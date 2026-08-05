@@ -115,6 +115,104 @@ code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;backgroun
 @media(max-width:1150px){:root{--right-w:0px} .right-rail{display:none} .content-grid{display:block} .main-content{padding:30px 34px} .report-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:820px){:root{--sidebar-w:280px} .mobile-menu{display:inline-grid;place-items:center} .brand{min-width:0} .brand .brand-title{display:none} .sidebar{transform:translateX(-100%)} body.sidebar-open .sidebar{transform:translateX(0)} .workspace{margin-left:0} .main-content,.panel-shell{padding:24px 18px 70px} .context-tabs{padding:0 12px} .hero{padding:25px 21px} .hero h1{font-size:28px} .hero-stats{grid-template-columns:1fr 1fr} .executive-banner,.report-grid,.evidence-grid{grid-template-columns:1fr} .top-tabs{display:none} .week-header,.roadmap-row{grid-template-columns:190px minmax(720px,1fr) 210px} .portal-kpis{grid-template-columns:1fr 1fr} .portal-grid{grid-template-columns:1fr} .field-row{grid-template-columns:1fr} .sync-badge{display:none}}
 @media print{.topbar,.sidebar,.context-tabs,.right-rail,.hero,.executive-banner,.artifact-toolbar,.board-toolbar,.roadmap-toolbar,.modal-overlay,.back-top,.health-strip,.sync-badge{display:none!important} .workspace{margin:0;padding:0} .content-grid{display:block} .main-content{padding:0} .doc-page[hidden]{display:block!important} .doc-page{page-break-after:always;max-width:none} body{background:white;color:black} .diagram-card,.code-card,.table-wrap{break-inside:avoid}}
+
+/* ---------- Manager Portal v2 ---------- */
+.portal-layout{display:flex;gap:18px;align-items:flex-start}
+.portal-rail{width:196px;flex:none;background:var(--nav);color:var(--nav-text);border-radius:14px;padding:12px 10px;position:sticky;top:calc(var(--top-h) + 20px);box-shadow:0 6px 22px rgba(1,16,37,.18)}
+.pr-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8c9bab;padding:2px 12px 9px;font-weight:750}
+.pr-item{display:flex;width:100%;align-items:center;gap:10px;padding:9px 12px;border:0;border-radius:9px;background:transparent;color:var(--nav-text);cursor:pointer;font-size:13px;font-weight:600;text-align:left;margin:1px 0;transition:background .15s ease,color .15s ease;font-family:inherit}
+.pr-item:hover{background:var(--nav-hover);color:#fff}
+.pr-item.active{background:linear-gradient(90deg,rgba(0,102,255,.38),rgba(0,102,255,.08));color:#fff;box-shadow:inset 0 0 0 1px rgba(0,102,255,.42)}
+.pr-ico{width:18px;text-align:center;color:#7fb3ff;font-size:12px;flex:none}
+.pr-item.active .pr-ico{color:#fff}
+.pr-foot{font-size:10.5px;line-height:1.5;color:#6b7f96;padding:12px 12px 2px;border-top:1px solid rgba(255,255,255,.08);margin-top:10px}
+.portal-stage{flex:1;min-width:0}
+.portal-screen{display:none}
+.portal-screen.active{display:block}
+.ps-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap}
+.ps-title h2{margin:0 0 4px;font-size:19px}
+.ps-title p{margin:0;color:var(--muted);font-size:13px;max-width:720px}
+.ps-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ps-input{border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);padding:8px 11px;font-size:13px;font-family:inherit}
+.ps-input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(0,102,255,.14)}
+.alpha-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(318px,1fr));gap:14px}
+.alpha-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:15px 16px;cursor:pointer;box-shadow:0 1px 3px rgba(1,16,37,.08);transition:border-color .15s ease,box-shadow .15s ease,transform .12s ease}
+.alpha-card:hover{border-color:rgba(0,102,255,.55);box-shadow:0 6px 18px rgba(0,102,255,.14);transform:translateY(-1px)}
+.ac-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:9px}
+.ac-name{font-weight:750;font-size:13.5px;line-height:1.35;word-break:break-all}
+.ac-id{font-family:JetBrains Mono,monospace;font-size:10.5px;color:var(--primary);margin-top:3px}
+.ac-metrics{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:12px 0 10px}
+.ac-metric{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:7px 9px}
+.ac-metric .m-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.ac-metric .m-value{font-size:13px;font-weight:750;margin-top:1px}
+.ac-foot{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--muted)}
+.ac-view{color:var(--primary);font-weight:700;font-size:12px}
+.ps-backdrop{position:fixed;inset:0;z-index:1190;background:rgba(1,16,37,.5);backdrop-filter:blur(2px)}
+.ps-drawer{position:fixed;z-index:1200;top:0;right:0;bottom:0;width:min(740px,96vw);background:var(--surface);box-shadow:-14px 0 44px rgba(1,16,37,.28);transform:translateX(102%);transition:transform .26s ease;overflow-y:auto}
+.ps-drawer.open{transform:none}
+.drawer-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 22px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:2}
+.drawer-head h3{margin:0;font-size:15px;word-break:break-all}
+.drawer-body{padding:20px 22px 80px}
+.drawer-body h4{margin:22px 0 8px;font-size:12.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:750}
+.ad-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.ad-logic{font-size:13px;line-height:1.7;color:var(--text);background:var(--surface-2);border:1px solid var(--border);border-left:3px solid var(--primary);border-radius:9px;padding:13px 15px}
+.ad-list .ver-row{display:flex;gap:12px;align-items:baseline;padding:9px 2px;border-bottom:1px dashed var(--border);font-size:12.5px}
+.ver-row .ver-v{font-family:JetBrains Mono,monospace;font-weight:700;color:var(--primary);flex:none}
+.ver-row .ver-date{color:var(--muted);font-size:11px;flex:none}
+.ver-row .ver-note{color:var(--text)}
+.ad-charts{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.ad-chart-card{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.ad-chart-card .cc-head{font-size:11.5px;font-weight:700;margin-bottom:8px}
+.bt-layout{display:grid;grid-template-columns:310px minmax(0,1fr);gap:16px;align-items:start;margin-bottom:16px}
+.bt-config label{display:flex;flex-direction:column;gap:5px;font-size:11.5px;color:var(--muted);font-weight:650;margin-bottom:12px}
+.bt-config label .ps-input{margin-top:1px}
+.bt-run{width:100%;padding:11px;font-size:13.5px;font-weight:750;margin-top:4px}
+.bt-progress{margin-top:14px;padding:12px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:9px}
+.bt-progress .bar{height:7px;background:var(--surface-3);border-radius:999px;overflow:hidden}
+.bt-progress .fill{height:100%;width:0%;background:linear-gradient(90deg,var(--primary),var(--cyan));transition:width .18s ease;border-radius:999px}
+.bt-status{font-size:12px;color:var(--muted);margin-top:8px;font-family:JetBrains Mono,monospace}
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px;margin-bottom:16px}
+.metric{background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:10px 12px}
+.metric .m-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:750}
+.metric .m-value{font-size:15.5px;font-weight:800;margin-top:2px;font-family:JetBrains Mono,monospace}
+.metric .m-value.pos{color:var(--success)} .metric .m-value.neg{color:var(--danger)}
+.chart-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-bottom:16px}
+.chart-card{background:var(--surface-2);border:1px solid var(--border);border-radius:11px;padding:11px 12px}
+.cc-head{font-size:11.5px;font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px}
+.cc-head .cc-sub{color:var(--muted);font-weight:600}
+.ps-canvas{width:100%;height:300px;display:block;cursor:crosshair}
+.bt-manifest{font-family:JetBrains Mono,monospace;font-size:11px;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:11px 13px;line-height:1.75;margin-bottom:16px;overflow-x:auto;white-space:nowrap}
+.bt-compare{margin-bottom:6px}
+.paper-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
+.paper-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:15px 16px;box-shadow:0 1px 3px rgba(1,16,37,.08)}
+.paper-card .pc-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px}
+.paper-card .pc-name{font-weight:750;font-size:13.5px;word-break:break-all}
+.paper-card .pc-meta{font-size:11.5px;color:var(--muted);margin-bottom:10px}
+.pc-canvas{width:100%;height:140px;display:block;margin-bottom:8px}
+.pc-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.pc-metric .m-label{font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:750}
+.pc-metric .m-value{font-size:12.5px;font-weight:750}
+.pc-actions{display:flex;gap:8px;flex-wrap:wrap}
+.pc-actions .action-btn{padding:7px 12px;font-size:12px}
+.live-ticker{font-family:JetBrains Mono,monospace;font-size:12.5px;font-weight:700;color:var(--success);background:var(--surface-2);border:1px solid var(--border);border-radius:999px;padding:7px 13px}
+.live-ticker.neg{color:var(--danger)}
+.live-tabs{display:flex;gap:6px;margin-bottom:16px}
+.ltab{border:0;background:transparent;color:var(--muted);border-radius:999px;padding:7px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+.ltab:hover{background:var(--surface-2);color:var(--text)}
+.ltab.active{background:linear-gradient(135deg,var(--primary),var(--primary-2));color:var(--bg);box-shadow:0 2px 8px rgba(0,102,255,.3)}
+.live-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:15px 16px;margin-bottom:14px}
+.live-card .lc-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.live-card .lc-name{font-weight:750;font-size:13.5px;word-break:break-all}
+.live-card .lc-canvas{width:100%;height:120px;display:block;margin-bottom:8px}
+.lc-metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px}
+.lc-metrics .pc-metric .m-value{font-size:13px}
+.halted-row{opacity:.55;filter:grayscale(.4)}
+.ps-live-banner{margin-bottom:14px}
+@media(max-width:1020px){.bt-layout{grid-template-columns:1fr} .chart-row{grid-template-columns:1fr}}
+@media(max-width:900px){.portal-layout{flex-direction:column} .portal-rail{width:100%;position:static;display:flex;gap:4px;overflow-x:auto;border-radius:12px;padding:8px} .pr-label,.pr-foot{display:none} .pr-item{white-space:nowrap;flex:none;padding:8px 13px} .ps-tools{width:100%}}
+@media(max-width:820px){.ps-head{flex-direction:column;align-items:stretch} .lc-metrics{grid-template-columns:repeat(3,1fr)} .ps-canvas{height:230px}}
+html[data-theme="dark"] .ac-metric,html[data-theme="dark"] .metric,html[data-theme="dark"] .chart-card,html[data-theme="dark"] .ad-chart-card,html[data-theme="dark"] .bt-manifest,html[data-theme="dark"] .ad-logic,html[data-theme="dark"] .bt-progress{background:var(--surface-2);border-color:var(--border)}
+
 </style>
 </head>
 <body>
@@ -3515,87 +3613,123 @@ I[Monitoring Incidents] --> C</pre></div>
     </section>
     <section class="view-panel" id="view-portal">
       <div class="panel-shell">
-        <div class="panel-header"><div><h1>Manager & Stakeholder Quant Platform</h1><p>Demo UI của domain nội bộ mục tiêu (V1). Portal là “phòng điều khiển”: chọn alpha/dataset, chạy backtest, duyệt evidence, theo dõi paper/live và trạng thái an toàn — không phải engine. Khi portal down, trading safety và monitoring vẫn hoạt động độc lập. Chi tiết kiến trúc domain xem trang <strong>Architecture → 13. Manager Platform — Domain nội bộ (Target)</strong>.</p></div><button class="action-btn" onclick="window.print()">Print view</button></div>
-        <div class="status-banner"><span class="status-dot"></span><div><strong>V1 prototype — interactive mockup</strong><div style="color:var(--muted);font-size:13px">Các nút Approve/Reject, liên kết report và trạng thái deployment là demo minh họa luồng tương tác; dữ liệu dùng để mô phỏng, chưa nối control-plane thật.</div></div></div>
-        <div class="health-strip">
-          <span class="health-item ok"><i></i>Market data — fresh</span>
-          <span class="health-item ok"><i></i>QuantBT workers — 4/4</span>
-          <span class="health-item ok"><i></i>Paper execution — healthy</span>
-          <span class="health-item warn"><i></i>Reconciliation — 1 finding</span>
-          <span class="health-item err"><i></i>Incident open — BRK-102</span>
-        </div>
-        <div class="portal-kpis">
-          <div class="portal-kpi"><div class="pk-label">Alpha registry</div><div class="pk-value">12</div><div class="pk-sub">8 live · 3 paper · 1 draft</div></div>
-          <div class="portal-kpi"><div class="pk-label">Backtest runs / 7d</div><div class="pk-value">247</div><div class="pk-sub">18 audit runs · 4 WFO</div></div>
-          <div class="portal-kpi"><div class="pk-label">Approval inbox</div><div class="pk-value">4</div><div class="pk-sub">1 canary · 3 paper</div></div>
-          <div class="portal-kpi"><div class="pk-label">Live deployments</div><div class="pk-value">9</div><div class="pk-sub">5 venues · 7 accounts</div></div>
-          <div class="portal-kpi"><div class="pk-label">System state</div><div class="pk-value" style="color:#b65c02">DEGRADED</div><div class="pk-sub">1 incident · fail-closed active</div></div>
-        </div>
-        <div class="portal-grid">
-          <div class="pcard wide">
-            <div class="pcard-head"><h3>Alpha Registry</h3><span class="tag">immutable artifacts · lifecycle DRAFT → REVIEW → PAPER → LIVE</span></div>
-            <div class="pcard-body" style="padding:0">
-              <div class="table-wrap" style="border:0;border-radius:0;margin:0"><table class="portal-table">
-                <thead><tr><th>Alpha</th><th>Version</th><th>Lifecycle</th><th>Owner</th><th>Mode</th><th>Last audit run</th><th>30d PnL (paper)</th></tr></thead>
-                <tbody>
-                  <tr><td><strong>crypto.cross_sectional_momentum</strong></td><td>1.4.0</td><td><span class="life-chip live">Live</span></td><td>quant-research</td><td>Live · Binance USD-M</td><td>QBT-2026-0801-042 (audit)</td><td>+2.14%</td></tr>
-                  <tr><td><strong>vn.derivatives_carry</strong></td><td>0.9.2</td><td><span class="life-chip paper">Paper</span></td><td>quant-research</td><td>Paper · DNSE</td><td>QBT-2026-0802-118 (WFO)</td><td>+0.62%</td></tr>
-                  <tr><td><strong>us.equity_ml_alpha</strong></td><td>2.1.0</td><td><span class="life-chip review">Quant review</span></td><td>ml-research</td><td>—</td><td>QBT-2026-0803-201 (standard)</td><td>—</td></tr>
-                  <tr><td><strong>grid.basket_v3</strong></td><td>1.1.5</td><td><span class="life-chip draft">Draft</span></td><td>quant-research</td><td>—</td><td>—</td><td>—</td></tr>
-                  <tr><td><strong>india.pair_statarb</strong></td><td>1.0.0</td><td><span class="life-chip live">Live</span></td><td>quant-research</td><td>Live · India broker (owner-confirmed)</td><td>QBT-2026-0728-077 (audit)</td><td>+1.08%</td></tr>
-                  <tr><td><strong>bybit.funding_carry</strong></td><td>1.2.3</td><td><span class="life-chip live">Live</span></td><td>quant-research</td><td>Live · Bybit</td><td>QBT-2026-0729-090 (audit)</td><td>+0.91%</td></tr>
-                </tbody>
-              </table></div>
+        <div class="panel-header"><div><h1>Manager &amp; Stakeholder Quant Platform</h1><p>Portal là “phòng điều khiển” của domain nội bộ: Alpha Pool → Backtest Engine (quantbt) → Paper Trading → Live Trading. Mọi hành động đều để lại dấu vết bất biến (manifest + SHA); khi portal down, trading safety và monitoring vẫn hoạt động độc lập. Chi tiết kiến trúc domain xem trang <strong>Architecture → 13. Manager Platform — Domain nội bộ (Target)</strong>.</p></div><button class="action-btn" onclick="window.print()">Print view</button></div>
+        <div class="status-banner"><span class="status-dot"></span><div><strong>V2 prototype — interactive mockup</strong><div style="color:var(--muted);font-size:13px">Backtest chạy trên engine mô phỏng dữ liệu để minh họa luồng nghiên cứu → phê duyệt → paper → live. Dữ liệu alpha/run là mô phỏng theo cấu trúc domain thật; chưa nối control-plane thật.</div></div></div>
+        <div class="portal-layout">
+          <nav class="portal-rail" id="portalRail" aria-label="Portal modules">
+            <div class="pr-label">Modules</div>
+            <button class="pr-item active" data-ps="overview"><span class="pr-ico">◈</span><span>Overview</span></button>
+            <button class="pr-item" data-ps="alphas"><span class="pr-ico">▦</span><span>Alpha Pool</span></button>
+            <button class="pr-item" data-ps="backtest"><span class="pr-ico">⚙</span><span>Backtest Engine</span></button>
+            <button class="pr-item" data-ps="paper"><span class="pr-ico">▤</span><span>Paper Trading</span></button>
+            <button class="pr-item" data-ps="live"><span class="pr-ico">◆</span><span>Live Trading</span></button>
+            <div class="pr-foot">quantbt engine 1.0.7<br>prototype · chưa nối control plane</div>
+          </nav>
+          <div class="portal-stage">
+            <div class="portal-screen active" id="ps-overview">
+              <div class="health-strip">
+                <span class="health-item ok"><i></i>Market data — fresh</span>
+                <span class="health-item ok"><i></i>QuantBT workers — 4/4</span>
+                <span class="health-item ok"><i></i>Paper execution — healthy</span>
+                <span class="health-item warn"><i></i>Reconciliation — 1 finding</span>
+                <span class="health-item err"><i></i>Incident open — BRK-102</span>
+              </div>
+              <div class="portal-kpis">
+                <div class="portal-kpi"><div class="pk-label">Alpha registry</div><div class="pk-value">12</div><div class="pk-sub">8 live · 3 paper · 1 draft</div></div>
+                <div class="portal-kpi"><div class="pk-label">Backtest runs / 7d</div><div class="pk-value">247</div><div class="pk-sub">18 audit runs · 4 WFO</div></div>
+                <div class="portal-kpi"><div class="pk-label">Approval inbox</div><div class="pk-value">4</div><div class="pk-sub">1 canary · 3 paper</div></div>
+                <div class="portal-kpi"><div class="pk-label">Live deployments</div><div class="pk-value">9</div><div class="pk-sub">5 venues · 7 accounts</div></div>
+                <div class="portal-kpi"><div class="pk-label">System state</div><div class="pk-value" style="color:#b65c02">DEGRADED</div><div class="pk-sub">1 incident · fail-closed active</div></div>
+              </div>
+              <div class="portal-grid">
+<div class="pcard-head"><h3>Approval Inbox</h3><span class="tag">evidence packages gated</span></div>
+<div class="pcard-head"><h3>Incident & Actions</h3><span class="tag">policy-gated action executor</span></div>
+<div class="pcard-head"><h3>System Health State</h3><span class="tag">health state builder</span></div>
+              </div>
             </div>
-          </div>
-          <div class="pcard">
-            <div class="pcard-head"><h3>Approval Inbox</h3><span class="tag">evidence packages gated</span></div>
-            <div class="pcard-body">
-              <div class="approval-row"><div class="ar-main"><div class="ar-title">us.equity_ml_alpha → Paper</div><div class="ar-sub">QBT-2026-0803-201 · dataset snap binance_usdm_daily_matrix@v2 · quant review passed</div></div><button class="action-btn" data-demo="Approve">✓</button><button class="action-btn danger" data-demo="Reject">✕</button></div>
-              <div class="approval-row"><div class="ar-main"><div class="ar-title">crypto.cross_sectional_momentum → Live canary</div><div class="ar-sub">Deploy-2026-0801 · risk profile crypto_market_neutral_v1 · capital $50k</div></div><button class="action-btn" data-demo="Approve">✓</button><button class="action-btn danger" data-demo="Reject">✕</button></div>
-              <div class="approval-row"><div class="ar-main"><div class="ar-title">vn.derivatives_carry → Live candidate</div><div class="ar-sub">Chờ paper observation window 4 tuần · reconciliation 2 findings</div></div><button class="action-btn" disabled title="Chưa đủ evidence">✓</button><button class="action-btn danger" data-demo="Request rerun">↺</button></div>
-              <div class="approval-row"><div class="ar-main"><div class="ar-title">grid.basket_v3 → Quant review</div><div class="ar-sub">WFO fold 3/5 chưa đạt threshold · yêu cầu rerun</div></div><button class="action-btn" data-demo="Approve">✓</button><button class="action-btn danger" data-demo="Reject">✕</button></div>
+            <div class="portal-screen" id="ps-alphas">
+              <div class="ps-head">
+                <div class="ps-title"><h2>Alpha Pool</h2><p>Toàn bộ alpha trong pool — logic nghiên cứu của researcher, lịch sử phiên bản và metadata từng lần backtest / walk-forward. Artifact bất biến (immutable, có SHA manifest).</p></div>
+                <div class="ps-tools"><input class="ps-input" id="alphaSearch" placeholder="Tìm alpha…" style="width:190px"><select class="ps-input" id="alphaLifeFilter" style="width:150px"><option value="">All lifecycles</option><option>Draft</option><option>Review</option><option>Paper</option><option>Live</option></select><span class="tag" id="alphaCount"></span></div>
+              </div>
+              <div class="alpha-grid" id="alphaGrid"></div>
+              <div class="ps-backdrop" id="alphaBackdrop" hidden></div>
+              <aside class="ps-drawer" id="alphaDrawer" aria-label="Alpha detail">
+                <div class="drawer-head"><h3 id="adTitle"></h3><button class="icon-btn" id="adClose" title="Close">✕</button></div>
+                <div class="drawer-body">
+                  <div class="ad-chips" id="adChips"></div>
+                  <div class="ad-logic" id="adLogic"></div>
+                  <h4>Phiên bản</h4>
+                  <div class="ad-list" id="adVersions"></div>
+                  <h4>Backtest &amp; Walk-Forward history</h4>
+                  <div class="table-wrap" style="margin:8px 0 18px"><table class="portal-table"><thead><tr><th>Run ID</th><th>Route</th><th>Dataset snapshot</th><th>Date</th><th>Duration</th><th>Sharpe</th><th>Max DD</th><th>Win rate</th><th>Status</th><th></th></tr></thead><tbody id="adRunsBody"></tbody></table></div>
+                  <h4>Equity curves theo route</h4>
+                  <div class="ad-charts" id="adCharts"></div>
+                </div>
+              </aside>
             </div>
-          </div>
-          <div class="pcard">
-            <div class="pcard-head"><h3>Deployments & Venue Certification</h3><span class="tag">deployment_id xuyên suốt</span></div>
-            <div class="pcard-body">
-              <div class="approval-row"><div class="ar-main"><div class="ar-title">DEP-241 · Binance USD-M</div><div class="ar-sub">crypto.cross_sectional_momentum · live · account BIN-A03</div></div><span class="life-chip live">Live</span></div>
-              <div class="approval-row"><div class="ar-main"><div class="ar-title">DEP-238 · Bybit</div><div class="ar-sub">bybit.funding_carry · live · owner-confirmed</div></div><span class="life-chip live">Live</span></div>
-              <div class="approval-row"><div class="ar-main"><div class="ar-title">DEP-244 · DNSE / VN</div><div class="ar-sub">vn.derivatives_carry · paper · cert chờ venue payload validation</div></div><span class="life-chip paper">Paper</span></div>
-              <div class="approval-row"><div class="ar-main"><div class="ar-title">DEP-245 · US broker</div><div class="ar-sub">us.equity_ml_alpha · shadow · chưa submit</div></div><span class="life-chip review">Shadow</span></div>
-              <div class="approval-row"><div class="ar-main"><div class="ar-title">DEP-239 · India broker</div><div class="ar-sub">india.pair_statarb · live · reconciliation clean 14d</div></div><span class="life-chip live">Live</span></div>
+            <div class="portal-screen" id="ps-backtest">
+              <div class="ps-head">
+                <div class="ps-title"><h2>Backtest Engine — Event-Driven Simulation</h2><p>Gọi alpha id từ pool, chọn route engine theo repo <code style="font-family:JetBrains Mono,monospace;background:var(--surface-2);padding:1px 6px;border-radius:5px">quantbt</code> (vectorized · intrabar · event · portfolio · walk-forward), chạy và xem kết quả kiểu TradingView.</p></div>
+                <div class="ps-tools"><span class="tag">quantbt@1.0.7 · audit-run bắt buộc</span></div>
+              </div>
+              <div class="bt-layout">
+                <div class="pcard bt-config">
+                  <div class="pcard-head"><h3>Run configuration</h3><span class="tag">manifest · immutable</span></div>
+                  <div class="pcard-body">
+                    <label>Alpha (từ pool)<select class="ps-input" id="btAlpha"></select></label>
+                    <label>Version<select class="ps-input" id="btVersion"></select></label>
+                    <label>Route<select class="ps-input" id="btRoute"><option>Vectorized</option><option>Intrabar</option><option>Event</option><option>Portfolio</option><option>Walk-Forward</option></select></label>
+                    <label>Dataset snapshot<select class="ps-input" id="btDataset"><option>binance_usdm_daily_matrix@v2</option><option>binance_usdm_1m@v2</option><option>vn_futures_roll@v1</option><option>us_equity_daily@v1</option><option>india_futures_daily@v1</option><option>bybit_usdt_1m@v1</option></select></label>
+                    <label>Period<select class="ps-input" id="btPeriod"><option>3Y</option><option>2Y</option><option>1Y</option><option>6M</option></select></label>
+                    <label>Initial capital<input class="ps-input" id="btCapital" value="100000"></label>
+                    <label class="wf-row" id="btWfRow" hidden>WFO folds<select class="ps-input" id="btFolds"><option>3</option><option>4</option><option selected>5</option></select></label>
+                    <button class="action-btn primary bt-run" id="btRun">▶ Run backtest</button>
+                    <div id="btProgress" hidden><div class="bt-progress"><div class="bar"><div class="fill" id="btFill"></div></div><div class="bt-status" id="btStatus">Đang khởi tạo…</div></div></div>
+                  </div>
+                </div>
+                <div class="pcard bt-results">
+                  <div class="pcard-head"><h3>Results — <span id="btResTitle">chưa có run</span></h3><span class="tag" id="btResId"></span></div>
+                  <div class="pcard-body" id="btResBody">
+                    <div class="metrics-grid" id="btMetrics"></div>
+                    <div class="chart-row">
+                      <div class="chart-card"><div class="cc-head">Equity curve</div><canvas class="ps-canvas" id="btEquity"></canvas></div>
+                      <div class="chart-card"><div class="cc-head">Price action &amp; trade markers</div><canvas class="ps-canvas" id="btCandles"></canvas></div>
+                    </div>
+                    <div class="bt-manifest" id="btManifest"></div>
+                    <div class="bt-compare" id="btCompare"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="pcard">
+                <div class="pcard-head"><h3>Run Registry</h3><span class="tag">immutable run spec · manifest bắt buộc</span></div>
+                <div class="pcard-body" style="padding:0"><div class="table-wrap" style="border:0;border-radius:0;margin:0"><table class="portal-table"><thead><tr><th>Run ID</th><th>Alpha</th><th>Route</th><th>Status</th><th>Engine</th><th>Duration</th><th>Sharpe</th><th>Max DD</th><th>Actions</th></tr></thead><tbody id="btRegistryBody"></tbody></table></div></div>
+              </div>
             </div>
-          </div>
-          <div class="pcard wide">
-            <div class="pcard-head"><h3>Recent Backtest Runs — Run Registry</h3><span class="tag">immutable run spec · manifest bắt buộc</span></div>
-            <div class="pcard-body" style="padding:0">
-              <div class="table-wrap" style="border:0;border-radius:0;margin:0"><table class="portal-table">
-                <thead><tr><th>Run ID</th><th>Alpha</th><th>Dataset snapshot</th><th>Route</th><th>Status</th><th>Engine</th><th>Duration</th><th>Actions</th></tr></thead>
-                <tbody>
-                  <tr><td><strong>QBT-2026-0803-201</strong></td><td>us.equity_ml_alpha v2.1.0</td><td>binance_usdm_daily_matrix@v2</td><td>Portfolio</td><td><span class="life-chip paper">Done</span></td><td>quantbt-engine 1.0.7</td><td>4m 12s</td><td><button class="mini-btn" data-demo="Open report">Report</button> <button class="mini-btn" data-demo="Copy manifest">Manifest</button></td></tr>
-                  <tr><td><strong>QBT-2026-0803-202</strong></td><td>crypto.cross_sectional_momentum v1.4.0</td><td>binance_usdm_daily_matrix@v2</td><td>Vectorized</td><td><span class="life-chip paper">Done</span></td><td>quantbt-engine 1.0.7</td><td>58s</td><td><button class="mini-btn" data-demo="Open report">Report</button></td></tr>
-                  <tr><td><strong>QBT-2026-0803-205</strong></td><td>vn.derivatives_carry v0.9.2</td><td>vn_futures_roll@v1</td><td>Intrabar</td><td><span class="life-chip review">Running</span></td><td>quantbt-engine 1.0.7</td><td>—</td><td><button class="mini-btn" data-demo="Watch">Watch</button></td></tr>
-                  <tr><td><strong>QBT-2026-0803-199</strong></td><td>grid.basket_v3 v1.1.5</td><td>binance_usdm_1m@v2</td><td>Event</td><td><span class="life-chip suspended">Failed</span></td><td>quantbt-engine 1.0.7</td><td>31s</td><td><button class="mini-btn" data-demo="View logs">Logs</button></td></tr>
-                </tbody>
-              </table></div>
+            <div class="portal-screen" id="ps-paper">
+              <div class="ps-head">
+                <div class="ps-title"><h2>Paper Trading</h2><p>Theo dõi các alpha đang paper trade — chart từng alpha, metrics và các hành động (pause / resume / stop / promote lên canary live).</p></div>
+                <div class="ps-tools"><span class="tag" id="paperCount"></span></div>
+              </div>
+              <div class="paper-grid" id="paperGrid"></div>
+              <div class="pcard" style="margin-top:16px">
+                <div class="pcard-head"><h3>Paper order flow</h3><span class="tag">execution events gần nhất</span></div>
+                <div class="pcard-body" style="padding:0"><div class="table-wrap" style="border:0;border-radius:0;margin:0"><table class="portal-table"><thead><tr><th>Time</th><th>Alpha</th><th>Side</th><th>Qty</th><th>Price</th><th>Venue (paper)</th><th>Status</th></tr></thead><tbody id="paperOrdersBody"></tbody></table></div></div>
+              </div>
             </div>
-          </div>
-          <div class="pcard">
-            <div class="pcard-head"><h3>Incident & Actions</h3><span class="tag">policy-gated action executor</span></div>
-            <div class="pcard-body">
-              <div class="approval-row"><div class="ar-main"><div class="ar-title"><span style="color:var(--danger)">BRK-102</span> · Broker sync stale (Bybit)</div><div class="ar-sub">Action: block new orders · cancel-all không kích hoạt · owner on-call</div></div><span class="health-item err" style="margin:0"><i></i>HALTED</span></div>
-              <div class="approval-row"><div class="ar-main"><div class="ar-title"><span style="color:var(--warning)">INC-041</span> · Stream lag &gt; SLO 3 lần</div><div class="ar-sub">Action: pause deployment DEP-245 (shadow) · auto-escalate</div></div><span class="life-chip review">Paused</span></div>
-              <div class="approval-row"><div class="ar-main"><div class="ar-title"><span>REC-077</span> · Position mismatch paper/DNSE</div><div class="ar-sub">Action: dry-run reconciliation → chờ operator apply</div></div><span class="life-chip draft">Open</span></div>
-            </div>
-          </div>
-          <div class="pcard">
-            <div class="pcard-head"><h3>System Health State</h3><span class="tag">health state builder</span></div>
-            <div class="pcard-body">
-              <div class="approval-row"><div class="ar-main"><div class="ar-title">Market data readiness</div><div class="ar-sub">Binance ✓ · Bybit ✓ · DNSE ✓ · US ✓ · India ✓</div></div><span class="health-item ok" style="margin:0"><i></i>HEALTHY</span></div>
-              <div class="approval-row"><div class="ar-main"><div class="ar-title">QuantBT workers</div><div class="ar-sub">4/4 workers · queue 12 jobs · avg wait 40s</div></div><span class="health-item ok" style="margin:0"><i></i>HEALTHY</span></div>
-              <div class="approval-row"><div class="ar-main"><div class="ar-title">Reconciliation</div><div class="ar-sub">1 finding chưa apply (REC-077) · fail-closed gate active</div></div><span class="health-item warn" style="margin:0"><i></i>DEGRADED</span></div>
-              <div class="approval-row"><div class="ar-main"><div class="ar-title">Trading event store</div><div class="ar-sub">Immutable replay lag 0 · last checkpoint 04:32 UTC</div></div><span class="health-item ok" style="margin:0"><i></i>HEALTHY</span></div>
+            <div class="portal-screen" id="ps-live">
+              <div class="ps-head">
+                <div class="ps-title"><h2>Live Trading</h2><p>Trạng thái hệ thống, từng alpha và toàn bộ danh mục live. Fail-closed: mọi lỗi reconcile đều dừng khởi tạo lệnh mới.</p></div>
+                <div class="ps-tools"><span class="live-ticker" id="liveTicker"></span><button class="action-btn danger" id="killSwitch">■ Emergency fail-closed</button></div>
+              </div>
+              <div class="live-tabs" id="liveTabs">
+                <button class="ltab active" data-lt="all">All</button>
+                <button class="ltab" data-lt="system">System</button>
+                <button class="ltab" data-lt="alpha">Alpha</button>
+              </div>
+              <div id="liveAll"></div>
+              <div id="liveSystem" hidden></div>
+              <div id="liveAlpha" hidden></div>
             </div>
           </div>
         </div>
@@ -3936,7 +4070,372 @@ function initTaskModal(){
   q('#taskTableWrap').addEventListener('click',e=>{const d=e.target.closest('[data-f="del"]');if(!d)return;const tr=d.closest('tr[data-tid]');if(!tr)return;if(confirm('Xóa task '+tr.dataset.tid+'?')){tasks=tasks.filter(t=>t.id!==tr.dataset.tid);saveTasks();renderTable();toast('Đã xóa')}});
 }
 /* ============ Portal demo ============ */
-function initPortalDemo(){document.addEventListener('click',e=>{const b=e.target.closest('[data-demo]');if(!b)return;toast(b.dataset.demo+' (demo — chưa nối control plane)')})}
+/* ============ Manager Portal v2 app ============ */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function seededSeries(seed,n,vol,drift){const r=mulberry32(seed);let p=100;const out=[];const t0=Date.now()-n*864e5;
+  for(let i=0;i<n;i++){const o=p;p=p*(1+drift+(r()-.5)*vol);const c=p;const h=Math.max(o,c)*(1+r()*.0035);const l=Math.min(o,c)*(1-r()*.0035);const v=Math.round(1.5e6+r()*6e6);out.push({t:t0+i*864e5,o,h,l,c,v})}return out}
+function equityFromSeries(series,sharpe){const r=mulberry32(Math.round(sharpe*100)+37);const n=series.length;const out=[100];const dt=n>240?864e5:3600e3;
+  for(let i=1;i<n;i++){const step=(sharpe*.045)+(r()-.5)*.16;out.push(out[i-1]*(1+step))}
+  return out}
+function pnlSeries(endPct,n,seed){const r=mulberry32(seed);const out=[100];for(let i=1;i<n;i++){const prog=i/n;out.push(out[i-1]*(1+prog*(endPct/100)*.35+(r()-.5)*.02))}return out}
+function fmtMoney(v){return (v>=0?'+':'')+v.toFixed(2)+'%'}
+function fmtDate(ts){const d=new Date(ts);return d.getDate()+'/'+(d.getMonth()+1)+'/'+String(d.getFullYear()).slice(2)}
+function fmtTime(ts){const d=new Date(ts);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+function fmtDur(sec){return sec>=60?Math.floor(sec/60)+'m '+String(sec%60).padStart(2,'0')+'s':sec+'s'}
+
+const PORTAL_ALPHAS=[
+ {key:'crypto.cross_sectional_momentum',ver:'1.4.0',life:'Live',owner:'quant-research',mkt:'Crypto · Binance USD-M',seed:11,sharpe:1.62,dd:-9.4,win:51,pnl:'+2.14%',
+  desc:'Cross-sectional momentum trên vũ trụ top-40 USDT perpetuals, điểm danh mục theo signal momentum 20D/60D chuẩn hóa theo vol. Rebalance tuần, lọc thị trường ngoài giờ funding cực đoan. Đây là alpha anchor của pool, đã sống qua 3 đợt regime 2024-2026.',
+  versions:[{v:'1.4.0',d:'2026-06-02',n:'Thêm funding filter và vol-targeting theo regime'},{v:'1.3.2',d:'2026-02-14',n:'Sửa tính thanh khoản khi tái cân bằng (slippage model)'},{v:'1.2.0',d:'2025-09-30',n:'Mở rộng universe lên 40 symbols'}],
+  runs:[{id:'QBT-2026-0801-042',route:'Portfolio',ds:'binance_usdm_daily_matrix@v2',d:'2026-08-01',dur:'4m 12s',sh:1.62,sortino:2.21,dd:-9.4,win:51,tr:312,pnl:2.14,status:'Done'},{id:'QBT-2026-0729-090',route:'Walk-Forward',ds:'binance_usdm_daily_matrix@v2',d:'2026-07-29',dur:'22m 08s',sh:1.41,sortino:1.88,dd:-11.2,win:49,tr:348,pnl:1.87,status:'Done'},{id:'QBT-2026-0722-055',route:'Event',ds:'binance_usdm_1m@v2',d:'2026-07-22',dur:'38m 41s',sh:1.55,sortino:2.02,dd:-10.1,win:52,tr:5210,pnl:2.01,status:'Done'}]},
+ {key:'vn.derivatives_carry',ver:'0.9.2',life:'Paper',owner:'quant-research',mkt:'VN futures · DNSE paper',seed:23,sharpe:1.08,dd:-7.6,win:44,pnl:'+0.62%',
+  desc:'Carry trên basis VN30F1-F2: bắt basis hẹp so với chi phí giữ, hedge bằng spread. Paper đang chạy tuần 3 — chờ đủ window 4 tuần và reconciliation sạch để lên canary live.',
+  versions:[{v:'0.9.2',d:'2026-07-21',n:'Calibrate lại roll schedule theo lịch VN30F'},{v:'0.8.0',d:'2026-06-05',n:'Thêm position limit theo thanh khoản HNX futures'}],
+  runs:[{id:'QBT-2026-0802-118',route:'Walk-Forward',ds:'vn_futures_roll@v1',d:'2026-08-02',dur:'9m 30s',sh:1.08,sortino:1.41,dd:-7.6,win:44,tr:96,pnl:0.62,status:'Done'},{id:'QBT-2026-0803-205',route:'Intrabar',ds:'vn_futures_roll@v1',d:'2026-08-03',dur:'—',sh:0,sortino:0,dd:0,win:0,tr:0,pnl:0,status:'Running'}]},
+ {key:'us.equity_ml_alpha',ver:'2.1.0',life:'Review',owner:'ml-research',mkt:'US equities · daily',seed:37,sharpe:1.31,dd:-12.8,win:47,pnl:'—',
+  desc:'Gradient boosting trên cross-section 800 cổ phiếu US: features giá/volume/analyst revisions. Đang ở gate Quant Review — chờ WFO fold 3-5 vượt threshold để lên Paper.',
+  versions:[{v:'2.1.0',d:'2026-07-18',n:'Feature nói lại: revision momentum thay analyst target ratio'},{v:'2.0.4',d:'2026-05-11',n:'Fix data leakage ở rolling z-score'},{v:'1.9.1',d:'2026-01-22',n:'Base model v1'}],
+  runs:[{id:'QBT-2026-0803-201',route:'Vectorized',ds:'us_equity_daily@v1',d:'2026-08-03',dur:'4m 12s',sh:1.31,sortino:1.72,dd:-12.8,win:47,tr:1840,pnl:1.98,status:'Done'},{id:'QBT-2026-0731-077',route:'Walk-Forward',ds:'us_equity_daily@v1',d:'2026-07-31',dur:'18m 44s',sh:1.12,sortino:1.45,dd:-14.1,win:44,tr:1902,pnl:1.44,status:'Done'}]},
+ {key:'grid.basket_v3',ver:'1.1.5',life:'Draft',owner:'quant-research',mkt:'Crypto · grid basket',seed:41,sharpe:0.84,dd:-6.2,win:62,pnl:'—',
+  desc:'Grid nhiều cấp trên basket các cặp BTC/ETH/BNB với kiểm soát inventory theo delta. V3 gợi ý rerun do fold 3/5 WFO chưa đạt threshold.',
+  versions:[{v:'1.1.5',d:'2026-07-08',n:'Điều chỉnh grid spacing theo vol regime'},{v:'1.0.0',d:'2026-04-19',n:'Basket v1'}],
+  runs:[{id:'QBT-2026-0803-199',route:'Event',ds:'binance_usdm_1m@v2',d:'2026-08-03',dur:'31s',sh:0,sortino:0,dd:0,win:0,tr:0,pnl:0,status:'Failed'},{id:'QBT-2026-0801-015',route:'Vectorized',ds:'binance_usdm_daily_matrix@v2',d:'2026-08-01',dur:'1m 02s',sh:0.84,sortino:1.05,dd:-6.2,win:62,tr:880,pnl:0.91,status:'Done'}]},
+ {key:'india.pair_statarb',ver:'1.0.0',life:'Live',owner:'quant-research',mkt:'India futures · broker owner-confirmed',seed:53,sharpe:1.47,dd:-8.9,win:55,pnl:'+1.08%',
+  desc:'Pairs trading Nifty-BankNifty spread và các cặp thanh khoản cao; entry khi z-score vượt ngưỡng, exit tại mean. Reconciliation sạch 14 ngày liên tiếp.',
+  versions:[{v:'1.0.0',d:'2026-07-10',n:'Go-live'},{v:'0.9.0',d:'2026-06-15',n:'Thêm execution heuristics cho gap open'}],
+  runs:[{id:'QBT-2026-0728-077',route:'Walk-Forward',ds:'india_futures_daily@v1',d:'2026-07-28',dur:'14m 09s',sh:1.47,sortino:1.95,dd:-8.9,win:55,tr:214,pnl:1.08,status:'Done'}]},
+ {key:'bybit.funding_carry',ver:'1.2.3',life:'Live',owner:'quant-research',mkt:'Bybit USDT perp · funding',seed:67,sharpe:1.22,dd:-6.8,win:58,pnl:'+0.91%',
+  desc:'Capture funding rate dương trên các perp basis cao; delta-neutral bằng spot. Live owner-confirmed, volume nhỏ có chủ đích.',
+  versions:[{v:'1.2.3',d:'2026-07-05',n:'Thêm funding ngưỡng lọc theo lịch sử 90d'},{v:'1.1.1',d:'2026-05-20',n:'Spread exit optimization'}],
+  runs:[{id:'QBT-2026-0729-090',route:'Portfolio',ds:'bybit_usdt_1m@v1',d:'2026-07-29',dur:'6m 51s',sh:1.22,sortino:1.58,dd:-6.8,win:58,tr:446,pnl:0.91,status:'Done'}]},
+ {key:'us.equity_vol_premium',ver:'0.7.1',life:'Paper',owner:'ml-research',mkt:'US equities · vol overlay',seed:79,sharpe:0.97,dd:-10.4,win:49,pnl:'+0.44%',
+  desc:'Bán vol có chọn lọc (short straddle được hedge) trên các cổ phiếu có skew phân tầng cao. Paper tuần 2 — monitoring tail risk rất sát.',
+  versions:[{v:'0.7.1',d:'2026-07-12',n:'Ngưỡng IV percentile 85+ khi entry'}],
+  runs:[{id:'QBT-2026-0730-044',route:'Event',ds:'us_equity_daily@v1',d:'2026-07-30',dur:'11m 20s',sh:0.97,sortino:1.21,dd:-10.4,win:49,tr:310,pnl:0.44,status:'Done'}]},
+ {key:'vn.index_smart_beta',ver:'0.3.0',life:'Draft',owner:'quant-research',mkt:'VN index · daily',seed:91,sharpe:0.71,dd:-13.5,win:42,pnl:'—',
+  desc:'Smart-beta trọng số theo quality/momentum trên rổ VN30. Giai đoạn khởi tạo dataset — chưa có run audit.',
+  versions:[{v:'0.3.0',d:'2026-08-01',n:'Dataset contract v1.0'}]}
+];
+let portalRuns=[
+ {id:'QBT-2026-0803-202',alpha:'crypto.cross_sectional_momentum',ver:'v1.4.0',route:'Vectorized',status:'Done',engine:'quantbt-engine 1.0.7',dur:'58s',sh:1.63,dd:-9.2,ds:'binance_usdm_daily_matrix@v2'},
+ {id:'QBT-2026-0803-205',alpha:'vn.derivatives_carry',ver:'v0.9.2',route:'Intrabar',status:'Running',engine:'quantbt-engine 1.0.7',dur:'—',sh:null,dd:null,ds:'vn_futures_roll@v1'},
+ {id:'QBT-2026-0803-201',alpha:'us.equity_ml_alpha',ver:'v2.1.0',route:'Vectorized',status:'Done',engine:'quantbt-engine 1.0.7',dur:'4m 12s',sh:1.31,dd:-12.8,ds:'us_equity_daily@v1'},
+ {id:'QBT-2026-0803-199',alpha:'grid.basket_v3',ver:'v1.1.5',route:'Event',status:'Failed',engine:'quantbt-engine 1.0.7',dur:'31s',sh:null,dd:null,ds:'binance_usdm_1m@v2'},
+ {id:'QBT-2026-0802-118',alpha:'vn.derivatives_carry',ver:'v0.9.2',route:'Walk-Forward',status:'Done',engine:'quantbt-engine 1.0.7',dur:'9m 30s',sh:1.08,dd:-7.6,ds:'vn_futures_roll@v1'},
+ {id:'QBT-2026-0801-042',alpha:'crypto.cross_sectional_momentum',ver:'v1.4.0',route:'Portfolio',status:'Done',engine:'quantbt-engine 1.0.7',dur:'4m 12s',sh:1.62,dd:-9.4,ds:'binance_usdm_daily_matrix@v2'}
+];
+let runSeq=206;
+function nextRunId(){return 'QBT-2026-0805-'+String(runSeq++).padStart(3,'0')}
+let portalHalted=false;
+
+const PAPER_ALPHAS=[
+ {key:'vn.derivatives_carry',ver:'0.9.2',days:28,state:'Running',pnl:'+0.62%',sharpe:1.08,dd:-7.6,win:44,gates:{days:28,dd:12}},
+ {key:'us.equity_vol_premium',ver:'0.7.1',days:12,state:'Running',pnl:'+0.44%',sharpe:0.97,dd:-10.4,win:49,gates:{days:28,dd:12}},
+ {key:'us.equity_ml_alpha',ver:'2.1.0',days:0,state:'Scheduled',pnl:'—',sharpe:null,dd:null,win:null,gates:{days:28,dd:12}}
+];
+const PAPER_ORDERS=[
+ {t:'2026-08-05T08:41:00Z',alpha:'vn.derivatives_carry',side:'SELL',qty:4,px:'1,253.4',venue:'DNSE (paper)',status:'Filled'},
+ {t:'2026-08-05T08:12:00Z',alpha:'us.equity_vol_premium',side:'SELL',qty:2,px:'142.10',venue:'US paper',status:'Filled'},
+ {t:'2026-08-04T14:30:00Z',alpha:'vn.derivatives_carry',side:'BUY',qty:6,px:'1,248.9',venue:'DNSE (paper)',status:'Filled'},
+ {t:'2026-08-04T09:02:00Z',alpha:'us.equity_vol_premium',side:'BUY',qty:3,px:'138.75',venue:'US paper',status:'Partial'},
+ {t:'2026-08-03T15:21:00Z',alpha:'vn.derivatives_carry',side:'BUY',qty:4,px:'1,251.2',venue:'DNSE (paper)',status:'Filled'}
+];
+const LIVE_DEPLOYS=[
+ {id:'DEP-241',venue:'Binance USD-M',alpha:'crypto.cross_sectional_momentum',account:'BIN-A03',cap:250000,pnl:0.14,exp:18.2,status:'Live'},
+ {id:'DEP-238',venue:'Bybit',alpha:'bybit.funding_carry',account:'BYB-A02',cap:80000,pnl:0.06,exp:6.4,status:'Live'},
+ {id:'DEP-239',venue:'India broker',alpha:'india.pair_statarb',account:'IND-A01',cap:60000,pnl:0.11,exp:12.1,status:'Live'},
+ {id:'DEP-242',venue:'Binance USD-M',alpha:'grid.basket_v3',account:'BIN-A05',cap:40000,pnl:-0.02,exp:9.8,status:'Paused'},
+ {id:'DEP-244',venue:'DNSE / VN',alpha:'vn.derivatives_carry',account:'VND-A01',cap:0,pnl:0,exp:0,status:'Paper'},
+ {id:'DEP-245',venue:'US broker',alpha:'us.equity_ml_alpha',account:'US-A04',cap:0,pnl:0,exp:0,status:'Shadow'}
+];
+const LIVE_SYSTEM={
+ venues:[{v:'Binance',st:'HEALTHY'},{v:'Bybit',st:'HEALTHY'},{v:'DNSE',st:'HEALTHY'},{v:'US broker',st:'HEALTHY'},{v:'India broker',st:'HEALTHY'}],
+ latency:'41ms',queue:12,recon:'1 finding (REC-077)',eventStore:'lag 0 · last checkpoint 04:32 UTC'
+};
+const ORDER_POOL=[
+ ['BIN','SELL','crypto.cross_sectional_momentum','12.5','98,210.0','Filled'],['IND','BUY','india.pair_statarb','150','24,310.5','Filled'],['BYB','SELL','bybit.funding_carry','8.0','5,142.3','Filled'],['BIN','BUY','crypto.cross_sectional_momentum','6.0','98,245.5','Filled'],['IND','SELL','india.pair_statarb','90','24,298.0','Partial'],['BYB','BUY','bybit.funding_carry','4.5','5,138.9','Filled'],['BIN','SELL','crypto.cross_sectional_momentum','9.0','98,198.2','Filled'],['IND','BUY','india.pair_statarb','120','24,302.7','Filled']];
+
+function psCanvas(el){const dpr=window.devicePixelRatio||1;const w=Math.max(el.clientWidth,60),h=el.clientHeight||300;el.width=Math.round(w*dpr);el.height=Math.round(h*dpr);const ctx=el.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);return{ctx,w,h}}
+function drawGrid(ctx,pad,w,h){ctx.strokeStyle='rgba(90,107,131,.15)';for(let g=0;g<=4;g++){const y=pad.t+(h-pad.t-pad.b)*g/4;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke()}}
+function psLineChart(el,data,opts){
+  opts=opts||{};const{ctx,w,h}=psCanvas(el);const pad={t:opts.padT||8,r:10,b:opts.padB||20,l:opts.padL||46};
+  const showY=opts.showY!==false;
+  let mn=Math.min.apply(null,data),mx=Math.max.apply(null,data);const rg=mx-mn||1;mn-=rg*.07;mx+=rg*.07;
+  const px=i=>pad.l+(w-pad.l-pad.r)*i/(data.length-1||1),py=v=>pad.t+(h-pad.t-pad.b)*(1-(v-mn)/(mx-mn));
+  ctx.clearRect(0,0,w,h);drawGrid(ctx,pad,w,h);
+  if(showY){ctx.fillStyle='#5a6b83';ctx.font='10px JetBrains Mono,monospace';for(let g=0;g<=4;g++){const v=mn+(mx-mn)*g/4;ctx.fillText(v.toFixed(1),4,py(v)+3)}}
+  const gr=ctx.createLinearGradient(0,pad.t,0,h-pad.b);gr.addColorStop(0,opts.color||'rgba(0,102,255,.28)');gr.addColorStop(1,'rgba(0,102,255,0)');
+  ctx.fillStyle=gr;ctx.beginPath();data.forEach((v,i)=>i?ctx.lineTo(px(i),py(v)):ctx.moveTo(px(i),py(v)));ctx.lineTo(px(data.length-1),h-pad.b);ctx.lineTo(pad.l,h-pad.b);ctx.closePath();ctx.fill();
+  ctx.strokeStyle=opts.stroke||'#0066ff';ctx.lineWidth=1.6;ctx.beginPath();data.forEach((v,i)=>i?ctx.lineTo(px(i),py(v)):ctx.moveTo(px(i),py(v)));ctx.stroke();
+  const lx=px(data.length-1),ly=py(data[data.length-1]);ctx.fillStyle=opts.stroke||'#0066ff';ctx.beginPath();ctx.arc(lx,ly,3,0,7);ctx.fill();
+  if(opts.showX){ctx.fillStyle='#5a6b83';ctx.font='10px JetBrains Mono,monospace';[0,Math.floor((data.length-1)/2),data.length-1].forEach(i=>ctx.fillText(opts.xLabels&&opts.xLabels[i]||'',px(i)-12,h-6))}
+}
+function psCandleChart(el,series,opts){
+  opts=opts||{};const{ctx,w,h}=psCanvas(el);const pad={t:opts.padT||26,r:12,b:26,l:52};const vh=Math.round((h-pad.t-pad.b)*.16);
+  const bodyH=h-pad.t-pad.b-vh-8;const n=series.length;
+  let mn=Math.min.apply(null,series.map(s=>s.l)),mx=Math.max.apply(null,series.map(s=>s.h));const rg=mx-mn||1;mn-=rg*.05;mx+=rg*.05;
+  const px=i=>pad.l+(w-pad.l-pad.r)*(i+.5)/n,py=v=>pad.t+bodyH*(1-(v-mn)/(mx-mn));
+  const vm=Math.max.apply(null,series.map(s=>s.v));
+  ctx.clearRect(0,0,w,h);ctx.fillStyle='#5a6b83';ctx.font='10px JetBrains Mono,monospace';
+  ctx.strokeStyle='rgba(90,107,131,.15)';for(let g=0;g<=4;g++){const v=mn+(mx-mn)*g/4,y=py(v);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.fillText(v.toFixed(1),4,y+3)}
+  const cw=Math.max(1.5,(w-pad.l-pad.r)/n);
+  series.forEach((s,i)=>{const up=s.c>=s.o,upc=opts.up||'#1f845a',dnc=opts.down||'#c9372c',col=up?upc:dnc,x=px(i),w0=Math.max(1.2,cw*.62);
+    ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x,py(s.h));ctx.lineTo(x,py(s.l));ctx.stroke();
+    ctx.fillRect(x-w0/2,Math.min(py(s.o),py(s.c)),w0,Math.max(1.1,Math.abs(py(s.c)-py(s.o))));
+    ctx.globalAlpha=.4;ctx.fillRect(x-w0/2,h-pad.b-vh*(s.v/vm),w0,Math.max(1,vh*(s.v/vm)));ctx.globalAlpha=1;
+  });
+  const sma=[];series.forEach((s,i)=>{const st=Math.max(0,i-19);let su=0;for(let k=st;k<=i;k++)su+=series[k].c;sma.push(su/(i-st+1))});
+  ctx.strokeStyle='#30ebfe';ctx.lineWidth=1.3;ctx.beginPath();sma.forEach((v,i)=>i&&v?ctx.lineTo(px(i),py(v)):v&&ctx.moveTo(px(i),py(v)));ctx.stroke();
+  (opts.trades||[]).forEach(tr=>{const x=px(tr.i);ctx.fillStyle=tr.side==='buy'?'#1f845a':'#c9372c';ctx.beginPath();ctx.moveTo(x,py(tr.price)-7);ctx.lineTo(x-4.5,py(tr.price)-1.5);ctx.lineTo(x+4.5,py(tr.price)-1.5);ctx.closePath();ctx.fill()});
+  ctx.fillStyle='#5a6b83';[0,Math.floor(n/2),n-1].forEach(i=>{const d=new Date(series[i].t);ctx.fillText(d.getDate()+'/'+(d.getMonth()+1),px(i)-12,h-6)});
+  ctx.fillStyle='#0c182b';ctx.fillRect(w-128,4,124,18);ctx.fillStyle='#30ebfe';ctx.fillRect(w-124,8,10,10);ctx.fillStyle='#5a6b83';ctx.fillText('SMA 20',w-110,16);
+  const legend=ctx.fillStyle==='#0c182b'?'':'';
+  const hit=e=>{const r=el.getBoundingClientRect();const x=e.clientX-r.left;const i=Math.max(0,Math.min(n-1,Math.round((x-pad.l)/(w-pad.l-pad.r)*n-.5)));return i};
+  el.onmousemove=e=>{const i=hit(e);if(!series[i])return;const r=el.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;
+    el.__cb=i;ctx.save();ctx.strokeStyle='rgba(90,107,131,.5)';ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(px(i),pad.t);ctx.lineTo(px(i),h-pad.b);ctx.stroke();ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+    const s=series[i];ctx.fillStyle='rgba(12,24,43,.85)';ctx.fillRect(pad.l+8,h-58,216,34);ctx.fillStyle='#fff';ctx.font='11px JetBrains Mono,monospace';
+    ctx.fillText('O '+s.o.toFixed(2)+'  H '+s.h.toFixed(2)+'  L '+s.l.toFixed(2)+'  C '+s.c.toFixed(2),pad.l+14,h-48);
+    ctx.fillText('V '+s.v.toLocaleString('en-US')+' · '+fmtDate(s.t),pad.l+14,h-32);
+  };
+  el.onmouseleave=()=>{ctx.clearRect(0,0,w,h);ctx.fillStyle='#5a6b83';ctx.font='10px JetBrains Mono,monospace';ctx.fillText('O '+series[0].o.toFixed(2)+' · H '+series[0].h.toFixed(2)+' · L '+series[0].l.toFixed(2)+' · C '+series[0].c.toFixed(2),pad.l+10,h-38)};
+  el.onmouseleave();
+  ctx.fillStyle='#5a6b83';ctx.font='10px JetBrains Mono,monospace';ctx.fillText('← crosshair hover để xem OHLC',pad.l+10,h-18);
+}
+function initPortalApp(){
+  document.addEventListener('click',e=>{const b=e.target.closest('[data-demo]');if(!b)return;toast(b.dataset.demo+' (demo — chưa nối control plane)')});
+  const rail=document.getElementById('portalRail');
+  rail.addEventListener('click',e=>{const b=e.target.closest('[data-ps]');if(!b)return;
+    rail.querySelectorAll('.pr-item').forEach(x=>x.classList.toggle('active',x===b));
+    document.querySelectorAll('.portal-screen').forEach(x=>x.classList.toggle('active',x.id==='ps-'+b.dataset.ps));
+    if(b.dataset.ps==='backtest'){renderBTRunSelects();renderBTRegistry()}
+    if(b.dataset.ps==='paper')renderPaper();
+    if(b.dataset.ps==='live')renderLive();
+    if(b.dataset.ps==='alphas')renderAlphaGrid();
+  });
+  document.getElementById('alphaSearch').addEventListener('input',renderAlphaGrid);
+  document.getElementById('alphaLifeFilter').addEventListener('change',renderAlphaGrid);
+  document.getElementById('adClose').addEventListener('click',closeAlphaDrawer);
+  document.getElementById('alphaBackdrop').addEventListener('click',closeAlphaDrawer);
+  document.getElementById('btRun').addEventListener('click',runBacktest);
+  document.getElementById('btRoute').addEventListener('change',()=>{document.getElementById('btWfRow').hidden=document.getElementById('btRoute').value!=='Walk-Forward'});
+  document.getElementById('liveTabs').addEventListener('click',e=>{const b=e.target.closest('[data-lt]');if(!b)return;
+    document.querySelectorAll('#liveTabs .ltab').forEach(x=>x.classList.toggle('active',x===b));
+    document.getElementById('liveAll').hidden=b.dataset.lt!=='all';
+    document.getElementById('liveSystem').hidden=b.dataset.lt!=='system';
+    document.getElementById('liveAlpha').hidden=b.dataset.lt!=='alpha';
+    if(b.dataset.lt==='alpha')renderLiveCharts();
+  });
+  document.getElementById('alphaGrid').addEventListener('click',e=>{const c=e.target.closest('[data-key]');if(c)openAlphaDrawer(c.dataset.key)});
+  document.getElementById('paperGrid').addEventListener('click',e=>{
+    const b=e.target.closest('[data-pa]');if(!b)return;
+    const p=PAPER_ALPHAS.find(x=>x.key===b.dataset.key);
+    if(b.dataset.pa==='toggle'){p.state=p.state==='Running'?'Paused':'Running';toast(p.key+' → '+(p.state==='Running'?'Resumed':'Paused')+' (demo)')}
+    if(b.dataset.pa==='stop'){if(!confirm('Dừng paper '+p.key+'? Dữ liệu giữ lại, alpha về trạng thái Review.'))return;p.state='Stopped';p.days=0;const a=PORTAL_ALPHAS.find(x=>x.key===p.key);a.life='Review';toast(p.key+' đã dừng paper → Review (demo)')}
+    if(b.dataset.pa==='promote'){
+      const ok=p.days>=p.gates.days&&(p.dd==null||p.dd>-p.gates.dd);
+      if(!ok){toast('Chưa đủ gates: cần ≥'+p.gates.days+' ngày paper và MaxDD > -'+p.gates.dd+'%');return}
+      p.state='Scheduled';toast('Tạo canary approval cho '+p.key+' (demo) — xem Approval Inbox');
+    }
+    renderPaper();
+  });
+  document.getElementById('killSwitch').addEventListener('click',()=>{
+    if(!portalHalted&&!confirm('Kích hoạt EMERGENCY FAIL-CLOSED: chặn mọi lệnh mới, đóng position đang mở? (demo)'))return;
+    portalHalted=!portalHalted;renderLive();
+    toast(portalHalted?'EMERGENCY FAIL-CLOSED ACTIVE — mọi lệnh mới bị chặn':'Hệ thống khôi phục — fail-closed off');
+  });
+  window.addEventListener('resize',()=>{clearTimeout(window.__psResize);window.__psResize=setTimeout(()=>{renderLiveCharts();},200)});
+  renderAlphaGrid();renderBTRunSelects();renderBTRegistry();
+  renderPaper();renderLive();
+  setInterval(portalTick,2600);
+}
+/* ---------- Alpha pool ---------- */
+function alphaCard(a){
+  const runs=(a.runs||[]).filter(r=>r.status==='Done');
+  const last=runs[runs.length-1];
+  const sh=last?last.sh:a.sharpe,dd=last?last.dd:a.dd,win=last?last.win:a.win;
+  return '<div class="alpha-card" data-key="'+a.key+'"><div class="ac-head"><div><div class="ac-name">'+escapeHtml(a.key)+'</div><div class="ac-id">'+escapeHtml(a.ver)+' · seed '+a.seed+'</div></div><span class="life-chip '+a.life.toLowerCase()+'">'+a.life+'</span></div>'
+    +'<div class="ac-metrics"><div class="ac-metric"><div class="m-label">Sharpe</div><div class="m-value">'+(sh?sh.toFixed(2):'—')+'</div></div><div class="ac-metric"><div class="m-label">Max DD</div><div class="m-value">'+(dd?dd.toFixed(1)+'%':'—')+'</div></div><div class="ac-metric"><div class="m-label">Win rate</div><div class="m-value">'+(win?win+'%':'—')+'</div></div></div>'
+    +'<div class="ac-foot"><span>'+escapeHtml(a.mkt)+'</span><span class="ac-view">Chi tiết →</span></div></div>';
+}
+function renderAlphaGrid(){
+  const s=document.getElementById('alphaSearch').value.trim().toLowerCase(),f=document.getElementById('alphaLifeFilter').value;
+  const list=PORTAL_ALPHAS.filter(a=>(!s||a.key.toLowerCase().includes(s)||a.owner.toLowerCase().includes(s))&&(!f||a.life===f));
+  document.getElementById('alphaGrid').innerHTML=list.map(alphaCard).join('')||'<div style="padding:20px;color:var(--muted);font-size:13px">Không có alpha khớp.</div>';
+  document.getElementById('alphaCount').textContent=list.length+' / '+PORTAL_ALPHAS.length+' alpha';
+}
+function openAlphaDrawer(key){
+  const a=PORTAL_ALPHAS.find(x=>x.key===key);if(!a)return;
+  document.getElementById('adTitle').textContent=a.key+' · v'+a.ver;
+  document.getElementById('adChips').innerHTML='<span class="life-chip '+a.life.toLowerCase()+'">'+a.life+'</span><span class="tag" style="background:var(--surface-2);border:1px solid var(--border);padding:3px 9px;border-radius:999px">'+escapeHtml(a.owner)+'</span><span class="tag" style="background:var(--surface-2);border:1px solid var(--border);padding:3px 9px;border-radius:999px">'+escapeHtml(a.mkt)+'</span><button class="mini-btn" data-bt="'+a.key+'" style="border-radius:999px">Chạy trên Backtest Engine →</button>';
+  document.getElementById('adChips').querySelector('[data-bt]').addEventListener('click',e=>{e.stopPropagation();document.querySelector('#portalRail [data-ps="backtest"]').click();const sel=document.getElementById('btAlpha');sel.value=a.key;document.getElementById('btAlpha').dispatchEvent(new Event('change'));renderBTRunSelects();});
+  document.getElementById('adLogic').textContent=a.desc;
+  document.getElementById('adVersions').innerHTML=(a.versions||[]).map(v=>'<div class="ver-row"><span class="ver-v">v'+escapeHtml(v.v)+'</span><span class="ver-date">'+v.d+'</span><span class="ver-note">'+escapeHtml(v.note)+'</span></div>').join('');
+  document.getElementById('adRunsBody').innerHTML=(a.runs||[]).map(r=>'<tr><td><strong>'+r.id+'</strong></td><td>'+r.route+'</td><td style="font-size:11.5px">'+r.ds+'</td><td>'+r.d+'</td><td>'+r.dur+'</td><td>'+(r.sh?r.sh.toFixed(2):'—')+'</td><td>'+(r.dd?r.dd.toFixed(1)+'%':'—')+'</td><td>'+(r.win?r.win+'%':'—')+'</td><td><span class="life-chip '+(r.status==='Done'?'live':r.status==='Failed'?'draft':'review')+'">'+r.status+'</span></td><td>'+(r.status==='Done'?'<button class="mini-btn" data-demo="Open report '+r.id+'">Report</button>':'')+'</td></tr>').join('');
+  const chartWrap=document.getElementById('adCharts');
+  chartWrap.innerHTML=((a.runs||[]).filter(r=>r.status==='Done').slice(0,4)).map(r=>{const sr=seededSeries(a.seed+ (r.route==='Walk-Forward'?5:r.route==='Event'?9:r.route==='Portfolio'?2:7),120,.02,.0009);const eq=equityFromSeries(sr,r.sh);return '<div class="ad-chart-card"><div class="cc-head">'+r.route+' · '+r.id+' <span class="cc-sub" style="color:var(--muted);font-weight:600">Sharpe '+r.sh.toFixed(2)+'</span></div><canvas class="ps-canvas" style="height:150px" data-eq="'+r.id+'"></canvas></div>'}).join('')||'<div style="color:var(--muted);font-size:13px">Chưa có run hoàn thành.</div>';
+  setTimeout(()=>{chartWrap.querySelectorAll('canvas[data-eq]').forEach(c=>{const id=c.dataset.eq;const r=a.runs.find(x=>x.id===id);if(r){const sr=seededSeries(a.seed+(r.route==='Walk-Forward'?5:r.route==='Event'?9:r.route==='Portfolio'?2:7),120,.02,.0009);psLineChart(c,equityFromSeries(sr,r.sh),{stroke:'#0066ff',padB:8})}})},60);
+  const dr=document.getElementById('alphaDrawer');dr.classList.add('open');document.getElementById('alphaBackdrop').hidden=false;
+}
+function closeAlphaDrawer(){document.getElementById('alphaDrawer').classList.remove('open');document.getElementById('alphaBackdrop').hidden=true}
+/* ---------- Backtest engine ---------- */
+function renderBTRunSelects(){
+  const sel=document.getElementById('btAlpha');const cur=sel.value;
+  sel.innerHTML=PORTAL_ALPHAS.map(a=>'<option value="'+escapeHtml(a.key)+'">'+escapeHtml(a.key)+'</option>').join('');
+  if(cur)sel.value=cur;
+  sel.dispatchEvent(new Event('change'));
+  const vsel=document.getElementById('btVersion');
+  const a=PORTAL_ALPHAS.find(x=>x.key===sel.value);
+  vsel.innerHTML=(a.versions||[]).map(v=>'<option>'+escapeHtml(v.v)+'</option>').join('');
+}
+document.getElementById('btAlpha')&&document.getElementById('btAlpha').addEventListener('change',()=>{
+  const a=PORTAL_ALPHAS.find(x=>x.key===document.getElementById('btAlpha').value);
+  if(a){const vsel=document.getElementById('btVersion');vsel.innerHTML=a.versions.map(v=>'<option>'+escapeHtml(v.v)+'</option>').join('')}
+});
+function runBacktest(){
+  if(portalHalted){toast('FAIL-CLOSED: backtest engine không nhận run mới (demo)');return}
+  const alpha=PORTAL_ALPHAS.find(x=>x.key===document.getElementById('btAlpha').value);
+  if(!alpha){toast('Chọn alpha');return}
+  const route=document.getElementById('btRoute').value,ds=document.getElementById('btDataset').value,per=document.getElementById('btPeriod').value;
+  const folds=document.getElementById('btFolds').value;
+  const runBtn=document.getElementById('btRun');runBtn.disabled=true;runBtn.textContent='Đang chạy…';
+  const prog=document.getElementById('btProgress');prog.hidden=false;
+  const fill=document.getElementById('btFill'),st=document.getElementById('btStatus');
+  const steps=[['Compiling manifest · sha256(alpha@'+alpha.ver+')','12'],['Loading dataset snapshot '+ds,'34'],['Executing '+route.toLowerCase()+' route (quantbt-engine 1.0.7)','68'],['Replay events · compute metrics'+(route==='Walk-Forward'?' · '+folds+' folds':'')+' …','89'],['Audit checksum · writing run record','100']];
+  let si=0;
+  const iv=setInterval(()=>{
+    if(si<steps.length){st.textContent=steps[si][0];fill.style.width=steps[si][1]+'%';si++}
+    else{clearInterval(iv);fill.style.width='100%';st.textContent='Done — run '+lastRunId+' đã ghi vào registry (immutable)';
+      runBtn.disabled=false;runBtn.textContent='▶ Run backtest';
+      setTimeout(()=>{renderBTResults(alpha,route,ds,per,folds);renderBTRegistry()},350)}
+  },320);
+  window.lastRunId=nextRunId();
+}
+function btMetrics(alpha,route,per){
+  const r=mulberry32(alpha.seed*13+route.length*7+per.length);
+  const sh=parseFloat((0.55+r()*1.85).toFixed(2));
+  const sortino=parseFloat((sh*(0.82+r()*0.28)).toFixed(2));
+  const dd=parseFloat(-(3+r()*13).toFixed(1));
+  const win=Math.round(36+r()*26);
+  const trades=route==='Event'?Math.round(3000+r()*3500):route==='Intrabar'?Math.round(400+r()*900):Math.round(120+r()*420);
+  const cagr=parseFloat((sh*0.16+r()*0.06).toFixed(1));
+  return{sh,sortino,dd,win,trades,cagr}
+}
+function renderBTResults(alpha,route,ds,per,folds){
+  const m=btMetrics(alpha,route,per);
+  const run={id:window.lastRunId,alpha:alpha.key,ver:'v'+alpha.ver,route,status:'Done',engine:'quantbt-engine 1.0.7',dur:fmtDur(18+Math.round(Math.random()*240)),sh:m.sh,dd:m.dd,ds};
+  portalRuns.unshift(run);
+  document.getElementById('btResTitle').textContent=alpha.key+' · '+route+(route==='Walk-Forward'?' · '+folds+' folds':'');
+  document.getElementById('btResId').textContent=run.id;
+  const cls=v=>v>=0?'pos':'neg';
+  document.getElementById('btMetrics').innerHTML=
+    '<div class="metric"><div class="m-label">Sharpe</div><div class="m-value pos">'+m.sh.toFixed(2)+'</div></div>'
+    +'<div class="metric"><div class="m-label">Sortino</div><div class="m-value pos">'+m.sortino.toFixed(2)+'</div></div>'
+    +'<div class="metric"><div class="m-label">CAGR</div><div class="m-value '+(m.cagr>=0?'pos':'neg')+'">'+m.cagr.toFixed(1)+'%</div></div>'
+    +'<div class="metric"><div class="m-label">Max drawdown</div><div class="m-value neg">'+m.dd.toFixed(1)+'%</div></div>'
+    +'<div class="metric"><div class="m-label">Win rate</div><div class="m-value">'+m.win+'%</div></div>'
+    +'<div class="metric"><div class="m-label">Trades</div><div class="m-value">'+m.trades.toLocaleString('en-US')+'</div></div>'
+    +'<div class="metric"><div class="m-label">Exposure</div><div class="m-value">'+Math.round(58+alpha.seed%33)+'%</div></div>'
+    +'<div class="metric"><div class="m-label">Duration</div><div class="m-value">'+run.dur+'</div></div>';
+  const n=per==='6M'?125:per==='1Y'?250:per==='2Y'?500:760;
+  const sr=seededSeries(alpha.seed+route.length,n,route==='Event'?.028:.022,route==='Intrabar'?.0016:.0009);
+  const eq=equityFromSeries(sr,m.sh);
+  const basePct=m.sh>1.3?m.cagr*.9:m.cagr*.6;
+  const pnl=parseFloat((basePct*(0.8+rnd()*0.5)).toFixed(2));
+  function rnd(){const r=mulberry32(alpha.seed*31+route.length*3);return r()}
+  const trades=[];
+  const tradeR=mulberry32(alpha.seed*7+route.length);let ti=0;while(ti<n){if(tradeR()>.965){trades.push({i:ti,side:tradeR()>.5?'buy':'sell',price:sr[ti].c});ti+=Math.round(2+tradeR()*9)}else ti++}
+  setTimeout(()=>{psLineChart(document.getElementById('btEquity'),eq,{stroke:'#0066ff'});psCandleChart(document.getElementById('btCandles'),sr,{trades:trades.slice(0,40)});},50);
+  document.getElementById('btManifest').innerHTML=
+    'run_id: '+run.id+'    alpha: '+alpha.key+'@'+alpha.ver+'    route: '+route+'    dataset: '+ds+'    period: '+per
+    +'<br>engine: quantbt-engine 1.0.7 (sha256 9f2c…7d1e)    dataset_sha: '+Math.random().toString(16).slice(2,10)+'    capital: $'+(document.getElementById('btCapital').value||'100000')
+    +'<br>fold_config: '+(route==='Walk-Forward'?folds+' folds · embargo 30d':'none')+'    status: audit_ok    ts: '+new Date().toISOString().replace('T',' ').slice(0,19)+'Z';
+  const prev=portalRuns.filter(x=>x.alpha===alpha.key&&x.status==='Done'&&x.id!==run.id).slice(0,4);
+  document.getElementById('btCompare').innerHTML=prev.length
+    ?'<div class="pcard-head" style="border:0;padding:10px 4px 8px"><h3 style="font-size:12px">So sánh với các run gần nhất của '+escapeHtml(alpha.key)+'</h3></div><div class="table-wrap" style="margin:0 0 4px"><table class="portal-table"><thead><tr><th>Run ID</th><th>Route</th><th>Date</th><th>Sharpe</th><th>Max DD</th><th>Status</th></tr></thead><tbody>'+prev.map(p=>'<tr'+(p.id===run.id?' style="background:rgba(0,102,255,.06)"':'')+'><td><strong>'+p.id+'</strong></td><td>'+p.route+'</td><td>'+p.id.split('-')[2]+'</td><td>'+(p.sh?p.sh.toFixed(2):'—')+'</td><td>'+(p.dd?p.dd.toFixed(1)+'%':'—')+'</td><td><span class="life-chip live">'+p.status+'</span></td></tr>').join('')+'</tbody></table></div>'
+    :'';
+  toast('Backtest hoàn tất — '+run.id);
+}
+function renderBTRegistry(){
+  document.getElementById('btRegistryBody').innerHTML=portalRuns.map(r=>
+    '<tr><td><strong>'+r.id+'</strong></td><td>'+escapeHtml(r.alpha)+' '+escapeHtml(r.ver)+'</td><td>'+r.route+'</td><td><span class="life-chip '+(r.status==='Done'?'live':r.status==='Failed'?'draft':'review')+'">'+r.status+'</span></td><td>'+r.engine+'</td><td>'+r.dur+'</td><td>'+(r.sh!=null?r.sh.toFixed(2):'—')+'</td><td>'+(r.dd!=null?r.dd.toFixed(1)+'%':'—')+'</td><td><button class="mini-btn" data-demo="Open report '+r.id+'">Report</button> <button class="mini-btn" data-demo="Copy manifest '+r.id+'">Manifest</button></td></tr>').join('');
+}
+/* ---------- Paper trading ---------- */
+function renderPaper(){
+  const grid=document.getElementById('paperGrid');
+  grid.innerHTML=PAPER_ALPHAS.map(p=>{
+    const a=PORTAL_ALPHAS.find(x=>x.key===p.key);
+    const gatesOk=p.days>=p.gates.days&&(p.dd==null||p.dd>-p.gates.dd);
+    const chips='<div class="life-chip paper">Paper</div><span class="life-chip '+(p.state==='Running'?'live':'review')+'">'+p.state+'</span>';
+    return '<div class="paper-card"><div class="pc-head"><span class="pc-name">'+escapeHtml(p.key)+' <span style="color:var(--muted);font-weight:600;font-size:11px">v'+escapeHtml(p.ver)+'</span></span>'+chips+'</div>'
+      +'<div class="pc-meta">'+escapeHtml(a.mkt)+' · paper day '+p.days+'/'+p.gates.days+' · '+escapeHtml(a.owner)+'</div>'
+      +'<canvas class="pc-canvas" data-pc="'+p.key+'"></canvas>'
+      +'<div class="pc-metrics"><div class="pc-metric"><div class="m-label">30d PnL</div><div class="m-value">'+p.pnl+'</div></div><div class="pc-metric"><div class="m-label">Sharpe</div><div class="m-value">'+(p.sharpe!=null?p.sharpe.toFixed(2):'—')+'</div></div><div class="pc-metric"><div class="m-label">Max DD</div><div class="m-value">'+(p.dd!=null?p.dd.toFixed(1)+'%':'—')+'</div></div><div class="pc-metric"><div class="m-label">Win rate</div><div class="m-value">'+(p.win!=null?p.win+'%':'—')+'</div></div></div>'
+      +'<div class="pc-actions">'
+      +'<button class="action-btn" data-pa="toggle" data-key="'+p.key+'">'+(p.state==='Paused'?'▶ Resume':'⏸ Pause')+'</button>'
+      +'<button class="action-btn danger" data-pa="stop" data-key="'+p.key+'">⏹ Stop</button>'
+      +'<button class="action-btn" data-pa="promote" data-key="'+p.key+'" '+(gatesOk?'':'disabled title="Chưa đủ gates: cần ≥'+p.gates.days+' ngày và MaxDD > -'+p.gates.dd+'%"')+'>⇪ Promote → canary</button>'
+      +'</div></div>'}).join('');
+  document.getElementById('paperCount').textContent=PAPER_ALPHAS.length+' alpha paper · '+PAPER_ALPHAS.filter(p=>p.state==='Running').length+' running';
+  setTimeout(()=>{grid.querySelectorAll('canvas[data-pc]').forEach(c=>{const p=PAPER_ALPHAS.find(x=>x.key===c.dataset.pc);if(!p)return;const a=PORTAL_ALPHAS.find(x=>x.key===p.key);const end=p.pnl==='—'?0:parseFloat(p.pnl);psLineChart(c,pnlSeries(end,40,a.seed),{stroke:'#0066ff',padB:6})})},60);
+  document.getElementById('paperOrdersBody').innerHTML=PAPER_ORDERS.map(o=>'<tr><td>'+o.t.replace('T',' ').slice(0,16)+'</td><td>'+escapeHtml(o.alpha)+'</td><td style="color:'+(o.side==='SELL'?'var(--danger)':'var(--success)')+'">'+o.side+'</td><td>'+o.qty+'</td><td>'+o.px+'</td><td>'+o.venue+'</td><td><span class="life-chip '+(o.status==='Filled'?'live':'review')+'">'+o.status+'</span></td></tr>').join('');
+}
+/* ---------- Live trading ---------- */
+function livePnlTotal(){return LIVE_DEPLOYS.reduce((s,d)=>s+(d.status==='Live'?d.pnl:0),0)}
+function renderLive(){
+  const halted=portalHalted;
+  const ticker=document.getElementById('liveTicker');
+  ticker.textContent=(halted?'FAIL-CLOSED · ':'PNL today · ')+fmtMoney(livePnlTotal());
+  ticker.classList.toggle('neg',livePnlTotal()<0);
+  ticker.style.color=halted?'var(--danger)':'';
+  document.getElementById('killSwitch').textContent=halted?'▶ Resume (fail-closed off)':'■ Emergency fail-closed';
+  const all=document.getElementById('liveAll');
+  all.innerHTML=''+(halted?'<div class="pcard ps-live-banner" style="border-color:var(--danger)"><div class="pcard-body" style="color:var(--danger);font-weight:700;font-size:13px">EMERGENCY FAIL-CLOSED ACTIVE — mọi lệnh mới bị chặn, chỉ cho phép giảm rủi ro. (demo)</div></div>':'')
+    +'<div class="pcard"><div class="pcard-head"><h3>Deployments</h3><span class="tag">'+LIVE_DEPLOYS.filter(d=>d.status==='Live').length+' live · '+LIVE_DEPLOYS.length+' total</span></div><div class="pcard-body" style="padding:0"><div class="table-wrap" style="border:0;border-radius:0;margin:0"><table class="portal-table"><thead><tr><th>Deployment</th><th>Alpha</th><th>Account</th><th>Capital</th><th>PnL today</th><th>Exposure</th><th>Status</th><th></th></tr></thead><tbody>'
+    +LIVE_DEPLOYS.map(d=>'<tr'+(halted?' class="halted-row"':'')+'><td><strong>'+d.id+'</strong><br><span style="font-size:11px;color:var(--muted)">'+d.venue+'</span></td><td>'+escapeHtml(d.alpha)+'</td><td style="font-family:JetBrains Mono,monospace;font-size:12px">'+d.account+'</td><td>$'+d.cap.toLocaleString('en-US')+'</td><td style="color:'+(d.pnl>=0?'var(--success)':'var(--danger)')+'">'+fmtMoney(d.pnl)+'</td><td>'+(d.exp?d.exp+'%':'—')+'</td><td><span class="life-chip '+(d.status==='Live'?'live':d.status==='Paused'?'review':'draft')+'">'+d.status+'</span></td><td><button class="mini-btn" data-demo="Open deployment '+d.id+'">Detail</button></td></tr>').join('')
+    +'</tbody></table></div></div></div>';
+  const sys=document.getElementById('liveSystem');
+  sys.innerHTML='<div class="portal-grid"><div class="pcard"><div class="pcard-head"><h3>Venue health</h3></div><div class="pcard-body">'
+    +LIVE_SYSTEM.venues.map(v=>'<div class="approval-row"><div class="ar-main"><div class="ar-title">'+v.v+'</div></div><span class="health-item ok" style="margin:0"><i></i>'+v.st+'</span></div>').join('')
+    +'</div></div><div class="pcard"><div class="pcard-head"><h3>Engine &amp; reconciliation</h3></div><div class="pcard-body">'
+    +'<div class="approval-row"><div class="ar-main"><div class="ar-title">Order latency (avg)</div></div><div style="font-family:JetBrains Mono,monospace;font-size:12.5px">'+LIVE_SYSTEM.latency+'</div></div>'
+    +'<div class="approval-row"><div class="ar-main"><div class="ar-title">QuantBT queue</div></div><div style="font-family:JetBrains Mono,monospace;font-size:12.5px">'+LIVE_SYSTEM.queue+' jobs</div></div>'
+    +'<div class="approval-row"><div class="ar-main"><div class="ar-title">Reconciliation</div></div><span class="health-item warn" style="margin:0"><i></i>'+LIVE_SYSTEM.recon.split('(')[0].trim()+'</span></div>'
+    +'<div class="approval-row"><div class="ar-main"><div class="ar-title">Trading event store</div></div><span class="health-item ok" style="margin:0"><i></i>HEALTHY</span></div>'
+    +'</div></div></div><div class="pcard" style="margin-top:14px"><div class="pcard-head"><h3>Order stream <span style="color:var(--muted);font-weight:600;font-size:11px">live demo</span></h3></div><div class="pcard-body" style="padding:0"><div class="table-wrap" style="border:0;border-radius:0;margin:0"><table class="portal-table"><thead><tr><th>Time</th><th>Venue</th><th>Side</th><th>Alpha</th><th>Qty</th><th>Price</th><th>Status</th></tr></thead><tbody id="sysOrdersBody"></tbody></table></div></div></div>';
+  const alphaTab=document.getElementById('liveAlpha');
+  const liveAs=PORTAL_ALPHAS.filter(a=>a.life==='Live');
+  alphaTab.innerHTML='<div class="live-grid" id="liveAlphaGrid">'+liveAs.map(a=>{
+    const d=LIVE_DEPLOYS.find(x=>x.alpha===a.key&&x.status==='Live');
+    return '<div class="live-card'+(halted?' halted-row':'')+'"><div class="lc-head"><span class="lc-name">'+escapeHtml(a.key)+' <span style="color:var(--muted);font-weight:600;font-size:11px">v'+escapeHtml(a.ver)+'</span></span><div style="display:flex;gap:8px;align-items:center"><span class="life-chip live">LIVE</span><button class="mini-btn" data-lp="halt" data-key="'+a.key+'">⏸ Halt</button><button class="mini-btn" data-lp="close" data-key="'+a.key+'">Close all</button></div></div>'
+      +'<canvas class="lc-canvas" data-lc="'+a.key+'"></canvas>'
+      +'<div class="lc-metrics"><div class="pc-metric"><div class="m-label">PnL today</div><div class="m-value">'+fmtMoney(d?d.pnl:0)+'</div></div><div class="pc-metric"><div class="m-label">30d PnL</div><div class="m-value">'+a.pnl+'</div></div><div class="pc-metric"><div class="m-label">Sharpe (live)</div><div class="m-value">'+a.sharpe.toFixed(2)+'</div></div><div class="pc-metric"><div class="m-label">Max DD</div><div class="m-value">'+a.dd.toFixed(1)+'%</div></div><div class="pc-metric"><div class="m-label">Exposure</div><div class="m-value">'+(d?d.exp+'%':'—')+'</div></div></div></div>'}).join('')+'</div>';
+  renderLiveCharts();
+  alphaTab.querySelector('#liveAlphaGrid')&&alphaTab.querySelector('#liveAlphaGrid').addEventListener('click',e=>{
+    const b=e.target.closest('[data-lp]');if(!b)return;
+    if(b.dataset.lp==='halt'){toast(b.dataset.key+' — halt pending, fail-closed sẽ chặn lệnh mới (demo)')}
+    if(b.dataset.lp==='close'){toast(b.dataset.key+' — close-all pending approval (demo)')}
+  });
+  sysOrders();
+}
+function sysOrders(){
+  const body=document.getElementById('sysOrdersBody');if(!body)return;
+  body.innerHTML=ORDER_POOL.slice(0,6).map((o,i)=>'<tr><td>'+(new Date(Date.now()-i*47000)).toISOString().slice(11,19)+'Z</td><td>'+o[0]+'</td><td style="color:'+(o[1]==='SELL'?'var(--danger)':'var(--success)')+'">'+o[1]+'</td><td>'+o[2]+'</td><td>'+o[3]+'</td><td>'+o[4]+'</td><td><span class="life-chip '+(o[6]==='Filled'?'live':'review')+'">'+o[6]+'</span></td></tr>').join('');
+}
+function renderLiveCharts(){
+  document.querySelectorAll('#liveAlphaGrid canvas[data-lc]').forEach(c=>{
+    const a=PORTAL_ALPHAS.find(x=>x.key===c.dataset.lc);if(!a)return;
+    const sr=seededSeries(a.seed+31,60,.012,.0012);psLineChart(c,sr.map(s=>s.c),{stroke:'#1f845a',padB:6});
+  });
+}
+function portalTick(){
+  if(portalHalted)return;
+  LIVE_DEPLOYS.forEach(d=>{if(d.status==='Live'){d.pnl=parseFloat((d.pnl+(Math.random()-.48)*.02).toFixed(4))}});
+  const ticker=document.getElementById('liveTicker');if(!ticker)return;
+  ticker.textContent='PNL today · '+fmtMoney(livePnlTotal());ticker.classList.toggle('neg',livePnlTotal()<0);
+  if(document.getElementById('liveAll')&&!document.getElementById('liveAll').hidden){const rows=document.querySelectorAll('#liveAll tbody tr');const l=Math.min(LIVE_DEPLOYS.length,rows.length);for(let i=0;i<l;i++){const cell=rows[i].querySelectorAll('td')[4];if(cell){cell.textContent=fmtMoney(LIVE_DEPLOYS[i].pnl);cell.style.color=LIVE_DEPLOYS[i].pnl>=0?'var(--success)':'var(--danger)'}}}
+}
+
 /* ============ Scrollspy + back-top ============ */
 function updateSpy(){
   const page=q(`[data-page-id="${CSS.escape(currentPage)}"]`);
@@ -3953,7 +4452,7 @@ function initExtras(){
   document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTaskModal()});
 }
 /* ============ boot ============ */
-renderRoadmap();initRoadmap();initBoard();initTaskModal();initPortalDemo();initExtras();detectApi();
+renderRoadmap();initRoadmap();initBoard();initTaskModal();initPortalApp();initExtras();detectApi();
 </script>
 </body>
 </html>
