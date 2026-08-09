@@ -1,0 +1,11 @@
+{
+  "datasets": [
+    {
+      "dataset_id": "ethusdt-1h-local",
+      "symbol": "ETHUSDT",
+      "venue": "BINANCE",
+      "timeframe": "1h",
+      "path": "data/ethusdt_1h.parquet"
+    }
+  ]
+}

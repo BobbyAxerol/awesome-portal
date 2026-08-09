@@ -14,3 +14,17 @@ domain protocol, architecture, UI specification and phase gates.
 - `dev`: active portal development.
 - QuantBT is consumed through its public API and is not modified here.
 - Market data, credentials and generated run artifacts are never committed.
+
+## Backend Development
+
+The scripts reuse the parent Pool Alpha environment and prefer the sibling
+QuantBT `src/` tree for local research. Set `QUANTBT_SOURCE_PATH` to override it;
+an installed `quantbt-engine` package is used when no local source tree exists.
+
+```bash
+./scripts/test_backend.sh
+./scripts/run_backend.sh
+```
+
+The API binds to `127.0.0.1:8000` by default. OpenAPI is available at
+`http://127.0.0.1:8000/api/docs`.
