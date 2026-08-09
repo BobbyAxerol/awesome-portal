@@ -1460,6 +1460,8 @@ Tren Delta-RSI data that:
 
 ### Pre-P0 - Backend Foundation And Repository Safety
 
+Status: **Completed on `dev`**.
+
 Muc tieu cua pre-phase la tao mot backend base co the giao cho agent khac ma
 khong cho phep no sua strategy core hoac QuantBT.
 
@@ -1490,6 +1492,17 @@ main remains baseline and all implementation commits live on dev.
 Pre-P0 khong chay production WFO va khong thay the cac Phase P0-P7. No chi tao
 foundation, contracts va safety gates de cac phase sau implement domain runner,
 artifacts va UI tren mot architecture on dinh.
+
+Completion evidence:
+
+```text
+backend tests: 16 passed;
+protected strategy checksum: pass;
+actual local QuantBT capability rows: 9;
+backend wheel build: pass;
+main branch remains baseline;
+implementation commits are isolated on dev.
+```
 
 ### Phase P0 - Protocol Freeze, UI Reference Map And Golden Baseline
 
