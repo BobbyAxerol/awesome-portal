@@ -4,28 +4,21 @@ import json
 import os
 import re
 import tempfile
-from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Mapping
 
-import numpy as np
 import pandas as pd
 
 from portal_api.domain.errors import ArtifactPathError
+from portal_api.serialization import canonicalize
 
 _RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
 
 
 def _json_default(value: Any) -> Any:
-    if isinstance(value, (datetime, date, pd.Timestamp)):
-        return value.isoformat()
-    if isinstance(value, np.generic):
-        return value.item()
-    if isinstance(value, np.ndarray):
-        return value.tolist()
-    if isinstance(value, Path):
-        return str(value)
-    raise TypeError(f"cannot serialize {type(value).__name__}")
+    # Canonical serializer (Phase P0, B2): no repr fallback, unknown types
+    # raise SerializationError so artifacts never leak arbitrary objects.
+    return canonicalize(value)
 
 
 class ArtifactRepository:

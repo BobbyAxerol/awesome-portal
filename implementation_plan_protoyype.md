@@ -198,7 +198,9 @@ Chon:
 - TanStack Table;
 - Lucide icons;
 - Vitest + React Testing Library;
-- Playwright cho visual/E2E gate.
+- Playwright cho visual/E2E gate;
+- TanStack Router (typed search params, chot tai §27.5);
+- openapi-typescript (API client typegen tu OpenAPI backend, xem §27.5).
 
 ECharts duoc chon vi mot library co the xu ly:
 
@@ -1465,6 +1467,9 @@ Tren Delta-RSI data that:
 
 ## 24. Implementation Phases
 
+> Trang thai brief/duyet/report cua tung phase duoc track tai §27.8; thu tu
+> thuc thi da khoa tai §27.6. Pre-P0 da hoan thanh; P0-P7 chua bat dau.
+
 ### Pre-P0 - Backend Foundation And Repository Safety
 
 Status: **Completed on `dev`**.
@@ -1525,7 +1530,8 @@ Deliverables:
 - freeze Mode 1 IS-search/OOS-selection/Holdout-evaluation flow;
 - define Pydantic discriminated request/artifact schemas;
 - define data provider protocol;
-- map `uiux-design.md` tokens/components to portal screens;
+- map `uiux-design.md` tokens/components to portal screens (da ghi tai
+  §27.2-27.4 trong planning 2026-08-10, P0 khong lap lai);
 - document capability gaps from public QuantBT results;
 - record that QuantBT remains read-only.
 
@@ -1739,3 +1745,490 @@ Prototype duoc coi la hoan thanh khi:
 Day la baseline implementation plan. Bat ky thay doi nao lam frontend tinh lai
 PnL/metrics, portal tu chon params, hoac can sua QuantBT deu phai dung lai va
 review lai domain contract/scope voi user truoc khi code tiep.
+
+---
+
+## 27. Execution Plan Post Pre-P0 (chot 2026-08-10)
+
+Muc nay chot phan con thieu sau Pre-P0, design system cua portal UI va thu tu
+phase da khoa. No khong thay cac contract phia tren; no dinh nghia cach build
+chung theo dung thu tu.
+
+### 27.1. Backend Gap Audit
+
+Da co tren `dev` (da verify bang doc code + chay test):
+
+- typed request contracts: `PortalRunRequest`, `ThreeWindowConfig`,
+  `AdvancedWalkForwardConfig`, `ParameterSpec`, `AccountConfig`,
+  `ExecutionConfig`;
+- data validation, three-window partition, provenance/content hash;
+- market providers: dynamic `CryptoBinance1m` DuckDB (default), manifest,
+  in-memory;
+- `StrategyRegistry` + `DeltaRsiStrategyAdapter` (lazy import kernel);
+- `QuantBTGateway` lazy: support matrix, `validate_param_ranges`,
+  `train_test_split`, `pct_equity`;
+- `ArtifactRepository`: atomic JSON/Parquet, path containment;
+- API: health, strategies, datasets, capabilities, runs/preflight;
+- error taxonomy mot phan (5/10 ma cua §20);
+- 30 backend tests + protected checksum gate.
+
+Con thieu, map theo phase:
+
+| # | Gap | Phase | Contract ref |
+|---|-----|-------|--------------|
+| B1 | golden signal fixture (trend up/down, high-vol reversal, low-volume, hard-SL) + old/new parity harness | P0 | §6.3 |
+| B2 | canonical serializer cho QuantBT metadata/DataFrame/Timestamp, khong repr fallback | P0 | §11.4 |
+| B3 | capability-gap note tu public QuantBT result (field nao co/khong tra ve) | P0 | §11.2 |
+| B4 | strategy package layout (`strategy/delta_rsi.py`, `specification.py`, `registry.py`) + Numba warm-up hook; `main.py` giu protected, chi wrap | P1 | §5, §6 |
+| B5 | `ThreeWindowRunner`/`QuantBTAdapter`: calibration tape = IS+OOS only, `train_test_split(mode_1_decay)`, freeze `selected_params.json` truoc khi doc Holdout | P2 | §7.2, §10 |
+| B6 | fresh-account replay `pct_equity` cho IS/OOS/Holdout bang frozen params; metrics + raw series | P2 | §7.3 |
+| B7 | `calendar_equity` (null break tai boundary) + `rebased_equity` (base 100, khong feed metric) | P2 | §7.3 |
+| B8 | leakage-mutation tests + direct-QuantBT parity tests | P2 | §23.2, §23.3 |
+| B9 | Advanced WFO routing qua `walk_forward` + conditional validation theo support matrix | P3 | §8, §10 |
+| B10 | artifact schema version + full layout §11 + export JSON/CSV/Parquet | P3 | §11 |
+| B11 | run state machine + `RunService`/`JobService` + mot `ProcessPoolExecutor` worker | P4 | §4.1, §9 |
+| B12 | SSE `/api/runs/{id}/events` stage-accurate, khong fabricate trial progress | P4 | §9 |
+| B13 | full run API: POST /api/runs, list/detail/summary, cancel, `wfo/*`, `series/{segment}`, audit, export; server-side filter/downsample | P4 | §12 |
+| B14 | hoan thien 10 error codes + safe message + server-side traceback | P4 | §20 |
+
+### 27.2. Portal Design System — "Fund Paper"
+
+Ba nguyen tac: (1) provenance first — moi con so truy duoc ve artifact;
+(2) honest surface — thieu capability thi omit, khong lap day; (3) quiet
+precision — khong decoration, nhip doc nhu bao cao quy.
+
+Color tokens (vai tro giu dung `uiux-design.md`):
+
+```text
+--paper          #FAF9F5   nen trang
+--paper-raised   #FFFFFF   the noi / chart frame
+--paper-sunken   #F4F2EC   vung chim nhe: table stripe, code block
+--ink            #1C2532   chu chinh
+--ink-soft       #4E5A6E   chu phu
+--ink-faint      #939DB0   chu mo / label
+--line           #E3E0D7   vien chinh
+--line-soft      #EFEDE4   vien nhat / chart grid
+--accent         #0F4C5C   structural petrol dam
+--accent-soft    #E2EDF0
+--accent-2       #9A6A1F   highlight gold duc
+--accent-2-soft  #F4ECDB
+--good           #1E7B4F   --good-bg #E3F1E9
+--bad            #B43A3A   --bad-bg #F7E8E8
+--ink-panel      #161E2A   be mat toi duy nhat: LedgerTerminal
+--ink-panel-fg   #C9D4E3   chu tren ink-panel
+```
+
+`--ink-panel` la mo rong co y thuc cua `uiux-design.md`: mot be mat toi duy
+nhat cho structured terminal; khong dung cho bat ky noi dung nao khac.
+
+Chart tint scales (chi cho heatmap/sequential/band, khong dung cho UI chrome):
+
+```text
+accent-100 #E7F0F2  accent-300 #A8C6CE  accent-500 #4E8697
+accent-700 #226173  accent-900 #0F4C5C
+good/bad co buoc tint tuong ung (100..900) cho PnL alpha scaling
+```
+
+Window role colors (semantic rieng cua portal, co dinh tren moi view/chart):
+
+```text
+IS            #7A8699   band 6% alpha, hairline 1px
+OOS           #0F4C5C   = accent
+Holdout Live  #9A6A1F   = accent-2
+```
+
+Selection semantics: selected = ink diamond filled; candidate = accent circle
+outline; pruned = ink-faint `x`. Khong them mau ngoai bang tren; SVG
+dark-theme rieng van duoc phep cho overlay chart dac thu nhu reference.
+
+Typography (self-host qua Fontsource: Newsreader, Inter, JetBrains Mono;
+khong CDN):
+
+| Token | Font | Size/Line | Weight | Dung cho |
+|---|---|---|---|---|
+| display-2xl | Newsreader | 32/40 | 500 | view title |
+| display-xl | Newsreader | 24/32 | 500 | section heading |
+| display-lg | Newsreader | 18/26 | 500 | card/panel title |
+| dek | Newsreader italic | 15/24 | 400 | mo ta ngan duoi heading |
+| body | Inter | 14/22 | 400 | noi dung |
+| body-sm | Inter | 13/20 | 400 | phu de, dense form |
+| label | JetBrains Mono | 11/16 | 500 uppercase | eyebrow, table header, chip |
+| data | JetBrains Mono | 13/20 | 400 | table number, timestamp |
+| data-lg | JetBrains Mono | 20/28 | 600 | KPI value |
+| data-xl | JetBrains Mono | 28/36 | 600 | MetricHeroStrip value |
+
+Rules: so luon mono + `font-feature-settings: "tnum"`, can phai; heading serif;
+letter-spacing 0 ke ca uppercase label (§19.1); khong dung serif cho so.
+
+Spacing / radius / elevation / motion:
+
+```text
+spacing: 4pt grid (4/8/12/16/24/32/48); section gap 40px; card padding 16-20px
+radius: 4 input/chip; 6 popover; 8 card (max); badge/flag = pill 999
+elevation:
+  e1 0 1px 2px rgba(28,37,50,.05)    card
+  e2 0 4px 12px rgba(28,37,50,.08)   drawer/popover
+  e3 0 10px 28px rgba(28,37,50,.12)  modal
+motion: 120ms hover / 200ms state / 320ms drawer; ease cubic-bezier(.2,.6,.2,1);
+  khong spring/bounce; ton trong prefers-reduced-motion
+```
+
+Chart language (mot module duy nhat `charts/theme.ts` chua ECharts defaults):
+
+- grid: dashed 1px `--line-soft`; axis label mono 11 `--ink-faint`; axis line
+  `--line`;
+- tooltip: `--paper-raised`, border `--line`, shadow e2, value mono; trigger
+  axis-cross cho time series;
+- legend: top-left, mono 11, inactive `--ink-faint`;
+- line widths: primary 1.75; secondary 1.25 dashed `--ink-faint`;
+- drawdown area: `--bad` 12% alpha, khong line;
+- window bands: role color 6% alpha + hairline 1px role color + flag label mono
+  10px tren top edge;
+- dataZoom: inside + slider 18px, brush `--ink-faint`;
+- canvas renderer khi >5k points; progressive cho scatter lon;
+- empty chart: dashed frame + mono note "Khong co du lieu cho segment nay";
+- moi chart co fig number (EChart N), title, `data-source-id`, export CSV/PNG.
+
+Number & time format (mot module duy nhat `lib/format.ts`):
+
+- percent: 2dp, co dau cho delta (`+12.40%` / `-3.10%`);
+- currency: thousand separator, 0dp cho equity lon, 2dp khi <1000;
+- ratio (Sharpe/Sortino/PF): 2dp; decay: 3dp;
+- hash: 8 ky tu dau + copy button; timestamp: `YYYY-MM-DD HH:mm UTC`;
+- duration: compact (`3m 42s`); bars count: thousand separator.
+
+Tailwind: token CSS dat trong `src/styles/tokens.css` (`:root`), Tailwind theme
+tham chieu `var(--token)`; component khong chua hex (CI frontend co lint check
+cho rule nay). Dark mode: out of scope prototype.
+
+Layout: desktop-first 12-col, max content 1440px; top bar compact; config la
+drawer; card radius <=8px, shadow rat nhe; page sections unframed; chart
+heights co dinh (equity 420, underwater 160, explorer 360–480) de filter/tab
+khong gay layout shift. Breakpoint, print va a11y theo §19.4.
+
+### 27.3. Signature Components (fund-grade, dung chung nhieu view)
+
+1. **RunPassport** — sticky provenance strip ngay duoi TopBar tren moi result
+   view: `[status badge] run_id mono-8 | strategy chip | symbol/timeframe chip |
+   protocol chip | config hash mono-8 + copy | submitted_at mono`. Moi man hinh
+   tra loi duoc "dang xem run nao, tu config nao" trong mot dong.
+
+2. **VerdictChain** — selection provenance chain ngang tren Overview:
+   `IS Search (n trials) -> Top Candidates (n) -> OOS Replay (n) -> Frozen theta*
+   (trial_id + hash) -> Holdout Verdict (Sharpe, MaxDD)`. Moi node: label mono
+   uppercase + value `data-lg` + underline role color; edge = hairline + arrow;
+   node Holdout dung gold. Chi hien so that tu artifact; thieu so thi node
+   hien `--`, khong suy dien.
+
+3. **ChartFigure** — frame chuan cho moi chart: `fig-num` mono highlight, title
+   `display-lg`, note slot, export menu (CSV/PNG), fixed height; footer chua
+   `data-source-id` + artifact hash mono-8. Publication cadence trong mot app
+   operational.
+
+4. **MetricHeroStrip** — 5 KPI (Final Equity, Total Return, Sharpe, MaxDD,
+   Trades): label mono uppercase + value `data-xl` + sub-row mono nho
+   (target/percentile) + sparkline 80x24 (SVG polyline, role color theo segment
+   dang chon).
+
+5. **ComparisonMatrix** — rows = metric, cols = IS/OOS/Holdout; delta columns
+   co mui ten + good/bad tint; cot "prefer" (segment tot nhat theo metric) nen
+   `--good-bg` nhe; so mono can phai; row hover `--paper-sunken`.
+
+6. **WindowTimelineEditor** — ba cua so: 3 row date/time picker la source of
+   truth; proportional timeline ben phai cho drag boundary handle snap-to-bar;
+   overlap hien hatch `--bad`, gap hien hatch `--accent-2` ngay khi keo; bars
+   count mono duoi moi vung. Drag la enhancement, khong thay picker.
+
+7. **LedgerTerminal** — structured run log tren `--ink-panel` (be mat toi duy
+   nhat trong app): mono 12px, timestamp column fixed-width, stage chip role
+   color, filter bar theo stage/trial, JSONL download. Cam giac desk terminal
+   nhung chi render structured events, khong parse stdout.
+
+8. **TermSheet** — preflight summary kieu term sheet: definition list 2 cot
+   (dt mono uppercase / dd `data`), tung muc co badge pass/fail, config hash o
+   cuoi + Run CTA primary voi keyboard hint `Cmd+Enter`.
+
+9. **SignoffSheet** — audit reconciliation dang bang "ky duyet": check name,
+   expected vs actual (mono), badge pass/fail, verified-at timestamp; print
+   friendly (day la trang audit in duoc).
+
+10. **FoldGantt** (Advanced WFO) — moi fold mot hang: train bar `--accent-soft`,
+    test bar `--accent` solid, boundary marker theo policy; click fold
+    cross-filter toan view; tooltip mono dates/trials/seed.
+
+11. **DecayLollipop** — stem + dot per candidate (selected = ink diamond),
+    threshold band `--accent-2-soft` cho vung decay chap nhan duoc; axis mono.
+
+12. **StateViews** — empty (placeholder dashed + guideline italic), loading
+    (skeleton shimmer 1200ms, tat khi reduced-motion), failed (error code chip
+    + safe message + retry neu transient), cancelled, partial-artifact
+    (banner `--accent-2-soft` ghi ro phan artifact con thieu).
+
+### 27.3.1. Per-View Mapping
+
+Shell:
+
+| Component | Vai tro |
+|---|---|
+| TopBar | strategy selector, dataset/symbol/timeframe chip, run selector, RunStatusBadge, Run CTA, ExportMenu |
+| NavTabs | Overview / Optimization / Parameters / Execution / Audit |
+| ConfigDrawer | config rail 360px -> drawer sau submit; submitted config immutable, xem lai bat ky luc |
+| RunStatusBadge | mau theo state machine §9 |
+| WindowRoleChip | chip IS/OOS/Holdout dung role color |
+
+Config workspace (P5):
+
+| Component | Ghi chu |
+|---|---|
+| ProtocolSegmentedControl | Three-Window default; Advanced WFO |
+| ThreeWindowEditor | 3 row dong bo: start/end picker + computed bars; block overlap/gap ngay khi edit |
+| WindowTimelineEditor | = signature #6; timeline ti le thoi gian ben phai, drag handle snap-to-bar, gap/overlap realtime |
+| SearchSpaceEditor | 8 scalar params, kind-aware input (int/float range, fixed, categorical), reset-to-default |
+| OptionGroup collapsible | Split/Optimization/Selection/Account/Execution; group co loi tu mo |
+| FoldPreview | Advanced WFO: fold preview tu capability/config truoc khi run |
+| TermSheet | = signature #8; checklist schema/boundary/rows/params + config hash; Run CTA disabled den khi pass |
+
+Run progress (P5):
+
+| Component | Ghi chu |
+|---|---|
+| RunStepper | stage state machine; stage-accurate, khong fake percent |
+| LedgerTerminal | = signature #7; structured event stream mono, filter theo stage; JSONL download |
+
+Overview (P6):
+
+| Component | Ghi chu |
+|---|---|
+| MetricHeroStrip | uiux §7.1: 5 KPI + sparkline equity chuan hoa |
+| SegmentControl | IS \| OOS \| Holdout Live \| Compare |
+| EquityChart | 3 trace khong noi (null break), window bands role color, boundary dividers, toggle Capital/Rebased-100 |
+| UnderwaterChart | linked zoom voi equity |
+| MonthlyReturnHeatmap | compact, theo segment dang chon |
+| ComparisonMatrix | = signature #5; rows = metric §11.3, cols = IS/OOS/Holdout + delta arrow |
+| SelectedParamsCard | frozen params tom tat |
+| VerdictChain | = signature #2; IS search -> candidates -> OOS replay -> frozen theta* -> Holdout verdict |
+
+Optimization (P6):
+
+| Component | Ghi chu |
+|---|---|
+| ProcessTimeline | Optimize IS -> Top Candidates -> Replay OOS -> Select -> Freeze -> Evaluate; click stage = filter |
+| SelectionFunnel | sampled -> valid -> candidates -> selected, actual counts |
+| CandidateSharpeBars | grouped IS/OOS Sharpe top candidates |
+| DecayLollipop | decay per candidate, marker selected |
+| ObjectiveDistribution | candidate objective histogram |
+| TrialScatter | objective theo trial id, canvas renderer, shape = selected/candidate/pruned |
+| CandidateScatter | IS Sharpe vs OOS Sharpe; click cross-filter toan bo |
+| ConvergenceChart | best-so-far theo trial id |
+| TrialTable | TanStack Table, server-side filter §12; click = highlight |
+| ParallelCoordinates | top candidates, brush link voi Parameters view |
+| SelectionTraceRail | IS rank -> IS score -> OOS score -> decay -> candidate score -> selected |
+| LedgerTerminal | = signature #7; terminal mono + filter stage/trial; JSONL export |
+| RunDetailsCollapsible | schedule/validation_claim/causality_claim/params_semantics; default collapsed |
+
+Parameters (P6):
+
+| Component | Ghi chu |
+|---|---|
+| CoverageHistogram | search-space coverage tung scalar param |
+| ObjectiveVsParam | scatter/boxplot objective theo param |
+| PairwiseContour | heatmap/contour 2 params duoc chon — cau tra loi truc tiep cho overfitting |
+| ParallelCoordinates | candidates IS + OOS replayed |
+| SelectedParamsTable | gia tri + percentile trong range |
+| ParamsByFoldHeatmap | normalized, Advanced WFO |
+| ParamTrajectory | selected param theo fold, Advanced WFO |
+| StructuralContractPanel | immutable thesis, tach khoi calibration params |
+
+Execution (P6):
+
+| Component | Ghi chu |
+|---|---|
+| PriceTargetChart | close + long/short entry-exit markers, label `Target transition`; chi goi `Fill` khi co audited fills |
+| PositionRegimeStrip | strip trang thai position |
+| EquityDrawdownLinked | linked zoom |
+| CostTimeline | fee/funding/margin neu capability co; thieu thi omit |
+| TransitionTable | theo timestamp |
+
+Audit (P6):
+
+| Component | Ghi chu |
+|---|---|
+| ManifestPanel | immutable run manifest |
+| ConfigSnapshot | full submitted config readonly |
+| DataQualityPanel | content hash, missing bars, range |
+| SignoffSheet | = signature #9; badge pass/fail cho cac checks §18, print friendly |
+| CapabilityFlagsPanel | warnings/fallback flags |
+| ArtifactDownloadList | JSON/CSV/Parquet links |
+
+Moi view co day du state: loading / empty / failed / cancelled /
+partial-artifact. Moi chart co: fig title, data-source id, export CSV/PNG,
+fixed height.
+
+### 27.4. View Blueprints (wireframe chuan de implement)
+
+Config workspace (first screen, chua co run):
+
+```text
+┌ TopBar: strategy | dataset/symbol/timeframe | run selector | status | Run | Export ┐
+├ Config rail 360px ────────────────┬ Preview + preflight ──────────────────────────┤
+│ 1 Strategy / dataset chips        │ WindowTimelineEditor (proportional)           │
+│ 2 ProtocolSegmentedControl        │   IS slate | OOS petrol | Holdout gold        │
+│ 3 ThreeWindowEditor (3 rows)      │   bars count mono duoi moi vung               │
+│ 4 SearchSpaceEditor (8 params)    │ TermSheet:                                    │
+│ 5 Optimization group (collapsed)  │   [pass] schema  [pass] boundaries            │
+│ 6 Account/Execution group         │   [pass] rows    [pass] parameter space       │
+│ 7 Advanced WFO: FoldPreview       │   config hash mono-8        [ Run  Cmd+Enter ]│
+└───────────────────────────────────┴───────────────────────────────────────────────┘
+```
+
+Overview (manager value cao nhat, build dau tien trong P6):
+
+```text
+TopBar
+RunPassport
+MetricHeroStrip (5 KPI + sparkline)
+SegmentControl [IS | OOS | Holdout Live | Compare]      toggle [Capital | Rebased 100]
+┌ EquityChart 420px: window bands, boundary flags, null breaks, linked zoom ┐
+┌ UnderwaterChart 160px (linked) ────────────────┬ MonthlyReturnHeatmap ────┤
+ComparisonMatrix (metrics x segments + delta)
+VerdictChain (5 nodes, actual counts)
+SelectedParamsCard (frozen theta*)
+```
+
+Optimization (man hinh trung tam):
+
+```text
+RunPassport
+ProcessTimeline: Optimize IS -> Top Candidates -> Replay OOS -> Select -> Freeze -> Evaluate
+┌ CandidateScatter IS x OOS (canvas) ─────────────┬ SelectionFunnel counts ─┤
+┌ DecayLollipop (threshold band) ─────────────────┬ CandidateSharpeBars ────┤
+┌ TrialScatter objective x trial_id (canvas) ─────┬ ConvergenceChart ───────┤
+TrialTable (server-side filter, click = cross-highlight)
+ParallelCoordinates (top candidates, brush link)
+SelectionTraceRail (IS rank -> ... -> selected params)
+RunDetailsCollapsible (collapsed) | LedgerTerminal (structured events, JSONL)
+```
+
+Parameters:
+
+```text
+RunPassport
+SelectedParamsTable (value + percentile trong range)
+┌ CoverageHistogram grid (8 scalar params) ──────────────────────────────────┐
+┌ ObjectiveVsParam (param picker, scatter/box) ───┬ PairwiseContour (A x B) ─┤
+ParallelCoordinates (IS candidates + OOS replayed)
+StructuralContractPanel (immutable thesis) — tach biet calibration params
+[Advanced WFO] ParamsByFoldHeatmap + ParamTrajectory
+```
+
+Execution:
+
+```text
+RunPassport + SegmentControl
+┌ PriceTargetChart (close + Target transition markers, khong goi Fill) ──────┐
+┌ PositionRegimeStrip 40px ──────────────────────────────────────────────────┐
+┌ EquityDrawdownLinked ────────────────────────────┬ CostTimeline* ──────────┤
+TransitionTable (timestamp, target, position, exit_type, exit_price)
+* chi render khi capability co fee/funding/margin; thieu thi omit + flag
+```
+
+Audit:
+
+```text
+RunPassport
+┌ ManifestPanel (immutable) ────────────┬ DataQualityPanel (hash, bars) ─────┐
+┌ ConfigSnapshot (readonly JSON cua submitted config) ───────────────────────┐
+SignoffSheet (reconciliation checks, badge pass/fail, print friendly)
+CapabilityFlagsPanel | ArtifactDownloadList | StructuralContractPanel
+```
+
+### 27.5. Frontend Architecture Decisions
+
+- Stack dung §4.2; router chon TanStack Router de co typed search params:
+  `run_id`, segment, selected trial/candidate, chart range nam tren URL
+  (deep-link, refresh-safe).
+- API client: typegen tu FastAPI OpenAPI (`openapi-typescript`) + fetch wrapper
+  + TanStack Query hooks; backend schema la single source of truth.
+- Charts: `echarts` core modular import + thin React wrapper (~50 LOC,
+  resize-observer, canvas renderer cho series lon); khong dung wrapper package
+  nang.
+- SSE: `EventSource` tren `/api/runs/{id}/events`, fallback polling 2s khi mat
+  ket noi.
+- Chart option memo theo `run_id + segment + range` (§21); frontend khong tinh
+  domain metric.
+- Folder theo §5, voi `features/optimization` thay `features/walkforward` de
+  trung ten nav; styles tach `tokens.css` / `base.css` / `print.css`.
+- Test: Vitest + RTL cho transform/state; Playwright visual gate
+  1440x900 / 1280x720 / 390x844 (§19.4).
+
+### 27.6. Thu Tu Phase Da Khoa
+
+Thu tu tuyen tinh, khong song song hoa frontend voi backend vi §26.1
+(contract-first) va vi chart P6 can artifact that tu P2/P3 de khoi phai viet
+lai transform tren mock:
+
+| Order | Phase | Scope chinh | Gate/verify chinh | Size |
+|---|---|---|---|---|
+| 1 | P0 | B1 golden fixture + parity harness, B2 canonical serializer, B3 capability-gap note (design map da hoan thanh: §27.2-27.5; P0 khong code UI) | golden parity pass; serializer khong repr; `./scripts/test_backend.sh` xanh | S–M |
+| 2 | P1 | B4 strategy package layout + Numba warm-up hook | strategy import no side-effect; parity giu nguyen | S |
+| 3 | P2 | B5–B7 orchestration + freeze + 3-segment replay + presentation series; B8 leakage/parity tests | Holdout mutation khong doi selected params; metrics parity voi `pct_equity` truc tiep | L |
+| 4 | P3 | B9 Advanced WFO routing + conditional validation; B10 artifact schema version + export | unsupported combo fail preflight; artifact reopen khong can QuantBT rerun | M–L |
+| 5 | P4 | B11–B14 state machine + worker + SSE + full run API + error taxonomy | API responsive trong luc WFO; run song lai sau refresh; failed worker giai phong RSS | L |
+| 6 | P5 | frontend scaffold + tokens + config workspace + run UX | manager config + launch ca 2 protocol khong code; overlap bi block | M–L |
+| 7 | P6 | Overview -> Optimization -> Parameters -> Execution -> Audit | moi so lieu tu artifact/API; cross-filter hoat dong; thieu capability thi omit | L |
+| 8 | P7 | real-data certification + visual QA + handoff docs | golden parity + real run reopen + screenshot gate + reproducible | M |
+
+Trong P6, thu tu view: Overview truoc (manager value cao nhat), Optimization
+thu hai (man hinh trung tam), sau do Parameters, Execution, Audit.
+
+### 27.7. UI Working Agreements (bat buoc khi build P5/P6)
+
+1. Component chi dung token; khong hex trong component (lint check).
+2. Moi so mono + tabular; table number can phai.
+3. Moi chart: fixed height, fig title, data-source id, export CSV/PNG.
+4. Khong narrative text tren chart surface; methodology nam trong collapsible.
+5. Missing capability -> omit component + capability flag, khong invent data.
+6. loading/empty/failed/cancelled/partial states cho moi view truoc khi goi la
+   xong view do.
+7. focus-visible, keyboard order, reduced-motion, print rules cho moi component
+   moi (theo uiux §3, §8).
+8. Khong reuse cover/abstract/key-finding tren run workspace (§19.2).
+9. Chart style chi qua `charts/theme.ts`; number/time format chi qua
+   `lib/format.ts`; khong inline style ad-hoc.
+10. Be mat toi `--ink-panel` chi cho LedgerTerminal; khong lan sang noi dung
+    khac.
+
+### 27.8. Phase Report Workflow Va Status Board
+
+Workflow bat buoc (theo yeu cau cua user, 2026-08-10):
+
+1. Truoc moi phase: dang **Phase Brief** ngan (scope, deliverables, gate, rui
+   ro) cho user phe duyet. Khong code khi chua duoc duyet.
+2. Implement dung brief; chay gate; neu phai lech brief thi dung lai va bao
+   truoc khi tiep tuc.
+3. Ghi **Phase Report** vao muc nay (delivered, gate evidence = lenh chay +
+   ket qua, deviations), cap nhat status board.
+4. User phe duyet report -> mo brief phase tiep theo.
+
+Report template:
+
+```text
+#### Phase PX Report (YYYY-MM-DD)
+- Delivered: ...
+- Gate evidence: `<command>` -> ket qua
+- Deviations: ...
+- Cho phe duyet de bat dau P(X+1).
+```
+
+Status board:
+
+| Phase | Trang thai | Brief duyet luc | Report | Phe duyet luc |
+|---|---|---|---|---|
+| P0 | cho duyet brief | - | - | - |
+| P1 | khoa | - | - | - |
+| P2 | khoa | - | - | - |
+| P3 | khoa | - | - | - |
+| P4 | khoa | - | - | - |
+| P5 | khoa | - | - | - |
+| P6 | khoa | - | - | - |
+| P7 | khoa | - | - | - |
