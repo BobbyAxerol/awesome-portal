@@ -76,11 +76,23 @@ def _sanitize(value: Any, *, path: str = "", non_finite: list[str] | None = None
         return [_sanitize(item, path=f"{path}[{i}]", non_finite=non_finite) for i, item in enumerate(value)]
     if isinstance(value, tuple):
         return [_sanitize(item, path=f"{path}[{i}]", non_finite=non_finite) for i, item in enumerate(value)]
-    if isinstance(value, float) and not math.isfinite(value):
+    if isinstance(value, (float, np.floating)) and not math.isfinite(float(value)):
         if non_finite is not None:
             non_finite.append(path or "<root>")
         return None
     return value
+
+
+def _required_selection_metric(best: Mapping[str, Any], field: str) -> float:
+    """Return a finite metric required to freeze a deployable selection."""
+    value = best.get(field)
+    if isinstance(value, np.generic):
+        value = value.item()
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ThreeWindowRunnerError(f"selected trial has no numeric {field}")
+    if not math.isfinite(float(value)):
+        raise ThreeWindowRunnerError(f"selected trial has non-finite {field}")
+    return float(value)
 
 
 def _mode1_optimization_config(config: ThreeWindowConfig) -> dict[str, object]:
@@ -330,13 +342,23 @@ def _freeze_selection(wf: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, 
     if not isinstance(best, Mapping) or not best.get("params"):
         raise ThreeWindowRunnerError("walk-forward metadata has no selected trial params")
     params = {key: canonicalize(value) for key, value in best["params"].items()}
+    trial_id = best.get("trial_id")
+    if isinstance(trial_id, np.generic):
+        trial_id = trial_id.item()
+    if isinstance(trial_id, bool) or not isinstance(trial_id, int):
+        raise ThreeWindowRunnerError("selected trial has no integer trial_id")
+
+    objective = _required_selection_metric(best, "objective")
+    mean_is_sharpe = _required_selection_metric(best, "mean_is_sharpe")
+    mean_oos_sharpe = _required_selection_metric(best, "mean_oos_sharpe")
+    mean_decay = _required_selection_metric(best, "mean_decay")
     frozen = {
         "params": params,
-        "trial_id": _sanitize(best.get("trial_id")),
-        "objective": _sanitize(best.get("objective")),
-        "mean_is_sharpe": _sanitize(best.get("mean_is_sharpe")),
-        "mean_oos_sharpe": _sanitize(best.get("mean_oos_sharpe")),
-        "mean_decay": _sanitize(best.get("mean_decay")),
+        "trial_id": trial_id,
+        "objective": objective,
+        "mean_is_sharpe": mean_is_sharpe,
+        "mean_oos_sharpe": mean_oos_sharpe,
+        "mean_decay": mean_decay,
         "std_decay": _sanitize(best.get("std_decay")),
         "params_hash": hashlib.sha256(
             json.dumps(params, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -358,19 +380,19 @@ def _freeze_selection(wf: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, 
             "fold_selection_table": bool(wf.get("fold_selection_table") is not None),
         },
         "fields": {
-            "is_objective": _sanitize(best.get("objective")),
+            "is_objective": objective,
             "is_sharpe_raw": None,
             "is_sharpe_penalized": None,
             "is_trade_count": None,
             "is_trade_penalty": None,
             "is_rank": None,
             "is_top_candidate": None,
-            "oos_sharpe_raw": _sanitize(best.get("mean_oos_sharpe")),
+            "oos_sharpe_raw": mean_oos_sharpe,
             "oos_sharpe_penalized": None,
             "oos_trade_count": None,
             "oos_trade_penalty": None,
-            "decay": _sanitize(best.get("mean_decay")),
-            "candidate_objective": _sanitize(best.get("objective")),
+            "decay": mean_decay,
+            "candidate_objective": objective,
             "selected": True,
         },
     }
@@ -378,15 +400,30 @@ def _freeze_selection(wf: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, 
 
 
 def _flatten_frame(frame: pd.DataFrame) -> pd.DataFrame:
-    """JSON-stringify dict-valued columns so they survive Parquet round-trips."""
+    """JSON-stringify structured columns so they survive Parquet round-trips.
+
+    QuantBT uses ``NaN`` as the missing object-cell sentinel for pruned Optuna
+    trials. Those cells are absence, not corrupt metadata, and become Parquet
+    nulls. Non-finite diagnostics nested inside an otherwise valid structure
+    also become JSON nulls; scalar objective columns retain their native values
+    and the explicit ``pruned`` flag remains the source of truth.
+    """
     out = frame.copy()
     for column in out.columns:
         if out[column].map(lambda value: isinstance(value, (dict, list))).any():
-            out[column + "_json"] = out[column].map(
-                lambda value: json.dumps(canonicalize(value), sort_keys=True, separators=(",", ":"))
-            )
+            out[column + "_json"] = out[column].map(_structured_json_cell)
             out = out.drop(columns=[column])
     return out
+
+
+def _structured_json_cell(value: Any) -> str | None:
+    if value is None:
+        return None
+    missing = pd.isna(value)
+    if isinstance(missing, (bool, np.bool_)) and bool(missing):
+        return None
+    sanitized = _sanitize(value)
+    return json.dumps(canonicalize(sanitized), sort_keys=True, separators=(",", ":"))
 
 
 def _search_trials_only(frame: pd.DataFrame) -> pd.DataFrame:

@@ -10,6 +10,7 @@ cancel flag between stages.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import time
 from pathlib import Path
@@ -28,6 +29,9 @@ from portal_api.serialization import canonicalize
 from portal_api.services.advanced_walkforward_runner import AdvancedWalkForwardRunner
 from portal_api.services.three_window_runner import ThreeWindowRunner
 from portal_api.strategies import StrategyRegistry
+
+
+logger = logging.getLogger(__name__)
 
 THREE_WINDOW_STAGES: tuple[RunState, ...] = (
     RunState.QUEUED,
@@ -203,6 +207,11 @@ def execute_run(
         )
         raise
     except Exception as exc:  # noqa: BLE001 - run failure must be persisted
+        logger.exception(
+            "portal run %s failed in state %s",
+            run_id,
+            _read_status(artifacts, run_id).get("state"),
+        )
         failure_code = getattr(exc, "code", "INTERNAL_ERROR")
         _write_status(
             artifacts,

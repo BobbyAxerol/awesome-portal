@@ -7,6 +7,7 @@ protected kernel and the read-only QuantBT tree are never touched.
 
 from __future__ import annotations
 
+import json
 import math
 from pathlib import Path
 
@@ -29,7 +30,10 @@ from portal_api.domain.requests import (
 from portal_api.repositories import ArtifactRepository
 from portal_api.services.three_window_runner import (
     ThreeWindowRunner,
+    ThreeWindowRunnerError,
     _account_kwargs,
+    _flatten_frame,
+    _freeze_selection,
     _quantbt_param_ranges,
 )
 from portal_api.strategies import StrategyRegistry
@@ -149,6 +153,83 @@ def test_quantbt_adapter_preserves_parameter_kinds_and_one_way_fee() -> None:
     kwargs = _account_kwargs(account, ExecutionConfig())
     assert kwargs["fee_rate"] == pytest.approx(0.0007)
     assert "fee" not in kwargs
+
+
+def test_trial_ledger_preserves_pruned_rows_with_null_structured_metadata() -> None:
+    frame = pd.DataFrame(
+        {
+            "trial_id": [7, 8],
+            "objective": [1.25, -np.inf],
+            "pruned": [False, True],
+            "params": [{"window": 32}, {}],
+            "selection_metadata": [
+                {"temporal_score": np.nan, "source": "search"},
+                np.nan,
+            ],
+        }
+    )
+
+    flattened = _flatten_frame(frame)
+
+    assert flattened.loc[1, "pruned"]
+    assert np.isneginf(flattened.loc[1, "objective"])
+    assert json.loads(flattened.loc[0, "selection_metadata_json"]) == {
+        "source": "search",
+        "temporal_score": None,
+    }
+    assert pd.isna(flattened.loc[1, "selection_metadata_json"])
+    assert json.loads(flattened.loc[1, "params_json"]) == {}
+
+
+@pytest.mark.parametrize(
+    "field",
+    ("objective", "mean_is_sharpe", "mean_oos_sharpe", "mean_decay"),
+)
+def test_freeze_rejects_non_finite_selected_metrics(field: str) -> None:
+    best = {
+        "trial_id": 4,
+        "params": {"window": 32},
+        "objective": 0.9,
+        "mean_is_sharpe": 1.2,
+        "mean_oos_sharpe": 0.8,
+        "mean_decay": 0.4,
+    }
+    best[field] = np.nan
+
+    with pytest.raises(ThreeWindowRunnerError, match=f"non-finite {field}"):
+        _freeze_selection({"best_trial": best})
+
+
+def test_runner_persists_pruned_trial_metadata_without_failing(runner, monkeypatch) -> None:
+    service, artifacts = runner
+    market = _market()
+    original = service._gateway.run_mode1_calibration
+
+    def append_pruned_trial(**kwargs):
+        endpoint, wf = original(**kwargs)
+        table = wf["trial_table"].copy()
+        row = {column: np.nan for column in table.columns}
+        row.update(
+            {
+                "trial_id": 99_999,
+                "objective": -np.inf,
+                "pruned": True,
+                "params": {},
+                "selection_metadata": np.nan,
+            }
+        )
+        wf["trial_table"] = pd.concat([table, pd.DataFrame([row])], ignore_index=True)
+        return endpoint, wf
+
+    monkeypatch.setattr(service._gateway, "run_mode1_calibration", append_pruned_trial)
+    summary = service.run(_request(market), market, "run_p2_pruned_metadata")
+
+    assert summary["status"] == "COMPLETED"
+    trials = _read_frame(artifacts, "run_p2_pruned_metadata", "wfo/trials.parquet")
+    pruned = trials.loc[trials["trial_id"] == 99_999].iloc[0]
+    assert bool(pruned["pruned"])
+    assert np.isneginf(pruned["objective"])
+    assert pd.isna(pruned["selection_metadata_json"])
 
 
 def test_runner_completes_and_writes_artifacts(runner, tmp_path) -> None:
