@@ -43,9 +43,10 @@
   `backend/src/portal_api`; frontend comes later per the plan.
 - Dependency direction: `api -> services -> domain/strategies/adapters/repositories`.
   `domain` imports no FastAPI/QuantBT/strategy code; `QuantBTGateway` is the
-  only QuantBT boundary; `DeltaRsiStrategyAdapter` is the only module allowed
-  to lazy-import `strategy.main`. Heavy QuantBT/Numba imports stay lazy so API
-  startup never loads them.
+  only QuantBT boundary; `strategy/delta_rsi.py` is the only module allowed to
+  lazy-import the protected `strategy/main.py` kernel, and
+  `DeltaRsiStrategyAdapter` routes through it. Heavy QuantBT/Numba imports
+  stay lazy so API startup never loads them.
 - `backend/ARCHITECTURE.md` documents boundaries, the performance contract and
   what is deliberately not implemented yet (WFO worker execution, param
   freeze/replay, run persistence/SSE).

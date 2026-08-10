@@ -10,8 +10,10 @@ api -> services -> domain
 ```
 
 `domain` imports no FastAPI, QuantBT or strategy kernel. `QuantBTGateway` is the
-only QuantBT public-API boundary. `DeltaRsiStrategyAdapter` is the only runtime
-module allowed to lazy-import `strategy.main`.
+only QuantBT public-API boundary. `strategy.delta_rsi` (Phase P1 package) is
+the only module allowed to lazy-import the protected `strategy.main` kernel;
+`DeltaRsiStrategyAdapter` routes through it and never touches the kernel
+directly.
 
 ## Current Foundation
 
