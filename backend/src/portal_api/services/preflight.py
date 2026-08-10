@@ -106,7 +106,14 @@ class PreflightService:
         if isinstance(request.calibration, AdvancedWalkForwardConfig):
             from portal_api.services.fold_plan import compute_run_fold_plan
 
-            fold_plan = compute_run_fold_plan(request, analysis_frame.index)
+            try:
+                fold_plan = compute_run_fold_plan(request, analysis_frame.index)
+            except Exception as exc:  # noqa: BLE001 - fold plan is deterministic; a bad
+                # combination (e.g. data_start after split_mode) must be a clean 422,
+                # never a 500 (v0.1.1 bugfix).
+                raise DataSchemaError(
+                    f"unsupported walk-forward fold configuration: {exc}"
+                ) from exc
         return PreflightResponse(
             valid=True,
             strategy_id=request.strategy_id,

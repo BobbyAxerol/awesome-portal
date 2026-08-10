@@ -10,6 +10,7 @@ import pandas as pd
 import pytest
 
 from golden_fixture import build_market_frame
+from portal_api.adapters.market_data import DatasetDescriptor, InMemoryMarketDataProvider
 from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.domain.enums import OptimizationMode, OptimizationSchedule
 from portal_api.domain.requests import (
@@ -17,10 +18,14 @@ from portal_api.domain.requests import (
     AdvancedWalkForwardConfig,
     ExecutionConfig,
     OptimizationConfig,
+    ParameterSpaceConfig,
+    ParameterSpec,
+    PortalRunRequest,
 )
 from portal_api.services.advanced_walkforward_runner import _config_fields
 from portal_api.services.fold_plan import compute_advanced_fold_plan, compute_run_fold_plan
 from portal_api.services.three_window_runner import _account_kwargs
+from portal_api.strategies import StrategyRegistry
 from strategy.delta_rsi import build_walkforward_signal
 from strategy.specification import DELTA_RSI_SPECIFICATION
 
@@ -135,3 +140,55 @@ def test_fold_plan_rejects_bad_split_mode() -> None:
     )
     with pytest.raises(ValueError, match="after the first data timestamp"):
         compute_advanced_fold_plan(config, frame.index)
+
+
+def test_preflight_fold_config_error_is_422_not_500() -> None:
+    """v0.1.1 bugfix: a fold plan that cannot be built (e.g. data_start after
+    split_mode) must surface as a clean validation error, never a 500."""
+    from portal_api.domain.errors import DataSchemaError
+    from portal_api.domain.requests import PortalRunRequest, ThreeWindowConfig
+    from portal_api.services.preflight import PreflightService
+
+    frame = build_market_frame()
+    index = frame.index
+    provider = InMemoryMarketDataProvider(
+        {
+            "g": (
+                DatasetDescriptor(dataset_id="g", symbol="ETHUSDT", venue="BINANCE", timeframe="1h"),
+                frame,
+            )
+        }
+    )
+    # analysis starts 2024-01-15 while the first OOS fold is 2022-01-01.
+    request = PortalRunRequest(
+        strategy_id="delta-rsi-polynomial-alpha",
+        dataset_id="g",
+        symbol="ETHUSDT",
+        timeframe="1h",
+        protocol="advanced_walk_forward",
+        parameter_space=ParameterSpaceConfig(
+            {
+                key: ParameterSpec(
+                    kind="float_range" if isinstance(low, float) else "int_range",
+                    low=low,
+                    high=high,
+                    step=step,
+                )
+                for key, (low, high, step) in DELTA_RSI_SPECIFICATION.parameter_space.items()
+            }
+        ),
+        calibration=AdvancedWalkForwardConfig(
+            data_start=index[350],
+            split_mode="2022-01-01",
+            split_frequency="weekly",
+            optimization_mode=OptimizationMode.MODE_1_DECAY,
+            optimization_schedule=OptimizationSchedule.GLOBAL,
+            optuna_trials=4,
+            random_seed=42,
+        ),
+        account=AccountConfig(),
+        execution=ExecutionConfig(),
+    )
+    preflight = PreflightService(provider=provider, strategies=StrategyRegistry(), quantbt_gateway=None)
+    with pytest.raises(DataSchemaError, match="fold configuration"):
+        preflight.run(request)
