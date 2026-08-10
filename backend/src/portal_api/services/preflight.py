@@ -66,7 +66,7 @@ class PreflightService:
                 WindowSummary(
                     role="HOLDOUT_LIVE",
                     start_inclusive=request.calibration.holdout_start,
-                    end_exclusive=windows.holdout_end_exclusive.to_pydatetime(),
+                    end_exclusive=windows.holdout_end_exclusive.to_pydatetime(warn=False),
                     bars=len(windows.holdout_frame),
                 ),
             )
@@ -79,11 +79,11 @@ class PreflightService:
             summaries = (
                 WindowSummary(
                     role="DATASET",
-                    start_inclusive=active_market.frame.index[0].to_pydatetime(),
+                    start_inclusive=active_market.frame.index[0].to_pydatetime(warn=False),
                     end_exclusive=(
-                        pd.Timestamp(request.calibration.data_end_exclusive).to_pydatetime()
+                        pd.Timestamp(request.calibration.data_end_exclusive).to_pydatetime(warn=False)
                         if request.calibration.data_end_exclusive is not None
-                        else (active_market.frame.index[-1] + pd.Timedelta(1, unit="ns")).to_pydatetime()
+                        else (active_market.frame.index[-1] + pd.Timedelta(1, unit="ns")).to_pydatetime(warn=False)
                     ),
                     bars=len(active_market.frame),
                 ),

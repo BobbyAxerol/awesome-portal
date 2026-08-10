@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import time
 import uuid
-from concurrent.futures import Future, ProcessPoolExecutor
+from concurrent.futures import Future, ProcessPoolExecutor, ThreadPoolExecutor
 from datetime import UTC, datetime
+from multiprocessing import get_all_start_methods, get_context
 from pathlib import Path
 from typing import Any
 
@@ -32,9 +33,23 @@ class RunManager:
         *,
         artifacts: ArtifactRepository,
         max_workers: int = 1,
+        mp_start_method: str | None = None,
     ):
         self._artifacts = artifacts
-        self._executor = ProcessPoolExecutor(max_workers=max_workers)
+        # FastAPI/TestClient and notebook hosts commonly have active threads.
+        # A fork server avoids inheriting interpreter/Numba locks and also
+        # avoids re-executing a pytest/notebook main module like spawn does.
+        method = mp_start_method or (
+            "forkserver" if "forkserver" in get_all_start_methods() else "spawn"
+        )
+        self._executor = ProcessPoolExecutor(
+            max_workers=max_workers,
+            mp_context=get_context(method),
+        )
+        self._launcher = ThreadPoolExecutor(
+            max_workers=1,
+            thread_name_prefix="portal-run-launcher",
+        )
         self._futures: dict[str, Future] = {}
 
     # -- submission -----------------------------------------------------------
@@ -56,15 +71,36 @@ class RunManager:
             "config/request.json",
             request.model_dump(mode="json", exclude_none=False),
         )
-        future = self._executor.submit(
-            run_worker.execute_run,
-            request_json=request.model_dump(mode="json"),
-            run_id=run_id,
-            artifact_root=str(self._artifacts.root),
+        self._launcher.submit(
+            self._launch_process,
+            run_id,
+            request.model_dump(mode="json"),
         )
+        return run_id
+
+    def _launch_process(self, run_id: str, request_json: dict[str, Any]) -> None:
+        try:
+            future = self._executor.submit(
+                run_worker.execute_run,
+                request_json=request_json,
+                run_id=run_id,
+                artifact_root=str(self._artifacts.root),
+            )
+        except Exception as exc:  # noqa: BLE001 - launch failure is persisted
+            status = self.status(run_id) or {"run_id": run_id}
+            self._artifacts.write_json(
+                run_id,
+                "status.json",
+                {
+                    **status,
+                    "state": RunState.FAILED.value,
+                    "completed_at": _utc_now_iso(),
+                    "failure": {"code": "WORKER_LAUNCH_FAILED", "message": str(exc)},
+                },
+            )
+            return
         self._futures[run_id] = future
         future.add_done_callback(lambda fut, rid=run_id: self._on_done(rid, fut))
-        return run_id
 
     def _on_done(self, run_id: str, future: Future) -> None:
         try:
@@ -133,4 +169,5 @@ class RunManager:
         return status is not None and status.get("state") in {s.value for s in TERMINAL_STATES}
 
     def shutdown(self) -> None:
+        self._launcher.shutdown(wait=False, cancel_futures=True)
         self._executor.shutdown(wait=False, cancel_futures=True)

@@ -21,6 +21,22 @@ _PRESENTATION_KEYS = {
     "calendar": "presentation/calendar_equity.parquet",
     "rebased": "presentation/rebased_equity.parquet",
 }
+_CANONICAL_STAGE_ORDER = (
+    "QUEUED",
+    "VALIDATING_DATA",
+    "WARMING_KERNEL",
+    "OPTIMIZING_IS",
+    "RANKING_IS_CANDIDATES",
+    "REPLAYING_CANDIDATES_ON_OOS",
+    "SELECTING_PARAMS",
+    "FREEZING_PARAMS",
+    "BACKTESTING_IS",
+    "BACKTESTING_OOS",
+    "BACKTESTING_HOLDOUT_LIVE",
+    "BUILDING_ARTIFACTS",
+    "COMPLETED",
+)
+_TERMINAL_STAGES = {"FAILED", "CANCELLED"}
 
 
 def _manager(request: Request):
@@ -66,6 +82,73 @@ def _optional_frame_records(request: Request, run_id: str, path: str) -> list[di
         if exc.status_code == 404:
             return []
         raise
+
+
+def _normalize_stage_events(events: list[dict]) -> list[dict]:
+    """Return a monotonic stage ledger while preserving source timestamps.
+
+    Early prototype artifacts may contain duplicated runner callbacks or a
+    lower stage after a higher worker stage. The raw status artifact remains
+    untouched; this API projection exposes the canonical execution timeline.
+    """
+    rank = {stage: index for index, stage in enumerate(_CANONICAL_STAGE_ORDER)}
+    normalized: list[dict] = []
+    highest_rank = -1
+    seen_terminal: set[str] = set()
+    for event in events:
+        state = str(event.get("state", ""))
+        if state in _TERMINAL_STAGES:
+            if state not in seen_terminal:
+                normalized.append(event)
+                seen_terminal.add(state)
+            continue
+        current_rank = rank.get(state)
+        if current_rank is None:
+            normalized.append(event)
+            continue
+        if current_rank <= highest_rank:
+            continue
+        normalized.append(event)
+        highest_rank = current_rank
+    return normalized
+
+
+def _unique_trial_rows(rows: list[dict]) -> list[dict]:
+    """Keep one search record per trial and leave candidate replays separate."""
+    unique: list[dict] = []
+    seen: set[tuple[object, ...]] = set()
+    for row in rows:
+        scope = tuple(
+            row.get(key)
+            for key in ("study_id", "schedule_fold_id", "fold_id")
+            if key in row
+        )
+        trial_id = row.get("trial_id")
+        key = (*scope, trial_id)
+        if trial_id is not None and key in seen:
+            continue
+        if trial_id is not None:
+            seen.add(key)
+        unique.append(row)
+    return unique
+
+
+def _trial_stage(row: dict) -> str | None:
+    direct = row.get("stage")
+    if direct is not None:
+        return str(direct)
+    metadata = row.get("selection_metadata")
+    if isinstance(metadata, dict) and metadata.get("stage") is not None:
+        return str(metadata["stage"])
+    raw = row.get("selection_metadata_json")
+    if isinstance(raw, str):
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return None
+        if isinstance(parsed, dict) and parsed.get("stage") is not None:
+            return str(parsed["stage"])
+    return None
 
 
 def _downsample_frame(frame, max_points: int | None):
@@ -166,12 +249,14 @@ async def run_ledger(run_id: str, request: Request) -> dict:
     status = _manager(request).status(run_id)
     if status is None:
         raise HTTPException(status_code=404, detail="run not found")
-    trials = _optional_frame_records(request, run_id, "wfo/trials.parquet")
+    trials = _unique_trial_rows(
+        _optional_frame_records(request, run_id, "wfo/trials.parquet")
+    )
     candidates = _optional_frame_records(request, run_id, "wfo/candidates.parquet")
     return {
         "run_id": run_id,
         "status": status.get("state", "UNKNOWN"),
-        "stage_events": status.get("events", []),
+        "stage_events": _normalize_stage_events(status.get("events", [])),
         "trial_events": trials,
         "candidate_events": candidates,
         "trial_ledger_ready": bool(trials),
@@ -217,15 +302,20 @@ async def wfo_trials(
     run_id: str,
     request: Request,
     fold_id: int | None = None,
+    stage: str | None = None,
     pruned: bool | None = None,
     top_n: Annotated[int | None, Query(ge=1)] = None,
     sort_by: str | None = None,
     sort_order: Literal["asc", "desc"] = "desc",
 ) -> list[dict]:
     _require_completed(request, run_id)
-    rows = _read_frame_records(request, run_id, "wfo/trials.parquet")
+    rows = _unique_trial_rows(
+        _read_frame_records(request, run_id, "wfo/trials.parquet")
+    )
     if fold_id is not None:
         rows = [row for row in rows if row.get("fold_id") == fold_id or row.get("study_id") == fold_id]
+    if stage is not None:
+        rows = [row for row in rows if _trial_stage(row) == stage]
     if pruned is not None:
         rows = [row for row in rows if bool(row.get("pruned")) is pruned]
     if sort_by and rows:

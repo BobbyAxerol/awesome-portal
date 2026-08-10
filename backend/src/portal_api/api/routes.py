@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import sys
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 
 from portal_api import __version__
 from portal_api.domain.enums import OptimizationMode, OptimizationSchedule, RunProtocol
+from portal_api.domain.errors import PortalDomainError
 from portal_api.domain.requests import PortalRunRequest
 from portal_api.domain.requests import (
     AccountConfig,
@@ -17,6 +18,22 @@ from portal_api.domain.requests import (
 from portal_api.domain.responses import HealthResponse, PreflightResponse, StrategyResponse
 
 router = APIRouter(prefix="/api")
+
+
+def _strategy_response(adapter) -> StrategyResponse:
+    spec = adapter.specification
+    return StrategyResponse(
+        strategy_id=spec.strategy_id,
+        display_name=spec.display_name,
+        version=spec.version,
+        default_timeframe=spec.default_timeframe,
+        required_columns=spec.required_columns,
+        structural_contract=spec.structural_contract,
+        parameter_space={
+            key: {"low": value[0], "high": value[1], "step": value[2]}
+            for key, value in spec.parameter_space.items()
+        },
+    )
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -31,24 +48,16 @@ async def health() -> HealthResponse:
 
 @router.get("/strategies", response_model=list[StrategyResponse])
 async def strategies(request: Request) -> list[StrategyResponse]:
-    records = []
-    for adapter in request.app.state.strategy_registry.list():
-        spec = adapter.specification
-        records.append(
-            StrategyResponse(
-                strategy_id=spec.strategy_id,
-                display_name=spec.display_name,
-                version=spec.version,
-                default_timeframe=spec.default_timeframe,
-                required_columns=spec.required_columns,
-                structural_contract=spec.structural_contract,
-                parameter_space={
-                    key: {"low": value[0], "high": value[1], "step": value[2]}
-                    for key, value in spec.parameter_space.items()
-                },
-            )
-        )
-    return records
+    return [_strategy_response(adapter) for adapter in request.app.state.strategy_registry.list()]
+
+
+@router.get("/strategies/{strategy_id}", response_model=StrategyResponse)
+async def strategy(strategy_id: str, request: Request) -> StrategyResponse:
+    try:
+        adapter = request.app.state.strategy_registry.get(strategy_id)
+    except PortalDomainError as exc:
+        raise HTTPException(status_code=404, detail=f"unknown strategy: {strategy_id}") from exc
+    return _strategy_response(adapter)
 
 
 @router.get("/datasets")

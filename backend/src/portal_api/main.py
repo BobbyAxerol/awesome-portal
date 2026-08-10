@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -45,11 +46,17 @@ def create_app(
     quantbt_gateway: QuantBTGateway | None = None,
     artifact_repository: ArtifactRepository | None = None,
 ) -> FastAPI:
+    @asynccontextmanager
+    async def lifespan(application: FastAPI):
+        yield
+        application.state.run_manager.shutdown()
+
     app = FastAPI(
         title="QuantBT Backtest Portal API",
         version="0.1.0",
         docs_url="/api/docs",
         redoc_url=None,
+        lifespan=lifespan,
     )
     app.state.market_data_provider = market_data_provider or _default_provider()
     app.state.strategy_registry = strategy_registry or StrategyRegistry()

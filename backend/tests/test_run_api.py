@@ -12,9 +12,10 @@ import os
 import time
 from pathlib import Path
 
+import anyio
+import httpx
 import pandas as pd
 import pytest
-from fastapi.testclient import TestClient
 
 from golden_fixture import build_market_frame
 from portal_api.adapters.market_data import DatasetDescriptor, InMemoryMarketDataProvider
@@ -37,6 +38,11 @@ OOS_END = 300
 
 
 @pytest.fixture
+def anyio_backend():
+    return "asyncio"
+
+
+@pytest.fixture
 def market_path(tmp_path: Path) -> Path:
     path = tmp_path / "market.parquet"
     build_market_frame().to_parquet(path, index=True)
@@ -44,7 +50,7 @@ def market_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def client(tmp_path: Path, market_path: Path, monkeypatch) -> tuple[TestClient, Path]:
+async def client(tmp_path: Path, market_path: Path, monkeypatch):
     artifacts = ArtifactRepository(tmp_path / "runs")
     frame = pd.read_parquet(market_path)
     provider = InMemoryMarketDataProvider(
@@ -65,7 +71,12 @@ def client(tmp_path: Path, market_path: Path, monkeypatch) -> tuple[TestClient, 
         market_data_provider=provider,
         artifact_repository=artifacts,
     )
-    return TestClient(app), tmp_path / "runs"
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://test",
+    ) as http:
+        yield http, tmp_path / "runs"
+    app.state.run_manager.shutdown()
 
 
 def _payload(frame: pd.DataFrame) -> dict:
@@ -106,50 +117,51 @@ def _payload(frame: pd.DataFrame) -> dict:
     }
 
 
-def _wait_terminal(client: TestClient, run_id: str, timeout: float = 120.0) -> dict:
+async def _wait_terminal(client: httpx.AsyncClient, run_id: str, timeout: float = 120.0) -> dict:
     deadline = time.time() + timeout
     while time.time() < deadline:
-        response = client.get(f"/api/runs/{run_id}")
+        response = await client.get(f"/api/runs/{run_id}")
         assert response.status_code == 200
         status = response.json()
         if status["status"] in ("COMPLETED", "FAILED", "CANCELLED"):
             return status
-        time.sleep(0.5)
+        await anyio.sleep(0.5)
     raise AssertionError(f"run {run_id} did not reach a terminal state within {timeout}s")
 
 
-def test_submit_run_and_poll_to_completion(client) -> None:
+@pytest.mark.anyio
+async def test_submit_run_and_poll_to_completion(client) -> None:
     http, artifact_root = client
     frame = build_market_frame()
-    response = http.post("/api/runs", json=_payload(frame))
+    response = await http.post("/api/runs", json=_payload(frame))
     assert response.status_code == 202, response.text
     run_id = response.json()["run_id"]
 
-    submitted = http.get(f"/api/runs/{run_id}/config")
+    submitted = await http.get(f"/api/runs/{run_id}/config")
     assert submitted.status_code == 200
     assert submitted.json()["account"]["canonical_one_way_fee_rate"] == pytest.approx(0.0005)
 
-    status = _wait_terminal(http, run_id)
+    status = await _wait_terminal(http, run_id)
     assert status["status"] == "COMPLETED", status
     assert (artifact_root / run_id / "selection" / "selected_params.json").is_file()
     assert (artifact_root / run_id / "manifest.json").is_file()
 
-    summary = http.get(f"/api/runs/{run_id}/summary").json()
+    summary = (await http.get(f"/api/runs/{run_id}/summary")).json()
     assert summary["selected_params"]["params"]
     assert set(summary["metrics"]["segments"]) == {"is", "oos", "holdout_live"}
 
 
-def test_sse_stream_reaches_terminal(client) -> None:
+@pytest.mark.anyio
+async def test_sse_stream_reaches_terminal(client) -> None:
     http, _ = client
     frame = build_market_frame()
-    run_id = http.post("/api/runs", json=_payload(frame)).json()["run_id"]
+    run_id = (await http.post("/api/runs", json=_payload(frame))).json()["run_id"]
 
     states: list[str] = []
-    with http.stream("GET", f"/api/runs/{run_id}/events") as stream:
+    async with http.stream("GET", f"/api/runs/{run_id}/events") as stream:
         deadline = time.time() + 120
         while time.time() < deadline:
-            chunk = stream.iter_lines()
-            for line in chunk:
+            async for line in stream.aiter_lines():
                 if line.startswith("data: "):
                     payload = json.loads(line[6:])
                     states.append(payload.get("state", ""))
@@ -159,55 +171,57 @@ def test_sse_stream_reaches_terminal(client) -> None:
     assert "COMPLETED" in states
 
 
-def test_list_and_detail(client) -> None:
+@pytest.mark.anyio
+async def test_list_and_detail(client) -> None:
     http, _ = client
     frame = build_market_frame()
-    run_id = http.post("/api/runs", json=_payload(frame)).json()["run_id"]
-    _wait_terminal(http, run_id)
+    run_id = (await http.post("/api/runs", json=_payload(frame))).json()["run_id"]
+    await _wait_terminal(http, run_id)
 
-    runs = http.get("/api/runs").json()
+    runs = (await http.get("/api/runs")).json()
     assert any(item["run_id"] == run_id for item in runs)
-    detail = http.get(f"/api/runs/{run_id}").json()
+    detail = (await http.get(f"/api/runs/{run_id}")).json()
     assert detail["run_id"] == run_id
     assert detail["protocol"] == "three_window_decay"
 
 
-def test_wfo_and_series_endpoints(client) -> None:
+@pytest.mark.anyio
+async def test_wfo_and_series_endpoints(client) -> None:
     http, _ = client
     frame = build_market_frame()
-    run_id = http.post("/api/runs", json=_payload(frame)).json()["run_id"]
-    _wait_terminal(http, run_id)
+    run_id = (await http.post("/api/runs", json=_payload(frame))).json()["run_id"]
+    await _wait_terminal(http, run_id)
 
-    trials = http.get(f"/api/runs/{run_id}/wfo/trials?sort_by=objective&top_n=5").json()
+    trials = (await http.get(f"/api/runs/{run_id}/wfo/trials?sort_by=objective&top_n=5")).json()
     assert len(trials) >= 1
     assert "trial_id" in trials[0]
     assert len({item["trial_id"] for item in trials}) == len(trials)
 
-    candidates = http.get(f"/api/runs/{run_id}/wfo/candidates").json()
+    candidates = (await http.get(f"/api/runs/{run_id}/wfo/candidates")).json()
     assert isinstance(candidates, list)
 
-    series = http.get(f"/api/runs/{run_id}/series/is?max_points=50").json()
+    series = (await http.get(f"/api/runs/{run_id}/series/is?max_points=50")).json()
     assert series["segment"] == "is"
     assert len(series["timestamps"]) <= 50
     assert len(series["timestamps"]) == len(series["series"]["equity"])
     assert len(series["timestamps"]) >= 2
 
-    full = http.get(f"/api/runs/{run_id}/series/oos").json()
+    full = (await http.get(f"/api/runs/{run_id}/series/oos")).json()
     assert len(full["timestamps"]) > 50
 
-    params = http.get(f"/api/runs/{run_id}/wfo/parameters").json()
+    params = (await http.get(f"/api/runs/{run_id}/wfo/parameters")).json()
     assert set(params["selected"]["params"]) == set(DELTA_RSI_SPECIFICATION.parameter_space)
 
-    trace = http.get(f"/api/runs/{run_id}/selection/trace").json()
+    trace = (await http.get(f"/api/runs/{run_id}/selection/trace")).json()
     assert trace["selected_trial_id"] is not None
 
-    ledger = http.get(f"/api/runs/{run_id}/ledger").json()
+    ledger = (await http.get(f"/api/runs/{run_id}/ledger")).json()
     assert ledger["status"] == "COMPLETED"
     assert ledger["trial_ledger_ready"] is True
     assert len(ledger["trial_events"]) == TRIALS
     assert any(item.get("objective") is not None for item in ledger["trial_events"])
 
-    presentation = http.get(f"/api/runs/{run_id}/presentation/calendar?max_points=50").json()
+    presentation = (await http.get(f"/api/runs/{run_id}/presentation/calendar?max_points=50")).json()
     assert presentation["segment"] == "calendar"
     assert {"is_equity", "oos_equity", "holdout_live_equity"} == set(presentation["series"])
     for values in presentation["series"].values():
@@ -218,35 +232,38 @@ def test_wfo_and_series_endpoints(client) -> None:
     assert any(value is None for value in presentation["series"]["oos_equity"])
 
 
-def test_audit_and_export_endpoints(client) -> None:
+@pytest.mark.anyio
+async def test_audit_and_export_endpoints(client) -> None:
     http, _ = client
     frame = build_market_frame()
-    run_id = http.post("/api/runs", json=_payload(frame)).json()["run_id"]
-    _wait_terminal(http, run_id)
+    run_id = (await http.post("/api/runs", json=_payload(frame))).json()["run_id"]
+    await _wait_terminal(http, run_id)
 
-    audit = http.get(f"/api/runs/{run_id}/audit").json()
+    audit = (await http.get(f"/api/runs/{run_id}/audit")).json()
     assert audit["manifest"]["status"] == "COMPLETED"
     assert audit["manifest"]["protocol"] == "three_window_decay"
     assert "config" in audit and "strategy" in audit and "metrics" in audit
 
-    response = http.get(f"/api/runs/{run_id}/export")
+    response = await http.get(f"/api/runs/{run_id}/export")
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/zip"
     assert len(response.content) > 0
 
 
-def test_invalid_payload_rejected_before_submission(client) -> None:
+@pytest.mark.anyio
+async def test_invalid_payload_rejected_before_submission(client) -> None:
     http, _ = client
     frame = build_market_frame()
     payload = _payload(frame)
     payload["parameter_space"] = {"window": {"kind": "int_range", "low": 20, "high": 60, "step": 2}}
-    response = http.post("/api/runs", json=payload)
+    response = await http.post("/api/runs", json=payload)
     assert response.status_code == 422
 
 
-def test_unknown_run_returns_404(client) -> None:
+@pytest.mark.anyio
+async def test_unknown_run_returns_404(client) -> None:
     http, _ = client
-    assert http.get("/api/runs/does_not_exist").status_code == 404
+    assert (await http.get("/api/runs/does_not_exist")).status_code == 404
 
 
 def test_cancel_flag_cancels_in_process_run(tmp_path, market_path, monkeypatch) -> None:
@@ -272,7 +289,8 @@ def test_cancel_flag_cancels_in_process_run(tmp_path, market_path, monkeypatch) 
     assert status["failure"]["code"] == "RUN_CANCELLED"
 
 
-def test_completed_runs_reopen_without_rerun(tmp_path, market_path, monkeypatch) -> None:
+@pytest.mark.anyio
+async def test_completed_runs_reopen_without_rerun(tmp_path, market_path, monkeypatch) -> None:
     artifacts = ArtifactRepository(tmp_path / "runs")
     frame = build_market_frame()
     provider = InMemoryMarketDataProvider(
@@ -290,16 +308,24 @@ def test_completed_runs_reopen_without_rerun(tmp_path, market_path, monkeypatch)
     )
     monkeypatch.setenv("PORTAL_RUNNER_MARKET_PATH", str(market_path))
     app = create_app(market_data_provider=provider, artifact_repository=artifacts)
-    with TestClient(app) as http:
-        run_id = http.post("/api/runs", json=_payload(frame)).json()["run_id"]
-        _wait_terminal(http, run_id)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://test",
+    ) as http:
+        run_id = (await http.post("/api/runs", json=_payload(frame))).json()["run_id"]
+        await _wait_terminal(http, run_id)
+    app.state.run_manager.shutdown()
 
     # New app over the same artifact root: the completed run must reopen.
     app2 = create_app(market_data_provider=provider, artifact_repository=artifacts)
-    with TestClient(app2) as http2:
-        runs = http2.get("/api/runs").json()
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app2),
+        base_url="http://test",
+    ) as http2:
+        runs = (await http2.get("/api/runs")).json()
         assert any(item["run_id"] == run_id for item in runs)
-        summary = http2.get(f"/api/runs/{run_id}/summary")
+        summary = await http2.get(f"/api/runs/{run_id}/summary")
         assert summary.status_code == 200
-        series = http2.get(f"/api/runs/{run_id}/series/is")
+        series = await http2.get(f"/api/runs/{run_id}/series/is")
         assert series.status_code == 200
+    app2.state.run_manager.shutdown()
