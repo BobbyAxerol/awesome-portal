@@ -1,0 +1,24 @@
+/* Print: hide chrome, open collapsibles, avoid breaking figures (§19.4). */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .toc-rail {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  .card,
+  .chart-figure,
+  table,
+  .stepper {
+    break-inside: avoid;
+  }
+  .collapsible-content {
+    display: block !important;
+  }
+  details {
+    open: true;
+  }
+}
