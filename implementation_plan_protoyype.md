@@ -2226,7 +2226,7 @@ Status board:
 |---|---|---|---|---|
 | P0 | hoan thanh, cho phe duyet | 2026-08-10 | xem duoi | - |
 | P1 | hoan thanh, cho phe duyet | 2026-08-10 | xem duoi | - |
-| P2 | khoa | - | - | - |
+| P2 | hoan thanh, cho phe duyet | 2026-08-10 | xem duoi | - |
 | P3 | khoa | - | - | - |
 | P4 | khoa | - | - | - |
 | P5 | khoa | - | - | - |
@@ -2288,3 +2288,39 @@ Status board:
   - `git log`: commit acf4757 tren `dev`.
 - Deviations: khong.
 - Cho phe duyet de bat dau P2.
+
+#### Phase P2 Report (2026-08-10)
+
+- Delivered (B5-B8 — three-window Mode 1 orchestration, §7/§10/§11/§23.3):
+  - `QuantBTGateway` mo rong (`adapters/quantbt.py`): `run_mode1_calibration`
+    (train_test_split mode_1_decay global tren tape IS+OOS), `run_frozen_replay`
+    (pct_equity fresh-account), `metrics` (full_report), `version`;
+  - `services/three_window_runner.py`: `ThreeWindowRunner` chay protocol day
+    du — partition 3 cua so, calibration tape IS+OOS, freeze
+    `selection/selected_params.json` + `selection/selection_trace.json` TRUOC
+    khi replay Holdout, replay fresh-account 3 segment, raw series
+    (`series/{is,oos,holdout_live}.parquet`), `presentation/calendar_equity`
+    (null break tai boundary) + `rebased_equity` (base 100, khong feed metric),
+    `metrics.json` (19 field QuantBT + reconciliation + warnings non-finite),
+    `wfo/*` (folds/fold_selection/trials/candidates parquet + params_by_fold),
+    `config.json`/`strategy.json`/`manifest.json` (canonical serializer, schema
+    v1); fee/funding/margin series omit kem capability flag (B3 gap);
+  - `PortalRunRequest.config_hash()` don nguon voi preflight;
+  - `backend/tests/test_three_window_runner.py` (10 tests, chay QuantBT that
+    tren golden fixture 500 bar, 12 trials, seed 42): artifacts day du; tape
+    khong chua Holdout; selected params == metadata best_trial; **Holdout
+    mutation invariant** (doi toan bo OHLCV Holdout -> selected params +
+    trials + candidates bitwise giong nhau); **OOS mutation** -> IS suggestions
+    + IS scores (mean_is_sharpe) khong doi; replay parity voi pct_equity truc
+    tiep (equity series + metrics isclose); calendar null breaks; rebased = 100
+    + khong feed metric; disjoint segments; seed reproducible.
+- Gate evidence:
+  - `./scripts/test_backend.sh` -> 69 passed in 12.64s (59 cu + 10 moi).
+  - `sha256sum -c strategy/PROTECTED_SHA256` -> OK; compileall OK.
+  - `git log`: commit 8b76998 tren `dev`.
+- Deviations:
+  - `objective` trong trial_table khong thuan IS (candidate row mang decay
+    objective co OOS) -> test OOS-mutation chi so sanh IS-origin columns
+    (ghi chu vao test, dung tinh than §7.2);
+  - `params_by_fold.json` chi ghi khi metadata co (global study khong co).
+- Cho phe duyet de bat dau P3.
