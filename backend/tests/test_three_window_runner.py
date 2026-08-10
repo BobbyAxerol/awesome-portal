@@ -27,7 +27,11 @@ from portal_api.domain.requests import (
     ThreeWindowConfig,
 )
 from portal_api.repositories import ArtifactRepository
-from portal_api.services.three_window_runner import ThreeWindowRunner
+from portal_api.services.three_window_runner import (
+    ThreeWindowRunner,
+    _account_kwargs,
+    _quantbt_param_ranges,
+)
 from portal_api.strategies import StrategyRegistry
 from strategy.delta_rsi import build_walkforward_signal, generate_signals
 from strategy.specification import DELTA_RSI_SPECIFICATION
@@ -69,7 +73,7 @@ def _request(market: PreparedMarketData, **overrides) -> PortalRunRequest:
             for key, (low, high, step) in DELTA_RSI_SPECIFICATION.parameter_space.items()
         }
     )
-    calibration = ThreeWindowConfig(
+    calibration = overrides.pop("calibration", ThreeWindowConfig(
         is_start=index[0],
         is_end_exclusive=index[IS_END],
         oos_start=index[IS_END],
@@ -80,7 +84,7 @@ def _request(market: PreparedMarketData, **overrides) -> PortalRunRequest:
         optuna_early_stopping=None,
         random_seed=SEED,
         optimization=OptimizationConfig(min_trades_per_year=50.0, trade_penalty_factor=0.5),
-    )
+    ))
     return PortalRunRequest(
         strategy_id="delta-rsi-polynomial-alpha",
         dataset_id="golden-fixture",
@@ -123,6 +127,30 @@ def _read_frame(artifacts: ArtifactRepository, run_id: str, path: str) -> pd.Dat
     return pd.read_parquet(artifacts.run_directory(run_id) / path)
 
 
+def test_quantbt_adapter_preserves_parameter_kinds_and_one_way_fee() -> None:
+    ranges = _quantbt_param_ranges(
+        {
+            "integer": ParameterSpec(kind="int_range", low=2, high=8, step=2),
+            "decimal": ParameterSpec(kind="float_range", low=0.1, high=0.5, step=0.1),
+            "choice": ParameterSpec(kind="categorical", values=("a", "b")),
+            "constant": ParameterSpec(kind="fixed", value=True),
+        }
+    )
+    assert ranges == {
+        "integer": (2, 8, 2),
+        "decimal": (0.1, 0.5, 0.1),
+        "choice": ["a", "b"],
+        "constant": True,
+    }
+    assert all(type(value) is int for value in ranges["integer"])
+    assert all(type(value) is float for value in ranges["decimal"])
+
+    account = AccountConfig(canonical_one_way_fee_rate=0.0007)
+    kwargs = _account_kwargs(account, ExecutionConfig())
+    assert kwargs["fee_rate"] == pytest.approx(0.0007)
+    assert "fee" not in kwargs
+
+
 def test_runner_completes_and_writes_artifacts(runner, tmp_path) -> None:
     service, artifacts = runner
     market = _market()
@@ -152,6 +180,10 @@ def test_runner_completes_and_writes_artifacts(runner, tmp_path) -> None:
     assert summary["selected_params"].keys() == {
         "window", "rsi_l", "signalLength", "len_atr1", "len_atr2", "rvol", "len_vol", "slpercent"
     }
+
+    trials = _read_frame(artifacts, "run_p2_complete", "wfo/trials.parquet")
+    assert trials["trial_id"].is_unique
+    assert len(trials) <= TRIALS
 
 
 def test_calibration_tape_excludes_holdout(runner, monkeypatch) -> None:
@@ -269,7 +301,7 @@ def test_replay_parity_with_direct_pct_equity(runner) -> None:
             "maintenance_ratio": account.maintenance_ratio,
             "contract_size": account.contract_size,
             "alloc_per_trade": account.alloc_per_trade,
-            "fee": 2.0 * account.canonical_one_way_fee_rate,
+            "fee_rate": account.canonical_one_way_fee_rate,
             "slippage": execution.slippage,
             "use_funding": account.funding_enabled,
             "funding_rate": account.funding_rate,
@@ -287,6 +319,46 @@ def test_replay_parity_with_direct_pct_equity(runner) -> None:
     )
     for field in ("final_equity", "total_return_pct", "sharpe", "max_drawdown_pct", "num_trades"):
         assert math.isclose(float(metrics[field]), float(direct[field]), rel_tol=1e-9, abs_tol=1e-6), field
+
+
+def test_market_history_before_declared_is_never_changes_protocol_results(runner) -> None:
+    service, artifacts = runner
+    market = _market()
+    index = market.frame.index
+    calibration = ThreeWindowConfig(
+        is_start=index[40],
+        is_end_exclusive=index[IS_END],
+        oos_start=index[IS_END],
+        oos_end_exclusive=index[OOS_END],
+        holdout_start=index[HOLDOUT_START],
+        holdout_end_exclusive=None,
+        optuna_trials=TRIALS,
+        optuna_early_stopping=None,
+        random_seed=SEED,
+        optimization=OptimizationConfig(min_trades_per_year=50.0, trade_penalty_factor=0.5),
+    )
+    request = _request(market, calibration=calibration)
+    service.run(request, market, "run_p2_late_is_original")
+
+    changed = market.frame.copy()
+    changed.iloc[:40] = _mutate(changed.iloc[:40], factor=7.0)
+    mutated = PreparedMarketData(
+        frame=changed,
+        descriptor=market.descriptor,
+        content_hash="mutated-before-protocol",
+        missing_bar_count=0,
+    )
+    service.run(request, mutated, "run_p2_late_is_mutated")
+
+    assert _selected_params(artifacts, "run_p2_late_is_original") == _selected_params(
+        artifacts, "run_p2_late_is_mutated"
+    )
+    for segment in ("is", "oos", "holdout_live"):
+        pd.testing.assert_frame_equal(
+            _read_frame(artifacts, "run_p2_late_is_original", f"series/{segment}.parquet"),
+            _read_frame(artifacts, "run_p2_late_is_mutated", f"series/{segment}.parquet"),
+            check_freq=False,
+        )
 
 
 def test_calendar_equity_has_null_breaks_at_boundaries(runner) -> None:

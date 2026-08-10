@@ -51,6 +51,11 @@ class RunManager:
             "failure": None,
         }
         self._artifacts.write_json(run_id, "status.json", status)
+        self._artifacts.write_json(
+            run_id,
+            "config/request.json",
+            request.model_dump(mode="json", exclude_none=False),
+        )
         future = self._executor.submit(
             run_worker.execute_run,
             request_json=request.model_dump(mode="json"),

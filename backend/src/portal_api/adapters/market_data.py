@@ -200,6 +200,49 @@ def partition_three_windows(data: PreparedMarketData, config: ThreeWindowConfig)
     )
 
 
+def slice_market_range(
+    data: PreparedMarketData,
+    *,
+    start: pd.Timestamp | str | None,
+    end_exclusive: pd.Timestamp | str | None,
+) -> PreparedMarketData:
+    """Return a validated half-open analysis tape without mutating the source."""
+    frame = data.frame
+    index = frame.index
+    start_ts = index[0] if start is None else pd.Timestamp(start)
+    end_ts = (
+        index[-1] + pd.Timedelta(1, unit="ns")
+        if end_exclusive is None
+        else pd.Timestamp(end_exclusive)
+    )
+    if start_ts.tzinfo is None:
+        start_ts = start_ts.tz_localize("UTC")
+    else:
+        start_ts = start_ts.tz_convert("UTC")
+    if end_ts.tzinfo is None:
+        end_ts = end_ts.tz_localize("UTC")
+    else:
+        end_ts = end_ts.tz_convert("UTC")
+    if start_ts < index[0] or end_ts > index[-1] + pd.Timedelta(1, unit="ns"):
+        raise DateRangeError("requested analysis range is outside the dataset range")
+    if start_ts >= end_ts:
+        raise DateRangeError("analysis range must have positive duration")
+    left, right = index.searchsorted(pd.DatetimeIndex([start_ts, end_ts]), side="left")
+    selected = frame.iloc[int(left) : int(right)]
+    if selected.empty:
+        raise DateRangeError("analysis range contains no market bars")
+    return prepare_market_data(
+        selected,
+        data.descriptor,
+        load_metadata={
+            **dict(data.load_metadata),
+            "analysis_start": selected.index[0].isoformat(),
+            "analysis_end_exclusive": end_ts.isoformat(),
+            "source_content_hash": data.content_hash,
+        },
+    )
+
+
 class InMemoryMarketDataProvider:
     def __init__(self, datasets: Mapping[str, tuple[DatasetDescriptor, pd.DataFrame]]):
         self._datasets = dict(datasets)

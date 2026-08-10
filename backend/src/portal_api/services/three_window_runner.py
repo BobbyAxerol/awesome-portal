@@ -31,6 +31,7 @@ import pandas as pd
 from portal_api import __version__ as portal_version
 from portal_api.adapters.market_data import (
     PreparedMarketData,
+    market_content_hash,
     partition_three_windows,
 )
 from portal_api.adapters.quantbt import QuantBTGateway
@@ -99,15 +100,15 @@ def _mode1_optimization_config(config: ThreeWindowConfig) -> dict[str, object]:
 
 
 def _account_kwargs(account: AccountConfig, execution: ExecutionConfig) -> dict[str, object]:
-    # fee is the legacy round-trip convention used by the certified baseline
-    # wrapper; canonical_one_way_fee_rate maps to half of it.
+    # QuantBT's explicit fee_rate contract is canonical one-way. Keeping this
+    # explicit avoids compatibility-layer ambiguity in config/audit metadata.
     return {
         "initial_capital": account.initial_capital,
         "leverage": account.leverage,
         "maintenance_ratio": account.maintenance_ratio,
         "contract_size": account.contract_size,
         "alloc_per_trade": account.alloc_per_trade,
-        "fee": 2.0 * account.canonical_one_way_fee_rate,
+        "fee_rate": account.canonical_one_way_fee_rate,
         "slippage": execution.slippage,
         "use_funding": account.funding_enabled,
         "funding_rate": account.funding_rate,
@@ -115,17 +116,19 @@ def _account_kwargs(account: AccountConfig, execution: ExecutionConfig) -> dict[
     }
 
 
-def _quantbt_param_ranges(specs: Mapping[str, ParameterSpec]) -> dict[str, tuple[float, float, float]]:
-    ranges: dict[str, tuple[float, float, float]] = {}
+def _quantbt_param_ranges(specs: Mapping[str, ParameterSpec]) -> dict[str, object]:
+    ranges: dict[str, object] = {}
     for key, spec in specs.items():
-        if spec.kind in ("int_range", "float_range"):
+        if spec.kind == "int_range":
+            ranges[key] = (int(spec.low), int(spec.high), int(spec.step))
+        elif spec.kind == "float_range":
             ranges[key] = (float(spec.low), float(spec.high), float(spec.step))
         elif spec.kind == "fixed":
-            ranges[key] = (float(spec.value), float(spec.value), 1.0)
+            ranges[key] = spec.value
+        elif spec.kind == "categorical":
+            ranges[key] = list(spec.values or ())
         else:
-            raise ThreeWindowRunnerError(
-                f"categorical parameter {key!r} is not supported by three_window_decay yet"
-            )
+            raise ThreeWindowRunnerError(f"unsupported parameter specification for {key!r}")
     return ranges
 
 
@@ -159,11 +162,13 @@ class ThreeWindowRunner:
             if progress is not None:
                 progress(name)
 
-        stage("VALIDATING_DATA")
         adapter = self._strategies.get(request.strategy_id)
         adapter.validate_parameter_space(request.parameter_space)
         windows = partition_three_windows(market, request.calibration)
         calibration_tape = pd.concat([windows.is_frame, windows.oos_frame])
+        protocol_tape = pd.concat(
+            [windows.is_frame, windows.oos_frame, windows.holdout_frame]
+        )
 
         config = request.calibration
         param_ranges = _quantbt_param_ranges(request.parameter_space.root)
@@ -213,7 +218,7 @@ class ThreeWindowRunner:
                 run_id,
                 key,
                 segment_frame,
-                market.frame,
+                protocol_tape,
                 selected_params["params"],
                 account_kwargs,
             )
@@ -222,7 +227,7 @@ class ThreeWindowRunner:
 
         stage("BUILDING_ARTIFACTS")
         calendar_equity, rebased_equity = _build_presentation_equity(
-            market.frame.index, segment_frames, series_by_segment
+            protocol_tape.index, segment_frames, series_by_segment
         )
         self._artifacts.write_frame(run_id, "presentation/calendar_equity.parquet", calendar_equity)
         self._artifacts.write_frame(run_id, "presentation/rebased_equity.parquet", rebased_equity)
@@ -250,6 +255,7 @@ class ThreeWindowRunner:
                 run_id=run_id,
                 request=request,
                 market=market,
+                analysis_content_hash=market_content_hash(protocol_tape),
                 config_hash=request.config_hash(),
                 started_at=started_at,
                 completed_at=completed_at,
@@ -282,6 +288,8 @@ class ThreeWindowRunner:
         for name, key in (("trials", "trial_table"), ("candidates", "candidate_table")):
             table = wf.get(key)
             if isinstance(table, pd.DataFrame):
+                if name == "trials":
+                    table = _search_trials_only(table)
                 self._artifacts.write_frame(
                     run_id, f"wfo/{name}.parquet", _flatten_frame(table)
                 )
@@ -381,6 +389,24 @@ def _flatten_frame(frame: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def _search_trials_only(frame: pd.DataFrame) -> pd.DataFrame:
+    """Remove candidate replay records duplicated in QuantBT trial_table.
+
+    QuantBT intentionally appends candidate evaluations to its complete trial
+    ledger. The portal persists those rows in candidates.parquet, while
+    trials.parquet remains the unique Optuna search ledger used by charts and
+    terminal output.
+    """
+    if frame.empty or "trial_id" not in frame.columns:
+        return frame.copy()
+    keys = ["trial_id"]
+    for column in ("study_id", "schedule_fold_id"):
+        if column in frame.columns and frame[column].notna().any():
+            keys.insert(0, column)
+            break
+    return frame.drop_duplicates(subset=keys, keep="first").reset_index(drop=True)
+
+
 def _build_segment_series(
     segment_frame: pd.DataFrame,
     generated: pd.DataFrame,
@@ -467,6 +493,7 @@ def _manifest(
     run_id: str,
     request: PortalRunRequest,
     market: PreparedMarketData,
+    analysis_content_hash: str,
     config_hash: str,
     started_at: str,
     completed_at: str,
@@ -486,6 +513,7 @@ def _manifest(
             "quantbt_version": gateway.version(),
             "portal_version": portal_version,
             "dataset_content_hash": market.content_hash,
+            "analysis_content_hash": analysis_content_hash,
             "config_hash": config_hash,
             "random_seed": request.calibration.random_seed,
             "started_at": started_at,

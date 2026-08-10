@@ -148,7 +148,6 @@ def execute_run(
     artifacts = ArtifactRepository(Path(artifact_root))
     gateway = QuantBTGateway()
     strategies = StrategyRegistry()
-    market = _load_market(request)
 
     stages = (
         THREE_WINDOW_STAGES
@@ -172,6 +171,7 @@ def execute_run(
             "dataset_id": request.dataset_id,
         },
     )
+    market = _load_market(request)
 
     def progress(state: RunState) -> None:
         if _cancel_requested(artifacts, run_id):
@@ -185,13 +185,11 @@ def execute_run(
         warm_up()
 
         if request.protocol.value == "three_window_decay":
-            progress(RunState.OPTIMIZING_IS)
             runner = ThreeWindowRunner(
                 gateway=gateway, strategies=strategies, artifacts=artifacts
             )
             result = runner.run(request, market, run_id, progress=progress)
         else:
-            progress(RunState.OPTIMIZING_IS)
             runner = AdvancedWalkForwardRunner(gateway=gateway, artifacts=artifacts)
             result = runner.run(request, market, run_id, progress=progress)
     except RunCancelledError:

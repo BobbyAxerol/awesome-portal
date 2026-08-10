@@ -17,6 +17,10 @@ from portal_api.services.export_service import export_bundle
 router = APIRouter(prefix="/api/runs")
 
 _SEGMENT_KEYS = ("is", "oos", "holdout_live", "stitched")
+_PRESENTATION_KEYS = {
+    "calendar": "presentation/calendar_equity.parquet",
+    "rebased": "presentation/rebased_equity.parquet",
+}
 
 
 def _manager(request: Request):
@@ -55,6 +59,45 @@ def _require_completed(request: Request, run_id: str) -> dict:
     return status
 
 
+def _optional_frame_records(request: Request, run_id: str, path: str) -> list[dict]:
+    try:
+        return _read_frame_records(request, run_id, path)
+    except HTTPException as exc:
+        if exc.status_code == 404:
+            return []
+        raise
+
+
+def _downsample_frame(frame, max_points: int | None):
+    if max_points is None or len(frame) <= max_points:
+        return frame
+    import numpy as np
+
+    stride = len(frame) / max_points
+    keep = {int(i * stride) for i in range(max_points - 1)} | {len(frame) - 1}
+    # Preserve every null/non-null boundary so independent account segments
+    # never look connected after presentation downsampling.
+    for column in frame.columns:
+        valid = frame[column].notna().to_numpy(dtype=bool)
+        transitions = np.flatnonzero(valid[1:] != valid[:-1]) + 1
+        for index in transitions:
+            keep.update({max(0, int(index) - 1), int(index)})
+    return frame.iloc[sorted(keep)]
+
+
+def _frame_series_payload(frame, *, segment: str) -> dict:
+    import pandas as pd
+
+    return {
+        "segment": segment,
+        "timestamps": [str(ts) for ts in frame.index],
+        "series": {
+            column: [None if pd.isna(value) else value for value in frame[column].tolist()]
+            for column in frame.columns
+        },
+    }
+
+
 @router.post("", status_code=202)
 async def create_run(payload: PortalRunRequest, request: Request) -> dict:
     # Synchronous preflight: the submitted configuration must already be valid.
@@ -76,6 +119,18 @@ async def get_run(run_id: str, request: Request) -> dict:
     if status is None:
         raise HTTPException(status_code=404, detail="run not found")
     return {**status, "status": status.get("state", "UNKNOWN")}
+
+
+@router.get("/{run_id}/config")
+async def run_config(run_id: str, request: Request) -> dict:
+    if _manager(request).status(run_id) is None:
+        raise HTTPException(status_code=404, detail="run not found")
+    try:
+        return _read_artifact(request, run_id, "config/request.json")
+    except HTTPException as exc:
+        if exc.status_code != 404:
+            raise
+        return _read_artifact(request, run_id, "config.json")
 
 
 @router.get("/{run_id}/events")
@@ -103,6 +158,24 @@ async def run_events(run_id: str, request: Request) -> StreamingResponse:
             await asyncio.sleep(0.3)
 
     return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+@router.get("/{run_id}/ledger")
+async def run_ledger(run_id: str, request: Request) -> dict:
+    """Structured stage and optimization ledger; available before completion."""
+    status = _manager(request).status(run_id)
+    if status is None:
+        raise HTTPException(status_code=404, detail="run not found")
+    trials = _optional_frame_records(request, run_id, "wfo/trials.parquet")
+    candidates = _optional_frame_records(request, run_id, "wfo/candidates.parquet")
+    return {
+        "run_id": run_id,
+        "status": status.get("state", "UNKNOWN"),
+        "stage_events": status.get("events", []),
+        "trial_events": trials,
+        "candidate_events": candidates,
+        "trial_ledger_ready": bool(trials),
+    }
 
 
 @router.post("/{run_id}/cancel")
@@ -156,8 +229,13 @@ async def wfo_trials(
     if pruned is not None:
         rows = [row for row in rows if bool(row.get("pruned")) is pruned]
     if sort_by and rows:
-        rows = sorted(rows, key=lambda row: row.get(sort_by) is None, reverse=sort_order == "asc")
-        rows = sorted(rows, key=lambda row: row.get(sort_by), reverse=sort_order == "desc")
+        populated = [row for row in rows if row.get(sort_by) is not None]
+        missing = [row for row in rows if row.get(sort_by) is None]
+        rows = sorted(
+            populated,
+            key=lambda row: row.get(sort_by),
+            reverse=sort_order == "desc",
+        ) + missing
     if top_n is not None:
         rows = rows[:top_n]
     return rows
@@ -219,15 +297,29 @@ async def segment_series(
         frame = frame.loc[frame.index >= pd.Timestamp(start)]
     if end:
         frame = frame.loc[frame.index < pd.Timestamp(end)]
-    if max_points and len(frame) > max_points:
-        stride = len(frame) / max_points
-        keep = sorted({int(i * stride) for i in range(max_points - 1)} | {len(frame) - 1})
-        frame = frame.iloc[keep]
-    return {
-        "segment": segment,
-        "timestamps": [str(ts) for ts in frame.index],
-        "series": {column: frame[column].tolist() for column in frame.columns},
-    }
+    frame = _downsample_frame(frame, max_points)
+    return _frame_series_payload(frame, segment=segment)
+
+
+@router.get("/{run_id}/presentation/{mode}")
+async def presentation_series(
+    run_id: str,
+    mode: str,
+    request: Request,
+    max_points: Annotated[int | None, Query(ge=10, le=100_000)] = None,
+) -> dict:
+    _require_completed(request, run_id)
+    path = _PRESENTATION_KEYS.get(mode)
+    if path is None:
+        raise HTTPException(status_code=404, detail=f"unknown presentation mode: {mode}")
+    import pandas as pd
+
+    try:
+        frame = pd.read_parquet(_artifacts(request).run_directory(run_id) / path)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"presentation {mode} not available") from exc
+    frame = _downsample_frame(frame, max_points)
+    return _frame_series_payload(frame, segment=mode)
 
 
 @router.get("/{run_id}/audit")

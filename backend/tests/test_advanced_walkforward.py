@@ -105,7 +105,16 @@ def _read_frame(artifacts: ArtifactRepository, run_id: str, path: str) -> pd.Dat
 def test_advanced_runner_completes_and_writes_artifacts(runner) -> None:
     service, artifacts = runner
     market = _market()
-    summary = service.run(_request(), market, "run_p3_adv")
+    base_request = _request()
+    calibration = AdvancedWalkForwardConfig(
+        **{
+            **base_request.calibration.model_dump(),
+            "data_start": market.frame.index[12],
+            "data_end_exclusive": market.frame.index[-12],
+        }
+    )
+    request = PortalRunRequest(**{**base_request.model_dump(), "calibration": calibration})
+    summary = service.run(request, market, "run_p3_adv")
 
     assert summary["status"] == "COMPLETED"
     assert summary["protocol"] == "advanced_walk_forward"
@@ -131,10 +140,15 @@ def test_advanced_runner_completes_and_writes_artifacts(runner) -> None:
     manifest = artifacts.read_json("run_p3_adv", "manifest.json")
     assert manifest["protocol"] == "advanced_walk_forward"
     assert manifest["artifact_schema_version"] == "1"
+    assert manifest["analysis_content_hash"] != manifest["dataset_content_hash"]
 
     selected = artifacts.read_json("run_p3_adv", "selection/selected_params.json")
     assert selected["params_semantics"]
     assert set(selected["params"]) == set(DELTA_RSI_SPECIFICATION.parameter_space)
+
+    stitched = _read_frame(artifacts, "run_p3_adv", "series/stitched.parquet")
+    assert stitched.index.min() >= market.frame.index[12]
+    assert stitched.index.max() < market.frame.index[-12]
 
 
 def test_capability_gate_rejects_unsupported_target_mode(runner, monkeypatch) -> None:

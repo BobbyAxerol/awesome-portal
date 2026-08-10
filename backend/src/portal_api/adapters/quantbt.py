@@ -47,7 +47,7 @@ class QuantBTGateway:
         *,
         strategy_fn,
         data: pd.DataFrame,
-        param_ranges: Mapping[str, tuple[int | float, int | float, int | float]],
+        param_ranges: Mapping[str, object],
         oos_start,
         optimization_config: Mapping[str, object],
         optuna_trials: int,

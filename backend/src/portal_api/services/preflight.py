@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import pandas as pd
 
-from portal_api.adapters.market_data import MarketDataProvider, partition_three_windows
+from portal_api.adapters.market_data import (
+    MarketDataProvider,
+    market_content_hash,
+    partition_three_windows,
+    slice_market_range,
+)
 from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.domain.errors import DataSchemaError
 from portal_api.domain.requests import AdvancedWalkForwardConfig, PortalRunRequest, ThreeWindowConfig
@@ -42,6 +47,9 @@ class PreflightService:
 
         if isinstance(request.calibration, ThreeWindowConfig):
             windows = partition_three_windows(market, request.calibration)
+            analysis_frame = pd.concat(
+                [windows.is_frame, windows.oos_frame, windows.holdout_frame]
+            )
             summaries = (
                 WindowSummary(
                     role="IS",
@@ -63,22 +71,37 @@ class PreflightService:
                 ),
             )
         elif isinstance(request.calibration, AdvancedWalkForwardConfig):
+            active_market = slice_market_range(
+                market,
+                start=request.calibration.data_start,
+                end_exclusive=request.calibration.data_end_exclusive,
+            )
             summaries = (
                 WindowSummary(
                     role="DATASET",
-                    start_inclusive=market.frame.index[0].to_pydatetime(),
-                    end_exclusive=(market.frame.index[-1] + market.frame.index.freq).to_pydatetime()
-                    if market.frame.index.freq is not None
-                    else (market.frame.index[-1] + pd.Timedelta(1, unit="ns")).to_pydatetime(),
-                    bars=len(market.frame),
+                    start_inclusive=active_market.frame.index[0].to_pydatetime(),
+                    end_exclusive=(
+                        pd.Timestamp(request.calibration.data_end_exclusive).to_pydatetime()
+                        if request.calibration.data_end_exclusive is not None
+                        else (active_market.frame.index[-1] + pd.Timedelta(1, unit="ns")).to_pydatetime()
+                    ),
+                    bars=len(active_market.frame),
                 ),
             )
+            analysis_frame = active_market.frame
             if self._quantbt_gateway is not None:
                 self._validate_advanced(request.calibration)
         else:  # pragma: no cover - closed Pydantic union
             raise TypeError("unsupported calibration config")
 
         canonical = request.config_hash()
+        data_quality = dict(market.quality)
+        data_quality["analysis"] = {
+            "rows": len(analysis_frame),
+            "first_timestamp": analysis_frame.index[0].isoformat(),
+            "last_timestamp": analysis_frame.index[-1].isoformat(),
+            "content_hash": market_content_hash(analysis_frame),
+        }
         return PreflightResponse(
             valid=True,
             strategy_id=request.strategy_id,
@@ -86,7 +109,7 @@ class PreflightService:
             symbol=request.symbol,
             timeframe=request.timeframe,
             windows=summaries,
-            data_quality=market.quality,
+            data_quality=data_quality,
             config_hash=canonical,
         )
 

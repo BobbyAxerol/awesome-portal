@@ -125,6 +125,10 @@ def test_submit_run_and_poll_to_completion(client) -> None:
     assert response.status_code == 202, response.text
     run_id = response.json()["run_id"]
 
+    submitted = http.get(f"/api/runs/{run_id}/config")
+    assert submitted.status_code == 200
+    assert submitted.json()["account"]["canonical_one_way_fee_rate"] == pytest.approx(0.0005)
+
     status = _wait_terminal(http, run_id)
     assert status["status"] == "COMPLETED", status
     assert (artifact_root / run_id / "selection" / "selected_params.json").is_file()
@@ -177,6 +181,7 @@ def test_wfo_and_series_endpoints(client) -> None:
     trials = http.get(f"/api/runs/{run_id}/wfo/trials?sort_by=objective&top_n=5").json()
     assert len(trials) >= 1
     assert "trial_id" in trials[0]
+    assert len({item["trial_id"] for item in trials}) == len(trials)
 
     candidates = http.get(f"/api/runs/{run_id}/wfo/candidates").json()
     assert isinstance(candidates, list)
@@ -195,6 +200,22 @@ def test_wfo_and_series_endpoints(client) -> None:
 
     trace = http.get(f"/api/runs/{run_id}/selection/trace").json()
     assert trace["selected_trial_id"] is not None
+
+    ledger = http.get(f"/api/runs/{run_id}/ledger").json()
+    assert ledger["status"] == "COMPLETED"
+    assert ledger["trial_ledger_ready"] is True
+    assert len(ledger["trial_events"]) == TRIALS
+    assert any(item.get("objective") is not None for item in ledger["trial_events"])
+
+    presentation = http.get(f"/api/runs/{run_id}/presentation/calendar?max_points=50").json()
+    assert presentation["segment"] == "calendar"
+    assert {"is_equity", "oos_equity", "holdout_live_equity"} == set(presentation["series"])
+    for values in presentation["series"].values():
+        assert len(values) == len(presentation["timestamps"])
+    # Segment gaps survive downsampling and remain null, preventing chart
+    # lines from visually joining independent fresh-account replays.
+    assert any(value is None for value in presentation["series"]["is_equity"])
+    assert any(value is None for value in presentation["series"]["oos_equity"])
 
 
 def test_audit_and_export_endpoints(client) -> None:

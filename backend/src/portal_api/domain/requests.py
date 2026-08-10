@@ -176,6 +176,8 @@ class ThreeWindowConfig(PortalModel):
 
 
 class AdvancedWalkForwardConfig(PortalModel):
+    data_start: datetime | None = None
+    data_end_exclusive: datetime | None = None
     split_mode: str | int | datetime = "walk_forward_2022"
     split_frequency: Literal["single", "yearly", "semi_yearly", "quarterly", "monthly", "weekly"] = "quarterly"
     window_mode: Literal["expanding", "rolling"] = "expanding"
@@ -191,8 +193,19 @@ class AdvancedWalkForwardConfig(PortalModel):
     random_seed: int | None = 42
     optimization: OptimizationConfig = OptimizationConfig()
 
+    @field_validator("data_start", "data_end_exclusive", mode="after")
+    @classmethod
+    def normalize_data_timestamps(cls, value: datetime | None) -> datetime | None:
+        return None if value is None else _utc_datetime(value)
+
     @model_validator(mode="after")
     def validate_schedule(self) -> "AdvancedWalkForwardConfig":
+        if (
+            self.data_start is not None
+            and self.data_end_exclusive is not None
+            and self.data_start >= self.data_end_exclusive
+        ):
+            raise ValueError("advanced data window must have positive duration")
         if self.window_mode == "rolling" and not self.train_window:
             raise ValueError("rolling window_mode requires train_window")
         if self.optimization_schedule == OptimizationSchedule.PER_FOLD_DECAY:

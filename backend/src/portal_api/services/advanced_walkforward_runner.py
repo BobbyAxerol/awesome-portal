@@ -13,12 +13,12 @@ from __future__ import annotations
 
 import math
 from datetime import UTC, datetime
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 import pandas as pd
 
 from portal_api import __version__ as portal_version
-from portal_api.adapters.market_data import PreparedMarketData
+from portal_api.adapters.market_data import PreparedMarketData, slice_market_range
 from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.domain.enums import OptimizationMode, RunProtocol
 from portal_api.domain.requests import (
@@ -141,9 +141,13 @@ class AdvancedWalkForwardRunner:
             if progress is not None:
                 progress(name)
 
-        stage("VALIDATING_DATA")
         self.validate_capabilities()
         config = request.calibration
+        active_market = slice_market_range(
+            market,
+            start=config.data_start,
+            end_exclusive=config.data_end_exclusive,
+        )
         fields = _config_fields(config)
         self._gateway.validate_advanced_walkforward(config_fields=fields)
 
@@ -170,7 +174,7 @@ class AdvancedWalkForwardRunner:
         stage("OPTIMIZING_IS")
         endpoint, wf = self._gateway.run_advanced_walkforward(
             strategy_fn=_strategy_callable,
-            data=market.frame,
+            data=active_market.frame,
             wf_config=wf_config,
             optimization_config=dict(fields),
             param_ranges=(
@@ -188,7 +192,7 @@ class AdvancedWalkForwardRunner:
 
         metrics = self._gateway.metrics(endpoint, trading_days=365)
         result = endpoint.result
-        series = _stitched_series(market.frame, result)
+        series = _stitched_series(active_market.frame, result)
         self._artifacts.write_frame(run_id, "series/stitched.parquet", series)
         non_finite: list[str] = []
         clean_metrics = _sanitize({"stitched": metrics}, non_finite=non_finite)
@@ -219,6 +223,7 @@ class AdvancedWalkForwardRunner:
                     "quantbt_version": self._gateway.version(),
                     "portal_version": portal_version,
                     "dataset_content_hash": market.content_hash,
+                    "analysis_content_hash": active_market.content_hash,
                     "config_hash": request.config_hash(),
                     "random_seed": config.random_seed,
                     "started_at": started_at,
@@ -255,6 +260,10 @@ class AdvancedWalkForwardRunner:
         for name, key in (("trials", "trial_table"), ("candidates", "candidate_table")):
             table = wf.get(key)
             if isinstance(table, pd.DataFrame) and not table.empty:
+                if name == "trials":
+                    from portal_api.services.three_window_runner import _search_trials_only
+
+                    table = _search_trials_only(table)
                 self._artifacts.write_frame(run_id, f"wfo/{name}.parquet", _flatten_frame(table))
 
 

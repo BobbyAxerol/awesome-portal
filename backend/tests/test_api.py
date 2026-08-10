@@ -58,6 +58,16 @@ async def test_control_plane_and_preflight(provider, run_request) -> None:
         capabilities = await client.get("/api/capabilities/walk-forward")
         assert capabilities.json()[0]["target_mode"] == "pct_equity"
 
+        options = await client.get("/api/config/options")
+        assert options.status_code == 200
+        option_payload = options.json()
+        assert "three_window_decay" in option_payload["protocols"]
+        assert "advanced_walk_forward" in option_payload["protocols"]
+        assert option_payload["defaults"]["account"]["canonical_one_way_fee_rate"] == pytest.approx(
+            0.0005
+        )
+        assert option_payload["compatibility"]["per_fold_decay"]["optimization_mode"] == "mode_1_decay"
+
         preflight = await client.post(
             "/api/runs/preflight",
             json=run_request.model_dump(mode="json"),
