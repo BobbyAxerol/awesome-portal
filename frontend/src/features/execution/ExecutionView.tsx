@@ -9,6 +9,7 @@ import { baseOption, palette } from "../../charts/theme";
 import { ChartFigure } from "../../components/ChartFigure";
 import { SegmentedControl, StateView } from "../../components/ui";
 import { api, type SeriesPayload } from "../../lib/api";
+import { entryPoints, exitPoints } from "../../lib/transitions";
 
 const SEGMENTS = ["is", "oos", "holdout_live"] as const;
 type SegmentKey = (typeof SEGMENTS)[number];
@@ -40,7 +41,7 @@ export function ExecutionView({ runId }: { runId: string }) {
           ]}
         />
       )}
-      <PriceChart payload={series.data!} advanced={advanced} />
+      <PriceChart payload={series.data!} />
       <PositionStrip payload={series.data!} />
       <div className="card p-4">
         <div className="label mb-2">Cost timeline</div>
@@ -54,25 +55,12 @@ export function ExecutionView({ runId }: { runId: string }) {
   );
 }
 
-
-function entryPoints(payload: SeriesPayload) {
-  const target = payload.series.signal_target ?? [];
-  const close = payload.series.close ?? [];
-  const points: Array<{ index: number; side: 1 | -1; price: number }> = [];
-  let prev = 0;
-  for (let i = 0; i < target.length; i += 1) {
-    const value = target[i] ?? 0;
-    if (value !== 0 && prev === 0) {
-      points.push({ index: i, side: value > 0 ? 1 : -1, price: close[i] ?? 0 });
-    }
-    prev = value;
-  }
-  return points;
-}
-
-function PriceChart({ payload, advanced }: { payload: SeriesPayload; advanced: boolean }) {
+function PriceChart({ payload }: { payload: SeriesPayload }) {
   const option = useMemo(() => {
-    const entries = advanced ? [] : entryPoints(payload);
+    const target = payload.series.signal_target ?? [];
+    const close = payload.series.close ?? [];
+    const entries = entryPoints(target, close);
+    const exits = exitPoints(target, close);
     return baseOption({
       grid: { left: 56, right: 20, top: 20, bottom: 48, containLabel: true },
       legend: { show: false },
@@ -86,28 +74,49 @@ function PriceChart({ payload, advanced }: { payload: SeriesPayload; advanced: b
           itemStyle: { color: "#5d7b93" },
         },
         {
-          name: "Target transition — long",
+          name: "Long entry",
           type: "scatter",
           symbol: "triangle",
-          symbolSize: 12,
-          itemStyle: { color: "var(--good)" },
+          symbolSize: 14,
+          itemStyle: { color: "var(--good)", borderColor: "#0f5c3a", borderWidth: 1 },
           data: entries.filter((entry) => entry.side === 1).map((entry) => [payload.timestamps[entry.index], entry.price]),
         },
         {
-          name: "Target transition — short",
+          name: "Short entry",
           type: "scatter",
           symbol: "triangle",
           symbolRotate: 180,
-          symbolSize: 12,
-          itemStyle: { color: "var(--bad)" },
+          symbolSize: 14,
+          itemStyle: { color: "var(--bad)", borderColor: "#7c2626", borderWidth: 1 },
           data: entries.filter((entry) => entry.side === -1).map((entry) => [payload.timestamps[entry.index], entry.price]),
+        },
+        {
+          name: "Long exit",
+          type: "scatter",
+          symbol: "path://M-4,-4 L4,4 M4,-4 L-4,4",
+          symbolSize: 13,
+          itemStyle: { color: "var(--good)", borderColor: "var(--good)", borderWidth: 1.5 },
+          data: exits.filter((exit) => exit.side === 1).map((exit) => [payload.timestamps[exit.index], exit.price]),
+        },
+        {
+          name: "Short exit",
+          type: "scatter",
+          symbol: "path://M-4,-4 L4,4 M4,-4 L-4,4",
+          symbolSize: 13,
+          itemStyle: { color: "var(--bad)", borderColor: "var(--bad)", borderWidth: 1.5 },
+          data: exits.filter((exit) => exit.side === -1).map((exit) => [payload.timestamps[exit.index], exit.price]),
         },
       ],
     });
   }, [payload]);
   return (
-    <ChartFigure figNumber={1} title="Close price + target transitions" note={advanced ? "Target markers chỉ có cho three-window protocol (stitched series không lưu signal)." : "Markers là Target transition từ strategy signal, không phải audited fills."} sourceId="series/*">
-      <EChart option={option} height={540} />
+    <ChartFigure
+      figNumber={1}
+      title="Close price + target transitions"
+      note="▲▼ = entry · ✕ = exit. Markers là Target transition từ strategy signal (pos_weight), không phải audited fills."
+      sourceId="series/*"
+    >
+      <EChart option={option} height={640} />
     </ChartFigure>
   );
 }

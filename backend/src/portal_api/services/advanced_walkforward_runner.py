@@ -326,6 +326,12 @@ def _stitched_series(market_frame: pd.DataFrame, result) -> pd.DataFrame:
         data=pd.Series(equity / peak - 1.0).to_numpy(),
         dtype=float,
     )
+    # Stitched OOS target signal (pos_weight) — lets the Execution view draw
+    # long/short entry & exit markers for advanced runs too (v0.1.1).
+    wf_result = getattr(result, "metadata", {}).get("walk_forward_result")
+    oos_output = getattr(wf_result, "oos_output", None)
+    if isinstance(oos_output, pd.Series):
+        series["signal_target"] = oos_output.reindex(index).fillna(0.0).astype(float)
     series.attrs["capabilities"] = {
         "fee_series": False,
         "funding_series": False,
