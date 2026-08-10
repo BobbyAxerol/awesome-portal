@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from portal_api.serialization import SerializationError, canonicalize
+from portal_api.serialization import SerializationError, canonicalize, canonicalize_nullable
 
 
 class _SampleEnum(Enum):
@@ -30,6 +30,21 @@ def test_non_finite_float_is_rejected() -> None:
     for value in (float("nan"), float("inf"), float("-inf")):
         with pytest.raises(SerializationError):
             canonicalize(value)
+
+
+def test_nullable_projection_maps_diagnostic_non_finite_values_to_null() -> None:
+    projected = canonicalize_nullable(
+        {
+            "objective": float("-inf"),
+            "temporal_score": np.float64("nan"),
+            "nested": [1.0, float("inf"), pd.NA],
+        }
+    )
+    assert projected == {
+        "objective": None,
+        "temporal_score": None,
+        "nested": [1.0, None, None],
+    }
 
 
 def test_timestamps_become_iso8601() -> None:

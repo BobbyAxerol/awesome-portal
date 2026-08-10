@@ -14,6 +14,7 @@ from pathlib import Path
 
 import anyio
 import httpx
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -187,10 +188,30 @@ async def test_list_and_detail(client) -> None:
 
 @pytest.mark.anyio
 async def test_wfo_and_series_endpoints(client) -> None:
-    http, _ = client
+    http, artifact_root = client
     frame = build_market_frame()
     run_id = (await http.post("/api/runs", json=_payload(frame))).json()["run_id"]
     await _wait_terminal(http, run_id)
+
+    # A real 400-trial TPE run can contain pruned rows represented by -inf/NaN
+    # in Parquet. The diagnostic JSON API must expose those sentinels as null
+    # without weakening strict artifact serialization.
+    trial_path = artifact_root / run_id / "wfo" / "trials.parquet"
+    persisted_trials = pd.read_parquet(trial_path)
+    pruned_row = {column: np.nan for column in persisted_trials.columns}
+    pruned_row.update(
+        {
+            "trial_id": 99_999,
+            "objective": -np.inf,
+            "pruned": True,
+            "params_json": "{}",
+            "selection_metadata_json": None,
+        }
+    )
+    persisted_trials = pd.concat(
+        [persisted_trials, pd.DataFrame([pruned_row])], ignore_index=True
+    )
+    persisted_trials.to_parquet(trial_path, index=True)
 
     trials = (await http.get(f"/api/runs/{run_id}/wfo/trials?sort_by=objective&top_n=5")).json()
     assert len(trials) >= 1
@@ -218,8 +239,14 @@ async def test_wfo_and_series_endpoints(client) -> None:
     ledger = (await http.get(f"/api/runs/{run_id}/ledger")).json()
     assert ledger["status"] == "COMPLETED"
     assert ledger["trial_ledger_ready"] is True
-    assert len(ledger["trial_events"]) == TRIALS
+    assert len(ledger["trial_events"]) == TRIALS + 1
     assert any(item.get("objective") is not None for item in ledger["trial_events"])
+    projected_pruned = next(
+        item for item in ledger["trial_events"] if item["trial_id"] == 99_999
+    )
+    assert projected_pruned["pruned"] is True
+    assert projected_pruned["objective"] is None
+    assert projected_pruned["selection_metadata_json"] is None
 
     presentation = (await http.get(f"/api/runs/{run_id}/presentation/calendar?max_points=50")).json()
     assert presentation["segment"] == "calendar"

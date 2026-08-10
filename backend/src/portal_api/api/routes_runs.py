@@ -55,7 +55,7 @@ def _read_artifact(request: Request, run_id: str, path: str) -> dict:
 
 
 def _read_frame_records(request: Request, run_id: str, path: str) -> list[dict]:
-    from portal_api.serialization import canonicalize
+    from portal_api.serialization import canonicalize_nullable
 
     try:
         import pandas as pd
@@ -63,7 +63,7 @@ def _read_frame_records(request: Request, run_id: str, path: str) -> list[dict]:
         frame = pd.read_parquet(_artifacts(request).run_directory(run_id) / path)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=f"artifact {path} not found") from exc
-    return canonicalize(frame.to_dict(orient="records"))
+    return canonicalize_nullable(frame.to_dict(orient="records"))
 
 
 def _require_completed(request: Request, run_id: str) -> dict:
