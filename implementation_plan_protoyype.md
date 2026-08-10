@@ -2224,7 +2224,7 @@ Status board:
 
 | Phase | Trang thai | Brief duyet luc | Report | Phe duyet luc |
 |---|---|---|---|---|
-| P0 | cho duyet brief | - | - | - |
+| P0 | hoan thanh, cho phe duyet | 2026-08-10 | xem duoi | - |
 | P1 | khoa | - | - | - |
 | P2 | khoa | - | - | - |
 | P3 | khoa | - | - | - |
@@ -2232,3 +2232,30 @@ Status board:
 | P5 | khoa | - | - | - |
 | P6 | khoa | - | - | - |
 | P7 | khoa | - | - | - |
+
+#### Phase P0 Report (2026-08-10)
+
+- Delivered:
+  - B1 golden fixture: `backend/tests/fixtures/` (market + signals + metadata)
+    tai `backend/tests/golden_fixture.py`; 5 scenario: low_volume (0 entry),
+    hard_sl (entry 116 -> SL 125), trend_down (entry 175 -> SL 202),
+    high_vol_reversal (entry 274 -> SL 315), trend_up (entry 412, giu den het);
+    rebuild bang `python backend/tests/golden_fixture.py`.
+  - B1 parity harness: `backend/tests/test_golden_parity.py` (6 tests) —
+    kernel vs golden (exact/tolerance da ghi trong metadata), `compare_to_golden`
+    nhan ham generator bat ky cho P1, scenario coverage, determinism.
+  - B2 canonical serializer: `backend/src/portal_api/serialization.py`
+    (`canonicalize`, khong repr fallback, SerializationError cho unknown/
+    non-finite); `ArtifactRepository._json_default` delegate sang no;
+    `backend/tests/test_serialization.py` (13 tests).
+  - B3 capability-gap note: `backend/ARCHITECTURE.md` "P0 Capability Gap Note"
+    — metrics 19/19 co, WFO metadata day du, 3 gap ro: per-trial selection
+    breakdown khong co (chi co objective/sharpe/decay), fee/funding/margin
+    series khong co tren BacktestResult, drawdown chi tinh o presentation layer.
+- Gate evidence:
+  - `./scripts/test_backend.sh` -> 49 passed in 5.44s (30 cu + 19 moi).
+  - `sha256sum -c strategy/PROTECTED_SHA256` -> OK.
+  - `git log`: commit d53e4ae tren `dev`.
+- Deviations: khong. Design system map (§27.2-27.5) da ghi trong planning
+  truoc do, P0 chi implement B1-B3.
+- Cho phe duyet de bat dau P1.
