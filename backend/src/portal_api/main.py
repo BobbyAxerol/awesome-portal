@@ -58,6 +58,7 @@ def create_app(
     app.state.preflight_service = PreflightService(
         app.state.market_data_provider,
         app.state.strategy_registry,
+        quantbt_gateway=app.state.quantbt_gateway,
     )
 
     @app.exception_handler(PortalDomainError)

@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 
 from portal_api.adapters.market_data import MarketDataProvider, partition_three_windows
+from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.domain.errors import DataSchemaError
 from portal_api.domain.requests import AdvancedWalkForwardConfig, PortalRunRequest, ThreeWindowConfig
 from portal_api.domain.responses import PreflightResponse, WindowSummary
@@ -10,9 +11,15 @@ from portal_api.strategies import StrategyRegistry
 
 
 class PreflightService:
-    def __init__(self, provider: MarketDataProvider, strategies: StrategyRegistry):
+    def __init__(
+        self,
+        provider: MarketDataProvider,
+        strategies: StrategyRegistry,
+        quantbt_gateway: QuantBTGateway | None = None,
+    ):
         self._provider = provider
         self._strategies = strategies
+        self._quantbt_gateway = quantbt_gateway
 
     def run(self, request: PortalRunRequest) -> PreflightResponse:
         strategy = self._strategies.get(request.strategy_id)
@@ -66,6 +73,8 @@ class PreflightService:
                     bars=len(market.frame),
                 ),
             )
+            if self._quantbt_gateway is not None:
+                self._validate_advanced(request.calibration)
         else:  # pragma: no cover - closed Pydantic union
             raise TypeError("unsupported calibration config")
 
@@ -80,3 +89,22 @@ class PreflightService:
             data_quality=market.quality,
             config_hash=canonical,
         )
+
+    def _validate_advanced(self, calibration: AdvancedWalkForwardConfig) -> None:
+        """Capability + QuantBT-native config validation for Advanced WFO."""
+        from portal_api.services.advanced_walkforward_runner import _config_fields
+
+        rows = self._quantbt_gateway.walkforward_capabilities()
+        supported = {
+            str(row.get("target_mode"))
+            for row in rows
+            if str(row.get("status")).strip().lower() == "supported"
+        }
+        if "pct_equity" not in supported:
+            raise DataSchemaError("pct_equity is not a supported walk-forward target mode")
+        try:
+            self._quantbt_gateway.validate_advanced_walkforward(
+                config_fields=_config_fields(calibration)
+            )
+        except Exception as exc:  # noqa: BLE001 - surface QuantBT's message safely
+            raise DataSchemaError(f"unsupported walk-forward configuration: {exc}") from exc

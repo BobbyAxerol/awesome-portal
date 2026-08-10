@@ -93,3 +93,38 @@ class QuantBTGateway:
     def metrics(self, endpoint, *, trading_days: int = 365, scope: str = "auto") -> dict[str, Any]:
         """QuantBT full report dict for the endpoint's latest result."""
         return endpoint.full_report(trading_days=trading_days, scope=scope)
+
+    # --- Phase P3 advanced walk-forward (plan §10.10, §8) --------------------
+
+    def validate_advanced_walkforward(self, *, config_fields: Mapping[str, object]) -> None:
+        """Instantiate the public WalkForwardConfig to fail fast on invalid
+        mode/schedule combinations before any run is started."""
+        from quantbt.walkforward import WalkForwardConfig
+
+        WalkForwardConfig(**dict(config_fields))
+
+    def run_advanced_walkforward(
+        self,
+        *,
+        strategy_fn,
+        data: pd.DataFrame,
+        wf_config,
+        optimization_config: Mapping[str, object],
+        param_ranges: Mapping[str, tuple[int | float, int | float, int | float]] | None,
+        fixed_params: Mapping[str, object] | None,
+        account_kwargs: Mapping[str, object],
+    ) -> tuple[Any, dict[str, Any]]:
+        """Run the public walk_forward endpoint with a fully typed config."""
+        module = self._module()
+        endpoint = module.QuantBTEndpoint.walk_forward(
+            strategy_class=strategy_fn,
+            target_mode="pct_equity",
+            walkforward_config=wf_config,
+            optimization_config=dict(optimization_config),
+            **dict(account_kwargs),
+        )
+        if fixed_params is not None:
+            result = endpoint.backtest(data=data, params=dict(fixed_params))
+        else:
+            result = endpoint.backtest(data=data, param_ranges=dict(param_ranges or {}))
+        return endpoint, result.metadata["walk_forward"]
