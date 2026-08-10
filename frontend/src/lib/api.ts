@@ -139,6 +139,10 @@ export const api = {
   getRun: (runId: string) => request<RunDetail>(`/api/runs/${runId}`),
   runConfig: (runId: string) => request<Record<string, unknown>>(`/api/runs/${runId}/config`),
   ledger: (runId: string) => request<RunLedger>(`/api/runs/${runId}/ledger`),
+  console: (runId: string, tail = 2000) =>
+    request<{ run_id: string; lines: string[] }>(
+      `/api/runs/${runId}/console?tail=${tail}`,
+    ),
   cancelRun: (runId: string) =>
     request<{ run_id: string; status: string }>(`/api/runs/${runId}/cancel`, { method: "POST" }),
   summary: (runId: string) =>

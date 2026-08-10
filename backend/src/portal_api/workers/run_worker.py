@@ -141,6 +141,40 @@ def _cancel_requested(artifacts: ArtifactRepository, run_id: str) -> bool:
     return (artifacts.run_directory(run_id) / ".cancel").exists()
 
 
+def _install_console_tee(artifacts: ArtifactRepository, run_id: str) -> None:
+    """Tee the worker's stdout/stderr into ``status/console.log``.
+
+    Optuna/QuantBT print every trial as it is evaluated; the API exposes the
+    tail of this file so the UI can stream real per-trial progress. The log is
+    an operational capture, never parsed into structured audit events.
+    """
+    import sys
+
+    log_path = artifacts.run_directory(run_id, create=True) / "status" / "console.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    handle = open(log_path, "a", encoding="utf-8", buffering=1)
+
+    class _Tee:
+        def __init__(self, stream, file_handle):
+            self._stream = stream
+            self._handle = file_handle
+
+        def write(self, data: str) -> int:
+            self._stream.write(data)
+            self._handle.write(data)
+            return len(data)
+
+        def flush(self) -> None:
+            self._stream.flush()
+            self._handle.flush()
+
+        def isatty(self) -> bool:
+            return False
+
+    sys.stdout = _Tee(sys.__stdout__, handle)
+    sys.stderr = _Tee(sys.__stderr__, handle)
+
+
 def execute_run(
     *,
     request_json: dict[str, Any],
@@ -175,6 +209,7 @@ def execute_run(
             "dataset_id": request.dataset_id,
         },
     )
+    _install_console_tee(artifacts, run_id)
     market = _load_market(request)
 
     def progress(state: RunState) -> None:

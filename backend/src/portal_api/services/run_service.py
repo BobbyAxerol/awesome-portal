@@ -155,7 +155,11 @@ class RunManager:
                     "completed_at": status.get("completed_at"),
                 }
             )
-        return sorted(records, key=lambda item: str(item.get("created_at")), reverse=True)
+        return sorted(
+            records,
+            key=lambda item: item.get("completed_at") or item.get("created_at") or "",
+            reverse=True,
+        )
 
     def cancel(self, run_id: str) -> bool:
         status = self.status(run_id)

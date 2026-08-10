@@ -243,6 +243,22 @@ async def run_events(run_id: str, request: Request) -> StreamingResponse:
     return StreamingResponse(stream(), media_type="text/event-stream")
 
 
+@router.get("/{run_id}/console")
+async def run_console(run_id: str, request: Request, tail: int = 2000) -> dict:
+    """Tail of the worker's captured stdout/stderr (per-trial Optuna output).
+
+    Operational capture only — it is never parsed into structured audit
+    events; the structured ledger stays the source of truth.
+    """
+    if _manager(request).status(run_id) is None:
+        raise HTTPException(status_code=404, detail="run not found")
+    log_path = _artifacts(request).run_directory(run_id) / "status" / "console.log"
+    if not log_path.is_file():
+        return {"run_id": run_id, "lines": []}
+    lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    return {"run_id": run_id, "lines": lines[-max(1, tail):]}
+
+
 @router.get("/{run_id}/ledger")
 async def run_ledger(run_id: str, request: Request) -> dict:
     """Structured stage and optimization ledger; available before completion."""

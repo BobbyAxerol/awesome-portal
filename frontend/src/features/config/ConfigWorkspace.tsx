@@ -282,7 +282,21 @@ export function ConfigWorkspace() {
   }, [protocol, windows]);
 
   const preflightValid = preflight.data?.valid === true && validatedKey === payloadKey;
-  const runnable = !overlapError && preflightValid && !createRun.isPending;
+
+  const handleRun = () => {
+    if (!preflightValid) {
+      preflight.mutate(
+        { body: payload, key: payloadKey },
+        {
+          onSuccess: (response) => {
+            if (response.valid) createRun.mutate();
+          },
+        },
+      );
+      return;
+    }
+    createRun.mutate();
+  };
 
   if (strategies.isLoading || datasets.isLoading || options.isLoading) return <StateView kind="loading" />;
   if (strategies.isError || datasets.isError || options.isError) {
@@ -466,7 +480,7 @@ export function ConfigWorkspace() {
           ) : <p className="text-[12px] text-ink-faint">Validate the current configuration before submitting a run.</p>}
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <button type="button" className="btn-ghost" onClick={() => preflight.mutate({ body: payload, key: payloadKey })} disabled={Boolean(overlapError) || preflight.isPending}><RefreshCcw size={12} />Validate</button>
-            <button type="button" className="btn-primary" disabled={!runnable} onClick={() => createRun.mutate()}><Play size={13} />{createRun.isPending ? "Submitting…" : "Run backtest"}</button>
+            <button type="button" className="btn-primary" disabled={Boolean(overlapError) || createRun.isPending} onClick={handleRun}><Play size={13} />{createRun.isPending ? "Submitting…" : preflight.isPending ? "Validating…" : "Run backtest"}</button>
             {createRun.isError ? <span className="mono text-[12px] text-bad">{createRun.error.message}</span> : null}
           </div>
         </div>
