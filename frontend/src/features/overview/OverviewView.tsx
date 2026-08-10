@@ -28,6 +28,10 @@ export function OverviewView({ runId }: { runId: string }) {
   const seriesQueries = useSegmentSeries(runId);
   const [selected, setSelected] = useState<SegmentKey | "compare">("compare");
   const [capitalMode, setCapitalMode] = useState<"capital" | "rebased">("capital");
+  const presentation = useQuery({
+    queryKey: ["presentation", runId, capitalMode],
+    queryFn: () => api.presentation(runId, capitalMode === "capital" ? "calendar" : "rebased", 5000),
+  });
 
   const segments = useMemo(() => {
     const out: Array<{ key: SegmentKey; series: SeriesPayload | undefined }> = [];
@@ -38,31 +42,28 @@ export function OverviewView({ runId }: { runId: string }) {
   }, [seriesQueries]);
 
   const metrics = summary.data?.metrics.segments;
-  const loaded = segments.every((segment) => segment.series) && Boolean(metrics);
+  const loaded = segments.every((segment) => segment.series) && Boolean(metrics) && Boolean(presentation.data);
 
   const equityOption = useMemo(() => {
-    const series = segments
-      .filter((segment) => (selected === "compare" || segment.key === selected) && segment.series)
-      .map((segment) => {
-        const payload = segment.series!;
-        const equity = payload.series.equity ?? [];
-        const first = equity.find((value) => value != null) ?? 1;
-        const values = capitalMode === "capital" ? equity : equity.map((value) => (value == null ? null : (value / first) * 100));
-        const firstNonNull = values.findIndex((value) => value != null);
-        const data = values.map((value, index) =>
-          value == null || (firstNonNull >= 0 && index < firstNonNull) ? [payload.timestamps[index], null] : [payload.timestamps[index], value],
-        );
+    const payload = presentation.data;
+    const series = SEGMENTS
+      .filter((key) => selected === "compare" || key === selected)
+      .map((key) => {
+        const values = payload?.series[`${key}_equity`] ?? [];
+        const data = values.map((value, index) => [payload?.timestamps[index], value]);
         return {
-          name: segment.key.toUpperCase(),
+          name: key === "holdout_live" ? "Holdout Live" : key.toUpperCase(),
           type: "line" as const,
           showSymbol: false,
+          connectNulls: false,
           data,
-          lineStyle: { width: 1.75, color: roleColors[segment.key] },
-          itemStyle: { color: roleColors[segment.key] },
+          lineStyle: { width: 1.75, color: roleColors[key] },
+          itemStyle: { color: roleColors[key] },
         };
       });
     return baseOption({
-      legend: { data: series.map((item) => item.name) },
+      grid: { left: 58, right: 24, top: 46, bottom: 54, containLabel: true },
+      legend: { data: series.map((item) => item.name), top: 2, right: 12, left: "auto" },
       yAxis: {
         type: "value",
         axisLabel: { color: "var(--ink-faint)", fontSize: 11 },
@@ -70,7 +71,7 @@ export function OverviewView({ runId }: { runId: string }) {
       },
       series,
     });
-  }, [segments, selected, capitalMode]);
+  }, [presentation.data, selected]);
 
   const underwaterOption = useMemo(() => {
     const active = (selected === "compare" ? segments : segments.filter((segment) => segment.key === selected)).filter((segment) => segment.series);
@@ -79,19 +80,15 @@ export function OverviewView({ runId }: { runId: string }) {
       legend: { show: false },
       series: active.map((segment) => {
         const payload = segment.series!;
-        const equity = payload.series.equity ?? [];
-        const peak = equity.map((value, index) =>
-          value == null ? null : Math.max(...equity.slice(0, index + 1).map((v) => v ?? -Infinity)),
-        );
-        const dd = equity.map((value, index) => (peak[index] ? ((value ?? 0) / peak[index]!) - 1 : null));
+        const dd = payload.series.drawdown ?? [];
         return {
-          name: segment.key.toUpperCase(),
+          name: segment.key === "holdout_live" ? "Holdout Live" : segment.key.toUpperCase(),
           type: "line",
           showSymbol: false,
           data: dd.map((value, index) => [payload.timestamps[index], value == null ? null : value * 100]),
-          lineStyle: { width: 1.25, color: "var(--bad)", opacity: 0.6 },
-          itemStyle: { color: "var(--bad)" },
-          areaStyle: { color: "rgba(180,58,58,.12)" },
+          lineStyle: { width: 1.25, color: roleColors[segment.key], opacity: 0.8 },
+          itemStyle: { color: roleColors[segment.key] },
+          areaStyle: { color: roleColors[segment.key], opacity: 0.07 },
         };
       }),
     });
@@ -99,8 +96,8 @@ export function OverviewView({ runId }: { runId: string }) {
 
   const heroMetrics = selected === "compare" ? (metrics?.holdout_live ?? {}) : (metrics?.[selected] ?? {});
 
-  if (summary.isLoading || !loaded) return <StateView kind="loading" />;
-  if (summary.isError) return <StateView kind="failed" message={summary.error.message} onRetry={() => summary.refetch()} />;
+  if (summary.isLoading || presentation.isLoading || !loaded) return <StateView kind="loading" />;
+  if (summary.isError || presentation.isError) return <StateView kind="failed" message={summary.error?.message ?? presentation.error?.message} onRetry={() => void (summary.refetch(), presentation.refetch())} />;
 
   return (
     <div className="space-y-6">
@@ -133,7 +130,7 @@ export function OverviewView({ runId }: { runId: string }) {
         <MetricHero label="Trades" value={fmtCount(heroMetrics.num_trades)} />
       </div>
 
-      <ChartFigure figNumber={1} title="Equity — three segments, non-connected accounts" sourceId="presentation/calendar-equity">
+      <ChartFigure figNumber={1} title={`Equity — ${capitalMode === "capital" ? "fresh-account capital" : "rebased 100"}`} sourceId={`presentation/${capitalMode === "capital" ? "calendar" : "rebased"}`}>
         <EChart option={equityOption} height={420} />
       </ChartFigure>
 

@@ -33,14 +33,50 @@ export interface PreflightResponse {
   symbol: string;
   timeframe: string;
   windows: WindowSummary[];
-  data_quality: { rows: number; content_hash: string; missing_bar_count: number };
+  data_quality: {
+    rows: number;
+    content_hash: string;
+    missing_bar_count: number;
+    analysis?: { rows: number; first_timestamp: string; last_timestamp: string; content_hash: string };
+    load_metadata?: Record<string, unknown>;
+  };
   config_hash: string;
 }
 
 export type ParameterSpec =
-  | { kind: "fixed"; value: number }
+  | { kind: "fixed"; value: unknown }
   | { kind: "int_range"; low: number; high: number; step: number }
-  | { kind: "float_range"; low: number; high: number; step: number };
+  | { kind: "float_range"; low: number; high: number; step: number }
+  | { kind: "categorical"; values: unknown[] };
+
+export interface ConfigOptions {
+  schema_version: string;
+  protocols: string[];
+  target_modes: string[];
+  optimization_modes: string[];
+  optimization_schedules: string[];
+  split_frequencies: string[];
+  window_modes: string[];
+  position_boundary_policies: string[];
+  candidate_selection_metrics: string[];
+  compatibility: Record<string, Record<string, string>>;
+  defaults: {
+    account: Record<string, unknown>;
+    execution: Record<string, unknown>;
+    optimization: Record<string, unknown>;
+    three_window: Record<string, unknown>;
+    advanced_walk_forward: Record<string, unknown>;
+  };
+}
+
+export interface RunLedger {
+  run_id: string;
+  status: string;
+  stage_events: Array<{ state: string; at: number }>;
+  trial_events: Record<string, unknown>[];
+  candidate_events: Record<string, unknown>[];
+  trial_ledger_ready: boolean;
+}
 
 export interface RunSummary {
   run_id: string;
@@ -86,6 +122,7 @@ export const api = {
   datasets: () => request<DatasetDescriptor[]>("/api/datasets"),
   strategies: () => request<StrategyResponse[]>("/api/strategies"),
   capabilities: () => request<Record<string, unknown>[]>("/api/capabilities/walk-forward"),
+  configOptions: () => request<ConfigOptions>("/api/config/options"),
   preflight: (payload: unknown) =>
     request<PreflightResponse>("/api/runs/preflight", {
       method: "POST",
@@ -100,6 +137,8 @@ export const api = {
     }),
   listRuns: () => request<RunSummary[]>("/api/runs"),
   getRun: (runId: string) => request<RunDetail>(`/api/runs/${runId}`),
+  runConfig: (runId: string) => request<Record<string, unknown>>(`/api/runs/${runId}/config`),
+  ledger: (runId: string) => request<RunLedger>(`/api/runs/${runId}/ledger`),
   cancelRun: (runId: string) =>
     request<{ run_id: string; status: string }>(`/api/runs/${runId}/cancel`, { method: "POST" }),
   summary: (runId: string) =>
@@ -116,6 +155,7 @@ export const api = {
     request<Record<string, unknown>[]>(`/api/runs/${runId}/wfo/trials${params ? `?${params}` : ""}`),
   candidates: (runId: string) =>
     request<Record<string, unknown>[]>(`/api/runs/${runId}/wfo/candidates`),
+  folds: (runId: string) => request<Record<string, unknown>[]>(`/api/runs/${runId}/wfo/folds`),
   parameters: (runId: string) =>
     request<{ params_by_fold: Record<string, unknown>; selected: { params: Record<string, number> } }>(
       `/api/runs/${runId}/wfo/parameters`,
@@ -124,6 +164,10 @@ export const api = {
   series: (runId: string, segment: string, maxPoints?: number) =>
     request<SeriesPayload>(
       `/api/runs/${runId}/series/${segment}${maxPoints ? `?max_points=${maxPoints}` : ""}`,
+    ),
+  presentation: (runId: string, mode: "calendar" | "rebased", maxPoints?: number) =>
+    request<SeriesPayload>(
+      `/api/runs/${runId}/presentation/${mode}${maxPoints ? `?max_points=${maxPoints}` : ""}`,
     ),
   audit: (runId: string) =>
     request<{

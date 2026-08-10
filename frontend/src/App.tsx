@@ -15,6 +15,7 @@ import { NavTabs, RunPassport, TopBar } from "./components/shell";
 export function App() {
   const [params] = useSearchParams();
   const runId = params.get("run") ?? "";
+  const creatingRun = params.get("new") === "1";
   const runs = useQuery({ queryKey: ["runs"], queryFn: api.listRuns, refetchInterval: 4000 });
   const run = useQuery({
     queryKey: ["run", runId],
@@ -24,9 +25,10 @@ export function App() {
   });
 
   const currentRun = useMemo(() => {
+    if (creatingRun) return undefined;
     if (runId && run.data) return run.data;
     return runs.data?.find((item) => item.status === "COMPLETED");
-  }, [runId, run.data, runs.data]);
+  }, [creatingRun, runId, run.data, runs.data]);
 
   return (
     <div className="min-h-screen">
@@ -57,7 +59,7 @@ export function App() {
           )}
         </>
       ) : (
-        <main className="mx-auto max-w-[1440px] px-6 py-6">
+        <main className="mx-auto max-w-[1440px] px-4 py-5 sm:px-6 sm:py-6">
           <ConfigWorkspace />
         </main>
       )}

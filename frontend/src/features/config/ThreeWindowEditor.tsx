@@ -30,19 +30,19 @@ function Row({
   endPlaceholder?: string;
 }) {
   return (
-    <div className="grid grid-cols-[72px_1fr_1fr] items-center gap-2">
+    <div className="grid grid-cols-[56px_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[64px_minmax(0,1fr)_minmax(0,1fr)]">
       <span className="mono text-[11px] font-semibold uppercase" style={{ color }}>
         {role}
       </span>
       <input
-        className="input"
+        className="input min-w-0 w-full"
         type="datetime-local"
         value={start.slice(0, 16)}
         onChange={(event) => onStart(parseIso(event.target.value))}
         aria-label={`${role} start`}
       />
       <input
-        className="input"
+        className="input col-start-2 min-w-0 w-full sm:col-start-auto"
         type="datetime-local"
         value={end ? end.slice(0, 16) : ""}
         placeholder={endPlaceholder}

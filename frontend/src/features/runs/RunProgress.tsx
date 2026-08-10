@@ -4,6 +4,7 @@ import { Check, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { api, type RunDetail } from "../../lib/api";
+import { rowParams } from "../../lib/api";
 import { fmtDuration, fmtTimestamp } from "../../lib/format";
 import { StateView } from "../../components/ui";
 
@@ -61,6 +62,11 @@ export function RunProgress({ runId }: { runId: string }) {
     queryFn: () => api.getRun(runId),
     refetchInterval: 1200,
   });
+  const ledger = useQuery({
+    queryKey: ["ledger", runId],
+    queryFn: () => api.ledger(runId),
+    refetchInterval: (query) => (query.state.data && ["COMPLETED", "FAILED", "CANCELLED"].includes(query.state.data.status) ? false : 1200),
+  });
   const [terminalMessage, setTerminalMessage] = useState("");
   useEffect(() => {
     if (detail.data?.status === "COMPLETED") setTerminalMessage("Run hoàn thành — đang mở Overview.");
@@ -98,31 +104,41 @@ export function RunProgress({ runId }: { runId: string }) {
         ) : null}
       </div>
 
-      <LedgerTerminal events={data.events} createdAt={data.created_at} status={data.status} />
+      <LedgerTerminal
+        events={ledger.data?.stage_events ?? data.events}
+        trials={ledger.data?.trial_events ?? []}
+        candidates={ledger.data?.candidate_events ?? []}
+        createdAt={data.created_at}
+        status={data.status}
+      />
     </div>
   );
 }
 
 function LedgerTerminal({
   events,
+  trials,
+  candidates,
   createdAt,
   status,
 }: {
   events: Array<{ state: string; at: number }>;
+  trials: Record<string, unknown>[];
+  candidates: Record<string, unknown>[];
   createdAt: string | null;
   status: string;
 }) {
   const terminalRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     terminalRef.current?.scrollTo({ top: terminalRef.current.scrollHeight });
-  }, [events.length]);
+  }, [events.length, trials.length, candidates.length]);
 
   const createdMs = createdAt ? new Date(createdAt).getTime() : Date.now();
   return (
     <div className="mt-6 overflow-hidden rounded-lg" style={{ background: "var(--ink-panel)" }}>
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
         <span className="mono text-[11px] uppercase tracking-normal text-panel-fg/60">
-          structured log · stage-accurate
+          execution ledger · stages and optimization records
         </span>
         <span className="mono text-[11px] text-panel-fg/60">{status}</span>
       </div>
@@ -137,7 +153,27 @@ function LedgerTerminal({
             </div>
           );
         })}
+        {trials.map((trial, index) => (
+          <div key={`trial-${String(trial.study_id ?? "global")}-${String(trial.trial_id)}-${index}`} className="grid grid-cols-[92px_90px_1fr] gap-3 border-t border-white/5 py-0.5">
+            <span className="text-panel-fg/50">trial #{String(trial.trial_id ?? index)}</span>
+            <span className="text-panel-fg">obj {formatLedgerNumber(trial.objective)}</span>
+            <span className="truncate text-panel-fg/70">
+              IS {formatLedgerNumber(trial.mean_is_sharpe)} · OOS {formatLedgerNumber(trial.mean_oos_sharpe)} · decay {formatLedgerNumber(trial.mean_decay)} · {JSON.stringify(rowParams(trial))}
+            </span>
+          </div>
+        ))}
+        {candidates.map((candidate, index) => (
+          <div key={`candidate-${String(candidate.trial_id ?? candidate.source_trial_id)}-${index}`} className="grid grid-cols-[92px_1fr] gap-3 border-t border-white/5 py-0.5 text-panel-fg/70">
+            <span>candidate</span>
+            <span>trial #{String(candidate.trial_id ?? candidate.source_trial_id ?? "—")} · objective {formatLedgerNumber(candidate.objective)} · decay {formatLedgerNumber(candidate.mean_decay)}</span>
+          </div>
+        ))}
+        {!trials.length && !["COMPLETED", "FAILED", "CANCELLED"].includes(status) ? <div className="text-panel-fg/40">Optimization ledger pending…</div> : null}
       </div>
     </div>
   );
+}
+
+function formatLedgerNumber(value: unknown): string {
+  return typeof value === "number" && Number.isFinite(value) ? value.toFixed(4) : "—";
 }

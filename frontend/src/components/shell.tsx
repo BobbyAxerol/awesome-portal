@@ -1,6 +1,6 @@
 /** Shell: TopBar, NavTabs and RunPassport (§27.3.1). */
 import { useQuery } from "@tanstack/react-query";
-import { Copy, Play, Download } from "lucide-react";
+import { Copy, Plus, Download } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -46,7 +46,7 @@ export function TopBar({
 
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-paper/95 backdrop-blur">
-      <div className="mx-auto flex h-12 max-w-[1440px] items-center gap-3 px-6">
+      <div className="mx-auto flex min-h-12 max-w-[1440px] flex-wrap items-center gap-2 px-4 py-2 sm:px-6">
         <span className="font-display text-[17px] font-medium text-ink">QuantBT Portal</span>
         <span className="mono text-[10px] uppercase text-ink-faint">backtest</span>
         <div className="mx-2 h-4 w-px bg-line" />
@@ -80,12 +80,11 @@ export function TopBar({
               Export
             </a>
           </>
-        ) : (
-          <Link className="btn-primary no-print ml-auto" to="/">
-            <Play size={13} />
-            New run
-          </Link>
-        )}
+        ) : null}
+        <Link className="btn-primary no-print ml-auto" to="/?new=1">
+          <Plus size={13} />
+          New run
+        </Link>
       </div>
     </header>
   );
@@ -95,7 +94,7 @@ export function NavTabs() {
   const location = useLocation();
   return (
     <nav className="border-b border-line bg-paper">
-      <div className="mx-auto flex max-w-[1440px] items-center gap-1 px-6">
+      <div className="mx-auto flex max-w-[1440px] items-center gap-1 overflow-x-auto px-4 sm:px-6">
         {NAV_ITEMS.map((item) => (
           <Link key={item.path} to={`${item.path}`} className={`navtab ${location.pathname === item.path ? "navtab-active" : ""}`}>
             {item.label}

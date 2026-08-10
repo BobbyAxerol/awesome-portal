@@ -23,23 +23,32 @@ export function OptimizationView({ runId }: { runId: string }) {
   const trials = useQuery({ queryKey: ["trials", runId], queryFn: () => api.trials(runId, "top_n=5000") });
   const candidates = useQuery({ queryKey: ["candidates", runId], queryFn: () => api.candidates(runId) });
   const trace = useQuery({ queryKey: ["trace", runId], queryFn: () => api.trace(runId) });
+  const folds = useQuery({ queryKey: ["folds", runId], queryFn: () => api.folds(runId) });
   const [selectedTrial, setSelectedTrial] = useState<number | null>(null);
 
-  const rows = useMemo(() => trials.data ?? [], [trials.data]);
+  const rows = useMemo(() => {
+    const unique = new Map<string, Record<string, unknown>>();
+    for (const row of trials.data ?? []) {
+      const study = row.study_id ?? row.schedule_fold_id ?? "global";
+      const key = `${String(study)}:${String(row.trial_id)}`;
+      if (!unique.has(key)) unique.set(key, row);
+    }
+    return [...unique.values()];
+  }, [trials.data]);
   const candidateRows = useMemo(() => candidates.data ?? [], [candidates.data]);
   const selectedId =
     selectedTrial ??
     ((trace.data?.selected_trial_id as number | null | undefined) ?? null) ??
-    ((candidateRows[0]?.trial_id as number | null | undefined) ?? null);
+    ((candidateRows[0]?.trial_id as number | null | undefined) ?? (candidateRows[0]?.source_trial_id as number | null | undefined) ?? null);
 
   const trialScatter = useMemo(() => {
-    const data: Array<[number, number]> = rows
+    const data: Array<[number, number, number, number, number]> = rows
       .filter((row) => typeof row.objective === "number")
-      .map((row) => [row.trial_id as number, row.objective as number]);
+      .map((row) => [row.trial_id as number, row.objective as number, row.mean_is_sharpe as number, row.mean_oos_sharpe as number, row.mean_decay as number]);
     return baseOption({
       grid: { left: 56, right: 20, top: 20, bottom: 40, containLabel: true },
       legend: { show: false },
-      tooltip: { trigger: "item", formatter: (p: { data: [number, number] }) => `trial #${p.data[0]} · ${p.data[1].toFixed(3)}` },
+      tooltip: { trigger: "item", formatter: (p: { data: number[] }) => `trial #${p.data[0]}<br/>objective ${fmtRatio(p.data[1])}<br/>IS ${fmtRatio(p.data[2])} · OOS ${fmtRatio(p.data[3])}<br/>decay ${fmtDecay(p.data[4])}` },
       xAxis: { type: "value", name: "trial id", nameTextStyle: { color: palette.inkFaint } },
       yAxis: { type: "value", name: "objective", nameTextStyle: { color: palette.inkFaint } },
       series: [
@@ -48,9 +57,9 @@ export function OptimizationView({ runId }: { runId: string }) {
           symbolSize: (value: number[]) => (value[0] === selectedId ? 12 : 7),
           data,
           itemStyle: {
-            color: (params: { data: [number, number] }) =>
+            color: (params: { data: number[] }) =>
               params.data[0] === selectedId ? palette.ink : palette.accent,
-            opacity: (params: { data: [number, number] }) => (params.data[0] === selectedId ? 1 : 0.6),
+            opacity: (params: { data: number[] }) => (params.data[0] === selectedId ? 1 : 0.6),
           },
         },
       ],
@@ -58,25 +67,25 @@ export function OptimizationView({ runId }: { runId: string }) {
   }, [rows, selectedId]);
 
   const candidateScatter = useMemo(() => {
-    const data: Array<[number, number]> = candidateRows
+    const data: Array<[number, number, number]> = candidateRows
       .filter((row) => typeof row.mean_is_sharpe === "number" && typeof row.mean_oos_sharpe === "number")
-      .map((row) => [row.mean_is_sharpe as number, row.mean_oos_sharpe as number]);
+      .map((row) => [row.mean_is_sharpe as number, row.mean_oos_sharpe as number, Number(row.trial_id ?? row.source_trial_id)]);
     return baseOption({
       grid: { left: 56, right: 20, top: 20, bottom: 40, containLabel: true },
       legend: { show: false },
-      tooltip: { trigger: "item" },
+      tooltip: { trigger: "item", formatter: (params: unknown) => { const data = (params as { data: number[] }).data; return `trial #${data[2]}<br/>IS ${fmtRatio(data[0])}<br/>OOS ${fmtRatio(data[1])}`; } },
       xAxis: { type: "value", name: "IS Sharpe", nameTextStyle: { color: palette.inkFaint } },
       yAxis: { type: "value", name: "OOS Sharpe", nameTextStyle: { color: palette.inkFaint } },
       series: [
         {
           type: "scatter",
-          symbolSize: 8,
+          symbolSize: (value: number[]) => (value[2] === selectedId ? 12 : 8),
           data,
-          itemStyle: { color: palette.accent, opacity: 0.75 },
+          itemStyle: { color: (params: unknown) => (params as { data: number[] }).data[2] === selectedId ? palette.ink : palette.accent, opacity: 0.75 },
         },
       ],
     });
-  }, [candidateRows]);
+  }, [candidateRows, selectedId]);
 
   const decayData = useMemo(
     () =>
@@ -147,6 +156,7 @@ export function OptimizationView({ runId }: { runId: string }) {
       </div>
 
       <TrialTable rows={rows} selectedId={selectedId} onSelect={setSelectedTrial} />
+      {folds.data?.length ? <FoldTable rows={folds.data} /> : null}
 
       <div className="card p-4">
         <Collapsible title="Selection trace" defaultOpen={Boolean(trace.data)}>
@@ -232,11 +242,11 @@ function TrialTable({
           </tr>
         </thead>
         <tbody>
-          {rows.slice(0, 100).map((row) => {
+          {rows.slice(0, 200).map((row, index) => {
             const id = row.trial_id as number;
             return (
               <tr
-                key={id}
+                key={`${String(row.study_id ?? row.schedule_fold_id ?? "global")}-${id}-${index}`}
                 className={`cursor-pointer border-t border-line-soft hover:bg-sunken ${
                   id === selectedId ? "bg-accent-soft" : ""
                 }`}
@@ -254,6 +264,26 @@ function TrialTable({
             );
           })}
         </tbody>
+      </table>
+    </div>
+  );
+}
+
+function FoldTable({ rows }: { rows: Record<string, unknown>[] }) {
+  return (
+    <div className="card overflow-x-auto p-4">
+      <div className="label mb-2">Fold map</div>
+      <table className="w-full min-w-[760px] text-[12px]">
+        <thead><tr>{["fold", "train start", "train end", "test start", "test end", "train bars", "test bars"].map((label) => <th key={label} className="mono pb-2 text-left text-[11px] uppercase text-ink-faint">{label}</th>)}</tr></thead>
+        <tbody>{rows.map((row, index) => <tr key={`${String(row.fold_id)}-${index}`} className="border-t border-line-soft">
+          <td className="num py-1.5">{String(row.fold_id ?? index)}</td>
+          <td className="mono text-[11px]">{String(row.train_start ?? "—")}</td>
+          <td className="mono text-[11px]">{String(row.train_end ?? "—")}</td>
+          <td className="mono text-[11px]">{String(row.test_start ?? "—")}</td>
+          <td className="mono text-[11px]">{String(row.test_end ?? "—")}</td>
+          <td className="num">{String(row.train_bars ?? "—")}</td>
+          <td className="num">{String(row.test_bars ?? "—")}</td>
+        </tr>)}</tbody>
       </table>
     </div>
   );

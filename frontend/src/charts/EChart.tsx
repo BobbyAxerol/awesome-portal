@@ -1,6 +1,6 @@
 /** Thin ECharts React wrapper: fixed-height figure with resize handling. */
 import * as echarts from "echarts/core";
-import { BarChart, LineChart, ScatterChart, HeatmapChart } from "echarts/charts";
+import { BarChart, LineChart, ScatterChart, HeatmapChart, ParallelChart } from "echarts/charts";
 import {
   GridComponent,
   TooltipComponent,
@@ -10,6 +10,7 @@ import {
   MarkAreaComponent,
   VisualMapComponent,
   DatasetComponent,
+  ParallelComponent,
 } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import { useEffect, useRef } from "react";
@@ -20,6 +21,7 @@ echarts.use([
   LineChart,
   ScatterChart,
   HeatmapChart,
+  ParallelChart,
   GridComponent,
   TooltipComponent,
   LegendComponent,
@@ -28,6 +30,7 @@ echarts.use([
   MarkAreaComponent,
   VisualMapComponent,
   DatasetComponent,
+  ParallelComponent,
   CanvasRenderer,
 ]);
 

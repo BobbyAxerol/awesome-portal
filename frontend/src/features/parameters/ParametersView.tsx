@@ -1,6 +1,6 @@
 /** Parameters: selected params + percentile, coverage, pairwise contour, parallel coordinates (§16). */
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { EChart } from "../../charts/EChart";
 import { baseOption, palette } from "../../charts/theme";
@@ -8,6 +8,7 @@ import { ChartFigure } from "../../components/ChartFigure";
 import { Collapsible, DefinitionList, StateView } from "../../components/ui";
 import { api, rowParams } from "../../lib/api";
 import type { StrategyResponse } from "../../lib/api";
+import { buildHistogram, buildObjectiveHeatmap, numericValues } from "./analytics";
 
 export function ParametersView({ runId }: { runId: string }) {
   const parameters = useQuery({ queryKey: ["parameters", runId], queryFn: () => api.parameters(runId) });
@@ -19,55 +20,56 @@ export function ParametersView({ runId }: { runId: string }) {
   const rows = trials.data ?? [];
 
   const paramKeys = Object.keys(selected);
+  const numericKeys = paramKeys.filter((key) => rows.some((row) => typeof rowParams(row)[key] === "number"));
   const [pairA, setPairA] = useState(paramKeys[0] ?? "");
   const [pairB, setPairB] = useState(paramKeys[1] ?? paramKeys[0] ?? "");
+  const [distributionParam, setDistributionParam] = useState(paramKeys[0] ?? "");
 
-  const coverageOption = useMemo(
-    () =>
-      baseOption({
+  useEffect(() => {
+    if (!distributionParam && numericKeys.length) setDistributionParam(numericKeys[0]);
+    if (!pairA && numericKeys.length) setPairA(numericKeys[0]);
+    if (!pairB && numericKeys.length) setPairB(numericKeys[1] ?? numericKeys[0]);
+  }, [distributionParam, numericKeys, pairA, pairB]);
+
+  const coverageOption = useMemo(() => {
+    const bins = buildHistogram(numericValues(rows, distributionParam));
+    return baseOption({
         grid: { left: 56, right: 16, top: 20, bottom: 40, containLabel: true },
         legend: { show: false },
-        xAxis: { type: "value", name: "value", nameTextStyle: { color: palette.inkFaint } },
-        series: paramKeys.map((key) => ({
-          name: key,
+        tooltip: { trigger: "axis" },
+        xAxis: { type: "category", data: bins.map((bin) => Number(bin.center.toPrecision(5))), name: distributionParam, nameTextStyle: { color: palette.inkFaint } },
+        yAxis: { type: "value", name: "trial count", nameTextStyle: { color: palette.inkFaint } },
+        series: [{
+          name: distributionParam,
           type: "bar",
-          data: rows
-            .map((row) => rowParams(row)[key])
-            .filter((value) => typeof value === "number"),
+          data: bins.map((bin) => bin.count),
           itemStyle: { color: palette.accent, opacity: 0.7 },
-          barWidth: 4,
-        })),
-      }),
-    [rows, paramKeys],
-  );
+        }],
+      });
+  }, [distributionParam, rows]);
 
   const contourOption = useMemo(() => {
-    const cells: Array<[string, string, number]> = [];
-    for (const row of rows) {
-      const params = rowParams(row);
-      const a = params[pairA];
-      const b = params[pairB];
-      if (typeof a === "number" && typeof b === "number") {
-        cells.push([String(a), String(b), row.objective as number]);
-      }
-    }
+    const cells = buildObjectiveHeatmap(rows, pairA, pairB);
+    const xValues = [...new Set(cells.map((cell) => cell.x))].sort((a, b) => a - b);
+    const yValues = [...new Set(cells.map((cell) => cell.y))].sort((a, b) => a - b);
     return baseOption({
       grid: { left: 56, right: 40, top: 20, bottom: 40, containLabel: true },
       legend: { show: false },
       visualMap: {
-        min: cells.length ? Math.min(...cells.map((c) => c[2])) : 0,
-        max: cells.length ? Math.max(...cells.map((c) => c[2])) : 1,
+        min: cells.length ? Math.min(...cells.map((cell) => cell.objective)) : 0,
+        max: cells.length ? Math.max(...cells.map((cell) => cell.objective)) : 1,
         right: 0,
         top: 20,
         calculable: true,
         textStyle: { color: palette.inkFaint, fontSize: 10 },
       },
-      xAxis: { type: "category", data: [...new Set(cells.map((c) => c[0]))] },
-      yAxis: { type: "category", data: [...new Set(cells.map((c) => c[1]))] },
+      tooltip: { trigger: "item", formatter: (params: unknown) => { const data = (params as { data: [number, number, number, number] }).data; return `${pairA}=${xValues[data[0]]}<br/>${pairB}=${yValues[data[1]]}<br/>mean objective=${data[2].toFixed(4)}<br/>n=${data[3]}`; } },
+      xAxis: { type: "category", data: xValues },
+      yAxis: { type: "category", data: yValues },
       series: [
         {
           type: "heatmap",
-          data: cells.map(([a, b, objective]) => [a, b, objective]),
+          data: cells.map((cell) => [xValues.indexOf(cell.x), yValues.indexOf(cell.y), cell.objective, cell.count]),
           itemStyle: { borderColor: "#fff", borderWidth: 1 },
         },
       ],
@@ -76,7 +78,8 @@ export function ParametersView({ runId }: { runId: string }) {
 
   const parallelOption = useMemo(() => {
     const dims = paramKeys;
-    const values: Array<(string | number)[]> = rows.slice(0, 300).map((row) => {
+    const topRows = [...rows].sort((a, b) => Number(b.objective ?? -Infinity) - Number(a.objective ?? -Infinity)).slice(0, 200);
+    const values: Array<(string | number)[]> = topRows.map((row) => {
       const params = rowParams(row);
       return dims.map((key) => (params[key] as string | number) ?? 0);
     });
@@ -127,9 +130,13 @@ export function ParametersView({ runId }: { runId: string }) {
 
       <div className="card p-4">
         <div className="mb-3 flex flex-wrap items-center gap-3">
-          <span className="label">Contour pair</span>
+          <span className="label">Distribution</span>
+          <select className="input" value={distributionParam} onChange={(e) => setDistributionParam(e.target.value)} aria-label="Distribution parameter">
+            {numericKeys.map((key) => <option key={key} value={key}>{key}</option>)}
+          </select>
+          <span className="label ml-3">Sensitivity pair</span>
           <select className="input" value={pairA} onChange={(e) => setPairA(e.target.value)} aria-label="Param A">
-            {paramKeys.map((key) => (
+            {numericKeys.map((key) => (
               <option key={key} value={key}>
                 {key}
               </option>
@@ -137,7 +144,7 @@ export function ParametersView({ runId }: { runId: string }) {
           </select>
           <span className="mono text-ink-faint">×</span>
           <select className="input" value={pairB} onChange={(e) => setPairB(e.target.value)} aria-label="Param B">
-            {paramKeys.map((key) => (
+            {numericKeys.map((key) => (
               <option key={key} value={key}>
                 {key}
               </option>
@@ -145,14 +152,14 @@ export function ParametersView({ runId }: { runId: string }) {
           </select>
         </div>
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <ChartFigure figNumber={1} title="Coverage histogram" sourceId="wfo/trials.parquet">
+          <ChartFigure figNumber={1} title={`Trial distribution — ${distributionParam || "parameter"}`} sourceId="wfo/trials.parquet">
             <EChart option={coverageOption} height={340} />
           </ChartFigure>
           <ChartFigure figNumber={2} title="Objective contour — parameter sensitivity" sourceId="wfo/trials.parquet">
             <EChart option={contourOption} height={340} />
           </ChartFigure>
         </div>
-        <ChartFigure figNumber={3} title="Parallel coordinates — top trials" sourceId="wfo/trials.parquet">
+        <ChartFigure figNumber={3} title="Parallel coordinates — top 200 trials by objective" sourceId="wfo/trials.parquet">
           <EChart option={parallelOption} height={420} />
         </ChartFigure>
       </div>

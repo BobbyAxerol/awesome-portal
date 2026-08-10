@@ -18,7 +18,7 @@ const viewports = [
   { name: "desktop-1280", width: 1280, height: 720 },
   { name: "mobile-390", width: 390, height: 844 },
 ];
-const views = ["overview", "optimization", "parameters", "execution", "audit"];
+const views = ["config", "overview", "optimization", "parameters", "execution", "audit"];
 
 const browser = await chromium.launch();
 const errors = [];
@@ -30,7 +30,8 @@ for (const viewport of viewports) {
     if (message.type() === "error") errors.push(`${viewport.name} console: ${message.text()}`);
   });
   for (const view of views) {
-    await page.goto(`${BASE}/${view}?run=${RUN_ID}`, { waitUntil: "networkidle" });
+    const url = view === "config" ? `${BASE}/?new=1` : `${BASE}/${view}?run=${RUN_ID}`;
+    await page.goto(url, { waitUntil: "networkidle" });
     await page.waitForTimeout(2500);
     const canvases = await page.locator("canvas").count();
     const blank = await page.evaluate(() =>
@@ -45,7 +46,7 @@ for (const viewport of viewports) {
     await page.screenshot({ path: `${OUT}/${viewport.name}-${view}.png`, fullPage: true });
     console.log(`${viewport.name} ${view}: canvases=${canvases} blank=${blank} title="${title}"`);
     if (blank > 0) errors.push(`${viewport.name} ${view}: ${blank} blank canvas(es)`);
-    if (canvases === 0 && view !== "audit") errors.push(`${viewport.name} ${view}: no charts rendered`);
+    if (canvases === 0 && view !== "audit" && view !== "config") errors.push(`${viewport.name} ${view}: no charts rendered`);
   }
   await page.close();
 }
