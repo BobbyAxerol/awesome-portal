@@ -146,6 +146,7 @@ class ThreeWindowRunner:
         request: PortalRunRequest,
         market: PreparedMarketData,
         run_id: str,
+        progress: Callable[[str], None] | None = None,
     ) -> dict[str, Any]:
         if request.protocol != RunProtocol.THREE_WINDOW_DECAY:
             raise ThreeWindowRunnerError("ThreeWindowRunner requires protocol=three_window_decay")
@@ -154,6 +155,11 @@ class ThreeWindowRunner:
         if request.calibration.holdout_start != request.calibration.oos_end_exclusive:
             raise ThreeWindowRunnerError("windows must be contiguous: OOS end == Holdout Live start")
 
+        def stage(name: str) -> None:
+            if progress is not None:
+                progress(name)
+
+        stage("VALIDATING_DATA")
         adapter = self._strategies.get(request.strategy_id)
         adapter.validate_parameter_space(request.parameter_space)
         windows = partition_three_windows(market, request.calibration)
@@ -165,6 +171,7 @@ class ThreeWindowRunner:
         account_kwargs = _account_kwargs(request.account, request.execution)
 
         started_at = _utc_now_iso()
+        stage("OPTIMIZING_IS")
         endpoint, wf = self._gateway.run_mode1_calibration(
             strategy_fn=_strategy_callable,
             data=calibration_tape,
@@ -176,9 +183,15 @@ class ThreeWindowRunner:
             random_seed=config.random_seed,
             account_kwargs=account_kwargs,
         )
+        # These stages occur inside the single public calibration call; they
+        # are recorded as completed once the study returns (§9).
+        stage("RANKING_IS_CANDIDATES")
+        stage("REPLAYING_CANDIDATES_ON_OOS")
+        stage("SELECTING_PARAMS")
 
         self._write_wfo_artifacts(run_id, wf)
         selected_params, trace = _freeze_selection(wf)
+        stage("FREEZING_PARAMS")
         self._artifacts.write_json(run_id, "selection/selected_params.json", selected_params)
         self._artifacts.write_json(run_id, "selection/selection_trace.json", trace)
 
@@ -189,7 +202,13 @@ class ThreeWindowRunner:
             "holdout_live": windows.holdout_frame,
         }
         metrics_by_segment, series_by_segment = {}, {}
+        replay_stages = {
+            "is": "BACKTESTING_IS",
+            "oos": "BACKTESTING_OOS",
+            "holdout_live": "BACKTESTING_HOLDOUT_LIVE",
+        }
         for key, segment_frame in segment_frames.items():
+            stage(replay_stages[key])
             series, metrics = self._replay_segment(
                 run_id,
                 key,
@@ -201,6 +220,7 @@ class ThreeWindowRunner:
             series_by_segment[key] = series
             metrics_by_segment[key] = metrics
 
+        stage("BUILDING_ARTIFACTS")
         calendar_equity, rebased_equity = _build_presentation_equity(
             market.frame.index, segment_frames, series_by_segment
         )

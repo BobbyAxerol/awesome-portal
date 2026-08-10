@@ -13,9 +13,11 @@ from portal_api.adapters.market_data import (
 )
 from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.api.routes import router
+from portal_api.api.routes_runs import router as router_runs
 from portal_api.domain.errors import PortalDomainError
 from portal_api.repositories import ArtifactRepository
 from portal_api.services import PreflightService
+from portal_api.services.run_service import RunManager
 from portal_api.strategies import StrategyRegistry
 
 
@@ -60,6 +62,7 @@ def create_app(
         app.state.strategy_registry,
         quantbt_gateway=app.state.quantbt_gateway,
     )
+    app.state.run_manager = RunManager(artifacts=app.state.artifact_repository)
 
     @app.exception_handler(PortalDomainError)
     async def domain_error_handler(request: Request, exc: PortalDomainError) -> JSONResponse:
@@ -70,6 +73,7 @@ def create_app(
         )
 
     app.include_router(router)
+    app.include_router(router_runs)
     return app
 
 

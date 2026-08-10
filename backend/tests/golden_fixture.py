@@ -175,6 +175,13 @@ def build_market_frame() -> pd.DataFrame:
     open_[0] = close[0]
     open_[1:] = close[:-1]
 
+    # Enforce the portal data contract (high >= max(open, close) and
+    # low <= min(open, close)): bars whose move exceeds the per-bar wick
+    # offsets get their range widened to cover the gap between consecutive
+    # closes. This keeps the frame valid for preflight/normalization paths.
+    high = np.maximum(high, np.maximum(open_, close))
+    low = np.minimum(low, np.minimum(open_, close))
+
     index = pd.date_range("2024-01-01", periods=n, freq="1h", tz="UTC")
     return pd.DataFrame(
         {"open": open_, "high": high, "low": low, "close": close, "volume": volume},

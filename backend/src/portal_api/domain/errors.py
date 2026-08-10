@@ -25,3 +25,27 @@ class ParameterSpaceError(PortalDomainError):
 
 class ArtifactPathError(PortalDomainError):
     code = "ARTIFACT_PATH_INVALID"
+
+
+class StrategyExecutionError(PortalDomainError):
+    code = "STRATEGY_EXECUTION_FAILED"
+
+
+class QuantBTValidationError(PortalDomainError):
+    code = "QUANTBT_VALIDATION_FAILED"
+
+
+class WfoError(PortalDomainError):
+    code = "WFO_FAILED"
+
+
+class ArtifactSerializationError(PortalDomainError):
+    code = "ARTIFACT_SERIALIZATION_FAILED"
+
+
+class RunCancelledError(PortalDomainError):
+    code = "RUN_CANCELLED"
+
+
+class InternalPortalError(PortalDomainError):
+    code = "INTERNAL_ERROR"

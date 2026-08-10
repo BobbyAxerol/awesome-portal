@@ -35,7 +35,7 @@
       500
     ]
   },
-  "source": "scripts/build_golden_fixture.py or backend/tests/golden_fixture.py",
+  "source": "backend/tests/golden_fixture.py (python backend/tests/golden_fixture.py)",
   "timeframe": "1h",
   "tolerance_policy": {
     "exit_price": {

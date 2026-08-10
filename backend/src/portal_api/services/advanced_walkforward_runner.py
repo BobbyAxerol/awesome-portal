@@ -130,12 +130,18 @@ class AdvancedWalkForwardRunner:
         request: PortalRunRequest,
         market: PreparedMarketData,
         run_id: str,
+        progress: Callable[[str], None] | None = None,
     ) -> dict[str, Any]:
         if request.protocol != RunProtocol.ADVANCED_WALK_FORWARD:
             raise AdvancedWalkForwardError("AdvancedWalkForwardRunner requires protocol=advanced_walk_forward")
         if not isinstance(request.calibration, AdvancedWalkForwardConfig):
             raise AdvancedWalkForwardError("AdvancedWalkForwardRunner requires AdvancedWalkForwardConfig")
 
+        def stage(name: str) -> None:
+            if progress is not None:
+                progress(name)
+
+        stage("VALIDATING_DATA")
         self.validate_capabilities()
         config = request.calibration
         fields = _config_fields(config)
@@ -161,6 +167,7 @@ class AdvancedWalkForwardRunner:
 
         account_kwargs = _account_kwargs(request.account, request.execution)
         started_at = _utc_now_iso()
+        stage("OPTIMIZING_IS")
         endpoint, wf = self._gateway.run_advanced_walkforward(
             strategy_fn=_strategy_callable,
             data=market.frame,
