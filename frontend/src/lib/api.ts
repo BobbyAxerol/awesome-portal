@@ -78,6 +78,13 @@ export interface RunLedger {
   trial_ledger_ready: boolean;
 }
 
+export interface RunFoldPlan {
+  protocol: string;
+  folds: Array<
+    | { fold_id: number; role?: string; start?: string; end?: string; train_start?: string; train_end?: string; test_start?: string; test_end?: string }
+  >;
+}
+
 export interface RunSummary {
   run_id: string;
   status: string;
@@ -139,6 +146,11 @@ export const api = {
   getRun: (runId: string) => request<RunDetail>(`/api/runs/${runId}`),
   runConfig: (runId: string) => request<Record<string, unknown>>(`/api/runs/${runId}/config`),
   ledger: (runId: string) => request<RunLedger>(`/api/runs/${runId}/ledger`),
+  foldPlan: (runId: string) => request<RunFoldPlan>(`/api/runs/${runId}/fold-plan`),
+  progress: (runId: string) =>
+    request<{ run_id: string; studyStarts: number; trialsDone: number; bestByStudy: Array<number | null> }>(
+      `/api/runs/${runId}/progress`,
+    ),
   console: (runId: string, tail = 2000) =>
     request<{ run_id: string; lines: string[] }>(
       `/api/runs/${runId}/console?tail=${tail}`,

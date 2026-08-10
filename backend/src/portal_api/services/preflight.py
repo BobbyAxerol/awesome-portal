@@ -102,6 +102,11 @@ class PreflightService:
             "last_timestamp": analysis_frame.index[-1].isoformat(),
             "content_hash": market_content_hash(analysis_frame),
         }
+        fold_plan = None
+        if isinstance(request.calibration, AdvancedWalkForwardConfig):
+            from portal_api.services.fold_plan import compute_run_fold_plan
+
+            fold_plan = compute_run_fold_plan(request, analysis_frame.index)
         return PreflightResponse(
             valid=True,
             strategy_id=request.strategy_id,
@@ -111,6 +116,7 @@ class PreflightService:
             windows=summaries,
             data_quality=data_quality,
             config_hash=canonical,
+            fold_plan=fold_plan,
         )
 
     def _validate_advanced(self, calibration: AdvancedWalkForwardConfig) -> None:

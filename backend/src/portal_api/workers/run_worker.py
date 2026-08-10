@@ -159,6 +159,20 @@ class _ConsoleSink:
         if _console_handle is not None:
             _console_handle.flush()
 
+    def getvalue(self) -> str:
+        # Some logging/test harnesses (pytest capsys teardown, caplog) call
+        # getvalue() on the handler stream; return the current file content.
+        if _console_handle is None:
+            return ""
+        try:
+            position = _console_handle.tell()
+            _console_handle.seek(0)
+            content = _console_handle.read()
+            _console_handle.seek(position)
+            return content
+        except OSError:
+            return ""
+
     def isatty(self) -> bool:
         return False
 
@@ -208,17 +222,20 @@ def _install_console_tee(artifacts: ArtifactRepository, run_id: str) -> None:
 
         sys.stdout = _Tee(sys.__stdout__)
         sys.stderr = _Tee(sys.__stderr__)
+        # Point optuna's existing handler(s) at the console sink (setStream,
+        # not remove+add) so output keeps optuna's native format and is never
+        # duplicated by a second handler.
         optuna_logger = logging.getLogger("optuna")
-        for handler in list(optuna_logger.handlers):
-            optuna_logger.removeHandler(handler)
-        handler = logging.StreamHandler(_console_sink)
-        handler.setFormatter(
-            logging.Formatter(
-                "[%(levelname)s %(asctime)s] %(message)s",
-                datefmt="%Y-%m-%d %H:%M:%S",
-            )
-        )
-        optuna_logger.addHandler(handler)
+        handlers = list(optuna_logger.handlers)
+        if not handlers:
+            handler = logging.StreamHandler(_console_sink)
+            optuna_logger.addHandler(handler)
+            handlers = [handler]
+        for handler in handlers:
+            try:
+                handler.setStream(_console_sink)
+            except Exception:  # noqa: BLE001 - fall back to adding a handler
+                pass
         optuna_logger.setLevel(logging.INFO)
         optuna_logger.propagate = False
 
@@ -266,6 +283,16 @@ def execute_run(
     )
     _install_console_tee(artifacts, run_id)
     market = _load_market(request)
+
+    # Deterministic fold plan (v0.1.1): lets the UI render the fold timeline
+    # while the run is still executing.
+    from portal_api.services.fold_plan import compute_run_fold_plan
+
+    artifacts.write_json(
+        run_id,
+        "config/fold_plan.json",
+        compute_run_fold_plan(request, market.frame.index),
+    )
 
     def progress(state: RunState) -> None:
         if _cancel_requested(artifacts, run_id):

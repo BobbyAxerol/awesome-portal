@@ -188,6 +188,10 @@ async def create_run(payload: PortalRunRequest, request: Request) -> dict:
     if not preflight.valid:
         raise HTTPException(status_code=422, detail="preflight failed")
     run_id = _manager(request).submit(payload)
+    # Write the deterministic fold plan immediately so the UI can render the
+    # fold timeline from second zero (the worker re-writes the same artifact).
+    if preflight.fold_plan is not None:
+        _artifacts(request).write_json(run_id, "config/fold_plan.json", preflight.fold_plan)
     return {"run_id": run_id, "status": RunState.QUEUED.value}
 
 
@@ -257,6 +261,61 @@ async def run_console(run_id: str, request: Request, tail: int = 2000) -> dict:
         return {"run_id": run_id, "lines": []}
     lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
     return {"run_id": run_id, "lines": lines[-max(1, tail):]}
+
+
+@router.get("/{run_id}/progress")
+async def run_progress(run_id: str, request: Request, tail: int = 200_000) -> dict:
+    """Operational progress counters parsed from the worker's console capture
+    (v0.1.1). Display-only estimates — the structured ledger stays the audit
+    source of truth. Server-side so long runs never overflow the client tail."""
+    if _manager(request).status(run_id) is None:
+        raise HTTPException(status_code=404, detail="run not found")
+    import re
+
+    log_path = _artifacts(request).run_directory(run_id) / "status" / "console.log"
+    if not log_path.is_file():
+        return {"run_id": run_id, "studyStarts": 0, "trialsDone": 0, "bestByStudy": []}
+    lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-max(1, tail):]
+
+    study_starts = 0
+    trials_done = 0
+    best_by_study: list[int | None] = []
+    pending_best: int | None = None
+    trial_re = re.compile(r"Trial\s+\d+\s+finished with value:")
+    best_re = re.compile(r"Best is trial\s+(\d+)")
+    for line in lines:
+        if "A new study created" in line:
+            if study_starts > 0:
+                best_by_study.append(pending_best)
+            study_starts += 1
+            pending_best = None
+            continue
+        if trial_re.search(line):
+            trials_done += 1
+        match = best_re.search(line)
+        if match:
+            pending_best = int(match.group(1))
+    if study_starts > 0:
+        best_by_study.append(pending_best)
+    return {
+        "run_id": run_id,
+        "studyStarts": study_starts,
+        "trialsDone": trials_done,
+        "bestByStudy": best_by_study,
+    }
+
+
+@router.get("/{run_id}/fold-plan")
+async def run_fold_plan(run_id: str, request: Request) -> dict:
+    """Fold timeline artifact (v0.1.1) — available while the run executes."""
+    if _manager(request).status(run_id) is None:
+        raise HTTPException(status_code=404, detail="run not found")
+    try:
+        return _read_artifact(request, run_id, "config/fold_plan.json")
+    except HTTPException as exc:
+        if exc.status_code != 404:
+            raise
+        raise HTTPException(status_code=404, detail="fold plan not available yet") from exc
 
 
 @router.get("/{run_id}/ledger")
