@@ -9,6 +9,7 @@ import { ExecutionView } from "./features/execution/ExecutionView";
 import { OptimizationView } from "./features/optimization/OptimizationView";
 import { OverviewView } from "./features/overview/OverviewView";
 import { ParametersView } from "./features/parameters/ParametersView";
+import { RunLibrary } from "./features/runs/RunLibrary";
 import { RunProgress } from "./features/runs/RunProgress";
 import { StateView } from "./components/ui";
 import { NavTabs, RunPassport, TopBar } from "./components/shell";
@@ -23,8 +24,10 @@ function OverviewRedirect() {
 
 export function App() {
   const [params] = useSearchParams();
+  const location = useLocation();
   const runId = params.get("run") ?? "";
   const creatingRun = params.get("new") === "1";
+  const isLibrary = location.pathname.startsWith("/runs");
   const [finishedNow, setFinishedNow] = useState(false);
   const previousStatus = useRef<string | null>(null);
   const runs = useQuery({ queryKey: ["runs"], queryFn: api.listRuns, refetchInterval: 4000 });
@@ -66,7 +69,9 @@ export function App() {
         activeRunId={currentRun?.run_id ?? null}
         runStatus={run.data?.status ?? null}
       />
-      {runPending ? (
+      {isLibrary ? (
+        <RunLibrary />
+      ) : runPending ? (
         <StateView kind="loading" message="Đang tải run…" />
       ) : runId && run.isError ? (
         <main className="mx-auto max-w-[1440px] px-4 py-5 sm:px-6 sm:py-6">

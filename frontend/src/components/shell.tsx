@@ -1,6 +1,6 @@
 /** Shell: TopBar, NavTabs and RunPassport (§27.3.1). */
 import { useQuery } from "@tanstack/react-query";
-import { Copy, Plus, Download } from "lucide-react";
+import { Copy, FolderOpen, Plus, Download } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -51,25 +51,15 @@ export function TopBar({
         <span className="mono text-[10px] uppercase text-ink-faint">backtest</span>
         <div className="mx-2 h-4 w-px bg-line" />
         <Chip>{strategy?.strategy_id ?? "—"}</Chip>
-        <select
-          className="input h-7"
-          value={activeRunId ?? ""}
-          onChange={(event) => {
-            const runId = event.target.value;
-            window.location.href = runId ? `/?run=${runId}` : "/";
-          }}
-          aria-label="Run selector"
-        >
-          <option value="">Select run…</option>
-          {runs.map((run) => (
-            <option key={run.run_id} value={run.run_id}>
-              {run.run_id} · {run.status} · {run.protocol ?? "—"}
-            </option>
-          ))}
-        </select>
-        <RunStatusBadge status={runStatus} />
+        <Link to="/runs" className="btn-ghost no-print" aria-label="Run library">
+          <FolderOpen size={12} />
+          Runs
+          {runs.length ? <span className="text-ink-faint">({runs.length})</span> : null}
+        </Link>
         {activeRunId ? (
           <>
+            <Chip>current {fmtShortHash(activeRunId)}</Chip>
+            <RunStatusBadge status={runStatus} />
             <button type="button" className="btn-ghost no-print" onClick={copyHash} aria-label="Copy run id">
               <Copy size={12} />
               {fmtShortHash(activeRunId)}
@@ -80,7 +70,9 @@ export function TopBar({
               Export
             </a>
           </>
-        ) : null}
+        ) : (
+          <RunStatusBadge status={runStatus} />
+        )}
         <Link className="btn-primary no-print ml-auto" to="/?new=1">
           <Plus size={13} />
           New run
