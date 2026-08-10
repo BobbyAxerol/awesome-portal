@@ -64,6 +64,11 @@ export function OverviewView({ runId }: { runId: string }) {
     return baseOption({
       grid: { left: 58, right: 24, top: 46, bottom: 54, containLabel: true },
       legend: { data: series.map((item) => item.name), top: 2, right: 12, left: "auto" },
+      xAxis: {
+        type: "time",
+        splitNumber: 5,
+        axisLabel: { hideOverlap: true, formatter: "{yyyy}", margin: 10 },
+      },
       yAxis: {
         type: "value",
         axisLabel: { color: "var(--ink-faint)", fontSize: 11 },
@@ -78,6 +83,11 @@ export function OverviewView({ runId }: { runId: string }) {
     return baseOption({
       grid: { left: 56, right: 20, top: 20, bottom: 48, containLabel: true },
       legend: { show: false },
+      xAxis: {
+        type: "time",
+        splitNumber: 5,
+        axisLabel: { hideOverlap: true, formatter: "{yyyy}", margin: 10 },
+      },
       series: active.map((segment) => {
         const payload = segment.series!;
         const dd = payload.series.drawdown ?? [];

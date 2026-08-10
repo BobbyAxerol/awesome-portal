@@ -48,9 +48,10 @@ export function OptimizationView({ runId }: { runId: string }) {
     return baseOption({
       grid: { left: 56, right: 20, top: 20, bottom: 40, containLabel: true },
       legend: { show: false },
+      dataZoom: [],
       tooltip: { trigger: "item", formatter: (p: { data: number[] }) => `trial #${p.data[0]}<br/>objective ${fmtRatio(p.data[1])}<br/>IS ${fmtRatio(p.data[2])} · OOS ${fmtRatio(p.data[3])}<br/>decay ${fmtDecay(p.data[4])}` },
-      xAxis: { type: "value", name: "trial id", nameTextStyle: { color: palette.inkFaint } },
-      yAxis: { type: "value", name: "objective", nameTextStyle: { color: palette.inkFaint } },
+      xAxis: { type: "value" },
+      yAxis: { type: "value" },
       series: [
         {
           type: "scatter",
@@ -73,9 +74,10 @@ export function OptimizationView({ runId }: { runId: string }) {
     return baseOption({
       grid: { left: 56, right: 20, top: 20, bottom: 40, containLabel: true },
       legend: { show: false },
+      dataZoom: [],
       tooltip: { trigger: "item", formatter: (params: unknown) => { const data = (params as { data: number[] }).data; return `trial #${data[2]}<br/>IS ${fmtRatio(data[0])}<br/>OOS ${fmtRatio(data[1])}`; } },
-      xAxis: { type: "value", name: "IS Sharpe", nameTextStyle: { color: palette.inkFaint } },
-      yAxis: { type: "value", name: "OOS Sharpe", nameTextStyle: { color: palette.inkFaint } },
+      xAxis: { type: "value" },
+      yAxis: { type: "value" },
       series: [
         {
           type: "scatter",
@@ -99,6 +101,7 @@ export function OptimizationView({ runId }: { runId: string }) {
       baseOption({
         grid: { left: 56, right: 20, top: 20, bottom: 40, containLabel: true },
         legend: { show: false },
+        dataZoom: [],
         tooltip: { trigger: "axis" },
         xAxis: { type: "category", data: decayData.map((row) => `#${row.id}`) },
         series: [
@@ -127,7 +130,8 @@ export function OptimizationView({ runId }: { runId: string }) {
     return baseOption({
       grid: { left: 56, right: 20, top: 20, bottom: 40, containLabel: true },
       legend: { show: false },
-      xAxis: { type: "value", name: "trial", nameTextStyle: { color: palette.inkFaint } },
+      dataZoom: [],
+      xAxis: { type: "value" },
       series: [{ type: "line", showSymbol: false, data, lineStyle: { color: palette.accent, width: 1.75 } }],
     });
   }, [rows]);
@@ -277,14 +281,20 @@ function FoldTable({ rows }: { rows: Record<string, unknown>[] }) {
         <thead><tr>{["fold", "train start", "train end", "test start", "test end", "train bars", "test bars"].map((label) => <th key={label} className="mono pb-2 text-left text-[11px] uppercase text-ink-faint">{label}</th>)}</tr></thead>
         <tbody>{rows.map((row, index) => <tr key={`${String(row.fold_id)}-${index}`} className="border-t border-line-soft">
           <td className="num py-1.5">{String(row.fold_id ?? index)}</td>
-          <td className="mono text-[11px]">{String(row.train_start ?? "—")}</td>
-          <td className="mono text-[11px]">{String(row.train_end ?? "—")}</td>
-          <td className="mono text-[11px]">{String(row.test_start ?? "—")}</td>
-          <td className="mono text-[11px]">{String(row.test_end ?? "—")}</td>
+          <td className="mono text-[11px]">{shortDate(row.train_start)}</td>
+          <td className="mono text-[11px]">{shortDate(row.train_end)}</td>
+          <td className="mono text-[11px]">{shortDate(row.test_start)}</td>
+          <td className="mono text-[11px]">{shortDate(row.test_end)}</td>
           <td className="num">{String(row.train_bars ?? "—")}</td>
           <td className="num">{String(row.test_bars ?? "—")}</td>
         </tr>)}</tbody>
       </table>
     </div>
   );
+}
+
+function shortDate(value: unknown): string {
+  if (value == null) return "—";
+  const match = String(value).match(/^\d{4}-\d{2}-\d{2}/);
+  return match?.[0] ?? String(value);
 }

@@ -36,9 +36,10 @@ export function ParametersView({ runId }: { runId: string }) {
     return baseOption({
         grid: { left: 56, right: 16, top: 20, bottom: 40, containLabel: true },
         legend: { show: false },
+        dataZoom: [],
         tooltip: { trigger: "axis" },
-        xAxis: { type: "category", data: bins.map((bin) => Number(bin.center.toPrecision(5))), name: distributionParam, nameTextStyle: { color: palette.inkFaint } },
-        yAxis: { type: "value", name: "trial count", nameTextStyle: { color: palette.inkFaint } },
+        xAxis: { type: "category", data: bins.map((bin) => Number(bin.center.toPrecision(5))), axisLabel: { hideOverlap: true } },
+        yAxis: { type: "value", minInterval: 1 },
         series: [{
           name: distributionParam,
           type: "bar",
@@ -55,6 +56,7 @@ export function ParametersView({ runId }: { runId: string }) {
     return baseOption({
       grid: { left: 56, right: 40, top: 20, bottom: 40, containLabel: true },
       legend: { show: false },
+      dataZoom: [],
       visualMap: {
         min: cells.length ? Math.min(...cells.map((cell) => cell.objective)) : 0,
         max: cells.length ? Math.max(...cells.map((cell) => cell.objective)) : 1,
@@ -86,6 +88,7 @@ export function ParametersView({ runId }: { runId: string }) {
     return baseOption({
       grid: { left: 16, right: 16, top: 20, bottom: 40 },
       legend: { show: false },
+      dataZoom: [],
       parallelAxis: dims.map((key, index) => ({
         dim: index,
         name: key,

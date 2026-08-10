@@ -30,12 +30,14 @@ export function ChartFigure({ figNumber, title, note, sourceId, children }: Char
       style={{ breakInside: "avoid" }}
       data-source-id={sourceId}
     >
-      <figcaption className="mb-3 flex items-baseline justify-between gap-2">
-        <span className="mono text-[11px] text-accent-2">EChart {figNumber}</span>
-        <span className="font-display text-[15px] text-ink">{title}</span>
+      <figcaption className="mb-3 flex items-start justify-between gap-2">
+        <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="mono shrink-0 text-[11px] text-accent-2">EChart {figNumber}</span>
+          <span className="font-display text-[15px] leading-5 text-ink">{title}</span>
+        </span>
         <button
           type="button"
-          className="btn-ghost no-print ml-auto"
+          className="btn-ghost no-print shrink-0"
           aria-label={`Download EChart ${figNumber} as PNG`}
           onClick={downloadPng}
         >
