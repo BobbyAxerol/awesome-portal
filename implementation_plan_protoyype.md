@@ -639,6 +639,25 @@ Danh sach value va combination hop le phai lay tu
 `walkforward_support_matrix()` va typed backend schema. UI disable combination
 khong support; khong de user submit roi moi nhan traceback.
 
+### 8.2. Trial Budget Semantics (verified 2026-08-10, quantbt source + empirical)
+
+- **Global schedule** (`optimization_schedule="global"`), bao gom ca
+  `train_test_split` cua three-window protocol: **mot study duy nhat**.
+  `optuna_trials` la tong so trial cua study do, chay tren IS (va phan IS cua
+  tung fold khi co nhieu fold). `n_studies=1`, `optuna_trials_scope="global"`.
+- **Per-fold schedules** (`per_fold_decay`, `per_fold_causal`): **moi fold mot
+  study doc lap** (seed rieng derive tu `random_seed + fold_id`). `optuna_trials`
+  va **toan bo optimization config** (decay_lambda/gamma, top_is_fraction,
+  candidate_selection_metric, scoring, trade penalty...) ap dung tren tung fold.
+  `n_studies=n_folds`, `optuna_trials_scope="per_fold"`,
+  `optuna_trials_configured_per_study=optuna_trials`.
+- Evidence: GLOBAL 2 folds x 12 trials -> 1 study / 14 trial rows;
+  PER_FOLD_DECAY 2 folds x 12 trials -> 2 studies / 28 trial rows.
+- UI phai hien dung semantics nay: three-window ghi "N trials tren IS (1
+  study)"; Advanced per-fold ghi "N trials moi fold x K folds".
+  Metadata `n_studies` / `optuna_trials_scope` tu public API la nguon chinh
+  thuc, khong hardcode.
+
 Account fields:
 
 ```text
@@ -1153,20 +1172,30 @@ IS rank -> IS score -> OOS score -> decay -> candidate score -> selected params
 Day la audit visualization, khong phai noi frontend tinh objective. Hover/click
 mo raw row va params JSON; mac dinh chi hien nhung so can de manager theo doi.
 
-### 15.7. Structured Optimization Log
+### 15.7. Structured Optimization Log (redesigned 2026-08-10)
 
-Terminal-style panel dung mono text, co filter theo stage/trial/candidate. Mot
-record co the gom:
+Hai nguon log rieng biet, khong tron:
 
-```text
-timestamp | stage | trial_id | IS objective | status | elapsed
-timestamp | OOS replay | candidate_id | decay | candidate objective
-timestamp | selected | trial_id | frozen params hash
-```
-
-Trong khi run, panel chi stream event backend thuc su biet. Khi study ket thuc,
-trial/candidate records duoc nap vao cung panel de inspect. Download action xuat
-structured JSONL; log khong phai scraped console text.
+1. **Live console** (operational): tail that cua worker stdout/stderr
+   (`status/console.log` via `GET /api/runs/{id}/console`). Optuna in tung
+   trial dang chay. Day la ban sao trung thuc, **khong bao gio parse thanh
+   structured events**; dung cho theo doi thoi gian thuc.
+2. **Stage log** (structured, audit-grade): nhom theo stage, nap tu artifacts
+   khi moi stage hoan thanh (`ledger` endpoint):
+   - `OPTIMIZING_IS`: tung trial — `trial #N · objective · IS Sharpe ·
+     params`; objective to mau good/bad tren nen toi;
+   - `REPLAYING_CANDIDATES_ON_OOS`: tung candidate — `candidate #N · IS
+     Sharpe -> OOS Sharpe · decay`; so sanh IS/OOS tu trai sang phai;
+   - `FREEZING_PARAMS`: selected params dang chips + params hash;
+   - `BACKTESTING_IS/OOS/HOLDOUT_LIVE`: rows danh gia — segment, final
+     equity, Sharpe, MaxDD (lay tu metrics khi co);
+   - group theo `study_id`/`fold_id` khi Advanced per-fold (moi fold mot
+     block ghi ro "fold K · N trials");
+   - auto-scroll; filter chip theo stage; JSONL export.
+- Mau tren nen toi (accessible): base `#C9D4E3`, faint `#7A879A`,
+  accent/IS `#7FB3C4`, Holdout gold `#D4B36A`, good `#6FCF97`, bad `#E58A8A`.
+- **Gate completed**: khi run COMPLETED, man hinh progress giu nguyen voi
+  banner + nut "Xem ket qua" — chi chuyen ve Overview khi user bam.
 
 ---
 
@@ -1943,10 +1972,13 @@ khong gay layout shift. Breakpoint, print va a11y theo §19.4.
    overlap hien hatch `--bad`, gap hien hatch `--accent-2` ngay khi keo; bars
    count mono duoi moi vung. Drag la enhancement, khong thay picker.
 
-7. **LedgerTerminal** — structured run log tren `--ink-panel` (be mat toi duy
-   nhat trong app): mono 12px, timestamp column fixed-width, stage chip role
-   color, filter bar theo stage/trial, JSONL download. Cam giac desk terminal
-   nhung chi render structured events, khong parse stdout.
+7. **LedgerTerminal** — hai tab: **Live console** (tail that worker stdout,
+   moi trial Optuna stream live, mau theo semantic good/bad/accent tren nen
+   toi `--ink-panel`, mau nhu §15.7) va **Stage log** (structured nhom theo
+   stage: trials -> candidates IS/OOS -> freeze params -> danh gia 3 segment;
+   group theo fold khi per-fold schedule); expandable, auto-scroll, filter
+   theo stage, JSONL export. Khi COMPLETED: banner + nut "Xem ket qua" —
+   khong tu dong chuyen man hinh.
 
 8. **TermSheet** — preflight summary kieu term sheet: definition list 2 cot
    (dt mono uppercase / dd `data`), tung muc co badge pass/fail, config hash o

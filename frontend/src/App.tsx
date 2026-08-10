@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 
 import { api, canOpenRunResults, isTerminal } from "./lib/api";
@@ -25,6 +25,8 @@ export function App() {
   const [params] = useSearchParams();
   const runId = params.get("run") ?? "";
   const creatingRun = params.get("new") === "1";
+  const [finishedNow, setFinishedNow] = useState(false);
+  const previousStatus = useRef<string | null>(null);
   const runs = useQuery({ queryKey: ["runs"], queryFn: api.listRuns, refetchInterval: 4000 });
   const run = useQuery({
     queryKey: ["run", runId],
@@ -32,6 +34,22 @@ export function App() {
     enabled: Boolean(runId),
     refetchInterval: (query) => (query.state.data && !isTerminal(query.state.data.status) ? 1500 : false),
   });
+
+  // When a run being watched transitions to COMPLETED, stay on the progress
+  // screen until the user explicitly presses "Xem kết quả" (§15.7 gate).
+  useEffect(() => {
+    const status = run.data?.status ?? null;
+    if (
+      previousStatus.current &&
+      previousStatus.current !== "COMPLETED" &&
+      previousStatus.current !== "FAILED" &&
+      previousStatus.current !== "CANCELLED" &&
+      status === "COMPLETED"
+    ) {
+      setFinishedNow(true);
+    }
+    previousStatus.current = status;
+  }, [run.data?.status]);
 
   const currentRun = useMemo(() => {
     if (creatingRun) return undefined;
@@ -57,7 +75,7 @@ export function App() {
       ) : currentRun ? (
         <>
           <RunPassport runId={currentRun.run_id} status={currentRun.status} />
-          {canOpenRunResults(currentRun.status) ? (
+          {canOpenRunResults(currentRun.status) && !finishedNow ? (
             <>
               <NavTabs />
               <main className="mx-auto max-w-[1440px] px-4 py-5 sm:px-6 sm:py-6">
@@ -72,7 +90,13 @@ export function App() {
               </main>
             </>
           ) : (
-            <RunProgress runId={currentRun.run_id} />
+            <RunProgress
+              runId={currentRun.run_id}
+              onViewResults={() => {
+                setFinishedNow(false);
+                window.location.href = `/overview?run=${currentRun.run_id}`;
+              }}
+            />
           )}
         </>
       ) : (
