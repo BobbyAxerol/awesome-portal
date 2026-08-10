@@ -1,4 +1,6 @@
-/** Execution: price + target transitions, position strip, equity/drawdown, transition table (§17). */
+/** Execution: price + target transitions, position strip, equity/drawdown, transition table (§17).
+ *  Protocol-aware (v0.1.1): advanced_walk_forward uses the single stitched
+ *  OOS account; three-window offers IS/OOS/Holdout Live. */
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
@@ -11,32 +13,34 @@ import { api, type SeriesPayload } from "../../lib/api";
 const SEGMENTS = ["is", "oos", "holdout_live"] as const;
 type SegmentKey = (typeof SEGMENTS)[number];
 
-function useSeries(runId: string, segment: SegmentKey) {
-  return useQuery({
+export function ExecutionView({ runId }: { runId: string }) {
+  const detail = useQuery({ queryKey: ["run", runId], queryFn: () => api.getRun(runId) });
+  const advanced = detail.data?.protocol === "advanced_walk_forward";
+  const [segment, setSegment] = useState<SegmentKey | "stitched">(advanced ? "stitched" : "oos");
+  const series = useQuery({
     queryKey: ["series", runId, segment],
     queryFn: () => api.series(runId, segment, 4000),
     staleTime: 60_000,
   });
-}
-
-export function ExecutionView({ runId }: { runId: string }) {
-  const [segment, setSegment] = useState<SegmentKey>("oos");
-  const series = useSeries(runId, segment);
-  if (series.isLoading) return <StateView kind="loading" />;
+  if (series.isLoading || detail.isLoading) return <StateView kind="loading" />;
   if (series.isError) return <StateView kind="failed" message={series.error.message} onRetry={() => series.refetch()} />;
 
   return (
     <div className="space-y-6">
-      <SegmentedControl
-        value={segment}
-        onChange={setSegment}
-        options={[
-          { value: "is", label: "IS" },
-          { value: "oos", label: "OOS" },
-          { value: "holdout_live", label: "Holdout Live" },
-        ]}
-      />
-      <PriceChart payload={series.data!} />
+      {advanced ? (
+        <span className="chip">Stitched OOS account</span>
+      ) : (
+        <SegmentedControl
+          value={segment as SegmentKey}
+          onChange={setSegment}
+          options={[
+            { value: "is", label: "IS" },
+            { value: "oos", label: "OOS" },
+            { value: "holdout_live", label: "Holdout Live" },
+          ]}
+        />
+      )}
+      <PriceChart payload={series.data!} advanced={advanced} />
       <PositionStrip payload={series.data!} />
       <div className="card p-4">
         <div className="label mb-2">Cost timeline</div>
@@ -49,6 +53,7 @@ export function ExecutionView({ runId }: { runId: string }) {
     </div>
   );
 }
+
 
 function entryPoints(payload: SeriesPayload) {
   const target = payload.series.signal_target ?? [];
@@ -65,9 +70,9 @@ function entryPoints(payload: SeriesPayload) {
   return points;
 }
 
-function PriceChart({ payload }: { payload: SeriesPayload }) {
+function PriceChart({ payload, advanced }: { payload: SeriesPayload; advanced: boolean }) {
   const option = useMemo(() => {
-    const entries = entryPoints(payload);
+    const entries = advanced ? [] : entryPoints(payload);
     return baseOption({
       grid: { left: 56, right: 20, top: 20, bottom: 48, containLabel: true },
       legend: { show: false },
@@ -101,7 +106,7 @@ function PriceChart({ payload }: { payload: SeriesPayload }) {
     });
   }, [payload]);
   return (
-    <ChartFigure figNumber={1} title="Close price + target transitions" note="Markers là Target transition từ strategy signal, không phải audited fills." sourceId="series/*">
+    <ChartFigure figNumber={1} title="Close price + target transitions" note={advanced ? "Target markers chỉ có cho three-window protocol (stitched series không lưu signal)." : "Markers là Target transition từ strategy signal, không phải audited fills."} sourceId="series/*">
       <EChart option={option} height={540} />
     </ChartFigure>
   );

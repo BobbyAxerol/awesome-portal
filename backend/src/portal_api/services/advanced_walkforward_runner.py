@@ -30,8 +30,10 @@ from portal_api.serialization import canonicalize
 from portal_api.services.three_window_runner import (
     ARTIFACT_SCHEMA_VERSION,
     _sanitize,
+    _strategy_artifact,
     _strategy_callable,
 )
+from portal_api.strategies import StrategyRegistry
 
 
 class AdvancedWalkForwardError(RuntimeError):
@@ -209,6 +211,10 @@ class AdvancedWalkForwardRunner:
             "config.json",
             canonicalize(request.model_dump(mode="json")),
         )
+        # Parity with the three-window runner: strategy.json feeds the audit
+        # endpoint, which 404s without it (v0.1.1 bugfix).
+        spec = StrategyRegistry().get(request.strategy_id).specification
+        self._artifacts.write_json(run_id, "strategy.json", _strategy_artifact(spec))
         self._artifacts.write_json(
             run_id,
             "manifest.json",
