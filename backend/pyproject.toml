@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12,<3.14"
 authors = [{ name = "BobbyAxerol", email = "vugioan11022002@gmail.com" }]
 dependencies = [
+  "duckdb>=1.1,<2",
   "fastapi>=0.115,<1",
   "numpy>=2,<3",
   "pandas>=2.2,<3",

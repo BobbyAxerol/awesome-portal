@@ -360,6 +360,13 @@ Parity phai exact hoac theo tolerance duoc dinh nghia ro cho floating point.
 Frontend khong upload DataFrame trong prototype. `RunRequest` chi chon
 `dataset_id` va date windows; backend provider doc du lieu.
 
+Default runtime provider dung dataset dong `crypto-binance-1m`. UI truyen
+`symbol` va `timeframe`; adapter goi truc tiep
+`CryptoBinance1m.load_resampled(..., check_val=True, engine="duckdb")` tu data
+service chinh cua Pool Alpha. Portal khong copy storage, khong doc raw 1m bang
+pandas truoc khi resample va khong expose local path. Manifest provider van la
+fallback tuy chon cho fixture/dataset co dinh.
+
 Required schema:
 
 ```text
@@ -1477,6 +1484,8 @@ Deliverables:
 - filesystem artifact repository voi atomic writes va path containment;
 - FastAPI app factory voi health, strategy, capability va preflight routes;
 - unit/API tests cho import safety, contracts, boundary va protected files.
+- dynamic Binance provider goi canonical `CryptoBinance1m` DuckDB hot path;
+- market smoke script ghi rows, range, content hash, missing bars va load time.
 
 Gate:
 
@@ -1496,10 +1505,11 @@ artifacts va UI tren mot architecture on dinh.
 Completion evidence:
 
 ```text
-backend tests: 16 passed;
+backend tests: 30 passed;
 protected strategy checksum: pass;
 actual local QuantBT capability rows: 9;
 backend wheel build: pass;
+ETHUSDT 1h real data: 57,914 bars, 0 missing, 0.981s loader time;
 main branch remains baseline;
 implementation commits are isolated on dev.
 ```

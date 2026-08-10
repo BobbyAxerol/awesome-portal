@@ -44,13 +44,15 @@ async def strategies(request: Request) -> list[StrategyResponse]:
 
 
 @router.get("/datasets")
-async def datasets(request: Request) -> list[dict[str, str]]:
+async def datasets(request: Request) -> list[dict[str, object]]:
     return [
         {
             "dataset_id": item.dataset_id,
             "symbol": item.symbol,
             "venue": item.venue,
             "timeframe": item.timeframe,
+            "dynamic_query": item.dynamic_query,
+            "supported_timeframes": list(item.supported_timeframes),
         }
         for item in request.app.state.market_data_provider.list_datasets()
     ]

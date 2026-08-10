@@ -18,7 +18,9 @@ module allowed to lazy-import `strategy.main`.
 - Typed three-window and Advanced WFO request contracts.
 - Typed parameter ranges and account/execution settings.
 - UTC OHLCV validation, content hashing and searchsorted window partitioning.
-- Registered-only local data provider; the HTTP request never supplies a path.
+- Dynamic Binance futures provider over the canonical `CryptoBinance1m`
+  DuckDB resample hot path; the HTTP request never supplies a path.
+- Manifest and in-memory providers retained as explicit fallback/test adapters.
 - Strategy registry with an immutable structural contract.
 - Lazy QuantBT capability gateway.
 - Atomic JSON/Parquet artifact repository with path-containment checks.
@@ -38,7 +40,11 @@ notebook code in route handlers.
 ## Performance Contract
 
 - API startup does not import QuantBT or the Numba strategy kernel.
-- Market data is normalized and hashed once per loaded dataset.
+- The canonical loader resamples from 1m storage before portal normalization;
+  the portal never materializes full 1m history for a higher-timeframe run.
+- Market data is normalized to UTC float64 OHLCV and hashed once per load.
+- Load provenance records provider, source/target resolution, engine,
+  validation policy and elapsed seconds without exposing the storage path.
 - Three-window partitioning uses index positions, not repeated boolean masks.
 - Heavy optimization belongs in a worker process so completion releases RSS.
 - Trial/report detail must be persisted columnarly and loaded on demand.
@@ -53,3 +59,10 @@ notebook code in route handlers.
 The scripts reuse the parent Pool Alpha environment and prefer the sibling
 QuantBT `src/` tree. A deployed service uses the declared `quantbt-engine`
 dependency instead.
+
+To test the real market-data boundary without starting FastAPI:
+
+```bash
+PYTHONPATH=backend/src:. ../.venv/bin/python \
+  scripts/smoke_crypto_market_data.py --symbol ETHUSDT --timeframe 1h
+```

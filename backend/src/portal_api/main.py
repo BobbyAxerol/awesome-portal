@@ -6,7 +6,11 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from portal_api.adapters.market_data import InMemoryMarketDataProvider, ManifestMarketDataProvider, MarketDataProvider
+from portal_api.adapters.market_data import (
+    CryptoBinanceMarketDataProvider,
+    ManifestMarketDataProvider,
+    MarketDataProvider,
+)
 from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.api.routes import router
 from portal_api.domain.errors import PortalDomainError
@@ -19,7 +23,17 @@ def _default_provider() -> MarketDataProvider:
     manifest = os.getenv("PORTAL_DATASET_MANIFEST")
     if manifest:
         return ManifestMarketDataProvider(Path(manifest))
-    return InMemoryMarketDataProvider({})
+    pool_alpha_root = Path(__file__).resolve().parents[4]
+    loader_root = Path(
+        os.getenv(
+            "PORTAL_CRYPTO_DATA_ROOT",
+            str(pool_alpha_root / "alphas_storage" / "_get_data"),
+        )
+    )
+    return CryptoBinanceMarketDataProvider(
+        loader_root,
+        engine=os.getenv("PORTAL_CRYPTO_RESAMPLE_ENGINE", "duckdb"),
+    )
 
 
 def create_app(

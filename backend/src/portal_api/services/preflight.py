@@ -20,14 +20,18 @@ class PreflightService:
     def run(self, request: PortalRunRequest) -> PreflightResponse:
         strategy = self._strategies.get(request.strategy_id)
         strategy.validate_parameter_space(request.parameter_space)
-        market = self._provider.load(request.dataset_id)
+        market = self._provider.load(
+            request.dataset_id,
+            symbol=request.symbol,
+            timeframe=request.timeframe,
+        )
 
         descriptor = market.descriptor
-        if request.symbol != descriptor.symbol:
+        if descriptor.symbol is not None and request.symbol != descriptor.symbol:
             raise DataSchemaError(
                 f"request symbol {request.symbol!r} does not match dataset symbol {descriptor.symbol!r}"
             )
-        if request.timeframe != descriptor.timeframe:
+        if descriptor.timeframe is not None and request.timeframe != descriptor.timeframe:
             raise DataSchemaError(
                 f"request timeframe {request.timeframe!r} does not match dataset timeframe {descriptor.timeframe!r}"
             )
