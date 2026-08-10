@@ -4,7 +4,8 @@ An internal, audit-first portal for running and presenting QuantBT strategy
 optimization and backtests. The first strategy is the protected Delta-RSI
 research kernel in `strategy/main.py`.
 
-The backend is being built first. See
+The prototype now includes the calculation backend, run service and interactive
+analysis workspace. See
 [`implementation_plan_protoyype.md`](implementation_plan_protoyype.md) for the
 domain protocol, architecture, UI specification and phase gates.
 
@@ -28,6 +29,32 @@ an installed `quantbt-engine` package is used when no local source tree exists.
 
 The API binds to `127.0.0.1:8000` by default. OpenAPI is available at
 `http://127.0.0.1:8000/api/docs`.
+
+Start the complete local workspace in one command:
+
+```bash
+./scripts/run_dev.sh
+```
+
+Then open `http://127.0.0.1:5173/?new=1` to configure a run. The configuration
+workspace exposes data windows, typed parameter ranges, WFO mode/schedule,
+selection controls, account sizing, canonical one-way fee, slippage, funding
+and pyramiding before preflight.
+
+Important read APIs include:
+
+```text
+GET /api/config/options
+GET /api/runs/{run_id}/config
+GET /api/runs/{run_id}/ledger
+GET /api/runs/{run_id}/wfo/{folds,trials,candidates,parameters}
+GET /api/runs/{run_id}/presentation/{calendar,rebased}
+GET /api/runs/{run_id}/series/{is,oos,holdout_live,stitched}
+```
+
+The trial ledger contains unique Optuna search trials. OOS candidate replays
+remain a separate collection, so optimization counts and selection evidence do
+not double count the same `trial_id`.
 
 ## Frontend
 
@@ -55,10 +82,9 @@ RUN_ID=<run_id> PORTAL_URL=http://127.0.0.1:4173 node e2e/screenshots.mjs
 
 ## End-To-End Smoke
 
-1. `./scripts/run_backend.sh` — backend on `127.0.0.1:8000`.
-2. `./scripts/run_frontend.sh` — portal on `127.0.0.1:5173`.
-3. Open `http://127.0.0.1:5173`, configure a Three-Window run, preflight, Run.
-4. Watch the SSE stepper + structured log, then review Overview → Optimization
+1. `./scripts/run_dev.sh` starts backend and frontend together.
+2. Open `http://127.0.0.1:5173`, configure a Three-Window run, preflight, Run.
+3. Watch the SSE stepper + structured log, then review Overview → Optimization
    → Parameters → Execution → Audit. Export bundle from Audit / top bar.
 
 Access from a remote machine without public exposure:

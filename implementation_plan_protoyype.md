@@ -936,11 +936,14 @@ GET  /api/strategies
 GET  /api/strategies/{strategy_id}
 GET  /api/datasets
 GET  /api/capabilities/walk-forward
+GET  /api/config/options
 POST /api/runs/preflight
 POST /api/runs
 GET  /api/runs
 GET  /api/runs/{run_id}
+GET  /api/runs/{run_id}/config
 GET  /api/runs/{run_id}/events
+GET  /api/runs/{run_id}/ledger
 POST /api/runs/{run_id}/cancel
 GET  /api/runs/{run_id}/summary
 GET  /api/runs/{run_id}/wfo/folds
@@ -949,6 +952,7 @@ GET  /api/runs/{run_id}/wfo/candidates
 GET  /api/runs/{run_id}/wfo/parameters
 GET  /api/runs/{run_id}/selection/trace
 GET  /api/runs/{run_id}/series/{segment}
+GET  /api/runs/{run_id}/presentation/{calendar|rebased}
 GET  /api/runs/{run_id}/audit
 GET  /api/runs/{run_id}/export
 ```
@@ -2423,3 +2427,42 @@ Status board:
 - Deviations: chua cai Playwright vao CI (can cache browser), de xuat P+1;
   production-budget run (400 trials) de lai cho stakeholder session de tranh
   tieu thu CPU vps.
+
+#### Post-P7 Backend And UI Correctness Audit (2026-08-10)
+
+- Backend calculation and contract corrections:
+  - explicit half-open active data range for Advanced WFO;
+  - canonical one-way `fee_rate` propagated to every portal replay;
+  - typed int/float/categorical/fixed Optuna search spaces preserved;
+  - strategy warm-up history constrained to the declared protocol tape;
+  - search trials and OOS candidate replays persisted as separate ledgers;
+  - submitted config persisted before worker launch and exposed by API;
+  - API-complete strategy detail, config options, run config, structured ledger,
+    trial `stage` filter, calendar/rebased presentation and null-safe downsample;
+  - legacy artifacts projected as monotonic stages plus unique search trials,
+    while their raw files remain unchanged for audit;
+  - API request acceptance detached from worker-process creation; Linux uses
+    `forkserver` and the application lifespan releases worker resources.
+- Frontend completion:
+  - editable Three-Window and Advanced WFO workspaces, including data bounds,
+    fold schedule/window, typed parameter space, all optimization families,
+    account/execution/funding and request preview;
+  - preflight invalidates on every config edit and Run only accepts the exact
+    validated payload;
+  - stage/trial/candidate terminal, selection funnel, fold map and unique trial
+    explorer;
+  - calendar and rebased equity read backend presentation artifacts directly;
+    fresh-account boundaries remain null and never become a fabricated line;
+  - parameter histogram, objective response map and parallel coordinates;
+  - chart legends, mobile captions, axis density and analytics layouts audited
+    at desktop and mobile sizes.
+- Gate evidence:
+  - backend: `93 passed` including real worker process, SSE, export, artifact
+    reopen, leakage invariants and direct QuantBT parity;
+  - frontend: `8 passed`; TypeScript/Vite production build pass;
+  - Playwright: `18/18` views at 1440x900, 1280x720 and 390x844; zero blank
+    canvas and zero console errors;
+  - real ETHUSDT 1h artifact `60d281ad61e942cf`: API projects 40 unique search
+    trials, 4 OOS candidates and a canonical monotonic stage timeline.
+- Scope remains deliberate: no file under sibling `quantbt/` and no protected
+  `strategy/main.py` source was modified by this audit.
