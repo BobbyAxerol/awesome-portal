@@ -6,7 +6,7 @@ import { EChart } from "../../charts/EChart";
 import { baseOption, palette } from "../../charts/theme";
 import { ChartFigure } from "../../components/ChartFigure";
 import { Collapsible, DefinitionList, StateView } from "../../components/ui";
-import { api } from "../../lib/api";
+import { api, rowParams } from "../../lib/api";
 import type { StrategyResponse } from "../../lib/api";
 
 export function ParametersView({ runId }: { runId: string }) {
@@ -17,10 +17,6 @@ export function ParametersView({ runId }: { runId: string }) {
   const selected = parameters.data?.selected.params ?? {};
   const ranges = strategies.data?.[0]?.parameter_space ?? {};
   const rows = trials.data ?? [];
-
-  if (parameters.isLoading || trials.isLoading) return <StateView kind="loading" />;
-  if (parameters.isError || trials.isError)
-    return <StateView kind="failed" message="Không tải được parameter analysis" onRetry={() => void (parameters.refetch(), trials.refetch())} />;
 
   const paramKeys = Object.keys(selected);
   const [pairA, setPairA] = useState(paramKeys[0] ?? "");
@@ -36,7 +32,7 @@ export function ParametersView({ runId }: { runId: string }) {
           name: key,
           type: "bar",
           data: rows
-            .map((row) => (row.params as Record<string, unknown>)?.[key])
+            .map((row) => rowParams(row)[key])
             .filter((value) => typeof value === "number"),
           itemStyle: { color: palette.accent, opacity: 0.7 },
           barWidth: 4,
@@ -48,7 +44,7 @@ export function ParametersView({ runId }: { runId: string }) {
   const contourOption = useMemo(() => {
     const cells: Array<[string, string, number]> = [];
     for (const row of rows) {
-      const params = row.params as Record<string, unknown>;
+      const params = rowParams(row);
       const a = params[pairA];
       const b = params[pairB];
       if (typeof a === "number" && typeof b === "number") {
@@ -81,7 +77,7 @@ export function ParametersView({ runId }: { runId: string }) {
   const parallelOption = useMemo(() => {
     const dims = paramKeys;
     const values: Array<(string | number)[]> = rows.slice(0, 300).map((row) => {
-      const params = row.params as Record<string, unknown>;
+      const params = rowParams(row);
       return dims.map((key) => (params[key] as string | number) ?? 0);
     });
     return baseOption({
@@ -102,6 +98,10 @@ export function ParametersView({ runId }: { runId: string }) {
       ],
     });
   }, [rows, paramKeys]);
+
+  if (parameters.isLoading || trials.isLoading) return <StateView kind="loading" />;
+  if (parameters.isError || trials.isError)
+    return <StateView kind="failed" message="Không tải được parameter analysis" onRetry={() => void (parameters.refetch(), trials.refetch())} />;
 
   return (
     <div className="space-y-6">

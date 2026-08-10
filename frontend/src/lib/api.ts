@@ -139,3 +139,16 @@ export const TERMINAL_STATES = new Set(["COMPLETED", "FAILED", "CANCELLED"]);
 export function isTerminal(state: string): boolean {
   return TERMINAL_STATES.has(state);
 }
+
+/** Trial/candidate rows persist dict columns as `params_json` strings. */
+export function rowParams(row: Record<string, unknown>): Record<string, unknown> {
+  const raw = row.params_json ?? row.params;
+  if (typeof raw === "string") {
+    try {
+      return JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
+  }
+  return (raw as Record<string, unknown>) ?? {};
+}

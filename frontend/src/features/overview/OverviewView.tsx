@@ -40,14 +40,9 @@ export function OverviewView({ runId }: { runId: string }) {
   const metrics = summary.data?.metrics.segments;
   const loaded = segments.every((segment) => segment.series) && Boolean(metrics);
 
-  if (summary.isLoading || !loaded) return <StateView kind="loading" />;
-  if (summary.isError) return <StateView kind="failed" message={summary.error.message} onRetry={() => summary.refetch()} />;
-
-  const heroMetrics = selected === "compare" ? (metrics?.holdout_live ?? {}) : (metrics?.[selected] ?? {});
-
   const equityOption = useMemo(() => {
     const series = segments
-      .filter((segment) => selected === "compare" || segment.key === selected)
+      .filter((segment) => (selected === "compare" || segment.key === selected) && segment.series)
       .map((segment) => {
         const payload = segment.series!;
         const equity = payload.series.equity ?? [];
@@ -78,7 +73,7 @@ export function OverviewView({ runId }: { runId: string }) {
   }, [segments, selected, capitalMode]);
 
   const underwaterOption = useMemo(() => {
-    const active = selected === "compare" ? segments : segments.filter((segment) => segment.key === selected);
+    const active = (selected === "compare" ? segments : segments.filter((segment) => segment.key === selected)).filter((segment) => segment.series);
     return baseOption({
       grid: { left: 56, right: 20, top: 20, bottom: 48, containLabel: true },
       legend: { show: false },
@@ -102,6 +97,10 @@ export function OverviewView({ runId }: { runId: string }) {
     });
   }, [segments, selected]);
 
+  const heroMetrics = selected === "compare" ? (metrics?.holdout_live ?? {}) : (metrics?.[selected] ?? {});
+
+  if (summary.isLoading || !loaded) return <StateView kind="loading" />;
+  if (summary.isError) return <StateView kind="failed" message={summary.error.message} onRetry={() => summary.refetch()} />;
 
   return (
     <div className="space-y-6">

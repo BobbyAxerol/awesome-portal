@@ -83,7 +83,7 @@ def _load_market(request: PortalRunRequest) -> PreparedMarketData:
         )
     from portal_api.adapters.market_data import CryptoBinanceMarketDataProvider
 
-    pool_alpha_root = Path(__file__).resolve().parents[4]
+    pool_alpha_root = Path(__file__).resolve().parents[5]
     loader_root = Path(
         os.getenv(
             "PORTAL_CRYPTO_DATA_ROOT",

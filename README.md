@@ -29,6 +29,48 @@ an installed `quantbt-engine` package is used when no local source tree exists.
 The API binds to `127.0.0.1:8000` by default. OpenAPI is available at
 `http://127.0.0.1:8000/api/docs`.
 
+## Frontend
+
+```bash
+./scripts/run_frontend.sh        # Vite dev server on 127.0.0.1:5173, proxies /api -> :8000
+```
+
+Build and unit tests:
+
+```bash
+cd frontend
+npm run build                    # tsc -b && vite build
+npm test                         # vitest (format helpers)
+```
+
+Playwright visual gate (screenshots + blank-canvas/console check at
+1440x900 / 1280x720 / 390x844) — run after a completed run exists:
+
+```bash
+cd frontend
+npx playwright install chromium   # once per clone
+RUN_ID=<run_id> npm run preview -- --port 4173 &  # or `npm run dev`
+RUN_ID=<run_id> PORTAL_URL=http://127.0.0.1:4173 node e2e/screenshots.mjs
+```
+
+## End-To-End Smoke
+
+1. `./scripts/run_backend.sh` — backend on `127.0.0.1:8000`.
+2. `./scripts/run_frontend.sh` — portal on `127.0.0.1:5173`.
+3. Open `http://127.0.0.1:5173`, configure a Three-Window run, preflight, Run.
+4. Watch the SSE stepper + structured log, then review Overview → Optimization
+   → Parameters → Execution → Audit. Export bundle from Audit / top bar.
+
+Access from a remote machine without public exposure:
+
+```bash
+ssh -L 8000:127.0.0.1:8000 -L 5173:127.0.0.1:5173 <user>@<vps>
+# then browse http://127.0.0.1:5173 locally
+```
+
+See `implementation_plan_protoyype.md` §22 for the hardening gates that must
+pass before any public-IP deployment (auth, TLS, CORS, rate limits).
+
 ## Market Data
 
 The default dataset source is `crypto-binance-1m`. The API accepts a Binance

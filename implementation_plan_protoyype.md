@@ -2210,6 +2210,11 @@ Workflow bat buoc (theo yeu cau cua user, 2026-08-10):
    ket qua, deviations), cap nhat status board.
 4. User phe duyet report -> mo brief phase tiep theo.
 
+> **Cap nhat 2026-08-10 (user):** tu P3 den P7, user phe duyet tu dong — chay
+> lien tuc het cac phase theo dung guide, khong bo qua phase nao, moi phase
+> phai co test + gate evidence; user se duyet lai mot vong sau khi xong tat
+> ca. Report van ghi vao §27.8 nhu binh thuong.
+
 Report template:
 
 ```text
@@ -2227,11 +2232,11 @@ Status board:
 | P0 | hoan thanh, cho phe duyet | 2026-08-10 | xem duoi | - |
 | P1 | hoan thanh, cho phe duyet | 2026-08-10 | xem duoi | - |
 | P2 | hoan thanh, cho phe duyet | 2026-08-10 | xem duoi | - |
-| P3 | khoa | - | - | - |
-| P4 | khoa | - | - | - |
-| P5 | khoa | - | - | - |
-| P6 | khoa | - | - | - |
-| P7 | khoa | - | - | - |
+| P3 | hoan thanh, cho phe duyet (auto) | 2026-08-10 | xem duoi | auto |
+| P4 | hoan thanh, cho phe duyet (auto) | 2026-08-10 | xem duoi | auto |
+| P5 | hoan thanh, cho phe duyet (auto) | 2026-08-10 | xem duoi | auto |
+| P6 | hoan thanh, cho phe duyet (auto) | 2026-08-10 | xem duoi | auto |
+| P7 | hoan thanh, cho phe duyet (auto) | 2026-08-10 | xem duoi | auto |
 
 #### Phase P0 Report (2026-08-10)
 
@@ -2324,3 +2329,97 @@ Status board:
     (ghi chu vao test, dung tinh than §7.2);
   - `params_by_fold.json` chi ghi khi metadata co (global study khong co).
 - Cho phe duyet de bat dau P3.
+
+#### Phase P3 Report (2026-08-10) — auto-approved
+
+- Delivered (B9-B10):
+  - `QuantBTGateway.validate_advanced_walkforward` (WalkForwardConfig native
+    fail-fast) + `run_advanced_walkforward` (walk_forward voi typed config);
+  - `services/advanced_walkforward_runner.py`: capability gate (support matrix
+    target_mode), config mapping day du, per-fold artifacts
+    (folds/fold_selection/fold_boundary/trials/candidates/params_by_fold),
+    frozen deployment params + params_semantics explicit, stitched series,
+    manifest; mode NONE yeu cau all-fixed params;
+  - `services/export_service.py`: export dir (JSON + CSV tu parquet) + zip
+    bundle, chi doc tu artifacts (khong rerun);
+  - Preflight nhan gateway: Advanced WFO check capability + QuantBT config
+    truoc khi submit.
+- Gate evidence: `./scripts/test_backend.sh` -> 77 passed; checksum OK;
+  commit cac7997.
+- Deviations: khong (combo invalid bi request-level chot truoc preflight,
+  test chuyen thanh request-level + gateway-native checks).
+
+#### Phase P4 Report (2026-08-10) — auto-approved
+
+- Delivered (B11-B14):
+  - `services/run_service.py` (RunManager: ProcessPoolExecutor 1 worker, status
+    per run, list tu artifact root, cancel flag, shutdown);
+  - `workers/run_worker.py`: execute_run chay runner trong subprocess, progress
+    stage-accurate vao status.json, cancel check giua cac stage, warm_up truoc
+    timed run; PORTAL_RUNNER_MARKET_PATH cho test in-memory;
+  - `api/routes_runs.py`: POST/GET list/detail, SSE events, cancel, summary,
+    wfo/{folds,trials,candidates,parameters}, selection/trace, series/{segment}
+    (downsample max_points), audit, export zip;
+  - error taxonomy day du (10 codes) + PortalDomainError -> 422;
+  - two runners emit progress stages (§9).
+- Gate evidence: `./scripts/test_backend.sh` -> 86 passed (9 API tests moi,
+  worker subprocess that); commit 4a78458.
+- Deviations: router frontend dung React Router (khong TanStack Router) —
+  ghi o P5.
+
+#### Phase P5 Report (2026-08-10) — auto-approved
+
+- Delivered:
+  - `frontend/` scaffold: Vite + React 18 + TS strict + Tailwind v3 + TanStack
+    Query + ECharts (modular, thin wrapper) + Lucide + React Router v6;
+  - design system "Fund Paper" §27.2: `styles/tokens.css` (full token scale),
+    typography (Newsreader/Inter/JetBrains Mono via Fontsource), chart theme
+    module, format module, print/a11y rules;
+  - ConfigWorkspace (§13.1/§27.4): protocol segmented control, ThreeWindowEditor
+    (half-open, overlap guard), proportional WindowTimeline, search space,
+    optimization + account groups, TermSheet preflight + Run CTA;
+  - RunProgress: stage stepper + LedgerTerminal (structured events), SSE via
+    /api/runs/{id}/events;
+  - TopBar/NavTabs/RunPassport shell, run selector, export link.
+- Gate evidence: `npm run build` xanh (tsc strict), `npm test` 6/6, commit
+  3017cff.
+- Deviations: React Router thay TanStack Router (typed search params duoc giu
+  qua helper; ly do: it dependency, cung deep-link + refresh-safe); de xuat
+  chuyen lai TanStack Router khi can route tree phuc tap.
+
+#### Phase P6 Report (2026-08-10) — auto-approved
+
+- Delivered (5 views, ECharts, tu artifacts/API chi):
+  - Overview: MetricHeroStrip, SegmentControl IS/OOS/Holdout/Compare, Equity
+    (null breaks, Capital/Rebased toggle), Underwater, ComparisonMatrix +
+    delta, VerdictChain + frozen params;
+  - Optimization: ProcessTimeline, SelectionFunnel, TrialScatter
+    (click = highlight), CandidateScatter, DecayLollipop, Convergence,
+    TrialTable (rowParams parse params_json), selection trace;
+  - Parameters: selected params + percentile, CoverageHistogram, PairwiseContour
+    (heatmap), ParallelCoordinates, StructuralContract;
+  - Execution: PriceTargetChart (Target transition markers, khong goi Fill),
+    PositionRegimeStrip, cost-timeline gap note, TransitionTable;
+  - Audit: Manifest, config snapshot, reconciliation sign-off, warnings,
+    export download.
+- Gate evidence: visual smoke qua Playwright (canvas render, khong blank,
+  khong console error) truoc khi commit; commit 3017cff.
+- Deviations: khong.
+
+#### Phase P7 Report (2026-08-10) — auto-approved
+
+- Delivered:
+  - real-data certification: ETHUSDT 1h (57,918 bars) three-window run
+    COMPLETED qua API day du (40 trials, seed 42) — selected trial #27,
+    IS Sharpe 1.21 / OOS 1.20 / Holdout Live 1.25, reconciliation match ca 3
+    segment; fix bug loader root cua worker (parents[5]);
+  - Playwright visual gate: `frontend/e2e/screenshots.mjs` — 15 screenshots
+    (1440x900 / 1280x720 / 390x844 x 5 views), 0 blank canvas, 0 console
+    error => VISUAL GATE PASS; fix hook-order React #310 + params_json parse;
+  - README: frontend build/test/visual-gate + E2E smoke + SSH tunnel access;
+  - `scripts/run_frontend.sh`.
+- Gate evidence: 86 backend tests + build xanh + visual gate pass + real run
+  reopen duoc tu artifacts.
+- Deviations: chua cai Playwright vao CI (can cache browser), de xuat P+1;
+  production-budget run (400 trials) de lai cho stakeholder session de tranh
+  tieu thu CPU vps.

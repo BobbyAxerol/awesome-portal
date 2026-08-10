@@ -7,7 +7,7 @@ import { baseOption, palette } from "../../charts/theme";
 import type { EChartsOption } from "echarts";
 import { ChartFigure } from "../../components/ChartFigure";
 import { Collapsible, DefinitionList, StateView } from "../../components/ui";
-import { api } from "../../lib/api";
+import { api, rowParams } from "../../lib/api";
 import { fmtDecay, fmtRatio } from "../../lib/format";
 
 const PROCESS_STAGES = [
@@ -31,9 +31,6 @@ export function OptimizationView({ runId }: { runId: string }) {
     selectedTrial ??
     ((trace.data?.selected_trial_id as number | null | undefined) ?? null) ??
     ((candidateRows[0]?.trial_id as number | null | undefined) ?? null);
-
-  if (trials.isLoading || candidates.isLoading) return <StateView kind="loading" />;
-  if (trials.isError || candidates.isError) return <StateView kind="failed" message="Không tải được dữ liệu optimization" onRetry={() => void (trials.refetch(), candidates.refetch())} />;
 
   const trialScatter = useMemo(() => {
     const data: Array<[number, number]> = rows
@@ -125,6 +122,9 @@ export function OptimizationView({ runId }: { runId: string }) {
       series: [{ type: "line", showSymbol: false, data, lineStyle: { color: palette.accent, width: 1.75 } }],
     });
   }, [rows]);
+
+  if (trials.isLoading || candidates.isLoading) return <StateView kind="loading" />;
+  if (trials.isError || candidates.isError) return <StateView kind="failed" message="Không tải được dữ liệu optimization" onRetry={() => void (trials.refetch(), candidates.refetch())} />;
 
   return (
     <div className="space-y-6">
@@ -248,7 +248,7 @@ function TrialTable({
                 <td className="num">{fmtRatio(row.mean_oos_sharpe as number)}</td>
                 <td className="num">{fmtDecay(row.mean_decay as number)}</td>
                 <td className="max-w-[280px] truncate text-ink-faint">
-                  {JSON.stringify(row.params)}
+                  {JSON.stringify(rowParams(row))}
                 </td>
               </tr>
             );
