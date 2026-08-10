@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
@@ -229,3 +231,10 @@ class PortalRunRequest(PortalModel):
         if not isinstance(self.calibration, expected):
             raise ValueError(f"{self.protocol} requires {expected.__name__}")
         return self
+
+    def config_hash(self) -> str:
+        """Deterministic hash of the full submitted configuration."""
+        canonical = self.model_dump(mode="json", exclude_none=False)
+        return hashlib.sha256(
+            json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()

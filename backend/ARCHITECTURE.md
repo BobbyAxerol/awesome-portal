@@ -27,13 +27,20 @@ directly.
 - Lazy QuantBT capability gateway.
 - Atomic JSON/Parquet artifact repository with path-containment checks.
 - FastAPI health, strategy, dataset, capability and preflight routes.
+- Phase P1 clean strategy package (`strategy/delta_rsi.py` owns the lazy
+  kernel boundary; golden parity certified in `test_golden_parity.py`).
+- Phase P2 three-window Mode 1 orchestration (`services/three_window_runner.py`):
+  IS+OOS-only calibration tape, `train_test_split(mode_1_decay)`, selected-
+  params freeze before Holdout, fresh-account `pct_equity` replay of the three
+  segments, canonical artifacts (§11 subset), calendar/rebased presentation
+  equity and the leakage/parity test battery (`test_three_window_runner.py`).
 
 ## Deliberately Not Implemented Yet
 
 - Production WFO/background worker execution.
-- Selected-parameter freeze and IS/OOS/Holdout replay.
 - Run state persistence and SSE progress.
 - Full run artifact schema and report normalization.
+- Advanced WFO routing and the typed per-mode validation matrix.
 
 Those features remain governed by Phases P0-P4 in the implementation plan.
 They must be built below the existing API/domain boundaries rather than placing

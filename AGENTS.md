@@ -48,8 +48,8 @@
   `DeltaRsiStrategyAdapter` routes through it. Heavy QuantBT/Numba imports
   stay lazy so API startup never loads them.
 - `backend/ARCHITECTURE.md` documents boundaries, the performance contract and
-  what is deliberately not implemented yet (WFO worker execution, param
-  freeze/replay, run persistence/SSE).
+  what is deliberately not implemented yet (WFO worker execution, run
+  persistence/SSE, full artifact schema, Advanced WFO routing).
 - `implementation_plan_protoyype.md` (sic) is the governing domain/UI spec with
   P0-P7 phase gates; execution order and per-phase status live in §27. Build
   new features below the existing API/domain boundaries, not in route handlers.

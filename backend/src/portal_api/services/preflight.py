@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import hashlib
-import json
-
 import pandas as pd
 
 from portal_api.adapters.market_data import MarketDataProvider, partition_three_windows
@@ -72,10 +69,7 @@ class PreflightService:
         else:  # pragma: no cover - closed Pydantic union
             raise TypeError("unsupported calibration config")
 
-        canonical = request.model_dump(mode="json", exclude_none=False)
-        config_hash = hashlib.sha256(
-            json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode("utf-8")
-        ).hexdigest()
+        canonical = request.config_hash()
         return PreflightResponse(
             valid=True,
             strategy_id=request.strategy_id,
@@ -84,5 +78,5 @@ class PreflightService:
             timeframe=request.timeframe,
             windows=summaries,
             data_quality=market.quality,
-            config_hash=config_hash,
+            config_hash=canonical,
         )
