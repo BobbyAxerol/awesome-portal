@@ -2225,7 +2225,7 @@ Status board:
 | Phase | Trang thai | Brief duyet luc | Report | Phe duyet luc |
 |---|---|---|---|---|
 | P0 | hoan thanh, cho phe duyet | 2026-08-10 | xem duoi | - |
-| P1 | khoa | - | - | - |
+| P1 | hoan thanh, cho phe duyet | 2026-08-10 | xem duoi | - |
 | P2 | khoa | - | - | - |
 | P3 | khoa | - | - | - |
 | P4 | khoa | - | - | - |
@@ -2259,3 +2259,32 @@ Status board:
 - Deviations: khong. Design system map (§27.2-27.5) da ghi trong planning
   truoc do, P0 chi implement B1-B3.
 - Cho phe duyet de bat dau P1.
+
+#### Phase P1 Report (2026-08-10)
+
+- Delivered (B4 — strategy package layout + Numba warm-up hook, §5/§6):
+  - `strategy/specification.py`: `StrategySpecification` + immutable
+    `DELTA_RSI_SPECIFICATION` (single source of truth);
+  - `strategy/delta_rsi.py`: clean runtime surface — `generate_signals`,
+    `build_walkforward_signal` (causal cutoff, output index = `test_index`),
+    `warm_up` (compile Numba 1 lan tren synthetic frame 140 bar, idempotent);
+    lazy-import `strategy.main` chi khi goi ham; `StrategyParameterError` /
+    `StrategyDataError` fail ro;
+  - `strategy/registry.py`: `list_specifications` / `get_specification` /
+    `get_generators` (runtime-checkable `StrategyGenerators` Protocol);
+  - `backend/src/portal_api/strategies/delta_rsi.py`: adapter route qua
+    strategy package, spec import tu package (mot nguon duy nhat), bo duplic
+    dataclass cung nhu truc tiep goi `strategy.main`;
+  - `backend/tests/test_strategy_package.py` (10 tests): import no side-effect
+    (strategy.main khong vao sys.modules), golden parity cua clean surface,
+    single-source spec, missing params/columns fail ro, input khong bi mutate,
+    walkforward contract, warm-up idempotent + khong doi golden, registry.
+  - Khong chinh sua `strategy/main.py` (checksum OK) va khong chinh sua
+    `../quantbt` (read-only).
+- Gate evidence:
+  - `./scripts/test_backend.sh` -> 59 passed in 7.26s (49 cu + 10 moi).
+  - `sha256sum -c strategy/PROTECTED_SHA256` -> OK.
+  - `../.venv/bin/python -m compileall -q backend/src strategy` -> OK.
+  - `git log`: commit acf4757 tren `dev`.
+- Deviations: khong.
+- Cho phe duyet de bat dau P2.
