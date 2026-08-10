@@ -184,6 +184,10 @@ export function isTerminal(state: string): boolean {
   return TERMINAL_STATES.has(state);
 }
 
+export function canOpenRunResults(state: string): boolean {
+  return state === "COMPLETED";
+}
+
 /** Trial/candidate rows persist dict columns as `params_json` strings. */
 export function rowParams(row: Record<string, unknown>): Record<string, unknown> {
   const raw = row.params_json ?? row.params;

@@ -1,9 +1,9 @@
 /** Run progress: stage stepper + LedgerTerminal over the SSE/status stream (§9, §27.3 #7). */
 import { useQuery } from "@tanstack/react-query";
 import { Check, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
-import { api, type RunDetail } from "../../lib/api";
+import { api, isTerminal, type RunDetail } from "../../lib/api";
 import { rowParams } from "../../lib/api";
 import { fmtDuration, fmtTimestamp } from "../../lib/format";
 import { StateView } from "../../components/ui";
@@ -60,31 +60,31 @@ export function RunProgress({ runId }: { runId: string }) {
   const detail = useQuery({
     queryKey: ["run", runId],
     queryFn: () => api.getRun(runId),
-    refetchInterval: 1200,
+    refetchInterval: (query) => (query.state.data && isTerminal(query.state.data.status) ? false : 1200),
   });
   const ledger = useQuery({
     queryKey: ["ledger", runId],
     queryFn: () => api.ledger(runId),
     refetchInterval: (query) => (query.state.data && ["COMPLETED", "FAILED", "CANCELLED"].includes(query.state.data.status) ? false : 1200),
   });
-  const [terminalMessage, setTerminalMessage] = useState("");
-  useEffect(() => {
-    if (detail.data?.status === "COMPLETED") setTerminalMessage("Run hoàn thành — đang mở Overview.");
-    if (detail.data?.status === "FAILED") {
-      setTerminalMessage(detail.data.failure?.message ?? "Run thất bại");
-    }
-    if (detail.data?.status === "CANCELLED") setTerminalMessage("Run đã bị huỷ");
-  }, [detail.data?.status, detail.data?.failure]);
-
   if (detail.isLoading) return <StateView kind="loading" />;
   if (detail.isError) return <StateView kind="failed" message={detail.error.message} />;
   const data = detail.data;
   if (!data) return <StateView kind="loading" />;
+  const failed = data.status === "FAILED";
+  const cancelled = data.status === "CANCELLED";
+  const terminalMessage = failed
+    ? data.failure?.message ?? "Run failed"
+    : cancelled
+      ? "Run cancelled"
+      : data.status === "COMPLETED"
+        ? "Run completed"
+        : "";
 
   return (
     <div className="mx-auto max-w-[1100px] px-6 py-8">
       <div className="mb-2 flex items-baseline gap-3">
-        <h1 className="section-title">Run progress</h1>
+        <h1 className="section-title">{failed ? "Run failed" : cancelled ? "Run cancelled" : "Run progress"}</h1>
         <span className="mono text-[12px] text-ink-faint">
           stage {data.stage_index ?? "—"} / {data.stage_count ?? "—"} · {fmtDuration(data.created_at)}
         </span>
@@ -92,13 +92,17 @@ export function RunProgress({ runId }: { runId: string }) {
       <div className="card p-4">
         <Stepper detail={data} />
         {terminalMessage ? (
-          <div className="mt-3 flex items-center gap-2 rounded-md border border-accent/30 bg-accent-soft p-3">
-            {data.status === "FAILED" || data.status === "CANCELLED" ? (
+          <div
+            className={`mt-3 flex items-start gap-2 rounded-md border p-3 ${
+              failed || cancelled ? "border-bad/40 bg-bad-bg" : "border-good/30 bg-good-bg"
+            }`}
+          >
+            {failed || cancelled ? (
               <X size={14} className="text-bad" />
             ) : (
               <Check size={14} className="text-good" />
             )}
-            <span className="mono text-[12px] text-ink">{terminalMessage}</span>
+            <span className="mono min-w-0 break-words text-[12px] text-ink">{terminalMessage}</span>
             {data.failure?.code ? <span className="chip">{data.failure.code}</span> : null}
           </div>
         ) : null}

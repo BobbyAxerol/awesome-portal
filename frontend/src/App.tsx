@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { Navigate, Route, Routes, useSearchParams } from "react-router-dom";
 
-import { api, isTerminal } from "./lib/api";
+import { api, canOpenRunResults, isTerminal } from "./lib/api";
 import { AuditView } from "./features/audit/AuditView";
 import { ConfigWorkspace } from "./features/config/ConfigWorkspace";
 import { ExecutionView } from "./features/execution/ExecutionView";
@@ -40,9 +40,7 @@ export function App() {
       {currentRun ? (
         <>
           <RunPassport runId={currentRun.run_id} status={currentRun.status} />
-          {!isTerminal(currentRun.status) ? (
-            <RunProgress runId={currentRun.run_id} />
-          ) : (
+          {canOpenRunResults(currentRun.status) ? (
             <>
               <NavTabs />
               <main className="mx-auto max-w-[1440px] px-6 py-6">
@@ -56,6 +54,8 @@ export function App() {
                 </Routes>
               </main>
             </>
+          ) : (
+            <RunProgress runId={currentRun.run_id} />
           )}
         </>
       ) : (
