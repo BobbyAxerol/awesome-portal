@@ -400,7 +400,10 @@ export function ConfigWorkspace() {
             <NumericInput label="Decay lambda" value={Number(optimization.decay_lambda)} min={0} onChange={(value) => setOpt("decay_lambda", value ?? 0)} />
             <NumericInput label="Decay gamma" value={Number(optimization.decay_gamma)} min={0} onChange={(value) => setOpt("decay_gamma", value ?? 0)} />
             <SelectInput label="Scoring backend" value={String(optimization.scoring_backend)} options={["endpoint", "proxy"]} onChange={(value) => setOpt("scoring_backend", value)} />
-            <NumericInput label="Trading days" value={Number(optimization.scoring_trading_days)} min={1} step={1} onChange={(value) => setOpt("scoring_trading_days", value ?? 365)} />
+            <label className="space-y-1" title="Annualization calendar for Sharpe/Sortino/etc: 365 for crypto, 252 for equities. Ghi vào config/request.json — auditable.">
+              <span className="label block">Trading days / year (annualization)</span>
+              <input className="input w-full" type="number" min={1} step={1} value={Number(optimization.scoring_trading_days)} onChange={(event) => setOpt("scoring_trading_days", Number(event.target.value))} />
+            </label>
             <NumericInput label="Min trades / year" value={optimization.min_trades_per_year as number | null} min={0} onChange={(value) => setOpt("min_trades_per_year", value)} />
             <NumericInput label="Trade penalty" value={optimization.trade_penalty_factor as number | null} min={0} onChange={(value) => setOpt("trade_penalty_factor", value)} />
           </div>

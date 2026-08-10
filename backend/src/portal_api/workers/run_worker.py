@@ -141,38 +141,93 @@ def _cancel_requested(artifacts: ArtifactRepository, run_id: str) -> bool:
     return (artifacts.run_directory(run_id) / ".cancel").exists()
 
 
+# The worker process is REUSED across runs (ProcessPoolExecutor), so the
+# console sink must be module-level: optuna's logging handler is rewired once
+# and always writes into the *current* run's console file.
+_console_handle: Any | None = None
+
+
+class _ConsoleSink:
+    """Routes writes to whatever run's console file is currently open."""
+
+    def write(self, data: str) -> int:
+        if _console_handle is not None:
+            _console_handle.write(data)
+        return len(data)
+
+    def flush(self) -> None:
+        if _console_handle is not None:
+            _console_handle.flush()
+
+    def isatty(self) -> bool:
+        return False
+
+
+_console_sink = _ConsoleSink()
+
+
 def _install_console_tee(artifacts: ArtifactRepository, run_id: str) -> None:
-    """Tee the worker's stdout/stderr into ``status/console.log``.
+    """Tee the worker's stdout/stderr + optuna log into ``status/console.log``.
 
     Optuna/QuantBT print every trial as it is evaluated; the API exposes the
     tail of this file so the UI can stream real per-trial progress. The log is
     an operational capture, never parsed into structured audit events.
     """
+    global _console_handle
+    import logging
     import sys
 
     log_path = artifacts.run_directory(run_id, create=True) / "status" / "console.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
-    handle = open(log_path, "a", encoding="utf-8", buffering=1)
+    new_handle = open(log_path, "a", encoding="utf-8", buffering=1)
 
-    class _Tee:
-        def __init__(self, stream, file_handle):
-            self._stream = stream
-            self._handle = file_handle
+    if not getattr(sys.stdout, "_portal_tee", False):
+        class _Tee:
+            _portal_tee = True
 
-        def write(self, data: str) -> int:
-            self._stream.write(data)
-            self._handle.write(data)
-            return len(data)
+            def __init__(self, stream):
+                self._stream = stream
 
-        def flush(self) -> None:
-            self._stream.flush()
-            self._handle.flush()
+            def write(self, data: str) -> int:
+                try:
+                    self._stream.write(data)
+                except Exception:  # noqa: BLE001 - the console sink must still run
+                    pass
+                _console_sink.write(data)
+                return len(data)
 
-        def isatty(self) -> bool:
-            return False
+            def flush(self) -> None:
+                try:
+                    self._stream.flush()
+                except Exception:  # noqa: BLE001
+                    pass
+                _console_sink.flush()
 
-    sys.stdout = _Tee(sys.__stdout__, handle)
-    sys.stderr = _Tee(sys.__stderr__, handle)
+            def isatty(self) -> bool:
+                return False
+
+        sys.stdout = _Tee(sys.__stdout__)
+        sys.stderr = _Tee(sys.__stderr__)
+        optuna_logger = logging.getLogger("optuna")
+        for handler in list(optuna_logger.handlers):
+            optuna_logger.removeHandler(handler)
+        handler = logging.StreamHandler(_console_sink)
+        handler.setFormatter(
+            logging.Formatter(
+                "[%(levelname)s %(asctime)s] %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+            )
+        )
+        optuna_logger.addHandler(handler)
+        optuna_logger.setLevel(logging.INFO)
+        optuna_logger.propagate = False
+
+    if _console_handle is not None:
+        try:
+            _console_handle.close()
+        except Exception:  # noqa: BLE001
+            pass
+    _console_handle = new_handle
 
 
 def execute_run(

@@ -190,7 +190,9 @@ class AdvancedWalkForwardRunner:
         self._artifacts.write_json(run_id, "selection/selected_params.json", selected)
         self._artifacts.write_json(run_id, "selection/selection_trace.json", selected["trace"])
 
-        metrics = self._gateway.metrics(endpoint, trading_days=365)
+        metrics = self._gateway.metrics(
+            endpoint, trading_days=int(config.optimization.scoring_trading_days)
+        )
         result = endpoint.result
         series = _stitched_series(active_market.frame, result)
         self._artifacts.write_frame(run_id, "series/stitched.parquet", series)

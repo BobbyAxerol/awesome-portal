@@ -141,11 +141,11 @@ export function OverviewView({ runId }: { runId: string }) {
       </div>
 
       <ChartFigure figNumber={1} title={`Equity — ${capitalMode === "capital" ? "fresh-account capital" : "rebased 100"}`} sourceId={`presentation/${capitalMode === "capital" ? "calendar" : "rebased"}`}>
-        <EChart option={equityOption} height={420} />
+        <EChart option={equityOption} height={560} />
       </ChartFigure>
 
       <ChartFigure figNumber={2} title="Underwater — drawdown (presentation from equity)" sourceId="series/*">
-        <EChart option={underwaterOption} height={160} />
+        <EChart option={underwaterOption} height={220} />
       </ChartFigure>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">

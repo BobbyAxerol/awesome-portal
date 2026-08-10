@@ -233,6 +233,7 @@ class ThreeWindowRunner:
                 protocol_tape,
                 selected_params["params"],
                 account_kwargs,
+                trading_days=int(request.calibration.optimization.scoring_trading_days),
             )
             series_by_segment[key] = series
             metrics_by_segment[key] = metrics
@@ -314,6 +315,7 @@ class ThreeWindowRunner:
         full_history: pd.DataFrame,
         frozen_params: Mapping[str, object],
         account_kwargs: Mapping[str, object],
+        trading_days: int,
     ) -> tuple[pd.DataFrame, dict[str, Any]]:
         # Warm-up history is readable up to the segment start, but the account
         # starts fresh at the segment boundary (plan §7.2, §7.3).
@@ -323,7 +325,7 @@ class ThreeWindowRunner:
         endpoint = self._gateway.run_frozen_replay(
             evaluation_frame=segment_frame, signal=signal, account_kwargs=account_kwargs
         )
-        metrics = self._gateway.metrics(endpoint, trading_days=365)
+        metrics = self._gateway.metrics(endpoint, trading_days=trading_days)
         result = endpoint.result
 
         series = _build_segment_series(segment_frame, generated, result)

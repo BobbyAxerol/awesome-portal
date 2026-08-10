@@ -102,7 +102,7 @@ function PriceChart({ payload }: { payload: SeriesPayload }) {
   }, [payload]);
   return (
     <ChartFigure figNumber={1} title="Close price + target transitions" note="Markers là Target transition từ strategy signal, không phải audited fills." sourceId="series/*">
-      <EChart option={option} height={380} />
+      <EChart option={option} height={540} />
     </ChartFigure>
   );
 }
@@ -132,7 +132,7 @@ function PositionStrip({ payload }: { payload: SeriesPayload }) {
   );
   return (
     <ChartFigure figNumber={2} title="Position regime strip" sourceId="series/*">
-      <EChart option={option} height={120} />
+      <EChart option={option} height={150} />
     </ChartFigure>
   );
 }

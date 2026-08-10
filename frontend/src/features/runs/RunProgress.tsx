@@ -219,7 +219,9 @@ function LiveConsole({ lines, expanded }: { lines: string[]; expanded: boolean }
   );
 }
 
-/** Structured per-stage log — trials -> candidates -> freeze -> segment eval. */
+/** Structured per-stage log — trials -> candidates -> freeze -> segment eval.
+ *  Trials/candidates are replayed progressively so the search process stays
+ *  visible instead of appearing in one jump (§15.7). */
 function StageLog({
   ledger,
   summary,
@@ -237,32 +239,91 @@ function StageLog({
   const trials = ledger?.trial_events ?? [];
   const candidates = ledger?.candidate_events ?? [];
   const events = ledger?.stage_events ?? [];
+  const [replay, setReplay] = useState({ visible: 0, playing: true, speed: 10 });
+  const total = trials.length + candidates.length;
+  const replaying = trials.length > 0 || candidates.length > 0;
+
+  // Progressive reveal: `speed` = rows per tick (~120ms). Candidates and the
+  // freeze/eval blocks appear only after the trials are fully replayed.
+  useEffect(() => {
+    if (!replay.playing || total === 0) return;
+    const timer = window.setInterval(() => {
+      setReplay((current) => {
+        const next = Math.min(current.visible + current.speed, total);
+        if (next >= total) window.clearInterval(timer);
+        return { ...current, visible: next };
+      });
+    }, 120);
+    return () => window.clearInterval(timer);
+  }, [replay.playing, replay.speed, total]);
+
+  const visibleTrials = trials.slice(0, replay.visible);
+  const visibleCandidates = replay.visible >= trials.length ? candidates.slice(0, replay.visible - trials.length) : [];
+
   useEffect(() => {
     terminalRef.current?.scrollTo({ top: terminalRef.current.scrollHeight });
-  }, [trials.length, candidates.length, events.length]);
+  }, [replay.visible, events.length]);
 
   const studies = useMemo(() => {
     const groups = new Map<string, Record<string, unknown>[]>();
-    for (const trial of trials) {
+    for (const trial of visibleTrials) {
       const key = String(trial.study_id ?? trial.schedule_fold_id ?? "global");
       groups.set(key, [...(groups.get(key) ?? []), trial]);
     }
     return [...groups.entries()].sort((a, b) => (a[0] === "global" ? -1 : Number(a[0]) - Number(b[0])));
-  }, [trials]);
+  }, [visibleTrials]);
 
   const segments = summary?.metrics?.segments;
   const createdMs = createdAt ? new Date(createdAt).getTime() : Date.now();
+  const done = replay.visible >= total;
 
   return (
     <div className="mt-3 overflow-hidden rounded-lg" style={{ background: "var(--ink-panel)" }}>
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
+      <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-2">
         <span className="mono text-[11px] uppercase tracking-normal" style={{ color: C.faint }}>
           stage log · structured · audit-grade
         </span>
-        <span className="mono text-[11px]" style={{ color: C.faint }}>
-          {studies.length} study{studies.length > 1 ? "s" : ""} · {trials.length} trials · {candidates.length} candidates · {status}
-        </span>
+        <div className="flex items-center gap-3">
+          {replaying ? (
+            <span className="mono text-[11px]" style={{ color: done ? C.good : C.gold }}>
+              {done ? "replayed" : `replaying ${Math.min(replay.visible, total)}/${total}`}
+            </span>
+          ) : null}
+          <span className="mono text-[11px]" style={{ color: C.faint }}>
+            {studies.length} study{studies.length > 1 ? "s" : ""} · {trials.length} trials · {candidates.length} candidates · {status}
+          </span>
+        </div>
       </div>
+      {replaying ? (
+        <div className="flex items-center gap-2 border-b border-white/10 px-4 py-1.5">
+          <button
+            type="button"
+            className="mono rounded border border-white/15 px-2 py-0.5 text-[11px] text-panel-fg hover:bg-white/10"
+            onClick={() => setReplay((current) => ({ ...current, playing: !current.playing }))}
+          >
+            {replay.playing && !done ? "⏸ Pause" : done ? "↺ Replay" : "▶ Play"}
+          </button>
+          {[20, 40, 80, 10000].map((speed) => (
+            <button
+              key={speed}
+              type="button"
+              className={`mono rounded border px-2 py-0.5 text-[11px] ${
+                replay.speed === speed
+                  ? "border-accent-2 bg-white/10 text-panel-fg"
+                  : "border-white/15 text-panel-fg/60 hover:bg-white/5"
+              }`}
+              onClick={() => setReplay((current) => ({ ...current, speed, playing: !done }))}
+            >
+              {speed === 10000 ? "instant" : `${speed}/tick`}
+            </button>
+          ))}
+          {replay.playing && !done ? (
+            <div className="ml-auto h-1 w-40 overflow-hidden rounded-full bg-white/10">
+              <div className="h-full" style={{ width: `${(replay.visible / Math.max(1, total)) * 100}%`, background: C.accent }} />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       <div
         ref={terminalRef}
         className={`overflow-y-auto px-4 py-3 font-mono text-[12px] leading-6 ${expanded ? "max-h-[calc(100vh-360px)] min-h-[420px]" : "max-h-44"}`}
@@ -311,15 +372,15 @@ function StageLog({
         ))}
 
         {/* Candidate replay on OOS */}
-        {candidates.length ? (
+        {visibleCandidates.length ? (
           <div className="mt-3 border-t border-white/10 pt-2">
             <div className="mb-1 flex items-center gap-2">
               <span className="mono text-[11px] uppercase" style={{ color: C.gold }}>
                 OOS replay · candidates
               </span>
-              <span style={{ color: C.faint }}>{candidates.length} candidates</span>
+              <span style={{ color: C.faint }}>{visibleCandidates.length}/{candidates.length} candidates</span>
             </div>
-            {candidates.map((candidate, index) => {
+            {visibleCandidates.map((candidate, index) => {
               const isSharp = typeof candidate.mean_is_sharpe === "number" ? candidate.mean_is_sharpe : null;
               const oosSharp = typeof candidate.mean_oos_sharpe === "number" ? candidate.mean_oos_sharpe : null;
               const decay = typeof candidate.mean_decay === "number" ? candidate.mean_decay : null;
@@ -340,8 +401,8 @@ function StageLog({
           </div>
         ) : null}
 
-        {/* Frozen params */}
-        {trials.length || candidates.length ? (
+        {/* Frozen params — appears once the replay finishes */}
+        {done && total > 0 ? (
           <div className="mt-3 border-t border-white/10 pt-2">
             <span className="mono text-[11px] uppercase" style={{ color: C.gold }}>
               freeze · selected params
@@ -349,8 +410,8 @@ function StageLog({
           </div>
         ) : null}
 
-        {/* Segment evaluation */}
-        {segments ? (
+        {/* Segment evaluation — appears once the replay finishes */}
+        {segments && done ? (
           <div className="mt-3 border-t border-white/10 pt-2">
             <div className="mb-1">
               <span className="mono text-[11px] uppercase" style={{ color: C.accent }}>
