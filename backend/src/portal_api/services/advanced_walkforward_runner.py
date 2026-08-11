@@ -316,7 +316,11 @@ def _stitched_series(market_frame: pd.DataFrame, result) -> pd.DataFrame:
         positions.columns[0],
     )
     series = pd.DataFrame(index=index)
+    series["open"] = market_frame["open"].astype(float)
+    series["high"] = market_frame["high"].astype(float)
+    series["low"] = market_frame["low"].astype(float)
     series["close"] = market_frame["close"].astype(float)
+    series["volume"] = market_frame["volume"].astype(float)
     series["accepted_position"] = positions[position_col].reindex(index).fillna(0.0).astype(float)
     series["equity"] = equity
     series["returns"] = result.returns.reindex(index).fillna(0.0).astype(float)

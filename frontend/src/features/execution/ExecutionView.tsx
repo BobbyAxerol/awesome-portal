@@ -59,52 +59,80 @@ function PriceChart({ payload }: { payload: SeriesPayload }) {
   const option = useMemo(() => {
     const target = payload.series.signal_target ?? [];
     const close = payload.series.close ?? [];
+    const open = payload.series.open ?? [];
+    const high = payload.series.high ?? [];
+    const low = payload.series.low ?? [];
     const entries = entryPoints(target, close);
     const exits = exitPoints(target, close);
+    const candles = payload.timestamps.map((ts, index) => [
+      ts,
+      open[index] ?? close[index] ?? 0,
+      close[index] ?? 0,
+      low[index] ?? 0,
+      high[index] ?? 0,
+    ]);
+    const markerData = (points: Array<{ index: number; price: number }>) =>
+      points.map((point) => [payload.timestamps[point.index], point.price]);
     return baseOption({
       grid: { left: 56, right: 20, top: 20, bottom: 48, containLabel: true },
-      legend: { show: false },
+      legend: {
+        show: true,
+        top: 0,
+        right: 12,
+        left: "auto",
+        textStyle: { color: "var(--ink-faint)", fontSize: 10 },
+        itemWidth: 10,
+        itemHeight: 8,
+      },
       series: [
         {
-          name: "close",
-          type: "line",
-          showSymbol: false,
-          data: payload.series.close?.map((value, index) => [payload.timestamps[index], value]),
-          lineStyle: { width: 1.25, color: "#5d7b93" },
-          itemStyle: { color: "#5d7b93" },
+          name: "Candles",
+          type: "candlestick" as const,
+          data: candles,
+          itemStyle: {
+            color: "var(--good)",
+            color0: "var(--bad)",
+            borderColor: "var(--good)",
+            borderColor0: "var(--bad)",
+            borderWidth: 1,
+          },
         },
         {
           name: "Long entry",
-          type: "scatter",
+          type: "scatter" as const,
           symbol: "triangle",
-          symbolSize: 14,
-          itemStyle: { color: "var(--good)", borderColor: "#0f5c3a", borderWidth: 1 },
-          data: entries.filter((entry) => entry.side === 1).map((entry) => [payload.timestamps[entry.index], entry.price]),
+          symbolSize: 15,
+          z: 5,
+          itemStyle: { color: "var(--good)", borderColor: "#ffffff", borderWidth: 1 },
+          data: markerData(entries.filter((entry) => entry.side === 1)),
         },
         {
           name: "Short entry",
-          type: "scatter",
+          type: "scatter" as const,
           symbol: "triangle",
           symbolRotate: 180,
-          symbolSize: 14,
-          itemStyle: { color: "var(--bad)", borderColor: "#7c2626", borderWidth: 1 },
-          data: entries.filter((entry) => entry.side === -1).map((entry) => [payload.timestamps[entry.index], entry.price]),
+          symbolSize: 15,
+          z: 5,
+          itemStyle: { color: "var(--bad)", borderColor: "#ffffff", borderWidth: 1 },
+          data: markerData(entries.filter((entry) => entry.side === -1)),
         },
         {
           name: "Long exit",
-          type: "scatter",
+          type: "scatter" as const,
           symbol: "path://M-4,-4 L4,4 M4,-4 L-4,4",
-          symbolSize: 13,
-          itemStyle: { color: "var(--good)", borderColor: "var(--good)", borderWidth: 1.5 },
-          data: exits.filter((exit) => exit.side === 1).map((exit) => [payload.timestamps[exit.index], exit.price]),
+          symbolSize: 14,
+          z: 5,
+          itemStyle: { color: "#ffffff", borderColor: "var(--good)", borderWidth: 2 },
+          data: markerData(exits.filter((exit) => exit.side === 1)),
         },
         {
           name: "Short exit",
-          type: "scatter",
+          type: "scatter" as const,
           symbol: "path://M-4,-4 L4,4 M4,-4 L-4,4",
-          symbolSize: 13,
-          itemStyle: { color: "var(--bad)", borderColor: "var(--bad)", borderWidth: 1.5 },
-          data: exits.filter((exit) => exit.side === -1).map((exit) => [payload.timestamps[exit.index], exit.price]),
+          symbolSize: 14,
+          z: 5,
+          itemStyle: { color: "#ffffff", borderColor: "var(--bad)", borderWidth: 2 },
+          data: markerData(exits.filter((exit) => exit.side === -1)),
         },
       ],
     });
@@ -112,8 +140,8 @@ function PriceChart({ payload }: { payload: SeriesPayload }) {
   return (
     <ChartFigure
       figNumber={1}
-      title="Close price + target transitions"
-      note="▲▼ = entry · ✕ = exit. Markers là Target transition từ strategy signal (pos_weight), không phải audited fills."
+      title="Candles + target transitions"
+      note="▲▼ = entry · ✕ = exit trên nến. Markers là Target transition từ strategy signal (pos_weight), không phải audited fills."
       sourceId="series/*"
     >
       <EChart option={option} height={640} />
