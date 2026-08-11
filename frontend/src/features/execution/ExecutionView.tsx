@@ -66,14 +66,25 @@ function PriceChart({ payload }: { payload: SeriesPayload }) {
     const low = payload.series.low ?? [];
     const entries = entryPoints(target, close);
     const exits = exitPoints(target, close);
-    // TradingView-style candles: ECharts candlestick expects
-    // [timestamp, [open, close, lowest, highest]] per item.
-    const candles = payload.timestamps.map((ts, index) => [
-      ts,
-      [open[index] ?? close[index] ?? 0, close[index] ?? 0, low[index] ?? 0, high[index] ?? 0],
-    ]) as [string, [number, number, number, number]][];
+    const timestamps = payload.timestamps;
+    // Classic ECharts candlestick: category axis + [open, close, low, high].
+    // This is the battle-tested pattern; a time axis with candles is flaky.
+    const candles = timestamps.map((_, index) => [
+      open[index] ?? close[index] ?? 0,
+      close[index] ?? 0,
+      low[index] ?? 0,
+      high[index] ?? 0,
+    ]);
     const markerData = (points: Array<{ index: number; price: number }>) =>
-      points.map((point) => [payload.timestamps[point.index], point.price]);
+      points.map((point) => [point.index, point.price]);
+    // Default view: last ~250 bars so candles are actually visible.
+    const totalBars = timestamps.length;
+    const defaultBars = 250;
+    const zoomStart = Math.max(0, ((totalBars - defaultBars) / totalBars) * 100);
+    const dateLabel = (value: string | number, index?: number) => {
+      const ts = typeof value === "string" ? value : timestamps[index ?? 0] ?? "";
+      return ts.slice(5, 16).replace("T", " ");
+    };
     return baseOption({
       grid: { left: 56, right: 20, top: 20, bottom: 48, containLabel: true },
       legend: {
@@ -85,11 +96,38 @@ function PriceChart({ payload }: { payload: SeriesPayload }) {
         itemWidth: 10,
         itemHeight: 8,
       },
-      // Default view on the most recent bars (TradingView behaviour) so the
-      // candles are readable instead of a compressed wall at t=0.
+      tooltip: {
+        trigger: "axis",
+        formatter: (params: unknown) => {
+          const list = Array.isArray(params) ? (params as Array<{ dataIndex: number; seriesName: string; value: unknown; marker?: string }>) : [];
+          const idx = list[0]?.dataIndex ?? 0;
+          const head = `<b>${dateLabel(timestamps[idx] ?? "")}</b>`;
+          const rows = list
+            .map((p) => {
+              const value = Array.isArray(p.value)
+                ? (p.value as Array<number | null>).slice(0, 4).map((v) => (v == null ? "—" : Number(v).toFixed(2))).join(" / ")
+                : String(p.value);
+              return `${p.marker ?? ""}${p.seriesName}: ${value}`;
+            })
+            .join("<br/>");
+          return `${head}<br/>${rows}`;
+        },
+      },
+      xAxis: {
+        type: "category" as const,
+        data: timestamps,
+        axisLabel: { formatter: dateLabel, hideOverlap: true, color: "var(--ink-faint)", fontSize: 10 },
+        axisLine: { lineStyle: { color: "#e3e0d7" } },
+      },
+      yAxis: {
+        type: "value",
+        scale: true,
+        axisLabel: { color: "var(--ink-faint)", fontSize: 11 },
+        splitLine: { lineStyle: { color: "var(--line-soft)", type: "dashed" } },
+      },
       dataZoom: [
-        { type: "inside", start: 85, end: 100, throttle: 50 },
-        { type: "slider", start: 85, end: 100, height: 18, bottom: 0, borderColor: "#e3e0d7", fillerColor: "rgba(15,76,92,.08)" },
+        { type: "inside", start: zoomStart, end: 100, throttle: 50 },
+        { type: "slider", start: zoomStart, end: 100, height: 18, bottom: 0, borderColor: "#e3e0d7", fillerColor: "rgba(15,76,92,.08)" },
       ],
       series: [
         {
@@ -101,7 +139,7 @@ function PriceChart({ payload }: { payload: SeriesPayload }) {
             color0: "#F23645",
             borderColor: "#089981",
             borderColor0: "#F23645",
-            borderWidth: 1,
+            borderWidth: 1.5,
           },
         },
         {
