@@ -1,0 +1,20 @@
+# macOS / editor files
+.DS_Store
+.vscode/
+
+# Python generated files and local environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local-only portal persistence written by server.py
+data/tasks.json
+data/roadmap.json
+
+# Local configuration and test outputs
+.env
+.env.*
+!.env.example
+.coverage
+htmlcov/
