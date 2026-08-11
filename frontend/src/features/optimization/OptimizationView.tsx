@@ -7,6 +7,7 @@ import { baseOption, palette } from "../../charts/theme";
 import type { EChartsOption } from "echarts";
 import { ChartFigure } from "../../components/ChartFigure";
 import { Collapsible, DefinitionList, StateView } from "../../components/ui";
+import { FoldGantt } from "../../components/FoldGantt";
 import { api, rowParams } from "../../lib/api";
 import { fmtDecay, fmtRatio } from "../../lib/format";
 
@@ -21,6 +22,8 @@ const PROCESS_STAGES = [
 
 export function OptimizationView({ runId }: { runId: string }) {
   const trials = useQuery({ queryKey: ["trials", runId], queryFn: () => api.trials(runId, "top_n=5000") });
+  const foldPlan = useQuery({ queryKey: ["fold-plan", runId], queryFn: () => api.foldPlan(runId), retry: 1 });
+  const detail = useQuery({ queryKey: ["run", runId], queryFn: () => api.getRun(runId) });
   const candidates = useQuery({ queryKey: ["candidates", runId], queryFn: () => api.candidates(runId) });
   const trace = useQuery({ queryKey: ["trace", runId], queryFn: () => api.trace(runId) });
   const folds = useQuery({ queryKey: ["folds", runId], queryFn: () => api.folds(runId) });
@@ -139,8 +142,14 @@ export function OptimizationView({ runId }: { runId: string }) {
   if (trials.isLoading || candidates.isLoading) return <StateView kind="loading" />;
   if (trials.isError || candidates.isError) return <StateView kind="failed" message="Không tải được dữ liệu optimization" onRetry={() => void (trials.refetch(), candidates.refetch())} />;
 
+  const showFoldGantt =
+    foldPlan.data?.protocol === "advanced_walk_forward" &&
+    (foldPlan.data.folds.length ?? 0) > 0 &&
+    detail.data?.protocol === "advanced_walk_forward";
+
   return (
     <div className="space-y-6">
+      {showFoldGantt ? <FoldGantt plan={foldPlan.data!} studyStarts={0} bestByStudy={[]} running={false} /> : null}
       <ProcessTimeline />
       <SelectionFunnel rows={rows} candidates={candidateRows} />
 

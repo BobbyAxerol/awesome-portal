@@ -1,4 +1,6 @@
-/** Execution: price + target transitions, position strip, equity/drawdown, transition table (§17). */
+/** Execution: price + target transitions, position strip, equity/drawdown, transition table (§17).
+ *  Protocol-aware (v0.1.1): advanced_walk_forward uses the single stitched
+ *  OOS account; three-window offers IS/OOS/Holdout Live. */
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
@@ -7,35 +9,38 @@ import { baseOption, palette } from "../../charts/theme";
 import { ChartFigure } from "../../components/ChartFigure";
 import { SegmentedControl, StateView } from "../../components/ui";
 import { api, type SeriesPayload } from "../../lib/api";
+import { entryPoints, exitPoints } from "../../lib/transitions";
 
 const SEGMENTS = ["is", "oos", "holdout_live"] as const;
 type SegmentKey = (typeof SEGMENTS)[number];
 
-function useSeries(runId: string, segment: SegmentKey) {
-  return useQuery({
+export function ExecutionView({ runId }: { runId: string }) {
+  const detail = useQuery({ queryKey: ["run", runId], queryFn: () => api.getRun(runId) });
+  const advanced = detail.data?.protocol === "advanced_walk_forward";
+  const [segment, setSegment] = useState<SegmentKey | "stitched">(advanced ? "stitched" : "oos");
+  const series = useQuery({
     queryKey: ["series", runId, segment],
     queryFn: () => api.series(runId, segment, 4000),
     staleTime: 60_000,
   });
-}
-
-export function ExecutionView({ runId }: { runId: string }) {
-  const [segment, setSegment] = useState<SegmentKey>("oos");
-  const series = useSeries(runId, segment);
-  if (series.isLoading) return <StateView kind="loading" />;
+  if (series.isLoading || detail.isLoading) return <StateView kind="loading" />;
   if (series.isError) return <StateView kind="failed" message={series.error.message} onRetry={() => series.refetch()} />;
 
   return (
     <div className="space-y-6">
-      <SegmentedControl
-        value={segment}
-        onChange={setSegment}
-        options={[
-          { value: "is", label: "IS" },
-          { value: "oos", label: "OOS" },
-          { value: "holdout_live", label: "Holdout Live" },
-        ]}
-      />
+      {advanced ? (
+        <span className="chip">Stitched OOS account</span>
+      ) : (
+        <SegmentedControl
+          value={segment as SegmentKey}
+          onChange={setSegment}
+          options={[
+            { value: "is", label: "IS" },
+            { value: "oos", label: "OOS" },
+            { value: "holdout_live", label: "Holdout Live" },
+          ]}
+        />
+      )}
       <PriceChart payload={series.data!} />
       <PositionStrip payload={series.data!} />
       <div className="card p-4">
@@ -50,24 +55,12 @@ export function ExecutionView({ runId }: { runId: string }) {
   );
 }
 
-function entryPoints(payload: SeriesPayload) {
-  const target = payload.series.signal_target ?? [];
-  const close = payload.series.close ?? [];
-  const points: Array<{ index: number; side: 1 | -1; price: number }> = [];
-  let prev = 0;
-  for (let i = 0; i < target.length; i += 1) {
-    const value = target[i] ?? 0;
-    if (value !== 0 && prev === 0) {
-      points.push({ index: i, side: value > 0 ? 1 : -1, price: close[i] ?? 0 });
-    }
-    prev = value;
-  }
-  return points;
-}
-
 function PriceChart({ payload }: { payload: SeriesPayload }) {
   const option = useMemo(() => {
-    const entries = entryPoints(payload);
+    const target = payload.series.signal_target ?? [];
+    const close = payload.series.close ?? [];
+    const entries = entryPoints(target, close);
+    const exits = exitPoints(target, close);
     return baseOption({
       grid: { left: 56, right: 20, top: 20, bottom: 48, containLabel: true },
       legend: { show: false },
@@ -81,28 +74,49 @@ function PriceChart({ payload }: { payload: SeriesPayload }) {
           itemStyle: { color: "#5d7b93" },
         },
         {
-          name: "Target transition — long",
+          name: "Long entry",
           type: "scatter",
           symbol: "triangle",
-          symbolSize: 12,
-          itemStyle: { color: "var(--good)" },
+          symbolSize: 14,
+          itemStyle: { color: "var(--good)", borderColor: "#0f5c3a", borderWidth: 1 },
           data: entries.filter((entry) => entry.side === 1).map((entry) => [payload.timestamps[entry.index], entry.price]),
         },
         {
-          name: "Target transition — short",
+          name: "Short entry",
           type: "scatter",
           symbol: "triangle",
           symbolRotate: 180,
-          symbolSize: 12,
-          itemStyle: { color: "var(--bad)" },
+          symbolSize: 14,
+          itemStyle: { color: "var(--bad)", borderColor: "#7c2626", borderWidth: 1 },
           data: entries.filter((entry) => entry.side === -1).map((entry) => [payload.timestamps[entry.index], entry.price]),
+        },
+        {
+          name: "Long exit",
+          type: "scatter",
+          symbol: "path://M-4,-4 L4,4 M4,-4 L-4,4",
+          symbolSize: 13,
+          itemStyle: { color: "var(--good)", borderColor: "var(--good)", borderWidth: 1.5 },
+          data: exits.filter((exit) => exit.side === 1).map((exit) => [payload.timestamps[exit.index], exit.price]),
+        },
+        {
+          name: "Short exit",
+          type: "scatter",
+          symbol: "path://M-4,-4 L4,4 M4,-4 L-4,4",
+          symbolSize: 13,
+          itemStyle: { color: "var(--bad)", borderColor: "var(--bad)", borderWidth: 1.5 },
+          data: exits.filter((exit) => exit.side === -1).map((exit) => [payload.timestamps[exit.index], exit.price]),
         },
       ],
     });
   }, [payload]);
   return (
-    <ChartFigure figNumber={1} title="Close price + target transitions" note="Markers là Target transition từ strategy signal, không phải audited fills." sourceId="series/*">
-      <EChart option={option} height={540} />
+    <ChartFigure
+      figNumber={1}
+      title="Close price + target transitions"
+      note="▲▼ = entry · ✕ = exit. Markers là Target transition từ strategy signal (pos_weight), không phải audited fills."
+      sourceId="series/*"
+    >
+      <EChart option={option} height={640} />
     </ChartFigure>
   );
 }

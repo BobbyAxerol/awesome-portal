@@ -34,6 +34,11 @@ directly.
   params freeze before Holdout, fresh-account `pct_equity` replay of the three
   segments, canonical artifacts (§11 subset), calendar/rebased presentation
   equity and the leakage/parity test battery (`test_three_window_runner.py`).
+- v0.1.1 Run Progress: deterministic fold plan (`services/fold_plan.py`,
+  QuantBT-parity port of `build_folds`; artifact `config/fold_plan.json`
+  written at submit + by the worker) and operational progress counters
+  (`GET /api/runs/{id}/progress`, parsed from the worker console capture —
+  display-only estimates; the structured ledger stays the audit source).
 
 ## Deliberately Not Implemented Yet
 

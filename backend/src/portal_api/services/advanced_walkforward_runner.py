@@ -30,8 +30,10 @@ from portal_api.serialization import canonicalize
 from portal_api.services.three_window_runner import (
     ARTIFACT_SCHEMA_VERSION,
     _sanitize,
+    _strategy_artifact,
     _strategy_callable,
 )
+from portal_api.strategies import StrategyRegistry
 
 
 class AdvancedWalkForwardError(RuntimeError):
@@ -209,6 +211,10 @@ class AdvancedWalkForwardRunner:
             "config.json",
             canonicalize(request.model_dump(mode="json")),
         )
+        # Parity with the three-window runner: strategy.json feeds the audit
+        # endpoint, which 404s without it (v0.1.1 bugfix).
+        spec = StrategyRegistry().get(request.strategy_id).specification
+        self._artifacts.write_json(run_id, "strategy.json", _strategy_artifact(spec))
         self._artifacts.write_json(
             run_id,
             "manifest.json",
@@ -310,7 +316,11 @@ def _stitched_series(market_frame: pd.DataFrame, result) -> pd.DataFrame:
         positions.columns[0],
     )
     series = pd.DataFrame(index=index)
+    series["open"] = market_frame["open"].astype(float)
+    series["high"] = market_frame["high"].astype(float)
+    series["low"] = market_frame["low"].astype(float)
     series["close"] = market_frame["close"].astype(float)
+    series["volume"] = market_frame["volume"].astype(float)
     series["accepted_position"] = positions[position_col].reindex(index).fillna(0.0).astype(float)
     series["equity"] = equity
     series["returns"] = result.returns.reindex(index).fillna(0.0).astype(float)
@@ -320,6 +330,12 @@ def _stitched_series(market_frame: pd.DataFrame, result) -> pd.DataFrame:
         data=pd.Series(equity / peak - 1.0).to_numpy(),
         dtype=float,
     )
+    # Stitched OOS target signal (pos_weight) — lets the Execution view draw
+    # long/short entry & exit markers for advanced runs too (v0.1.1).
+    wf_result = getattr(result, "metadata", {}).get("walk_forward_result")
+    oos_output = getattr(wf_result, "oos_output", None)
+    if isinstance(oos_output, pd.Series):
+        series["signal_target"] = oos_output.reindex(index).fillna(0.0).astype(float)
     series.attrs["capabilities"] = {
         "fee_series": False,
         "funding_series": False,

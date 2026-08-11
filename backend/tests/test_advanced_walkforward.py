@@ -146,6 +146,13 @@ def test_advanced_runner_completes_and_writes_artifacts(runner) -> None:
     assert selected["params_semantics"]
     assert set(selected["params"]) == set(DELTA_RSI_SPECIFICATION.parameter_space)
 
+    # v0.1.1 bugfix: audit endpoint 404s for advanced runs without strategy.json
+    # — parity with the three-window runner.
+    strategy = artifacts.read_json("run_p3_adv", "strategy.json")
+    assert strategy["strategy_id"] == "delta-rsi-polynomial-alpha"
+    assert "structural_contract" in strategy
+    assert "parameter_space" in strategy
+
     stitched = _read_frame(artifacts, "run_p3_adv", "series/stitched.parquet")
     assert stitched.index.min() >= market.frame.index[12]
     assert stitched.index.max() < market.frame.index[-12]

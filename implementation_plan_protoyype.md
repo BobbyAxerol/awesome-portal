@@ -2234,6 +2234,36 @@ thu hai (man hinh trung tam), sau do Parameters, Execution, Audit.
 10. Be mat toi `--ink-panel` chi cho LedgerTerminal; khong lan sang noi dung
     khac.
 
+### 27.9. v0.1.1 — Run Progress v2 (branch `feat/run-progress-v2`, 2026-08-10)
+
+Nang cap Run Progress cho Advanced WFO (va giu nguyen tot cho Three-Window):
+
+- **Fold plan deterministic** (`services/fold_plan.py`): port parity-tested cua
+  QuantBT `build_folds` — tinh truoc tu config (split_mode/frequency, window
+  mode, min bars). Parity test 5 config voi `fold_table` that (expanding,
+  rolling, single, mode_5, min_bars). Artifact `config/fold_plan.json` ghi
+  ngay tai submit (preflight cung tra `fold_plan`), worker ghi lai cung gia
+  tri. Chi la du lieu hien thi, khong phai audit input.
+- **Progress strip (thay stepper don dieu)**: `Fold K/N · trials · elapsed ·
+  ETA (uoc tinh)` + segmented fold bar (done=xanh, running=accent pulse,
+  pending=xam). Three-window: `Trial K/N` + thanh don.
+- **ETA va fold counters**: `GET /api/runs/{id}/progress` — dem server-side tu
+  console capture (studyStarts, trialsDone, bestByStudy, tail 200k khong tran
+  client). Operational estimate, ghi nhan "uoc tinh"; structured ledger van la
+  nguon audit. Khong parse console thanh structured events.
+- **Fold Gantt** (`components/FoldGantt.tsx`, dung chung): moi fold mot hang —
+  train bar + test bar theo ngay that, expanding/rolling thay ro; status
+  done/running/pending + chip `best #N`; hien trong Run Progress (live) va
+  Optimization view (sau run, advanced protocol).
+- **Live console**: separator hien thi `── FOLD K — STUDY STARTED ──` tai ranh
+  gioi fold (khong ghi vao file log); dedupe cac dong trial trung tu hai he
+  thong in cua QuantBT (print + logging).
+- **Stage log**: block theo fold kem dates `train A->B · test C->D`; giu replay
+  + speed control.
+- Ghi chu ky thuat: worker process duoc ProcessPoolExecutor tai su dung giua
+  cac run — console sink phai o module level (optuna handler `setStream` ve
+  sink cua run hien tai, khong them handler moi de tranh duplicate).
+
 ### 27.8. Phase Report Workflow Va Status Board
 
 Workflow bat buoc (theo yeu cau cua user, 2026-08-10):

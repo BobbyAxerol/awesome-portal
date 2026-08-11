@@ -1,10 +1,14 @@
-/** Run progress: stepper + Live console + Stage log (§15.7 redesigned). */
+/** Run progress v2 (v0.1.1): tqdm-grade progress with a designed UI —
+ *  overall progress strip + ETA, fold Gantt, live console with fold
+ *  separators, and a per-fold structured stage log with replay. */
 import { useQuery } from "@tanstack/react-query";
-import { Check, Eye, Maximize2, Minimize2, X } from "lucide-react";
+import { Check, Eye, Maximize2, Minimize2, Pause, Play, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { api, isTerminal, rowParams, type RunDetail, type RunLedger } from "../../lib/api";
-import { fmtDuration } from "../../lib/format";
+import { api, isTerminal, rowParams, type RunDetail, type RunFoldPlan, type RunLedger } from "../../lib/api";
+import { FoldGantt } from "../../components/FoldGantt";
+import { annotateConsoleLines, estimateEtaSeconds, parseConsoleStats } from "../../lib/consoleStats";
+import { fmtDuration, fmtTimestamp } from "../../lib/format";
 import { StateView } from "../../components/ui";
 
 /* Dark-panel palette (§15.7): readable on --ink-panel */
@@ -15,6 +19,15 @@ const C = {
   gold: "#D4B36A",
   good: "#6FCF97",
   bad: "#E58A8A",
+};
+
+/* Light-theme accents for the progress strip / Gantt */
+const L = {
+  good: "#1E7B4F",
+  accent: "#0F4C5C",
+  pending: "#E3E0D7",
+  train: "#A8C6CE",
+  textFaint: "#939DB0",
 };
 
 const STAGE_ORDER = [
@@ -79,6 +92,23 @@ export function RunProgress({ runId, onViewResults }: { runId: string; onViewRes
     refetchInterval: 1000,
     enabled: !detail.data || !isTerminal(detail.data.status),
   });
+  const foldPlan = useQuery({
+    queryKey: ["fold-plan", runId],
+    queryFn: () => api.foldPlan(runId),
+    retry: 5,
+    refetchInterval: (query) => (query.state.data ? false : 2000),
+  });
+  const progress = useQuery({
+    queryKey: ["progress", runId],
+    queryFn: () => api.progress(runId),
+    refetchInterval: 1000,
+    enabled: !detail.data || !isTerminal(detail.data.status),
+  });
+  const config = useQuery({
+    queryKey: ["config", runId],
+    queryFn: () => api.runConfig(runId),
+    retry: 3,
+  });
   const summary = useQuery({
     queryKey: ["summary", runId],
     queryFn: () => api.summary(runId),
@@ -106,6 +136,32 @@ export function RunProgress({ runId, onViewResults }: { runId: string; onViewRes
       : completed
         ? "Run hoàn thành — nhấn “Xem kết quả” để mở Overview."
         : "";
+
+  const protocol = data.protocol ?? "";
+  const lines = consoleTail.data?.lines ?? [];
+  const stats = useMemo(
+    () =>
+      progress.data
+        ? { studyStarts: progress.data.studyStarts, trialsDone: progress.data.trialsDone, bestByStudy: progress.data.bestByStudy }
+        : parseConsoleStats(lines),
+    [progress.data, lines],
+  );
+  const calibration = (config.data?.calibration ?? {}) as Record<string, unknown>;
+  const trialsPerStudy = Number(calibration.optuna_trials ?? 0);
+  const folds = foldPlan.data?.folds ?? [];
+  const advancedFolds = protocol === "advanced_walk_forward" ? folds.filter((f) => f.train_start) : [];
+  const totalStudies = advancedFolds.length || 1;
+  const currentStudy = Math.min(stats.studyStarts, totalStudies);
+
+  let completedTrials = stats.trialsDone;
+  let total = trialsPerStudy;
+  if (protocol === "advanced_walk_forward" && advancedFolds.length > 1) {
+    total = advancedFolds.length * trialsPerStudy;
+  }
+  const elapsedSeconds = data.created_at ? Math.max(0, (Date.now() - new Date(data.created_at).getTime()) / 1000) : 0;
+  const etaSeconds = estimateEtaSeconds(completedTrials, total, elapsedSeconds);
+  const etaText =
+    etaSeconds == null ? "…" : etaSeconds >= 3600 ? `${Math.round(etaSeconds / 3600)}h ${Math.round((etaSeconds % 3600) / 60)}m` : etaSeconds >= 60 ? `${Math.floor(etaSeconds / 60)}m ${Math.round(etaSeconds % 60)}s` : `${Math.round(etaSeconds)}s`;
 
   return (
     <div className="mx-auto max-w-[1280px] px-6 py-8">
@@ -136,6 +192,28 @@ export function RunProgress({ runId, onViewResults }: { runId: string; onViewRes
           </div>
         ) : null}
       </div>
+
+      {/* v0.1.1 — overall progress + ETA (tqdm-grade, custom design) */}
+      <ProgressStrip
+        stats={stats}
+        currentStudy={currentStudy}
+        totalStudies={totalStudies}
+        completed={completedTrials}
+        total={total}
+        elapsedSeconds={elapsedSeconds}
+        etaText={etaText}
+        protocol={protocol}
+      />
+
+      {/* v0.1.1 — fold Gantt with live status */}
+      {foldPlan.data && foldPlan.data.folds.length ? (
+        <FoldGantt
+          plan={foldPlan.data}
+          studyStarts={stats.studyStarts}
+          bestByStudy={stats.bestByStudy}
+          running={!completed}
+        />
+      ) : null}
 
       <div className="mt-4 flex items-center gap-2">
         <div className="inline-flex rounded-md border border-line bg-raised p-0.5">
@@ -169,24 +247,131 @@ export function RunProgress({ runId, onViewResults }: { runId: string; onViewRes
       </div>
 
       {tab === "live" ? (
-        <LiveConsole lines={consoleTail.data?.lines ?? []} expanded={expanded} />
+        <LiveConsole lines={lines} expanded={expanded} />
       ) : (
-        <StageLog ledger={ledger.data} summary={summary.data} createdAt={data.created_at} status={data.status} expanded={expanded} />
+        <StageLog
+          ledger={ledger.data}
+          summary={summary.data}
+          foldPlan={foldPlan.data}
+          createdAt={data.created_at}
+          status={data.status}
+          expanded={expanded}
+        />
       )}
     </div>
   );
 }
 
+/* ---------------------------------------------------------------- Progress */
+
+function ProgressStrip({
+  stats,
+  currentStudy,
+  totalStudies,
+  completed,
+  total,
+  elapsedSeconds,
+  etaText,
+  protocol,
+}: {
+  stats: { studyStarts: number };
+  currentStudy: number;
+  totalStudies: number;
+  completed: number;
+  total: number;
+  elapsedSeconds: number;
+  etaText: string;
+  protocol: string;
+}) {
+  const perFold = protocol === "advanced_walk_forward" && totalStudies > 1;
+  const fraction = total > 0 ? Math.min(1, completed / total) : 0;
+  const elapsed = elapsedSeconds >= 3600 ? `${Math.floor(elapsedSeconds / 3600)}h ${Math.floor((elapsedSeconds % 3600) / 60)}m` : elapsedSeconds >= 60 ? `${Math.floor(elapsedSeconds / 60)}m ${Math.round(elapsedSeconds % 60)}s` : `${Math.round(elapsedSeconds)}s`;
+
+  return (
+    <div className="card mt-4 p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div className="flex items-baseline gap-3">
+          {perFold ? (
+            <span className="mono text-[20px] font-semibold text-ink">
+              Fold {currentStudy}/{totalStudies}
+            </span>
+          ) : (
+            <span className="mono text-[20px] font-semibold text-ink">Tuning parameters</span>
+          )}
+          <span className="mono text-[12px] text-ink-soft">
+            {completed}/{total} trials · elapsed {elapsed}
+          </span>
+        </div>
+        <span className="mono text-[12px] text-ink-faint">
+          ETA <span className="font-semibold text-accent">{etaText}</span>{" "}
+          <span className="text-ink-faint/70">(ước tính)</span>
+        </span>
+      </div>
+
+      {perFold ? (
+        <div className="mt-3 flex gap-1">
+          {Array.from({ length: totalStudies }).map((_, index) => {
+            const done = index < currentStudy - 1;
+            const running = index === currentStudy - 1 && stats.studyStarts > 0 && currentStudy <= totalStudies;
+            return (
+              <div
+                key={index}
+                title={`Fold ${index + 1}`}
+                className={`h-2.5 flex-1 rounded-full transition-colors duration-300 ${
+                  done ? "" : running ? "animate-pulse" : ""
+                }`}
+                style={{
+                  background: done ? L.good : running ? L.accent : L.pending,
+                }}
+              />
+            );
+          })}
+        </div>
+      ) : (
+        <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-sunken">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${fraction * 100}%`, background: L.accent }}
+          />
+        </div>
+      )}
+      <div className="mono mt-1.5 text-[10px] text-ink-faint">
+        {perFold ? `${totalStudies} folds · ${total} trials total (mỗi fold ${Math.round(total / totalStudies)})` : `${total} trials · 1 study`}
+      </div>
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------- Console */
+
 function LiveConsole({ lines, expanded }: { lines: string[]; expanded: boolean }) {
   const terminalRef = useRef<HTMLDivElement>(null);
+  const rows = useMemo(() => {
+    const annotated = annotateConsoleLines(lines);
+    // QuantBT emits each trial through both print and logging streams; collapse
+    // consecutive rows carrying the SAME trial id+value (display-only).
+    const out: typeof annotated = [];
+    let lastTrialKey: string | null = null;
+    for (const row of annotated) {
+      if (row.kind === "line") {
+        const match = row.text.match(/Trial\s+(\d+)\s+finished with value:\s*([\d.eE+-]+)/);
+        const key = match ? `${match[1]}:${match[2]}` : null;
+        if (key !== null && key === lastTrialKey) continue;
+        lastTrialKey = key;
+      }
+      out.push(row);
+    }
+    return out;
+  }, [lines]);
   useEffect(() => {
     terminalRef.current?.scrollTo({ top: terminalRef.current.scrollHeight });
   }, [lines.length]);
+
   return (
     <div className="mt-3 overflow-hidden rounded-lg" style={{ background: "var(--ink-panel)" }}>
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
         <span className="mono text-[11px] uppercase tracking-normal" style={{ color: C.faint }}>
-          live console · worker stdout/stderr (mỗi trial Optuna)
+          live console · per-trial output
         </span>
         <span className="mono text-[11px]" style={{ color: C.faint }}>
           {lines.length} lines
@@ -194,20 +379,31 @@ function LiveConsole({ lines, expanded }: { lines: string[]; expanded: boolean }
       </div>
       <div
         ref={terminalRef}
-        className={`overflow-y-auto px-4 py-3 font-mono text-[12px] leading-6 ${expanded ? "max-h-[calc(100vh-360px)] min-h-[420px]" : "max-h-44"}`}
+        className={`overflow-y-auto px-4 py-3 font-mono text-[12px] leading-6 ${expanded ? "max-h-[calc(100vh-380px)] min-h-[420px]" : "max-h-44"}`}
       >
-        {lines.length ? (
-          lines.map((line, index) => {
-            const hasTrial = /Trial|trial|Best is/.test(line);
-            const isGood = /finished with value: (1[0-9]|[2-9]|[0-9])\.[0-9]/.test(line);
-            const isBad = /finished with value: -/.test(line);
+        {rows.length ? (
+          rows.map((row, index) => {
+            if (row.kind === "separator") {
+              return (
+                <div key={`sep-${index}`} className="my-1 flex items-center gap-2">
+                  <span className="h-px flex-1" style={{ background: "rgba(212,179,106,.35)" }} />
+                  <span className="mono text-[10px] uppercase tracking-normal" style={{ color: C.gold }}>
+                    ── {row.text} ──
+                  </span>
+                  <span className="h-px flex-1" style={{ background: "rgba(212,179,106,.35)" }} />
+                </div>
+              );
+            }
+            const isGood = /finished with value: (1[0-9]|[2-9]|[0-9])\.[0-9]/.test(row.text);
+            const isBad = /finished with value: -/.test(row.text);
+            const isTrial = /Trial|Best is/.test(row.text);
             return (
               <div
                 key={index}
                 className="whitespace-pre-wrap break-words"
-                style={{ color: isGood ? C.good : isBad ? C.bad : hasTrial ? C.base : C.faint }}
+                style={{ color: isGood ? C.good : isBad ? C.bad : isTrial ? C.base : C.faint }}
               >
-                {line}
+                {row.text}
               </div>
             );
           })
@@ -219,18 +415,20 @@ function LiveConsole({ lines, expanded }: { lines: string[]; expanded: boolean }
   );
 }
 
-/** Structured per-stage log — trials -> candidates -> freeze -> segment eval.
- *  Trials/candidates are replayed progressively so the search process stays
- *  visible instead of appearing in one jump (§15.7). */
+/* ------------------------------------------------------------ Stage log */
+
+/** Structured per-stage log with fold-aware blocks + replay (v0.1.1). */
 function StageLog({
   ledger,
   summary,
+  foldPlan,
   createdAt,
   status,
   expanded,
 }: {
   ledger: RunLedger | undefined;
   summary: { metrics?: { segments?: Record<string, Record<string, number | null>> } } | undefined;
+  foldPlan: RunFoldPlan | undefined;
   createdAt: string | null;
   status: string;
   expanded: boolean;
@@ -243,8 +441,6 @@ function StageLog({
   const total = trials.length + candidates.length;
   const replaying = trials.length > 0 || candidates.length > 0;
 
-  // Progressive reveal: `speed` = rows per tick (~120ms). Candidates and the
-  // freeze/eval blocks appear only after the trials are fully replayed.
   useEffect(() => {
     if (!replay.playing || total === 0) return;
     const timer = window.setInterval(() => {
@@ -263,6 +459,11 @@ function StageLog({
   useEffect(() => {
     terminalRef.current?.scrollTo({ top: terminalRef.current.scrollHeight });
   }, [replay.visible, events.length]);
+
+  const foldById = new Map<number, { train_start?: string; test_start?: string; test_end?: string }>();
+  for (const fold of foldPlan?.folds ?? []) {
+    if (fold.train_start) foldById.set(fold.fold_id, fold);
+  }
 
   const studies = useMemo(() => {
     const groups = new Map<string, Record<string, unknown>[]>();
@@ -301,16 +502,14 @@ function StageLog({
             className="mono rounded border border-white/15 px-2 py-0.5 text-[11px] text-panel-fg hover:bg-white/10"
             onClick={() => setReplay((current) => ({ ...current, playing: !current.playing }))}
           >
-            {replay.playing && !done ? "⏸ Pause" : done ? "↺ Replay" : "▶ Play"}
+            {replay.playing && !done ? <Pause size={11} className="inline" /> : done ? <Play size={11} className="inline" /> : <Play size={11} className="inline" />} {replay.playing && !done ? "Pause" : done ? "Replay" : "Play"}
           </button>
-          {[20, 40, 80, 10000].map((speed) => (
+          {[10, 40, 10000].map((speed) => (
             <button
               key={speed}
               type="button"
               className={`mono rounded border px-2 py-0.5 text-[11px] ${
-                replay.speed === speed
-                  ? "border-accent-2 bg-white/10 text-panel-fg"
-                  : "border-white/15 text-panel-fg/60 hover:bg-white/5"
+                replay.speed === speed ? "border-accent-2 bg-white/10 text-panel-fg" : "border-white/15 text-panel-fg/60 hover:bg-white/5"
               }`}
               onClick={() => setReplay((current) => ({ ...current, speed, playing: !done }))}
             >
@@ -324,11 +523,7 @@ function StageLog({
           ) : null}
         </div>
       ) : null}
-      <div
-        ref={terminalRef}
-        className={`overflow-y-auto px-4 py-3 font-mono text-[12px] leading-6 ${expanded ? "max-h-[calc(100vh-360px)] min-h-[420px]" : "max-h-44"}`}
-      >
-        {/* Stages timeline */}
+      <div ref={terminalRef} className={`overflow-y-auto px-4 py-3 font-mono text-[12px] leading-6 ${expanded ? "max-h-[calc(100vh-380px)] min-h-[420px]" : "max-h-44"}`}>
         {events.map((event, index) => {
           const elapsed = event.at - createdMs / 1000;
           return (
@@ -339,39 +534,46 @@ function StageLog({
           );
         })}
 
-        {/* Optimization — one block per study/fold */}
-        {studies.map(([studyKey, studyTrials]) => (
-          <div key={studyKey} className="mt-3 border-t border-white/10 pt-2">
-            <div className="mb-1 flex items-center gap-2">
-              <span className="mono text-[11px] uppercase" style={{ color: C.accent }}>
-                {studyKey === "global" ? "IS search · 1 study (global)" : `fold ${studyKey} · 1 study`}
-              </span>
-              <span style={{ color: C.faint }}>{studyTrials.length} trials</span>
+        {studies.map(([studyKey, studyTrials]) => {
+          const foldId = studyKey === "global" ? null : Number(studyKey);
+          const foldMeta = foldId != null ? foldById.get(foldId) : null;
+          const dates =
+            foldMeta && foldMeta.train_start
+              ? ` · train ${fmtTimestamp(foldMeta.train_start).slice(5, 10)}→${fmtTimestamp(foldMeta.test_start ?? "").slice(5, 10)} · test ${fmtTimestamp(foldMeta.test_start ?? "").slice(5, 10)}→${fmtTimestamp(foldMeta.test_end ?? "").slice(5, 10)}`
+              : "";
+          return (
+            <div key={studyKey} className="mt-3 border-t border-white/10 pt-2">
+              <div className="mb-1 flex items-center gap-2">
+                <span className="mono text-[11px] uppercase" style={{ color: C.accent }}>
+                  {foldId != null ? `fold ${foldId} · 1 study` : "IS search · 1 study (global)"}
+                </span>
+                <span style={{ color: C.faint }}>{studyTrials.length} trials</span>
+                <span style={{ color: C.faint }}>{dates}</span>
+              </div>
+              {studyTrials.map((trial, index) => {
+                const objective = typeof trial.objective === "number" ? trial.objective : null;
+                const isSharp = typeof trial.mean_is_sharpe === "number" ? trial.mean_is_sharpe : null;
+                const params = rowParams(trial);
+                const paramText = Object.entries(params)
+                  .map(([key, value]) => `${key}=${value}`)
+                  .join(" ");
+                return (
+                  <div key={`t-${studyKey}-${String(trial.trial_id)}-${index}`} className="grid grid-cols-[110px_120px_1fr] gap-3 py-0.5">
+                    <span style={{ color: C.faint }}>trial #{String(trial.trial_id ?? index)}</span>
+                    <span style={{ color: objective != null ? (objective >= 0 ? C.good : C.bad) : C.faint }}>
+                      obj {objective != null ? objective.toFixed(4) : "—"}
+                    </span>
+                    <span className="truncate" style={{ color: C.base }}>
+                      IS {isSharp != null ? isSharp.toFixed(2) : "—"}
+                      <span style={{ color: C.faint }}> · {paramText}</span>
+                    </span>
+                  </div>
+                );
+              })}
             </div>
-            {studyTrials.map((trial, index) => {
-              const objective = typeof trial.objective === "number" ? trial.objective : null;
-              const isSharp = typeof trial.mean_is_sharpe === "number" ? trial.mean_is_sharpe : null;
-              const params = rowParams(trial);
-              const paramText = Object.entries(params)
-                .map(([key, value]) => `${key}=${value}`)
-                .join(" ");
-              return (
-                <div key={`t-${studyKey}-${String(trial.trial_id)}-${index}`} className="grid grid-cols-[110px_120px_1fr] gap-3 py-0.5">
-                  <span style={{ color: C.faint }}>trial #{String(trial.trial_id ?? index)}</span>
-                  <span style={{ color: objective != null ? (objective >= 0 ? C.good : C.bad) : C.faint }}>
-                    obj {objective != null ? objective.toFixed(4) : "—"}
-                  </span>
-                  <span className="truncate" style={{ color: C.base }}>
-                    IS {isSharp != null ? isSharp.toFixed(2) : "—"}
-                    <span style={{ color: C.faint }}> · {paramText}</span>
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        ))}
+          );
+        })}
 
-        {/* Candidate replay on OOS */}
         {visibleCandidates.length ? (
           <div className="mt-3 border-t border-white/10 pt-2">
             <div className="mb-1 flex items-center gap-2">
@@ -401,7 +603,6 @@ function StageLog({
           </div>
         ) : null}
 
-        {/* Frozen params — appears once the replay finishes */}
         {done && total > 0 ? (
           <div className="mt-3 border-t border-white/10 pt-2">
             <span className="mono text-[11px] uppercase" style={{ color: C.gold }}>
@@ -410,7 +611,6 @@ function StageLog({
           </div>
         ) : null}
 
-        {/* Segment evaluation — appears once the replay finishes */}
         {segments && done ? (
           <div className="mt-3 border-t border-white/10 pt-2">
             <div className="mb-1">

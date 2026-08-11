@@ -33,6 +33,7 @@ class PreflightResponse(ResponseModel):
     windows: tuple[WindowSummary, ...]
     data_quality: dict[str, Any]
     config_hash: str
+    fold_plan: dict[str, Any] | None = None
 
 
 class StrategyResponse(ResponseModel):
