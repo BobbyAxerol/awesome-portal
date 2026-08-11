@@ -8,6 +8,8 @@ import { EChart } from "../../charts/EChart";
 import { baseOption, palette } from "../../charts/theme";
 import { ChartFigure } from "../../components/ChartFigure";
 import { SegmentedControl, StateView } from "../../components/ui";
+import type { EChartsOption } from "echarts";
+
 import { api, type SeriesPayload } from "../../lib/api";
 import { entryPoints, exitPoints } from "../../lib/transitions";
 
@@ -64,13 +66,12 @@ function PriceChart({ payload }: { payload: SeriesPayload }) {
     const low = payload.series.low ?? [];
     const entries = entryPoints(target, close);
     const exits = exitPoints(target, close);
+    // TradingView-style candles: ECharts candlestick expects
+    // [timestamp, [open, close, lowest, highest]] per item.
     const candles = payload.timestamps.map((ts, index) => [
       ts,
-      open[index] ?? close[index] ?? 0,
-      close[index] ?? 0,
-      low[index] ?? 0,
-      high[index] ?? 0,
-    ]);
+      [open[index] ?? close[index] ?? 0, close[index] ?? 0, low[index] ?? 0, high[index] ?? 0],
+    ]) as [string, [number, number, number, number]][];
     const markerData = (points: Array<{ index: number; price: number }>) =>
       points.map((point) => [payload.timestamps[point.index], point.price]);
     return baseOption({
@@ -84,16 +85,22 @@ function PriceChart({ payload }: { payload: SeriesPayload }) {
         itemWidth: 10,
         itemHeight: 8,
       },
+      // Default view on the most recent bars (TradingView behaviour) so the
+      // candles are readable instead of a compressed wall at t=0.
+      dataZoom: [
+        { type: "inside", start: 85, end: 100, throttle: 50 },
+        { type: "slider", start: 85, end: 100, height: 18, bottom: 0, borderColor: "#e3e0d7", fillerColor: "rgba(15,76,92,.08)" },
+      ],
       series: [
         {
           name: "Candles",
           type: "candlestick" as const,
           data: candles,
           itemStyle: {
-            color: "var(--good)",
-            color0: "var(--bad)",
-            borderColor: "var(--good)",
-            borderColor0: "var(--bad)",
+            color: "#089981",
+            color0: "#F23645",
+            borderColor: "#089981",
+            borderColor0: "#F23645",
             borderWidth: 1,
           },
         },
@@ -135,7 +142,7 @@ function PriceChart({ payload }: { payload: SeriesPayload }) {
           data: markerData(exits.filter((exit) => exit.side === -1)),
         },
       ],
-    });
+    } as unknown as EChartsOption);
   }, [payload]);
   return (
     <ChartFigure
