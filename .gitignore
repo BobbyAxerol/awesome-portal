@@ -11,6 +11,9 @@ venv/
 # Local-only portal persistence written by server.py
 data/tasks.json
 data/roadmap.json
+data/*.db
+data/*.db-shm
+data/*.db-wal
 
 # Local configuration and test outputs
 .env
