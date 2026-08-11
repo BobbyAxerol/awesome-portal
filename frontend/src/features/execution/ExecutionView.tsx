@@ -8,8 +8,6 @@ import { EChart } from "../../charts/EChart";
 import { baseOption, palette } from "../../charts/theme";
 import { ChartFigure } from "../../components/ChartFigure";
 import { SegmentedControl, StateView } from "../../components/ui";
-import type { EChartsOption } from "echarts";
-
 import { api, type SeriesPayload } from "../../lib/api";
 import { entryPoints, exitPoints } from "../../lib/transitions";
 
@@ -61,132 +59,61 @@ function PriceChart({ payload }: { payload: SeriesPayload }) {
   const option = useMemo(() => {
     const target = payload.series.signal_target ?? [];
     const close = payload.series.close ?? [];
-    const open = payload.series.open ?? [];
-    const high = payload.series.high ?? [];
-    const low = payload.series.low ?? [];
     const entries = entryPoints(target, close);
     const exits = exitPoints(target, close);
-    const timestamps = payload.timestamps;
-    // Classic ECharts candlestick: category axis + [open, close, low, high].
-    // This is the battle-tested pattern; a time axis with candles is flaky.
-    const candles = timestamps.map((_, index) => [
-      open[index] ?? close[index] ?? 0,
-      close[index] ?? 0,
-      low[index] ?? 0,
-      high[index] ?? 0,
-    ]);
-    const markerData = (points: Array<{ index: number; price: number }>) =>
-      points.map((point) => [point.index, point.price]);
-    // Default view: last ~250 bars so candles are actually visible.
-    const totalBars = timestamps.length;
-    const defaultBars = 250;
-    const zoomStart = Math.max(0, ((totalBars - defaultBars) / totalBars) * 100);
-    const dateLabel = (value: string | number, index?: number) => {
-      const ts = typeof value === "string" ? value : timestamps[index ?? 0] ?? "";
-      return ts.slice(5, 16).replace("T", " ");
-    };
     return baseOption({
       grid: { left: 56, right: 20, top: 20, bottom: 48, containLabel: true },
-      legend: {
-        show: true,
-        top: 0,
-        right: 12,
-        left: "auto",
-        textStyle: { color: "var(--ink-faint)", fontSize: 10 },
-        itemWidth: 10,
-        itemHeight: 8,
-      },
-      tooltip: {
-        trigger: "axis",
-        formatter: (params: unknown) => {
-          const list = Array.isArray(params) ? (params as Array<{ dataIndex: number; seriesName: string; value: unknown; marker?: string }>) : [];
-          const idx = list[0]?.dataIndex ?? 0;
-          const head = `<b>${dateLabel(timestamps[idx] ?? "")}</b>`;
-          const rows = list
-            .map((p) => {
-              const value = Array.isArray(p.value)
-                ? (p.value as Array<number | null>).slice(0, 4).map((v) => (v == null ? "—" : Number(v).toFixed(2))).join(" / ")
-                : String(p.value);
-              return `${p.marker ?? ""}${p.seriesName}: ${value}`;
-            })
-            .join("<br/>");
-          return `${head}<br/>${rows}`;
-        },
-      },
-      xAxis: {
-        type: "category" as const,
-        data: timestamps,
-        axisLabel: { formatter: dateLabel, hideOverlap: true, color: "var(--ink-faint)", fontSize: 10 },
-        axisLine: { lineStyle: { color: "#e3e0d7" } },
-      },
-      yAxis: {
-        type: "value",
-        scale: true,
-        axisLabel: { color: "var(--ink-faint)", fontSize: 11 },
-        splitLine: { lineStyle: { color: "var(--line-soft)", type: "dashed" } },
-      },
-      dataZoom: [
-        { type: "inside", start: zoomStart, end: 100, throttle: 50 },
-        { type: "slider", start: zoomStart, end: 100, height: 18, bottom: 0, borderColor: "#e3e0d7", fillerColor: "rgba(15,76,92,.08)" },
-      ],
+      legend: { show: false },
       series: [
         {
-          name: "Candles",
-          type: "candlestick" as const,
-          data: candles,
-          itemStyle: {
-            color: "#089981",
-            color0: "#F23645",
-            borderColor: "#089981",
-            borderColor0: "#F23645",
-            borderWidth: 1.5,
-          },
+          name: "close",
+          type: "line",
+          showSymbol: false,
+          data: payload.series.close?.map((value, index) => [payload.timestamps[index], value]),
+          lineStyle: { width: 1.25, color: "#5d7b93" },
+          itemStyle: { color: "#5d7b93" },
         },
         {
           name: "Long entry",
-          type: "scatter" as const,
+          type: "scatter",
           symbol: "triangle",
-          symbolSize: 15,
-          z: 5,
-          itemStyle: { color: "var(--good)", borderColor: "#ffffff", borderWidth: 1 },
-          data: markerData(entries.filter((entry) => entry.side === 1)),
+          symbolSize: 14,
+          itemStyle: { color: "var(--good)", borderColor: "#0f5c3a", borderWidth: 1 },
+          data: entries.filter((entry) => entry.side === 1).map((entry) => [payload.timestamps[entry.index], entry.price]),
         },
         {
           name: "Short entry",
-          type: "scatter" as const,
+          type: "scatter",
           symbol: "triangle",
           symbolRotate: 180,
-          symbolSize: 15,
-          z: 5,
-          itemStyle: { color: "var(--bad)", borderColor: "#ffffff", borderWidth: 1 },
-          data: markerData(entries.filter((entry) => entry.side === -1)),
+          symbolSize: 14,
+          itemStyle: { color: "var(--bad)", borderColor: "#7c2626", borderWidth: 1 },
+          data: entries.filter((entry) => entry.side === -1).map((entry) => [payload.timestamps[entry.index], entry.price]),
         },
         {
           name: "Long exit",
-          type: "scatter" as const,
+          type: "scatter",
           symbol: "path://M-4,-4 L4,4 M4,-4 L-4,4",
-          symbolSize: 14,
-          z: 5,
-          itemStyle: { color: "#ffffff", borderColor: "var(--good)", borderWidth: 2 },
-          data: markerData(exits.filter((exit) => exit.side === 1)),
+          symbolSize: 13,
+          itemStyle: { color: "var(--good)", borderColor: "var(--good)", borderWidth: 1.5 },
+          data: exits.filter((exit) => exit.side === 1).map((exit) => [payload.timestamps[exit.index], exit.price]),
         },
         {
           name: "Short exit",
-          type: "scatter" as const,
+          type: "scatter",
           symbol: "path://M-4,-4 L4,4 M4,-4 L-4,4",
-          symbolSize: 14,
-          z: 5,
-          itemStyle: { color: "#ffffff", borderColor: "var(--bad)", borderWidth: 2 },
-          data: markerData(exits.filter((exit) => exit.side === -1)),
+          symbolSize: 13,
+          itemStyle: { color: "var(--bad)", borderColor: "var(--bad)", borderWidth: 1.5 },
+          data: exits.filter((exit) => exit.side === -1).map((exit) => [payload.timestamps[exit.index], exit.price]),
         },
       ],
-    } as unknown as EChartsOption);
+    });
   }, [payload]);
   return (
     <ChartFigure
       figNumber={1}
-      title="Candles + target transitions"
-      note="▲▼ = entry · ✕ = exit trên nến. Markers là Target transition từ strategy signal (pos_weight), không phải audited fills."
+      title="Close price + target transitions"
+      note="▲▼ = entry · ✕ = exit. Markers là Target transition từ strategy signal (pos_weight), không phải audited fills."
       sourceId="series/*"
     >
       <EChart option={option} height={640} />
