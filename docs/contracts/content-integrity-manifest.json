@@ -1,0 +1,708 @@
+{
+  "schema_version": 1,
+  "extractor_version": "1.0.0",
+  "source": "legacy/portal.html",
+  "source_sha256": "3ed4e5eb62edccfdb825c9bd52fbc436b11155c6510a666b7e79b04d3621d8c0",
+  "doc_pages": [
+    {
+      "data_page_id": "quantitative-trading-ecosystem",
+      "data_title": "QUANTITATIVE TRADING ECOSYSTEM",
+      "h1": "QUANTITATIVE TRADING ECOSYSTEM",
+      "sha256_markup": "bc5fa2fb5e709cac683af0b64dbac03b38bb4f37f71242d599d5689cd042c6af",
+      "sha256_text": "9179d344bd369ee2956a6e56d3f8a202f2cb961a719d7d21726eae78792f0fcf"
+    },
+    {
+      "data_page_id": "tong-quan-he-thong",
+      "data_title": "TỔNG QUAN HỆ THỐNG",
+      "h1": "TỔNG QUAN HỆ THỐNG",
+      "sha256_markup": "96f7253fe75714a1138ca9721641ac10d4e6bbee35201619d86c069328369c8b",
+      "sha256_text": "8a3eb986843b4e4acd16894809cacf8a34da4f1ecf5b785ceb6cb2f85cab6bec"
+    },
+    {
+      "data_page_id": "1-historical-data-layer",
+      "data_title": "1. HISTORICAL DATA LAYER",
+      "h1": "1. HISTORICAL DATA LAYER",
+      "sha256_markup": "a9d5fc8aa993c7e8b2a688913de303ef6b2600a56159857b828501af228d912b",
+      "sha256_text": "338883a0e9e8cf4b00919414a56d8091c8178c13c0cafa88cc2052dec9c99a1c"
+    },
+    {
+      "data_page_id": "2-quantbt-backtest-engine",
+      "data_title": "2. QUANTBT — BACKTEST ENGINE",
+      "h1": "2. QUANTBT — BACKTEST ENGINE",
+      "sha256_markup": "69eb070debea9dadc3505926db9b007def1e16051ebbb734afde22f90f8a279b",
+      "sha256_text": "c92d9dda136011b87b5446181fe8427df31d11a7fd3509f250584c3aa7131f25"
+    },
+    {
+      "data_page_id": "3-research-alpha-development-runtime-layer",
+      "data_title": "3. RESEARCH & ALPHA DEVELOPMENT/RUNTIME LAYER",
+      "h1": "3. RESEARCH & ALPHA DEVELOPMENT/RUNTIME LAYER",
+      "sha256_markup": "045082b02c479b5dd4a467f75daebce09b46e760cdf5759b321da31339c41f1e",
+      "sha256_text": "04237eaadb28f3a904dad261e6085fa708c862250b6b8310b6a5c56c17f9bfa4"
+    },
+    {
+      "data_page_id": "4-real-time-data-layer-quant-data-layer",
+      "data_title": "4. REAL-TIME DATA LAYER — quant-data-layer",
+      "h1": "4. REAL-TIME DATA LAYER — quant-data-layer",
+      "sha256_markup": "bf27e3d4b1159fdb36520740db9c5976f976ee2216a95cf9d64458830b37d7c0",
+      "sha256_text": "114cc4ca26a262654dff185ea34c308cde0f06e42493c50af7140a978a1c623c"
+    },
+    {
+      "data_page_id": "5-unified-trading-system-core",
+      "data_title": "5. UNIFIED TRADING SYSTEM CORE",
+      "h1": "5. UNIFIED TRADING SYSTEM CORE",
+      "sha256_markup": "a60b3cb3d19fb25beb4ef0991171a85569567864690f0c9d2535f8bb16d1597f",
+      "sha256_text": "9f93d9f2351ff984e262fc4aac03e0e171a1449ad382beedcc0e7ff9a319a65a"
+    },
+    {
+      "data_page_id": "6-monitoring-reconciliation-operations-system",
+      "data_title": "6. MONITORING, RECONCILIATION & OPERATIONS SYSTEM",
+      "h1": "6. MONITORING, RECONCILIATION & OPERATIONS SYSTEM",
+      "sha256_markup": "6b6a4cfe894e3feb66dfb2a326f3c3f3300e03e488faaa1935782082432f06ae",
+      "sha256_text": "0233afbd82f5369d7308e2224233e8880b51c59ea4f593b240852907996f0c85"
+    },
+    {
+      "data_page_id": "7-stakeholder-interpretation-reporting-layer",
+      "data_title": "7. STAKEHOLDER INTERPRETATION & REPORTING LAYER",
+      "h1": "7. STAKEHOLDER INTERPRETATION & REPORTING LAYER",
+      "sha256_markup": "a4952576a257766811cc22bac42e44a1620e674eb78a0a7fa6c2643aaca54334",
+      "sha256_text": "97b135b83fdb50f2bec85fe6e5c78b72348f94da18b656d621372a81f68bda95"
+    },
+    {
+      "data_page_id": "8-manager-stakeholder-quant-platform",
+      "data_title": "8. MANAGER & STAKEHOLDER QUANT PLATFORM",
+      "h1": "8. MANAGER & STAKEHOLDER QUANT PLATFORM",
+      "sha256_markup": "983abe3fa62c89f420188a9a90a2b490d85f6756571e89fababc00d51712ca17",
+      "sha256_text": "40f612f702eb532abdbae9a58ac7c590599354a22d4cb70435ce2dad3f5e7a7f"
+    },
+    {
+      "data_page_id": "9-live-trading-readiness-promotion-pipeline",
+      "data_title": "9. LIVE TRADING READINESS & PROMOTION PIPELINE",
+      "h1": "9. LIVE TRADING READINESS & PROMOTION PIPELINE",
+      "sha256_markup": "622a66cd6a5a55e7096ee845eb84975c4592bb8c1ab26933c7e18ca80c638f97",
+      "sha256_text": "4bbcea0fdd34938ebde58b8c467440fb64ee738d585e7709698e33df60491323"
+    },
+    {
+      "data_page_id": "10-kien-truc-muc-tieu-end-to-end-sau-upgrade-v1",
+      "data_title": "10. KIẾN TRÚC MỤC TIÊU END-TO-END SAU UPGRADE V1",
+      "h1": "10. KIẾN TRÚC MỤC TIÊU END-TO-END SAU UPGRADE V1",
+      "sha256_markup": "d9df69e9ee83a8820f2c3cdfac777919bdea99c445a1eba463b349ab98b593b8",
+      "sha256_text": "1077580be638bc196dfacda6e8ca17e69759958e7d6dc40ff808fcdc7d3768d7"
+    },
+    {
+      "data_page_id": "11-thu-tu-migration-va-upgrade-e-xuat",
+      "data_title": "11. THỨ TỰ MIGRATION VÀ UPGRADE ĐỀ XUẤT",
+      "h1": "11. THỨ TỰ MIGRATION VÀ UPGRADE ĐỀ XUẤT",
+      "sha256_markup": "83b1500108614f4dbf6ceb1878d6aff7f17f0764afe8e5a2d6c0449961fc4044",
+      "sha256_text": "709634f38cf7a7df3feea39ee08b92a426422b9723221536a7a6094ff8a4eef2"
+    },
+    {
+      "data_page_id": "12-ket-luan-anh-gia",
+      "data_title": "12. KẾT LUẬN ĐÁNH GIÁ",
+      "h1": "12. KẾT LUẬN ĐÁNH GIÁ",
+      "sha256_markup": "bd56372d5ee17166a1b01de2b74078a73050e6690379f6fb3d9eba324163aabc",
+      "sha256_text": "ca01bebc457ba764adb01b1c71e614e48c600817aabbaa84f79fbf974d38c858"
+    },
+    {
+      "data_page_id": "phu-luc-nguon-va-branch-a-uoc-oi-chieu",
+      "data_title": "PHỤ LỤC — NGUỒN VÀ BRANCH ĐÃ ĐƯỢC ĐỐI CHIẾU",
+      "h1": "PHỤ LỤC — NGUỒN VÀ BRANCH ĐÃ ĐƯỢC ĐỐI CHIẾU",
+      "sha256_markup": "65c0802ef00fa248057e2602acfbefe1123cb59b5b39ce44cf3861668c244724",
+      "sha256_text": "d952b463ac7b94ebc64cd7461aae0036ada5cf06e55cd8038051cd447a776c63"
+    },
+    {
+      "data_page_id": "13-manager-platform-domain-noi-bo",
+      "data_title": "13. MANAGER PLATFORM — DOMAIN NỘI BỘ (TARGET)",
+      "h1": "13. MANAGER PLATFORM — DOMAIN NỘI BỘ (TARGET)",
+      "sha256_markup": "aa7eb6dc6c441ca3e2044d1b9c7f121870351f24b38a787f421be1bf6d2ca5b9",
+      "sha256_text": "4240b26b03ad86a7c8eeca50bdd7167e18651611c6c31f105bbe8a2395f929d6"
+    }
+  ],
+  "mermaid_sources": [
+    {
+      "index": 0,
+      "sha256": "f532ef1ceec8362e2d6fe4db2810ff095ed063ec28de9fa722521db5d9280af9",
+      "preview": "flowchart LR\n    subgraph SOURCES[\"MARKET, BROKER &amp; REFERENCE SOURCES\"]\n    "
+    },
+    {
+      "index": 1,
+      "sha256": "f7355d9724a2a6adb1d91eb08207e73bbcc9f3deb6767b7b6fe2cf0106a062e0",
+      "preview": "flowchart LR\n    subgraph PROVIDERS[\"PROVIDERS\"]\n        B1[\"Binance Archives / "
+    },
+    {
+      "index": 2,
+      "sha256": "d6c5c52c2bb1becd68760ff5afca7947ef8505ca94189b53c1ed2ddd379d6764",
+      "preview": "flowchart LR\n    PROVIDERS[\"Providers / Exchange Archives / REST\"] --&gt; INGEST"
+    },
+    {
+      "index": 3,
+      "sha256": "7b940ae106de2993b400b612471b20003428237237502636847ba8cdfbf268cf",
+      "preview": "flowchart LR\n    DATA[\"Historical Data / Dataset Loader\"] --&gt; ENDPOINT[\"Quant"
+    },
+    {
+      "index": 4,
+      "sha256": "effe0f6a6ea2d7eeef111d9f5f97273a0305fdef32326981344d47baa3c42915",
+      "preview": "flowchart LR\n    PORTAL[\"Manager / Research Portal\"] --&gt; API[\"Backtest Contro"
+    },
+    {
+      "index": 5,
+      "sha256": "7bc036385bbd08a35d7ce260def154c9eb965b2ac36f0b3f629ba99cdcc7bd2a",
+      "preview": "flowchart LR\n    HIST[\"Historical Loader / Matrices\"] --&gt; RESEARCH[\"Researche"
+    },
+    {
+      "index": 6,
+      "sha256": "48e5a0298434ecc2786491b3de7bd1526503b2e2000c9d6b13dfd703df7b7671",
+      "preview": "flowchart LR\n    DEV[\"Researcher\"] --&gt; GIT[\"Alpha Repository\"]\n    GIT --&gt;"
+    },
+    {
+      "index": 7,
+      "sha256": "b7cc2c57992a66ac1cd7b4e78e025f50dcf93367bc9ce1c89de5603a40fbf183",
+      "preview": "flowchart LR\n    subgraph PROVIDERS[\"PROVIDERS\"]\n        BSPOT[\"Binance Spot WS/"
+    },
+    {
+      "index": 8,
+      "sha256": "211797a2268298f4ffa03e09a5ee3f94f41c11e1f457bd28031cf7bd318bc997",
+      "preview": "flowchart LR\n    PROVIDERS[\"Exchange / Broker / Vendor Feeds\"] --&gt; INGEST[\"De"
+    },
+    {
+      "index": 9,
+      "sha256": "a7c7f33a32eb6c8d956599c6c49cab825d954e8e5fe773dc8979b6aa6f06bcf6",
+      "preview": "flowchart LR\n    ALPHA[\"Alpha Runtime / Shared SDK\"] --&gt; GW[\"Gateway API\"]\n  "
+    },
+    {
+      "index": 10,
+      "sha256": "0b503397fc443cfdbfe0d3bca995d8276373bb4d984899a54e059c51cd36fc02",
+      "preview": "flowchart LR\n    ALPHA[\"Approved Alpha Runtime\"] --&gt; GATEWAY[\"Unified Gateway"
+    },
+    {
+      "index": 11,
+      "sha256": "df6d153ceeeb2df44fa2b926e018d468ee11857416c1268570d0c60fcfab32a4",
+      "preview": "flowchart LR\n    GW[\"Gateway\"] --&gt; HB[\"Service Heartbeats\"]\n    RISK[\"Risk\"] "
+    },
+    {
+      "index": 12,
+      "sha256": "0d76bad03802b428ce274df6ffd408c6d4e13c5304c68540f8411f5807e9c180",
+      "preview": "flowchart LR\n    DATA[\"Historical + Streaming Data Services\"] --&gt; INGEST[\"Tel"
+    },
+    {
+      "index": 13,
+      "sha256": "d643d948fc4427966f2528def1ada2377f022ea11327307af41d56165aa041ae",
+      "preview": "flowchart LR\n    QBT[\"QuantBT Artifacts\"] --&gt; EXTRACT[\"Extractors\"]\n    QS[\"Q"
+    },
+    {
+      "index": 14,
+      "sha256": "acf4f401f3275a1c593352cf54550d182e45b79a31ded6a4f2cd44ddafb9737d",
+      "preview": "flowchart LR\n    RUN[\"Run Registry\"] --&gt; Q[\"Report Job Queue\"]\n    ART[\"Backt"
+    },
+    {
+      "index": 15,
+      "sha256": "44093d8d6efc591b9d3d49828ce67359ec77e94610c74ddc9ba70c15eee9f161",
+      "preview": "flowchart LR\n    RESEARCHER[\"Researcher\"] --&gt; SCRIPT[\"Notebook / Script / Alp"
+    },
+    {
+      "index": 16,
+      "sha256": "8a6dd7516e859d3c6c6d92734a67c5727244d86924e99903b0651c2a30731360",
+      "preview": "sequenceDiagram\n    actor Manager\n    participant Portal\n    participant API as "
+    },
+    {
+      "index": 17,
+      "sha256": "5459b892bd424494b2f7508625a781ea60cf5872015a409f9ddf01129354eec1",
+      "preview": "flowchart LR\n    MANAGER[\"Manager / Stakeholder\"] --&gt; UI[\"Quant Portal\"]\n    "
+    },
+    {
+      "index": 18,
+      "sha256": "e01b2b20a57c8e0f57ba44264628cae3181838d90018bedb7e5144a89f12d26c",
+      "preview": "flowchart LR\n    RESEARCH[\"Research Result\"] --&gt; BACKTEST[\"QuantBT Backtest\"]"
+    },
+    {
+      "index": 19,
+      "sha256": "ba218b9f32a8118c31aaaed7f66f56243fb935cfb128aba72878369be8124331",
+      "preview": "flowchart LR\n    DRAFT[\"DRAFT\"] --&gt; TECH[\"Technical Validation\"]\n    TECH --&"
+    },
+    {
+      "index": 20,
+      "sha256": "e9cdbe4029e43ff9e18251086fb3a730b454e4d9a121467cff481ce8bc3aea97",
+      "preview": "flowchart LR\n    subgraph DATA_PLANE[\"DATA PLANE\"]\n        PROVIDERS[\"Providers\""
+    },
+    {
+      "index": 21,
+      "sha256": "927593e5bfe314e094f88530881840da15816298a6b2c864e399cc7e0afbb508",
+      "preview": "flowchart LR\n    MGR[\"Manager / Stakeholder\"] --> UI[\"Quant Portal UI\"]\n    RSR["
+    },
+    {
+      "index": 22,
+      "sha256": "690d87faa0b6826b3d7f51a86bdcd4cfb66adc01c1b4807f272381e895551c14",
+      "preview": "flowchart LR\nA[Freeze & Backup] --> B[Historical Mirror]\nB --> C[QuantBT Golden "
+    },
+    {
+      "index": 23,
+      "sha256": "1d120b77c215860a300509b43248dd3baede7ddbf0ea9b79441a5777f830253b",
+      "preview": "flowchart LR\nA[QuantBT Run] --> B[Artifact Store]\nB --> C[Interpretation Worker]"
+    }
+  ],
+  "code_blocks": [
+    {
+      "index": 0,
+      "language": "yaml",
+      "sha256": "75e98fda85fb31ee42d40f766abfc5e342b37c79147dddf58a5d628a968324bd",
+      "preview": "alpha_id: crypto.cross_sectional_momentum\nversion: 1.4.0\ngit_sha: 9f1c...\nimage_"
+    },
+    {
+      "index": 1,
+      "language": "text",
+      "sha256": "e65e681d454fc110f0c96090b3f71fe1167b80174c136adacb70ea72a571b607",
+      "preview": "DRAFT\n  -&gt; TECHNICAL_VALIDATION\n  -&gt; QUANT_REVIEW\n  -&gt; CANDIDATE\n  -&gt"
+    },
+    {
+      "index": 2,
+      "language": "json",
+      "sha256": "dd49b56bd8587c6583bdeff9caf22c99fccd47a5f32f17dad594eaebbc4ab6c6",
+      "preview": "{\n  \"event_id\": \"uuid\",\n  \"schema_version\": 1,\n  \"event_type\": \"market.trade\",\n "
+    },
+    {
+      "index": 3,
+      "language": "text",
+      "sha256": "ae945a84588053741e723eac6ea0761784370d61bf207373b37920cda74e54bb",
+      "preview": "market event\n  -&gt; alpha signal\n  -&gt; gateway command\n  -&gt; risk decision\n"
+    },
+    {
+      "index": 4,
+      "language": "text",
+      "sha256": "542e7f227892b360ea0bf7e88ec5d86faad98a41345921245ea4abb177fc322a",
+      "preview": "trace_id\ncorrelation_id\ncausation_id\nexecution_session_id\nalpha_version_id\ndeplo"
+    },
+    {
+      "index": 5,
+      "language": "text",
+      "sha256": "ea9120fc42797f31b1e2fb315c7721ceccd9f5d2a7dc61bfb643be172b681327",
+      "preview": "HEALTHY\nDEGRADED\nAT_RISK\nPAUSED\nHALTED\nUNKNOWN\n"
+    },
+    {
+      "index": 6,
+      "language": "text",
+      "sha256": "086f941626dd576ec898b73fb7fa6cc1f52f6fab77624cf10ee665f6de850f3a",
+      "preview": "quant_bot/\n├── domain/          # Trade, Fill, EquityPoint, ReportDataset\n├── ex"
+    },
+    {
+      "index": 7,
+      "language": "text",
+      "sha256": "44de7b8dd865dc660e94091764a4b87241181069ab401f1ec602a4f665d0375a",
+      "preview": "backtest_run_id\nalpha_version_id\ndataset_snapshot_id\nexecution_contract\nmetrics."
+    },
+    {
+      "index": 8,
+      "language": "text",
+      "sha256": "626a6a3f86cbf78de37a43e035e900c50395afc9ec0136f471084d65423a3e19",
+      "preview": "Run Registry\n  -&gt; Report Job Queue\n  -&gt; awesome-quant-interpretation Worke"
+    },
+    {
+      "index": 9,
+      "language": "text",
+      "sha256": "b062ab0c243111a1ef28f61d0cbc42ae7b72cc22b049077acdac68cabb0afe10",
+      "preview": "run_id\nrequester\nalpha_id / alpha_version / git_sha / image_digest\nmodel_artifac"
+    },
+    {
+      "index": 10,
+      "language": "text",
+      "sha256": "8bd2e0d2bcd9e25f75b1316931dc02b5bf9be208fa7dbceab29e009674b517ac",
+      "preview": "alpha_artifact_digest\nalpha_config_hash\nmodel_artifact_digest\napproved_backtest_"
+    },
+    {
+      "index": 11,
+      "language": "text",
+      "sha256": "8e27f2edb527c98dc10a8c9ea44113ccab982bbbc3eb5e861ea7007e4ff1cae9",
+      "preview": "Acquire và reproduce current cores\n  -&gt; chuẩn hóa identity/contracts\n  -&gt; "
+    },
+    {
+      "index": 12,
+      "language": "json",
+      "sha256": "6fcb53dce83e99269d8ad5f8a565dcdc9fd1f9a75ada460ad5870c043f02dd4e",
+      "preview": "{\n  \"deployment_id\": \"DEP-244\",\n  \"alpha_version_id\": \"vn.derivatives_carry@0.9."
+    }
+  ],
+  "links": {
+    "count": 14,
+    "sha256": "54124c9c45cbe0c039f09972ea460f9dd4df74b854690a0089e58683656749a1"
+  },
+  "seed_data": {
+    "BASE_TASKS": {
+      "found": true,
+      "sha256": "8a9887f427e4ebe19cba720c1d4c42b9fdda257cd73faaa46099265fcd96e27f",
+      "count": 36,
+      "ids": [
+        "ACQ-001",
+        "SEC-001",
+        "DATA-001",
+        "QBT-001",
+        "ALPHA-001",
+        "STREAM-001",
+        "TRD-001",
+        "MON-001",
+        "DATA-010",
+        "QBT-010",
+        "STREAM-010",
+        "TRD-010",
+        "OPS-010",
+        "DATA-020",
+        "DATA-021",
+        "DATA-022",
+        "ALPHA-020",
+        "QBT-020",
+        "QBT-021",
+        "REPORT-020",
+        "PORTAL-030",
+        "PORTAL-031",
+        "REPORT-030",
+        "PORTAL-032",
+        "REPORT-031",
+        "MON-040",
+        "MON-041",
+        "PAPER-040",
+        "MON-042",
+        "LIVE-050",
+        "LIVE-051",
+        "LIVE-052",
+        "LIVE-053",
+        "LIVE-054",
+        "LIVE-055",
+        "LIVE-056"
+      ]
+    },
+    "ROADMAP_PHASES": {
+      "found": true,
+      "sha256": "9fa6e8724adbc6f69840f22c0cfcf96abc0aae3071babda744697cde8fbbf4ee",
+      "count": 6,
+      "ids": [
+        "P0",
+        "P1",
+        "P2",
+        "P3",
+        "P4",
+        "P5"
+      ]
+    }
+  },
+  "inventory": {
+    "ids": [
+      "${CSS.escape(currentPage)}",
+      "${CSS.escape(meta.id)}",
+      "${CSS.escape(pageId)}",
+      "1-1-historical-layer-ang-uoc-phat-trien-va-phuc-vu-cho-cac-muc-ich-sau",
+      "1-2-cau-truc-hien-tai-va-ranh-gioi-giua-main-voi-dev",
+      "1-3-iem-manh-can-giu-nguyen-trong-giai-oan-acquire",
+      "1-4-historical-layer-hien-a-serve-cho-nhung-he-thong-va-muc-ich-nao",
+      "1-5-anh-gia-muc-o-core-hien-tai-oi-voi-mot-quant-firm",
+      "1-6-nhung-phan-chua-nen-coi-la-institutional-grade-hoan-chinh",
+      "1-7-ke-hoach-migration-khi-acquire",
+      "1-8-nhung-y-tuong-va-ke-hoach-nang-cap-sau-acquire-theo-muc-o-can-thiet",
+      "1-9-e-xuat-kien-truc-sau-upgrade-v1",
+      "1-historical-data-layer",
+      "10-kien-truc-muc-tieu-end-to-end-sau-upgrade-v1",
+      "11-thu-tu-migration-va-upgrade-e-xuat",
+      "12-ket-luan-anh-gia",
+      "13-1-domain-statement-va-ranh-gioi",
+      "13-2-capabilities-va-services",
+      "13-3-raci-cac-quy-trinh-chinh",
+      "13-4-data-contracts-va-identity-xuyen-suot",
+      "13-5-rbac-va-phan-quyen",
+      "13-6-quy-trinh-van-hanh-co-ban",
+      "13-7-tich-hop-voi-cac-subsystem",
+      "13-8-sla-va-observability-cua-domain",
+      "13-9-lotrinh-chuyen-doi-thanh-domain",
+      "13-manager-platform-domain-noi-bo",
+      "2-1-quantbt-ang-phuc-vu-cho-cac-muc-ich-sau",
+      "2-10-ke-hoach-upgrade-sau-acquire",
+      "2-11-e-xuat-kien-truc-sau-upgrade-v1-dua-tren-he-thong-a-migration",
+      "2-2-cac-loai-backtest-strategy-hien-ang-supported",
+      "2-3-anh-gia-pham-vi-strategy-validation-va-calibration",
+      "2-4-output-a-co",
+      "2-5-wfo-train-test-hien-tai",
+      "2-6-quantbt-packaging-va-rust-iem-noi-bat-can-nhan-manh",
+      "2-7-co-the-verify-boi-ben-thu-ba-va-ai-theo-cach-nao",
+      "2-8-anh-gia-muc-o-core-hien-tai-oi-voi-quant-firm",
+      "2-9-quantbt-con-thieu-gi",
+      "2-quantbt-backtest-engine",
+      "3-1-alpha-layer-ang-phuc-vu-cho-cac-muc-ich-sau",
+      "3-2-iem-manh-can-giu-nguyen",
+      "3-3-alpha-layer-hien-serve-cho-nhung-he-thong-nao",
+      "3-4-anh-gia-muc-o-core-hien-tai-oi-voi-quant-firm",
+      "3-5-khoang-trong-hien-tai",
+      "3-6-ke-hoach-nang-cap-sau-acquire",
+      "3-7-e-xuat-kien-truc-sau-upgrade-v1",
+      "3-research-alpha-development-runtime-layer",
+      "4-1-data-layer-ang-phuc-vu-cho-cac-muc-ich-sau",
+      "4-2-iem-manh-can-giu-nguyen",
+      "4-3-data-layer-hien-a-serve-cho-nhung-he-thong-nao",
+      "4-4-anh-gia-muc-o-core-hien-tai-oi-voi-quant-firm",
+      "4-5-gioi-han-hien-tai",
+      "4-6-ke-hoach-nang-cap-sau-acquire",
+      "4-7-e-xuat-kien-truc-sau-upgrade-v1",
+      "4-real-time-data-layer-quant-data-layer",
+      "5-1-trading-system-ang-phuc-vu-cho-cac-muc-ich-sau",
+      "5-2-cac-service-domain-chinh-hien-tai",
+      "5-3-muc-o-support-theo-mode",
+      "5-4-iem-manh-can-giu-nguyen-trong-giai-oan-acquire",
+      "5-5-anh-gia-muc-o-core-hien-tai-oi-voi-quant-firm",
+      "5-6-nhung-phan-con-thieu-hoac-chua-nen-quang-ba-la-hoan-tat",
+      "5-7-ke-hoach-migration-khi-acquire",
+      "5-8-ke-hoach-upgrade-sau-acquire",
+      "5-9-e-xuat-kien-truc-sau-upgrade-v1",
+      "5-unified-trading-system-core",
+      "6-1-monitoring-system-hien-ang-phuc-vu-cho-cac-muc-ich-sau",
+      "6-2-iem-manh-can-giu-nguyen",
+      "6-3-anh-gia-muc-o-core-hien-tai-oi-voi-quant-firm",
+      "6-4-khoang-trong-hien-tai",
+      "6-5-ke-hoach-nang-cap-sau-acquire",
+      "6-6-e-xuat-kien-truc-sau-upgrade-v1",
+      "6-monitoring-reconciliation-operations-system",
+      "7-1-reporting-layer-ang-phuc-vu-cho-cac-muc-ich-sau",
+      "7-2-cau-truc-va-capability-hien-tai",
+      "7-3-a-serve-cho-he-thong-va-muc-ich-nao",
+      "7-4-anh-gia-muc-o-core-hien-tai-oi-voi-quant-firm",
+      "7-5-iem-manh-can-giu-nguyen-trong-giai-oan-acquire",
+      "7-6-ke-hoach-migration-va-upgrade-sau-acquire",
+      "7-7-e-xuat-kien-truc-sau-upgrade-v1",
+      "7-stakeholder-interpretation-reporting-layer",
+      "8-1-muc-ich-can-xay-cua-manager-platform",
+      "8-2-nhung-nen-tang-hien-tai-a-san-sang-e-xay-platform",
+      "8-3-anh-gia-muc-o-hien-tai",
+      "8-4-kien-truc-backend-e-xuat",
+      "8-5-backtest-manager-flow",
+      "8-6-manager-khong-nen-tu-chon-kernel-tuy-y",
+      "8-7-run-manifest-bat-buoc",
+      "8-8-report-danh-cho-stakeholder",
+      "8-9-e-xuat-kien-truc-sau-upgrade-v1",
+      "8-manager-stakeholder-quant-platform",
+      "9-1-nhung-gi-hien-a-co",
+      "9-2-nhung-gi-con-thieu-e-goi-la-institutional-live-production-ready",
+      "9-3-promotion-gates-e-xuat",
+      "9-4-gate-criteria",
+      "9-5-identity-can-khoa-khi-promote",
+      "9-live-trading-readiness-promotion-pipeline",
+      "a0-alpha-inventory",
+      "a1-alpha-manifest-chuan",
+      "a2-build-once-promote-same-artifact",
+      "a3-alpha-lifecycle",
+      "a4-research-governance",
+      "adCharts",
+      "adChips",
+      "adClose",
+      "adLogic",
+      "adRunsBody",
+      "adTitle",
+      "adVersions",
+      "addPhaseBtn",
+      "addTaskBtn",
+      "alphaBackdrop",
+      "alphaCount",
+      "alphaDrawer",
+      "alphaGrid",
+      "alphaLifeFilter",
+      "alphaSearch",
+      "audit",
+      "backTop",
+      "boardViewToggle",
+      "btAlpha",
+      "btCandles",
+      "btCapital",
+      "btCompare",
+      "btDataset",
+      "btEquity",
+      "btFill",
+      "btFolds",
+      "btManifest",
+      "btMetrics",
+      "btPeriod",
+      "btProgress",
+      "btRegistryBody",
+      "btResBody",
+      "btResId",
+      "btResTitle",
+      "btRoute",
+      "btRun",
+      "btStatus",
+      "btVersion",
+      "btWfRow",
+      "buoc-h0-freeze-va-mirror-current-state",
+      "buoc-h1-cutover-collector-tung-workload",
+      "buoc-h2-promote-verified-dev-capabilities",
+      "cau-truc-hien-tai",
+      "cau-truc-hien-tai-2",
+      "cau-truc-hien-tai-3",
+      "cau-truc-hien-tai-4",
+      "cau-truc-hien-tai-5",
+      "cau-truc-hien-tai-6",
+      "cau-truc-hien-tai-7",
+      "cau-truc-hien-tai-awesome-quant-interpretation",
+      "cau-truc-hien-tai-theo-tai-lieu-private",
+      "charts",
+      "contextTabs",
+      "copyPageBtn",
+      "current-state-assessment-acquisition-plan-va-upgrade-architecture-v1",
+      "d0-lift-and-shift-current-gateway",
+      "d1-event-envelope-va-schema-version",
+      "d2-split-ingress-khoi-query-api",
+      "d3-durable-event-log-cho-critical-flows",
+      "d4-active-requirement-readiness-registry",
+      "dev-huong-modernization-ang-phat-trien",
+      "docPages",
+      "exportPhases",
+      "exportTasks",
+      "giai-oan-0-tuan-1-reproduce-current-system-khong-redesign",
+      "giai-oan-1-tuan-2-4-cutover-current-services",
+      "giai-oan-2-tuan-5-9-standardize-contracts-va-reproducibility",
+      "giai-oan-3-tuan-8-14-backtest-platform-va-manager-workflow",
+      "giai-oan-4-tuan-12-18-monitoring-core-va-paper-hardening",
+      "giai-oan-5-tuan-16-24-live-shadow-va-canary",
+      "globalSearch",
+      "importPhases",
+      "importPhasesFile",
+      "importTasks",
+      "importTasksFile",
+      "kanban",
+      "khi-nen-dung-c",
+      "khuyen-nghi-mac-inh",
+      "kien-truc-end-to-end-hien-tai",
+      "kien-truc-nay-bo-sung-nhung-gi",
+      "kien-truc-nay-giu-lai-nhung-gi-ang-co",
+      "killSwitch",
+      "liveAll",
+      "liveAlpha",
+      "liveAlphaGrid",
+      "liveSystem",
+      "liveTabs",
+      "liveTicker",
+      "luu-y-xac-minh",
+      "m0-chuan-hoa-telemetry-va-identity",
+      "m1-health-state-builder",
+      "m2-stateful-rule-engine",
+      "m3-incident-va-action-plane",
+      "m4-game-day-tests",
+      "main-baseline-release-public-on-inh",
+      "menuBtn",
+      "nguyen-tac-acquisition-va-modernization",
+      "nhan-inh-tong-the",
+      "ownerFilter",
+      "ownerList",
+      "ownerList2",
+      "pageToc",
+      "paperCount",
+      "paperGrid",
+      "paperOrdersBody",
+      "performance",
+      "phaseFilter",
+      "phu-luc-nguon-va-branch-a-uoc-oi-chieu",
+      "portalRail",
+      "printBtn",
+      "priorityFilter",
+      "private-source-basis",
+      "ps-alphas",
+      "ps-backtest",
+      "ps-live",
+      "ps-overview",
+      "ps-paper",
+      "public-repositories",
+      "q0-package-va-api-freeze",
+      "q1-quantbt-worker-service",
+      "q2-prepared-context-va-optimization-orchestration",
+      "q3-certification-policy",
+      "quantitative-trading-ecosystem",
+      "r0-reproduce-current-report",
+      "r1-normalized-report-contract",
+      "r2-report-generation-worker",
+      "r3-backtest-paper-live-comparison",
+      "r4-governance-va-distribution",
+      "resetPhases",
+      "resetTasks",
+      "roadmapRows",
+      "robustness",
+      "rust-highlight",
+      "searchBtn",
+      "searchOverlay",
+      "searchResults",
+      "sidebar",
+      "syncBadge",
+      "sysOrdersBody",
+      "t0-non-production-restore-truoc",
+      "t1-golden-execution-matrix",
+      "t2-cutover-paper-truoc-sandbox-live",
+      "t3-shadow-live",
+      "t4-live-canary",
+      "taskModal",
+      "taskModalClose",
+      "taskModalTitle",
+      "taskSearch",
+      "taskTableWrap",
+      "tfCancel",
+      "tfDelete",
+      "tfDepends",
+      "tfId",
+      "tfNotes",
+      "tfOwner",
+      "tfPhase",
+      "tfPriority",
+      "tfSave",
+      "tfStatus",
+      "tfTitle",
+      "tfWeeks",
+      "tfWorkstream",
+      "thang-anh-gia-muc-o-truong-thanh",
+      "themeBtn",
+      "toast",
+      "tong-quan-he-thong",
+      "view-board",
+      "view-docs",
+      "view-evidence",
+      "view-portal",
+      "view-reports",
+      "view-roadmap",
+      "workstreamFilter",
+      "wsList",
+      "wsList2"
+    ],
+    "data_page_ids": [
+      "quantitative-trading-ecosystem",
+      "tong-quan-he-thong",
+      "1-historical-data-layer",
+      "2-quantbt-backtest-engine",
+      "3-research-alpha-development-runtime-layer",
+      "4-real-time-data-layer-quant-data-layer",
+      "5-unified-trading-system-core",
+      "6-monitoring-reconciliation-operations-system",
+      "7-stakeholder-interpretation-reporting-layer",
+      "8-manager-stakeholder-quant-platform",
+      "9-live-trading-readiness-promotion-pipeline",
+      "10-kien-truc-muc-tieu-end-to-end-sau-upgrade-v1",
+      "11-thu-tu-migration-va-upgrade-e-xuat",
+      "12-ket-luan-anh-gia",
+      "phu-luc-nguon-va-branch-a-uoc-oi-chieu",
+      "13-manager-platform-domain-noi-bo"
+    ],
+    "views": [
+      "board",
+      "docs",
+      "evidence",
+      "portal",
+      "reports",
+      "roadmap"
+    ],
+    "hash_routes": [
+      "#view=board",
+      "#view=docs",
+      "#view=evidence",
+      "#view=portal",
+      "#view=reports",
+      "#view=roadmap"
+    ],
+    "api_endpoints": [
+      "api/health",
+      "api/roadmap",
+      "api/tasks"
+    ],
+    "localstorage_keys": [
+      "quantBoardViewV1",
+      "quantPortalPhasesV1",
+      "quantPortalTasksV1",
+      "quantPortalTheme"
+    ]
+  }
+}
