@@ -1,0 +1,43 @@
+/* Print — matches legacy print behaviour (plan F11): hide navigation/controls,
+ * keep all document content, force open previews. */
+@media print {
+  .topbar,
+  .sidebar,
+  .toc-rail,
+  .context-tabs,
+  .topbar-actions,
+  .no-print {
+    display: none !important;
+  }
+  .app,
+  .workspace,
+  .content,
+  .doc-main {
+    display: block !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+  .view-panel:not(.active) {
+    display: none;
+  }
+  .view-panel.active {
+    display: block;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
+  .card,
+  .chart-figure {
+    break-inside: avoid;
+  }
+  .collapsible {
+    display: block !important;
+  }
+  .collapsible summary {
+    display: none;
+  }
+  * {
+    box-shadow: none !important;
+  }
+}

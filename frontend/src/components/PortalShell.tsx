@@ -1,0 +1,103 @@
+import { type ReactNode } from "react";
+import type { View } from "@/lib/router";
+import { DOC_PAGES } from "@/content/pages/index";
+
+export interface ShellProps {
+  view: View;
+  page: string | null;
+  theme: "light" | "dark";
+  apiMode: "local" | "api" | "detecting";
+  onNavigate: (view: View, page?: string) => void;
+  onToggleTheme: () => void;
+  children?: ReactNode;
+}
+
+export const VIEWS: { id: View; label: string }[] = [
+  { id: "docs", label: "Docs" },
+  { id: "roadmap", label: "Roadmap" },
+  { id: "board", label: "Board" },
+  { id: "reports", label: "Reports" },
+  { id: "evidence", label: "Evidence" },
+  { id: "portal", label: "Portal" },
+];
+
+export function Topbar({ view, theme, apiMode, onNavigate, onToggleTheme }: ShellProps) {
+  return (
+    <header className="topbar">
+      <div className="brand">
+        <span className="brand-mark" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" strokeWidth="1.6" />
+            <path d="M7 15.5 10.5 12l2.5 2.5 4-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+        <span className="brand-name">Quant Ecosystem</span>
+        <span className="brand-tag">Portal · V2</span>
+      </div>
+      <nav className="top-tabs" aria-label="Views">
+        {VIEWS.map((v) => (
+          <button
+            key={v.id}
+            type="button"
+            className={`navtab ${view === v.id ? "navtab-active" : ""}`}
+            onClick={() => onNavigate(v.id)}
+          >
+            {v.label}
+          </button>
+        ))}
+      </nav>
+      <div className="topbar-actions">
+        <span className={`sync-badge ${apiMode === "api" ? "on" : ""}`} title={apiMode === "api" ? "API connected" : apiMode === "detecting" ? "Detecting backend…" : "Local storage"}>
+          {apiMode === "detecting" ? "…" : apiMode === "api" ? "API" : "LOCAL"}
+        </span>
+        <button
+          type="button"
+          className="icon-btn"
+          aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+          onClick={onToggleTheme}
+        >
+          {theme === "dark" ? "☀" : "☾"}
+        </button>
+      </div>
+    </header>
+  );
+}
+
+export function Sidebar({ view, page, onNavigate }: ShellProps) {
+  return (
+    <aside className="sidebar" aria-label="Navigation">
+      {view === "docs" ? (
+        <>
+          <p className="mono-label">Documents</p>
+          <nav>
+            {DOC_PAGES.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className={`nav-item ${page === p.id ? "active" : ""}`}
+                onClick={() => onNavigate("docs", p.id)}
+              >
+                <span className="nav-icon" aria-hidden="true" />
+                <span className="nav-text">{p.title}</span>
+              </button>
+            ))}
+          </nav>
+        </>
+      ) : (
+        <nav>
+          {VIEWS.filter((v) => v.id !== "docs").map((v) => (
+            <button
+              key={v.id}
+              type="button"
+              className={`nav-item ${view === v.id ? "active" : ""}`}
+              onClick={() => onNavigate(v.id)}
+            >
+              <span className="nav-icon" aria-hidden="true" />
+              <span className="nav-text">{v.label}</span>
+            </button>
+          ))}
+        </nav>
+      )}
+    </aside>
+  );
+}
