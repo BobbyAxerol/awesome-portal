@@ -32,3 +32,4 @@ docs/contracts/screenshots-new/
 docs/contracts/geometry-new.json
 frontend/node_modules/
 frontend/dist/
+frontend/tsconfig.tsbuildinfo
