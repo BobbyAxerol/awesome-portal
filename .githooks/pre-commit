@@ -18,6 +18,10 @@ git diff --cached --check
 # here, while secrets and generated runtime output remain blocked below.
 while IFS= read -r staged_path; do
   case "${staged_path}" in
+    apps/portal/strategy/main.py)
+      printf 'The protected strategy kernel cannot be modified: %s\n' "${staged_path}" >&2
+      exit 1
+      ;;
     *.env.example|*.env.*.example)
       # Versioned templates are safe; actual environment files remain blocked.
       ;;

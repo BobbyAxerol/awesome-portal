@@ -1,4 +1,4 @@
-name: Portal integration CI
+name: Portal CI
 
 on:
   push:
@@ -16,27 +16,18 @@ concurrency:
 
 jobs:
   integration:
-    name: Validate locked Portal stack
+    name: Validate Portal monorepo stack
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
-      - name: Check out parent workspace
+      - name: Check out Portal source
         uses: actions/checkout@v4
         with:
           persist-credentials: false
 
-      - name: Configure access to child repositories
-        env:
-          PORTAL_REPOS_TOKEN: ${{ secrets.PORTAL_REPOS_TOKEN || github.token }}
-        run: |
-          git config --global url."https://x-access-token:${PORTAL_REPOS_TOKEN}@github.com/".insteadOf "git@github.com:"
-
-      - name: Fetch locked child source
-        run: ./scripts/portal sync --locked
-
-      - name: Validate workspace contracts
-        run: ./scripts/portal verify --require-sources
+      - name: Validate Portal contracts
+        run: ./scripts/portal verify
 
       - name: Lint GitHub Actions definitions
         run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7
@@ -46,19 +37,21 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: apps/quantbt-portal/backend/pyproject.toml
+          cache-dependency-path: |
+            apps/portal/backend/pyproject.toml
+            features/roadmap-task-board/backend/requirements-dev.txt
 
-      - name: Test QuantBT Portal backend
+      - name: Test Portal Research backend
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --constraint constraints/portal.txt -e './apps/quantbt-portal/backend[dev]'
+          python -m pip install --constraint constraints/portal.txt -e './apps/portal/backend[dev]'
           (
-            cd apps/quantbt-portal
+            cd apps/portal
             sha256sum -c strategy/PROTECTED_SHA256
           )
-          PYTHONPATH=apps/quantbt-portal/backend/src:apps/quantbt-portal \
-            python -m pytest -c apps/quantbt-portal/backend/pyproject.toml apps/quantbt-portal/backend/tests
-          python -m compileall -q apps/quantbt-portal/backend/src apps/quantbt-portal/strategy
+          PYTHONPATH=apps/portal/backend/src:apps/portal \
+            python -m pytest -c apps/portal/backend/pyproject.toml apps/portal/backend/tests
+          python -m compileall -q apps/portal/backend/src apps/portal/strategy
 
       - name: Test Roadmap & Task Board backend
         run: |
@@ -72,23 +65,32 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: |
-            apps/quantbt-portal/frontend/package-lock.json
+            apps/portal/frontend/package-lock.json
             features/roadmap-task-board/frontend/package-lock.json
 
-      - name: Test and build QuantBT Portal frontend
-        working-directory: apps/quantbt-portal/frontend
+      - name: Test and build Portal Research frontend
+        working-directory: apps/portal/frontend
         run: |
           npm ci
+          npm audit --package-lock-only --audit-level=moderate
           npm test
           npm run build
 
-      - name: Test and build embedded Roadmap & Task Board
+      - name: Test and build Roadmap & Task Board
         working-directory: features/roadmap-task-board/frontend
         run: |
           npm ci
           npm audit --package-lock-only --audit-level=moderate
           npm test
           npm run build
+
+      - name: Install Chromium for Roadmap browser parity
+        working-directory: features/roadmap-task-board/frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Roadmap local-first browser flows
+        working-directory: features/roadmap-task-board/frontend
+        run: npm run e2e
 
       - name: Smoke-test composed services
         env:

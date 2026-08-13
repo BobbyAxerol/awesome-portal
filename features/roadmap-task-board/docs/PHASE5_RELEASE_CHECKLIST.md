@@ -1,8 +1,8 @@
 # Phase 5 — release candidate & UAT checklist
 
-> Status: **packaged locally; source promotion and gateway UAT are still
-> required before a parent release.** This document does not authorize a
-> production rollout or a live Discord notification.
+> Status: **imported into the Portal monorepo; gateway UAT is still required
+> before a production release.** This document does not authorize a production
+> rollout or a live Discord notification.
 
 ## What is in the candidate
 
@@ -29,9 +29,8 @@ npx playwright install --with-deps chromium
 npm run e2e
 ```
 
-The source CI at `.github/workflows/ci.yml` runs the same backend, frontend and
-Chromium gates on push/PR. The integration repository additionally runs a
-three-container smoke flow through the parent gateway.
+Root Portal CI runs the same backend, frontend and Chromium gates on push/PR,
+then runs a three-container smoke flow through the parent gateway.
 
 ## Gateway UAT
 
@@ -48,29 +47,19 @@ Manual UAT must also confirm on desktop and mobile that task drag/drop, task
 editor, roadmap editor, Refresh, initialization warning, activity drawer,
 theme, print and legacy hash routes remain usable.
 
-## Source promotion sequence
+## Portal release sequence
 
-The integration lock must never point to a source commit that has not reached
-the source remote. The current parent manifest tracks `manager-portal-v2`, so
-merge this candidate into that approved source branch (or explicitly change the
-manifest branch in a reviewed parent PR) first.
+Roadmap Phase 5 source is now committed directly in the parent Portal Git.
+Review the Portal branch into `dev`, then run the root gates:
 
 ```bash
-# in this source repository: commit is already local; push after review
-git push -u origin feat/phase5-release-readiness
-
-# after the approved source branch contains the commit, in portal/
-./scripts/portal sync
-./scripts/portal lock
-git diff -- repos.lock
-./scripts/portal verify --require-sources
+./scripts/portal verify
 ./scripts/portal smoke
 ```
 
-Commit the parent `repos.lock` change separately, review it into `dev`, then
-promote a stable composed stack to `main`. Do not copy this repository into the
-parent Git history and do not deploy a parent lock that still resolves the old
-source revision.
+Promote the stable composed stack from `dev` to `main`. There is no child
+repository lock or source-promotion step; the reviewed Portal commit is the
+release definition.
 
 ## Data and rollback
 

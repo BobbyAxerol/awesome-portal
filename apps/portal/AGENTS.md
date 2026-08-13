@@ -1,86 +1,49 @@
-# Backtest Portal Agent Rules
+# Portal Research (QuantBT) Rules
 
-## Scope
+`apps/portal/` is a tracked module of the Portal monorepo, not an independent
+repository. It is the public Portal shell's initial QuantBT Research capability.
+Use the root `AGENTS.md` for Git, CI/CD and deployment rules.
 
-- Work only inside this repository or the parent `/home/bobby/portal` workspace
-  when changing its integration/deployment layer.
-- QuantBT is supplied by the published `quantbt-engine==1.0.8` package. No
-  sibling QuantBT source checkout is part of this project.
-- `strategy/main.py` is a protected strategy kernel and must never be edited.
-- Preserve `quantbt_kernel_wrapper/wrapper.py` as a legacy reference until the
-  replacement backend has passed parity tests.
+## Scope and protected boundaries
+
+- QuantBT is supplied by published `quantbt-engine==1.0.8`; do not add a
+  sibling engine checkout or vendor its source.
+- `strategy/main.py` is protected and must never be edited. Preserve
+  `quantbt_kernel_wrapper/wrapper.py` as a legacy reference until the
+  replacement backend has parity tests.
+- FastAPI lives in `backend/src/portal_api`; the React/Vite UI lives in
+  `frontend/`. The root Portal builds both into one Compose-managed deployment.
+- Dependency direction remains
+  `api -> services -> domain/strategies/adapters/repositories`. Domain code
+  imports no FastAPI, QuantBT or protected strategy code.
 
 ## Commands
 
-- `./scripts/test_backend.sh [pytest args...]` — backend suite; extra args pass
-  through to pytest, e.g. `./scripts/test_backend.sh backend/tests/test_contracts.py -k window`.
-- `./scripts/smoke_quantbt_pypi.sh` — deterministic no-data-service gate for
-  the PyPI package: provenance, three-window, Advanced WFO, API and artifacts.
-- `./scripts/run_backend.sh` — uvicorn on `127.0.0.1:${PORTAL_PORT:-8000}`,
-  OpenAPI at `/api/docs`.
-- Both scripts set `PYTHONPATH` themselves and use
-  `${POOL_ALPHA_PYTHON:-.venv/bin/python}`. Running bare `pytest` or a system
-  python misses this setup — use the scripts.
-- Real market-data smoke without starting FastAPI:
-  `PYTHONPATH=backend/src:. .venv/bin/python scripts/smoke_crypto_market_data.py --symbol ETHUSDT --timeframe 1h`
-- The suite is fast and self-contained (in-memory/fake market-data providers,
-  no external services). Run it before every meaningful commit.
+- `./scripts/test_backend.sh [pytest args...]` runs the configured backend suite.
+- `./scripts/smoke_quantbt_pypi.sh` is the deterministic no-data-service gate:
+  package provenance, three-window, Advanced WFO, API and artifacts.
+- `./scripts/run_backend.sh` runs Uvicorn at
+  `127.0.0.1:${PORTAL_PORT:-8000}`; `./scripts/run_dev.sh` is local module
+  development only. For the composed product use `../../scripts/portal up`.
+- The scripts set `PYTHONPATH` and use `${POOL_ALPHA_PYTHON:-.venv/bin/python}`;
+  do not substitute bare system `pytest` for their contract.
 
-## Setup
-
-- Once per clone: `git config core.hooksPath .githooks`. The pre-commit hook
-  blocks direct commits to `main` and rejects changes to `strategy/main.py`
-  (sha256 in `strategy/PROTECTED_SHA256`; also verified by CI and a backend
-  test).
-- Env vars (see `.env.example`) are read via `os.environ`; nothing autoloads
-  `.env`. `PORTAL_DATASET_MANIFEST` switches from the default dynamic
-  Binance/DuckDB provider to a fixed manifest; `PORTAL_ARTIFACT_ROOT` defaults
-  to `artifacts/runs`.
-- CI gate (`.github/workflows/backend-ci.yml`, py 3.12/3.13):
-  `pip install -e './backend[dev]'` -> `sha256sum -c strategy/PROTECTED_SHA256`
-  -> pytest -> `compileall backend/src strategy`.
-
-## Architecture
-
-- FastAPI app `portal_api.main:app` lives under `backend/src/portal_api`; the
-  React/Vite frontend lives under `frontend/`. The parent Portal workspace
-  builds both into a single Compose-managed deployment.
-- Dependency direction: `api -> services -> domain/strategies/adapters/repositories`.
-  `domain` imports no FastAPI/QuantBT/strategy code; `QuantBTGateway` is the
-  only QuantBT boundary; `strategy/delta_rsi.py` is the only module allowed to
-  lazy-import the protected `strategy/main.py` kernel, and
-  `DeltaRsiStrategyAdapter` routes through it. Heavy QuantBT/Numba imports
-  stay lazy so API startup never loads them.
-- `backend/ARCHITECTURE.md` documents boundaries, the performance contract and
-  what is deliberately not implemented yet (WFO worker execution, run
-  persistence/SSE, full artifact schema, Advanced WFO routing).
-- `implementation_plan_protoyype.md` (sic) is the governing domain/UI spec with
-  P0-P7 phase gates; execution order and per-phase status live in §27. Build
-  new features below the existing API/domain boundaries, not in route handlers.
-
-## Git Workflow
-
-- Develop on `dev`; keep `main` as the reviewed release branch.
-- After each small, meaningful change passes its relevant checks, commit it
-  immediately with a clear single-purpose message; do not batch unrelated
-  finished work into a later commit.
-- Never force-push, rewrite history, or merge into `main` without an explicit
-  user request.
-- Do not commit market data, run artifacts, credentials, virtual environments,
-  caches, generated reports, or local configuration.
-
-## Domain Rules
+## Data and domain rules
 
 - QuantBT remains the source of truth for optimization, accounting and metrics.
-- Do not reimplement QuantBT objectives or PnL in the portal frontend/backend.
-- Holdout Live data must never enter calibration or parameter selection.
-- Preserve exact half-open window boundaries and immutable selected params.
-- Never invent fills, margin fields or metrics absent from audited results.
+  Do not reimplement objectives or PnL in Portal code.
+- Holdout Live data never enters calibration or parameter selection. Preserve
+  half-open window boundaries and immutable selected parameters.
+- Keep imports side-effect free. Record integration gaps rather than inventing
+  fills, margin fields or metrics absent from audited results.
 
-## Engineering Rules
+## Development discipline
 
-- Backend contracts and domain tests come before frontend work.
-- Keep imports side-effect free; no notebook globals, display, print or plotting
-  in runtime service modules.
-- Use typed schemas and explicit capability flags at every API boundary.
-- Record integration gaps rather than silently changing protected dependencies.
+- Enable the one root hook with `../../scripts/install-git-hooks.sh`, not a
+  module-local hook. The root hook blocks direct `main` commits and edits to the
+  protected strategy kernel.
+- Read `backend/ARCHITECTURE.md` and `implementation_plan_protoyype.md` before
+  extending domain behavior. Backend contracts and tests come before UI work.
+- Do not commit market data, artifacts, credentials, environments, caches or
+  generated reports. Commit every tested, coherent change immediately under the
+  root Portal branch workflow.

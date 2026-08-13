@@ -30,8 +30,12 @@ credentials
 **/.pnpm-store
 **/.yarn
 **/.eslintcache
+**/.vite
+**/*.tsbuildinfo
 **/dist
 **/build
+**/playwright-report
+**/test-results
 **/*.log
 **/*.pid
 **/*.pem

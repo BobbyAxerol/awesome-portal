@@ -1,13 +1,13 @@
 name: ${PORTAL_STACK_NAME:-portal}
 
-# This is the integration entry point. Each image is built from the checked-out
-# source under apps/, so `./scripts/portal up` starts one coherent portal stack.
+# This is the Portal monorepo entry point. `./scripts/portal up` builds every
+# tracked module into one coherent stack with one public gateway.
 services:
-  quantbt-portal-api:
+  portal-api:
     build:
       context: .
-      dockerfile: deploy/images/quantbt-portal-api.Dockerfile
-    image: ${PORTAL_IMAGE_PREFIX:-local/portal}-quantbt-portal-api:${PORTAL_IMAGE_TAG:-dev}
+      dockerfile: deploy/images/portal-api.Dockerfile
+    image: ${PORTAL_IMAGE_PREFIX:-local/portal}-portal-api:${PORTAL_IMAGE_TAG:-dev}
     restart: unless-stopped
     environment:
       PORTAL_ARTIFACT_ROOT: /var/lib/portal/artifacts/runs
@@ -64,20 +64,20 @@ services:
       retries: 6
       start_period: 15s
 
-  quantbt-portal-web:
+  portal-web:
     build:
       context: .
-      dockerfile: deploy/images/quantbt-portal-web.Dockerfile
+      dockerfile: deploy/images/portal-web.Dockerfile
       args:
         ROADMAP_TASK_BOARD_LOCAL_ONLY: ${ROADMAP_TASK_BOARD_LOCAL_ONLY:-true}
         ROADMAP_TASK_BOARD_PERSISTENCE: ${ROADMAP_TASK_BOARD_PERSISTENCE:-legacy}
         ROADMAP_TASK_BOARD_API_BASE: ${ROADMAP_TASK_BOARD_API_BASE:-/roadmap-task-board/api}
-    image: ${PORTAL_IMAGE_PREFIX:-local/portal}-quantbt-portal-web:${PORTAL_IMAGE_TAG:-dev}
+    image: ${PORTAL_IMAGE_PREFIX:-local/portal}-portal-web:${PORTAL_IMAGE_TAG:-dev}
     restart: unless-stopped
     ports:
       - "${PORTAL_HTTP_PORT:-8080}:80"
     depends_on:
-      quantbt-portal-api:
+      portal-api:
         condition: service_healthy
       roadmap-task-board-api:
         condition: service_healthy

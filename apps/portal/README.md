@@ -1,18 +1,21 @@
-# QuantBT Backtest Portal Prototype
+# Portal Research — QuantBT
 
-An internal, audit-first portal for running and presenting QuantBT strategy
-optimization and backtests. The first strategy is the protected Delta-RSI
-research kernel in `strategy/main.py`.
+The initial research capability inside the shared Portal shell. It is an
+audit-first workspace for running and presenting QuantBT strategy optimization
+and backtests. The first strategy is the protected Delta-RSI research kernel in
+`strategy/main.py`.
 
 The prototype now includes the calculation backend, run service and interactive
 analysis workspace. See
 [`implementation_plan_protoyype.md`](implementation_plan_protoyype.md) for the
 domain protocol, architecture, UI specification and phase gates.
 
-## Repository Policy
+## Portal Monorepo Policy
 
 - `main`: reviewed release baseline.
 - `dev`: active portal development.
+- This module is committed, tested and released with the root Portal Git; it is
+  not a separate source repository.
 - QuantBT is consumed through its public API and is not modified here.
 - Market data, credentials and generated run artifacts are never committed.
 

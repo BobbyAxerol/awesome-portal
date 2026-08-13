@@ -1,9 +1,8 @@
 # Operations Runbook
 
-## Local integration stack
+## Local Portal stack
 
 ```bash
-./scripts/portal sync
 ./scripts/portal verify
 ./scripts/portal up
 ./scripts/portal status
@@ -41,4 +40,4 @@ container being `Up` as sufficient; both Compose health checks must be healthy.
   `backend.scripts.portal_db` command; do not treat Docker build cache cleanup
   as a data cleanup operation.
 - Credentials stay in the host environment, secret store or deployment system;
-  never add them to `.env.example`, `repos.conf`, `repos.lock` or workflow YAML.
+  never add them to `.env.example` or workflow YAML.

@@ -24,19 +24,10 @@ jobs:
         language: [python, javascript-typescript]
 
     steps:
-      - name: Check out parent workspace
+      - name: Check out Portal source
         uses: actions/checkout@v4
         with:
           persist-credentials: false
-
-      - name: Configure access to child repositories
-        env:
-          PORTAL_REPOS_TOKEN: ${{ secrets.PORTAL_REPOS_TOKEN || github.token }}
-        run: |
-          git config --global url."https://x-access-token:${PORTAL_REPOS_TOKEN}@github.com/".insteadOf "git@github.com:"
-
-      - name: Fetch locked child source
-        run: ./scripts/portal sync --locked
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3

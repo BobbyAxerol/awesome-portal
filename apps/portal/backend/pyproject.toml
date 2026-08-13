@@ -3,7 +3,7 @@ requires = ["setuptools>=75", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "quantbt-portal-backend"
+name = "portal-api"
 version = "0.1.0"
 description = "Audit-first backend for the QuantBT backtest portal prototype"
 readme = "README.md"

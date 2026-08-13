@@ -16,9 +16,7 @@ Commands:
   status   Show status for every portal service.
   build    Build every portal service image from source.
   config   Render and validate the composed deployment configuration.
-  sync     Fetch every configured child repo and create local tracking branches.
-  lock     Update repos.lock to the configured default branch of every child repo.
-  verify   Validate the workspace manifest, source contracts and Compose config.
+  verify   Validate tracked source, source contracts and Compose config.
   smoke    Build, start, probe and tear down an isolated local portal stack.
 EOF
 }
@@ -71,12 +69,6 @@ case "${command}" in
   config)
     require_docker_cli
     exec "${COMPOSE[@]}" config "$@"
-    ;;
-  sync)
-    exec "${ROOT_DIR}/scripts/sync-repos.sh" "$@"
-    ;;
-  lock)
-    exec "${ROOT_DIR}/scripts/sync-repos.sh" --update-lock "$@"
     ;;
   verify)
     exec "${ROOT_DIR}/scripts/verify-workspace.sh" "$@"

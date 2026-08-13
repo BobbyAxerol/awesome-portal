@@ -9,8 +9,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /opt/roadmap-task-board
 
-# The independently tracked source owns its FastAPI domain; this parent image
-# only supplies the runtime boundary used by the composed Portal stack.
+# This tracked Portal feature owns its FastAPI domain; the image only supplies
+# its private runtime boundary within the composed Portal stack.
 COPY features/roadmap-task-board/backend/requirements.txt ./backend/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r backend/requirements.txt

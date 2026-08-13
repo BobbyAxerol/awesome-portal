@@ -1,11 +1,11 @@
 name: ${PORTAL_STACK_NAME:-portal}
 
-# Image-only deployment definition. CI publishes these images after building
-# the source pinned in repos.lock. Provision .env.production on the host from
-# .env.production.example; do not put deployment secrets in this repository.
+# Image-only deployment definition. CI publishes images from the Portal
+# monorepo. Provision .env.production on the host from .env.production.example;
+# do not put deployment secrets in this repository.
 services:
-  quantbt-portal-api:
-    image: ${PORTAL_IMAGE_PREFIX:?Set PORTAL_IMAGE_PREFIX}-quantbt-portal-api:${PORTAL_IMAGE_TAG:?Set PORTAL_IMAGE_TAG}
+  portal-api:
+    image: ${PORTAL_IMAGE_PREFIX:?Set PORTAL_IMAGE_PREFIX}-portal-api:${PORTAL_IMAGE_TAG:?Set PORTAL_IMAGE_TAG}
     restart: unless-stopped
     environment:
       PORTAL_ARTIFACT_ROOT: /var/lib/portal/artifacts/runs
@@ -57,13 +57,13 @@ services:
       retries: 6
       start_period: 15s
 
-  quantbt-portal-web:
-    image: ${PORTAL_IMAGE_PREFIX:?Set PORTAL_IMAGE_PREFIX}-quantbt-portal-web:${PORTAL_IMAGE_TAG:?Set PORTAL_IMAGE_TAG}
+  portal-web:
+    image: ${PORTAL_IMAGE_PREFIX:?Set PORTAL_IMAGE_PREFIX}-portal-web:${PORTAL_IMAGE_TAG:?Set PORTAL_IMAGE_TAG}
     restart: unless-stopped
     ports:
       - "${PORTAL_HTTP_PORT:-8080}:80"
     depends_on:
-      quantbt-portal-api:
+      portal-api:
         condition: service_healthy
       roadmap-task-board-api:
         condition: service_healthy

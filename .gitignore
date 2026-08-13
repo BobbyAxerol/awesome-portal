@@ -49,9 +49,13 @@
 **/.pnpm-store/
 **/.yarn/
 **/.eslintcache
+**/.vite/
+**/*.tsbuildinfo
 **/dist/
 **/build/
 **/coverage/
+**/playwright-report/
+**/test-results/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

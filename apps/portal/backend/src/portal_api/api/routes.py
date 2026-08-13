@@ -40,7 +40,7 @@ def _strategy_response(adapter) -> StrategyResponse:
 async def health() -> HealthResponse:
     return HealthResponse(
         status="ok",
-        service="quantbt-portal-backend",
+        service="portal-api",
         version=__version__,
         quantbt_loaded="quantbt" in sys.modules,
     )

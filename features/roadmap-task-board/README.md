@@ -11,6 +11,10 @@ Nội dung gồm: đánh giá hiện trạng từng layer (16 tài liệu), kế
 tóm tắt cho manager, và một **mockup minh họa** Manager Platform (view "Portal" —
 truy cập từ sidebar → Settings, không nổi bật).
 
+Source này là một feature được track trực tiếp trong Portal monorepo. CI/CD và
+release dùng workflow ở root Portal; không tạo repo Git hoặc pipeline độc lập ở
+thư mục này.
+
 ## Chạy cục bộ
 
 Không cần cài dependency:
@@ -56,7 +60,7 @@ không tự overwrite workspace server. Nội dung docs được mang nguyên kh
 
 ### Phase 5 release candidate
 
-The candidate has browser parity tests, source CI and an operations handoff.
+The candidate has browser parity tests, root Portal CI and an operations handoff.
 Run `npm run e2e` from `frontend/` after installing Chromium, then see
 [`docs/PHASE5_RELEASE_CHECKLIST.md`](docs/PHASE5_RELEASE_CHECKLIST.md) for the
 parent gateway/UAT sequence. Generated output can be removed safely with
