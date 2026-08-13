@@ -25,6 +25,11 @@ Run the relevant validation, merge reviewed work into `dev`, and promote `dev`
 to `main` only when the complete portal stack is stable. Do not force-push or
 bypass hooks on shared branches.
 
+After each completed, coherent change, run its relevant checks and commit it
+immediately with a small, descriptive message. Do not batch unrelated finished
+work. Commit an application change in its child repository first; commit the
+parent `repos.lock` promotion as a separate parent change.
+
 For a composed change:
 
 1. Commit and push the child-repository change through its own review process.

@@ -24,6 +24,11 @@ Run `./scripts/install-git-hooks.sh` once to enable parent hooks.
   `dev` to `main` only when the composed stack is stable and release-ready.
 - Do not force-push, rewrite shared branch history, bypass hooks, or merge an
   unreviewed child-repository revision into `repos.lock`.
+- Commit every completed, coherent change immediately after its relevant
+  validation passes. Keep commits small and single-purpose with a descriptive
+  message; never leave unrelated finished work uncommitted or bundle it into a
+  later change. Commit child-repository work in that child first, then commit
+  the resulting parent `repos.lock` promotion separately.
 - The parent pre-commit hook blocks direct commits on an existing `main` branch.
   GitHub branch protection is the server-side backstop; configure it for both
   `main` and `dev` before allowing collaborators to push.
