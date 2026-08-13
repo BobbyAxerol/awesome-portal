@@ -83,6 +83,9 @@
   background: var(--paper-sunken);
   color: var(--ink);
 }
+.menu-btn {
+  display: none;
+}
 
 .sync-badge {
   font-family: var(--font-mono);
@@ -170,6 +173,10 @@
   max-width: var(--content-max);
 }
 
+.sidebar-backdrop {
+  display: none;
+}
+
 /* ---------- View panels ---------- */
 .view-panel {
   display: none;
@@ -242,8 +249,19 @@
     box-shadow: var(--shadow-raised);
     background: var(--paper-raised);
   }
-  body.sidebar-open .sidebar {
+  .sidebar.sidebar-open {
     transform: translateX(0);
+  }
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: var(--topbar-h) 0 0;
+    z-index: 35;
+    border: 0;
+    background: color-mix(in srgb, var(--ink) 24%, transparent);
+  }
+  .menu-btn {
+    display: grid;
   }
   .content {
     padding: 16px 16px 64px;

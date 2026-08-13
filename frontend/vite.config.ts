@@ -15,6 +15,8 @@ export default defineConfig({
   },
   build: { outDir: "dist" },
   test: {
+    environment: "jsdom",
+    setupFiles: ["./tests/setup.ts"],
     server: { fs: { allow: [".."] } },
   },
 });

@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  forwardRef,
   useRef,
   useState,
   type ButtonHTMLAttributes,
@@ -48,9 +49,9 @@ export function Button({
   );
 }
 
-export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className="input" {...props} />;
-}
+export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input(props, ref) {
+  return <input ref={ref} className="input" {...props} />;
+});
 
 export function NavTab({ active, onClick, children }: { active?: boolean; onClick?: () => void; children: ReactNode }) {
   return (

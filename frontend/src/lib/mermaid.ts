@@ -1,7 +1,5 @@
 import mermaid from "mermaid";
 
-let initialized = false;
-
 export async function initMermaid(theme: "light" | "dark"): Promise<void> {
   mermaid.initialize({
     startOnLoad: false,
@@ -35,14 +33,20 @@ export async function initMermaid(theme: "light" | "dark"): Promise<void> {
             fontSize: "13px",
           },
   });
-  initialized = true;
 }
 
-/** Render all `.mermaid` blocks inside a container; returns false if re-render is needed. */
+/** Recreate diagrams from their original text so a theme switch cannot leave stale SVG. */
 export async function renderMermaid(container: HTMLElement, theme: "light" | "dark"): Promise<boolean> {
-  if (!initialized) await initMermaid(theme);
+  const nodes = Array.from(container.querySelectorAll<HTMLElement>(".mermaid"));
+  for (const node of nodes) {
+    const source = node.dataset.mermaidSource ?? node.textContent ?? "";
+    node.dataset.mermaidSource = source;
+    node.removeAttribute("data-processed");
+    node.textContent = source;
+  }
+  await initMermaid(theme);
   try {
-    await mermaid.run({ nodes: Array.from(container.querySelectorAll<HTMLElement>(".mermaid")) });
+    await mermaid.run({ nodes });
     return true;
   } catch {
     return false;

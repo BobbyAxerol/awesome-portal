@@ -9,6 +9,9 @@ export interface ShellProps {
   apiMode: "local" | "api" | "detecting";
   onNavigate: (view: View, page?: string) => void;
   onToggleTheme: () => void;
+  sidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
+  onPrint?: () => void;
   children?: ReactNode;
 }
 
@@ -24,7 +27,7 @@ export const TOP_TABS: { id: View; label: string }[] = [
 /** Portal chỉ truy cập từ sidebar, nhóm Settings. */
 export const SETTINGS_TABS: { id: View; label: string }[] = [{ id: "portal", label: "Portal" }];
 
-export function Topbar({ view, theme, apiMode, onNavigate, onToggleTheme }: ShellProps) {
+export function Topbar({ view, theme, apiMode, onNavigate, onToggleTheme, sidebarOpen = false, onToggleSidebar, onPrint }: ShellProps) {
   return (
     <header className="topbar">
       <div className="brand">
@@ -50,6 +53,8 @@ export function Topbar({ view, theme, apiMode, onNavigate, onToggleTheme }: Shel
         ))}
       </nav>
       <div className="topbar-actions">
+        <button type="button" className="icon-btn menu-btn" aria-label={sidebarOpen ? "Close navigation" : "Open navigation"} aria-expanded={sidebarOpen} onClick={onToggleSidebar}>☰</button>
+        <button type="button" className="icon-btn" aria-label="Print current view" onClick={onPrint}>⎙</button>
         <span className={`sync-badge ${apiMode === "api" ? "on" : ""}`} title={apiMode === "api" ? "API connected" : apiMode === "detecting" ? "Detecting backend…" : "Local storage"}>
           {apiMode === "detecting" ? "…" : apiMode === "api" ? "API" : "LOCAL"}
         </span>
@@ -66,9 +71,9 @@ export function Topbar({ view, theme, apiMode, onNavigate, onToggleTheme }: Shel
   );
 }
 
-export function Sidebar({ view, page, onNavigate }: ShellProps) {
+export function Sidebar({ view, page, onNavigate, sidebarOpen = false }: ShellProps) {
   return (
-    <aside className="sidebar" aria-label="Navigation">
+    <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`} aria-label="Navigation">
       {view === "docs" ? (
         <>
           <p className="mono-label">Documents</p>
@@ -100,6 +105,19 @@ export function Sidebar({ view, page, onNavigate }: ShellProps) {
               <span className="nav-text">{v.label}</span>
             </button>
           ))}
+          {(view === "reports" || view === "interpretation") && (
+            <>
+              <p className="mono-label">Report workflow</p>
+              <button type="button" className={`nav-item ${view === "reports" ? "active" : ""}`} onClick={() => onNavigate("reports")}>
+                <span className="nav-icon" aria-hidden="true" />
+                <span className="nav-text">Reports source</span>
+              </button>
+              <button type="button" className={`nav-item ${view === "interpretation" ? "active" : ""}`} onClick={() => onNavigate("interpretation")}>
+                <span className="nav-icon" aria-hidden="true" />
+                <span className="nav-text">Interpretation</span>
+              </button>
+            </>
+          )}
           <p className="mono-label">Settings</p>
           {SETTINGS_TABS.map((v) => (
             <button

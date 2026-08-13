@@ -4,6 +4,7 @@ export type View =
   | "roadmap"
   | "board"
   | "reports"
+  | "interpretation"
   | "evidence"
   | "portal";
 
@@ -16,7 +17,7 @@ export function parseHash(hash: string): Route {
   const params = new URLSearchParams(hash.replace(/^#/, ""));
   const view = (params.get("view") ?? "docs") as View;
   const page = params.get("page");
-  const valid: View[] = ["docs", "roadmap", "board", "reports", "evidence", "portal"];
+  const valid: View[] = ["docs", "roadmap", "board", "reports", "interpretation", "evidence", "portal"];
   return { view: valid.includes(view) ? view : "docs", page };
 }
 
