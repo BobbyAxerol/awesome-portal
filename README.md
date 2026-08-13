@@ -10,7 +10,7 @@ application.
 | Source repository | Role in the parent stack |
 | --- | --- |
 | `apps/quantbt-portal` | FastAPI API and React/Nginx web portal |
-| `features/roadmap-task-board` | Roadmap & Task Board static UI embedded at `/roadmap-task-board/` in the existing web container; no extra Compose service |
+| `features/roadmap-task-board` | Static UI embedded at `/roadmap-task-board/` plus a private FastAPI/SQLite companion at `/roadmap-task-board/api/`, both behind the existing web gateway |
 
 The backend installs `quantbt-engine==1.0.8` from PyPI. No local QuantBT source
 repository is required.
@@ -66,8 +66,10 @@ container services rather than cross-repository filesystem imports.
 
 For an embedded UI feature, add it to `repos.conf` with role
 `embedded-feature`, test and lock its source independently, then compile it
-into an existing public image and mount it on a route. Do not add a Compose
-service unless it has a separately approved runtime boundary.
+into an existing public image and mount it on a route. A private companion
+service is appropriate only when the feature owns mutable state (as Roadmap &
+Task Board does); it must stay behind the existing gateway rather than adding
+another public entry point.
 
 ## Quality, CI/CD and deployment
 

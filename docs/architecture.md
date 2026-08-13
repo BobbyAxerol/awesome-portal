@@ -13,7 +13,8 @@ repos.conf + repos.lock
           │       └── quantbt-portal-web
           │
           ├── features/roadmap-task-board [embedded-feature]
-          │       └── static Roadmap & Task Board mounted at /roadmap-task-board/
+          │       ├── static Roadmap & Task Board mounted at /roadmap-task-board/
+          │       └── private Roadmap API mounted at /roadmap-task-board/api/
           │
           └── compose.yaml / Dockerfiles / gateway / operational policy
                          │
@@ -42,10 +43,12 @@ repository.
 
 `compose.yaml` builds checked-out source for local integration and CI smoke
 tests. The React/Nginx service is the single public entry point and proxies
-`/api` to the private FastAPI service. It also compiles
+`/api` to the private QuantBT FastAPI service. It compiles
 `features/roadmap-task-board/frontend` into the same image and serves it at
-`/roadmap-task-board/`; this is a route within the web service, not a second
-service.
+`/roadmap-task-board/`. Roadmap's stateful FastAPI companion has its own
+private container and SQLite volume; Nginx exposes it only through
+`/roadmap-task-board/api/`, without overlapping the QuantBT `/api` namespace
+or creating another public service.
 `deploy/compose.production.yaml` is the image-only equivalent for a host that
 pulls images published by CI.
 
@@ -67,9 +70,10 @@ runtime concerns; none belong in source control or the Docker build context.
 
 1. Add the repository to `repos.conf` with role `embedded-feature` and pin it
    in `repos.lock`.
-2. Build its source into an existing public image and expose a route without
-   adding a standalone Compose service.
-3. Keep the feature local-first unless a parent-owned API contract is approved;
-   do not proxy it to an unrelated API merely because it shares a hostname.
-4. Test the feature source independently in CI and add a route probe to the
+2. Build its source into an existing public image and expose a route. If it
+   owns mutable state, add a private companion service with a persistent volume
+   and a unique gateway prefix; do not expose another public port.
+3. Keep the feature local-first unless its own parent-approved API contract is
+   enabled; never proxy it to an unrelated API merely because it shares a hostname.
+4. Test the feature source independently in CI and add a route/API probe to the
    composed smoke test.

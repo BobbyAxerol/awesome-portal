@@ -20,8 +20,15 @@
 
 The source of a tracked repository is not copied into parent Git history. A
 parent commit plus `repos.lock` is the reproducible release definition. The
-Roadmap & Task Board is compiled into the existing web image, so releasing it
-does not require a separate production service.
+Roadmap & Task Board UI is compiled into the existing web image; its stateful
+backend is a private companion image/volume published with the same immutable
+parent tag. The only public entry remains the web gateway.
+
+For Roadmap & Task Board, source commits must reach the source remote before
+advancing `repos.lock`. Start with the local-first build flag, use the composed
+smoke stack to exercise the audited V1 route, then explicitly approve the V1
+rollout after backup/restore dry-run and browser UAT. Never replace a lock with
+an unpublished child SHA just to make a local build pass.
 
 ## Prepare a deployment host
 
