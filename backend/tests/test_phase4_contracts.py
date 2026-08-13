@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import httpx
+import pytest
 
 from backend.app.config import Settings
 from backend.app.infrastructure.database import connect, initialize
@@ -53,6 +54,17 @@ def test_reorder_invalidates_shifted_tasks_and_transition_is_one_atomic_command(
     assert transitioned.status_code == 200
     assert transitioned.json()["item"]["status"] == "Done"
     assert client.get("/api/v1/tasks/T-3/activity").json()["items"][0]["type"] == "task.status_changed"
+
+
+def test_unchanged_transition_does_not_add_audit_noise_or_bump_version(client):
+    created = client.post("/api/v1/tasks", json=_task("Already ready", "T-ready") | {"status": "Ready"}).json()
+    unchanged = client.post(
+        "/api/v1/tasks/T-ready/transition",
+        json={"status": "Ready", "expected_version": created["version"]},
+    )
+    assert unchanged.status_code == 200
+    assert unchanged.json()["version"] == created["version"]
+    assert [event["type"] for event in client.get("/api/v1/tasks/T-ready/activity").json()["items"]] == ["task.created"]
 
 
 def test_error_envelope_readiness_and_export_do_not_expose_runtime_secrets(client):
@@ -150,3 +162,21 @@ def test_delivery_claim_prevents_duplicate_post_with_concurrent_workers(client, 
     assert sum(results) == 1
     assert len(calls) == 1
     assert calls[0]["allowed_mentions"] == {"parse": []}
+
+
+def test_production_config_requires_explicit_cors_and_https_webhook(monkeypatch, tmp_path: Path):
+    monkeypatch.setenv("PORTAL_ENV", "production")
+    monkeypatch.setenv("PORTAL_DATABASE_PATH", str(tmp_path / "portal.db"))
+    monkeypatch.delenv("PORTAL_CORS_ORIGINS", raising=False)
+    monkeypatch.delenv("DISCORD_WEBHOOK_URL", raising=False)
+    production = Settings.from_environment()
+    assert production.cors_origins == ()
+
+    monkeypatch.setenv("PORTAL_CORS_ORIGINS", "*")
+    with pytest.raises(ValueError, match="explicit allowlist"):
+        Settings.from_environment()
+
+    monkeypatch.setenv("PORTAL_CORS_ORIGINS", "https://portal.example")
+    monkeypatch.setenv("DISCORD_WEBHOOK_URL", "http://discord.example/webhook")
+    with pytest.raises(ValueError, match="HTTPS"):
+        Settings.from_environment()

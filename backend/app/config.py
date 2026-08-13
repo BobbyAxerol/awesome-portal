@@ -5,6 +5,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Tuple
+from urllib.parse import urlparse
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -35,6 +36,16 @@ def _environment() -> str:
     value = aliases.get(value, value)
     if value not in {"development", "test", "production"}:
         raise ValueError("PORTAL_ENV must be development, test, or production")
+    return value
+
+
+def _discord_webhook_url() -> Optional[str]:
+    value = os.getenv("DISCORD_WEBHOOK_URL", "").strip()
+    if not value:
+        return None
+    parsed = urlparse(value)
+    if parsed.scheme != "https" or not parsed.netloc:
+        raise ValueError("DISCORD_WEBHOOK_URL must be an absolute HTTPS URL")
     return value
 
 
@@ -70,7 +81,7 @@ class Settings:
         return cls(
             database_path=database_path,
             portal_file=portal_file,
-            discord_webhook_url=os.getenv("DISCORD_WEBHOOK_URL") or None,
+            discord_webhook_url=_discord_webhook_url(),
             portal_url=os.getenv("PORTAL_PUBLIC_URL", "http://127.0.0.1:8000").rstrip("/"),
             default_actor=os.getenv("PORTAL_DEFAULT_ACTOR", "local-user"),
             cors_origins=cors_origins,

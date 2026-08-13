@@ -394,6 +394,11 @@ class PortalRepository:
             ).fetchall()
         ]
         destination = min(max(0, position), len(target_ids))
+        if status == old_status and destination == row["position"]:
+            # An editor can submit the unchanged status.  Do not turn that
+            # into an audit event/version bump merely because it travelled
+            # through the transition command.
+            return self._public(before)
         target_ids.insert(destination, task_id)
         item = dict(before["item"])
         item["status"] = status

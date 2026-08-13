@@ -119,5 +119,9 @@ def initialize(path: Path) -> None:
             "INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (?, datetime('now'))",
             (MIGRATION_DELIVERY_CLAIMS,),
         )
+        # Keep a restored/migrated file self-contained before an operational
+        # command atomically moves it into place.  Normal request traffic uses
+        # WAL as usual; this only runs during initialization.
+        connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     finally:
         connection.close()
