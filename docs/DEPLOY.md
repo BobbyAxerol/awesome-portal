@@ -40,7 +40,10 @@ DISCORD_WEBHOOK_URL=...   # rỗng = tắt outbox
 PORTAL_DEFAULT_ACTOR=local-user
 ```
 
-Database tự tạo `data/portal.db`; backup bằng cách copy 3 file `portal.db*` khi service tạm dừng.
+Database tự tạo `data/portal.db`; production cần mount `data/` trên persistent
+volume. Health/liveness ở `/api/health`, readiness (SQLite + migration + outbox)
+ở `/api/ready`. Đặt `PORTAL_ENV=production`; CORS chỉ là allowlist HTTPS cụ thể
+khi frontend khác origin, không dùng `*`.
 
 ## Frontend V2 (song song, chưa phải default)
 
@@ -53,6 +56,28 @@ Xem chi tiết vận hành ở `docs/design-system-catalog.md` và kế hoạch 
 
 ## Runbook nhỏ
 
-- Log: tự uvicorn stdout; structured log của backend ra `data/portal-events.log` (nếu bật).
-- Reset dữ liệu: tắt service, xóa `data/portal.db*`, khởi động lại.
+- Log: uvicorn + backend structured JSON log ra stdout; không log request body,
+  note hoặc `DISCORD_WEBHOOK_URL`.
+- Backup online, không cần dừng API:
+
+  ```bash
+  python -m backend.scripts.portal_db backup \
+    --database data/portal.db \
+    --output backups/portal-$(date +%F).db
+  ```
+
+- Restore cần backup hiện hành trước và `--replace` rõ ràng:
+
+  ```bash
+  python -m backend.scripts.portal_db restore \
+    --input backups/portal-2026-08-13.db \
+    --database data/portal.db \
+    --replace
+  ```
+
+- Reset dữ liệu chỉ trong local/dev: dừng service, backup trước, rồi xóa đúng
+  `data/portal.db` cùng file `-wal`/`-shm` liên quan. Không reset volume shared
+  khi chưa có approval.
 - Thay đổi nội dung: sửa ở `server.py` static hoặc file HTML seed kèm `PORTAL_FILE`.
+
+Xem thêm contract và feature flag V1 tại [`TASK_ROADMAP_BACKEND.md`](TASK_ROADMAP_BACKEND.md).

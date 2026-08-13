@@ -68,6 +68,7 @@ toc-rail sticky; breakpoints 1024/820/640.
 | `#view=docs&page=…` hash | `lib/router.ts` |
 | `quantPortalTasksV1/PhasesV1/BoardViewV1/Theme` | `lib/storage.ts` |
 | `api/health`, `api/tasks`, `api/roadmap` | `lib/api.ts` (detectApi + legacy compat) |
+| Versioned API / sync status / conflict recovery | `lib/api.ts` + `useTasks.ts` / `useRoadmap.ts` + `.sync-notice` |
 | topbar/nav/sidebar | `PortalShell.tsx` |
 | Modal/toast/badge/chip/table | `components/ui.tsx` |
 | Palette cũ `--surface/--border/--muted/...` | tokens.css (map trong port_legacy_css.mjs) |
@@ -81,3 +82,12 @@ toc-rail sticky; breakpoints 1024/820/640.
 | Verify | `node tooling/screenshots/verify_geometry.mjs`, `node tooling/screenshots/new.mjs` | — |
 
 Gate: `npm test` (integrity 100%) + `npm run build` + geometry 4 viewport không overflow.
+
+## Phase 4 persistence UX
+
+Task/Roadmap show one compact `.sync-notice` above the working surface. It is
+semantic state, not decorative chrome: Local, compatibility API and audited V1
+must remain distinguishable; V1’s explicit initialization and Refresh action
+must remain available during visual refinement. See
+[Phase 4 component & API handoff](PHASE4_COMPONENT_API_MAP.md) before changing
+these flows.

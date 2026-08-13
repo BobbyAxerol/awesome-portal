@@ -23,7 +23,7 @@ Mở `http://127.0.0.1:8000`.
 
 Không chạy backend, bạn vẫn có thể mở trực tiếp tệp HTML; trạng thái Task Board và Roadmap khi đó chỉ nằm trong `localStorage` của trình duyệt. Khi chạy `server.py`, hai trạng thái này được lưu cục bộ tại `data/tasks.json` và `data/roadmap.json`; đây là dữ liệu runtime nên không được đưa vào Git.
 
-### Backend có audit trail (khuyến nghị cho Task Board/Roadmap)
+### Backend Phase 4 có audit trail (khuyến nghị cho Task Board/Roadmap)
 
 Backend mới dùng SQLite, audit log và Discord outbox, đồng thời vẫn phục vụ nguyên portal HTML cùng các endpoint API cũ:
 
@@ -33,7 +33,11 @@ python3 -m venv .venv
 .venv/bin/python -m backend.app
 ```
 
-Mở `http://127.0.0.1:8000`; tài liệu API ở `/api/docs`. Xem [tài liệu backend](docs/TASK_ROADMAP_BACKEND.md) để biết domain, API và cấu hình Discord.
+Mở `http://127.0.0.1:8000`; tài liệu API ở `/api/docs`, readiness ở
+`/api/ready`. Backend dùng SQLite migration forward-only, optimistic version,
+soft-delete, activity append-only và Discord outbox lease/retry. Xem [tài liệu
+backend](docs/TASK_ROADMAP_BACKEND.md) để biết domain, API, backup/restore và
+cấu hình Discord.
 
 ### Frontend V2 (chạy song song, chưa flip default)
 
@@ -43,7 +47,12 @@ Frontend mới (React + TypeScript + Vite, design system Fund Paper) chạy song
 cd frontend && npm install && npm run dev
 ```
 
-Mở `http://127.0.0.1:5173` (proxy `/api` → `127.0.0.1:8000` khi backend chạy). Nội dung docs được mang nguyên khối (byte-exact) từ bản freeze `legacy/portal.html`; xem [kế hoạch migration](upgrade/KE_HOACH_MIGRATION_5_PHASE.md), [catalog design system](docs/design-system-catalog.md) và `docs/adr/0001-portal-architecture.md`.
+Mở `http://127.0.0.1:5173` (proxy `/api` → `127.0.0.1:8000` khi backend chạy).
+Mặc định frontend giữ adapter compatibility; chỉ đặt
+`VITE_ROADMAP_TASK_BOARD_PERSISTENCE=v1` trong môi trường đã UAT để bật API
+versioned. Khi database V1 trống, UI yêu cầu xác nhận khởi tạo từ local state,
+không tự overwrite workspace server. Nội dung docs được mang nguyên khối
+(byte-exact) từ bản freeze `legacy/portal.html`; xem [kế hoạch migration](upgrade/KE_HOACH_MIGRATION_5_PHASE.md), [catalog design system](docs/design-system-catalog.md) và `docs/adr/0001-portal-architecture.md`.
 
 ## Cấu trúc hiện tại
 
