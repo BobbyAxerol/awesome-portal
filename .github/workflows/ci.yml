@@ -60,6 +60,12 @@ jobs:
             python -m pytest -c apps/quantbt-portal/backend/pyproject.toml apps/quantbt-portal/backend/tests
           python -m compileall -q apps/quantbt-portal/backend/src apps/quantbt-portal/strategy
 
+      - name: Test Roadmap & Task Board backend
+        run: |
+          python -m pip install -r features/roadmap-task-board/backend/requirements-dev.txt
+          PYTHONPATH=features/roadmap-task-board python -m pytest features/roadmap-task-board/backend/tests
+          python -m compileall -q features/roadmap-task-board/backend
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:

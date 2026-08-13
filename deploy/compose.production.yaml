@@ -29,6 +29,34 @@ services:
       retries: 6
       start_period: 15s
 
+  roadmap-task-board-api:
+    image: ${PORTAL_IMAGE_PREFIX:?Set PORTAL_IMAGE_PREFIX}-roadmap-task-board-api:${PORTAL_IMAGE_TAG:?Set PORTAL_IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      PORTAL_ENV: production
+      PORTAL_DATABASE_PATH: /var/lib/roadmap-task-board/portal.db
+      PORTAL_PUBLIC_URL: ${ROADMAP_TASK_BOARD_PUBLIC_URL:?Set ROADMAP_TASK_BOARD_PUBLIC_URL}
+      PORTAL_DEFAULT_ACTOR: ${ROADMAP_TASK_BOARD_DEFAULT_ACTOR:-local-user}
+      PORTAL_CORS_ORIGINS: ${ROADMAP_TASK_BOARD_CORS_ORIGINS:-}
+      PORTAL_LOG_LEVEL: ${ROADMAP_TASK_BOARD_LOG_LEVEL:-INFO}
+      DISCORD_WEBHOOK_URL: ${ROADMAP_TASK_BOARD_DISCORD_WEBHOOK_URL:-}
+    volumes:
+      - roadmap-task-board-data:/var/lib/roadmap-task-board
+    expose:
+      - "8000"
+    networks:
+      - portal
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ready', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
   quantbt-portal-web:
     image: ${PORTAL_IMAGE_PREFIX:?Set PORTAL_IMAGE_PREFIX}-quantbt-portal-web:${PORTAL_IMAGE_TAG:?Set PORTAL_IMAGE_TAG}
     restart: unless-stopped
@@ -36,6 +64,8 @@ services:
       - "${PORTAL_HTTP_PORT:-8080}:80"
     depends_on:
       quantbt-portal-api:
+        condition: service_healthy
+      roadmap-task-board-api:
         condition: service_healthy
     networks:
       - portal
@@ -52,3 +82,4 @@ networks:
 
 volumes:
   portal-artifacts:
+  roadmap-task-board-data:

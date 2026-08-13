@@ -77,6 +77,17 @@ jobs:
             type=ref,event=tag
             type=raw,value=latest,enable={{is_default_branch}}
 
+      - name: Derive Roadmap & Task Board API image metadata
+        id: roadmap-task-board-api-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image-prefix.outputs.value }}-roadmap-task-board-api
+          tags: |
+            type=raw,value=sha-${{ github.sha }}
+            type=ref,event=branch
+            type=ref,event=tag
+            type=raw,value=latest,enable={{is_default_branch}}
+
       - name: Build and publish API image
         uses: docker/build-push-action@v6
         with:
@@ -98,6 +109,17 @@ jobs:
           labels: ${{ steps.web-meta.outputs.labels }}
           cache-from: type=gha,scope=quantbt-portal-web
           cache-to: type=gha,mode=max,scope=quantbt-portal-web
+
+      - name: Build and publish Roadmap & Task Board API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/images/roadmap-task-board-api.Dockerfile
+          push: true
+          tags: ${{ steps.roadmap-task-board-api-meta.outputs.tags }}
+          labels: ${{ steps.roadmap-task-board-api-meta.outputs.labels }}
+          cache-from: type=gha,scope=roadmap-task-board-api
+          cache-to: type=gha,mode=max,scope=roadmap-task-board-api
 
       - name: Publish deployment environment artifact
         env:
