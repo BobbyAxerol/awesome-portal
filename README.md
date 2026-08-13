@@ -54,6 +54,15 @@ versioned. Khi database V1 trống, UI yêu cầu xác nhận khởi tạo từ 
 không tự overwrite workspace server. Nội dung docs được mang nguyên khối
 (byte-exact) từ bản freeze `legacy/portal.html`; xem [kế hoạch migration](upgrade/KE_HOACH_MIGRATION_5_PHASE.md), [catalog design system](docs/design-system-catalog.md) và `docs/adr/0001-portal-architecture.md`.
 
+### Phase 5 release candidate
+
+The candidate has browser parity tests, source CI and an operations handoff.
+Run `npm run e2e` from `frontend/` after installing Chromium, then see
+[`docs/PHASE5_RELEASE_CHECKLIST.md`](docs/PHASE5_RELEASE_CHECKLIST.md) for the
+parent gateway/UAT sequence. Generated output can be removed safely with
+`tooling/clean-generated.sh`; use `--dependencies` only when reinstalling from
+the lockfile is acceptable.
+
 ## Cấu trúc hiện tại
 
 | Đường dẫn | Vai trò |

@@ -50,7 +50,8 @@ pass improve presentation without weakening persistence or content contracts.
 
 ## Safe UI additions
 
-Good next refinements: skeleton state for first load, activity timeline drawer,
-keyboard reorder alternative to drag/drop, unsaved-draft conflict panel and
-responsive filter disclosure. Add test IDs and Vitest coverage beside the
-feature; preserve existing `data-testid` values used by contract tests.
+The V1 activity timeline drawer is now implemented as an on-demand read-only
+component. Good next refinements: skeleton state for first load, keyboard
+reorder alternative to drag/drop, unsaved-draft conflict panel and responsive
+filter disclosure. Add test IDs and Vitest coverage beside the feature;
+preserve existing `data-testid` values used by contract tests.

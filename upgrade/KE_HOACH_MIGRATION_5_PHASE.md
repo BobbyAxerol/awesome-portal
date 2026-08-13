@@ -1,6 +1,6 @@
 # Kế hoạch migration portal — 5 phase
 
-> Trạng thái: **Phase 4 hoàn tất implementation local — chờ UAT gateway** · Ngày lập: 2026-08-11
+> Trạng thái: **Phase 5 release candidate đã đóng gói local — chờ source promotion và UAT gateway** · Ngày lập: 2026-08-11
 > Chủ dự án đã duyệt tiếp tục Phase 4 qua yêu cầu ngày 2026-08-13. Các contract
 > Phase 1–3 vẫn là ràng buộc bắt buộc; không bỏ qua integrity/rollback gate.
 
@@ -277,9 +277,9 @@ Chỉ chấp nhận migration khi đồng thời thỏa tất cả:
 | Mục | Giá trị |
 | --- | --- |
 | Kế hoạch được duyệt? | Có — yêu cầu triển khai Phase 4 |
-| Phase đã thực hiện | Phase 4 (backend, persistence, API adapter, runbook) — hoàn tất gate local ngày 2026-08-13 |
+| Phase đã thực hiện | Phase 4 và Phase 5 release candidate (backend, API adapter, browser parity, CI, package/runbook) — hoàn tất gate local ngày 2026-08-13 |
 | Người duyệt / thời điểm | Chủ dự án · 2026-08-13 |
-| Ghi chú thay đổi phạm vi | Giữ local-first/legacy default; API V1 là feature flag. Source mới chỉ được commit local; cần push/promotion và UAT gateway trước rollout parent. |
+| Ghi chú thay đổi phạm vi | Giữ local-first/legacy default; API V1 là feature flag. Source mới chỉ được commit local; cần push/promotion, parent lock và UAT gateway trước rollout parent. |
 
-Phase 5 chỉ bắt đầu sau khi Phase 4 được UAT qua gateway, có backup/restore
-dry-run và chủ dự án duyệt rollout.
+Phase 5 chỉ được xem là release hoàn tất sau khi source được promotion, gateway
+UAT, backup/restore dry-run và chủ dự án duyệt rollout.
