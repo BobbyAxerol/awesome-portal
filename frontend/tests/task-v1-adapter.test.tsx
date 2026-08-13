@@ -100,4 +100,36 @@ describe.sequential("Task Board v1 adapter", () => {
     expect(JSON.parse(String((fetchMock.mock.calls[1]?.[1] as RequestInit).body))).toEqual({ status: "Done", expected_version: 3 });
     expect(fetchMock.mock.calls.map(([url]) => url)).not.toContain("api/v1/tasks/API-1");
   });
+
+  it("loads immutable activity only when a manager explicitly opens the timeline", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response({ items: [{ item: task, version: 3, position: 0, created_at: "now", updated_at: "now", deleted_at: null }] }))
+      .mockResolvedValueOnce(response({
+        items: [{
+          id: "evt-1",
+          entity_type: "task",
+          entity_id: "API-1",
+          type: "task.status_changed",
+          actor: "bobby",
+          occurred_at: "2026-08-13T10:00:00Z",
+          before: null,
+          after: null,
+          metadata: { from_status: "Ready", to_status: "Done" },
+        }],
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { TaskBoardFeature } = await import("../src/features/tasks/TaskBoardFeature");
+    const { ToastProvider } = await import("../src/components/ui");
+    const user = userEvent.setup();
+
+    render(<ToastProvider><TaskBoardFeature apiMode="api" /></ToastProvider>);
+    await screen.findByTestId("task-card-API-1");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: "Edit task API-1" }));
+    await user.click(screen.getByRole("button", { name: "Activity" }));
+
+    expect(await screen.findByText("Task status changed")).toBeInTheDocument();
+    expect(screen.getByTestId("activity-timeline-tasks-API-1")).toHaveTextContent("Ready → Done");
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("api/v1/tasks/API-1/activity");
+  });
 });

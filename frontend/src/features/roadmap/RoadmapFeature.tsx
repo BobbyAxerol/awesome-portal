@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent } from "react";
 import { Button, Chip, Input, Modal, StateView, useToast } from "@/components/ui";
 import type { ApiMode } from "@/lib/api";
+import { ActivityTimeline } from "../shared/ActivityTimeline";
 import {
   PHASE_TONES,
   normalisePhase,
@@ -63,6 +64,7 @@ export function RoadmapFeature({ apiMode }: { apiMode: ApiMode }) {
   const toast = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<RoadmapPhase | null>(null);
+  const [activityPhaseId, setActivityPhaseId] = useState<string | null>(null);
 
   const closeEditor = () => {
     setEditingId(null);
@@ -108,6 +110,7 @@ export function RoadmapFeature({ apiMode }: { apiMode: ApiMode }) {
     void remove(phase.id)
       .then(() => {
         if (editingId === phase.id) closeEditor();
+        if (activityPhaseId === phase.id) setActivityPhaseId(null);
         toast(`Đã xóa ${phase.id}`, "info");
       })
       .catch((error: Error) => toast(error.message, "bad"));
@@ -181,11 +184,19 @@ export function RoadmapFeature({ apiMode }: { apiMode: ApiMode }) {
         {draft && <PhaseEditor draft={draft} idLocked={Boolean(editingId && persistence === "v1")} onChange={updateDraft} />}
         <div className="modal-actions">
           {editingId && draft && <Button type="button" variant="ghost" onClick={() => deletePhase(draft)}>Delete</Button>}
+          {editingId && persistence === "v1" && <Button type="button" variant="ghost" onClick={() => setActivityPhaseId(editingId)}>Activity</Button>}
           <span />
           <Button type="button" variant="ghost" onClick={closeEditor}>Cancel</Button>
           <Button type="button" onClick={saveDraft}>Save phase</Button>
         </div>
       </Modal>
+      <ActivityTimeline
+        collection="roadmap"
+        entityId={activityPhaseId ?? ""}
+        entityLabel={activityPhaseId ?? "Phase"}
+        open={activityPhaseId !== null}
+        onClose={() => setActivityPhaseId(null)}
+      />
     </section>
   );
 }

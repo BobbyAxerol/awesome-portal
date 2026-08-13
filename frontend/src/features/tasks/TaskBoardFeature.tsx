@@ -2,6 +2,7 @@ import { useMemo, useState, type ChangeEvent, type DragEvent } from "react";
 import { Button, Chip, Input, Modal, StateView, useToast } from "@/components/ui";
 import type { ApiMode } from "@/lib/api";
 import { LS_BOARD_VIEW, storageGet, storageSet } from "@/lib/storage";
+import { ActivityTimeline } from "../shared/ActivityTimeline";
 import {
   EMPTY_TASK_FILTERS,
   TASK_STATUSES,
@@ -148,6 +149,7 @@ export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Task | null>(null);
+  const [activityTaskId, setActivityTaskId] = useState<string | null>(null);
 
   const visibleTasks = useMemo(() => filteredTasks(tasks, filters), [tasks, filters]);
   const workstreams = useMemo(() => optionValues(tasks, "workstream"), [tasks]);
@@ -211,6 +213,7 @@ export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
     void remove(task.id)
       .then(() => {
         if (editingId === task.id) closeEditor();
+        if (activityTaskId === task.id) setActivityTaskId(null);
         toast(`Đã xóa ${task.id}`, "info");
       })
       .catch((error: Error) => toast(error.message, "bad"));
@@ -341,11 +344,19 @@ export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
         {draft && <TaskEditor draft={draft} onChange={updateDraft} />}
         <div className="modal-actions">
           {editingId && draft && <Button type="button" variant="ghost" onClick={() => deleteTask(draft)}>Delete</Button>}
+          {editingId && persistence === "v1" && <Button type="button" variant="ghost" onClick={() => setActivityTaskId(editingId)}>Activity</Button>}
           <span />
           <Button type="button" variant="ghost" onClick={closeEditor}>Cancel</Button>
           <Button type="button" onClick={saveDraft}>Save task</Button>
         </div>
       </Modal>
+      <ActivityTimeline
+        collection="tasks"
+        entityId={activityTaskId ?? ""}
+        entityLabel={activityTaskId ?? "Task"}
+        open={activityTaskId !== null}
+        onClose={() => setActivityTaskId(null)}
+      />
     </section>
   );
 }
