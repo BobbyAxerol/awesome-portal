@@ -38,7 +38,7 @@ export function Topbar({ view, theme, apiMode, onNavigate, onToggleTheme, sideba
           </svg>
         </span>
         <span className="brand-name">Quant Ecosystem</span>
-        <span className="brand-tag">Migration Tracker</span>
+        <span className="brand-tag">Roadmap &amp; Task Board</span>
       </div>
       <nav className="top-tabs" aria-label="Views">
         {TOP_TABS.map((v) => (

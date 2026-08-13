@@ -9,7 +9,7 @@ Phase 3 uses a strangler boundary: the immutable content fragments and seed valu
 | `#view-board` / `BASE_TASKS_SEED` | `features/tasks/TaskBoardFeature.tsx` | `task-board-feature`, `task-column-<status>`, `task-card-<id>` | Uses `quantPortalTasksV1` and `quantBoardViewV1`; API remains `api/tasks`. |
 | `#view-reports` / `VIEW_PANELS.view-reports` | `features/reports/ReportsFeature.tsx` | `reports-feature`, `raw-view-reports` | Reports is the default route and renders its locked raw fragment unchanged. |
 | `#view-evidence` / `VIEW_PANELS.view-evidence` | `features/evidence/EvidenceFeature.tsx` | `raw-view-evidence` | Renders the locked raw fragment unchanged. |
-| `#view-portal` / `VIEW_PANELS.view-portal` | `features/manager/ManagerPortalFeature.tsx` | `raw-view-portal` | Embedded mockup only; it is not a deployable service or control plane. |
+| `#view-portal` / `VIEW_PANELS.view-portal` | `features/portal-mockup/PortalMockupFeature.tsx` | `raw-view-portal` | Embedded mockup only; it is not a deployable service or control plane. |
 | No legacy selector | `features/interpretation/InterpretationFeature.tsx` | `interpretation-feature` | Lazy route `#view=interpretation`; no iframe; legacy Reports remains default. |
 
 ## Runtime contracts

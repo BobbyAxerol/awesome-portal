@@ -3,7 +3,7 @@ import { Topbar, Sidebar } from "@/components/PortalShell";
 import { ToastProvider } from "@/components/ui";
 import { DocsFeature } from "@/features/docs/DocsFeature";
 import { EvidenceFeature } from "@/features/evidence/EvidenceFeature";
-import { ManagerPortalFeature } from "@/features/manager/ManagerPortalFeature";
+import { PortalMockupFeature } from "@/features/portal-mockup/PortalMockupFeature";
 import { ReportsFeature } from "@/features/reports/ReportsFeature";
 import { RoadmapFeature } from "@/features/roadmap/RoadmapFeature";
 import { TaskBoardFeature } from "@/features/tasks/TaskBoardFeature";
@@ -77,7 +77,7 @@ export default function App() {
       case "evidence":
         return <EvidenceFeature theme={theme} />;
       case "portal":
-        return <ManagerPortalFeature theme={theme} />;
+        return <PortalMockupFeature theme={theme} />;
     }
   };
 

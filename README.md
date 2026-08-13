@@ -1,4 +1,4 @@
-# Migration Tracker — Quant Ecosystem (Migration & Acquisition Plan)
+# Roadmap & Task Board — Quant Ecosystem
 
 > **Mục đích:** chốt phương án migration/acquisition và theo dõi task triển khai để
 > **manager xem và duyệt**. Đây **không phải** trang nổi bật của hệ sinh thái quant:

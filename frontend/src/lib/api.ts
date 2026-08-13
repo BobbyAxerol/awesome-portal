@@ -16,8 +16,8 @@ export interface LegacyCollection {
 
 export type ApiMode = "local" | "api" | "detecting";
 
-const apiBase = (import.meta.env.VITE_MIGRATION_API_BASE ?? "api").replace(/\/$/, "");
-const localOnly = import.meta.env.VITE_MIGRATION_LOCAL_ONLY === "true";
+const apiBase = (import.meta.env.VITE_ROADMAP_TASK_BOARD_API_BASE ?? "api").replace(/\/$/, "");
+const localOnly = import.meta.env.VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY === "true";
 
 function apiPath(path: "health" | "tasks" | "roadmap"): string {
   return `${apiBase}/${path}`;
