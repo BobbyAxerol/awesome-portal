@@ -22,6 +22,7 @@ Run these from this repository before promoting source:
 python -m pytest backend/tests
 cd frontend
 npm ci
+npm audit --package-lock-only --audit-level=moderate
 npm test
 npm run build
 npx playwright install --with-deps chromium
