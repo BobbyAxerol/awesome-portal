@@ -1,7 +1,11 @@
-# Design System Catalog — Quant Ecosystem Portal V2
+# Design System Catalog — Migration Tracker (Frontend V2)
 
 **Chủ trương:** palette Fund Paper (đã duyệt ở `upgrade/KE_HOACH_MIGRATION_5_PHASE.md` §2).
 Raw hex **chỉ sống trong** `frontend/src/styles/tokens.css`; component tuyệt đối không hardcode màu.
+
+**Vị trí sản phẩm:** mục đích = chốt phương án migration + task tracker cho manager xem;
+truy cập từ Settings/mục quản lý Task của hệ thống cha, không nổi bật ở top-level.
+Xem [docs/MIGRATION_TRACKER_PURPOSE.md](../MIGRATION_TRACKER_PURPOSE.md).
 
 ## Tokens (`tokens.css`)
 
@@ -40,9 +44,12 @@ Tất cả đều có `:focus-visible` outline và tôn trọng `prefers-reduced
 
 ## Shell (`shell.css` + component `PortalShell.tsx`)
 
-Topbar (sticky 56px, brand = logo+name+tag V2) → top-tabs 6 views → actions (sync-badge API/LOCAL + theme toggle).
-Workspace: sidebar 280px (docs: 16 pages / khác: 5 views), content, view-panel active.
-Docs layout: `doc-layout` grid `1fr + 250px` toc-rail sticky; breakpoints 1024/820/640.
+Topbar (sticky 56px, brand = logo + "Migration Tracker") → top-tabs **5 views** (Docs,
+Roadmap, Board, Reports, Evidence) → actions (sync-badge API/LOCAL + theme toggle).
+Workspace: sidebar 280px; khi ở Docs hiện 16 page; khi ở view khác hiện 2 nhóm
+"Quản lý Task" (Roadmap/Board) + "Settings" (**Portal** — không nằm ở top-tabs,
+xem MIGRATION_TRACKER_PURPOSE.md). Docs layout: `doc-layout` grid `1fr + 250px`
+toc-rail sticky; breakpoints 1024/820/640.
 
 ## Legacy views (`legacy-views.css` + `LegacyView.tsx`)
 

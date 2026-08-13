@@ -12,14 +12,17 @@ export interface ShellProps {
   children?: ReactNode;
 }
 
-export const VIEWS: { id: View; label: string }[] = [
+/** Top-level navigation — Portal không nổi bật ở đây (xem docs/MIGRATION_TRACKER_PURPOSE.md). */
+export const TOP_TABS: { id: View; label: string }[] = [
   { id: "docs", label: "Docs" },
   { id: "roadmap", label: "Roadmap" },
   { id: "board", label: "Board" },
   { id: "reports", label: "Reports" },
   { id: "evidence", label: "Evidence" },
-  { id: "portal", label: "Portal" },
 ];
+
+/** Portal chỉ truy cập từ sidebar, nhóm Settings. */
+export const SETTINGS_TABS: { id: View; label: string }[] = [{ id: "portal", label: "Portal" }];
 
 export function Topbar({ view, theme, apiMode, onNavigate, onToggleTheme }: ShellProps) {
   return (
@@ -32,10 +35,10 @@ export function Topbar({ view, theme, apiMode, onNavigate, onToggleTheme }: Shel
           </svg>
         </span>
         <span className="brand-name">Quant Ecosystem</span>
-        <span className="brand-tag">Portal · V2</span>
+        <span className="brand-tag">Migration Tracker</span>
       </div>
       <nav className="top-tabs" aria-label="Views">
-        {VIEWS.map((v) => (
+        {TOP_TABS.map((v) => (
           <button
             key={v.id}
             type="button"
@@ -85,7 +88,20 @@ export function Sidebar({ view, page, onNavigate }: ShellProps) {
         </>
       ) : (
         <nav>
-          {VIEWS.filter((v) => v.id !== "docs").map((v) => (
+          <p className="mono-label">Quản lý Task</p>
+          {TOP_TABS.filter((v) => v.id !== "docs").map((v) => (
+            <button
+              key={v.id}
+              type="button"
+              className={`nav-item ${view === v.id ? "active" : ""}`}
+              onClick={() => onNavigate(v.id)}
+            >
+              <span className="nav-icon" aria-hidden="true" />
+              <span className="nav-text">{v.label}</span>
+            </button>
+          ))}
+          <p className="mono-label">Settings</p>
+          {SETTINGS_TABS.map((v) => (
             <button
               key={v.id}
               type="button"

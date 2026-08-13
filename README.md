@@ -1,6 +1,15 @@
-# Primus Spark Quant Ecosystem — Migration Portal
+# Migration Tracker — Quant Ecosystem (Migration & Acquisition Plan)
 
-Một portal tĩnh bằng tiếng Việt để lưu trữ đánh giá hiện trạng, kế hoạch acquisition/migration và bản demo Manager Portal cho hệ sinh thái giao dịch định lượng.
+> **Mục đích:** chốt phương án migration/acquisition và theo dõi task triển khai để
+> **manager xem và duyệt**. Đây **không phải** trang nổi bật của hệ sinh thái quant:
+> trong hệ thống cha (đường dẫn mẹ), portal này chỉ được truy cập từ **Settings**
+> hoặc **mục quản lý Task** — không đặt ở top-level wireframe.
+> Chi tiết: [docs/MIGRATION_TRACKER_PURPOSE.md](docs/MIGRATION_TRACKER_PURPOSE.md).
+
+Nội dung gồm: đánh giá hiện trạng từng layer (16 tài liệu), kế hoạch 6 phase P0–P5
+(Roadmap), Task Board Kanban (36 task), Evidence đối chiếu repo/artifact, Reports
+tóm tắt cho manager, và một **mockup minh họa** Manager Platform (view "Portal" —
+truy cập từ sidebar → Settings, không nổi bật).
 
 ## Chạy cục bộ
 
