@@ -16,9 +16,17 @@ export interface LegacyCollection {
 
 export type ApiMode = "local" | "api" | "detecting";
 
+const apiBase = (import.meta.env.VITE_MIGRATION_API_BASE ?? "api").replace(/\/$/, "");
+const localOnly = import.meta.env.VITE_MIGRATION_LOCAL_ONLY === "true";
+
+function apiPath(path: "health" | "tasks" | "roadmap"): string {
+  return `${apiBase}/${path}`;
+}
+
 export async function detectApi(): Promise<ApiMode> {
+  if (localOnly) return "local";
   try {
-    const res = await fetch("api/health", { cache: "no-store" });
+    const res = await fetch(apiPath("health"), { cache: "no-store" });
     if (res.ok) {
       const body = (await res.json()) as LegacyHealth;
       if (body?.ok) return "api";
@@ -30,8 +38,9 @@ export async function detectApi(): Promise<ApiMode> {
 }
 
 export async function fetchLegacy(name: "tasks" | "roadmap"): Promise<Record<string, unknown>[]> {
-  const res = await fetch(`api/${name}`, { cache: "no-store" });
-  if (!res.ok) throw new Error(`GET api/${name} failed: ${res.status}`);
+  const url = apiPath(name);
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`GET ${url} failed: ${res.status}`);
   const body = (await res.json()) as LegacyCollection;
   if (body?.initialized && Array.isArray(body.items)) return body.items;
   if (Array.isArray(body) && body.length) return body;
@@ -41,7 +50,7 @@ export async function fetchLegacy(name: "tasks" | "roadmap"): Promise<Record<str
 }
 
 export async function putLegacy(name: "tasks" | "roadmap", items: Record<string, unknown>[]): Promise<void> {
-  await fetch(`api/${name}`, {
+  await fetch(apiPath(name), {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(items),
