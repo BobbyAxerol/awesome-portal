@@ -1,0 +1,32 @@
+# Keep cross-platform automation deterministic.
+* text=auto eol=lf
+
+# Source and configuration files are text.
+*.py text
+*.ts text
+*.tsx text
+*.js text
+*.jsx text
+*.json text
+*.yaml text
+*.yml text
+*.toml text
+*.ini text
+*.cfg text
+*.md text
+*.sh text eol=lf
+Dockerfile* text eol=lf
+Makefile text eol=lf
+
+# Generated or data-like binary formats must never undergo line-ending changes.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.parquet binary
+*.feather binary
+*.zip binary
+*.gz binary

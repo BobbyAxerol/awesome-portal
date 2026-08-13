@@ -1,0 +1,33 @@
+name: Feature request
+description: Propose an integration, deployment or operational improvement.
+title: "[Feature]: "
+labels: [enhancement, triage]
+body:
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - New sub-portal service
+        - Existing service integration
+        - CI/CD and release process
+        - Deployment/operations
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

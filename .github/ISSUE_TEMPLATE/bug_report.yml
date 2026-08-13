@@ -1,0 +1,53 @@
+name: Bug report
+description: Report a reproducible Portal integration or deployment defect.
+title: "[Bug]: "
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not disclose credentials, private URLs, market data or security-sensitive details here.
+        See SECURITY.md for vulnerability reporting.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Workspace/repository synchronization
+        - Docker build
+        - Compose runtime
+        - Web gateway
+        - API integration
+        - Deployment automation
+        - Documentation
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Parent commit or image tag
+      placeholder: sha-...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and sanitized logs
+    validations:
+      required: true

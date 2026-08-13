@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+
+# `main` is the stable deployment baseline. The only permitted direct commit is
+# the repository's initial bootstrap commit, before HEAD exists. Every later
+# change must arrive through the dev/review flow.
+CURRENT_BRANCH="$(git branch --show-current)"
+if [[ "${CURRENT_BRANCH}" == "main" ]] && git rev-parse --verify HEAD >/dev/null 2>&1; then
+  printf 'Direct commits to main are blocked. Create a branch from dev and merge through review.\n' >&2
+  exit 1
+fi
+
+git diff --cached --check
+
+# Child repositories must stay independently versioned. A forced add of their
+# source would turn the parent into an accidental monorepo snapshot.
+while IFS= read -r staged_path; do
+  case "${staged_path}" in
+    apps/.gitkeep)
+      ;;
+    *.env.example|*.env.*.example)
+      # Versioned templates are safe; actual environment files remain blocked.
+      ;;
+    apps/*)
+      printf 'Refusing to stage child-repository content in the parent: %s\n' "${staged_path}" >&2
+      printf 'Commit it inside its own repository and update repos.lock instead.\n' >&2
+      exit 1
+      ;;
+    .env|.env.*|*.env|*.pem|*.key|*.p12|*.pfx|*.age|secrets/*|credentials/*)
+      printf 'Refusing to stage a likely secret or local environment file: %s\n' "${staged_path}" >&2
+      exit 1
+      ;;
+  esac
+done < <(git diff --cached --name-only --diff-filter=ACMR)
+
+"${ROOT_DIR}/scripts/verify-workspace.sh"

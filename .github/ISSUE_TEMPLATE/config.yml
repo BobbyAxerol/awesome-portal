@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security reporting
+    url: https://github.com/BobbyAxerol
+    about: Follow SECURITY.md and use a private reporting channel for vulnerabilities.
+  - name: Support and operations
+    url: https://github.com/BobbyAxerol
+    about: Read SUPPORT.md and the operations runbook before opening an issue.

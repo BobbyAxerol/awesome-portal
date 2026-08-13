@@ -1,0 +1,19 @@
+[Unit]
+Description=Portal Docker Compose stack
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+WorkingDirectory=/srv/portal
+EnvironmentFile=/srv/portal/.env.production
+ExecStartPre=/usr/bin/docker compose --env-file .env.production -f deploy/compose.production.yaml pull
+ExecStart=/usr/bin/docker compose --env-file .env.production -f deploy/compose.production.yaml up --remove-orphans
+ExecStop=/usr/bin/docker compose --env-file .env.production -f deploy/compose.production.yaml down
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,54 @@
+name: ${PORTAL_STACK_NAME:-portal}
+
+# Image-only deployment definition. CI publishes these images after building
+# the source pinned in repos.lock. Provision .env.production on the host from
+# .env.production.example; do not put deployment secrets in this repository.
+services:
+  quantbt-portal-api:
+    image: ${PORTAL_IMAGE_PREFIX:?Set PORTAL_IMAGE_PREFIX}-quantbt-portal-api:${PORTAL_IMAGE_TAG:?Set PORTAL_IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      PORTAL_ARTIFACT_ROOT: /var/lib/portal/artifacts/runs
+      PORTAL_CRYPTO_DATA_ROOT: /opt/portal/market-data
+      PORTAL_CRYPTO_RESAMPLE_ENGINE: ${PORTAL_CRYPTO_RESAMPLE_ENGINE:-duckdb}
+    volumes:
+      - portal-artifacts:/var/lib/portal/artifacts
+      - ${PORTAL_MARKET_DATA_DIR:?Set PORTAL_MARKET_DATA_DIR}:/opt/portal/market-data:ro
+    expose:
+      - "8000"
+    networks:
+      - portal
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+  quantbt-portal-web:
+    image: ${PORTAL_IMAGE_PREFIX:?Set PORTAL_IMAGE_PREFIX}-quantbt-portal-web:${PORTAL_IMAGE_TAG:?Set PORTAL_IMAGE_TAG}
+    restart: unless-stopped
+    ports:
+      - "${PORTAL_HTTP_PORT:-8080}:80"
+    depends_on:
+      quantbt-portal-api:
+        condition: service_healthy
+    networks:
+      - portal
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+networks:
+  portal:
+    driver: bridge
+
+volumes:
+  portal-artifacts:

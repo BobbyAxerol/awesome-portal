@@ -1,0 +1,9 @@
+# Replace or extend this entry with the production ownership team before
+# enabling required CODEOWNERS review in GitHub branch protection.
+* @BobbyAxerol
+
+/.github/ @BobbyAxerol
+/deploy/ @BobbyAxerol
+/compose.yaml @BobbyAxerol
+/repos.conf @BobbyAxerol
+/repos.lock @BobbyAxerol

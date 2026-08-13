@@ -1,0 +1,98 @@
+name: Deploy Portal stack
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Immutable image tag to deploy (for example sha-<parent-commit>)
+        required: true
+        type: string
+      deployment_path:
+        description: Absolute path of the prepared Portal directory on the host
+        required: true
+        default: /srv/portal
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: portal-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy production image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+      DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+      DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      DEPLOY_PATH: ${{ inputs.deployment_path }}
+
+    steps:
+      - name: Check out deployment definition
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Validate deployment configuration
+        run: |
+          for required in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_PRIVATE_KEY DEPLOY_KNOWN_HOSTS; do
+            if [[ -z "${!required}" ]]; then
+              printf 'Required production environment secret is missing: %s\n' "${required}" >&2
+              exit 1
+            fi
+          done
+          if ! [[ "${DEPLOY_PORT}" =~ ^[0-9]{1,5}$ ]]; then
+            echo 'DEPLOY_PORT must be numeric.' >&2
+            exit 1
+          fi
+          if ! [[ "${IMAGE_TAG}" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo 'Invalid image tag.' >&2
+            exit 1
+          fi
+          if ! [[ "${DEPLOY_PATH}" =~ ^/[A-Za-z0-9._/-]+$ ]]; then
+            echo 'Deployment path must be an absolute safe path.' >&2
+            exit 1
+          fi
+
+      - name: Configure pinned SSH access
+        run: |
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "${DEPLOY_SSH_PRIVATE_KEY}" > ~/.ssh/id_ed25519
+          chmod 0600 ~/.ssh/id_ed25519
+          printf '%s\n' "${DEPLOY_KNOWN_HOSTS}" > ~/.ssh/known_hosts
+          chmod 0600 ~/.ssh/known_hosts
+
+      - name: Transfer production Compose definition
+        run: |
+          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" "install -d -m 0750 '${DEPLOY_PATH}/deploy'"
+          scp -P "${DEPLOY_PORT}" deploy/compose.production.yaml \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/deploy/compose.production.yaml.next"
+          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "mv '${DEPLOY_PATH}/deploy/compose.production.yaml.next' '${DEPLOY_PATH}/deploy/compose.production.yaml'"
+
+      - name: Pull and start immutable images
+        run: |
+          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "DEPLOY_PATH='${DEPLOY_PATH}' IMAGE_TAG='${IMAGE_TAG}' bash -s" <<'REMOTE'
+          set -eu
+          cd "${DEPLOY_PATH}"
+          test -f .env.production
+          PORTAL_IMAGE_TAG="${IMAGE_TAG}" docker compose \
+            --env-file .env.production \
+            -f deploy/compose.production.yaml config -q
+          PORTAL_IMAGE_TAG="${IMAGE_TAG}" docker compose \
+            --env-file .env.production \
+            -f deploy/compose.production.yaml pull
+          PORTAL_IMAGE_TAG="${IMAGE_TAG}" docker compose \
+            --env-file .env.production \
+            -f deploy/compose.production.yaml up -d --remove-orphans
+          docker compose --env-file .env.production -f deploy/compose.production.yaml ps
+          REMOTE

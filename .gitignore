@@ -1,0 +1,84 @@
+# Environment files and secrets. Commit only documented examples/templates.
+.env
+.env.*
+*.env
+!*.env.example
+!*.env.*.example
+!*.env.template
+.envrc
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.age
+/secrets/
+/credentials/
+
+# Local deployment state, market data, run artifacts and logs.
+/runtime/
+/artifacts/
+/data/
+/logs/
+/backups/
+.repos.lock.*
+*.log
+*.pid
+*.seed
+*.sqlite
+*.sqlite3
+*.db
+
+# Child applications are independent Git repositories. Their source, history,
+# branch policy and CI remain in their own repositories; only this placeholder
+# belongs to the parent integration repository.
+/apps/*
+!/apps/.gitkeep
+
+# Python
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.tox/
+**/.nox/
+**/.coverage
+**/coverage.xml
+**/htmlcov/
+
+# Node and frontend tooling
+**/node_modules/
+**/.npm/
+**/.pnpm-store/
+**/.yarn/
+**/.eslintcache
+**/dist/
+**/build/
+**/coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Docker and local overrides
+compose.override.yaml
+compose.override.yml
+docker-compose.override.yaml
+docker-compose.override.yml
+.docker/
+*.tar
+*.tar.gz
+
+# Editors and operating-system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

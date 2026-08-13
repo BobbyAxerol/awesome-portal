@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+COMPOSE=(docker compose --project-directory "${ROOT_DIR}" -f "${ROOT_DIR}/compose.yaml")
+
+usage() {
+  cat <<'EOF'
+Usage: ./scripts/portal <command> [arguments]
+
+Commands:
+  up       Build source and start the complete portal stack in the background.
+  run      Build source and run the complete portal stack in the foreground.
+  down     Stop the complete portal stack.
+  logs     Follow logs from every portal service.
+  status   Show status for every portal service.
+  build    Build every portal service image from source.
+  config   Render and validate the composed deployment configuration.
+  sync     Fetch every configured child repo and create local tracking branches.
+  lock     Update repos.lock to the configured default branch of every child repo.
+  verify   Validate the workspace manifest, source contracts and Compose config.
+  smoke    Build, start, probe and tear down an isolated local portal stack.
+EOF
+}
+
+require_docker_cli() {
+  if ! command -v docker >/dev/null 2>&1; then
+    printf 'Docker CLI is required but was not found in PATH.\n' >&2
+    exit 1
+  fi
+}
+
+require_docker_access() {
+  require_docker_cli
+  if ! docker info >/dev/null 2>&1; then
+    printf 'Cannot access the Docker daemon. Run with sudo or configure Docker group access for this user.\n' >&2
+    exit 1
+  fi
+}
+
+command="${1:-help}"
+if [[ $# -gt 0 ]]; then
+  shift
+fi
+
+case "${command}" in
+  up)
+    require_docker_access
+    exec "${COMPOSE[@]}" up --detach --build "$@"
+    ;;
+  run)
+    require_docker_access
+    exec "${COMPOSE[@]}" up --build "$@"
+    ;;
+  down)
+    require_docker_access
+    exec "${COMPOSE[@]}" down "$@"
+    ;;
+  logs)
+    require_docker_access
+    exec "${COMPOSE[@]}" logs --follow "$@"
+    ;;
+  status)
+    require_docker_access
+    exec "${COMPOSE[@]}" ps "$@"
+    ;;
+  build)
+    require_docker_access
+    exec "${COMPOSE[@]}" build "$@"
+    ;;
+  config)
+    require_docker_cli
+    exec "${COMPOSE[@]}" config "$@"
+    ;;
+  sync)
+    exec "${ROOT_DIR}/scripts/sync-repos.sh" "$@"
+    ;;
+  lock)
+    exec "${ROOT_DIR}/scripts/sync-repos.sh" --update-lock "$@"
+    ;;
+  verify)
+    exec "${ROOT_DIR}/scripts/verify-workspace.sh" "$@"
+    ;;
+  smoke)
+    require_docker_access
+    exec "${ROOT_DIR}/scripts/smoke-stack.sh" "$@"
+    ;;
+  help|-h|--help)
+    usage
+    ;;
+  *)
+    printf 'Unknown command: %s\n\n' "${command}" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
