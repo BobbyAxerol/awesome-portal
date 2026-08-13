@@ -2,3 +2,4 @@
 # Regenerate after intentionally selecting a new child-repository revision:
 #   ./scripts/portal lock
 quantbt-portal|580958837622b459cc2d58a9644c49ced78d2698
+manager-portal|69aad1f12ffc9675e7edcc1c79a8240a88921868

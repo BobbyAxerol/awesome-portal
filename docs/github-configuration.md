@@ -42,8 +42,8 @@ The `Deploy Portal stack` workflow is intentionally manual and never deploys on
 every push. It requires an already prepared host and uses the immutable image
 tag selected at dispatch time.
 
-## Child repositories
+## Tracked source repositories
 
-Each child repository should retain its own branch protection, Dependabot and
-application-level CI. Parent CI protects only the cross-repository composition
-recorded in `repos.lock`.
+Each tracked source repository should retain its own branch protection,
+Dependabot and application-level CI. Parent CI protects only the
+cross-repository composition recorded in `repos.lock`.

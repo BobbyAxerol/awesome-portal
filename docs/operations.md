@@ -10,7 +10,9 @@
 ./scripts/portal logs
 ```
 
-The expected public health endpoint is `http://localhost:8080/api/health`.
+The expected public health endpoint is `http://localhost:8080/api/health`; the
+embedded Migration Tracker is available at `http://localhost:8080/migration/`
+from the same web service.
 Use `./scripts/portal down` to stop the local stack. `./scripts/portal smoke`
 uses a separate Compose project and port, verifies the web/API path, then tears
 that isolated stack down.

@@ -65,10 +65,19 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: apps/quantbt-portal/frontend/package-lock.json
+          cache-dependency-path: |
+            apps/quantbt-portal/frontend/package-lock.json
+            features/manager-portal/frontend/package-lock.json
 
       - name: Test and build QuantBT Portal frontend
         working-directory: apps/quantbt-portal/frontend
+        run: |
+          npm ci
+          npm test
+          npm run build
+
+      - name: Test and build embedded Migration Tracker
+        working-directory: features/manager-portal/frontend
         run: |
           npm ci
           npm test

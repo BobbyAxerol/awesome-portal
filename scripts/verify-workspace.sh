@@ -12,7 +12,7 @@ Usage: ./scripts/verify-workspace.sh [--require-sources]
 
 Checks parent-repository contracts, manifest/lock consistency, shell syntax and
 the rendered Docker Compose configuration. --require-sources additionally
-requires every configured child repository to exist and contain its locked
+requires every configured tracked repository to exist and contain its locked
 revision; CI uses this mode after ./scripts/portal sync --locked.
 EOF
 }
@@ -72,12 +72,19 @@ locked_revision() {
 }
 
 seen_names="|"
-while IFS='|' read -r name relative_path remote_url default_branch extra; do
+while IFS='|' read -r name relative_path remote_url tracked_branch role extra; do
   [[ -z "${name}" || "${name}" == \#* ]] && continue
-  [[ -n "${relative_path}" && -n "${remote_url}" && -n "${default_branch}" && -z "${extra}" ]] || {
+  [[ -n "${relative_path}" && -n "${remote_url}" && -n "${tracked_branch}" && -n "${role}" && -z "${extra}" ]] || {
     printf 'Invalid manifest row for %s\n' "${name}" >&2
     exit 1
   }
+  case "${role}" in
+    service|embedded-feature) ;;
+    *)
+      printf 'Invalid repository role for %s: %s\n' "${name}" "${role}" >&2
+      exit 1
+      ;;
+  esac
   [[ "${seen_names}" != *"|${name}|"* ]] || {
     printf 'Duplicate repository name in manifest: %s\n' "${name}" >&2
     exit 1

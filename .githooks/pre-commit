@@ -18,13 +18,13 @@ git diff --cached --check
 # source would turn the parent into an accidental monorepo snapshot.
 while IFS= read -r staged_path; do
   case "${staged_path}" in
-    apps/.gitkeep)
+    apps/.gitkeep|features/.gitkeep)
       ;;
     *.env.example|*.env.*.example)
       # Versioned templates are safe; actual environment files remain blocked.
       ;;
-    apps/*)
-      printf 'Refusing to stage child-repository content in the parent: %s\n' "${staged_path}" >&2
+    apps/*|features/*)
+      printf 'Refusing to stage independently tracked source in the parent: %s\n' "${staged_path}" >&2
       printf 'Commit it inside its own repository and update repos.lock instead.\n' >&2
       exit 1
       ;;

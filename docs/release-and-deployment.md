@@ -2,8 +2,8 @@
 
 ## Release a composed Portal version
 
-1. Finish, test and push changes in the relevant child repository.
-2. In this workspace, fetch the child repositories and advance the lock:
+1. Finish, test and push changes in the relevant source repository.
+2. In this workspace, fetch the tracked source repositories and advance the lock:
 
    ```bash
    ./scripts/portal sync
@@ -18,8 +18,10 @@
    the locked source and publishes immutable `sha-<parent-commit>` image tags
    to GHCR. A Git tag beginning with `v` also receives a release tag.
 
-The source of a child repository is not copied into parent Git history. A
-parent commit plus `repos.lock` is the reproducible release definition.
+The source of a tracked repository is not copied into parent Git history. A
+parent commit plus `repos.lock` is the reproducible release definition. The
+Migration Tracker is compiled into the existing web image, so releasing it does
+not require a separate production service.
 
 ## Prepare a deployment host
 

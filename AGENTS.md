@@ -1,15 +1,17 @@
 # Portal Workspace Agent Rules
 
-This is an **integration repository, not a monorepo**. Each app under `apps/` is
-an independent Git repository with its own history, CI and review. The parent
-owns only the integration contract: `repos.conf` (catalog) + `repos.lock`
-(pinned child commits) + `compose.yaml` + deploy definitions.
+This is an **integration repository, not a monorepo**. Deployable apps under
+`apps/` and embedded sources under `features/` are independent Git repositories
+with their own history, CI and review. The parent owns only the integration
+contract: `repos.conf` (catalog) + `repos.lock` (pinned source commits) +
+`compose.yaml` + deploy definitions.
 
-## Golden rule: never commit child-repo content here
+## Golden rule: never commit independently tracked source here
 
-`apps/*` is git-ignored; the pre-commit hook rejects staging child content.
-To promote child work: commit and push in the child repo, then run
-`./scripts/portal lock` and commit the `repos.lock` diff in the parent.
+`apps/*` and `features/*` are git-ignored; the pre-commit hook rejects staging
+their content. To promote source work: commit and push in that source repo,
+then run `./scripts/portal lock` and commit the `repos.lock` diff in the
+parent.
 Run `./scripts/install-git-hooks.sh` once to enable parent hooks.
 
 ## Branch model (required)
@@ -23,28 +25,30 @@ Run `./scripts/install-git-hooks.sh` once to enable parent hooks.
 - Merge feature branches into `dev` through review and passing CI. Promote
   `dev` to `main` only when the composed stack is stable and release-ready.
 - Do not force-push, rewrite shared branch history, bypass hooks, or merge an
-  unreviewed child-repository revision into `repos.lock`.
+  unreviewed tracked-source revision into `repos.lock`.
 - Commit every completed, coherent change immediately after its relevant
   validation passes. Keep commits small and single-purpose with a descriptive
   message; never leave unrelated finished work uncommitted or bundle it into a
-  later change. Commit child-repository work in that child first, then commit
-  the resulting parent `repos.lock` promotion separately.
+  later change. Commit source-repository work in that source first, then
+  commit the resulting parent `repos.lock` promotion separately.
 - The parent pre-commit hook blocks direct commits on an existing `main` branch.
   GitHub branch protection is the server-side backstop; configure it for both
   `main` and `dev` before allowing collaborators to push.
 
-## Child repositories
+## Tracked source repositories
 
 - `./scripts/portal sync` fetches and updates tracking branches, does **not**
   switch branches or touch the worktree.
-- `./scripts/portal sync --locked` detaches child worktrees at `repos.lock`
-  (CI uses this; rejects child worktrees with local changes).
-- `./scripts/portal lock` rewrites `repos.lock` to fetched default branches —
+- `./scripts/portal sync --locked` detaches tracked worktrees at `repos.lock`
+  (CI uses this; it can replace a developer checkout, so do not run it over
+  unpublished work).
+- `./scripts/portal lock` rewrites `repos.lock` to configured tracked branches —
   review the diff before committing.
-- Adding a sub-portal: add to `repos.conf` + `repos.lock`, Dockerfile + service
-  in `compose.yaml`, image-only service in `deploy/compose.production.yaml`,
-  health endpoint, and extend `scripts/verify-workspace.sh`. See
-  `docs/architecture.md`.
+- A `service` source gets a Dockerfile + Compose service, image-only production
+  service, health endpoint and ingress route. An `embedded-feature` source is
+  compiled into an existing public service and must not add a standalone
+  container merely to display its UI. Both roles require a source test/build,
+  a lock, and documentation. See `docs/architecture.md`.
 
 ## Commands
 
@@ -61,7 +65,7 @@ cp .env.example .env
   docker group). `config` and `verify` only need the CLI.
 - `verify` checks manifest/lock consistency, shell syntax, the
   `strategy/PROTECTED_SHA256` contract and rendered Compose config.
-  `verify --require-sources` additionally checks child repos exist at the
+  `verify --require-sources` additionally checks tracked repos exist at the
   locked revision (CI mode).
 - `docker compose` commands must use `--project-directory <repo>` and
   `-f compose.yaml`; the scripts do this for you.
@@ -77,8 +81,9 @@ cp .env.example .env
 ## Verification for edits
 
 CI gate (`ci.yml`) for reference: `sync --locked` -> `verify --require-sources`
--> actionlint -> backend pytest (py3.12) -> frontend `npm ci && npm test &&
-npm run build` -> `portal smoke`. Run `./scripts/portal verify` before
+-> actionlint -> service backend pytest (py3.12) -> service and embedded
+frontend `npm ci && npm test && npm run build` -> `portal smoke`. Run
+`./scripts/portal verify` before
 committing; the pre-commit hook does this too.
 
 For any parent-repository change, work from a branch created from `dev`, run
@@ -86,9 +91,12 @@ the relevant checks, and open a PR back to `dev`. A stable integration PR then
 promotes `dev` to `main`; do not make ad-hoc edits directly on either release
 baseline.
 
-## Child app context
+## Current source context
 
-The child repo has its own `apps/quantbt-portal/AGENTS.md` with authoritative
+The service repo has its own `apps/quantbt-portal/AGENTS.md` with authoritative
 setup, test commands (`./scripts/test_backend.sh` sets PYTHONPATH itself), the
 protected `strategy/main.py` kernel rules, and domain/architecture contracts.
-Read it before touching anything under `apps/`.
+Read it before touching anything under `apps/`. The embedded Manager Portal
+source at `features/manager-portal` is a Migration Tracker UI mounted at
+`/migration/` within the existing web service; its local-first board and
+roadmap are not a new runtime control plane.

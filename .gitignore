@@ -36,6 +36,11 @@
 /apps/*
 !/apps/.gitkeep
 
+# Embedded feature sources are independently versioned too. They are mounted
+# into the Docker build context but never copied into this parent Git history.
+/features/*
+!/features/.gitkeep
+
 # Python
 **/.venv/
 **/venv/
