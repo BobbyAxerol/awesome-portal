@@ -22,24 +22,12 @@
 /data/
 /logs/
 /backups/
-.repos.lock.*
 *.log
 *.pid
 *.seed
 *.sqlite
 *.sqlite3
 *.db
-
-# Child applications are independent Git repositories. Their source, history,
-# branch policy and CI remain in their own repositories; only this placeholder
-# belongs to the parent integration repository.
-/apps/*
-!/apps/.gitkeep
-
-# Embedded feature sources are independently versioned too. They are mounted
-# into the Docker build context but never copied into this parent Git history.
-/features/*
-!/features/.gitkeep
 
 # Python
 **/.venv/

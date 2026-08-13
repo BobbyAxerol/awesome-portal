@@ -14,19 +14,12 @@ fi
 
 git diff --cached --check
 
-# Child repositories must stay independently versioned. A forced add of their
-# source would turn the parent into an accidental monorepo snapshot.
+# Portal is a monorepo. Source in apps/ and features/ is deliberately tracked
+# here, while secrets and generated runtime output remain blocked below.
 while IFS= read -r staged_path; do
   case "${staged_path}" in
-    apps/.gitkeep|features/.gitkeep)
-      ;;
     *.env.example|*.env.*.example)
       # Versioned templates are safe; actual environment files remain blocked.
-      ;;
-    apps/*|features/*)
-      printf 'Refusing to stage independently tracked source in the parent: %s\n' "${staged_path}" >&2
-      printf 'Commit it inside its own repository and update repos.lock instead.\n' >&2
-      exit 1
       ;;
     .env|.env.*|*.env|*.pem|*.key|*.p12|*.pfx|*.age|secrets/*|credentials/*)
       printf 'Refusing to stage a likely secret or local environment file: %s\n' "${staged_path}" >&2
