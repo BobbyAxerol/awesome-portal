@@ -86,6 +86,7 @@ jobs:
         working-directory: features/roadmap-task-board/frontend
         run: |
           npm ci
+          npm audit --package-lock-only --audit-level=moderate
           npm test
           npm run build
 
