@@ -1,0 +1,452 @@
+/* Phase 3 domain surfaces. Components use Fund Paper tokens only. */
+.feature-surface {
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+.feature-header,
+.feature-context-bar,
+.feature-toolbar,
+.feature-actions,
+.modal-actions,
+.roadmap-outcome > div,
+.sync-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feature-header {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.feature-header h1 {
+  margin: 2px 0 6px;
+  font-size: 28px;
+}
+
+.feature-header p:not(.mono-label),
+.feature-card-note,
+.task-depends,
+.roadmap-label span,
+.roadmap-outcome p,
+.interpretation-card p,
+.feature-context-bar,
+.search-empty {
+  color: var(--ink-soft);
+}
+
+.feature-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.file-button {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.file-button input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.feature-toolbar {
+  flex-wrap: wrap;
+  padding: 12px;
+  margin-bottom: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper-raised);
+  box-shadow: var(--shadow);
+}
+
+.sync-notice {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  margin: -4px 0 16px;
+  padding: 9px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--paper-sunken);
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.sync-notice button {
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  padding: 0;
+  color: var(--accent);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.sync-notice-error {
+  border-color: var(--bad);
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+
+.activity-timeline-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.activity-timeline {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--paper-raised);
+}
+
+.activity-entry {
+  display: grid;
+  gap: 3px;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.activity-entry:last-child {
+  border-bottom: 0;
+}
+
+.activity-entry > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.activity-entry strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.activity-entry span,
+.activity-entry p {
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.activity-entry p {
+  color: var(--ink-soft);
+}
+
+.feature-toolbar .input {
+  min-width: min(260px, 100%);
+  flex: 1 1 260px;
+}
+
+.feature-toolbar select,
+.feature-field select,
+.feature-field textarea,
+.feature-field .input {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper-raised);
+  color: var(--ink);
+  padding: 6px 10px;
+  font: inherit;
+}
+
+.feature-toolbar select {
+  width: auto;
+  min-width: 132px;
+  font-size: 12px;
+}
+
+.phase3-kanban {
+  min-height: 560px;
+}
+
+.phase3-task-card {
+  outline: none;
+}
+
+.phase3-task-card:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow);
+}
+
+.task-id {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+}
+
+.task-title {
+  margin: 4px 18px 8px 0;
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.feature-card-note,
+.task-depends {
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.task-depends {
+  font-family: var(--font-mono);
+}
+
+.table-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.table-actions button,
+.roadmap-outcome button {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+
+.danger-text {
+  color: var(--bad) !important;
+}
+
+.feature-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.feature-field {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.feature-field > span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+}
+
+.feature-field-help {
+  color: var(--ink-faint);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.feature-field-wide {
+  grid-column: 1 / -1;
+}
+
+.feature-field textarea {
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.modal-actions {
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.modal-actions > span {
+  flex: 1;
+}
+
+.phase3-roadmap-card {
+  padding: 0;
+  overflow: auto;
+}
+
+.roadmap-week-header,
+.phase3-roadmap-row {
+  display: grid;
+  grid-template-columns: 230px minmax(720px, 1fr) 260px;
+  gap: 14px;
+  min-width: 1240px;
+}
+
+.roadmap-week-header {
+  align-items: end;
+  padding: 16px 16px 8px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+}
+
+.roadmap-week-header > div,
+.phase3-roadmap-track {
+  display: grid;
+  grid-template-columns: repeat(24, minmax(24px, 1fr));
+}
+
+.roadmap-week-header > div span {
+  border-left: 1px solid var(--line-soft);
+  text-align: center;
+}
+
+.phase3-roadmap-row {
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.phase3-roadmap-row:last-child {
+  border-bottom: 0;
+}
+
+.roadmap-label {
+  display: grid;
+  gap: 3px;
+}
+
+.roadmap-label strong {
+  font-size: 13px;
+}
+
+.roadmap-label span,
+.roadmap-outcome p {
+  font-size: 12px;
+}
+
+.phase3-roadmap-track {
+  min-height: 32px;
+  align-items: center;
+  background-image: linear-gradient(to right, var(--line-soft) 1px, transparent 1px);
+  background-size: calc(100% / 24) 100%;
+}
+
+.phase3-roadmap-bar {
+  min-width: 0;
+  border-radius: 6px;
+  padding: 5px 8px;
+  color: var(--paper-raised);
+  background: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.phase-tone-teal,
+.phase-tone-cyan {
+  background: var(--good);
+}
+
+.phase-tone-purple,
+.phase-tone-indigo,
+.phase-tone-orange {
+  background: var(--accent-2);
+}
+
+.phase-tone-red {
+  background: var(--bad);
+}
+
+.roadmap-outcome {
+  display: grid;
+  gap: 8px;
+}
+
+.roadmap-outcome > div {
+  flex-wrap: wrap;
+}
+
+.feature-context-bar {
+  justify-content: space-between;
+  margin: 0 auto;
+  padding: 10px 14px;
+  max-width: 1424px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper-raised);
+  font-size: 12px;
+}
+
+.raw-view-feature {
+  min-width: 0;
+}
+
+.interpretation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.interpretation-card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 18px;
+}
+
+.interpretation-card h3 {
+  font-size: 18px;
+}
+
+.feature-loading {
+  padding: 32px;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+}
+
+@media (max-width: 900px) {
+  .feature-header {
+    display: grid;
+  }
+
+  .feature-actions {
+    justify-content: flex-start;
+  }
+
+  .interpretation-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .feature-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .feature-field-wide {
+    grid-column: auto;
+  }
+
+  .feature-context-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .activity-timeline-actions,
+  .activity-entry > div {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

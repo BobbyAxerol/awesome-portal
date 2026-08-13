@@ -1,0 +1,383 @@
+/* Shell: topbar, sidebar, workspace, view panels. */
+@import "./base.css";
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Topbar ---------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter: blur(8px);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+}
+.brand-mark svg {
+  width: 22px;
+  height: 22px;
+}
+.brand-name {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.brand-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+}
+
+.top-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.icon-btn:hover {
+  background: var(--paper-sunken);
+  color: var(--ink);
+}
+.menu-btn {
+  display: none;
+}
+
+.sync-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+.sync-badge.on {
+  color: var(--good);
+  border-color: var(--good);
+  background: var(--good-bg);
+}
+
+/* ---------- Workspace ---------- */
+.workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Sidebar (docs navigation) */
+.sidebar {
+  position: sticky;
+  top: var(--topbar-h);
+  align-self: flex-start;
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  height: calc(100vh - var(--topbar-h));
+  overflow-y: auto;
+  border-right: 1px solid var(--line);
+  background: var(--paper);
+  padding: 12px 10px 40px;
+}
+.side-group-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  padding: 14px 8px 6px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  padding: 7px 9px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.nav-item:hover {
+  background: var(--paper-sunken);
+  color: var(--ink);
+}
+.nav-item.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+.nav-icon {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  flex-shrink: 0;
+  color: var(--ink-faint);
+}
+.nav-item.active .nav-icon {
+  color: var(--accent);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: 24px 32px 80px;
+  max-width: var(--content-max);
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
+/* ---------- View panels ---------- */
+.view-panel {
+  display: none;
+}
+.view-panel.active {
+  display: block;
+}
+
+/* Doc layout inside content */
+.doc-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--rail-w);
+  gap: 28px;
+  align-items: start;
+}
+.doc-main {
+  min-width: 0;
+}
+.toc-rail {
+  position: sticky;
+  top: calc(var(--topbar-h) + 16px);
+  border-left: 1px solid var(--line);
+  padding-left: 14px;
+  max-height: calc(100vh - var(--topbar-h) - 40px);
+  overflow-y: auto;
+}
+.toc-link {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-soft);
+  padding: 3px 0;
+  border-left: 2px solid transparent;
+  padding-left: 8px;
+  margin-left: -15px;
+}
+.toc-link:hover {
+  color: var(--ink);
+  text-decoration: none;
+}
+.toc-link.active {
+  color: var(--accent);
+  border-left-color: var(--accent);
+}
+
+.context-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1024px) {
+  .doc-layout {
+    grid-template-columns: 1fr;
+  }
+  .toc-rail {
+    display: none;
+  }
+}
+
+@media (max-width: 820px) {
+  .sidebar {
+    position: fixed;
+    top: var(--topbar-h);
+    left: 0;
+    z-index: 40;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: var(--shadow-raised);
+    background: var(--paper-raised);
+  }
+  .sidebar.sidebar-open {
+    transform: translateX(0);
+  }
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: var(--topbar-h) 0 0;
+    z-index: 35;
+    border: 0;
+    background: color-mix(in srgb, var(--ink) 24%, transparent);
+  }
+  .menu-btn {
+    display: grid;
+  }
+  .content {
+    padding: 16px 16px 64px;
+  }
+  .brand-tag,
+  .brand-name {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .top-tabs {
+    gap: 0;
+    overflow-x: auto;
+  }
+  .sync-badge {
+    display: none;
+  }
+}
+/* Docs layout extras */
+.doc-article {
+  max-width: var(--content-max);
+}
+.doc-article h1 {
+  font-family: var(--font-display);
+  font-size: 30px;
+  letter-spacing: -0.01em;
+  margin: 0 0 14px;
+}
+.doc-article h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  margin: 28px 0 10px;
+}
+.doc-article h3 {
+  font-size: 16px;
+  margin: 20px 0 8px;
+}
+.doc-article p,
+.doc-article li {
+  line-height: 1.62;
+  color: var(--ink-soft);
+}
+.doc-article ul,
+.doc-article ol {
+  padding-left: 22px;
+}
+.doc-article a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.doc-article a:hover {
+  text-decoration: underline;
+}
+
+/* Search results overlay */
+.search-results {
+  position: absolute;
+  z-index: 800;
+  margin-top: 6px;
+  width: min(560px, calc(100% - 48px));
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow-raised);
+  max-height: 58vh;
+  overflow: auto;
+  padding: 6px;
+}
+.search-result {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 10px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  border-radius: 6px;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.search-result:hover {
+  background: var(--line-soft);
+}
+
+/* TOC rail */
+.toc-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  line-height: 1.45;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.toc-item:hover {
+  color: var(--ink);
+  background: var(--line-soft);
+}
+.toc-l2 {
+  padding-left: 16px;
+}
+.toc-l3 {
+  padding-left: 24px;
+  font-size: 12px;
+}
+
+/* Legacy view wrapper */
+.legacy-skin .view-panel,
+.legacy-skin > section {
+  display: block;
+}

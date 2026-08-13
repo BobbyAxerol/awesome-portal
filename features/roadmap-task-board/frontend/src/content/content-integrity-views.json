@@ -1,0 +1,36 @@
+{
+  "generated": "2026-08-12T03:06:03.239Z",
+  "source": "legacy/portal.html",
+  "views": [
+    {
+      "id": "view-roadmap",
+      "sha256": "d4101d0bdb68a90774c09450ea772d524e1cb87652b25f11b78cc68e9def975c"
+    },
+    {
+      "id": "view-board",
+      "sha256": "93014943bd9c16372b389ab1cfae7ae77c223f5530c3c1a4427a78e230bf46da"
+    },
+    {
+      "id": "view-reports",
+      "sha256": "3afa2f02d74eb7d51bfa62eb527db0c2b70b3a7262fe6d6cef2cbc15856c1cf3"
+    },
+    {
+      "id": "view-evidence",
+      "sha256": "28f61e075e994c23d80aaf88bf550fe16bd1d5e253f9578dbc4ed9b900502c86"
+    },
+    {
+      "id": "view-portal",
+      "sha256": "5a8d61ad45115891e93516c50536703be754c99f4327a519daa5361221d1cb52"
+    }
+  ],
+  "seed": {
+    "BASE_TASKS": {
+      "sha256": "8a9887f427e4ebe19cba720c1d4c42b9fdda257cd73faaa46099265fcd96e27f",
+      "count": 36
+    },
+    "ROADMAP_PHASES": {
+      "sha256": "9fa6e8724adbc6f69840f22c0cfcf96abc0aae3071babda744697cde8fbbf4ee",
+      "count": 6
+    }
+  }
+}
