@@ -152,10 +152,7 @@ class AdvancedWalkForwardRunner:
         )
         fields = _config_fields(config)
         self._gateway.validate_advanced_walkforward(config_fields=fields)
-
-        from quantbt.walkforward import WalkForwardConfig
-
-        wf_config = WalkForwardConfig(**fields)
+        wf_config = self._gateway.build_advanced_walkforward_config(config_fields=fields)
 
         fixed_params = None
         if config.optimization_mode == OptimizationMode.NONE:

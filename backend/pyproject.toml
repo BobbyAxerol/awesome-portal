@@ -16,7 +16,7 @@ dependencies = [
   "pandas>=2.2,<3",
   "pyarrow>=18,<25",
   "pydantic>=2.10,<3",
-  "quantbt-engine>=1.0.7,<2",
+  "quantbt-engine[optimization]==1.0.8",
   "uvicorn>=0.34,<1",
 ]
 

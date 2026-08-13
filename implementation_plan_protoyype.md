@@ -32,7 +32,9 @@ cho sizing, accounting, WFO selection va metrics.
 
 Trong toan bo task portal:
 
-- `/root/bobby/pool_alpha/quantbt` la protected read-only dependency;
+- QuantBT la dependency PyPI read-only, duoc pin tai
+  `backend/pyproject.toml` voi `quantbt-engine==1.0.8`;
+- khong dung local source checkout hoac `sys.path` de nap QuantBT;
 - khong sua, commit, format, generate file hoac thay dependency cua QuantBT;
 - portal chi duoc dung public API da ton tai cua package;
 - neu gap limitation can sua QuantBT, ghi thanh integration gap va dung lai;
@@ -93,7 +95,6 @@ Day la mot diem tot: structural thesis khong bi lap lai trong Optuna search.
 `quantbt_kernel_wrapper/wrapper.py` hien la notebook code duoc paste vao module,
 chua phai service. Cac blocker:
 
-- absolute `sys.path.append`;
 - import `QuantBTEndpoint` lap lai;
 - tham chieu global `data_eth`, `param_ranges`, `generate_delta_rsi_signals`;
 - chay WFO ngay khi import module;

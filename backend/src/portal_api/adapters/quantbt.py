@@ -1,27 +1,68 @@
 from __future__ import annotations
 
 import importlib
+from importlib import metadata
+from pathlib import Path
 from typing import Any, Mapping
 
 import pandas as pd
 
 
+QUANTBT_DISTRIBUTION = "quantbt-engine"
+QUANTBT_ENGINE_VERSION = "1.0.8"
+
+
 class QuantBTGateway:
-    """Lazy public-API boundary; no QuantBT import occurs at module import time."""
+    """Lazy boundary for the pinned QuantBT package installed from PyPI.
+
+    The importable module is named ``quantbt`` while its PyPI distribution is
+    ``quantbt-engine``. Dependency resolution belongs to ``pyproject.toml``;
+    this gateway deliberately never adds a source checkout to ``sys.path``.
+    """
 
     @staticmethod
     def _module():
-        module = importlib.import_module("quantbt")
+        try:
+            distribution = metadata.distribution(QUANTBT_DISTRIBUTION)
+        except metadata.PackageNotFoundError as exc:
+            raise RuntimeError(
+                f"QuantBT is unavailable. Install {QUANTBT_DISTRIBUTION}=={QUANTBT_ENGINE_VERSION} "
+                "from PyPI through the backend project dependencies."
+            ) from exc
+        installed_version = distribution.version
+        if installed_version != QUANTBT_ENGINE_VERSION:
+            raise RuntimeError(
+                f"Unsupported {QUANTBT_DISTRIBUTION} version {installed_version!r}; "
+                f"expected {QUANTBT_ENGINE_VERSION!r}."
+            )
+        try:
+            module = importlib.import_module("quantbt")
+        except ModuleNotFoundError as exc:
+            if exc.name != "quantbt":
+                raise
+            raise RuntimeError(
+                f"{QUANTBT_DISTRIBUTION}=={QUANTBT_ENGINE_VERSION} is installed but does not "
+                "provide the expected quantbt package."
+            ) from exc
         if not hasattr(module, "QuantBTEndpoint"):
             raise RuntimeError(
-                "QuantBT public package is unavailable. Install quantbt-engine or set "
-                "PYTHONPATH to the repository src directory."
+                f"{QUANTBT_DISTRIBUTION}=={QUANTBT_ENGINE_VERSION} does not expose "
+                "the expected QuantBT public API."
+            )
+
+        expected_package_root = Path(distribution.locate_file("quantbt")).resolve()
+        module_file = getattr(module, "__file__", None)
+        if module_file is None or not Path(module_file).resolve().is_relative_to(expected_package_root):
+            raise RuntimeError(
+                "QuantBT import is shadowed by a local module. Expected the package installed "
+                f"by {QUANTBT_DISTRIBUTION}=={QUANTBT_ENGINE_VERSION} under "
+                f"{expected_package_root}."
             )
         return module
 
     def version(self) -> str:
-        module = self._module()
-        return str(getattr(module, "__version__", "unknown"))
+        self._module()
+        return metadata.version(QUANTBT_DISTRIBUTION)
 
     def walkforward_capabilities(self) -> list[dict[str, Any]]:
         matrix = self._module().walkforward_support_matrix()
@@ -96,12 +137,19 @@ class QuantBTGateway:
 
     # --- Phase P3 advanced walk-forward (plan §10.10, §8) --------------------
 
-    def validate_advanced_walkforward(self, *, config_fields: Mapping[str, object]) -> None:
-        """Instantiate the public WalkForwardConfig to fail fast on invalid
-        mode/schedule combinations before any run is started."""
-        from quantbt.walkforward import WalkForwardConfig
+    def build_advanced_walkforward_config(self, *, config_fields: Mapping[str, object]) -> Any:
+        """Build the pinned package's public WalkForwardConfig.
 
-        WalkForwardConfig(**dict(config_fields))
+        Keeping this import in the gateway ensures advanced WFO follows the
+        same PyPI-only dependency boundary as the remaining QuantBT hot path.
+        """
+        self._module()
+        walkforward_module = importlib.import_module("quantbt.walkforward")
+        return walkforward_module.WalkForwardConfig(**dict(config_fields))
+
+    def validate_advanced_walkforward(self, *, config_fields: Mapping[str, object]) -> None:
+        """Fail fast on invalid public WalkForwardConfig combinations."""
+        self.build_advanced_walkforward_config(config_fields=config_fields)
 
     def run_advanced_walkforward(
         self,

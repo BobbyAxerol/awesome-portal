@@ -18,14 +18,22 @@ domain protocol, architecture, UI specification and phase gates.
 
 ## Backend Development
 
-The scripts reuse the parent Pool Alpha environment and prefer the sibling
-QuantBT `src/` tree for local research. Set `QUANTBT_SOURCE_PATH` to override it;
-an installed `quantbt-engine` package is used when no local source tree exists.
+The backend uses the published `quantbt-engine==1.0.8` package from PyPI with
+its `optimization` extra; it does not require a sibling QuantBT source checkout.
+For the integrated deployment, run `../../scripts/portal up` from the parent
+workspace rather than starting the frontend and backend separately.
 
 ```bash
 ./scripts/test_backend.sh
+./scripts/smoke_quantbt_pypi.sh  # synthetic data; no market-data service needed
 ./scripts/run_backend.sh
 ```
+
+`smoke_quantbt_pypi.sh` confirms that the imported `quantbt` package belongs to
+the installed PyPI distribution, then runs the deterministic fixture through
+three-window, Advanced Walk-Forward, API and artifact use cases. It is the
+pre-server-migration compatibility gate; it does not replace a later web UI run
+with real market data.
 
 The API binds to `127.0.0.1:8000` by default. OpenAPI is available at
 `http://127.0.0.1:8000/api/docs`.
@@ -105,7 +113,7 @@ futures symbol and target timeframe, then delegates to the canonical
 market files or expose their server-side location.
 
 ```bash
-PYTHONPATH=backend/src:. ../.venv/bin/python \
+PYTHONPATH=backend/src:. .venv/bin/python \
   scripts/smoke_crypto_market_data.py --symbol ETHUSDT --timeframe 1h
 ```
 

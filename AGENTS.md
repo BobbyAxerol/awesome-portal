@@ -2,8 +2,10 @@
 
 ## Scope
 
-- Work only inside `/root/bobby/pool_alpha/backtest_portal_prototype`.
-- `/root/bobby/pool_alpha/quantbt` is a read-only dependency for this project.
+- Work only inside this repository or the parent `/home/bobby/portal` workspace
+  when changing its integration/deployment layer.
+- QuantBT is supplied by the published `quantbt-engine==1.0.8` package. No
+  sibling QuantBT source checkout is part of this project.
 - `strategy/main.py` is a protected strategy kernel and must never be edited.
 - Preserve `quantbt_kernel_wrapper/wrapper.py` as a legacy reference until the
   replacement backend has passed parity tests.
@@ -12,14 +14,15 @@
 
 - `./scripts/test_backend.sh [pytest args...]` — backend suite; extra args pass
   through to pytest, e.g. `./scripts/test_backend.sh backend/tests/test_contracts.py -k window`.
+- `./scripts/smoke_quantbt_pypi.sh` — deterministic no-data-service gate for
+  the PyPI package: provenance, three-window, Advanced WFO, API and artifacts.
 - `./scripts/run_backend.sh` — uvicorn on `127.0.0.1:${PORTAL_PORT:-8000}`,
   OpenAPI at `/api/docs`.
 - Both scripts set `PYTHONPATH` themselves and use
-  `${POOL_ALPHA_PYTHON:-../.venv/bin/python}`, preferring the sibling
-  `../quantbt/src` tree (override with `QUANTBT_SOURCE_PATH`). Running bare
-  `pytest` or a system python misses this setup — use the scripts.
+  `${POOL_ALPHA_PYTHON:-.venv/bin/python}`. Running bare `pytest` or a system
+  python misses this setup — use the scripts.
 - Real market-data smoke without starting FastAPI:
-  `PYTHONPATH=backend/src:. ../.venv/bin/python scripts/smoke_crypto_market_data.py --symbol ETHUSDT --timeframe 1h`
+  `PYTHONPATH=backend/src:. .venv/bin/python scripts/smoke_crypto_market_data.py --symbol ETHUSDT --timeframe 1h`
 - The suite is fast and self-contained (in-memory/fake market-data providers,
   no external services). Run it before every meaningful commit.
 
@@ -39,8 +42,9 @@
 
 ## Architecture
 
-- Backend-only so far: FastAPI app `portal_api.main:app` under
-  `backend/src/portal_api`; frontend comes later per the plan.
+- FastAPI app `portal_api.main:app` lives under `backend/src/portal_api`; the
+  React/Vite frontend lives under `frontend/`. The parent Portal workspace
+  builds both into a single Compose-managed deployment.
 - Dependency direction: `api -> services -> domain/strategies/adapters/repositories`.
   `domain` imports no FastAPI/QuantBT/strategy code; `QuantBTGateway` is the
   only QuantBT boundary; `strategy/delta_rsi.py` is the only module allowed to
@@ -57,7 +61,9 @@
 ## Git Workflow
 
 - Develop on `dev`; keep `main` as the reviewed release branch.
-- Commit every small, meaningful, tested change.
+- After each small, meaningful change passes its relevant checks, commit it
+  immediately with a clear single-purpose message; do not batch unrelated
+  finished work into a later commit.
 - Never force-push, rewrite history, or merge into `main` without an explicit
   user request.
 - Do not commit market data, run artifacts, credentials, virtual environments,

@@ -1,8 +1,5 @@
-import sys
-sys.path.append('/root/bobby/pool_alpha')
-from quantbt import QuantBTEndpoint
-
-
+# Legacy notebook reference only. QuantBT resolves exclusively from the PyPI
+# dependency declared in backend/pyproject.toml; never add a local source path.
 from quantbt import QuantBTEndpoint, validate_param_ranges, walkforward_support_matrix
 
 import numpy as np

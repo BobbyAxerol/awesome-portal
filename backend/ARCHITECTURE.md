@@ -70,14 +70,20 @@ notebook code in route handlers.
 ./scripts/run_backend.sh
 ```
 
-The scripts reuse the parent Pool Alpha environment and prefer the sibling
-QuantBT `src/` tree. A deployed service uses the declared `quantbt-engine`
-dependency instead.
+The scripts use this application's virtual environment (or an explicitly set
+`POOL_ALPHA_PYTHON`). QuantBT is always supplied by the published
+`quantbt-engine==1.0.8` dependency with its `optimization` extra; the gateway
+verifies that exact installed PyPI distribution at first use, rejects local
+module shadowing, and never adds a sibling source checkout to `sys.path`.
+
+Run `./scripts/smoke_quantbt_pypi.sh` to execute the deterministic fixture gate
+without a market-data service. It covers package provenance plus the public
+three-window and Advanced WFO endpoint paths used by the portal.
 
 To test the real market-data boundary without starting FastAPI:
 
 ```bash
-PYTHONPATH=backend/src:. ../.venv/bin/python \
+PYTHONPATH=backend/src:. .venv/bin/python \
   scripts/smoke_crypto_market_data.py --symbol ETHUSDT --timeframe 1h
 ```
 
