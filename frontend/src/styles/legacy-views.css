@@ -71,7 +71,7 @@ html[data-theme="dark"] .status-banner{background:linear-gradient(90deg,#0c2d4a,
 .doc-page[hidden]{display:block!important}
 .doc-page{page-break-after:always;max-width:none}
 .diagram-card,.code-card,.table-wrap{break-inside:avoid}
-.portal-rail{width:196px;flex:none;background:var(--paper-sunken);color:var(--ink-soft);border-radius:14px;padding:12px 10px;position:sticky;top:calc(var(56px) + 20px);box-shadow:0 6px 22px rgba(1,16,37,.18)}
+.portal-rail{width:196px;flex:none;background:var(--paper-sunken);color:var(--ink-soft);border-radius:14px;padding:12px 10px;position:sticky;top:calc(var(--topbar-h) + 20px);box-shadow:0 6px 22px rgba(1,16,37,.18)}
 .pr-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8c9bab;padding:2px 12px 9px;font-weight:750}
 .pr-item{display:flex;width:100%;align-items:center;gap:10px;padding:9px 12px;border:0;border-radius:9px;background:transparent;color:var(--ink-soft);cursor:pointer;font-size:13px;font-weight:600;text-align:left;margin:1px 0;transition:background .15s ease,color .15s ease;font-family:inherit}
 .pr-item:hover{background:var(--line-soft);color:#fff}
