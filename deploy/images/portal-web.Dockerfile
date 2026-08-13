@@ -1,4 +1,4 @@
-FROM node:22-alpine AS portal-build
+FROM node:26-alpine AS portal-build
 
 WORKDIR /opt/portal/frontend
 COPY apps/portal/frontend/package.json apps/portal/frontend/package-lock.json ./
@@ -6,7 +6,7 @@ RUN npm ci
 COPY apps/portal/frontend ./
 RUN npm run build
 
-FROM node:22-alpine AS roadmap-task-board-build
+FROM node:26-alpine AS roadmap-task-board-build
 
 WORKDIR /opt/roadmap-task-board/frontend
 ARG ROADMAP_TASK_BOARD_LOCAL_ONLY=true
