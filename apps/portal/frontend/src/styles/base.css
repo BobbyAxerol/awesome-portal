@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: "Inter", system-ui, sans-serif;
+    letter-spacing: 0;
+  }
+  body {
+    @apply bg-paper text-ink antialiased;
+    font-feature-settings: "cv11", "cv02";
+  }
+  h1, h2, h3, h4 {
+    font-family: "Newsreader", Georgia, serif;
+    font-weight: 500;
+  }
+  .mono,
+  table td,
+  table th {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-feature-settings: "tnum" 1;
+  }
+  td.num {
+    text-align: right;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  ::selection {
+    background: var(--accent-2);
+    color: #fff;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .label {
+    @apply mono text-[11px] uppercase text-ink-faint;
+  }
+  .card {
+    @apply bg-raised border border-line rounded-lg shadow-e1;
+  }
+  .kpi-value {
+    @apply mono font-semibold;
+    font-size: 28px;
+    line-height: 36px;
+  }
+  .chip {
+    @apply mono inline-flex items-center gap-1 rounded-full border border-line bg-raised px-2 py-0.5 text-[11px] text-ink-soft;
+  }
+  .badge-pass {
+    @apply mono inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold;
+    background: var(--good-bg);
+    color: var(--good);
+  }
+  .badge-fail {
+    @apply mono inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold;
+    background: var(--bad-bg);
+    color: var(--bad);
+  }
+  .badge-pending {
+    @apply mono inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold;
+    background: var(--accent-2-soft);
+    color: var(--accent-2);
+  }
+  .navtab {
+    @apply mono px-3 py-1.5 text-[12px] uppercase tracking-normal text-ink-soft border-b-2 border-transparent transition-colors duration-200;
+  }
+  .navtab-active {
+    @apply text-ink border-accent;
+  }
+  .navtab:hover {
+    @apply text-ink;
+  }
+  .btn-primary {
+    @apply mono inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-[12px] font-semibold text-white transition-colors duration-200 hover:bg-accent-700 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-ghost {
+    @apply mono inline-flex items-center gap-2 rounded-md border border-line bg-raised px-3 py-1.5 text-[12px] text-ink-soft transition-colors duration-200 hover:border-accent hover:text-ink;
+  }
+  .input {
+    @apply mono rounded-md border border-line bg-raised px-2 py-1.5 text-[12px] text-ink focus:border-accent focus:outline-none;
+  }
+  .section-title {
+    @apply text-[24px] leading-8 text-ink;
+  }
+  .dek {
+    font-family: "Newsreader", Georgia, serif;
+    font-style: italic;
+    @apply text-[15px] leading-6 text-ink-faint;
+  }
+  .mono-label {
+    @apply mono text-[11px] uppercase text-ink-faint;
+  }
+  .seg-legend {
+    @apply mono inline-flex items-center gap-1.5 text-[11px] text-ink-soft;
+  }
+}

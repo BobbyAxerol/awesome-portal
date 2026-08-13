@@ -1,55 +1,88 @@
-# Integration Architecture
+# Portal Architecture
 
-`portal/` is an integration repository, not a monorepo. Each application under
-`apps/` remains an independent Git repository with its own history, branch
-rules, review process and CI. The parent owns only the integration contract:
+`portal/` is a monorepo and one deployable Portal. Source ownership is shared
+at the Git, review, CI and release level; runtime boundaries remain explicit so
+future portal domains can grow without creating a distributed monolith.
 
 ```text
-repos.conf + repos.lock
-          │
-          ├── apps/quantbt-portal (independent source repository)
-          │       ├── quantbt-portal-api
-          │       └── quantbt-portal-web
-          │
-          └── compose.yaml / Dockerfiles / gateway / operational policy
-                         │
-                         └── one deployable Portal stack
+Portal monorepo
+│
+├── apps/portal/                         public Portal shell
+│   ├── frontend/                        React/Vite UI
+│   ├── backend/                         FastAPI API
+│   └── strategy/                        protected QuantBT Research kernel
+│
+├── features/roadmap-task-board/         embedded management feature
+│   ├── frontend/                        compiled at /roadmap-task-board/
+│   └── backend/                         private FastAPI + SQLite service
+│
+├── deploy/                              images, gateway and production Compose
+└── compose.yaml                         one local/CI stack
 ```
 
-## Source and version policy
+## Product and source boundaries
 
-- `repos.conf` is the catalog: name, relative worktree, canonical origin and
-  default branch.
-- `repos.lock` is the deployable bill of materials. It records one immutable
-  commit per child repository.
-- `./scripts/portal sync` fetches remote branches without changing a
-  developer's checked-out child branch.
-- `./scripts/portal sync --locked` checks child repositories out detached at
-  their locked commits. CI uses this mode.
-- `./scripts/portal lock` intentionally advances the bill of materials to the
-  currently fetched default branches. Review its diff in a parent PR.
+`apps/portal/` is intentionally named for the mother Portal, not for one
+research domain. QuantBT Research is its first capability and retains its
+audited API/domain boundaries. New domains should be introduced behind a named
+module boundary, then connected through explicit contracts rather than direct
+cross-domain imports.
 
-The parent `.gitignore` intentionally excludes `apps/*`; never force-add a
-child worktree. To promote child work, commit and push it in that child
-repository first, then update and commit `repos.lock` in this repository.
+Roadmap & Task Board is source-controlled in the same repository but stays an
+embedded feature. It does not become a top-level product surface or a second
+public entry point. Its local-first UI and optional versioned persistence API
+remain scoped to task and roadmap data.
+
+`quantbt-engine==1.0.8` is constrained and installed from PyPI. QuantBT remains
+the source of truth for optimization, accounting and metrics; Portal code must
+not reimplement those calculations.
 
 ## Runtime topology
 
-`compose.yaml` builds checked-out source for local integration and CI smoke
-tests. The React/Nginx service is the single public entry point and proxies
-`/api` to the private FastAPI service. `deploy/compose.production.yaml` is the
-image-only equivalent for a host that pulls images published by CI.
+```text
+browser
+  │
+  ▼
+portal-web (only public service)
+  ├── /                         Portal React application
+  ├── /api/                     ► portal-api:8000
+  ├── /roadmap-task-board/      embedded feature assets
+  └── /roadmap-task-board/api/  ► roadmap-task-board-api:8000/api/
 
-The API has a named artifact volume and receives market-data source through a
-read-only host mount. Market data, credentials and generated artifacts are
-runtime concerns; none belong in source control or the Docker build context.
+portal-api                        roadmap-task-board-api
+  ├── read-only market-data mount  └── named SQLite volume + Discord outbox
+  └── named artifact volume
+```
 
-## Adding a sub-portal
+The web gateway is the only host-bound service. APIs communicate on the private
+`portal` Docker network. Images are built from the same tracked source commit;
+production uses the image-only Compose definition and immutable image tags.
 
-1. Add its independent repository to `repos.conf` and add a resolved commit to
-   `repos.lock`.
-2. Add its source Dockerfile and service in `compose.yaml`.
-3. Add the image-only service to `deploy/compose.production.yaml`.
-4. Give the service a health endpoint and define its ingress/gateway route.
-5. Extend `scripts/verify-workspace.sh`, CI tests and operational docs with its
-   integration contract.
+## Source and release policy
+
+- No nested Git repositories or submodules are permitted below `apps/` or
+  `features/`.
+- Shared root CI, CodeQL, Dependabot and GitHub branch protection govern all
+  source. Nested `.github` automation is not used as a release authority.
+- `dev` is the integration-development branch. Feature branches start from
+  `dev`; `main` is only for reviewed stable releases.
+- Every completed coherent change is validated and committed immediately.
+- Real data, credentials, databases, artifacts, caches and build output remain
+  ignored. The root verification script rejects tracked generated outputs.
+
+## Adding the next domain
+
+1. Place the new source behind a clear application, feature or package boundary
+   in this repository.
+2. Define typed backend and frontend contracts before coupling it to an existing
+   domain.
+3. Add a private service only when it owns an independent runtime/data boundary;
+   otherwise compose it into `portal-api` or `portal-web` deliberately.
+4. Extend Compose, production Compose, gateway, CI, smoke coverage and docs in
+   the same change.
+5. Keep backward-compatible public routes while a feature is being moved into
+   the Portal shell.
+
+The first migration intentionally keeps QuantBT Research and Roadmap services
+modular at runtime. A later, separately reviewed change can extract shared UI,
+contracts and module registries after the domains have stable integration tests.

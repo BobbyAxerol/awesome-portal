@@ -1,0 +1,95 @@
+/* Design tokens — "Fund Paper" (approved in upgrade/KE_HOACH_MIGRATION_5_PHASE.md §2).
+ * Raw hex values belong here ONLY. Components must reference these variables.
+ * Origin: awesome-quant-portal frontend tokens.css + InterpretationBot design language. */
+:root {
+  --paper: #faf9f5;
+  --paper-raised: #ffffff;
+  --paper-sunken: #f4f2ec;
+
+  /* Tinted surfaces (legacy view panels) */
+  --surface-2: #eef3fb;
+  --surface-3: #e3f0ff;
+
+  --ink: #1c2532;
+  --ink-soft: #4e5a6e;
+  --ink-faint: #939db0;
+
+  --line: #e3e0d7;
+  --line-soft: #efede4;
+
+  --accent: #0f4c5c;
+  --accent-soft: #e2edf0;
+
+  --accent-2: #9a6a1f;
+  --accent-2-soft: #f4ecdb;
+
+  --good: #1e7b4f;
+  --good-bg: #e3f1e9;
+  --bad: #b43a3a;
+  --bad-bg: #f7e8e8;
+
+  --shadow: 0 1px 2px rgba(28, 37, 50, 0.05), 0 4px 14px rgba(28, 37, 50, 0.05);
+  --shadow-raised: 0 2px 6px rgba(28, 37, 50, 0.08), 0 10px 30px rgba(28, 37, 50, 0.1);
+
+  /* Typography roles */
+  --font-display: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Structural surfaces */
+  --topbar-h: 56px;
+  --sidebar-w: 280px;
+  --rail-w: 250px;
+  --content-max: 1440px;
+}
+
+:root[data-theme="dark"] {
+  --paper: #141a24;
+  --paper-raised: #182031;
+  --paper-sunken: #10151e;
+
+  --surface-2: #15233d;
+  --surface-3: #0c2d4a;
+
+  --ink: #e6ebf2;
+  --ink-soft: #a9b4c6;
+  --ink-faint: #6b7891;
+
+  --line: #2b3648;
+  --line-soft: #222b3a;
+
+  --accent: #7fc8d8;
+  --accent-soft: #1d3540;
+
+  --accent-2: #d8a94e;
+  --accent-2-soft: #3a2f1b;
+
+  --good: #62c18a;
+  --good-bg: #16301f;
+  --bad: #e07a7a;
+  --bad-bg: #3a1c1c;
+
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.25);
+  --shadow-raised: 0 2px 6px rgba(0, 0, 0, 0.4), 0 12px 34px rgba(0, 0, 0, 0.45);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --paper: #141a24;
+    --paper-raised: #182031;
+    --paper-sunken: #10151e;
+    --ink: #e6ebf2;
+    --ink-soft: #a9b4c6;
+    --ink-faint: #6b7891;
+    --line: #2b3648;
+    --line-soft: #222b3a;
+    --accent: #7fc8d8;
+    --accent-soft: #1d3540;
+    --accent-2: #d8a94e;
+    --accent-2-soft: #3a2f1b;
+    --good: #62c18a;
+    --good-bg: #16301f;
+    --bad: #e07a7a;
+    --bad-bg: #3a1c1c;
+  }
+}

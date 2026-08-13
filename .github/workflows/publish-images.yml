@@ -23,19 +23,10 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: Check out parent workspace
+      - name: Check out Portal source
         uses: actions/checkout@v4
         with:
           persist-credentials: false
-
-      - name: Configure access to child repositories
-        env:
-          PORTAL_REPOS_TOKEN: ${{ secrets.PORTAL_REPOS_TOKEN || github.token }}
-        run: |
-          git config --global url."https://x-access-token:${PORTAL_REPOS_TOKEN}@github.com/".insteadOf "git@github.com:"
-
-      - name: Fetch locked child source
-        run: ./scripts/portal sync --locked
 
       - name: Derive lowercase image prefix
         id: image-prefix
@@ -59,7 +50,7 @@ jobs:
         id: api-meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ steps.image-prefix.outputs.value }}-quantbt-portal-api
+          images: ${{ steps.image-prefix.outputs.value }}-portal-api
           tags: |
             type=raw,value=sha-${{ github.sha }}
             type=ref,event=branch
@@ -70,7 +61,18 @@ jobs:
         id: web-meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ steps.image-prefix.outputs.value }}-quantbt-portal-web
+          images: ${{ steps.image-prefix.outputs.value }}-portal-web
+          tags: |
+            type=raw,value=sha-${{ github.sha }}
+            type=ref,event=branch
+            type=ref,event=tag
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Derive Roadmap & Task Board API image metadata
+        id: roadmap-task-board-api-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image-prefix.outputs.value }}-roadmap-task-board-api
           tags: |
             type=raw,value=sha-${{ github.sha }}
             type=ref,event=branch
@@ -81,23 +83,34 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: deploy/images/quantbt-portal-api.Dockerfile
+          file: deploy/images/portal-api.Dockerfile
           push: true
           tags: ${{ steps.api-meta.outputs.tags }}
           labels: ${{ steps.api-meta.outputs.labels }}
-          cache-from: type=gha,scope=quantbt-portal-api
-          cache-to: type=gha,mode=max,scope=quantbt-portal-api
+          cache-from: type=gha,scope=portal-api
+          cache-to: type=gha,mode=max,scope=portal-api
 
       - name: Build and publish web image
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: deploy/images/quantbt-portal-web.Dockerfile
+          file: deploy/images/portal-web.Dockerfile
           push: true
           tags: ${{ steps.web-meta.outputs.tags }}
           labels: ${{ steps.web-meta.outputs.labels }}
-          cache-from: type=gha,scope=quantbt-portal-web
-          cache-to: type=gha,mode=max,scope=quantbt-portal-web
+          cache-from: type=gha,scope=portal-web
+          cache-to: type=gha,mode=max,scope=portal-web
+
+      - name: Build and publish Roadmap & Task Board API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/images/roadmap-task-board-api.Dockerfile
+          push: true
+          tags: ${{ steps.roadmap-task-board-api-meta.outputs.tags }}
+          labels: ${{ steps.roadmap-task-board-api-meta.outputs.labels }}
+          cache-from: type=gha,scope=roadmap-task-board-api
+          cache-to: type=gha,mode=max,scope=roadmap-task-board-api
 
       - name: Publish deployment environment artifact
         env:

@@ -1,0 +1,27 @@
+/* Design tokens — "Fund Paper" (§27.2 of implementation_plan_protoyype.md).
+ * Components must reference these variables only; raw hex belongs here. */
+:root {
+  --paper: #faf9f5;
+  --paper-raised: #ffffff;
+  --paper-sunken: #f4f2ec;
+  --ink: #1c2532;
+  --ink-soft: #4e5a6e;
+  --ink-faint: #939db0;
+  --line: #e3e0d7;
+  --line-soft: #efede4;
+  --accent: #0f4c5c;
+  --accent-soft: #e2edf0;
+  --accent-2: #9a6a1f;
+  --accent-2-soft: #f4ecdb;
+  --good: #1e7b4f;
+  --good-bg: #e3f1e9;
+  --bad: #b43a3a;
+  --bad-bg: #f7e8e8;
+  --ink-panel: #161e2a;
+  --ink-panel-fg: #c9d4e3;
+
+  /* Window roles — fixed across the whole app (§27.2) */
+  --role-is: #7a8699;
+  --role-oos: #0f4c5c;
+  --role-holdout: #9a6a1f;
+}

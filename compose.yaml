@@ -1,13 +1,13 @@
 name: ${PORTAL_STACK_NAME:-portal}
 
-# This is the integration entry point. Each image is built from the checked-out
-# source under apps/, so `./scripts/portal up` starts one coherent portal stack.
+# This is the Portal monorepo entry point. `./scripts/portal up` builds every
+# tracked module into one coherent stack with one public gateway.
 services:
-  quantbt-portal-api:
+  portal-api:
     build:
       context: .
-      dockerfile: deploy/images/quantbt-portal-api.Dockerfile
-    image: ${PORTAL_IMAGE_PREFIX:-local/portal}-quantbt-portal-api:${PORTAL_IMAGE_TAG:-dev}
+      dockerfile: deploy/images/portal-api.Dockerfile
+    image: ${PORTAL_IMAGE_PREFIX:-local/portal}-portal-api:${PORTAL_IMAGE_TAG:-dev}
     restart: unless-stopped
     environment:
       PORTAL_ARTIFACT_ROOT: /var/lib/portal/artifacts/runs
@@ -31,16 +31,55 @@ services:
       retries: 6
       start_period: 15s
 
-  quantbt-portal-web:
+  # The feature stays embedded in the public web image. This private companion
+  # service owns its SQLite state, audit log and Discord outbox only.
+  roadmap-task-board-api:
     build:
       context: .
-      dockerfile: deploy/images/quantbt-portal-web.Dockerfile
-    image: ${PORTAL_IMAGE_PREFIX:-local/portal}-quantbt-portal-web:${PORTAL_IMAGE_TAG:-dev}
+      dockerfile: deploy/images/roadmap-task-board-api.Dockerfile
+    image: ${PORTAL_IMAGE_PREFIX:-local/portal}-roadmap-task-board-api:${PORTAL_IMAGE_TAG:-dev}
+    restart: unless-stopped
+    environment:
+      PORTAL_ENV: ${ROADMAP_TASK_BOARD_ENV:-development}
+      PORTAL_DATABASE_PATH: /var/lib/roadmap-task-board/portal.db
+      PORTAL_PUBLIC_URL: ${ROADMAP_TASK_BOARD_PUBLIC_URL:-http://localhost:8080/roadmap-task-board}
+      PORTAL_DEFAULT_ACTOR: ${ROADMAP_TASK_BOARD_DEFAULT_ACTOR:-local-user}
+      PORTAL_CORS_ORIGINS: ${ROADMAP_TASK_BOARD_CORS_ORIGINS:-}
+      PORTAL_LOG_LEVEL: ${ROADMAP_TASK_BOARD_LOG_LEVEL:-INFO}
+      DISCORD_WEBHOOK_URL: ${ROADMAP_TASK_BOARD_DISCORD_WEBHOOK_URL:-}
+    volumes:
+      - roadmap-task-board-data:/var/lib/roadmap-task-board
+    expose:
+      - "8000"
+    networks:
+      - portal
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ready', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+  portal-web:
+    build:
+      context: .
+      dockerfile: deploy/images/portal-web.Dockerfile
+      args:
+        ROADMAP_TASK_BOARD_LOCAL_ONLY: ${ROADMAP_TASK_BOARD_LOCAL_ONLY:-true}
+        ROADMAP_TASK_BOARD_PERSISTENCE: ${ROADMAP_TASK_BOARD_PERSISTENCE:-legacy}
+        ROADMAP_TASK_BOARD_API_BASE: ${ROADMAP_TASK_BOARD_API_BASE:-/roadmap-task-board/api}
+    image: ${PORTAL_IMAGE_PREFIX:-local/portal}-portal-web:${PORTAL_IMAGE_TAG:-dev}
     restart: unless-stopped
     ports:
       - "${PORTAL_HTTP_PORT:-8080}:80"
     depends_on:
-      quantbt-portal-api:
+      portal-api:
+        condition: service_healthy
+      roadmap-task-board-api:
         condition: service_healthy
     networks:
       - portal
@@ -57,3 +96,4 @@ networks:
 
 volumes:
   portal-artifacts:
+  roadmap-task-board-data:

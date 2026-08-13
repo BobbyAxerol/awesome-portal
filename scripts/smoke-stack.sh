@@ -23,6 +23,12 @@ export PORTAL_HTTP_PORT="${PORTAL_HTTP_PORT:-18080}"
 export PORTAL_IMAGE_PREFIX="${PORTAL_IMAGE_PREFIX:-local/portal-smoke}"
 export PORTAL_IMAGE_TAG="${PORTAL_IMAGE_TAG:-smoke}"
 export PORTAL_MARKET_DATA_DIR="${PORTAL_MARKET_DATA_DIR:-${ROOT_DIR}/runtime/market-data}"
+# Smoke the audited route deliberately; normal local `up` remains local-first
+# until the release owner performs the documented rollout switch.
+export ROADMAP_TASK_BOARD_LOCAL_ONLY="${ROADMAP_TASK_BOARD_LOCAL_ONLY:-false}"
+export ROADMAP_TASK_BOARD_PERSISTENCE="${ROADMAP_TASK_BOARD_PERSISTENCE:-v1}"
+export ROADMAP_TASK_BOARD_API_BASE="${ROADMAP_TASK_BOARD_API_BASE:-/roadmap-task-board/api}"
+export ROADMAP_TASK_BOARD_PUBLIC_URL="${ROADMAP_TASK_BOARD_PUBLIC_URL:-http://127.0.0.1:${PORTAL_HTTP_PORT}/roadmap-task-board}"
 
 mkdir -p "${PORTAL_MARKET_DATA_DIR}"
 COMPOSE=(docker compose --project-directory "${ROOT_DIR}" -f "${ROOT_DIR}/compose.yaml")
@@ -72,6 +78,60 @@ if [[ "${web_ready}" != true ]]; then
   exit 1
 fi
 
+roadmap_task_board_url="http://127.0.0.1:${PORTAL_HTTP_PORT}/roadmap-task-board/"
+roadmap_task_board_ready=false
+for _ in $(seq 1 15); do
+  if curl --fail --silent "${roadmap_task_board_url}" | grep --quiet '<div id="root"></div>'; then
+    roadmap_task_board_ready=true
+    break
+  fi
+  sleep 1
+done
+if [[ "${roadmap_task_board_ready}" != true ]]; then
+  printf 'Embedded Roadmap & Task Board did not become ready: %s\n' "${roadmap_task_board_url}" >&2
+  "${COMPOSE[@]}" logs >&2 || true
+  exit 1
+fi
+
+roadmap_task_board_api_url="http://127.0.0.1:${PORTAL_HTTP_PORT}/roadmap-task-board/api"
+roadmap_task_board_api_ready=false
+for _ in $(seq 1 15); do
+  if curl --fail --silent "${roadmap_task_board_api_url}/ready" | grep --quiet '"ok":true'; then
+    roadmap_task_board_api_ready=true
+    break
+  fi
+  sleep 1
+done
+if [[ "${roadmap_task_board_api_ready}" != true ]]; then
+  printf 'Roadmap & Task Board API did not become ready: %s\n' "${roadmap_task_board_api_url}/ready" >&2
+  "${COMPOSE[@]}" logs >&2 || true
+  exit 1
+fi
+
+created_task="$(curl --fail --silent --show-error --request POST "${roadmap_task_board_api_url}/v1/tasks" \
+  --header 'Content-Type: application/json' \
+  --header 'X-Portal-Actor: smoke' \
+  --data '{"id":"SMOKE-PHASE5","title":"Phase 5 gateway smoke","workstream":"Portal","phase":"P5","owner":"smoke"}')"
+[[ "${created_task}" == *'"id":"SMOKE-PHASE5"'* && "${created_task}" == *'"version":1'* ]] || {
+  printf 'Roadmap task create response was unexpected: %s\n' "${created_task}" >&2
+  exit 1
+}
+
+transitioned_task="$(curl --fail --silent --show-error --request POST "${roadmap_task_board_api_url}/v1/tasks/SMOKE-PHASE5/transition" \
+  --header 'Content-Type: application/json' \
+  --header 'X-Portal-Actor: smoke' \
+  --data '{"status":"Done","expected_version":1}')"
+[[ "${transitioned_task}" == *'"status":"Done"'* && "${transitioned_task}" == *'"version":2'* ]] || {
+  printf 'Roadmap task transition response was unexpected: %s\n' "${transitioned_task}" >&2
+  exit 1
+}
+
+activity="$(curl --fail --silent --show-error "${roadmap_task_board_api_url}/v1/tasks/SMOKE-PHASE5/activity")"
+[[ "${activity}" == *'"task.status_changed"'* ]] || {
+  printf 'Roadmap task activity response was unexpected: %s\n' "${activity}" >&2
+  exit 1
+}
+
 grep --quiet '"status":"ok"' "${health_file}" || {
   printf 'Unexpected health response:\n' >&2
   cat "${health_file}" >&2
@@ -79,4 +139,5 @@ grep --quiet '"status":"ok"' "${health_file}" || {
 }
 
 "${COMPOSE[@]}" ps
-printf 'Portal smoke test passed at %s\n' "${health_url}"
+printf 'Portal smoke test passed at %s, %s and %s\n' \
+  "${health_url}" "${roadmap_task_board_url}" "${roadmap_task_board_api_url}/ready"

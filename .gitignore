@@ -22,19 +22,12 @@
 /data/
 /logs/
 /backups/
-.repos.lock.*
 *.log
 *.pid
 *.seed
 *.sqlite
 *.sqlite3
 *.db
-
-# Child applications are independent Git repositories. Their source, history,
-# branch policy and CI remain in their own repositories; only this placeholder
-# belongs to the parent integration repository.
-/apps/*
-!/apps/.gitkeep
 
 # Python
 **/.venv/
@@ -56,9 +49,13 @@
 **/.pnpm-store/
 **/.yarn/
 **/.eslintcache
+**/.vite/
+**/*.tsbuildinfo
 **/dist/
 **/build/
 **/coverage/
+**/playwright-report/
+**/test-results/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

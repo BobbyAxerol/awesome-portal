@@ -1,21 +1,20 @@
 ## Summary
 
-Describe the integration-level change and the affected services.
+Describe the Portal module(s), API/UI contract and deployment surface affected.
 
-## Child source and lock
+## Monorepo boundaries
 
-- [ ] No child-repository source was added to this parent repository.
-- [ ] `repos.lock` was updated and reviewed when a child revision is promoted.
-- [ ] Child-repository changes were committed and reviewed in their own repo.
+- [ ] Source changes remain inside the appropriate `apps/`, `features/` or `packages/` boundary.
+- [ ] No nested Git repository, generated dependency/build output, credentials or data is included.
+- [ ] `quantbt-engine` remains a pinned PyPI dependency; no sibling engine source was added.
 
 ## Validation
 
 - [ ] `./scripts/portal verify`
 - [ ] `./scripts/portal smoke` (or explain why Docker validation was not run)
-- [ ] Relevant child backend/frontend tests were run.
+- [ ] Relevant backend/frontend/browser tests were run.
 
 ## Deployment and security
 
 - [ ] Compose, environment examples and runbook were updated if service wiring changed.
-- [ ] No credentials, market data, artifacts or generated output are included.
 - [ ] Rollback impact and any required deployment steps are documented.

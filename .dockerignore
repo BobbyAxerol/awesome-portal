@@ -30,8 +30,12 @@ credentials
 **/.pnpm-store
 **/.yarn
 **/.eslintcache
+**/.vite
+**/*.tsbuildinfo
 **/dist
 **/build
+**/playwright-report
+**/test-results
 **/*.log
 **/*.pid
 **/*.pem
@@ -45,3 +49,6 @@ credentials
 **/Thumbs.db
 **/.idea
 **/.vscode
+# Do not exclude features/: the web image intentionally compiles the tracked
+# Roadmap & Task Board frontend from features/roadmap-task-board. Its node_modules and
+# dist artifacts remain excluded by the patterns above.

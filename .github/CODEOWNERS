@@ -5,5 +5,5 @@
 /.github/ @BobbyAxerol
 /deploy/ @BobbyAxerol
 /compose.yaml @BobbyAxerol
-/repos.conf @BobbyAxerol
-/repos.lock @BobbyAxerol
+/apps/ @BobbyAxerol
+/features/ @BobbyAxerol
