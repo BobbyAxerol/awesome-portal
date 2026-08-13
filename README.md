@@ -10,7 +10,7 @@ application.
 | Source repository | Role in the parent stack |
 | --- | --- |
 | `apps/quantbt-portal` | FastAPI API and React/Nginx web portal |
-| `features/manager-portal` | Migration Tracker static UI embedded at `/migration/` in the existing web container; no extra Compose service |
+| `features/roadmap-task-board` | Roadmap & Task Board static UI embedded at `/roadmap-task-board/` in the existing web container; no extra Compose service |
 
 The backend installs `quantbt-engine==1.0.8` from PyPI. No local QuantBT source
 repository is required.
@@ -27,7 +27,8 @@ If the current account cannot access `/var/run/docker.sock`, use
 host's security policy.
 
 Open `http://localhost:8080` for the QuantBT portal or
-`http://localhost:8080/migration/` for the embedded Migration Tracker. The
+`http://localhost:8080/roadmap-task-board/` for the embedded Roadmap & Task
+Board. The
 public web service proxies `/api` to the internal API service, so all portal
 components use a single deployment entry point. Use `./scripts/portal logs`, `./scripts/portal status`, and
 `./scripts/portal down` to operate the stack.

@@ -20,8 +20,8 @@
 
 The source of a tracked repository is not copied into parent Git history. A
 parent commit plus `repos.lock` is the reproducible release definition. The
-Migration Tracker is compiled into the existing web image, so releasing it does
-not require a separate production service.
+Roadmap & Task Board is compiled into the existing web image, so releasing it
+does not require a separate production service.
 
 ## Prepare a deployment host
 

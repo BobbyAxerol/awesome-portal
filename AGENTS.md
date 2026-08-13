@@ -96,7 +96,7 @@ baseline.
 The service repo has its own `apps/quantbt-portal/AGENTS.md` with authoritative
 setup, test commands (`./scripts/test_backend.sh` sets PYTHONPATH itself), the
 protected `strategy/main.py` kernel rules, and domain/architecture contracts.
-Read it before touching anything under `apps/`. The embedded Manager Portal
-source at `features/manager-portal` is a Migration Tracker UI mounted at
-`/migration/` within the existing web service; its local-first board and
-roadmap are not a new runtime control plane.
+Read it before touching anything under `apps/`. The embedded Roadmap & Task
+Board source at `features/roadmap-task-board` is mounted at
+`/roadmap-task-board/` within the existing web service; its local-first board
+and roadmap are not a new runtime control plane.

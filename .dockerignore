@@ -46,5 +46,5 @@ credentials
 **/.idea
 **/.vscode
 # Do not exclude features/: the web image intentionally compiles the tracked
-# Migration Tracker frontend from features/manager-portal. Its node_modules and
+# Roadmap & Task Board frontend from features/roadmap-task-board. Its node_modules and
 # dist artifacts remain excluded by the patterns above.

@@ -6,20 +6,20 @@ RUN npm ci
 COPY apps/quantbt-portal/frontend ./
 RUN npm run build
 
-FROM node:22-alpine AS manager-portal-build
+FROM node:22-alpine AS roadmap-task-board-build
 
-WORKDIR /opt/manager-portal/frontend
-COPY features/manager-portal/frontend/package.json features/manager-portal/frontend/package-lock.json ./
+WORKDIR /opt/roadmap-task-board/frontend
+COPY features/roadmap-task-board/frontend/package.json features/roadmap-task-board/frontend/package-lock.json ./
 RUN npm ci
-COPY features/manager-portal/frontend ./
-# The Migration Tracker is an embedded, local-first UI; it is mounted under
-# this existing web service rather than receiving a Compose service of its own.
-RUN VITE_MIGRATION_LOCAL_ONLY=true npm run build -- --base=/migration/
+COPY features/roadmap-task-board/frontend ./
+# Roadmap & Task Board is embedded into this existing web service rather than
+# receiving a Compose service of its own.
+RUN VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY=true npm run build -- --base=/roadmap-task-board/
 
 FROM nginx:1.27-alpine
 
 COPY deploy/nginx/quantbt-portal.conf /etc/nginx/conf.d/default.conf
 COPY --from=quantbt-portal-build /opt/quantbt-portal/frontend/dist /usr/share/nginx/html
-COPY --from=manager-portal-build /opt/manager-portal/frontend/dist /usr/share/nginx/html/migration
+COPY --from=roadmap-task-board-build /opt/roadmap-task-board/frontend/dist /usr/share/nginx/html/roadmap-task-board
 
 EXPOSE 80

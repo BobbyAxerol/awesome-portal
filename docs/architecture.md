@@ -12,8 +12,8 @@ repos.conf + repos.lock
           │       ├── quantbt-portal-api
           │       └── quantbt-portal-web
           │
-          ├── features/manager-portal [embedded-feature]
-          │       └── static Migration Tracker mounted at /migration/
+          ├── features/roadmap-task-board [embedded-feature]
+          │       └── static Roadmap & Task Board mounted at /roadmap-task-board/
           │
           └── compose.yaml / Dockerfiles / gateway / operational policy
                          │
@@ -43,8 +43,9 @@ repository.
 `compose.yaml` builds checked-out source for local integration and CI smoke
 tests. The React/Nginx service is the single public entry point and proxies
 `/api` to the private FastAPI service. It also compiles
-`features/manager-portal/frontend` into the same image and serves it at
-`/migration/`; this is a route within the web service, not a second service.
+`features/roadmap-task-board/frontend` into the same image and serves it at
+`/roadmap-task-board/`; this is a route within the web service, not a second
+service.
 `deploy/compose.production.yaml` is the image-only equivalent for a host that
 pulls images published by CI.
 

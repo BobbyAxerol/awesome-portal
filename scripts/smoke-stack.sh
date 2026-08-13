@@ -72,17 +72,17 @@ if [[ "${web_ready}" != true ]]; then
   exit 1
 fi
 
-migration_url="http://127.0.0.1:${PORTAL_HTTP_PORT}/migration/"
-migration_ready=false
+roadmap_task_board_url="http://127.0.0.1:${PORTAL_HTTP_PORT}/roadmap-task-board/"
+roadmap_task_board_ready=false
 for _ in $(seq 1 15); do
-  if curl --fail --silent "${migration_url}" | grep --quiet '<div id="root"></div>'; then
-    migration_ready=true
+  if curl --fail --silent "${roadmap_task_board_url}" | grep --quiet '<div id="root"></div>'; then
+    roadmap_task_board_ready=true
     break
   fi
   sleep 1
 done
-if [[ "${migration_ready}" != true ]]; then
-  printf 'Embedded Migration Tracker did not become ready: %s\n' "${migration_url}" >&2
+if [[ "${roadmap_task_board_ready}" != true ]]; then
+  printf 'Embedded Roadmap & Task Board did not become ready: %s\n' "${roadmap_task_board_url}" >&2
   "${COMPOSE[@]}" logs >&2 || true
   exit 1
 fi
@@ -94,4 +94,4 @@ grep --quiet '"status":"ok"' "${health_file}" || {
 }
 
 "${COMPOSE[@]}" ps
-printf 'Portal smoke test passed at %s and %s\n' "${health_url}" "${migration_url}"
+printf 'Portal smoke test passed at %s and %s\n' "${health_url}" "${roadmap_task_board_url}"
