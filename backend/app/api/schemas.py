@@ -1,7 +1,7 @@
 """Pydantic request models for the public v1 API."""
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -23,6 +23,7 @@ class TaskCreate(APIModel):
     status: str = Field(default="Backlog")
     notes: Optional[str] = Field(default=None, max_length=8000)
     depends: List[str] = Field(default_factory=list)
+    created: Optional[str] = Field(default=None, max_length=80)
     position: Optional[int] = Field(default=None, ge=0)
 
     @field_validator("status")
@@ -31,6 +32,16 @@ class TaskCreate(APIModel):
         if value not in TASK_STATUSES:
             raise ValueError("status must be one of: " + ", ".join(TASK_STATUSES))
         return value
+
+    @field_validator("depends")
+    @classmethod
+    def validate_depends(cls, value: List[str]) -> List[str]:
+        if len(value) > 100:
+            raise ValueError("depends may contain at most 100 task IDs")
+        cleaned = [item.strip() for item in value if item.strip()]
+        if len(cleaned) != len(set(cleaned)):
+            raise ValueError("depends must not contain duplicate task IDs")
+        return cleaned
 
 
 class TaskUpdate(APIModel):
@@ -42,7 +53,15 @@ class TaskUpdate(APIModel):
     owner: Optional[str] = Field(default=None, max_length=160)
     notes: Optional[str] = Field(default=None, max_length=8000)
     depends: Optional[List[str]] = None
+    created: Optional[str] = Field(default=None, max_length=80)
     expected_version: Optional[int] = Field(default=None, ge=1)
+
+    @field_validator("depends")
+    @classmethod
+    def validate_depends(cls, value: Optional[List[str]]) -> Optional[List[str]]:
+        if value is None:
+            return value
+        return TaskCreate.validate_depends(value)
 
 
 class TaskTransition(APIModel):
@@ -106,3 +125,10 @@ class RoadmapPhaseUpdate(APIModel):
 class RoadmapMove(APIModel):
     position: int = Field(ge=0)
     expected_version: Optional[int] = Field(default=None, ge=1)
+
+
+class SnapshotImport(APIModel):
+    """An explicit destructive replacement for import/reset workflows only."""
+
+    items: List[Dict[str, Any]]
+    confirm_replace: Literal[True]

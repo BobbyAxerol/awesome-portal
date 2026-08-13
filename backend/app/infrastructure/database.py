@@ -1,11 +1,16 @@
-"""SQLite connection and schema management for the portal."""
+"""SQLite connection and forward-only schema management for the portal."""
 from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
 
 
-SCHEMA = """
+BASE_SCHEMA = """
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version TEXT PRIMARY KEY,
+    applied_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS app_state (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,
@@ -56,6 +61,8 @@ CREATE TABLE IF NOT EXISTS webhook_deliveries (
     attempt_count INTEGER NOT NULL DEFAULT 0,
     last_error TEXT,
     next_attempt_at TEXT,
+    claim_token TEXT,
+    lease_expires_at TEXT,
     created_at TEXT NOT NULL,
     sent_at TEXT,
     FOREIGN KEY(activity_id) REFERENCES activity_events(id)
@@ -65,6 +72,10 @@ CREATE INDEX IF NOT EXISTS idx_webhook_due ON webhook_deliveries (status, next_a
 """
 
 
+MIGRATION_INITIAL = "0001_initial"
+MIGRATION_DELIVERY_CLAIMS = "0002_delivery_claims"
+
+
 def connect(path: Path) -> sqlite3.Connection:
     """Open a short-lived connection; callers own commit/rollback boundaries."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -72,13 +83,41 @@ def connect(path: Path) -> sqlite3.Connection:
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
     connection.execute("PRAGMA journal_mode = WAL")
+    connection.execute("PRAGMA synchronous = NORMAL")
     connection.execute("PRAGMA busy_timeout = 5000")
     return connection
 
 
+def _has_column(connection: sqlite3.Connection, table: str, column: str) -> bool:
+    return any(row["name"] == column for row in connection.execute(f"PRAGMA table_info({table})"))
+
+
+def _ensure_column(connection: sqlite3.Connection, table: str, definition: str) -> None:
+    column = definition.split(maxsplit=1)[0]
+    if not _has_column(connection, table, column):
+        connection.execute(f"ALTER TABLE {table} ADD COLUMN {definition}")
+
+
 def initialize(path: Path) -> None:
+    """Apply idempotent forward migrations to new and pre-Phase-4 databases.
+
+    The original backend created its schema with ``CREATE TABLE IF NOT EXISTS``
+    and did not record a version.  Initialising therefore first establishes the
+    baseline, then adds Phase-4 delivery-claim fields when opening an existing
+    database.  No migration rewrites user task or audit data.
+    """
     connection = connect(path)
     try:
-        connection.executescript(SCHEMA)
+        connection.executescript(BASE_SCHEMA)
+        connection.execute(
+            "INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (?, datetime('now'))",
+            (MIGRATION_INITIAL,),
+        )
+        _ensure_column(connection, "webhook_deliveries", "claim_token TEXT")
+        _ensure_column(connection, "webhook_deliveries", "lease_expires_at TEXT")
+        connection.execute(
+            "INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (?, datetime('now'))",
+            (MIGRATION_DELIVERY_CLAIMS,),
+        )
     finally:
         connection.close()
