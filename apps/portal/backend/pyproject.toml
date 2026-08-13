@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quantbt-portal-backend"
+version = "0.1.0"
+description = "Audit-first backend for the QuantBT backtest portal prototype"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+authors = [{ name = "BobbyAxerol", email = "vugioan11022002@gmail.com" }]
+dependencies = [
+  "duckdb>=1.1,<2",
+  "fastapi>=0.115,<1",
+  "numpy>=2,<3",
+  "pandas>=2.2,<3",
+  "pyarrow>=18,<25",
+  "pydantic>=2.10,<3",
+  "quantbt-engine[optimization]==1.0.8",
+  "uvicorn>=0.34,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx>=0.28,<1",
+  "pytest>=8,<10",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", ".."]
+addopts = "-q"

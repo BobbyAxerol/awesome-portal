@@ -1,0 +1,48 @@
+{
+  "bars": 500,
+  "fixture": "delta-rsi-golden-v1",
+  "generated_at": "2026-08-10T00:00:00Z",
+  "kernel_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
+  "params": {
+    "len_atr1": 10,
+    "len_atr2": 42,
+    "len_vol": 16,
+    "rsi_l": 20,
+    "rvol": 1.6,
+    "signalLength": 9,
+    "slpercent": 1.3,
+    "window": 32
+  },
+  "segments": {
+    "hard_sl": [
+      100,
+      160
+    ],
+    "high_vol_reversal": [
+      260,
+      360
+    ],
+    "low_volume": [
+      0,
+      100
+    ],
+    "trend_down": [
+      160,
+      260
+    ],
+    "trend_up": [
+      360,
+      500
+    ]
+  },
+  "source": "backend/tests/golden_fixture.py (python backend/tests/golden_fixture.py)",
+  "timeframe": "1h",
+  "tolerance_policy": {
+    "exit_price": {
+      "atol": 1e-12,
+      "rtol": 1e-09
+    },
+    "exit_type": "exact",
+    "pos_weight": "exact"
+  }
+}
