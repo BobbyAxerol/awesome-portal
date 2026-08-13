@@ -9,7 +9,8 @@
 .feature-toolbar,
 .feature-actions,
 .modal-actions,
-.roadmap-outcome > div {
+.roadmap-outcome > div,
+.sync-notice {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -65,6 +66,35 @@
   border-radius: 10px;
   background: var(--paper-raised);
   box-shadow: var(--shadow);
+}
+
+.sync-notice {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  margin: -4px 0 16px;
+  padding: 9px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--paper-sunken);
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.sync-notice button {
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  padding: 0;
+  color: var(--accent);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.sync-notice-error {
+  border-color: var(--bad);
+  background: var(--bad-bg);
+  color: var(--bad);
 }
 
 .feature-toolbar .input {
@@ -164,6 +194,12 @@
   font-size: 11px;
   color: var(--ink-faint);
   text-transform: uppercase;
+}
+
+.feature-field-help {
+  color: var(--ink-faint);
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .feature-field-wide {

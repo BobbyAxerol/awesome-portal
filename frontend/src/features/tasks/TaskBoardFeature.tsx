@@ -9,7 +9,6 @@ import {
   nextTaskId,
   normaliseTasks,
   optionValues,
-  replaceTask,
   taskDraft,
   type Task,
   type TaskFilters,
@@ -142,7 +141,7 @@ function TaskEditor({ draft, onChange }: { draft: Task; onChange: (field: keyof 
 }
 
 export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
-  const { tasks, replace, reset } = useTasks(apiMode);
+  const { tasks, persistence, syncState, syncError, needsInitialization, refresh, create, update, move, remove, replace, reset } = useTasks(apiMode);
   const toast = useToast();
   const [view, setView] = useState<BoardView>(initialBoardView);
   const [filters, setFilters] = useState<TaskFilters>(EMPTY_TASK_FILTERS);
@@ -199,23 +198,31 @@ export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
       depends: draft.depends.map((item) => item.trim()).filter(Boolean),
       created: existing?.created || draft.created || today(),
     };
-    replace(existing ? replaceTask(tasks, next) : [...tasks, next]);
-    closeEditor();
-    toast(existing ? "Task đã cập nhật" : "Task đã tạo", "good");
+    void (existing ? update(next) : create(next))
+      .then(() => {
+        closeEditor();
+        toast(existing ? "Task đã cập nhật" : "Task đã tạo", "good");
+      })
+      .catch((error: Error) => toast(error.message, "bad"));
   };
 
   const deleteTask = (task: Task) => {
     if (!window.confirm(`Xóa task ${task.id}?`)) return;
-    replace(tasks.filter((item) => item.id !== task.id));
-    if (editingId === task.id) closeEditor();
-    toast(`Đã xóa ${task.id}`, "info");
+    void remove(task.id)
+      .then(() => {
+        if (editingId === task.id) closeEditor();
+        toast(`Đã xóa ${task.id}`, "info");
+      })
+      .catch((error: Error) => toast(error.message, "bad"));
   };
 
   const moveTask = (taskId: string, status: TaskStatus) => {
     const task = tasks.find((item) => item.id === taskId);
     if (!task || task.status === status) return;
-    replace(replaceTask(tasks, { ...task, status }));
-    toast(`${task.id} → ${status}`, "good");
+    const position = tasks.filter((item) => item.status === status).length;
+    void move(taskId, status, position)
+      .then(() => toast(`${task.id} → ${status}`, "good"))
+      .catch((error: Error) => toast(error.message, "bad"));
   };
 
   const importTasks = (event: ChangeEvent<HTMLInputElement>) => {
@@ -226,9 +233,9 @@ export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
       .then((text) => {
         const parsed: unknown = JSON.parse(text);
         if (!Array.isArray(parsed)) throw new Error("Expected a JSON array");
-        replace(normaliseTasks(parsed as Record<string, unknown>[]));
-        toast("Đã import task board", "good");
+        return replace(normaliseTasks(parsed as Record<string, unknown>[]));
       })
+      .then(() => toast("Đã import task board", "good"))
       .catch(() => toast("File JSON task không hợp lệ", "bad"));
   };
 
@@ -249,7 +256,7 @@ export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
     <section className="feature-surface" data-testid="task-board-feature">
       <header className="feature-header">
         <div>
-          <p className="mono-label">Phase 3 · local-first task domain</p>
+          <p className="mono-label">Phase 4 · {persistence === "v1" ? "audited server workspace" : persistence === "legacy" ? "compatibility sync" : "local-first workspace"}</p>
           <h1>Migration task board</h1>
           <p>Board, table and editor preserve the existing task schema and <code>quantPortalTasksV1</code> key.</p>
         </div>
@@ -258,13 +265,19 @@ export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
           <label className="btn-ghost file-button">Import JSON<input type="file" accept="application/json" onChange={importTasks} /></label>
           <Button type="button" variant="ghost" onClick={() => {
             if (window.confirm("Reset toàn bộ trạng thái task về bản mặc định?")) {
-              reset();
-              toast("Task board đã reset", "good");
+              void reset().then(() => toast("Task board đã reset", "good")).catch((error: Error) => toast(error.message, "bad"));
             }
           }}>Reset</Button>
           <Button type="button" onClick={() => openNew()}>+ Add task</Button>
         </div>
       </header>
+
+      <div className={`sync-notice ${syncState === "error" ? "sync-notice-error" : ""}`} role={syncState === "error" ? "alert" : "status"}>
+        <span>{syncState === "loading" ? "Đang tải workspace…" : syncState === "saving" ? "Đang lưu an toàn…" : persistence === "v1" ? "Server workspace · versioned & audited" : persistence === "legacy" ? "Compatibility API sync" : "Local-only workspace"}</span>
+        {persistence !== "local" && <button type="button" onClick={() => void refresh()}>Refresh</button>}
+        {needsInitialization && <button type="button" onClick={() => void replace(tasks).then(() => toast("Đã khởi tạo server từ snapshot local", "good")).catch((error: Error) => toast(error.message, "bad"))}>Initialize server from local</button>}
+        {syncError && <span>{syncError.message}</span>}
+      </div>
 
       <div className="feature-toolbar" aria-label="Task filters">
         <Input value={filters.query} onChange={(event) => setFilter("query", event.target.value)} placeholder="Search ID, title, owner…" aria-label="Search tasks" />

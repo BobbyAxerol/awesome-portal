@@ -1,17 +1,23 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Topbar, Sidebar } from "@/components/PortalShell";
 import { ToastProvider } from "@/components/ui";
-import { DocsFeature } from "@/features/docs/DocsFeature";
-import { EvidenceFeature } from "@/features/evidence/EvidenceFeature";
-import { PortalMockupFeature } from "@/features/portal-mockup/PortalMockupFeature";
-import { ReportsFeature } from "@/features/reports/ReportsFeature";
-import { RoadmapFeature } from "@/features/roadmap/RoadmapFeature";
-import { TaskBoardFeature } from "@/features/tasks/TaskBoardFeature";
 import { parseHash, routeHash, subscribeHash, navigate, type Route, type View } from "@/lib/router";
 import { getTheme, saveTheme } from "@/lib/storage";
 import { detectApi, type ApiMode } from "@/lib/api";
 
+// Each view carries a substantial raw-document or domain payload. Route-level
+// loading keeps the first paint small while preserving every legacy hash route.
+const DocsFeature = lazy(async () => import("@/features/docs/DocsFeature").then((module) => ({ default: module.DocsFeature })));
+const RoadmapFeature = lazy(async () => import("@/features/roadmap/RoadmapFeature").then((module) => ({ default: module.RoadmapFeature })));
+const TaskBoardFeature = lazy(async () => import("@/features/tasks/TaskBoardFeature").then((module) => ({ default: module.TaskBoardFeature })));
+const ReportsFeature = lazy(async () => import("@/features/reports/ReportsFeature").then((module) => ({ default: module.ReportsFeature })));
+const EvidenceFeature = lazy(async () => import("@/features/evidence/EvidenceFeature").then((module) => ({ default: module.EvidenceFeature })));
+const PortalMockupFeature = lazy(async () => import("@/features/portal-mockup/PortalMockupFeature").then((module) => ({ default: module.PortalMockupFeature })));
 const InterpretationFeature = lazy(async () => import("@/features/interpretation/InterpretationFeature").then((module) => ({ default: module.InterpretationFeature })));
+
+function FeatureLoading() {
+  return <div className="feature-loading" role="status">Loading workspace…</div>;
+}
 
 export default function App() {
   const [route, setRoute] = useState<Route>(() => parseHash(window.location.hash));
@@ -65,19 +71,19 @@ export default function App() {
   const renderView = () => {
     switch (route.view) {
       case "docs":
-        return <DocsFeature pageId={route.page} theme={theme} onNavigate={handleNavigate} />;
+        return <Suspense fallback={<FeatureLoading />}><DocsFeature pageId={route.page} theme={theme} onNavigate={handleNavigate} /></Suspense>;
       case "roadmap":
-        return <RoadmapFeature apiMode={apiMode} />;
+        return <Suspense fallback={<FeatureLoading />}><RoadmapFeature apiMode={apiMode} /></Suspense>;
       case "board":
-        return <TaskBoardFeature apiMode={apiMode} />;
+        return <Suspense fallback={<FeatureLoading />}><TaskBoardFeature apiMode={apiMode} /></Suspense>;
       case "reports":
-        return <ReportsFeature theme={theme} onOpenInterpretation={() => handleNavigate("interpretation")} />;
+        return <Suspense fallback={<FeatureLoading />}><ReportsFeature theme={theme} onOpenInterpretation={() => handleNavigate("interpretation")} /></Suspense>;
       case "interpretation":
-        return <Suspense fallback={<div className="feature-loading" role="status">Loading interpretation…</div>}><InterpretationFeature onOpenReports={() => handleNavigate("reports")} /></Suspense>;
+        return <Suspense fallback={<FeatureLoading />}><InterpretationFeature onOpenReports={() => handleNavigate("reports")} /></Suspense>;
       case "evidence":
-        return <EvidenceFeature theme={theme} />;
+        return <Suspense fallback={<FeatureLoading />}><EvidenceFeature theme={theme} /></Suspense>;
       case "portal":
-        return <PortalMockupFeature theme={theme} />;
+        return <Suspense fallback={<FeatureLoading />}><PortalMockupFeature theme={theme} /></Suspense>;
     }
   };
 

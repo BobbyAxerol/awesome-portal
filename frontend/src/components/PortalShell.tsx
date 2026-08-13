@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import type { View } from "@/lib/router";
-import { DOC_PAGES } from "@/content/pages/index";
+import { DOC_NAV } from "@/content/doc-nav";
 
 export interface ShellProps {
   view: View;
@@ -78,7 +78,7 @@ export function Sidebar({ view, page, onNavigate, sidebarOpen = false }: ShellPr
         <>
           <p className="mono-label">Documents</p>
           <nav>
-            {DOC_PAGES.map((p) => (
+            {DOC_NAV.map((p) => (
               <button
                 key={p.id}
                 type="button"

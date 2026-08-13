@@ -6,7 +6,6 @@ import {
   normalisePhase,
   normalisePhases,
   phaseDraft,
-  replacePhase,
   type RoadmapPhase,
 } from "./roadmap-model";
 import { useRoadmap } from "./useRoadmap";
@@ -21,12 +20,13 @@ function downloadJson(filename: string, value: unknown): void {
   window.setTimeout(() => URL.revokeObjectURL(href), 0);
 }
 
-function PhaseEditor({ draft, onChange }: { draft: RoadmapPhase; onChange: (field: keyof RoadmapPhase, value: string | number) => void }) {
+function PhaseEditor({ draft, idLocked, onChange }: { draft: RoadmapPhase; idLocked: boolean; onChange: (field: keyof RoadmapPhase, value: string | number) => void }) {
   return (
     <div className="feature-form-grid">
       <label className="feature-field">
         <span>ID</span>
-        <Input value={draft.id} onChange={(event) => onChange("id", event.target.value)} aria-label="Phase ID" />
+        <Input value={draft.id} onChange={(event) => onChange("id", event.target.value)} aria-label="Phase ID" disabled={idLocked} />
+        {idLocked && <small className="feature-field-help">Server IDs are immutable to preserve audit history.</small>}
       </label>
       <label className="feature-field">
         <span>Name</span>
@@ -59,7 +59,7 @@ function PhaseEditor({ draft, onChange }: { draft: RoadmapPhase; onChange: (fiel
 }
 
 export function RoadmapFeature({ apiMode }: { apiMode: ApiMode }) {
-  const { phases, replace, reset } = useRoadmap(apiMode);
+  const { phases, persistence, syncState, syncError, needsInitialization, refresh, create, update, remove, replace, reset } = useRoadmap(apiMode);
   const toast = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<RoadmapPhase | null>(null);
@@ -94,16 +94,23 @@ export function RoadmapFeature({ apiMode }: { apiMode: ApiMode }) {
       toast(`ID ${next.id} đã tồn tại`, "bad");
       return;
     }
-    replace(replacePhase(phases, { ...next, id: next.id.trim(), name: next.name.trim() }, editingId ?? next.id));
-    closeEditor();
-    toast(editingId ? "Phase đã cập nhật" : "Phase mới đã thêm", "good");
+    const saved = { ...next, id: next.id.trim(), name: next.name.trim() };
+    void (editingId ? update(saved, editingId) : create(saved))
+      .then(() => {
+        closeEditor();
+        toast(editingId ? "Phase đã cập nhật" : "Phase mới đã thêm", "good");
+      })
+      .catch((error: Error) => toast(error.message, "bad"));
   };
 
   const deletePhase = (phase: RoadmapPhase) => {
     if (!window.confirm(`Xóa phase ${phase.id}?`)) return;
-    replace(phases.filter((item) => item.id !== phase.id));
-    if (editingId === phase.id) closeEditor();
-    toast(`Đã xóa ${phase.id}`, "info");
+    void remove(phase.id)
+      .then(() => {
+        if (editingId === phase.id) closeEditor();
+        toast(`Đã xóa ${phase.id}`, "info");
+      })
+      .catch((error: Error) => toast(error.message, "bad"));
   };
 
   const importPhases = (event: ChangeEvent<HTMLInputElement>) => {
@@ -114,9 +121,9 @@ export function RoadmapFeature({ apiMode }: { apiMode: ApiMode }) {
       .then((text) => {
         const parsed: unknown = JSON.parse(text);
         if (!Array.isArray(parsed)) throw new Error("Expected a JSON array");
-        replace(normalisePhases(parsed as Record<string, unknown>[]));
-        toast("Đã import roadmap", "good");
+        return replace(normalisePhases(parsed as Record<string, unknown>[]));
       })
+      .then(() => toast("Đã import roadmap", "good"))
       .catch(() => toast("File JSON roadmap không hợp lệ", "bad"));
   };
 
@@ -124,7 +131,7 @@ export function RoadmapFeature({ apiMode }: { apiMode: ApiMode }) {
     <section className="feature-surface" data-testid="roadmap-feature">
       <header className="feature-header">
         <div>
-          <p className="mono-label">Phase 3 · local-first roadmap domain</p>
+          <p className="mono-label">Phase 4 · {persistence === "v1" ? "audited server workspace" : persistence === "legacy" ? "compatibility sync" : "local-first workspace"}</p>
           <h1>Migration roadmap</h1>
           <p>Timeline edits preserve the existing phase schema and <code>quantPortalPhasesV1</code> key.</p>
         </div>
@@ -133,13 +140,19 @@ export function RoadmapFeature({ apiMode }: { apiMode: ApiMode }) {
           <label className="btn-ghost file-button">Import JSON<input type="file" accept="application/json" onChange={importPhases} /></label>
           <Button type="button" variant="ghost" onClick={() => {
             if (window.confirm("Reset roadmap về bản mặc định?")) {
-              reset();
-              toast("Roadmap đã reset", "good");
+              void reset().then(() => toast("Roadmap đã reset", "good")).catch((error: Error) => toast(error.message, "bad"));
             }
           }}>Reset</Button>
           <Button type="button" onClick={openNew}>+ Add phase</Button>
         </div>
       </header>
+
+      <div className={`sync-notice ${syncState === "error" ? "sync-notice-error" : ""}`} role={syncState === "error" ? "alert" : "status"}>
+        <span>{syncState === "loading" ? "Đang tải workspace…" : syncState === "saving" ? "Đang lưu an toàn…" : persistence === "v1" ? "Server workspace · versioned & audited" : persistence === "legacy" ? "Compatibility API sync" : "Local-only workspace"}</span>
+        {persistence !== "local" && <button type="button" onClick={() => void refresh()}>Refresh</button>}
+        {needsInitialization && <button type="button" onClick={() => void replace(phases).then(() => toast("Đã khởi tạo server từ snapshot local", "good")).catch((error: Error) => toast(error.message, "bad"))}>Initialize server from local</button>}
+        {syncError && <span>{syncError.message}</span>}
+      </div>
 
       {phases.length ? (
         <div className="roadmap-card phase3-roadmap-card">
@@ -165,7 +178,7 @@ export function RoadmapFeature({ apiMode }: { apiMode: ApiMode }) {
       ) : <StateView kind="empty" message="Chưa có phase nào. Nhấn “Add phase” để tạo." />}
 
       <Modal open={draft !== null} title={editingId ? `Edit ${editingId}` : "New phase"} onClose={closeEditor}>
-        {draft && <PhaseEditor draft={draft} onChange={updateDraft} />}
+        {draft && <PhaseEditor draft={draft} idLocked={Boolean(editingId && persistence === "v1")} onChange={updateDraft} />}
         <div className="modal-actions">
           {editingId && draft && <Button type="button" variant="ghost" onClick={() => deletePhase(draft)}>Delete</Button>}
           <span />
