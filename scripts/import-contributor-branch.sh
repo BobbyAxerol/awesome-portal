@@ -4,8 +4,10 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$BASH_SOURCE")/.." && pwd)"
 MAINTAINER_USER="bobby"
 CONTRIBUTOR_USER="thanhvuong"
+MAINTAINER_GROUP="$(id -gn "$MAINTAINER_USER")"
 WORKSPACE_ROOT="/srv/portal-contributors"
 BRANCH=""
+BUNDLE_STAGE=""
 
 usage() {
   cat <<'EOF'
@@ -20,6 +22,10 @@ EOF
 die() {
   printf '%s\n' "$1" >&2
   exit 1
+}
+
+cleanup() {
+  [[ -n "$BUNDLE_STAGE" ]] && sudo -n rm -rf "$BUNDLE_STAGE"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -53,8 +59,6 @@ git -C "$ROOT_DIR" show-ref --verify --quiet "refs/heads/$BRANCH" || die "Local 
 
 WORKSPACE="$WORKSPACE_ROOT/$BRANCH"
 MARKER="$WORKSPACE/.portal-contributor-workspace"
-SAFE_WORKTREE="$WORKSPACE"
-SAFE_GIT_DIR="$WORKSPACE/.git"
 [[ -d "$WORKSPACE/.git" && ! -L "$WORKSPACE/.git" ]] || die "Expected a standalone Git checkout at $WORKSPACE."
 [[ -f "$MARKER" ]] || die "Contributor workspace marker is missing: $MARKER."
 grep -Fx "BRANCH=$BRANCH" "$MARKER" >/dev/null || die 'Contributor workspace marker does not match the requested branch.'
@@ -66,8 +70,17 @@ fi
 SOURCE_REF="refs/heads/$BRANCH"
 DESTINATION_REF="refs/remotes/contributor/$CONTRIBUTOR_USER/$BRANCH"
 git check-ref-format "$DESTINATION_REF" >/dev/null
-git -C "$WORKSPACE" -c safe.directory="$SAFE_WORKTREE" -c safe.directory="$SAFE_GIT_DIR" rev-parse --verify "$SOURCE_REF" >/dev/null
-git -C "$ROOT_DIR" -c safe.directory="$SAFE_WORKTREE" -c safe.directory="$SAFE_GIT_DIR" fetch --no-tags "$WORKSPACE" "$SOURCE_REF:$DESTINATION_REF"
+
+BUNDLE_STAGE="$(mktemp -d -t portal-contributor-import.XXXXXX)"
+trap cleanup EXIT
+BUNDLE_FILE="$BUNDLE_STAGE/$CONTRIBUTOR_USER.bundle"
+sudo -n chown "$CONTRIBUTOR_USER:$MAINTAINER_GROUP" "$BUNDLE_STAGE"
+sudo -n chmod 0700 "$BUNDLE_STAGE"
+sudo -n -u "$CONTRIBUTOR_USER" git -C "$WORKSPACE" bundle create "$BUNDLE_FILE" "$SOURCE_REF"
+sudo -n chown "$MAINTAINER_USER:$MAINTAINER_GROUP" "$BUNDLE_STAGE" "$BUNDLE_FILE"
+sudo -n chmod 0700 "$BUNDLE_STAGE"
+sudo -n chmod 0600 "$BUNDLE_FILE"
+git -C "$ROOT_DIR" fetch --no-tags "$BUNDLE_FILE" "$SOURCE_REF:$DESTINATION_REF"
 
 printf 'Imported %s as %s. No Portal branch was merged or changed.\n' "$SOURCE_REF" "$DESTINATION_REF"
 printf 'Review with: git log --oneline %s..%s and git diff %s...%s\n' "$BRANCH" "$DESTINATION_REF" "$BRANCH" "$DESTINATION_REF"

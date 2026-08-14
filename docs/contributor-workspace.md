@@ -73,8 +73,10 @@ When the contributor is done, only Bobby imports the local branch:
 
 The import creates or fast-forwards only the local reference
 refs/remotes/contributor/thanhvuong/feat/<topic>. It refuses a contributor
-workspace that has any remote configured. It does not checkout, merge, rebase,
-commit, push, or rewrite any Portal branch.
+workspace that has any remote configured. It asks the contributor account to
+write a short-lived local Git bundle, transfers the bundle into a Bobby-owned
+temporary directory, and fetches that file only. It does not checkout, merge,
+rebase, commit, push, or rewrite any Portal branch.
 
 Bobby reviews the handoff before choosing an integration action:
 
