@@ -15,10 +15,11 @@ usage() {
   cat <<'EOF'
 Usage: ./scripts/provision-contributor-workspace.sh --branch <branch>
 
-Creates a separate, local-only checkout for Thanh Vuong under
+Creates a separate contributor checkout for Thanh Vuong under
 /srv/portal-contributors/<branch>. The branch must already exist locally and
-match feat/*, fix/*, chore/*, or docs/*. The checkout has no Git remotes and
-is owned by the contributor while Bobby retains read access for handoff.
+match feat/*, fix/*, chore/*, or docs/*. The checkout has only primus-origin
+for feature-branch push and is owned by the contributor while Bobby retains
+read access for recovery.
 EOF
 }
 
@@ -83,10 +84,13 @@ git clone --no-local --branch "$BRANCH" --single-branch "$ROOT_DIR" "$STAGE_DIR/
 git -C "$STAGE_DIR/portal" remote remove origin
 git -C "$STAGE_DIR/portal" config --unset-all "branch.$BRANCH.remote" || true
 git -C "$STAGE_DIR/portal" config --unset-all "branch.$BRANCH.merge" || true
+git -C "$STAGE_DIR/portal" remote add "$PORTAL_CONTRIBUTOR_REMOTE_NAME" "$PORTAL_CONTRIBUTOR_REMOTE_URL"
+git -C "$STAGE_DIR/portal" config remote.pushDefault "$PORTAL_CONTRIBUTOR_REMOTE_NAME"
+git -C "$STAGE_DIR/portal" config "branch.$BRANCH.pushRemote" "$PORTAL_CONTRIBUTOR_REMOTE_NAME"
 git -C "$STAGE_DIR/portal" config core.hooksPath .githooks
 git -C "$STAGE_DIR/portal" config user.name "$CONTRIBUTOR_GIT_NAME"
 git -C "$STAGE_DIR/portal" config user.email "$CONTRIBUTOR_GIT_EMAIL"
-[[ -z "$(git -C "$STAGE_DIR/portal" remote)" ]] || die 'Provisioning refused because the contributor checkout still has a remote.'
+git -C "$STAGE_DIR/portal" remote get-url --push "$PORTAL_CONTRIBUTOR_REMOTE_NAME" | grep -Fx "$PORTAL_CONTRIBUTOR_REMOTE_URL" >/dev/null || die 'Provisioning refused because the Primus push URL is incorrect.'
 
 SOURCE_COMMIT="$(git -C "$STAGE_DIR/portal" rev-parse HEAD)"
 printf 'PORTAL_CONTRIBUTOR_WORKSPACE=1\nBRANCH=%s\nSOURCE_COMMIT=%s\nPROVISIONED_BY=%s\n' "$BRANCH" "$SOURCE_COMMIT" "$MAINTAINER_USER" > "$STAGE_DIR/portal/.portal-contributor-workspace"
@@ -99,5 +103,5 @@ sudo -n find "$WORKSPACE" -type d -exec chmod g+rx {} +
 sudo -n find "$WORKSPACE" -type f -exec chmod g+r {} +
 sudo -n chmod 0750 "$WORKSPACE"
 
-printf 'Created local-only contributor workspace: %s\n' "$WORKSPACE"
-printf 'It contains branch %s at %s, has no Git remotes, and must be handed back with scripts/import-contributor-branch.sh.\n' "$BRANCH" "$SOURCE_COMMIT"
+printf 'Created contributor workspace: %s\n' "$WORKSPACE"
+printf 'It contains branch %s at %s and may push that feature branch only to %s.\n' "$BRANCH" "$SOURCE_COMMIT" "$PORTAL_CONTRIBUTOR_REMOTE_NAME"

@@ -35,15 +35,15 @@ selected at dispatch time.
 
 ## Contributor access boundary
 
-The current contributor model is local-only. Do not add Thanh Vuong as a write,
-maintain, or admin collaborator on BobbyAxerol/awesome-portal, and do not copy
-the bobby SSH key, token, credential helper, or remote configuration into a
-contributor workspace. The canonical origin and the preservation remote
-primus-origin remain under Bobby's full control.
+Do not add Thanh Vuong as a write, maintain, or admin collaborator on
+BobbyAxerol/awesome-portal, and do not copy the bobby SSH key, token, or
+credential helper into a contributor workspace. Contributor work is published
+only to primus-origin from the contributor's own GitHub identity.
 
-Repository branch protection remains useful defense in depth. If it is enabled,
-keep BobbyAxerol as the sole allowed updater or bypass actor for main and dev;
-do not add a contributor to a bypass list. This preserves Bobby's emergency
-authority while rejecting any future contributor credential that is granted by
-mistake. The detailed local workflow is in
-[Contributor Workspace and Handoff](contributor-workspace.md).
+The Primus repository owner must allow Thanh to push feature branches while
+protecting main and dev: require pull requests, block direct and force updates,
+and keep both BobbyAxerol and thanhvuong1105 out of any bypass or
+allowed-updater list unless the owner deliberately changes that policy. This is
+what prevents a web PR merge; local hooks cannot enforce GitHub permissions.
+The detailed workflow is in
+[Contributor Workspace and Pull Request Flow](contributor-workspace.md).

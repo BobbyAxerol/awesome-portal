@@ -6,17 +6,17 @@ separate source lock.
 
 ## Contributor access
 
-The bobby account is the sole maintainer and keeps full authority over the
-canonical checkout, origin and primus-origin. Thanh Vuong is a contributor,
-not a remote collaborator: he works only in the separate local workspace Bobby
-provisions for a named feat, fix, chore or docs branch. The workspace has no
-Git remote and cannot change main or dev.
+The bobby account is the sole maintainer of the canonical checkout and its
+origin. Thanh Vuong works in the separate workspace Bobby provisions for a
+named feat, fix, chore or docs branch. That workspace has only primus-origin:
+it permits a normal feature-branch push and a pull request to dev, but cannot
+push to origin, dev, main, tags, or a differently named branch.
 
 Read [Contributor Workspace and Handoff](docs/contributor-workspace.md) and
 [Contributor Agent Rules](CONTRIBUTOR_AGENT_RULES.md) before handing work to a
-contributor agent. Only Bobby may provision or import a contributor workspace.
-Importing is review-only; it never merges or pushes on the contributor's
-behalf.
+contributor agent. Only Bobby may provision a contributor workspace. The
+contributor may open or update a Primus pull request to dev, but must never
+merge it.
 
 ## Branch flow
 
@@ -24,9 +24,9 @@ behalf.
 promotions from `dev`. The root hooks reject contributor commits, merge
 commits, rebases and patch applications on either protected branch; the bobby
 maintainer account deliberately retains full authority for recovery and release
-work. The separate local-only checkout and push block protect the canonical
-branches even if a contributor alters their own copy. Start new work from
-up-to-date `dev`:
+work. The separate checkout and restricted Primus feature push protect the
+canonical branches even if a contributor alters their own copy. Start new work
+from up-to-date `dev`:
 
 ```bash
 git switch dev
@@ -36,9 +36,10 @@ git switch -c feat/<topic>
 
 Use `fix/`, `chore/` or `docs/` when appropriate. Bobby validates each
 completed coherent change and commits it immediately with a focused message.
-Contributors create a local branch commit only when Bobby explicitly asks.
-Merge reviewed work into `dev`; promote `dev` to `main` only after the
-complete stack is stable. Never force-push or bypass hooks on shared branches.
+Contributors commit normally on their assigned branch, then push only that
+branch to primus-origin when asked to hand it off. Merge reviewed work into
+`dev`; promote `dev` to `main` only after the complete stack is stable.
+Never force-push or bypass hooks on shared branches.
 
 ## Required checks
 

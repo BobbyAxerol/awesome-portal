@@ -1,105 +1,91 @@
-# Contributor Workspace and Handoff
+# Contributor Workspace and Pull Request Flow
 
-Thanh Vuong works in a separate local Git checkout. It is intentionally not a
-clone that can talk to the Portal remotes: it has no configured remote, no
-Bobby credential, and a hook prevents any push if a remote is added later.
-This lets a contributor or their coding agent make local changes and, when
-explicitly authorized, local commits without being able to alter the canonical
-Portal repository, dev, main, origin, or primus-origin.
+Thanh Vuong works in a separate Git checkout under
+/srv/portal-contributors/<branch>. It is a normal local checkout for the
+requested feature branch, with one carefully limited remote:
+
+- origin is absent, so the contributor cannot push to the BobbyAxerol
+  canonical repository from this workspace.
+- primus-origin is the only remote and points to
+  git@github.com:PrimusSpark/awesome-primus-portal.git.
+- Hooks allow a contributor to push only the same named feat, fix, chore, or
+  docs branch to primus-origin. They reject every push to dev, main, tags,
+  origin, another remote, branch deletion, or a differently named destination.
+
+The canonical checkout remains /home/bobby/portal. Its Linux ownership keeps
+the thanhvuong account out of Bobby's working tree and its .git directory, so
+the contributor cannot locally merge into Bobby's dev or main.
 
 ## Roles
 
-- Bobby is the sole maintainer. The bobby Linux account retains full local and
-  remote authority, including both origin and primus-origin.
-- Thanh is a local contributor. He may work only in the supplied checkout and
-  only on the branch Bobby names.
-- The canonical repository remains /home/bobby/portal. Do not grant Thanh
-  access to this directory, its .git directory, or Bobby's SSH directory.
+- The bobby Linux account owns the canonical checkout and has its normal full
+  authority for local work and the BobbyAxerol origin.
+- The thanhvuong Linux account works only in its supplied workspace. Its GitHub
+  identity is thanhvuong1105.
+- On primus-origin, both accounts use the access granted by PrimusSpark. The
+  repository owner must protect dev and main so contributors can create pull
+  requests but cannot merge or update those branches.
 
-## Prepare an approved branch
+## One-time host and GitHub prerequisites
 
-Only Bobby performs these commands in the canonical repository. Create a
-feature branch from current dev only when the work is requested:
+Before the first push, Bobby must arrange these items:
+
+1. Give the thanhvuong Linux account a usable, private home directory and its
+   own SSH key. Do not copy Bobby's SSH key or credential helper. The current
+   declared home directory needs its ownership checked before adding SSH
+   configuration.
+2. Register that public key with GitHub account thanhvuong1105 and verify that
+   SSH identifies as that account.
+3. Grant that GitHub account enough permission on PrimusSpark/awesome-primus-portal
+   to push feature branches. If it has only read or triage permission, use a
+   fork instead.
+4. In the Primus repository, protect main and dev: require a pull request,
+   block direct/force updates, and do not add thanhvuong1105 to a bypass or
+   allowed-updater list. The repository owner controls this rule.
+
+## Prepare a requested branch
+
+Only Bobby prepares the branch and workspace:
 
     git switch dev
     git pull --ff-only origin dev
     git switch -c feat/<topic>
     ./scripts/provision-contributor-workspace.sh --branch feat/<topic>
 
-The provisioning command creates /srv/portal-contributors/feat/<topic>. It
-uses passwordless sudo only to create and permission the isolated workspace.
-It refuses an existing destination and never overwrites an earlier workspace.
-It clones without hardlinks, removes origin immediately, removes upstream
-tracking, enables the Portal hooks, records the exact source commit, and sets
-the local-only Git identity Thanh Vuong <thanhvuong@local.invalid>. It never
-copies a credential or a global Git configuration.
-
-Bobby may push the feature branch to origin if and only if Bobby wants to; the
-provisioning command never pushes anything.
+Provisioning never pushes. It clones without hardlinks, removes origin, adds
+only primus-origin, sets the local Git identity Thanh Vuong
+<thanhvuong@local.invalid>, and enables the shared hooks.
 
 ## Contributor work
 
-The agent must read [CONTRIBUTOR_AGENT_RULES.md](../CONTRIBUTOR_AGENT_RULES.md)
-before editing. In the supplied workspace, its initial check is:
+The contributor agent must first read
+[CONTRIBUTOR_AGENT_RULES.md](../CONTRIBUTOR_AGENT_RULES.md), then run:
 
+    cd /srv/portal-contributors/feat/<topic>
     ./scripts/verify-contributor-workspace.sh
 
-The check requires an approved feat, fix, chore, or docs branch and requires
-that no Git remote exists. Hooks enforce the following for every non-bobby
-Linux account:
+Normal feature work is allowed: inspect status, edit, test, add files, and
+commit focused changes on the supplied branch. After Bobby has authorized the
+handoff, the contributor may push only that branch:
 
-- local commits, merge commits, rebases, and patch application are rejected on
-  main and dev;
-- control-plane files cannot be committed;
-- every remote push is rejected, including origin and primus-origin;
-- local work on the named feature branch remains possible only after the
-  contributor workspace check passes.
+    git push -u primus-origin feat/<topic>
 
-A contributor may create a local commit only when Bobby asks. Otherwise the
-agent hands back its uncommitted working tree. It must never create a PR, merge
-changes, or use a remote command.
+The contributor may then create a pull request on primus-origin with base
+branch dev. Creating a PR is allowed; merging it is not. Do not create a PR
+to main, do not push a protected branch, and do not use origin.
 
-Git has no client-side hook before every branch checkout or fast-forward ref
-movement. That is why this model does not treat a contributor's clone as a
-security boundary: its lack of remotes, the push hook, and the contributor's
-lack of Bobby credentials are what prevent any local experiment from changing
-the canonical Portal branches.
+## Review and merge
 
-## Review and import
-
-When the contributor is done, only Bobby imports the local branch:
-
-    ./scripts/import-contributor-branch.sh --branch feat/<topic>
-
-The import creates or fast-forwards only the local reference
-refs/remotes/contributor/thanhvuong/feat/<topic>. It refuses a contributor
-workspace that has any remote configured. It asks the contributor account to
-write a short-lived local Git bundle, transfers the bundle into a Bobby-owned
-temporary directory, and fetches that file only. It does not checkout, merge,
-rebase, commit, push, or rewrite any Portal branch.
-
-Bobby reviews the handoff before choosing an integration action:
-
-    git log --oneline feat/<topic>..contributor/thanhvuong/feat/<topic>
-    git diff feat/<topic>...contributor/thanhvuong/feat/<topic>
-    git switch feat/<topic>
-    git merge --ff-only contributor/thanhvuong/feat/<topic>
-
-If Bobby's branch has moved, inspect the changes and merge or cherry-pick
-deliberately instead of forcing either history. Normal review then remains
-feature branch to dev, followed by a release-ready dev to main promotion.
-
-There is deliberately no automatic delete command for contributor workspaces.
-After import and review, Bobby can inspect and remove the exact completed
-workspace manually.
+Review takes place on the Primus pull request. The contributor stops after
+opening or updating it. Only a person with the repository's approved merge
+permission may merge it into dev. Promotion from dev to main remains a
+separate release decision.
 
 ## Security boundary
 
-Client-side Git hooks are helpful workflow controls but are not an
-authorization system: a contributor can alter a copy they own. The protection
-that matters is the separate Linux account, a standalone checkout with no
-remote, no access to /home/bobby or its SSH key, and no GitHub write
-permission. Do not add Thanh as a write, maintain, or admin collaborator on
-the BobbyAxerol repository. If remote collaboration is needed later, use a
-separate fork and keep Bobby as the only account permitted to merge or push
-canonical branches.
+Hooks provide useful local guardrails but can be changed in a clone that a
+contributor owns. The durable protections are Linux isolation from
+/home/bobby/portal, no Bobby credential in the contributor workspace, origin
+being absent, and Primus branch protection. The hook is deliberately narrow:
+it permits normal feature collaboration while preventing accidental protected
+branch pushes from the thanhvuong account.

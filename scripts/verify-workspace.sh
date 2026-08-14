@@ -68,7 +68,6 @@ bash -n \
   "${ROOT_DIR}/scripts/verify-workspace.sh" \
   "${ROOT_DIR}/scripts/smoke-stack.sh" \
   "${ROOT_DIR}/scripts/install-git-hooks.sh" \
-  "${ROOT_DIR}/scripts/import-contributor-branch.sh" \
   "${ROOT_DIR}/scripts/provision-contributor-workspace.sh" \
   "${ROOT_DIR}/scripts/verify-contributor-workspace.sh" \
   "${ROOT_DIR}/.githooks/lib/access-policy.sh" \

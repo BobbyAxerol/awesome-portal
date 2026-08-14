@@ -8,7 +8,7 @@ Describe the Portal module(s), API/UI contract and deployment surface affected.
 - [ ] No nested Git repository, generated dependency/build output, credentials or data is included.
 - [ ] `quantbt-engine` remains a pinned PyPI dependency; no sibling engine source was added.
 
-- [ ] If a contributor workspace was used, Bobby imported and reviewed its local branch; the contributor did not push, merge, or alter dev or main.
+- [ ] If a contributor workspace was used, its feature branch was pushed only to primus-origin and the contributor did not merge or alter dev or main.
 
 ## Validation
 
