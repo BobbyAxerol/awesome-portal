@@ -30,7 +30,9 @@ The provisioning command creates /srv/portal-contributors/feat/<topic>. It
 uses passwordless sudo only to create and permission the isolated workspace.
 It refuses an existing destination and never overwrites an earlier workspace.
 It clones without hardlinks, removes origin immediately, removes upstream
-tracking, enables the Portal hooks, and records the exact source commit.
+tracking, enables the Portal hooks, records the exact source commit, and sets
+the local-only Git identity Thanh Vuong <thanhvuong@local.invalid>. It never
+copies a credential or a global Git configuration.
 
 Bobby may push the feature branch to origin if and only if Bobby wants to; the
 provisioning command never pushes anything.

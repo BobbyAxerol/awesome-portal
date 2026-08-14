@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$BASH_SOURCE")/.." && pwd)"
 MAINTAINER_USER="bobby"
 CONTRIBUTOR_USER="thanhvuong"
+CONTRIBUTOR_GIT_NAME="Thanh Vuong"
+CONTRIBUTOR_GIT_EMAIL="thanhvuong@local.invalid"
 MAINTAINER_GROUP="$(id -gn "$MAINTAINER_USER")"
 WORKSPACE_ROOT="/srv/portal-contributors"
 BRANCH=""
@@ -82,6 +84,8 @@ git -C "$STAGE_DIR/portal" remote remove origin
 git -C "$STAGE_DIR/portal" config --unset-all "branch.$BRANCH.remote" || true
 git -C "$STAGE_DIR/portal" config --unset-all "branch.$BRANCH.merge" || true
 git -C "$STAGE_DIR/portal" config core.hooksPath .githooks
+git -C "$STAGE_DIR/portal" config user.name "$CONTRIBUTOR_GIT_NAME"
+git -C "$STAGE_DIR/portal" config user.email "$CONTRIBUTOR_GIT_EMAIL"
 [[ -z "$(git -C "$STAGE_DIR/portal" remote)" ]] || die 'Provisioning refused because the contributor checkout still has a remote.'
 
 SOURCE_COMMIT="$(git -C "$STAGE_DIR/portal" rev-parse HEAD)"
