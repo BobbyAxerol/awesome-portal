@@ -4,11 +4,29 @@ Portal is one monorepo. Make application and feature changes directly in the
 appropriate tracked directory; do not create a nested repository, submodule or
 separate source lock.
 
+## Contributor access
+
+The bobby account is the sole maintainer and keeps full authority over the
+canonical checkout, origin and primus-origin. Thanh Vuong is a contributor,
+not a remote collaborator: he works only in the separate local workspace Bobby
+provisions for a named feat, fix, chore or docs branch. The workspace has no
+Git remote and cannot change main or dev.
+
+Read [Contributor Workspace and Handoff](docs/contributor-workspace.md) and
+[Contributor Agent Rules](CONTRIBUTOR_AGENT_RULES.md) before handing work to a
+contributor agent. Only Bobby may provision or import a contributor workspace.
+Importing is review-only; it never merges or pushes on the contributor's
+behalf.
+
 ## Branch flow
 
-`main` is the stable deployment branch and accepts only reviewed promotions from
-`dev`. Direct local commits to an existing `main` branch are rejected by the
-root hook. Start new work from up-to-date `dev`:
+`main` is the stable deployment branch and normally accepts only reviewed
+promotions from `dev`. The root hooks reject contributor commits, merge
+commits, rebases and patch applications on either protected branch; the bobby
+maintainer account deliberately retains full authority for recovery and release
+work. The separate local-only checkout and push block protect the canonical
+branches even if a contributor alters their own copy. Start new work from
+up-to-date `dev`:
 
 ```bash
 git switch dev
@@ -16,10 +34,11 @@ git pull --ff-only
 git switch -c feat/<topic>
 ```
 
-Use `fix/`, `chore/` or `docs/` when appropriate. Validate each completed
-coherent change and commit it immediately with a focused message. Merge reviewed
-work into `dev`; promote `dev` to `main` only after the complete stack is stable.
-Never force-push or bypass hooks on shared branches.
+Use `fix/`, `chore/` or `docs/` when appropriate. Bobby validates each
+completed coherent change and commits it immediately with a focused message.
+Contributors create a local branch commit only when Bobby explicitly asks.
+Merge reviewed work into `dev`; promote `dev` to `main` only after the
+complete stack is stable. Never force-push or bypass hooks on shared branches.
 
 ## Required checks
 

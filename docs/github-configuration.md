@@ -32,3 +32,18 @@ the secrets documented in [release and deployment](release-and-deployment.md).
 The `Deploy Portal stack` workflow is intentionally manual and never deploys on
 every push. It requires an already prepared host and the immutable image tag
 selected at dispatch time.
+
+## Contributor access boundary
+
+The current contributor model is local-only. Do not add Thanh Vuong as a write,
+maintain, or admin collaborator on BobbyAxerol/awesome-portal, and do not copy
+the bobby SSH key, token, credential helper, or remote configuration into a
+contributor workspace. The canonical origin and the preservation remote
+primus-origin remain under Bobby's full control.
+
+Repository branch protection remains useful defense in depth. If it is enabled,
+keep BobbyAxerol as the sole allowed updater or bypass actor for main and dev;
+do not add a contributor to a bypass list. This preserves Bobby's emergency
+authority while rejecting any future contributor credential that is granted by
+mistake. The detailed local workflow is in
+[Contributor Workspace and Handoff](contributor-workspace.md).

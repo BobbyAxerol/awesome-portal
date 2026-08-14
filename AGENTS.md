@@ -23,19 +23,49 @@ their own private runtime services.
 
 ## Branch model (required)
 
-- `main` is the stable deployable baseline. Do not commit directly to it.
+- `main` is the stable deployable baseline. Bobby should normally promote a
+  reviewed release rather than commit there directly. Contributor hooks reject
+  direct commits, merge commits, rebases and patch applies; the isolated
+  checkout and push block protect the canonical branch from all other accounts.
 - `dev` is the shared development branch. Start every `feat/*`, `fix/*`,
-  `chore/*`, or `docs/*` branch from current `dev` and merge through review.
+  `chore/*`, or `docs/*` branch from current `dev` and merge through
+  review. Contributor hooks and the local-only workspace protect it from all
+  non-bobby accounts.
 - Merge validated work into `dev`; promote `dev` to `main` only through a
   release-ready pull request. Do not force-push, rewrite shared history, or
-  bypass hooks.
-- GitHub branch protection is required for both `main` and `dev`.
+  bypass hooks. Bobby retains emergency authority when explicitly needed.
+- GitHub branch protection is recommended as defense in depth for both `main`
+  and `dev`; BobbyAxerol must remain the sole updater or bypass actor.
+
+## Contributor identity and authority (required)
+
+- The bobby Linux account is the sole local maintainer and retains full
+  authority over the canonical checkout and both remotes. The feature-to-dev
+  and dev-to-main flow remains the expected release process, but the local
+  contributor hooks must never remove Bobby's authority.
+- Thanh Vuong and every unknown local account are contributors. They may work
+  only in a separate local-only workspace on the explicit feat, fix, chore, or
+  docs branch Bobby requested. They must not commit, merge, rebase, or apply a
+  patch on main or dev, and they must not push to any remote.
+- Contributor agents must read CONTRIBUTOR_AGENT_RULES.md and begin work with
+  its explicit confirmation. They may create a local feature-branch commit
+  only when Bobby has explicitly asked for a commit; otherwise they hand back
+  the working tree without a Git action.
+- Do not give contributors access to /home/bobby, the canonical Portal .git
+  directory, Bobby's SSH keys, sudo, GitHub write permission, or a configured
+  remote in their workspace. Hooks are guardrails; account isolation and
+  absent credentials are the security boundary.
+- Only Bobby provisions a workspace with
+  scripts/provision-contributor-workspace.sh and imports it with
+  scripts/import-contributor-branch.sh. Importing a branch is review-only and
+  must never auto-merge or push.
 
 ## Commit discipline
 
-- Every completed coherent change must be validated and committed immediately.
+- Bobby must validate and commit every completed coherent change immediately.
   Keep commits small, single-purpose and descriptive; never leave finished
-  unrelated work uncommitted.
+  unrelated work uncommitted. A contributor makes a local feature-branch
+  commit only when Bobby has expressly requested one.
 - Do not commit credentials, market data, artifacts, databases, virtual
   environments, dependency caches, generated reports, or local configuration.
   Version only documented examples/templates.

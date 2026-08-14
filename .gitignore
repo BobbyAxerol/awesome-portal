@@ -6,6 +6,7 @@
 !*.env.*.example
 !*.env.template
 .envrc
+/.portal-contributor-workspace
 *.pem
 *.key
 *.p12
