@@ -21,6 +21,12 @@ coherent change and commit it immediately with a focused message. Merge reviewed
 work into `dev`; promote `dev` to `main` only after the complete stack is stable.
 Never force-push or bypass hooks on shared branches.
 
+`origin` is the canonical development remote. `primus-origin` is a manual,
+source-preserving mirror: never set it as an upstream, force-push to it, or
+delete its refs during a mirror operation. Sync it only when explicitly
+requested, after comparing refs, and include both local branches and archive or
+release tags.
+
 ## Required checks
 
 ```bash
