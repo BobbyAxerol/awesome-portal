@@ -91,7 +91,8 @@ sudo -n install -d -o "$MAINTAINER_USER" -g "$MAINTAINER_GROUP" -m 0751 "$WORKSP
 sudo -n install -d -o "$MAINTAINER_USER" -g "$MAINTAINER_GROUP" -m 0751 "$(dirname "$WORKSPACE")"
 sudo -n mv "$STAGE_DIR/portal" "$WORKSPACE"
 sudo -n chown -R --no-dereference "$CONTRIBUTOR_USER:$MAINTAINER_GROUP" "$WORKSPACE"
-sudo -n chmod -R --no-dereference g+rX "$WORKSPACE"
+sudo -n find "$WORKSPACE" -type d -exec chmod g+rx {} +
+sudo -n find "$WORKSPACE" -type f -exec chmod g+r {} +
 sudo -n chmod 0750 "$WORKSPACE"
 
 printf 'Created local-only contributor workspace: %s\n' "$WORKSPACE"
