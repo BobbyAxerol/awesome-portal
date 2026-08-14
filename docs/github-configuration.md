@@ -40,10 +40,11 @@ BobbyAxerol/awesome-portal, and do not copy the bobby SSH key, token, or
 credential helper into a contributor workspace. Contributor work is published
 only to primus-origin from the contributor's own GitHub identity.
 
-The Primus repository owner must allow Thanh to push feature branches while
+The PrimusSparkQuant repository must allow Thanh to push feature branches while
 protecting main and dev: require pull requests, block direct and force updates,
-and keep both BobbyAxerol and thanhvuong1105 out of any bypass or
-allowed-updater list unless the owner deliberately changes that policy. This is
-what prevents a web PR merge; local hooks cannot enforce GitHub permissions.
+and keep thanhvuong1105 out of every bypass or allowed-updater list.
+BobbyAxerol is the sole approved bypass actor, so Bobby can handle an emergency
+or release merge when required. This is what prevents a contributor web PR
+merge; local hooks cannot enforce GitHub permissions.
 The detailed workflow is in
 [Contributor Workspace and Pull Request Flow](contributor-workspace.md).

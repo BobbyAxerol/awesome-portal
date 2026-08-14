@@ -43,7 +43,9 @@ their own private runtime services.
 
 - The bobby Linux account is the sole local maintainer and retains full
   authority over the canonical checkout and the BobbyAxerol origin. Actual
-  permissions on primus-origin are governed by PrimusSpark.
+  permissions on primus-origin are governed by PrimusSparkQuant; its protected
+  branch ruleset gives BobbyAxerol the configured maintainer bypass, never a
+  contributor bypass.
 - Thanh Vuong and every unknown local account are contributors. They may work
   only in a separate workspace on the explicit feat, fix, chore, or docs branch
   Bobby requested. They must not commit, merge, rebase, or apply a patch on

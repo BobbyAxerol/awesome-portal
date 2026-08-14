@@ -7,7 +7,7 @@ requested feature branch, with one carefully limited remote:
 - origin is absent, so the contributor cannot push to the BobbyAxerol
   canonical repository from this workspace.
 - primus-origin is the only remote and points to
-  git@github.com:PrimusSpark/awesome-primus-portal.git.
+  git@github.com:PrimusSparkQuant/awesome-primus-portal.git.
 - Hooks allow a contributor to push only the same named feat, fix, chore, or
   docs branch to primus-origin. They reject every push to dev, main, tags,
   origin, another remote, branch deletion, or a differently named destination.
@@ -22,9 +22,10 @@ the contributor cannot locally merge into Bobby's dev or main.
   authority for local work and the BobbyAxerol origin.
 - The thanhvuong Linux account works only in its supplied workspace. Its GitHub
   identity is thanhvuong1105.
-- On primus-origin, both accounts use the access granted by PrimusSpark. The
-  repository owner must protect dev and main so contributors can create pull
-  requests but cannot merge or update those branches.
+- On primus-origin, both accounts use the access granted by PrimusSparkQuant.
+  The repository ruleset protects dev and main so contributors can create pull
+  requests but cannot merge or update those branches; BobbyAxerol is the sole
+  configured bypass actor for maintainer and release work.
 
 ## One-time host and GitHub prerequisites
 
@@ -36,12 +37,14 @@ Before the first push, Bobby must arrange these items:
    configuration.
 2. Register that public key with GitHub account thanhvuong1105 and verify that
    SSH identifies as that account.
-3. Grant that GitHub account enough permission on PrimusSpark/awesome-primus-portal
+3. Grant that GitHub account enough permission on
+   PrimusSparkQuant/awesome-primus-portal
    to push feature branches. If it has only read or triage permission, use a
    fork instead.
 4. In the Primus repository, protect main and dev: require a pull request,
    block direct/force updates, and do not add thanhvuong1105 to a bypass or
-   allowed-updater list. The repository owner controls this rule.
+   allowed-updater list. BobbyAxerol is the only intended bypass actor. The
+   repository owner controls this rule.
 
 ## Prepare a requested branch
 

@@ -7,7 +7,7 @@
 
 PORTAL_MAINTAINER_USER="bobby"
 PORTAL_CONTRIBUTOR_REMOTE_NAME="primus-origin"
-PORTAL_CONTRIBUTOR_REMOTE_URL="git@github.com:PrimusSpark/awesome-primus-portal.git"
+PORTAL_CONTRIBUTOR_REMOTE_URL="git@github.com:PrimusSparkQuant/awesome-primus-portal.git"
 
 portal_current_user() {
   command -p id -un
