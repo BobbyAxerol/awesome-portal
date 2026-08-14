@@ -53,6 +53,8 @@ git -C "$ROOT_DIR" show-ref --verify --quiet "refs/heads/$BRANCH" || die "Local 
 
 WORKSPACE="$WORKSPACE_ROOT/$BRANCH"
 MARKER="$WORKSPACE/.portal-contributor-workspace"
+SAFE_WORKTREE="$WORKSPACE"
+SAFE_GIT_DIR="$WORKSPACE/.git"
 [[ -d "$WORKSPACE/.git" && ! -L "$WORKSPACE/.git" ]] || die "Expected a standalone Git checkout at $WORKSPACE."
 [[ -f "$MARKER" ]] || die "Contributor workspace marker is missing: $MARKER."
 grep -Fx "BRANCH=$BRANCH" "$MARKER" >/dev/null || die 'Contributor workspace marker does not match the requested branch.'
@@ -64,8 +66,8 @@ fi
 SOURCE_REF="refs/heads/$BRANCH"
 DESTINATION_REF="refs/remotes/contributor/$CONTRIBUTOR_USER/$BRANCH"
 git check-ref-format "$DESTINATION_REF" >/dev/null
-git -C "$WORKSPACE" -c safe.directory="$WORKSPACE" rev-parse --verify "$SOURCE_REF" >/dev/null
-git -C "$ROOT_DIR" fetch --no-tags "$WORKSPACE" "$SOURCE_REF:$DESTINATION_REF"
+git -C "$WORKSPACE" -c safe.directory="$SAFE_WORKTREE" -c safe.directory="$SAFE_GIT_DIR" rev-parse --verify "$SOURCE_REF" >/dev/null
+git -C "$ROOT_DIR" -c safe.directory="$SAFE_WORKTREE" -c safe.directory="$SAFE_GIT_DIR" fetch --no-tags "$WORKSPACE" "$SOURCE_REF:$DESTINATION_REF"
 
 printf 'Imported %s as %s. No Portal branch was merged or changed.\n' "$SOURCE_REF" "$DESTINATION_REF"
 printf 'Review with: git log --oneline %s..%s and git diff %s...%s\n' "$BRANCH" "$DESTINATION_REF" "$BRANCH" "$DESTINATION_REF"
