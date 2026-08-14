@@ -24,7 +24,7 @@ feature branch from current dev only when the work is requested:
     git switch dev
     git pull --ff-only origin dev
     git switch -c feat/<topic>
-    make contributor-provision BRANCH=feat/<topic>
+    ./scripts/provision-contributor-workspace.sh --branch feat/<topic>
 
 The provisioning command creates /srv/portal-contributors/feat/<topic>. It
 uses passwordless sudo only to create and permission the isolated workspace.
@@ -69,7 +69,7 @@ the canonical Portal branches.
 
 When the contributor is done, only Bobby imports the local branch:
 
-    make contributor-import BRANCH=feat/<topic>
+    ./scripts/import-contributor-branch.sh --branch feat/<topic>
 
 The import creates or fast-forwards only the local reference
 refs/remotes/contributor/thanhvuong/feat/<topic>. It refuses a contributor
