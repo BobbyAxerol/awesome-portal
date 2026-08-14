@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help verify build up run down logs status config smoke hooks
+.PHONY: help verify build up run down logs status config smoke hooks contributor-provision
 
 help: ## Show available workspace commands.
 	@./scripts/portal help
@@ -34,3 +34,6 @@ smoke: ## Build, start, verify and tear down an isolated smoke-test stack.
 
 hooks: ## Enable parent workspace pre-commit hooks.
 	@./scripts/install-git-hooks.sh
+
+contributor-provision: ## Create Thanh Vuong's Primus feature workspace (set BRANCH=feat/topic).
+	@./scripts/provision-contributor-workspace.sh --branch "$(BRANCH)"

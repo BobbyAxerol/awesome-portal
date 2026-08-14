@@ -23,6 +23,12 @@ for required in \
   "${ROOT_DIR}/deploy/.env.production.example" \
   "${ROOT_DIR}/.gitignore" \
   "${ROOT_DIR}/.dockerignore" \
+  "${ROOT_DIR}/.githooks/lib/access-policy.sh" \
+  "${ROOT_DIR}/.githooks/pre-applypatch" \
+  "${ROOT_DIR}/.githooks/pre-commit" \
+  "${ROOT_DIR}/.githooks/pre-merge-commit" \
+  "${ROOT_DIR}/.githooks/pre-push" \
+  "${ROOT_DIR}/.githooks/pre-rebase" \
   "${ROOT_DIR}/apps/portal/backend/pyproject.toml" \
   "${ROOT_DIR}/apps/portal/frontend/package-lock.json" \
   "${ROOT_DIR}/apps/portal/strategy/PROTECTED_SHA256" \
@@ -62,6 +68,14 @@ bash -n \
   "${ROOT_DIR}/scripts/verify-workspace.sh" \
   "${ROOT_DIR}/scripts/smoke-stack.sh" \
   "${ROOT_DIR}/scripts/install-git-hooks.sh" \
+  "${ROOT_DIR}/scripts/provision-contributor-workspace.sh" \
+  "${ROOT_DIR}/scripts/verify-contributor-workspace.sh" \
+  "${ROOT_DIR}/.githooks/lib/access-policy.sh" \
+  "${ROOT_DIR}/.githooks/pre-applypatch" \
+  "${ROOT_DIR}/.githooks/pre-commit" \
+  "${ROOT_DIR}/.githooks/pre-merge-commit" \
+  "${ROOT_DIR}/.githooks/pre-push" \
+  "${ROOT_DIR}/.githooks/pre-rebase" \
   "${ROOT_DIR}/apps/portal/scripts/run_backend.sh" \
   "${ROOT_DIR}/apps/portal/scripts/run_dev.sh" \
   "${ROOT_DIR}/apps/portal/scripts/run_frontend.sh" \

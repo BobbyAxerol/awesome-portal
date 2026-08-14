@@ -23,19 +23,52 @@ their own private runtime services.
 
 ## Branch model (required)
 
-- `main` is the stable deployable baseline. Do not commit directly to it.
+- `main` is the stable deployable baseline. Bobby should normally promote a
+  reviewed release rather than commit there directly. Contributor hooks reject
+  direct commits, merge commits, rebases and patch applies; the isolated
+  checkout and restricted Primus-only push protect the canonical branch from
+  all other accounts.
 - `dev` is the shared development branch. Start every `feat/*`, `fix/*`,
-  `chore/*`, or `docs/*` branch from current `dev` and merge through review.
+  `chore/*`, or `docs/*` branch from current `dev` and merge through
+  review. Contributor hooks and the isolated workspace protect it from all
+  non-bobby accounts.
 - Merge validated work into `dev`; promote `dev` to `main` only through a
   release-ready pull request. Do not force-push, rewrite shared history, or
-  bypass hooks.
-- GitHub branch protection is required for both `main` and `dev`.
+  bypass hooks. Bobby retains emergency authority when explicitly needed.
+- GitHub branch protection is recommended as defense in depth for both `main`
+  and `dev`. On primus-origin, do not give a contributor bypass or protected
+  branch update permission.
+
+## Contributor identity and authority (required)
+
+- The bobby Linux account is the sole local maintainer and retains full
+  authority over the canonical checkout and the BobbyAxerol origin. Actual
+  permissions on primus-origin are governed by PrimusSparkQuant; its protected
+  branch ruleset gives BobbyAxerol the configured maintainer bypass, never a
+  contributor bypass.
+- Thanh Vuong and every unknown local account are contributors. They may work
+  only in a separate workspace on the explicit feat, fix, chore, or docs branch
+  Bobby requested. They must not commit, merge, rebase, or apply a patch on
+  main or dev. They may push only that feature branch to primus-origin.
+- Contributor agents must read CONTRIBUTOR_AGENT_RULES.md and begin work with
+  its explicit confirmation. They may make normal local commits on their
+  assigned branch; they may push and open or update a dev pull request only
+  when Bobby has asked for the handoff.
+- Do not give contributors access to /home/bobby, the canonical Portal .git
+  directory, Bobby's SSH keys, sudo, or GitHub write permission on origin.
+  Their workspace contains only the primus-origin remote, configured for their
+  own GitHub identity. Hooks are guardrails; account isolation and remote
+  branch protection are the security boundary.
+- Only Bobby provisions a workspace with
+  scripts/provision-contributor-workspace.sh. Contributors may create a Primus
+  pull request to dev but must never merge it.
 
 ## Commit discipline
 
-- Every completed coherent change must be validated and committed immediately.
+- Bobby must validate and commit every completed coherent change immediately.
   Keep commits small, single-purpose and descriptive; never leave finished
-  unrelated work uncommitted.
+  unrelated work uncommitted. A contributor commits coherent work normally on
+  their assigned feature branch and hands it off through a Primus pull request.
 - Do not commit credentials, market data, artifacts, databases, virtual
   environments, dependency caches, generated reports, or local configuration.
   Version only documented examples/templates.
