@@ -46,6 +46,7 @@ for required in \
   "${ROOT_DIR}/apps/portal/backend/tests/test_portal_summary_service.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_frontend_handoff.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_compat_parity.py" \
+  "${ROOT_DIR}/apps/portal/backend/tests/test_artifact_provenance.py" \
   "${ROOT_DIR}/apps/portal/frontend/package-lock.json" \
   "${ROOT_DIR}/apps/portal/registry/registry.json" \
   "${ROOT_DIR}/apps/portal/registry/FRONTEND_HANDOFF.md" \
@@ -105,6 +106,7 @@ for tracked_source in \
   apps/portal/backend/tests/test_portal_summary_service.py \
   apps/portal/backend/tests/test_frontend_handoff.py \
   apps/portal/backend/tests/test_compat_parity.py \
+  apps/portal/backend/tests/test_artifact_provenance.py \
   apps/portal/frontend/package-lock.json \
   apps/portal/registry/registry.json \
   apps/portal/registry/FRONTEND_HANDOFF.md \

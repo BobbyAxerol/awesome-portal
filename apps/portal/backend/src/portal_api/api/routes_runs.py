@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from portal_api.domain.enums import RunState
 from portal_api.domain.errors import PortalDomainError
 from portal_api.domain.requests import PortalRunRequest
+from portal_api.repositories.artifacts import with_portal_provenance
 from portal_api.services.export_service import export_bundle
 
 router = APIRouter(prefix="/api/runs")
@@ -191,7 +192,11 @@ async def create_run(payload: PortalRunRequest, request: Request) -> dict:
     # Write the deterministic fold plan immediately so the UI can render the
     # fold timeline from second zero (the worker re-writes the same artifact).
     if preflight.fold_plan is not None:
-        _artifacts(request).write_json(run_id, "config/fold_plan.json", preflight.fold_plan)
+        _artifacts(request).write_json(
+            run_id,
+            "config/fold_plan.json",
+            with_portal_provenance("fold_plan.json", preflight.fold_plan),
+        )
     return {"run_id": run_id, "status": RunState.QUEUED.value}
 
 

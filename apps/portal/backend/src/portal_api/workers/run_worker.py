@@ -24,7 +24,10 @@ from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.domain.enums import RunState
 from portal_api.domain.errors import RunCancelledError
 from portal_api.domain.requests import PortalRunRequest
-from portal_api.repositories.artifacts import ArtifactRepository
+from portal_api.repositories.artifacts import (
+    ArtifactRepository,
+    with_portal_provenance,
+)
 from portal_api.serialization import canonicalize
 from portal_api.services.advanced_walkforward_runner import AdvancedWalkForwardRunner
 from portal_api.services.three_window_runner import ThreeWindowRunner
@@ -131,7 +134,11 @@ def _write_status(
     if extra:
         status.update(extra)
     status.setdefault("events", []).append({"state": state.value, "at": time.time()})
-    artifacts.write_json(run_id, "status.json", canonicalize(status))
+    artifacts.write_json(
+        run_id,
+        "status.json",
+        canonicalize(with_portal_provenance("status.json", status)),
+    )
 
 
 def _cancel_requested(artifacts: ArtifactRepository, run_id: str) -> bool:
@@ -288,7 +295,9 @@ def execute_run(
     artifacts.write_json(
         run_id,
         "config/fold_plan.json",
-        compute_run_fold_plan(request, market.frame.index),
+        with_portal_provenance(
+            "fold_plan.json", compute_run_fold_plan(request, market.frame.index)
+        ),
     )
 
     def progress(state: RunState) -> None:
