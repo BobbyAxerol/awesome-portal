@@ -32,6 +32,10 @@ for required in \
   "${ROOT_DIR}/.githooks/pre-rebase" \
   "${ROOT_DIR}/apps/portal/backend/pyproject.toml" \
   "${ROOT_DIR}/apps/portal/frontend/package-lock.json" \
+  "${ROOT_DIR}/apps/portal/registry/registry.json" \
+  "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry-source.v1.schema.json" \
+  "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry.v1.schema.json" \
+  "${ROOT_DIR}/apps/portal/registry/schemas/portal-summary.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/strategy/PROTECTED_SHA256" \
   "${ROOT_DIR}/apps/portal/strategy/main.py" \
   "${ROOT_DIR}/features/roadmap-task-board/backend/requirements-dev.txt" \
@@ -55,6 +59,10 @@ fi
 for tracked_source in \
   apps/portal/backend/pyproject.toml \
   apps/portal/frontend/package-lock.json \
+  apps/portal/registry/registry.json \
+  apps/portal/registry/schemas/portal-registry-source.v1.schema.json \
+  apps/portal/registry/schemas/portal-registry.v1.schema.json \
+  apps/portal/registry/schemas/portal-summary.v1.schema.json \
   apps/portal/strategy/PROTECTED_SHA256 \
   features/roadmap-task-board/backend/requirements-dev.txt \
   features/roadmap-task-board/frontend/package-lock.json; do
@@ -62,6 +70,19 @@ for tracked_source in \
     printf 'Portal source is present but not tracked by the parent Git: %s\n' "${tracked_source}" >&2
     exit 1
   }
+done
+
+command -v python3 >/dev/null 2>&1 || {
+  printf 'Python 3 is required to validate Portal JSON contracts.\n' >&2
+  exit 1
+}
+
+for json_contract in \
+  "${ROOT_DIR}/apps/portal/registry/registry.json" \
+  "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry-source.v1.schema.json" \
+  "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry.v1.schema.json" \
+  "${ROOT_DIR}/apps/portal/registry/schemas/portal-summary.v1.schema.json"; do
+  python3 -m json.tool "${json_contract}" >/dev/null
 done
 
 bash -n \

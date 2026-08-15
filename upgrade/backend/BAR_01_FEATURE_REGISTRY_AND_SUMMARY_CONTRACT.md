@@ -1,7 +1,7 @@
 # BAR-01 — Feature Registry and Command Center Summary Contract
 
 > **Version:** 0.1<br>
-> **Status:** Backend architecture ready for U02/U03 implementation review<br>
+> **Status:** BAR-01-BE1 complete; BAR-01-BE2 pending<br>
 > **Updated:** 2026-08-15<br>
 > **Unified phases:** U02 Shared Foundations, U03 Unified Shell<br>
 > **Runtime authority:** current FastAPI services remain authoritative
@@ -731,6 +731,24 @@ The implementation agent should use these coherent commit boundaries.
 
 Gate: invalid/dangling/duplicate fixture tests fail deterministically.
 
+Implementation evidence — 2026-08-15:
+
+- [x] Added canonical `portal.registry.v1` source with 7 feature groups, 9
+  lifecycle stages, 13 features, 17 screen contracts and 8 tracked concerns.
+- [x] Only `QUANTBT_RESEARCH` and `PLANNING` are `AVAILABLE + REAL`; Alpha,
+  Data Catalog, Approval, Paper, Sandbox and Live remain commissioned without
+  runtime summary sources.
+- [x] Added Draft 2020-12 source/public/summary schemas with strict unknown-field
+  rejection, computed public digest boundary and unavailable-value `null`
+  enforcement.
+- [x] Added cross-reference symmetry, route collision, source-module/evidence,
+  maturity, deterministic digest and truthful summary contract tests.
+- [x] Targeted registry contract suite: `12 passed`.
+- [x] Full backend suite: `128 passed, 1 skipped`; the skip is the explicit
+  opt-in external Historical real-data test.
+- [x] Root workspace verification now requires tracked registry/schema files
+  and checks JSON syntax before Compose validation.
+
 ### BAR-01-BE2 — Registry repository and API
 
 - Add immutable domain models and repository loader.
@@ -862,3 +880,9 @@ BAR-01 backend contract is complete only when:
 - OpenAPI/fixtures are sufficient for a separate frontend agent.
 - Current backend/frontend/Planning tests and production builds still pass.
 - Workspace verification passes and every coherent slice is committed.
+
+BE1 satisfies only the schema/fixture foundation. The next backend slice is
+BAR-01-BE2: immutable registry domain/repository loader, startup/readiness
+validation and read-only `/api/v1/portal/registry` with deterministic public
+digest, ETag and `304` behavior. BE2 must not add summary adapters, a database,
+frontend registry code or any mutation endpoint.

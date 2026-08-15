@@ -207,7 +207,7 @@ contract/schema → backend/domain tests → API/read model → UI states/wirefr
 | U01 | Baseline inventory & golden visual evidence | PARTIAL | Không mất capability hiện tại |
 | U01-BE | HMD consumer boundary & real-reader smoke | PARTIAL — CODE COMPLETE | Chờ host ACL/publish secret |
 | U02 | Shared foundations & Figma-ready design system | PARTIAL | Một visual/component language |
-| U03 | Unified shell, registry & Command Center | NOT STARTED | Một mother Portal thật |
+| U03 | Unified shell, registry & Command Center | PARTIAL — CONTRACT BASELINE | Một mother Portal thật |
 | U04 | QuantBT Research embedding & parity | PARTIAL | QuantBT trong shell chung |
 | U05 | Planning embedding & cross-link | PARTIAL | Planning trong shell chung |
 | U06 | Secure edge/origin topology | EXTERNAL | Hostname private-origin an toàn |
@@ -493,6 +493,9 @@ Tạo một visual language/component contract chung trước khi ghép hai fron
 - Fund Paper token palette, typography roles, ECharts conventions và report
   components đã tồn tại trong QuantBT.
 - Planning có responsive shell, light/dark tokens và design catalog riêng.
+- BAR-01-BE1 đã khóa display/capability metadata contract bằng canonical
+  registry source, Draft 2020-12 schemas và integrity tests; implementation UI
+  package vẫn chờ các slice U02/U03 sau.
 
 **Description / To-do**
 
@@ -550,6 +553,9 @@ trung thực capability hiện tại/tương lai.
 
 - Root web gateway là public entry point duy nhất.
 - Hai frontend cùng React/Vite nhưng vẫn build và route độc lập.
+- BAR-01-BE1 đã tạo canonical Feature/Screen/Concern/Lifecycle fixture và
+  source/public/summary schemas. Chỉ QuantBT Research và Planning được đánh dấu
+  `AVAILABLE + REAL`; mọi capability tương lai vẫn `COMMISSIONED`.
 
 **Description / To-do**
 

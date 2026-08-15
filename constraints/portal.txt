@@ -2,6 +2,7 @@
 # reader is an optional checksum-verified wheel build input. Exact dataframe
 # versions keep the two packages ABI/runtime-compatible in CI and images.
 duckdb==1.5.5
+jsonschema==4.26.0
 pandas==2.3.3
 primus-historical-market-data==0.1.0rc3
 pyarrow==24.0.0
