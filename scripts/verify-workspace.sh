@@ -21,6 +21,7 @@ for required in \
   "${ROOT_DIR}/compose.yaml" \
   "${ROOT_DIR}/deploy/compose.production.yaml" \
   "${ROOT_DIR}/deploy/.env.production.example" \
+  "${ROOT_DIR}/constraints/portal.txt" \
   "${ROOT_DIR}/vendor/hmd-reader/README.md" \
   "${ROOT_DIR}/.gitignore" \
   "${ROOT_DIR}/.dockerignore" \
@@ -32,12 +33,14 @@ for required in \
   "${ROOT_DIR}/.githooks/pre-rebase" \
   "${ROOT_DIR}/apps/portal/backend/pyproject.toml" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/api/routes_portal.py" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/adapters/planning_summary.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/adapters/quantbt_summary.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/domain/portal_registry.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/domain/portal_summary.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/repositories/portal_registry.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/portal_registry.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_portal_registry_api.py" \
+  "${ROOT_DIR}/apps/portal/backend/tests/test_planning_summary_adapter.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_quantbt_summary_adapter.py" \
   "${ROOT_DIR}/apps/portal/frontend/package-lock.json" \
   "${ROOT_DIR}/apps/portal/registry/registry.json" \
@@ -47,6 +50,7 @@ for required in \
   "${ROOT_DIR}/apps/portal/strategy/PROTECTED_SHA256" \
   "${ROOT_DIR}/apps/portal/strategy/main.py" \
   "${ROOT_DIR}/features/roadmap-task-board/backend/requirements-dev.txt" \
+  "${ROOT_DIR}/features/roadmap-task-board/backend/tests/test_summary_contract.py" \
   "${ROOT_DIR}/features/roadmap-task-board/frontend/package-lock.json"; do
   [[ -f "${required}" ]] || {
     printf 'Required Portal source file is missing: %s\n' "${required}" >&2
@@ -65,14 +69,17 @@ if nested_git="$(find "${ROOT_DIR}/apps" "${ROOT_DIR}/features" -name .git -prin
 fi
 
 for tracked_source in \
+  constraints/portal.txt \
   apps/portal/backend/pyproject.toml \
   apps/portal/backend/src/portal_api/api/routes_portal.py \
+  apps/portal/backend/src/portal_api/adapters/planning_summary.py \
   apps/portal/backend/src/portal_api/adapters/quantbt_summary.py \
   apps/portal/backend/src/portal_api/domain/portal_registry.py \
   apps/portal/backend/src/portal_api/domain/portal_summary.py \
   apps/portal/backend/src/portal_api/repositories/portal_registry.py \
   apps/portal/backend/src/portal_api/services/portal_registry.py \
   apps/portal/backend/tests/test_portal_registry_api.py \
+  apps/portal/backend/tests/test_planning_summary_adapter.py \
   apps/portal/backend/tests/test_quantbt_summary_adapter.py \
   apps/portal/frontend/package-lock.json \
   apps/portal/registry/registry.json \
@@ -81,6 +88,7 @@ for tracked_source in \
   apps/portal/registry/schemas/portal-summary.v1.schema.json \
   apps/portal/strategy/PROTECTED_SHA256 \
   features/roadmap-task-board/backend/requirements-dev.txt \
+  features/roadmap-task-board/backend/tests/test_summary_contract.py \
   features/roadmap-task-board/frontend/package-lock.json; do
   git -C "${ROOT_DIR}" ls-files --error-unmatch "${tracked_source}" >/dev/null || {
     printf 'Portal source is present but not tracked by the parent Git: %s\n' "${tracked_source}" >&2

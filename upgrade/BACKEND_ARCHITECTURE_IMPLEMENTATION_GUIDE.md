@@ -582,15 +582,15 @@ whether anything was pushed or deployed
 
 ## 14. Next backend architecture task
 
-BAR-01-BE1 through BE3 now provide the versioned Feature/Screen/Concern and
-Capability Availability schemas, immutable registry API and internal read-only
-QuantBT summary contribution for U02/U03. They do not introduce a new
-database/service or begin U07/U10 early.
+BAR-01-BE1 through BE4 now provide the versioned Feature/Screen/Concern and
+Capability Availability schemas, immutable registry API and independently
+fail-safe internal QuantBT/Planning summary contributions for U02/U03. They do
+not introduce a new database/service or begin U07/U10 early.
 
 The BAR-01 deep dive is now available at
 [`upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md`](./backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md).
-The next backend task is BAR-01-BE4, the independently fail-safe Planning
-summary adapter defined in that deep dive. It must use a fixed server-owned
-private HTTP destination with bounded timeout/body/schema validation, expose
-LOCAL browser state as unavailable rather than guessed counts, and leave
-aggregation plus the public endpoint to BAR-01-BE5.
+The next backend task is BAR-01-BE5, the deadline-aware concurrent aggregator
+and public summary endpoint defined in that deep dive. It must preserve healthy
+evidence when another adapter fails, propagate cancellation, enforce payload
+ceilings and merge only currently authorized priority types; it must not begin
+the BE6 frontend handoff or later control-plane infrastructure early.

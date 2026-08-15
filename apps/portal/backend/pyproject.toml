@@ -12,6 +12,7 @@ authors = [{ name = "BobbyAxerol", email = "vugioan11022002@gmail.com" }]
 dependencies = [
   "duckdb>=1.1,<2",
   "fastapi>=0.115,<1",
+  "httpx>=0.28,<1",
   "jsonschema>=4.23,<5",
   "numpy>=2,<3",
   "pandas>=2.2,<3",
@@ -23,7 +24,6 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "httpx>=0.28,<1",
   "pytest>=8,<10",
 ]
 historical-data = [

@@ -8,6 +8,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    StrictInt,
     field_serializer,
     field_validator,
     model_validator,
@@ -40,6 +41,20 @@ PriorityType = Literal[
     "HISTORICAL_DATA_UNAVAILABLE",
     "REGISTRY_BLOCKING_CONCERN",
 ]
+PlanningTaskStatus = Literal[
+    "Backlog",
+    "Ready",
+    "In Progress",
+    "Validating",
+    "Done",
+]
+PLANNING_TASK_STATUSES: tuple[PlanningTaskStatus, ...] = (
+    "Backlog",
+    "Ready",
+    "In Progress",
+    "Validating",
+    "Done",
+)
 ContentDigest = Annotated[str, Field(pattern=r"^sha256:[0-9a-f]{64}$")]
 
 
@@ -235,12 +250,68 @@ class HistoricalCapabilitySnapshot(SummaryModel):
         return self
 
 
+class PlanningSummaryTask(SummaryModel):
+    id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$")
+    status: PlanningTaskStatus
+    updated_at: datetime
+
+    _updated_at_timezone = field_validator("updated_at")(_require_timezone)
+
+
+class PlanningSummaryRoadmapPhase(SummaryModel):
+    id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$")
+    updated_at: datetime
+
+    _updated_at_timezone = field_validator("updated_at")(_require_timezone)
+
+
+class PlanningSummarySnapshot(SummaryModel):
+    schema_version: Literal["planning.summary.v1"]
+    observed_at: datetime
+    total_tasks: StrictInt = Field(ge=0)
+    task_counts: Mapping[PlanningTaskStatus, StrictInt]
+    roadmap_phase_count: StrictInt = Field(ge=0)
+    recent_tasks: tuple[PlanningSummaryTask, ...] = Field(max_length=5)
+    recent_roadmap: tuple[PlanningSummaryRoadmapPhase, ...] = Field(max_length=5)
+
+    _observed_at_timezone = field_validator("observed_at")(_require_timezone)
+
+    @field_validator("task_counts", mode="after")
+    @classmethod
+    def freeze_task_counts(
+        cls, value: Mapping[PlanningTaskStatus, StrictInt]
+    ) -> Mapping[PlanningTaskStatus, StrictInt]:
+        if set(value) != set(PLANNING_TASK_STATUSES):
+            raise ValueError("task counts must contain every current Planning status")
+        if any(count < 0 for count in value.values()):
+            raise ValueError("task counts cannot be negative")
+        return MappingProxyType(dict(value))
+
+    @field_serializer("task_counts")
+    def serialize_task_counts(
+        self, value: Mapping[PlanningTaskStatus, int]
+    ) -> dict[str, int]:
+        return dict(value)
+
+    @model_validator(mode="after")
+    def validate_task_total(self) -> "PlanningSummarySnapshot":
+        if sum(self.task_counts.values()) != self.total_tasks:
+            raise ValueError("task counts must sum to total_tasks")
+        return self
+
+
 class CurrentRunSummaryPort(Protocol):
     def read_current_runs(self, *, limit: int) -> CurrentRunInventory: ...
 
 
 class HistoricalCapabilityPort(Protocol):
     def read_historical_capability(self) -> HistoricalCapabilitySnapshot: ...
+
+
+class PlanningSummaryReadPort(Protocol):
+    async def read_planning_summary(
+        self, *, deadline: float
+    ) -> PlanningSummarySnapshot: ...
 
 
 class PortalSummaryAdapter(Protocol):
@@ -267,6 +338,11 @@ __all__ = [
     "EvidenceValue",
     "HistoricalCapabilityPort",
     "HistoricalCapabilitySnapshot",
+    "PLANNING_TASK_STATUSES",
+    "PlanningSummaryReadPort",
+    "PlanningSummaryRoadmapPhase",
+    "PlanningSummarySnapshot",
+    "PlanningSummaryTask",
     "PortalSummaryAdapter",
     "PortalSummaryContribution",
     "PortalSummarySection",

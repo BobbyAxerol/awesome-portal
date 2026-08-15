@@ -563,7 +563,12 @@ trung thực capability hiện tại/tương lai.
   evidence/current-run/Historical ports, exact state counts nhưng bounded
   metadata, independent failure isolation và registry-derived links. Empty
   authority là available zero; unavailable/timeout/incompatible luôn là null.
-  Public summary endpoint vẫn chờ Planning adapter và aggregator ở BE4/BE5.
+  Public summary endpoint vẫn chờ aggregator ở BE5.
+- BAR-01-BE4 đã thêm bounded `planning.summary.v1` read model trong Planning
+  authority và private async HTTP adapter trong Portal. API mode trả exact task
+  status/roadmap counts và recent IDs; LOCAL/timeout/denied/incompatible trả
+  typed null evidence. Không import Planning repository/SQLite, không mutation,
+  không suy diễn current phase hoặc blocker. Public summary route vẫn chờ BE5.
 
 **Description / To-do**
 

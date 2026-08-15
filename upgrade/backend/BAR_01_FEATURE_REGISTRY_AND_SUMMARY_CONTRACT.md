@@ -1,7 +1,7 @@
 # BAR-01 — Feature Registry and Command Center Summary Contract
 
 > **Version:** 0.1<br>
-> **Status:** BAR-01-BE1/BE2/BE3 complete; BAR-01-BE4 pending<br>
+> **Status:** BAR-01-BE1/BE2/BE3/BE4 complete; BAR-01-BE5 pending<br>
 > **Updated:** 2026-08-15<br>
 > **Unified phases:** U02 Shared Foundations, U03 Unified Shell<br>
 > **Runtime authority:** current FastAPI services remain authoritative
@@ -833,6 +833,47 @@ Implementation evidence — 2026-08-15:
 
 Gate: no direct Planning import/database access and no mutation occur.
 
+Implementation evidence — 2026-08-15:
+
+- [x] Added the read-only `planning.summary.v1` source endpoint inside the
+  existing Planning authority. It returns exact counts for all five current
+  task statuses, roadmap phase count and at most five recent task/phase
+  ID/status/timestamps from one consistent SQLite read transaction.
+- [x] The source projection never returns task title/notes, roadmap
+  name/owner/outcome, activity body, webhook state or deleted records; its
+  response model rejects unknown fields, invalid status/count totals, unsafe
+  IDs and unbounded `recent_limit` values.
+- [x] Added a fixed-origin async HTTP client using only GET, no actor header,
+  no redirects and `trust_env=false`. The default timeout is `500 ms`; accepted
+  configuration stays within `100–2000 ms`. Decompressed response size defaults
+  to `64 KB` with an absolute `100 KB` ceiling and is checked both from
+  `Content-Length` and streamed bytes.
+- [x] Added strict typed source/domain projection and safe mapping for expired
+  deadline, cancellation, timeout, connection, 401/403, 404, 408/429/5xx,
+  malformed UTF-8/JSON/content type, oversized body and incompatible schema.
+  Raw upstream response/exception details never enter summary evidence.
+- [x] API mode emits truthful zero for an empty authoritative database and
+  exact counts/recent links otherwise. Browser-local mode emits
+  `LOCAL_ONLY_STATE` and null counts without making an HTTP request.
+- [x] Planning v1 has no authoritative current-phase marker. BE4 exposes
+  `current_phase_id/name` as `CAPABILITY_NOT_IMPLEMENTED + null` and does not
+  infer a milestone from week ranges, task titles, dependencies or status.
+- [x] Planning emits no blocker/incident/deployment priority because the
+  current source contract does not authorize one. Routes come only from the
+  validated Planning screen registry.
+- [x] BE4 adapter suite passes `36` tests; combined BAR-01 BE1–BE4 suites pass
+  `81` tests; full Portal backend regression passes `197 passed, 1 skipped`;
+  full Planning backend regression passes `18 passed`. The skip remains the
+  opt-in external Historical real-data smoke.
+- [x] Both API images build. A private Docker-network smoke reported both
+  services ready and produced an available empty Planning contribution through
+  real service DNS; the public `/api/v1/portal/summary` route remains `404`
+  until BE5.
+- [x] The existing Planning `FastAPI TestClient` suite emits one upstream
+  deprecation warning under the current shared dev environment. Migrating that
+  legacy synchronous harness is tracked debt; runtime, async adapter and image
+  smoke gates pass.
+
 ### BAR-01-BE5 — Aggregator and endpoint
 
 - Collect adapters concurrently with deadline/cancellation.
@@ -938,10 +979,10 @@ BAR-01 backend contract is complete only when:
 - Current backend/frontend/Planning tests and production builds still pass.
 - Workspace verification passes and every coherent slice is committed.
 
-BE1/BE2/BE3 satisfy the schema, immutable registry repository, deployment
-readiness, HTTP caching and read-only QuantBT evidence foundation. The next
-backend slice is BAR-01-BE4: a Planning summary adapter over a server-owned,
-fixed-destination private HTTP client with timeout, response-size and strict
-schema validation. BE4 must represent browser-only Planning state as
-`LOCAL_ONLY_STATE`, must not import Planning modules or open its SQLite path,
-and must not begin the BE5 public aggregator/endpoint early.
+BE1 through BE4 satisfy the schema, immutable registry repository, deployment
+readiness, HTTP caching and independently fail-safe QuantBT/Planning adapter
+foundation. The next backend slice is BAR-01-BE5: collect the adapters
+concurrently under one hard request deadline, propagate cancellation, merge
+registry counts and only currently authorized priority types, enforce section/
+payload limits and expose `GET /api/v1/portal/summary`. One failed adapter must
+not delay, erase or falsify a healthy adapter.

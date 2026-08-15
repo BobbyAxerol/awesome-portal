@@ -265,6 +265,77 @@ class PortalRepository:
         finally:
             connection.close()
 
+    def planning_summary(self, *, recent_limit: int) -> Dict[str, Any]:
+        """Return the bounded, content-minimal read model exported to Portal."""
+        if not 1 <= recent_limit <= 5:
+            raise ValueError("recent_limit must be between 1 and 5")
+        connection = self._read()
+        try:
+            # One deferred read transaction keeps counts and recent records on
+            # the same SQLite snapshot while concurrent writers continue.
+            connection.execute("BEGIN")
+            task_counts = {status: 0 for status in TASK_STATUSES}
+            for row in connection.execute(
+                """
+                SELECT status, COUNT(*) AS count
+                FROM tasks
+                WHERE deleted_at IS NULL
+                GROUP BY status
+                """
+            ).fetchall():
+                status = str(row["status"])
+                if status not in task_counts:
+                    raise ValidationError("planning summary found an invalid task status")
+                task_counts[status] = int(row["count"])
+
+            roadmap_phase_count = int(
+                connection.execute(
+                    "SELECT COUNT(*) FROM roadmap_phases WHERE deleted_at IS NULL"
+                ).fetchone()[0]
+            )
+            recent_tasks = [
+                {
+                    "id": row["id"],
+                    "status": row["status"],
+                    "updated_at": row["updated_at"],
+                }
+                for row in connection.execute(
+                    """
+                    SELECT id, status, updated_at
+                    FROM tasks
+                    WHERE deleted_at IS NULL
+                    ORDER BY updated_at DESC, id
+                    LIMIT ?
+                    """,
+                    (recent_limit,),
+                ).fetchall()
+            ]
+            recent_roadmap = [
+                {"id": row["id"], "updated_at": row["updated_at"]}
+                for row in connection.execute(
+                    """
+                    SELECT id, updated_at
+                    FROM roadmap_phases
+                    WHERE deleted_at IS NULL
+                    ORDER BY updated_at DESC, id
+                    LIMIT ?
+                    """,
+                    (recent_limit,),
+                ).fetchall()
+            ]
+            return {
+                "schema_version": "planning.summary.v1",
+                "observed_at": _now(),
+                "total_tasks": sum(task_counts.values()),
+                "task_counts": task_counts,
+                "roadmap_phase_count": roadmap_phase_count,
+                "recent_tasks": recent_tasks,
+                "recent_roadmap": recent_roadmap,
+            }
+        finally:
+            connection.rollback()
+            connection.close()
+
     def list_tasks(self, include_deleted: bool = False) -> List[Dict[str, Any]]:
         connection = self._read()
         try:

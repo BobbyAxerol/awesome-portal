@@ -13,6 +13,12 @@ from portal_api.adapters.market_data import (
     MarketDataProvider,
     UnavailableHistoricalMarketDataProvider,
 )
+from portal_api.adapters.planning_summary import (
+    PlanningSummaryAdapter,
+    PlanningSummaryHTTPClient,
+    PlanningSummaryRoutes,
+    PlanningSummarySettings,
+)
 from portal_api.adapters.quantbt_summary import (
     CurrentRunSummaryReader,
     HistoricalCapabilityReader,
@@ -82,8 +88,13 @@ def create_app(
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI):
-        yield
-        application.state.run_manager.shutdown()
+        try:
+            yield
+        finally:
+            try:
+                await application.state.planning_summary_adapter.aclose()
+            finally:
+                application.state.run_manager.shutdown()
 
     app = FastAPI(
         title="QuantBT Backtest Portal API",
@@ -104,6 +115,15 @@ def create_app(
     quantbt_summary_routes = QuantBTSummaryRoutes.from_registry(
         app.state.portal_registry_service.document
     )
+    planning_summary_routes = PlanningSummaryRoutes.from_registry(
+        app.state.portal_registry_service.document
+    )
+    planning_summary_settings = PlanningSummarySettings.from_environment()
+    planning_summary_reader = (
+        PlanningSummaryHTTPClient(planning_summary_settings)
+        if planning_summary_settings.mode == "api"
+        else None
+    )
     app.state.preflight_service = PreflightService(
         app.state.market_data_provider,
         app.state.strategy_registry,
@@ -114,6 +134,11 @@ def create_app(
         run_reader=CurrentRunSummaryReader(app.state.run_manager),
         historical_reader=HistoricalCapabilityReader(app.state.market_data_provider),
         routes=quantbt_summary_routes,
+    )
+    app.state.planning_summary_adapter = PlanningSummaryAdapter(
+        mode=planning_summary_settings.mode,
+        reader=planning_summary_reader,
+        routes=planning_summary_routes,
     )
 
     @app.exception_handler(PortalDomainError)
