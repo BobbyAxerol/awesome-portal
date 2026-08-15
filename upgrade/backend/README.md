@@ -27,7 +27,17 @@ Chúng không thay thế phase hoặc exit gate trong
   correlation qua ASGI middleware + nginx `$request_id`, `/api/diagnostics`
   dependency states an toàn, SSE unbuffered (backend headers + nginx
   location), request_id trong mọi error envelope, redaction tests cho
-  health/ready/diagnostics/error. Kế tiếp là BAR-04 (U07 thin identity BFF).
+  health/ready/diagnostics/error.
+- [BAR-04 — Thin Identity BFF](./BAR_04_THIN_IDENTITY_BFF.md)
+  — U07 slice Control API đầu tiên. **Complete:** `apps/control-api/`
+  (NestJS/Fastify) với 6 bảng identity PostgreSQL (ADR-003: node-pg-migrate +
+  typed `pg`, không ORM), Cloudflare JWT/JWKS verify + rotation, Argon2id +
+  blocklist policy, activation credentials dùng một lần, opaque sessions
+  `__Host-portal_session` + CSRF/origin, throttling/lockout, RBAC ADMIN guard,
+  HMAC-signed internal principal, bootstrap CLI idempotent (bobby/stan/
+  thanhvuong, secret sinh runtime không commit) và full security matrix (24
+  tests trên PostgreSQL thật). BFF chưa wire vào gateway (U10), không có
+  run/data/alpha authority. Kế tiếp là BAR-05 (U08 reproducibility freeze).
 
 Agent chỉ được implement deep dive khi phase tương ứng đang active và owner đã
 giao scope. Tài liệu của phase sau là thiết kế trước, không phải implementation

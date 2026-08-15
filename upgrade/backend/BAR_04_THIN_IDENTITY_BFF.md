@@ -97,4 +97,65 @@ session/CSRF aware; `context` reports the state machine state.
 - **BAR-04-BE3:** admin APIs, bootstrap CLI, Compose/Dockerfile wiring and the
   full security matrix.
 
-Evidence is recorded in each slice below after validation.
+Implementation evidence — 2026-08-15:
+
+- [x] Scaffolded `apps/control-api/` (NestJS 11 + Fastify 5) with its own
+  lockfile, strict TypeScript, health/ready endpoints and a dynamic
+  `AppModule.register(config, pool)` so tests inject the same wiring as
+  production.
+- [x] ADR-003 written (node-pg-migrate + typed `pg` repositories, no ORM,
+  CHECK-constrained text statuses, `usr_/ses_/evt_` opaque IDs) — status
+  Proposed for owner confirmation.
+- [x] Six locked identity tables (portal_users, external_identity_bindings,
+  password_credentials, activation_credentials, auth_sessions,
+  auth_audit_events) as idempotent SQL migrations verified against a real
+  `postgres:16` container.
+- [x] Auth core: Argon2id (19 MiB/2/1 baseline) hashing, NFC + blocklist
+  password policy, 192-bit single-use 24 h activation credentials (hashed at
+  rest), opaque 256-bit session tokens (sha256 at rest) with
+  `__Host-portal_session` cookies (Secure/HttpOnly/SameSite=Lax), 30 min idle
+  / 8 h absolute TTL, CSRF double-submit + Origin checks, login throttling
+  (5/15 min delay, 10/30 min 15-minute lock), generic login errors.
+- [x] Cloudflare Access verification via `jose` remote JWKS: signature, `kid`
+  resolution with TTL cache + unknown-kid refetch (rotation tested), `iss`,
+  `aud`, `exp`/`nbf` (clock-skew 30 s), `@azdag.com` email policy; raw email
+  headers never trusted.
+- [x] Auth API: `/api/auth/{context,login,change-password,logout,csrf}` with
+  the full state machine; admin API `/api/admin/users*` with reset-credential,
+  revoke-sessions and disable behind an ADMIN guard; HMAC-signed internal
+  principal (`auth-policy-v1`) with tamper/expiry rejection.
+- [x] `AUTH_MODE` dev / cloudflare_access / cloudflare_access_local_password
+  with fail-closed startup guards (dev only with `PORTAL_ENV=local`; non-dev
+  requires the full Cloudflare config).
+- [x] Bootstrap CLI (`dist/cli/bootstrap.js`) seeds `bobby/ADMIN`,
+  `stan/USER`, `thanhvuong/USER` idempotently and prints one-time credentials
+  exactly once; nothing secret is committed or logged.
+- [x] Compose gains private `control-api` + `portal-postgres` services (no
+  public ports) with healthchecks; `.env.example` documents the Cloudflare
+  runtime secrets without values; `scripts/control-api-test.sh` runs the
+  suite against a real PostgreSQL container with node:22.
+- [x] Test matrix: `24` Control API tests pass (repositories 5, auth flows 9,
+  security matrix 10) covering forged headers, invalid signature/audience/
+  issuer/domain, expired JWT, JWKS rotation, identity binding conflicts,
+  cross-user admin denial without data leak, expiry, session revocation,
+  forced password change, no account enumeration, CSRF/origin, lockout and
+  secret-free responses. `tsc --noEmit` passes.
+- [x] Built `local/portal-control-api:dev`; container probe: healthz/readyz/
+  context, idempotent bootstrap with one-time credentials printed once and
+  skipped on re-run.
+- [x] Full Portal backend regression `292 passed, 1 skipped` and full Planning
+  backend `18 passed` remain green; workspace verification passes including
+  the protected strategy hash. The gateway still routes to the Python
+  services (U10 façade owns the cutover); the BFF owns no run/data/alpha
+  authority.
+
+Technical debt and rollback:
+
+- The BFF is not yet wired into the web gateway or nginx strip-list; that is
+  U10/U06-owner work. Step-up MFA, SCIM, passkey and self-service reset wait
+  for U15/U16.
+- Session idle/absolute TTLs are config-driven; SLI/monitoring arrives with
+  U10 observability.
+- Rollback: remove the `control-api`/`portal-postgres` compose services or
+  redeploy the previous images; existing Python endpoints are untouched. No
+  change was pushed or deployed.

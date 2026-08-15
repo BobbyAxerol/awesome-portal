@@ -822,6 +822,17 @@ opaque session + server-side permission.
 
 - Username/role and auth states are locked in guide; runtime implementation
   chưa có.
+- BAR-04 đã scaffold thin auth BFF `apps/control-api/` (NestJS/Fastify,
+  private trong Compose cùng `portal-postgres`): 6 bảng identity theo
+  P0.25A.14 với SQL-first migrations (ADR-003), verify Cloudflare Access
+  JWT/JWKS (signature/iss/aud/time/@azdag.com, key rotation), Argon2id +
+  blocklist, activation credentials dùng một lần, opaque session
+  `__Host-portal_session` + CSRF/origin, throttling/lockout, error generic
+  không enumeration, HMAC-signed internal principal, RBAC ADMIN/USER,
+  bootstrap idempotent bobby/stan/thanhvuong với one-time secret sinh
+  runtime. 24 tests security matrix pass trên PostgreSQL thật; raw
+  JWT/password/session không bao giờ xuống Python services. BFF chưa wire
+  vào gateway (U10 façade) và không có run/data/alpha authority.
 
 **Description / To-do**
 
