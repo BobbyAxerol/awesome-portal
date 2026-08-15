@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 
 from portal_api.domain.portal_registry import PortalRegistryDocument
 from portal_api.domain.portal_summary import PortalSummaryV1
+from portal_api.domain.responses import PortalErrorResponse
 
 
 router = APIRouter(prefix="/api/v1/portal", tags=["portal"])
@@ -30,7 +31,12 @@ async def portal_registry(
 @router.get(
     "/summary",
     response_model=PortalSummaryV1,
-    responses={500: {"description": "Summary internal contract failure."}},
+    responses={
+        500: {
+            "description": "Summary internal contract failure.",
+            "model": PortalErrorResponse,
+        }
+    },
 )
 async def portal_summary(request: Request) -> JSONResponse:
     service = request.app.state.portal_summary_service

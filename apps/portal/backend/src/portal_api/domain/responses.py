@@ -53,3 +53,12 @@ class StrategyResponse(ResponseModel):
     required_columns: tuple[str, ...]
     structural_contract: dict[str, Any]
     parameter_space: dict[str, Any]
+
+
+class PortalErrorDetail(ResponseModel):
+    code: str
+    message: str
+
+
+class PortalErrorResponse(ResponseModel):
+    error: PortalErrorDetail

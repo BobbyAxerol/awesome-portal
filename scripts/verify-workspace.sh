@@ -44,8 +44,19 @@ for required in \
   "${ROOT_DIR}/apps/portal/backend/tests/test_planning_summary_adapter.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_quantbt_summary_adapter.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_portal_summary_service.py" \
+  "${ROOT_DIR}/apps/portal/backend/tests/test_frontend_handoff.py" \
   "${ROOT_DIR}/apps/portal/frontend/package-lock.json" \
   "${ROOT_DIR}/apps/portal/registry/registry.json" \
+  "${ROOT_DIR}/apps/portal/registry/FRONTEND_HANDOFF.md" \
+  "${ROOT_DIR}/apps/portal/registry/openapi/portal-api.openapi.json" \
+  "${ROOT_DIR}/apps/portal/registry/fixtures/registry.public.json" \
+  "${ROOT_DIR}/apps/portal/registry/fixtures/summary.healthy.json" \
+  "${ROOT_DIR}/apps/portal/registry/fixtures/summary.empty.json" \
+  "${ROOT_DIR}/apps/portal/registry/fixtures/summary.partial.json" \
+  "${ROOT_DIR}/apps/portal/registry/fixtures/summary.stale.json" \
+  "${ROOT_DIR}/apps/portal/registry/fixtures/summary.denied.json" \
+  "${ROOT_DIR}/apps/portal/registry/fixtures/summary.unavailable.json" \
+  "${ROOT_DIR}/apps/portal/scripts/export_handoff_contract.py" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry-source.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-summary.v1.schema.json" \
@@ -85,8 +96,19 @@ for tracked_source in \
   apps/portal/backend/tests/test_planning_summary_adapter.py \
   apps/portal/backend/tests/test_quantbt_summary_adapter.py \
   apps/portal/backend/tests/test_portal_summary_service.py \
+  apps/portal/backend/tests/test_frontend_handoff.py \
   apps/portal/frontend/package-lock.json \
   apps/portal/registry/registry.json \
+  apps/portal/registry/FRONTEND_HANDOFF.md \
+  apps/portal/registry/openapi/portal-api.openapi.json \
+  apps/portal/registry/fixtures/registry.public.json \
+  apps/portal/registry/fixtures/summary.healthy.json \
+  apps/portal/registry/fixtures/summary.empty.json \
+  apps/portal/registry/fixtures/summary.partial.json \
+  apps/portal/registry/fixtures/summary.stale.json \
+  apps/portal/registry/fixtures/summary.denied.json \
+  apps/portal/registry/fixtures/summary.unavailable.json \
+  apps/portal/scripts/export_handoff_contract.py \
   apps/portal/registry/schemas/portal-registry-source.v1.schema.json \
   apps/portal/registry/schemas/portal-registry.v1.schema.json \
   apps/portal/registry/schemas/portal-summary.v1.schema.json \
