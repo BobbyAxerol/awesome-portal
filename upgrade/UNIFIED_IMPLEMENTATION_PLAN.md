@@ -4,7 +4,8 @@
 > **Cập nhật:** 2026-08-15<br>
 > **Nguồn kiến trúc:** [QuantBT Portal Architecture & UI/UX Final v0.4](./quantbt_portal_architecture_uiux_final_v0.4_vi.md)<br>
 > **Phạm vi:** mother Portal, QuantBT Research, Planning, identity, control plane, quant compute, data/artifact, Alpha Platform, Paper/Sandbox/Live và operations<br>
-> **Engine baseline:** `quantbt-engine[optimization]==1.0.8` từ PyPI
+> **Engine baseline:** `quantbt-engine[optimization]==1.0.8` từ PyPI<br>
+> **Data reader baseline:** approved code-only wheel `primus-historical-market-data==0.1.0rc3`, loader contract `hmd-loader-v1`
 
 Tài liệu này là **execution index**, không phải bản viết lại của guide v0.4.
 Mọi agent phải đọc phần guide được link trong phase đang làm. Khi có khác biệt,
@@ -12,6 +13,8 @@ thứ tự authority là: [§40 Final Configuration Lock](./quantbt_portal_archi
 → [§P0.25A Auth/Deployment](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p025a-addendum-draft-v03--portalprimussparkcom-login-nội-bộ-và-identity-bootstrap)
 → [§29 Migration Strategy](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#29-migration-strategy-từ-portal-hiện-tại)
 → nội dung lịch sử trước đó.
+Riêng concern Historical Market Data, [§P0.24A Data Consumer Contract](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p024a-historical-market-data-consumer-contract--addendum-2026-08-15)
+là authority trước các mô tả data tổng quát ở §§8, 11 và 24.
 
 ---
 
@@ -45,6 +48,7 @@ backend hiện tại và không giả dữ liệu production.
 | Feature Registry, Screen Contract | [§P0.12–P0.13](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p012-feature-registry--contract-trung-tâm-của-prototype) |
 | Current feature embedding | [§P0.9–P0.11](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p09-cách-ghép-quantbt-research-vào-shell-chung) |
 | Prototype data/fixture policy | [§P0.24](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p024-prototype-data-và-fixture-policy) |
+| Historical Market Data reader/runtime | [§P0.24A](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p024a-historical-market-data-consumer-contract--addendum-2026-08-15) |
 | Edge, login, session, bootstrap | [§P0.25A](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p025a-addendum-draft-v03--portalprimussparkcom-login-nội-bộ-và-identity-bootstrap) |
 | Architecture planes và tech stack | [§§3–6](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#3-nguyên-tắc-kiến-trúc-bắt-buộc) |
 | QuantBT 1.0.8 capability | [§7](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#7-full-quantbt-108-integration) |
@@ -99,6 +103,24 @@ không suy diễn layout chỉ từ tên task.
 - Python worker không sở hữu user session/RBAC, broker secret hoặc business
   state tùy ý.
 
+### 3.3A Historical Market Data consumer
+
+- Portal dùng approved **code-only wheel**
+  `primus-historical-market-data==0.1.0rc3`; không import source checkout, không
+  `pip install -e`, không tạo local `data_loader.py` và không mount source repo.
+- Wheel artifact hiện hành có SHA-256
+  `3b2a41b87ff834912556bb3039bf3e3c148bd859a1ced9ee4f52a3c658ca5663`.
+- Canonical host storage `/srv/primus/historical-market-data/storage` chỉ được
+  mount vào consumer container tại `/data:ro`; runtime đặt
+  `HISTORICAL_MARKET_DATA_ROOT=/data` để bắt buộc release-manifest validation.
+- `check_val=True`, explicit symbol/time window/minimal columns là default. Không
+  forward-fill, sửa, thu thập hoặc suy diễn empty frame thành “zero activity”.
+- Crypto naive timestamp được hiểu là UTC; VN naive timestamp được hiểu là
+  `Asia/Ho_Chi_Minh`. Adapter normalize rõ ở boundary và giữ source timezone
+  trong provenance.
+- `quantbt-engine` và Historical Market Data reader là hai dependency độc lập:
+  reader cấp immutable input; engine không được tự tìm host path.
+
 ### 3.4 Rust fast paths
 
 - Axum + Tokio + Tower; Arrow/Parquet/DataFusion; SQLx; object_store;
@@ -131,8 +153,9 @@ không suy diễn layout chỉ từ tên task.
   report định lượng.
 - Root CI, CodeQL/Dependabot, Compose smoke, image publishing, release/deploy
   skeleton, contributor guardrails và protected branches.
-- Data thật vẫn chưa sẵn sàng trên server mới; synthetic/golden evidence là gate
-  hiện hành.
+- Historical Market Data đã có consumer contract và approved non-Deribit reader
+  release. Portal chưa tích hợp wheel/mount/smoke nên synthetic/golden evidence
+  vẫn là CI gate; target-VPS real-reader smoke là gate riêng của U01-BE.
 
 ### Chưa có
 
@@ -145,6 +168,9 @@ không suy diễn layout chỉ từ tên task.
   registry hoặc isolated quant worker.
 - Chưa có Engine Capability Manifest, Alpha Registry, Data Catalog, Paper,
   Sandbox, Live hay Rust fast-path services.
+- Current `CryptoBinanceMarketDataProvider` còn nạp `data_loader.py` từ host path
+  và chưa nhận explicit time window. Đây là compatibility debt phải được thay ở
+  U01-BE, không phải contract production được chấp nhận.
 
 ## 5. Quy tắc triển khai và trạng thái phase
 
@@ -178,6 +204,7 @@ contract/schema → backend/domain tests → API/read model → UI states/wirefr
 |---|---|---|---|
 | U00 | Governance & source-of-truth | PARTIAL | Plan, IDs, ADR/backlog authority |
 | U01 | Baseline inventory & golden visual evidence | PARTIAL | Không mất capability hiện tại |
+| U01-BE | HMD consumer boundary & real-reader smoke | PARTIAL | Data input fail-closed, read-only |
 | U02 | Shared foundations & Figma-ready design system | PARTIAL | Một visual/component language |
 | U03 | Unified shell, registry & Command Center | NOT STARTED | Một mother Portal thật |
 | U04 | QuantBT Research embedding & parity | PARTIAL | QuantBT trong shell chung |
@@ -189,7 +216,7 @@ contract/schema → backend/domain tests → API/read model → UI states/wirefr
 | U10 | TypeScript Control API façade | NOT STARTED | Browser đi qua TS authority |
 | U11 | Durable quant worker & immutable artifacts | NOT STARTED | Compute tách, retry đúng |
 | U12 | Engine Capability Registry & full QuantBT UI | NOT STARTED | Capability-driven platform |
-| U13 | Data Catalog, snapshots & query foundation | BLOCKED/PARTIAL | Data identity/quality đúng |
+| U13 | Data Catalog, snapshots & query foundation | PARTIAL | Platform hóa data identity/quality |
 | U14 | Alpha Registry & research platform | NOT STARTED | Alpha artifact có governance |
 | U15 | Approval, Paper & Sandbox | NOT STARTED | Governed same-artifact promotion |
 | U16 | Live control & operational safety | EXTERNAL | Live không bypass risk engine |
@@ -200,12 +227,15 @@ contract/schema → backend/domain tests → API/read model → UI states/wirefr
 Critical path:
 
 ```text
-U00 → U01 → U02 → U03 → U04/U05 → U06 → U07 → U08 → U09 → U10
+U00 → U01 → U01-BE → U02 → U03 → U04/U05 → U06 → U07 → U08 → U09 → U10
 → U11 → U12 → U13/U14 → U15 → U16 → U17 → U18 → U19
 ```
 
-U13 có thể chuẩn bị schema/fixture contract song song U11/U12, nhưng không được
-đánh dấu data thật `AVAILABLE` trước khi service/data source server mới pass.
+U01-BE chỉ khóa reader boundary và một Binance OHLCV hot path trên backend
+FastAPI hiện tại; không kéo toàn bộ Data Catalog lên trước. U13 có thể chuẩn bị
+schema/read model song song U11/U12 và mở rộng sang các family đã được manifest
+chấp nhận. Mỗi môi trường chỉ được đánh dấu data thật `AVAILABLE` sau reader
+doctor và real-reader smoke của chính environment đó pass.
 
 ---
 
@@ -311,9 +341,120 @@ route, behavior, artifact, dữ liệu Planning hoặc visual quan trọng.
 
 **Technical debt**
 
-- Real market-data web flow remains pending server migration.
+- Real market-data web flow remains pending U01-BE target-VPS smoke.
 - Baseline evidence has an expiry; refresh after any dependency/runtime major
   upgrade.
+
+### Phase U01-BE — Historical Market Data Consumer Boundary & Real-Reader Smoke
+
+**Goal**
+
+Khóa data input boundary đầu tiên của backend bằng approved reader wheel và
+canonical storage read-only, thay cơ chế import `data_loader.py` theo host path,
+đồng thời chứng minh một QuantBT Binance flow nhỏ chạy fail-closed trên VPS.
+Đây là **backend phase phải làm trước U02/U03**; U13 vẫn là phase platform hóa
+Data Catalog, snapshot và query sau này.
+
+**Guide index**
+
+- [§P0.24A Historical Market Data contract](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p024a-historical-market-data-consumer-contract--addendum-2026-08-15)
+- [§8.10 Reader boundary](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#810-historical-market-data-reader-boundary)
+- Operator consumer guide trên VPS:
+  `/home/bobby/pool_alpha/HISTORICAL_MARKET_DATA_CONSUMER_GUIDE.md`
+- Canonical source checkout `/home/bobby/historical_market_data` chỉ dùng để
+  audit contract/read tests; không là runtime dependency của Portal.
+
+**Đã làm**
+
+- Approved wheel `primus-historical-market-data==0.1.0rc3`, SHA-256
+  `3b2a41b87ff834912556bb3039bf3e3c148bd859a1ced9ee4f52a3c658ca5663`
+  và loader contract `hmd-loader-v1` đã tồn tại.
+- Canonical release manifest đã fail-closed theo release status, dataset family
+  và supported loader contract.
+- Reader doctor ngày 2026-08-15 pass từ installed site-packages wheel trên
+  environment `primus-hmd-do-sgp1-20260813`, release commit
+  `d9327fb2fff11d0d864c811d8286716b9b192343`; đây là audit evidence, không phải
+  hard-coded runtime selector.
+- Current FastAPI đã có `MarketDataProvider`, frame normalization, content hash,
+  synthetic injection tests và một Binance provider seam.
+
+**Description / To-do**
+
+1. Chốt ADR/package-delivery cho approved wheel trong image build. CI/build phải
+   verify exact version + SHA; không dùng editable install, source copy hay
+   unversioned `latest` wheel.
+2. Pin reader-compatible dependency set: Python `>=3.12,<3.14`, DuckDB `1.5.5`,
+   pandas `2.3.3`, PyArrow `24.0.0`; kiểm tra xung đột với Portal/QuantBT lock.
+3. Compose target-VPS mount
+   `/srv/primus/historical-market-data/storage:/data:ro`, set
+   `HISTORICAL_MARKET_DATA_ROOT=/data`, map reader group/GID đúng và không cấp
+   Docker group, writer ACL, collector/state/log/secrets access.
+4. Thay `_load_external_data_loader()` bằng import package bình thường
+   (`from data_loader import ...`) sau khi doctor pass. Cấm local
+   `data_loader.py`, source checkout mount và fallback `DATA_ROOT`.
+5. Thêm typed `MarketDataQuery` có `dataset_id`, explicit `symbol`, `start`,
+   `end`, `timeframe` và minimal `columns`. Request lớn không được chỉ dựa vào
+   `limit`, vì `limit` áp dụng sau partition discovery.
+6. Adapter đọc release manifest trước khi quảng bá availability; trả provenance
+   tối thiểu gồm reader version, loader contract, release tag/commit, manifest
+   digest, dataset release ID, requested window, source timezone, validation
+   mode và normalized content hash.
+7. Vòng đầu chỉ activate `crypto_1m` / `CryptoBinance1m` cho QuantBT hot path.
+   Các family approved khác đăng ký typed capability ở U13; Deribit, Binance
+   options, VN raw 1m và concrete VN contracts vẫn `UNAVAILABLE`/fail-closed.
+8. Giữ `check_val=True`; preserve source/session gaps, không forward-fill hoặc
+   mutate canonical root. Empty frame thành typed unavailable/no-data state,
+   không thành metric 0 hay success rỗng.
+9. Normalize crypto naive timestamps như UTC và VN naive timestamps như
+   `Asia/Ho_Chi_Minh`, sau đó trả UTC kèm source-timezone metadata. Không dùng
+   một rule `tz_localize("UTC")` chung cho mọi family.
+10. Tạo reader doctor command cho Portal và opt-in real-data smoke tách khỏi CI
+    synthetic. Smoke dùng explicit small BTCUSDT window, minimal OHLCV columns,
+    so sánh Portal adapter với direct reader và ghi latency/RSS/provenance.
+
+**Backend**
+
+- Giữ FastAPI hiện tại là first consumer để giảm blast radius; chưa cần dựng
+  NestJS Control API hay NATS trong phase này.
+- Khi REAL historical-data capability được enable, provider/readiness phải fail
+  nếu manifest thiếu, status khác `pass`, `hmd-loader-v1` không được hỗ trợ hoặc
+  dataset chưa declared. Local/CI không mount data giữ capability `UNAVAILABLE`.
+- Dataset availability là capability có reason/evidence, không phải kiểm tra
+  đơn giản `Path.exists()`.
+- Có cleanup/bounded materialization sau large Arrow/pandas reads; không cache
+  full history vô hạn trong API process.
+
+**Frontend / UX / Wireframe**
+
+- Không redesign dashboard trong U01-BE. Chỉ nối typed states `available`,
+  `unavailable`, `incompatible`, `empty-window`, `validation-warning` vào UI
+  hiện tại với provenance/freshness dễ kiểm tra.
+- Data picker buộc explicit symbol/time window; unsupported family disabled với
+  lý do, không ẩn lỗi hoặc thay bằng fixture im lặng.
+
+**Exit gate**
+
+- Unit/contract tests pass với injected fake reader, gồm timezone, duplicate,
+  schema, empty frame và exact time-window behavior.
+- Fail-closed tests pass cho missing/malformed/rejected manifest, incompatible
+  loader contract và undeclared dataset.
+- Image chứng minh import đến installed wheel, exact version/SHA; scan không có
+  Portal-local `data_loader.py` hay source checkout mount.
+- Target-VPS reader doctor pass; canonical storage mount được xác nhận `ro`.
+- Opt-in BTCUSDT real-reader smoke pass trên một cửa sổ nhỏ, dữ liệu sorted,
+  unique, OHLCV hợp lệ; artifact ghi release/provenance và performance baseline.
+- Existing synthetic/golden QuantBT tests vẫn pass; thiếu canonical mount trong
+  generic CI phải skip rõ `external-data-unavailable`, không giả pass real-data.
+
+**Technical debt**
+
+- BE-01 chỉ chứng nhận Binance perpetual OHLCV. Matrix, metrics, order-book,
+  quarterly, spot và VN được platform hóa trong U13 theo dataset-specific
+  schemas; không ép mọi output về OHLCV.
+- Internal package registry/OCI artifact delivery cần ADR nếu hiện tại build còn
+  dùng wheel file cục bộ; checksum lock là yêu cầu không được hạ.
+- NestJS BFF, immutable DatasetSnapshot identity, S3 read model và event-driven
+  availability thuộc U09–U13, không nhét vào first smoke.
 
 ### Phase U02 — Shared Foundations & Figma-Ready Design System
 
@@ -903,6 +1044,8 @@ quality gate và chart-ready query contract.
 
 **Guide index**
 
+- [§P0.24A Historical Market Data contract](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p024a-historical-market-data-consumer-contract--addendum-2026-08-15)
+- [§8.10 Reader boundary](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#810-historical-market-data-reader-boundary)
 - [§8.7–8.9 storage](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#87-postgresql-timescaledb-clickhouse)
 - [§11.6 Data API](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#116-data-catalog)
 - [Screen 22 Data Catalog](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#242-screen-22--data-catalog--quality)
@@ -910,13 +1053,21 @@ quality gate và chart-ready query contract.
 
 **Đã làm**
 
-- Current backend has read-only market-data mount and synthetic fixtures.
-- Real data services/path on server mới chưa sẵn sàng.
+- Approved reader wheel/manifest contract và canonical read-only storage đã có;
+  U01-BE chịu trách nhiệm chứng nhận first Portal hot path trên target VPS.
+- Current backend has provider boundary, content hash, validation và synthetic
+  fixtures, nhưng host-path loader mechanism còn phải retire ở U01-BE.
 
 **Description / To-do**
 
-- Deep-dive `quant-data-layer`/historical services when available; freeze
-  historical snapshot, instrument and realtime contracts.
+- Dùng U01-BE reader/provenance contract làm ingestion boundary; không bypass
+  wheel để đọc filesystem trực tiếp. Deep-dive riêng realtime/event contract
+  khi service đó được mở, không làm chậm historical read-only integration.
+- Register typed capabilities cho các family đã được accepted manifest:
+  Binance perpetual/quarterly/spot 1m, daily matrix, futures metrics 5m,
+  order-book 1h, VN equity daily, VN daily matrix và VN30F1M continuous.
+- Giữ Deribit, Binance options, VN raw 1m và concrete VN contracts fail-closed
+  cho tới release manifest mới chấp nhận chúng.
 - Implement Dataset/Universe/Snapshot/Quality identities and immutable quality
   reports; no mutable `latest` for approved run.
 - Add data-quality preflight blocking and repair → new snapshot semantics.
@@ -928,6 +1079,8 @@ quality gate và chart-ready query contract.
 - Catalog metadata in PostgreSQL; bulk immutable data/artifact in object store.
 - Event/availability/ingest time, timezone, unit, gap/duplicate/repair provenance
   explicit.
+- Không ép matrices/metrics/order-book vào OHLCV schema; mỗi dataset kind có
+  schema/version/query adapter riêng và cùng release-manifest provenance.
 
 **Frontend / UX / Wireframe**
 
@@ -943,7 +1096,8 @@ quality gate và chart-ready query contract.
 
 **Technical debt**
 
-- Phase remains partially BLOCKED until real services are migrated.
+- Historical reader không còn là blocker tổng quát sau U01-BE; realtime/event
+  source và từng family chưa certified vẫn là capability-level dependency.
 - Timescale/ClickHouse/Rust query are explicitly deferred by evidence gate.
 
 ### Phase U14 — Alpha Registry, Import & Research Platform
@@ -1329,10 +1483,15 @@ Một phase chỉ được `DONE` khi:
 
 ## 11. Owner review checklist cho plan
 
-- [ ] Chấp thuận U00–U19 và critical path.
+- [ ] Chấp thuận U00–U19, U01-BE và critical path.
+- [x] Historical Market Data consumer authority đã được owner cung cấp; exact
+  wheel, fail-closed manifest và canonical read-only storage đã được index.
+- [ ] Chấp thuận U01-BE là backend implementation phase đầu tiên và chỉ certify
+  Binance perpetual OHLCV trước khi mở các family khác ở U13.
 - [ ] Chấp thuận thin TypeScript auth BFF ở U07 để tái sử dụng thành U10.
 - [ ] Chấp thuận giữ current npm locks đến U09 rồi mới quyết định pnpm workspace.
-- [ ] Chấp thuận Data phase ở trạng thái BLOCKED/PARTIAL tới khi server data sẵn.
+- [ ] Chấp thuận U13 ở trạng thái PARTIAL: historical reader không còn blocker
+  tổng quát, nhưng availability vẫn fail-closed theo family/environment smoke.
 - [ ] Xác nhận Access Dashboard state trước U06 activation.
 - [ ] Xác nhận kênh giao activation credential ngoài Git/chat/task board.
 - [ ] Xác nhận alpha package sample và private trading/data repository owner khi

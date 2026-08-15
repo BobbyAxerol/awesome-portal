@@ -10,6 +10,7 @@
 > **Bổ sung additive — Draft v0.2:** thêm giai đoạn Unified Portal Prototype & Current Feature Integration trước toàn bộ migration kỹ thuật; giữ nguyên các quyết định, section và phase của Draft v0.1.<br>
 > **Bổ sung additive — Draft v0.3 (2026-08-15):** khóa hostname `portal.primusspark.com`, tách pre-M0 thành M-1A/M-1B, bổ sung Cloudflare Access/Tunnel + Nginx Origin CA, local login/first-password-change, bootstrap users và security acceptance gates; không xóa nội dung v0.1–v0.2.<br>
 > **Finalization — v0.4 (2026-08-15):** khóa Cloudflare Zero Trust team `primussparkquant`, issuer/team domain, Access Application AUD thực tế, policy boundary `@azdag.com`, first-login identity binding, thứ tự Access → Tunnel/DNS → origin → app RBAC, cấu hình handoff và acceptance gates; các secret còn lại vẫn phải sinh tại runtime, không ghi vào tài liệu/repository.<br>
+> **Historical Data addendum (2026-08-15):** khóa approved reader wheel `primus-historical-market-data==0.1.0rc3`, `hmd-loader-v1`, canonical storage read-only/fail-closed manifest boundary và U01-BE là backend phase mở đầu; xem §P0.24A và §8.10.<br>
 > **Nguyên tắc revision:** chỉ bổ sung, không rút gọn hoặc xóa nội dung thảo luận trước; các feature chưa triển khai được hiển thị ở trạng thái `COMMISSIONED`/`PROTOTYPE` thay vì bị giả lập như production.
 
 ---
@@ -1066,6 +1067,176 @@ Sample paper deployment
 Illustrative portfolio
 Commissioned — no runtime connected
 ```
+
+### P0.24A Historical Market Data consumer contract — addendum 2026-08-15
+
+> **Concern-specific authority:** section này bổ sung v0.4 sau khi đã audit
+> `/home/bobby/pool_alpha/HISTORICAL_MARKET_DATA_CONSUMER_GUIDE.md` và public
+> reader contract trong `/home/bobby/historical_market_data`. Với Historical
+> Market Data, section này có authority trước các giả định data/path cũ trong
+> guide. Source checkout thứ hai chỉ là nơi kiểm chứng contract; Portal không
+> được phụ thuộc vào nó khi build hoặc chạy.
+
+#### P0.24A.1 Boundary đã khóa
+
+```text
+Historical Market Data collectors/writers
+  -> canonical immutable storage release
+       /srv/primus/historical-market-data/storage
+          + _primus_metadata/release_manifest.json
+  -> read-only mount /data:ro
+  -> approved code-only reader wheel
+       primus-historical-market-data==0.1.0rc3
+       loader contract hmd-loader-v1
+  -> Portal HistoricalMarketDataProvider
+  -> validated/provenanced DataQueryResult
+  -> QuantBT current FastAPI / later Control API + worker
+```
+
+Portal là **consumer**, không phải collector/operator của repository dữ liệu:
+
+- Không `pip install -e /home/bobby/historical_market_data`.
+- Không copy/mount source checkout, `storage/`, `state/`, `logs`, collector
+  config hoặc secrets vào Portal.
+- Không tạo `data_loader.py` trong Portal vì sẽ shadow module từ wheel.
+- Không dùng arbitrary host path hay `DATA_ROOT` làm production fallback.
+- Không cho Portal API user quyền Docker group, writer ACL hoặc quyền sửa
+  canonical storage.
+
+Approved wheel artifact hiện hành:
+
+| Field | Locked value |
+|---|---|
+| Distribution | `primus-historical-market-data==0.1.0rc3` |
+| Wheel | `primus_historical_market_data-0.1.0rc3-py3-none-any.whl` |
+| SHA-256 | `3b2a41b87ff834912556bb3039bf3e3c148bd859a1ced9ee4f52a3c658ca5663` |
+| Reader import | `from data_loader import CryptoBinance1m` |
+| Namespace import | `from primus.historical_market_data import CryptoBinance1m` |
+| Loader contract | `hmd-loader-v1` |
+| Python | `>=3.12,<3.14` |
+| Reader dependency lock | DuckDB `1.5.5`, pandas `2.3.3`, PyArrow `24.0.0` |
+
+Image build phải nhận wheel qua approved immutable artifact channel/build
+context và verify exact SHA. Không dùng unversioned `latest`; không làm wheel
+source thành Git submodule của Portal. `quantbt-engine==1.0.8` vẫn là dependency
+PyPI độc lập và không thay thế reader này.
+
+#### P0.24A.2 Runtime mount và fail-closed compatibility
+
+Target Compose contract:
+
+```yaml
+services:
+  portal-api:
+    environment:
+      HISTORICAL_MARKET_DATA_ROOT: /data
+    volumes:
+      - /srv/primus/historical-market-data/storage:/data:ro
+```
+
+`HISTORICAL_MARKET_DATA_ROOT` là biến bắt buộc. Khi biến này được set, reader
+phải đọc `_primus_metadata/release_manifest.json` và từ chối đọc nếu:
+
+- manifest thiếu/malformed hoặc `status != "pass"`;
+- storage release không support `hmd-loader-v1`;
+- requested dataset family không được manifest declare;
+- dataset schema/layout không support loader contract hiện hành.
+
+Portal readiness và capability registry phải phản ánh lỗi
+`StorageCompatibilityError` thành typed unavailable reason; không catch rồi
+fallback sang path/fixture khác. Một environment chỉ được ghi `REAL/AVAILABLE`
+khi reader doctor và real-reader smoke của chính environment đó pass.
+
+Host operator có thể kiểm tra contract hiện tại bằng:
+
+```bash
+cd /home/bobby/pool_alpha
+./run_hmd_python.sh examples/reader_doctor.py
+```
+
+Portal production container không phụ thuộc wrapper host này; image của Portal
+cài wheel trực tiếp, còn wrapper chỉ là operator reference/independent doctor.
+Audit ngày 2026-08-15 cho thấy doctor import từ installed `site-packages`, root
+canonical ở `/srv/primus/historical-market-data/storage`, release `pass` tại
+commit `d9327fb2fff11d0d864c811d8286716b9b192343`. Đây là environment evidence tại
+thời điểm audit, không được hard-code thay manifest lookup lúc runtime.
+
+#### P0.24A.3 Dataset eligibility hiện hành
+
+| Dataset family | Public endpoint/router | Portal state |
+|---|---|---|
+| Binance USD-M perpetual 1m | `CryptoBinance1m` / `crypto_1m` | Approved; first BE-01 hot path |
+| Binance USD-M quarterly 1m | `CryptoBinanceQuarterly1m` / `binance_usdm_quarterly_1m` | Approved; register in U13 |
+| Binance spot 1m | `CryptoBinanceSpot1m` / `binance_spot_1m` | Approved; register in U13 |
+| Binance futures metrics 5m | `BinanceFuturesMetrics5m` / `futures_metrics_5m` | Approved; typed non-OHLCV adapter in U13 |
+| Binance order-book features 1h | `BinanceOrderBookSnapshot1h` / `orderbook_snapshot_1h` | Approved; typed non-OHLCV adapter in U13 |
+| Binance daily matrix | `CryptoDailyMatrix` / `binance_daily_matrix` | Approved; matrix adapter in U13 |
+| VN equity daily | `VnStockDaily` / `vn_stock_daily` | Approved; register in U13 |
+| VN daily matrix | `VNDailyMatrix` / `vn_daily_matrix` | Approved; matrix adapter in U13 |
+| VN30F1M continuous 1m/daily | `VnDerivativesContinuous1m` / `VnDerivativesContinuousDaily` | Approved VNDIRECT continuous alias; not reconstructed contracts |
+| VN raw equity/futures 1m | `VnStock1m` / `VnFutures1m` | Not declared; fail closed |
+| Concrete VN contracts | `VnDerivativesContracts1m/Daily` | Not declared; fail closed |
+| Binance options 5m | `BinanceOptions5m` | Public code only, not release-approved |
+| Deribit options | Deribit public reader classes | Disabled/not called |
+
+Class existence không phải evidence coverage. Portal chỉ advertise capability
+khi release manifest cho phép đúng family và adapter schema tương ứng đã được
+certify. Matrix, metrics và order-book không được ép về OHLCV chỉ để tái dùng UI.
+
+#### P0.24A.4 Query, time và quality semantics
+
+Service request contract tối thiểu:
+
+```ts
+type HistoricalMarketDataQuery = {
+  datasetId: string;
+  symbol: string;
+  start: string;          // inclusive, explicit timezone/venue interpretation
+  end: string;            // explicit boundary contract
+  timeframe?: string;
+  columns: string[];      // minimal required projection
+};
+```
+
+Rules:
+
+1. Explicit symbol + bounded `start/end` là bắt buộc cho Portal services.
+   `limit` chỉ trim kết quả sau discovery nên không thay time window.
+2. `check_val=True` luôn bật. Loader warning/gap evidence được propagate vào
+   provenance/quality state; reader không tự repair canonical data.
+3. Empty frame có thể là symbol/range/release không có dữ liệu, không phải bằng
+   chứng “market activity = 0”.
+4. Không forward-fill, fabricate candle hoặc viết lại source/session gaps.
+5. Crypto timestamps naive được interpret là UTC; VN timestamps naive được
+   interpret là `Asia/Ho_Chi_Minh`. Adapter normalize ra UTC và luôn giữ
+   `source_timezone`/venue session metadata.
+6. Kết quả phải sorted, unique theo time/key và validate schema/finite/OHLCV
+   invariant khi dataset kind là candle.
+7. Provenance tối thiểu gồm reader version, loader contract, storage release
+   tag/commit, manifest digest, dataset release ID, requested window, validation
+   mode, source timezone và normalized result/content digest.
+
+#### P0.24A.5 Portal adapter và implementation order
+
+Current `CryptoBinanceMarketDataProvider` là một seam hữu ích nhưng implementation
+host-path hiện tại không đạt contract production: nó tìm và import
+`data_loader.py` từ `PORTAL_CRYPTO_DATA_ROOT`, không truyền explicit date window
+và localize mọi naive timestamp như UTC. U01-BE phải thay debt đó trước khi mở
+rộng shell/control plane:
+
+```text
+U00/U01 baseline
+  -> U01-BE reader wheel + manifest doctor + one Binance real-data smoke
+  -> U02/U03 shared UI + mother shell
+  -> U08/U09/U10 contract/control-plane migration
+  -> U13 full Data Catalog + approved family adapters/query foundation
+```
+
+U01-BE giữ FastAPI hiện tại làm first consumer, để chỉ thay một boundary mỗi
+lần. Unit/contract tests dùng injected fake reader và synthetic fixture; real
+smoke là opt-in test trên target VPS với một fixed, small BTCUSDT window. Generic
+CI thiếu canonical mount phải report `external-data-unavailable/skip`, tuyệt đối
+không được ghi real-data smoke đã pass.
 
 ### P0.25 Authentication baseline — Cloudflare Zero Trust, vừa đủ cho prototype
 
@@ -2376,6 +2547,22 @@ Exit gate:
 
 - Không bỏ sót current route/action chính.
 - Current app build/test/smoke xanh.
+
+#### P0-A1 / U01-BE — Historical Data consumer boundary
+
+Đây là backend phase đầu tiên sau baseline inventory, trước khi refactor shell:
+
+- Install exact approved reader wheel trong Portal API image và verify SHA.
+- Mount canonical storage `/data:ro`; set
+  `HISTORICAL_MARKET_DATA_ROOT=/data` để manifest validation fail-closed.
+- Thay host-path `data_loader.py` import bằng installed-package adapter.
+- Thêm explicit symbol/time-window/column projection và timezone provenance.
+- Chứng nhận duy nhất `CryptoBinance1m` hot path trước; family khác để U13.
+- Chạy manifest doctor, fail-closed contract tests và một small real BTCUSDT
+  smoke trên target VPS; giữ synthetic/golden suite xanh.
+
+Exit gate chi tiết và technical debt được quản lý tại
+[Unified Plan — U01-BE](./UNIFIED_IMPLEMENTATION_PLAN.md#phase-u01-be--historical-market-data-consumer-boundary--real-reader-smoke).
 
 #### P0-B — Shared tokens và App Shell
 
@@ -3873,6 +4060,31 @@ Chỉ dùng cho:
 - Session aid nếu identity architecture cần.
 
 Không dùng Redis list/pubsub làm source of truth cho run queue hoặc audit event.
+
+### 8.10 Historical Market Data reader boundary
+
+Historical storage không phải một object-store path mà Portal được tự do scan.
+Portal đi qua approved reader contract tại [§P0.24A](#p024a-historical-market-data-consumer-contract--addendum-2026-08-15),
+với canonical storage mount read-only và accepted release manifest. Boundary này
+tồn tại trước U13 để current QuantBT FastAPI có thể dùng data thật an toàn.
+
+U13 bọc reader output thành `Dataset`, `DatasetSnapshot`, `UniverseSnapshot` và
+`DataQualityReport`; nó không thay reader bằng direct filesystem access. Một
+approved storage release có thể cấp nhiều dataset family, nhưng availability
+vẫn được đánh giá theo từng family + schema adapter + environment smoke.
+
+```text
+accepted release manifest
+  -> reader compatibility + family eligibility
+  -> bounded typed query
+  -> normalized frame/table/matrix + provenance
+  -> immutable Portal DatasetSnapshot identity
+  -> preflight / run manifest / artifact lineage
+```
+
+Historical read path, realtime event path và future ingest/control path là ba
+concern riêng. Việc historical reader đã sẵn sàng không tự động chứng nhận
+realtime hoặc cấp cho Portal quyền vận hành collectors.
 
 ---
 
