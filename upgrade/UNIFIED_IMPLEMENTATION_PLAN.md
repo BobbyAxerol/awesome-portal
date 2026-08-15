@@ -1,0 +1,1340 @@
+# Unified Implementation Plan — QuantBT Portal v0.4
+
+> **Trạng thái:** Draft để owner review và chốt thứ tự triển khai<br>
+> **Cập nhật:** 2026-08-15<br>
+> **Nguồn kiến trúc:** [QuantBT Portal Architecture & UI/UX Final v0.4](./quantbt_portal_architecture_uiux_final_v0.4_vi.md)<br>
+> **Phạm vi:** mother Portal, QuantBT Research, Planning, identity, control plane, quant compute, data/artifact, Alpha Platform, Paper/Sandbox/Live và operations<br>
+> **Engine baseline:** `quantbt-engine[optimization]==1.0.8` từ PyPI
+
+Tài liệu này là **execution index**, không phải bản viết lại của guide v0.4.
+Mọi agent phải đọc phần guide được link trong phase đang làm. Khi có khác biệt,
+thứ tự authority là: [§40 Final Configuration Lock](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#40-final-configuration-lock--agent-handoff--baseline-v04)
+→ [§P0.25A Auth/Deployment](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p025a-addendum-draft-v03--portalprimussparkcom-login-nội-bộ-và-identity-bootstrap)
+→ [§29 Migration Strategy](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#29-migration-strategy-từ-portal-hiện-tại)
+→ nội dung lịch sử trước đó.
+
+---
+
+## 1. Mục tiêu điều hành
+
+Xây một Portal thống nhất, mượt và có khả năng tiến hóa từ hai capability thật
+đang có thành platform end-to-end:
+
+```text
+Research / Alpha
+  → QuantBT Backtest / WFO / Audit
+  → Approval / Promotion
+  → Paper
+  → Sandbox
+  → Live Operations
+  → Monitoring / Incident / Reconciliation
+
+Planning / Roadmap / Task Board theo dõi toàn bộ lifecycle trên.
+```
+
+Thứ tự triển khai là **contract và backend authority trước, UI render sau** trong
+mỗi bounded context. Ngoại lệ duy nhất là M-1A: dựng shell/prototype trước để
+manager duyệt information architecture, maturity và luồng UX, nhưng vẫn dùng
+backend hiện tại và không giả dữ liệu production.
+
+## 2. Guide index bắt buộc cho agent
+
+| Concern | Section phải đọc |
+|---|---|
+| Prototype, maturity, shell, registry | [§P0](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p0-giai-đoạn-ưu-tiên-trước--unified-portal-prototype--current-feature-integration) |
+| Feature Registry, Screen Contract | [§P0.12–P0.13](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p012-feature-registry--contract-trung-tâm-của-prototype) |
+| Current feature embedding | [§P0.9–P0.11](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p09-cách-ghép-quantbt-research-vào-shell-chung) |
+| Prototype data/fixture policy | [§P0.24](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p024-prototype-data-và-fixture-policy) |
+| Edge, login, session, bootstrap | [§P0.25A](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p025a-addendum-draft-v03--portalprimussparkcom-login-nội-bộ-và-identity-bootstrap) |
+| Architecture planes và tech stack | [§§3–6](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#3-nguyên-tắc-kiến-trúc-bắt-buộc) |
+| QuantBT 1.0.8 capability | [§7](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#7-full-quantbt-108-integration) |
+| Run, study, artifact | [§8](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#8-run-study-và-artifact-architecture) |
+| Alpha Platform | [§9](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#9-alpha-platform-và-chuẩn-import-dự-kiến) |
+| Domain/API/Paper/Live/Security | [§§10–16](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#10-domain-model-và-lifecycle-xuyên-suốt) |
+| UI/UX, IA và 26 screens | [§§17–24](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#17-uiux-direction) |
+| Components, responsive, Figma | [§§25–27](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#25-component-system) |
+| End-to-end product flows | [§28](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#28-end-to-end-product-flows) |
+| Migration M-1A → M8 | [§29](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#29-migration-strategy-từ-portal-hiện-tại) |
+| Test strategy và DoD | [§31](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#31-testing-strategy-và-acceptance-gates) |
+| Risks và ADR | [§§32–33](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#32-risk-register) |
+| Exact v0.4 runtime values | [§40](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#40-final-configuration-lock--agent-handoff--baseline-v04) |
+
+Agent làm screen cụ thể phải đọc thêm đúng subsection Screen 01–26 ở §§21–24;
+không suy diễn layout chỉ từ tên task.
+
+## 3. Quyết định kỹ thuật đã khóa
+
+### 3.1 Frontend
+
+- React 18 + Vite + TypeScript; giữ React Router trong migration có chủ đích.
+- TanStack Query; thêm TanStack Table/Virtual khi bắt đầu bảng platform.
+- React Hook Form + Zod/Ajv cho form sinh từ schema.
+- Radix primitives + component do Portal sở hữu; CSS variables là source of
+  truth. Tailwind/shadcn chỉ là implementation pattern và phải map vào token.
+- ECharts cho quantitative analytics; Lightweight Charts cho candle/order/fill
+  overlay. Advanced Charts chỉ mở sau license review.
+- Dnd Kit cho Planning; Lucide cho icon.
+- Playwright + Vitest + Testing Library + visual regression.
+- Không rewrite hai frontend sang framework khác trong M-1A.
+
+### 3.2 Product/control plane
+
+- Node.js LTS; baseline repo hiện tại giữ Node `>=22.12 <23` tới khi có ADR nâng
+  version.
+- NestJS + Fastify là authoritative Control API/BFF.
+- PostgreSQL là system of record cho identity, registry, workflow, audit và
+  outbox.
+- OpenAPI cho browser contract; Protobuf/Buf hoặc versioned JSON Schema cho
+  cross-language events.
+- NATS JetStream cho durable job/event; Redis chỉ ephemeral cache/rate limit,
+  không làm source of truth.
+- Pino structured logging + OpenTelemetry.
+
+### 3.3 Quant compute
+
+- Python 3.12 baseline.
+- `quantbt-engine[optimization]==1.0.8` exact pin từ PyPI.
+- Pydantic v2, PyArrow/Parquet, NATS Python client, pytest/Hypothesis.
+- Một heavy run trên một process/container hoặc concurrency được kiểm soát rõ.
+- Python worker không sở hữu user session/RBAC, broker secret hoặc business
+  state tùy ý.
+
+### 3.4 Rust fast paths
+
+- Axum + Tokio + Tower; Arrow/Parquet/DataFusion; SQLx; object_store;
+  tracing/OpenTelemetry.
+- Chỉ mở `artifact-query-rs`, `realtime-gateway-rs` hoặc runner supervisor khi
+  benchmark/p95/p99/RSS/backpressure có evidence.
+- Rust không duplicate QuantBT accounting và không làm CRUD authority.
+
+### 3.5 Infrastructure
+
+- Compose cho local/CI và prototype VPS; Kubernetes chỉ khi distributed
+  workload thực sự cần.
+- Cloudflare Access → Tunnel → Nginx loopback TLS → Portal BFF.
+- PostgreSQL + S3/MinIO + NATS là nền tảng đầu; Timescale/ClickHouse optional
+  theo workload evidence.
+- Không thêm Java/Go trong v1, không dùng Celery làm cross-language queue, không
+  dùng Kafka/ClickHouse chỉ vì dự đoán scale.
+
+## 4. Baseline thực tế tại thời điểm lập plan
+
+### Đã có
+
+- Một Git monorepo và một Compose-managed stack với một public web gateway.
+- QuantBT Research React/FastAPI có New Run, Library, Progress, Overview,
+  Optimization, Parameters, Execution và Audit.
+- `quantbt-engine==1.0.8` được cài từ PyPI và có synthetic smoke/golden tests.
+- Roadmap & Task Board React/FastAPI/SQLite đã hoàn thành phase 5 riêng, được
+  build/serve tại `/roadmap-task-board/` và API private qua gateway.
+- Fund Paper tokens, Newsreader/Inter/JetBrains Mono, ECharts và nhiều component
+  report định lượng.
+- Root CI, CodeQL/Dependabot, Compose smoke, image publishing, release/deploy
+  skeleton, contributor guardrails và protected branches.
+- Data thật vẫn chưa sẵn sàng trên server mới; synthetic/golden evidence là gate
+  hiện hành.
+
+### Chưa có
+
+- Hai frontend chưa dùng chung một React shell/component registry; gateway hợp
+  nhất deployment nhưng UX vẫn là hai app build riêng.
+- Chưa có Feature Registry, Screen Contract, Concern Registry, Command Center
+  hoặc commissioned preview chuẩn.
+- Chưa có Cloudflare Tunnel/Nginx/Auth implementation trong source.
+- Chưa có TypeScript Control API, PostgreSQL authority, NATS, MinIO/S3 artifact
+  registry hoặc isolated quant worker.
+- Chưa có Engine Capability Manifest, Alpha Registry, Data Catalog, Paper,
+  Sandbox, Live hay Rust fast-path services.
+
+## 5. Quy tắc triển khai và trạng thái phase
+
+Trạng thái dùng trong tài liệu này:
+
+```text
+DONE         code/evidence đã có và gate đã pass
+PARTIAL      có baseline nhưng còn deliverable/gate
+NOT STARTED  chưa có implementation authority
+EXTERNAL     phụ thuộc dashboard, credential, data service hoặc private engine
+BLOCKED      dependency được xác nhận là chưa sẵn sàng
+```
+
+Mỗi phase phải cập nhật bốn mục trước khi merge:
+
+1. `Đã làm` — commit/PR/evidence thật, không mô tả ý định.
+2. `To-do` — task còn mở, mỗi task có owner và acceptance evidence.
+3. `Technical debt` — debt mở mới, debt đóng và ngày/phase xử lý.
+4. `Exit gate` — test/evidence bắt buộc; không hoàn thành bằng đánh giá cảm tính.
+
+Mỗi thay đổi production phải đi theo thứ tự:
+
+```text
+contract/schema → backend/domain tests → API/read model → UI states/wireframe
+→ interaction/E2E → performance/security evidence → docs/runbook
+```
+
+## 6. Phase map và critical path
+
+| Phase | Tên | Trạng thái đầu kỳ | Outcome chính |
+|---|---|---|---|
+| U00 | Governance & source-of-truth | PARTIAL | Plan, IDs, ADR/backlog authority |
+| U01 | Baseline inventory & golden visual evidence | PARTIAL | Không mất capability hiện tại |
+| U02 | Shared foundations & Figma-ready design system | PARTIAL | Một visual/component language |
+| U03 | Unified shell, registry & Command Center | NOT STARTED | Một mother Portal thật |
+| U04 | QuantBT Research embedding & parity | PARTIAL | QuantBT trong shell chung |
+| U05 | Planning embedding & cross-link | PARTIAL | Planning trong shell chung |
+| U06 | Secure edge/origin topology | EXTERNAL | Hostname private-origin an toàn |
+| U07 | Identity, local login, session & RBAC | NOT STARTED | M-1B auth hoàn chỉnh |
+| U08 | M0 reproducibility freeze | PARTIAL | Golden technical baseline |
+| U09 | Contract foundation & monorepo platform tooling | NOT STARTED | Contract/codegen/breaking CI |
+| U10 | TypeScript Control API façade | NOT STARTED | Browser đi qua TS authority |
+| U11 | Durable quant worker & immutable artifacts | NOT STARTED | Compute tách, retry đúng |
+| U12 | Engine Capability Registry & full QuantBT UI | NOT STARTED | Capability-driven platform |
+| U13 | Data Catalog, snapshots & query foundation | BLOCKED/PARTIAL | Data identity/quality đúng |
+| U14 | Alpha Registry & research platform | NOT STARTED | Alpha artifact có governance |
+| U15 | Approval, Paper & Sandbox | NOT STARTED | Governed same-artifact promotion |
+| U16 | Live control & operational safety | EXTERNAL | Live không bypass risk engine |
+| U17 | Rust fast paths & scale certification | NOT STARTED | Tối ưu theo evidence |
+| U18 | Planning/Postgres cutover | PARTIAL | Retire SQLite companion an toàn |
+| U19 | Release, DR, open-source & product hardening | PARTIAL | Stable release-ready Portal |
+
+Critical path:
+
+```text
+U00 → U01 → U02 → U03 → U04/U05 → U06 → U07 → U08 → U09 → U10
+→ U11 → U12 → U13/U14 → U15 → U16 → U17 → U18 → U19
+```
+
+U13 có thể chuẩn bị schema/fixture contract song song U11/U12, nhưng không được
+đánh dấu data thật `AVAILABLE` trước khi service/data source server mới pass.
+
+---
+
+## 7. Kế hoạch phase chi tiết
+
+### Phase U00 — Governance & Source-of-Truth
+
+**Goal**
+
+Khóa guide v0.4, plan, ID và cách ra quyết định để nhiều agent không tạo các
+kiến trúc/UI fork khác nhau.
+
+**Guide index**
+
+- [§P0.13 Screen Contract](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p013-screen-contract--đơn-vị-thảo-luận-cho-các-vòng-sau)
+- [§30 Epic Map](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#30-implementation-backlog-đề-xuất)
+- [§33 ADR backlog](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#33-architecture-decision-records-cần-tạo)
+- [§40.20 Authority order](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#4020-source-of-truth-và-handoff-conclusion)
+
+**Đã làm**
+
+- Guide v0.4 đã khóa M-1A/M-1B và exact Cloudflare identifiers.
+- Monorepo rules, `dev`/`main`, contributor flow và commit discipline đã có.
+- Unified plan này tạo phase IDs và gate chung.
+
+**Description / To-do**
+
+- Owner review và ghi quyết định `APPROVED` cho plan; thay đổi scope phải qua
+  changelog/ADR, không sửa âm thầm phase đã chốt.
+- Tạo versioned `Feature Registry`, `Screen Contract`, `Concern Registry` và
+  task ID namespace (`PRT`, `UI`, `CP`, `QW`, `EC`, `AR`, `DATA`, `AP`, `DP`,
+  `OP`, `PLAN`, `SEC`, `SRE`, `PERF`).
+- Mỗi task phải link phase, screen, API/schema, repo scope, test evidence và
+  activation gate.
+- Tạo ADR-001…ADR-016 theo §33 trước khi code boundary tương ứng.
+
+**Backend / Frontend / Wireframe**
+
+- Không thêm runtime code trong phase này.
+- Chuẩn hóa template metadata cho API concern, UI state và Figma frame.
+- Khóa data-mode `REAL / FIXTURE / STATIC_PREVIEW / NONE` và maturity status.
+
+**Exit gate**
+
+- Owner duyệt phase order, stack lock và non-goals.
+- Guide + plan được Git track, link nội bộ không hỏng.
+- Mọi commissioned feature có ID và concern owner, chưa cần implementation.
+
+**Technical debt**
+
+- Alpha/Data/Private Trading bounded contexts chưa final; chỉ được mở sau
+  deep-dive repository/contract riêng.
+- Plan không thay task tracker; trạng thái phải đồng bộ với Planning ở U05.
+
+### Phase U01 — Baseline Inventory & Golden Visual Evidence
+
+**Goal**
+
+Freeze chính xác những gì đang chạy để refactor shell/backend không làm mất
+route, behavior, artifact, dữ liệu Planning hoặc visual quan trọng.
+
+**Guide index**
+
+- [§P0.2 Baseline](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p02-baseline-thực-tế-đang-có-trong-awesome-portal)
+- [§P0.27 P0-A](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p027-implementation-sequence--thứ-tự-nên-làm-trướcsau)
+- [§29.2 M0](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#292-phase-m0--baseline-inventory-và-golden-evidence)
+
+**Đã làm**
+
+- QuantBT backend/frontend tests, PyPI synthetic smoke và golden Parquet fixture.
+- Planning backend/frontend/E2E, content-integrity manifest và Phase 5 release
+  checklist.
+- Root Compose smoke, health routes và current gateway route topology.
+
+**Description / To-do**
+
+- Inventory routes, query/hash behavior, deep links, browser actions, APIs,
+  artifact schemas, SQLite counts/checksums và dependency/runtime versions.
+- Capture reproducible baseline at 1440×900, 1280×720, 1024×768 và 390×844.
+- Record network payload, bundle size, LCP, chart canvas size, API p95, backend
+  RSS và synthetic run duration.
+- Freeze accepted screenshots and trace artifacts outside normal source output;
+  CI keeps only approved compact evidence.
+
+**Backend**
+
+- Snapshot OpenAPI for both FastAPI services.
+- Pin wheel/image/config hashes and protected strategy checksum.
+- Export Planning SQLite with count/hash report; no migration yet.
+
+**Frontend / UX / Wireframe**
+
+- Build route-action matrix for both apps.
+- Annotate nested shells, inconsistent route state, focus, responsive and empty
+  states as concerns—not ad-hoc fixes in this phase.
+- Create Figma page `01 — Current Baseline` from sanitized screenshots.
+
+**Exit gate**
+
+- Clean checkout reproduces current synthetic/golden flows.
+- All primary routes/actions appear in inventory and screenshot set.
+- Existing completed QuantBT artifact can reopen; Planning export reconciles.
+
+**Technical debt**
+
+- Real market-data web flow remains pending server migration.
+- Baseline evidence has an expiry; refresh after any dependency/runtime major
+  upgrade.
+
+### Phase U02 — Shared Foundations & Figma-Ready Design System
+
+**Goal**
+
+Tạo một visual language/component contract chung trước khi ghép hai frontend.
+
+**Guide index**
+
+- [§P0.21–P0.22](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p021-design-direction-wealthfolio-pattern--quantbt-fund-paper)
+- [§17 UI/UX Direction](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#17-uiux-direction)
+- [§25 Components](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#25-component-system)
+- [§26–27 Responsive/Figma](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#26-responsive-mobile-và-accessibility)
+- [Current UI guide](../apps/portal/uiux-design.md)
+
+**Đã làm**
+
+- Fund Paper token palette, typography roles, ECharts conventions và report
+  components đã tồn tại trong QuantBT.
+- Planning có responsive shell, light/dark tokens và design catalog riêng.
+
+**Description / To-do**
+
+- Chọn Fund Paper là token authority; map token Planning vào semantic roles.
+- Dựng Figma pages Foundations, Tokens, Components, Patterns và Responsive.
+- Tạo foundation API cho buttons, inputs, badges, tabs, cards, tables, drawers,
+  dialogs, skeletons, callouts, metric/evidence components.
+- Chuẩn hóa density `comfortable / compact / operational` và themes Research
+  Light / Operations Dark / Print Light.
+- Reimplement Wealthfolio-inspired patterns clean-room; không copy AGPL code,
+  logo hoặc asset.
+
+**Backend**
+
+- Định nghĩa display metadata contract: unit, timezone, segment, freshness,
+  provenance, permission và source artifact digest.
+- Không thêm numerical calculation vào component/presentation layer.
+
+**Frontend / UX / Wireframe**
+
+- Tạo token package thử nghiệm trong current frontend boundary; promote thành
+  `packages/ui` chính thức ở U09 sau parity.
+- Component states bắt buộc: loading, empty, partial, stale, denied,
+  capability-unavailable, retryable và terminal failure.
+- WCAG 2.2 AA, focus ring, reduced motion, print/export và chart text fallback.
+
+**Exit gate**
+
+- Visual tests ở bốn breakpoints và ba themes pass.
+- Không có raw color mới ngoài documented token/visualization exception.
+- Figma variables/component variants map được 1:1 sang typed React props.
+
+**Technical debt**
+
+- Hai legacy style systems còn tồn tại trong parity window.
+- Storybook/package workspace chỉ productionize ở U09 để tránh toolchain churn
+  trước khi shell được duyệt.
+
+### Phase U03 — Unified Shell, Feature Registry & Command Center
+
+**Goal**
+
+Biến `apps/portal` thành mother shell duy nhất, có IA theo lifecycle và mô tả
+trung thực capability hiện tại/tương lai.
+
+**Guide index**
+
+- [§P0.5–P0.8 Maturity, IA, shell](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p05-maturity-model-cho-feature-và-screen)
+- [§P0.12 Registry](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p012-feature-registry--contract-trung-tâm-của-prototype)
+- [§P0.14–P0.20 Wireframes](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p014-command-center-prototype)
+- [§19–20 IA/screens](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#19-information-architecture-và-route-map)
+
+**Đã làm**
+
+- Root web gateway là public entry point duy nhất.
+- Hai frontend cùng React/Vite nhưng vẫn build và route độc lập.
+
+**Description / To-do**
+
+- Implement typed Feature Registry; sidebar/topbar/command palette render từ
+  registry, không hard-code từng nav item.
+- Implement Screen/Concern registry và commissioned Feature Preview.
+- Build PortalShell: product rail, topbar, breadcrumbs, module header, optional
+  subnav, context drawer và responsive mobile sheet.
+- Build Command Center và Portal Map từ real adapters + static lifecycle model.
+- Add `Show commissioned modules` user preference và role/maturity filtering.
+
+**Backend**
+
+- Current FastAPI services giữ nguyên authority.
+- Tạo read-only summary adapter; field chưa có trả `unavailable`, không bịa 0.
+- Version registry/concern sidecar trong source với schema validation.
+
+**Frontend / UX / Wireframe**
+
+- One obvious primary action per screen; evidence/status nằm gần action.
+- Command Center priority: critical incident → approval → failed/corrupt run →
+  stale data → normal work.
+- Commissioned screen click được nhưng chỉ mở brief/wireframe/dependency/task;
+  destructive/compute CTA disabled với lý do cụ thể.
+- URL giữ workspace/project placeholder nhưng không giả multi-tenancy backend.
+
+**Exit gate**
+
+- Thêm một commissioned feature chỉ bằng registry entry.
+- Keyboard/sidebar/mobile drawer/deep-link/back-forward pass.
+- Không có fake live/account/performance metric; fixture có banner/provenance.
+
+**Technical debt**
+
+- Command Center chưa có authoritative platform read model tới U10.
+- Workspace/project context chỉ là single-workspace shell contract trong P0.
+
+### Phase U04 — QuantBT Research Embedding & Parity
+
+**Goal**
+
+Nhúng toàn bộ QuantBT Research vào shell chung mà không đổi accounting,
+selection, artifacts hoặc protected strategy kernel.
+
+**Guide index**
+
+- [§P0.9 QuantBT embedding](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p09-cách-ghép-quantbt-research-vào-shell-chung)
+- [§P0.17 Wireframe](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p017-wireframe--quantbt-research-được-nhúng-trong-portal)
+- [Screens 11–15](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#22-detailed-wireframes--backtest-optimization-và-approval)
+- [QuantBT app rules](../apps/portal/AGENTS.md)
+
+**Đã làm**
+
+- Current New Run/Progress/Result tabs, SSE, artifact persistence, API tests và
+  synthetic PyPI smoke hoạt động.
+- Fund Paper report components và IS/OOS/Holdout semantics đã có.
+
+**Description / To-do**
+
+- Extract app body/module boundary, loại bỏ duplicated shell nhưng giữ feature
+  local subnav.
+- Canonical routes dưới `/research/quantbt/*`; legacy route redirect có test.
+- Preserve run query/deep-link behavior trong compatibility window.
+- Tạo immutable run passport strip: strategy, dataset, engine, window, hash,
+  backend và data mode.
+
+**Backend**
+
+- Freeze current API/artifact contracts; chỉ thêm compatibility metadata.
+- Không import internal QuantBT kernel; không sửa `strategy/main.py`.
+- Keep current FastAPI private; all mutations retain preflight/audit behavior.
+
+**Frontend / UX / Wireframe**
+
+- Flow: New Run → Progress → explicit Open Results → Overview → Optimization
+  → Parameters → Execution → Audit.
+- Charts không remount vô ích khi đổi tab/range; stale request được abort.
+- Data-unavailable và artifact-partial có explainable state, không blank canvas.
+
+**Exit gate**
+
+- Golden browser parity, deep links, back/forward, export và SSE reconnect pass.
+- Protected source hash, backend tests, frontend tests/build và visual diff pass.
+- Existing API/artifact output không đổi ngoài documented additive field.
+
+**Technical debt**
+
+- Query-string/legacy route adapter tồn tại tới U10/U12.
+- FastAPI còn là public domain authority phía sau BFF tới strangler cutover.
+
+### Phase U05 — Planning Embedding & Feature/Task Cross-Link
+
+**Goal**
+
+Đưa Docs/Roadmap/Board/Reports/Evidence vào mother shell và biến Planning thành
+governance surface cho chính Portal roadmap.
+
+**Guide index**
+
+- [§P0.10 Planning embedding](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p010-cách-ghép-roadmap--task-board-vào-shell-chung)
+- [§P0.18 Planning wireframe](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p018-wireframe--planning-được-nhúng-trong-portal)
+- [§P0.23 Cross-link](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p023-liên-kết-portal-feature-với-roadmaptask-board)
+- [Screen 24](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#244-screen-24--roadmap--task-board)
+
+**Đã làm**
+
+- Planning frontend Phase 5, local/API adapter, lazy views, SQLite audit backend
+  và compatibility route `/roadmap-task-board/` đã có.
+
+**Description / To-do**
+
+- Extract reusable Planning body; remove nested topbar/sidebar.
+- Add canonical `/planning/{docs|roadmap|board|reports|interpretation|evidence}`
+  routes and legacy hash/subpath adapter.
+- Add versioned mapping: feature/screen/concern ↔ epic/task/Figma/repository.
+- Task drawer giữ context và có `Open Portal screen`; feature preview có
+  `Open roadmap epic/tasks`.
+
+**Backend**
+
+- Giữ FastAPI/SQLite private trong P0.
+- Dùng optional metadata hoặc versioned sidecar trước schema migration.
+- Validate link target/ID; broken links xuất hiện trong integrity report.
+
+**Frontend / UX / Wireframe**
+
+- Phân biệt Planning Reports/Evidence với QuantBT Run Report bằng breadcrumb,
+  module label và source badge.
+- API/LOCAL mode luôn visible; local state không giả là shared server state.
+- Print/docs/Kanban/drag-drop/keyboard behavior giữ parity.
+
+**Exit gate**
+
+- Manager đi lifecycle → feature → task → feature không mất context.
+- Planning parity tests, content-integrity, API/local modes và legacy redirects
+  pass.
+- Không còn nested shell.
+
+**Technical debt**
+
+- SQLite companion và local-first adapter tồn tại tới U18.
+- Cross-link sidecar là temporary authority; sẽ migrate vào Planning/Postgres.
+
+### Phase U06 — Secure Edge & Loopback Origin Topology
+
+**Goal**
+
+Publish prototype tại `portal.primusspark.com` qua deny-by-default Access/Tunnel
+mà không expose web/API port của VPS.
+
+**Guide index**
+
+- [§40.2–40.10 exact configuration](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#402-runtime-identifiers-đã-khóa)
+- [§29.0.1 M-1B.0–M-1B.4](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#2901-phase-m-1b--secure-domain-login--identity-bootstrap-trước-m0)
+
+**Đã làm**
+
+- Guide đã khóa hostname, team domain, issuer, AUD và `@azdag.com` boundary.
+- Repo hiện có one-gateway Compose nhưng host port chưa được chuyển sang final
+  loopback/Cloudflare topology.
+
+**Description / To-do**
+
+- Owner verify Access Application hostname, login method, allow-domain policy,
+  exact AUD và không có `Bypass/Everyone`.
+- Bind Portal app `127.0.0.1:8080`; Nginx loopback TLS `127.0.0.1:443`.
+- Install Origin CA cert/key ngoài repo; deploy Nginx config strip spoofable
+  identity headers.
+- Create named tunnel, exact `teamName/audTag`, catch-all 404 and systemd health.
+- Route DNS qua Tunnel CNAME only after Access and origin are ready.
+- Configure UFW/SSH management safely; verify public 80/443/8080 closed.
+
+**Backend**
+
+- Add `/health`, `/ready` and ingress diagnostics without topology/secret leak.
+- Preserve SSE/upgrade/timeouts and request correlation through Nginx.
+
+**Frontend / UX / Wireframe**
+
+- Add external-access maintenance/error screen with request ID.
+- Do not pretend Cloudflare-owned screen is a Portal React route.
+
+**Exit gate**
+
+- Edge/origin/network checklist in §40.16 passes.
+- `noTLSVerify=false`; wrong cert/AUD/hostname fails closed.
+- Stopping Tunnel makes hostname unavailable but never exposes origin.
+
+**Technical debt**
+
+- Single VPS/single tunnel connector has no regional HA.
+- Device posture/WARP, multi-region and advanced Access policies are deferred.
+
+### Phase U07 — Identity, Local Login, Session & RBAC
+
+**Goal**
+
+Hoàn thành hybrid M-1B auth: verified Cloudflare identity + local account +
+opaque session + server-side permission.
+
+**Guide index**
+
+- [§P0.25A Auth design](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p025a-addendum-draft-v03--portalprimussparkcom-login-nội-bộ-và-identity-bootstrap)
+- [§13.9 identity profile](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#139-deployed-prototype-identity--explicit-override-cho-portalprimussparkcom)
+- [§21.1 Login wireframes](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#211-screen-01--login--sso)
+- [§40.11–40.17 pipeline/gates](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#4011-portal-jwt-verification-pipeline)
+
+**Đã làm**
+
+- Username/role and auth states are locked in guide; runtime implementation
+  chưa có.
+
+**Description / To-do**
+
+- Bootstrap a thin NestJS/Fastify auth BFF now; it becomes U10 Control API,
+  tránh viết auth production tạm trong Python rồi rewrite.
+- Add PostgreSQL migrations for users, external bindings, password/activation
+  credentials, sessions and auth audit.
+- Verify JWT/JWKS signature, issuer, audience, times and `@azdag.com`; cache keys
+  with rotation, never fallback to raw email header.
+- Implement Argon2id, blocklist, one-time activation, forced password change,
+  rate limit/lock, opaque `__Host-portal_session`, CSRF/origin and session revoke.
+- Idempotently seed `bobby/ADMIN`, `stan/USER`, `thanhvuong/USER`; generate
+  unique secrets at runtime and distribute out-of-band.
+
+**Backend**
+
+- `/api/auth/context|login|change-password|logout|csrf` and admin user/session
+  API from guide.
+- BFF overwrites internal principal headers and signs/trust-bounds downstream
+  context; raw password/session/JWT never reaches QuantBT/Planning.
+- Audit and metrics for all login/binding/session/role events.
+
+**Frontend / UX / Wireframe**
+
+- Implement Frames 01B/01C/01D, session expired, Access identity switch and
+  Settings → Users & Access.
+- Verified email read-only/masked; generic auth errors + request ID; no account
+  enumeration; password-manager/paste accessible.
+- USER deep-link to admin shows Not Authorized without data leak.
+
+**Exit gate**
+
+- Full §40.16 JWT/account/login/RBAC matrix passes.
+- QuantBT/Planning parity through authenticated BFF passes.
+- No raw token, cookie, password/hash or activation secret in repo/log/evidence.
+
+**Technical debt**
+
+- Prototype roles `ADMIN/USER` are intentionally coarse.
+- Step-up MFA, SCIM, passkey, self-service reset and full ABAC wait for U15/U16.
+
+### Phase U08 — M0 Reproducibility Freeze
+
+**Goal**
+
+Sau shell/auth ổn định, freeze lại technical baseline qua entry point thật để
+mọi migration authority sau có parity và rollback.
+
+**Guide index**
+
+- [§29.2 M0](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#292-phase-m0--baseline-inventory-và-golden-evidence)
+- [§31 tests](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#31-testing-strategy-và-acceptance-gates)
+
+**Đã làm**
+
+- Synthetic PyPI/golden suite và current CI đã có; chưa freeze qua unified
+  shell/auth path.
+
+**Description / To-do**
+
+- Freeze commits, images, config fingerprints, wheel/hash, OpenAPI, artifact
+  schemas, Planning export and visual baseline.
+- Add golden routes: signal_notional, intrabar, event-driven, portfolio,
+  WFO/three-window using synthetic data.
+- Define tolerances for metrics/series/artifacts and non-functional baselines.
+
+**Backend**
+
+- Verify provenance from installed distribution; no sibling source.
+- Add deterministic environment report without credentials/host paths.
+
+**Frontend / UX / Wireframe**
+
+- Capture complete Access → Login → Command Center → QuantBT/Planning flows.
+- Visual regression includes loading/empty/partial/error at supported sizes.
+
+**Exit gate**
+
+- Clean rebuild reproduces golden hashes/tolerances and reopens artifact.
+- Authenticated parity and rollback to current Compose image are documented.
+
+**Technical debt**
+
+- Real data/broker evidence is explicitly absent; cannot promote a synthetic
+  result as production evidence.
+
+### Phase U09 — Contract Foundation & Monorepo Platform Tooling
+
+**Goal**
+
+Tạo contract/schema/codegen/tooling foundation trước khi Control API nhận
+authority nghiệp vụ.
+
+**Guide index**
+
+- [§16 Repository/build](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#16-repository-build-và-deployment-architecture)
+- [§29.3 M1](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#293-phase-m1--contract-foundation-và-shared-design-system)
+- [§31.1 Contract tests](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#311-test-pyramid-theo-boundary)
+
+**Đã làm**
+
+- Current pyproject/package-lock/OpenAPI/test contracts exist per module.
+- Shared root orchestration exists; no formal packages/contracts workspace.
+
+**Description / To-do**
+
+- Create `packages/ui`, `packages/contracts-ts`, generated API client and schema
+  directories without nested Git.
+- Publish canonical IDs, UTC timestamps, decimals, RFC7807 problem, idempotency,
+  ETag/version and event envelope conventions.
+- Snapshot RunSpec, artifact manifest, Engine Capability and alpha manifest.
+- Introduce pnpm workspace/task graph only through ADR and lockfile migration;
+  do not keep npm and pnpm authority simultaneously after cutover.
+- Add OpenAPI/schema/Buf breaking CI and multi-language generated type compile.
+
+**Backend**
+
+- Current FastAPI OpenAPI becomes compatibility contract.
+- Contract fixtures contain no business fake used to pass integration tests.
+
+**Frontend / UX / Wireframe**
+
+- Promote U02 components into versioned package API and visual harness.
+- Generated clients replace handwritten API shape incrementally.
+
+**Exit gate**
+
+- Breaking contract PR fails CI.
+- Current frontend consumes generated compatibility client with golden parity.
+- One lock/tool authority per ecosystem; `portal doctor` reports versions.
+
+**Technical debt**
+
+- Old/new DTO and client coexist during strangler window.
+- Alpha manifest remains draft until owner sample is deep-dived in U14.
+
+### Phase U10 — TypeScript Control API Façade
+
+**Goal**
+
+Mở rộng auth BFF thành NestJS/Fastify modular monolith và đưa browser qua một
+authoritative product/control boundary.
+
+**Guide index**
+
+- [§5.3 module boundaries](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#53-modular-monolith-boundaries-trong-control-api-ts)
+- [§6.2 Control API](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#62-control-api-ts--authoritative-control-plane)
+- [§11 API surface](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#11-api-surface-đề-xuất)
+- [§29.4 M2](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#294-phase-m2--typescript-control-api-as-façade)
+
+**Đã làm**
+
+- U07 thin BFF/auth and PostgreSQL identity foundation expected.
+- Current FastAPI domain semantics remain baseline.
+
+**Description / To-do**
+
+- Add organizations/workspaces/projects, run registry/read models, audit and
+  transactional outbox modules.
+- Proxy current QuantBT/Planning APIs first; compare response/state transitions.
+- Every write records actor/workspace/request/idempotency/aggregate version.
+- Add feature flags and rollback adapter; FastAPI services become private.
+
+**Backend**
+
+- SQL-first typed query layer; module dependency rules enforced.
+- OpenAPI, generated frontend client, SSE from normalized durable/read state.
+- No cross-module infrastructure imports; commands/events for mutations.
+
+**Frontend / UX / Wireframe**
+
+- Replace direct FastAPI calls route-by-route without visual/metric change.
+- Command Center starts reading authoritative summary read model with
+  freshness/staleness metadata.
+
+**Exit gate**
+
+- All browser calls enter TS gateway; crafted permission/cross-workspace request
+  denied server-side.
+- Golden UI/run parity and feature-flag rollback pass.
+
+**Technical debt**
+
+- FastAPI compatibility endpoints remain until U11/U12 cutovers.
+- PostgreSQL read models initially single-region and modest-scale.
+
+### Phase U11 — Durable Quant Worker & Immutable Artifacts
+
+**Goal**
+
+Tách heavy QuantBT compute khỏi request loop, có queue/retry/cancel đúng và
+artifact content-addressed có thể audit.
+
+**Guide index**
+
+- [§6.4 worker lifecycle](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#64-quant-worker-py)
+- [§6.7 NATS](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#67-nats-và-event-semantics)
+- [§8 artifact architecture](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#8-run-study-và-artifact-architecture)
+- [§29.5 M3](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#295-phase-m3--worker-isolation-durable-queue-và-immutable-artifacts)
+
+**Đã làm**
+
+- Current async run service/artifact repository and golden tests provide
+  behavior reference; no durable distributed queue/object store authority.
+
+**Description / To-do**
+
+- Add NATS JetStream, S3/MinIO and one-run `quant-worker-py` container.
+- Implement immutable `run`, `run_attempt`, `study`, `trial` identities; lease,
+  heartbeat, cancel, retry, redelivery and standardized failure codes.
+- Use transactional outbox and idempotent consumers.
+- Implement temp → checksum → manifest → content-addressed finalize protocol,
+  orphan/corrupt reconciler and legacy artifact importer.
+
+**Backend**
+
+- Worker accepts immutable RunEnvelope and exact wheel/image/data/alpha hashes.
+- SSE reads durable progress/events; API remains responsive under WFO load.
+- Worker non-root, resource limited, network restricted, no live secret.
+
+**Frontend / UX / Wireframe**
+
+- Run Queue and Progress expose queue/claim/stage/attempt/reconnect accurately.
+- `FINALIZING`, `CANCELLING`, redelivery and corrupt artifact have specific
+  states—not generic spinner/error.
+
+**Exit gate**
+
+- Kill/restart worker does not duplicate successful run.
+- Cancel/retry/lease/quota/artifact checksum/reopen/fault injection pass.
+- Golden numerical/artifact parity with current engine path passes.
+
+**Technical debt**
+
+- Initial worker scheduling is resource-class based; affinity/warm pools later.
+- MinIO/NATS add backup/observability burden handled progressively in U19.
+
+### Phase U12 — Engine Capability Registry & Full QuantBT UI
+
+**Goal**
+
+Support QuantBT 1.0.8 qua machine-readable capability thay vì hard-code form và
+route trong React.
+
+**Guide index**
+
+- [§7 full QuantBT integration](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#7-full-quantbt-108-integration)
+- [Screen 10 Endpoint Explorer](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#2110-screen-10--endpoint-explorer)
+- [Screens 11–16](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#22-detailed-wireframes--backtest-optimization-và-approval)
+- [§29.6 M4](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#296-phase-m4--engine-capability-registry-và-full-quantbt-ui)
+
+**Đã làm**
+
+- Current portal covers three-window/Advanced WFO and selected current routes.
+- PyPI provenance and protected strategy tests exist.
+
+**Description / To-do**
+
+- Build `engine-inspector-py`: exact wheel/hash, public endpoint inspection,
+  schemas, optional dependency/backend probes, synthetic smoke and signed
+  capability manifest.
+- Register releases/capabilities/status/certification in Control API.
+- Implement Generic Run API and typed preflight.
+- Support stable 1.0.8 factory matrix; optional capabilities remain manifest-
+  gated.
+
+**Backend**
+
+- Public `QuantBTEndpoint` only; no internal kernel/private backend imports.
+- Preflight validates actor/quota, alpha, data, methodology, backend,
+  parameters, resources and promotion constraints.
+- Optimization trials use light profile; final selection requires audit replay.
+
+**Frontend / UX / Wireframe**
+
+- Endpoint Explorer, schema-driven eight-step Backtest Wizard, Run Queue, WFO
+  Lab, Run Detail, Compare Runs and evidence-aware errors.
+- Every metric shows definition/unit/segment/source/as-of; capability absent
+  explains why and cannot be crafted through API.
+
+**Exit gate**
+
+- Synthetic new manifest capability renders without core wizard edit.
+- Full route matrix/golden/holdout mutation/final-audit digest tests pass.
+- Unsupported or uncertified capability fails closed.
+
+**Technical debt**
+
+- Experimental/native/options capability remains disabled until exact package
+  manifest and certification evidence exists.
+- Current specialized QuantBT components coexist with generic renderer until
+  visual/interaction parity.
+
+### Phase U13 — Data Catalog, Immutable Snapshots & Query Foundation
+
+**Goal**
+
+Thay host-path/latest-data assumption bằng dataset/universe/instrument identity,
+quality gate và chart-ready query contract.
+
+**Guide index**
+
+- [§8.7–8.9 storage](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#87-postgresql-timescaledb-clickhouse)
+- [§11.6 Data API](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#116-data-catalog)
+- [Screen 22 Data Catalog](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#242-screen-22--data-catalog--quality)
+- [§15 performance/query](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#15-performance-architecture)
+
+**Đã làm**
+
+- Current backend has read-only market-data mount and synthetic fixtures.
+- Real data services/path on server mới chưa sẵn sàng.
+
+**Description / To-do**
+
+- Deep-dive `quant-data-layer`/historical services when available; freeze
+  historical snapshot, instrument and realtime contracts.
+- Implement Dataset/Universe/Snapshot/Quality identities and immutable quality
+  reports; no mutable `latest` for approved run.
+- Add data-quality preflight blocking and repair → new snapshot semantics.
+- Implement TS/Python query/read-model path first: pagination, range,
+  downsampling metadata, object URL/export and cache key by digest.
+
+**Backend**
+
+- Catalog metadata in PostgreSQL; bulk immutable data/artifact in object store.
+- Event/availability/ingest time, timezone, unit, gap/duplicate/repair provenance
+  explicit.
+
+**Frontend / UX / Wireframe**
+
+- Data Catalog/Snapshot Detail/Quality evidence and clear blocked-run link.
+- No fixture or missing data shown as healthy/real; display freshness/provenance.
+- Tables virtualized, charts fetch viewport resolution only.
+
+**Exit gate**
+
+- Data-quality fail blocks crafted and UI run submission.
+- Snapshot immutable hash/lineage/reopen and repaired-version flow pass.
+- Real-data activation requires separate smoke; synthetic does not satisfy it.
+
+**Technical debt**
+
+- Phase remains partially BLOCKED until real services are migrated.
+- Timescale/ClickHouse/Rust query are explicitly deferred by evidence gate.
+
+### Phase U14 — Alpha Registry, Import & Research Platform
+
+**Goal**
+
+Tạo immutable Alpha identity/artifact/certification, Alpha Pool và workbench mà
+không biến browser thành arbitrary Python editor.
+
+**Guide index**
+
+- [§9 Alpha Platform](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#9-alpha-platform-và-chuẩn-import-dự-kiến)
+- [Screens 04–09](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#214-screen-04--alpha-pool)
+- [Flow A/B](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#281-flow-a--import-một-alpha-mới-vào-alpha-pool)
+- [§29.7 M5](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#297-phase-m5--alpha-registry-import-pool-và-research-workbench)
+
+**Đã làm**
+
+- Protected Delta-RSI strategy/current research UI provide one concrete
+  reference; generic alpha contract chưa final.
+
+**Description / To-do**
+
+- Deep-dive owner alpha package sample, then finalize `alpha.yaml`, output
+  contracts, parameter/UI schemas and certification policy.
+- Build quarantine ingest → hermetic build → lock/SBOM/secret/license scan →
+  contract/determinism/lookahead/QuantBT smoke → signed publication.
+- Implement Alpha Pool, Alpha Detail/Version/Lineage, Import Wizard, Research
+  Workbench, Mining campaign skeleton and governed Strategy Composer.
+
+**Backend**
+
+- Exact artifact digest and schema compatibility bind every run.
+- Sandbox arbitrary package load; network denied, no live secrets.
+- Lifecycle/quarantine/promotion transitions versioned and audited.
+
+**Frontend / UX / Wireframe**
+
+- Evidence-first catalog: lifecycle, OOS/Holdout range, drawdown, costs,
+  correlation, capacity, drift, evidence age and limitations.
+- Workbench shows PREVIEW watermark and exact run passport.
+- Composer only exposes versioned managed operators, never arbitrary code node.
+
+**Exit gate**
+
+- CI publishes immutable alpha version and same digest appears in run manifest.
+- Manager can adjust allowed schema fields but cannot execute arbitrary source.
+- Quarantine blocks new run/promotion, even with crafted request.
+
+**Technical debt**
+
+- Mining/composer advanced algorithms remain commissioned until their domain
+  contracts and research evidence are independently reviewed.
+- A single “Alpha Score” is intentionally not introduced.
+
+### Phase U15 — Approval, Promotion, Paper & Sandbox
+
+**Goal**
+
+Promote đúng một immutable artifact qua governed evidence, Paper và Sandbox;
+chưa mở Live.
+
+**Guide index**
+
+- [§10.4–10.6 promotion/deployment](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#104-promotion-state-machine)
+- [§12 Paper/Sandbox/Live semantics](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#12-paper-sandbox-và-live-operations)
+- [Screens 16–18](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#226-screen-16--approval-inbox--review)
+- [§29.8 M6](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#298-phase-m6--approval-paper-và-sandbox)
+
+**Đã làm**
+
+- Current audit artifacts provide research evidence; approval/promotion/paper
+  authority chưa có.
+
+**Description / To-do**
+
+- Implement policy/version, approval request/comment/decision/waiver and
+  separation-of-duties.
+- Bind approval to immutable final audit/evidence hashes; new artifact invalidates
+  previous request/version.
+- Implement promotion state, Paper adapter/telemetry/drift and Sandbox account
+  capability/reconciliation checklist.
+- Add incident links and pause/rollback game-day flows.
+
+**Backend**
+
+- Same artifact/config digest across Research → Paper → Sandbox.
+- Account stores secret reference only; no browser/worker live credential.
+- Risk/data/reconciliation gates evaluated server-side at command time.
+
+**Frontend / UX / Wireframe**
+
+- Approval Inbox/Review, Paper dashboard, Sandbox certification and Account
+  capability views per guide.
+- Disabled promotion lists exact failed gates; no opaque tooltip.
+- Dangerous action drawer includes environment/scope/consequence/reason.
+
+**Exit gate**
+
+- Self-approval/permission/crafted promotion denied.
+- Paper/Sandbox events trace to deployment/alpha/run/evidence.
+- Drift/reconciliation gate and pause/rollback fault tests pass.
+
+**Technical debt**
+
+- Step-up and richer reviewer/operator/risk roles must finish before U16.
+- Paper simulator/venue sandbox differences remain versioned evidence, not
+  assumed live parity.
+
+### Phase U16 — Live Control & Operational Safety
+
+**Goal**
+
+Kết nối private trading system bằng signed intent, fail-closed risk/reconciliation
+và operational UX an toàn; Portal không trở thành execution hot path.
+
+**Guide index**
+
+- [§10.6–10.7 deployment/incident state](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#106-deployment-state-machine)
+- [§12.5–12.8 live actions](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#125-live-operations-rule)
+- [§13 security/governance](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#13-identity-security-và-governance)
+- [Screen 19–23](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#233-screen-19--live-operations)
+- [§29.9 M7](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#299-phase-m7--live-control-integration)
+
+**Đã làm**
+
+- Chỉ có commissioned wireframe/architecture; private engine contracts phải
+  deep-dive trước implementation.
+
+**Description / To-do**
+
+- Freeze private deployment command, telemetry, account, risk, reconciliation
+  and incident contract.
+- Implement signed/expiring/idempotent deployment intent, canary/scale/pause/
+  rollback/protective state and observed acknowledgement.
+- Add dual approval, short-lived step-up grant and audited break-glass runbook.
+- Separate live monitoring/risk/execution safety from Portal availability.
+
+**Backend**
+
+- Risk engine remains final authority; Portal cannot emit raw normal-UI orders.
+- Continuous order/fill/position/cash/PnL/cost reconciliation and drift model.
+- Stale/unknown/mismatch blocks new action fail-closed.
+
+**Frontend / UX / Wireframe**
+
+- Dark Operations workstation, persistent `LIVE` context, health/risk strip,
+  virtual blotters, incident/action drawer and observed-state confirmation.
+- Cancel-all/flatten is separate protected workflow, never a nearby red button.
+- Mobile scope is monitoring/incident/protective action only.
+
+**Exit gate**
+
+- Staging/sandbox/canary tests prove Portal cannot bypass risk.
+- Every operator action has actor/policy/reason/intent/ack/state/audit lineage.
+- Portal outage leaves monitoring/risk/execution safety operational.
+
+**Technical debt**
+
+- Multi-region HA, device posture/hardware-key mandates and advanced capital
+  allocation can follow after initial canary certification.
+- No Live feature moves from COMMISSIONED before private contracts are signed.
+
+### Phase U17 — Rust Fast Paths & Scale Certification
+
+**Goal**
+
+Tách đúng performance bottleneck sang Rust sau profiling, giữ numerical and
+artifact parity.
+
+**Guide index**
+
+- [§4.3 Rust services](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#43-rust--backend-hiệu-năng-cao-nhưng-không-phải-crud-authority)
+- [§6.5–6.6 query/realtime](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#65-artifact-query-rs)
+- [§15.6–15.7 extraction/benchmark](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#156-rust-extraction-criteria)
+- [§29.10 M8](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#2910-phase-m8--rust-fast-paths-và-scale-hardening)
+
+**Đã làm**
+
+- Chưa có Rust service; đây là chủ đích đúng cho current scale.
+
+**Description / To-do**
+
+- Run benchmark suite on TS/Python path; capture flamegraph, p95/p99, bytes,
+  RSS/GC and slow-consumer evidence.
+- Nếu gate đạt: implement `artifact-query-rs` for Parquet range/aggregate/
+  downsample and `realtime-gateway-rs` for authorization/backpressure/replay.
+- Runner supervisor chỉ khi Kubernetes/process lifecycle evidence yêu cầu.
+
+**Backend**
+
+- Query response includes source digest/query hash/downsample/source/returned
+  rows; never silently changes units/timezone/segment.
+- Durable order/fill/incident cannot be dropped; latest market/health may coalesce.
+
+**Frontend / UX / Wireframe**
+
+- Progressive chart fetch, virtual tables, reconnect cursor and staleness UI.
+- Performance optimization must not alter metric definition or perceived state.
+
+**Exit gate**
+
+- Numerical/artifact/schema parity, load/fault/slow consumer pass.
+- Target p95/p99/RSS achieved and old path has reversible cutover flag.
+
+**Technical debt**
+
+- If benchmark gate is not met, Rust remains NOT STARTED—not a failed phase.
+- A new Rust service creates on-call/build/security ownership that U19 must cover.
+
+### Phase U18 — Planning/PostgreSQL Cutover
+
+**Goal**
+
+Đưa Roadmap/Task Board vào Planning bounded context của Control API mà không mất
+history, attachments, cross-links hoặc current UX.
+
+**Guide index**
+
+- [§24.4 Planning migration](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#244-screen-24--roadmap--task-board)
+- [§29.11 Roadmap migration](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#2911-roadmap-task-board-migration)
+
+**Đã làm**
+
+- Phase 5 Planning feature, FastAPI/SQLite, audit trail, local/API adapters,
+  content integrity and release checklist exist.
+
+**Description / To-do**
+
+- Freeze/export schema/data/attachments; add global IDs, workspace, version and
+  timestamps.
+- Build idempotent importer with `legacy_id`, checksum and reconciliation.
+- Implement Planning module/Postgres compatibility API.
+- Dual-read comparison, controlled write freeze, final import, read-only archive
+  and companion service retirement.
+
+**Backend**
+
+- Transactional task move/version/audit; migrate feature/screen/concern links.
+- Never dual-write without reconciliation and explicit cutover state.
+
+**Frontend / UX / Wireframe**
+
+- Preserve Docs/Roadmap/Board/Reports/Evidence behavior and URLs.
+- Upgrade board with shared DataTable/drawer/filter/saved view/accessibility only
+  after persistence parity.
+
+**Exit gate**
+
+- Entity/attachment/count/hash/audit reconciliation is exact or documented.
+- Rollback/read-only archive tested; no lost/mutated legacy evidence.
+- SQLite companion removed from runtime only after signed cutover.
+
+**Technical debt**
+
+- Local-only offline mode may remain as explicit personal mode, never shared
+  authority.
+- Legacy HTML/content archive retained by retention policy.
+
+### Phase U19 — Release, DR, Open-Source & Product Hardening
+
+**Goal**
+
+Đóng gói một stable Portal có release governance, operational evidence, tài
+liệu onboarding và rollback/DR đủ để tiếp tục mở rộng.
+
+**Guide index**
+
+- [§14 Observability](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#14-observability-monitoring-và-incident-response)
+- [§16.5–16.8 release/DR/DX](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#165-release-governance)
+- [§31.7 Platform DoD](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#317-definition-of-done-cấp-platform)
+- [§32 Risk register](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#32-risk-register)
+
+**Đã làm**
+
+- Root CI, image publishing, production Compose/deploy skeleton, security/
+  contributing/community docs and stack smoke exist.
+- Root README chưa đủ open-source/reproducible dependency guide và repo chưa có
+  license file.
+
+**Description / To-do**
+
+- Complete OTel traces, metrics/log dashboards, alerts, SLOs and runbooks.
+- Add PostgreSQL PITR/restore drill, object versioning/hash verification, NATS
+  recovery, config/identity backup and game-day tests.
+- Release manifest includes image/schema/migration/engine compatibility,
+  SBOM/signature, feature defaults, notes and rollback.
+- Upgrade root README: prerequisites, Docker/native setup, dependency matrix,
+  troubleshooting, architecture/routes, tests and support.
+- Owner chooses/adds license before calling repository open-source; add changelog
+  and release/version policy.
+- Run WCAG, visual, load/soak, security scan, backup/restore and full E2E gates.
+
+**Backend**
+
+- No committed secret/data/artifact; production config and migrations validated.
+- Supply-chain scan/signature and compatibility matrix for Portal/engine release.
+
+**Frontend / UX / Wireframe**
+
+- Final usability review by manager/quant/operator; fix dead ends and unclear
+  destructive flows.
+- Bundle/LCP/chart/table budgets and mobile/accessibility/print evidence pass.
+
+**Exit gate**
+
+- `dev` complete stack green; release PR promotes exact artifacts to `main`.
+- Restore/rollback/game-day and production go/no-go evidence approved.
+- README/license/support/security/release notes match actual shipped stack.
+
+**Technical debt**
+
+- Multi-region, advanced enterprise IAM, ClickHouse and Kubernetes remain
+  optional future roadmap unless measured requirements activate them.
+- Technical debt accepted at release must have owner, severity and target phase.
+
+---
+
+## 8. UX work order và wireframe review gates
+
+Không thiết kế đồng loạt 26 screen ở high fidelity. Thứ tự review hợp lý:
+
+1. **Foundation:** status/data-mode, typography, spacing, form/table/chart states.
+2. **Shell:** Login, Command Center, navigation, Portal Map, Profile/Access.
+3. **Current capability:** QuantBT embedded và Planning embedded ở bốn viewport.
+4. **Research workflow:** Alpha Pool → Detail → Workbench → Backtest Wizard.
+5. **Evidence workflow:** Queue → WFO → Run Detail → Compare → Approval.
+6. **Promotion workflow:** Paper → Sandbox → Live, chỉ high fidelity khi backend
+   contract của môi trường đó đã khóa.
+7. **Operations:** Data Quality → Monitoring/Incident → Reconciliation.
+8. **Administration/Planning:** Users/Access, Accounts, Settings, Roadmap/Board.
+
+Mỗi frame phải có:
+
+```text
+screen_id / feature_id / maturity / data_mode
+permission / route / API-schema source / fixture source
+loading-empty-partial-stale-denied-failure states
+responsive notes / accessibility notes
+primary decision / primary action / dangerous action rules
+linked concern/task/ADR/evidence
+```
+
+Sáng tạo UX được khuyến khích trong ba vùng:
+
+- Context continuity: từ lifecycle → resource → evidence → task và quay lại.
+- Progressive disclosure: surface chính calm, detail/evidence mở bằng drawer/tab.
+- Decision confidence: mọi action quan trọng đặt cạnh provenance, freshness,
+  policy và consequence.
+
+Không sáng tạo bằng cách đổi semantics engine, tạo fake metric, giấu environment
+hoặc thu nhỏ critical confirmation.
+
+## 9. Global Definition of Done
+
+Một phase chỉ được `DONE` khi:
+
+- Goal đạt bằng code/evidence, không chỉ có wireframe hoặc TODO.
+- Contract/backend/domain test đi trước UI completion.
+- Current capability và compatibility/rollback path pass.
+- Permission/security enforced server-side.
+- Loading/empty/partial/stale/denied/failure states có test.
+- Desktop/tablet/mobile, keyboard, focus, contrast và reduced-motion pass theo
+  scope screen.
+- Performance budget và telemetry liên quan đã đo.
+- Không secret, raw token, market data, runtime DB, cache hoặc generated output
+  vào Git.
+- Docs/runbook/task/technical debt được cập nhật và commit coherent.
+- Feature maturity chỉ đổi khi activation gate và evidence tương ứng pass.
+
+## 10. Non-goals xuyên suốt
+
+- Không big-bang rewrite FastAPI/React hiện tại.
+- Không iframe làm kiến trúc chính.
+- Không reimplement QuantBT PnL/metric/selection ở TS/Rust/frontend.
+- Không browser arbitrary Python trong shared/live environment.
+- Không fake account, broker, live PnL, incident hoặc data quality.
+- Không direct TradingView/web UI → broker; mọi intent qua risk authority.
+- Không public origin port, không `noTLSVerify=true` như permanent fix.
+- Không shared/default bootstrap password hoặc secret trong repo/log/task.
+- Không Rust/ClickHouse/Kubernetes trước contract/profile/evidence.
+- Không gọi prototype `production/live-ready` chỉ vì UI đã đẹp.
+
+## 11. Owner review checklist cho plan
+
+- [ ] Chấp thuận U00–U19 và critical path.
+- [ ] Chấp thuận thin TypeScript auth BFF ở U07 để tái sử dụng thành U10.
+- [ ] Chấp thuận giữ current npm locks đến U09 rồi mới quyết định pnpm workspace.
+- [ ] Chấp thuận Data phase ở trạng thái BLOCKED/PARTIAL tới khi server data sẵn.
+- [ ] Xác nhận Access Dashboard state trước U06 activation.
+- [ ] Xác nhận kênh giao activation credential ngoài Git/chat/task board.
+- [ ] Xác nhận alpha package sample và private trading/data repository owner khi
+  mở U13/U14/U16.
+- [ ] Chọn license trước U19 nếu muốn public repository là open-source thực sự.
