@@ -25,6 +25,9 @@ dev = [
   "httpx>=0.28,<1",
   "pytest>=8,<10",
 ]
+historical-data = [
+  "primus-historical-market-data==0.1.0rc3",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

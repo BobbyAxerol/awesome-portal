@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 
 from portal_api.adapters.market_data import (
+    MarketDataQuery,
     MarketDataProvider,
     market_content_hash,
     partition_three_windows,
@@ -13,6 +14,30 @@ from portal_api.domain.errors import DataSchemaError
 from portal_api.domain.requests import AdvancedWalkForwardConfig, PortalRunRequest, ThreeWindowConfig
 from portal_api.domain.responses import PreflightResponse, WindowSummary
 from portal_api.strategies import StrategyRegistry
+
+
+def market_data_query_for_run(
+    request: PortalRunRequest,
+    *,
+    columns: tuple[str, ...],
+) -> MarketDataQuery:
+    """Map a run contract to one bounded historical/fixture data query."""
+    if isinstance(request.calibration, ThreeWindowConfig):
+        start = request.calibration.is_start
+        end_exclusive = request.calibration.holdout_end_exclusive
+    elif isinstance(request.calibration, AdvancedWalkForwardConfig):
+        start = request.calibration.data_start
+        end_exclusive = request.calibration.data_end_exclusive
+    else:  # pragma: no cover - Pydantic closes the calibration union
+        raise TypeError("unsupported calibration config")
+    return MarketDataQuery(
+        dataset_id=request.dataset_id,
+        symbol=request.symbol,
+        timeframe=request.timeframe,
+        start=start,
+        end_exclusive=end_exclusive,
+        columns=columns,
+    )
 
 
 class PreflightService:
@@ -30,9 +55,10 @@ class PreflightService:
         strategy = self._strategies.get(request.strategy_id)
         strategy.validate_parameter_space(request.parameter_space)
         market = self._provider.load(
-            request.dataset_id,
-            symbol=request.symbol,
-            timeframe=request.timeframe,
+            market_data_query_for_run(
+                request,
+                columns=tuple(strategy.specification.required_columns),
+            )
         )
 
         descriptor = market.descriptor

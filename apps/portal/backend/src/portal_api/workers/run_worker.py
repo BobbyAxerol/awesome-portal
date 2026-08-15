@@ -85,20 +85,17 @@ def _load_market(request: PortalRunRequest) -> PreparedMarketData:
             content_hash=f"override-{Path(override).name}",
             missing_bar_count=0,
         )
-    from portal_api.adapters.market_data import CryptoBinanceMarketDataProvider
-
-    pool_alpha_root = Path(__file__).resolve().parents[5]
-    loader_root = Path(
-        os.getenv(
-            "PORTAL_CRYPTO_DATA_ROOT",
-            str(pool_alpha_root / "alphas_storage" / "_get_data"),
-        )
+    from portal_api.adapters.market_data import (
+        REQUIRED_MARKET_COLUMNS,
+        HistoricalMarketDataProvider,
     )
-    provider = CryptoBinanceMarketDataProvider(
-        loader_root, engine=os.getenv("PORTAL_CRYPTO_RESAMPLE_ENGINE", "duckdb")
+    from portal_api.services.preflight import market_data_query_for_run
+
+    provider = HistoricalMarketDataProvider(
+        engine=os.getenv("PORTAL_CRYPTO_RESAMPLE_ENGINE", "duckdb")
     )
     return provider.load(
-        request.dataset_id, symbol=request.symbol, timeframe=request.timeframe
+        market_data_query_for_run(request, columns=REQUIRED_MARKET_COLUMNS)
     )
 
 

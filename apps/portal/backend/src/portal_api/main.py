@@ -8,9 +8,10 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from portal_api.adapters.market_data import (
-    CryptoBinanceMarketDataProvider,
+    HistoricalMarketDataProvider,
     ManifestMarketDataProvider,
     MarketDataProvider,
+    UnavailableHistoricalMarketDataProvider,
 )
 from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.api.routes import router
@@ -26,17 +27,25 @@ def _default_provider() -> MarketDataProvider:
     manifest = os.getenv("PORTAL_DATASET_MANIFEST")
     if manifest:
         return ManifestMarketDataProvider(Path(manifest))
-    pool_alpha_root = Path(__file__).resolve().parents[4]
-    loader_root = Path(
-        os.getenv(
-            "PORTAL_CRYPTO_DATA_ROOT",
-            str(pool_alpha_root / "alphas_storage" / "_get_data"),
+    mode = os.getenv("PORTAL_HISTORICAL_DATA_MODE", "disabled").strip().lower()
+    if mode not in {"disabled", "optional", "required"}:
+        raise RuntimeError(
+            "PORTAL_HISTORICAL_DATA_MODE must be disabled, optional or required"
         )
-    )
-    return CryptoBinanceMarketDataProvider(
-        loader_root,
-        engine=os.getenv("PORTAL_CRYPTO_RESAMPLE_ENGINE", "duckdb"),
-    )
+    if mode == "disabled":
+        return UnavailableHistoricalMarketDataProvider(
+            "historical backtest/research data is disabled in this environment"
+        )
+    try:
+        return HistoricalMarketDataProvider(
+            engine=os.getenv("PORTAL_CRYPTO_RESAMPLE_ENGINE", "duckdb"),
+        )
+    except Exception as exc:
+        if mode == "required":
+            raise RuntimeError(
+                f"required historical market-data capability failed: {exc}"
+            ) from exc
+        return UnavailableHistoricalMarketDataProvider(str(exc))
 
 
 def create_app(

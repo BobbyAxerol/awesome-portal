@@ -70,6 +70,13 @@ async def datasets(request: Request) -> list[dict[str, object]]:
             "timeframe": item.timeframe,
             "dynamic_query": item.dynamic_query,
             "supported_timeframes": list(item.supported_timeframes),
+            "source_class": item.source_class,
+            "data_kind": item.data_kind,
+            "availability": item.availability,
+            "unavailable_reason": item.unavailable_reason,
+            "usage_scopes": list(item.usage_scopes),
+            "excluded_scopes": list(item.excluded_scopes),
+            "source_timezone": item.source_timezone,
         }
         for item in request.app.state.market_data_provider.list_datasets()
     ]
