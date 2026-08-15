@@ -582,15 +582,16 @@ whether anything was pushed or deployed
 
 ## 14. Next backend architecture task
 
-BAR-01-BE1 through BE4 now provide the versioned Feature/Screen/Concern and
-Capability Availability schemas, immutable registry API and independently
-fail-safe internal QuantBT/Planning summary contributions for U02/U03. They do
-not introduce a new database/service or begin U07/U10 early.
+BAR-01-BE1 through BE5 now provide the versioned Feature/Screen/Concern and
+Capability Availability schemas, immutable registry API, independently
+fail-safe internal QuantBT/Planning summary contributions, the deadline-aware
+concurrent aggregator and the public `GET /api/v1/portal/summary` endpoint for
+U02/U03. They do not introduce a new database/service or begin U07/U10 early.
 
-The BAR-01 deep dive is now available at
+The BAR-01 deep dive is available at
 [`upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md`](./backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md).
-The next backend task is BAR-01-BE5, the deadline-aware concurrent aggregator
-and public summary endpoint defined in that deep dive. It must preserve healthy
-evidence when another adapter fails, propagate cancellation, enforce payload
-ceilings and merge only currently authorized priority types; it must not begin
-the BE6 frontend handoff or later control-plane infrastructure early.
+The next backend task is BAR-01-BE6, the frontend contract handoff defined in
+that deep dive: export the registry/summary OpenAPI schema and canonical JSON
+fixtures, document query keys, ETag behavior and every
+loading/empty/partial/stale/denied state, without implementing shell visuals in
+the backend slice.

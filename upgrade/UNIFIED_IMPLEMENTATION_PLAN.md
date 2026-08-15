@@ -569,6 +569,18 @@ trung thực capability hiện tại/tương lai.
   status/roadmap counts và recent IDs; LOCAL/timeout/denied/incompatible trả
   typed null evidence. Không import Planning repository/SQLite, không mutation,
   không suy diễn current phase hoặc blocker. Public summary route vẫn chờ BE5.
+- BAR-01-BE5 đã thêm deadline-aware concurrent aggregator
+  (`services/portal_overview.py`) và mở read-only `GET /api/v1/portal/summary`.
+  Collection chạy song song dưới một hard deadline 100–2000 ms (default
+  500 ms), cancellation của client lan tới pending upstream, adapter lỗi
+  không trì hoãn/xoá evidence adapter khỏe và không bao giờ biến unavailable
+  thành zero. Overall availability theo available/degraded/unavailable;
+  registry maturity/blocking counts chỉ từ validated public registry; priority
+  merge chỉ 3 type hiện được ủy quyền theo thứ tự deep-dive; payload giới hạn
+  32 sections/50 priorities với target 50 KB và hard ceiling 100 KB (quá là
+  typed 500, không truncate). Endpoint trả `Cache-Control: no-store`,
+  `Vary: Authorization, Cookie` và vẫn là FastAPI compatibility bridge — không
+  đổi TypeScript control-plane target. BE6 (frontend handoff) pending.
 
 **Description / To-do**
 

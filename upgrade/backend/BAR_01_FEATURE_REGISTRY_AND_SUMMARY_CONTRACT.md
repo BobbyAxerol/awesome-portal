@@ -1,7 +1,7 @@
 # BAR-01 — Feature Registry and Command Center Summary Contract
 
 > **Version:** 0.1<br>
-> **Status:** BAR-01-BE1/BE2/BE3/BE4 complete; BAR-01-BE5 pending<br>
+> **Status:** BAR-01-BE1/BE2/BE3/BE4/BE5 complete; BAR-01-BE6 pending<br>
 > **Updated:** 2026-08-15<br>
 > **Unified phases:** U02 Shared Foundations, U03 Unified Shell<br>
 > **Runtime authority:** current FastAPI services remain authoritative
@@ -882,6 +882,84 @@ Implementation evidence — 2026-08-15:
 
 Gate: one failed adapter does not delay or erase a healthy adapter.
 
+Implementation evidence — 2026-08-15:
+
+- [x] Added `services/portal_overview.py` application aggregator; the route
+  handler performs no orchestration. A `SummaryContext` is built from the
+  validated public registry digest, configured `PORTAL_ENVIRONMENT` (default
+  `research`) and a timezone-aware `requested_at`.
+- [x] Adapters collect concurrently under one hard request deadline
+  (`PORTAL_SUMMARY_DEADLINE_MS`, default `500`, accepted `100–2000`). Each
+  adapter receives the same absolute deadline, so it only ever uses its
+  remaining budget; no retry exists inside the browser request. Client
+  cancellation cancels pending adapter tasks; an adapter that ignores its
+  budget is cancelled at the hard deadline and mapped to a typed
+  `UPSTREAM_TIMEOUT` unavailable contribution.
+- [x] One adapter timeout/connection/5xx/malformed/oversized failure never
+  delays or erases the healthy adapter: healthy evidence stays serialized,
+  unavailable evidence stays `null`, never zero, and the response stays a
+  truthful `200`.
+- [x] Overall availability: `available` when every current section is
+  available; `degraded` (`PARTIAL_SOURCE_FAILURE`) when a useful section
+  remains but one section is degraded/stale/unavailable/denied; `unavailable`
+  when no dynamic section is usable (`UPSTREAM_TIMEOUT` when every section
+  timed out, otherwise `UPSTREAM_UNAVAILABLE`). LOCAL-only Planning maps to
+  `LOCAL_ONLY_STATE` with null counts, never zero.
+- [x] `registry_counts` is computed only from the validated public registry:
+  exact maturity counts (public projection keeps `HIDDEN` at zero) and
+  blocking concerns using the locked invariant
+  `BLOCKING + {OPEN,PARTIAL,BLOCKED} + non-HIDDEN/DEPRECATED reference`.
+- [x] Priority merge is deterministic and restricted to `RUN_FAILED`,
+  `HISTORICAL_DATA_UNAVAILABLE`, `REGISTRY_BLOCKING_CONCERN` in deep-dive
+  order, tie-broken by `observed_at` desc then `id`. Planning emits no
+  blocker; concern priorities come from the registry only; every route is a
+  validated registry canonical route and domain models reject unsafe or
+  scheme-relative routes.
+- [x] Payload enforcement: 32 sections and 50 priority items max, five
+  recent/warnings per section, target `< 50 KB` (logged warning when
+  exceeded) and hard `100 KB` ceiling. Exceeding a cap or ceiling is a typed
+  `SUMMARY_CONTRACT_FAILURE` internal error, never a silent truncation.
+- [x] Opened read-only `GET /api/v1/portal/summary` with `Cache-Control:
+  no-store`, the future-auth-safe `Vary: Authorization, Cookie`, no query
+  input and no mutation endpoint. Healthy, empty, partial and
+  all-optional-unavailable sources all return schema-valid `200`; internal
+  contract failure maps to a typed `500`. Invalid registry still fails
+  startup/readiness as in BE2.
+- [x] Application lifespan closes the summary service (including the Planning
+  HTTP client) before the run manager shutdown; the BE3/BE4 "endpoint is 404"
+  assertions were updated to assert those adapters stay internal and are
+  served only through the BE5 aggregator.
+- [x] BE5 target suite passes `30` tests; combined BAR-01 BE1–BE5 suites pass
+  `119` tests; full Portal backend regression passes `235 passed, 1 skipped`;
+  full Planning backend regression passes `18 passed` (the one known upstream
+  FastAPI TestClient deprecation warning remains recorded debt). The skip is
+  the explicit opt-in external Historical real-data smoke.
+- [x] `pip check` is clean; compile/import checks and `git diff --check`
+  pass; workspace verification passes including the protected strategy hash.
+- [x] Built `local/portal-portal-api:dev` and ran a private Docker-network
+  smoke with the untouched BE4 `roadmap-task-board-api` image: both services
+  ready over service DNS; phase A returned a `200` schema-valid summary with
+  available zero-count Planning evidence, degraded QuantBT (Historical
+  disabled) and 5 blocking concerns in ~24 KB; phase B stopped Planning and
+  the next summary kept `200` with `planning_current` unavailable
+  (`UPSTREAM_UNAVAILABLE`, null counts) while QuantBT evidence stayed intact.
+  All temporary containers/networks were removed.
+- [x] BE5 remains a FastAPI compatibility bridge over the current services;
+  it adds no PostgreSQL/NATS/MinIO/Redis, no cache correctness dependency, no
+  auth/RBAC and does not change the TypeScript control-plane target
+  architecture.
+
+Technical debt and rollback:
+
+- Stuck adapters that ignore deadline inside blocking sync code cannot be
+  preempted; the aggregator still returns within deadline and logs
+  structurally, but the task may linger until it returns.
+- The summary has no in-process micro-cache; later measured caching must
+  preserve original `as_of/checked_at`.
+- Rollback: stop serving `/api/v1/portal/summary` by reverting commit
+  `7188bc7`; registry/runs/Planning routes are unaffected. No change was
+  pushed or deployed.
+
 ### BAR-01-BE6 — Frontend contract handoff
 
 - Export registry/summary OpenAPI schema and canonical JSON fixtures.
@@ -979,10 +1057,10 @@ BAR-01 backend contract is complete only when:
 - Current backend/frontend/Planning tests and production builds still pass.
 - Workspace verification passes and every coherent slice is committed.
 
-BE1 through BE4 satisfy the schema, immutable registry repository, deployment
-readiness, HTTP caching and independently fail-safe QuantBT/Planning adapter
-foundation. The next backend slice is BAR-01-BE5: collect the adapters
-concurrently under one hard request deadline, propagate cancellation, merge
-registry counts and only currently authorized priority types, enforce section/
-payload limits and expose `GET /api/v1/portal/summary`. One failed adapter must
-not delay, erase or falsify a healthy adapter.
+BE1 through BE5 satisfy the schema, immutable registry repository, deployment
+readiness, HTTP caching, independently fail-safe QuantBT/Planning adapters and
+the deadline-aware concurrent aggregator with the public summary endpoint
+foundation. The next backend slice is BAR-01-BE6: export the OpenAPI schema and
+canonical JSON fixtures, document query keys, ETag behavior and every
+loading/empty/partial/stale/denied state for the frontend agent, without
+implementing shell visuals in this backend slice.
