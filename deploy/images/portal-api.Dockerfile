@@ -1,5 +1,9 @@
 FROM python:3.12-slim
 
+ARG PORTAL_HMD_READER_REQUIRED=false
+ARG PORTAL_HMD_READER_VERSION=0.1.0rc3
+ARG PORTAL_HMD_READER_SHA256=3b2a41b87ff834912556bb3039bf3e3c148bd859a1ced9ee4f52a3c658ca5663
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/opt/portal/src:/opt/portal \
@@ -14,6 +18,23 @@ COPY apps/portal/backend/pyproject.toml apps/portal/backend/README.md ./
 COPY apps/portal/backend/src ./src
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir --constraint /tmp/portal-constraints.txt .
+
+# Generic CI/local images may leave the historical capability disabled. A
+# production image is built with PORTAL_HMD_READER_REQUIRED=true after CI has
+# staged the approved code-only wheel into this ignored build-input directory.
+COPY vendor/hmd-reader /tmp/hmd-reader
+RUN wheel="/tmp/hmd-reader/primus_historical_market_data-${PORTAL_HMD_READER_VERSION}-py3-none-any.whl" \
+    && if [ -f "${wheel}" ]; then \
+         printf '%s  %s\n' "${PORTAL_HMD_READER_SHA256}" "${wheel}" | sha256sum -c - \
+         && pip install --no-cache-dir --no-deps "${wheel}"; \
+       elif [ "${PORTAL_HMD_READER_REQUIRED}" = "true" ]; then \
+         printf 'Required approved Historical Market Data reader wheel is missing.\n' >&2; \
+         exit 1; \
+       fi \
+    && rm -rf /tmp/hmd-reader
+
+ENV PORTAL_HMD_READER_VERSION=${PORTAL_HMD_READER_VERSION} \
+    PORTAL_HMD_READER_WHEEL_SHA256=${PORTAL_HMD_READER_SHA256}
 
 # The protected strategy remains source-controlled in the portal application.
 COPY apps/portal/strategy ./strategy

@@ -40,9 +40,14 @@ Useful commands:
 ./scripts/portal down
 ```
 
-The default market-data mount is `runtime/market-data`. For live research runs,
-set `PORTAL_MARKET_DATA_DIR` to a host directory that contains the compatible
-`data_loader.py` surface and non-committed data.
+Generic local/CI starts with Historical Market Data disabled. Historical input
+is only for backtest/research; realtime feeds and paper-trading state are
+separate future services. To enable the target-VPS capability, stage the
+approved reader wheel with `scripts/stage-hmd-reader-wheel.sh`, set
+`PORTAL_HISTORICAL_DATA_MODE=required`, and mount canonical
+`/srv/primus/historical-market-data/storage` read-only through
+`PORTAL_HISTORICAL_DATA_DIR`. Source checkouts and `data_loader.py` files are
+never mounted into Portal.
 
 ## Development and releases
 

@@ -11,11 +11,14 @@ services:
     restart: unless-stopped
     environment:
       PORTAL_ARTIFACT_ROOT: /var/lib/portal/artifacts/runs
-      PORTAL_CRYPTO_DATA_ROOT: /opt/portal/market-data
+      PORTAL_HISTORICAL_DATA_MODE: ${PORTAL_HISTORICAL_DATA_MODE:-disabled}
+      HISTORICAL_MARKET_DATA_ROOT: /data
       PORTAL_CRYPTO_RESAMPLE_ENGINE: ${PORTAL_CRYPTO_RESAMPLE_ENGINE:-duckdb}
     volumes:
       - portal-artifacts:/var/lib/portal/artifacts
-      - ${PORTAL_MARKET_DATA_DIR:-./runtime/market-data}:/opt/portal/market-data:ro
+      - ${PORTAL_HISTORICAL_DATA_DIR:-./runtime/historical-market-data}:/data:ro
+    group_add:
+      - ${PORTAL_HMD_READER_GID:-10001}
     expose:
       - "8000"
     networks:

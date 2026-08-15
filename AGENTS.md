@@ -93,9 +93,16 @@ cp .env.example .env
 
 ## Runtime data and deployment
 
-- Market data mounts are read-only from
-  `${PORTAL_MARKET_DATA_DIR:-runtime/market-data}` and must contain a compatible
-  `data_loader.py`; never commit real market data or credentials.
+- Historical Market Data is a read-only input for backtest/research and any
+  future module explicitly granted that capability. It is **not** the source
+  for realtime market feeds, paper orders/fills, paper account state or live
+  execution; those belong to separate bounded contexts/services.
+- Historical consumers install the checksum-verified code-only
+  `primus-historical-market-data==0.1.0rc3` wheel and mount only
+  `${PORTAL_HISTORICAL_DATA_DIR}:/data:ro` with
+  `HISTORICAL_MARKET_DATA_ROOT=/data`. Never add/mount a local `data_loader.py`,
+  the Historical Market Data source checkout, collectors, state, logs or
+  secrets. Never commit reader wheels or market data.
 - QuantBT artifacts and Roadmap SQLite state use named volumes. A public web
   gateway is the single entry point; backend services must not add public ports
   unless an approved architecture change requires one.

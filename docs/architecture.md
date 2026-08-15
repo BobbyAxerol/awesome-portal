@@ -50,13 +50,20 @@ portal-web (only public service)
   └── /roadmap-task-board/api/  ► roadmap-task-board-api:8000/api/
 
 portal-api                        roadmap-task-board-api
-  ├── read-only market-data mount  └── named SQLite volume + Discord outbox
+  ├── read-only historical-data mount
+  ├── backtest/research consumers  └── named SQLite volume + Discord outbox
   └── named artifact volume
 ```
 
 The web gateway is the only host-bound service. APIs communicate on the private
 `portal` Docker network. Images are built from the same tracked source commit;
 production uses the image-only Compose definition and immutable image tags.
+
+The historical-data mount is an explicitly bounded consumer for backtest and
+approved research modules. It is not a realtime feed and must not supply paper
+execution, paper positions, balances, orders or account state. Those future
+capabilities require separate typed providers and independent freshness and
+failure contracts.
 
 ## Source and release policy
 

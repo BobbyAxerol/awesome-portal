@@ -20,8 +20,10 @@ directly.
 - Typed three-window and Advanced WFO request contracts.
 - Typed parameter ranges and account/execution settings.
 - UTC OHLCV validation, content hashing and searchsorted window partitioning.
-- Dynamic Binance futures provider over the canonical `CryptoBinance1m`
-  DuckDB resample hot path; the HTTP request never supplies a path.
+- Dynamic Binance futures provider over the approved installed
+  `primus-historical-market-data==0.1.0rc3` wheel and canonical
+  `CryptoBinance1m` DuckDB resample hot path; the HTTP request never supplies a
+  path and the release manifest fails closed.
 - Manifest and in-memory providers retained as explicit fallback/test adapters.
 - Strategy registry with an immutable structural contract.
 - Lazy QuantBT capability gateway.
@@ -54,8 +56,12 @@ notebook code in route handlers.
 ## Performance Contract
 
 - API startup does not import QuantBT or the Numba strategy kernel.
+- Historical input is for backtest/research only. Realtime market data, paper
+  orders/fills and paper account state are separate service boundaries.
 - The canonical loader resamples from 1m storage before portal normalization;
   the portal never materializes full 1m history for a higher-timeframe run.
+- Every historical service query has explicit symbol, timezone-aware start and
+  end-exclusive bounds; loader validation remains enabled.
 - Market data is normalized to UTC float64 OHLCV and hashed once per load.
 - Load provenance records provider, source/target resolution, engine,
   validation policy and elapsed seconds without exposing the storage path.
@@ -80,11 +86,20 @@ Run `./scripts/smoke_quantbt_pypi.sh` to execute the deterministic fixture gate
 without a market-data service. It covers package provenance plus the public
 three-window and Advanced WFO endpoint paths used by the portal.
 
-To test the real market-data boundary without starting FastAPI:
+To verify the installed wheel + release manifest without reading bars:
+
+```bash
+HISTORICAL_MARKET_DATA_ROOT=/srv/primus/historical-market-data/storage \
+  .venv/bin/python -m portal_api.historical_data_doctor
+```
+
+To test the real historical backtest boundary without starting FastAPI:
 
 ```bash
 PYTHONPATH=backend/src:. .venv/bin/python \
-  scripts/smoke_crypto_market_data.py --symbol ETHUSDT --timeframe 1h
+  scripts/smoke_crypto_market_data.py --symbol BTCUSDT --timeframe 1h \
+  --start 2026-08-01T00:00:00+00:00 \
+  --end-exclusive 2026-08-02T00:00:00+00:00
 ```
 
 ## P0 Capability Gap Note (2026-08-10)

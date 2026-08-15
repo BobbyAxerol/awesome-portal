@@ -70,6 +70,7 @@ docker-compose.override.yml
 .docker/
 *.tar
 *.tar.gz
+/vendor/hmd-reader/*.whl
 
 # Editors and operating-system files
 .DS_Store

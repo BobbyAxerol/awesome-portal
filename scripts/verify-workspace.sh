@@ -21,6 +21,7 @@ for required in \
   "${ROOT_DIR}/compose.yaml" \
   "${ROOT_DIR}/deploy/compose.production.yaml" \
   "${ROOT_DIR}/deploy/.env.production.example" \
+  "${ROOT_DIR}/vendor/hmd-reader/README.md" \
   "${ROOT_DIR}/.gitignore" \
   "${ROOT_DIR}/.dockerignore" \
   "${ROOT_DIR}/.githooks/lib/access-policy.sh" \
@@ -67,6 +68,7 @@ bash -n \
   "${ROOT_DIR}/scripts/portal" \
   "${ROOT_DIR}/scripts/verify-workspace.sh" \
   "${ROOT_DIR}/scripts/smoke-stack.sh" \
+  "${ROOT_DIR}/scripts/stage-hmd-reader-wheel.sh" \
   "${ROOT_DIR}/scripts/install-git-hooks.sh" \
   "${ROOT_DIR}/scripts/provision-contributor-workspace.sh" \
   "${ROOT_DIR}/scripts/verify-contributor-workspace.sh" \
