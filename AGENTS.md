@@ -112,3 +112,7 @@ cp .env.example .env
   `upgrade/BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md`. The `BAR-*` slices
   refine sequencing but never authorize skipping a Unified Plan phase or
   introducing a future datastore/service early.
+- When an active `BAR-*` slice has a deep dive under `upgrade/backend/`, read
+  that document before editing contracts or code. BAR-01 work must follow
+  `upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md`; frontend
+  and backend agents must not create separate feature registries.

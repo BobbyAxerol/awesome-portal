@@ -486,6 +486,7 @@ Tạo một visual language/component contract chung trước khi ghép hai fron
 - [§25 Components](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#25-component-system)
 - [§26–27 Responsive/Figma](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#26-responsive-mobile-và-accessibility)
 - [Current UI guide](../apps/portal/uiux-design.md)
+- [BAR-01 backend registry/summary contract](./backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md)
 
 **Đã làm**
 
@@ -543,6 +544,7 @@ trung thực capability hiện tại/tương lai.
 - [§P0.12 Registry](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p012-feature-registry--contract-trung-tâm-của-prototype)
 - [§P0.14–P0.20 Wireframes](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p014-command-center-prototype)
 - [§19–20 IA/screens](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#19-information-architecture-và-route-map)
+- [BAR-01 backend registry/summary contract](./backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md)
 
 **Đã làm**
 

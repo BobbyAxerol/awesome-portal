@@ -138,6 +138,9 @@ Do not expand Historical families here. That belongs to U13.
 Maps to: [U02](./UNIFIED_IMPLEMENTATION_PLAN.md#phase-u02--shared-foundations--figma-ready-design-system)
 and [U03](./UNIFIED_IMPLEMENTATION_PLAN.md#phase-u03--unified-shell-feature-registry--command-center).
 
+Detailed contract:
+[BAR-01 — Feature Registry and Command Center Summary](./backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md).
+
 Goal: give the shell truthful, typed metadata without creating a new backend
 authority.
 
@@ -583,3 +586,8 @@ After owner review of this runway, the next implementation design is BAR-01:
 define versioned Feature/Screen/Concern and Capability Availability schemas for
 U02/U03, plus a read-only summary adapter contract. It must not introduce a new
 database/service or begin U07/U10 early.
+
+The BAR-01 deep dive is now available at
+[`upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md`](./backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md).
+Implementation remains pending owner assignment and should follow the six
+coherent `BAR-01-BE*` slices defined there.

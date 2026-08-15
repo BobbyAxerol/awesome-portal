@@ -62,6 +62,11 @@ Future backend work follows
 must be built below the existing API/domain boundaries rather than placing
 compute or cross-domain imports in route handlers.
 
+The next designed backend boundary is BAR-01, documented at
+`upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md`. It defines a
+source-controlled Feature/Screen/Concern Registry and read-only Command Center
+summary adapters without granting this FastAPI service new write authority.
+
 ## Performance Contract
 
 - API startup does not import QuantBT or the Numba strategy kernel.
