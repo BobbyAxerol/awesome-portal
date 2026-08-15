@@ -19,6 +19,10 @@ COPY apps/portal/backend/src ./src
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir --constraint /tmp/portal-constraints.txt .
 
+# Product metadata is an image-owned read-only sidecar. Keep it after the
+# dependency layer so registry-only changes do not invalidate package installs.
+COPY apps/portal/registry ./registry
+
 # Generic CI/local images may leave the historical capability disabled. A
 # production image is built with PORTAL_HMD_READER_REQUIRED=true after CI has
 # staged the approved code-only wheel into this ignored build-input directory.
@@ -34,7 +38,8 @@ RUN wheel="/tmp/hmd-reader/primus_historical_market_data-${PORTAL_HMD_READER_VER
     && rm -rf /tmp/hmd-reader
 
 ENV PORTAL_HMD_READER_VERSION=${PORTAL_HMD_READER_VERSION} \
-    PORTAL_HMD_READER_WHEEL_SHA256=${PORTAL_HMD_READER_SHA256}
+    PORTAL_HMD_READER_WHEEL_SHA256=${PORTAL_HMD_READER_SHA256} \
+    PORTAL_REGISTRY_ROOT=/opt/portal/registry
 
 # The protected strategy remains source-controlled in the portal application.
 COPY apps/portal/strategy ./strategy

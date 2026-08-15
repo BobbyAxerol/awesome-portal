@@ -15,7 +15,12 @@ from portal_api.domain.requests import (
     OptimizationConfig,
     ThreeWindowConfig,
 )
-from portal_api.domain.responses import HealthResponse, PreflightResponse, StrategyResponse
+from portal_api.domain.responses import (
+    HealthResponse,
+    PreflightResponse,
+    ReadinessResponse,
+    StrategyResponse,
+)
 
 router = APIRouter(prefix="/api")
 
@@ -43,6 +48,19 @@ async def health() -> HealthResponse:
         service="portal-api",
         version=__version__,
         quantbt_loaded="quantbt" in sys.modules,
+    )
+
+
+@router.get("/ready", response_model=ReadinessResponse)
+async def ready(request: Request) -> ReadinessResponse:
+    registry = request.app.state.portal_registry_service.document
+    return ReadinessResponse(
+        status="ready",
+        service="portal-api",
+        version=__version__,
+        registry_schema_version=registry.schema_version,
+        registry_revision=registry.revision,
+        registry_digest=registry.content_digest,
     )
 
 

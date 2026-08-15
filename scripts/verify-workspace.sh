@@ -31,6 +31,11 @@ for required in \
   "${ROOT_DIR}/.githooks/pre-push" \
   "${ROOT_DIR}/.githooks/pre-rebase" \
   "${ROOT_DIR}/apps/portal/backend/pyproject.toml" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/api/routes_portal.py" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/domain/portal_registry.py" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/repositories/portal_registry.py" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/portal_registry.py" \
+  "${ROOT_DIR}/apps/portal/backend/tests/test_portal_registry_api.py" \
   "${ROOT_DIR}/apps/portal/frontend/package-lock.json" \
   "${ROOT_DIR}/apps/portal/registry/registry.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry-source.v1.schema.json" \
@@ -58,6 +63,11 @@ fi
 
 for tracked_source in \
   apps/portal/backend/pyproject.toml \
+  apps/portal/backend/src/portal_api/api/routes_portal.py \
+  apps/portal/backend/src/portal_api/domain/portal_registry.py \
+  apps/portal/backend/src/portal_api/repositories/portal_registry.py \
+  apps/portal/backend/src/portal_api/services/portal_registry.py \
+  apps/portal/backend/tests/test_portal_registry_api.py \
   apps/portal/frontend/package-lock.json \
   apps/portal/registry/registry.json \
   apps/portal/registry/schemas/portal-registry-source.v1.schema.json \

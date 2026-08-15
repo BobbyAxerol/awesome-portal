@@ -29,6 +29,9 @@ directly.
 - Lazy QuantBT capability gateway.
 - Atomic JSON/Parquet artifact repository with path-containment checks.
 - FastAPI health, strategy, dataset, capability and preflight routes.
+- BAR-01-BE2 immutable Portal Registry boundary: source/public schema and
+  invariant validation before readiness, hidden-safe public projection,
+  deterministic digest, ETag/304 API and image-owned read-only sidecar.
 - Phase P1 clean strategy package (`strategy/delta_rsi.py` owns the lazy
   kernel boundary; golden parity certified in `test_golden_parity.py`).
 - Phase P2 three-window Mode 1 orchestration (`services/three_window_runner.py`):
@@ -62,10 +65,13 @@ Future backend work follows
 must be built below the existing API/domain boundaries rather than placing
 compute or cross-domain imports in route handlers.
 
-The next designed backend boundary is BAR-01, documented at
+The active designed backend boundary is BAR-01, documented at
 `upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md`. It defines a
 source-controlled Feature/Screen/Concern Registry and read-only Command Center
 summary adapters without granting this FastAPI service new write authority.
+BE1/BE2 now provide the registry contract and delivery path. The next slice is
+BE3, a read-only QuantBT summary adapter over exported current run/dataset
+ports; it must not recalculate engine metrics or create a durable run authority.
 
 ## Performance Contract
 

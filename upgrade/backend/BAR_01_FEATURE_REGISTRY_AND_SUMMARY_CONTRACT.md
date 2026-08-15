@@ -1,7 +1,7 @@
 # BAR-01 — Feature Registry and Command Center Summary Contract
 
 > **Version:** 0.1<br>
-> **Status:** BAR-01-BE1 complete; BAR-01-BE2 pending<br>
+> **Status:** BAR-01-BE1/BE2 complete; BAR-01-BE3 pending<br>
 > **Updated:** 2026-08-15<br>
 > **Unified phases:** U02 Shared Foundations, U03 Unified Shell<br>
 > **Runtime authority:** current FastAPI services remain authoritative
@@ -759,6 +759,32 @@ Implementation evidence — 2026-08-15:
 Gate: one commissioned feature is added only through registry data and appears
 in endpoint output without route-handler/sidebar edits.
 
+Implementation evidence — 2026-08-15:
+
+- [x] Added frozen domain models and a one-load repository that validates both
+  Draft 2020-12 schemas, typed domain projection and deterministic structural/
+  security invariants before the application becomes ready.
+- [x] Source and public digests are computed independently; `HIDDEN` features,
+  screens, lifecycle membership and concern references are removed before the
+  public digest is calculated.
+- [x] Added read-only `GET /api/v1/portal/registry` with strong ETag,
+  `If-None-Match` weak/list/wildcard handling, `304`, `no-cache,
+  must-revalidate` and the future-auth-safe `Vary` contract.
+- [x] Added `GET /api/ready`; invalid/missing/unknown-major registry input now
+  fails app composition, and both development/production Compose healthchecks
+  use readiness instead of liveness.
+- [x] Moved `jsonschema==4.26.0` into runtime dependencies and copied the
+  image-owned registry sidecar after the dependency layer to preserve Docker
+  build caching.
+- [x] The BAR-01 registry suites pass `30` tests, including immutable snapshot,
+  hidden filtering, path-override isolation, duplicate/dangling/unsafe source,
+  ETag and commissioned-feature data-only gates.
+- [x] Full backend regression passes `146 passed, 1 skipped`; the skip is the
+  explicit opt-in external Historical real-data test.
+- [x] Built `local/portal-portal-api:dev` and probed the running image:
+  readiness `ready`, 13 public features, digest/ETag match and conditional
+  request `304`.
+
 ### BAR-01-BE3 — QuantBT summary adapter
 
 - Read bounded current run/dataset metadata through exported ports.
@@ -881,8 +907,10 @@ BAR-01 backend contract is complete only when:
 - Current backend/frontend/Planning tests and production builds still pass.
 - Workspace verification passes and every coherent slice is committed.
 
-BE1 satisfies only the schema/fixture foundation. The next backend slice is
-BAR-01-BE2: immutable registry domain/repository loader, startup/readiness
-validation and read-only `/api/v1/portal/registry` with deterministic public
-digest, ETag and `304` behavior. BE2 must not add summary adapters, a database,
-frontend registry code or any mutation endpoint.
+BE1/BE2 satisfy the schema, immutable registry repository, deployment
+readiness and HTTP caching foundation. The next backend slice is BAR-01-BE3:
+a read-only QuantBT summary adapter over exported current run/dataset ports,
+with evidence wrappers, truthful empty/active/completed/failed states and
+Historical capability mapping. BE3 must not recalculate QuantBT metrics, treat
+the filesystem model as the future durable Run Registry, call route handlers,
+or begin the Planning adapter/aggregator early.

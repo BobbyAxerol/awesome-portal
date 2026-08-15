@@ -11,3 +11,9 @@ scope; realtime and paper-trading data are separate service boundaries.
 `POST /api/runs/preflight` supplies symbol, timeframe and bounded calibration
 dates. Unit tests inject an in-memory/fake reader; production paths remain
 server-owned and fail closed.
+
+Mother-Portal metadata is supplied by the image-owned registry sidecar. The
+API validates its schemas and cross-references before readiness, then exposes
+the hidden-safe immutable projection through `GET /api/v1/portal/registry`
+with deterministic digest, ETag and conditional `304` support. `GET /api/ready`
+is the deployment healthcheck; `GET /api/health` remains lightweight liveness.

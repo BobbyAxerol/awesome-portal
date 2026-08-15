@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -15,6 +15,15 @@ class HealthResponse(ResponseModel):
     service: str
     version: str
     quantbt_loaded: bool
+
+
+class ReadinessResponse(ResponseModel):
+    status: Literal["ready"]
+    service: str
+    version: str
+    registry_schema_version: Literal["portal.registry.v1"]
+    registry_revision: int
+    registry_digest: str
 
 
 class WindowSummary(ResponseModel):

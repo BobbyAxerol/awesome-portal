@@ -556,6 +556,9 @@ trung thực capability hiện tại/tương lai.
 - BAR-01-BE1 đã tạo canonical Feature/Screen/Concern/Lifecycle fixture và
   source/public/summary schemas. Chỉ QuantBT Research và Planning được đánh dấu
   `AVAILABLE + REAL`; mọi capability tương lai vẫn `COMMISSIONED`.
+- BAR-01-BE2 đã thêm immutable registry repository, startup/readiness
+  fail-closed, public `GET /api/v1/portal/registry`, deterministic digest,
+  ETag/304 và image-owned sidecar; frontend vẫn chưa có registry thứ hai.
 
 **Description / To-do**
 

@@ -15,10 +15,13 @@ from portal_api.adapters.market_data import (
 )
 from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.api.routes import router
+from portal_api.api.routes_portal import router as router_portal
 from portal_api.api.routes_runs import router as router_runs
 from portal_api.domain.errors import PortalDomainError
 from portal_api.repositories import ArtifactRepository
+from portal_api.repositories.portal_registry import PortalRegistryRepository
 from portal_api.services import PreflightService
+from portal_api.services.portal_registry import PortalRegistryService
 from portal_api.services.run_service import RunManager
 from portal_api.strategies import StrategyRegistry
 
@@ -48,12 +51,28 @@ def _default_provider() -> MarketDataProvider:
         return UnavailableHistoricalMarketDataProvider(str(exc))
 
 
+def _default_registry_root() -> Path:
+    configured = os.getenv("PORTAL_REGISTRY_ROOT")
+    if configured:
+        return Path(configured)
+    module_path = Path(__file__).resolve()
+    candidates = (
+        module_path.parents[3] / "registry",
+        module_path.parents[2] / "registry",
+    )
+    return next(
+        (candidate for candidate in candidates if (candidate / "registry.json").is_file()),
+        candidates[0],
+    )
+
+
 def create_app(
     *,
     market_data_provider: MarketDataProvider | None = None,
     strategy_registry: StrategyRegistry | None = None,
     quantbt_gateway: QuantBTGateway | None = None,
     artifact_repository: ArtifactRepository | None = None,
+    portal_registry_repository: PortalRegistryRepository | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI):
@@ -73,6 +92,9 @@ def create_app(
     app.state.artifact_repository = artifact_repository or ArtifactRepository(
         Path(os.getenv("PORTAL_ARTIFACT_ROOT", "artifacts/runs"))
     )
+    app.state.portal_registry_service = PortalRegistryService(
+        portal_registry_repository or PortalRegistryRepository(_default_registry_root())
+    )
     app.state.preflight_service = PreflightService(
         app.state.market_data_provider,
         app.state.strategy_registry,
@@ -89,6 +111,7 @@ def create_app(
         )
 
     app.include_router(router)
+    app.include_router(router_portal)
     app.include_router(router_runs)
     return app
 
