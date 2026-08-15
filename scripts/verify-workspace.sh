@@ -45,6 +45,7 @@ for required in \
   "${ROOT_DIR}/apps/portal/backend/tests/test_quantbt_summary_adapter.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_portal_summary_service.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_frontend_handoff.py" \
+  "${ROOT_DIR}/apps/portal/backend/tests/test_compat_parity.py" \
   "${ROOT_DIR}/apps/portal/frontend/package-lock.json" \
   "${ROOT_DIR}/apps/portal/registry/registry.json" \
   "${ROOT_DIR}/apps/portal/registry/FRONTEND_HANDOFF.md" \
@@ -57,9 +58,15 @@ for required in \
   "${ROOT_DIR}/apps/portal/registry/fixtures/summary.denied.json" \
   "${ROOT_DIR}/apps/portal/registry/fixtures/summary.unavailable.json" \
   "${ROOT_DIR}/apps/portal/scripts/export_handoff_contract.py" \
+  "${ROOT_DIR}/apps/portal/scripts/export_compat_snapshots.py" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry-source.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-summary.v1.schema.json" \
+  "${ROOT_DIR}/upgrade/backend/BAR_02_COMPATIBILITY_BOUNDARIES_AND_PARITY_FREEZE.md" \
+  "${ROOT_DIR}/upgrade/backend/bar02/snapshots/portal-api.openapi.json" \
+  "${ROOT_DIR}/upgrade/backend/bar02/snapshots/planning-api.openapi.json" \
+  "${ROOT_DIR}/upgrade/backend/bar02/snapshots/run-request.schema.json" \
+  "${ROOT_DIR}/upgrade/backend/bar02/snapshots/manifest.json" \
   "${ROOT_DIR}/apps/portal/strategy/PROTECTED_SHA256" \
   "${ROOT_DIR}/apps/portal/strategy/main.py" \
   "${ROOT_DIR}/features/roadmap-task-board/backend/requirements-dev.txt" \
@@ -97,6 +104,7 @@ for tracked_source in \
   apps/portal/backend/tests/test_quantbt_summary_adapter.py \
   apps/portal/backend/tests/test_portal_summary_service.py \
   apps/portal/backend/tests/test_frontend_handoff.py \
+  apps/portal/backend/tests/test_compat_parity.py \
   apps/portal/frontend/package-lock.json \
   apps/portal/registry/registry.json \
   apps/portal/registry/FRONTEND_HANDOFF.md \
@@ -109,10 +117,16 @@ for tracked_source in \
   apps/portal/registry/fixtures/summary.denied.json \
   apps/portal/registry/fixtures/summary.unavailable.json \
   apps/portal/scripts/export_handoff_contract.py \
+  apps/portal/scripts/export_compat_snapshots.py \
   apps/portal/registry/schemas/portal-registry-source.v1.schema.json \
   apps/portal/registry/schemas/portal-registry.v1.schema.json \
   apps/portal/registry/schemas/portal-summary.v1.schema.json \
   apps/portal/strategy/PROTECTED_SHA256 \
+  upgrade/backend/BAR_02_COMPATIBILITY_BOUNDARIES_AND_PARITY_FREEZE.md \
+  upgrade/backend/bar02/snapshots/portal-api.openapi.json \
+  upgrade/backend/bar02/snapshots/planning-api.openapi.json \
+  upgrade/backend/bar02/snapshots/run-request.schema.json \
+  upgrade/backend/bar02/snapshots/manifest.json \
   features/roadmap-task-board/backend/requirements-dev.txt \
   features/roadmap-task-board/backend/tests/test_summary_contract.py \
   features/roadmap-task-board/frontend/package-lock.json; do
@@ -131,7 +145,11 @@ for json_contract in \
   "${ROOT_DIR}/apps/portal/registry/registry.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry-source.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry.v1.schema.json" \
-  "${ROOT_DIR}/apps/portal/registry/schemas/portal-summary.v1.schema.json"; do
+  "${ROOT_DIR}/apps/portal/registry/schemas/portal-summary.v1.schema.json" \
+  "${ROOT_DIR}/upgrade/backend/bar02/snapshots/portal-api.openapi.json" \
+  "${ROOT_DIR}/upgrade/backend/bar02/snapshots/planning-api.openapi.json" \
+  "${ROOT_DIR}/upgrade/backend/bar02/snapshots/run-request.schema.json" \
+  "${ROOT_DIR}/upgrade/backend/bar02/snapshots/manifest.json"; do
   python3 -m json.tool "${json_contract}" >/dev/null
 done
 
