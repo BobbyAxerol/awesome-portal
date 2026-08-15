@@ -783,7 +783,8 @@ Implementation evidence — 2026-08-15:
   explicit opt-in external Historical real-data test.
 - [x] Built `local/portal-portal-api:dev` and probed the running image:
   readiness `ready`, 13 public features, digest/ETag match and conditional
-  request `304`.
+  request `304`; the image also owns a writable non-root artifact-root default
+  so the same probe works without Compose-only environment overrides.
 
 ### BAR-01-BE3 — QuantBT summary adapter
 

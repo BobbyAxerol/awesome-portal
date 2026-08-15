@@ -39,7 +39,8 @@ RUN wheel="/tmp/hmd-reader/primus_historical_market_data-${PORTAL_HMD_READER_VER
 
 ENV PORTAL_HMD_READER_VERSION=${PORTAL_HMD_READER_VERSION} \
     PORTAL_HMD_READER_WHEEL_SHA256=${PORTAL_HMD_READER_SHA256} \
-    PORTAL_REGISTRY_ROOT=/opt/portal/registry
+    PORTAL_REGISTRY_ROOT=/opt/portal/registry \
+    PORTAL_ARTIFACT_ROOT=/var/lib/portal/artifacts/runs
 
 # The protected strategy remains source-controlled in the portal application.
 COPY apps/portal/strategy ./strategy

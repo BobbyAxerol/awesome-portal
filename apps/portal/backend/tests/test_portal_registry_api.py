@@ -303,6 +303,7 @@ def test_registry_is_packaged_without_a_frontend_source_duplicate() -> None:
     )
     assert "COPY apps/portal/registry ./registry" in dockerfile
     assert "PORTAL_REGISTRY_ROOT=/opt/portal/registry" in dockerfile
+    assert "PORTAL_ARTIFACT_ROOT=/var/lib/portal/artifacts/runs" in dockerfile
 
     frontend_root = PORTAL_ROOT / "frontend/src"
     assert not list(frontend_root.rglob("registry.json"))
