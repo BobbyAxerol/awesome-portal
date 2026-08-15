@@ -21,7 +21,13 @@ Chúng không thay thế phase hoặc exit gate trong
   (`artifact_schema_version` + `producer` trên mọi Portal-written artifact),
   cross-link sidecar `portal.links.v1` + `GET /api/v1/portal/links` với
   integrity block. Services vẫn private, protected hash và Planning state
-  không đổi. Kế tiếp là BAR-03 (U06 operational ingress).
+  không đổi.
+- [BAR-03 — Operational Ingress Boundary](./BAR_03_OPERATIONAL_INGRESS_BOUNDARY.md)
+  — U06 backend slice. **Complete:** `X-Request-ID`/W3C `traceparent`
+  correlation qua ASGI middleware + nginx `$request_id`, `/api/diagnostics`
+  dependency states an toàn, SSE unbuffered (backend headers + nginx
+  location), request_id trong mọi error envelope, redaction tests cho
+  health/ready/diagnostics/error. Kế tiếp là BAR-04 (U07 thin identity BFF).
 
 Agent chỉ được implement deep dive khi phase tương ứng đang active và owner đã
 giao scope. Tài liệu của phase sau là thiết kế trước, không phải implementation

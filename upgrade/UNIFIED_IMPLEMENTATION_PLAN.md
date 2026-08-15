@@ -763,6 +763,14 @@ mà không expose web/API port của VPS.
 - Guide đã khóa hostname, team domain, issuer, AUD và `@azdag.com` boundary.
 - Repo hiện có one-gateway Compose nhưng host port chưa được chuyển sang final
   loopback/Cloudflare topology.
+- BAR-03 đã thêm operational ingress boundary cho backend: `X-Request-ID` +
+  W3C `traceparent` correlation (middleware ASGI thuần + nginx `$request_id`
+  forward, unsafe value bị thay), `/api/diagnostics` dependency states an
+  toàn (không path/hostname/secret), SSE unbuffered qua gateway (headers
+  `no-cache`/`X-Accel-Buffering: no` + dedicated nginx location),
+  `request_id` trong mọi error envelope, redaction tests cho
+  health/ready/diagnostics/error. Edge publish (Tunnel/Access/cert/firewall)
+  vẫn là bước owner-operational và U07 identity là slice backend tiếp theo.
 
 **Description / To-do**
 

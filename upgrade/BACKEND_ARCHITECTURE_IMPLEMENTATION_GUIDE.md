@@ -582,21 +582,25 @@ whether anything was pushed or deployed
 
 ## 14. Next backend architecture task
 
-BAR-01 (BE1–BE6) and BAR-02 (BE1–BE3) are complete: the registry/summary/links
-contracts, immutable registry API, fail-safe summary adapters with the
-deadline-aware aggregator, the frontend handoff, the parity snapshot freeze,
-additive artifact provenance and the validated cross-link sidecar. They did
-not introduce a new database/service or begin U07/U10 early.
+BAR-01 (BE1–BE6), BAR-02 (BE1–BE3) and BAR-03 are complete: the
+registry/summary/links contracts and API, the parity snapshot freeze,
+additive artifact provenance, the validated cross-link sidecar and the
+operational ingress boundary (request-id/traceparent correlation, safe
+dependency diagnostics, SSE preservation, redaction tests). They did not
+introduce a new database/service or begin U07/U10 early.
 
 Deep dives:
 
 - [`upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md`](./backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md)
 - [`upgrade/backend/BAR_02_COMPATIBILITY_BOUNDARIES_AND_PARITY_FREEZE.md`](./backend/BAR_02_COMPATIBILITY_BOUNDARIES_AND_PARITY_FREEZE.md)
+- [`upgrade/backend/BAR_03_OPERATIONAL_INGRESS_BOUNDARY.md`](./backend/BAR_03_OPERATIONAL_INGRESS_BOUNDARY.md)
 
-The next backend task is BAR-03, the operational ingress boundary for U06
-(secure edge and loopback origin topology): distinguish liveness/readiness and
-dependency diagnostics, propagate or create `request_id`/W3C trace context and
-safe ingress metadata, preserve SSE buffering/timeouts through the proxy, and
-redact topology, filesystem paths, tokens and identity assertions from
-health/error responses. It must fail closed on wrong origin/AUD/certificate
-without ever exposing the origin publicly.
+The next backend task is BAR-04, the thin identity BFF as the first Control
+API slice for U07: scaffold one NestJS/Fastify application with only the
+identity/session/admin modules U07 requires, PostgreSQL migrations for users,
+external bindings, activation credentials, sessions and auth audit, Cloudflare
+JWT/JWKS verification before local binding/login, opaque secure session
+cookies with CSRF/origin checks, Argon2id, rate limits, session revocation and
+forced first-password change. Raw JWT/password/browser session must never
+reach the Python services, and no run/data/alpha authority may be added to the
+BFF in U07.
