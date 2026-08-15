@@ -317,6 +317,16 @@ def build_openapi(registry_root: Path | None = None) -> dict[str, Any]:
         app.state.run_manager.shutdown()
 
 
+def build_links_fixture(registry_root: Path) -> dict[str, Any]:
+    from portal_api.repositories.portal_links import PortalLinksRepository
+    from portal_api.services.portal_links import PortalLinksService
+
+    registry_service = PortalRegistryService(PortalRegistryRepository(registry_root))
+    return PortalLinksService(
+        PortalLinksRepository(registry_root), registry_service.document
+    ).response_document()
+
+
 async def build_fixtures(
     registry_service: PortalRegistryService,
 ) -> dict[str, dict[str, Any]]:
@@ -399,17 +409,27 @@ def validate_fixtures(
         "portal-summary.v1": _load_json(
             registry_root / "schemas" / "portal-summary.v1.schema.json"
         ),
+        "portal-links.v1": _load_json(
+            registry_root / "schemas" / "portal-links.v1.schema.json"
+        ),
     }
     schema_registry = Registry().with_resources(
         (schema["$id"], Resource.from_contents(schema))
         for schema in schemas.values()
     )
+    schema_ids = {
+        "registry.public.json": (
+            "https://schemas.primusspark.com/portal/portal-registry.v1.schema.json"
+        ),
+        "links.public.json": (
+            "https://schemas.primusspark.com/portal/portal-links.v1.schema.json"
+        ),
+    }
     for name, document in fixtures.items():
         basename = name.rsplit("/", 1)[-1]
-        schema_id = (
-            "https://schemas.primusspark.com/portal/portal-registry.v1.schema.json"
-            if basename == "registry.public.json"
-            else "https://schemas.primusspark.com/portal/portal-summary.v1.schema.json"
+        schema_id = schema_ids.get(
+            basename,
+            "https://schemas.primusspark.com/portal/portal-summary.v1.schema.json",
         )
         validator = Draft202012Validator(
             {"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": schema_id},
@@ -446,6 +466,7 @@ def build_artifacts(registry_root: Path) -> dict[str, dict[str, Any]]:
             for name, document in asyncio.run(build_fixtures(registry_service)).items()
         }
     )
+    artifacts["fixtures/links.public.json"] = build_links_fixture(registry_root)
     validate_fixtures(
         registry_root,
         {name: document for name, document in artifacts.items() if name != "openapi/portal-api.openapi.json"},

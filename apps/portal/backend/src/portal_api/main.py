@@ -31,8 +31,10 @@ from portal_api.api.routes_portal import router as router_portal
 from portal_api.api.routes_runs import router as router_runs
 from portal_api.domain.errors import PortalDomainError
 from portal_api.repositories import ArtifactRepository
+from portal_api.repositories.portal_links import PortalLinksRepository
 from portal_api.repositories.portal_registry import PortalRegistryRepository
 from portal_api.services import PreflightService
+from portal_api.services.portal_links import PortalLinksService
 from portal_api.services.portal_registry import PortalRegistryService
 from portal_api.services.portal_overview import (
     PortalSummaryContractError,
@@ -114,8 +116,14 @@ def create_app(
     app.state.artifact_repository = artifact_repository or ArtifactRepository(
         Path(os.getenv("PORTAL_ARTIFACT_ROOT", "artifacts/runs"))
     )
-    app.state.portal_registry_service = PortalRegistryService(
-        portal_registry_repository or PortalRegistryRepository(_default_registry_root())
+    registry_repository = (
+        portal_registry_repository
+        or PortalRegistryRepository(_default_registry_root())
+    )
+    app.state.portal_registry_service = PortalRegistryService(registry_repository)
+    app.state.portal_links_service = PortalLinksService(
+        PortalLinksRepository(registry_repository.registry_root),
+        app.state.portal_registry_service.document,
     )
     quantbt_summary_routes = QuantBTSummaryRoutes.from_registry(
         app.state.portal_registry_service.document

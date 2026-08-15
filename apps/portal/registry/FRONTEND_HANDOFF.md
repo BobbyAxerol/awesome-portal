@@ -12,6 +12,7 @@
 | --- | --- | --- | --- |
 | `/api/v1/portal/registry` | GET | `ETag` + `Cache-Control: no-cache, must-revalidate` + `Vary: Authorization, Cookie` | `portal.registry.v1` |
 | `/api/v1/portal/summary` | GET | `Cache-Control: no-store` + `Vary: Authorization, Cookie` | `portal.summary.v1` |
+| `/api/v1/portal/links` | GET | `ETag` + `Cache-Control: no-cache, must-revalidate` + `Vary: Authorization, Cookie` | `portal.links.v1` |
 
 Cả hai endpoint đều **read-only**, **không nhận query/header/body input** để
 chọn upstream hay file. `Vary: Authorization, Cookie` là future-auth-safe:
@@ -36,6 +37,19 @@ class.
 - Không retry client-side trong response loop: server đã có hard deadline
   (default 500 ms) và không retry upstream. Nếu cần làm mới, gọi lại
   endpoint.
+
+### Links: cross-link sidecar (BAR-02, U05)
+
+- `GET /api/v1/portal/links` trả `portal.links.v1`: mapping feature/screen/
+  concern ↔ `roadmap_epic_id`, `planning_task_ids`, `figma_frame_id`,
+  `repository_scope`, `prototype_route`, `activation_gate` + block `integrity`
+  (đếm coverage, `dangling_links` luôn 0 vì sidecar validated lúc startup).
+- Cùng ETag/304 semantics như registry; dùng cho Feature preview → `Open
+  roadmap epic/tasks` và Task drawer → `Open Portal screen` ở U05.
+- `planning_task_ids` rỗng nghĩa là chưa có authority mapping — UI không bịa
+  link. External existence check với Planning API chờ U05 proper.
+- Sidecar là temporary overlay; sẽ migrate vào Planning/PostgreSQL authority
+  ở phase sau. Không merge với localStorage.
 
 ### Lỗi
 

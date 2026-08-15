@@ -36,8 +36,11 @@ for required in \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/adapters/planning_summary.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/adapters/quantbt_summary.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/domain/portal_registry.py" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/domain/portal_links.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/domain/portal_summary.py" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/repositories/portal_links.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/repositories/portal_registry.py" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/portal_links.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/portal_registry.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/portal_overview.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_portal_registry_api.py" \
@@ -47,8 +50,11 @@ for required in \
   "${ROOT_DIR}/apps/portal/backend/tests/test_frontend_handoff.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_compat_parity.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_artifact_provenance.py" \
+  "${ROOT_DIR}/apps/portal/backend/tests/test_portal_links_api.py" \
   "${ROOT_DIR}/apps/portal/frontend/package-lock.json" \
   "${ROOT_DIR}/apps/portal/registry/registry.json" \
+  "${ROOT_DIR}/apps/portal/registry/links.v1.json" \
+  "${ROOT_DIR}/apps/portal/registry/fixtures/links.public.json" \
   "${ROOT_DIR}/apps/portal/registry/FRONTEND_HANDOFF.md" \
   "${ROOT_DIR}/apps/portal/registry/openapi/portal-api.openapi.json" \
   "${ROOT_DIR}/apps/portal/registry/fixtures/registry.public.json" \
@@ -63,6 +69,7 @@ for required in \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry-source.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-summary.v1.schema.json" \
+  "${ROOT_DIR}/apps/portal/registry/schemas/portal-links.v1.schema.json" \
   "${ROOT_DIR}/upgrade/backend/BAR_02_COMPATIBILITY_BOUNDARIES_AND_PARITY_FREEZE.md" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/portal-api.openapi.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/planning-api.openapi.json" \
@@ -96,8 +103,11 @@ for tracked_source in \
   apps/portal/backend/src/portal_api/adapters/planning_summary.py \
   apps/portal/backend/src/portal_api/adapters/quantbt_summary.py \
   apps/portal/backend/src/portal_api/domain/portal_registry.py \
+  apps/portal/backend/src/portal_api/domain/portal_links.py \
   apps/portal/backend/src/portal_api/domain/portal_summary.py \
+  apps/portal/backend/src/portal_api/repositories/portal_links.py \
   apps/portal/backend/src/portal_api/repositories/portal_registry.py \
+  apps/portal/backend/src/portal_api/services/portal_links.py \
   apps/portal/backend/src/portal_api/services/portal_registry.py \
   apps/portal/backend/src/portal_api/services/portal_overview.py \
   apps/portal/backend/tests/test_portal_registry_api.py \
@@ -107,8 +117,11 @@ for tracked_source in \
   apps/portal/backend/tests/test_frontend_handoff.py \
   apps/portal/backend/tests/test_compat_parity.py \
   apps/portal/backend/tests/test_artifact_provenance.py \
+  apps/portal/backend/tests/test_portal_links_api.py \
   apps/portal/frontend/package-lock.json \
   apps/portal/registry/registry.json \
+  apps/portal/registry/links.v1.json \
+  apps/portal/registry/fixtures/links.public.json \
   apps/portal/registry/FRONTEND_HANDOFF.md \
   apps/portal/registry/openapi/portal-api.openapi.json \
   apps/portal/registry/fixtures/registry.public.json \
@@ -123,6 +136,7 @@ for tracked_source in \
   apps/portal/registry/schemas/portal-registry-source.v1.schema.json \
   apps/portal/registry/schemas/portal-registry.v1.schema.json \
   apps/portal/registry/schemas/portal-summary.v1.schema.json \
+  apps/portal/registry/schemas/portal-links.v1.schema.json \
   apps/portal/strategy/PROTECTED_SHA256 \
   upgrade/backend/BAR_02_COMPATIBILITY_BOUNDARIES_AND_PARITY_FREEZE.md \
   upgrade/backend/bar02/snapshots/portal-api.openapi.json \
@@ -145,10 +159,11 @@ command -v python3 >/dev/null 2>&1 || {
 
 for json_contract in \
   "${ROOT_DIR}/apps/portal/registry/registry.json" \
+  "${ROOT_DIR}/apps/portal/registry/links.v1.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry-source.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-summary.v1.schema.json" \
-  "${ROOT_DIR}/upgrade/backend/bar02/snapshots/portal-api.openapi.json" \
+  "${ROOT_DIR}/apps/portal/registry/schemas/portal-links.v1.schema.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/planning-api.openapi.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/run-request.schema.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/manifest.json"; do

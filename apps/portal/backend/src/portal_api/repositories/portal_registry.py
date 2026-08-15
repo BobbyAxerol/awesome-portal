@@ -328,20 +328,20 @@ class PortalRegistryRepository:
     """Load and retain one immutable registry snapshot for the deployed commit."""
 
     def __init__(self, registry_root: Path) -> None:
-        self._registry_root = registry_root
+        self.registry_root = registry_root
         self._loaded: LoadedPortalRegistry | None = None
 
     def load(self) -> LoadedPortalRegistry:
         if self._loaded is not None:
             return self._loaded
 
-        source_document = self._read_json(self._registry_root / "registry.json", "source")
+        source_document = self._read_json(self.registry_root / "registry.json", "source")
         source_schema = self._read_json(
-            self._registry_root / "schemas" / SOURCE_SCHEMA_NAME,
+            self.registry_root / "schemas" / SOURCE_SCHEMA_NAME,
             "source schema",
         )
         public_schema = self._read_json(
-            self._registry_root / "schemas" / PUBLIC_SCHEMA_NAME,
+            self.registry_root / "schemas" / PUBLIC_SCHEMA_NAME,
             "public schema",
         )
         schemas = (source_schema, public_schema)

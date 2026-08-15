@@ -31,6 +31,7 @@ EXPORT_SCRIPT = PORTAL_ROOT / "scripts" / "export_handoff_contract.py"
 
 FIXTURE_NAMES = (
     "registry.public.json",
+    "links.public.json",
     "summary.healthy.json",
     "summary.empty.json",
     "summary.partial.json",
@@ -53,6 +54,7 @@ def _schema_registry() -> Registry:
         _load_json(SCHEMA_ROOT / "portal-registry-source.v1.schema.json"),
         _load_json(SCHEMA_ROOT / "portal-registry.v1.schema.json"),
         _load_json(SCHEMA_ROOT / "portal-summary.v1.schema.json"),
+        _load_json(SCHEMA_ROOT / "portal-links.v1.schema.json"),
     ]
     return Registry().with_resources(
         (schema["$id"], Resource.from_contents(schema)) for schema in schemas
@@ -75,17 +77,22 @@ REGISTRY_SCHEMA_ID = (
 SUMMARY_SCHEMA_ID = (
     "https://schemas.primusspark.com/portal/portal-summary.v1.schema.json"
 )
+LINKS_SCHEMA_ID = (
+    "https://schemas.primusspark.com/portal/portal-links.v1.schema.json"
+)
 
 
 # ---------------------------------------------------------------- fixtures
 
 
 def test_every_committed_fixture_is_schema_valid() -> None:
+    schema_ids = {
+        "registry.public.json": REGISTRY_SCHEMA_ID,
+        "links.public.json": LINKS_SCHEMA_ID,
+    }
     for name in FIXTURE_NAMES:
         document = _fixture(name)
-        schema_id = (
-            REGISTRY_SCHEMA_ID if name == "registry.public.json" else SUMMARY_SCHEMA_ID
-        )
+        schema_id = schema_ids.get(name, SUMMARY_SCHEMA_ID)
         _validate_schema(schema_id, document)
 
 
@@ -275,6 +282,7 @@ def test_openapi_response_schemas_validate_every_fixture() -> None:
     )
     for name, component in (
         ("registry.public.json", "PortalRegistryDocument"),
+        ("links.public.json", "PortalLinksDocument"),
         ("summary.healthy.json", "PortalSummaryV1"),
         ("summary.empty.json", "PortalSummaryV1"),
         ("summary.partial.json", "PortalSummaryV1"),
@@ -411,6 +419,7 @@ def test_handoff_doc_documents_endpoints_states_and_constraints() -> None:
     for marker in (
         "/api/v1/portal/registry",
         "/api/v1/portal/summary",
+        "/api/v1/portal/links",
         "If-None-Match",
         "304",
         "no-store",
@@ -421,6 +430,7 @@ def test_handoff_doc_documents_endpoints_states_and_constraints() -> None:
         "summary.unavailable.json",
         "summary.stale.json",
         "summary.denied.json",
+        "links.public.json",
         "FeatureMaturity",
         "AvailabilityState",
         "LOCAL_ONLY_STATE",
@@ -430,6 +440,7 @@ def test_handoff_doc_documents_endpoints_states_and_constraints() -> None:
         "REGISTRY_BLOCKING_CONCERN",
         "portal-registry.v1.schema.json",
         "portal-summary.v1.schema.json",
+        "portal-links.v1.schema.json",
         "loading",
         "partial",
         "stale",
