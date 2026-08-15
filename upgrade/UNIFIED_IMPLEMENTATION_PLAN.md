@@ -646,6 +646,14 @@ selection, artifacts hoặc protected strategy kernel.
 - Current New Run/Progress/Result tabs, SSE, artifact persistence, API tests và
   synthetic PyPI smoke hoạt động.
 - Fund Paper report components và IS/OOS/Holdout semantics đã có.
+- BAR-02 đã freeze parity boundary cho U04/U05: snapshot OpenAPI Portal +
+  Planning + run-request schema (digest manifest tại
+  `upgrade/backend/bar02/snapshots/`), thêm additive artifact provenance
+  (`artifact_schema_version` + `producer`) vào mọi Portal-written JSON
+  artifact (engine `manifest.json` giữ nguyên), cross-link sidecar
+  `portal.links.v1` + `GET /api/v1/portal/links` với integrity block. Legacy
+  routes vẫn là data từ registry; gateway giữ proxy compatibility; không
+  dual-write; protected hash và Planning state không đổi.
 
 **Description / To-do**
 
@@ -698,6 +706,11 @@ governance surface cho chính Portal roadmap.
 
 - Planning frontend Phase 5, local/API adapter, lazy views, SQLite audit backend
   và compatibility route `/roadmap-task-board/` đã có.
+- BAR-02 đã thêm versioned cross-link sidecar `portal.links.v1` (mapping
+  feature/screen/concern ↔ epic/task/Figma/repository) validated lúc startup,
+  served read-only qua `GET /api/v1/portal/links` với ETag/304 + integrity
+  coverage block. External task-existence check chờ U05 proper; link không
+  hợp lệ fail startup, không bịa task link.
 
 **Description / To-do**
 

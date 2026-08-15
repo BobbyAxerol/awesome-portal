@@ -186,6 +186,17 @@ green; and every coherent slice is committed.
 
 Gate: a contract drift fails the regeneration comparison, not silently.
 
+Implementation evidence — 2026-08-15:
+
+- [x] Committed the Portal API OpenAPI, Planning API OpenAPI and the
+  self-contained bundled run-request JSON Schema under
+  `upgrade/backend/bar02/snapshots/` with a sha256 digest manifest.
+- [x] `9` parity tests pass: snapshots regenerate identically, manifest
+  digests verify, frozen route sets (runs, registry/summary, Planning v1 +
+  legacy), the bundled request schema accepts the canonical run request,
+  only the web gateway exposes a public port, the nginx compatibility proxies
+  stay, and registry legacy routes feed the U04/U05 embedding contracts.
+
 ### BAR-02-BE2 — Additive artifact provenance
 
 - Add `with_portal_provenance` and apply it at every Portal JSON write site.
@@ -193,6 +204,19 @@ Gate: a contract drift fails the regeneration comparison, not silently.
   fields present; engine `manifest.json` untouched.
 
 Gate: existing API/artifact output differs only by the two documented fields.
+
+Implementation evidence — 2026-08-15:
+
+- [x] Every Portal-written JSON artifact (`status.json`, `config/request.json`,
+  `config/fold_plan.json`, `config.json`, `strategy.json`, `metrics.json`,
+  `selection/*.json`, `wfo/params_by_fold.json`) now carries
+  `artifact_schema_version: "1"` and `producer: {service, artifact, version}`;
+  the engine-owned `manifest.json` keeps its own contract untouched.
+- [x] `4` provenance tests pass: golden-payload subset equality, AST scan
+  proving every Portal write site wraps provenance (and manifest does not),
+  run submission persistence and worker status rewrites.
+- [x] Existing run API/fold-plan/serialization suites stay green — the change
+  is strictly additive.
 
 ### BAR-02-BE3 — Cross-link sidecar and legacy/façade parity
 
@@ -204,5 +228,45 @@ Gate: existing API/artifact output differs only by the two documented fields.
 Gate: a dangling or unsafe link fails startup; every served link is a
 validated registry route or sidecar ID.
 
-Implementation evidence per slice is recorded in
-[`upgrade/backend/README.md`](README.md) history notes and the final report.
+Implementation evidence — 2026-08-15:
+
+- [x] Added `registry/links.v1.json` (17 entries: 4 features, 8 screens, 5
+  blocking concerns with truthful epic/task/Figma/scope links and empty task
+  lists where no authority exists), `portal-links.v1.schema.json`, fail-closed
+  startup validation (unknown reference, duplicate ID, no-entity entry, unsafe
+  route/metadata, wrong schema major) and the read-only
+  `GET /api/v1/portal/links` endpoint with ETag/304, `no-cache,
+  must-revalidate` and the future-auth-safe `Vary`.
+- [x] `17` links tests pass including invalid-sidecar fail-closed matrix,
+  endpoint ETag/304/405/no-query and no-mutation/no-dual-write source scans.
+- [x] The BAR-01-BE6 exporter now also emits the `links.public.json` fixture;
+  the frontend handoff document and OpenAPI artifact include the links
+  endpoint.
+
+### BAR-02 combined evidence — 2026-08-15
+
+- [x] BAR-02 suites pass `30` tests; combined BAR-01 + BAR-02 contract suites
+  pass `164` tests; full Portal backend regression passes `280 passed,
+  1 skipped`; full Planning backend regression passes `18 passed` (the same
+  one recorded upstream TestClient deprecation warning). The skip is the
+  explicit opt-in external Historical real-data smoke.
+- [x] `pip check`, compile/import and `git diff --check` pass; workspace
+  verification passes including the protected strategy hash; Planning state
+  is untouched (no Planning backend file changed).
+- [x] Rebuilt `local/portal-portal-api:dev`: the private Docker-network smoke
+  returns identical truthful summary phases and the image now serves
+  `/api/v1/portal/links` with a valid integrity block; the image-owned
+  registry sidecar ships the links source/schema and refreshed handoff
+  fixtures.
+- [x] BAR-02 adds no database/service, no identity, no gateway topology
+  change and no new public port; it remains the FastAPI compatibility bridge
+  toward the future TypeScript façade.
+
+Technical debt and rollback:
+
+- Cross-link planning-task existence checking waits for U05 proper; the
+  integrity block reports coverage but does not query Planning.
+- Snapshot/provenance/link regeneration is a manual step guarded by CI tests.
+- Rollback: revert `f1435e7`, `4b59a1f`, `7c3ee4e` (and follow-up artifact
+  refreshes) in reverse order; existing endpoints stay compatible. No change
+  was pushed or deployed.

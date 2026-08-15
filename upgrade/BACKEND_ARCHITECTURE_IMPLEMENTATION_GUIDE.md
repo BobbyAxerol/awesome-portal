@@ -582,19 +582,21 @@ whether anything was pushed or deployed
 
 ## 14. Next backend architecture task
 
-BAR-01-BE1 through BE6 are complete: versioned Feature/Screen/Concern and
-Capability Availability schemas, immutable registry API, independently
-fail-safe QuantBT/Planning summary adapters, the deadline-aware concurrent
-aggregator with the public summary endpoint, and the frontend contract handoff
-(OpenAPI document, canonical fixtures and state/ETag semantics). They did not
-introduce a new database/service or begin U07/U10 early.
+BAR-01 (BE1–BE6) and BAR-02 (BE1–BE3) are complete: the registry/summary/links
+contracts, immutable registry API, fail-safe summary adapters with the
+deadline-aware aggregator, the frontend handoff, the parity snapshot freeze,
+additive artifact provenance and the validated cross-link sidecar. They did
+not introduce a new database/service or begin U07/U10 early.
 
-The BAR-01 deep dive is available at
-[`upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md`](./backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md).
+Deep dives:
 
-The next backend task is BAR-02, the compatibility boundaries and parity freeze
-for U04 (QuantBT Research embedding) and U05 (Planning embedding): snapshot
-current OpenAPI/run/artifact and Planning API contracts, keep both services
-private and unchanged in authority, add only additive compatibility metadata
-and validated link sidecars, and pass golden API/artifact parity without
-touching the protected strategy hash or existing Planning state.
+- [`upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md`](./backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md)
+- [`upgrade/backend/BAR_02_COMPATIBILITY_BOUNDARIES_AND_PARITY_FREEZE.md`](./backend/BAR_02_COMPATIBILITY_BOUNDARIES_AND_PARITY_FREEZE.md)
+
+The next backend task is BAR-03, the operational ingress boundary for U06
+(secure edge and loopback origin topology): distinguish liveness/readiness and
+dependency diagnostics, propagate or create `request_id`/W3C trace context and
+safe ingress metadata, preserve SSE buffering/timeouts through the proxy, and
+redact topology, filesystem paths, tokens and identity assertions from
+health/error responses. It must fail closed on wrong origin/AUD/certificate
+without ever exposing the origin publicly.
