@@ -1427,6 +1427,214 @@
         "title": "PortalFeatureDefinition",
         "type": "object"
       },
+      "PortalLinkEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "activation_gate": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activation Gate"
+          },
+          "concern_id": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z][A-Z0-9_]{2,63}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Concern Id"
+          },
+          "feature_id": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z][A-Z0-9_]{2,63}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature Id"
+          },
+          "figma_frame_id": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Figma Frame Id"
+          },
+          "id": {
+            "pattern": "^[A-Z][A-Z0-9_]{2,63}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "planning_task_ids": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Planning Task Ids",
+            "type": "array"
+          },
+          "prototype_route": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "pattern": "^/",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prototype Route"
+          },
+          "repository_scope": {
+            "items": {
+              "pattern": "^[a-z][a-z0-9-]{1,63}$",
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Repository Scope",
+            "type": "array"
+          },
+          "roadmap_epic_id": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Roadmap Epic Id"
+          },
+          "screen_id": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z][A-Z0-9_]{2,63}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Screen Id"
+          }
+        },
+        "required": [
+          "id",
+          "feature_id",
+          "screen_id",
+          "concern_id",
+          "roadmap_epic_id",
+          "planning_task_ids",
+          "figma_frame_id",
+          "repository_scope"
+        ],
+        "title": "PortalLinkEntry",
+        "type": "object"
+      },
+      "PortalLinksDocument": {
+        "additionalProperties": false,
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/PortalLinkEntry"
+            },
+            "maxItems": 128,
+            "title": "Entries",
+            "type": "array"
+          },
+          "integrity": {
+            "$ref": "#/components/schemas/PortalLinksIntegrity"
+          },
+          "links_revision": {
+            "minimum": 1.0,
+            "title": "Links Revision",
+            "type": "integer"
+          },
+          "reviewed_at": {
+            "title": "Reviewed At",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "portal.links.v1",
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "links_revision",
+          "reviewed_at",
+          "entries",
+          "integrity"
+        ],
+        "title": "PortalLinksDocument",
+        "type": "object"
+      },
+      "PortalLinksIntegrity": {
+        "additionalProperties": false,
+        "properties": {
+          "concerns_linked": {
+            "minimum": 0.0,
+            "title": "Concerns Linked",
+            "type": "integer"
+          },
+          "dangling_links": {
+            "default": 0,
+            "title": "Dangling Links",
+            "type": "integer"
+          },
+          "features_linked": {
+            "minimum": 0.0,
+            "title": "Features Linked",
+            "type": "integer"
+          },
+          "planning_tasks_referenced": {
+            "minimum": 0.0,
+            "title": "Planning Tasks Referenced",
+            "type": "integer"
+          },
+          "screens_linked": {
+            "minimum": 0.0,
+            "title": "Screens Linked",
+            "type": "integer"
+          },
+          "status": {
+            "const": "valid",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "features_linked",
+          "screens_linked",
+          "concerns_linked",
+          "planning_tasks_referenced"
+        ],
+        "title": "PortalLinksIntegrity",
+        "type": "object"
+      },
       "PortalRegistryDocument": {
         "additionalProperties": false,
         "properties": {
@@ -3691,6 +3899,58 @@
           }
         },
         "summary": "Strategy"
+      }
+    },
+    "/api/v1/portal/links": {
+      "get": {
+        "operationId": "portal_links_api_v1_portal_links_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "if-none-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-None-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalLinksDocument"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "304": {
+            "description": "Links content has not changed."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Portal Links",
+        "tags": [
+          "portal"
+        ]
       }
     },
     "/api/v1/portal/registry": {

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-15T18:19:34.040898+00:00",
+  "generated_at": "2026-08-15T18:35:05.825397+00:00",
   "producer": "export_compat_snapshots.py",
   "run_request_component": "PortalRunRequest",
   "schema_version": "bar02.snapshots.v1",
@@ -9,8 +9,8 @@
       "digest": "sha256:8c4977b136a60694fd334f4e1441df5f0058668105556878f47cd28e20704051"
     },
     "portal-api.openapi.json": {
-      "bytes": 99176,
-      "digest": "sha256:e02e1b4aa1cb40013de8b9057c831c12e1b6a5694758a72c9793c89f3928f951"
+      "bytes": 105942,
+      "digest": "sha256:156f1cf32372a6dfa8aa1cc5d84d382355db3b10b751cfbad1a3273010ddf1be"
     },
     "run-request.schema.json": {
       "bytes": 35562,
