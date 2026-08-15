@@ -13,6 +13,12 @@ from portal_api.adapters.market_data import (
     MarketDataProvider,
     UnavailableHistoricalMarketDataProvider,
 )
+from portal_api.adapters.quantbt_summary import (
+    CurrentRunSummaryReader,
+    HistoricalCapabilityReader,
+    QuantBTSummaryAdapter,
+    QuantBTSummaryRoutes,
+)
 from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.api.routes import router
 from portal_api.api.routes_portal import router as router_portal
@@ -95,12 +101,20 @@ def create_app(
     app.state.portal_registry_service = PortalRegistryService(
         portal_registry_repository or PortalRegistryRepository(_default_registry_root())
     )
+    quantbt_summary_routes = QuantBTSummaryRoutes.from_registry(
+        app.state.portal_registry_service.document
+    )
     app.state.preflight_service = PreflightService(
         app.state.market_data_provider,
         app.state.strategy_registry,
         quantbt_gateway=app.state.quantbt_gateway,
     )
     app.state.run_manager = RunManager(artifacts=app.state.artifact_repository)
+    app.state.quantbt_summary_adapter = QuantBTSummaryAdapter(
+        run_reader=CurrentRunSummaryReader(app.state.run_manager),
+        historical_reader=HistoricalCapabilityReader(app.state.market_data_provider),
+        routes=quantbt_summary_routes,
+    )
 
     @app.exception_handler(PortalDomainError)
     async def domain_error_handler(request: Request, exc: PortalDomainError) -> JSONResponse:

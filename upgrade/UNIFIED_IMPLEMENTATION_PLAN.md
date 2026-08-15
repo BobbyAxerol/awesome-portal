@@ -559,6 +559,11 @@ trung thực capability hiện tại/tương lai.
 - BAR-01-BE2 đã thêm immutable registry repository, startup/readiness
   fail-closed, public `GET /api/v1/portal/registry`, deterministic digest,
   ETag/304 và image-owned sidecar; frontend vẫn chưa có registry thứ hai.
+- BAR-01-BE3 đã thêm internal read-only QuantBT summary adapter với typed
+  evidence/current-run/Historical ports, exact state counts nhưng bounded
+  metadata, independent failure isolation và registry-derived links. Empty
+  authority là available zero; unavailable/timeout/incompatible luôn là null.
+  Public summary endpoint vẫn chờ Planning adapter và aggregator ở BE4/BE5.
 
 **Description / To-do**
 

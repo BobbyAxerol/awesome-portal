@@ -1,7 +1,7 @@
 # BAR-01 — Feature Registry and Command Center Summary Contract
 
 > **Version:** 0.1<br>
-> **Status:** BAR-01-BE1/BE2 complete; BAR-01-BE3 pending<br>
+> **Status:** BAR-01-BE1/BE2/BE3 complete; BAR-01-BE4 pending<br>
 > **Updated:** 2026-08-15<br>
 > **Unified phases:** U02 Shared Foundations, U03 Unified Shell<br>
 > **Runtime authority:** current FastAPI services remain authoritative
@@ -794,6 +794,36 @@ Implementation evidence — 2026-08-15:
 
 Gate: no numerical metric is recalculated and unavailable is never zero.
 
+Implementation evidence — 2026-08-15:
+
+- [x] Added frozen summary-domain models, evidence/availability invariants and
+  exported read ports; unavailable/denied/commissioned evidence rejects any
+  non-null value and all observations require timezone-aware timestamps.
+- [x] Added a typed current-run inventory that retains exact total/state counts
+  while bounding projected run metadata to 100 records and summary
+  items/warnings/priorities to 5 each.
+- [x] Added independent current-run and Historical capability reads. One source
+  failure degrades only its own evidence, preserves the healthy source and
+  strips raw exception, host-path and secret detail from output.
+- [x] Mapped empty run authority to available zero; source failure, timeout,
+  unknown run state and Historical unavailability map to typed null evidence,
+  never a fabricated zero.
+- [x] Exposed only allowed run counts/state, latest run identity/protocol/
+  strategy/observed time, current registry-derived links and Historical
+  backtest/research capability. No PnL, ETA, portfolio or deployment value is
+  calculated or claimed.
+- [x] Wired the adapter into application composition as an internal read-only
+  compatibility bridge. The public summary endpoint remains absent until BE5.
+- [x] BE3 target suite passes `15` tests; combined BAR-01 BE1/BE2/BE3 suites
+  pass `45` tests; full backend regression passes `161 passed, 1 skipped`.
+  The skip is the explicit opt-in external Historical real-data smoke.
+- [x] Built `local/portal-portal-api:dev`, started the packaged application and
+  probed readiness as `ready`; `/api/v1/portal/summary` remains `404` by design
+  until BE5 owns the aggregator and public route.
+- [x] The adapter stays on the current FastAPI authority only for migration.
+  Durable run read models remain U11 work and the long-term Portal control
+  plane remains TypeScript, as locked by the v0.4 architecture.
+
 ### BAR-01-BE4 — Planning summary adapter
 
 - Add private async HTTP client with fixed destination, timeout, size and schema
@@ -908,10 +938,10 @@ BAR-01 backend contract is complete only when:
 - Current backend/frontend/Planning tests and production builds still pass.
 - Workspace verification passes and every coherent slice is committed.
 
-BE1/BE2 satisfy the schema, immutable registry repository, deployment
-readiness and HTTP caching foundation. The next backend slice is BAR-01-BE3:
-a read-only QuantBT summary adapter over exported current run/dataset ports,
-with evidence wrappers, truthful empty/active/completed/failed states and
-Historical capability mapping. BE3 must not recalculate QuantBT metrics, treat
-the filesystem model as the future durable Run Registry, call route handlers,
-or begin the Planning adapter/aggregator early.
+BE1/BE2/BE3 satisfy the schema, immutable registry repository, deployment
+readiness, HTTP caching and read-only QuantBT evidence foundation. The next
+backend slice is BAR-01-BE4: a Planning summary adapter over a server-owned,
+fixed-destination private HTTP client with timeout, response-size and strict
+schema validation. BE4 must represent browser-only Planning state as
+`LOCAL_ONLY_STATE`, must not import Planning modules or open its SQLite path,
+and must not begin the BE5 public aggregator/endpoint early.

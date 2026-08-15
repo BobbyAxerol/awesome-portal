@@ -582,12 +582,15 @@ whether anything was pushed or deployed
 
 ## 14. Next backend architecture task
 
-After owner review of this runway, the next implementation design is BAR-01:
-define versioned Feature/Screen/Concern and Capability Availability schemas for
-U02/U03, plus a read-only summary adapter contract. It must not introduce a new
+BAR-01-BE1 through BE3 now provide the versioned Feature/Screen/Concern and
+Capability Availability schemas, immutable registry API and internal read-only
+QuantBT summary contribution for U02/U03. They do not introduce a new
 database/service or begin U07/U10 early.
 
 The BAR-01 deep dive is now available at
 [`upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md`](./backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md).
-Implementation remains pending owner assignment and should follow the six
-coherent `BAR-01-BE*` slices defined there.
+The next backend task is BAR-01-BE4, the independently fail-safe Planning
+summary adapter defined in that deep dive. It must use a fixed server-owned
+private HTTP destination with bounded timeout/body/schema validation, expose
+LOCAL browser state as unavailable rather than guessed counts, and leave
+aggregation plus the public endpoint to BAR-01-BE5.
