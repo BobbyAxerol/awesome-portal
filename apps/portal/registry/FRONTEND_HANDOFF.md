@@ -150,6 +150,7 @@ Chỉ 3 type hiện được ủy quyền, thứ tự ưu tiên:
 - `schemas/portal-registry-source.v1.schema.json` — validate file nguồn.
 - `schemas/portal-registry.v1.schema.json` — validate public response.
 - `schemas/portal-summary.v1.schema.json` — validate summary response.
+- `schemas/portal-links.v1.schema.json` — validate cross-link sidecar.
 - Tất cả dùng Draft 2020-12, `additionalProperties: false` — field lạ là
   breaking change; additive change yêu cầu bump `revision` (registry) và
   compatible window khi đổi schema major.
