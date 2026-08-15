@@ -54,10 +54,16 @@ class.
 ### Lỗi
 
 - `500` trả envelope typed:
-  `{"error": {"code": "SUMMARY_CONTRACT_FAILURE", "message": "..."}}`
+  `{"error": {"code": "SUMMARY_CONTRACT_FAILURE", "message": "..."}, "request_id": "<id>"}`
   (model `PortalErrorResponse` trong OpenAPI). Không có retry ngầm.
-- `4xx` khác: FastAPI mặc định. Registry invalid không xảy ra lúc runtime —
-  service không ready khi registry lỗi.
+- Mọi response (kể cả lỗi) kèm header `X-Request-ID` và `traceparent` (W3C);
+  `request_id` trong body = `X-Request-ID` header — dùng để báo lỗi/external
+  maintenance screen. Backend accept `X-Request-ID`/`traceparent` hợp lệ từ
+  gateway (nginx `$request_id`), nếu không sẽ tự sinh; giá trị unsafe bị thay.
+- `4xx` khác: FastAPI mặc định + `request_id`. Registry invalid không xảy ra
+  lúc runtime — service không ready khi registry lỗi.
+- `/api/diagnostics` (BAR-03) trả dependency states an toàn (không path,
+  hostname, secret) kèm `request_id`/`traceparent` của chính request đó.
 
 ## 2. Generate types từ OpenAPI — không viết model tay thứ hai
 

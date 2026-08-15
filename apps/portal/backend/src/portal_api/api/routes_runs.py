@@ -249,7 +249,14 @@ async def run_events(run_id: str, request: Request) -> StreamingResponse:
                 return
             await asyncio.sleep(0.3)
 
-    return StreamingResponse(stream(), media_type="text/event-stream")
+    return StreamingResponse(
+        stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.get("/{run_id}/console")

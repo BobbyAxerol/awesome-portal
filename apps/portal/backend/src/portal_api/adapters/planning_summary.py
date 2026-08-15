@@ -307,6 +307,10 @@ class PlanningSummaryAdapter:
         self._reader = reader
         self._clock = clock
 
+    @property
+    def mode(self) -> PlanningSummaryMode:
+        return self._mode
+
     async def collect(
         self,
         context: SummaryContext,

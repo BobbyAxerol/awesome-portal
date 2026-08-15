@@ -5,7 +5,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from portal_api.adapters.market_data import (
     HistoricalMarketDataProvider,
@@ -27,6 +29,7 @@ from portal_api.adapters.quantbt_summary import (
 )
 from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.api.routes import router
+from portal_api.api.ingress import IngressContextMiddleware, ingress_request_id
 from portal_api.api.routes_portal import router as router_portal
 from portal_api.api.routes_runs import router as router_runs
 from portal_api.domain.errors import PortalDomainError
@@ -164,22 +167,54 @@ def create_app(
 
     @app.exception_handler(PortalDomainError)
     async def domain_error_handler(request: Request, exc: PortalDomainError) -> JSONResponse:
-        del request
         return JSONResponse(
             status_code=422,
-            content={"error": {"code": exc.code, "message": str(exc)}},
+            content={
+                "error": {"code": exc.code, "message": str(exc)},
+                "request_id": ingress_request_id(request),
+            },
         )
 
     @app.exception_handler(PortalSummaryContractError)
     async def summary_contract_error_handler(
         request: Request, exc: PortalSummaryContractError
     ) -> JSONResponse:
-        del request
         return JSONResponse(
             status_code=500,
-            content={"error": {"code": exc.code, "message": str(exc)}},
+            content={
+                "error": {"code": exc.code, "message": str(exc)},
+                "request_id": ingress_request_id(request),
+            },
         )
 
+    @app.exception_handler(StarletteHTTPException)
+    async def http_error_handler(
+        request: Request, exc: StarletteHTTPException
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "detail": exc.detail,
+                "request_id": ingress_request_id(request),
+            },
+            headers=exc.headers,
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error_handler(
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
+        from fastapi.encoders import jsonable_encoder
+
+        return JSONResponse(
+            status_code=422,
+            content={
+                "detail": jsonable_encoder(exc.errors()),
+                "request_id": ingress_request_id(request),
+            },
+        )
+
+    app.add_middleware(IngressContextMiddleware)
     app.include_router(router)
     app.include_router(router_portal)
     app.include_router(router_runs)

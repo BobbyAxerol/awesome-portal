@@ -62,3 +62,51 @@ class PortalErrorDetail(ResponseModel):
 
 class PortalErrorResponse(ResponseModel):
     error: PortalErrorDetail
+    request_id: str
+
+
+class IngressDiagnostics(ResponseModel):
+    forwarded_proto: str | None
+    forwarded_for_present: bool
+
+
+class DependencyState(ResponseModel):
+    state: Literal["ready", "available", "unavailable", "disabled"]
+    detail: str | None
+
+
+class RegistryDependency(DependencyState):
+    digest: str | None
+
+
+class HistoricalDataDependency(DependencyState):
+    mode: str
+    datasets: int | None
+
+
+class PlanningSummaryDependency(DependencyState):
+    mode: str
+
+
+class WorkerDependency(DependencyState):
+    max_workers: int | None
+
+
+class DependenciesReport(ResponseModel):
+    registry: RegistryDependency
+    artifact_store: DependencyState
+    historical_data: HistoricalDataDependency
+    quantbt_engine: DependencyState
+    planning_summary: PlanningSummaryDependency
+    run_worker: WorkerDependency
+
+
+class DiagnosticsResponse(ResponseModel):
+    status: Literal["ok"]
+    service: str
+    version: str
+    checked_at: datetime
+    request_id: str
+    traceparent: str
+    ingress: IngressDiagnostics
+    dependencies: DependenciesReport

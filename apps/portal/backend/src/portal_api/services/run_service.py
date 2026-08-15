@@ -39,6 +39,7 @@ class RunManager:
         mp_start_method: str | None = None,
     ):
         self._artifacts = artifacts
+        self._max_workers = max_workers
         # FastAPI/TestClient and notebook hosts commonly have active threads.
         # A fork server avoids inheriting interpreter/Numba locks and also
         # avoids re-executing a pytest/notebook main module like spawn does.
@@ -56,6 +57,10 @@ class RunManager:
         self._futures: dict[str, Future] = {}
 
     # -- submission -----------------------------------------------------------
+
+    @property
+    def max_workers(self) -> int:
+        return self._max_workers
 
     def submit(self, request) -> str:
         run_id = uuid.uuid4().hex[:16]

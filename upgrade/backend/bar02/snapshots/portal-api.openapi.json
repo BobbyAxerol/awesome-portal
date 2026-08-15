@@ -522,6 +522,120 @@
         "title": "ConcernDefinition",
         "type": "object"
       },
+      "DependenciesReport": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_store": {
+            "$ref": "#/components/schemas/DependencyState"
+          },
+          "historical_data": {
+            "$ref": "#/components/schemas/HistoricalDataDependency"
+          },
+          "planning_summary": {
+            "$ref": "#/components/schemas/PlanningSummaryDependency"
+          },
+          "quantbt_engine": {
+            "$ref": "#/components/schemas/DependencyState"
+          },
+          "registry": {
+            "$ref": "#/components/schemas/RegistryDependency"
+          },
+          "run_worker": {
+            "$ref": "#/components/schemas/WorkerDependency"
+          }
+        },
+        "required": [
+          "registry",
+          "artifact_store",
+          "historical_data",
+          "quantbt_engine",
+          "planning_summary",
+          "run_worker"
+        ],
+        "title": "DependenciesReport",
+        "type": "object"
+      },
+      "DependencyState": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "state": {
+            "enum": [
+              "ready",
+              "available",
+              "unavailable",
+              "disabled"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "detail"
+        ],
+        "title": "DependencyState",
+        "type": "object"
+      },
+      "DiagnosticsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "dependencies": {
+            "$ref": "#/components/schemas/DependenciesReport"
+          },
+          "ingress": {
+            "$ref": "#/components/schemas/IngressDiagnostics"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "service": {
+            "title": "Service",
+            "type": "string"
+          },
+          "status": {
+            "const": "ok",
+            "title": "Status",
+            "type": "string"
+          },
+          "traceparent": {
+            "title": "Traceparent",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "service",
+          "version",
+          "checked_at",
+          "request_id",
+          "traceparent",
+          "ingress",
+          "dependencies"
+        ],
+        "title": "DiagnosticsResponse",
+        "type": "object"
+      },
       "EvidenceValue": {
         "additionalProperties": false,
         "properties": {
@@ -699,6 +813,81 @@
           "quantbt_loaded"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "HistoricalDataDependency": {
+        "additionalProperties": false,
+        "properties": {
+          "datasets": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datasets"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "ready",
+              "available",
+              "unavailable",
+              "disabled"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "detail",
+          "mode",
+          "datasets"
+        ],
+        "title": "HistoricalDataDependency",
+        "type": "object"
+      },
+      "IngressDiagnostics": {
+        "additionalProperties": false,
+        "properties": {
+          "forwarded_for_present": {
+            "title": "Forwarded For Present",
+            "type": "boolean"
+          },
+          "forwarded_proto": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forwarded Proto"
+          }
+        },
+        "required": [
+          "forwarded_proto",
+          "forwarded_for_present"
+        ],
+        "title": "IngressDiagnostics",
         "type": "object"
       },
       "LifecycleStageDefinition": {
@@ -1193,6 +1382,43 @@
         "title": "ParameterSpec",
         "type": "object"
       },
+      "PlanningSummaryDependency": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "ready",
+              "available",
+              "unavailable",
+              "disabled"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "detail",
+          "mode"
+        ],
+        "title": "PlanningSummaryDependency",
+        "type": "object"
+      },
       "PortalErrorDetail": {
         "additionalProperties": false,
         "properties": {
@@ -1217,10 +1443,15 @@
         "properties": {
           "error": {
             "$ref": "#/components/schemas/PortalErrorDetail"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
           }
         },
         "required": [
-          "error"
+          "error",
+          "request_id"
         ],
         "title": "PortalErrorResponse",
         "type": "object"
@@ -2115,6 +2346,50 @@
         "title": "RegistryCounts",
         "type": "object"
       },
+      "RegistryDependency": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Digest"
+          },
+          "state": {
+            "enum": [
+              "ready",
+              "available",
+              "unavailable",
+              "disabled"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "detail",
+          "digest"
+        ],
+        "title": "RegistryDependency",
+        "type": "object"
+      },
       "RunProtocol": {
         "enum": [
           "three_window_decay",
@@ -2635,6 +2910,50 @@
         ],
         "title": "WindowSummary",
         "type": "object"
+      },
+      "WorkerDependency": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "max_workers": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Workers"
+          },
+          "state": {
+            "enum": [
+              "ready",
+              "available",
+              "unavailable",
+              "disabled"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "detail",
+          "max_workers"
+        ],
+        "title": "WorkerDependency",
+        "type": "object"
       }
     }
   },
@@ -2709,6 +3028,25 @@
           }
         },
         "summary": "Datasets"
+      }
+    },
+    "/api/diagnostics": {
+      "get": {
+        "description": "Dependency diagnostics without topology, path or secret exposure.",
+        "operationId": "diagnostics_api_diagnostics_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Diagnostics"
       }
     },
     "/api/health": {

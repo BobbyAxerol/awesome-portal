@@ -32,6 +32,7 @@ for required in \
   "${ROOT_DIR}/.githooks/pre-push" \
   "${ROOT_DIR}/.githooks/pre-rebase" \
   "${ROOT_DIR}/apps/portal/backend/pyproject.toml" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/api/ingress.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/api/routes_portal.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/adapters/planning_summary.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/adapters/quantbt_summary.py" \
@@ -51,6 +52,7 @@ for required in \
   "${ROOT_DIR}/apps/portal/backend/tests/test_compat_parity.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_artifact_provenance.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_portal_links_api.py" \
+  "${ROOT_DIR}/apps/portal/backend/tests/test_ingress_boundary.py" \
   "${ROOT_DIR}/apps/portal/frontend/package-lock.json" \
   "${ROOT_DIR}/apps/portal/registry/registry.json" \
   "${ROOT_DIR}/apps/portal/registry/links.v1.json" \
@@ -71,6 +73,8 @@ for required in \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-summary.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-links.v1.schema.json" \
   "${ROOT_DIR}/upgrade/backend/BAR_02_COMPATIBILITY_BOUNDARIES_AND_PARITY_FREEZE.md" \
+  "${ROOT_DIR}/upgrade/backend/BAR_03_OPERATIONAL_INGRESS_BOUNDARY.md" \
+  "${ROOT_DIR}/deploy/nginx/portal.conf" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/portal-api.openapi.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/planning-api.openapi.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/run-request.schema.json" \
@@ -118,6 +122,7 @@ for tracked_source in \
   apps/portal/backend/tests/test_compat_parity.py \
   apps/portal/backend/tests/test_artifact_provenance.py \
   apps/portal/backend/tests/test_portal_links_api.py \
+  apps/portal/backend/tests/test_ingress_boundary.py \
   apps/portal/frontend/package-lock.json \
   apps/portal/registry/registry.json \
   apps/portal/registry/links.v1.json \
@@ -139,6 +144,8 @@ for tracked_source in \
   apps/portal/registry/schemas/portal-links.v1.schema.json \
   apps/portal/strategy/PROTECTED_SHA256 \
   upgrade/backend/BAR_02_COMPATIBILITY_BOUNDARIES_AND_PARITY_FREEZE.md \
+  upgrade/backend/BAR_03_OPERATIONAL_INGRESS_BOUNDARY.md \
+  deploy/nginx/portal.conf \
   upgrade/backend/bar02/snapshots/portal-api.openapi.json \
   upgrade/backend/bar02/snapshots/planning-api.openapi.json \
   upgrade/backend/bar02/snapshots/run-request.schema.json \
