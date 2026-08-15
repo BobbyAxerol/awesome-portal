@@ -75,6 +75,44 @@ for required in \
   "${ROOT_DIR}/upgrade/backend/BAR_02_COMPATIBILITY_BOUNDARIES_AND_PARITY_FREEZE.md" \
   "${ROOT_DIR}/upgrade/backend/BAR_03_OPERATIONAL_INGRESS_BOUNDARY.md" \
   "${ROOT_DIR}/deploy/nginx/portal.conf" \
+  "${ROOT_DIR}/apps/control-api/package.json" \
+  "${ROOT_DIR}/apps/control-api/package-lock.json" \
+  "${ROOT_DIR}/apps/control-api/tsconfig.json" \
+  "${ROOT_DIR}/apps/control-api/vitest.config.ts" \
+  "${ROOT_DIR}/apps/control-api/migrations/1723680000000_init-identity.sql" \
+  "${ROOT_DIR}/apps/control-api/src/main.ts" \
+  "${ROOT_DIR}/apps/control-api/src/app.ts" \
+  "${ROOT_DIR}/apps/control-api/src/app.module.ts" \
+  "${ROOT_DIR}/apps/control-api/src/config.ts" \
+  "${ROOT_DIR}/apps/control-api/src/domain.ts" \
+  "${ROOT_DIR}/apps/control-api/src/tokens.ts" \
+  "${ROOT_DIR}/apps/control-api/src/http-error.filter.ts" \
+  "${ROOT_DIR}/apps/control-api/src/auth/auth.service.ts" \
+  "${ROOT_DIR}/apps/control-api/src/auth/auth.controller.ts" \
+  "${ROOT_DIR}/apps/control-api/src/auth/argon.ts" \
+  "${ROOT_DIR}/apps/control-api/src/auth/policy.ts" \
+  "${ROOT_DIR}/apps/control-api/src/auth/cloudflare.ts" \
+  "${ROOT_DIR}/apps/control-api/src/auth/principal.ts" \
+  "${ROOT_DIR}/apps/control-api/src/auth/cookies.ts" \
+  "${ROOT_DIR}/apps/control-api/src/admin/admin.service.ts" \
+  "${ROOT_DIR}/apps/control-api/src/admin/admin.controller.ts" \
+  "${ROOT_DIR}/apps/control-api/src/admin/rbac.guard.ts" \
+  "${ROOT_DIR}/apps/control-api/src/repos/users.ts" \
+  "${ROOT_DIR}/apps/control-api/src/repos/bindings.ts" \
+  "${ROOT_DIR}/apps/control-api/src/repos/credentials.ts" \
+  "${ROOT_DIR}/apps/control-api/src/repos/sessions.ts" \
+  "${ROOT_DIR}/apps/control-api/src/repos/audit.ts" \
+  "${ROOT_DIR}/apps/control-api/src/db/pool.ts" \
+  "${ROOT_DIR}/apps/control-api/src/health/health.controller.ts" \
+  "${ROOT_DIR}/apps/control-api/src/cli/bootstrap.ts" \
+  "${ROOT_DIR}/apps/control-api/test/harness.ts" \
+  "${ROOT_DIR}/apps/control-api/test/repos.spec.ts" \
+  "${ROOT_DIR}/apps/control-api/test/auth.spec.ts" \
+  "${ROOT_DIR}/apps/control-api/test/matrix.spec.ts" \
+  "${ROOT_DIR}/deploy/images/control-api.Dockerfile" \
+  "${ROOT_DIR}/scripts/control-api-test.sh" \
+  "${ROOT_DIR}/upgrade/backend/BAR_04_THIN_IDENTITY_BFF.md" \
+  "${ROOT_DIR}/upgrade/backend/adr/ADR-003-POSTGRES_MIGRATION_AND_QUERY_APPROACH.md" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/portal-api.openapi.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/planning-api.openapi.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/run-request.schema.json" \
@@ -146,6 +184,44 @@ for tracked_source in \
   upgrade/backend/BAR_02_COMPATIBILITY_BOUNDARIES_AND_PARITY_FREEZE.md \
   upgrade/backend/BAR_03_OPERATIONAL_INGRESS_BOUNDARY.md \
   deploy/nginx/portal.conf \
+  apps/control-api/package.json \
+  apps/control-api/package-lock.json \
+  apps/control-api/tsconfig.json \
+  apps/control-api/vitest.config.ts \
+  apps/control-api/migrations/1723680000000_init-identity.sql \
+  apps/control-api/src/main.ts \
+  apps/control-api/src/app.ts \
+  apps/control-api/src/app.module.ts \
+  apps/control-api/src/config.ts \
+  apps/control-api/src/domain.ts \
+  apps/control-api/src/tokens.ts \
+  apps/control-api/src/http-error.filter.ts \
+  apps/control-api/src/auth/auth.service.ts \
+  apps/control-api/src/auth/auth.controller.ts \
+  apps/control-api/src/auth/argon.ts \
+  apps/control-api/src/auth/policy.ts \
+  apps/control-api/src/auth/cloudflare.ts \
+  apps/control-api/src/auth/principal.ts \
+  apps/control-api/src/auth/cookies.ts \
+  apps/control-api/src/admin/admin.service.ts \
+  apps/control-api/src/admin/admin.controller.ts \
+  apps/control-api/src/admin/rbac.guard.ts \
+  apps/control-api/src/repos/users.ts \
+  apps/control-api/src/repos/bindings.ts \
+  apps/control-api/src/repos/credentials.ts \
+  apps/control-api/src/repos/sessions.ts \
+  apps/control-api/src/repos/audit.ts \
+  apps/control-api/src/db/pool.ts \
+  apps/control-api/src/health/health.controller.ts \
+  apps/control-api/src/cli/bootstrap.ts \
+  apps/control-api/test/harness.ts \
+  apps/control-api/test/repos.spec.ts \
+  apps/control-api/test/auth.spec.ts \
+  apps/control-api/test/matrix.spec.ts \
+  deploy/images/control-api.Dockerfile \
+  scripts/control-api-test.sh \
+  upgrade/backend/BAR_04_THIN_IDENTITY_BFF.md \
+  upgrade/backend/adr/ADR-003-POSTGRES_MIGRATION_AND_QUERY_APPROACH.md \
   upgrade/backend/bar02/snapshots/portal-api.openapi.json \
   upgrade/backend/bar02/snapshots/planning-api.openapi.json \
   upgrade/backend/bar02/snapshots/run-request.schema.json \

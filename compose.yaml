@@ -99,6 +99,64 @@ services:
       retries: 6
       start_period: 10s
 
+  # U07 thin identity BFF: first Control API slice. Private until the U10
+  # facade wires the gateway to it; it owns no run/data/alpha authority.
+  control-api:
+    build:
+      context: .
+      dockerfile: deploy/images/control-api.Dockerfile
+    image: ${PORTAL_IMAGE_PREFIX:-local/portal}-control-api:${PORTAL_IMAGE_TAG:-dev}
+    restart: unless-stopped
+    environment:
+      PORTAL_ENV: ${PORTAL_ENV:-local}
+      AUTH_MODE: ${CONTROL_API_AUTH_MODE:-dev}
+      DATABASE_URL: postgres://portal:portal@portal-postgres:5432/portal_control
+      PORTAL_PUBLIC_ORIGIN: ${PORTAL_PUBLIC_ORIGIN:-http://localhost:8080}
+      INTERNAL_PRINCIPAL_SECRET: ${CONTROL_API_INTERNAL_PRINCIPAL_SECRET:-local-dev-principal-secret-0123456789}
+      CLOUDFLARE_TEAM_DOMAIN: ${CLOUDFLARE_TEAM_DOMAIN:-}
+      CLOUDFLARE_ACCESS_ISSUER: ${CLOUDFLARE_ACCESS_ISSUER:-}
+      CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:-}
+      CLOUDFLARE_ACCESS_JWKS_URI: ${CLOUDFLARE_ACCESS_JWKS_URI:-}
+      CLOUDFLARE_ALLOWED_EMAIL_DOMAIN: ${CLOUDFLARE_ALLOWED_EMAIL_DOMAIN:-azdag.com}
+    depends_on:
+      portal-postgres:
+        condition: service_healthy
+    expose:
+      - "4000"
+    networks:
+      - portal
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:4000/api/control/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  # U07 identity datastore: private, SQL-first, no public port.
+  portal-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: portal
+      POSTGRES_PASSWORD: portal
+      POSTGRES_DB: portal_control
+    volumes:
+      - portal-postgres-data:/var/lib/postgresql/data
+    expose:
+      - "5432"
+    networks:
+      - portal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portal -d portal_control"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
 networks:
   portal:
     driver: bridge
@@ -106,3 +164,4 @@ networks:
 volumes:
   portal-artifacts:
   roadmap-task-board-data:
+  portal-postgres-data:
