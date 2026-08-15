@@ -63,5 +63,7 @@ images from the same parent commit.
 
 Read [architecture](docs/architecture.md), [contributing](CONTRIBUTING.md),
 [operations](docs/operations.md), and [release and deployment](docs/release-and-deployment.md)
-before changing runtime boundaries. The history-preserving source migration is
-recorded in [the monorepo migration note](docs/migrations/2026-08-13-monorepo-foundation.md).
+before changing runtime boundaries. Backend and cross-service phases also use
+the [Backend Architecture Implementation Guide](upgrade/BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md)
+as their staged architecture runway. The history-preserving source migration
+is recorded in [the monorepo migration note](docs/migrations/2026-08-13-monorepo-foundation.md).

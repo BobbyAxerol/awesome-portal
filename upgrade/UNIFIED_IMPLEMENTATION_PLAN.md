@@ -238,6 +238,12 @@ schema/read model song song U11/U12 và mở rộng sang các family đã đư�
 chấp nhận. Mỗi môi trường chỉ được đánh dấu data thật `AVAILABLE` sau reader
 doctor và real-reader smoke của chính environment đó pass.
 
+Backend và cross-service implementation từ U02 trở đi phải dùng
+[Backend Architecture Implementation Guide](./BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md)
+làm architecture runway. Các slice `BAR-*` trong guide khóa authority,
+consistency, migration/rollback và agent handoff nhưng không thay số phase hoặc
+cho phép dựng sớm service/datastore của phase sau.
+
 ---
 
 ## 7. Kế hoạch phase chi tiết

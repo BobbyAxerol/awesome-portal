@@ -108,3 +108,7 @@ cp .env.example .env
   unless an approved architecture change requires one.
 - Before modifying a domain, read its local `AGENTS.md`, architecture document
   and tests. Keep domain/backend contracts ahead of presentation changes.
+- Backend or cross-service architecture work from U02 onward must also read
+  `upgrade/BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md`. The `BAR-*` slices
+  refine sequencing but never authorize skipping a Unified Plan phase or
+  introducing a future datastore/service early.

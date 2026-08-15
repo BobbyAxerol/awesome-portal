@@ -42,16 +42,25 @@ directly.
   (`GET /api/runs/{id}/progress`, parsed from the worker console capture —
   display-only estimates; the structured ledger stays the audit source).
 
-## Deliberately Not Implemented Yet
+## Current Prototype Limits
 
-- Production WFO/background worker execution.
-- Run state persistence and SSE progress.
-- Full run artifact schema and report normalization.
-- Advanced WFO routing and the typed per-mode validation matrix.
+- Runs execute in a local `ProcessPoolExecutor`; this is process isolation, not
+  the durable distributed queue/lease/redelivery authority planned for U11.
+- Run state and SSE work for the current service, but are backed by local
+  process/filesystem state rather than PostgreSQL read models and a durable
+  event stream.
+- JSON/Parquet artifacts are atomically persisted in the current repository,
+  but content-addressed object-store finalization, attempt identity, orphan
+  reconciliation and corrupt-bundle handling remain U11 work.
+- Current typed three-window and Advanced WFO paths are compatibility
+  authorities. Generic capability-driven engine dispatch remains U12 work.
+- Dataset Snapshot/Catalog identity and per-family quality authority remain U13
+  work; U01-BE certifies only the first bounded Binance perpetual OHLCV path.
 
-Those features remain governed by Phases P0-P4 in the implementation plan.
-They must be built below the existing API/domain boundaries rather than placing
-notebook code in route handlers.
+Future backend work follows
+`upgrade/BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md` and the Unified Plan. It
+must be built below the existing API/domain boundaries rather than placing
+compute or cross-domain imports in route handlers.
 
 ## Performance Contract
 
