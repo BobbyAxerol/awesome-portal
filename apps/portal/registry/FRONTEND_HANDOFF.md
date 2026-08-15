@@ -115,6 +115,7 @@ Canonical fixtures (schema-validated, deterministic) ở
 | `summary.stale.json` | Ví dụ contract `stale` (adapter hiện tại chưa emit) | `degraded` |
 | `summary.unavailable.json` | Cả hai nguồn down | `unavailable` |
 | `registry.public.json` | Public registry thật | — |
+| `links.public.json` | Cross-link sidecar + integrity block | — |
 
 UI phải phân biệt rõ **loading / empty / partial / stale / denied /
 unavailable / terminal failure** — không gộp trạng thái.
