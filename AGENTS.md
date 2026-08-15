@@ -87,9 +87,41 @@ cp .env.example .env
 - Docker Compose commands use `--project-directory <repo>` and `compose.yaml`
   through the helper script.
 - `verify` checks tracked source boundaries, protected strategy integrity,
-  shell syntax and both rendered Compose definitions.
+  shell syntax, JSON contracts and both rendered Compose definitions. It
+  requires the Docker CLI.
 - The normal CI gate is: verify -> actionlint -> Python tests -> frontend
-  tests/builds -> composed smoke test.
+  tests/builds -> roadmap browser e2e -> composed smoke test.
+
+## Local tests (CI-equivalent)
+
+- Portal backend:
+
+  ```bash
+  python -m pip install --constraint constraints/portal.txt -e './apps/portal/backend[dev]'
+  PYTHONPATH=apps/portal/backend/src:apps/portal \
+    python -m pytest -c apps/portal/backend/pyproject.toml apps/portal/backend/tests
+  ```
+
+- Roadmap backend:
+
+  ```bash
+  python -m pip install -r features/roadmap-task-board/backend/requirements-dev.txt
+  PYTHONPATH=features/roadmap-task-board python -m pytest features/roadmap-task-board/backend/tests
+  ```
+
+- Frontends: `npm ci && npm test && npm run build` in `apps/portal/frontend`
+  and `features/roadmap-task-board/frontend`. Roadmap e2e also needs
+  `npx playwright install --with-deps chromium` before `npm run e2e`.
+- Protected kernel check: `sha256sum -c strategy/PROTECTED_SHA256` from
+  `apps/portal/`.
+
+## Git hooks
+
+- Enable the root hook set with `./scripts/install-git-hooks.sh` (or `make
+  hooks`); it sets `core.hooksPath=.githooks`. The pre-commit hook runs the
+  full `verify-workspace.sh` on every commit, so commits need Docker and
+  Python available. Hooks reject staged secrets, edits to
+  `apps/portal/strategy/main.py`, and control-plane changes from contributors.
 
 ## Runtime data and deployment
 
