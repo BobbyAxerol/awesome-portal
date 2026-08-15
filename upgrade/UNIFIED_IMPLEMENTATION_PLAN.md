@@ -581,6 +581,15 @@ trung thực capability hiện tại/tương lai.
   typed 500, không truncate). Endpoint trả `Cache-Control: no-store`,
   `Vary: Authorization, Cookie` và vẫn là FastAPI compatibility bridge — không
   đổi TypeScript control-plane target. BE6 (frontend handoff) pending.
+- BAR-01-BE6 đã hoàn tất frontend contract handoff: canonical OpenAPI 3.1
+  (`registry/openapi/portal-api.openapi.json`, regenerate bằng
+  `scripts/export_handoff_contract.py`), 7 fixtures schema-validated
+  (registry.public + summary healthy/empty/partial/stale/denied/unavailable)
+  và `registry/FRONTEND_HANDOFF.md` (ETag/304, no-store/Vary, bảng
+  FeatureMaturity vs AvailabilityState, mọi loading/empty/partial/stale/
+  denied state, priority ordering/route constraints). Frontend generate types
+  từ OpenAPI — không có model tay thứ hai. Backend contract BAR-01 hoàn tất;
+  kế tiếp là BAR-02 (U04/U05 compatibility boundaries & parity freeze).
 
 **Description / To-do**
 

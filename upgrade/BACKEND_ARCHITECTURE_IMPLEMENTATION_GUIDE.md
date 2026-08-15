@@ -582,16 +582,19 @@ whether anything was pushed or deployed
 
 ## 14. Next backend architecture task
 
-BAR-01-BE1 through BE5 now provide the versioned Feature/Screen/Concern and
+BAR-01-BE1 through BE6 are complete: versioned Feature/Screen/Concern and
 Capability Availability schemas, immutable registry API, independently
-fail-safe internal QuantBT/Planning summary contributions, the deadline-aware
-concurrent aggregator and the public `GET /api/v1/portal/summary` endpoint for
-U02/U03. They do not introduce a new database/service or begin U07/U10 early.
+fail-safe QuantBT/Planning summary adapters, the deadline-aware concurrent
+aggregator with the public summary endpoint, and the frontend contract handoff
+(OpenAPI document, canonical fixtures and state/ETag semantics). They did not
+introduce a new database/service or begin U07/U10 early.
 
 The BAR-01 deep dive is available at
 [`upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md`](./backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md).
-The next backend task is BAR-01-BE6, the frontend contract handoff defined in
-that deep dive: export the registry/summary OpenAPI schema and canonical JSON
-fixtures, document query keys, ETag behavior and every
-loading/empty/partial/stale/denied state, without implementing shell visuals in
-the backend slice.
+
+The next backend task is BAR-02, the compatibility boundaries and parity freeze
+for U04 (QuantBT Research embedding) and U05 (Planning embedding): snapshot
+current OpenAPI/run/artifact and Planning API contracts, keep both services
+private and unchanged in authority, add only additive compatibility metadata
+and validated link sidecars, and pass golden API/artifact parity without
+touching the protected strategy hash or existing Planning state.

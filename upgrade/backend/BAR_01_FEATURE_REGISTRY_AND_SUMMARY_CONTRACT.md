@@ -1,7 +1,7 @@
 # BAR-01 — Feature Registry and Command Center Summary Contract
 
 > **Version:** 0.1<br>
-> **Status:** BAR-01-BE1/BE2/BE3/BE4/BE5 complete; BAR-01-BE6 pending<br>
+> **Status:** BAR-01 backend contract complete (BE1–BE6)<br>
 > **Updated:** 2026-08-15<br>
 > **Unified phases:** U02 Shared Foundations, U03 Unified Shell<br>
 > **Runtime authority:** current FastAPI services remain authoritative
@@ -970,6 +970,59 @@ Technical debt and rollback:
 Gate: frontend types can be generated/validated without a second handwritten
 feature model.
 
+Implementation evidence — 2026-08-15:
+
+- [x] Added `apps/portal/scripts/export_handoff_contract.py`, a deterministic
+  exporter that regenerates every handoff artifact from the validated registry
+  and the real BE3–BE5 adapter/service code paths and fails closed when any
+  fixture violates its canonical Draft 2020-12 schema.
+- [x] Committed the canonical OpenAPI 3.1 document at
+  `registry/openapi/portal-api.openapi.json`. It documents `GET
+  /api/v1/portal/registry` (200/304, no query input) and `GET
+  /api/v1/portal/summary` (200, GET only, no query input, typed
+  `PortalErrorResponse` 500) with complete `PortalRegistryDocument`,
+  `PortalSummaryV1` and `PortalErrorResponse` component schemas. The summary
+  500 error model was added to the route contract.
+- [x] Committed seven canonical fixtures under `registry/fixtures/`:
+  `registry.public.json` (public registry with computed digest) plus
+  `summary.{healthy,empty,partial,stale,denied,unavailable}.json`. Every
+  summary fixture carries the registry fixture digest, stays below the 50 KB
+  target, keeps unavailable values `null`, uses only the three authorized
+  priority types in deep-dive order and contains no forbidden metric or
+  private detail.
+- [x] Wrote `registry/FRONTEND_HANDOFF.md` (referenced from
+  `registry/README.md`): endpoints and headers, ETag/304 and
+  `no-store`/`Vary` invalidation semantics, the FeatureMaturity vs
+  AvailabilityState table, loading/empty/partial/stale/denied/unavailable UI
+  states, the no-zero-from-null rule, priority ordering/route constraints and
+  the type-generation workflow.
+- [x] Added the BE6 contract suite (`15` tests): every fixture validates
+  against both the canonical JSON Schemas and the committed OpenAPI response
+  schemas; the committed OpenAPI document equals a freshly regenerated one;
+  the exporter regenerates byte-identical artifacts into a clean copy; the
+  runtime `500` envelope matches `PortalErrorResponse`; the handoff document
+  and registry README reference the artifacts.
+- [x] Combined BAR-01 BE1–BE6 suites pass `134` tests; full Portal backend
+  regression passes `250 passed, 1 skipped`; full Planning backend regression
+  passes `18 passed` (same one recorded upstream TestClient deprecation
+  warning). The skip is the explicit opt-in external Historical real-data
+  smoke. `pip check`, compile/import and `git diff --check` pass; workspace
+  verification passes including the protected strategy hash.
+- [x] Rebuilt `local/portal-portal-api:dev` and reran the private
+  Docker-network smoke: summary responses unchanged and truthful, and the
+  image-owned registry sidecar now ships the OpenAPI document, all seven
+  fixtures and the handoff document.
+- [x] No shell visuals, no second handwritten feature model, no new backend
+  authority. Frontend type generation/validation is possible from the OpenAPI
+  document alone.
+
+Technical debt and rollback:
+
+- OpenAPI/fixture regeneration is a manual step before frontend consumption;
+  CI sync-checking runs through the BE6 test suite.
+- Rollback: revert commit `e99094c`; endpoints remain unchanged. No change
+  was pushed or deployed.
+
 ## 15. Test matrix
 
 ### Registry
@@ -1057,10 +1110,12 @@ BAR-01 backend contract is complete only when:
 - Current backend/frontend/Planning tests and production builds still pass.
 - Workspace verification passes and every coherent slice is committed.
 
-BE1 through BE5 satisfy the schema, immutable registry repository, deployment
-readiness, HTTP caching, independently fail-safe QuantBT/Planning adapters and
-the deadline-aware concurrent aggregator with the public summary endpoint
-foundation. The next backend slice is BAR-01-BE6: export the OpenAPI schema and
-canonical JSON fixtures, document query keys, ETag behavior and every
-loading/empty/partial/stale/denied state for the frontend agent, without
-implementing shell visuals in this backend slice.
+BE1 through BE6 satisfy the complete BAR-01 backend contract: schema and
+immutable registry repository, deployment readiness, HTTP caching, the
+independently fail-safe QuantBT/Planning adapters, the deadline-aware
+concurrent aggregator with the public summary endpoint, and the frontend
+handoff (OpenAPI document, canonical healthy/empty/partial/stale/denied/
+unavailable fixtures and the state/ETag semantics document). The next backend
+work is BAR-02 — compatibility boundaries and parity freeze for U04/U05
+(see `upgrade/BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md`), not further
+BAR-01 expansion.
