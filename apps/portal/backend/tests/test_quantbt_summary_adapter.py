@@ -475,7 +475,7 @@ def test_evidence_contract_rejects_unavailable_numeric_zero_and_naive_time() -> 
 
 
 @pytest.mark.anyio
-async def test_be3_is_wired_as_internal_adapter_without_summary_endpoint() -> None:
+async def test_be3_stays_an_internal_adapter_served_through_be5_aggregator() -> None:
     app = create_app()
     try:
         async with httpx.AsyncClient(
@@ -487,4 +487,9 @@ async def test_be3_is_wired_as_internal_adapter_without_summary_endpoint() -> No
         app.state.run_manager.shutdown()
 
     assert isinstance(app.state.quantbt_summary_adapter, QuantBTSummaryAdapter)
-    assert response.status_code == 404
+    assert isinstance(app.state.portal_summary_service, object)
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["schema_version"] == "portal.summary.v1"
+    sections = {section["source_id"]: section for section in payload["sections"]}
+    assert "quantbt_current" in sections

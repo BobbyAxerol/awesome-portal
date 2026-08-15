@@ -5,7 +5,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from portal_api.adapters.market_data import HISTORICAL_READER_VERSION, MarketDataProvider
 from portal_api.domain.enums import RunState
@@ -253,6 +253,19 @@ class QuantBTSummaryAdapter:
             results["historical"],
             checked_at=checked_at,
         )
+
+    def unavailable_contribution(
+        self,
+        *,
+        reason_code: Literal["UPSTREAM_TIMEOUT", "UPSTREAM_UNAVAILABLE"],
+        checked_at: datetime,
+    ) -> PortalSummaryContribution:
+        failure: BaseException = (
+            TimeoutError("summary deadline expired")
+            if reason_code == "UPSTREAM_TIMEOUT"
+            else RuntimeError("summary adapter failed")
+        )
+        return self._build_contribution(failure, failure, checked_at=checked_at)
 
     def _build_contribution(
         self,

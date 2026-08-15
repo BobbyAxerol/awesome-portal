@@ -34,6 +34,11 @@ from portal_api.repositories import ArtifactRepository
 from portal_api.repositories.portal_registry import PortalRegistryRepository
 from portal_api.services import PreflightService
 from portal_api.services.portal_registry import PortalRegistryService
+from portal_api.services.portal_overview import (
+    PortalSummaryContractError,
+    PortalSummaryService,
+    PortalSummarySettings,
+)
 from portal_api.services.run_service import RunManager
 from portal_api.strategies import StrategyRegistry
 
@@ -92,7 +97,7 @@ def create_app(
             yield
         finally:
             try:
-                await application.state.planning_summary_adapter.aclose()
+                await application.state.portal_summary_service.aclose()
             finally:
                 application.state.run_manager.shutdown()
 
@@ -140,12 +145,30 @@ def create_app(
         reader=planning_summary_reader,
         routes=planning_summary_routes,
     )
+    app.state.portal_summary_service = PortalSummaryService(
+        registry_service=app.state.portal_registry_service,
+        adapters=(
+            app.state.quantbt_summary_adapter,
+            app.state.planning_summary_adapter,
+        ),
+        settings=PortalSummarySettings.from_environment(),
+    )
 
     @app.exception_handler(PortalDomainError)
     async def domain_error_handler(request: Request, exc: PortalDomainError) -> JSONResponse:
         del request
         return JSONResponse(
             status_code=422,
+            content={"error": {"code": exc.code, "message": str(exc)}},
+        )
+
+    @app.exception_handler(PortalSummaryContractError)
+    async def summary_contract_error_handler(
+        request: Request, exc: PortalSummaryContractError
+    ) -> JSONResponse:
+        del request
+        return JSONResponse(
+            status_code=500,
             content={"error": {"code": exc.code, "message": str(exc)}},
         )
 

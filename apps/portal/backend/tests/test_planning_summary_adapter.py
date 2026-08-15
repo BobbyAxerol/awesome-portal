@@ -511,7 +511,7 @@ def test_adapter_has_no_planning_import_sqlite_or_actor_impersonation() -> None:
 
 
 @pytest.mark.anyio
-async def test_be4_is_wired_internal_in_local_mode_without_summary_endpoint(
+async def test_be4_stays_internal_in_local_mode_served_through_be5_aggregator(
     monkeypatch,
 ) -> None:
     monkeypatch.setenv("PORTAL_PLANNING_SUMMARY_MODE", "local")
@@ -527,4 +527,8 @@ async def test_be4_is_wired_internal_in_local_mode_without_summary_endpoint(
         app.state.run_manager.shutdown()
 
     assert isinstance(app.state.planning_summary_adapter, PlanningSummaryAdapter)
-    assert response.status_code == 404
+    assert response.status_code == 200
+    sections = {section["source_id"]: section for section in response.json()["sections"]}
+    planning = sections["planning_current"]
+    assert planning["availability"]["reason_code"] == "LOCAL_ONLY_STATE"
+    assert all(metric["value"] is None for metric in planning["metrics"].values())

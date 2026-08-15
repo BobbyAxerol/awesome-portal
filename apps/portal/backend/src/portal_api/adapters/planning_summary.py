@@ -332,6 +332,32 @@ class PlanningSummaryAdapter:
             return self._failure_contribution(exc, checked_at=checked_at)
         return self._available_contribution(snapshot, checked_at=checked_at)
 
+    def unavailable_contribution(
+        self,
+        *,
+        reason_code: Literal["UPSTREAM_TIMEOUT", "UPSTREAM_UNAVAILABLE"],
+        checked_at: datetime,
+    ) -> PortalSummaryContribution:
+        if reason_code == "UPSTREAM_TIMEOUT":
+            return self._unavailable_contribution(
+                state="unavailable",
+                reason_code="UPSTREAM_TIMEOUT",
+                detail="Planning summary did not respond within its deadline.",
+                warning_code="PLANNING_SUMMARY_TIMEOUT",
+                warning_title="Planning summary timed out",
+                retryable=True,
+                checked_at=checked_at,
+            )
+        return self._unavailable_contribution(
+            state="unavailable",
+            reason_code="UPSTREAM_UNAVAILABLE",
+            detail="Planning summary is currently unavailable.",
+            warning_code="PLANNING_SUMMARY_UNAVAILABLE",
+            warning_title="Planning summary unavailable",
+            retryable=True,
+            checked_at=checked_at,
+        )
+
     async def aclose(self) -> None:
         if self._reader is None:
             return

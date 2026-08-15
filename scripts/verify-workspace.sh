@@ -39,9 +39,11 @@ for required in \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/domain/portal_summary.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/repositories/portal_registry.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/portal_registry.py" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/portal_overview.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_portal_registry_api.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_planning_summary_adapter.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_quantbt_summary_adapter.py" \
+  "${ROOT_DIR}/apps/portal/backend/tests/test_portal_summary_service.py" \
   "${ROOT_DIR}/apps/portal/frontend/package-lock.json" \
   "${ROOT_DIR}/apps/portal/registry/registry.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry-source.v1.schema.json" \
@@ -78,9 +80,11 @@ for tracked_source in \
   apps/portal/backend/src/portal_api/domain/portal_summary.py \
   apps/portal/backend/src/portal_api/repositories/portal_registry.py \
   apps/portal/backend/src/portal_api/services/portal_registry.py \
+  apps/portal/backend/src/portal_api/services/portal_overview.py \
   apps/portal/backend/tests/test_portal_registry_api.py \
   apps/portal/backend/tests/test_planning_summary_adapter.py \
   apps/portal/backend/tests/test_quantbt_summary_adapter.py \
+  apps/portal/backend/tests/test_portal_summary_service.py \
   apps/portal/frontend/package-lock.json \
   apps/portal/registry/registry.json \
   apps/portal/registry/schemas/portal-registry-source.v1.schema.json \

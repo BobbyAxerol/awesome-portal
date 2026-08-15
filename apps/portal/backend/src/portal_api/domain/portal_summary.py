@@ -14,7 +14,7 @@ from pydantic import (
     model_validator,
 )
 
-from portal_api.domain.portal_registry import PortalEnvironment
+from portal_api.domain.portal_registry import FeatureMaturity, PortalEnvironment
 
 
 AvailabilityState = Literal[
@@ -55,12 +55,30 @@ PLANNING_TASK_STATUSES: tuple[PlanningTaskStatus, ...] = (
     "Validating",
     "Done",
 )
+FEATURE_MATURITIES: tuple[FeatureMaturity, ...] = (
+    "AVAILABLE",
+    "PROTOTYPE",
+    "COMMISSIONED",
+    "BLOCKED",
+    "HIDDEN",
+    "DEPRECATED",
+)
+MAX_SUMMARY_SECTIONS = 32
+MAX_SUMMARY_PRIORITY_ITEMS = 50
+MAX_SECTION_RECENT_ITEMS = 5
+MAX_SECTION_WARNINGS = 5
 ContentDigest = Annotated[str, Field(pattern=r"^sha256:[0-9a-f]{64}$")]
 
 
 def _require_timezone(value: datetime | None) -> datetime | None:
     if value is not None and (value.tzinfo is None or value.utcoffset() is None):
         raise ValueError("summary timestamps must include a timezone")
+    return value
+
+
+def _require_safe_route(value: str) -> str:
+    if value.startswith("//"):
+        raise ValueError("summary routes cannot be scheme-relative")
     return value
 
 
@@ -121,12 +139,13 @@ class EvidenceValue(SummaryModel):
 class SummaryLinkItem(SummaryModel):
     id: str
     label: str
-    route: str
+    route: str = Field(pattern=r"^/", max_length=240)
     resource_id: str | None
     observed_at: datetime
     authority: str
 
     _observed_at_timezone = field_validator("observed_at")(_require_timezone)
+    _route_safe = field_validator("route")(_require_safe_route)
 
 
 class SummaryWarning(SummaryModel):
@@ -149,10 +168,11 @@ class PriorityItem(SummaryModel):
     resource_id: str | None
     observed_at: datetime
     authority: str
-    route: str
+    route: str = Field(pattern=r"^/", max_length=240)
     evidence_digest: ContentDigest | None
 
     _observed_at_timezone = field_validator("observed_at")(_require_timezone)
+    _route_safe = field_validator("route")(_require_safe_route)
 
 
 class PortalSummarySection(SummaryModel):
@@ -300,6 +320,52 @@ class PlanningSummarySnapshot(SummaryModel):
         return self
 
 
+class RegistryCounts(SummaryModel):
+    by_maturity: Mapping[FeatureMaturity, int]
+    blocking_concerns: int = Field(ge=0)
+
+    @field_validator("by_maturity", mode="after")
+    @classmethod
+    def freeze_by_maturity(
+        cls, value: Mapping[FeatureMaturity, int]
+    ) -> Mapping[FeatureMaturity, int]:
+        if set(value) != set(FEATURE_MATURITIES):
+            raise ValueError("by_maturity must contain every FeatureMaturity")
+        if any(count < 0 for count in value.values()):
+            raise ValueError("maturity counts cannot be negative")
+        return MappingProxyType(dict(value))
+
+    @field_serializer("by_maturity")
+    def serialize_by_maturity(
+        self, value: Mapping[FeatureMaturity, int]
+    ) -> dict[str, int]:
+        return dict(value)
+
+
+class PortalSummaryV1(SummaryModel):
+    schema_version: Literal["portal.summary.v1"]
+    registry_digest: ContentDigest
+    environment: PortalEnvironment
+    requested_at: datetime
+    completed_at: datetime
+    overall_availability: CapabilityAvailability
+    registry_counts: RegistryCounts
+    sections: tuple[PortalSummarySection, ...] = Field(max_length=MAX_SUMMARY_SECTIONS)
+    priority_items: tuple[PriorityItem, ...] = Field(max_length=MAX_SUMMARY_PRIORITY_ITEMS)
+
+    _requested_at_timezone = field_validator("requested_at")(_require_timezone)
+    _completed_at_timezone = field_validator("completed_at")(_require_timezone)
+
+    @model_validator(mode="after")
+    def validate_bounded_evidence(self) -> "PortalSummaryV1":
+        for section in self.sections:
+            if len(section.recent_items) > MAX_SECTION_RECENT_ITEMS:
+                raise ValueError("summary sections bound recent items to five")
+            if len(section.warnings) > MAX_SECTION_WARNINGS:
+                raise ValueError("summary sections bound warnings to five")
+        return self
+
+
 class CurrentRunSummaryPort(Protocol):
     def read_current_runs(self, *, limit: int) -> CurrentRunInventory: ...
 
@@ -324,6 +390,13 @@ class PortalSummaryAdapter(Protocol):
         deadline: float,
     ) -> PortalSummaryContribution: ...
 
+    def unavailable_contribution(
+        self,
+        *,
+        reason_code: Literal["UPSTREAM_TIMEOUT", "UPSTREAM_UNAVAILABLE"],
+        checked_at: datetime,
+    ) -> PortalSummaryContribution: ...
+
 
 SummaryClock = Callable[[], datetime]
 
@@ -336,8 +409,13 @@ __all__ = [
     "CurrentRunSnapshot",
     "CurrentRunSummaryPort",
     "EvidenceValue",
+    "FEATURE_MATURITIES",
     "HistoricalCapabilityPort",
     "HistoricalCapabilitySnapshot",
+    "MAX_SECTION_RECENT_ITEMS",
+    "MAX_SECTION_WARNINGS",
+    "MAX_SUMMARY_PRIORITY_ITEMS",
+    "MAX_SUMMARY_SECTIONS",
     "PLANNING_TASK_STATUSES",
     "PlanningSummaryReadPort",
     "PlanningSummaryRoadmapPhase",
@@ -346,7 +424,9 @@ __all__ = [
     "PortalSummaryAdapter",
     "PortalSummaryContribution",
     "PortalSummarySection",
+    "PortalSummaryV1",
     "PriorityItem",
+    "RegistryCounts",
     "SummaryClock",
     "SummaryContext",
     "SummaryLinkItem",
