@@ -582,8 +582,8 @@ whether anything was pushed or deployed
 
 ## 14. Next backend architecture task
 
-BAR-01 (BE1–BE6), BAR-02 (BE1–BE3), BAR-03, BAR-04, BAR-05, BAR-06,
-BAR-07, BAR-08, BAR-09, BAR-10, BAR-11 and BAR-12 are complete:
+The complete BAR runway is now delivered: BAR-00 through BAR-16 (U01-BE →
+U19 foundations). Delivered authorities:
 registry/summary/links contracts and API, the parity snapshot freeze,
 additive artifact provenance, the cross-link sidecar, the operational ingress
 boundary, the thin identity BFF with the security matrix, and the M0
@@ -618,12 +618,15 @@ Deep dives:
 - [`upgrade/backend/BAR_10_DATA_CATALOG_AND_IMMUTABLE_SNAPSHOTS.md`](./backend/BAR_10_DATA_CATALOG_AND_IMMUTABLE_SNAPSHOTS.md)
 - [`upgrade/backend/BAR_11_ALPHA_REGISTRY_AND_RESEARCH_PLATFORM.md`](./backend/BAR_11_ALPHA_REGISTRY_AND_RESEARCH_PLATFORM.md)
 - [`upgrade/backend/BAR_12_APPROVAL_PROMOTION_PAPER_SANDBOX.md`](./backend/BAR_12_APPROVAL_PROMOTION_PAPER_SANDBOX.md)
+- [`upgrade/backend/BAR_13_LIVE_CONTROL_AND_OPERATIONAL_SAFETY.md`](./backend/BAR_13_LIVE_CONTROL_AND_OPERATIONAL_SAFETY.md)
+- [`upgrade/backend/BAR_14_RUST_FAST_PATHS_GATE.md`](./backend/BAR_14_RUST_FAST_PATHS_GATE.md)
+- [`upgrade/backend/BAR_15_PLANNING_POSTGRES_CUTOVER.md`](./backend/BAR_15_PLANNING_POSTGRES_CUTOVER.md)
+- [`upgrade/backend/BAR_16_RELEASE_DR_HARDENING.md`](./backend/BAR_16_RELEASE_DR_HARDENING.md)
 
-The next backend task is BAR-13, the live control and operational safety
-foundations for U16: incident, pause/resume and protective-action commands
-with dual approval; webhook/notification delivery with retries and audit;
-realtime market feeds as a separate freshness/subscription contract; and
-no live keys anywhere in the prototype. Gate: incident state transitions
-are audited and idempotent, protective actions fail closed on missing
-authority, and replaying the notification outbox never duplicates a
-delivery.
+The runway is complete. Remaining platform work continues as
+phase-scoped slices: the Control API façade cutover (gateway rewiring and
+per-route migrations behind flags), the Planning PostgreSQL production
+adapter with a real cutover run, Rust extraction only if heavier-path
+profiling crosses the §15.6 gate, and the owner-operational release/DR
+execution from the BAR-16 report. Any new authority must follow the same
+deep-dive → ADR → slice → evidence discipline documented above.

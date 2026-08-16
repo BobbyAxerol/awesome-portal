@@ -1393,6 +1393,12 @@ và operational UX an toàn; Portal không trở thành execution hot path.
 
 - Chỉ có commissioned wireframe/architecture; private engine contracts phải
   deep-dive trước implementation.
+- BAR-13 đã thêm live-control foundations: signed/expiring/idempotent
+  deployment intent (HMAC, nonce, TTL), dual approval + step-up grant ngắn
+  hạn single-use, fail-closed khi deployment state UNKNOWN/STALE, incident
+  state machine audited (OPEN→ACKNOWLEDGED→RESOLVED→RETIRED, replay bị
+  chặn), break-glass luôn audit. Risk engine vẫn là final authority;
+  Portal không emit raw normal-UI orders.
 
 **Description / To-do**
 
@@ -1445,6 +1451,10 @@ artifact parity.
 **Đã làm**
 
 - Chưa có Rust service; đây là chủ đích đúng cho current scale.
+- BAR-14 đã dựng benchmark gate: harness đo p50/p95/p99/bytes/RSS trên query
+  path 200k rows, baseline p95 87.6 ms dưới target 200 ms → **Rust NOT
+  STARTED** (metadata query path trong budget; heavier artifact-series
+  profiling là precondition theo §15.6 trước khi extract).
 
 **Description / To-do**
 
@@ -1491,6 +1501,11 @@ history, attachments, cross-links hoặc current UX.
 
 - Phase 5 Planning feature, FastAPI/SQLite, audit trail, local/API adapters,
   content integrity and release checklist exist.
+- BAR-15 đã thêm cutover foundation: export legacy_id + per-entity checksum,
+  import idempotent (skip existing, reject tampered checksum), reconcile
+  exact counts/hashes, cutover state machine NOT_STARTED→EXPORTED→
+  IMPORTED→RECONCILED→ARCHIVED (transition ngoài map bị chặn). PostgreSQL
+  production adapter + real cutover là slice theo sau.
 
 **Description / To-do**
 

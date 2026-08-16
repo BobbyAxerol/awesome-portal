@@ -99,8 +99,25 @@ Chúng không thay thế phase hoặc exit gate trong
   self-approval, gate matrix §10.5 đánh giá server-side, promotion state
   machine §10.4 + PAUSED/ROLLED_BACK/RETIRED), PaperLedger deterministic
   (chỉ lưu secret reference, replay từ fills, reconciliation phát hiện
-  drift). 9 tests. Kế tiếp là BAR-13 (U16 live control & operational
-  safety).
+  drift). 9 tests.
+- [BAR-13 — Live Control & Operational Safety](./BAR_13_LIVE_CONTROL_AND_OPERATIONAL_SAFETY.md)
+  — U16. **Complete:** signed/expiring/idempotent deployment intents, dual
+  approval + step-up grant ngắn hạn, fail-closed UNKNOWN/STALE state,
+  incident state machine audited + idempotent, break-glass audit. 7 tests.
+- [BAR-14 — Rust fast paths: benchmark gate](./BAR_14_RUST_FAST_PATHS_GATE.md)
+  — U17. **Complete:** benchmark harness (p50/p95/p99/bytes/RSS) + baseline
+  p95 87.6 ms < 200 ms → **Rust NOT STARTED** (đúng gate §15.6). 3 tests.
+- [BAR-15 — Planning/PostgreSQL cutover](./BAR_15_PLANNING_POSTGRES_CUTOVER.md)
+  — U18. **Complete:** export legacy_id + checksum, import idempotent,
+  reconcile exact, cutover state machine NOT_STARTED→ARCHIVED. 5 tests.
+- [BAR-16 — Release, DR & hardening](./BAR_16_RELEASE_DR_HARDENING.md)
+  — U19. **Complete:** release report credential-free (provenance digests,
+  backup commands, DR checklist) + secret-hygiene scan. 4 tests.
+
+**Runway complete (BAR-00 → BAR-16).** Phần còn lại là các slice theo phase:
+façade cutover gateway, Planning PG production adapter + real cutover, Rust
+chỉ khi heavier-path profiling vượt gate §15.6, và release/DR owner-
+operational theo BAR-16 report.
 
 Agent chỉ được implement deep dive khi phase tương ứng đang active và owner đã
 giao scope. Tài liệu của phase sau là thiết kế trước, không phải implementation
