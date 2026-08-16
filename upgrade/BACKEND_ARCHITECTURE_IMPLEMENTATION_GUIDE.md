@@ -582,16 +582,19 @@ whether anything was pushed or deployed
 
 ## 14. Next backend architecture task
 
-BAR-01 (BE1–BE6), BAR-02 (BE1–BE3), BAR-03, BAR-04, BAR-05 and BAR-06 are complete:
+BAR-01 (BE1–BE6), BAR-02 (BE1–BE3), BAR-03, BAR-04, BAR-05, BAR-06 and
+BAR-07 are complete:
 registry/summary/links contracts and API, the parity snapshot freeze,
 additive artifact provenance, the cross-link sidecar, the operational ingress
 boundary, the thin identity BFF with the security matrix, and the M0
 reproducibility freeze (digest manifest, credential-free environment report,
 Planning export count/hash report, executable golden gate), and the shared
 contract authority (`packages/contracts/` canonical schemas, generated
-OpenAPI types, breaking-change gate, ADR-001/002/005 proposals). The BFF
-still owns no routing authority; the gateway remains the single public
-entry until U10.
+OpenAPI types, breaking-change gate, ADR-001/002/005 proposals), and the
+Control API façade foundation (workspaces, run read models, product audit,
+transactional outbox, ADMIN-first authenticated proxy with signed principal,
+idempotent writes, feature-flag rollback). The gateway keeps routing legacy
+paths until the façade cutover is exercised.
 
 Deep dives:
 
@@ -601,12 +604,14 @@ Deep dives:
 - [`upgrade/backend/BAR_04_THIN_IDENTITY_BFF.md`](./backend/BAR_04_THIN_IDENTITY_BFF.md)
 - [`upgrade/backend/BAR_05_REPRODUCIBILITY_FREEZE.md`](./backend/BAR_05_REPRODUCIBILITY_FREEZE.md)
 - [`upgrade/backend/BAR_06_SHARED_CONTRACT_AUTHORITY.md`](./backend/BAR_06_SHARED_CONTRACT_AUTHORITY.md)
+- [`upgrade/backend/BAR_07_CONTROL_API_FACADE.md`](./backend/BAR_07_CONTROL_API_FACADE.md)
 
-The next backend task is BAR-07, the Control API façade expansion for U10:
-add modular boundaries for workspaces/projects, run registry/read models,
-audit and transactional outbox; proxy current services first and migrate
-route authority one vertical slice at a time behind feature flags; every
-write records actor, workspace, request, idempotency and expected aggregate
-version; the Command Center reads authoritative summaries with freshness
-metadata. Gate: all browser calls enter the Control API, permission and
-cross-workspace attacks fail server-side, and parity/rollback flags pass.
+The next backend task is BAR-08, the durable worker and immutable artifact
+authority for U11: introduce NATS JetStream, object storage and isolated
+non-root workers; separate immutable `run` from `run_attempt`, `study` and
+`trial`; implement claim lease, heartbeat, cooperative cancel, hard-kill
+grace, retry/redelivery idempotency and standardized failure codes; commit
+artifacts temp → checksums → manifest → content-addressed bundle; reconcile
+orphan/corrupt bundles and import legacy artifacts explicitly. Gate: worker
+kill/restart/redelivery cannot duplicate a successful run; cancel, retry,
+checksum, reopen and numerical parity all pass.

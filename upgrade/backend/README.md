@@ -51,7 +51,15 @@ Chúng không thay thế phase hoặc exit gate trong
   fixture compilation (Python jsonschema + TS ajv), generated
   `portal-api.d.ts` từ frozen OpenAPI (sync gate), `contracts-snapshot.json`
   breaking-change gate, Python canonical models, ADR-001/002/005 (Proposed
-  cho owner confirm). Kế tiếp là BAR-07 (U10 Control API façade).
+  cho owner confirm).
+- [BAR-07 — Control API Façade](./BAR_07_CONTROL_API_FACADE.md)
+  — U10 vertical slices đầu tiên. **Complete:** workspaces/memberships, run
+  read models, product audit + transactional outbox, ADMIN-first
+  authenticated proxy tới portal-api với signed `X-Portal-Principal` +
+  freshness passthrough, write idempotent (replay/conflict 409, không
+  double-fire upstream), RBAC cross-workspace fail-closed, feature flag
+  rollback `FEATURE_PROXY_PORTAL`. 31 control-api tests trên PostgreSQL
+  thật. Kế tiếp là BAR-08 (U11 durable worker & immutable artifacts).
 
 Agent chỉ được implement deep dive khi phase tương ứng đang active và owner đã
 giao scope. Tài liệu của phase sau là thiết kế trước, không phải implementation

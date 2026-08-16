@@ -1003,6 +1003,15 @@ authoritative product/control boundary.
 
 - U07 thin BFF/auth and PostgreSQL identity foundation expected.
 - Current FastAPI domain semantics remain baseline.
+- BAR-07 đã mở rộng BFF thành façade foundation: workspaces/memberships +
+  personal workspace tự provision, run read models, product audit và
+  transactional outbox; proxy authenticated (session) tới portal-api với
+  signed principal, RBAC ADMIN-first, write idempotent theo command
+  envelope (replay kết quả cũ, payload khác conflict 409, upstream không
+  double-fire), summary passthrough giữ nguyên freshness; feature flag
+  `FEATURE_PROXY_PORTAL` rollback sạch. USER đọc runs qua workspace read
+  model, cross-workspace fail-closed 404. SSE/planning proxy và
+  organizations/projects là vertical slices sau.
 
 **Description / To-do**
 
