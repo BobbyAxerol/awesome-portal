@@ -26,6 +26,12 @@ Rules for these agents:
 - Cross-boundary changes (contracts, schemas, registry data) are reviewed by
   codex before merge; UI copy is Vietnamese with English technical terms.
 - All agents follow the contributor/branch rules below; only Bobby merges.
+- All agents must read the architecture supplement
+  `upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md`
+  (dual-cell Research SGP / Execution AWS HK, release flow, BAR-17→BAR-20
+  runway, UI synthesis from `Design/`). It supplements, never replaces, the
+  v0.4 guide; its authority order (section 2) is binding when documents
+  conflict.
 
 ## Source layout and boundaries
 

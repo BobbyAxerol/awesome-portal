@@ -22,12 +22,19 @@ cuối file này) thay vì tự sửa backend.
    phần **Frontend/UX/Wireframe** và **Exit gate** của U02, U03, U04, U05,
    U07 (đây là phạm vi công việc của bạn).
 4. `upgrade/quantbt_portal_architecture_uiux_final_v0.4_vi.md` — **guide UIUX
-   chi tiết v0.4** (authority cao nhất về design): §P0 maturity/IA/shell,
+   chi tiết v0.4** (authority design): §P0 maturity/IA/shell,
    §P0.12–P0.15 Registry/Command Center, §P0.17–P0.23 wireframes embedding,
    §17 UI direction, §21.x screens (01 Login, 03 Command Center, 24 Planning),
    §25 components, §26–27 responsive/accessibility.
+4b. `upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md`
+   — **supplement bắt buộc, không thay thế v0.4**: dual-cell topology,
+   release flow, và nhất là §10 (UI/UX creative direction — đọc đúng thứ tự
+   §10.1), §11 (component reuse + Reuse report trong mỗi PR UI), §12 (chart
+   production contract). `Design/` là nguồn nguyên lý, **không phải palette
+   để copy**; Fund Paper là token authority.
 5. `upgrade/BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md` — hiểu backend đã
-   giao những contract gì (BAR-01→BAR-16 complete) để không làm trùng/sai.
+   giao những contract gì (BAR-01→BAR-16 complete; BAR-17→BAR-20 là runway
+   dual-cell kế tiếp) để không làm trùng/sai.
 6. `apps/portal/registry/FRONTEND_HANDOFF.md` — **contract frontend chính
    thức**: endpoints (`/api/v1/portal/registry|summary|links|capabilities`,
    `/api/v1/data/*`, `/api/v1/alphas*`), ETag/304, no-store/Vary, states,
@@ -76,7 +83,9 @@ cuối file này) thay vì tự sửa backend.
    unavailable ≠ terminal failure.
 5. **Không suy diễn backend health/permission/financial state** ở frontend;
    permission arrays trong registry chỉ là mô tả.
-6. **Clean-room**: không copy AGPL code/logo/asset từ Wealthfolio.
+6. **Clean-room**: không copy AGPL code/logo/asset từ Wealthfolio; theo v0.5
+   §10.3 — không để giao diện có "AI look"; ưu tiên component hiện có, mỗi
+   PR UI kèm **Reuse report** (§11.3).
 7. **Git**: branch từ `dev` hiện tại (`feat/*`, `fix/*`, `chore/*`, `docs/*`),
    commit nhỏ đúng nghĩa; không commit secret/data/artifact/cache; hooks
    chặn sai phạm; merge dev/main là quyền Bobby (contributor chỉ push branch
@@ -113,6 +122,8 @@ Backend request
 ## 6. Handoff
 
 Kết thúc mỗi task báo cáo: branch/commit, file thay đổi, màn hình/state đã
-cover, test đã chạy, và Backend request còn treo. Authority khi tài liệu mâu
-thuẫn: `AGENTS.md` → `UNIFIED_IMPLEMENTATION_PLAN.md` → guide v0.4 → BAR deep
-dives → `FRONTEND_HANDOFF.md`.
+cover, test đã chạy, Reuse report, và Backend request còn treo. Authority khi
+tài liệu mâu thuẫn (theo v0.5 §2): `AGENTS.md` → guide v0.5 → `UNIFIED_
+IMPLEMENTATION_PLAN.md` → guide v0.4 → BAR deep dives → `FRONTEND_HANDOFF.md`
+→ code hiện hành. Code và tài liệu không khớp thì ghi discrepancy + evidence,
+không tự chọn mô tả tiện lợi.
