@@ -1,4 +1,12 @@
-# Stack-wide runtime constraints. Keep this aligned with the child application's
-# declared dependency and use it in CI/image builds so every environment runs
-# the same QuantBT engine release.
+# Stack-wide runtime constraints. QuantBT remains a PyPI dependency; the HMD
+# reader is an optional checksum-verified wheel build input. Exact dataframe
+# versions keep the two packages ABI/runtime-compatible in CI and images.
+duckdb==1.5.5
+httpx==0.28.1
+jsonschema==4.26.0
+pandas==2.3.3
+primus-historical-market-data==0.1.0rc3
+pyarrow==24.0.0
 quantbt-engine==1.0.8
+nats-py==2.10.0
+minio==7.2.18

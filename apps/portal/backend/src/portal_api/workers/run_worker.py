@@ -24,7 +24,10 @@ from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.domain.enums import RunState
 from portal_api.domain.errors import RunCancelledError
 from portal_api.domain.requests import PortalRunRequest
-from portal_api.repositories.artifacts import ArtifactRepository
+from portal_api.repositories.artifacts import (
+    ArtifactRepository,
+    with_portal_provenance,
+)
 from portal_api.serialization import canonicalize
 from portal_api.services.advanced_walkforward_runner import AdvancedWalkForwardRunner
 from portal_api.services.three_window_runner import ThreeWindowRunner
@@ -85,20 +88,17 @@ def _load_market(request: PortalRunRequest) -> PreparedMarketData:
             content_hash=f"override-{Path(override).name}",
             missing_bar_count=0,
         )
-    from portal_api.adapters.market_data import CryptoBinanceMarketDataProvider
-
-    pool_alpha_root = Path(__file__).resolve().parents[5]
-    loader_root = Path(
-        os.getenv(
-            "PORTAL_CRYPTO_DATA_ROOT",
-            str(pool_alpha_root / "alphas_storage" / "_get_data"),
-        )
+    from portal_api.adapters.market_data import (
+        REQUIRED_MARKET_COLUMNS,
+        HistoricalMarketDataProvider,
     )
-    provider = CryptoBinanceMarketDataProvider(
-        loader_root, engine=os.getenv("PORTAL_CRYPTO_RESAMPLE_ENGINE", "duckdb")
+    from portal_api.services.preflight import market_data_query_for_run
+
+    provider = HistoricalMarketDataProvider(
+        engine=os.getenv("PORTAL_CRYPTO_RESAMPLE_ENGINE", "duckdb")
     )
     return provider.load(
-        request.dataset_id, symbol=request.symbol, timeframe=request.timeframe
+        market_data_query_for_run(request, columns=REQUIRED_MARKET_COLUMNS)
     )
 
 
@@ -134,7 +134,11 @@ def _write_status(
     if extra:
         status.update(extra)
     status.setdefault("events", []).append({"state": state.value, "at": time.time()})
-    artifacts.write_json(run_id, "status.json", canonicalize(status))
+    artifacts.write_json(
+        run_id,
+        "status.json",
+        canonicalize(with_portal_provenance("status.json", status)),
+    )
 
 
 def _cancel_requested(artifacts: ArtifactRepository, run_id: str) -> bool:
@@ -291,7 +295,9 @@ def execute_run(
     artifacts.write_json(
         run_id,
         "config/fold_plan.json",
-        compute_run_fold_plan(request, market.frame.index),
+        with_portal_provenance(
+            "fold_plan.json", compute_run_fold_plan(request, market.frame.index)
+        ),
     )
 
     def progress(state: RunState) -> None:

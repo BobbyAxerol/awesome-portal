@@ -26,8 +26,10 @@ change.
 1. Install Docker Engine and the Docker Compose plugin.
 2. Create `/srv/portal`, then copy `deploy/compose.production.yaml` and create
    `/srv/portal/.env.production` from `deploy/.env.production.example`.
-3. Set a lowercase `PORTAL_IMAGE_PREFIX`, an immutable image tag and an absolute
-   `PORTAL_MARKET_DATA_DIR` outside Git.
+3. Set a lowercase `PORTAL_IMAGE_PREFIX`, an immutable image tag, canonical
+   `PORTAL_HISTORICAL_DATA_DIR=/srv/primus/historical-market-data/storage` and
+   the numeric `PORTAL_HMD_READER_GID`. The mount is read-only and only serves
+   backtest/research; it does not provide realtime or paper-trading state.
 4. If the GHCR package is private, authenticate the host with an account or
    token permitted to pull it.
 5. Put TLS, authentication and public-network policy in a reverse proxy or load
@@ -53,6 +55,12 @@ environment secrets:
 - `DEPLOY_USER`
 - `DEPLOY_SSH_PRIVATE_KEY`
 - `DEPLOY_KNOWN_HOSTS` (the pinned host-key line, not an unverified scan)
+
+Image publishing additionally requires repository/environment secret
+`HMD_READER_WHEEL_BASE64`, containing the approved code-only
+`primus_historical_market_data-0.1.0rc3-py3-none-any.whl`. The workflow verifies
+SHA-256 before building and fails if the wheel is absent or different. Do not
+store the wheel, Historical Market Data source or storage in Portal Git.
 
 The host must already contain `.env.production` and be authenticated to pull
 the registry. The workflow transfers only the non-secret Compose definition,

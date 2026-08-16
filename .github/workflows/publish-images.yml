@@ -79,11 +79,29 @@ jobs:
             type=ref,event=tag
             type=raw,value=latest,enable={{is_default_branch}}
 
+      - name: Stage approved Historical Market Data reader wheel
+        env:
+          HMD_READER_WHEEL_BASE64: ${{ secrets.HMD_READER_WHEEL_BASE64 }}
+        run: |
+          if [[ -z "${HMD_READER_WHEEL_BASE64}" ]]; then
+            printf 'Required HMD_READER_WHEEL_BASE64 repository/environment secret is missing.\n' >&2
+            exit 1
+          fi
+          mkdir -p vendor/hmd-reader
+          printf '%s' "${HMD_READER_WHEEL_BASE64}" | base64 --decode \
+            > vendor/hmd-reader/primus_historical_market_data-0.1.0rc3-py3-none-any.whl
+          printf '%s  %s\n' \
+            '3b2a41b87ff834912556bb3039bf3e3c148bd859a1ced9ee4f52a3c658ca5663' \
+            'vendor/hmd-reader/primus_historical_market_data-0.1.0rc3-py3-none-any.whl' \
+            | sha256sum -c -
+
       - name: Build and publish API image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: deploy/images/portal-api.Dockerfile
+          build-args: |
+            PORTAL_HMD_READER_REQUIRED=true
           push: true
           tags: ${{ steps.api-meta.outputs.tags }}
           labels: ${{ steps.api-meta.outputs.labels }}

@@ -1,0 +1,60 @@
+{
+  "artifact_schema_versions": {
+    "engine_manifest": "1",
+    "portal_artifacts": "1",
+    "portal_producer": "portal-api"
+  },
+  "file_digests": {
+    "compose": "sha256:485853dc506600c4d9586f1e706e09fe86c5d71cfe13f1a76ceaad107373d8f1",
+    "compose_production": "sha256:e773049b1d40a753ada0ad8d187693df8098703f849400070225153003dd63cb",
+    "constraints_portal": "sha256:a16dcc4c1a3ded5c03a742ce38f351f8d13e738255518a6629da42ad65b900b2",
+    "control_api_migrations": "sha256:7af62e52e20e1340882c50f033ab0cd690de99231c3cc4dbd150b2a2f0a000b8",
+    "control_api_package": "sha256:ead2bbcf2b06822b60f9d7101208347f334830cdea7a8715a439202680bceaf0",
+    "control_api_package_lock": "sha256:eefcd089e37ca98554d0d56747bc8b2039878d06ef57e3e62355a24968623276",
+    "control_api_tsconfig": "sha256:505f416ac474f249e52523f39a227669a2be931f491d39d67aa76f657de71200",
+    "env_template": "sha256:79500f9259c32f1ebb7a1b1e6ba903f014e5767f9dfdef4f5f82f24682db0207",
+    "golden_market": "sha256:16131e4d930bc78b8375ad3fb14584b5d5b8191d7f89bec29ce502470e4646ae",
+    "golden_metadata": "sha256:13128530dc74744e2bf5dc562eb3792d49b2e942a8579dcd01fb1b74b7c9a725",
+    "golden_signals": "sha256:5a24f1b35566b9755b4f3c2a4f863c0e12541ecb173a5e6cec24ca32fd293c0c",
+    "links_sidecar": "sha256:5fe5ea3ffa4c12bf78dc396bf1371d34bbcf6f47b099e12918d0a9957be0a1a6",
+    "nginx_portal_conf": "sha256:4cc340ea6aec250fac2f5cc715ca35753d93edeace85ec9954526b730d3c9caf",
+    "openapi_planning_snapshot": "sha256:8c4977b136a60694fd334f4e1441df5f0058668105556878f47cd28e20704051",
+    "openapi_portal": "sha256:4e2907d8cd36426e9b3943a4cb38f109f0dfc0ae71c427d6eb1b5b84a83e26ea",
+    "openapi_portal_snapshot": "sha256:4e2907d8cd36426e9b3943a4cb38f109f0dfc0ae71c427d6eb1b5b84a83e26ea",
+    "planning_frontend_lock": "sha256:8d98e59a964741e0842fcd19d18179270d5e6c4934439ca8c2230b364f711f14",
+    "planning_frontend_package": "sha256:2e53ca88ebbfeb25c2551ab29a2c45ef67c9b776595058b07e81d6caf5f59253",
+    "planning_requirements": "sha256:89a5642e429cc00ba51f79f3854db39ade9e0e69fa098b16fc44cc54a1b1d053",
+    "planning_requirements_dev": "sha256:90928c1a46fe2de88771d85b92c4789d52f1a8ba9dffff08dea206d18de34783",
+    "portal_backend_pyproject": "sha256:516c6a12f78ddbc0b4e5c2c096e8002ea288d72b3da033925c71291fd8ab6a6b",
+    "portal_frontend_lock": "sha256:8f7b92f1124061e0a70ed8fcfd483cf7478c636dd8e308a52d38ff456c08e3c9",
+    "portal_frontend_package": "sha256:363d11e41039b3a2f7399389a559467427d0fe66dd80c7e25ecbadc99b033eae",
+    "protected_kernel_hash": "sha256:3d7f0520defd55acddcf21bfde2fcca34b7aabbf26e5413eb7cd5c4e90c684d9",
+    "protected_kernel_main": "sha256:34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
+    "registry_source": "sha256:27b4da324ecd001ad011fac57ffbbb709cec7417af449eb916af2aaa4d87fc90",
+    "run_request_schema": "sha256:582ced995417c641c9247fce422887e7f637359945fd8ef3b3e442d15fde009e"
+  },
+  "frozen_at_commit": "fd500a0591cce4f7901e496fa53c29edf6cedf78",
+  "golden_tolerances": {
+    "exit_price": {
+      "atol": 1e-12,
+      "rtol": 1e-09
+    },
+    "exit_type": "exact",
+    "pos_weight": "exact"
+  },
+  "python_pins": {
+    "historical_market_data_reader": "primus-historical-market-data==0.1.0rc3",
+    "quantbt_engine": "quantbt-engine==1.0.8"
+  },
+  "registry_source_digest": "sha256:74a1d04b2de425a03b8863386e66bd0f0a79102ec7d726d5f21513959b7762e8",
+  "rollback": {
+    "last_known_good_images": [
+      "local/portal-portal-api:dev",
+      "local/portal-portal-web:dev",
+      "local/portal-roadmap-task-board-api:dev",
+      "local/portal-control-api:dev"
+    ],
+    "procedure": "docker compose down; restore the previous image tags (or redeploy the freeze commit); ./scripts/portal smoke"
+  },
+  "schema_version": "bar05.freeze.v1"
+}

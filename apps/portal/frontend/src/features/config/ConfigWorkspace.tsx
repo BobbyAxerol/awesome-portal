@@ -28,7 +28,7 @@ const DEFAULT_WINDOWS: WindowState = {
   oosStart: "2024-01-01T00:00:00Z",
   oosEnd: "2025-07-01T00:00:00Z",
   holdoutStart: "2025-07-01T00:00:00Z",
-  holdoutEnd: "",
+  holdoutEnd: "2026-08-14T00:00:00Z",
 };
 
 const DEFAULT_OPTIMIZATION: Record<string, string | number | boolean | null> = {
@@ -89,7 +89,7 @@ const DEFAULT_EXECUTION = { slippage: 0.0001, target_mode: "pct_equity", backend
 
 const DEFAULT_ADVANCED = {
   dataStart: "2020-01-01T00:00:00Z",
-  dataEnd: "",
+  dataEnd: "2026-08-14T00:00:00Z",
   splitMode: "2022-01-01",
   splitFrequency: "quarterly",
   windowMode: "expanding",
@@ -212,6 +212,14 @@ export function ConfigWorkspace() {
   }, [datasets.data, datasetId]);
 
   const dataset = datasets.data?.find((item) => item.dataset_id === datasetId) ?? datasets.data?.[0];
+  const dataContractError =
+    dataset?.availability !== "available"
+      ? dataset?.unavailable_reason ?? "Historical backtest data is unavailable."
+      : protocol === "three_window_decay" && !windows.holdoutEnd
+        ? "Holdout end-exclusive is required for historical queries."
+        : protocol === "advanced_walk_forward" && (!advanced.dataStart || !advanced.dataEnd)
+          ? "Analysis start and end-exclusive are required for historical queries."
+          : "";
   const setOpt = (key: string, value: string | number | boolean | null) =>
     setOptimization((current) => ({ ...current, [key]: value }));
 
@@ -331,12 +339,14 @@ export function ConfigWorkspace() {
             <label className="col-span-2 space-y-1">
               <span className="label block">Dataset</span>
               <select className="input w-full" value={datasetId} onChange={(event) => setDatasetId(event.target.value)}>
-                {datasets.data?.map((item) => <option key={item.dataset_id} value={item.dataset_id}>{item.dataset_id}</option>)}
+                {datasets.data?.map((item) => <option key={item.dataset_id} value={item.dataset_id}>{item.dataset_id} · {item.availability}</option>)}
               </select>
             </label>
             <label className="space-y-1"><span className="label block">Symbol</span><input className="input w-full" value={symbol} onChange={(event) => setSymbol(event.target.value.toUpperCase())} /></label>
             <SelectInput label="Timeframe" value={timeframe} options={timeframes} onChange={setTimeframe} />
           </div>
+          <p className="mt-2 text-[11px] text-ink-faint">Historical source · backtest/research only. Realtime and paper-trading data are separate.</p>
+          {dataset?.availability !== "available" ? <div className="mt-2 rounded-md border border-accent-2/40 bg-accent-2-soft p-2 text-[11px] text-accent-2">{dataset?.unavailable_reason}</div> : null}
         </Collapsible>
 
         {protocol === "three_window_decay" ? (
@@ -468,6 +478,7 @@ export function ConfigWorkspace() {
           {preflight.isPending ? <StateView kind="loading" message="Validating market tape and run contract…" /> : null}
           {preflight.isError ? <StateView kind="failed" message={preflight.error.message} onRetry={() => preflight.mutate({ body: payload, key: payloadKey })} /> : null}
           {overlapError ? <div className="mb-3 rounded-md border border-bad/40 bg-bad-bg p-3"><span className="mono text-[12px] font-semibold text-bad">{overlapError}</span></div> : null}
+          {dataContractError ? <div className="mb-3 rounded-md border border-accent-2/40 bg-accent-2-soft p-3"><span className="mono text-[12px] font-semibold text-accent-2">{dataContractError}</span></div> : null}
           {preflight.data ? (
             <div className="space-y-3">
               <div className="flex flex-wrap gap-2"><Badge tone="pass">schema</Badge><Badge tone="pass">boundaries</Badge><Badge tone="pass">content hash</Badge>{preflight.data.windows.map((window) => <span key={window.role} className="chip">{window.role} · {fmtCount(window.bars)} bars</span>)}</div>
@@ -482,8 +493,8 @@ export function ConfigWorkspace() {
             </div>
           ) : <p className="text-[12px] text-ink-faint">Validate the current configuration before submitting a run.</p>}
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <button type="button" className="btn-ghost" onClick={() => preflight.mutate({ body: payload, key: payloadKey })} disabled={Boolean(overlapError) || preflight.isPending}><RefreshCcw size={12} />Validate</button>
-            <button type="button" className="btn-primary" disabled={Boolean(overlapError) || createRun.isPending} onClick={handleRun}><Play size={13} />{createRun.isPending ? "Submitting…" : preflight.isPending ? "Validating…" : "Run backtest"}</button>
+            <button type="button" className="btn-ghost" onClick={() => preflight.mutate({ body: payload, key: payloadKey })} disabled={Boolean(overlapError || dataContractError) || preflight.isPending}><RefreshCcw size={12} />Validate</button>
+            <button type="button" className="btn-primary" disabled={Boolean(overlapError || dataContractError) || createRun.isPending} onClick={handleRun}><Play size={13} />{createRun.isPending ? "Submitting…" : preflight.isPending ? "Validating…" : "Run backtest"}</button>
             {createRun.isError ? <span className="mono text-[12px] text-bad">{createRun.error.message}</span> : null}
           </div>
         </div>

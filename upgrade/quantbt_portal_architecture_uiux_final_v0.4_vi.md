@@ -1090,10 +1090,14 @@ Historical Market Data collectors/writers
        loader contract hmd-loader-v1
   -> Portal HistoricalMarketDataProvider
   -> validated/provenanced DataQueryResult
-  -> QuantBT current FastAPI / later Control API + worker
+  -> QuantBT current FastAPI / later Control API + worker / permitted research module
 ```
 
 Portal là **consumer**, không phải collector/operator của repository dữ liệu:
+
+- Scope được phép là historical input cho `backtest`, `research` và module được
+  capability registry grant rõ. Boundary này không cung cấp realtime market
+  feed, paper order/fill, paper account state hoặc live execution.
 
 - Không `pip install -e /home/bobby/historical_market_data`.
 - Không copy/mount source checkout, `storage/`, `state/`, `logs`, collector
@@ -1218,11 +1222,11 @@ Rules:
 
 #### P0.24A.5 Portal adapter và implementation order
 
-Current `CryptoBinanceMarketDataProvider` là một seam hữu ích nhưng implementation
-host-path hiện tại không đạt contract production: nó tìm và import
+Baseline trước U01-BE của `CryptoBinanceMarketDataProvider` là một seam hữu ích
+nhưng implementation host-path khi đó không đạt contract production: nó tìm và import
 `data_loader.py` từ `PORTAL_CRYPTO_DATA_ROOT`, không truyền explicit date window
-và localize mọi naive timestamp như UTC. U01-BE phải thay debt đó trước khi mở
-rộng shell/control plane:
+và localize mọi naive timestamp như UTC. Debt này đã được retire trong U01-BE;
+evidence hiện hành ở §P0.24A.6. Thứ tự triển khai vẫn là:
 
 ```text
 U00/U01 baseline
@@ -1237,6 +1241,29 @@ lần. Unit/contract tests dùng injected fake reader và synthetic fixture; rea
 smoke là opt-in test trên target VPS với một fixed, small BTCUSDT window. Generic
 CI thiếu canonical mount phải report `external-data-unavailable/skip`, tuyệt đối
 không được ghi real-data smoke đã pass.
+
+#### P0.24A.6 U01-BE implementation evidence — 2026-08-15
+
+- `HistoricalMarketDataProvider` import installed distribution, kiểm tra exact
+  version, module shadowing, storage root, `hmd-loader-v1`, accepted manifest và
+  declared Binance release family trước khi advertise `AVAILABLE`.
+- `MarketDataQuery` truyền explicit symbol, timezone-aware start/end-exclusive,
+  timeframe và required columns từ cùng request vào API preflight và worker.
+- Generic local/CI dùng `PORTAL_HISTORICAL_DATA_MODE=disabled`; production dùng
+  `required`, image thiếu/sai wheel hoặc manifest incompatible phải fail.
+- Dataset catalog ghi `usage_scopes=[backtest,research]` và exclude
+  realtime/paper concerns; UI không cho validate/run capability unavailable.
+- Portal doctor pass với manifest digest
+  `f6220732763258a08f97d066433945fea0b0680653098ddae110af3e3a54686b`.
+- BTCUSDT `1h`, `[2026-08-01, 2026-08-02)` trả 24 bars, sorted/unique, 0 inferred
+  gaps và parity content hash với direct approved reader.
+- Required-wheel Docker image build pass; container doctor và service
+  health/catalog pass; Docker inspect xác nhận canonical bind mount `RW=false`.
+
+Gate còn mở: host storage hiện owner/group `bobby:bobby`; ACL named reader group
+hiển thị overflow trong environment audit. Portal không tự thay quyền kho data.
+Host admin phải repair/verify `primus-market-data-readers` GID access và owner
+phải cấu hình `HMD_READER_WHEEL_BASE64` trước production publish/activation.
 
 ### P0.25 Authentication baseline — Cloudflare Zero Trust, vừa đủ cho prototype
 
@@ -4082,9 +4109,10 @@ accepted release manifest
   -> preflight / run manifest / artifact lineage
 ```
 
-Historical read path, realtime event path và future ingest/control path là ba
-concern riêng. Việc historical reader đã sẵn sàng không tự động chứng nhận
-realtime hoặc cấp cho Portal quyền vận hành collectors.
+Historical read path, realtime event path, paper order/fill + account-state path
+và future ingest/control path là các concern riêng. Việc historical reader đã
+sẵn sàng không tự động chứng nhận realtime/paper hoặc cấp cho Portal quyền vận
+hành collectors.
 
 ---
 

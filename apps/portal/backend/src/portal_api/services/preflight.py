@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 
 from portal_api.adapters.market_data import (
+    MarketDataQuery,
     MarketDataProvider,
     market_content_hash,
     partition_three_windows,
@@ -12,7 +13,32 @@ from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.domain.errors import DataSchemaError
 from portal_api.domain.requests import AdvancedWalkForwardConfig, PortalRunRequest, ThreeWindowConfig
 from portal_api.domain.responses import PreflightResponse, WindowSummary
+from portal_api.services.engine_capabilities import EngineCapabilityService
 from portal_api.strategies import StrategyRegistry
+
+
+def market_data_query_for_run(
+    request: PortalRunRequest,
+    *,
+    columns: tuple[str, ...],
+) -> MarketDataQuery:
+    """Map a run contract to one bounded historical/fixture data query."""
+    if isinstance(request.calibration, ThreeWindowConfig):
+        start = request.calibration.is_start
+        end_exclusive = request.calibration.holdout_end_exclusive
+    elif isinstance(request.calibration, AdvancedWalkForwardConfig):
+        start = request.calibration.data_start
+        end_exclusive = request.calibration.data_end_exclusive
+    else:  # pragma: no cover - Pydantic closes the calibration union
+        raise TypeError("unsupported calibration config")
+    return MarketDataQuery(
+        dataset_id=request.dataset_id,
+        symbol=request.symbol,
+        timeframe=request.timeframe,
+        start=start,
+        end_exclusive=end_exclusive,
+        columns=columns,
+    )
 
 
 class PreflightService:
@@ -21,21 +47,63 @@ class PreflightService:
         provider: MarketDataProvider,
         strategies: StrategyRegistry,
         quantbt_gateway: QuantBTGateway | None = None,
+        capabilities: EngineCapabilityService | None = None,
     ):
         self._provider = provider
         self._strategies = strategies
         self._quantbt_gateway = quantbt_gateway
+        if capabilities is None:
+            from pathlib import Path as _Path
+
+            module_path = _Path(__file__).resolve()
+            candidates = (
+                module_path.parents[4] / "registry",
+                module_path.parents[3] / "registry",
+            )
+            root = next(
+                (candidate for candidate in candidates if (candidate / "registry.json").is_file()),
+                candidates[0],
+            )
+            capabilities = EngineCapabilityService(root)
+        self._capabilities = capabilities
+
+    @staticmethod
+    def _quality_preflight(frame: pd.DataFrame, descriptor: object) -> None:
+        from portal_api.domain.errors import DataSchemaError
+        from portal_api.services.data_catalog import compute_quality
+
+        timeframe = getattr(descriptor, "timeframe", None) or "1d"
+        report = compute_quality(
+            frame,
+            snapshot_id="preflight",
+            max_gap_ratio=0.1,
+            max_duplicate_rows=0,
+            expected_frequency=timeframe,
+        )
+        if not report.passed:
+            raise DataSchemaError(
+                f"data quality gate failed: {', '.join(report.reason_codes)}"
+            )
 
     def run(self, request: PortalRunRequest) -> PreflightResponse:
         strategy = self._strategies.get(request.strategy_id)
         strategy.validate_parameter_space(request.parameter_space)
         market = self._provider.load(
-            request.dataset_id,
-            symbol=request.symbol,
-            timeframe=request.timeframe,
+            market_data_query_for_run(
+                request,
+                columns=tuple(strategy.specification.required_columns),
+            )
         )
 
         descriptor = market.descriptor
+        if descriptor.source_class == "historical_market_data":
+            self._quality_preflight(market.frame, descriptor)
+        self._capabilities.preflight(
+            protocol=request.protocol.value,
+            data_class=descriptor.source_class or "historical_market_data",
+            optuna_trials=request.calibration.optuna_trials,
+            parameter_space_entries=len(request.parameter_space.root),
+        )
         if descriptor.symbol is not None and request.symbol != descriptor.symbol:
             raise DataSchemaError(
                 f"request symbol {request.symbol!r} does not match dataset symbol {descriptor.symbol!r}"

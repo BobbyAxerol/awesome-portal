@@ -11,11 +11,20 @@ services:
     restart: unless-stopped
     environment:
       PORTAL_ARTIFACT_ROOT: /var/lib/portal/artifacts/runs
-      PORTAL_CRYPTO_DATA_ROOT: /opt/portal/market-data
+      PORTAL_HISTORICAL_DATA_MODE: ${PORTAL_HISTORICAL_DATA_MODE:-disabled}
+      HISTORICAL_MARKET_DATA_ROOT: /data
       PORTAL_CRYPTO_RESAMPLE_ENGINE: ${PORTAL_CRYPTO_RESAMPLE_ENGINE:-duckdb}
+      PORTAL_SUMMARY_DEADLINE_MS: ${PORTAL_SUMMARY_DEADLINE_MS:-500}
+      PORTAL_ENVIRONMENT: ${PORTAL_ENVIRONMENT:-research}
+      PORTAL_PLANNING_SUMMARY_MODE: ${PORTAL_PLANNING_SUMMARY_MODE:-local}
+      PORTAL_PLANNING_API_BASE_URL: http://roadmap-task-board-api:8000
+      PORTAL_PLANNING_SUMMARY_TIMEOUT_MS: ${PORTAL_PLANNING_SUMMARY_TIMEOUT_MS:-500}
+      PORTAL_PLANNING_SUMMARY_MAX_BYTES: ${PORTAL_PLANNING_SUMMARY_MAX_BYTES:-65536}
     volumes:
       - portal-artifacts:/var/lib/portal/artifacts
-      - ${PORTAL_MARKET_DATA_DIR:-./runtime/market-data}:/opt/portal/market-data:ro
+      - ${PORTAL_HISTORICAL_DATA_DIR:-./runtime/historical-market-data}:/data:ro
+    group_add:
+      - ${PORTAL_HMD_READER_GID:-10001}
     expose:
       - "8000"
     networks:
@@ -25,7 +34,7 @@ services:
         - CMD
         - python
         - -c
-        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ready', timeout=3)"
       interval: 10s
       timeout: 5s
       retries: 6
@@ -90,6 +99,130 @@ services:
       retries: 6
       start_period: 10s
 
+  # U07 thin identity BFF: first Control API slice. Private until the U10
+  # facade wires the gateway to it; it owns no run/data/alpha authority.
+  control-api:
+    build:
+      context: .
+      dockerfile: deploy/images/control-api.Dockerfile
+    image: ${PORTAL_IMAGE_PREFIX:-local/portal}-control-api:${PORTAL_IMAGE_TAG:-dev}
+    restart: unless-stopped
+    environment:
+      PORTAL_ENV: ${PORTAL_ENV:-local}
+      AUTH_MODE: ${CONTROL_API_AUTH_MODE:-dev}
+      DATABASE_URL: postgres://portal:portal@portal-postgres:5432/portal_control
+      PORTAL_PUBLIC_ORIGIN: ${PORTAL_PUBLIC_ORIGIN:-http://localhost:8080}
+      PORTAL_API_BASE_URL: http://portal-api:8000
+      FEATURE_PROXY_PORTAL: ${CONTROL_API_FEATURE_PROXY_PORTAL:-true}
+      INTERNAL_PRINCIPAL_SECRET: ${CONTROL_API_INTERNAL_PRINCIPAL_SECRET:-local-dev-principal-secret-0123456789}
+      CLOUDFLARE_TEAM_DOMAIN: ${CLOUDFLARE_TEAM_DOMAIN:-}
+      CLOUDFLARE_ACCESS_ISSUER: ${CLOUDFLARE_ACCESS_ISSUER:-}
+      CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:-}
+      CLOUDFLARE_ACCESS_JWKS_URI: ${CLOUDFLARE_ACCESS_JWKS_URI:-}
+      CLOUDFLARE_ALLOWED_EMAIL_DOMAIN: ${CLOUDFLARE_ALLOWED_EMAIL_DOMAIN:-azdag.com}
+    depends_on:
+      portal-postgres:
+        condition: service_healthy
+    expose:
+      - "4000"
+    networks:
+      - portal
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:4000/api/control/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  # U07 identity datastore: private, SQL-first, no public port.
+  portal-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: portal
+      POSTGRES_PASSWORD: portal
+      POSTGRES_DB: portal_control
+    volumes:
+      - portal-postgres-data:/var/lib/postgresql/data
+    expose:
+      - "5432"
+    networks:
+      - portal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portal -d portal_control"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  # U11 durable job/event broker: private JetStream, no public port.
+  portal-nats:
+    image: nats:2.10-alpine
+    restart: unless-stopped
+    command: ["-js", "-m", "8222", "-sd", "/var/lib/nats"]
+    volumes:
+      - portal-nats-data:/var/lib/nats
+    expose:
+      - "4222"
+      - "8222"
+    networks:
+      - portal
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8222/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  # U11 local/CI immutable object storage (S3-compatible). The production
+  # provider stays ADR-004 owner decision.
+  portal-minio:
+    image: minio/minio:RELEASE.2024-09-13T20-26-02Z
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: portal
+      MINIO_ROOT_PASSWORD: portal-dev-only
+    volumes:
+      - portal-minio-data:/data
+    expose:
+      - "9000"
+    networks:
+      - portal
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  # U11 durable Quant worker: same portal-api image, non-root, consumes
+  # QUANT_JOBS and finalizes content-addressed bundles.
+  quant-worker-py:
+    image: ${PORTAL_IMAGE_PREFIX:-local/portal}-portal-api:${PORTAL_IMAGE_TAG:-dev}
+    restart: unless-stopped
+    command: ["python", "-m", "portal_api.workers.durable_worker_main"]
+    environment:
+      NATS_URL: nats://portal-nats:4222
+      PORTAL_ARTIFACT_ROOT: /var/lib/portal/artifacts/runs
+      PORTAL_HISTORICAL_DATA_MODE: disabled
+      PORTAL_CRYPTO_RESAMPLE_ENGINE: ${PORTAL_CRYPTO_RESAMPLE_ENGINE:-duckdb}
+      PORTAL_WORKER_LEASE_SECONDS: ${PORTAL_WORKER_LEASE_SECONDS:-60}
+      PORTAL_WORKER_GRACE_SECONDS: ${PORTAL_WORKER_GRACE_SECONDS:-10}
+    volumes:
+      - portal-artifacts:/var/lib/portal/artifacts
+    depends_on:
+      portal-nats:
+        condition: service_healthy
+    expose:
+      - "8000"
+    networks:
+      - portal
+
 networks:
   portal:
     driver: bridge
@@ -97,3 +230,6 @@ networks:
 volumes:
   portal-artifacts:
   roadmap-task-board-data:
+  portal-postgres-data:
+  portal-nats-data:
+  portal-minio-data:

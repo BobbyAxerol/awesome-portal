@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/common.v1.schema.json",
+  "title": "Portal Canonical Common Types v1",
+  "$defs": {
+    "ulidId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{1,15}_[0-9A-HJKMNP-TV-Z]{26}$",
+      "maxLength": 64
+    },
+    "uuidHexId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{1,15}_[0-9a-f]{32}$",
+      "maxLength": 64
+    },
+    "opaqueId": {
+      "oneOf": [
+        {"$ref": "#/$defs/ulidId"},
+        {"$ref": "#/$defs/uuidHexId"}
+      ]
+    },
+    "utcTimestamp": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 40
+    },
+    "decimal": {
+      "type": "string",
+      "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+      "maxLength": 80
+    },
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9.-]{0,31}\\.v[0-9]+$",
+      "maxLength": 64
+    },
+    "traceparent": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$"
+    }
+  }
+}
