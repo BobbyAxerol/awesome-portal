@@ -676,3 +676,51 @@
     max-width: none;
   }
 }
+
+/* --- Planning embedding (U05) ------------------------------------------- */
+
+/* The embedded Planning body inherits the shell's content box. Its own
+ * `.app`/`.workspace`/`.content` shell classes are never rendered here, which
+ * is what removes the nested shell the U05 exit gate targets. */
+.planning-embed {
+  min-width: 0;
+}
+
+.portal-crosslinks {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--paper-sunken);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.portal-crosslinks > summary {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.portal-crosslinks > summary:hover {
+  color: var(--ink);
+}
+.portal-crosslinks-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--space-3);
+  font-size: 12px;
+}
+.portal-crosslinks-table th {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  padding: 4px var(--space-2);
+}
+.portal-crosslinks-table td {
+  padding: 5px var(--space-2);
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: middle;
+}

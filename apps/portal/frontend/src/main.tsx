@@ -9,6 +9,11 @@ import "@fontsource/jetbrains-mono/600.css";
 import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/shell.css";
+// Planning's FEATURE stylesheets only. Its tokens.css and base.css are
+// deliberately not imported: the Portal owns tokens and primitives now, and
+// re-importing Planning's would fork the palette (verified collision-free).
+import "@/styles/features.css";
+import "@/styles/legacy-views.css";
 import "./styles/print.css";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

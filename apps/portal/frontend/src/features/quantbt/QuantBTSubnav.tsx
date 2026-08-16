@@ -1,40 +1,37 @@
 /**
- * QuantBT module subnav — the feature keeps its own local tabs while the
- * shell owns primary navigation (v0.4 §P0.9).
+ * QuantBT module subnav — the feature keeps local tabs while the shell owns
+ * primary navigation (v0.4 §P0.9).
  *
- * `?run=` is carried across tabs: dropping it would silently reset run
- * selection, which is exactly the regression the standalone app guarded.
+ * Run identity lives in the path, so switching tabs cannot lose the selection
+ * the way a dropped `?run=` used to.
  */
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
-import { QUANTBT_ROOT } from "./routes";
+import { QUANTBT_TABS, runTabPath } from "./routes";
 
-const TABS = [
-  { path: "overview", label: "Overview" },
-  { path: "optimization", label: "Optimization" },
-  { path: "parameters", label: "Parameters" },
-  { path: "execution", label: "Execution" },
-  { path: "audit", label: "Audit" },
-] as const;
+const LABELS: Record<(typeof QUANTBT_TABS)[number], string> = {
+  overview: "Overview",
+  optimization: "Optimization",
+  parameters: "Parameters",
+  execution: "Execution",
+  audit: "Audit",
+};
 
-export function QuantBTSubnav() {
+export function QuantBTSubnav({ runId }: { runId: string }) {
   const location = useLocation();
-  const [params] = useSearchParams();
-  const search = params.toString();
-
   return (
     <nav className="portal-subnav" aria-label="QuantBT Research">
-      {TABS.map((tab) => {
-        const to = `${QUANTBT_ROOT}/${tab.path}${search ? `?${search}` : ""}`;
-        const active = location.pathname === `${QUANTBT_ROOT}/${tab.path}`;
+      {QUANTBT_TABS.map((tab) => {
+        const to = runTabPath(runId, tab);
+        const active = location.pathname === to;
         return (
           <Link
-            key={tab.path}
+            key={tab}
             to={to}
             className={`navtab ${active ? "navtab-active" : ""}`}
             aria-current={active ? "page" : undefined}
           >
-            {tab.label}
+            {LABELS[tab]}
           </Link>
         );
       })}

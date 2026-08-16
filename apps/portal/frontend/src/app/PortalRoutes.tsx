@@ -15,9 +15,10 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { StateView } from "../components/ui";
 import { CommandCenter } from "../features/command-center/CommandCenter";
 import { PortalMap } from "../features/portal-map/PortalMap";
+import { PlanningModule } from "../features/planning/PlanningModule";
 import { FeaturePreview } from "../features/preview/FeaturePreview";
 import { QuantBTModule } from "../features/quantbt/QuantBTModule";
-import { canonicalQuantBTPath } from "../features/quantbt/routes";
+import { QUANTBT_ROOT, canonicalQuantBTPath } from "../features/quantbt/routes";
 import type { PortalFeatureDefinition, PortalRegistryDocument } from "../portal/contracts";
 
 /**
@@ -29,7 +30,21 @@ const MODULES: Record<string, { component: ComponentType; wildcard?: boolean }> 
   COMMAND_CENTER: { component: CommandCenter },
   PORTAL_MAP: { component: PortalMap },
   QUANTBT_RESEARCH: { component: QuantBTModule, wildcard: true },
+  PLANNING: { component: PlanningModule, wildcard: true },
 };
+
+/**
+ * `/?new=1` was the standalone QuantBT entry point for a new run. `/` now
+ * belongs to the Command Center, so the shim keeps the old bookmark working
+ * without giving QuantBT a claim on the root route.
+ */
+function RootRoute() {
+  const location = useLocation();
+  if (new URLSearchParams(location.search).get("new") === "1") {
+    return <Navigate to={`${QUANTBT_ROOT}/new`} replace />;
+  }
+  return <CommandCenter />;
+}
 
 /** Redirects a declared legacy path onto its canonical route, keeping search. */
 function LegacyRedirect({ feature }: { feature: PortalFeatureDefinition }) {
@@ -53,7 +68,12 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
     <Routes>
       {registry.features.map((feature) => {
         const module = MODULES[feature.id];
-        const element = module ? <module.component /> : <FeaturePreview feature={feature} />;
+        const element =
+          feature.canonical_route === "/"
+            ? <RootRoute />
+            : module
+              ? <module.component />
+              : <FeaturePreview feature={feature} />;
         const path =
           feature.canonical_route === "/"
             ? "/"

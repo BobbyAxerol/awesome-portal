@@ -1,25 +1,34 @@
 /**
- * QuantBT Research as a module of the Portal shell.
+ * QuantBT Research as a module of the Portal shell — U04.
  *
- * This is the P0.9 refactor: the feature body is unchanged, but the shell now
- * owns the topbar, so what used to live in the QuantBT `TopBar` becomes the
- * module header's context and actions.
+ * The feature body is unchanged; what moved is the shell around it. The
+ * standalone `TopBar` became the module header's context and actions, and run
+ * identity moved from `?run=` into the canonical path.
  *
  * Invariants preserved from the standalone app (v0.4 §P0.9):
  *  - no metric is recalculated here;
- *  - run selection semantics are untouched (`?run=` still selects);
- *  - progress/SSE behaviour and the explicit "open results" gate are unchanged;
- *  - artifact and export routes are unchanged.
+ *  - run selection resolves to the same run for canonical and legacy links;
+ *  - the explicit "open results" gate after COMPLETED is unchanged;
+ *  - progress/SSE behaviour and artifact/export routes are unchanged.
  */
 import { useQuery } from "@tanstack/react-query";
 import { Copy, Download, FolderOpen, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 
 import { ModuleHeader } from "../../app/ModuleHeader";
 import { useFeature } from "../../app/context";
 import { Badge, Chip, StateView } from "../../components/ui";
-import { api, canOpenRunResults, isTerminal } from "../../lib/api";
+import { api, canOpenRunResults, isTerminal, type RunSummary } from "../../lib/api";
 import { fmtShortHash } from "../../lib/format";
 import { AuditView } from "../audit/AuditView";
 import { ConfigWorkspace } from "../config/ConfigWorkspace";
@@ -31,7 +40,7 @@ import { RunLibrary } from "../runs/RunLibrary";
 import { RunProgress } from "../runs/RunProgress";
 import { QuantBTSubnav } from "./QuantBTSubnav";
 import { RunPassport } from "./RunPassport";
-import { QUANTBT_ROOT } from "./routes";
+import { QUANTBT_ROOT, isQuantBTTab, runPath, runTabPath } from "./routes";
 
 function RunStatusBadge({ status }: { status: string | null }) {
   if (!status) return null;
@@ -40,32 +49,33 @@ function RunStatusBadge({ status }: { status: string | null }) {
   return <Badge tone={tone}>{status}</Badge>;
 }
 
-/** Redirect that PRESERVES `?run=` — dropping it reset run selection. */
-function OverviewRedirect() {
-  const location = useLocation();
-  return <Navigate to={`${QUANTBT_ROOT}/overview${location.search}`} replace />;
+/**
+ * The run the standalone app would have selected when none was named: the
+ * first COMPLETED run in the library. Kept identical so a bookmark of
+ * `/overview` still opens the run it always did.
+ */
+function defaultRun(runs: RunSummary[] | undefined): RunSummary | null {
+  return runs?.find((item) => item.status === "COMPLETED") ?? null;
 }
 
-export function QuantBTModule() {
-  const [params] = useSearchParams();
-  const location = useLocation();
-  const feature = useFeature("QUANTBT_RESEARCH");
-  const runId = params.get("run") ?? "";
-  const creatingRun = params.get("new") === "1";
-  const isLibrary = location.pathname.startsWith(`${QUANTBT_ROOT}/runs`);
+/* -------------------------------------------------------------------------
+ * Run workspace — canonical /runs/:runId/*
+ * ---------------------------------------------------------------------- */
+
+function RunWorkspace() {
+  const { runId = "" } = useParams();
   const [finishedNow, setFinishedNow] = useState(false);
   const previousStatus = useRef<string | null>(null);
+  const navigate = useNavigate();
 
-  const runs = useQuery({ queryKey: ["runs"], queryFn: api.listRuns, refetchInterval: 4000 });
   const run = useQuery({
     queryKey: ["run", runId],
     queryFn: () => api.getRun(runId),
     enabled: Boolean(runId),
     refetchInterval: (query) => (query.state.data && !isTerminal(query.state.data.status) ? 1500 : false),
   });
-  const strategies = useQuery({ queryKey: ["strategies"], queryFn: api.strategies });
 
-  // When a watched run reaches COMPLETED, stay on progress until the user
+  // A run that completes while being watched stays on progress until the user
   // explicitly opens results (§15.7 gate).
   useEffect(() => {
     const status = run.data?.status ?? null;
@@ -81,15 +91,107 @@ export function QuantBTModule() {
     previousStatus.current = status;
   }, [run.data?.status]);
 
-  const currentRun = useMemo(() => {
-    if (creatingRun) return undefined;
-    if (runId) return run.data ?? null;
-    return runs.data?.find((item) => item.status === "COMPLETED") ?? null;
-  }, [creatingRun, runId, run.data, runs.data]);
+  if (run.isLoading && !run.data) {
+    return <StateView kind="loading" message="Đang tải run…" />;
+  }
+  if (run.isError || !run.data) {
+    return (
+      <StateView
+        kind="failed"
+        code={runId}
+        message={run.error instanceof Error ? run.error.message : "Không đọc được run này."}
+        onRetry={() => void run.refetch()}
+      />
+    );
+  }
 
-  const runPending = Boolean(runId) && run.isLoading && !run.data;
-  const activeRunId = currentRun?.run_id ?? null;
+  const current = run.data;
+
+  if (!canOpenRunResults(current.status) || finishedNow) {
+    return (
+      <>
+        <RunPassport runId={current.run_id} status={current.status} />
+        <RunProgress
+          runId={current.run_id}
+          onViewResults={() => {
+            setFinishedNow(false);
+            navigate(runTabPath(current.run_id, "overview"));
+          }}
+        />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <RunPassport runId={current.run_id} status={current.status} />
+      <QuantBTSubnav runId={current.run_id} />
+      <Routes>
+        <Route path="overview" element={<OverviewView runId={current.run_id} />} />
+        <Route path="optimization" element={<OptimizationView runId={current.run_id} />} />
+        <Route path="parameters" element={<ParametersView runId={current.run_id} />} />
+        <Route path="execution" element={<ExecutionView runId={current.run_id} />} />
+        <Route path="audit" element={<AuditView runId={current.run_id} />} />
+        <Route path="*" element={<Navigate to={runTabPath(current.run_id, "overview")} replace />} />
+      </Routes>
+    </>
+  );
+}
+
+/* -------------------------------------------------------------------------
+ * Default-run resolution for the module root and bare legacy tabs
+ * ---------------------------------------------------------------------- */
+
+/**
+ * Resolves `/research/quantbt` and `/research/quantbt/<tab>` (no run named)
+ * onto a canonical run URL, reproducing the standalone default-run behaviour.
+ * With no completed run at all, the module opens New Run — the only action
+ * available in that state.
+ */
+function ResolveDefaultRun({ tab }: { tab?: string }) {
+  const runs = useQuery({ queryKey: ["runs"], queryFn: api.listRuns });
+  if (runs.isLoading) return <StateView kind="loading" message="Đang tìm run mặc định…" />;
+  const target = defaultRun(runs.data);
+  if (!target) return <Navigate to={`${QUANTBT_ROOT}/new`} replace />;
+  const safeTab = tab && isQuantBTTab(tab) ? tab : "overview";
+  return <Navigate to={runTabPath(target.run_id, safeTab)} replace />;
+}
+
+/** `/research/quantbt/<tab>?run=…` — the in-module legacy form. */
+function LegacyTabRedirect() {
+  const { tab = "" } = useParams();
+  const [params] = useSearchParams();
+  const runId = params.get("run");
+  if (!isQuantBTTab(tab)) return <Navigate to={QUANTBT_ROOT} replace />;
+  if (runId) return <Navigate to={runTabPath(runId, tab)} replace />;
+  return <ResolveDefaultRun tab={tab} />;
+}
+
+/* -------------------------------------------------------------------------
+ * Module
+ * ---------------------------------------------------------------------- */
+
+export function QuantBTModule() {
+  const feature = useFeature("QUANTBT_RESEARCH");
+  const location = useLocation();
   const [copied, setCopied] = useState(false);
+
+  const runs = useQuery({ queryKey: ["runs"], queryFn: api.listRuns, refetchInterval: 4000 });
+  const strategies = useQuery({ queryKey: ["strategies"], queryFn: api.strategies });
+
+  // The active run is whatever the canonical path names. Reading it from the
+  // URL keeps the header, passport and export action in agreement by
+  // construction, instead of tracking a second copy of the selection.
+  const activeRunId = useMemo(() => {
+    const match = /\/runs\/([^/]+)/.exec(location.pathname);
+    return match ? decodeURIComponent(match[1]) : null;
+  }, [location.pathname]);
+
+  const activeRun = useQuery({
+    queryKey: ["run", activeRunId ?? ""],
+    queryFn: () => api.getRun(activeRunId as string),
+    enabled: Boolean(activeRunId),
+  });
 
   const actions = (
     <>
@@ -140,44 +242,20 @@ export function QuantBTModule() {
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Chip>{strategies.data?.[0]?.strategy_id ?? "—"}</Chip>
           {activeRunId ? <Chip>current {fmtShortHash(activeRunId)}</Chip> : null}
-          <RunStatusBadge status={run.data?.status ?? null} />
+          <RunStatusBadge status={activeRun.data?.status ?? null} />
         </div>
       </ModuleHeader>
 
-      {isLibrary ? (
-        <RunLibrary />
-      ) : runPending ? (
-        <StateView kind="loading" message="Đang tải run…" />
-      ) : runId && run.isError ? (
-        <StateView kind="failed" message={run.error.message} />
-      ) : currentRun ? (
-        <>
-          <RunPassport runId={currentRun.run_id} status={currentRun.status} />
-          {canOpenRunResults(currentRun.status) && !finishedNow ? (
-            <>
-              <QuantBTSubnav />
-              <Routes>
-                <Route path="overview" element={<OverviewView runId={currentRun.run_id} />} />
-                <Route path="optimization" element={<OptimizationView runId={currentRun.run_id} />} />
-                <Route path="parameters" element={<ParametersView runId={currentRun.run_id} />} />
-                <Route path="execution" element={<ExecutionView runId={currentRun.run_id} />} />
-                <Route path="audit" element={<AuditView runId={currentRun.run_id} />} />
-                <Route path="*" element={<OverviewRedirect />} />
-              </Routes>
-            </>
-          ) : (
-            <RunProgress
-              runId={currentRun.run_id}
-              onViewResults={() => {
-                setFinishedNow(false);
-                window.location.href = `${QUANTBT_ROOT}/overview?run=${currentRun.run_id}`;
-              }}
-            />
-          )}
-        </>
-      ) : (
-        <ConfigWorkspace />
-      )}
+      <Routes>
+        <Route path="new" element={<ConfigWorkspace />} />
+        <Route path="runs" element={<RunLibrary />} />
+        <Route path="runs/:runId/*" element={<RunWorkspace />} />
+        <Route path=":tab" element={<LegacyTabRedirect />} />
+        <Route index element={<ResolveDefaultRun />} />
+        <Route path="*" element={<Navigate to={QUANTBT_ROOT} replace />} />
+      </Routes>
     </>
   );
 }
+
+export { runPath, runTabPath };

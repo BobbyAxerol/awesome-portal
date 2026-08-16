@@ -174,9 +174,11 @@ describe("route resolution", () => {
     }
   });
 
-  it("preserves the query string when translating a legacy deep link", () => {
+  it("resolves a legacy deep link onto the canonical run path", () => {
+    // Full translation coverage lives in features/quantbt/routes.test.ts; this
+    // asserts the registry-declared routes reach the canonical U04 form.
     expect(canonicalQuantBTPath("/overview", "?run=abc123")).toBe(
-      "/research/quantbt/overview?run=abc123",
+      "/research/quantbt/runs/abc123/overview",
     );
     expect(canonicalQuantBTPath("/runs")).toBe("/research/quantbt/runs");
     expect(canonicalQuantBTPath("/planning")).toBeNull();

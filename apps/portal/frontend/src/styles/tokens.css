@@ -143,6 +143,11 @@
   --shadow-e2: 0 4px 12px rgba(28, 37, 50, 0.08);
   --shadow-e3: 0 10px 28px rgba(28, 37, 50, 0.12);
 
+  /* Composite aliases consumed by the embedded Planning stylesheets. They
+   * resolve to the same elevation scale rather than a second shadow system. */
+  --shadow: var(--shadow-e1), var(--shadow-e2);
+  --shadow-raised: var(--shadow-e2), var(--shadow-e3);
+
   /* --- Shell metrics (v0.4 §P0.8 reference sizes) ------------------------- */
   --topbar-h: 56px;
   --sidebar-w: 248px;
@@ -252,6 +257,8 @@
   --shadow-e1: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-e2: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-e3: 0 10px 28px rgba(0, 0, 0, 0.5);
+  --shadow: var(--shadow-e1), var(--shadow-e2);
+  --shadow-raised: var(--shadow-e2), var(--shadow-e3);
   --scrim: rgb(0 0 0 / 55%);
 
   color-scheme: dark;

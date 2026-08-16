@@ -25,6 +25,7 @@ const registry: PortalRegistryDocument = JSON.parse(
 const summary: PortalSummaryV1 = JSON.parse(
   readFileSync(join(FIXTURES, "summary.healthy.json"), "utf8"),
 );
+const linksDocument = JSON.parse(readFileSync(join(FIXTURES, "links.public.json"), "utf8"));
 
 const originalFetch = globalThis.fetch;
 
@@ -51,6 +52,9 @@ function mount({ route = "/", registryDocument = registry, registryStatus }: Mou
     }
     if (url.includes("/portal/summary")) {
       return new Response(JSON.stringify(summary), { status: 200 });
+    }
+    if (url.includes("/portal/links")) {
+      return new Response(JSON.stringify(linksDocument), { status: 200 });
     }
     // QuantBT run endpoints are not under test here.
     return new Response(JSON.stringify([]), { status: 200 });
@@ -166,6 +170,54 @@ describe("legacy compatibility", () => {
   it("shows a not-found state for a route no feature owns", async () => {
     mount({ route: "/definitely-not-a-feature" });
     await waitFor(() => expect(screen.getByText(/không thuộc feature nào/)).toBeTruthy());
+  });
+});
+
+describe("embedding (U04/U05)", () => {
+  it("mounts QuantBT under its canonical route with no nested topbar", async () => {
+    mount({ route: "/research/quantbt/runs" });
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1, name: "QuantBT Research" })).toBeTruthy(),
+    );
+    // Exactly one shell topbar: the module must not render a second one.
+    expect(document.querySelectorAll(".portal-topbar").length).toBe(1);
+  });
+
+  it("mounts Planning under /planning with no nested shell", async () => {
+    mount({ route: "/planning/board" });
+    await waitFor(() => expect(screen.getByRole("navigation", { name: "Planning" })).toBeTruthy());
+    expect(document.querySelectorAll(".portal-topbar").length).toBe(1);
+    // Planning's standalone shell classes must not appear inside the Portal.
+    expect(document.querySelector(".app .workspace")).toBeNull();
+  });
+
+  it("redirects the Planning root to its first view", async () => {
+    mount({ route: "/planning" });
+    await waitFor(() => expect(screen.getByRole("navigation", { name: "Planning" })).toBeTruthy());
+    const active = document.querySelector(".portal-subnav .navtab-active");
+    expect(active?.textContent).toBe("Documents");
+  });
+
+  it("keeps the API/LOCAL mode visible so local state is never read as shared", async () => {
+    mount({ route: "/planning/roadmap" });
+    await waitFor(() => expect(document.querySelector("[data-api-mode]")).not.toBeNull());
+  });
+
+  it("translates a legacy Planning hash link onto the canonical path", async () => {
+    mount({ route: "/planning/docs#view=board" });
+    await waitFor(() => {
+      const active = document.querySelector(".portal-subnav .navtab-active");
+      expect(active?.textContent).toBe("Task Board");
+    });
+  });
+
+  it("sends the legacy /?new=1 bookmark to the canonical new-run route", async () => {
+    mount({ route: "/?new=1" });
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1, name: "QuantBT Research" })).toBeTruthy(),
+    );
+    // The Command Center must not also be mounted at the root.
+    expect(screen.queryByRole("heading", { level: 1, name: "Command Center" })).toBeNull();
   });
 });
 
