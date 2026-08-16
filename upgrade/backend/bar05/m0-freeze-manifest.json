@@ -33,7 +33,7 @@
     "registry_source": "sha256:27b4da324ecd001ad011fac57ffbbb709cec7417af449eb916af2aaa4d87fc90",
     "run_request_schema": "sha256:582ced995417c641c9247fce422887e7f637359945fd8ef3b3e442d15fde009e"
   },
-  "frozen_at_commit": "102d96ef200a9dc96a4a9e02b42d66698587c124",
+  "frozen_at_commit": "5278e7ccd9fb4249be2a7635fcdfdc5714d765cc",
   "golden_tolerances": {
     "exit_price": {
       "atol": 1e-12,
