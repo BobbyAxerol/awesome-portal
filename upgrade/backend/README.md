@@ -67,8 +67,16 @@ Chúng không thay thế phase hoặc exit gate trong
   manifest v2.0.0 → blobs sha256, tamper detection, reconcile, legacy
   import), NATS JetStream + MinIO + `quant-worker-py` trong Compose, broker
   port in-memory/NATS, 9 tests + smoke end-to-end (chạy three-window thật,
-  bundle 17 files, redelivery không duplicate). ADR-004/006 Proposed. Kế
-  tiếp là BAR-09 (U12 engine capability authority).
+  bundle 17 files, redelivery không duplicate). ADR-004/006 Proposed.
+- [BAR-09 — Engine Capability Authority](./BAR_09_ENGINE_CAPABILITY_AUTHORITY.md)
+  — U12 authority. **Complete:** manifest `engine-capabilities.v1` pin
+  `quantbt-engine==1.0.8` (dist-info RECORD sha256) + 2 certified
+  capabilities, loader fail-closed lúc startup, inspector verify installed
+  wheel, capability preflight trong mọi run/preflight (protocol/data
+  class/optuna trials/parameter space), reject unadvertised/uncertified dù
+  request hợp lệ, gate: synthetic capability thêm bằng manifest-only không
+  cần sửa code, endpoint read-only `/api/v1/portal/capabilities`. 12 tests.
+  Kế tiếp là BAR-10 (U13 data catalog & immutable snapshots).
 
 Agent chỉ được implement deep dive khi phase tương ứng đang active và owner đã
 giao scope. Tài liệu của phase sau là thiết kế trước, không phải implementation

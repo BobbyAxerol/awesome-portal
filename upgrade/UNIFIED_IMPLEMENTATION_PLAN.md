@@ -1123,6 +1123,15 @@ route trong React.
 
 - Current portal covers three-window/Advanced WFO and selected current routes.
 - PyPI provenance and protected strategy tests exist.
+- BAR-09 đã thêm engine capability authority: manifest
+  `engine-capabilities.v1` (pin quantbt-engine 1.0.8 với dist-info RECORD
+  sha256, 2 capability certified kèm backend/data/methodology/resource
+  requirements), loader fail-closed, inspector verify installed wheel,
+  capability preflight cho mọi run request (reject unadvertised/uncertified
+  dù request hợp lệ; synthetic capability qua manifest-only pass mà không
+  sửa dispatch code), endpoint read-only `/api/v1/portal/capabilities`.
+  Endpoint Explorer UI, Generic Run API và Control API capability tables là
+  slice U12 sau.
 
 **Description / To-do**
 

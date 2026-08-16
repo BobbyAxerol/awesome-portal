@@ -583,7 +583,7 @@ whether anything was pushed or deployed
 ## 14. Next backend architecture task
 
 BAR-01 (BE1–BE6), BAR-02 (BE1–BE3), BAR-03, BAR-04, BAR-05, BAR-06,
-BAR-07 and BAR-08 are complete:
+BAR-07, BAR-08 and BAR-09 are complete:
 registry/summary/links contracts and API, the parity snapshot freeze,
 additive artifact provenance, the cross-link sidecar, the operational ingress
 boundary, the thin identity BFF with the security matrix, and the M0
@@ -596,8 +596,10 @@ transactional outbox, ADMIN-first authenticated proxy with signed principal,
 idempotent writes, feature-flag rollback), and the durable worker +
 immutable artifact authority (run/attempt separation, claim-lease/heartbeat,
 standardized failure codes, content-addressed bundles, NATS JetStream +
-MinIO private services, ADR-004/006). The gateway keeps routing legacy
-paths until the façade cutover is exercised.
+MinIO private services, ADR-004/006), and the engine capability authority
+(source-controlled capability manifest, installed-wheel inspector, typed
+capability preflight, read-only capabilities endpoint). The gateway keeps
+routing legacy paths until the façade cutover is exercised.
 
 Deep dives:
 
@@ -609,11 +611,15 @@ Deep dives:
 - [`upgrade/backend/BAR_06_SHARED_CONTRACT_AUTHORITY.md`](./backend/BAR_06_SHARED_CONTRACT_AUTHORITY.md)
 - [`upgrade/backend/BAR_07_CONTROL_API_FACADE.md`](./backend/BAR_07_CONTROL_API_FACADE.md)
 - [`upgrade/backend/BAR_08_DURABLE_QUANT_WORKER_AND_IMMUTABLE_ARTIFACTS.md`](./backend/BAR_08_DURABLE_QUANT_WORKER_AND_IMMUTABLE_ARTIFACTS.md)
+- [`upgrade/backend/BAR_09_ENGINE_CAPABILITY_AUTHORITY.md`](./backend/BAR_09_ENGINE_CAPABILITY_AUTHORITY.md)
 
-The next backend task is BAR-09, the engine capability authority for U12:
-build an inspector from the public QuantBT API and the exact installed
-wheel; register signed/hashed capability manifests and certification state;
-perform actor/quota/alpha/data/methodology/backend/resource preflight; and
-reject unadvertised or uncertified capabilities even when a crafted request
-is syntactically valid. Gate: a new certified synthetic capability appears
-through schema/manifest without editing core backend dispatch code.
+The next backend task is BAR-10, the Data Catalog and immutable snapshot
+authority for U13: add Dataset, Universe, Instrument, Snapshot and Quality
+identities; wrap the approved Historical reader output without replacing it
+with filesystem scanning or mutable `latest` paths; keep candle, matrix,
+metrics and order-book schemas separate and versioned; add quality-blocking
+preflight, repair-as-new-snapshot and digest-keyed query contracts with
+pagination/downsampling metadata; design realtime availability separately
+and never infer it from Historical release health. Gate: a crafted
+submission cannot bypass data quality; snapshot lineage/hash and reopen
+pass for every activated family.
