@@ -6,6 +6,7 @@ import { Copy, ExternalLink, FolderOpen, Search } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { runPath } from "../quantbt/routes";
 import { api, type RunSummary } from "../../lib/api";
 import { fmtDuration, fmtShortHash, fmtTimestamp } from "../../lib/format";
 import { Badge, StateView } from "../../components/ui";
@@ -48,7 +49,7 @@ export function RunLibrary() {
     setPasteError("");
     api
       .getRun(runId)
-      .then(() => navigate(`/?run=${runId}`))
+      .then(() => navigate(runPath(runId)))
       .catch((error: Error) => setPasteError(error.message));
   };
 
