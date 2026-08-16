@@ -84,6 +84,7 @@ for required in \
   "${ROOT_DIR}/upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md" \
   "${ROOT_DIR}/upgrade/PAPER_TO_LIVE_EXECUTION_PORTAL_BACKEND_UIUX_ADJUSTMENT_SPEC_v0.6_vi.md" \
   "${ROOT_DIR}/upgrade/DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md" \
+  "${ROOT_DIR}/upgrade/STRATEGY_IMPORT_AND_RUNTIME_CONTRACT.md" \
   "${ROOT_DIR}/CLAUDE.md" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_approval_paper.py" \
   "${ROOT_DIR}/upgrade/backend/BAR_12_APPROVAL_PROMOTION_PAPER_SANDBOX.md" \
@@ -282,6 +283,7 @@ for tracked_source in \
   upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md \
   upgrade/PAPER_TO_LIVE_EXECUTION_PORTAL_BACKEND_UIUX_ADJUSTMENT_SPEC_v0.6_vi.md \
   upgrade/DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md \
+  upgrade/STRATEGY_IMPORT_AND_RUNTIME_CONTRACT.md \
   CLAUDE.md \
   apps/portal/backend/tests/test_approval_paper.py \
   upgrade/backend/BAR_12_APPROVAL_PROMOTION_PAPER_SANDBOX.md \

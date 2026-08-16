@@ -37,6 +37,11 @@ Rules for these agents:
   (paper→live backend/UIUX adjustment spec) and
   `upgrade/DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md` (trading DB schema
   guide: 88 tables / 2 views across 6 layers).
+- Strategy import (U14) follows the design note
+  `upgrade/STRATEGY_IMPORT_AND_RUNTIME_CONTRACT.md`: imported strategies enter
+  through the same adapter port as the built-in `delta-rsi-polynomial-alpha`
+  and must mirror its spec/output/endpoint contract; browser never executes
+  arbitrary source.
 
 ## Source layout and boundaries
 
