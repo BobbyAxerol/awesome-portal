@@ -6,6 +6,38 @@ not create nested Git repositories, submodules, or independent lockfiles there.
 The Portal deploys as one Compose-managed stack, even when its modules retain
 their own private runtime services.
 
+## Agent roles
+
+| Role | Agent | Authority |
+|---|---|---|
+| Owner/maintainer | Bobby | Merge decisions, version releases, workspace provisioning |
+| Backend lead | codex | Backend authority: services, contracts, infra, migrations |
+| Member (backend + frontend) | opencode agent | Implements alongside both leads, keeps the contract bridge |
+| Frontend lead / UIUX | Claude | U02–U05, U07 frontend and design system; see `CLAUDE.md` |
+
+Rules for these agents:
+
+- codex owns backend changes; opencode implements backend slices under the
+  BAR deep-dive discipline and supports frontend work.
+- Claude owns UI/UX and frontend; backend needs go through a Backend request
+  to codex, never direct edits (full handoff context in `CLAUDE.md`).
+- opencode works both sides, commits coherent slices on the assigned branch
+  and keeps `FRONTEND_HANDOFF.md` and the BAR docs up to date.
+- Cross-boundary changes (contracts, schemas, registry data) are reviewed by
+  codex before merge; UI copy is Vietnamese with English technical terms.
+- All agents follow the contributor/branch rules below; only Bobby merges.
+- All agents must read the architecture supplement
+  `upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md`
+  (dual-cell Research SGP / Execution AWS HK, release flow, BAR-17→BAR-20
+  runway, UI synthesis from `Design/`). It supplements, never replaces, the
+  v0.4 guide; its authority order (section 2) is binding when documents
+  conflict.
+- Paper-flow onwards follows two further supplements, also non-replacing:
+  `upgrade/PAPER_TO_LIVE_EXECUTION_PORTAL_BACKEND_UIUX_ADJUSTMENT_SPEC_v0.6_vi.md`
+  (paper→live backend/UIUX adjustment spec) and
+  `upgrade/DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md` (trading DB schema
+  guide: 88 tables / 2 views across 6 layers).
+
 ## Source layout and boundaries
 
 - `apps/portal/` is the public Portal application. Its first delivered domain

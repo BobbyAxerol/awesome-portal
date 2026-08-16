@@ -35,14 +35,23 @@ define the backend contract needed by U02/U03
 When documents appear to disagree, use this order:
 
 1. [Portal agent rules](../AGENTS.md) and the closest domain `AGENTS.md`.
-2. [Unified Implementation Plan](./UNIFIED_IMPLEMENTATION_PLAN.md), especially
+2. The v0.5 adjustment guide
+   [Research–Execution Dual-Cell & Institutional UI/UX](./RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md)
+   for dual-cell topology, release flow and UI synthesis from `Design/`.
+   It supplements, never replaces, v0.4.
+3. From the paper flow onwards, the two non-replacing supplements:
+   [PAPER_TO_LIVE_EXECUTION_PORTAL_BACKEND_UIUX_ADJUSTMENT_SPEC_v0.6_vi.md](./PAPER_TO_LIVE_EXECUTION_PORTAL_BACKEND_UIUX_ADJUSTMENT_SPEC_v0.6_vi.md)
+   (paper→live backend/UIUX spec) and
+   [DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md](./DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md)
+   (trading DB schema guide).
+4. [Unified Implementation Plan](./UNIFIED_IMPLEMENTATION_PLAN.md), especially
    the active phase and its exit gate.
-3. [Architecture and UIUX v0.4](./quantbt_portal_architecture_uiux_final_v0.4_vi.md)
+5. [Architecture and UIUX v0.4](./quantbt_portal_architecture_uiux_final_v0.4_vi.md)
    for target topology, domain lifecycle, API and UX semantics.
-4. This guide for backend sequencing and handoff discipline.
-5. [Current FastAPI architecture](../apps/portal/backend/ARCHITECTURE.md) for
+6. This guide for backend sequencing and handoff discipline.
+7. [Current FastAPI architecture](../apps/portal/backend/ARCHITECTURE.md) for
    implementation facts in the existing service.
-6. For Historical Market Data only, the operator contract at
+8. For Historical Market Data only, the operator contract at
    `/home/bobby/pool_alpha/HISTORICAL_MARKET_DATA_CONSUMER_GUIDE.md`.
 
 The active phase owns implementation authority. A future target diagram is not
@@ -623,7 +632,14 @@ Deep dives:
 - [`upgrade/backend/BAR_15_PLANNING_POSTGRES_CUTOVER.md`](./backend/BAR_15_PLANNING_POSTGRES_CUTOVER.md)
 - [`upgrade/backend/BAR_16_RELEASE_DR_HARDENING.md`](./backend/BAR_16_RELEASE_DR_HARDENING.md)
 
-The runway is complete. Remaining platform work continues as
+The v0.5 adjustment guide extends the runway with four dual-cell slices —
+**BAR-17** Dual-Cell Deployment & Release Authority, **BAR-18** Inter-Cell
+Gateway & Contract Authority, **BAR-19** Single-Domain Routing & Emergency
+Operations, **BAR-20** Production Activation, DR & Documentation
+Reconciliation. Its §8 audit matrix and §8.3 discrepancies are binding review
+items before BAR-17 starts.
+
+The original runway is complete. Remaining platform work continues as
 phase-scoped slices: the Control API façade cutover (gateway rewiring and
 per-route migrations behind flags), the Planning PostgreSQL production
 adapter with a real cutover run, Rust extraction only if heavier-path

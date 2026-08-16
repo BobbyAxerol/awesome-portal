@@ -81,6 +81,10 @@ for required in \
   "${ROOT_DIR}/upgrade/backend/BAR_14_RUST_FAST_PATHS_GATE.md" \
   "${ROOT_DIR}/upgrade/backend/BAR_15_PLANNING_POSTGRES_CUTOVER.md" \
   "${ROOT_DIR}/upgrade/backend/BAR_16_RELEASE_DR_HARDENING.md" \
+  "${ROOT_DIR}/upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md" \
+  "${ROOT_DIR}/upgrade/PAPER_TO_LIVE_EXECUTION_PORTAL_BACKEND_UIUX_ADJUSTMENT_SPEC_v0.6_vi.md" \
+  "${ROOT_DIR}/upgrade/DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md" \
+  "${ROOT_DIR}/CLAUDE.md" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_approval_paper.py" \
   "${ROOT_DIR}/upgrade/backend/BAR_12_APPROVAL_PROMOTION_PAPER_SANDBOX.md" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_alpha_registry.py" \
@@ -275,6 +279,10 @@ for tracked_source in \
   upgrade/backend/BAR_14_RUST_FAST_PATHS_GATE.md \
   upgrade/backend/BAR_15_PLANNING_POSTGRES_CUTOVER.md \
   upgrade/backend/BAR_16_RELEASE_DR_HARDENING.md \
+  upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md \
+  upgrade/PAPER_TO_LIVE_EXECUTION_PORTAL_BACKEND_UIUX_ADJUSTMENT_SPEC_v0.6_vi.md \
+  upgrade/DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md \
+  CLAUDE.md \
   apps/portal/backend/tests/test_approval_paper.py \
   upgrade/backend/BAR_12_APPROVAL_PROMOTION_PAPER_SANDBOX.md \
   apps/portal/backend/tests/test_alpha_registry.py \

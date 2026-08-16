@@ -114,7 +114,14 @@ Chúng không thay thế phase hoặc exit gate trong
   — U19. **Complete:** release report credential-free (provenance digests,
   backup commands, DR checklist) + secret-hygiene scan. 4 tests.
 
-**Runway complete (BAR-00 → BAR-16).** Phần còn lại là các slice theo phase:
+**Runway complete (BAR-00 → BAR-16).** Guide v0.5 bổ sung (không thay thế)
+tại `upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md`
+mở runway dual-cell **BAR-17 → BAR-20** (deployment/release authority,
+inter-cell gateway, single-domain routing & emergency ops, production
+activation/DR). §8 audit matrix + §8.3 discrepancies là review bắt buộc trước
+BAR-17. Paper→live theo 2 supplement (không thay thế):
+`upgrade/PAPER_TO_LIVE_EXECUTION_PORTAL_BACKEND_UIUX_ADJUSTMENT_SPEC_v0.6_vi.md`
+và `upgrade/DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md` (88 tables/2 views). Phần còn lại là các slice theo phase:
 façade cutover gateway, Planning PG production adapter + real cutover, Rust
 chỉ khi heavier-path profiling vượt gate §15.6, và release/DR owner-
 operational theo BAR-16 report.

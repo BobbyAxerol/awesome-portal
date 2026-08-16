@@ -1531,7 +1531,7 @@ export interface components {
             label: string;
             /** Metrics */
             metrics: {
-                [key: string]: unknown;
+                [key: string]: components["schemas"]["EvidenceValue"];
             };
             /** Recent Items */
             recent_items: components["schemas"]["SummaryLinkItem"][];
