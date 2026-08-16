@@ -32,9 +32,17 @@ cuối file này) thay vì tự sửa backend.
    §10.1), §11 (component reuse + Reuse report trong mỗi PR UI), §12 (chart
    production contract). `Design/` là nguồn nguyên lý, **không phải palette
    để copy**; Fund Paper là token authority.
+4c. `upgrade/PAPER_TO_LIVE_EXECUTION_PORTAL_BACKEND_UIUX_ADJUSTMENT_SPEC_v0.6_vi.md`
+   — spec paper→live: chỉ đọc khi làm các màn từ Paper trở đi (chưa vội ở
+   version này, nhưng nắm §4 Information Architecture + §6 chart/metric
+   contract để không thiết kế lệch). Bổ sung, không thay thế.
 5. `upgrade/BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md` — hiểu backend đã
    giao những contract gì (BAR-01→BAR-16 complete; BAR-17→BAR-20 là runway
    dual-cell kế tiếp) để không làm trùng/sai.
+5b. `upgrade/STRATEGY_IMPORT_AND_RUNTIME_CONTRACT.md` — contract cho strategy
+   picker + Import Wizard: built-in `delta-rsi-polynomial-alpha` + imported
+   alpha đi qua cùng một adapter port; bảng endpoint §7.2 + output/index/
+   timestamp bắt buộc (§3) — đọc trước khi thiết kế màn New Run/Import.
 6. `apps/portal/registry/FRONTEND_HANDOFF.md` — **contract frontend chính
    thức**: endpoints (`/api/v1/portal/registry|summary|links|capabilities`,
    `/api/v1/data/*`, `/api/v1/alphas*`), ETag/304, no-store/Vary, states,
@@ -123,7 +131,7 @@ Backend request
 
 Kết thúc mỗi task báo cáo: branch/commit, file thay đổi, màn hình/state đã
 cover, test đã chạy, Reuse report, và Backend request còn treo. Authority khi
-tài liệu mâu thuẫn (theo v0.5 §2): `AGENTS.md` → guide v0.5 → `UNIFIED_
-IMPLEMENTATION_PLAN.md` → guide v0.4 → BAR deep dives → `FRONTEND_HANDOFF.md`
-→ code hiện hành. Code và tài liệu không khớp thì ghi discrepancy + evidence,
+tài liệu mâu thuẫn (theo v0.5 §2): `AGENTS.md` → guide v0.5 → guide v0.6
+(nếu làm paper→live) → `UNIFIED_IMPLEMENTATION_PLAN.md` → guide v0.4 → BAR
+deep dives → `FRONTEND_HANDOFF.md` → code hiện hành. Code và tài liệu không khớp thì ghi discrepancy + evidence,
 không tự chọn mô tả tiện lợi.

@@ -319,7 +319,14 @@ def test_only_current_real_capabilities_are_marked_available() -> None:
     }
     real = {feature["id"] for feature in source["features"] if feature["data_mode"] == "REAL"}
     assert available == {"QUANTBT_RESEARCH", "PLANNING"}
-    assert real == available
+    # v0.4 P0.6: the Command Center aggregates real counts while the screen
+    # itself is still PROTOTYPE — REAL data mode under PROTOTYPE maturity.
+    assert real == {"QUANTBT_RESEARCH", "PLANNING", "COMMAND_CENTER"}
+    for feature in source["features"]:
+        if feature["data_mode"] == "REAL":
+            assert feature["maturity"] in {"AVAILABLE", "PROTOTYPE"}
+        if feature["maturity"] == "COMMISSIONED":
+            assert feature["data_mode"] != "REAL"
 
     commissioned = {
         "ALPHA_POOL",

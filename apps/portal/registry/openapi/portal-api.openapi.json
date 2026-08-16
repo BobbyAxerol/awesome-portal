@@ -2024,7 +2024,9 @@
             "type": "string"
           },
           "metrics": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "$ref": "#/components/schemas/EvidenceValue"
+            },
             "title": "Metrics",
             "type": "object"
           },

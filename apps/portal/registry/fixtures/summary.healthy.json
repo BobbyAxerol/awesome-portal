@@ -86,13 +86,13 @@
     "by_maturity": {
       "AVAILABLE": 2,
       "BLOCKED": 0,
-      "COMMISSIONED": 11,
+      "COMMISSIONED": 9,
       "DEPRECATED": 0,
       "HIDDEN": 0,
-      "PROTOTYPE": 0
+      "PROTOTYPE": 2
     }
   },
-  "registry_digest": "sha256:74a1d04b2de425a03b8863386e66bd0f0a79102ec7d726d5f21513959b7762e8",
+  "registry_digest": "sha256:0ac8910145aafeb544e362db6cba3382e578b4fa254b4943364eb82df4746a71",
   "requested_at": "2026-08-15T18:00:00Z",
   "schema_version": "portal.summary.v1",
   "sections": [

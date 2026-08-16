@@ -1,6 +1,6 @@
 {
   "control_api_version": "0.1.0",
-  "git_commit": "fd500a0591cce4f7901e496fa53c29edf6cedf78",
+  "git_commit": "5deb0ddfac9d6a93d9c84fcade7a31a8bc5ad762",
   "modes": {
     "control_api_auth_mode": null,
     "historical_data_mode": null,

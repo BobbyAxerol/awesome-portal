@@ -224,7 +224,7 @@
       ]
     }
   ],
-  "content_digest": "sha256:74a1d04b2de425a03b8863386e66bd0f0a79102ec7d726d5f21513959b7762e8",
+  "content_digest": "sha256:0ac8910145aafeb544e362db6cba3382e578b4fa254b4943364eb82df4746a71",
   "feature_groups": [
     {
       "id": "command",
@@ -264,7 +264,7 @@
   ],
   "features": [
     {
-      "activation_gate": "U03 registry, shell and truthful summary exit gates pass.",
+      "activation_gate": null,
       "canonical_route": "/",
       "concern_ids": [
         "CONCERN_REGISTRY_AUTHORITY",
@@ -272,7 +272,7 @@
         "CONCERN_PORTAL_AUTHORIZATION",
         "CONCERN_COMMAND_CENTER_PERFORMANCE"
       ],
-      "data_mode": "STATIC_PREVIEW",
+      "data_mode": "REAL",
       "default_task_id": "PRT-012",
       "description": "Truthful product map and current operational summaries.",
       "environments": [
@@ -285,7 +285,7 @@
       "label": "Command Center",
       "legacy_routes": [],
       "lifecycle_stage_ids": [],
-      "maturity": "COMMISSIONED",
+      "maturity": "PROTOTYPE",
       "navigation": {
         "icon_key": "layout-dashboard",
         "order": 10,
@@ -300,7 +300,7 @@
       "screen_ids": [
         "COMMAND_CENTER_SCREEN"
       ],
-      "source_module": null,
+      "source_module": "apps/portal",
       "summary_source_ids": [
         "registry_current",
         "quantbt_current",
@@ -308,7 +308,7 @@
       ]
     },
     {
-      "activation_gate": "U03 registry-driven Portal Map and preview navigation pass.",
+      "activation_gate": null,
       "canonical_route": "/portal-map",
       "concern_ids": [
         "CONCERN_REGISTRY_AUTHORITY",
@@ -337,7 +337,7 @@
         "LIVE",
         "MONITOR"
       ],
-      "maturity": "COMMISSIONED",
+      "maturity": "PROTOTYPE",
       "navigation": {
         "icon_key": "map",
         "order": 20,
@@ -914,12 +914,14 @@
     }
   ],
   "registry_id": "portal-default",
-  "revision": 1,
+  "revision": 2,
   "schema_version": "portal.registry.v1",
   "screens": [
     {
-      "activation_gate": "BAR-01 registry and summary contracts plus U03 shell gates pass.",
-      "backend_dependency_ids": [],
+      "activation_gate": null,
+      "backend_dependency_ids": [
+        "portal_api"
+      ],
       "concern_ids": [
         "CONCERN_REGISTRY_AUTHORITY",
         "CONCERN_COMMAND_CENTER_TRUTH",
@@ -927,10 +929,26 @@
         "CONCERN_COMMAND_CENTER_PERFORMANCE"
       ],
       "contract_revision": 1,
-      "data_mode": "STATIC_PREVIEW",
+      "data_mode": "REAL",
       "feature_id": "COMMAND_CENTER",
-      "inputs": [],
-      "maturity": "COMMISSIONED",
+      "inputs": [
+        {
+          "authority": "portal.registry.v1",
+          "id": "registry",
+          "required": true
+        },
+        {
+          "authority": "portal.summary.v1",
+          "id": "summary",
+          "required": true
+        },
+        {
+          "authority": "portal.links.v1",
+          "id": "links",
+          "required": false
+        }
+      ],
+      "maturity": "PROTOTYPE",
       "permissions": [
         "portal.command.read"
       ],
@@ -948,7 +966,7 @@
       "screen_id": "COMMAND_CENTER_SCREEN"
     },
     {
-      "activation_gate": "U03 registry-driven lifecycle and preview interactions pass.",
+      "activation_gate": null,
       "backend_dependency_ids": [],
       "concern_ids": [
         "CONCERN_REGISTRY_AUTHORITY",
@@ -958,7 +976,7 @@
       "data_mode": "STATIC_PREVIEW",
       "feature_id": "PORTAL_MAP",
       "inputs": [],
-      "maturity": "COMMISSIONED",
+      "maturity": "PROTOTYPE",
       "permissions": [
         "portal.map.read"
       ],
