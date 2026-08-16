@@ -74,8 +74,11 @@ def test_freeze_manifest_regenerates_identically() -> None:
     assert regenerated["python_pins"] == committed["python_pins"]
     assert regenerated["artifact_schema_versions"] == committed["artifact_schema_versions"]
     assert regenerated["golden_tolerances"] == committed["golden_tolerances"]
-    assert regenerated["frozen_at_commit"] == committed["frozen_at_commit"]
     assert regenerated["schema_version"] == "bar05.freeze.v1"
+    assert regenerated["frozen_at_commit"] == committed["frozen_at_commit"]
+    # frozen_at_commit records the commit that froze the files (the parent of
+    # the commit that carries the manifest); it must be a full sha1.
+    assert len(regenerated["frozen_at_commit"]) == 40
 
 
 def test_freeze_manifest_locks_pins_and_tolerances() -> None:
