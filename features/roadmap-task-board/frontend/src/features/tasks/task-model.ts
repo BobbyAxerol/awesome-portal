@@ -137,6 +137,53 @@ export function taskDraft(status: TaskStatus = "Backlog"): Task {
   };
 }
 
+/** How the board groups its columns. */
+export type TaskGrouping = "status" | "milestone";
+
+export interface MilestoneLane {
+  /** Milestone key; "" is the unassigned lane. */
+  id: string;
+  label: string;
+  tasks: Task[];
+  /** Progress counters, computed from real task status only. */
+  total: number;
+  done: number;
+}
+
+/**
+ * Groups tasks into milestone lanes.
+ *
+ * `phase` is the milestone field the task schema already carries; grouping
+ * does not introduce a second one. Tasks without a phase are kept in an
+ * explicit "chưa gán milestone" lane rather than dropped, so the lane counts
+ * always add up to the filtered total.
+ */
+export function milestoneLanes(tasks: Task[]): MilestoneLane[] {
+  const byPhase = new Map<string, Task[]>();
+  for (const task of tasks) {
+    const key = task.phase.trim();
+    const bucket = byPhase.get(key);
+    if (bucket) bucket.push(task);
+    else byPhase.set(key, [task]);
+  }
+
+  return [...byPhase.entries()]
+    .sort(([a], [b]) => {
+      // The unassigned lane sorts last; everything else is natural order.
+      if (a === b) return 0;
+      if (!a) return 1;
+      if (!b) return -1;
+      return a.localeCompare(b, undefined, { numeric: true });
+    })
+    .map(([id, laneTasks]) => ({
+      id,
+      label: id || "Chưa gán milestone",
+      tasks: laneTasks,
+      total: laneTasks.length,
+      done: laneTasks.filter((task) => task.status === "Done").length,
+    }));
+}
+
 export function replaceTask(tasks: Task[], next: Task): Task[] {
   const index = tasks.findIndex((task) => task.id === next.id);
   if (index < 0) return [...tasks, next];

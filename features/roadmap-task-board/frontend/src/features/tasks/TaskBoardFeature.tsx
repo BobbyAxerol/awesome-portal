@@ -7,12 +7,14 @@ import {
   EMPTY_TASK_FILTERS,
   TASK_STATUSES,
   filteredTasks,
+  milestoneLanes,
   nextTaskId,
   normaliseTasks,
   optionValues,
   taskDraft,
   type Task,
   type TaskFilters,
+  type TaskGrouping,
   type TaskStatus,
 } from "./task-model";
 import { useTasks } from "./useTasks";
@@ -150,12 +152,23 @@ export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Task | null>(null);
   const [activityTaskId, setActivityTaskId] = useState<string | null>(null);
+  const [grouping, setGrouping] = useState<TaskGrouping>("status");
 
   const visibleTasks = useMemo(() => filteredTasks(tasks, filters), [tasks, filters]);
   const workstreams = useMemo(() => optionValues(tasks, "workstream"), [tasks]);
   const priorities = useMemo(() => optionValues(tasks, "priority"), [tasks]);
   const phases = useMemo(() => optionValues(tasks, "phase"), [tasks]);
   const owners = useMemo(() => optionValues(tasks, "owner"), [tasks]);
+
+  // Milestone lanes are derived from the `phase` field the schema already
+  // carries; grouping never introduces a second milestone model.
+  const lanes = useMemo(
+    () =>
+      grouping === "milestone"
+        ? milestoneLanes(visibleTasks)
+        : [{ id: "", label: "", tasks: visibleTasks, total: visibleTasks.length, done: 0 }],
+    [grouping, visibleTasks],
+  );
 
   const setBoardView = (next: BoardView) => {
     setView(next);
@@ -297,6 +310,14 @@ export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
           <option value="">All owners</option>{owners.map((value) => <option key={value}>{value}</option>)}
         </select>
         <Button type="button" variant="ghost" onClick={() => setFilters(EMPTY_TASK_FILTERS)}>Clear</Button>
+        <select
+          value={grouping}
+          onChange={(event) => setGrouping(event.target.value as TaskGrouping)}
+          aria-label="Group tasks"
+        >
+          <option value="status">Nhóm theo status</option>
+          <option value="milestone">Nhóm theo milestone</option>
+        </select>
         <div className="view-toggle" aria-label="Task presentation">
           <button type="button" className={view === "board" ? "active" : ""} onClick={() => setBoardView("board")}>Board</button>
           <button type="button" className={view === "table" ? "active" : ""} onClick={() => setBoardView("table")}>Table</button>
@@ -304,26 +325,40 @@ export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
       </div>
 
       {view === "board" ? (
-        <div className="kanban phase3-kanban" aria-label="Task kanban board">
-          {TASK_STATUSES.map((status) => {
-            const tasksForStatus = visibleTasks.filter((task) => task.status === status);
-            return (
-              <section
-                key={status}
-                className="kanban-col"
-                data-testid={`task-column-${status}`}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => dropOnStatus(event, status)}
-              >
-                <header className="kanban-head"><span>{status}</span><Chip>{tasksForStatus.length}</Chip></header>
-                <div className="task-list">
-                  {tasksForStatus.map((task) => <TaskCard key={task.id} task={task} onEdit={openEdit} onDelete={deleteTask} onDragStart={startDrag} onDragEnd={() => setDraggedTaskId(null)} />)}
-                </div>
-                <button type="button" className="add-card-btn" onClick={() => openNew(status)}>+ Add task</button>
-              </section>
-            );
-          })}
-        </div>
+        lanes.length === 0 ? (
+          <StateView kind="empty" message="Không có task khớp bộ lọc." />
+        ) : (
+          lanes.map((lane) => (
+            <div key={lane.id || "__all__"} className="milestone-lane" data-testid={`milestone-lane-${lane.id || "unassigned"}`}>
+              {grouping === "milestone" ? (
+                <header className="milestone-lane-head">
+                  <span className="milestone-lane-label">{lane.label}</span>
+                  <Chip>{lane.done}/{lane.total} done</Chip>
+                </header>
+              ) : null}
+              <div className="kanban phase3-kanban" aria-label={grouping === "milestone" ? `Kanban ${lane.label}` : "Task kanban board"}>
+                {TASK_STATUSES.map((status) => {
+                  const tasksForStatus = lane.tasks.filter((task) => task.status === status);
+                  return (
+                    <section
+                      key={status}
+                      className="kanban-col"
+                      data-testid={grouping === "milestone" ? `task-column-${lane.id || "unassigned"}-${status}` : `task-column-${status}`}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => dropOnStatus(event, status)}
+                    >
+                      <header className="kanban-head"><span>{status}</span><Chip>{tasksForStatus.length}</Chip></header>
+                      <div className="task-list">
+                        {tasksForStatus.map((task) => <TaskCard key={task.id} task={task} onEdit={openEdit} onDelete={deleteTask} onDragStart={startDrag} onDragEnd={() => setDraggedTaskId(null)} />)}
+                      </div>
+                      <button type="button" className="add-card-btn" onClick={() => openNew(status)}>+ Add task</button>
+                    </section>
+                  );
+                })}
+              </div>
+            </div>
+          ))
+        )
       ) : visibleTasks.length ? (
         <div className="table-wrap phase3-table-wrap">
           <table className="task-table">

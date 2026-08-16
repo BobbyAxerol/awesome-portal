@@ -4,6 +4,7 @@ import { Download } from "lucide-react";
 
 import { Badge, Collapsible, DefinitionList, StateView } from "../../components/ui";
 import { api } from "../../lib/api";
+import { PlanningLinkPanel } from "../quantbt/PlanningLinkPanel";
 import { fmtShortHash, fmtTimestamp } from "../../lib/format";
 
 export function AuditView({ runId }: { runId: string }) {
@@ -104,6 +105,8 @@ export function AuditView({ runId }: { runId: string }) {
           </Collapsible>
         </div>
       </div>
+
+      <PlanningLinkPanel runId={runId} />
     </div>
   );
 }
