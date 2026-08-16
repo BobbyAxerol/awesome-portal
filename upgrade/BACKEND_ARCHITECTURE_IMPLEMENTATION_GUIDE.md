@@ -582,13 +582,14 @@ whether anything was pushed or deployed
 
 ## 14. Next backend architecture task
 
-BAR-01 (BE1–BE6), BAR-02 (BE1–BE3), BAR-03 and BAR-04 are complete: the
-registry/summary/links contracts and API, the parity snapshot freeze, additive
-artifact provenance, the cross-link sidecar, the operational ingress boundary
-and the thin identity BFF (`apps/control-api/`) with PostgreSQL identity
-tables, Cloudflare JWT verification, opaque sessions, Argon2id credentials,
-RBAC and the security test matrix. The BFF owns no run/data/alpha authority
-and the gateway still routes to the Python services until U10.
+BAR-01 (BE1–BE6), BAR-02 (BE1–BE3), BAR-03, BAR-04 and BAR-05 are complete:
+registry/summary/links contracts and API, the parity snapshot freeze,
+additive artifact provenance, the cross-link sidecar, the operational ingress
+boundary, the thin identity BFF with the security matrix, and the M0
+reproducibility freeze (digest manifest, credential-free environment report,
+Planning export count/hash report, executable golden gate). The BFF still
+owns no routing authority; the gateway remains the single public entry until
+U10.
 
 Deep dives:
 
@@ -596,10 +597,12 @@ Deep dives:
 - [`upgrade/backend/BAR_02_COMPATIBILITY_BOUNDARIES_AND_PARITY_FREEZE.md`](./backend/BAR_02_COMPATIBILITY_BOUNDARIES_AND_PARITY_FREEZE.md)
 - [`upgrade/backend/BAR_03_OPERATIONAL_INGRESS_BOUNDARY.md`](./backend/BAR_03_OPERATIONAL_INGRESS_BOUNDARY.md)
 - [`upgrade/backend/BAR_04_THIN_IDENTITY_BFF.md`](./backend/BAR_04_THIN_IDENTITY_BFF.md)
+- [`upgrade/backend/BAR_05_REPRODUCIBILITY_FREEZE.md`](./backend/BAR_05_REPRODUCIBILITY_FREEZE.md)
 
-The next backend task is BAR-05, the reproducibility freeze for U08: freeze
-exact commits, images, package/wheel hashes, OpenAPI, configuration
-fingerprints and artifact schemas; produce a credential-free environment
-report; run deterministic QuantBT golden routes through the authenticated
-ingress; and document tolerances plus rollback to the last known-good image
-set.
+The next backend task is BAR-06, the shared contract authority for U09:
+canonical schemas for IDs, UTC timestamps, decimal values, RFC 7807 errors,
+idempotency, optimistic concurrency and event envelopes; snapshot the FastAPI
+compatibility OpenAPI and generate clients/types; add breaking-change CI and
+cross-language fixture compilation; and resolve ADR-001 (npm-to-pnpm) and
+ADR-002 (opaque ID format) before one JavaScript workspace/lock authority is
+chosen.

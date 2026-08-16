@@ -890,6 +890,14 @@ mọi migration authority sau có parity và rollback.
 
 - Synthetic PyPI/golden suite và current CI đã có; chưa freeze qua unified
   shell/auth path.
+- BAR-05 đã freeze technical baseline: digest manifest
+  (`upgrade/backend/bar05/m0-freeze-manifest.json` — protected kernel, pins
+  PyPI, OpenAPI snapshots, golden fixtures, artifact schema versions, config/
+  lockfiles) regenerate được, environment report credential-free, Planning
+  export có `counts` + `content_hash`, và `scripts/verify-m0-golden.sh` chạy
+  golden parity + reopen suites (27 tests). Golden qua authenticated BFF
+  ingress chạy khi U10 wire façade; visual/Playwright flows là slice
+  frontend.
 
 **Description / To-do**
 

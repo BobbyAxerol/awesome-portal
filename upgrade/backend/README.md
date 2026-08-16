@@ -37,7 +37,14 @@ Chúng không thay thế phase hoặc exit gate trong
   HMAC-signed internal principal, bootstrap CLI idempotent (bobby/stan/
   thanhvuong, secret sinh runtime không commit) và full security matrix (24
   tests trên PostgreSQL thật). BFF chưa wire vào gateway (U10), không có
-  run/data/alpha authority. Kế tiếp là BAR-05 (U08 reproducibility freeze).
+  run/data/alpha authority.
+- [BAR-05 — Reproducibility Freeze](./BAR_05_REPRODUCIBILITY_FREEZE.md)
+  — U08 M0 slice. **Complete:** digest manifest
+  (`upgrade/backend/bar05/m0-freeze-manifest.json`, 27 files: protected
+  kernel, pins, OpenAPI, golden fixtures, config, control-api/frontend
+  lockfiles), credential-free environment report, Planning export có
+  `counts` + `content_hash`, `scripts/verify-m0-golden.sh` gate (27 tests).
+  Kế tiếp là BAR-06 (U09 shared contract authority).
 
 Agent chỉ được implement deep dive khi phase tương ứng đang active và owner đã
 giao scope. Tài liệu của phase sau là thiết kế trước, không phải implementation

@@ -83,4 +83,43 @@ previous images/tags (or redeploy the freeze commit), and
 - **BAR-05-BE3:** Planning export count/hash report, `verify-m0-golden.sh`
   gate and evidence documentation.
 
-Evidence is recorded per slice below.
+Implementation evidence — 2026-08-15:
+
+- [x] Added `apps/portal/scripts/export_m0_freeze.py` and the committed
+  `upgrade/backend/bar05/m0-freeze-manifest.json`: 27 file digests (protected
+  kernel + hash, registry/links sources, Python pins/`pyproject.toml`,
+  Portal/Planning OpenAPI + run-request schema, golden fixtures, compose/
+  production compose/nginx/`.env.example`, control-api manifests/lockfile/
+  tsconfig/migrations, both frontend manifests/lockfiles, Planning
+  requirements), `python_pins` (quantbt-engine==1.0.8,
+  primus-historical-market-data==0.1.0rc3), artifact schema versions,
+  documented golden tolerances (pos_weight/exit_type exact; exit_price
+  rtol 1e-9/atol 1e-12) and the rollback procedure.
+- [x] Added `apps/portal/scripts/export_environment_report.py` and the
+  committed `environment-report.json`: python/platform identifiers, exact
+  package versions (portal-api 0.1.0, quantbt-engine 1.0.8, duckdb/pandas/
+  numpy/pyarrow/fastapi/httpx/jsonschema), control-api version and mode
+  placeholders — no credentials, host paths or secret values.
+- [x] Planning `GET /api/v1/export` now returns additive `counts` and
+  `content_hash` (sha256 over canonical tasks+roadmap JSON); webhook
+  configuration stays unexported. Existing Planning suites stay green.
+- [x] Added `scripts/verify-m0-golden.sh`: protected hash, golden fixture
+  digest checks and the golden parity/protected-sources/three-window/artifact
+  suites. It passes (`27` tests).
+- [x] M0 freeze suite: `9` tests (digest verification, regeneration
+  stability, pins/tolerances lock, credential-free scan, golden policy
+  consistency, environment report determinism and Planning export contract).
+- [x] Full Portal backend regression passes `300 passed, 1 skipped`; full
+  Planning backend passes `18 passed`; workspace verification passes
+  including the protected strategy hash. No change was pushed or deployed.
+- [x] Known boundary (documented): the golden route set through the
+  authenticated BFF ingress runs when U10 wires the façade; until then the
+  gateway remains the single public entry and the BFF has no routing
+  authority.
+
+Technical debt and rollback:
+
+- SLO/RSS/payload baselines wait for the measured U10 observability boundary.
+- Screenshot/Playwright golden flows are the frontend slice of U08.
+- Rollback stays the manifest procedure: restore the freeze image set and
+  run `./scripts/portal smoke`.
