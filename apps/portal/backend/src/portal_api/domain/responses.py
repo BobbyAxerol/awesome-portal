@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -15,6 +15,15 @@ class HealthResponse(ResponseModel):
     service: str
     version: str
     quantbt_loaded: bool
+
+
+class ReadinessResponse(ResponseModel):
+    status: Literal["ready"]
+    service: str
+    version: str
+    registry_schema_version: Literal["portal.registry.v1"]
+    registry_revision: int
+    registry_digest: str
 
 
 class WindowSummary(ResponseModel):
@@ -44,3 +53,60 @@ class StrategyResponse(ResponseModel):
     required_columns: tuple[str, ...]
     structural_contract: dict[str, Any]
     parameter_space: dict[str, Any]
+
+
+class PortalErrorDetail(ResponseModel):
+    code: str
+    message: str
+
+
+class PortalErrorResponse(ResponseModel):
+    error: PortalErrorDetail
+    request_id: str
+
+
+class IngressDiagnostics(ResponseModel):
+    forwarded_proto: str | None
+    forwarded_for_present: bool
+
+
+class DependencyState(ResponseModel):
+    state: Literal["ready", "available", "unavailable", "disabled"]
+    detail: str | None
+
+
+class RegistryDependency(DependencyState):
+    digest: str | None
+
+
+class HistoricalDataDependency(DependencyState):
+    mode: str
+    datasets: int | None
+
+
+class PlanningSummaryDependency(DependencyState):
+    mode: str
+
+
+class WorkerDependency(DependencyState):
+    max_workers: int | None
+
+
+class DependenciesReport(ResponseModel):
+    registry: RegistryDependency
+    artifact_store: DependencyState
+    historical_data: HistoricalDataDependency
+    quantbt_engine: DependencyState
+    planning_summary: PlanningSummaryDependency
+    run_worker: WorkerDependency
+
+
+class DiagnosticsResponse(ResponseModel):
+    status: Literal["ok"]
+    service: str
+    version: str
+    checked_at: datetime
+    request_id: str
+    traceparent: str
+    ingress: IngressDiagnostics
+    dependencies: DependenciesReport

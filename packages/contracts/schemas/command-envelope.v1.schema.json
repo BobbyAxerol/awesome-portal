@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/command-envelope.v1.schema.json",
+  "title": "Portal Command Envelope v1",
+  "description": "Canonical envelope for mutating requests (guide §6.2): idempotency and optimistic concurrency are part of the initial contract, not a later optimization.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "request_id",
+    "actor_id",
+    "workspace_id",
+    "idempotency_key",
+    "expected_aggregate_version",
+    "payload_schema_version",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {"const": "command-envelope.v1"},
+    "request_id": {"$ref": "https://schemas.primusspark.com/portal/common.v1.schema.json#/$defs/opaqueId"},
+    "actor_id": {"$ref": "https://schemas.primusspark.com/portal/common.v1.schema.json#/$defs/opaqueId"},
+    "workspace_id": {"$ref": "https://schemas.primusspark.com/portal/common.v1.schema.json#/$defs/opaqueId"},
+    "idempotency_key": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$"
+    },
+    "expected_aggregate_version": {
+      "oneOf": [
+        {"type": "integer", "minimum": 1},
+        {"type": "null"}
+      ]
+    },
+    "aggregate_type": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+    "aggregate_id": {"$ref": "https://schemas.primusspark.com/portal/common.v1.schema.json#/$defs/opaqueId"},
+    "payload_schema_version": {"$ref": "https://schemas.primusspark.com/portal/common.v1.schema.json#/$defs/schemaVersion"},
+    "traceparent": {"$ref": "https://schemas.primusspark.com/portal/common.v1.schema.json#/$defs/traceparent"},
+    "payload": {"type": "object"}
+  }
+}

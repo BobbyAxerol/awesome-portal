@@ -10,6 +10,9 @@ import { ChartFigure } from "../../components/ChartFigure";
 import { SegmentedControl, StateView } from "../../components/ui";
 import { api, type SeriesPayload } from "../../lib/api";
 import { entryPoints, exitPoints } from "../../lib/transitions";
+import { activeTheme, vizTokensFor, withAlpha } from "../../styles/tokens";
+
+const viz = vizTokensFor(activeTheme());
 
 const SEGMENTS = ["is", "oos", "holdout_live"] as const;
 type SegmentKey = (typeof SEGMENTS)[number];
@@ -70,15 +73,15 @@ function PriceChart({ payload }: { payload: SeriesPayload }) {
           type: "line",
           showSymbol: false,
           data: payload.series.close?.map((value, index) => [payload.timestamps[index], value]),
-          lineStyle: { width: 1.25, color: "#5d7b93" },
-          itemStyle: { color: "#5d7b93" },
+          lineStyle: { width: 1.25, color: viz.price },
+          itemStyle: { color: viz.price },
         },
         {
           name: "Long entry",
           type: "scatter",
           symbol: "triangle",
           symbolSize: 14,
-          itemStyle: { color: "var(--good)", borderColor: "#0f5c3a", borderWidth: 1 },
+          itemStyle: { color: "var(--good)", borderColor: viz.markerLongBorder, borderWidth: 1 },
           data: entries.filter((entry) => entry.side === 1).map((entry) => [payload.timestamps[entry.index], entry.price]),
         },
         {
@@ -87,7 +90,7 @@ function PriceChart({ payload }: { payload: SeriesPayload }) {
           symbol: "triangle",
           symbolRotate: 180,
           symbolSize: 14,
-          itemStyle: { color: "var(--bad)", borderColor: "#7c2626", borderWidth: 1 },
+          itemStyle: { color: "var(--bad)", borderColor: viz.markerShortBorder, borderWidth: 1 },
           data: entries.filter((entry) => entry.side === -1).map((entry) => [payload.timestamps[entry.index], entry.price]),
         },
         {
@@ -138,7 +141,7 @@ function PositionStrip({ payload }: { payload: SeriesPayload }) {
             showSymbol: false,
             data: payload.series.accepted_position?.map((value, index) => [payload.timestamps[index], value]),
             lineStyle: { color: palette.accent, width: 1.75 },
-            areaStyle: { color: "rgba(15,76,92,.08)" },
+            areaStyle: { color: withAlpha(palette.accent, 0.08) },
           },
         ],
       }),

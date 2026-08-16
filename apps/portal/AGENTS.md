@@ -32,6 +32,14 @@ Use the root `AGENTS.md` for Git, CI/CD and deployment rules.
 
 - QuantBT remains the source of truth for optimization, accounting and metrics.
   Do not reimplement objectives or PnL in Portal code.
+- Canonical historical data is consumed only through the approved installed
+  reader wheel and accepted release manifest. Its allowed scopes are backtest
+  and research; do not reuse this adapter for realtime feeds, paper
+  orders/fills, paper account state or live execution.
+- Historical queries require explicit symbol and timezone-aware start/end
+  bounds, keep `check_val=True`, and preserve source gaps. Never import a host
+  `data_loader.py`, source-mount the data repository, forward-fill canonical
+  gaps or silently replace incompatible real data with fixtures.
 - Holdout Live data never enters calibration or parameter selection. Preserve
   half-open window boundaries and immutable selected parameters.
 - Keep imports side-effect free. Record integration gaps rather than inventing

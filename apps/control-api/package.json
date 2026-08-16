@@ -1,0 +1,35 @@
+{
+  "name": "@primusspark/control-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Portal Control API: thin identity BFF (U07), future Control API facade (U10)",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "migrate:up": "node-pg-migrate -m migrations --envPath ./.env-control-api up",
+    "start": "node dist/main.js",
+    "bootstrap": "node dist/cli/bootstrap.js"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.0",
+    "@fastify/rate-limit": "^10.0.0",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-fastify": "^11.0.0",
+    "argon2": "^0.41.0",
+    "jose": "^5.9.0",
+    "node-pg-migrate": "^7.9.0",
+    "pg": "^8.13.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.0",
+    "typescript": "^5.7.0",
+    "undici": "^7.0.0",
+    "vitest": "^2.1.0"
+  }
+}

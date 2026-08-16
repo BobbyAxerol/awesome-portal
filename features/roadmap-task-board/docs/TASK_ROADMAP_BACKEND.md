@@ -39,6 +39,7 @@ Backend giữ hai bề mặt API cùng lúc:
 | Resource | Endpoint |
 | --- | --- |
 | Service | `GET /api/health`, `GET /api/ready`, `GET /api/docs`, `GET /api/openapi.json` |
+| Portal summary | `GET /api/v1/summary?recent_limit=5` (`planning.summary.v1`) |
 | Export | `GET /api/v1/export?include_deleted=false` |
 | Task | `GET|POST /api/v1/tasks`; `GET|PATCH|DELETE /api/v1/tasks/{id}` |
 | Task command | `POST /{id}/transition`, `POST /{id}/move`, `POST /{id}/restore`, `GET /{id}/activity` |
@@ -50,6 +51,13 @@ Backend giữ hai bề mặt API cùng lúc:
 `PATCH` Task không nhận `status`; đổi trạng thái phải dùng `transition` hoặc
 `move`, để audit/outbox không bị bỏ qua. Roadmap phase ID bất biến ở V1 vì ID
 là anchor của activity history.
+
+`planning.summary.v1` là read model bounded cho Portal mẹ: exact task counts
+theo năm status hiện hành, phase count và tối đa năm ID/status/timestamp gần
+nhất trên cùng một SQLite read snapshot. Endpoint không trả title, notes,
+owner, outcome, activity body hoặc webhook state. Planning schema chưa có
+authoritative current-phase marker; consumer phải hiển thị unavailable thay vì
+suy diễn phase hiện tại từ week, task title hoặc dependency.
 
 Lỗi domain có envelope thống nhất và `X-Request-ID`:
 

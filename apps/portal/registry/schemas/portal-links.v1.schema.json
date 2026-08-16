@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/portal-links.v1.schema.json",
+  "title": "Portal Cross-Link Sidecar v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "links_revision", "reviewed_at", "entries"],
+  "properties": {
+    "schema_version": {"const": "portal.links.v1"},
+    "links_revision": {"type": "integer", "minimum": 1},
+    "reviewed_at": {"type": "string", "format": "date-time"},
+    "entries": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/linkEntry"},
+      "maxItems": 128
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "dangling_links",
+        "features_linked",
+        "screens_linked",
+        "concerns_linked",
+        "planning_tasks_referenced"
+      ],
+      "properties": {
+        "status": {"const": "valid"},
+        "dangling_links": {"const": 0},
+        "features_linked": {"type": "integer", "minimum": 0},
+        "screens_linked": {"type": "integer", "minimum": 0},
+        "concerns_linked": {"type": "integer", "minimum": 0},
+        "planning_tasks_referenced": {"type": "integer", "minimum": 0}
+      }
+    }
+  },
+  "$defs": {
+    "linkEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "feature_id",
+        "screen_id",
+        "concern_id",
+        "roadmap_epic_id",
+        "planning_task_ids",
+        "figma_frame_id",
+        "repository_scope",
+        "prototype_route",
+        "activation_gate"
+      ],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,63}$"},
+        "feature_id": {
+          "oneOf": [
+            {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,63}$"},
+            {"type": "null"}
+          ]
+        },
+        "screen_id": {
+          "oneOf": [
+            {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,63}$"},
+            {"type": "null"}
+          ]
+        },
+        "concern_id": {
+          "oneOf": [
+            {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,63}$"},
+            {"type": "null"}
+          ]
+        },
+        "roadmap_epic_id": {
+          "oneOf": [
+            {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"},
+            {"type": "null"}
+          ]
+        },
+        "planning_task_ids": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$"},
+          "maxItems": 50
+        },
+        "figma_frame_id": {
+          "oneOf": [
+            {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"},
+            {"type": "null"}
+          ]
+        },
+        "repository_scope": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$"},
+          "maxItems": 16
+        },
+        "prototype_route": {
+          "oneOf": [
+            {"type": "string", "pattern": "^/", "maxLength": 240},
+            {"type": "null"}
+          ]
+        },
+        "activation_gate": {
+          "oneOf": [
+            {"type": "string", "minLength": 1, "maxLength": 500},
+            {"type": "null"}
+          ]
+        }
+      }
+    }
+  }
+}

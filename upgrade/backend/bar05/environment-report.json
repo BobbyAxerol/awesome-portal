@@ -1,0 +1,24 @@
+{
+  "control_api_version": "0.1.0",
+  "git_commit": "5deb0ddfac9d6a93d9c84fcade7a31a8bc5ad762",
+  "modes": {
+    "control_api_auth_mode": null,
+    "historical_data_mode": null,
+    "planning_summary_mode": null,
+    "portal_environment": null
+  },
+  "packages": {
+    "duckdb": "1.5.5",
+    "fastapi": "0.141.1",
+    "httpx": "0.28.1",
+    "jsonschema": "4.26.0",
+    "numpy": "2.2.6",
+    "pandas": "2.3.3",
+    "portal-api": "0.1.0",
+    "pyarrow": "24.0.0",
+    "quantbt-engine": "1.0.8"
+  },
+  "platform": "linux",
+  "python_version": "3.12.13",
+  "schema_version": "bar05.env-report.v1"
+}

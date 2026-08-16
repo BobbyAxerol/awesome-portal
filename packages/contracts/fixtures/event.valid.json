@@ -1,0 +1,19 @@
+{
+  "event_id": "evt_01J2K3M4N5P6Q7R8S9T0A1B2C7",
+  "event_type": "quant.run.progressed.v1",
+  "schema_version": 1,
+  "aggregate_type": "run_attempt",
+  "aggregate_id": "ra_01J2K3M4N5P6Q7R8S9T0A1B2C8",
+  "aggregate_version": 12,
+  "workspace_id": "ws_01J2K3M4N5P6Q7R8S9T0A1B2C4",
+  "occurred_at": "2026-08-15T12:00:00.123456Z",
+  "produced_at": "2026-08-15T12:00:00.130000Z",
+  "producer": "quant-worker-py@0.1.0",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "idempotency_key": "ra_01J2K3M4N5P6Q7R8S9T0A1B2C8:progress:12",
+  "payload": {
+    "state": "OPTIMIZING_IS",
+    "stage_index": 3,
+    "stage_count": 14
+  }
+}

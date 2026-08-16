@@ -1,0 +1,303 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/portal-summary.v1.schema.json",
+  "title": "Portal Command Center Summary v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "registry_digest",
+    "environment",
+    "requested_at",
+    "completed_at",
+    "overall_availability",
+    "registry_counts",
+    "sections",
+    "priority_items"
+  ],
+  "properties": {
+    "schema_version": {"const": "portal.summary.v1"},
+    "registry_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "environment": {
+      "$ref": "https://schemas.primusspark.com/portal/portal-registry-source.v1.schema.json#/$defs/portalEnvironment"
+    },
+    "requested_at": {"type": "string", "format": "date-time"},
+    "completed_at": {"type": "string", "format": "date-time"},
+    "overall_availability": {"$ref": "#/$defs/availability"},
+    "registry_counts": {"$ref": "#/$defs/registryCounts"},
+    "sections": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/section"},
+      "maxItems": 32
+    },
+    "priority_items": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/priorityItem"},
+      "maxItems": 50
+    }
+  },
+  "$defs": {
+    "nullableString": {
+      "oneOf": [
+        {"type": "string", "minLength": 1, "maxLength": 500},
+        {"type": "null"}
+      ]
+    },
+    "availabilityState": {
+      "enum": [
+        "available",
+        "unavailable",
+        "degraded",
+        "stale",
+        "denied",
+        "commissioned"
+      ]
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["service", "contract", "endpoint"],
+      "properties": {
+        "service": {"type": "string", "minLength": 1, "maxLength": 120},
+        "contract": {"type": "string", "minLength": 1, "maxLength": 120},
+        "endpoint": {"$ref": "#/$defs/nullableString"}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_revision", "content_digest"],
+      "properties": {
+        "source_revision": {"$ref": "#/$defs/nullableString"},
+        "content_digest": {
+          "oneOf": [
+            {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "availability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "reason_code",
+        "detail",
+        "retryable",
+        "checked_at",
+        "as_of",
+        "stale_after_seconds",
+        "authority",
+        "provenance"
+      ],
+      "properties": {
+        "state": {"$ref": "#/$defs/availabilityState"},
+        "reason_code": {"$ref": "#/$defs/nullableString"},
+        "detail": {"$ref": "#/$defs/nullableString"},
+        "retryable": {"type": "boolean"},
+        "checked_at": {"type": "string", "format": "date-time"},
+        "as_of": {
+          "oneOf": [
+            {"type": "string", "format": "date-time"},
+            {"type": "null"}
+          ]
+        },
+        "stale_after_seconds": {
+          "oneOf": [
+            {"type": "integer", "minimum": 0},
+            {"type": "null"}
+          ]
+        },
+        "authority": {"$ref": "#/$defs/authority"},
+        "provenance": {"$ref": "#/$defs/provenance"}
+      }
+    },
+    "evidenceValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "availability",
+        "value",
+        "unit",
+        "timezone",
+        "segment",
+        "source_artifact_digest"
+      ],
+      "properties": {
+        "availability": {"$ref": "#/$defs/availability"},
+        "value": {
+          "oneOf": [
+            {"type": "number"},
+            {"type": "string", "maxLength": 500},
+            {"type": "null"}
+          ]
+        },
+        "unit": {"$ref": "#/$defs/nullableString"},
+        "timezone": {"$ref": "#/$defs/nullableString"},
+        "segment": {"$ref": "#/$defs/nullableString"},
+        "source_artifact_digest": {
+          "oneOf": [
+            {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            {"type": "null"}
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "availability": {
+                "properties": {
+                  "state": {
+                    "enum": ["unavailable", "denied", "commissioned"]
+                  }
+                }
+              }
+            },
+            "required": ["availability"]
+          },
+          "then": {
+            "properties": {"value": {"const": null}}
+          }
+        }
+      ]
+    },
+    "summaryLink": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "route", "resource_id", "observed_at", "authority"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "maxLength": 120},
+        "label": {"type": "string", "minLength": 1, "maxLength": 200},
+        "route": {"type": "string", "pattern": "^/", "maxLength": 240},
+        "resource_id": {"$ref": "#/$defs/nullableString"},
+        "observed_at": {"type": "string", "format": "date-time"},
+        "authority": {"type": "string", "minLength": 1, "maxLength": 120}
+      }
+    },
+    "summaryWarning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "title", "detail", "observed_at", "evidence_digest"],
+      "properties": {
+        "code": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,63}$"},
+        "severity": {"enum": ["warning", "error"]},
+        "title": {"type": "string", "minLength": 1, "maxLength": 200},
+        "detail": {"type": "string", "minLength": 1, "maxLength": 500},
+        "observed_at": {"type": "string", "format": "date-time"},
+        "evidence_digest": {
+          "oneOf": [
+            {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "feature_id",
+        "label",
+        "availability",
+        "metrics",
+        "recent_items",
+        "warnings"
+      ],
+      "properties": {
+        "source_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$"},
+        "feature_id": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,63}$"},
+        "label": {"type": "string", "minLength": 1, "maxLength": 120},
+        "availability": {"$ref": "#/$defs/availability"},
+        "metrics": {
+          "type": "object",
+          "propertyNames": {"pattern": "^[a-z][a-z0-9_]{1,63}$"},
+          "additionalProperties": {"$ref": "#/$defs/evidenceValue"},
+          "maxProperties": 64
+        },
+        "recent_items": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/summaryLink"},
+          "maxItems": 5
+        },
+        "warnings": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/summaryWarning"},
+          "maxItems": 5
+        }
+      }
+    },
+    "priorityItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "severity",
+        "title",
+        "feature_id",
+        "resource_id",
+        "observed_at",
+        "authority",
+        "route",
+        "evidence_digest"
+      ],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "maxLength": 160},
+        "type": {
+          "enum": [
+            "RUN_FAILED",
+            "HISTORICAL_DATA_UNAVAILABLE",
+            "REGISTRY_BLOCKING_CONCERN"
+          ]
+        },
+        "severity": {"enum": ["critical", "warning", "info"]},
+        "title": {"type": "string", "minLength": 1, "maxLength": 200},
+        "feature_id": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,63}$"},
+        "resource_id": {"$ref": "#/$defs/nullableString"},
+        "observed_at": {"type": "string", "format": "date-time"},
+        "authority": {"type": "string", "minLength": 1, "maxLength": 120},
+        "route": {"type": "string", "pattern": "^/", "maxLength": 240},
+        "evidence_digest": {
+          "oneOf": [
+            {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "registryCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["by_maturity", "blocking_concerns"],
+      "properties": {
+        "by_maturity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "AVAILABLE",
+            "PROTOTYPE",
+            "COMMISSIONED",
+            "BLOCKED",
+            "HIDDEN",
+            "DEPRECATED"
+          ],
+          "properties": {
+            "AVAILABLE": {"type": "integer", "minimum": 0},
+            "PROTOTYPE": {"type": "integer", "minimum": 0},
+            "COMMISSIONED": {"type": "integer", "minimum": 0},
+            "BLOCKED": {"type": "integer", "minimum": 0},
+            "HIDDEN": {"type": "integer", "minimum": 0},
+            "DEPRECATED": {"type": "integer", "minimum": 0}
+          }
+        },
+        "blocking_concerns": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

@@ -17,7 +17,10 @@ from typing import Any
 
 from portal_api.domain.enums import RunState
 from portal_api.domain.errors import RunCancelledError
-from portal_api.repositories.artifacts import ArtifactRepository
+from portal_api.repositories.artifacts import (
+    ArtifactRepository,
+    with_portal_provenance,
+)
 from portal_api.workers import run_worker
 
 TERMINAL_STATES = {RunState.COMPLETED, RunState.FAILED, RunState.CANCELLED}
@@ -36,6 +39,7 @@ class RunManager:
         mp_start_method: str | None = None,
     ):
         self._artifacts = artifacts
+        self._max_workers = max_workers
         # FastAPI/TestClient and notebook hosts commonly have active threads.
         # A fork server avoids inheriting interpreter/Numba locks and also
         # avoids re-executing a pytest/notebook main module like spawn does.
@@ -54,6 +58,10 @@ class RunManager:
 
     # -- submission -----------------------------------------------------------
 
+    @property
+    def max_workers(self) -> int:
+        return self._max_workers
+
     def submit(self, request) -> str:
         run_id = uuid.uuid4().hex[:16]
         status = {
@@ -65,11 +73,17 @@ class RunManager:
             "events": [{"state": RunState.QUEUED.value, "at": time.time()}],
             "failure": None,
         }
-        self._artifacts.write_json(run_id, "status.json", status)
+        self._artifacts.write_json(
+            run_id,
+            "status.json",
+            with_portal_provenance("status.json", status),
+        )
         self._artifacts.write_json(
             run_id,
             "config/request.json",
-            request.model_dump(mode="json", exclude_none=False),
+            with_portal_provenance(
+                "request.json", request.model_dump(mode="json", exclude_none=False)
+            ),
         )
         self._launcher.submit(
             self._launch_process,
@@ -91,12 +105,15 @@ class RunManager:
             self._artifacts.write_json(
                 run_id,
                 "status.json",
-                {
-                    **status,
-                    "state": RunState.FAILED.value,
-                    "completed_at": _utc_now_iso(),
-                    "failure": {"code": "WORKER_LAUNCH_FAILED", "message": str(exc)},
-                },
+                with_portal_provenance(
+                    "status.json",
+                    {
+                        **status,
+                        "state": RunState.FAILED.value,
+                        "completed_at": _utc_now_iso(),
+                        "failure": {"code": "WORKER_LAUNCH_FAILED", "message": str(exc)},
+                    },
+                ),
             )
             return
         self._futures[run_id] = future
@@ -113,12 +130,18 @@ class RunManager:
                 self._artifacts.write_json(
                     run_id,
                     "status.json",
-                    {
-                        **status,
-                        "state": RunState.FAILED.value,
-                        "completed_at": _utc_now_iso(),
-                        "failure": {"code": "INTERNAL_ERROR", "message": "worker process failed"},
-                    },
+                    with_portal_provenance(
+                        "status.json",
+                        {
+                            **status,
+                            "state": RunState.FAILED.value,
+                            "completed_at": _utc_now_iso(),
+                            "failure": {
+                                "code": "INTERNAL_ERROR",
+                                "message": "worker process failed",
+                            },
+                        },
+                    ),
                 )
 
     # -- queries --------------------------------------------------------------

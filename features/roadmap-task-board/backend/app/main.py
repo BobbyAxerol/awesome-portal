@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
 from backend.app.api.schemas import (
+    PlanningSummaryResponse,
     RestoreRequest,
     RoadmapMove,
     RoadmapPhaseCreate,
@@ -206,6 +207,16 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             return repository.readiness()
         except Exception as error:
             raise ReadinessError("Database is not ready") from error
+
+    @app.get(
+        "/api/v1/summary",
+        response_model=PlanningSummaryResponse,
+        tags=["operations"],
+    )
+    def planning_summary(
+        recent_limit: int = Query(default=5, ge=1, le=5),
+    ) -> Dict[str, Any]:
+        return repository.planning_summary(recent_limit=recent_limit)
 
     @app.get("/api/tasks", tags=["compatibility"])
     def legacy_tasks() -> Dict[str, Any]:

@@ -22,7 +22,8 @@ export PORTAL_STACK_NAME="${PORTAL_STACK_NAME:-portal-smoke}"
 export PORTAL_HTTP_PORT="${PORTAL_HTTP_PORT:-18080}"
 export PORTAL_IMAGE_PREFIX="${PORTAL_IMAGE_PREFIX:-local/portal-smoke}"
 export PORTAL_IMAGE_TAG="${PORTAL_IMAGE_TAG:-smoke}"
-export PORTAL_MARKET_DATA_DIR="${PORTAL_MARKET_DATA_DIR:-${ROOT_DIR}/runtime/market-data}"
+export PORTAL_HISTORICAL_DATA_MODE="${PORTAL_HISTORICAL_DATA_MODE:-disabled}"
+export PORTAL_HISTORICAL_DATA_DIR="${PORTAL_HISTORICAL_DATA_DIR:-${ROOT_DIR}/runtime/historical-market-data}"
 # Smoke the audited route deliberately; normal local `up` remains local-first
 # until the release owner performs the documented rollout switch.
 export ROADMAP_TASK_BOARD_LOCAL_ONLY="${ROADMAP_TASK_BOARD_LOCAL_ONLY:-false}"
@@ -30,7 +31,7 @@ export ROADMAP_TASK_BOARD_PERSISTENCE="${ROADMAP_TASK_BOARD_PERSISTENCE:-v1}"
 export ROADMAP_TASK_BOARD_API_BASE="${ROADMAP_TASK_BOARD_API_BASE:-/roadmap-task-board/api}"
 export ROADMAP_TASK_BOARD_PUBLIC_URL="${ROADMAP_TASK_BOARD_PUBLIC_URL:-http://127.0.0.1:${PORTAL_HTTP_PORT}/roadmap-task-board}"
 
-mkdir -p "${PORTAL_MARKET_DATA_DIR}"
+mkdir -p "${PORTAL_HISTORICAL_DATA_DIR}"
 COMPOSE=(docker compose --project-directory "${ROOT_DIR}" -f "${ROOT_DIR}/compose.yaml")
 started=false
 health_file="$(mktemp /tmp/portal-smoke-health.XXXXXX)"

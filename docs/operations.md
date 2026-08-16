@@ -32,7 +32,9 @@ container being `Up` as sufficient; both Compose health checks must be healthy.
 
 ## Data and artifact handling
 
-- Market data remains on a host-managed path mounted read-only.
+- Historical OHLCV used by backtest and approved research modules remains on a
+  host-managed path mounted read-only. It is not a source for realtime market
+  data or paper-trade execution/account state.
 - Run artifacts are persisted in the named `portal-artifacts` volume. Back it
   up before host maintenance or image/Compose migrations.
 - Roadmap state is persisted independently in `roadmap-task-board-data`. Before

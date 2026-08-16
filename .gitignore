@@ -6,6 +6,7 @@
 !*.env.*.example
 !*.env.template
 .envrc
+/.portal-contributor-workspace
 *.pem
 *.key
 *.p12
@@ -69,6 +70,7 @@ docker-compose.override.yml
 .docker/
 *.tar
 *.tar.gz
+/vendor/hmd-reader/*.whl
 
 # Editors and operating-system files
 .DS_Store

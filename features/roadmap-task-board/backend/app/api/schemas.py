@@ -1,9 +1,10 @@
 """Pydantic request models for the public v1 API."""
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from backend.app.domain.constants import TASK_STATUSES
 
@@ -132,3 +133,39 @@ class SnapshotImport(APIModel):
 
     items: List[Dict[str, Any]]
     confirm_replace: Literal[True]
+
+
+class PlanningSummaryTask(APIModel):
+    id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$")
+    status: Literal["Backlog", "Ready", "In Progress", "Validating", "Done"]
+    updated_at: datetime
+
+
+class PlanningSummaryRoadmapPhase(APIModel):
+    id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$")
+    updated_at: datetime
+
+
+class PlanningSummaryResponse(APIModel):
+    schema_version: Literal["planning.summary.v1"]
+    observed_at: datetime
+    total_tasks: int = Field(ge=0)
+    task_counts: Dict[str, int]
+    roadmap_phase_count: int = Field(ge=0)
+    recent_tasks: List[PlanningSummaryTask] = Field(max_length=5)
+    recent_roadmap: List[PlanningSummaryRoadmapPhase] = Field(max_length=5)
+
+    @field_validator("task_counts")
+    @classmethod
+    def validate_task_counts(cls, value: Dict[str, int]) -> Dict[str, int]:
+        if set(value) != set(TASK_STATUSES):
+            raise ValueError("task_counts must contain every current task status")
+        if any(count < 0 for count in value.values()):
+            raise ValueError("task counts cannot be negative")
+        return value
+
+    @model_validator(mode="after")
+    def validate_total(self) -> "PlanningSummaryResponse":
+        if sum(self.task_counts.values()) != self.total_tasks:
+            raise ValueError("task counts must sum to total_tasks")
+        return self

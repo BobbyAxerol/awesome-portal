@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/problem.v1.schema.json",
+  "title": "Portal RFC 7807 Problem Document v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["code", "title", "request_id"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "format": "uri",
+      "maxLength": 240
+    },
+    "code": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
+    },
+    "title": {"type": "string", "minLength": 1, "maxLength": 120},
+    "detail": {"type": "string", "minLength": 1, "maxLength": 500},
+    "status": {"type": "integer", "minimum": 400, "maximum": 599},
+    "request_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+    "traceparent": {"$ref": "https://schemas.primusspark.com/portal/common.v1.schema.json#/$defs/traceparent"},
+    "occurred_at": {"$ref": "https://schemas.primusspark.com/portal/common.v1.schema.json#/$defs/utcTimestamp"}
+  }
+}

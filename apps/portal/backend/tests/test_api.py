@@ -6,9 +6,10 @@ import pytest
 
 from portal_api.adapters.market_data import (
     CRYPTO_BINANCE_DATASET_ID,
-    CryptoBinanceMarketDataProvider,
+    HistoricalMarketDataProvider,
 )
-from portal_api.main import create_app
+from portal_api.domain.errors import DataSchemaError
+from portal_api.main import _default_provider, create_app
 
 
 class FakeQuantBTGateway:
@@ -97,8 +98,7 @@ async def test_preflight_rejects_dataset_symbol_mismatch(provider, run_request) 
 
 @pytest.mark.anyio
 async def test_dynamic_crypto_catalog_and_preflight(market_frame, run_request) -> None:
-    provider = CryptoBinanceMarketDataProvider(
-        "/unused/in/api/test",
+    provider = HistoricalMarketDataProvider(
         loader_factory=lambda: ApiCryptoLoader(market_frame),
     )
     app = create_app(market_data_provider=provider, quantbt_gateway=FakeQuantBTGateway())
@@ -122,7 +122,43 @@ async def test_dynamic_crypto_catalog_and_preflight(market_frame, run_request) -
     assert catalog.json()[0]["dataset_id"] == CRYPTO_BINANCE_DATASET_ID
     assert catalog.json()[0]["dynamic_query"] is True
     assert catalog.json()[0]["symbol"] is None
+    assert catalog.json()[0]["source_class"] == "historical_market_data"
+    assert catalog.json()[0]["usage_scopes"] == ["backtest", "research"]
+    assert "realtime_market_data" in catalog.json()[0]["excluded_scopes"]
+    assert "paper_execution" in catalog.json()[0]["excluded_scopes"]
     assert response.status_code == 200, response.text
     quality = response.json()["data_quality"]
     assert quality["load_metadata"]["provider"] == "CryptoBinance1m"
     assert quality["load_metadata"]["requested_timeframe"] == "1d"
+
+
+@pytest.mark.anyio
+async def test_default_local_catalog_is_explicitly_unavailable(monkeypatch) -> None:
+    monkeypatch.delenv("PORTAL_DATASET_MANIFEST", raising=False)
+    monkeypatch.setenv("PORTAL_HISTORICAL_DATA_MODE", "disabled")
+    app = create_app(quantbt_gateway=FakeQuantBTGateway())
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        response = await client.get("/api/datasets")
+
+    dataset = response.json()[0]
+    assert dataset["availability"] == "unavailable"
+    assert dataset["usage_scopes"] == ["backtest", "research"]
+    assert "paper_account_state" in dataset["excluded_scopes"]
+
+
+def test_required_mode_fails_closed_when_reader_runtime_is_invalid(
+    monkeypatch,
+) -> None:
+    monkeypatch.delenv("PORTAL_DATASET_MANIFEST", raising=False)
+    monkeypatch.setenv("PORTAL_HISTORICAL_DATA_MODE", "required")
+    monkeypatch.setattr(
+        "portal_api.main.HistoricalMarketDataProvider",
+        lambda **kwargs: (_ for _ in ()).throw(DataSchemaError("manifest rejected")),
+    )
+
+    with pytest.raises(RuntimeError, match="required historical.*manifest rejected"):
+        _default_provider()

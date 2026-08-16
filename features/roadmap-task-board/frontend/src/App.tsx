@@ -1,24 +1,19 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Topbar, Sidebar } from "@/components/PortalShell";
 import { ToastProvider } from "@/components/ui";
+import { PlanningFeatureBody } from "@/embedded/PlanningFeature";
 import { parseHash, routeHash, subscribeHash, navigate, type Route, type View } from "@/lib/router";
 import { getTheme, saveTheme } from "@/lib/storage";
 import { detectApi, type ApiMode } from "@/lib/api";
 
-// Each view carries a substantial raw-document or domain payload. Route-level
-// loading keeps the first paint small while preserving every legacy hash route.
-const DocsFeature = lazy(async () => import("@/features/docs/DocsFeature").then((module) => ({ default: module.DocsFeature })));
-const RoadmapFeature = lazy(async () => import("@/features/roadmap/RoadmapFeature").then((module) => ({ default: module.RoadmapFeature })));
-const TaskBoardFeature = lazy(async () => import("@/features/tasks/TaskBoardFeature").then((module) => ({ default: module.TaskBoardFeature })));
-const ReportsFeature = lazy(async () => import("@/features/reports/ReportsFeature").then((module) => ({ default: module.ReportsFeature })));
-const EvidenceFeature = lazy(async () => import("@/features/evidence/EvidenceFeature").then((module) => ({ default: module.EvidenceFeature })));
-const PortalMockupFeature = lazy(async () => import("@/features/portal-mockup/PortalMockupFeature").then((module) => ({ default: module.PortalMockupFeature })));
-const InterpretationFeature = lazy(async () => import("@/features/interpretation/InterpretationFeature").then((module) => ({ default: module.InterpretationFeature })));
-
-function FeatureLoading() {
-  return <div className="feature-loading" role="status">Loading workspace…</div>;
-}
-
+/**
+ * Standalone Planning entry — the compatibility surface at
+ * `/roadmap-task-board/`.
+ *
+ * The views themselves live in `embedded/PlanningFeature`, shared with the
+ * Portal shell embedding, so the two never drift. What stays here is only the
+ * standalone shell: hash routing, its own topbar/sidebar and theme toggle.
+ */
 export default function App() {
   const [route, setRoute] = useState<Route>(() => parseHash(window.location.hash));
   const [theme, setTheme] = useState<"light" | "dark">(() => getTheme());
@@ -68,25 +63,6 @@ export default function App() {
     onPrint: () => window.print(),
   };
 
-  const renderView = () => {
-    switch (route.view) {
-      case "docs":
-        return <Suspense fallback={<FeatureLoading />}><DocsFeature pageId={route.page} theme={theme} onNavigate={handleNavigate} /></Suspense>;
-      case "roadmap":
-        return <Suspense fallback={<FeatureLoading />}><RoadmapFeature apiMode={apiMode} /></Suspense>;
-      case "board":
-        return <Suspense fallback={<FeatureLoading />}><TaskBoardFeature apiMode={apiMode} /></Suspense>;
-      case "reports":
-        return <Suspense fallback={<FeatureLoading />}><ReportsFeature theme={theme} onOpenInterpretation={() => handleNavigate("interpretation")} /></Suspense>;
-      case "interpretation":
-        return <Suspense fallback={<FeatureLoading />}><InterpretationFeature onOpenReports={() => handleNavigate("reports")} /></Suspense>;
-      case "evidence":
-        return <Suspense fallback={<FeatureLoading />}><EvidenceFeature theme={theme} /></Suspense>;
-      case "portal":
-        return <Suspense fallback={<FeatureLoading />}><PortalMockupFeature theme={theme} /></Suspense>;
-    }
-  };
-
   return (
     <ToastProvider>
       <div className="app">
@@ -95,7 +71,13 @@ export default function App() {
           <Sidebar {...props} />
           {sidebarOpen && <button type="button" className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />}
           <main className="content">
-            {renderView()}
+            <PlanningFeatureBody
+              view={route.view}
+              page={route.page}
+              theme={theme}
+              apiMode={apiMode}
+              onNavigate={handleNavigate}
+            />
           </main>
         </div>
       </div>

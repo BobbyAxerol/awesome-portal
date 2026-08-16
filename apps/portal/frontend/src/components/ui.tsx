@@ -41,38 +41,67 @@ export function SegmentedControl<T extends string>({
   );
 }
 
+/**
+ * The states a `StateView` can express.
+ *
+ * U02 requires these to stay visually distinct rather than collapsing into one
+ * spinner or one "no data" message (v0.4 §25.8). `failed` and `cancelled` are
+ * the pre-existing QuantBT run states and are kept so run views do not change
+ * behaviour; the rest come from the Portal availability contract.
+ */
+export type StateViewKind =
+  | "loading"
+  | "empty"
+  | "partial"
+  | "stale"
+  | "denied"
+  | "unavailable"
+  | "commissioned"
+  | "failed"
+  | "cancelled";
+
+/** Title + non-colour glyph per state, so greyscale and print stay readable. */
+const STATE_META: Record<Exclude<StateViewKind, "loading">, { title: string; glyph: string }> = {
+  empty: { title: "Chưa có dữ liệu", glyph: "—" },
+  partial: { title: "Dữ liệu một phần", glyph: "◐" },
+  stale: { title: "Dữ liệu cũ", glyph: "◔" },
+  denied: { title: "Không có quyền truy cập", glyph: "⊘" },
+  unavailable: { title: "Nguồn không khả dụng", glyph: "○" },
+  commissioned: { title: "Chưa triển khai", glyph: "◌" },
+  failed: { title: "Có lỗi xảy ra", glyph: "✕" },
+  cancelled: { title: "Run đã bị huỷ", glyph: "⊗" },
+};
+
 export function StateView({
   kind,
   message,
   code,
   onRetry,
 }: {
-  kind: "loading" | "empty" | "failed" | "cancelled";
+  kind: StateViewKind;
   message?: string;
   code?: string;
   onRetry?: () => void;
 }) {
   if (kind === "loading") {
     return (
-      <div className="flex items-center justify-center gap-2 py-12 text-ink-soft">
+      <div className="flex items-center justify-center gap-2 py-12 text-ink-soft" role="status">
         <Loader2 size={16} className="animate-spin" />
-        <span className="mono text-[12px]">{message ?? "Loading…"}</span>
+        <span className="mono text-[12px]">{message ?? "Đang tải…"}</span>
       </div>
     );
   }
-  const titles: Record<string, string> = {
-    empty: "Không có dữ liệu",
-    failed: "Có lỗi xảy ra",
-    cancelled: "Run đã bị huỷ",
-  };
+  const meta = STATE_META[kind];
   return (
-    <div className="flex flex-col items-center gap-2 py-12">
-      <div className="mono text-[12px] text-ink-faint">{titles[kind]}</div>
+    <div className="flex flex-col items-center gap-2 py-12" data-state={kind}>
+      <div className="mono text-[12px] text-ink-faint">
+        <span aria-hidden="true">{meta.glyph}</span> {meta.title}
+      </div>
       {code ? <span className="chip">{code}</span> : null}
       {message ? <div className="max-w-md text-center text-[13px] text-ink-soft">{message}</div> : null}
-      {kind === "failed" && onRetry ? (
+      {onRetry && (kind === "failed" || kind === "unavailable") ? (
         <button type="button" className="btn-ghost mt-2" onClick={onRetry}>
-          Retry
+          Thử lại
         </button>
       ) : null}
     </div>

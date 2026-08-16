@@ -98,5 +98,6 @@ jobs:
           PORTAL_HTTP_PORT: "18080"
           PORTAL_IMAGE_PREFIX: local/portal-ci
           PORTAL_IMAGE_TAG: ${{ github.sha }}
-          PORTAL_MARKET_DATA_DIR: ./runtime/market-data
+          PORTAL_HISTORICAL_DATA_MODE: disabled
+          PORTAL_HISTORICAL_DATA_DIR: ./runtime/historical-market-data
         run: ./scripts/portal smoke

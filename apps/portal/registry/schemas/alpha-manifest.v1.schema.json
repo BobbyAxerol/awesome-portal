@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/alpha-manifest.v1.schema.json",
+  "title": "Portal Alpha Manifest v1 (draft per guide §9.3)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "alpha_id",
+    "version",
+    "name",
+    "entrypoint",
+    "artifact",
+    "strategy",
+    "data_requirements",
+    "parameters",
+    "lifecycle"
+  ],
+  "properties": {
+    "schema_version": {"const": "alpha-manifest/v1"},
+    "alpha_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{2,63}$"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "name": {"type": "string", "minLength": 1, "maxLength": 120},
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["team", "maintainers"],
+      "properties": {
+        "team": {"type": "string", "minLength": 1, "maxLength": 64},
+        "maintainers": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{2,63}$"},
+          "maxItems": 16
+        }
+      }
+    },
+    "entrypoint": {"type": "string", "pattern": "^[a-z][a-z0-9_.]{1,127}:[A-Za-z][A-Za-z0-9_]{1,63}$"},
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "digest"],
+      "properties": {
+        "type": {"const": "python-wheel"},
+        "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "lock_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "sbom_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+      }
+    },
+    "strategy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["family", "input_kind", "supported_endpoint_ids", "execution_contracts", "determinism"],
+      "properties": {
+        "family": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{1,63}$"},
+        "input_kind": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "supported_endpoint_ids": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]{0,63}$"},
+          "minItems": 1,
+          "maxItems": 8
+        },
+        "execution_contracts": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]{0,63}$"},
+          "maxItems": 8
+        },
+        "determinism": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["seed_required", "external_io"],
+          "properties": {
+            "seed_required": {"type": "boolean"},
+            "external_io": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    "data_requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset_classes", "columns", "timeframes", "warmup_bars", "point_in_time"],
+      "properties": {
+        "asset_classes": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{1,31}$"},
+          "minItems": 1,
+          "maxItems": 8
+        },
+        "columns": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$"},
+          "minItems": 1,
+          "maxItems": 16
+        },
+        "timeframes": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[0-9]+[a-z]$"},
+          "minItems": 1,
+          "maxItems": 8
+        },
+        "warmup_bars": {"type": "integer", "minimum": 0},
+        "point_in_time": {"type": "boolean"},
+        "funding": {"type": "string", "pattern": "^(optional|required|none)$"},
+        "borrow": {"type": "string", "pattern": "^(optional|required|none)$"},
+        "corporate_actions": {"type": "string", "pattern": "^(optional|required|none)$"}
+      }
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "manager_exposed", "immutable_for_live"],
+      "properties": {
+        "schema": {"type": "string", "minLength": 1, "maxLength": 240},
+        "manager_exposed": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]{0,63}$"},
+          "maxItems": 64
+        },
+        "immutable_for_live": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]{0,63}$"},
+          "maxItems": 64
+        }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "quarantined"],
+      "properties": {
+        "stage": {
+          "enum": [
+            "DRAFT",
+            "REGISTERED",
+            "CANDIDATE",
+            "RESEARCH",
+            "PAPER",
+            "SANDBOX",
+            "LIVE"
+          ]
+        },
+        "quarantined": {"type": "boolean"},
+        "quarantine_reason": {
+          "oneOf": [
+            {"type": "string", "minLength": 1, "maxLength": 240},
+            {"type": "null"}
+          ]
+        },
+        "certification": {
+          "oneOf": [
+            {"type": "string", "pattern": "^[a-z][a-z0-9_-]{1,63}$"},
+            {"type": "null"}
+          ]
+        },
+        "promotion_evidence": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{2,63}:sha256:[0-9a-f]{64}$"},
+          "maxItems": 32
+        }
+      }
+    }
+  }
+}

@@ -10,24 +10,27 @@ import { FoldGantt } from "../../components/FoldGantt";
 import { annotateConsoleLines, estimateEtaSeconds, parseConsoleStats } from "../../lib/consoleStats";
 import { fmtDuration, fmtTimestamp } from "../../lib/format";
 import { StateView } from "../../components/ui";
+import { activeTheme, canvasTokens, consoleTokens, vizTokensFor } from "../../styles/tokens";
 
-/* Dark-panel palette (§15.7): readable on --ink-panel */
+/* Dark-panel palette (§15.7): the console keeps its terminal surface in both
+ * themes, so it reads the theme-independent console tokens. */
 const C = {
-  base: "#C9D4E3",
-  faint: "#7A879A",
-  accent: "#7FB3C4",
-  gold: "#D4B36A",
-  good: "#6FCF97",
-  bad: "#E58A8A",
+  base: consoleTokens.fg,
+  faint: consoleTokens.faint,
+  accent: consoleTokens.accent,
+  gold: consoleTokens.gold,
+  good: consoleTokens.good,
+  bad: consoleTokens.bad,
 };
 
-/* Light-theme accents for the progress strip / Gantt */
+/* Themed accents for the progress strip / Gantt */
+const theme = activeTheme();
 const L = {
-  good: "#1E7B4F",
-  accent: "#0F4C5C",
-  pending: "#E3E0D7",
-  train: "#A8C6CE",
-  textFaint: "#939DB0",
+  good: canvasTokens(theme).good,
+  accent: canvasTokens(theme).accent,
+  pending: vizTokensFor(theme).pending,
+  train: vizTokensFor(theme).train,
+  textFaint: canvasTokens(theme).inkFaint,
 };
 
 const STAGE_ORDER = [
@@ -386,11 +389,11 @@ function LiveConsole({ lines, expanded }: { lines: string[]; expanded: boolean }
             if (row.kind === "separator") {
               return (
                 <div key={`sep-${index}`} className="my-1 flex items-center gap-2">
-                  <span className="h-px flex-1" style={{ background: "rgba(212,179,106,.35)" }} />
+                  <span className="h-px flex-1" style={{ background: consoleTokens.rule }} />
                   <span className="mono text-[10px] uppercase tracking-normal" style={{ color: C.gold }}>
                     ── {row.text} ──
                   </span>
-                  <span className="h-px flex-1" style={{ background: "rgba(212,179,106,.35)" }} />
+                  <span className="h-px flex-1" style={{ background: consoleTokens.rule }} />
                 </div>
               );
             }
