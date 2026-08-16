@@ -150,6 +150,9 @@ for required in \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-links.v1.schema.json" \
   "${ROOT_DIR}/upgrade/backend/BAR_02_COMPATIBILITY_BOUNDARIES_AND_PARITY_FREEZE.md" \
   "${ROOT_DIR}/upgrade/backend/BAR_03_OPERATIONAL_INGRESS_BOUNDARY.md" \
+  "${ROOT_DIR}/deploy/cloudflared/config.example.yml" \
+  "${ROOT_DIR}/deploy/nginx/portal-loopback.conf" \
+  "${ROOT_DIR}/deploy/edge/README.md" \
   "${ROOT_DIR}/deploy/nginx/portal.conf" \
   "${ROOT_DIR}/apps/control-api/package.json" \
   "${ROOT_DIR}/apps/control-api/package-lock.json" \
@@ -342,6 +345,9 @@ for tracked_source in \
   apps/portal/strategy/PROTECTED_SHA256 \
   upgrade/backend/BAR_02_COMPATIBILITY_BOUNDARIES_AND_PARITY_FREEZE.md \
   upgrade/backend/BAR_03_OPERATIONAL_INGRESS_BOUNDARY.md \
+  deploy/cloudflared/config.example.yml \
+  deploy/nginx/portal-loopback.conf \
+  deploy/edge/README.md \
   deploy/nginx/portal.conf \
   apps/control-api/package.json \
   apps/control-api/package-lock.json \
