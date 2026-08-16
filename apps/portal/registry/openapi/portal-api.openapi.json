@@ -4239,6 +4239,25 @@
         "summary": "Strategy"
       }
     },
+    "/api/v1/portal/capabilities": {
+      "get": {
+        "operationId": "portal_capabilities_api_v1_portal_capabilities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Portal Capabilities",
+        "tags": [
+          "portal"
+        ]
+      }
+    },
     "/api/v1/portal/links": {
       "get": {
         "operationId": "portal_links_api_v1_portal_links_get",

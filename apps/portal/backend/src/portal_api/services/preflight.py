@@ -13,6 +13,7 @@ from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.domain.errors import DataSchemaError
 from portal_api.domain.requests import AdvancedWalkForwardConfig, PortalRunRequest, ThreeWindowConfig
 from portal_api.domain.responses import PreflightResponse, WindowSummary
+from portal_api.services.engine_capabilities import EngineCapabilityService
 from portal_api.strategies import StrategyRegistry
 
 
@@ -46,10 +47,25 @@ class PreflightService:
         provider: MarketDataProvider,
         strategies: StrategyRegistry,
         quantbt_gateway: QuantBTGateway | None = None,
+        capabilities: EngineCapabilityService | None = None,
     ):
         self._provider = provider
         self._strategies = strategies
         self._quantbt_gateway = quantbt_gateway
+        if capabilities is None:
+            from pathlib import Path as _Path
+
+            module_path = _Path(__file__).resolve()
+            candidates = (
+                module_path.parents[4] / "registry",
+                module_path.parents[3] / "registry",
+            )
+            root = next(
+                (candidate for candidate in candidates if (candidate / "registry.json").is_file()),
+                candidates[0],
+            )
+            capabilities = EngineCapabilityService(root)
+        self._capabilities = capabilities
 
     def run(self, request: PortalRunRequest) -> PreflightResponse:
         strategy = self._strategies.get(request.strategy_id)
@@ -62,6 +78,12 @@ class PreflightService:
         )
 
         descriptor = market.descriptor
+        self._capabilities.preflight(
+            protocol=request.protocol.value,
+            data_class=descriptor.source_class or "historical_market_data",
+            optuna_trials=request.calibration.optuna_trials,
+            parameter_space_entries=len(request.parameter_space.root),
+        )
         if descriptor.symbol is not None and request.symbol != descriptor.symbol:
             raise DataSchemaError(
                 f"request symbol {request.symbol!r} does not match dataset symbol {descriptor.symbol!r}"

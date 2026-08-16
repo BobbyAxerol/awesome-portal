@@ -45,6 +45,11 @@ async def portal_summary(request: Request) -> JSONResponse:
     return JSONResponse(content=summary.model_dump(mode="json"), headers=service.headers)
 
 
+@router.get("/capabilities")
+async def portal_capabilities(request: Request) -> JSONResponse:
+    return JSONResponse(content=request.app.state.engine_capabilities.public_document())
+
+
 @router.get(
     "/links",
     response_model=PortalLinksDocument,

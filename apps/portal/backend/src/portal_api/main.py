@@ -37,6 +37,7 @@ from portal_api.repositories import ArtifactRepository
 from portal_api.repositories.portal_links import PortalLinksRepository
 from portal_api.repositories.portal_registry import PortalRegistryRepository
 from portal_api.services import PreflightService
+from portal_api.services.engine_capabilities import EngineCapabilityService
 from portal_api.services.portal_links import PortalLinksService
 from portal_api.services.portal_registry import PortalRegistryService
 from portal_api.services.portal_overview import (
@@ -140,10 +141,14 @@ def create_app(
         if planning_summary_settings.mode == "api"
         else None
     )
+    app.state.engine_capabilities = EngineCapabilityService(
+        registry_repository.registry_root
+    )
     app.state.preflight_service = PreflightService(
         app.state.market_data_provider,
         app.state.strategy_registry,
         quantbt_gateway=app.state.quantbt_gateway,
+        capabilities=app.state.engine_capabilities,
     )
     app.state.run_manager = RunManager(artifacts=app.state.artifact_repository)
     app.state.quantbt_summary_adapter = QuantBTSummaryAdapter(

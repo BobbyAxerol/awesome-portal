@@ -54,6 +54,11 @@ for required in \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/job_broker.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/workers/durable_worker.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/workers/durable_worker_main.py" \
+  "${ROOT_DIR}/apps/portal/registry/engine-capabilities.v1.json" \
+  "${ROOT_DIR}/apps/portal/registry/schemas/engine-capabilities.v1.schema.json" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/engine_capabilities.py" \
+  "${ROOT_DIR}/apps/portal/backend/tests/test_engine_capabilities.py" \
+  "${ROOT_DIR}/upgrade/backend/BAR_09_ENGINE_CAPABILITY_AUTHORITY.md" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_durable_worker.py" \
   "${ROOT_DIR}/upgrade/backend/BAR_08_DURABLE_QUANT_WORKER_AND_IMMUTABLE_ARTIFACTS.md" \
   "${ROOT_DIR}/upgrade/backend/adr/ADR-004-OBJECT_STORE_PROVIDER.md" \
@@ -213,6 +218,11 @@ for tracked_source in \
   apps/portal/backend/src/portal_api/services/job_broker.py \
   apps/portal/backend/src/portal_api/workers/durable_worker.py \
   apps/portal/backend/src/portal_api/workers/durable_worker_main.py \
+  apps/portal/registry/engine-capabilities.v1.json \
+  apps/portal/registry/schemas/engine-capabilities.v1.schema.json \
+  apps/portal/backend/src/portal_api/services/engine_capabilities.py \
+  apps/portal/backend/tests/test_engine_capabilities.py \
+  upgrade/backend/BAR_09_ENGINE_CAPABILITY_AUTHORITY.md \
   apps/portal/backend/tests/test_durable_worker.py \
   upgrade/backend/BAR_08_DURABLE_QUANT_WORKER_AND_IMMUTABLE_ARTIFACTS.md \
   upgrade/backend/adr/ADR-004-OBJECT_STORE_PROVIDER.md \

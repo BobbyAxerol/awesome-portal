@@ -4,7 +4,7 @@
     "fixtures/command.valid.json": "sha256:9792bac391b74bfd6a2581768d6ea60ae0e880f9504063d82a52c4f8893f39ce",
     "fixtures/event.valid.json": "sha256:c245b69c773d205d6edec800db8cee5410769b0d8e256905ea8827fcf08ae11e",
     "fixtures/problem.valid.json": "sha256:3986ee8577ed6867e5abcf7619576869f80847944bc11d8cbae7056750c552a1",
-    "generated/portal-api.d.ts": "sha256:473c015829841a615dae30a14d93eff7579e5d9506d66b6e32e28ad1435b9d55",
+    "generated/portal-api.d.ts": "sha256:3fc85cb81d7afd06d33663c0496e25f2b5443b79eeb19a6b02a5ef4e45b85e6b",
     "package.json": "sha256:553e468594149c1721b6155aae1df0e7507fa56098d8f4929ebc8464b14b1691",
     "schemas/command-envelope.v1.schema.json": "sha256:53c6f3ccf66d1b74de59945fe33f480ae58bb00ae500b7696d0411d8094d4cb1",
     "schemas/common.v1.schema.json": "sha256:a74a2c08ff7e87f8cb9110932099c66520bb942788000f5499c594d1c6ef5f88",
