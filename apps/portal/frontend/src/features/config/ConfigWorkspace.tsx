@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Badge, Collapsible, DefinitionList, SegmentedControl, StateView } from "../../components/ui";
+import { runPath } from "../quantbt/routes";
 import { api, type ParameterSpec } from "../../lib/api";
 import { fmtCount } from "../../lib/format";
 import { ThreeWindowEditor } from "./ThreeWindowEditor";
@@ -278,7 +279,7 @@ export function ConfigWorkspace() {
   });
   const createRun = useMutation({
     mutationFn: async () => (await api.createRun(payload)).run_id,
-    onSuccess: (runId) => navigate(`/?run=${runId}`),
+    onSuccess: (runId) => navigate(runPath(runId)),
   });
 
   const overlapError = useMemo(() => {
