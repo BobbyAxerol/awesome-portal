@@ -1193,6 +1193,16 @@ quality gate và chart-ready query contract.
 - Backend đã dùng installed-wheel `HistoricalMarketDataProvider`, bounded query,
   content hash, provenance, validation, synthetic fixtures và opt-in real smoke;
   host-path loader mechanism đã được retire.
+- BAR-10 đã thêm Data Catalog + immutable snapshot authority: catalog
+  `data-catalog.v1` với 11 family (candle/matrix/metrics/orderbook, quality
+  profile, release-manifest provenance; fail-closed với Deribit options và
+  VN raw 1m; không family activated tới khi digest manifest thật được xác
+  nhận qua real smoke), loader fail-closed, `SnapshotStore` digest-addressed
+  (quality block khi gap/duplicate vượt ngưỡng, open-by-digest + tamper
+  detection, repair luôn tạo snapshot mới), query contract range/max_points
+  với downsampling metadata, quality preflight cho historical run
+  submission, 4 endpoint read-only `/api/v1/data/*`. PostgreSQL catalog
+  tables, ingestion và object-store snapshot là slice U13 sau.
 
 **Description / To-do**
 

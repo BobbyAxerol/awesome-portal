@@ -583,7 +583,7 @@ whether anything was pushed or deployed
 ## 14. Next backend architecture task
 
 BAR-01 (BE1–BE6), BAR-02 (BE1–BE3), BAR-03, BAR-04, BAR-05, BAR-06,
-BAR-07, BAR-08 and BAR-09 are complete:
+BAR-07, BAR-08, BAR-09 and BAR-10 are complete:
 registry/summary/links contracts and API, the parity snapshot freeze,
 additive artifact provenance, the cross-link sidecar, the operational ingress
 boundary, the thin identity BFF with the security matrix, and the M0
@@ -598,8 +598,11 @@ immutable artifact authority (run/attempt separation, claim-lease/heartbeat,
 standardized failure codes, content-addressed bundles, NATS JetStream +
 MinIO private services, ADR-004/006), and the engine capability authority
 (source-controlled capability manifest, installed-wheel inspector, typed
-capability preflight, read-only capabilities endpoint). The gateway keeps
-routing legacy paths until the façade cutover is exercised.
+capability preflight, read-only capabilities endpoint), and the Data
+Catalog + immutable snapshot authority (family identities, quality gate,
+digest-addressed snapshots, bounded query contract, read-only data
+endpoints). The gateway keeps routing legacy paths until the façade cutover
+is exercised.
 
 Deep dives:
 
@@ -612,14 +615,13 @@ Deep dives:
 - [`upgrade/backend/BAR_07_CONTROL_API_FACADE.md`](./backend/BAR_07_CONTROL_API_FACADE.md)
 - [`upgrade/backend/BAR_08_DURABLE_QUANT_WORKER_AND_IMMUTABLE_ARTIFACTS.md`](./backend/BAR_08_DURABLE_QUANT_WORKER_AND_IMMUTABLE_ARTIFACTS.md)
 - [`upgrade/backend/BAR_09_ENGINE_CAPABILITY_AUTHORITY.md`](./backend/BAR_09_ENGINE_CAPABILITY_AUTHORITY.md)
+- [`upgrade/backend/BAR_10_DATA_CATALOG_AND_IMMUTABLE_SNAPSHOTS.md`](./backend/BAR_10_DATA_CATALOG_AND_IMMUTABLE_SNAPSHOTS.md)
 
-The next backend task is BAR-10, the Data Catalog and immutable snapshot
-authority for U13: add Dataset, Universe, Instrument, Snapshot and Quality
-identities; wrap the approved Historical reader output without replacing it
-with filesystem scanning or mutable `latest` paths; keep candle, matrix,
-metrics and order-book schemas separate and versioned; add quality-blocking
-preflight, repair-as-new-snapshot and digest-keyed query contracts with
-pagination/downsampling metadata; design realtime availability separately
-and never infer it from Historical release health. Gate: a crafted
-submission cannot bypass data quality; snapshot lineage/hash and reopen
-pass for every activated family.
+The next backend task is BAR-11, the Alpha Registry and research platform
+foundation for U14: create immutable Alpha identity/artifact/certification,
+an Alpha Pool and workbench without turning the browser into an arbitrary
+Python editor; align import manifests with the shared contract authority;
+register alpha versions with lineage/digests; and gate promotion evidence
+through the run registry read models. Gate: a new alpha registers through
+schema/manifest without editing dispatch code, and every alpha artifact
+opens by digest with lineage verification.

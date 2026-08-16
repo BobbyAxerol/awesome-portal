@@ -76,7 +76,15 @@ Chúng không thay thế phase hoặc exit gate trong
   class/optuna trials/parameter space), reject unadvertised/uncertified dù
   request hợp lệ, gate: synthetic capability thêm bằng manifest-only không
   cần sửa code, endpoint read-only `/api/v1/portal/capabilities`. 12 tests.
-  Kế tiếp là BAR-10 (U13 data catalog & immutable snapshots).
+- [BAR-10 — Data Catalog & Immutable Snapshots](./BAR_10_DATA_CATALOG_AND_IMMUTABLE_SNAPSHOTS.md)
+  — U13 authority. **Complete:** catalog `data-catalog.v1` (11 families:
+  candle/matrix/metrics/orderbook, quality profile, release-manifest
+  provenance; không family nào activated tới khi digest manifest thật được
+  xác nhận), loader fail-closed, `SnapshotStore` digest-addressed immutable
+  (register → quality block → open-by-digest + tamper detection →
+  repair-as-new-snapshot), query contract range/max_points + downsampling
+  metadata, quality preflight cho historical run, 4 endpoint read-only
+  `/api/v1/data/*`. 12 tests. Kế tiếp là BAR-11 (U14 alpha registry).
 
 Agent chỉ được implement deep dive khi phase tương ứng đang active và owner đã
 giao scope. Tài liệu của phase sau là thiết kế trước, không phải implementation
