@@ -68,7 +68,7 @@ services:
     image: ${PORTAL_IMAGE_PREFIX:?Set PORTAL_IMAGE_PREFIX}-portal-web:${PORTAL_IMAGE_TAG:?Set PORTAL_IMAGE_TAG}
     restart: unless-stopped
     ports:
-      - "${PORTAL_HTTP_PORT:-8080}:80"
+      - "127.0.0.1:${PORTAL_HTTP_PORT:-8080}:80"
     depends_on:
       portal-api:
         condition: service_healthy
