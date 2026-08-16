@@ -65,6 +65,10 @@ for required in \
   "${ROOT_DIR}/apps/portal/registry/schemas/alpha-manifest.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/alpha_registry.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/api/routes_alphas.py" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/approval_authority.py" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/paper_ledger.py" \
+  "${ROOT_DIR}/apps/portal/backend/tests/test_approval_paper.py" \
+  "${ROOT_DIR}/upgrade/backend/BAR_12_APPROVAL_PROMOTION_PAPER_SANDBOX.md" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_alpha_registry.py" \
   "${ROOT_DIR}/upgrade/backend/BAR_11_ALPHA_REGISTRY_AND_RESEARCH_PLATFORM.md" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_data_catalog.py" \
@@ -241,6 +245,10 @@ for tracked_source in \
   apps/portal/registry/schemas/alpha-manifest.v1.schema.json \
   apps/portal/backend/src/portal_api/services/alpha_registry.py \
   apps/portal/backend/src/portal_api/api/routes_alphas.py \
+  apps/portal/backend/src/portal_api/services/approval_authority.py \
+  apps/portal/backend/src/portal_api/services/paper_ledger.py \
+  apps/portal/backend/tests/test_approval_paper.py \
+  upgrade/backend/BAR_12_APPROVAL_PROMOTION_PAPER_SANDBOX.md \
   apps/portal/backend/tests/test_alpha_registry.py \
   upgrade/backend/BAR_11_ALPHA_REGISTRY_AND_RESEARCH_PLATFORM.md \
   apps/portal/backend/tests/test_data_catalog.py \
