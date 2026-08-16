@@ -7,6 +7,13 @@ export interface DatasetDescriptor {
   timeframe: string | null;
   dynamic_query: boolean;
   supported_timeframes: string[];
+  source_class: string;
+  data_kind: string;
+  availability: "available" | "unavailable";
+  unavailable_reason: string | null;
+  usage_scopes: string[];
+  excluded_scopes: string[];
+  source_timezone: string;
 }
 
 export interface StrategyResponse {

@@ -1,0 +1,1452 @@
+{
+  "concerns": [
+    {
+      "activation_gate": "BAR-01-BE2 registry repository/API and BAR-01-BE6 frontend handoff pass.",
+      "category": "SOURCE_OF_TRUTH",
+      "evidence_refs": [
+        "upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md#5-registry-document-contract"
+      ],
+      "feature_ids": [
+        "COMMAND_CENTER",
+        "PORTAL_MAP"
+      ],
+      "id": "CONCERN_REGISTRY_AUTHORITY",
+      "reviewed_at": "2026-08-15T00:00:00Z",
+      "screen_ids": [
+        "COMMAND_CENTER_SCREEN",
+        "PORTAL_MAP_SCREEN"
+      ],
+      "severity": "BLOCKING",
+      "statement": "Navigation, routes, maturity, preview and task links must come from one validated registry.",
+      "status": "OPEN",
+      "task_ids": [
+        "PRT-003"
+      ]
+    },
+    {
+      "activation_gate": "BAR-01-BE3 through BE5 healthy and failure fixtures pass.",
+      "category": "SOURCE_OF_TRUTH",
+      "evidence_refs": [
+        "upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md#9-command-center-summary-contract"
+      ],
+      "feature_ids": [
+        "COMMAND_CENTER"
+      ],
+      "id": "CONCERN_COMMAND_CENTER_TRUTH",
+      "reviewed_at": "2026-08-15T00:00:00Z",
+      "screen_ids": [
+        "COMMAND_CENTER_SCREEN"
+      ],
+      "severity": "BLOCKING",
+      "statement": "Command Center must not show fake PnL, deployment, incident, blocker or healthy-zero values.",
+      "status": "OPEN",
+      "task_ids": [
+        "PRT-012"
+      ]
+    },
+    {
+      "activation_gate": "U07 identity, session and RBAC matrix passes.",
+      "category": "AUTHORIZATION",
+      "evidence_refs": [
+        "upgrade/BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md#bar-04--thin-identity-bff-as-the-first-control-api-slice"
+      ],
+      "feature_ids": [
+        "COMMAND_CENTER",
+        "PORTAL_MAP",
+        "QUANTBT_RESEARCH",
+        "PLANNING",
+        "ALPHA_POOL",
+        "ALPHA_MINING",
+        "STRATEGY_COMPOSER",
+        "APPROVALS",
+        "DATA_CATALOG",
+        "PAPER_TRADING",
+        "SANDBOX_TRADING",
+        "LIVE_OPERATIONS",
+        "PROFILE_ACCESS"
+      ],
+      "id": "CONCERN_PORTAL_AUTHORIZATION",
+      "reviewed_at": "2026-08-15T00:00:00Z",
+      "screen_ids": [
+        "COMMAND_CENTER_SCREEN",
+        "PORTAL_MAP_SCREEN",
+        "QUANTBT_NEW_RUN_SCREEN",
+        "QUANTBT_RUN_LIBRARY_SCREEN",
+        "QUANTBT_RUN_PROGRESS_SCREEN",
+        "QUANTBT_RUN_DETAIL_SCREEN",
+        "PLANNING_ROADMAP_SCREEN",
+        "PLANNING_TASK_BOARD_SCREEN",
+        "ALPHA_POOL_SCREEN",
+        "ALPHA_MINING_SCREEN",
+        "STRATEGY_COMPOSER_SCREEN",
+        "APPROVAL_INBOX_SCREEN",
+        "DATA_CATALOG_SCREEN",
+        "PAPER_TRADING_SCREEN",
+        "SANDBOX_TRADING_SCREEN",
+        "LIVE_OPERATIONS_SCREEN",
+        "PROFILE_ACCESS_SCREEN"
+      ],
+      "severity": "BLOCKING",
+      "statement": "Registry permissions are descriptive until U07 server-side identity, session and RBAC enforcement passes.",
+      "status": "OPEN",
+      "task_ids": [
+        "SEC-001"
+      ]
+    },
+    {
+      "activation_gate": null,
+      "category": "QUANT_SEMANTICS",
+      "evidence_refs": [
+        "apps/portal/backend/ARCHITECTURE.md"
+      ],
+      "feature_ids": [
+        "QUANTBT_RESEARCH"
+      ],
+      "id": "CONCERN_QUANTBT_PARITY",
+      "reviewed_at": "2026-08-15T00:00:00Z",
+      "screen_ids": [
+        "QUANTBT_NEW_RUN_SCREEN",
+        "QUANTBT_RUN_LIBRARY_SCREEN",
+        "QUANTBT_RUN_PROGRESS_SCREEN",
+        "QUANTBT_RUN_DETAIL_SCREEN"
+      ],
+      "severity": "HIGH",
+      "statement": "Current QuantBT numerical metrics and artifacts remain engine-owned and protected by parity tests.",
+      "status": "VERIFIED_CURRENT",
+      "task_ids": [
+        "QBT-020",
+        "QBT-021"
+      ]
+    },
+    {
+      "activation_gate": "Configure approved wheel publish secret and verify canonical storage ACL with production reader GID.",
+      "category": "DEPENDENCY",
+      "evidence_refs": [
+        "upgrade/UNIFIED_IMPLEMENTATION_PLAN.md#phase-u01-be--historical-market-data-consumer-boundary--real-reader-smoke"
+      ],
+      "feature_ids": [
+        "QUANTBT_RESEARCH",
+        "DATA_CATALOG"
+      ],
+      "id": "CONCERN_HISTORICAL_DEPLOYMENT",
+      "reviewed_at": "2026-08-15T00:00:00Z",
+      "screen_ids": [
+        "QUANTBT_NEW_RUN_SCREEN",
+        "QUANTBT_RUN_DETAIL_SCREEN",
+        "DATA_CATALOG_SCREEN"
+      ],
+      "severity": "BLOCKING",
+      "statement": "Historical backtest reader code is certified; production publishing secret and canonical reader-group ACL remain open deployment gates.",
+      "status": "PARTIAL",
+      "task_ids": [
+        "DATA-020"
+      ]
+    },
+    {
+      "activation_gate": null,
+      "category": "SOURCE_OF_TRUTH",
+      "evidence_refs": [
+        "features/roadmap-task-board/backend/README.md"
+      ],
+      "feature_ids": [
+        "PLANNING"
+      ],
+      "id": "CONCERN_PLANNING_MODE",
+      "reviewed_at": "2026-08-15T00:00:00Z",
+      "screen_ids": [
+        "PLANNING_ROADMAP_SCREEN",
+        "PLANNING_TASK_BOARD_SCREEN"
+      ],
+      "severity": "HIGH",
+      "statement": "Planning API and browser-local modes stay visibly distinct; local state is not presented as shared server authority.",
+      "status": "VERIFIED_CURRENT",
+      "task_ids": [
+        "MGR-PLATFORM-001"
+      ]
+    },
+    {
+      "activation_gate": "Each owning Unified phase must pass before its feature maturity changes.",
+      "category": "ACTIVATION_GATE",
+      "evidence_refs": [
+        "upgrade/UNIFIED_IMPLEMENTATION_PLAN.md#6-phase-map-và-critical-path"
+      ],
+      "feature_ids": [
+        "ALPHA_POOL",
+        "ALPHA_MINING",
+        "STRATEGY_COMPOSER",
+        "APPROVALS",
+        "DATA_CATALOG",
+        "PAPER_TRADING",
+        "SANDBOX_TRADING",
+        "LIVE_OPERATIONS"
+      ],
+      "id": "CONCERN_FUTURE_AUTHORITY",
+      "reviewed_at": "2026-08-15T00:00:00Z",
+      "screen_ids": [
+        "ALPHA_POOL_SCREEN",
+        "ALPHA_MINING_SCREEN",
+        "STRATEGY_COMPOSER_SCREEN",
+        "APPROVAL_INBOX_SCREEN",
+        "DATA_CATALOG_SCREEN",
+        "PAPER_TRADING_SCREEN",
+        "SANDBOX_TRADING_SCREEN",
+        "LIVE_OPERATIONS_SCREEN"
+      ],
+      "severity": "BLOCKING",
+      "statement": "Commissioned Alpha, Data Catalog, Approval, Paper, Sandbox and Live screens cannot expose operational actions before their authoritative backend phases pass.",
+      "status": "BLOCKED",
+      "task_ids": [
+        "ALPHA-001",
+        "DATA-020",
+        "QBT-021",
+        "TRD-010"
+      ]
+    },
+    {
+      "activation_gate": "BAR-01-BE5 deadline, payload-limit and partial-failure tests pass.",
+      "category": "PERFORMANCE",
+      "evidence_refs": [
+        "upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md#12-performance-and-caching-budget"
+      ],
+      "feature_ids": [
+        "COMMAND_CENTER"
+      ],
+      "id": "CONCERN_COMMAND_CENTER_PERFORMANCE",
+      "reviewed_at": "2026-08-15T00:00:00Z",
+      "screen_ids": [
+        "COMMAND_CENTER_SCREEN"
+      ],
+      "severity": "HIGH",
+      "statement": "Command Center summary must remain bounded, concurrent and below the BAR-01 payload and latency budgets.",
+      "status": "OPEN",
+      "task_ids": [
+        "PRT-012"
+      ]
+    }
+  ],
+  "content_digest": "sha256:74a1d04b2de425a03b8863386e66bd0f0a79102ec7d726d5f21513959b7762e8",
+  "feature_groups": [
+    {
+      "id": "command",
+      "label": "Command",
+      "order": 10
+    },
+    {
+      "id": "research",
+      "label": "Research",
+      "order": 20
+    },
+    {
+      "id": "backtests",
+      "label": "Backtests",
+      "order": 30
+    },
+    {
+      "id": "deployments",
+      "label": "Deployments",
+      "order": 40
+    },
+    {
+      "id": "data_ops",
+      "label": "Data & Operations",
+      "order": 50
+    },
+    {
+      "id": "planning",
+      "label": "Planning",
+      "order": 60
+    },
+    {
+      "id": "administration",
+      "label": "Administration",
+      "order": 70
+    }
+  ],
+  "features": [
+    {
+      "activation_gate": "U03 registry, shell and truthful summary exit gates pass.",
+      "canonical_route": "/",
+      "concern_ids": [
+        "CONCERN_REGISTRY_AUTHORITY",
+        "CONCERN_COMMAND_CENTER_TRUTH",
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_COMMAND_CENTER_PERFORMANCE"
+      ],
+      "data_mode": "STATIC_PREVIEW",
+      "default_task_id": "PRT-012",
+      "description": "Truthful product map and current operational summaries.",
+      "environments": [
+        "local",
+        "research"
+      ],
+      "group": "command",
+      "hidden_for_roles": [],
+      "id": "COMMAND_CENTER",
+      "label": "Command Center",
+      "legacy_routes": [],
+      "lifecycle_stage_ids": [],
+      "maturity": "COMMISSIONED",
+      "navigation": {
+        "icon_key": "layout-dashboard",
+        "order": 10,
+        "show_in_command_palette": true,
+        "show_in_sidebar": true
+      },
+      "permissions": [
+        "portal.command.read"
+      ],
+      "prototype_frame_id": "P0.14",
+      "roadmap_epic_id": "U03",
+      "screen_ids": [
+        "COMMAND_CENTER_SCREEN"
+      ],
+      "source_module": null,
+      "summary_source_ids": [
+        "registry_current",
+        "quantbt_current",
+        "planning_current"
+      ]
+    },
+    {
+      "activation_gate": "U03 registry-driven Portal Map and preview navigation pass.",
+      "canonical_route": "/portal-map",
+      "concern_ids": [
+        "CONCERN_REGISTRY_AUTHORITY",
+        "CONCERN_PORTAL_AUTHORIZATION"
+      ],
+      "data_mode": "STATIC_PREVIEW",
+      "default_task_id": "PRT-003",
+      "description": "Lifecycle map of available, prototype and commissioned capabilities.",
+      "environments": [
+        "local",
+        "research"
+      ],
+      "group": "command",
+      "hidden_for_roles": [],
+      "id": "PORTAL_MAP",
+      "label": "Portal Map",
+      "legacy_routes": [],
+      "lifecycle_stage_ids": [
+        "ALPHA_IDEA",
+        "IMPORT_REGISTRY",
+        "RESEARCH",
+        "BACKTEST",
+        "APPROVAL",
+        "PAPER",
+        "SANDBOX",
+        "LIVE",
+        "MONITOR"
+      ],
+      "maturity": "COMMISSIONED",
+      "navigation": {
+        "icon_key": "map",
+        "order": 20,
+        "show_in_command_palette": true,
+        "show_in_sidebar": true
+      },
+      "permissions": [
+        "portal.map.read"
+      ],
+      "prototype_frame_id": "P0.15",
+      "roadmap_epic_id": "U03",
+      "screen_ids": [
+        "PORTAL_MAP_SCREEN"
+      ],
+      "source_module": null,
+      "summary_source_ids": [
+        "registry_current"
+      ]
+    },
+    {
+      "activation_gate": null,
+      "canonical_route": "/research/quantbt",
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_QUANTBT_PARITY",
+        "CONCERN_HISTORICAL_DEPLOYMENT"
+      ],
+      "data_mode": "REAL",
+      "default_task_id": "QBT-020",
+      "description": "Current QuantBT backtest, WFO, results and audit capability.",
+      "environments": [
+        "local",
+        "research"
+      ],
+      "group": "research",
+      "hidden_for_roles": [],
+      "id": "QUANTBT_RESEARCH",
+      "label": "QuantBT Research",
+      "legacy_routes": [
+        "/runs",
+        "/overview",
+        "/optimization",
+        "/parameters",
+        "/execution",
+        "/audit"
+      ],
+      "lifecycle_stage_ids": [
+        "RESEARCH",
+        "BACKTEST"
+      ],
+      "maturity": "AVAILABLE",
+      "navigation": {
+        "icon_key": "flask-conical",
+        "order": 10,
+        "show_in_command_palette": true,
+        "show_in_sidebar": true
+      },
+      "permissions": [
+        "quantbt.research.read",
+        "quantbt.run.submit"
+      ],
+      "prototype_frame_id": "P0.17",
+      "roadmap_epic_id": "U04",
+      "screen_ids": [
+        "QUANTBT_NEW_RUN_SCREEN",
+        "QUANTBT_RUN_LIBRARY_SCREEN",
+        "QUANTBT_RUN_PROGRESS_SCREEN",
+        "QUANTBT_RUN_DETAIL_SCREEN"
+      ],
+      "source_module": "apps/portal",
+      "summary_source_ids": [
+        "quantbt_current"
+      ]
+    },
+    {
+      "activation_gate": null,
+      "canonical_route": "/planning",
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_PLANNING_MODE"
+      ],
+      "data_mode": "REAL",
+      "default_task_id": "MGR-PLATFORM-001",
+      "description": "Current documentation, roadmap, task and evidence workspace.",
+      "environments": [
+        "local",
+        "research"
+      ],
+      "group": "planning",
+      "hidden_for_roles": [],
+      "id": "PLANNING",
+      "label": "Roadmap & Task Board",
+      "legacy_routes": [
+        "/roadmap-task-board/"
+      ],
+      "lifecycle_stage_ids": [],
+      "maturity": "AVAILABLE",
+      "navigation": {
+        "icon_key": "kanban-square",
+        "order": 10,
+        "show_in_command_palette": true,
+        "show_in_sidebar": true
+      },
+      "permissions": [
+        "planning.read"
+      ],
+      "prototype_frame_id": "P0.18",
+      "roadmap_epic_id": "U05",
+      "screen_ids": [
+        "PLANNING_ROADMAP_SCREEN",
+        "PLANNING_TASK_BOARD_SCREEN"
+      ],
+      "source_module": "features/roadmap-task-board",
+      "summary_source_ids": [
+        "planning_current"
+      ]
+    },
+    {
+      "activation_gate": "U14 immutable Alpha Registry and certification authority pass.",
+      "canonical_route": "/research/alphas",
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_FUTURE_AUTHORITY"
+      ],
+      "data_mode": "STATIC_PREVIEW",
+      "default_task_id": "ALPHA-001",
+      "description": "Governed alpha import, registry, evidence and scorecards.",
+      "environments": [
+        "local",
+        "research"
+      ],
+      "group": "research",
+      "hidden_for_roles": [],
+      "id": "ALPHA_POOL",
+      "label": "Alpha Pool",
+      "legacy_routes": [],
+      "lifecycle_stage_ids": [
+        "ALPHA_IDEA",
+        "IMPORT_REGISTRY",
+        "RESEARCH"
+      ],
+      "maturity": "COMMISSIONED",
+      "navigation": {
+        "icon_key": "library-big",
+        "order": 20,
+        "show_in_command_palette": true,
+        "show_in_sidebar": true
+      },
+      "permissions": [
+        "alpha.read"
+      ],
+      "prototype_frame_id": "SCREEN-04",
+      "roadmap_epic_id": "U14",
+      "screen_ids": [
+        "ALPHA_POOL_SCREEN"
+      ],
+      "source_module": null,
+      "summary_source_ids": []
+    },
+    {
+      "activation_gate": "U14 mining contract, resource guard and evidence gates pass.",
+      "canonical_route": "/research/mining",
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_FUTURE_AUTHORITY"
+      ],
+      "data_mode": "STATIC_PREVIEW",
+      "default_task_id": "ALPHA-020",
+      "description": "Governed mining campaigns and candidate promotion.",
+      "environments": [
+        "local",
+        "research"
+      ],
+      "group": "research",
+      "hidden_for_roles": [],
+      "id": "ALPHA_MINING",
+      "label": "Alpha Mining",
+      "legacy_routes": [],
+      "lifecycle_stage_ids": [
+        "RESEARCH"
+      ],
+      "maturity": "COMMISSIONED",
+      "navigation": {
+        "icon_key": "pickaxe",
+        "order": 30,
+        "show_in_command_palette": true,
+        "show_in_sidebar": true
+      },
+      "permissions": [
+        "alpha.read"
+      ],
+      "prototype_frame_id": "SCREEN-08",
+      "roadmap_epic_id": "U14",
+      "screen_ids": [
+        "ALPHA_MINING_SCREEN"
+      ],
+      "source_module": null,
+      "summary_source_ids": []
+    },
+    {
+      "activation_gate": "U14 composition schema and immutable version gates pass.",
+      "canonical_route": "/research/composer",
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_FUTURE_AUTHORITY"
+      ],
+      "data_mode": "STATIC_PREVIEW",
+      "default_task_id": "ALPHA-020",
+      "description": "Versioned alpha composition and validation preview.",
+      "environments": [
+        "local",
+        "research"
+      ],
+      "group": "research",
+      "hidden_for_roles": [],
+      "id": "STRATEGY_COMPOSER",
+      "label": "Strategy Composer",
+      "legacy_routes": [],
+      "lifecycle_stage_ids": [
+        "RESEARCH"
+      ],
+      "maturity": "COMMISSIONED",
+      "navigation": {
+        "icon_key": "workflow",
+        "order": 40,
+        "show_in_command_palette": true,
+        "show_in_sidebar": true
+      },
+      "permissions": [
+        "alpha.read"
+      ],
+      "prototype_frame_id": "SCREEN-09",
+      "roadmap_epic_id": "U14",
+      "screen_ids": [
+        "STRATEGY_COMPOSER_SCREEN"
+      ],
+      "source_module": null,
+      "summary_source_ids": []
+    },
+    {
+      "activation_gate": "U15 approval state machine, RBAC and immutable evidence pass.",
+      "canonical_route": "/backtests/approvals",
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_FUTURE_AUTHORITY"
+      ],
+      "data_mode": "NONE",
+      "default_task_id": "QBT-021",
+      "description": "Evidence-bound review and promotion decisions.",
+      "environments": [
+        "local",
+        "research",
+        "paper",
+        "sandbox",
+        "live"
+      ],
+      "group": "backtests",
+      "hidden_for_roles": [],
+      "id": "APPROVALS",
+      "label": "Approvals",
+      "legacy_routes": [],
+      "lifecycle_stage_ids": [
+        "APPROVAL"
+      ],
+      "maturity": "COMMISSIONED",
+      "navigation": {
+        "icon_key": "shield-check",
+        "order": 10,
+        "show_in_command_palette": true,
+        "show_in_sidebar": true
+      },
+      "permissions": [
+        "approval.read"
+      ],
+      "prototype_frame_id": "SCREEN-16",
+      "roadmap_epic_id": "U15",
+      "screen_ids": [
+        "APPROVAL_INBOX_SCREEN"
+      ],
+      "source_module": null,
+      "summary_source_ids": []
+    },
+    {
+      "activation_gate": "U13 Dataset Snapshot, quality and query contracts pass.",
+      "canonical_route": "/data/catalog",
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_HISTORICAL_DEPLOYMENT",
+        "CONCERN_FUTURE_AUTHORITY"
+      ],
+      "data_mode": "NONE",
+      "default_task_id": "DATA-020",
+      "description": "Dataset, snapshot and quality authority; not the realtime feed.",
+      "environments": [
+        "local",
+        "research"
+      ],
+      "group": "data_ops",
+      "hidden_for_roles": [],
+      "id": "DATA_CATALOG",
+      "label": "Data Catalog",
+      "legacy_routes": [],
+      "lifecycle_stage_ids": [],
+      "maturity": "COMMISSIONED",
+      "navigation": {
+        "icon_key": "database",
+        "order": 10,
+        "show_in_command_palette": true,
+        "show_in_sidebar": true
+      },
+      "permissions": [
+        "data.catalog.read"
+      ],
+      "prototype_frame_id": "SCREEN-22",
+      "roadmap_epic_id": "U13",
+      "screen_ids": [
+        "DATA_CATALOG_SCREEN"
+      ],
+      "source_module": null,
+      "summary_source_ids": []
+    },
+    {
+      "activation_gate": "U15 paper execution, ledger and reconciliation gates pass.",
+      "canonical_route": "/deployments/paper",
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_FUTURE_AUTHORITY"
+      ],
+      "data_mode": "NONE",
+      "default_task_id": "TRD-010",
+      "description": "Separate simulated execution, ledger and account-state authority.",
+      "environments": [
+        "paper"
+      ],
+      "group": "deployments",
+      "hidden_for_roles": [],
+      "id": "PAPER_TRADING",
+      "label": "Paper Trading",
+      "legacy_routes": [],
+      "lifecycle_stage_ids": [
+        "PAPER"
+      ],
+      "maturity": "COMMISSIONED",
+      "navigation": {
+        "icon_key": "file-clock",
+        "order": 10,
+        "show_in_command_palette": true,
+        "show_in_sidebar": true
+      },
+      "permissions": [
+        "paper.read"
+      ],
+      "prototype_frame_id": "SCREEN-17",
+      "roadmap_epic_id": "U15",
+      "screen_ids": [
+        "PAPER_TRADING_SCREEN"
+      ],
+      "source_module": null,
+      "summary_source_ids": []
+    },
+    {
+      "activation_gate": "U15 sandbox permission, preflight and reconciliation gates pass.",
+      "canonical_route": "/deployments/sandbox",
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_FUTURE_AUTHORITY"
+      ],
+      "data_mode": "NONE",
+      "default_task_id": "TRD-010",
+      "description": "Governed venue sandbox validation with explicit risk boundaries.",
+      "environments": [
+        "sandbox"
+      ],
+      "group": "deployments",
+      "hidden_for_roles": [],
+      "id": "SANDBOX_TRADING",
+      "label": "Sandbox",
+      "legacy_routes": [],
+      "lifecycle_stage_ids": [
+        "SANDBOX"
+      ],
+      "maturity": "COMMISSIONED",
+      "navigation": {
+        "icon_key": "boxes",
+        "order": 20,
+        "show_in_command_palette": true,
+        "show_in_sidebar": true
+      },
+      "permissions": [
+        "sandbox.read"
+      ],
+      "prototype_frame_id": "SCREEN-18",
+      "roadmap_epic_id": "U15",
+      "screen_ids": [
+        "SANDBOX_TRADING_SCREEN"
+      ],
+      "source_module": null,
+      "summary_source_ids": []
+    },
+    {
+      "activation_gate": "U16 private risk, execution and reconciliation authorities pass.",
+      "canonical_route": "/deployments/live",
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_FUTURE_AUTHORITY"
+      ],
+      "data_mode": "NONE",
+      "default_task_id": "TRD-001",
+      "description": "Private risk-controlled live operation and reconciliation surface.",
+      "environments": [
+        "live"
+      ],
+      "group": "deployments",
+      "hidden_for_roles": [],
+      "id": "LIVE_OPERATIONS",
+      "label": "Live Operations",
+      "legacy_routes": [],
+      "lifecycle_stage_ids": [
+        "LIVE",
+        "MONITOR"
+      ],
+      "maturity": "COMMISSIONED",
+      "navigation": {
+        "icon_key": "radio-tower",
+        "order": 30,
+        "show_in_command_palette": true,
+        "show_in_sidebar": true
+      },
+      "permissions": [
+        "live.read"
+      ],
+      "prototype_frame_id": "SCREEN-19",
+      "roadmap_epic_id": "U16",
+      "screen_ids": [
+        "LIVE_OPERATIONS_SCREEN"
+      ],
+      "source_module": null,
+      "summary_source_ids": []
+    },
+    {
+      "activation_gate": "U07 verified identity, session and RBAC gates pass.",
+      "canonical_route": "/administration/profile-access",
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION"
+      ],
+      "data_mode": "STATIC_PREVIEW",
+      "default_task_id": "SEC-001",
+      "description": "Verified identity, session and access information.",
+      "environments": [
+        "local",
+        "research",
+        "paper",
+        "sandbox",
+        "live"
+      ],
+      "group": "administration",
+      "hidden_for_roles": [],
+      "id": "PROFILE_ACCESS",
+      "label": "Profile & Access",
+      "legacy_routes": [],
+      "lifecycle_stage_ids": [],
+      "maturity": "COMMISSIONED",
+      "navigation": {
+        "icon_key": "user-round-cog",
+        "order": 10,
+        "show_in_command_palette": true,
+        "show_in_sidebar": true
+      },
+      "permissions": [
+        "profile.read"
+      ],
+      "prototype_frame_id": "P0.20",
+      "roadmap_epic_id": "U07",
+      "screen_ids": [
+        "PROFILE_ACCESS_SCREEN"
+      ],
+      "source_module": null,
+      "summary_source_ids": []
+    }
+  ],
+  "lifecycle_stages": [
+    {
+      "description": "Capture and qualify research ideas before a governed import exists.",
+      "feature_ids": [
+        "ALPHA_POOL"
+      ],
+      "id": "ALPHA_IDEA",
+      "label": "Alpha Idea",
+      "maturity": "COMMISSIONED",
+      "order": 10
+    },
+    {
+      "description": "Create immutable alpha identity and import evidence.",
+      "feature_ids": [
+        "ALPHA_POOL"
+      ],
+      "id": "IMPORT_REGISTRY",
+      "label": "Import / Registry",
+      "maturity": "COMMISSIONED",
+      "order": 20
+    },
+    {
+      "description": "Develop and evaluate research hypotheses; QuantBT is the available subset.",
+      "feature_ids": [
+        "ALPHA_POOL",
+        "ALPHA_MINING",
+        "STRATEGY_COMPOSER",
+        "QUANTBT_RESEARCH"
+      ],
+      "id": "RESEARCH",
+      "label": "Research",
+      "maturity": "PROTOTYPE",
+      "order": 30
+    },
+    {
+      "description": "Run current QuantBT backtests and WFO with explicit evidence.",
+      "feature_ids": [
+        "QUANTBT_RESEARCH"
+      ],
+      "id": "BACKTEST",
+      "label": "Backtest",
+      "maturity": "AVAILABLE",
+      "order": 40
+    },
+    {
+      "description": "Review exact artifacts and promotion evidence.",
+      "feature_ids": [
+        "APPROVALS"
+      ],
+      "id": "APPROVAL",
+      "label": "Approval",
+      "maturity": "COMMISSIONED",
+      "order": 50
+    },
+    {
+      "description": "Operate a separate simulated execution and account-state authority.",
+      "feature_ids": [
+        "PAPER_TRADING"
+      ],
+      "id": "PAPER",
+      "label": "Paper",
+      "maturity": "COMMISSIONED",
+      "order": 60
+    },
+    {
+      "description": "Validate exchange integration in a governed non-live environment.",
+      "feature_ids": [
+        "SANDBOX_TRADING"
+      ],
+      "id": "SANDBOX",
+      "label": "Sandbox",
+      "maturity": "COMMISSIONED",
+      "order": 70
+    },
+    {
+      "description": "Control approved live deployment through private risk authority.",
+      "feature_ids": [
+        "LIVE_OPERATIONS"
+      ],
+      "id": "LIVE",
+      "label": "Live",
+      "maturity": "COMMISSIONED",
+      "order": 80
+    },
+    {
+      "description": "Monitor execution and reconcile authoritative order, fill and account state.",
+      "feature_ids": [
+        "LIVE_OPERATIONS"
+      ],
+      "id": "MONITOR",
+      "label": "Monitor / Reconcile",
+      "maturity": "COMMISSIONED",
+      "order": 90
+    }
+  ],
+  "registry_id": "portal-default",
+  "revision": 1,
+  "schema_version": "portal.registry.v1",
+  "screens": [
+    {
+      "activation_gate": "BAR-01 registry and summary contracts plus U03 shell gates pass.",
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_REGISTRY_AUTHORITY",
+        "CONCERN_COMMAND_CENTER_TRUTH",
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_COMMAND_CENTER_PERFORMANCE"
+      ],
+      "contract_revision": 1,
+      "data_mode": "STATIC_PREVIEW",
+      "feature_id": "COMMAND_CENTER",
+      "inputs": [],
+      "maturity": "COMMISSIONED",
+      "permissions": [
+        "portal.command.read"
+      ],
+      "primary_action": "Open the highest-priority evidenced item",
+      "primary_decision": "Which current capability or verified blocker needs attention next?",
+      "primary_persona": "manager",
+      "related_repositories": [
+        "apps/portal",
+        "features/roadmap-task-board"
+      ],
+      "related_task_ids": [
+        "PRT-012"
+      ],
+      "route": "/",
+      "screen_id": "COMMAND_CENTER_SCREEN"
+    },
+    {
+      "activation_gate": "U03 registry-driven lifecycle and preview interactions pass.",
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_REGISTRY_AUTHORITY",
+        "CONCERN_PORTAL_AUTHORIZATION"
+      ],
+      "contract_revision": 1,
+      "data_mode": "STATIC_PREVIEW",
+      "feature_id": "PORTAL_MAP",
+      "inputs": [],
+      "maturity": "COMMISSIONED",
+      "permissions": [
+        "portal.map.read"
+      ],
+      "primary_action": "Open a feature brief",
+      "primary_decision": "Which lifecycle stages are available, commissioned or blocked?",
+      "primary_persona": "manager",
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [
+        "PRT-003"
+      ],
+      "route": "/portal-map",
+      "screen_id": "PORTAL_MAP_SCREEN"
+    },
+    {
+      "activation_gate": null,
+      "backend_dependency_ids": [
+        "current_quantbt_fastapi",
+        "quantbt_engine_1_0_8",
+        "historical_market_data_reader"
+      ],
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_QUANTBT_PARITY",
+        "CONCERN_HISTORICAL_DEPLOYMENT"
+      ],
+      "contract_revision": 1,
+      "data_mode": "REAL",
+      "feature_id": "QUANTBT_RESEARCH",
+      "inputs": [
+        {
+          "authority": "portal_api.run_request",
+          "id": "run_spec",
+          "required": true
+        },
+        {
+          "authority": "historical_market_data.reader",
+          "id": "historical_data",
+          "required": true
+        }
+      ],
+      "maturity": "AVAILABLE",
+      "permissions": [
+        "quantbt.research.read",
+        "quantbt.run.submit"
+      ],
+      "primary_action": "Validate and submit run",
+      "primary_decision": "Is this bounded configuration valid and reproducible?",
+      "primary_persona": "quant_researcher",
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [
+        "QBT-020"
+      ],
+      "route": "/research/quantbt/new",
+      "screen_id": "QUANTBT_NEW_RUN_SCREEN"
+    },
+    {
+      "activation_gate": null,
+      "backend_dependency_ids": [
+        "current_quantbt_fastapi"
+      ],
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_QUANTBT_PARITY"
+      ],
+      "contract_revision": 1,
+      "data_mode": "REAL",
+      "feature_id": "QUANTBT_RESEARCH",
+      "inputs": [
+        {
+          "authority": "portal_api.run_manager",
+          "id": "run_records",
+          "required": true
+        }
+      ],
+      "maturity": "AVAILABLE",
+      "permissions": [
+        "quantbt.research.read"
+      ],
+      "primary_action": "Open run",
+      "primary_decision": "Which persisted run should be inspected or reopened?",
+      "primary_persona": "quant_researcher",
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [
+        "QBT-020"
+      ],
+      "route": "/research/quantbt/runs",
+      "screen_id": "QUANTBT_RUN_LIBRARY_SCREEN"
+    },
+    {
+      "activation_gate": null,
+      "backend_dependency_ids": [
+        "current_quantbt_fastapi"
+      ],
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_QUANTBT_PARITY"
+      ],
+      "contract_revision": 1,
+      "data_mode": "REAL",
+      "feature_id": "QUANTBT_RESEARCH",
+      "inputs": [
+        {
+          "authority": "portal_api.run_status",
+          "id": "run_status",
+          "required": true
+        },
+        {
+          "authority": "portal_api.run_sse",
+          "id": "run_events",
+          "required": true
+        }
+      ],
+      "maturity": "AVAILABLE",
+      "permissions": [
+        "quantbt.research.read"
+      ],
+      "primary_action": "Open results when terminal",
+      "primary_decision": "Is the current run progressing, failed or safe to cancel?",
+      "primary_persona": "quant_researcher",
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [
+        "QBT-020"
+      ],
+      "route": "/research/quantbt/runs/:runId/progress",
+      "screen_id": "QUANTBT_RUN_PROGRESS_SCREEN"
+    },
+    {
+      "activation_gate": null,
+      "backend_dependency_ids": [
+        "current_quantbt_fastapi",
+        "quantbt_engine_1_0_8"
+      ],
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_QUANTBT_PARITY",
+        "CONCERN_HISTORICAL_DEPLOYMENT"
+      ],
+      "contract_revision": 1,
+      "data_mode": "REAL",
+      "feature_id": "QUANTBT_RESEARCH",
+      "inputs": [
+        {
+          "authority": "portal_api.run_artifacts",
+          "id": "run_artifacts",
+          "required": true
+        },
+        {
+          "authority": "quantbt_engine.artifacts",
+          "id": "quant_metrics",
+          "required": true
+        }
+      ],
+      "maturity": "AVAILABLE",
+      "permissions": [
+        "quantbt.research.read"
+      ],
+      "primary_action": "Inspect result evidence",
+      "primary_decision": "Does this run have enough evidence for comparison or later approval?",
+      "primary_persona": "quant_researcher",
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [
+        "QBT-021"
+      ],
+      "route": "/research/quantbt/runs/:runId/overview",
+      "screen_id": "QUANTBT_RUN_DETAIL_SCREEN"
+    },
+    {
+      "activation_gate": null,
+      "backend_dependency_ids": [
+        "current_planning_fastapi"
+      ],
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_PLANNING_MODE"
+      ],
+      "contract_revision": 1,
+      "data_mode": "REAL",
+      "feature_id": "PLANNING",
+      "inputs": [
+        {
+          "authority": "planning_api.roadmap_v1",
+          "id": "roadmap_items",
+          "required": true
+        }
+      ],
+      "maturity": "AVAILABLE",
+      "permissions": [
+        "planning.read"
+      ],
+      "primary_action": "Open roadmap phase",
+      "primary_decision": "Which roadmap phase and outcome is currently being advanced?",
+      "primary_persona": "manager",
+      "related_repositories": [
+        "features/roadmap-task-board"
+      ],
+      "related_task_ids": [
+        "MGR-PLATFORM-001"
+      ],
+      "route": "/planning/roadmap",
+      "screen_id": "PLANNING_ROADMAP_SCREEN"
+    },
+    {
+      "activation_gate": null,
+      "backend_dependency_ids": [
+        "current_planning_fastapi"
+      ],
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_PLANNING_MODE"
+      ],
+      "contract_revision": 1,
+      "data_mode": "REAL",
+      "feature_id": "PLANNING",
+      "inputs": [
+        {
+          "authority": "planning_api.tasks_v1",
+          "id": "task_items",
+          "required": true
+        }
+      ],
+      "maturity": "AVAILABLE",
+      "permissions": [
+        "planning.read"
+      ],
+      "primary_action": "Open task",
+      "primary_decision": "Which task can move next under the current dependencies?",
+      "primary_persona": "manager",
+      "related_repositories": [
+        "features/roadmap-task-board"
+      ],
+      "related_task_ids": [
+        "MGR-PLATFORM-001"
+      ],
+      "route": "/planning/board",
+      "screen_id": "PLANNING_TASK_BOARD_SCREEN"
+    },
+    {
+      "activation_gate": "U14 Alpha Registry authority and evidence gates pass.",
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_FUTURE_AUTHORITY"
+      ],
+      "contract_revision": 1,
+      "data_mode": "STATIC_PREVIEW",
+      "feature_id": "ALPHA_POOL",
+      "inputs": [],
+      "maturity": "COMMISSIONED",
+      "permissions": [
+        "alpha.read"
+      ],
+      "primary_action": null,
+      "primary_decision": "Which alpha has evidence for the next governed research action?",
+      "primary_persona": "quant_researcher",
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [
+        "ALPHA-001"
+      ],
+      "route": "/research/alphas",
+      "screen_id": "ALPHA_POOL_SCREEN"
+    },
+    {
+      "activation_gate": "U14 mining campaign and candidate contracts pass.",
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_FUTURE_AUTHORITY"
+      ],
+      "contract_revision": 1,
+      "data_mode": "STATIC_PREVIEW",
+      "feature_id": "ALPHA_MINING",
+      "inputs": [],
+      "maturity": "COMMISSIONED",
+      "permissions": [
+        "alpha.read"
+      ],
+      "primary_action": null,
+      "primary_decision": "Which mining candidate is eligible for governed import?",
+      "primary_persona": "quant_researcher",
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [
+        "ALPHA-020"
+      ],
+      "route": "/research/mining",
+      "screen_id": "ALPHA_MINING_SCREEN"
+    },
+    {
+      "activation_gate": "U14 versioned composition and validation contracts pass.",
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_FUTURE_AUTHORITY"
+      ],
+      "contract_revision": 1,
+      "data_mode": "STATIC_PREVIEW",
+      "feature_id": "STRATEGY_COMPOSER",
+      "inputs": [],
+      "maturity": "COMMISSIONED",
+      "permissions": [
+        "alpha.read"
+      ],
+      "primary_action": null,
+      "primary_decision": "Is this composition valid, versioned and auditable?",
+      "primary_persona": "quant_researcher",
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [
+        "ALPHA-020"
+      ],
+      "route": "/research/composer",
+      "screen_id": "STRATEGY_COMPOSER_SCREEN"
+    },
+    {
+      "activation_gate": "U15 approval authority, immutable evidence and RBAC pass.",
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_FUTURE_AUTHORITY"
+      ],
+      "contract_revision": 1,
+      "data_mode": "NONE",
+      "feature_id": "APPROVALS",
+      "inputs": [],
+      "maturity": "COMMISSIONED",
+      "permissions": [
+        "approval.read"
+      ],
+      "primary_action": null,
+      "primary_decision": "Does an exact artifact satisfy all promotion gates?",
+      "primary_persona": "manager",
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [
+        "QBT-021"
+      ],
+      "route": "/backtests/approvals",
+      "screen_id": "APPROVAL_INBOX_SCREEN"
+    },
+    {
+      "activation_gate": "U13 immutable snapshot, quality and query contracts pass.",
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_HISTORICAL_DEPLOYMENT",
+        "CONCERN_FUTURE_AUTHORITY"
+      ],
+      "contract_revision": 1,
+      "data_mode": "NONE",
+      "feature_id": "DATA_CATALOG",
+      "inputs": [],
+      "maturity": "COMMISSIONED",
+      "permissions": [
+        "data.catalog.read"
+      ],
+      "primary_action": null,
+      "primary_decision": "Which immutable snapshot is eligible for a governed run?",
+      "primary_persona": "platform_engineer",
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [
+        "DATA-020"
+      ],
+      "route": "/data/catalog",
+      "screen_id": "DATA_CATALOG_SCREEN"
+    },
+    {
+      "activation_gate": "U15 paper execution, ledger and reconciliation gates pass.",
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_FUTURE_AUTHORITY"
+      ],
+      "contract_revision": 1,
+      "data_mode": "NONE",
+      "feature_id": "PAPER_TRADING",
+      "inputs": [],
+      "maturity": "COMMISSIONED",
+      "permissions": [
+        "paper.read"
+      ],
+      "primary_action": null,
+      "primary_decision": "Is simulated execution state reconciled and within policy?",
+      "primary_persona": "operator",
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [
+        "TRD-010"
+      ],
+      "route": "/deployments/paper",
+      "screen_id": "PAPER_TRADING_SCREEN"
+    },
+    {
+      "activation_gate": "U15 sandbox permissions, preflight and reconciliation gates pass.",
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_FUTURE_AUTHORITY"
+      ],
+      "contract_revision": 1,
+      "data_mode": "NONE",
+      "feature_id": "SANDBOX_TRADING",
+      "inputs": [],
+      "maturity": "COMMISSIONED",
+      "permissions": [
+        "sandbox.read"
+      ],
+      "primary_action": null,
+      "primary_decision": "Is the sandbox deployment safe to advance or stop?",
+      "primary_persona": "operator",
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [
+        "TRD-010"
+      ],
+      "route": "/deployments/sandbox",
+      "screen_id": "SANDBOX_TRADING_SCREEN"
+    },
+    {
+      "activation_gate": "U16 private risk, execution and reconciliation authorities pass.",
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION",
+        "CONCERN_FUTURE_AUTHORITY"
+      ],
+      "contract_revision": 1,
+      "data_mode": "NONE",
+      "feature_id": "LIVE_OPERATIONS",
+      "inputs": [],
+      "maturity": "COMMISSIONED",
+      "permissions": [
+        "live.read"
+      ],
+      "primary_action": null,
+      "primary_decision": "Which risk-authorized protective action is required now?",
+      "primary_persona": "operator",
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [
+        "TRD-001"
+      ],
+      "route": "/deployments/live",
+      "screen_id": "LIVE_OPERATIONS_SCREEN"
+    },
+    {
+      "activation_gate": "U07 verified identity, opaque session and RBAC gates pass.",
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_PORTAL_AUTHORIZATION"
+      ],
+      "contract_revision": 1,
+      "data_mode": "STATIC_PREVIEW",
+      "feature_id": "PROFILE_ACCESS",
+      "inputs": [],
+      "maturity": "COMMISSIONED",
+      "permissions": [
+        "profile.read"
+      ],
+      "primary_action": null,
+      "primary_decision": "Which verified identity, session and role currently applies?",
+      "primary_persona": "portal_user",
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [
+        "SEC-001"
+      ],
+      "route": "/administration/profile-access",
+      "screen_id": "PROFILE_ACCESS_SCREEN"
+    }
+  ]
+}

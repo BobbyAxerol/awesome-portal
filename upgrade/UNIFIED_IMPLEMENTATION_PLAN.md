@@ -153,9 +153,10 @@ không suy diễn layout chỉ từ tên task.
   report định lượng.
 - Root CI, CodeQL/Dependabot, Compose smoke, image publishing, release/deploy
   skeleton, contributor guardrails và protected branches.
-- Historical Market Data đã có consumer contract và approved non-Deribit reader
-  release. Portal chưa tích hợp wheel/mount/smoke nên synthetic/golden evidence
-  vẫn là CI gate; target-VPS real-reader smoke là gate riêng của U01-BE.
+- Historical Market Data có consumer contract và approved non-Deribit reader
+  release. U01-BE đã tích hợp exact wheel, bounded provider, read-only mount,
+  doctor và target-VPS real-reader smoke; production activation còn chờ host
+  reader-group ACL và encrypted publish secret.
 
 ### Chưa có
 
@@ -168,9 +169,9 @@ không suy diễn layout chỉ từ tên task.
   registry hoặc isolated quant worker.
 - Chưa có Engine Capability Manifest, Alpha Registry, Data Catalog, Paper,
   Sandbox, Live hay Rust fast-path services.
-- Current `CryptoBinanceMarketDataProvider` còn nạp `data_loader.py` từ host path
-  và chưa nhận explicit time window. Đây là compatibility debt phải được thay ở
-  U01-BE, không phải contract production được chấp nhận.
+- Realtime feed, paper order/fill và paper account state chưa có provider trong
+  Portal. Chúng không được phép dùng Historical provider làm fallback và thuộc
+  service/contract riêng ở U15–U16.
 
 ## 5. Quy tắc triển khai và trạng thái phase
 
@@ -204,9 +205,9 @@ contract/schema → backend/domain tests → API/read model → UI states/wirefr
 |---|---|---|---|
 | U00 | Governance & source-of-truth | PARTIAL | Plan, IDs, ADR/backlog authority |
 | U01 | Baseline inventory & golden visual evidence | PARTIAL | Không mất capability hiện tại |
-| U01-BE | HMD consumer boundary & real-reader smoke | PARTIAL | Data input fail-closed, read-only |
+| U01-BE | HMD consumer boundary & real-reader smoke | PARTIAL — CODE COMPLETE | Chờ host ACL/publish secret |
 | U02 | Shared foundations & Figma-ready design system | PARTIAL | Một visual/component language |
-| U03 | Unified shell, registry & Command Center | NOT STARTED | Một mother Portal thật |
+| U03 | Unified shell, registry & Command Center | PARTIAL — CONTRACT BASELINE | Một mother Portal thật |
 | U04 | QuantBT Research embedding & parity | PARTIAL | QuantBT trong shell chung |
 | U05 | Planning embedding & cross-link | PARTIAL | Planning trong shell chung |
 | U06 | Secure edge/origin topology | EXTERNAL | Hostname private-origin an toàn |
@@ -236,6 +237,12 @@ FastAPI hiện tại; không kéo toàn bộ Data Catalog lên trước. U13 có
 schema/read model song song U11/U12 và mở rộng sang các family đã được manifest
 chấp nhận. Mỗi môi trường chỉ được đánh dấu data thật `AVAILABLE` sau reader
 doctor và real-reader smoke của chính environment đó pass.
+
+Backend và cross-service implementation từ U02 trở đi phải dùng
+[Backend Architecture Implementation Guide](./BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md)
+làm architecture runway. Các slice `BAR-*` trong guide khóa authority,
+consistency, migration/rollback và agent handoff nhưng không thay số phase hoặc
+cho phép dựng sớm service/datastore của phase sau.
 
 ---
 
@@ -341,7 +348,6 @@ route, behavior, artifact, dữ liệu Planning hoặc visual quan trọng.
 
 **Technical debt**
 
-- Real market-data web flow remains pending U01-BE target-VPS smoke.
 - Baseline evidence has an expiry; refresh after any dependency/runtime major
   upgrade.
 
@@ -354,6 +360,11 @@ canonical storage read-only, thay cơ chế import `data_loader.py` theo host pa
 đồng thời chứng minh một QuantBT Binance flow nhỏ chạy fail-closed trên VPS.
 Đây là **backend phase phải làm trước U02/U03**; U13 vẫn là phase platform hóa
 Data Catalog, snapshot và query sau này.
+
+Historical boundary này chỉ cấp dữ liệu cho backtest, research và module được
+grant capability rõ ràng. Nó không cấp realtime market feed, paper order/fill,
+paper account state hoặc live execution; các concern đó có service/contract
+riêng ở U15–U16.
 
 **Guide index**
 
@@ -377,40 +388,34 @@ Data Catalog, snapshot và query sau này.
   hard-coded runtime selector.
 - Current FastAPI đã có `MarketDataProvider`, frame normalization, content hash,
   synthetic injection tests và một Binance provider seam.
+- U01-BE implementation đã thay seam cũ bằng `HistoricalMarketDataProvider`,
+  `MarketDataQuery`, installed-wheel provenance check, manifest compatibility,
+  explicit availability/scope và worker/API dùng chung một query builder.
+- Docker image verify exact wheel SHA trước install; generic local/CI dùng mode
+  `disabled`, production Compose dùng `required` + `/data:ro` và fail startup
+  khi reader/release incompatible.
+- Portal doctor, reusable real smoke, opt-in integration test và UI unavailable
+  state đã được triển khai; realtime/paper scopes bị catalog exclude rõ.
 
 **Description / To-do**
 
-1. Chốt ADR/package-delivery cho approved wheel trong image build. CI/build phải
-   verify exact version + SHA; không dùng editable install, source copy hay
-   unversioned `latest` wheel.
-2. Pin reader-compatible dependency set: Python `>=3.12,<3.14`, DuckDB `1.5.5`,
-   pandas `2.3.3`, PyArrow `24.0.0`; kiểm tra xung đột với Portal/QuantBT lock.
-3. Compose target-VPS mount
-   `/srv/primus/historical-market-data/storage:/data:ro`, set
-   `HISTORICAL_MARKET_DATA_ROOT=/data`, map reader group/GID đúng và không cấp
-   Docker group, writer ACL, collector/state/log/secrets access.
-4. Thay `_load_external_data_loader()` bằng import package bình thường
-   (`from data_loader import ...`) sau khi doctor pass. Cấm local
-   `data_loader.py`, source checkout mount và fallback `DATA_ROOT`.
-5. Thêm typed `MarketDataQuery` có `dataset_id`, explicit `symbol`, `start`,
-   `end`, `timeframe` và minimal `columns`. Request lớn không được chỉ dựa vào
-   `limit`, vì `limit` áp dụng sau partition discovery.
-6. Adapter đọc release manifest trước khi quảng bá availability; trả provenance
-   tối thiểu gồm reader version, loader contract, release tag/commit, manifest
-   digest, dataset release ID, requested window, source timezone, validation
-   mode và normalized content hash.
-7. Vòng đầu chỉ activate `crypto_1m` / `CryptoBinance1m` cho QuantBT hot path.
-   Các family approved khác đăng ký typed capability ở U13; Deribit, Binance
-   options, VN raw 1m và concrete VN contracts vẫn `UNAVAILABLE`/fail-closed.
-8. Giữ `check_val=True`; preserve source/session gaps, không forward-fill hoặc
-   mutate canonical root. Empty frame thành typed unavailable/no-data state,
-   không thành metric 0 hay success rỗng.
-9. Normalize crypto naive timestamps như UTC và VN naive timestamps như
-   `Asia/Ho_Chi_Minh`, sau đó trả UTC kèm source-timezone metadata. Không dùng
-   một rule `tz_localize("UTC")` chung cho mọi family.
-10. Tạo reader doctor command cho Portal và opt-in real-data smoke tách khỏi CI
-    synthetic. Smoke dùng explicit small BTCUSDT window, minimal OHLCV columns,
-    so sánh Portal adapter với direct reader và ghi latency/RSS/provenance.
+- [x] Verify exact wheel version/SHA trong image build; không editable/source
+  mount/unversioned wheel.
+- [x] Pin Python/reader dependency set và giữ `quantbt-engine==1.0.8` độc lập.
+- [x] Thay host-path import bằng installed-package provenance check.
+- [x] Thêm bounded typed query, half-open range, minimal OHLCV projection,
+  `check_val=True`, UTC source provenance và no-fill/empty semantics.
+- [x] Fail closed theo release status, loader contract và declared dataset;
+  local/CI advertise `UNAVAILABLE`, không fallback fixture im lặng.
+- [x] Chỉ activate Binance perpetual OHLCV; family khác vẫn do U13 quản lý.
+- [x] Doctor + opt-in real BTCUSDT smoke + direct-reader parity + latency/RSS.
+- [x] UI công bố historical/backtest scope và chặn validate/run khi unavailable
+  hoặc thiếu explicit time bounds.
+- [ ] Owner cấu hình encrypted GitHub secret `HMD_READER_WHEEL_BASE64` để
+  workflow publish image production có approved wheel.
+- [ ] Host admin sửa/verify ACL cho numeric GID của
+  `primus-market-data-readers`: storage hiện hiệu lực qua `bobby:bobby`, named
+  ACL hiển thị overflow nên production Compose chưa được activate bằng GID 996.
 
 **Backend**
 
@@ -446,13 +451,25 @@ Data Catalog, snapshot và query sau này.
 - Existing synthetic/golden QuantBT tests vẫn pass; thiếu canonical mount trong
   generic CI phải skip rõ `external-data-unavailable`, không giả pass real-data.
 
+Evidence 2026-08-15: BTCUSDT `1h` `[2026-08-01, 2026-08-02)` trả 24 bars,
+0 inferred gaps, content hash
+`08e770725bd6fb8e46a88ac38c58e998b9f47ab8152ad53e11d6f66d06ac6438`,
+reader load `0.121–0.157s` và process max RSS khoảng `165–167 MB` ở host/image
+smoke trên VPS hiện tại. Đây
+là first baseline, không phải SLO chung cho window lớn. Full backend đạt
+`116 passed, 1 skipped` (generic suite skip đúng external real-data test),
+opt-in real test đạt `1 passed`; frontend đạt `23 passed` và production build.
+
 **Technical debt**
 
 - BE-01 chỉ chứng nhận Binance perpetual OHLCV. Matrix, metrics, order-book,
   quarterly, spot và VN được platform hóa trong U13 theo dataset-specific
   schemas; không ép mọi output về OHLCV.
-- Internal package registry/OCI artifact delivery cần ADR nếu hiện tại build còn
-  dùng wheel file cục bộ; checksum lock là yêu cầu không được hạ.
+- GitHub publish hiện dùng encrypted base64 wheel secret làm immutable build
+  input. Chuyển sang private package/OCI artifact registry cần ADR ở U19; checksum
+  lock là yêu cầu không được hạ.
+- Host storage ACL/GID repair là deployment blocker duy nhất còn mở của U01-BE;
+  Portal không tự chmod/chgrp canonical data.
 - NestJS BFF, immutable DatasetSnapshot identity, S3 read model và event-driven
   availability thuộc U09–U13, không nhét vào first smoke.
 
@@ -469,12 +486,16 @@ Tạo một visual language/component contract chung trước khi ghép hai fron
 - [§25 Components](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#25-component-system)
 - [§26–27 Responsive/Figma](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#26-responsive-mobile-và-accessibility)
 - [Current UI guide](../apps/portal/uiux-design.md)
+- [BAR-01 backend registry/summary contract](./backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md)
 
 **Đã làm**
 
 - Fund Paper token palette, typography roles, ECharts conventions và report
   components đã tồn tại trong QuantBT.
 - Planning có responsive shell, light/dark tokens và design catalog riêng.
+- BAR-01-BE1 đã khóa display/capability metadata contract bằng canonical
+  registry source, Draft 2020-12 schemas và integrity tests; implementation UI
+  package vẫn chờ các slice U02/U03 sau.
 
 **Description / To-do**
 
@@ -526,11 +547,49 @@ trung thực capability hiện tại/tương lai.
 - [§P0.12 Registry](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p012-feature-registry--contract-trung-tâm-của-prototype)
 - [§P0.14–P0.20 Wireframes](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#p014-command-center-prototype)
 - [§19–20 IA/screens](./quantbt_portal_architecture_uiux_final_v0.4_vi.md#19-information-architecture-và-route-map)
+- [BAR-01 backend registry/summary contract](./backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md)
 
 **Đã làm**
 
 - Root web gateway là public entry point duy nhất.
 - Hai frontend cùng React/Vite nhưng vẫn build và route độc lập.
+- BAR-01-BE1 đã tạo canonical Feature/Screen/Concern/Lifecycle fixture và
+  source/public/summary schemas. Chỉ QuantBT Research và Planning được đánh dấu
+  `AVAILABLE + REAL`; mọi capability tương lai vẫn `COMMISSIONED`.
+- BAR-01-BE2 đã thêm immutable registry repository, startup/readiness
+  fail-closed, public `GET /api/v1/portal/registry`, deterministic digest,
+  ETag/304 và image-owned sidecar; frontend vẫn chưa có registry thứ hai.
+- BAR-01-BE3 đã thêm internal read-only QuantBT summary adapter với typed
+  evidence/current-run/Historical ports, exact state counts nhưng bounded
+  metadata, independent failure isolation và registry-derived links. Empty
+  authority là available zero; unavailable/timeout/incompatible luôn là null.
+  Public summary endpoint vẫn chờ aggregator ở BE5.
+- BAR-01-BE4 đã thêm bounded `planning.summary.v1` read model trong Planning
+  authority và private async HTTP adapter trong Portal. API mode trả exact task
+  status/roadmap counts và recent IDs; LOCAL/timeout/denied/incompatible trả
+  typed null evidence. Không import Planning repository/SQLite, không mutation,
+  không suy diễn current phase hoặc blocker. Public summary route vẫn chờ BE5.
+- BAR-01-BE5 đã thêm deadline-aware concurrent aggregator
+  (`services/portal_overview.py`) và mở read-only `GET /api/v1/portal/summary`.
+  Collection chạy song song dưới một hard deadline 100–2000 ms (default
+  500 ms), cancellation của client lan tới pending upstream, adapter lỗi
+  không trì hoãn/xoá evidence adapter khỏe và không bao giờ biến unavailable
+  thành zero. Overall availability theo available/degraded/unavailable;
+  registry maturity/blocking counts chỉ từ validated public registry; priority
+  merge chỉ 3 type hiện được ủy quyền theo thứ tự deep-dive; payload giới hạn
+  32 sections/50 priorities với target 50 KB và hard ceiling 100 KB (quá là
+  typed 500, không truncate). Endpoint trả `Cache-Control: no-store`,
+  `Vary: Authorization, Cookie` và vẫn là FastAPI compatibility bridge — không
+  đổi TypeScript control-plane target. BE6 (frontend handoff) pending.
+- BAR-01-BE6 đã hoàn tất frontend contract handoff: canonical OpenAPI 3.1
+  (`registry/openapi/portal-api.openapi.json`, regenerate bằng
+  `scripts/export_handoff_contract.py`), 7 fixtures schema-validated
+  (registry.public + summary healthy/empty/partial/stale/denied/unavailable)
+  và `registry/FRONTEND_HANDOFF.md` (ETag/304, no-store/Vary, bảng
+  FeatureMaturity vs AvailabilityState, mọi loading/empty/partial/stale/
+  denied state, priority ordering/route constraints). Frontend generate types
+  từ OpenAPI — không có model tay thứ hai. Backend contract BAR-01 hoàn tất;
+  kế tiếp là BAR-02 (U04/U05 compatibility boundaries & parity freeze).
 
 **Description / To-do**
 
@@ -587,6 +646,14 @@ selection, artifacts hoặc protected strategy kernel.
 - Current New Run/Progress/Result tabs, SSE, artifact persistence, API tests và
   synthetic PyPI smoke hoạt động.
 - Fund Paper report components và IS/OOS/Holdout semantics đã có.
+- BAR-02 đã freeze parity boundary cho U04/U05: snapshot OpenAPI Portal +
+  Planning + run-request schema (digest manifest tại
+  `upgrade/backend/bar02/snapshots/`), thêm additive artifact provenance
+  (`artifact_schema_version` + `producer`) vào mọi Portal-written JSON
+  artifact (engine `manifest.json` giữ nguyên), cross-link sidecar
+  `portal.links.v1` + `GET /api/v1/portal/links` với integrity block. Legacy
+  routes vẫn là data từ registry; gateway giữ proxy compatibility; không
+  dual-write; protected hash và Planning state không đổi.
 
 **Description / To-do**
 
@@ -639,6 +706,11 @@ governance surface cho chính Portal roadmap.
 
 - Planning frontend Phase 5, local/API adapter, lazy views, SQLite audit backend
   và compatibility route `/roadmap-task-board/` đã có.
+- BAR-02 đã thêm versioned cross-link sidecar `portal.links.v1` (mapping
+  feature/screen/concern ↔ epic/task/Figma/repository) validated lúc startup,
+  served read-only qua `GET /api/v1/portal/links` với ETag/304 + integrity
+  coverage block. External task-existence check chờ U05 proper; link không
+  hợp lệ fail startup, không bịa task link.
 
 **Description / To-do**
 
@@ -691,6 +763,14 @@ mà không expose web/API port của VPS.
 - Guide đã khóa hostname, team domain, issuer, AUD và `@azdag.com` boundary.
 - Repo hiện có one-gateway Compose nhưng host port chưa được chuyển sang final
   loopback/Cloudflare topology.
+- BAR-03 đã thêm operational ingress boundary cho backend: `X-Request-ID` +
+  W3C `traceparent` correlation (middleware ASGI thuần + nginx `$request_id`
+  forward, unsafe value bị thay), `/api/diagnostics` dependency states an
+  toàn (không path/hostname/secret), SSE unbuffered qua gateway (headers
+  `no-cache`/`X-Accel-Buffering: no` + dedicated nginx location),
+  `request_id` trong mọi error envelope, redaction tests cho
+  health/ready/diagnostics/error. Edge publish (Tunnel/Access/cert/firewall)
+  vẫn là bước owner-operational và U07 identity là slice backend tiếp theo.
 
 **Description / To-do**
 
@@ -742,6 +822,17 @@ opaque session + server-side permission.
 
 - Username/role and auth states are locked in guide; runtime implementation
   chưa có.
+- BAR-04 đã scaffold thin auth BFF `apps/control-api/` (NestJS/Fastify,
+  private trong Compose cùng `portal-postgres`): 6 bảng identity theo
+  P0.25A.14 với SQL-first migrations (ADR-003), verify Cloudflare Access
+  JWT/JWKS (signature/iss/aud/time/@azdag.com, key rotation), Argon2id +
+  blocklist, activation credentials dùng một lần, opaque session
+  `__Host-portal_session` + CSRF/origin, throttling/lockout, error generic
+  không enumeration, HMAC-signed internal principal, RBAC ADMIN/USER,
+  bootstrap idempotent bobby/stan/thanhvuong với one-time secret sinh
+  runtime. 24 tests security matrix pass trên PostgreSQL thật; raw
+  JWT/password/session không bao giờ xuống Python services. BFF chưa wire
+  vào gateway (U10 façade) và không có run/data/alpha authority.
 
 **Description / To-do**
 
@@ -799,6 +890,14 @@ mọi migration authority sau có parity và rollback.
 
 - Synthetic PyPI/golden suite và current CI đã có; chưa freeze qua unified
   shell/auth path.
+- BAR-05 đã freeze technical baseline: digest manifest
+  (`upgrade/backend/bar05/m0-freeze-manifest.json` — protected kernel, pins
+  PyPI, OpenAPI snapshots, golden fixtures, artifact schema versions, config/
+  lockfiles) regenerate được, environment report credential-free, Planning
+  export có `counts` + `content_hash`, và `scripts/verify-m0-golden.sh` chạy
+  golden parity + reopen suites (27 tests). Golden qua authenticated BFF
+  ingress chạy khi U10 wire façade; visual/Playwright flows là slice
+  frontend.
 
 **Description / To-do**
 
@@ -845,6 +944,14 @@ authority nghiệp vụ.
 
 - Current pyproject/package-lock/OpenAPI/test contracts exist per module.
 - Shared root orchestration exists; no formal packages/contracts workspace.
+- BAR-06 đã tạo `packages/contracts/`: canonical schemas (opaque IDs, UTC
+  timestamps, decimals, RFC 7807 problem, command envelope với idempotency +
+  optimistic concurrency, §6.7 event envelope), fixtures hợp lệ compile
+  cross-language (Python jsonschema + TS ajv), `generated/portal-api.d.ts`
+  từ frozen OpenAPI với sync gate, `contracts-snapshot.json` breaking-change
+  gate, Python canonical models (ProblemDocument/CommandEnvelope/
+  EventEnvelope), ADR-001/002/005 (Proposed). pnpm cutover và `packages/ui`
+  chờ follow-up slices theo ADR-001.
 
 **Description / To-do**
 
@@ -896,6 +1003,15 @@ authoritative product/control boundary.
 
 - U07 thin BFF/auth and PostgreSQL identity foundation expected.
 - Current FastAPI domain semantics remain baseline.
+- BAR-07 đã mở rộng BFF thành façade foundation: workspaces/memberships +
+  personal workspace tự provision, run read models, product audit và
+  transactional outbox; proxy authenticated (session) tới portal-api với
+  signed principal, RBAC ADMIN-first, write idempotent theo command
+  envelope (replay kết quả cũ, payload khác conflict 409, upstream không
+  double-fire), summary passthrough giữ nguyên freshness; feature flag
+  `FEATURE_PROXY_PORTAL` rollback sạch. USER đọc runs qua workspace read
+  model, cross-workspace fail-closed 404. SSE/planning proxy và
+  organizations/projects là vertical slices sau.
 
 **Description / To-do**
 
@@ -946,6 +1062,16 @@ artifact content-addressed có thể audit.
 
 - Current async run service/artifact repository and golden tests provide
   behavior reference; no durable distributed queue/object store authority.
+- BAR-08 đã thêm durable worker + immutable artifact authority: tách
+  `run`/`run_attempt` với registry append-only (redelivery no-op, retry tạo
+  attempt mới), claim-lease/heartbeat + standardized failure codes,
+  content-addressed bundle (temp → checksums → manifest v2.0.0 → blobs
+  sha256, reopen-by-digest, tamper detection, reconcile, legacy import),
+  broker port in-memory + NATS JetStream, `quant-worker-py` container +
+  `portal-nats` + `portal-minio` private trong Compose (ADR-004/006
+  Proposed). Smoke end-to-end: three-window thật qua NATS → bundle 17 files
+  → succeeded event; redelivery không duplicate. MinIO adapter swap và
+  outbox→NATS relay là slice U11 sau.
 
 **Description / To-do**
 
@@ -997,6 +1123,15 @@ route trong React.
 
 - Current portal covers three-window/Advanced WFO and selected current routes.
 - PyPI provenance and protected strategy tests exist.
+- BAR-09 đã thêm engine capability authority: manifest
+  `engine-capabilities.v1` (pin quantbt-engine 1.0.8 với dist-info RECORD
+  sha256, 2 capability certified kèm backend/data/methodology/resource
+  requirements), loader fail-closed, inspector verify installed wheel,
+  capability preflight cho mọi run request (reject unadvertised/uncertified
+  dù request hợp lệ; synthetic capability qua manifest-only pass mà không
+  sửa dispatch code), endpoint read-only `/api/v1/portal/capabilities`.
+  Endpoint Explorer UI, Generic Run API và Control API capability tables là
+  slice U12 sau.
 
 **Description / To-do**
 
@@ -1054,9 +1189,20 @@ quality gate và chart-ready query contract.
 **Đã làm**
 
 - Approved reader wheel/manifest contract và canonical read-only storage đã có;
-  U01-BE chịu trách nhiệm chứng nhận first Portal hot path trên target VPS.
-- Current backend has provider boundary, content hash, validation và synthetic
-  fixtures, nhưng host-path loader mechanism còn phải retire ở U01-BE.
+  U01-BE đã chứng nhận first Portal hot path trên target VPS.
+- Backend đã dùng installed-wheel `HistoricalMarketDataProvider`, bounded query,
+  content hash, provenance, validation, synthetic fixtures và opt-in real smoke;
+  host-path loader mechanism đã được retire.
+- BAR-10 đã thêm Data Catalog + immutable snapshot authority: catalog
+  `data-catalog.v1` với 11 family (candle/matrix/metrics/orderbook, quality
+  profile, release-manifest provenance; fail-closed với Deribit options và
+  VN raw 1m; không family activated tới khi digest manifest thật được xác
+  nhận qua real smoke), loader fail-closed, `SnapshotStore` digest-addressed
+  (quality block khi gap/duplicate vượt ngưỡng, open-by-digest + tamper
+  detection, repair luôn tạo snapshot mới), query contract range/max_points
+  với downsampling metadata, quality preflight cho historical run
+  submission, 4 endpoint read-only `/api/v1/data/*`. PostgreSQL catalog
+  tables, ingestion và object-store snapshot là slice U13 sau.
 
 **Description / To-do**
 
@@ -1118,6 +1264,17 @@ không biến browser thành arbitrary Python editor.
 
 - Protected Delta-RSI strategy/current research UI provide one concrete
   reference; generic alpha contract chưa final.
+- BAR-11 đã thêm Alpha Registry foundation: `registry/alphas.v1.json` theo
+  draft §9.3 register `delta-rsi-polynomial` v1.0.0 (entrypoint, artifact
+  digest đúng protected strategy package, family/endpoint/execution
+  contracts, data requirements, manager-exposed params, lifecycle
+  RESEARCH + golden-parity certification, chưa có promotion evidence),
+  loader fail-closed (stage/digest/duplicate sai → app không compose),
+  quarantine gate chặn run/promotion kể cả crafted request,
+  `verify_artifact` so digest đăng ký với protected package (phát hiện
+  drift), 3 endpoint read-only `/api/v1/alphas*` không leak
+  maintainer/lock digest. Quarantine ingest/build/scan pipeline và Alpha
+  Pool/Workbench UI là slice U14 sau.
 
 **Description / To-do**
 
@@ -1171,6 +1328,16 @@ chưa mở Live.
 
 - Current audit artifacts provide research evidence; approval/promotion/paper
   authority chưa có.
+- BAR-12 đã thêm U15 foundations: ApprovalAuthority (policy v1, approval
+  request gắn immutable artifact/audit digest, separation of duties chặn
+  self-approval kể cả crafted request, gate matrix §10.5 đánh giá
+  server-side — thiếu evidence là denied, promotion state machine §10.4
+  RESEARCH→PAPER_APPROVED→PAPER_ACTIVE→SANDBOX_APPROVED→SANDBOX_ACTIVE→
+  LIVE_CANARY_APPROVED→LIVE_CANARY→LIVE_SCALED + PAUSED/ROLLED_BACK/
+  RETIRED, digest đổi → invalidate), PaperLedger deterministic (cash/
+  positions/orders/fills append-only, chỉ lưu secret reference không bao
+  giờ credential, replay từ fills, reconciliation phát hiện drift). Live
+  control và step-up là U16.
 
 **Description / To-do**
 
@@ -1226,6 +1393,12 @@ và operational UX an toàn; Portal không trở thành execution hot path.
 
 - Chỉ có commissioned wireframe/architecture; private engine contracts phải
   deep-dive trước implementation.
+- BAR-13 đã thêm live-control foundations: signed/expiring/idempotent
+  deployment intent (HMAC, nonce, TTL), dual approval + step-up grant ngắn
+  hạn single-use, fail-closed khi deployment state UNKNOWN/STALE, incident
+  state machine audited (OPEN→ACKNOWLEDGED→RESOLVED→RETIRED, replay bị
+  chặn), break-glass luôn audit. Risk engine vẫn là final authority;
+  Portal không emit raw normal-UI orders.
 
 **Description / To-do**
 
@@ -1278,6 +1451,10 @@ artifact parity.
 **Đã làm**
 
 - Chưa có Rust service; đây là chủ đích đúng cho current scale.
+- BAR-14 đã dựng benchmark gate: harness đo p50/p95/p99/bytes/RSS trên query
+  path 200k rows, baseline p95 87.6 ms dưới target 200 ms → **Rust NOT
+  STARTED** (metadata query path trong budget; heavier artifact-series
+  profiling là precondition theo §15.6 trước khi extract).
 
 **Description / To-do**
 
@@ -1324,6 +1501,11 @@ history, attachments, cross-links hoặc current UX.
 
 - Phase 5 Planning feature, FastAPI/SQLite, audit trail, local/API adapters,
   content integrity and release checklist exist.
+- BAR-15 đã thêm cutover foundation: export legacy_id + per-entity checksum,
+  import idempotent (skip existing, reject tampered checksum), reconcile
+  exact counts/hashes, cutover state machine NOT_STARTED→EXPORTED→
+  IMPORTED→RECONCILED→ARCHIVED (transition ngoài map bị chặn). PostgreSQL
+  production adapter + real cutover là slice theo sau.
 
 **Description / To-do**
 
@@ -1486,7 +1668,7 @@ Một phase chỉ được `DONE` khi:
 - [ ] Chấp thuận U00–U19, U01-BE và critical path.
 - [x] Historical Market Data consumer authority đã được owner cung cấp; exact
   wheel, fail-closed manifest và canonical read-only storage đã được index.
-- [ ] Chấp thuận U01-BE là backend implementation phase đầu tiên và chỉ certify
+- [x] Chấp thuận U01-BE là backend implementation phase đầu tiên và chỉ certify
   Binance perpetual OHLCV trước khi mở các family khác ở U13.
 - [ ] Chấp thuận thin TypeScript auth BFF ở U07 để tái sử dụng thành U10.
 - [ ] Chấp thuận giữ current npm locks đến U09 rồi mới quyết định pnpm workspace.

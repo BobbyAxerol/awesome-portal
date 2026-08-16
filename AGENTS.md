@@ -87,17 +87,64 @@ cp .env.example .env
 - Docker Compose commands use `--project-directory <repo>` and `compose.yaml`
   through the helper script.
 - `verify` checks tracked source boundaries, protected strategy integrity,
-  shell syntax and both rendered Compose definitions.
+  shell syntax, JSON contracts and both rendered Compose definitions. It
+  requires the Docker CLI.
 - The normal CI gate is: verify -> actionlint -> Python tests -> frontend
-  tests/builds -> composed smoke test.
+  tests/builds -> roadmap browser e2e -> composed smoke test.
+
+## Local tests (CI-equivalent)
+
+- Portal backend:
+
+  ```bash
+  python -m pip install --constraint constraints/portal.txt -e './apps/portal/backend[dev]'
+  PYTHONPATH=apps/portal/backend/src:apps/portal \
+    python -m pytest -c apps/portal/backend/pyproject.toml apps/portal/backend/tests
+  ```
+
+- Roadmap backend:
+
+  ```bash
+  python -m pip install -r features/roadmap-task-board/backend/requirements-dev.txt
+  PYTHONPATH=features/roadmap-task-board python -m pytest features/roadmap-task-board/backend/tests
+  ```
+
+- Frontends: `npm ci && npm test && npm run build` in `apps/portal/frontend`
+  and `features/roadmap-task-board/frontend`. Roadmap e2e also needs
+  `npx playwright install --with-deps chromium` before `npm run e2e`.
+- Protected kernel check: `sha256sum -c strategy/PROTECTED_SHA256` from
+  `apps/portal/`.
+
+## Git hooks
+
+- Enable the root hook set with `./scripts/install-git-hooks.sh` (or `make
+  hooks`); it sets `core.hooksPath=.githooks`. The pre-commit hook runs the
+  full `verify-workspace.sh` on every commit, so commits need Docker and
+  Python available. Hooks reject staged secrets, edits to
+  `apps/portal/strategy/main.py`, and control-plane changes from contributors.
 
 ## Runtime data and deployment
 
-- Market data mounts are read-only from
-  `${PORTAL_MARKET_DATA_DIR:-runtime/market-data}` and must contain a compatible
-  `data_loader.py`; never commit real market data or credentials.
+- Historical Market Data is a read-only input for backtest/research and any
+  future module explicitly granted that capability. It is **not** the source
+  for realtime market feeds, paper orders/fills, paper account state or live
+  execution; those belong to separate bounded contexts/services.
+- Historical consumers install the checksum-verified code-only
+  `primus-historical-market-data==0.1.0rc3` wheel and mount only
+  `${PORTAL_HISTORICAL_DATA_DIR}:/data:ro` with
+  `HISTORICAL_MARKET_DATA_ROOT=/data`. Never add/mount a local `data_loader.py`,
+  the Historical Market Data source checkout, collectors, state, logs or
+  secrets. Never commit reader wheels or market data.
 - QuantBT artifacts and Roadmap SQLite state use named volumes. A public web
   gateway is the single entry point; backend services must not add public ports
   unless an approved architecture change requires one.
 - Before modifying a domain, read its local `AGENTS.md`, architecture document
   and tests. Keep domain/backend contracts ahead of presentation changes.
+- Backend or cross-service architecture work from U02 onward must also read
+  `upgrade/BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md`. The `BAR-*` slices
+  refine sequencing but never authorize skipping a Unified Plan phase or
+  introducing a future datastore/service early.
+- When an active `BAR-*` slice has a deep dive under `upgrade/backend/`, read
+  that document before editing contracts or code. BAR-01 work must follow
+  `upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md`; frontend
+  and backend agents must not create separate feature registries.

@@ -43,7 +43,10 @@ from portal_api.domain.requests import (
     PortalRunRequest,
     ThreeWindowConfig,
 )
-from portal_api.repositories.artifacts import ArtifactRepository
+from portal_api.repositories.artifacts import (
+    ArtifactRepository,
+    with_portal_provenance,
+)
 from portal_api.serialization import canonicalize
 from portal_api.strategies import StrategyRegistry
 from strategy.delta_rsi import generate_signals
@@ -209,8 +212,16 @@ class ThreeWindowRunner:
         self._write_wfo_artifacts(run_id, wf)
         selected_params, trace = _freeze_selection(wf)
         stage("FREEZING_PARAMS")
-        self._artifacts.write_json(run_id, "selection/selected_params.json", selected_params)
-        self._artifacts.write_json(run_id, "selection/selection_trace.json", trace)
+        self._artifacts.write_json(
+            run_id,
+            "selection/selected_params.json",
+            with_portal_provenance("selected_params.json", selected_params),
+        )
+        self._artifacts.write_json(
+            run_id,
+            "selection/selection_trace.json",
+            with_portal_provenance("selection_trace.json", trace),
+        )
 
         # Replay happens strictly after the freeze (plan §7.2).
         segment_frames = {
@@ -252,14 +263,27 @@ class ThreeWindowRunner:
         self._artifacts.write_json(
             run_id,
             "metrics.json",
-            {
-                "segments": clean_metrics,
-                "reconciliation": reconciliation,
-                "warnings": warnings,
-            },
+            with_portal_provenance(
+                "metrics.json",
+                {
+                    "segments": clean_metrics,
+                    "reconciliation": reconciliation,
+                    "warnings": warnings,
+                },
+            ),
         )
-        self._artifacts.write_json(run_id, "strategy.json", _strategy_artifact(adapter.specification))
-        self._artifacts.write_json(run_id, "config.json", canonicalize(request.model_dump(mode="json")))
+        self._artifacts.write_json(
+            run_id,
+            "strategy.json",
+            with_portal_provenance("strategy.json", _strategy_artifact(adapter.specification)),
+        )
+        self._artifacts.write_json(
+            run_id,
+            "config.json",
+            with_portal_provenance(
+                "config.json", canonicalize(request.model_dump(mode="json"))
+            ),
+        )
         completed_at = _utc_now_iso()
         self._artifacts.write_json(
             run_id,
@@ -297,7 +321,13 @@ class ThreeWindowRunner:
             self._artifacts.write_frame(run_id, "wfo/fold_selection.parquet", selection_table)
         params_by_fold = wf.get("params_by_fold")
         if params_by_fold:
-            self._artifacts.write_json(run_id, "wfo/params_by_fold.json", canonicalize(params_by_fold))
+            self._artifacts.write_json(
+                run_id,
+                "wfo/params_by_fold.json",
+                with_portal_provenance(
+                    "params_by_fold.json", canonicalize(params_by_fold)
+                ),
+            )
         for name, key in (("trials", "trial_table"), ("candidates", "candidate_table")):
             table = wf.get(key)
             if isinstance(table, pd.DataFrame):

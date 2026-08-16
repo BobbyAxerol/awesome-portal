@@ -12,6 +12,10 @@ authors = [{ name = "BobbyAxerol", email = "vugioan11022002@gmail.com" }]
 dependencies = [
   "duckdb>=1.1,<2",
   "fastapi>=0.115,<1",
+  "httpx>=0.28,<1",
+  "jsonschema>=4.23,<5",
+  "minio>=7.2,<8",
+  "nats-py>=2.10,<3",
   "numpy>=2,<3",
   "pandas>=2.2,<3",
   "pyarrow>=18,<25",
@@ -22,8 +26,10 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "httpx>=0.28,<1",
   "pytest>=8,<10",
+]
+historical-data = [
+  "primus-historical-market-data==0.1.0rc3",
 ]
 
 [tool.setuptools.packages.find]

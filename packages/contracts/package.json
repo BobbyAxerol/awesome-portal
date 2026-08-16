@@ -1,0 +1,19 @@
+{
+  "name": "@primusspark/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Portal canonical contract workspace (U09): schemas, fixtures, generated types",
+  "scripts": {
+    "test": "vitest run",
+    "generate": "openapi-typescript ../../apps/portal/registry/openapi/portal-api.openapi.json -o generated/portal-api.d.ts"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.4.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

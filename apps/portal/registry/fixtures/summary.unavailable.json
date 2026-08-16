@@ -1,0 +1,1117 @@
+{
+  "completed_at": "2026-08-15T18:00:00Z",
+  "environment": "research",
+  "overall_availability": {
+    "as_of": null,
+    "authority": {
+      "contract": "portal.summary.v1",
+      "endpoint": "/api/v1/portal/summary",
+      "service": "portal-api"
+    },
+    "checked_at": "2026-08-15T18:00:00Z",
+    "detail": "No current summary source is usable.",
+    "provenance": {
+      "content_digest": null,
+      "source_revision": "BAR-01-BE5"
+    },
+    "reason_code": "UPSTREAM_UNAVAILABLE",
+    "retryable": true,
+    "stale_after_seconds": null,
+    "state": "unavailable"
+  },
+  "priority_items": [
+    {
+      "authority": "quantbt_current",
+      "evidence_digest": null,
+      "feature_id": "QUANTBT_RESEARCH",
+      "id": "quantbt:historical-data-unavailable",
+      "observed_at": "2026-08-15T18:00:00Z",
+      "resource_id": null,
+      "route": "/research/quantbt/new",
+      "severity": "warning",
+      "title": "Restore Historical Market Data for QuantBT",
+      "type": "HISTORICAL_DATA_UNAVAILABLE"
+    },
+    {
+      "authority": "registry_current",
+      "evidence_digest": null,
+      "feature_id": "COMMAND_CENTER",
+      "id": "registry:blocking-concern:CONCERN_COMMAND_CENTER_TRUTH",
+      "observed_at": "2026-08-15T00:00:00Z",
+      "resource_id": null,
+      "route": "/",
+      "severity": "warning",
+      "title": "Registry concern CONCERN_COMMAND_CENTER_TRUTH requires attention",
+      "type": "REGISTRY_BLOCKING_CONCERN"
+    },
+    {
+      "authority": "registry_current",
+      "evidence_digest": null,
+      "feature_id": "ALPHA_POOL",
+      "id": "registry:blocking-concern:CONCERN_FUTURE_AUTHORITY",
+      "observed_at": "2026-08-15T00:00:00Z",
+      "resource_id": null,
+      "route": "/research/alphas",
+      "severity": "warning",
+      "title": "Registry concern CONCERN_FUTURE_AUTHORITY requires attention",
+      "type": "REGISTRY_BLOCKING_CONCERN"
+    },
+    {
+      "authority": "registry_current",
+      "evidence_digest": null,
+      "feature_id": "QUANTBT_RESEARCH",
+      "id": "registry:blocking-concern:CONCERN_HISTORICAL_DEPLOYMENT",
+      "observed_at": "2026-08-15T00:00:00Z",
+      "resource_id": null,
+      "route": "/research/quantbt",
+      "severity": "warning",
+      "title": "Registry concern CONCERN_HISTORICAL_DEPLOYMENT requires attention",
+      "type": "REGISTRY_BLOCKING_CONCERN"
+    },
+    {
+      "authority": "registry_current",
+      "evidence_digest": null,
+      "feature_id": "COMMAND_CENTER",
+      "id": "registry:blocking-concern:CONCERN_PORTAL_AUTHORIZATION",
+      "observed_at": "2026-08-15T00:00:00Z",
+      "resource_id": null,
+      "route": "/",
+      "severity": "warning",
+      "title": "Registry concern CONCERN_PORTAL_AUTHORIZATION requires attention",
+      "type": "REGISTRY_BLOCKING_CONCERN"
+    },
+    {
+      "authority": "registry_current",
+      "evidence_digest": null,
+      "feature_id": "COMMAND_CENTER",
+      "id": "registry:blocking-concern:CONCERN_REGISTRY_AUTHORITY",
+      "observed_at": "2026-08-15T00:00:00Z",
+      "resource_id": null,
+      "route": "/",
+      "severity": "warning",
+      "title": "Registry concern CONCERN_REGISTRY_AUTHORITY requires attention",
+      "type": "REGISTRY_BLOCKING_CONCERN"
+    }
+  ],
+  "registry_counts": {
+    "blocking_concerns": 5,
+    "by_maturity": {
+      "AVAILABLE": 2,
+      "BLOCKED": 0,
+      "COMMISSIONED": 11,
+      "DEPRECATED": 0,
+      "HIDDEN": 0,
+      "PROTOTYPE": 0
+    }
+  },
+  "registry_digest": "sha256:74a1d04b2de425a03b8863386e66bd0f0a79102ec7d726d5f21513959b7762e8",
+  "requested_at": "2026-08-15T18:00:00Z",
+  "schema_version": "portal.summary.v1",
+  "sections": [
+    {
+      "availability": {
+        "as_of": null,
+        "authority": {
+          "contract": "quantbt-summary-contribution.v1",
+          "endpoint": null,
+          "service": "portal-api"
+        },
+        "checked_at": "2026-08-15T18:00:00Z",
+        "detail": "Current QuantBT summary sources are unavailable.",
+        "provenance": {
+          "content_digest": null,
+          "source_revision": "BAR-01-BE3"
+        },
+        "reason_code": "UPSTREAM_UNAVAILABLE",
+        "retryable": true,
+        "stale_after_seconds": null,
+        "state": "unavailable"
+      },
+      "feature_id": "QUANTBT_RESEARCH",
+      "label": "QuantBT Research",
+      "metrics": {
+        "active_runs": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "cancelled_runs": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "completed_runs": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "failed_runs": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "historical_data_state": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "historical-capability.v1",
+              "endpoint": "/api/datasets",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Historical backtest/research capability is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": null
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": null,
+          "value": null
+        },
+        "historical_dataset_count": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "historical-capability.v1",
+              "endpoint": "/api/datasets",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Historical backtest/research capability is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": null
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "datasets",
+          "value": null
+        },
+        "latest_run_id": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": null,
+          "value": null
+        },
+        "latest_run_observed_at": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": null,
+          "value": null
+        },
+        "latest_run_protocol": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": null,
+          "value": null
+        },
+        "latest_run_status": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": null,
+          "value": null
+        },
+        "latest_run_strategy": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": null,
+          "value": null
+        },
+        "queued_runs": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "runs_state_backtesting_holdout_live": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "runs_state_backtesting_is": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "runs_state_backtesting_oos": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "runs_state_building_artifacts": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "runs_state_cancelled": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "runs_state_completed": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "runs_state_failed": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "runs_state_freezing_params": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "runs_state_optimizing_is": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "runs_state_queued": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "runs_state_ranking_is_candidates": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "runs_state_replaying_candidates_on_oos": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "runs_state_selecting_params": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "runs_state_validating_data": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "runs_state_warming_kernel": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        },
+        "total_runs": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "quantbt-current-runs.v1",
+              "endpoint": "/api/runs",
+              "service": "portal-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Current QuantBT run metadata is unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": "prototype-run-files.v1"
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "runs",
+          "value": null
+        }
+      },
+      "recent_items": [],
+      "source_id": "quantbt_current",
+      "warnings": [
+        {
+          "code": "RUN_SUMMARY_UNAVAILABLE",
+          "detail": "Current QuantBT run metadata could not be read safely.",
+          "evidence_digest": null,
+          "observed_at": "2026-08-15T18:00:00Z",
+          "severity": "error",
+          "title": "Run summary unavailable"
+        },
+        {
+          "code": "HISTORICAL_DATA_UNAVAILABLE",
+          "detail": "Backtest and research data cannot currently be queried.",
+          "evidence_digest": null,
+          "observed_at": "2026-08-15T18:00:00Z",
+          "severity": "warning",
+          "title": "Historical data unavailable"
+        }
+      ]
+    },
+    {
+      "availability": {
+        "as_of": null,
+        "authority": {
+          "contract": "planning.summary.v1",
+          "endpoint": "/api/v1/summary",
+          "service": "roadmap-task-board-api"
+        },
+        "checked_at": "2026-08-15T18:00:00Z",
+        "detail": "Planning summary is currently unavailable.",
+        "provenance": {
+          "content_digest": null,
+          "source_revision": null
+        },
+        "reason_code": "UPSTREAM_UNAVAILABLE",
+        "retryable": true,
+        "stale_after_seconds": null,
+        "state": "unavailable"
+      },
+      "feature_id": "PLANNING",
+      "label": "Roadmap & Task Board",
+      "metrics": {
+        "current_phase_id": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "planning.summary.v1",
+              "endpoint": "/api/v1/summary",
+              "service": "roadmap-task-board-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Planning summary is currently unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": null
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": null,
+          "value": null
+        },
+        "current_phase_name": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "planning.summary.v1",
+              "endpoint": "/api/v1/summary",
+              "service": "roadmap-task-board-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Planning summary is currently unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": null
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": null,
+          "value": null
+        },
+        "roadmap_phase_count": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "planning.summary.v1",
+              "endpoint": "/api/v1/summary",
+              "service": "roadmap-task-board-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Planning summary is currently unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": null
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "phases",
+          "value": null
+        },
+        "tasks_backlog": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "planning.summary.v1",
+              "endpoint": "/api/v1/summary",
+              "service": "roadmap-task-board-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Planning summary is currently unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": null
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "tasks",
+          "value": null
+        },
+        "tasks_done": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "planning.summary.v1",
+              "endpoint": "/api/v1/summary",
+              "service": "roadmap-task-board-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Planning summary is currently unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": null
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "tasks",
+          "value": null
+        },
+        "tasks_in_progress": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "planning.summary.v1",
+              "endpoint": "/api/v1/summary",
+              "service": "roadmap-task-board-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Planning summary is currently unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": null
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "tasks",
+          "value": null
+        },
+        "tasks_ready": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "planning.summary.v1",
+              "endpoint": "/api/v1/summary",
+              "service": "roadmap-task-board-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Planning summary is currently unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": null
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "tasks",
+          "value": null
+        },
+        "tasks_validating": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "planning.summary.v1",
+              "endpoint": "/api/v1/summary",
+              "service": "roadmap-task-board-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Planning summary is currently unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": null
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "tasks",
+          "value": null
+        },
+        "total_tasks": {
+          "availability": {
+            "as_of": null,
+            "authority": {
+              "contract": "planning.summary.v1",
+              "endpoint": "/api/v1/summary",
+              "service": "roadmap-task-board-api"
+            },
+            "checked_at": "2026-08-15T18:00:00Z",
+            "detail": "Planning summary is currently unavailable.",
+            "provenance": {
+              "content_digest": null,
+              "source_revision": null
+            },
+            "reason_code": "UPSTREAM_UNAVAILABLE",
+            "retryable": true,
+            "stale_after_seconds": null,
+            "state": "unavailable"
+          },
+          "segment": null,
+          "source_artifact_digest": null,
+          "timezone": null,
+          "unit": "tasks",
+          "value": null
+        }
+      },
+      "recent_items": [],
+      "source_id": "planning_current",
+      "warnings": [
+        {
+          "code": "PLANNING_SUMMARY_UNAVAILABLE",
+          "detail": "Planning summary is currently unavailable.",
+          "evidence_digest": null,
+          "observed_at": "2026-08-15T18:00:00Z",
+          "severity": "warning",
+          "title": "Planning summary unavailable"
+        }
+      ]
+    }
+  ]
+}

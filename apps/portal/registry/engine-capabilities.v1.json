@@ -1,0 +1,46 @@
+{
+  "schema_version": "engine-capabilities.v1",
+  "manifest_revision": 1,
+  "engine_releases": [
+    {
+      "release_id": "er_quantbt_108",
+      "package": "quantbt-engine",
+      "version": "1.0.8",
+      "dist_info_record_sha256": "48c09e6b8f26b06c9ab695f9f44467dfa5c7118c9fa9d765b4199a6f5b2db832"
+    }
+  ],
+  "capabilities": [
+    {
+      "capability_id": "CAP_THREE_WINDOW_DECAY",
+      "protocol": "three_window_decay",
+      "endpoint_id": "walk_forward",
+      "engine_release_id": "er_quantbt_108",
+      "certified": true,
+      "requirements": {
+        "backend": "python",
+        "data_class": ["historical_market_data", "fixture"],
+        "methodology": "three-window-decay",
+        "resource_profile": {
+          "max_optuna_trials": 4000,
+          "max_parameter_space_entries": 128
+        }
+      }
+    },
+    {
+      "capability_id": "CAP_ADVANCED_WALK_FORWARD",
+      "protocol": "advanced_walk_forward",
+      "endpoint_id": "walk_forward",
+      "engine_release_id": "er_quantbt_108",
+      "certified": true,
+      "requirements": {
+        "backend": "python",
+        "data_class": ["historical_market_data", "fixture"],
+        "methodology": "advanced-walk-forward",
+        "resource_profile": {
+          "max_optuna_trials": 4000,
+          "max_parameter_space_entries": 128
+        }
+      }
+    }
+  ]
+}

@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import hashlib
-import importlib.util
+import importlib
+import importlib.metadata
 import json
+import os
 import re
-import sys
-import threading
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from time import perf_counter
-from types import ModuleType
 from typing import Callable, Mapping, Protocol
 
 import numpy as np
@@ -20,13 +20,24 @@ from portal_api.domain.requests import ThreeWindowConfig
 
 REQUIRED_MARKET_COLUMNS = ("open", "high", "low", "close", "volume")
 CRYPTO_BINANCE_DATASET_ID = "crypto-binance-1m"
+HISTORICAL_READER_DISTRIBUTION = "primus-historical-market-data"
+HISTORICAL_READER_VERSION = "0.1.0rc3"
+HISTORICAL_READER_WHEEL_SHA256 = (
+    "3b2a41b87ff834912556bb3039bf3e3c148bd859a1ced9ee4f52a3c658ca5663"
+)
+HISTORICAL_LOADER_CONTRACT = "hmd-loader-v1"
+BINANCE_RELEASE_DATASET_ID = "binance_perpetual_spot_quarterly"
+HISTORICAL_USAGE_SCOPES = ("backtest", "research")
+HISTORICAL_EXCLUDED_SCOPES = (
+    "realtime_market_data",
+    "paper_execution",
+    "paper_account_state",
+)
 _SYMBOL_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9_-]{1,31}$")
 _TIMEFRAME_PATTERN = re.compile(
     r"^[1-9]\d*(?:s|sec|secs|second|seconds|min|minute|minutes|h|hour|hours|d|day|days)$",
     re.IGNORECASE,
 )
-_LOADER_IMPORT_LOCK = threading.Lock()
-_LOADER_MODULES: dict[Path, ModuleType] = {}
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +49,62 @@ class DatasetDescriptor:
     source_path: Path | None = None
     dynamic_query: bool = False
     supported_timeframes: tuple[str, ...] = ()
+    source_class: str = "fixture"
+    data_kind: str = "ohlcv"
+    availability: str = "available"
+    unavailable_reason: str | None = None
+    usage_scopes: tuple[str, ...] = ()
+    excluded_scopes: tuple[str, ...] = ()
+    source_timezone: str = "UTC"
+
+
+@dataclass(frozen=True, slots=True)
+class MarketDataQuery:
+    dataset_id: str
+    symbol: str | None
+    timeframe: str | None
+    start: datetime | pd.Timestamp | str | None = None
+    end_exclusive: datetime | pd.Timestamp | str | None = None
+    columns: tuple[str, ...] = REQUIRED_MARKET_COLUMNS
+
+    def utc_bounds(self, *, required: bool = False) -> tuple[pd.Timestamp | None, pd.Timestamp | None]:
+        if required and (self.start is None or self.end_exclusive is None):
+            raise DateRangeError(
+                "historical market-data queries require explicit start and end_exclusive"
+            )
+        start = _utc_timestamp(self.start)
+        end = _utc_timestamp(self.end_exclusive)
+        if start is not None and end is not None and start >= end:
+            raise DateRangeError("market-data query must have positive duration")
+        return start, end
+
+
+@dataclass(frozen=True, slots=True)
+class HistoricalDataRuntime:
+    storage_root: Path
+    reader_version: str
+    loader_contract: str
+    manifest_digest: str
+    environment_id: str
+    release_commit: str
+    release_tag: str
+    dataset_release_id: str
+    loader_class: type
+
+    def provenance(self) -> dict[str, str]:
+        return {
+            "source_class": "historical_market_data",
+            "usage_scope": "backtest,research",
+            "reader_distribution": HISTORICAL_READER_DISTRIBUTION,
+            "reader_version": self.reader_version,
+            "reader_wheel_sha256": HISTORICAL_READER_WHEEL_SHA256,
+            "loader_contract": self.loader_contract,
+            "manifest_digest": self.manifest_digest,
+            "environment_id": self.environment_id,
+            "release_commit": self.release_commit,
+            "release_tag": self.release_tag,
+            "dataset_release_id": self.dataset_release_id,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,13 +143,28 @@ class MarketWindows:
 class MarketDataProvider(Protocol):
     def list_datasets(self) -> tuple[DatasetDescriptor, ...]: ...
 
-    def load(
-        self,
-        dataset_id: str,
-        *,
-        symbol: str | None = None,
-        timeframe: str | None = None,
-    ) -> PreparedMarketData: ...
+    def load(self, query: MarketDataQuery) -> PreparedMarketData: ...
+
+
+def _utc_timestamp(value: datetime | pd.Timestamp | str | None) -> pd.Timestamp | None:
+    if value is None:
+        return None
+    timestamp = pd.Timestamp(value)
+    if timestamp.tzinfo is None:
+        raise DateRangeError("market-data query timestamps must include a timezone")
+    return timestamp.tz_convert("UTC")
+
+
+def _bounded_frame(frame: pd.DataFrame, query: MarketDataQuery) -> pd.DataFrame:
+    start, end = query.utc_bounds()
+    selected = frame
+    if start is not None:
+        selected = selected.loc[selected.index >= start]
+    if end is not None:
+        selected = selected.loc[selected.index < end]
+    if selected.empty:
+        raise DatasetNotFoundError("no market bars exist in the requested bounded window")
+    return selected
 
 
 def normalize_market_frame(frame: pd.DataFrame) -> pd.DataFrame:
@@ -145,6 +227,17 @@ def infer_missing_bars(index: pd.DatetimeIndex) -> int:
     return int(np.maximum((positive // cadence) - 1, 0).sum())
 
 
+def inferred_end_exclusive(index: pd.DatetimeIndex) -> pd.Timestamp:
+    """Return the cadence boundary after the final bar, not final timestamp + 1ns."""
+    if len(index) < 2:
+        return index[-1] + pd.Timedelta(1, unit="ns")
+    deltas = np.diff(index.asi8)
+    positive = deltas[deltas > 0]
+    if positive.size == 0:
+        return index[-1] + pd.Timedelta(1, unit="ns")
+    return index[-1] + pd.Timedelta(int(np.median(positive)), unit="ns")
+
+
 def prepare_market_data(
     frame: pd.DataFrame,
     descriptor: DatasetDescriptor,
@@ -161,6 +254,25 @@ def prepare_market_data(
     )
 
 
+def prepare_bounded_market_data(
+    frame: pd.DataFrame,
+    descriptor: DatasetDescriptor,
+    query: MarketDataQuery,
+    *,
+    load_metadata: Mapping[str, object] | None = None,
+) -> PreparedMarketData:
+    """Normalize, bound and hash once for one service query."""
+    normalized = normalize_market_frame(frame)
+    bounded = _bounded_frame(normalized, query)
+    return PreparedMarketData(
+        frame=bounded,
+        descriptor=descriptor,
+        content_hash=market_content_hash(bounded),
+        missing_bar_count=infer_missing_bars(bounded.index),
+        load_metadata=dict(load_metadata or {}),
+    )
+
+
 def partition_three_windows(data: PreparedMarketData, config: ThreeWindowConfig) -> MarketWindows:
     frame = data.frame
     index = frame.index
@@ -171,10 +283,14 @@ def partition_three_windows(data: PreparedMarketData, config: ThreeWindowConfig)
     holdout_end = (
         pd.Timestamp(config.holdout_end_exclusive)
         if config.holdout_end_exclusive is not None
-        else index[-1] + pd.Timedelta(1, unit="ns")
+        else inferred_end_exclusive(index)
     )
 
-    if is_start < index[0] or holdout_end <= index[0] or holdout_end > index[-1] + pd.Timedelta(1, unit="ns"):
+    if (
+        is_start < index[0]
+        or holdout_end <= index[0]
+        or holdout_end > inferred_end_exclusive(index)
+    ):
         raise DateRangeError("requested windows are outside the dataset range")
 
     boundaries = index.searchsorted(
@@ -211,7 +327,7 @@ def slice_market_range(
     index = frame.index
     start_ts = index[0] if start is None else pd.Timestamp(start)
     end_ts = (
-        index[-1] + pd.Timedelta(1, unit="ns")
+        inferred_end_exclusive(index)
         if end_exclusive is None
         else pd.Timestamp(end_exclusive)
     )
@@ -223,7 +339,7 @@ def slice_market_range(
         end_ts = end_ts.tz_localize("UTC")
     else:
         end_ts = end_ts.tz_convert("UTC")
-    if start_ts < index[0] or end_ts > index[-1] + pd.Timedelta(1, unit="ns"):
+    if start_ts < index[0] or end_ts > inferred_end_exclusive(index):
         raise DateRangeError("requested analysis range is outside the dataset range")
     if start_ts >= end_ts:
         raise DateRangeError("analysis range must have positive duration")
@@ -250,22 +366,33 @@ class InMemoryMarketDataProvider:
     def list_datasets(self) -> tuple[DatasetDescriptor, ...]:
         return tuple(item[0] for item in self._datasets.values())
 
-    def load(
-        self,
-        dataset_id: str,
-        *,
-        symbol: str | None = None,
-        timeframe: str | None = None,
-    ) -> PreparedMarketData:
+    def load(self, query: MarketDataQuery) -> PreparedMarketData:
         try:
-            descriptor, frame = self._datasets[dataset_id]
+            descriptor, frame = self._datasets[query.dataset_id]
         except KeyError as exc:
-            raise DatasetNotFoundError(f"unknown dataset_id: {dataset_id}") from exc
-        if symbol is not None and descriptor.symbol is not None and symbol != descriptor.symbol:
-            raise DataSchemaError(f"dataset {dataset_id} does not provide symbol {symbol}")
-        if timeframe is not None and descriptor.timeframe is not None and timeframe != descriptor.timeframe:
-            raise DataSchemaError(f"dataset {dataset_id} does not provide timeframe {timeframe}")
-        return prepare_market_data(frame, descriptor)
+            raise DatasetNotFoundError(f"unknown dataset_id: {query.dataset_id}") from exc
+        if (
+            query.symbol is not None
+            and descriptor.symbol is not None
+            and query.symbol != descriptor.symbol
+        ):
+            raise DataSchemaError(
+                f"dataset {query.dataset_id} does not provide symbol {query.symbol}"
+            )
+        if (
+            query.timeframe is not None
+            and descriptor.timeframe is not None
+            and query.timeframe != descriptor.timeframe
+        ):
+            raise DataSchemaError(
+                f"dataset {query.dataset_id} does not provide timeframe {query.timeframe}"
+            )
+        return prepare_bounded_market_data(
+            frame,
+            descriptor,
+            query,
+            load_metadata={"query_bounded": True},
+        )
 
 
 class ManifestMarketDataProvider:
@@ -294,88 +421,162 @@ class ManifestMarketDataProvider:
     def list_datasets(self) -> tuple[DatasetDescriptor, ...]:
         return tuple(self._descriptors.values())
 
-    def load(
-        self,
-        dataset_id: str,
-        *,
-        symbol: str | None = None,
-        timeframe: str | None = None,
-    ) -> PreparedMarketData:
+    def load(self, query: MarketDataQuery) -> PreparedMarketData:
         try:
-            descriptor = self._descriptors[dataset_id]
+            descriptor = self._descriptors[query.dataset_id]
         except KeyError as exc:
-            raise DatasetNotFoundError(f"unknown dataset_id: {dataset_id}") from exc
-        if symbol is not None and descriptor.symbol is not None and symbol != descriptor.symbol:
-            raise DataSchemaError(f"dataset {dataset_id} does not provide symbol {symbol}")
-        if timeframe is not None and descriptor.timeframe is not None and timeframe != descriptor.timeframe:
-            raise DataSchemaError(f"dataset {dataset_id} does not provide timeframe {timeframe}")
+            raise DatasetNotFoundError(f"unknown dataset_id: {query.dataset_id}") from exc
+        if (
+            query.symbol is not None
+            and descriptor.symbol is not None
+            and query.symbol != descriptor.symbol
+        ):
+            raise DataSchemaError(
+                f"dataset {query.dataset_id} does not provide symbol {query.symbol}"
+            )
+        if (
+            query.timeframe is not None
+            and descriptor.timeframe is not None
+            and query.timeframe != descriptor.timeframe
+        ):
+            raise DataSchemaError(
+                f"dataset {query.dataset_id} does not provide timeframe {query.timeframe}"
+            )
         path = descriptor.source_path
         if path is None or not path.is_file():
-            raise DatasetNotFoundError(f"dataset file is unavailable: {dataset_id}")
+            raise DatasetNotFoundError(f"dataset file is unavailable: {query.dataset_id}")
         if path.suffix == ".parquet":
             frame = pd.read_parquet(path)
         elif path.suffix == ".csv" or path.name.endswith(".csv.gz"):
             frame = pd.read_csv(path, index_col=0, parse_dates=True)
         else:
             raise DataSchemaError(f"unsupported dataset format: {path.suffix}")
-        return prepare_market_data(frame, descriptor)
+        return prepare_bounded_market_data(
+            frame,
+            descriptor,
+            query,
+            load_metadata={"query_bounded": True},
+        )
 
 
-def _load_external_data_loader(loader_root: Path) -> ModuleType:
-    root = loader_root.resolve()
-    cached = _LOADER_MODULES.get(root)
-    if cached is not None:
-        return cached
+def load_historical_data_runtime(storage_root: str | Path) -> HistoricalDataRuntime:
+    """Verify the approved installed wheel and accepted canonical storage release."""
+    root = Path(storage_root).resolve()
+    configured_root = os.getenv("HISTORICAL_MARKET_DATA_ROOT")
+    if not configured_root or Path(configured_root).resolve() != root:
+        raise DataSchemaError(
+            "HISTORICAL_MARKET_DATA_ROOT must point at the canonical read-only mount"
+        )
 
-    module_path = root / "data_loader.py"
-    if not module_path.is_file():
-        raise DatasetNotFoundError(f"data_loader.py not found under {root}")
+    try:
+        distribution = importlib.metadata.distribution(HISTORICAL_READER_DISTRIBUTION)
+    except importlib.metadata.PackageNotFoundError as exc:
+        raise DatasetNotFoundError(
+            f"approved {HISTORICAL_READER_DISTRIBUTION} reader wheel is not installed"
+        ) from exc
+    if distribution.version != HISTORICAL_READER_VERSION:
+        raise DataSchemaError(
+            "historical reader version mismatch: "
+            f"expected {HISTORICAL_READER_VERSION}, got {distribution.version}"
+        )
 
-    with _LOADER_IMPORT_LOCK:
-        cached = _LOADER_MODULES.get(root)
-        if cached is not None:
-            return cached
-        existing_loaders = sys.modules.get("loaders")
-        if existing_loaders is not None:
-            existing_file = getattr(existing_loaders, "__file__", None)
-            if existing_file is not None and not Path(existing_file).resolve().is_relative_to(root):
-                raise DataSchemaError("an incompatible top-level loaders package is already imported")
+    loader_module = importlib.import_module("data_loader")
+    manifest_module = importlib.import_module("storage_manifest")
+    expected_loader_path = Path(distribution.locate_file("data_loader.py")).resolve()
+    actual_loader_path = Path(loader_module.__file__).resolve()
+    if actual_loader_path != expected_loader_path:
+        raise DataSchemaError(
+            "data_loader import is shadowed; Portal requires the installed approved wheel"
+        )
+    module_storage_root = Path(loader_module.STORAGE_DIR).resolve()
+    if module_storage_root != root:
+        raise DataSchemaError(
+            "installed historical reader was initialized with a different storage root"
+        )
+    loader_contract = str(loader_module.LOADER_CONTRACT_VERSION)
+    if loader_contract != HISTORICAL_LOADER_CONTRACT:
+        raise DataSchemaError(
+            "historical loader contract mismatch: "
+            f"expected {HISTORICAL_LOADER_CONTRACT}, got {loader_contract}"
+        )
 
-        module_name = f"portal_external_data_loader_{hashlib.sha256(str(root).encode()).hexdigest()[:12]}"
-        spec = importlib.util.spec_from_file_location(module_name, module_path)
-        if spec is None or spec.loader is None:
-            raise DatasetNotFoundError(f"cannot load data_loader.py from {root}")
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[module_name] = module
-        sys.path.insert(0, str(root))
-        try:
-            spec.loader.exec_module(module)
-        except Exception:
-            sys.modules.pop(module_name, None)
-            raise
-        finally:
-            try:
-                sys.path.remove(str(root))
-            except ValueError:  # pragma: no cover - defensive against external mutation
-                pass
-        _LOADER_MODULES[root] = module
-        return module
+    try:
+        payload = manifest_module.validate_accepted_release_manifest(
+            manifest_module.read_release_manifest(root)
+        )
+        manifest_module.assert_loader_compatible(
+            root,
+            dataset_id=BINANCE_RELEASE_DATASET_ID,
+            loader_contract_version=loader_contract,
+        )
+    except Exception as exc:
+        raise DataSchemaError(
+            f"historical storage release is incompatible: {type(exc).__name__}: {exc}"
+        ) from exc
+    manifest_path = Path(manifest_module.release_manifest_path(root))
+    manifest_digest = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+    git = payload["git"]
+    return HistoricalDataRuntime(
+        storage_root=root,
+        reader_version=distribution.version,
+        loader_contract=loader_contract,
+        manifest_digest=manifest_digest,
+        environment_id=str(payload["environment_id"]),
+        release_commit=str(git["commit"]),
+        release_tag=str(git["tag"]),
+        dataset_release_id=BINANCE_RELEASE_DATASET_ID,
+        loader_class=loader_module.CryptoBinance1m,
+    )
 
 
-class CryptoBinanceMarketDataProvider:
-    """Portal adapter over the canonical CryptoBinance1m resample hot path."""
+class UnavailableHistoricalMarketDataProvider:
+    """Advertise an intentionally disabled historical capability without fake data."""
+
+    def __init__(self, reason: str) -> None:
+        self._reason = str(reason)
+
+    def list_datasets(self) -> tuple[DatasetDescriptor, ...]:
+        return (
+            DatasetDescriptor(
+                dataset_id=CRYPTO_BINANCE_DATASET_ID,
+                symbol=None,
+                venue="BINANCE",
+                timeframe=None,
+                dynamic_query=True,
+                supported_timeframes=HistoricalMarketDataProvider.SUPPORTED_TIMEFRAMES,
+                source_class="historical_market_data",
+                availability="unavailable",
+                unavailable_reason=self._reason,
+                usage_scopes=HISTORICAL_USAGE_SCOPES,
+                excluded_scopes=HISTORICAL_EXCLUDED_SCOPES,
+                source_timezone="UTC",
+            ),
+        )
+
+    def load(self, query: MarketDataQuery) -> PreparedMarketData:
+        del query
+        raise DatasetNotFoundError(f"historical market data is unavailable: {self._reason}")
+
+
+class HistoricalMarketDataProvider:
+    """Read-only backtest/research adapter over the approved HMD reader wheel."""
 
     SUPPORTED_TIMEFRAMES = ("1min", "5min", "15min", "30min", "1h", "4h", "1D")
 
     def __init__(
         self,
-        loader_root: str | Path,
         *,
+        runtime: HistoricalDataRuntime | None = None,
         loader_factory: Callable[[], object] | None = None,
         check_val: bool = True,
         engine: str = "duckdb",
     ) -> None:
-        self._loader_root = Path(loader_root).resolve()
+        if runtime is None and loader_factory is None:
+            storage_root = os.getenv("HISTORICAL_MARKET_DATA_ROOT")
+            if not storage_root:
+                raise DatasetNotFoundError("HISTORICAL_MARKET_DATA_ROOT is not configured")
+            runtime = load_historical_data_runtime(storage_root)
+        self._runtime = runtime
         self._loader_factory = loader_factory
         self._check_val = bool(check_val)
         self._engine = str(engine)
@@ -392,39 +593,47 @@ class CryptoBinanceMarketDataProvider:
                 source_path=None,
                 dynamic_query=True,
                 supported_timeframes=self.SUPPORTED_TIMEFRAMES,
+                source_class="historical_market_data",
+                availability="available",
+                usage_scopes=HISTORICAL_USAGE_SCOPES,
+                excluded_scopes=HISTORICAL_EXCLUDED_SCOPES,
+                source_timezone="UTC",
             ),
         )
 
     def _new_loader(self):
         if self._loader_factory is not None:
             return self._loader_factory()
-        module = _load_external_data_loader(self._loader_root)
-        try:
-            loader_class = module.CryptoBinance1m
-        except AttributeError as exc:
-            raise DatasetNotFoundError("data_loader.py does not expose CryptoBinance1m") from exc
-        return loader_class()
+        if self._runtime is None:  # pragma: no cover - constructor invariant
+            raise DatasetNotFoundError("historical reader runtime is unavailable")
+        return self._runtime.loader_class()
 
-    def load(
-        self,
-        dataset_id: str,
-        *,
-        symbol: str | None = None,
-        timeframe: str | None = None,
-    ) -> PreparedMarketData:
-        if dataset_id != CRYPTO_BINANCE_DATASET_ID:
-            raise DatasetNotFoundError(f"unknown dataset_id: {dataset_id}")
-        normalized_symbol = str(symbol or "").strip().upper()
+    def load(self, query: MarketDataQuery) -> PreparedMarketData:
+        if query.dataset_id != CRYPTO_BINANCE_DATASET_ID:
+            raise DatasetNotFoundError(f"unknown dataset_id: {query.dataset_id}")
+        normalized_symbol = str(query.symbol or "").strip().upper()
         if not _SYMBOL_PATTERN.fullmatch(normalized_symbol):
             raise DataSchemaError("symbol must contain 2-32 uppercase venue characters")
-        normalized_timeframe = str(timeframe or "").strip()
+        normalized_timeframe = str(query.timeframe or "").strip()
         if not _TIMEFRAME_PATTERN.fullmatch(normalized_timeframe):
             raise DataSchemaError("timeframe must be a positive interval such as 15min, 1h or 1D")
+        if tuple(query.columns) != REQUIRED_MARKET_COLUMNS:
+            raise DataSchemaError(
+                "the certified Binance OHLCV hot path requires open/high/low/close/volume"
+            )
+        start, end = query.utc_bounds(required=True)
+        assert start is not None and end is not None
+        # The reader's end_date is inclusive and converts to Python datetime.
+        # One microsecond preserves the half-open Portal contract without a
+        # nanosecond-truncation warning or admitting the next boundary.
+        reader_end = end - pd.Timedelta(1, unit="us")
 
         started = perf_counter()
         raw = self._new_loader().load_resampled(
             normalized_symbol,
             timeframe=normalized_timeframe,
+            start_date=start.isoformat(),
+            end_date=reader_end.isoformat(),
             check_val=self._check_val,
             engine=self._engine,
         )
@@ -448,16 +657,32 @@ class CryptoBinanceMarketDataProvider:
             timeframe=normalized_timeframe,
             dynamic_query=True,
             supported_timeframes=self.SUPPORTED_TIMEFRAMES,
+            source_class="historical_market_data",
+            availability="available",
+            usage_scopes=HISTORICAL_USAGE_SCOPES,
+            excluded_scopes=HISTORICAL_EXCLUDED_SCOPES,
+            source_timezone="UTC",
         )
-        return prepare_market_data(
+        return prepare_bounded_market_data(
             frame,
             descriptor,
+            query,
             load_metadata={
                 "provider": "CryptoBinance1m",
                 "source_resolution": "1min",
+                "source_timezone": "UTC",
                 "requested_timeframe": normalized_timeframe,
+                "requested_start": start.isoformat(),
+                "requested_end_exclusive": end.isoformat(),
                 "resample_engine": self._engine,
                 "check_val": self._check_val,
                 "load_seconds": round(load_seconds, 6),
+                **(self._runtime.provenance() if self._runtime is not None else {
+                    "source_class": "historical_market_data",
+                    "usage_scope": "backtest,research",
+                    "reader_version": "test-double",
+                    "loader_contract": HISTORICAL_LOADER_CONTRACT,
+                    "dataset_release_id": BINANCE_RELEASE_DATASET_ID,
+                }),
             },
         )

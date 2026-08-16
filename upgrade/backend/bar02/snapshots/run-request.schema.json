@@ -1,0 +1,1160 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "account": {
+      "additionalProperties": false,
+      "default": {
+        "alloc_per_trade": 0.5,
+        "canonical_one_way_fee_rate": 0.0005,
+        "contract_size": 1.0,
+        "funding_enabled": true,
+        "funding_rate": 0.0001,
+        "initial_capital": 20000.0,
+        "leverage": 1.0,
+        "maintenance_ratio": 0.005,
+        "use_pyramiding": false
+      },
+      "properties": {
+        "alloc_per_trade": {
+          "default": 0.5,
+          "exclusiveMinimum": 0.0,
+          "title": "Alloc Per Trade",
+          "type": "number"
+        },
+        "canonical_one_way_fee_rate": {
+          "default": 0.0005,
+          "exclusiveMaximum": 1.0,
+          "minimum": 0.0,
+          "title": "Canonical One Way Fee Rate",
+          "type": "number"
+        },
+        "contract_size": {
+          "default": 1.0,
+          "exclusiveMinimum": 0.0,
+          "title": "Contract Size",
+          "type": "number"
+        },
+        "funding_enabled": {
+          "default": true,
+          "title": "Funding Enabled",
+          "type": "boolean"
+        },
+        "funding_rate": {
+          "default": 0.0001,
+          "title": "Funding Rate",
+          "type": "number"
+        },
+        "initial_capital": {
+          "default": 20000.0,
+          "exclusiveMinimum": 0.0,
+          "title": "Initial Capital",
+          "type": "number"
+        },
+        "leverage": {
+          "default": 1.0,
+          "exclusiveMinimum": 0.0,
+          "title": "Leverage",
+          "type": "number"
+        },
+        "maintenance_ratio": {
+          "default": 0.005,
+          "exclusiveMaximum": 1.0,
+          "minimum": 0.0,
+          "title": "Maintenance Ratio",
+          "type": "number"
+        },
+        "use_pyramiding": {
+          "default": false,
+          "title": "Use Pyramiding",
+          "type": "boolean"
+        }
+      },
+      "title": "AccountConfig",
+      "type": "object"
+    },
+    "calibration": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "holdout_end_exclusive": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Holdout End Exclusive"
+            },
+            "holdout_start": {
+              "default": "2025-07-01T00:00:00Z",
+              "format": "date-time",
+              "title": "Holdout Start",
+              "type": "string"
+            },
+            "is_end_exclusive": {
+              "default": "2024-01-01T00:00:00Z",
+              "format": "date-time",
+              "title": "Is End Exclusive",
+              "type": "string"
+            },
+            "is_start": {
+              "default": "2020-01-01T00:00:00Z",
+              "format": "date-time",
+              "title": "Is Start",
+              "type": "string"
+            },
+            "oos_end_exclusive": {
+              "default": "2025-07-01T00:00:00Z",
+              "format": "date-time",
+              "title": "Oos End Exclusive",
+              "type": "string"
+            },
+            "oos_start": {
+              "default": "2024-01-01T00:00:00Z",
+              "format": "date-time",
+              "title": "Oos Start",
+              "type": "string"
+            },
+            "optimization": {
+              "additionalProperties": false,
+              "default": {
+                "candidate_selection_metric": "robust_decay",
+                "decay_gamma": 0.5,
+                "decay_lambda": 0.5,
+                "dispersion_penalty": 0.5,
+                "flat_eps": 0.15,
+                "flat_min_samples": 3,
+                "flat_selector": "medoid",
+                "flat_top_fraction": 0.1,
+                "garch_dist": "t",
+                "garch_p": 1,
+                "garch_q": 1,
+                "garch_vol_multiplier": 1.0,
+                "is_subperiods": 6,
+                "min_trades_per_year": 100.0,
+                "plateau_median_weight": 0.25,
+                "plateau_quantile": 0.25,
+                "plateau_size_bonus": 0.01,
+                "plateau_std_penalty": 0.5,
+                "plateau_weight": 0.35,
+                "q25_weight": 0.3,
+                "regime_count": 3,
+                "regime_lookback": 20,
+                "sbb_block_length": 20,
+                "sbb_decay_lambda": 0.5,
+                "sbb_samples": 256,
+                "sbb_simulation": "stationary",
+                "sbb_std_penalty": 0.1,
+                "scoring_backend": "endpoint",
+                "scoring_trading_days": 365,
+                "stress_vol_multiplier": 1.0,
+                "temporal_weight": 0.65,
+                "top_is_fraction": 0.1,
+                "trade_penalty_factor": 0.5,
+                "use_bootstrap_penalty": false,
+                "use_complexity_penalty": false,
+                "use_numba": true
+              },
+              "properties": {
+                "candidate_decay_gamma": {
+                  "anyOf": [
+                    {
+                      "minimum": 0.0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Candidate Decay Gamma"
+                },
+                "candidate_decay_lambda": {
+                  "anyOf": [
+                    {
+                      "minimum": 0.0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Candidate Decay Lambda"
+                },
+                "candidate_selection_metric": {
+                  "default": "robust_decay",
+                  "title": "Candidate Selection Metric",
+                  "type": "string"
+                },
+                "decay_gamma": {
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "title": "Decay Gamma",
+                  "type": "number"
+                },
+                "decay_lambda": {
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "title": "Decay Lambda",
+                  "type": "number"
+                },
+                "dispersion_penalty": {
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "title": "Dispersion Penalty",
+                  "type": "number"
+                },
+                "flat_eps": {
+                  "default": 0.15,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Flat Eps",
+                  "type": "number"
+                },
+                "flat_min_samples": {
+                  "default": 3,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Flat Min Samples",
+                  "type": "integer"
+                },
+                "flat_selector": {
+                  "default": "medoid",
+                  "enum": [
+                    "medoid",
+                    "centroid"
+                  ],
+                  "title": "Flat Selector",
+                  "type": "string"
+                },
+                "flat_top_fraction": {
+                  "default": 0.1,
+                  "exclusiveMinimum": 0.0,
+                  "maximum": 1.0,
+                  "title": "Flat Top Fraction",
+                  "type": "number"
+                },
+                "garch_dist": {
+                  "default": "t",
+                  "enum": [
+                    "normal",
+                    "gaussian",
+                    "t",
+                    "studentst"
+                  ],
+                  "title": "Garch Dist",
+                  "type": "string"
+                },
+                "garch_p": {
+                  "default": 1,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Garch P",
+                  "type": "integer"
+                },
+                "garch_q": {
+                  "default": 1,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Garch Q",
+                  "type": "integer"
+                },
+                "garch_vol_multiplier": {
+                  "default": 1.0,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Garch Vol Multiplier",
+                  "type": "number"
+                },
+                "is_subperiods": {
+                  "default": 6,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Is Subperiods",
+                  "type": "integer"
+                },
+                "min_trades_per_year": {
+                  "anyOf": [
+                    {
+                      "minimum": 0.0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": 100.0,
+                  "title": "Min Trades Per Year"
+                },
+                "plateau_median_weight": {
+                  "default": 0.25,
+                  "minimum": 0.0,
+                  "title": "Plateau Median Weight",
+                  "type": "number"
+                },
+                "plateau_quantile": {
+                  "default": 0.25,
+                  "maximum": 1.0,
+                  "minimum": 0.0,
+                  "title": "Plateau Quantile",
+                  "type": "number"
+                },
+                "plateau_size_bonus": {
+                  "default": 0.01,
+                  "minimum": 0.0,
+                  "title": "Plateau Size Bonus",
+                  "type": "number"
+                },
+                "plateau_std_penalty": {
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "title": "Plateau Std Penalty",
+                  "type": "number"
+                },
+                "plateau_weight": {
+                  "default": 0.35,
+                  "minimum": 0.0,
+                  "title": "Plateau Weight",
+                  "type": "number"
+                },
+                "q25_weight": {
+                  "default": 0.3,
+                  "minimum": 0.0,
+                  "title": "Q25 Weight",
+                  "type": "number"
+                },
+                "regime_count": {
+                  "default": 3,
+                  "minimum": 2.0,
+                  "title": "Regime Count",
+                  "type": "integer"
+                },
+                "regime_lookback": {
+                  "default": 20,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Regime Lookback",
+                  "type": "integer"
+                },
+                "regime_weights": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": {
+                        "type": "number"
+                      },
+                      "type": "object"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Regime Weights"
+                },
+                "sbb_block_length": {
+                  "default": 20,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Sbb Block Length",
+                  "type": "integer"
+                },
+                "sbb_decay_lambda": {
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "title": "Sbb Decay Lambda",
+                  "type": "number"
+                },
+                "sbb_samples": {
+                  "default": 256,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Sbb Samples",
+                  "type": "integer"
+                },
+                "sbb_simulation": {
+                  "default": "stationary",
+                  "enum": [
+                    "stationary",
+                    "regime",
+                    "stress",
+                    "garch"
+                  ],
+                  "title": "Sbb Simulation",
+                  "type": "string"
+                },
+                "sbb_std_penalty": {
+                  "default": 0.1,
+                  "minimum": 0.0,
+                  "title": "Sbb Std Penalty",
+                  "type": "number"
+                },
+                "scoring_backend": {
+                  "default": "endpoint",
+                  "enum": [
+                    "proxy",
+                    "endpoint"
+                  ],
+                  "title": "Scoring Backend",
+                  "type": "string"
+                },
+                "scoring_trading_days": {
+                  "default": 365,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Scoring Trading Days",
+                  "type": "integer"
+                },
+                "stress_vol_multiplier": {
+                  "default": 1.0,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Stress Vol Multiplier",
+                  "type": "number"
+                },
+                "temporal_weight": {
+                  "default": 0.65,
+                  "minimum": 0.0,
+                  "title": "Temporal Weight",
+                  "type": "number"
+                },
+                "top_is_fraction": {
+                  "default": 0.1,
+                  "exclusiveMinimum": 0.0,
+                  "maximum": 1.0,
+                  "title": "Top Is Fraction",
+                  "type": "number"
+                },
+                "top_is_k": {
+                  "anyOf": [
+                    {
+                      "exclusiveMinimum": 0.0,
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Top Is K"
+                },
+                "trade_penalty_factor": {
+                  "anyOf": [
+                    {
+                      "minimum": 0.0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": 0.5,
+                  "title": "Trade Penalty Factor"
+                },
+                "use_bootstrap_penalty": {
+                  "default": false,
+                  "title": "Use Bootstrap Penalty",
+                  "type": "boolean"
+                },
+                "use_complexity_penalty": {
+                  "default": false,
+                  "title": "Use Complexity Penalty",
+                  "type": "boolean"
+                },
+                "use_numba": {
+                  "default": true,
+                  "title": "Use Numba",
+                  "type": "boolean"
+                }
+              },
+              "title": "OptimizationConfig",
+              "type": "object"
+            },
+            "optimization_mode": {
+              "const": "mode_1_decay",
+              "default": "mode_1_decay",
+              "title": "Optimization Mode",
+              "type": "string"
+            },
+            "optimization_schedule": {
+              "const": "global",
+              "default": "global",
+              "title": "Optimization Schedule",
+              "type": "string"
+            },
+            "optuna_early_stopping": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0.0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 200,
+              "title": "Optuna Early Stopping"
+            },
+            "optuna_trials": {
+              "default": 400,
+              "exclusiveMinimum": 0.0,
+              "title": "Optuna Trials",
+              "type": "integer"
+            },
+            "random_seed": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 42,
+              "title": "Random Seed"
+            }
+          },
+          "title": "ThreeWindowConfig",
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "data_end_exclusive": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Data End Exclusive"
+            },
+            "data_start": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Data Start"
+            },
+            "fill_value": {
+              "default": 0.0,
+              "title": "Fill Value",
+              "type": "number"
+            },
+            "fold_boundary_position_policy": {
+              "const": "carry",
+              "default": "carry",
+              "title": "Fold Boundary Position Policy",
+              "type": "string"
+            },
+            "min_test_bars": {
+              "default": 1,
+              "exclusiveMinimum": 0.0,
+              "title": "Min Test Bars",
+              "type": "integer"
+            },
+            "min_train_bars": {
+              "default": 1,
+              "exclusiveMinimum": 0.0,
+              "title": "Min Train Bars",
+              "type": "integer"
+            },
+            "optimization": {
+              "additionalProperties": false,
+              "default": {
+                "candidate_selection_metric": "robust_decay",
+                "decay_gamma": 0.5,
+                "decay_lambda": 0.5,
+                "dispersion_penalty": 0.5,
+                "flat_eps": 0.15,
+                "flat_min_samples": 3,
+                "flat_selector": "medoid",
+                "flat_top_fraction": 0.1,
+                "garch_dist": "t",
+                "garch_p": 1,
+                "garch_q": 1,
+                "garch_vol_multiplier": 1.0,
+                "is_subperiods": 6,
+                "min_trades_per_year": 100.0,
+                "plateau_median_weight": 0.25,
+                "plateau_quantile": 0.25,
+                "plateau_size_bonus": 0.01,
+                "plateau_std_penalty": 0.5,
+                "plateau_weight": 0.35,
+                "q25_weight": 0.3,
+                "regime_count": 3,
+                "regime_lookback": 20,
+                "sbb_block_length": 20,
+                "sbb_decay_lambda": 0.5,
+                "sbb_samples": 256,
+                "sbb_simulation": "stationary",
+                "sbb_std_penalty": 0.1,
+                "scoring_backend": "endpoint",
+                "scoring_trading_days": 365,
+                "stress_vol_multiplier": 1.0,
+                "temporal_weight": 0.65,
+                "top_is_fraction": 0.1,
+                "trade_penalty_factor": 0.5,
+                "use_bootstrap_penalty": false,
+                "use_complexity_penalty": false,
+                "use_numba": true
+              },
+              "properties": {
+                "candidate_decay_gamma": {
+                  "anyOf": [
+                    {
+                      "minimum": 0.0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Candidate Decay Gamma"
+                },
+                "candidate_decay_lambda": {
+                  "anyOf": [
+                    {
+                      "minimum": 0.0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Candidate Decay Lambda"
+                },
+                "candidate_selection_metric": {
+                  "default": "robust_decay",
+                  "title": "Candidate Selection Metric",
+                  "type": "string"
+                },
+                "decay_gamma": {
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "title": "Decay Gamma",
+                  "type": "number"
+                },
+                "decay_lambda": {
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "title": "Decay Lambda",
+                  "type": "number"
+                },
+                "dispersion_penalty": {
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "title": "Dispersion Penalty",
+                  "type": "number"
+                },
+                "flat_eps": {
+                  "default": 0.15,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Flat Eps",
+                  "type": "number"
+                },
+                "flat_min_samples": {
+                  "default": 3,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Flat Min Samples",
+                  "type": "integer"
+                },
+                "flat_selector": {
+                  "default": "medoid",
+                  "enum": [
+                    "medoid",
+                    "centroid"
+                  ],
+                  "title": "Flat Selector",
+                  "type": "string"
+                },
+                "flat_top_fraction": {
+                  "default": 0.1,
+                  "exclusiveMinimum": 0.0,
+                  "maximum": 1.0,
+                  "title": "Flat Top Fraction",
+                  "type": "number"
+                },
+                "garch_dist": {
+                  "default": "t",
+                  "enum": [
+                    "normal",
+                    "gaussian",
+                    "t",
+                    "studentst"
+                  ],
+                  "title": "Garch Dist",
+                  "type": "string"
+                },
+                "garch_p": {
+                  "default": 1,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Garch P",
+                  "type": "integer"
+                },
+                "garch_q": {
+                  "default": 1,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Garch Q",
+                  "type": "integer"
+                },
+                "garch_vol_multiplier": {
+                  "default": 1.0,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Garch Vol Multiplier",
+                  "type": "number"
+                },
+                "is_subperiods": {
+                  "default": 6,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Is Subperiods",
+                  "type": "integer"
+                },
+                "min_trades_per_year": {
+                  "anyOf": [
+                    {
+                      "minimum": 0.0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": 100.0,
+                  "title": "Min Trades Per Year"
+                },
+                "plateau_median_weight": {
+                  "default": 0.25,
+                  "minimum": 0.0,
+                  "title": "Plateau Median Weight",
+                  "type": "number"
+                },
+                "plateau_quantile": {
+                  "default": 0.25,
+                  "maximum": 1.0,
+                  "minimum": 0.0,
+                  "title": "Plateau Quantile",
+                  "type": "number"
+                },
+                "plateau_size_bonus": {
+                  "default": 0.01,
+                  "minimum": 0.0,
+                  "title": "Plateau Size Bonus",
+                  "type": "number"
+                },
+                "plateau_std_penalty": {
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "title": "Plateau Std Penalty",
+                  "type": "number"
+                },
+                "plateau_weight": {
+                  "default": 0.35,
+                  "minimum": 0.0,
+                  "title": "Plateau Weight",
+                  "type": "number"
+                },
+                "q25_weight": {
+                  "default": 0.3,
+                  "minimum": 0.0,
+                  "title": "Q25 Weight",
+                  "type": "number"
+                },
+                "regime_count": {
+                  "default": 3,
+                  "minimum": 2.0,
+                  "title": "Regime Count",
+                  "type": "integer"
+                },
+                "regime_lookback": {
+                  "default": 20,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Regime Lookback",
+                  "type": "integer"
+                },
+                "regime_weights": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": {
+                        "type": "number"
+                      },
+                      "type": "object"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Regime Weights"
+                },
+                "sbb_block_length": {
+                  "default": 20,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Sbb Block Length",
+                  "type": "integer"
+                },
+                "sbb_decay_lambda": {
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "title": "Sbb Decay Lambda",
+                  "type": "number"
+                },
+                "sbb_samples": {
+                  "default": 256,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Sbb Samples",
+                  "type": "integer"
+                },
+                "sbb_simulation": {
+                  "default": "stationary",
+                  "enum": [
+                    "stationary",
+                    "regime",
+                    "stress",
+                    "garch"
+                  ],
+                  "title": "Sbb Simulation",
+                  "type": "string"
+                },
+                "sbb_std_penalty": {
+                  "default": 0.1,
+                  "minimum": 0.0,
+                  "title": "Sbb Std Penalty",
+                  "type": "number"
+                },
+                "scoring_backend": {
+                  "default": "endpoint",
+                  "enum": [
+                    "proxy",
+                    "endpoint"
+                  ],
+                  "title": "Scoring Backend",
+                  "type": "string"
+                },
+                "scoring_trading_days": {
+                  "default": 365,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Scoring Trading Days",
+                  "type": "integer"
+                },
+                "stress_vol_multiplier": {
+                  "default": 1.0,
+                  "exclusiveMinimum": 0.0,
+                  "title": "Stress Vol Multiplier",
+                  "type": "number"
+                },
+                "temporal_weight": {
+                  "default": 0.65,
+                  "minimum": 0.0,
+                  "title": "Temporal Weight",
+                  "type": "number"
+                },
+                "top_is_fraction": {
+                  "default": 0.1,
+                  "exclusiveMinimum": 0.0,
+                  "maximum": 1.0,
+                  "title": "Top Is Fraction",
+                  "type": "number"
+                },
+                "top_is_k": {
+                  "anyOf": [
+                    {
+                      "exclusiveMinimum": 0.0,
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Top Is K"
+                },
+                "trade_penalty_factor": {
+                  "anyOf": [
+                    {
+                      "minimum": 0.0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": 0.5,
+                  "title": "Trade Penalty Factor"
+                },
+                "use_bootstrap_penalty": {
+                  "default": false,
+                  "title": "Use Bootstrap Penalty",
+                  "type": "boolean"
+                },
+                "use_complexity_penalty": {
+                  "default": false,
+                  "title": "Use Complexity Penalty",
+                  "type": "boolean"
+                },
+                "use_numba": {
+                  "default": true,
+                  "title": "Use Numba",
+                  "type": "boolean"
+                }
+              },
+              "title": "OptimizationConfig",
+              "type": "object"
+            },
+            "optimization_mode": {
+              "default": "none",
+              "enum": [
+                "none",
+                "mode_1_decay",
+                "mode_2_sbb",
+                "mode_3_flat_minima",
+                "mode_4_is_only_robust",
+                "mode_5_full_robust"
+              ],
+              "title": "OptimizationMode",
+              "type": "string"
+            },
+            "optimization_schedule": {
+              "default": "global",
+              "enum": [
+                "global",
+                "per_fold_decay",
+                "per_fold_causal"
+              ],
+              "title": "OptimizationSchedule",
+              "type": "string"
+            },
+            "optuna_early_stopping": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0.0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Optuna Early Stopping"
+            },
+            "optuna_trials": {
+              "default": 0,
+              "minimum": 0.0,
+              "title": "Optuna Trials",
+              "type": "integer"
+            },
+            "random_seed": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 42,
+              "title": "Random Seed"
+            },
+            "split_frequency": {
+              "default": "quarterly",
+              "enum": [
+                "single",
+                "yearly",
+                "semi_yearly",
+                "quarterly",
+                "monthly",
+                "weekly"
+              ],
+              "title": "Split Frequency",
+              "type": "string"
+            },
+            "split_mode": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "format": "date-time",
+                  "type": "string"
+                }
+              ],
+              "default": "walk_forward_2022",
+              "title": "Split Mode"
+            },
+            "train_window": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Train Window"
+            },
+            "window_mode": {
+              "default": "expanding",
+              "enum": [
+                "expanding",
+                "rolling"
+              ],
+              "title": "Window Mode",
+              "type": "string"
+            }
+          },
+          "title": "AdvancedWalkForwardConfig",
+          "type": "object"
+        }
+      ],
+      "title": "Calibration"
+    },
+    "dataset_id": {
+      "title": "Dataset Id",
+      "type": "string"
+    },
+    "execution": {
+      "additionalProperties": false,
+      "default": {
+        "backend": "auto",
+        "slippage": 0.0001,
+        "target_mode": "pct_equity"
+      },
+      "properties": {
+        "backend": {
+          "default": "auto",
+          "title": "Backend",
+          "type": "string"
+        },
+        "slippage": {
+          "default": 0.0001,
+          "exclusiveMaximum": 1.0,
+          "minimum": 0.0,
+          "title": "Slippage",
+          "type": "number"
+        },
+        "target_mode": {
+          "default": "pct_equity",
+          "title": "Target Mode",
+          "type": "string"
+        }
+      },
+      "title": "ExecutionConfig",
+      "type": "object"
+    },
+    "parameter_space": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "high": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High"
+          },
+          "kind": {
+            "enum": [
+              "fixed",
+              "int_range",
+              "float_range",
+              "categorical"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "low": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low"
+          },
+          "step": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step"
+          },
+          "value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "values": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Values"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "ParameterSpec",
+        "type": "object"
+      },
+      "title": "ParameterSpaceConfig",
+      "type": "object"
+    },
+    "protocol": {
+      "default": "three_window_decay",
+      "enum": [
+        "three_window_decay",
+        "advanced_walk_forward"
+      ],
+      "title": "RunProtocol",
+      "type": "string"
+    },
+    "strategy_id": {
+      "title": "Strategy Id",
+      "type": "string"
+    },
+    "symbol": {
+      "title": "Symbol",
+      "type": "string"
+    },
+    "timeframe": {
+      "title": "Timeframe",
+      "type": "string"
+    }
+  },
+  "required": [
+    "strategy_id",
+    "dataset_id",
+    "symbol",
+    "timeframe",
+    "parameter_space",
+    "calibration"
+  ],
+  "title": "PortalRunRequest",
+  "type": "object"
+}
