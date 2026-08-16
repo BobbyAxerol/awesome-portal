@@ -1328,6 +1328,16 @@ chưa mở Live.
 
 - Current audit artifacts provide research evidence; approval/promotion/paper
   authority chưa có.
+- BAR-12 đã thêm U15 foundations: ApprovalAuthority (policy v1, approval
+  request gắn immutable artifact/audit digest, separation of duties chặn
+  self-approval kể cả crafted request, gate matrix §10.5 đánh giá
+  server-side — thiếu evidence là denied, promotion state machine §10.4
+  RESEARCH→PAPER_APPROVED→PAPER_ACTIVE→SANDBOX_APPROVED→SANDBOX_ACTIVE→
+  LIVE_CANARY_APPROVED→LIVE_CANARY→LIVE_SCALED + PAUSED/ROLLED_BACK/
+  RETIRED, digest đổi → invalidate), PaperLedger deterministic (cash/
+  positions/orders/fills append-only, chỉ lưu secret reference không bao
+  giờ credential, replay từ fills, reconciliation phát hiện drift). Live
+  control và step-up là U16.
 
 **Description / To-do**
 

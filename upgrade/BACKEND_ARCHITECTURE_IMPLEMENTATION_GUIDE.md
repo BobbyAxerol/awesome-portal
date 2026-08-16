@@ -583,7 +583,7 @@ whether anything was pushed or deployed
 ## 14. Next backend architecture task
 
 BAR-01 (BE1–BE6), BAR-02 (BE1–BE3), BAR-03, BAR-04, BAR-05, BAR-06,
-BAR-07, BAR-08, BAR-09, BAR-10 and BAR-11 are complete:
+BAR-07, BAR-08, BAR-09, BAR-10, BAR-11 and BAR-12 are complete:
 registry/summary/links contracts and API, the parity snapshot freeze,
 additive artifact provenance, the cross-link sidecar, the operational ingress
 boundary, the thin identity BFF with the security matrix, and the M0
@@ -617,12 +617,13 @@ Deep dives:
 - [`upgrade/backend/BAR_09_ENGINE_CAPABILITY_AUTHORITY.md`](./backend/BAR_09_ENGINE_CAPABILITY_AUTHORITY.md)
 - [`upgrade/backend/BAR_10_DATA_CATALOG_AND_IMMUTABLE_SNAPSHOTS.md`](./backend/BAR_10_DATA_CATALOG_AND_IMMUTABLE_SNAPSHOTS.md)
 - [`upgrade/backend/BAR_11_ALPHA_REGISTRY_AND_RESEARCH_PLATFORM.md`](./backend/BAR_11_ALPHA_REGISTRY_AND_RESEARCH_PLATFORM.md)
+- [`upgrade/backend/BAR_12_APPROVAL_PROMOTION_PAPER_SANDBOX.md`](./backend/BAR_12_APPROVAL_PROMOTION_PAPER_SANDBOX.md)
 
-The next backend task is BAR-12, the paper/sandbox/live execution
-foundations for U15: separate execution, ledger and reconciliation
-contracts; environment-scoped promotion gates with step-up policy; paper
-orders/fills/positions and account state as a bounded context distinct from
-backtest research; live execution stays private-risk authority with no
-prototype secrets. Gate: paper flows replay deterministically from the
-ledger, crafted promotion requests fail server-side, and no live key
-reaches a developer environment.
+The next backend task is BAR-13, the live control and operational safety
+foundations for U16: incident, pause/resume and protective-action commands
+with dual approval; webhook/notification delivery with retries and audit;
+realtime market feeds as a separate freshness/subscription contract; and
+no live keys anywhere in the prototype. Gate: incident state transitions
+are audited and idempotent, protective actions fail closed on missing
+authority, and replaying the notification outbox never duplicates a
+delivery.

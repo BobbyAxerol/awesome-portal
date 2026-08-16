@@ -92,8 +92,15 @@ Chúng không thay thế phase hoặc exit gate trong
   fail-closed, quarantine gate chặn mọi run/promotion khi quarantined,
   `verify_artifact` phát hiện digest drift, 3 endpoint read-only
   `/api/v1/alphas*` với public projection an toàn (không maintainer/lock
-  digest). 12 tests. Kế tiếp là BAR-12 (U15 paper/sandbox/live
-  foundations).
+  digest). 12 tests.
+- [BAR-12 — Approval, Promotion, Paper & Sandbox foundations](./BAR_12_APPROVAL_PROMOTION_PAPER_SANDBOX.md)
+  — U15 foundations. **Complete:** ApprovalAuthority (policy v1, request
+  gắn immutable artifact/audit digest, separation of duties chặn
+  self-approval, gate matrix §10.5 đánh giá server-side, promotion state
+  machine §10.4 + PAUSED/ROLLED_BACK/RETIRED), PaperLedger deterministic
+  (chỉ lưu secret reference, replay từ fills, reconciliation phát hiện
+  drift). 9 tests. Kế tiếp là BAR-13 (U16 live control & operational
+  safety).
 
 Agent chỉ được implement deep dive khi phase tương ứng đang active và owner đã
 giao scope. Tài liệu của phase sau là thiết kế trước, không phải implementation
