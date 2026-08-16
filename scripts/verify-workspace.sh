@@ -48,6 +48,13 @@ for required in \
   "${ROOT_DIR}/apps/portal/backend/tests/test_planning_summary_adapter.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_quantbt_summary_adapter.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_portal_summary_service.py" \
+  "${ROOT_DIR}/apps/portal/backend/tests/test_m0_freeze.py" \
+  "${ROOT_DIR}/apps/portal/scripts/export_m0_freeze.py" \
+  "${ROOT_DIR}/apps/portal/scripts/export_environment_report.py" \
+  "${ROOT_DIR}/scripts/verify-m0-golden.sh" \
+  "${ROOT_DIR}/upgrade/backend/BAR_05_REPRODUCIBILITY_FREEZE.md" \
+  "${ROOT_DIR}/upgrade/backend/bar05/m0-freeze-manifest.json" \
+  "${ROOT_DIR}/upgrade/backend/bar05/environment-report.json" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_frontend_handoff.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_compat_parity.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_artifact_provenance.py" \
@@ -68,6 +75,9 @@ for required in \
   "${ROOT_DIR}/apps/portal/registry/fixtures/summary.unavailable.json" \
   "${ROOT_DIR}/apps/portal/scripts/export_handoff_contract.py" \
   "${ROOT_DIR}/apps/portal/scripts/export_compat_snapshots.py" \
+  "${ROOT_DIR}/apps/portal/scripts/export_m0_freeze.py" \
+  "${ROOT_DIR}/apps/portal/scripts/export_environment_report.py" \
+  "${ROOT_DIR}/scripts/verify-m0-golden.sh" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry-source.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-summary.v1.schema.json" \
@@ -156,6 +166,13 @@ for tracked_source in \
   apps/portal/backend/tests/test_planning_summary_adapter.py \
   apps/portal/backend/tests/test_quantbt_summary_adapter.py \
   apps/portal/backend/tests/test_portal_summary_service.py \
+  apps/portal/backend/tests/test_m0_freeze.py \
+  apps/portal/scripts/export_m0_freeze.py \
+  apps/portal/scripts/export_environment_report.py \
+  scripts/verify-m0-golden.sh \
+  upgrade/backend/BAR_05_REPRODUCIBILITY_FREEZE.md \
+  upgrade/backend/bar05/m0-freeze-manifest.json \
+  upgrade/backend/bar05/environment-report.json \
   apps/portal/backend/tests/test_frontend_handoff.py \
   apps/portal/backend/tests/test_compat_parity.py \
   apps/portal/backend/tests/test_artifact_provenance.py \
@@ -270,6 +287,7 @@ bash -n \
   "${ROOT_DIR}/apps/portal/scripts/run_backend.sh" \
   "${ROOT_DIR}/apps/portal/scripts/run_dev.sh" \
   "${ROOT_DIR}/apps/portal/scripts/run_frontend.sh" \
+  "${ROOT_DIR}/scripts/verify-m0-golden.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
   "${ROOT_DIR}/apps/portal/scripts/test_backend.sh" \
   "${ROOT_DIR}/features/roadmap-task-board/tooling/clean-generated.sh"

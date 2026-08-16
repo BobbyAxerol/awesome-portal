@@ -1,6 +1,7 @@
 """Repository implementing transactional state plus append-only audit history."""
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 import uuid
@@ -962,11 +963,19 @@ class PortalRepository:
 
     def export_snapshot(self, include_deleted: bool = False) -> Dict[str, Any]:
         """Produce a portable data-only backup; webhook configuration is never exported."""
+        tasks = [snapshot["item"] for snapshot in self.list_tasks(include_deleted=include_deleted)]
+        roadmap = [snapshot["item"] for snapshot in self.list_roadmap(include_deleted=include_deleted)]
+        content = {"tasks": tasks, "roadmap": roadmap}
+        encoded = json.dumps(
+            content, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
         return {
             "schema_version": 1,
             "exported_at": _now(),
-            "tasks": [snapshot["item"] for snapshot in self.list_tasks(include_deleted=include_deleted)],
-            "roadmap": [snapshot["item"] for snapshot in self.list_roadmap(include_deleted=include_deleted)],
+            "tasks": tasks,
+            "roadmap": roadmap,
+            "counts": {"tasks": len(tasks), "roadmap": len(roadmap)},
+            "content_hash": f"sha256:{hashlib.sha256(encoded).hexdigest()}",
         }
 
     def readiness(self) -> Dict[str, Any]:
