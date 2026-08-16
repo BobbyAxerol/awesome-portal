@@ -59,7 +59,16 @@ Chúng không thay thế phase hoặc exit gate trong
   freshness passthrough, write idempotent (replay/conflict 409, không
   double-fire upstream), RBAC cross-workspace fail-closed, feature flag
   rollback `FEATURE_PROXY_PORTAL`. 31 control-api tests trên PostgreSQL
-  thật. Kế tiếp là BAR-08 (U11 durable worker & immutable artifacts).
+  thật.
+- [BAR-08 — Durable Quant Worker & Immutable Artifacts](./BAR_08_DURABLE_QUANT_WORKER_AND_IMMUTABLE_ARTIFACTS.md)
+  — U11 authority. **Complete:** tách `run` immutable khỏi `run_attempt`
+  (history append-only, retry tạo attempt mới), claim-lease/heartbeat +
+  standardized failure codes, content-addressed bundles (temp → checksums →
+  manifest v2.0.0 → blobs sha256, tamper detection, reconcile, legacy
+  import), NATS JetStream + MinIO + `quant-worker-py` trong Compose, broker
+  port in-memory/NATS, 9 tests + smoke end-to-end (chạy three-window thật,
+  bundle 17 files, redelivery không duplicate). ADR-004/006 Proposed. Kế
+  tiếp là BAR-09 (U12 engine capability authority).
 
 Agent chỉ được implement deep dive khi phase tương ứng đang active và owner đã
 giao scope. Tài liệu của phase sau là thiết kế trước, không phải implementation

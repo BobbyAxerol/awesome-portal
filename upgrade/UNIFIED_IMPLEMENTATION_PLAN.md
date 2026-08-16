@@ -1062,6 +1062,16 @@ artifact content-addressed có thể audit.
 
 - Current async run service/artifact repository and golden tests provide
   behavior reference; no durable distributed queue/object store authority.
+- BAR-08 đã thêm durable worker + immutable artifact authority: tách
+  `run`/`run_attempt` với registry append-only (redelivery no-op, retry tạo
+  attempt mới), claim-lease/heartbeat + standardized failure codes,
+  content-addressed bundle (temp → checksums → manifest v2.0.0 → blobs
+  sha256, reopen-by-digest, tamper detection, reconcile, legacy import),
+  broker port in-memory + NATS JetStream, `quant-worker-py` container +
+  `portal-nats` + `portal-minio` private trong Compose (ADR-004/006
+  Proposed). Smoke end-to-end: three-window thật qua NATS → bundle 17 files
+  → succeeded event; redelivery không duplicate. MinIO adapter swap và
+  outbox→NATS relay là slice U11 sau.
 
 **Description / To-do**
 
