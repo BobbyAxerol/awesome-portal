@@ -15,7 +15,10 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals", "node"],
+    "paths": {
+      "@portal/contracts": ["../../../packages/contracts/generated/portal-api.d.ts"]
+    }
   },
   "include": ["src", "vite.config.ts"]
 }

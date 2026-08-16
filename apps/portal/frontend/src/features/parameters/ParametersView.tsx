@@ -9,6 +9,9 @@ import { Collapsible, DefinitionList, StateView } from "../../components/ui";
 import { api, rowParams } from "../../lib/api";
 import type { StrategyResponse } from "../../lib/api";
 import { buildHistogram, buildObjectiveHeatmap, numericValues } from "./analytics";
+import { activeTheme, vizTokensFor } from "../../styles/tokens";
+
+const viz = vizTokensFor(activeTheme());
 
 export function ParametersView({ runId }: { runId: string }) {
   const parameters = useQuery({ queryKey: ["parameters", runId], queryFn: () => api.parameters(runId) });
@@ -72,7 +75,7 @@ export function ParametersView({ runId }: { runId: string }) {
         {
           type: "heatmap",
           data: cells.map((cell) => [xValues.indexOf(cell.x), yValues.indexOf(cell.y), cell.objective, cell.count]),
-          itemStyle: { borderColor: "#fff", borderWidth: 1 },
+          itemStyle: { borderColor: viz.cellBorder, borderWidth: 1 },
         },
       ],
     });

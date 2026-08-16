@@ -1,6 +1,23 @@
-/* Design tokens — "Fund Paper" (§27.2 of implementation_plan_protoyype.md).
- * Components must reference these variables only; raw hex belongs here. */
+/* ============================================================================
+ * Portal design tokens — U02 Shared Foundations.
+ *
+ * AUTHORITY: "Fund Paper" (guide v0.4 §17.2) is the token authority. Planning's
+ * token set (features/roadmap-task-board/frontend/src/styles/tokens.css) is
+ * mapped INTO the semantic roles below; it does not introduce a second palette.
+ *
+ * RULE: raw color literals live in this file only. The one documented
+ * exception is `src/styles/tokens.ts`, which mirrors these values for canvas
+ * renderers (ECharts/SVG) that cannot read CSS custom properties. Both files
+ * are checked against each other by `src/styles/tokens.test.ts`.
+ *
+ * Themes are applied on <html>: `data-theme="research"` (default, light,
+ * publication-grade) and `data-theme="operations"` (dark workstation, derived
+ * from --ink-panel per v0.4 §17.4 — no neon, no gradient).
+ * Density is applied on <html>: `data-density="comfortable|compact|operational"`.
+ * ========================================================================== */
+
 :root {
+  /* --- Surface / ink / line — Fund Paper core (v0.4 §17.2) ---------------- */
   --paper: #faf9f5;
   --paper-raised: #ffffff;
   --paper-sunken: #f4f2ec;
@@ -11,6 +28,7 @@
   --line-soft: #efede4;
   --accent: #0f4c5c;
   --accent-soft: #e2edf0;
+  --accent-strong: #226173;
   --accent-2: #9a6a1f;
   --accent-2-soft: #f4ecdb;
   --good: #1e7b4f;
@@ -20,8 +38,243 @@
   --ink-panel: #161e2a;
   --ink-panel-fg: #c9d4e3;
 
-  /* Window roles — fixed across the whole app (§27.2) */
+  /* Tinted surfaces mapped from the Planning token set (--surface-2/-3).
+   * Re-toned to the Fund Paper canvas instead of Planning's cool blue. */
+  --surface-2: #f1f3f0;
+  --surface-3: #eaeff0;
+
+  /* --- Window roles — fixed across the whole app (v0.4 §17.2) ------------- */
   --role-is: #7a8699;
   --role-oos: #0f4c5c;
   --role-holdout: #9a6a1f;
+  --role-stitched: #0f4c5c;
+
+  /* --- Runtime availability semantics (summary `availability.state`) ------
+   * Colour is never the only channel: every consumer also renders text and a
+   * shape/icon (FRONTEND_HANDOFF §3, v0.5 §12.3). */
+  --state-available: #1e7b4f;
+  --state-available-bg: #e3f1e9;
+  --state-degraded: #9a6a1f;
+  --state-degraded-bg: #f4ecdb;
+  --state-stale: #8a6a3c;
+  --state-stale-bg: #f2ebdf;
+  --state-unavailable: #6f7a8c;
+  --state-unavailable-bg: #eceef1;
+  --state-denied: #b43a3a;
+  --state-denied-bg: #f7e8e8;
+  --state-commissioned: #77839a;
+  --state-commissioned-bg: #eef0f4;
+
+  /* --- Registry maturity semantics (static metadata, NOT runtime health) --- */
+  --maturity-available: #1c2532;
+  --maturity-prototype: #9a6a1f;
+  --maturity-commissioned: #77839a;
+  --maturity-blocked: #b43a3a;
+  --maturity-deprecated: #939db0;
+  --maturity-opacity-available: 1;
+  --maturity-opacity-prototype: 1;
+  --maturity-opacity-commissioned: 0.58;
+  --maturity-opacity-blocked: 0.38;
+  --maturity-opacity-deprecated: 0.55;
+
+  /* --- Lifecycle stage semantics — badge/stepper only (v0.4 §17.5) --------
+   * Explicitly not a chart palette. */
+  --lifecycle-research: #0f4c5c;
+  --lifecycle-candidate: #9a6a1f;
+  --lifecycle-paper: #5f5a7d;
+  --lifecycle-sandbox: #a8761c;
+  --lifecycle-live: #1e7b4f;
+  --lifecycle-paused: #6f7a8c;
+  --lifecycle-degraded: #b4772f;
+  --lifecycle-blocked: #b43a3a;
+
+  /* --- Environment badge (topbar) ----------------------------------------- */
+  --env-local: #6f7a8c;
+  --env-research: #0f4c5c;
+  --env-paper: #5f5a7d;
+  --env-sandbox: #a8761c;
+  --env-live: #b43a3a;
+
+  /* --- Visualization tokens ----------------------------------------------
+   * Values consumed by canvas/SVG renderers through `tokens.ts`. They are
+   * declared here so the palette still has exactly one source of truth. */
+  --viz-train: #a8c6ce;
+  --viz-pending: #e3e0d7;
+  --viz-price: #5d7b93;
+  --viz-marker-long-border: #0f5c3a;
+  --viz-marker-short-border: #7c2626;
+  --viz-cell-border: #ffffff;
+  --viz-legend-inactive: #c9c5ba;
+
+  /* Run console is a terminal surface: it stays dark in BOTH themes so log
+   * output keeps one legibility contract. */
+  --console-bg: #161e2a;
+  --console-fg: #c9d4e3;
+  --console-faint: #7a879a;
+  --console-accent: #7fb3c4;
+  --console-gold: #d4b36a;
+  --console-good: #6fcf97;
+  --console-bad: #e58a8a;
+  --console-rule: rgba(212, 179, 106, 0.35);
+
+  /* --- Typography roles (mirrors the Planning --font-* contract) ---------- */
+  --font-display: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* --- Spacing scale — 4px base (Design/ synthesis: IBM modular grid) ----- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* --- Radius — deliberately small (Design/ synthesis: Binance/SpaceX) ---- */
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+
+  /* --- Elevation — hairline first, shadow last (v0.5 §10.3) -------------- */
+  --shadow-e1: 0 1px 2px rgba(28, 37, 50, 0.05);
+  --shadow-e2: 0 4px 12px rgba(28, 37, 50, 0.08);
+  --shadow-e3: 0 10px 28px rgba(28, 37, 50, 0.12);
+
+  /* --- Shell metrics (v0.4 §P0.8 reference sizes) ------------------------- */
+  --topbar-h: 56px;
+  --sidebar-w: 248px;
+  --sidebar-collapsed-w: 72px;
+  --content-gutter: 32px;
+  --content-max: 1440px;
+  --drawer-w: 460px;
+  --row-h: 40px;
+
+  /* --- Motion ------------------------------------------------------------- */
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-easing: cubic-bezier(0.2, 0, 0.2, 1);
+
+  color-scheme: light;
+}
+
+/* ---------------------------------------------------------------------------
+ * Density — spacing rhythm only. Form/chart spacing stays consistent so a
+ * denser table never hides labels (v0.4 §17.6).
+ * ------------------------------------------------------------------------ */
+:root[data-density="compact"] {
+  --topbar-h: 52px;
+  --sidebar-w: 228px;
+  --sidebar-collapsed-w: 64px;
+  --content-gutter: 24px;
+  --drawer-w: 400px;
+  --row-h: 36px;
+}
+
+:root[data-density="operational"] {
+  --topbar-h: 52px;
+  --sidebar-w: 228px;
+  --sidebar-collapsed-w: 64px;
+  --content-gutter: 16px;
+  --drawer-w: 380px;
+  --row-h: 32px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Operations Dark theme — derived from --ink-panel (v0.4 §17.4). Semantic
+ * good/bad/state roles keep their meaning; only their carrier tone changes.
+ * ------------------------------------------------------------------------ */
+:root[data-theme="operations"] {
+  --paper: #101720;
+  --paper-raised: #161e2a;
+  --paper-sunken: #0c121a;
+  --surface-2: #1c2634;
+  --surface-3: #16202c;
+  --ink: #e3e9f1;
+  --ink-soft: #aab6c5;
+  --ink-faint: #738095;
+  --line: #2b3747;
+  --line-soft: #212c3a;
+  --accent: #7fb3c4;
+  --accent-soft: #1a2b34;
+  --accent-strong: #9ac6d4;
+  --accent-2: #d4a75e;
+  --accent-2-soft: #33291a;
+  --good: #4fb07c;
+  --good-bg: #15291f;
+  --bad: #dd6f6f;
+  --bad-bg: #331b1b;
+
+  --role-is: #8e99ab;
+  --role-oos: #7fb3c4;
+  --role-holdout: #d4a75e;
+  --role-stitched: #7fb3c4;
+
+  --state-available: #4fb07c;
+  --state-available-bg: #15291f;
+  --state-degraded: #d4a75e;
+  --state-degraded-bg: #33291a;
+  --state-stale: #c39a63;
+  --state-stale-bg: #2d2519;
+  --state-unavailable: #8b97a8;
+  --state-unavailable-bg: #1c242f;
+  --state-denied: #dd6f6f;
+  --state-denied-bg: #331b1b;
+  --state-commissioned: #8b97a8;
+  --state-commissioned-bg: #1c242f;
+
+  --maturity-available: #e3e9f1;
+  --maturity-prototype: #d4a75e;
+  --maturity-commissioned: #8b97a8;
+  --maturity-blocked: #dd6f6f;
+  --maturity-deprecated: #738095;
+
+  --lifecycle-research: #7fb3c4;
+  --lifecycle-candidate: #d4a75e;
+  --lifecycle-paper: #9a93bd;
+  --lifecycle-sandbox: #d4a75e;
+  --lifecycle-live: #4fb07c;
+  --lifecycle-paused: #8b97a8;
+  --lifecycle-degraded: #d49b5e;
+  --lifecycle-blocked: #dd6f6f;
+
+  --env-local: #8b97a8;
+  --env-research: #7fb3c4;
+  --env-paper: #9a93bd;
+  --env-sandbox: #d4a75e;
+  --env-live: #dd6f6f;
+
+  --shadow-e1: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-e2: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-e3: 0 10px 28px rgba(0, 0, 0, 0.5);
+
+  color-scheme: dark;
+}
+
+/* ---------------------------------------------------------------------------
+ * Print theme — always light, regardless of the active app theme, so exported
+ * evidence keeps one deterministic appearance (v0.4 §26.6).
+ * ------------------------------------------------------------------------ */
+@media print {
+  :root,
+  :root[data-theme="operations"] {
+    --paper: #ffffff;
+    --paper-raised: #ffffff;
+    --paper-sunken: #f4f2ec;
+    --ink: #1c2532;
+    --ink-soft: #4e5a6e;
+    --ink-faint: #6b7385;
+    --line: #c9c5ba;
+    --line-soft: #ddd9cf;
+    --accent: #0f4c5c;
+    --accent-2: #9a6a1f;
+    --good: #1e7b4f;
+    --bad: #b43a3a;
+    --shadow-e1: none;
+    --shadow-e2: none;
+    --shadow-e3: none;
+    color-scheme: light;
+  }
 }

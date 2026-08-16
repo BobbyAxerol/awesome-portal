@@ -27,7 +27,7 @@
   }
   ::selection {
     background: var(--accent-2);
-    color: #fff;
+    color: var(--paper-raised);
   }
   :focus-visible {
     outline: 2px solid var(--accent);
@@ -102,5 +102,61 @@
   }
   .seg-legend {
     @apply mono inline-flex items-center gap-1.5 text-[11px] text-ink-soft;
+  }
+
+  /* --- U02 semantic components ----------------------------------------- */
+
+  /* Runtime availability. Colour arrives inline from the semantic token; the
+   * glyph and label carry the same information without colour. */
+  .badge-state {
+    @apply mono inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold;
+  }
+
+  /* Registry maturity: outline, never filled, so it never competes with a
+   * runtime state badge sitting next to it. */
+  .badge-maturity {
+    @apply mono inline-flex items-center rounded-sm border px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide;
+    background: transparent;
+  }
+  .badge-maturity-dashed {
+    border-style: dashed;
+  }
+
+  .badge-env {
+    @apply mono inline-flex items-center rounded-sm border px-1.5 py-px text-[10px] font-semibold tracking-wide;
+    background: transparent;
+  }
+
+  .metric-value {
+    @apply mono text-[20px] font-semibold text-ink;
+    font-variant-numeric: tabular-nums;
+    line-height: 26px;
+  }
+  /* No number exists here. Deliberately not styled like a value so it can
+   * never be misread as one. */
+  .metric-absent {
+    @apply inline-flex items-center;
+  }
+  .metric-cell {
+    @apply rounded-md border border-line-soft px-3 py-2;
+    background: var(--paper-raised);
+    min-width: 132px;
+  }
+  .metric-strip {
+    @apply flex flex-wrap gap-2;
+  }
+}
+
+@layer utilities {
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
   }
 }
