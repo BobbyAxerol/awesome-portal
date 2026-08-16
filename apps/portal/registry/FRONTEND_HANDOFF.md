@@ -175,3 +175,34 @@ Chỉ 3 type hiện được ủy quyền, thứ tự ưu tiên:
 - Permission arrays trong registry là **descriptive**, không phải
   enforcement.
 - Frontend không suy diễn backend health/permission/financial state.
+
+## 8. Backlog deep-dive (ghi bởi Claude — v1 packaging)
+
+Version v1 đóng gói theo nguyên tắc "làm được luồng nào chắc luồng đó". Mục
+này liệt kê phần **làm ở mức đủ dùng nhưng chưa deep-dive**, kèm lý do và
+slice đề xuất kế tiếp theo v0.5 §10–§12. Không có placeholder ẩn: mọi màn
+chưa implement đều là `COMMISSIONED` trong registry và mở ra Feature Preview.
+
+| Vùng | Trạng thái v1 | Vì sao chưa sâu | Slice đề xuất |
+|---|---|---|---|
+| Import Wizard (U14) | Chưa có UI. Picker đã đọc `/api/v1/alphas`; alpha chưa đăng ký runtime hiển thị kèm lý do. | Backend slice `POST /api/v1/alphas/import` + quarantine pipeline chưa có (strategy contract §6). Làm UI trước sẽ là form không có authority. | Sau BAR-21: Import Flow A/B, digest verify, quarantine state. |
+| Run Progress | Giữ nguyên bản v0.1.1 (console + fold Gantt). | Đã hoạt động; chưa áp §12 envelope vì fold Gantt vẽ từ fold plan chứ không từ series artifact. | Chuẩn hoá Gantt theo §12.2, thêm as-of/digest, ETA có confidence. |
+| Optimization / Parameters / Execution tabs | Chart chưa mang envelope §12.2 đầy đủ (mới có ở Overview). | Ưu tiên Overview vì là màn quyết định chính; ba tab còn lại cần trial-level provenance mà artifact hiện chưa expose per-chart. | Một slice "chart envelope rollout" cho toàn bộ result tabs. |
+| Command Center | Đủ 7 state, số liệu thật từ summary. Chưa có drill-down drawer. | Read model bền thuộc U10; drawer không có nguồn ổn định để mở. | Sau U10: evidence drawer + cross-filter. |
+| Portal Map | Render lifecycle từ registry, chưa có filter theo persona/status (v0.4 §P0.15). | Registry chưa khai báo persona cho stage. | Backend thêm `persona` vào lifecycle stage → UI thêm filter. |
+| Planning: Roadmap / Docs / Reports / Evidence | Nhúng nguyên feature body, dùng chung token; chưa refactor sang primitive Portal. | Ưu tiên Task Board theo yêu cầu v1. Refactor rộng sẽ đụng content-integrity tests. | Slice "Planning primitive parity" — đổi `@/components/ui` sang shared layer, giữ content hash. |
+| Profile & Access | `COMMISSIONED` preview. | Chờ U07 wire gateway→BFF; login screens 01B/01C/01D chưa có backend. | Sau U10: Frames 01B–01D + session expired + maintenance screen kèm request ID. |
+| Responsive / a11y | Có focus ring, aria-describedby cho field, reduced-motion, print layout, mobile drawer. Chưa có visual regression 4 breakpoint × 3 theme. | Cần hạ tầng screenshot (Playwright + baseline) chưa dựng cho `apps/portal/frontend`. | Slice "visual baseline": Playwright screenshot cho Research Light / Operations Dark / Print. |
+| Operations Dark | Token đầy đủ, đã kiểm bằng test parity; chưa review thị giác từng màn. | Chưa có visual baseline (trên). | Đi kèm slice visual baseline. |
+
+### Backend request còn treo (@codex)
+
+1. `/api/v1/alphas` và `/api/v1/portal/capabilities` chưa có schema trong
+   `components/schemas` — codegen ra `unknown`. Frontend đang narrow ở boundary
+   (`portal/strategyCatalog.ts`) và có test theo file registry thật. Đề xuất
+   đặt tên `AlphaRegistryDocument` + `EngineCapabilityDocument`.
+2. `SeriesPayload` chưa công bố `source_rows` — chart envelope §12.2 cần
+   "source_rows/returned_rows" để nói thật về downsample. Hiện UI hiển thị
+   returned = source khi thiếu field, tức không khẳng định có downsample.
+3. Lifecycle stage chưa có `persona` → Portal Map không filter theo persona
+   như v0.4 §P0.15 mô tả.
