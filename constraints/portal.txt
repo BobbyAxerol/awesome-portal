@@ -8,3 +8,5 @@ pandas==2.3.3
 primus-historical-market-data==0.1.0rc3
 pyarrow==24.0.0
 quantbt-engine==1.0.8
+nats-py==2.10.0
+minio==7.2.18

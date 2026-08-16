@@ -49,6 +49,15 @@ for required in \
   "${ROOT_DIR}/apps/portal/backend/tests/test_quantbt_summary_adapter.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_portal_summary_service.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/domain/canonical.py" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/durable_runs.py" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/artifact_store.py" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/job_broker.py" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/workers/durable_worker.py" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/workers/durable_worker_main.py" \
+  "${ROOT_DIR}/apps/portal/backend/tests/test_durable_worker.py" \
+  "${ROOT_DIR}/upgrade/backend/BAR_08_DURABLE_QUANT_WORKER_AND_IMMUTABLE_ARTIFACTS.md" \
+  "${ROOT_DIR}/upgrade/backend/adr/ADR-004-OBJECT_STORE_PROVIDER.md" \
+  "${ROOT_DIR}/upgrade/backend/adr/ADR-006-WORKER_ISOLATION_AND_SUPERVISION.md" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_canonical_contracts.py" \
   "${ROOT_DIR}/packages/contracts/README.md" \
   "${ROOT_DIR}/packages/contracts/package.json" \
@@ -199,6 +208,15 @@ for tracked_source in \
   apps/portal/backend/tests/test_quantbt_summary_adapter.py \
   apps/portal/backend/tests/test_portal_summary_service.py \
   apps/portal/backend/src/portal_api/domain/canonical.py \
+  apps/portal/backend/src/portal_api/services/durable_runs.py \
+  apps/portal/backend/src/portal_api/services/artifact_store.py \
+  apps/portal/backend/src/portal_api/services/job_broker.py \
+  apps/portal/backend/src/portal_api/workers/durable_worker.py \
+  apps/portal/backend/src/portal_api/workers/durable_worker_main.py \
+  apps/portal/backend/tests/test_durable_worker.py \
+  upgrade/backend/BAR_08_DURABLE_QUANT_WORKER_AND_IMMUTABLE_ARTIFACTS.md \
+  upgrade/backend/adr/ADR-004-OBJECT_STORE_PROVIDER.md \
+  upgrade/backend/adr/ADR-006-WORKER_ISOLATION_AND_SUPERVISION.md \
   apps/portal/backend/tests/test_canonical_contracts.py \
   packages/contracts/README.md \
   packages/contracts/package.json \
