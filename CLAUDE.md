@@ -36,6 +36,9 @@ cuối file này) thay vì tự sửa backend.
    — spec paper→live: chỉ đọc khi làm các màn từ Paper trở đi (chưa vội ở
    version này, nhưng nắm §4 Information Architecture + §6 chart/metric
    contract để không thiết kế lệch). Bổ sung, không thay thế.
+4d. `upgrade/DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md` — 88 tables / 2 views
+    trading DB (paper→live); đọc khi làm màn account/portfolio/equity để nắm
+    nguồn số liệu thật; không thiết kế schema riêng.
 5. `upgrade/BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md` — hiểu backend đã
    giao những contract gì (BAR-01→BAR-16 complete; BAR-17→BAR-20 là runway
    dual-cell kế tiếp) để không làm trùng/sai.
