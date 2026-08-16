@@ -1264,6 +1264,17 @@ không biến browser thành arbitrary Python editor.
 
 - Protected Delta-RSI strategy/current research UI provide one concrete
   reference; generic alpha contract chưa final.
+- BAR-11 đã thêm Alpha Registry foundation: `registry/alphas.v1.json` theo
+  draft §9.3 register `delta-rsi-polynomial` v1.0.0 (entrypoint, artifact
+  digest đúng protected strategy package, family/endpoint/execution
+  contracts, data requirements, manager-exposed params, lifecycle
+  RESEARCH + golden-parity certification, chưa có promotion evidence),
+  loader fail-closed (stage/digest/duplicate sai → app không compose),
+  quarantine gate chặn run/promotion kể cả crafted request,
+  `verify_artifact` so digest đăng ký với protected package (phát hiện
+  drift), 3 endpoint read-only `/api/v1/alphas*` không leak
+  maintainer/lock digest. Quarantine ingest/build/scan pipeline và Alpha
+  Pool/Workbench UI là slice U14 sau.
 
 **Description / To-do**
 

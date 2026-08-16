@@ -84,7 +84,16 @@ Chúng không thay thế phase hoặc exit gate trong
   (register → quality block → open-by-digest + tamper detection →
   repair-as-new-snapshot), query contract range/max_points + downsampling
   metadata, quality preflight cho historical run, 4 endpoint read-only
-  `/api/v1/data/*`. 12 tests. Kế tiếp là BAR-11 (U14 alpha registry).
+  `/api/v1/data/*`. 12 tests.
+- [BAR-11 — Alpha Registry & Research Platform foundation](./BAR_11_ALPHA_REGISTRY_AND_RESEARCH_PLATFORM.md)
+  — U14 foundation. **Complete:** registry `alphas.v1` với
+  `delta-rsi-polynomial` v1.0.0 (artifact digest trùng protected strategy
+  package, lifecycle RESEARCH, golden-parity certification), loader
+  fail-closed, quarantine gate chặn mọi run/promotion khi quarantined,
+  `verify_artifact` phát hiện digest drift, 3 endpoint read-only
+  `/api/v1/alphas*` với public projection an toàn (không maintainer/lock
+  digest). 12 tests. Kế tiếp là BAR-12 (U15 paper/sandbox/live
+  foundations).
 
 Agent chỉ được implement deep dive khi phase tương ứng đang active và owner đã
 giao scope. Tài liệu của phase sau là thiết kế trước, không phải implementation

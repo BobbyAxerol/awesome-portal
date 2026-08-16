@@ -583,7 +583,7 @@ whether anything was pushed or deployed
 ## 14. Next backend architecture task
 
 BAR-01 (BE1–BE6), BAR-02 (BE1–BE3), BAR-03, BAR-04, BAR-05, BAR-06,
-BAR-07, BAR-08, BAR-09 and BAR-10 are complete:
+BAR-07, BAR-08, BAR-09, BAR-10 and BAR-11 are complete:
 registry/summary/links contracts and API, the parity snapshot freeze,
 additive artifact provenance, the cross-link sidecar, the operational ingress
 boundary, the thin identity BFF with the security matrix, and the M0
@@ -616,12 +616,13 @@ Deep dives:
 - [`upgrade/backend/BAR_08_DURABLE_QUANT_WORKER_AND_IMMUTABLE_ARTIFACTS.md`](./backend/BAR_08_DURABLE_QUANT_WORKER_AND_IMMUTABLE_ARTIFACTS.md)
 - [`upgrade/backend/BAR_09_ENGINE_CAPABILITY_AUTHORITY.md`](./backend/BAR_09_ENGINE_CAPABILITY_AUTHORITY.md)
 - [`upgrade/backend/BAR_10_DATA_CATALOG_AND_IMMUTABLE_SNAPSHOTS.md`](./backend/BAR_10_DATA_CATALOG_AND_IMMUTABLE_SNAPSHOTS.md)
+- [`upgrade/backend/BAR_11_ALPHA_REGISTRY_AND_RESEARCH_PLATFORM.md`](./backend/BAR_11_ALPHA_REGISTRY_AND_RESEARCH_PLATFORM.md)
 
-The next backend task is BAR-11, the Alpha Registry and research platform
-foundation for U14: create immutable Alpha identity/artifact/certification,
-an Alpha Pool and workbench without turning the browser into an arbitrary
-Python editor; align import manifests with the shared contract authority;
-register alpha versions with lineage/digests; and gate promotion evidence
-through the run registry read models. Gate: a new alpha registers through
-schema/manifest without editing dispatch code, and every alpha artifact
-opens by digest with lineage verification.
+The next backend task is BAR-12, the paper/sandbox/live execution
+foundations for U15: separate execution, ledger and reconciliation
+contracts; environment-scoped promotion gates with step-up policy; paper
+orders/fills/positions and account state as a bounded context distinct from
+backtest research; live execution stays private-risk authority with no
+prototype secrets. Gate: paper flows replay deterministically from the
+ledger, crafted promotion requests fail server-side, and no live key
+reaches a developer environment.
