@@ -57,6 +57,12 @@ for required in \
   "${ROOT_DIR}/apps/portal/registry/engine-capabilities.v1.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/engine-capabilities.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/engine_capabilities.py" \
+  "${ROOT_DIR}/apps/portal/registry/data-catalog.v1.json" \
+  "${ROOT_DIR}/apps/portal/registry/schemas/data-catalog.v1.schema.json" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/data_catalog.py" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/api/routes_data.py" \
+  "${ROOT_DIR}/apps/portal/backend/tests/test_data_catalog.py" \
+  "${ROOT_DIR}/upgrade/backend/BAR_10_DATA_CATALOG_AND_IMMUTABLE_SNAPSHOTS.md" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_engine_capabilities.py" \
   "${ROOT_DIR}/upgrade/backend/BAR_09_ENGINE_CAPABILITY_AUTHORITY.md" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_durable_worker.py" \
@@ -221,6 +227,12 @@ for tracked_source in \
   apps/portal/registry/engine-capabilities.v1.json \
   apps/portal/registry/schemas/engine-capabilities.v1.schema.json \
   apps/portal/backend/src/portal_api/services/engine_capabilities.py \
+  apps/portal/registry/data-catalog.v1.json \
+  apps/portal/registry/schemas/data-catalog.v1.schema.json \
+  apps/portal/backend/src/portal_api/services/data_catalog.py \
+  apps/portal/backend/src/portal_api/api/routes_data.py \
+  apps/portal/backend/tests/test_data_catalog.py \
+  upgrade/backend/BAR_10_DATA_CATALOG_AND_IMMUTABLE_SNAPSHOTS.md \
   apps/portal/backend/tests/test_engine_capabilities.py \
   upgrade/backend/BAR_09_ENGINE_CAPABILITY_AUTHORITY.md \
   apps/portal/backend/tests/test_durable_worker.py \

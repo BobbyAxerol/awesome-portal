@@ -31,12 +31,14 @@ from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.api.routes import router
 from portal_api.api.ingress import IngressContextMiddleware, ingress_request_id
 from portal_api.api.routes_portal import router as router_portal
+from portal_api.api.routes_data import router as router_data
 from portal_api.api.routes_runs import router as router_runs
 from portal_api.domain.errors import PortalDomainError
 from portal_api.repositories import ArtifactRepository
 from portal_api.repositories.portal_links import PortalLinksRepository
 from portal_api.repositories.portal_registry import PortalRegistryRepository
 from portal_api.services import PreflightService
+from portal_api.services.data_catalog import DataCatalogService, SnapshotStore
 from portal_api.services.engine_capabilities import EngineCapabilityService
 from portal_api.services.portal_links import PortalLinksService
 from portal_api.services.portal_registry import PortalRegistryService
@@ -144,6 +146,10 @@ def create_app(
     app.state.engine_capabilities = EngineCapabilityService(
         registry_repository.registry_root
     )
+    app.state.data_catalog = DataCatalogService(registry_repository.registry_root)
+    app.state.snapshot_store = SnapshotStore(
+        Path(os.getenv("PORTAL_SNAPSHOT_ROOT", str(Path(os.getenv("PORTAL_ARTIFACT_ROOT", "artifacts/runs")) / "snapshots")))
+    )
     app.state.preflight_service = PreflightService(
         app.state.market_data_provider,
         app.state.strategy_registry,
@@ -223,6 +229,7 @@ def create_app(
     app.include_router(router)
     app.include_router(router_portal)
     app.include_router(router_runs)
+    app.include_router(router_data)
     return app
 
 

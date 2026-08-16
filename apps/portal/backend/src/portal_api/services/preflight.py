@@ -67,6 +67,24 @@ class PreflightService:
             capabilities = EngineCapabilityService(root)
         self._capabilities = capabilities
 
+    @staticmethod
+    def _quality_preflight(frame: pd.DataFrame, descriptor: object) -> None:
+        from portal_api.domain.errors import DataSchemaError
+        from portal_api.services.data_catalog import compute_quality
+
+        timeframe = getattr(descriptor, "timeframe", None) or "1d"
+        report = compute_quality(
+            frame,
+            snapshot_id="preflight",
+            max_gap_ratio=0.1,
+            max_duplicate_rows=0,
+            expected_frequency=timeframe,
+        )
+        if not report.passed:
+            raise DataSchemaError(
+                f"data quality gate failed: {', '.join(report.reason_codes)}"
+            )
+
     def run(self, request: PortalRunRequest) -> PreflightResponse:
         strategy = self._strategies.get(request.strategy_id)
         strategy.validate_parameter_space(request.parameter_space)
@@ -78,6 +96,8 @@ class PreflightService:
         )
 
         descriptor = market.descriptor
+        if descriptor.source_class == "historical_market_data":
+            self._quality_preflight(market.frame, descriptor)
         self._capabilities.preflight(
             protocol=request.protocol.value,
             data_class=descriptor.source_class or "historical_market_data",

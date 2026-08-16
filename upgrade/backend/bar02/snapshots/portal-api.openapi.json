@@ -4239,6 +4239,190 @@
         "summary": "Strategy"
       }
     },
+    "/api/v1/data/catalog": {
+      "get": {
+        "operationId": "data_catalog_api_v1_data_catalog_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Data Catalog Api V1 Data Catalog Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Data Catalog",
+        "tags": [
+          "data"
+        ]
+      }
+    },
+    "/api/v1/data/snapshots": {
+      "get": {
+        "operationId": "data_snapshots_api_v1_data_snapshots_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Data Snapshots Api V1 Data Snapshots Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Data Snapshots",
+        "tags": [
+          "data"
+        ]
+      }
+    },
+    "/api/v1/data/snapshots/{snapshot_id}/quality": {
+      "get": {
+        "operationId": "snapshot_quality_api_v1_data_snapshots__snapshot_id__quality_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snapshot_id",
+            "required": true,
+            "schema": {
+              "title": "Snapshot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Snapshot Quality Api V1 Data Snapshots  Snapshot Id  Quality Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Snapshot Quality",
+        "tags": [
+          "data"
+        ]
+      }
+    },
+    "/api/v1/data/snapshots/{snapshot_id}/series": {
+      "get": {
+        "operationId": "snapshot_series_api_v1_data_snapshots__snapshot_id__series_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snapshot_id",
+            "required": true,
+            "schema": {
+              "title": "Snapshot Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_exclusive",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End Exclusive"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_points",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max Points"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Snapshot Series Api V1 Data Snapshots  Snapshot Id  Series Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Snapshot Series",
+        "tags": [
+          "data"
+        ]
+      }
+    },
     "/api/v1/portal/capabilities": {
       "get": {
         "operationId": "portal_capabilities_api_v1_portal_capabilities_get",
