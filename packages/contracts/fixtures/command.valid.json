@@ -1,0 +1,17 @@
+{
+  "schema_version": "command-envelope.v1",
+  "request_id": "req_01J2K3M4N5P6Q7R8S9T0A1B2C3",
+  "actor_id": "usr_6f9a47e2be511ace1cf999f9ae0d29cd",
+  "workspace_id": "ws_01J2K3M4N5P6Q7R8S9T0A1B2C4",
+  "idempotency_key": "run_create:01J2K3M4N5P6Q7R8S9T0A1B2C5",
+  "expected_aggregate_version": 3,
+  "aggregate_type": "run",
+  "aggregate_id": "run_01J2K3M4N5P6Q7R8S9T0A1B2C6",
+  "payload_schema_version": "quant.run.create.v1",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "payload": {
+    "strategy_id": "delta-rsi-polynomial-alpha",
+    "dataset_id": "crypto-binance-1m",
+    "protocol": "three_window_decay"
+  }
+}

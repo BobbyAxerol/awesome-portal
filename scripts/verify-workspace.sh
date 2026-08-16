@@ -48,6 +48,28 @@ for required in \
   "${ROOT_DIR}/apps/portal/backend/tests/test_planning_summary_adapter.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_quantbt_summary_adapter.py" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_portal_summary_service.py" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/domain/canonical.py" \
+  "${ROOT_DIR}/apps/portal/backend/tests/test_canonical_contracts.py" \
+  "${ROOT_DIR}/packages/contracts/README.md" \
+  "${ROOT_DIR}/packages/contracts/package.json" \
+  "${ROOT_DIR}/packages/contracts/package-lock.json" \
+  "${ROOT_DIR}/packages/contracts/contracts-snapshot.json" \
+  "${ROOT_DIR}/packages/contracts/tooling/snapshot.py" \
+  "${ROOT_DIR}/packages/contracts/schemas/common.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/problem.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/command-envelope.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/event-envelope.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/problem.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/command.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/event.valid.json" \
+  "${ROOT_DIR}/packages/contracts/generated/portal-api.d.ts" \
+  "${ROOT_DIR}/packages/contracts/vitest.config.ts" \
+  "${ROOT_DIR}/packages/contracts/test/fixtures.spec.ts" \
+  "${ROOT_DIR}/scripts/contracts-test.sh" \
+  "${ROOT_DIR}/upgrade/backend/BAR_06_SHARED_CONTRACT_AUTHORITY.md" \
+  "${ROOT_DIR}/upgrade/backend/adr/ADR-001-JAVASCRIPT_WORKSPACE_AND_LOCK_AUTHORITY.md" \
+  "${ROOT_DIR}/upgrade/backend/adr/ADR-002-OPAQUE_ID_FORMAT.md" \
+  "${ROOT_DIR}/upgrade/backend/adr/ADR-005-EVENT_SCHEMA_ENCODING_AND_REGISTRY.md" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_m0_freeze.py" \
   "${ROOT_DIR}/apps/portal/scripts/export_m0_freeze.py" \
   "${ROOT_DIR}/apps/portal/scripts/export_environment_report.py" \
@@ -166,6 +188,28 @@ for tracked_source in \
   apps/portal/backend/tests/test_planning_summary_adapter.py \
   apps/portal/backend/tests/test_quantbt_summary_adapter.py \
   apps/portal/backend/tests/test_portal_summary_service.py \
+  apps/portal/backend/src/portal_api/domain/canonical.py \
+  apps/portal/backend/tests/test_canonical_contracts.py \
+  packages/contracts/README.md \
+  packages/contracts/package.json \
+  packages/contracts/package-lock.json \
+  packages/contracts/contracts-snapshot.json \
+  packages/contracts/tooling/snapshot.py \
+  packages/contracts/schemas/common.v1.schema.json \
+  packages/contracts/schemas/problem.v1.schema.json \
+  packages/contracts/schemas/command-envelope.v1.schema.json \
+  packages/contracts/schemas/event-envelope.v1.schema.json \
+  packages/contracts/fixtures/problem.valid.json \
+  packages/contracts/fixtures/command.valid.json \
+  packages/contracts/fixtures/event.valid.json \
+  packages/contracts/generated/portal-api.d.ts \
+  packages/contracts/vitest.config.ts \
+  packages/contracts/test/fixtures.spec.ts \
+  scripts/contracts-test.sh \
+  upgrade/backend/BAR_06_SHARED_CONTRACT_AUTHORITY.md \
+  upgrade/backend/adr/ADR-001-JAVASCRIPT_WORKSPACE_AND_LOCK_AUTHORITY.md \
+  upgrade/backend/adr/ADR-002-OPAQUE_ID_FORMAT.md \
+  upgrade/backend/adr/ADR-005-EVENT_SCHEMA_ENCODING_AND_REGISTRY.md \
   apps/portal/backend/tests/test_m0_freeze.py \
   apps/portal/scripts/export_m0_freeze.py \
   apps/portal/scripts/export_environment_report.py \
