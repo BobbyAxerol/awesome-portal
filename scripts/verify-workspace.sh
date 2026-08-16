@@ -81,6 +81,7 @@ for required in \
   "${ROOT_DIR}/upgrade/backend/BAR_14_RUST_FAST_PATHS_GATE.md" \
   "${ROOT_DIR}/upgrade/backend/BAR_15_PLANNING_POSTGRES_CUTOVER.md" \
   "${ROOT_DIR}/upgrade/backend/BAR_16_RELEASE_DR_HARDENING.md" \
+  "${ROOT_DIR}/CLAUDE.md" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_approval_paper.py" \
   "${ROOT_DIR}/upgrade/backend/BAR_12_APPROVAL_PROMOTION_PAPER_SANDBOX.md" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_alpha_registry.py" \
@@ -275,6 +276,7 @@ for tracked_source in \
   upgrade/backend/BAR_14_RUST_FAST_PATHS_GATE.md \
   upgrade/backend/BAR_15_PLANNING_POSTGRES_CUTOVER.md \
   upgrade/backend/BAR_16_RELEASE_DR_HARDENING.md \
+  CLAUDE.md \
   apps/portal/backend/tests/test_approval_paper.py \
   upgrade/backend/BAR_12_APPROVAL_PROMOTION_PAPER_SANDBOX.md \
   apps/portal/backend/tests/test_alpha_registry.py \
