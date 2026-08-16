@@ -192,7 +192,7 @@ class PortalSummarySection(SummaryModel):
         return MappingProxyType(dict(value))
 
     @field_serializer("metrics")
-    def serialize_metrics(self, value: Mapping[str, EvidenceValue]) -> dict[str, object]:
+    def serialize_metrics(self, value: Mapping[str, EvidenceValue]) -> dict[str, EvidenceValue]:
         return dict(value)
 
 

@@ -81,6 +81,10 @@ for required in \
   "${ROOT_DIR}/upgrade/backend/BAR_14_RUST_FAST_PATHS_GATE.md" \
   "${ROOT_DIR}/upgrade/backend/BAR_15_PLANNING_POSTGRES_CUTOVER.md" \
   "${ROOT_DIR}/upgrade/backend/BAR_16_RELEASE_DR_HARDENING.md" \
+  "${ROOT_DIR}/upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md" \
+  "${ROOT_DIR}/upgrade/PAPER_TO_LIVE_EXECUTION_PORTAL_BACKEND_UIUX_ADJUSTMENT_SPEC_v0.6_vi.md" \
+  "${ROOT_DIR}/upgrade/DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md" \
+  "${ROOT_DIR}/upgrade/STRATEGY_IMPORT_AND_RUNTIME_CONTRACT.md" \
   "${ROOT_DIR}/CLAUDE.md" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_approval_paper.py" \
   "${ROOT_DIR}/upgrade/backend/BAR_12_APPROVAL_PROMOTION_PAPER_SANDBOX.md" \
@@ -151,6 +155,9 @@ for required in \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-links.v1.schema.json" \
   "${ROOT_DIR}/upgrade/backend/BAR_02_COMPATIBILITY_BOUNDARIES_AND_PARITY_FREEZE.md" \
   "${ROOT_DIR}/upgrade/backend/BAR_03_OPERATIONAL_INGRESS_BOUNDARY.md" \
+  "${ROOT_DIR}/deploy/cloudflared/config.example.yml" \
+  "${ROOT_DIR}/deploy/nginx/portal-loopback.conf" \
+  "${ROOT_DIR}/deploy/edge/README.md" \
   "${ROOT_DIR}/deploy/nginx/portal.conf" \
   "${ROOT_DIR}/apps/control-api/package.json" \
   "${ROOT_DIR}/apps/control-api/package-lock.json" \
@@ -276,6 +283,10 @@ for tracked_source in \
   upgrade/backend/BAR_14_RUST_FAST_PATHS_GATE.md \
   upgrade/backend/BAR_15_PLANNING_POSTGRES_CUTOVER.md \
   upgrade/backend/BAR_16_RELEASE_DR_HARDENING.md \
+  upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md \
+  upgrade/PAPER_TO_LIVE_EXECUTION_PORTAL_BACKEND_UIUX_ADJUSTMENT_SPEC_v0.6_vi.md \
+  upgrade/DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md \
+  upgrade/STRATEGY_IMPORT_AND_RUNTIME_CONTRACT.md \
   CLAUDE.md \
   apps/portal/backend/tests/test_approval_paper.py \
   upgrade/backend/BAR_12_APPROVAL_PROMOTION_PAPER_SANDBOX.md \
@@ -344,6 +355,9 @@ for tracked_source in \
   apps/portal/strategy/PROTECTED_SHA256 \
   upgrade/backend/BAR_02_COMPATIBILITY_BOUNDARIES_AND_PARITY_FREEZE.md \
   upgrade/backend/BAR_03_OPERATIONAL_INGRESS_BOUNDARY.md \
+  deploy/cloudflared/config.example.yml \
+  deploy/nginx/portal-loopback.conf \
+  deploy/edge/README.md \
   deploy/nginx/portal.conf \
   apps/control-api/package.json \
   apps/control-api/package-lock.json \

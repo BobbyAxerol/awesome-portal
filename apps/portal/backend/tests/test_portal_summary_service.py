@@ -463,7 +463,8 @@ async def test_healthy_sources_produce_available_schema_valid_summary() -> None:
         section.availability.state == "available" for section in summary.sections
     )
     assert summary.registry_counts.by_maturity["AVAILABLE"] == 2
-    assert summary.registry_counts.by_maturity["COMMISSIONED"] == 11
+    assert summary.registry_counts.by_maturity["PROTOTYPE"] == 2
+    assert summary.registry_counts.by_maturity["COMMISSIONED"] == 9
     assert summary.registry_counts.blocking_concerns == 5
     payload = summary.model_dump(mode="json")
     _validate_summary(payload)
@@ -926,8 +927,8 @@ def test_registry_counts_exact_for_default_source() -> None:
 
     assert dict(summary_counts.by_maturity) == {
         "AVAILABLE": 2,
-        "PROTOTYPE": 0,
-        "COMMISSIONED": 11,
+        "PROTOTYPE": 2,
+        "COMMISSIONED": 9,
         "BLOCKED": 0,
         "HIDDEN": 0,
         "DEPRECATED": 0,

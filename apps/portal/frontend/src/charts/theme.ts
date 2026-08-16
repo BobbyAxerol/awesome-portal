@@ -1,19 +1,14 @@
 /** ECharts theme — single source for chart styling (§27.7 rule 9). */
 import type { EChartsOption } from "echarts";
 
-const ink = "#1c2532";
-const inkFaint = "#939db0";
-const lineSoft = "#efede4";
-const accent = "#0f4c5c";
-const good = "#1e7b4f";
-const bad = "#b43a3a";
+import { activeTheme, canvasTokens, roleColorsFor, vizTokensFor, withAlpha } from "../styles/tokens";
 
-export const roleColors = {
-  is: "#7a8699",
-  oos: "#0f4c5c",
-  holdout_live: "#9a6a1f",
-  stitched: "#0f4c5c",
-};
+const t = canvasTokens(activeTheme());
+const { ink, inkFaint, lineSoft, accent, good, bad, paperRaised, line } = t;
+const accentFill = withAlpha(accent, 0.08);
+const legendInactive = vizTokensFor(activeTheme()).legendInactive;
+
+export const roleColors = roleColorsFor(activeTheme());
 
 export function baseOption(extra: EChartsOption = {}): EChartsOption {
   return {
@@ -27,8 +22,8 @@ export function baseOption(extra: EChartsOption = {}): EChartsOption {
     grid: { left: 56, right: 20, top: 40, bottom: 48, containLabel: true },
     tooltip: {
       trigger: "axis",
-      backgroundColor: "#ffffff",
-      borderColor: "#e3e0d7",
+      backgroundColor: paperRaised,
+      borderColor: line,
       textStyle: { color: ink, fontSize: 11, fontFamily: "JetBrains Mono, monospace" },
       axisPointer: { lineStyle: { color: inkFaint } },
     },
@@ -39,11 +34,11 @@ export function baseOption(extra: EChartsOption = {}): EChartsOption {
       itemWidth: 10,
       itemHeight: 10,
       textStyle: { color: inkFaint, fontSize: 11, fontFamily: "JetBrains Mono, monospace" },
-      inactiveColor: "#c9c5ba",
+      inactiveColor: legendInactive,
     },
     xAxis: {
       type: "time",
-      axisLine: { lineStyle: { color: "#e3e0d7" } },
+      axisLine: { lineStyle: { color: line } },
       axisLabel: { color: inkFaint, fontSize: 11, fontFamily: "JetBrains Mono, monospace" },
       splitLine: { show: false },
     },
@@ -54,7 +49,7 @@ export function baseOption(extra: EChartsOption = {}): EChartsOption {
     },
     dataZoom: [
       { type: "inside", throttle: 50 },
-      { type: "slider", height: 18, bottom: 0, borderColor: "#e3e0d7", fillerColor: "rgba(15,76,92,.08)" },
+      { type: "slider", height: 18, bottom: 0, borderColor: line, fillerColor: accentFill },
     ],
     ...extra,
   };

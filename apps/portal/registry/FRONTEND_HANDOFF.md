@@ -107,6 +107,13 @@ Rule bắt buộc:
 `maturity=AVAILABLE` **không** nghĩa là dependency đang reachable — badge
 runtime luôn dùng `availability.state`, không dùng maturity.
 
+**Ngữ nghĩa `environments` (chốt theo quyết định codex):** là danh sách môi
+trường nơi feature **được phép chạy/liệt kê khi có runtime**. Feature
+`COMMISSIONED` (brief/wireframe) luôn hiển thị ở mọi môi trường — filter
+environment chỉ áp cho feature có runtime (`AVAILABLE`/`PROTOTYPE`/
+`DEPRECATED`). Ví dụ `PAPER_TRADING` khai `["paper"]` vì chỉ chạy ở paper,
+nhưng nhóm Deployments vẫn thấy brief của nó khi đang ở môi trường research.
+
 ## 4. States bắt buộc và fixtures
 
 Canonical fixtures (schema-validated, deterministic) ở

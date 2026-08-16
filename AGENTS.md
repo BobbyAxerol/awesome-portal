@@ -26,6 +26,22 @@ Rules for these agents:
 - Cross-boundary changes (contracts, schemas, registry data) are reviewed by
   codex before merge; UI copy is Vietnamese with English technical terms.
 - All agents follow the contributor/branch rules below; only Bobby merges.
+- All agents must read the architecture supplement
+  `upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md`
+  (dual-cell Research SGP / Execution AWS HK, release flow, BAR-17→BAR-20
+  runway, UI synthesis from `Design/`). It supplements, never replaces, the
+  v0.4 guide; its authority order (section 2) is binding when documents
+  conflict.
+- Paper-flow onwards follows two further supplements, also non-replacing:
+  `upgrade/PAPER_TO_LIVE_EXECUTION_PORTAL_BACKEND_UIUX_ADJUSTMENT_SPEC_v0.6_vi.md`
+  (paper→live backend/UIUX adjustment spec) and
+  `upgrade/DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md` (trading DB schema
+  guide: 88 tables / 2 views across 6 layers).
+- Strategy import (U14) follows the design note
+  `upgrade/STRATEGY_IMPORT_AND_RUNTIME_CONTRACT.md`: imported strategies enter
+  through the same adapter port as the built-in `delta-rsi-polynomial-alpha`
+  and must mirror its spec/output/endpoint contract; browser never executes
+  arbitrary source.
 
 ## Source layout and boundaries
 

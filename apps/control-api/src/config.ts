@@ -7,12 +7,27 @@ const EnvSchema = z.object({
   AUTH_MODE: z.enum(AUTH_MODES).default("cloudflare_access_local_password"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   PORTAL_PUBLIC_ORIGIN: z.string().min(1).default("http://localhost:8080"),
-  CLOUDFLARE_TEAM_DOMAIN: z.string().min(1).optional(),
-  CLOUDFLARE_ACCESS_ISSUER: z.string().min(1).optional(),
-  CLOUDFLARE_ACCESS_AUD: z.string().min(1).optional(),
-  CLOUDFLARE_ACCESS_JWKS_URI: z.string().min(1).optional(),
+  CLOUDFLARE_TEAM_DOMAIN: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(1).optional(),
+  ),
+  CLOUDFLARE_ACCESS_ISSUER: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(1).optional(),
+  ),
+  CLOUDFLARE_ACCESS_AUD: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(1).optional(),
+  ),
+  CLOUDFLARE_ACCESS_JWKS_URI: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(1).optional(),
+  ),
   CLOUDFLARE_ALLOWED_EMAIL_DOMAIN: z.string().default("azdag.com"),
-  INTERNAL_PRINCIPAL_SECRET: z.string().min(16).optional(),
+  INTERNAL_PRINCIPAL_SECRET: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(16).optional(),
+  ),
   SESSION_IDLE_SECONDS: z.coerce.number().int().positive().default(30 * 60),
   SESSION_ABSOLUTE_SECONDS: z.coerce.number().int().positive().default(8 * 3600),
   ACTIVATION_TTL_SECONDS: z.coerce.number().int().positive().default(24 * 3600),

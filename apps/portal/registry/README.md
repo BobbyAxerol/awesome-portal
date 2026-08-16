@@ -39,5 +39,10 @@ validated `GET /api/v1/portal/registry` and `GET /api/v1/portal/summary`
 endpoints; see `FRONTEND_HANDOFF.md`. Runtime availability, authorization
 enforcement and dynamic summaries remain backend responsibilities.
 
+`environments` on a feature means the environments where the feature is
+allowed to run/be listed once it has runtime availability; `COMMISSIONED`
+briefs stay visible in every environment and environment filters apply only
+to runtime features (`AVAILABLE`/`PROTOTYPE`/`DEPRECATED`).
+
 The architecture and validation invariants are defined in
 [`upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md`](../../../upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md).

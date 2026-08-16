@@ -6,12 +6,14 @@ import { Check, Loader2 } from "lucide-react";
 
 import type { RunFoldPlan } from "../lib/api";
 import { fmtTimestamp } from "../lib/format";
+import { activeTheme, canvasTokens, vizTokensFor } from "../styles/tokens";
 
+const theme = activeTheme();
 const L = {
-  good: "#1E7B4F",
-  accent: "#0F4C5C",
-  pending: "#E3E0D7",
-  train: "#A8C6CE",
+  good: canvasTokens(theme).good,
+  accent: canvasTokens(theme).accent,
+  pending: vizTokensFor(theme).pending,
+  train: vizTokensFor(theme).train,
 };
 
 export function FoldGantt({
