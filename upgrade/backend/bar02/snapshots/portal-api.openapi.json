@@ -4239,6 +4239,179 @@
         "summary": "Strategy"
       }
     },
+    "/api/v1/alphas": {
+      "get": {
+        "operationId": "list_alphas_api_v1_alphas_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Alphas Api V1 Alphas Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Alphas",
+        "tags": [
+          "alphas"
+        ]
+      }
+    },
+    "/api/v1/alphas/{alpha_id}": {
+      "get": {
+        "operationId": "get_alpha_api_v1_alphas__alpha_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "alpha_id",
+            "required": true,
+            "schema": {
+              "title": "Alpha Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Alpha Api V1 Alphas  Alpha Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Alpha",
+        "tags": [
+          "alphas"
+        ]
+      }
+    },
+    "/api/v1/alphas/{alpha_id}/versions/{version}": {
+      "get": {
+        "operationId": "get_alpha_version_api_v1_alphas__alpha_id__versions__version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "alpha_id",
+            "required": true,
+            "schema": {
+              "title": "Alpha Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Alpha Version Api V1 Alphas  Alpha Id  Versions  Version  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Alpha Version",
+        "tags": [
+          "alphas"
+        ]
+      }
+    },
+    "/api/v1/alphas/{alpha_id}/versions/{version}/verify": {
+      "get": {
+        "operationId": "verify_alpha_version_api_v1_alphas__alpha_id__versions__version__verify_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "alpha_id",
+            "required": true,
+            "schema": {
+              "title": "Alpha Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Verify Alpha Version Api V1 Alphas  Alpha Id  Versions  Version  Verify Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify Alpha Version",
+        "tags": [
+          "alphas"
+        ]
+      }
+    },
     "/api/v1/data/catalog": {
       "get": {
         "operationId": "data_catalog_api_v1_data_catalog_get",

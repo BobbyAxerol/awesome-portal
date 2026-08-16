@@ -61,6 +61,12 @@ for required in \
   "${ROOT_DIR}/apps/portal/registry/schemas/data-catalog.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/data_catalog.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/api/routes_data.py" \
+  "${ROOT_DIR}/apps/portal/registry/alphas.v1.json" \
+  "${ROOT_DIR}/apps/portal/registry/schemas/alpha-manifest.v1.schema.json" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/alpha_registry.py" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/api/routes_alphas.py" \
+  "${ROOT_DIR}/apps/portal/backend/tests/test_alpha_registry.py" \
+  "${ROOT_DIR}/upgrade/backend/BAR_11_ALPHA_REGISTRY_AND_RESEARCH_PLATFORM.md" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_data_catalog.py" \
   "${ROOT_DIR}/upgrade/backend/BAR_10_DATA_CATALOG_AND_IMMUTABLE_SNAPSHOTS.md" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_engine_capabilities.py" \
@@ -231,6 +237,12 @@ for tracked_source in \
   apps/portal/registry/schemas/data-catalog.v1.schema.json \
   apps/portal/backend/src/portal_api/services/data_catalog.py \
   apps/portal/backend/src/portal_api/api/routes_data.py \
+  apps/portal/registry/alphas.v1.json \
+  apps/portal/registry/schemas/alpha-manifest.v1.schema.json \
+  apps/portal/backend/src/portal_api/services/alpha_registry.py \
+  apps/portal/backend/src/portal_api/api/routes_alphas.py \
+  apps/portal/backend/tests/test_alpha_registry.py \
+  upgrade/backend/BAR_11_ALPHA_REGISTRY_AND_RESEARCH_PLATFORM.md \
   apps/portal/backend/tests/test_data_catalog.py \
   upgrade/backend/BAR_10_DATA_CATALOG_AND_IMMUTABLE_SNAPSHOTS.md \
   apps/portal/backend/tests/test_engine_capabilities.py \

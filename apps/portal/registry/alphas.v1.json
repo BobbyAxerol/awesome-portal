@@ -1,0 +1,80 @@
+{
+  "alphas": [
+    {
+      "schema_version": "alpha-manifest/v1",
+      "alpha_id": "delta-rsi-polynomial",
+      "version": "1.0.0",
+      "name": "Delta RSI Polynomial",
+      "owner": {
+        "team": "quant-research",
+        "maintainers": [
+          "bobby"
+        ]
+      },
+      "entrypoint": "strategy.delta_rsi:DeltaRsiStrategyAdapter",
+      "artifact": {
+        "type": "python-wheel",
+        "digest": "sha256:4117b87006525d576aef7559c001002f18ea9f78e9fa83c64187d2776f4e9d18"
+      },
+      "strategy": {
+        "family": "momentum",
+        "input_kind": "target_signal",
+        "supported_endpoint_ids": [
+          "walk_forward"
+        ],
+        "execution_contracts": [
+          "close_target_v2"
+        ],
+        "determinism": {
+          "seed_required": true,
+          "external_io": false
+        }
+      },
+      "data_requirements": {
+        "asset_classes": [
+          "crypto"
+        ],
+        "columns": [
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume"
+        ],
+        "timeframes": [
+          "1h",
+          "4h",
+          "1d"
+        ],
+        "warmup_bars": 300,
+        "point_in_time": true,
+        "funding": "optional",
+        "borrow": "none",
+        "corporate_actions": "none"
+      },
+      "parameters": {
+        "schema": "schemas/parameters.schema.json",
+        "manager_exposed": [
+          "window",
+          "rsi_l",
+          "signalLength",
+          "len_atr1",
+          "len_atr2",
+          "rvol",
+          "len_vol",
+          "slpercent"
+        ],
+        "immutable_for_live": [
+          "execution_delay"
+        ]
+      },
+      "lifecycle": {
+        "stage": "RESEARCH",
+        "quarantined": false,
+        "quarantine_reason": null,
+        "certification": "golden-parity-v1",
+        "promotion_evidence": []
+      }
+    }
+  ]
+}

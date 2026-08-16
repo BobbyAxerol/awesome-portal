@@ -31,6 +31,7 @@ from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.api.routes import router
 from portal_api.api.ingress import IngressContextMiddleware, ingress_request_id
 from portal_api.api.routes_portal import router as router_portal
+from portal_api.api.routes_alphas import router as router_alphas
 from portal_api.api.routes_data import router as router_data
 from portal_api.api.routes_runs import router as router_runs
 from portal_api.domain.errors import PortalDomainError
@@ -38,6 +39,7 @@ from portal_api.repositories import ArtifactRepository
 from portal_api.repositories.portal_links import PortalLinksRepository
 from portal_api.repositories.portal_registry import PortalRegistryRepository
 from portal_api.services import PreflightService
+from portal_api.services.alpha_registry import AlphaRegistry
 from portal_api.services.data_catalog import DataCatalogService, SnapshotStore
 from portal_api.services.engine_capabilities import EngineCapabilityService
 from portal_api.services.portal_links import PortalLinksService
@@ -147,6 +149,7 @@ def create_app(
         registry_repository.registry_root
     )
     app.state.data_catalog = DataCatalogService(registry_repository.registry_root)
+    app.state.alpha_registry = AlphaRegistry(registry_repository.registry_root)
     app.state.snapshot_store = SnapshotStore(
         Path(os.getenv("PORTAL_SNAPSHOT_ROOT", str(Path(os.getenv("PORTAL_ARTIFACT_ROOT", "artifacts/runs")) / "snapshots")))
     )
@@ -230,6 +233,7 @@ def create_app(
     app.include_router(router_portal)
     app.include_router(router_runs)
     app.include_router(router_data)
+    app.include_router(router_alphas)
     return app
 
 
