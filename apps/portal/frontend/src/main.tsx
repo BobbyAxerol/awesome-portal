@@ -8,6 +8,7 @@ import "@fontsource/jetbrains-mono/500.css";
 import "@fontsource/jetbrains-mono/600.css";
 import "./styles/tokens.css";
 import "./styles/base.css";
+import "./styles/shell.css";
 import "./styles/print.css";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
