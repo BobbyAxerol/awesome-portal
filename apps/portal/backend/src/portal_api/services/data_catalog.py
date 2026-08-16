@@ -176,20 +176,20 @@ class SnapshotStore:
             raise DataCatalogError(
                 f"snapshot {snapshot_id} failed quality: {', '.join(quality.reason_codes)}"
             )
+        identity = SnapshotIdentity(
+            snapshot_id=snapshot_id,
+            family_id=family.family_id,
+            kind=family.kind,
+            schema_version=family.schema_version,
+            content_hash=content_hash,
+            lineage=lineage,
+            produced_at=produced_at,
+            bounds=(str(frame.index.min()), str(frame.index.max())),
+            row_count=len(frame),
+        )
         if not path.is_dir():
             path.mkdir(parents=True, exist_ok=True)
             (path / "frame.parquet").write_bytes(encoded)
-            identity = SnapshotIdentity(
-                snapshot_id=snapshot_id,
-                family_id=family.family_id,
-                kind=family.kind,
-                schema_version=family.schema_version,
-                content_hash=content_hash,
-                lineage=lineage,
-                produced_at=produced_at,
-                bounds=(str(frame.index.min()), str(frame.index.max())),
-                row_count=len(frame),
-            )
             (path / "identity.json").write_text(
                 json.dumps(
                     {

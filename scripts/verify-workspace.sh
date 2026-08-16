@@ -67,6 +67,20 @@ for required in \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/api/routes_alphas.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/approval_authority.py" \
   "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/paper_ledger.py" \
+  "${ROOT_DIR}/apps/portal/backend/src/portal_api/services/live_control.py" \
+  "${ROOT_DIR}/apps/portal/backend/tests/test_live_control.py" \
+  "${ROOT_DIR}/apps/portal/scripts/benchmark_query_path.py" \
+  "${ROOT_DIR}/apps/portal/backend/tests/test_benchmark_gate.py" \
+  "${ROOT_DIR}/upgrade/backend/bar14/benchmark-report.json" \
+  "${ROOT_DIR}/apps/portal/scripts/export_release_report.py" \
+  "${ROOT_DIR}/apps/portal/backend/tests/test_release_report.py" \
+  "${ROOT_DIR}/upgrade/backend/bar16/release-report.json" \
+  "${ROOT_DIR}/features/roadmap-task-board/backend/app/infrastructure/cutover.py" \
+  "${ROOT_DIR}/features/roadmap-task-board/backend/tests/test_cutover.py" \
+  "${ROOT_DIR}/upgrade/backend/BAR_13_LIVE_CONTROL_AND_OPERATIONAL_SAFETY.md" \
+  "${ROOT_DIR}/upgrade/backend/BAR_14_RUST_FAST_PATHS_GATE.md" \
+  "${ROOT_DIR}/upgrade/backend/BAR_15_PLANNING_POSTGRES_CUTOVER.md" \
+  "${ROOT_DIR}/upgrade/backend/BAR_16_RELEASE_DR_HARDENING.md" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_approval_paper.py" \
   "${ROOT_DIR}/upgrade/backend/BAR_12_APPROVAL_PROMOTION_PAPER_SANDBOX.md" \
   "${ROOT_DIR}/apps/portal/backend/tests/test_alpha_registry.py" \
@@ -247,6 +261,20 @@ for tracked_source in \
   apps/portal/backend/src/portal_api/api/routes_alphas.py \
   apps/portal/backend/src/portal_api/services/approval_authority.py \
   apps/portal/backend/src/portal_api/services/paper_ledger.py \
+  apps/portal/backend/src/portal_api/services/live_control.py \
+  apps/portal/backend/tests/test_live_control.py \
+  apps/portal/scripts/benchmark_query_path.py \
+  apps/portal/backend/tests/test_benchmark_gate.py \
+  upgrade/backend/bar14/benchmark-report.json \
+  apps/portal/scripts/export_release_report.py \
+  apps/portal/backend/tests/test_release_report.py \
+  upgrade/backend/bar16/release-report.json \
+  features/roadmap-task-board/backend/app/infrastructure/cutover.py \
+  features/roadmap-task-board/backend/tests/test_cutover.py \
+  upgrade/backend/BAR_13_LIVE_CONTROL_AND_OPERATIONAL_SAFETY.md \
+  upgrade/backend/BAR_14_RUST_FAST_PATHS_GATE.md \
+  upgrade/backend/BAR_15_PLANNING_POSTGRES_CUTOVER.md \
+  upgrade/backend/BAR_16_RELEASE_DR_HARDENING.md \
   apps/portal/backend/tests/test_approval_paper.py \
   upgrade/backend/BAR_12_APPROVAL_PROMOTION_PAPER_SANDBOX.md \
   apps/portal/backend/tests/test_alpha_registry.py \
