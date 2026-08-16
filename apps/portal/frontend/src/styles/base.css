@@ -336,3 +336,232 @@
     border-width: 0;
   }
 }
+
+/* ==========================================================================
+ * v1 design system — form and surface primitives.
+ * Everything resolves through the U02 tokens; no literal colour or size.
+ * ========================================================================== */
+
+@layer components {
+  /* --- Fields ----------------------------------------------------------- */
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+  .field-label {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--ink-faint);
+  }
+  .field-required {
+    color: var(--bad);
+  }
+  .field-suffix {
+    margin-left: auto;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--ink-faint);
+  }
+  .field-hint {
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--ink-faint);
+  }
+  .field-error {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--bad);
+  }
+  /* The invalid border is paired with the message above; colour alone would
+   * not survive greyscale or convey the reason. */
+  .field[data-invalid="true"] .input {
+    border-color: var(--bad);
+  }
+
+  .field-grid {
+    display: grid;
+    gap: var(--space-2) var(--space-3);
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 640px) {
+    .field-grid[data-columns="2"] {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .field-grid[data-columns="3"] {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .field-span {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .toggle-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: 6px 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .toggle-field:last-child {
+    border-bottom: 0;
+  }
+  .toggle-field-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+
+  /* --- Surfaces --------------------------------------------------------- */
+
+  .panel {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--paper-raised);
+  }
+  .panel-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .panel-title {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .subsection-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-faint);
+  }
+  .panel-actions {
+    margin-left: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .panel-body {
+    padding: var(--space-4);
+  }
+
+  .section-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+  .section-heading-actions {
+    margin-left: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .toolbar[data-align="end"] {
+    justify-content: flex-end;
+  }
+  .toolbar[data-align="between"] {
+    justify-content: space-between;
+  }
+
+  .callout {
+    border-left: 2px solid var(--ink-faint);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    background: var(--paper-sunken);
+    padding: var(--space-2) var(--space-3);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+  .callout[data-tone="warning"] {
+    border-left-color: var(--state-degraded);
+  }
+  .callout[data-tone="danger"] {
+    border-left-color: var(--bad);
+  }
+  .callout[data-tone="muted"] {
+    border-left-color: var(--line);
+  }
+  .callout-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+
+  /* --- Stepper ---------------------------------------------------------- */
+
+  .stepper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+  .stepper-step {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 5px var(--space-3);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    color: var(--ink-soft);
+    transition: background var(--motion-fast) var(--motion-easing);
+  }
+  .stepper-step:hover {
+    background: var(--paper-sunken);
+    color: var(--ink);
+  }
+  .stepper-step-active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .stepper-index {
+    font-size: 10px;
+    min-width: 16px;
+    text-align: center;
+    color: var(--ink-faint);
+  }
+  .stepper-step[data-state="complete"] .stepper-index {
+    color: var(--good);
+  }
+  .stepper-step[data-state="error"] .stepper-index {
+    color: var(--bad);
+  }
+  .stepper-step[data-state="error"] .stepper-label {
+    color: var(--bad);
+  }
+}
