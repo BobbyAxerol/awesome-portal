@@ -23,6 +23,12 @@ const EnvSchema = z.object({
   LOGIN_LOCK_ATTEMPTS: z.coerce.number().int().positive().default(10),
   LOGIN_LOCK_SECONDS: z.coerce.number().int().positive().default(15 * 60),
   JWKS_CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(300),
+  PORTAL_API_BASE_URL: z.string().min(1).default("http://portal-api:8000"),
+  FEATURE_PROXY_PORTAL: z
+    .enum(["true", "false"])
+    .default("true"),
+  FEATURE_NATIVE_WORKSPACES: z.enum(["true", "false"]).default("true"),
+  OUTBOX_MAX_RESPONSE_BYTES: z.coerce.number().int().positive().default(64 * 1024),
 });
 
 export type ControlApiConfig = z.infer<typeof EnvSchema>;

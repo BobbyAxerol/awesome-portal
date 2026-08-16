@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { AuthError } from "./auth/auth.service";
+import { FacadeError } from "./facade/proxy.service";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -19,7 +20,7 @@ export class HttpErrorFilter implements ExceptionFilter {
     const requestId =
       (request.headers["x-request-id"] as string | undefined) ?? "unknown";
 
-    if (exception instanceof AuthError) {
+    if (exception instanceof AuthError || exception instanceof FacadeError) {
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },
         request_id: requestId,

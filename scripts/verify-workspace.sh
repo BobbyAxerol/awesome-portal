@@ -112,6 +112,16 @@ for required in \
   "${ROOT_DIR}/apps/control-api/tsconfig.json" \
   "${ROOT_DIR}/apps/control-api/vitest.config.ts" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000000_init-identity.sql" \
+  "${ROOT_DIR}/apps/control-api/migrations/1723680000001_control-facade.sql" \
+  "${ROOT_DIR}/apps/control-api/src/id.ts" \
+  "${ROOT_DIR}/apps/control-api/src/repos/workspaces.ts" \
+  "${ROOT_DIR}/apps/control-api/src/repos/runs.ts" \
+  "${ROOT_DIR}/apps/control-api/src/repos/outbox.ts" \
+  "${ROOT_DIR}/apps/control-api/src/facade/proxy.service.ts" \
+  "${ROOT_DIR}/apps/control-api/src/facade/facade.controller.ts" \
+  "${ROOT_DIR}/apps/control-api/src/facade/session.guard.ts" \
+  "${ROOT_DIR}/apps/control-api/test/facade.spec.ts" \
+  "${ROOT_DIR}/upgrade/backend/BAR_07_CONTROL_API_FACADE.md" \
   "${ROOT_DIR}/apps/control-api/src/main.ts" \
   "${ROOT_DIR}/apps/control-api/src/app.ts" \
   "${ROOT_DIR}/apps/control-api/src/app.module.ts" \
@@ -250,6 +260,16 @@ for tracked_source in \
   apps/control-api/tsconfig.json \
   apps/control-api/vitest.config.ts \
   apps/control-api/migrations/1723680000000_init-identity.sql \
+  apps/control-api/migrations/1723680000001_control-facade.sql \
+  apps/control-api/src/id.ts \
+  apps/control-api/src/repos/workspaces.ts \
+  apps/control-api/src/repos/runs.ts \
+  apps/control-api/src/repos/outbox.ts \
+  apps/control-api/src/facade/proxy.service.ts \
+  apps/control-api/src/facade/facade.controller.ts \
+  apps/control-api/src/facade/session.guard.ts \
+  apps/control-api/test/facade.spec.ts \
+  upgrade/backend/BAR_07_CONTROL_API_FACADE.md \
   apps/control-api/src/main.ts \
   apps/control-api/src/app.ts \
   apps/control-api/src/app.module.ts \
