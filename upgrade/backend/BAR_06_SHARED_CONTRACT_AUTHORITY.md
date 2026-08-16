@@ -81,7 +81,7 @@ Gates: `scripts/contracts-test.sh` (ajv + vitest + generated-type sync).
 - [x] ADR-001/002/005 written (Proposed for owner confirmation).
 - [x] Contracts workspace suite passes `6` tests plus the generated-type
   sync; canonical Python suite passes `7` tests; full Portal backend
-  regression passes `307 passed, 1 skipped`; full Planning backend passes
+  regression passes `308 passed, 1 skipped`; full Planning backend passes
   `18 passed`; workspace verification passes including the protected
   strategy hash.
 

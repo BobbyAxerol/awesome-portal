@@ -582,14 +582,16 @@ whether anything was pushed or deployed
 
 ## 14. Next backend architecture task
 
-BAR-01 (BE1–BE6), BAR-02 (BE1–BE3), BAR-03, BAR-04 and BAR-05 are complete:
+BAR-01 (BE1–BE6), BAR-02 (BE1–BE3), BAR-03, BAR-04, BAR-05 and BAR-06 are complete:
 registry/summary/links contracts and API, the parity snapshot freeze,
 additive artifact provenance, the cross-link sidecar, the operational ingress
 boundary, the thin identity BFF with the security matrix, and the M0
 reproducibility freeze (digest manifest, credential-free environment report,
-Planning export count/hash report, executable golden gate). The BFF still
-owns no routing authority; the gateway remains the single public entry until
-U10.
+Planning export count/hash report, executable golden gate), and the shared
+contract authority (`packages/contracts/` canonical schemas, generated
+OpenAPI types, breaking-change gate, ADR-001/002/005 proposals). The BFF
+still owns no routing authority; the gateway remains the single public
+entry until U10.
 
 Deep dives:
 
@@ -598,11 +600,13 @@ Deep dives:
 - [`upgrade/backend/BAR_03_OPERATIONAL_INGRESS_BOUNDARY.md`](./backend/BAR_03_OPERATIONAL_INGRESS_BOUNDARY.md)
 - [`upgrade/backend/BAR_04_THIN_IDENTITY_BFF.md`](./backend/BAR_04_THIN_IDENTITY_BFF.md)
 - [`upgrade/backend/BAR_05_REPRODUCIBILITY_FREEZE.md`](./backend/BAR_05_REPRODUCIBILITY_FREEZE.md)
+- [`upgrade/backend/BAR_06_SHARED_CONTRACT_AUTHORITY.md`](./backend/BAR_06_SHARED_CONTRACT_AUTHORITY.md)
 
-The next backend task is BAR-06, the shared contract authority for U09:
-canonical schemas for IDs, UTC timestamps, decimal values, RFC 7807 errors,
-idempotency, optimistic concurrency and event envelopes; snapshot the FastAPI
-compatibility OpenAPI and generate clients/types; add breaking-change CI and
-cross-language fixture compilation; and resolve ADR-001 (npm-to-pnpm) and
-ADR-002 (opaque ID format) before one JavaScript workspace/lock authority is
-chosen.
+The next backend task is BAR-07, the Control API façade expansion for U10:
+add modular boundaries for workspaces/projects, run registry/read models,
+audit and transactional outbox; proxy current services first and migrate
+route authority one vertical slice at a time behind feature flags; every
+write records actor, workspace, request, idempotency and expected aggregate
+version; the Command Center reads authoritative summaries with freshness
+metadata. Gate: all browser calls enter the Control API, permission and
+cross-workspace attacks fail server-side, and parity/rollback flags pass.

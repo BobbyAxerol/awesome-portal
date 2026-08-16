@@ -944,6 +944,14 @@ authority nghiệp vụ.
 
 - Current pyproject/package-lock/OpenAPI/test contracts exist per module.
 - Shared root orchestration exists; no formal packages/contracts workspace.
+- BAR-06 đã tạo `packages/contracts/`: canonical schemas (opaque IDs, UTC
+  timestamps, decimals, RFC 7807 problem, command envelope với idempotency +
+  optimistic concurrency, §6.7 event envelope), fixtures hợp lệ compile
+  cross-language (Python jsonschema + TS ajv), `generated/portal-api.d.ts`
+  từ frozen OpenAPI với sync gate, `contracts-snapshot.json` breaking-change
+  gate, Python canonical models (ProblemDocument/CommandEnvelope/
+  EventEnvelope), ADR-001/002/005 (Proposed). pnpm cutover và `packages/ui`
+  chờ follow-up slices theo ADR-001.
 
 **Description / To-do**
 

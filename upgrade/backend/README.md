@@ -44,7 +44,14 @@ Chúng không thay thế phase hoặc exit gate trong
   kernel, pins, OpenAPI, golden fixtures, config, control-api/frontend
   lockfiles), credential-free environment report, Planning export có
   `counts` + `content_hash`, `scripts/verify-m0-golden.sh` gate (27 tests).
-  Kế tiếp là BAR-06 (U09 shared contract authority).
+- [BAR-06 — Shared Contract Authority](./BAR_06_SHARED_CONTRACT_AUTHORITY.md)
+  — U09 foundation. **Complete:** `packages/contracts/` canonical schemas
+  (opaque IDs/UTC timestamps/decimals/RFC 7807 problem/command envelope với
+  idempotency + optimistic concurrency/§6.7 event envelope), cross-language
+  fixture compilation (Python jsonschema + TS ajv), generated
+  `portal-api.d.ts` từ frozen OpenAPI (sync gate), `contracts-snapshot.json`
+  breaking-change gate, Python canonical models, ADR-001/002/005 (Proposed
+  cho owner confirm). Kế tiếp là BAR-07 (U10 Control API façade).
 
 Agent chỉ được implement deep dive khi phase tương ứng đang active và owner đã
 giao scope. Tài liệu của phase sau là thiết kế trước, không phải implementation
