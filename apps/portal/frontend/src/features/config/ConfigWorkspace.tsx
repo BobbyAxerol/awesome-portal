@@ -1,18 +1,56 @@
-/** Complete run configuration workspace backed by the portal request schema. */
+/**
+ * New Run — the QuantBT Research configuration flow.
+ *
+ * The flow is explicit and ordered (v0.4 §P0.9): strategy → data → windows →
+ * parameters → optimization → review. Each step is validated on its own, so a
+ * problem is reported where it can be fixed instead of appearing as one
+ * preflight rejection at the end.
+ *
+ * Authority rules held here:
+ *  - the strategy list comes from the two registry projections, never from a
+ *    hard-coded id (strategy import contract §1);
+ *  - the protocol list comes from the capability manifest of the INSTALLED
+ *    engine release — an uncertified protocol is not offered (§4);
+ *  - the parameter editor refuses values outside the declared space (§2);
+ *  - the run request payload is unchanged, so the backend contract is frozen.
+ */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Play, RefreshCcw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { Badge, Collapsible, DefinitionList, SegmentedControl, StateView } from "../../components/ui";
-import { runPath } from "../quantbt/routes";
+import {
+  DateTimeField,
+  FieldGrid,
+  FieldSpan,
+  NumberField,
+  SelectField,
+  TextField,
+  ToggleField,
+} from "../../components/form";
+import { Badge, Collapsible, DefinitionList, StateView } from "../../components/ui";
+import { Callout, Panel, SectionHeading, Stepper, Toolbar, type StepDefinition } from "../../components/surface";
 import { api, type ParameterSpec } from "../../lib/api";
 import { fmtCount } from "../../lib/format";
+import {
+  buildCatalog,
+  certifiedProtocols,
+  parseAlphas,
+  parseCapabilities,
+  protocolLimits,
+  type CatalogEntry,
+} from "../../portal/strategyCatalog";
+import { runPath } from "../quantbt/routes";
+import { ParameterEditor, ParameterSummary } from "./ParameterEditor";
+import { StrategyDetail, StrategyPicker } from "./StrategyPicker";
 import { ThreeWindowEditor } from "./ThreeWindowEditor";
 import { WindowTimeline } from "./WindowTimeline";
-
-type Protocol = "three_window_decay" | "advanced_walk_forward";
-type EditableSpec = ParameterSpec;
+import {
+  checkResourceCeiling,
+  readDeclaredSpace,
+  seedSearchSpace,
+  validateSearchSpace,
+} from "./parameterSpace";
 
 export interface WindowState {
   isStart: string;
@@ -102,127 +140,188 @@ const DEFAULT_ADVANCED = {
   optimizationSchedule: "global",
 };
 
-function NumericInput({
-  label,
-  value,
-  onChange,
-  min,
-  step = "any",
-}: {
-  label: string;
-  value: number | null;
-  onChange: (value: number | null) => void;
-  min?: number;
-  step?: number | "any";
-}) {
-  return (
-    <label className="space-y-1">
-      <span className="label block">{label}</span>
-      <input
-        className="input w-full"
-        type="number"
-        min={min}
-        step={step}
-        value={value ?? ""}
-        onChange={(event) => onChange(event.target.value === "" ? null : Number(event.target.value))}
-      />
-    </label>
-  );
-}
+/** Human labels for protocol ids; unknown ids fall back to the raw id. */
+const PROTOCOL_LABELS: Record<string, string> = {
+  three_window_decay: "Three-Window Decay",
+  advanced_walk_forward: "Advanced Walk-Forward",
+};
 
-function SelectInput({
-  label,
-  value,
-  options,
-  onChange,
-  disabled = false,
-}: {
-  label: string;
-  value: string;
-  options: string[];
-  onChange: (value: string) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <label className="space-y-1">
-      <span className="label block">{label}</span>
-      <select className="input w-full" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
+const ACCOUNT_LABELS: Record<string, string> = {
+  initial_capital: "Vốn ban đầu",
+  leverage: "Đòn bẩy",
+  maintenance_ratio: "Maintenance ratio",
+  contract_size: "Contract size",
+  alloc_per_trade: "Phân bổ mỗi lệnh",
+  canonical_one_way_fee_rate: "Phí một chiều",
+  funding_rate: "Funding rate",
+};
 
-function ToggleInput({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) {
-  return (
-    <label className="flex items-center justify-between gap-3 border-b border-line-soft py-1.5 last:border-0">
-      <span className="mono text-[11px] text-ink-soft">{label}</span>
-      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
-    </label>
-  );
-}
+type StepId = "strategy" | "data" | "windows" | "parameters" | "optimization" | "review";
 
 export function ConfigWorkspace() {
   const navigate = useNavigate();
+
   const strategies = useQuery({ queryKey: ["strategies"], queryFn: api.strategies });
   const datasets = useQuery({ queryKey: ["datasets"], queryFn: api.datasets });
   const options = useQuery({ queryKey: ["config-options"], queryFn: api.configOptions });
-  const strategy = strategies.data?.[0];
+  const alphas = useQuery({ queryKey: ["alphas"], queryFn: api.alphas, staleTime: 5 * 60_000 });
+  const capabilities = useQuery({
+    queryKey: ["engine-capabilities"],
+    queryFn: api.engineCapabilities,
+    staleTime: 5 * 60_000,
+  });
 
-  const [protocol, setProtocol] = useState<Protocol>("three_window_decay");
-  const [datasetId, setDatasetId] = useState("crypto-binance-1m");
+  const capabilityDoc = useMemo(
+    () => (capabilities.data === undefined ? undefined : parseCapabilities(capabilities.data)),
+    [capabilities.data],
+  );
+  const catalog = useMemo(
+    () =>
+      buildCatalog(
+        strategies.data,
+        alphas.data === undefined ? undefined : parseAlphas(alphas.data),
+        capabilityDoc,
+      ),
+    [strategies.data, alphas.data, capabilityDoc],
+  );
+
+  const [step, setStep] = useState<StepId>("strategy");
+  const [strategyId, setStrategyId] = useState<string | null>(null);
+  const [protocol, setProtocol] = useState<string>("");
+  const [datasetId, setDatasetId] = useState("");
   const [windows, setWindows] = useState<WindowState>(DEFAULT_WINDOWS);
   const [symbol, setSymbol] = useState("ETHUSDT");
-  const [timeframe, setTimeframe] = useState("1h");
+  const [timeframe, setTimeframe] = useState("");
   const [trials, setTrials] = useState(400);
   const [earlyStopping, setEarlyStopping] = useState<number | null>(200);
   const [seed, setSeed] = useState<number | null>(42);
-  const [searchSpace, setSearchSpace] = useState<Record<string, EditableSpec>>({});
+  const [searchSpace, setSearchSpace] = useState<Record<string, ParameterSpec>>({});
   const [optimization, setOptimization] = useState(DEFAULT_OPTIMIZATION);
   const [account, setAccount] = useState(DEFAULT_ACCOUNT);
   const [execution, setExecution] = useState(DEFAULT_EXECUTION);
   const [advanced, setAdvanced] = useState(DEFAULT_ADVANCED);
   const [validatedKey, setValidatedKey] = useState("");
 
+  const selected = useMemo(
+    () => catalog.find((entry) => entry.strategyId === strategyId) ?? null,
+    [catalog, strategyId],
+  );
+
+  // Auto-select when the catalog offers exactly one runnable strategy: making
+  // the user click through a single-item list adds nothing.
   useEffect(() => {
-    if (!strategy || Object.keys(searchSpace).length) return;
-    setSearchSpace(
-      Object.fromEntries(
-        Object.entries(strategy.parameter_space).map(([key, value]) => [
-          key,
-          {
-            kind: Number.isInteger(value.low) && Number.isInteger(value.high) && Number.isInteger(value.step)
-              ? "int_range"
-              : "float_range",
-            low: value.low,
-            high: value.high,
-            step: value.step,
-          },
-        ]),
-      ),
-    );
-  }, [strategy, searchSpace]);
+    if (strategyId || catalog.length === 0) return;
+    const runnable = catalog.filter((entry) => entry.blockedReason === null);
+    if (runnable.length === 1) setStrategyId(runnable[0].strategyId);
+  }, [catalog, strategyId]);
+
+  const declaredSpace = useMemo(
+    () => readDeclaredSpace(selected?.runtime?.parameter_space),
+    [selected],
+  );
+
+  // Re-seed the editable space whenever the selected strategy changes: a space
+  // carried over from another strategy would be validated against the wrong
+  // contract.
+  useEffect(() => {
+    setSearchSpace(seedSearchSpace(declaredSpace));
+    setValidatedKey("");
+  }, [declaredSpace]);
 
   useEffect(() => {
-    if (!datasets.data?.length || datasets.data.some((item) => item.dataset_id === datasetId)) return;
+    if (selected?.defaultTimeframe && !timeframe) setTimeframe(selected.defaultTimeframe);
+  }, [selected, timeframe]);
+
+  useEffect(() => {
+    if (!datasets.data?.length) return;
+    if (datasets.data.some((item) => item.dataset_id === datasetId)) return;
     setDatasetId(datasets.data[0].dataset_id);
   }, [datasets.data, datasetId]);
 
+  /* --- Protocol availability, declared not inferred ---------------------- */
+
+  const certified = useMemo(() => certifiedProtocols(capabilityDoc), [capabilityDoc]);
+  const availableProtocols = useMemo(() => {
+    const published = options.data?.protocols ?? [];
+    if (certified.length === 0) return published;
+    return published.filter((item) => certified.includes(item));
+  }, [options.data, certified]);
+
+  useEffect(() => {
+    if (availableProtocols.length && !availableProtocols.includes(protocol)) {
+      setProtocol(availableProtocols[0]);
+    }
+  }, [availableProtocols, protocol]);
+
+  const limits = useMemo(() => protocolLimits(capabilityDoc, protocol), [capabilityDoc, protocol]);
+
+  /* --- Validation per step ---------------------------------------------- */
+
   const dataset = datasets.data?.find((item) => item.dataset_id === datasetId) ?? datasets.data?.[0];
-  const dataContractError =
-    dataset?.availability !== "available"
-      ? dataset?.unavailable_reason ?? "Historical backtest data is unavailable."
-      : protocol === "three_window_decay" && !windows.holdoutEnd
-        ? "Holdout end-exclusive is required for historical queries."
-        : protocol === "advanced_walk_forward" && (!advanced.dataStart || !advanced.dataEnd)
-          ? "Analysis start and end-exclusive are required for historical queries."
-          : "";
-  const setOpt = (key: string, value: string | number | boolean | null) =>
-    setOptimization((current) => ({ ...current, [key]: value }));
+  const timeframes = dataset?.supported_timeframes?.length
+    ? dataset.supported_timeframes
+    : selected?.timeframes.length
+      ? selected.timeframes
+      : ["15m", "1h", "4h", "1d"];
+
+  const strategyError = !selected
+    ? "Chưa chọn strategy."
+    : (selected.blockedReason ?? null);
+
+  const dataError =
+    !dataset
+      ? "Chưa có dataset nào khả dụng."
+      : dataset.availability !== "available"
+        ? (dataset.unavailable_reason ?? "Dữ liệu historical cho backtest không khả dụng.")
+        : !symbol
+          ? "Cần nhập symbol."
+          : !timeframe
+            ? "Cần chọn timeframe."
+            : selected && selected.timeframes.length && !selected.timeframes.includes(timeframe)
+              ? `Strategy chỉ khai báo timeframe ${selected.timeframes.join(", ")}.`
+              : null;
+
+  const windowError = useMemo(() => {
+    if (protocol === "three_window_decay") {
+      if (windows.isEnd !== windows.oosStart) return "OOS phải bắt đầu đúng nơi IS kết thúc.";
+      if (windows.oosEnd !== windows.holdoutStart) return "Holdout phải bắt đầu đúng nơi OOS kết thúc.";
+      if (windows.isStart >= windows.isEnd || windows.oosStart >= windows.oosEnd) {
+        return "Mọi window phải có độ dài dương.";
+      }
+      if (!windows.holdoutEnd) return "Cần holdout end-exclusive cho truy vấn historical.";
+      return null;
+    }
+    if (protocol === "advanced_walk_forward") {
+      if (!advanced.dataStart || !advanced.dataEnd) {
+        return "Cần analysis start và end-exclusive cho truy vấn historical.";
+      }
+      if (advanced.dataStart >= advanced.dataEnd) return "Analysis end phải sau analysis start.";
+      return null;
+    }
+    return null;
+  }, [protocol, windows, advanced]);
+
+  const validation = useMemo(
+    () => validateSearchSpace(searchSpace, declaredSpace),
+    [searchSpace, declaredSpace],
+  );
+  const ceilingError = checkResourceCeiling(
+    Object.keys(searchSpace).length,
+    limits.maxParameterSpaceEntries,
+  );
+  const parameterError =
+    validation.errors.length > 0
+      ? `${validation.errors.length} tham số nằm ngoài parameter space đã công bố.`
+      : ceilingError;
+
+  const trialsError =
+    limits.maxTrials !== null && trials > limits.maxTrials
+      ? `Engine release công bố trần ${limits.maxTrials} trial.`
+      : null;
+
+  const blockingError = strategyError ?? dataError ?? windowError ?? parameterError ?? trialsError;
+
+  /* --- Request payload — shape unchanged from the frozen contract -------- */
 
   const payload = useMemo(() => {
     const calibration =
@@ -260,7 +359,7 @@ export function ConfigWorkspace() {
             optimization,
           };
     return {
-      strategy_id: strategy?.strategy_id ?? "delta-rsi-polynomial-alpha",
+      strategy_id: selected?.strategyId ?? "",
       dataset_id: dataset?.dataset_id ?? datasetId,
       symbol,
       timeframe,
@@ -270,9 +369,10 @@ export function ConfigWorkspace() {
       account,
       execution,
     };
-  }, [account, advanced, dataset, datasetId, earlyStopping, execution, optimization, protocol, searchSpace, seed, strategy, symbol, timeframe, trials, windows]);
+  }, [account, advanced, dataset, datasetId, earlyStopping, execution, optimization, protocol, searchSpace, seed, selected, symbol, timeframe, trials, windows]);
 
   const payloadKey = useMemo(() => JSON.stringify(payload), [payload]);
+
   const preflight = useMutation({
     mutationFn: (variables: { body: typeof payload; key: string }) => api.preflight(variables.body),
     onSuccess: (_data, variables) => setValidatedKey(variables.key),
@@ -282,243 +382,471 @@ export function ConfigWorkspace() {
     onSuccess: (runId) => navigate(runPath(runId)),
   });
 
-  const overlapError = useMemo(() => {
-    if (protocol !== "three_window_decay") return null;
-    if (windows.isEnd !== windows.oosStart) return "OOS must start where IS ends";
-    if (windows.oosEnd !== windows.holdoutStart) return "Holdout Live must start where OOS ends";
-    if (windows.isStart >= windows.isEnd || windows.oosStart >= windows.oosEnd) return "Every window must have positive duration";
-    return null;
-  }, [protocol, windows]);
-
   const preflightValid = preflight.data?.valid === true && validatedKey === payloadKey;
 
   const handleRun = () => {
     if (!preflightValid) {
       preflight.mutate(
         { body: payload, key: payloadKey },
-        {
-          onSuccess: (response) => {
-            if (response.valid) createRun.mutate();
-          },
-        },
+        { onSuccess: (response) => { if (response.valid) createRun.mutate(); } },
       );
       return;
     }
     createRun.mutate();
   };
 
-  if (strategies.isLoading || datasets.isLoading || options.isLoading) return <StateView kind="loading" />;
-  if (strategies.isError || datasets.isError || options.isError) {
-    return <StateView kind="failed" message="Không tải được schema cấu hình" onRetry={() => void (strategies.refetch(), datasets.refetch(), options.refetch())} />;
+  /* --- Steps ------------------------------------------------------------- */
+
+  const steps: StepDefinition[] = [
+    { id: "strategy", label: "Strategy", error: strategyError, complete: !strategyError },
+    { id: "data", label: "Dữ liệu", error: dataError, complete: !dataError },
+    { id: "windows", label: "Walk-forward", error: windowError, complete: !windowError },
+    {
+      id: "parameters",
+      label: "Tham số",
+      error: parameterError,
+      complete: !parameterError && Object.keys(searchSpace).length > 0,
+    },
+    { id: "optimization", label: "Tối ưu", error: trialsError, complete: !trialsError },
+    { id: "review", label: "Kiểm tra & chạy", complete: preflightValid },
+  ];
+
+  /* --- Loading / error --------------------------------------------------- */
+
+  const bootstrapping = strategies.isLoading || datasets.isLoading || options.isLoading;
+  const bootstrapFailed = strategies.isError || datasets.isError || options.isError;
+
+  if (bootstrapping) return <StateView kind="loading" message="Đang tải contract cấu hình…" />;
+  if (bootstrapFailed) {
+    return (
+      <StateView
+        kind="failed"
+        message="Không tải được contract cấu hình. Portal không dựng form tạm để tránh gửi run sai."
+        onRetry={() => {
+          void strategies.refetch();
+          void datasets.refetch();
+          void options.refetch();
+        }}
+      />
+    );
   }
 
-  const timeframes = dataset?.supported_timeframes?.length ? dataset.supported_timeframes : ["15m", "1h", "4h", "1d"];
-  const fieldGrid = "grid grid-cols-2 gap-2";
-
   return (
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[430px_minmax(0,1fr)]">
-      <aside className="space-y-3 self-start xl:max-h-[calc(100vh-76px)] xl:overflow-y-auto xl:pr-2">
-        <div>
-          <h1 className="section-title">Run Configuration</h1>
-          <p className="dek">Configure market tape, WFO, search space and account.</p>
-        </div>
+    <div className="space-y-4">
+      <SectionHeading
+        title="New Run"
+        description="Cấu hình một backtest walk-forward. Mỗi bước được kiểm tra riêng trước khi gửi preflight."
+      />
 
-        <div>
-          <div className="label mb-1.5">Protocol</div>
-          <SegmentedControl
-            value={protocol}
-            onChange={setProtocol}
-            options={[
-              { value: "three_window_decay", label: "Three-Window" },
-              { value: "advanced_walk_forward", label: "Advanced WFO" },
-            ]}
-          />
-        </div>
+      <Stepper steps={steps} activeId={step} onSelect={(id) => setStep(id as StepId)} />
 
-        <Collapsible title="Market data" defaultOpen>
-          <div className={fieldGrid}>
-            <label className="col-span-2 space-y-1">
-              <span className="label block">Dataset</span>
-              <select className="input w-full" value={datasetId} onChange={(event) => setDatasetId(event.target.value)}>
-                {datasets.data?.map((item) => <option key={item.dataset_id} value={item.dataset_id}>{item.dataset_id} · {item.availability}</option>)}
-              </select>
-            </label>
-            <label className="space-y-1"><span className="label block">Symbol</span><input className="input w-full" value={symbol} onChange={(event) => setSymbol(event.target.value.toUpperCase())} /></label>
-            <SelectInput label="Timeframe" value={timeframe} options={timeframes} onChange={setTimeframe} />
-          </div>
-          <p className="mt-2 text-[11px] text-ink-faint">Historical source · backtest/research only. Realtime and paper-trading data are separate.</p>
-          {dataset?.availability !== "available" ? <div className="mt-2 rounded-md border border-accent-2/40 bg-accent-2-soft p-2 text-[11px] text-accent-2">{dataset?.unavailable_reason}</div> : null}
-        </Collapsible>
+      <div className="run-config-grid">
+        <div className="min-w-0 space-y-4">
+          {step === "strategy" ? (
+            <Panel title="Chọn strategy">
+              {capabilities.isError ? (
+                <Callout tone="warning" title="Capability manifest không đọc được">
+                  Không xác nhận được engine release nào đang certify endpoint nào, nên danh sách
+                  protocol bên dưới lấy nguyên từ config options thay vì lọc theo capability.
+                </Callout>
+              ) : null}
+              <StrategyPicker
+                entries={catalog}
+                selectedId={strategyId}
+                isLoading={alphas.isLoading}
+                isError={strategies.isError}
+                onRetry={() => {
+                  void strategies.refetch();
+                  void alphas.refetch();
+                }}
+                onSelect={(entry: CatalogEntry) => {
+                  setStrategyId(entry.strategyId);
+                  setTimeframe(entry.defaultTimeframe ?? "");
+                  setStep("data");
+                }}
+              />
+            </Panel>
+          ) : null}
 
-        {protocol === "three_window_decay" ? (
-          <ThreeWindowEditor windows={windows} onChange={setWindows} />
-        ) : (
-          <Collapsible title="Walk-forward folds" defaultOpen>
-            <div className={fieldGrid}>
-              <label className="space-y-1"><span className="label block">Analysis start</span><input className="input w-full" type="datetime-local" value={advanced.dataStart.slice(0, 16)} onChange={(event) => setAdvanced({ ...advanced, dataStart: event.target.value ? new Date(event.target.value).toISOString() : "" })} /></label>
-              <label className="space-y-1"><span className="label block">End exclusive</span><input className="input w-full" type="datetime-local" value={advanced.dataEnd.slice(0, 16)} onChange={(event) => setAdvanced({ ...advanced, dataEnd: event.target.value ? new Date(event.target.value).toISOString() : "" })} /></label>
-              <label className="col-span-2 space-y-1"><span className="label block">Split mode / first OOS</span><input className="input w-full" value={advanced.splitMode} onChange={(event) => setAdvanced({ ...advanced, splitMode: event.target.value })} /></label>
-              <SelectInput label="Frequency" value={advanced.splitFrequency} options={options.data?.split_frequencies ?? []} onChange={(value) => setAdvanced({ ...advanced, splitFrequency: value })} />
-              <SelectInput label="Window" value={advanced.windowMode} options={options.data?.window_modes ?? []} onChange={(value) => setAdvanced({ ...advanced, windowMode: value })} />
-              {advanced.windowMode === "rolling" ? <label className="col-span-2 space-y-1"><span className="label block">Train window</span><input className="input w-full" value={advanced.trainWindow} onChange={(event) => setAdvanced({ ...advanced, trainWindow: event.target.value })} /></label> : null}
-              <NumericInput label="Min train bars" value={advanced.minTrainBars} min={1} step={1} onChange={(value) => setAdvanced({ ...advanced, minTrainBars: value ?? 1 })} />
-              <NumericInput label="Min test bars" value={advanced.minTestBars} min={1} step={1} onChange={(value) => setAdvanced({ ...advanced, minTestBars: value ?? 1 })} />
-              <NumericInput label="Signal fill value" value={advanced.fillValue} onChange={(value) => setAdvanced({ ...advanced, fillValue: value ?? 0 })} />
-            </div>
-          </Collapsible>
-        )}
+          {step === "data" ? (
+            <Panel title="Dữ liệu thị trường">
+              <FieldGrid>
+                <FieldSpan>
+                  <SelectField
+                    label="Dataset"
+                    value={datasetId}
+                    options={(datasets.data ?? []).map((item) => ({
+                      value: item.dataset_id,
+                      label: `${item.dataset_id} · ${item.availability}`,
+                    }))}
+                    onChange={setDatasetId}
+                    hint="Nguồn historical — chỉ dùng cho backtest/research. Realtime và paper là service riêng."
+                  />
+                </FieldSpan>
+                <TextField
+                  label="Symbol"
+                  value={symbol}
+                  onChange={setSymbol}
+                  transform={(value) => value.toUpperCase()}
+                  required
+                />
+                <SelectField
+                  label="Timeframe"
+                  value={timeframe}
+                  options={timeframes}
+                  onChange={setTimeframe}
+                  hint={selected?.timeframes.length ? `Strategy khai báo: ${selected.timeframes.join(", ")}` : undefined}
+                  required
+                />
+                <FieldSpan>
+                  <SelectField
+                    label="Protocol"
+                    value={protocol}
+                    options={availableProtocols.map((item) => ({
+                      value: item,
+                      label: PROTOCOL_LABELS[item] ?? item,
+                    }))}
+                    onChange={setProtocol}
+                    hint={
+                      certified.length
+                        ? `Chỉ hiện protocol mà engine release đang cài đã certify (${certified.length}).`
+                        : "Capability manifest chưa xác nhận — đang hiện toàn bộ protocol từ config options."
+                    }
+                  />
+                </FieldSpan>
+              </FieldGrid>
+              {dataError ? <Callout tone="danger">{dataError}</Callout> : null}
+            </Panel>
+          ) : null}
 
-        <Collapsible title="Search space" defaultOpen>
-          <div className="space-y-2">
-            {Object.entries(searchSpace).map(([key, spec]) => (
-              <div key={key} className="border-b border-line-soft pb-2 last:border-0">
-                <div className="mb-1 grid grid-cols-[1fr_120px] items-center gap-2">
-                  <span className="mono text-[11px] text-ink-soft">{key}</span>
-                  <select className="input" value={spec.kind} onChange={(event) => {
-                    const kind = event.target.value as EditableSpec["kind"];
-                    const next: EditableSpec = kind === "fixed" ? { kind, value: 0 } : kind === "categorical" ? { kind, values: [] } : { kind, low: 0, high: 1, step: kind === "int_range" ? 1 : 0.1 };
-                    setSearchSpace((current) => ({ ...current, [key]: next }));
-                  }}>
-                    {(["int_range", "float_range", "fixed", "categorical"] as const).map((kind) => <option key={kind} value={kind}>{kind}</option>)}
-                  </select>
-                </div>
-                {spec.kind === "int_range" || spec.kind === "float_range" ? (
-                  <div className="grid grid-cols-3 gap-1">
-                    {(["low", "high", "step"] as const).map((field) => <input key={field} aria-label={`${key} ${field}`} className="input" type="number" step="any" value={spec[field]} onChange={(event) => setSearchSpace((current) => ({ ...current, [key]: { ...spec, [field]: Number(event.target.value) } }))} />)}
+          {step === "windows" ? (
+            <Panel title={protocol === "three_window_decay" ? "Ba cửa sổ" : "Fold walk-forward"}>
+              {protocol === "three_window_decay" ? (
+                <ThreeWindowEditor windows={windows} onChange={setWindows} />
+              ) : (
+                <FieldGrid>
+                  <DateTimeField
+                    label="Analysis start"
+                    value={advanced.dataStart}
+                    onChange={(value) => setAdvanced({ ...advanced, dataStart: value })}
+                  />
+                  <DateTimeField
+                    label="End exclusive"
+                    value={advanced.dataEnd}
+                    onChange={(value) => setAdvanced({ ...advanced, dataEnd: value })}
+                  />
+                  <FieldSpan>
+                    <TextField
+                      label="Split mode / OOS đầu tiên"
+                      value={advanced.splitMode}
+                      onChange={(value) => setAdvanced({ ...advanced, splitMode: value })}
+                    />
+                  </FieldSpan>
+                  <SelectField
+                    label="Tần suất"
+                    value={advanced.splitFrequency}
+                    options={options.data?.split_frequencies ?? []}
+                    onChange={(value) => setAdvanced({ ...advanced, splitFrequency: value })}
+                  />
+                  <SelectField
+                    label="Window"
+                    value={advanced.windowMode}
+                    options={options.data?.window_modes ?? []}
+                    onChange={(value) => setAdvanced({ ...advanced, windowMode: value })}
+                  />
+                  {advanced.windowMode === "rolling" ? (
+                    <FieldSpan>
+                      <TextField
+                        label="Train window"
+                        value={advanced.trainWindow}
+                        onChange={(value) => setAdvanced({ ...advanced, trainWindow: value })}
+                      />
+                    </FieldSpan>
+                  ) : null}
+                  <NumberField
+                    label="Min train bars"
+                    value={advanced.minTrainBars}
+                    min={1}
+                    step={1}
+                    onChange={(value) => setAdvanced({ ...advanced, minTrainBars: value ?? 1 })}
+                  />
+                  <NumberField
+                    label="Min test bars"
+                    value={advanced.minTestBars}
+                    min={1}
+                    step={1}
+                    onChange={(value) => setAdvanced({ ...advanced, minTestBars: value ?? 1 })}
+                  />
+                  <NumberField
+                    label="Signal fill value"
+                    value={advanced.fillValue}
+                    onChange={(value) => setAdvanced({ ...advanced, fillValue: value ?? 0 })}
+                  />
+                </FieldGrid>
+              )}
+              {windowError ? <Callout tone="danger">{windowError}</Callout> : null}
+            </Panel>
+          ) : null}
+
+          {step === "parameters" ? (
+            <Panel title="Parameter space">
+              <ParameterEditor
+                searchSpace={searchSpace}
+                declared={declaredSpace}
+                validation={validation}
+                ceilingError={ceilingError}
+                onChange={setSearchSpace}
+                onResetAll={() => setSearchSpace(seedSearchSpace(declaredSpace))}
+              />
+            </Panel>
+          ) : null}
+
+          {step === "optimization" ? (
+            <>
+              <Panel title="Tối ưu">
+                <FieldGrid>
+                  {protocol === "advanced_walk_forward" ? (
+                    <>
+                      <SelectField
+                        label="Mode"
+                        value={advanced.optimizationMode}
+                        options={options.data?.optimization_modes ?? []}
+                        onChange={(value) => setAdvanced({ ...advanced, optimizationMode: value })}
+                      />
+                      <SelectField
+                        label="Schedule"
+                        value={advanced.optimizationSchedule}
+                        options={options.data?.optimization_schedules ?? []}
+                        onChange={(value) => setAdvanced({ ...advanced, optimizationSchedule: value })}
+                      />
+                    </>
+                  ) : null}
+                  <NumberField
+                    label="Optuna trials"
+                    value={trials}
+                    min={1}
+                    step={1}
+                    max={limits.maxTrials ?? undefined}
+                    error={trialsError}
+                    hint={limits.maxTrials !== null ? `Trần công bố: ${limits.maxTrials}` : undefined}
+                    onChange={(value) => setTrials(value ?? 1)}
+                  />
+                  <NumberField label="Early stopping" value={earlyStopping} min={1} step={1} onChange={setEarlyStopping} />
+                  <NumberField
+                    label="Random seed"
+                    value={seed}
+                    step={1}
+                    hint="Bắt buộc khi strategy khai báo determinism.seed_required."
+                    onChange={setSeed}
+                  />
+                  <SelectField
+                    label="Selection metric"
+                    value={String(protocol === "three_window_decay" ? "robust_decay" : optimization.candidate_selection_metric)}
+                    options={options.data?.candidate_selection_metrics ?? []}
+                    disabled={protocol === "three_window_decay"}
+                    disabledReason="Three-Window Decay khoá metric ở robust_decay."
+                    onChange={(value) => setOptimization((c) => ({ ...c, candidate_selection_metric: value }))}
+                  />
+                  <NumberField
+                    label="Trading days / năm"
+                    value={Number(optimization.scoring_trading_days)}
+                    min={1}
+                    step={1}
+                    hint="Lịch annualization cho Sharpe/Sortino: 365 crypto, 252 equities. Ghi vào config/request.json."
+                    onChange={(value) => setOptimization((c) => ({ ...c, scoring_trading_days: value ?? 365 }))}
+                  />
+                </FieldGrid>
+              </Panel>
+
+              <Collapsible title="Plateau & temporal robustness">
+                <FieldGrid>
+                  {(
+                    [
+                      ["top_is_fraction", "Top IS fraction"],
+                      ["decay_lambda", "Decay lambda"],
+                      ["decay_gamma", "Decay gamma"],
+                      ["flat_top_fraction", "Flat top fraction"],
+                      ["flat_eps", "DBSCAN eps"],
+                      ["plateau_quantile", "Plateau quantile"],
+                      ["temporal_weight", "Temporal weight"],
+                      ["plateau_weight", "Plateau weight"],
+                      ["dispersion_penalty", "Dispersion penalty"],
+                      ["q25_weight", "Q25 weight"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <NumberField
+                      key={key}
+                      label={label}
+                      value={Number(optimization[key])}
+                      onChange={(value) => setOptimization((c) => ({ ...c, [key]: value ?? 0 }))}
+                    />
+                  ))}
+                </FieldGrid>
+                <ToggleField
+                  label="Bootstrap penalty"
+                  checked={Boolean(optimization.use_bootstrap_penalty)}
+                  onChange={(value) => setOptimization((c) => ({ ...c, use_bootstrap_penalty: value }))}
+                />
+                <ToggleField
+                  label="Complexity penalty"
+                  checked={Boolean(optimization.use_complexity_penalty)}
+                  onChange={(value) => setOptimization((c) => ({ ...c, use_complexity_penalty: value }))}
+                />
+                <ToggleField
+                  label="Numba scoring"
+                  checked={Boolean(optimization.use_numba)}
+                  onChange={(value) => setOptimization((c) => ({ ...c, use_numba: value }))}
+                />
+              </Collapsible>
+
+              <Collapsible title="Tài khoản & khớp lệnh">
+                <FieldGrid>
+                  {(
+                    [
+                      "initial_capital",
+                      "leverage",
+                      "maintenance_ratio",
+                      "contract_size",
+                      "alloc_per_trade",
+                      "canonical_one_way_fee_rate",
+                      "funding_rate",
+                    ] as const
+                  ).map((key) => (
+                    <NumberField
+                      key={key}
+                      label={ACCOUNT_LABELS[key] ?? key}
+                      value={account[key] as number}
+                      min={key === "funding_rate" ? undefined : 0}
+                      onChange={(value) => setAccount({ ...account, [key]: value ?? 0 })}
+                    />
+                  ))}
+                  <NumberField
+                    label="Slippage"
+                    value={execution.slippage}
+                    min={0}
+                    onChange={(value) => setExecution({ ...execution, slippage: value ?? 0 })}
+                  />
+                  <SelectField
+                    label="Target mode"
+                    value={execution.target_mode}
+                    options={options.data?.target_modes ?? ["pct_equity"]}
+                    onChange={(value) => setExecution({ ...execution, target_mode: value })}
+                  />
+                </FieldGrid>
+                <ToggleField
+                  label="Funding enabled"
+                  checked={account.funding_enabled}
+                  onChange={(value) => setAccount({ ...account, funding_enabled: value })}
+                />
+                <ToggleField
+                  label="Pyramiding"
+                  checked={account.use_pyramiding}
+                  onChange={(value) => setAccount({ ...account, use_pyramiding: value })}
+                />
+              </Collapsible>
+            </>
+          ) : null}
+
+          {step === "review" ? (
+            <Panel title="Preflight TermSheet">
+              {validatedKey && validatedKey !== payloadKey ? (
+                <Callout tone="warning">Cấu hình đã đổi sau lần validate gần nhất — cần validate lại.</Callout>
+              ) : null}
+              {blockingError ? <Callout tone="danger">{blockingError}</Callout> : null}
+              {preflight.isPending ? <StateView kind="loading" message="Đang validate market tape và run contract…" /> : null}
+              {preflight.isError ? (
+                <StateView
+                  kind="failed"
+                  message={preflight.error.message}
+                  onRetry={() => preflight.mutate({ body: payload, key: payloadKey })}
+                />
+              ) : null}
+
+              {preflight.data ? (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge tone="pass">schema</Badge>
+                    <Badge tone="pass">boundaries</Badge>
+                    <Badge tone="pass">content hash</Badge>
+                    {preflight.data.windows.map((window) => (
+                      <span key={window.role} className="chip">
+                        {window.role} · {fmtCount(window.bars)} bars
+                      </span>
+                    ))}
                   </div>
-                ) : spec.kind === "fixed" ? (
-                  <input className="input w-full" value={String(spec.value ?? "")} onChange={(event) => setSearchSpace((current) => ({ ...current, [key]: { kind: "fixed", value: Number.isNaN(Number(event.target.value)) ? event.target.value : Number(event.target.value) } }))} />
-                ) : (
-                  <input className="input w-full" value={spec.values.join(", ")} placeholder="value1, value2" onChange={(event) => setSearchSpace((current) => ({ ...current, [key]: { kind: "categorical", values: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) } }))} />
-                )}
+                  <DefinitionList
+                    rows={[
+                      ["Strategy", `${selected?.displayName ?? "—"} · v${selected?.version ?? "—"}`],
+                      ["Dataset", preflight.data.dataset_id],
+                      ["Symbol / timeframe", `${preflight.data.symbol} · ${preflight.data.timeframe}`],
+                      ["Loaded rows", fmtCount(preflight.data.data_quality.rows)],
+                      ["Analysis rows", fmtCount(preflight.data.data_quality.analysis?.rows ?? preflight.data.data_quality.rows)],
+                      ["Missing bars", `${preflight.data.data_quality.missing_bar_count}`],
+                      ["Config hash", preflight.data.config_hash.slice(0, 12)],
+                    ]}
+                  />
+                </div>
+              ) : (
+                <p className="field-hint">Validate cấu hình hiện tại trước khi gửi run.</p>
+              )}
+
+              <div className="mt-4">
+                <ParameterSummary searchSpace={searchSpace} validation={validation} />
               </div>
-            ))}
-          </div>
-        </Collapsible>
 
-        <Collapsible title="Optimization" defaultOpen>
-          <div className={fieldGrid}>
-            {protocol === "advanced_walk_forward" ? <>
-              <SelectInput label="Mode" value={advanced.optimizationMode} options={options.data?.optimization_modes ?? []} onChange={(value) => setAdvanced({ ...advanced, optimizationMode: value })} />
-              <SelectInput label="Schedule" value={advanced.optimizationSchedule} options={options.data?.optimization_schedules ?? []} onChange={(value) => setAdvanced({ ...advanced, optimizationSchedule: value })} />
-            </> : null}
-            <NumericInput label="Optuna trials" value={trials} min={1} step={1} onChange={(value) => setTrials(value ?? 1)} />
-            <NumericInput label="Early stopping" value={earlyStopping} min={1} step={1} onChange={setEarlyStopping} />
-            <NumericInput label="Random seed" value={seed} step={1} onChange={setSeed} />
-            <SelectInput label="Selection metric" value={String(protocol === "three_window_decay" ? "robust_decay" : optimization.candidate_selection_metric)} options={options.data?.candidate_selection_metrics ?? []} disabled={protocol === "three_window_decay"} onChange={(value) => setOpt("candidate_selection_metric", value)} />
-            <NumericInput label="Top IS fraction" value={Number(optimization.top_is_fraction)} min={0} onChange={(value) => setOpt("top_is_fraction", value ?? 0.1)} />
-            <NumericInput label="Top IS k" value={optimization.top_is_k as number | null} min={1} step={1} onChange={(value) => setOpt("top_is_k", value)} />
-            <NumericInput label="Decay lambda" value={Number(optimization.decay_lambda)} min={0} onChange={(value) => setOpt("decay_lambda", value ?? 0)} />
-            <NumericInput label="Decay gamma" value={Number(optimization.decay_gamma)} min={0} onChange={(value) => setOpt("decay_gamma", value ?? 0)} />
-            <SelectInput label="Scoring backend" value={String(optimization.scoring_backend)} options={["endpoint", "proxy"]} onChange={(value) => setOpt("scoring_backend", value)} />
-            <label className="space-y-1" title="Annualization calendar for Sharpe/Sortino/etc: 365 for crypto, 252 for equities. Ghi vào config/request.json — auditable.">
-              <span className="label block">Trading days / year (annualization)</span>
-              <input className="input w-full" type="number" min={1} step={1} value={Number(optimization.scoring_trading_days)} onChange={(event) => setOpt("scoring_trading_days", Number(event.target.value))} />
-            </label>
-            <NumericInput label="Min trades / year" value={optimization.min_trades_per_year as number | null} min={0} onChange={(value) => setOpt("min_trades_per_year", value)} />
-            <NumericInput label="Trade penalty" value={optimization.trade_penalty_factor as number | null} min={0} onChange={(value) => setOpt("trade_penalty_factor", value)} />
-          </div>
-          <ToggleInput label="Use Numba scoring" checked={Boolean(optimization.use_numba)} onChange={(value) => setOpt("use_numba", value)} />
-        </Collapsible>
-
-        <Collapsible title="Plateau & temporal robustness">
-          <div className={fieldGrid}>
-            <NumericInput label="Flat top fraction" value={Number(optimization.flat_top_fraction)} onChange={(value) => setOpt("flat_top_fraction", value ?? 0.1)} />
-            <NumericInput label="DBSCAN eps" value={Number(optimization.flat_eps)} onChange={(value) => setOpt("flat_eps", value ?? 0.15)} />
-            <NumericInput label="Min samples" value={Number(optimization.flat_min_samples)} step={1} onChange={(value) => setOpt("flat_min_samples", value ?? 3)} />
-            <SelectInput label="Selector" value={String(optimization.flat_selector)} options={["medoid", "centroid"]} onChange={(value) => setOpt("flat_selector", value)} />
-            <NumericInput label="Plateau quantile" value={Number(optimization.plateau_quantile)} onChange={(value) => setOpt("plateau_quantile", value ?? 0.25)} />
-            <NumericInput label="Median weight" value={Number(optimization.plateau_median_weight)} onChange={(value) => setOpt("plateau_median_weight", value ?? 0.25)} />
-            <NumericInput label="Std penalty" value={Number(optimization.plateau_std_penalty)} onChange={(value) => setOpt("plateau_std_penalty", value ?? 0.5)} />
-            <NumericInput label="Size bonus" value={Number(optimization.plateau_size_bonus)} onChange={(value) => setOpt("plateau_size_bonus", value ?? 0.01)} />
-            <NumericInput label="IS subperiods" value={Number(optimization.is_subperiods)} step={1} onChange={(value) => setOpt("is_subperiods", value ?? 6)} />
-            <NumericInput label="Q25 weight" value={Number(optimization.q25_weight)} onChange={(value) => setOpt("q25_weight", value ?? 0.3)} />
-            <NumericInput label="Dispersion penalty" value={Number(optimization.dispersion_penalty)} onChange={(value) => setOpt("dispersion_penalty", value ?? 0.5)} />
-            <NumericInput label="Temporal weight" value={Number(optimization.temporal_weight)} onChange={(value) => setOpt("temporal_weight", value ?? 0.65)} />
-            <NumericInput label="Plateau weight" value={Number(optimization.plateau_weight)} onChange={(value) => setOpt("plateau_weight", value ?? 0.35)} />
-          </div>
-          <ToggleInput label="Bootstrap penalty" checked={Boolean(optimization.use_bootstrap_penalty)} onChange={(value) => setOpt("use_bootstrap_penalty", value)} />
-          <ToggleInput label="Complexity penalty" checked={Boolean(optimization.use_complexity_penalty)} onChange={(value) => setOpt("use_complexity_penalty", value)} />
-        </Collapsible>
-
-        <Collapsible title="SBB, regime & GARCH">
-          <div className={fieldGrid}>
-            <NumericInput label="SBB samples" value={Number(optimization.sbb_samples)} step={1} onChange={(value) => setOpt("sbb_samples", value ?? 256)} />
-            <NumericInput label="Block length" value={Number(optimization.sbb_block_length)} step={1} onChange={(value) => setOpt("sbb_block_length", value ?? 20)} />
-            <NumericInput label="SBB decay lambda" value={Number(optimization.sbb_decay_lambda)} onChange={(value) => setOpt("sbb_decay_lambda", value ?? 0.5)} />
-            <NumericInput label="SBB std penalty" value={Number(optimization.sbb_std_penalty)} onChange={(value) => setOpt("sbb_std_penalty", value ?? 0.1)} />
-            <SelectInput label="Simulation" value={String(optimization.sbb_simulation)} options={["stationary", "regime", "stress", "garch"]} onChange={(value) => setOpt("sbb_simulation", value)} />
-            <NumericInput label="Regime count" value={Number(optimization.regime_count)} step={1} onChange={(value) => setOpt("regime_count", value ?? 3)} />
-            <NumericInput label="Regime lookback" value={Number(optimization.regime_lookback)} step={1} onChange={(value) => setOpt("regime_lookback", value ?? 20)} />
-            <NumericInput label="Stress vol multiplier" value={Number(optimization.stress_vol_multiplier)} onChange={(value) => setOpt("stress_vol_multiplier", value ?? 1)} />
-            <NumericInput label="GARCH p" value={Number(optimization.garch_p)} step={1} onChange={(value) => setOpt("garch_p", value ?? 1)} />
-            <NumericInput label="GARCH q" value={Number(optimization.garch_q)} step={1} onChange={(value) => setOpt("garch_q", value ?? 1)} />
-            <SelectInput label="GARCH dist" value={String(optimization.garch_dist)} options={["t", "normal", "gaussian", "studentst"]} onChange={(value) => setOpt("garch_dist", value)} />
-            <NumericInput label="GARCH vol multiplier" value={Number(optimization.garch_vol_multiplier)} onChange={(value) => setOpt("garch_vol_multiplier", value ?? 1)} />
-          </div>
-        </Collapsible>
-
-        <Collapsible title="Account & execution" defaultOpen>
-          <div className={fieldGrid}>
-            {(["initial_capital", "leverage", "maintenance_ratio", "contract_size", "alloc_per_trade", "canonical_one_way_fee_rate", "funding_rate"] as const).map((key) => (
-              <NumericInput key={key} label={key.replaceAll("_", " ")} value={account[key] as number} min={key === "funding_rate" ? undefined : 0} onChange={(value) => setAccount({ ...account, [key]: value ?? 0 })} />
-            ))}
-            <NumericInput label="Slippage" value={execution.slippage} min={0} onChange={(value) => setExecution({ ...execution, slippage: value ?? 0 })} />
-            <SelectInput label="Target mode" value={execution.target_mode} options={options.data?.target_modes ?? ["pct_equity"]} onChange={(value) => setExecution({ ...execution, target_mode: value })} />
-            <SelectInput label="Backend" value={execution.backend} options={["auto"]} onChange={(value) => setExecution({ ...execution, backend: value })} />
-          </div>
-          <ToggleInput label="Funding enabled" checked={account.funding_enabled} onChange={(value) => setAccount({ ...account, funding_enabled: value })} />
-          <ToggleInput label="Use pyramiding" checked={account.use_pyramiding} onChange={(value) => setAccount({ ...account, use_pyramiding: value })} />
-        </Collapsible>
-      </aside>
-
-      <section className="min-w-0 space-y-4">
-        {protocol === "three_window_decay" ? <WindowTimeline windows={windows} overlapError={overlapError} /> : <AdvancedSummary advanced={advanced} />}
-        <div className="card p-4">
-          <div className="mb-3 flex items-center justify-between gap-3"><span className="label">Preflight TermSheet</span>{validatedKey && validatedKey !== payloadKey ? <Badge tone="pending">configuration changed</Badge> : null}</div>
-          {preflight.isPending ? <StateView kind="loading" message="Validating market tape and run contract…" /> : null}
-          {preflight.isError ? <StateView kind="failed" message={preflight.error.message} onRetry={() => preflight.mutate({ body: payload, key: payloadKey })} /> : null}
-          {overlapError ? <div className="mb-3 rounded-md border border-bad/40 bg-bad-bg p-3"><span className="mono text-[12px] font-semibold text-bad">{overlapError}</span></div> : null}
-          {dataContractError ? <div className="mb-3 rounded-md border border-accent-2/40 bg-accent-2-soft p-3"><span className="mono text-[12px] font-semibold text-accent-2">{dataContractError}</span></div> : null}
-          {preflight.data ? (
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-2"><Badge tone="pass">schema</Badge><Badge tone="pass">boundaries</Badge><Badge tone="pass">content hash</Badge>{preflight.data.windows.map((window) => <span key={window.role} className="chip">{window.role} · {fmtCount(window.bars)} bars</span>)}</div>
-              <DefinitionList rows={[
-                ["Dataset", preflight.data.dataset_id],
-                ["Symbol / timeframe", `${preflight.data.symbol} · ${preflight.data.timeframe}`],
-                ["Loaded rows", fmtCount(preflight.data.data_quality.rows)],
-                ["Analysis rows", fmtCount(preflight.data.data_quality.analysis?.rows ?? preflight.data.data_quality.rows)],
-                ["Missing bars", `${preflight.data.data_quality.missing_bar_count}`],
-                ["Config hash", preflight.data.config_hash.slice(0, 12)],
-              ]} />
-            </div>
-          ) : <p className="text-[12px] text-ink-faint">Validate the current configuration before submitting a run.</p>}
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <button type="button" className="btn-ghost" onClick={() => preflight.mutate({ body: payload, key: payloadKey })} disabled={Boolean(overlapError || dataContractError) || preflight.isPending}><RefreshCcw size={12} />Validate</button>
-            <button type="button" className="btn-primary" disabled={Boolean(overlapError || dataContractError) || createRun.isPending} onClick={handleRun}><Play size={13} />{createRun.isPending ? "Submitting…" : preflight.isPending ? "Validating…" : "Run backtest"}</button>
-            {createRun.isError ? <span className="mono text-[12px] text-bad">{createRun.error.message}</span> : null}
-          </div>
+              <Toolbar>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => preflight.mutate({ body: payload, key: payloadKey })}
+                  disabled={Boolean(blockingError) || preflight.isPending}
+                  title={blockingError ?? undefined}
+                >
+                  <RefreshCcw size={12} />
+                  Validate
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={Boolean(blockingError) || createRun.isPending}
+                  title={blockingError ?? undefined}
+                  onClick={handleRun}
+                >
+                  <Play size={13} />
+                  {createRun.isPending ? "Đang gửi…" : preflight.isPending ? "Đang validate…" : "Chạy backtest"}
+                </button>
+                {createRun.isError ? <span className="mono text-[12px] text-bad">{createRun.error.message}</span> : null}
+              </Toolbar>
+            </Panel>
+          ) : null}
         </div>
-        <div className="card p-4">
-          <div className="label mb-2">Request preview</div>
-          <pre className="max-h-[520px] overflow-auto rounded bg-sunken p-3 text-[11px] leading-5 text-ink-soft">{JSON.stringify(payload, null, 2)}</pre>
-        </div>
-      </section>
-    </div>
-  );
-}
 
-function AdvancedSummary({ advanced }: { advanced: typeof DEFAULT_ADVANCED }) {
-  return (
-    <div className="card p-4">
-      <div className="label mb-3">Advanced WFO protocol</div>
-      <DefinitionList rows={[
-        ["Analysis tape", `${advanced.dataStart || "dataset start"} → ${advanced.dataEnd || "dataset end"}`],
-        ["Split", `${advanced.splitMode} · ${advanced.splitFrequency}`],
-        ["Window", advanced.windowMode === "rolling" ? `rolling ${advanced.trainWindow}` : "expanding"],
-        ["Optimization", `${advanced.optimizationMode} · ${advanced.optimizationSchedule}`],
-        ["Boundary positions", "carry"],
-      ]} />
+        <aside className="run-config-aside">
+          <Panel title="Strategy đang chọn">
+            <StrategyDetail entry={selected} />
+          </Panel>
+
+          {protocol === "three_window_decay" ? (
+            <WindowTimeline windows={windows} overlapError={windowError} />
+          ) : (
+            <Panel title="Advanced WFO">
+              <DefinitionList
+                rows={[
+                  ["Analysis tape", `${advanced.dataStart || "dataset start"} → ${advanced.dataEnd || "dataset end"}`],
+                  ["Split", `${advanced.splitMode} · ${advanced.splitFrequency}`],
+                  ["Window", advanced.windowMode === "rolling" ? `rolling ${advanced.trainWindow}` : "expanding"],
+                  ["Optimization", `${advanced.optimizationMode} · ${advanced.optimizationSchedule}`],
+                  ["Boundary positions", "carry"],
+                ]}
+              />
+            </Panel>
+          )}
+
+          <Collapsible title="Request preview">
+            <pre className="request-preview">{JSON.stringify(payload, null, 2)}</pre>
+          </Collapsible>
+        </aside>
+      </div>
     </div>
   );
 }

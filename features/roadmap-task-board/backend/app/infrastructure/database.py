@@ -63,17 +63,18 @@ CREATE TABLE IF NOT EXISTS webhook_deliveries (
     next_attempt_at TEXT,
     claim_token TEXT,
     lease_expires_at TEXT,
+    channel TEXT NOT NULL DEFAULT 'discord',
     created_at TEXT NOT NULL,
     sent_at TEXT,
     FOREIGN KEY(activity_id) REFERENCES activity_events(id)
 );
-CREATE UNIQUE INDEX IF NOT EXISTS idx_webhook_delivery_activity ON webhook_deliveries (activity_id);
 CREATE INDEX IF NOT EXISTS idx_webhook_due ON webhook_deliveries (status, next_attempt_at, created_at);
 """
 
 
 MIGRATION_INITIAL = "0001_initial"
 MIGRATION_DELIVERY_CLAIMS = "0002_delivery_claims"
+MIGRATION_LARK_CHANNEL = "0003_lark_channel"
 
 
 def connect(path: Path) -> sqlite3.Connection:
@@ -118,6 +119,16 @@ def initialize(path: Path) -> None:
         connection.execute(
             "INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (?, datetime('now'))",
             (MIGRATION_DELIVERY_CLAIMS,),
+        )
+        _ensure_column(connection, "webhook_deliveries", "channel TEXT NOT NULL DEFAULT 'discord'")
+        connection.execute("DROP INDEX IF EXISTS idx_webhook_delivery_activity")
+        connection.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_webhook_delivery_activity_channel "
+            "ON webhook_deliveries (activity_id, channel)"
+        )
+        connection.execute(
+            "INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (?, datetime('now'))",
+            (MIGRATION_LARK_CHANNEL,),
         )
         # Keep a restored/migrated file self-contained before an operational
         # command atomically moves it into place.  Normal request traffic uses

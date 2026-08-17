@@ -42,7 +42,12 @@ cuối file này) thay vì tự sửa backend.
 5. `upgrade/BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md` — hiểu backend đã
    giao những contract gì (BAR-01→BAR-16 complete; BAR-17→BAR-20 là runway
    dual-cell kế tiếp) để không làm trùng/sai.
-5b. `upgrade/STRATEGY_IMPORT_AND_RUNTIME_CONTRACT.md` — contract cho strategy
+5b. `upgrade/v1.1_ROADMAP_TASKBOARD_UIUX_PLAN.md` — plan hoàn thiện Roadmap +
+   Task Board (copy nội dung doc gốc, bỏ INTERPRETATION/EVIDENCE/PORTAL
+   PREVIEW, mermaid đẹp, roadmap vibe sáng tạo, task board flow hay hơn,
+   fonts/tickbox theo design system, webhook Lark khi kéo task — secret chỉ
+   ở env, không được lộ).
+5c. `upgrade/STRATEGY_IMPORT_AND_RUNTIME_CONTRACT.md` — contract cho strategy
    picker + Import Wizard: built-in `delta-rsi-polynomial-alpha` + imported
    alpha đi qua cùng một adapter port; bảng endpoint §7.2 + output/index/
    timestamp bắt buộc (§3) — đọc trước khi thiết kế màn New Run/Import.
