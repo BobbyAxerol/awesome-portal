@@ -218,6 +218,12 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 | **Users & Access (ADMIN)** | §8.6 mục 5 | List/đổi role/reset credential/revoke sessions/disable. Mọi write mang `x-portal-csrf`, **fail closed** khi thiếu cookie CSRF. Role change nói trước là sẽ thu hồi session. One-time credential hiện **một lần**, không lưu, không log. Row của chính mình được đánh dấu. Non-ADMIN thấy `denied` và **không** gọi list (`enabled: isAdmin`) — biên vẫn là gateway, 403 báo nguyên văn. Route xem §8.4 điểm 4. 9 test + 2 snapshot. |
 | **SSE cho run events** | §8.6 mục 6 (tuỳ chọn — đã làm) | `useRunEvents` mở `/api/runs/{id}/events`; frame chỉ mang state nên **invalidate query**, không patch bản sao run vào cache. Không có `EventSource` hoặc mất kết nối → `streaming:false` và polling giữ nhịp cũ. Khi đang stream, polling **chậm lại (8s floor) chứ không tắt**: stream mở rồi im lặng không được trông giống run đứng yên. Đóng ở frame terminal và khi unmount. 10 test (gồm no-EventSource + dropped connection). |
 | **Alpha 360° (version detail)** | §8.6 mục 7 | `/research/quantbt/alphas/:alphaId/:version`. Lifecycle là **track chung** DRAFT→LIVE (khoảng cách tới live là thông tin, không chỉ tên stage); certification/evidence trống nói rõ là trống; quarantine trích nguyên văn lý do của service; verify digest hiện cả hai digest. **Không có nút promote** — chuyển stage thuộc certification. ALPHA_POOL vẫn `COMMISSIONED` nên màn nằm dưới quantbt. 9 test + 2 snapshot. |
+| **Sửa 3 lỗi nghĩa (audit toàn màn)** | v0.5 §12.3, §13; rule §3.5 | (1) `metricTone` tô xanh mọi metric `direction:"higher"` ≥ 0 → Sharpe 13.20, Calmar 7231 đều "good" dù engine không phán xét; equity xanh vĩnh viễn (màu không bao giờ đổi = không mang tin). Giờ tone theo `toneBasis`: `sign` (return/CAGR), chỉ-mặt-xấu (Sharpe<0, profit factor<1 — đúng định nghĩa của nó), drawdown về **neutral** vì mọi run đều có drawdown và engine chưa công bố threshold. (2) Step rail tick `✓` các bước **chưa mở** (validation rỗng thì trivially valid) → tick giờ cần `visited && !error`, screen-reader nói "chưa mở"/"đã mở, không có lỗi". (3) Danh tính run in **hai lần** (header chip + passport strip cách nhau 40px) → header nhường passport trên run route; nút copy trước đây label là chính run id, giờ có động từ. Kèm: `fmtPct` in `24837.88%` không group → mọi formatter qua một helper. |
+| **Typography: vai trò font + scale** | v0.4 §25, v0.5 §10.2 | `table td, table th` là JetBrains Mono → **mọi** nhãn và câu trong bảng đều mono (tệ nhất với dấu tiếng Việt ở 12px). Mono giờ chỉ thuộc về **số** (`.mono`, `td.num`); column header và row-scope header là micro-label chữ prose; `.label` cũng chuyển sang prose. Scale 10/11/12/13/14/16/20/26 (4 bậc trong 3px) → 10/11/12/13/15/18/23/30. Hai file token đổi cùng nhau + gate parity mới cho type scale (đã negative-test). |
+| **Chart: theme sống + craft** | v0.5 §12.2/§12.3 | **Bug thật:** `theme.ts` chụp `canvasTokens(activeTheme())` ở module scope — chạy **trước** khi React set `data-theme` → mọi chart ở Operations Dark vẽ bằng palette Research Light (lộ ra ở dataZoom gần trắng trên nền tối). Giờ đọc theo từng lần build option, `useChartTheme()` là nguồn reactive, theme truyền tường minh vì DOM attribute chậm hơn preference một render. Kèm: dataZoom khai đủ mọi phần (không còn rơi về default), crosshair snap + nhãn trục, drawdown có `%` + area 0.07→0.18 (trước vẽ convention mà không thấy) + callout đáy khớp với tile max-drawdown; `MarkPointComponent` chưa từng được register nên callout đó sẽ bị bỏ âm thầm. |
+| **Skeleton thay spinner** | v0.4 §26 | Loading là một dòng chữ rồi nhảy sang layout đầy đủ trong một frame — đó là phần lớn cái "không đủ mượt". `Skeleton`/`ResultsSkeleton` giữ đúng footprint ở 4 màn result + run library, đọc một lần bằng chữ, không lọt vào accessibility tree. |
+| **Entry bundle 346 → 91 KB gz** | v0.4 §27 (perf) | Không có `React.lazy` nào → entry chunk mang cả ECharts và Task Board nhúng: 346 KB gz trước first paint cho màn chỉ vẽ một thanh tỉ lệ, hai card và một list. Split QuantBT + Planning; ECharts ra khỏi entry; **gate budget** fail ở 140 KB để không tụt lại. |
+| **Thứ tự đọc màn khởi đầu** | v0.4 §21.3, §P0.13 | Command Center: priority list nằm **cuối** scroll → giờ act → measure → reference (ledger → mục ưu tiên → section card → lifecycle metadata), có test khoá thứ tự DOM. New Run: bước 1 mở ra 12 dòng contract → 3 dòng quyết định được ("nguồn+version, cột bắt buộc, timeframe") + disclosure "Contract chi tiết"; strip run-context bỏ khỏi /new, /imports, /alphas. |
 | **Login 01B + overview: pass sáng tạo** | v0.4 §21.1/§21.3, v0.5 §10.3 | Login thành split full-height (plate column + form trên paper, một hairline làm ranh giới) và plate mang **sơ đồ walk-forward** — instrument của chính sản phẩm, có caption "không phải dữ liệu của một run nào", legend bằng chữ (màu chỉ đồng thuận). Một load sequence, tắt dưới `prefers-reduced-motion`. Command Center: 6 con số registry giờ có thanh tỉ lệ theo thứ tự maturity cố định (không sắp theo độ lớn — feature sẽ nhảy chỗ giữa các snapshot), count 0 **không** vẽ segment, caption nhắc đây là metadata chứ không phải runtime. Không có màu nào ngoài token (gate token-parity phủ). |
 
 ### 8.2 Còn treo
@@ -401,6 +407,14 @@ R1–R15 đã giao và đã thu hết. Không còn request nào treo tại 2026-
 | Thanh tỉ lệ registry giữ thứ tự maturity cố định | Sắp theo độ lớn thì cùng một maturity đổi chỗ giữa hai snapshot — reader học sai bản đồ. | Count 0 **không** vẽ segment (sliver tối thiểu sẽ khẳng định có feature không tồn tại). |
 | Baseline thêm Users & Access + Alpha 360° (101 shot) | Hai màn này tồn tại để render **hậu quả**; drift CSS làm nút danger thôi trông như danger là đúng thứ unit test không thấy. | Body fixture pin sẵn, hoàn toàn synthetic: không principal thật, không digest thật, không token. |
 
+| `toneBasis` tách khỏi `direction` | "Higher is better" **không** kéo theo "giá trị cao là tin tốt". Sharpe 13.20 vẫn là một mức engine báo, không phải phán xét engine ra. | Trộn hai khái niệm vào một field là cách màu semantic nói quá. Test phủ từng basis + case equity/drawdown về neutral. |
+| Gate parity cho type scale | Gate ramp cũ chỉ so `--ws-*`; một split 14px/15px giữa hai file token sẽ đi qua mà không ai thấy — mà Portal ship stylesheet của Planning. | Negative-test: đổi `--text-md` một bên → fail đúng dòng. |
+| Chart theme đọc theo từng lần build | Palette bị chụp ở module scope, trước khi `data-theme` được set → **mọi** chart Operations Dark dùng palette Light. Chỉ lộ ra ở một chi tiết (dataZoom gần trắng) nên sống rất lâu. | Test khoá: hai theme cho ra hai palette từ cùng module; theme tường minh thắng DOM attribute; dataZoom khai đủ 7 thuộc tính. |
+| `MarkPointComponent` phải register | ECharts tree-shaken: `markPoint` không register thì **bị bỏ im lặng**, không lỗi. Callout đáy drawdown đã "viết xong" mà không hề vẽ. | Cùng họ với bug `var(--…)` trong option canvas: thứ không báo lỗi thì phải có gate hoặc phải nhìn bằng ảnh. |
+| Budget entry bundle 140 KB gz | Split route là một dòng `React.lazy`; **bỏ** split cũng là một dòng static import. Không test nào khác thấy được. | Gate đọc `dist/` thật, skip có tiếng khi chưa build (không pass rỗng). Đo được: 346 → 91 KB gz, ECharts ra khỏi entry. |
+| Bỏ end-label equity sau khi xem ảnh | Nhãn bị chart clip ở rìa phải **và** lặp lại đúng con số của hero tile ngay trên nó. | Ví dụ vì sao visual baseline là gate chứ không phải trang trí: viết ra thấy hợp lý, nhìn ảnh thấy sai cả hai mặt. |
+| Skeleton không lọt accessibility tree | Placeholder là hình dạng, không phải nội dung; screen reader phải nghe "đang tải", không nghe mô tả các khối xám. | `aria-hidden` trên từng khối + đúng một `role="status"` bằng chữ. |
+
 ### 8.6 Slice kế tiếp — "đóng 2 domain cho chắc" (chốt 2026-08-17, Bobby)
 
 **Trạng thái:** login UI (01B/01C/01D), Run Progress baseline, Import Wizard
@@ -467,3 +481,25 @@ qua Evidence drawer; Reports "fragment legacy" đã đóng qua "Reports như d�
 sang source-reference R11).
 6. Việc nhỏ: wire `scripts/portal-web-visual.sh` vào `ci.yml` (đã thêm step,
    script skip tới khi Playwright project xong); mermaid theo print (§8.2).
+
+### 8.7 Sẵn sàng push / merge / build (soát 2026-08-17)
+
+**Phía frontend: sẵn sàng.** Gate xanh toàn bộ — Portal 354 unit (1 skip khi chưa
+build), Planning 71 unit, visual baseline 101 shot (record + verify lại 2 lần),
+`contracts-test.sh`, `control-api-test.sh`, `./scripts/portal verify`, hai build
+clean. `ci.yml` đã chạy cả ba script (`:36`, `:39`, `:42`). Không có regression nào
+trong branch này; mọi thứ ở §8.1 đều có gate.
+
+**Chặn "chạy được trên domain" — không nằm trong code, thuộc quyền Bobby/codex:**
+
+| Nơi | Đang là | Hậu quả nếu build main như vậy |
+|---|---|---|
+| `.env:25` `PORTAL_PUBLIC_ORIGIN` | `http://localhost:8080` | `originAllowed()` (`apps/control-api/src/auth/auth.controller.ts:66,101,139`) **403 mọi** login / change-password / logout gửi từ `https://portal.primusspark.com`. Login chết trên domain — không phải bug UI. |
+| `.env:23` `CONTROL_API_AUTH_MODE` | `dev` | Tin `x-dev-access-email` thay vì assertion thật của Cloudflare Access. Trên domain public đây là tư thế bypass authentication. |
+
+Hai việc phải làm cùng lúc, không phải sau: `deploy/control-api/bootstrap-users.yaml`
+có account thật + credential một lần đã rotate (Portal không tạo account từ UI), và
+smoke thật sau build — login → Command Center → mở một run → cancel — vì chuỗi
+`__Host-*` cookie + CSRF + Access chỉ đúng dưới HTTPS thật, không môi trường CI nào
+ở đây kiểm được. `PORTAL_WEB_UPSTREAM` không cần sửa: `.env` không set nên compose
+lấy default `control-api:4000` (`compose.yaml:98`) — đúng.
