@@ -4,6 +4,7 @@ import json
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 
+from portal_api.api.ingress import ingress_request_id
 from portal_api.domain.responses import PortalErrorDetail, PortalErrorResponse
 from portal_api.services.alpha_import import (
     AlphaImportError,
@@ -96,7 +97,8 @@ async def import_alpha(
             detail=PortalErrorResponse(
                 error=PortalErrorDetail(
                     code="ALPHA_IMPORT_INVALID_JSON", message="manifest is not valid JSON"
-                )
+                ),
+                request_id=ingress_request_id(request),
             ).model_dump(mode="json"),
         ) from exc
     if not isinstance(payload, dict):
@@ -106,7 +108,8 @@ async def import_alpha(
                 error=PortalErrorDetail(
                     code="ALPHA_IMPORT_INVALID_MANIFEST",
                     message="manifest must be a JSON object",
-                )
+                ),
+                request_id=ingress_request_id(request),
             ).model_dump(mode="json"),
         )
     try:
@@ -120,7 +123,8 @@ async def import_alpha(
                 error=PortalErrorDetail(
                     code="ALPHA_IMPORT_REJECTED",
                     message=record.reason or record.state,
-                )
+                ),
+                request_id=ingress_request_id(request),
             ).model_dump(mode="json"),
         )
     return record
