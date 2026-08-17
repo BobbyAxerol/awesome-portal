@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { ChartFigure } from "../../components/ChartFigure";
 import { FoldGantt } from "../../components/FoldGantt";
 import type { SeriesPayload } from "../../lib/api";
-import { seriesProvenance, tableProvenance, trialsPopulation, type RunEvidence } from "./provenance";
+import { seriesProvenance, tableProvenance, rowPopulation, type RunEvidence } from "./provenance";
 
 afterEach(cleanup);
 
@@ -184,6 +184,7 @@ describe("FoldPlanProvenance", () => {
           producer: {
             service: "portal-api",
             artifact: "fold_plan.json",
+            version: "0.1.0",
             as_of: "2026-08-17T05:00:00+00:00",
             source_artifact_digest: "sha256:1f0e3dad99908345f7439f8ffabdffc4",
           },
@@ -213,9 +214,9 @@ describe("FoldPlanProvenance", () => {
   });
 });
 
-describe("trialsPopulation", () => {
+describe("rowPopulation", () => {
   it("reads truncation from the envelope", () => {
-    expect(trialsPopulation({ total_rows: 42_000, returned_rows: 5_000, rows: [] })).toEqual({
+    expect(rowPopulation({ total_rows: 42_000, returned_rows: 5_000, rows: [] })).toEqual({
       total: 42_000,
       returned: 5_000,
       truncated: true,
@@ -225,7 +226,7 @@ describe("trialsPopulation", () => {
   it("does not call a full artifact truncated just because it fills the page", () => {
     // This is the case the old `rows.length >= top_n` inference got wrong: a run
     // holding exactly the cap was warned about as if trials were missing.
-    expect(trialsPopulation({ total_rows: 5_000, returned_rows: 5_000, rows: [] })).toEqual({
+    expect(rowPopulation({ total_rows: 5_000, returned_rows: 5_000, rows: [] })).toEqual({
       total: 5_000,
       returned: 5_000,
       truncated: false,
@@ -233,6 +234,26 @@ describe("trialsPopulation", () => {
   });
 
   it("claims nothing about the population before the payload arrives", () => {
-    expect(trialsPopulation(undefined)).toEqual({ total: null, returned: null, truncated: false });
+    expect(rowPopulation(undefined)).toEqual({ total: null, returned: null, truncated: false });
+  });
+});
+
+describe("rowPopulation across every row-table endpoint", () => {
+  it("treats candidates and folds exactly like trials", () => {
+    // All three carry RowEnvelope now, so one helper serves them and a future
+    // `top_n` on candidates/folds cannot silently falsify their provenance —
+    // which is precisely what was possible while they returned bare arrays.
+    for (const payload of [
+      { total_rows: 4, returned_rows: 4, rows: [] },
+      { total_rows: 20, returned_rows: 20, rows: [] },
+    ]) {
+      expect(rowPopulation(payload).truncated).toBe(false);
+      expect(rowPopulation(payload).total).toBe(payload.total_rows);
+    }
+    expect(rowPopulation({ total_rows: 900, returned_rows: 100, rows: [] })).toEqual({
+      total: 900,
+      returned: 100,
+      truncated: true,
+    });
   });
 });

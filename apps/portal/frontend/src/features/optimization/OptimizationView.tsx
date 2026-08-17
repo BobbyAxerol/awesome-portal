@@ -10,7 +10,7 @@ import { Collapsible, DefinitionList, StateView } from "../../components/ui";
 import { FoldGantt } from "../../components/FoldGantt";
 import { api, rowParams } from "../../lib/api";
 import { fmtDecay, fmtRatio } from "../../lib/format";
-import { tableProvenance, trialsPopulation, type RunEvidence } from "../quantbt/provenance";
+import { tableProvenance, rowPopulation, type RowPopulation, type RunEvidence } from "../quantbt/provenance";
 
 /** Server-side cap on the trials query; disclosed on every trial chart. */
 const TRIAL_QUERY_CAP = 5000;
@@ -36,7 +36,7 @@ export function OptimizationView({ runId }: { runId: string }) {
 
   // Population of the trials artifact, straight from the envelope.
   const { total: trialsTotal, returned: trialsReturned, truncated: trialsTruncated } =
-    trialsPopulation(trials.data);
+    rowPopulation(trials.data);
 
   const manifest = (audit.data?.manifest ?? {}) as Record<string, unknown>;
   const run: RunEvidence = {
@@ -63,7 +63,11 @@ export function OptimizationView({ runId }: { runId: string }) {
     }
     return [...unique.values()];
   }, [trials.data]);
-  const candidateRows = useMemo(() => candidates.data ?? [], [candidates.data]);
+  const candidateRows = useMemo(() => candidates.data?.rows ?? [], [candidates.data]);
+  // Candidates and folds carry the same RowEnvelope as trials, so their charts
+  // and tables count against the artifact instead of against the page.
+  const candidatePopulation = rowPopulation(candidates.data);
+  const foldPopulation = rowPopulation(folds.data);
   const selectedId =
     selectedTrial ??
     ((trace.data?.selected_trial_id as number | null | undefined) ?? null) ??
@@ -217,9 +221,11 @@ export function OptimizationView({ runId }: { runId: string }) {
             source: "wfo/candidates.parquet",
             segment: "is+oos",
             units: "Sharpe (annualized)",
-            available: candidateRows.length,
+            available: candidatePopulation.total,
             plotted: candidatesPlotted,
-            reduction: "bỏ candidate thiếu IS hoặc OOS Sharpe",
+            reduction: candidatePopulation.truncated
+              ? "server top_n, rồi bỏ candidate thiếu IS hoặc OOS Sharpe"
+              : "bỏ candidate thiếu IS hoặc OOS Sharpe",
           })}
         >
           <EChart option={candidateScatter} height={360} />
@@ -231,9 +237,11 @@ export function OptimizationView({ runId }: { runId: string }) {
             source: "wfo/candidates.parquet",
             segment: "is→oos",
             units: "decay",
-            available: candidateRows.length,
+            available: candidatePopulation.total,
             plotted: decayData.length,
-            reduction: "bỏ candidate chưa có mean_decay",
+            reduction: candidatePopulation.truncated
+              ? "server top_n, rồi bỏ candidate chưa có mean_decay"
+              : "bỏ candidate chưa có mean_decay",
           })}
         >
           <EChart option={decayOption} height={320} />
@@ -258,7 +266,7 @@ export function OptimizationView({ runId }: { runId: string }) {
       </div>
 
       <TrialTable rows={rows} selectedId={selectedId} onSelect={setSelectedTrial} />
-      {folds.data?.length ? <FoldTable rows={folds.data} /> : null}
+      {foldPopulation.total ? <FoldTable rows={folds.data!.rows} population={foldPopulation} /> : null}
 
       <div className="card p-4">
         <Collapsible title="Selection trace" defaultOpen={Boolean(trace.data)}>
@@ -371,10 +379,24 @@ function TrialTable({
   );
 }
 
-function FoldTable({ rows }: { rows: Record<string, unknown>[] }) {
+function FoldTable({
+  rows,
+  population,
+}: {
+  rows: Record<string, unknown>[];
+  population: RowPopulation;
+}) {
   return (
     <div className="card overflow-x-auto p-4">
-      <div className="label mb-2">Fold map</div>
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+        <span className="label">Fold map</span>
+        {/* A table is a figure too: saying which rows of the artifact are on
+         * screen is the same §12.2 obligation the charts carry. */}
+        <span className="mono text-[11px] text-ink-faint">
+          {population.returned}/{population.total} fold
+          {population.truncated ? " · server top_n" : ""}
+        </span>
+      </div>
       <table className="w-full min-w-[760px] text-[12px]">
         <thead><tr>{["fold", "train start", "train end", "test start", "test end", "train bars", "test bars"].map((label) => <th key={label} className="mono pb-2 text-left text-[11px] uppercase text-ink-faint">{label}</th>)}</tr></thead>
         <tbody>{rows.map((row, index) => <tr key={`${String(row.fold_id)}-${index}`} className="border-t border-line-soft">

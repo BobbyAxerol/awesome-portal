@@ -8,7 +8,7 @@ import { ChartFigure } from "../../components/ChartFigure";
 import { Collapsible, DefinitionList, StateView } from "../../components/ui";
 import { api, rowParams } from "../../lib/api";
 import type { StrategyResponse } from "../../lib/api";
-import { tableProvenance, trialsPopulation, type RunEvidence } from "../quantbt/provenance";
+import { tableProvenance, rowPopulation, type RunEvidence } from "../quantbt/provenance";
 import { buildHistogram, buildObjectiveHeatmap, numericValues } from "./analytics";
 import { activeTheme, vizTokensFor } from "../../styles/tokens";
 
@@ -31,7 +31,7 @@ export function ParametersView({ runId }: { runId: string }) {
   const rows = trials.data?.rows ?? [];
 
   const { total: trialsTotal, returned: trialsReturned, truncated: trialsTruncated } =
-    trialsPopulation(trials.data);
+    rowPopulation(trials.data);
 
   const manifest = (audit.data?.manifest ?? {}) as Record<string, unknown>;
   const run: RunEvidence = {

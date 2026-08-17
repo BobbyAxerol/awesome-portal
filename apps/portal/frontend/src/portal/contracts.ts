@@ -49,6 +49,22 @@ export type AlphaSummary = Schemas["AlphaSummary"];
 export type EngineCapabilitiesDocument = Schemas["EngineCapabilitiesDocument"];
 export type CapabilityPublic = Schemas["CapabilityPublic"];
 export type CapabilityRequirements = Schemas["CapabilityRequirements"];
+
+/**
+ * Row-table and artifact envelopes for the QuantBT run endpoints.
+ *
+ * `RowEnvelope` is shared by `wfo/trials`, `wfo/candidates` and `wfo/folds`;
+ * `FoldPlanDocument` carries `ArtifactProducer`. All three replace types this
+ * frontend previously hand-wrote in `lib/api.ts` — the backend named them on
+ * 2026-08-17 (requests 6 and 8), so a field rename upstream is a build error
+ * again rather than a silent `undefined`.
+ */
+export type RowEnvelope = Schemas["RowEnvelope"];
+export type FoldPlanDocument = Schemas["FoldPlanDocument"];
+export type ArtifactProducer = Schemas["ArtifactProducer"];
+
+/** Quarantine record for an imported alpha (U14 / BAR-21). */
+export type AlphaImportRecord = Schemas["AlphaImportRecord"];
 export type EngineReleasePublic = Schemas["EngineReleasePublic"];
 
 /**
