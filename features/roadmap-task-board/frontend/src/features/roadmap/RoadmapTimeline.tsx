@@ -18,7 +18,6 @@
  * where there is room for it and the same rows read as self-describing cards
  * where there is not, so nothing is hidden on a narrow screen.
  */
-import { Chip } from "@/components/ui";
 import { workstreamVar } from "@/lib/workstream";
 
 import {
@@ -31,6 +30,14 @@ import {
 
 /** Quarter gridlines: 24 weeks read as 6 four-week blocks. */
 const WEEKS_PER_BLOCK = 4;
+
+/**
+ * Smallest share of the timeline a bar must occupy to carry its own label.
+ *
+ * ~12% of a 24-week programme is three weeks, which is where "W12–W18" stops
+ * fitting inside the bar at the narrow breakpoint.
+ */
+const LABEL_MIN_SPAN_RATIO = 0.12;
 
 interface TimelineTask {
   phase: string;
@@ -72,7 +79,6 @@ function PhaseRow({
   phases,
   onEdit,
   onActivity,
-  onDelete,
 }: {
   phase: RoadmapPhase;
   index: number;
@@ -81,7 +87,6 @@ function PhaseRow({
   phases: RoadmapPhase[];
   onEdit: () => void;
   onActivity: (() => void) | null;
-  onDelete: () => void;
 }) {
   const hue = workstreamVar((index % 8) + 1);
   const progress = phaseProgress(phase.id, tasks);
@@ -108,9 +113,16 @@ function PhaseRow({
           style={{ gridColumn: `${phase.start} / ${phase.end + 1}` }}
           title={`${phase.id}: W${phase.start}–W${phase.end} (${weeks} tuần)`}
         >
-          <span className="phase-bar-label mono">
-            W{phase.start}–W{phase.end}
-          </span>
+          {/* A short phase has no room for its own label — a one-week phase is
+           * 1/24 of the track, and the visual baseline showed "W1–W1" clipped
+           * to "W…". Below the threshold the bar is a position marker only; the
+           * week range is stated in full on the fact line either way, so
+           * nothing is lost by dropping the label rather than truncating it. */}
+          {weeks / horizon >= LABEL_MIN_SPAN_RATIO && (
+            <span className="phase-bar-label mono">
+              W{phase.start}–W{phase.end}
+            </span>
+          )}
           {/* Milestone marker: the exit week is the decision point. */}
           <span className="phase-milestone" aria-hidden="true" />
         </div>
@@ -136,8 +148,17 @@ function PhaseRow({
           </p>
         )}
 
-        <div className="phase-actions">
-          <Chip>{phase.tone}</Chip>
+        {/* The `tone` chip is gone. It printed a raw internal enum ("purple")
+         * next to a swatch drawn from the workstream ramp, so on every seeded
+         * phase the label contradicted the colour beside it — the visual
+         * baseline caught all six. Phase identity is the swatch plus the phase
+         * code; `tone` stays in the persisted schema and the editor, it just
+         * has nothing to say to a reader.
+         *
+         * Delete is not here either: v0.5 §13 keeps a destructive action away
+         * from ordinary row actions. It lives in the editor, where the phase is
+         * open and named. */}
+        <div className="phase-actions no-print">
           <button type="button" onClick={onEdit}>
             Edit
           </button>
@@ -146,9 +167,6 @@ function PhaseRow({
               Activity
             </button>
           )}
-          <button type="button" className="danger-text" onClick={onDelete}>
-            Delete
-          </button>
         </div>
       </div>
     </article>
@@ -160,13 +178,11 @@ export function RoadmapTimeline({
   tasks,
   onEdit,
   onActivity,
-  onDelete,
 }: {
   phases: RoadmapPhase[];
   tasks: readonly TimelineTask[];
   onEdit: (phase: RoadmapPhase) => void;
   onActivity: ((phase: RoadmapPhase) => void) | null;
-  onDelete: (phase: RoadmapPhase) => void;
 }) {
   const horizon = Math.max(programHorizon(phases), 1);
 
@@ -189,7 +205,6 @@ export function RoadmapTimeline({
             phases={phases}
             onEdit={() => onEdit(phase)}
             onActivity={onActivity ? () => onActivity(phase) : null}
-            onDelete={() => onDelete(phase)}
           />
         ))}
       </div>

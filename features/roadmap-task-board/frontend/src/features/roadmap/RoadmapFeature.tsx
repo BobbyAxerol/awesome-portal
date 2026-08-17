@@ -103,7 +103,7 @@ function ProgramSummary({ phases }: { phases: RoadmapPhase[] }) {
         <dd className="mono">{phases.length}</dd>
       </div>
       <div>
-        <dt>Peak song song</dt>
+        <dt>Song song tối đa</dt>
         <dd className="mono">{peakConcurrency} phase/tuần</dd>
       </div>
       <div>
@@ -223,7 +223,6 @@ export function RoadmapFeature({ apiMode }: { apiMode: ApiMode }) {
             tasks={tasks}
             onEdit={openEdit}
             onActivity={persistence === "v1" ? (phase) => setActivityPhaseId(phase.id) : null}
-            onDelete={deletePhase}
           />
         </>
       ) : <StateView kind="empty" message="Chưa có phase nào. Nhấn “Add phase” để tạo." />}

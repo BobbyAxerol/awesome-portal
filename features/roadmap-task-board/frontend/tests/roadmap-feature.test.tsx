@@ -62,3 +62,39 @@ describe("RoadmapFeature", () => {
     expect(within(summary).getByText(String(ROADMAP_PHASES_SEED.length))).toBeInTheDocument();
   });
 });
+
+describe("timeline row affordances", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    vi.stubGlobal("confirm", vi.fn(() => true));
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("does not print the internal tone enum next to the phase swatch", async () => {
+    // The tone chip contradicted the colour beside it on every seeded phase:
+    // the swatch comes from the workstream ramp, the chip printed `tone`.
+    render(<ToastProvider><RoadmapFeature apiMode="local" /></ToastProvider>);
+    const row = await screen.findByTestId("roadmap-phase-P2");
+    expect(within(row).queryByText("purple")).toBeNull();
+    // The identity that IS shown stays: phase code plus name.
+    expect(within(row).getByText("P2")).toBeInTheDocument();
+  });
+
+  it("keeps the destructive action out of the row (v0.5 §13)", async () => {
+    render(<ToastProvider><RoadmapFeature apiMode="local" /></ToastProvider>);
+    const row = await screen.findByTestId("roadmap-phase-P0");
+    expect(within(row).getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    expect(within(row).queryByRole("button", { name: "Delete" })).toBeNull();
+  });
+
+  it("drops a bar label it cannot fit, keeping the range on the fact line", async () => {
+    render(<ToastProvider><RoadmapFeature apiMode="local" /></ToastProvider>);
+    // P0 spans one week of twenty-four, so the in-bar label would clip to "W…".
+    const short = await screen.findByTestId("roadmap-phase-P0");
+    expect(short.querySelector(".phase-bar-label")).toBeNull();
+    expect(within(short).getByText(/W1→W1/)).toBeInTheDocument();
+    // P5 spans nine weeks and keeps its label.
+    const long = screen.getByTestId("roadmap-phase-P5");
+    expect(long.querySelector(".phase-bar-label")?.textContent).toContain("W16");
+  });
+});

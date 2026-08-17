@@ -6,6 +6,17 @@
   .toc-rail,
   .context-tabs,
   .topbar-actions,
+  /* §26.6 hides *actions*, not just navigation. The visual baseline showed the
+   * print sheet still carrying Export/Import/Reset/Add phase and per-row
+   * Edit/Delete, none of which mean anything on paper. */
+  .feature-actions,
+  .feature-toolbar,
+  .phase-actions,
+  .bulk-bar,
+  .add-card-btn,
+  .task-del,
+  .task-activity,
+  .view-toggle,
   .no-print {
     display: none !important;
   }

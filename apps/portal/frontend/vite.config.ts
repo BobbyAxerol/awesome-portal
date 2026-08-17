@@ -50,5 +50,8 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    // `e2e/` is Playwright's. Vitest's default include would otherwise collect
+    // `visual.spec.ts` and fail on `@playwright/test` imports.
+    exclude: ["e2e/**", "node_modules/**", "dist/**"],
   },
 });
