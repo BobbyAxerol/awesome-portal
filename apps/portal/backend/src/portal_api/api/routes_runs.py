@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -212,10 +213,20 @@ async def create_run(payload: PortalRunRequest, request: Request) -> dict:
     # Write the deterministic fold plan immediately so the UI can render the
     # fold timeline from second zero (the worker re-writes the same artifact).
     if preflight.fold_plan is not None:
+        source_digest = (
+            preflight.data_quality.get("analysis", {}).get("content_hash")
+            if preflight.data_quality
+            else None
+        )
         _artifacts(request).write_json(
             run_id,
             "config/fold_plan.json",
-            with_portal_provenance("fold_plan.json", preflight.fold_plan),
+            with_portal_provenance(
+                "fold_plan.json",
+                preflight.fold_plan,
+                as_of=datetime.now(UTC).isoformat(),
+                source_digest=source_digest,
+            ),
         )
     return {"run_id": run_id, "status": RunState.QUEUED.value}
 
@@ -414,11 +425,18 @@ async def wfo_trials(
     top_n: Annotated[int | None, Query(ge=1)] = None,
     sort_by: str | None = None,
     sort_order: Literal["asc", "desc"] = "desc",
-) -> list[dict]:
+) -> dict:
+    """Trial rows wrapped in an envelope that discloses the full population.
+
+    ``total_rows`` is the number of unique trials stored in the artifact
+    (before any filter or ``top_n`` cap), so consumers never have to *infer*
+    "there may be more trials than this page" from ``len(rows) == top_n``.
+    """
     _require_completed(request, run_id)
     rows = _unique_trial_rows(
         _read_frame_records(request, run_id, "wfo/trials.parquet")
     )
+    total_rows = len(rows)
     if fold_id is not None:
         rows = [row for row in rows if row.get("fold_id") == fold_id or row.get("study_id") == fold_id]
     if stage is not None:
@@ -435,7 +453,7 @@ async def wfo_trials(
         ) + missing
     if top_n is not None:
         rows = rows[:top_n]
-    return rows
+    return {"total_rows": total_rows, "returned_rows": len(rows), "rows": rows}
 
 
 @router.get("/{run_id}/wfo/candidates")

@@ -296,7 +296,10 @@ def execute_run(
         run_id,
         "config/fold_plan.json",
         with_portal_provenance(
-            "fold_plan.json", compute_run_fold_plan(request, market.frame.index)
+            "fold_plan.json",
+            compute_run_fold_plan(request, market.frame.index),
+            as_of=datetime.now(UTC).isoformat(),
+            source_digest=market.content_hash,
         ),
     )
 

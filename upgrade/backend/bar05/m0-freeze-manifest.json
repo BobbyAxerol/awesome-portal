@@ -19,8 +19,8 @@
     "links_sidecar": "sha256:5fe5ea3ffa4c12bf78dc396bf1371d34bbcf6f47b099e12918d0a9957be0a1a6",
     "nginx_portal_conf": "sha256:4cc340ea6aec250fac2f5cc715ca35753d93edeace85ec9954526b730d3c9caf",
     "openapi_planning_snapshot": "sha256:5c03e4311582f3ae5beb07d5d3f588b78ea9a1689f78712c062a25182bd5a9cf",
-    "openapi_portal": "sha256:6834eb10b6b4a8496672076b1b1ae375252be78e55b257bd9afb2a2afbd73ded",
-    "openapi_portal_snapshot": "sha256:6834eb10b6b4a8496672076b1b1ae375252be78e55b257bd9afb2a2afbd73ded",
+    "openapi_portal": "sha256:d6419a6eba8784ecfee343cc2b8e08b217676a679901aa04226101af9efb8349",
+    "openapi_portal_snapshot": "sha256:d6419a6eba8784ecfee343cc2b8e08b217676a679901aa04226101af9efb8349",
     "planning_frontend_lock": "sha256:8d98e59a964741e0842fcd19d18179270d5e6c4934439ca8c2230b364f711f14",
     "planning_frontend_package": "sha256:2e53ca88ebbfeb25c2551ab29a2c45ef67c9b776595058b07e81d6caf5f59253",
     "planning_requirements": "sha256:89a5642e429cc00ba51f79f3854db39ade9e0e69fa098b16fc44cc54a1b1d053",
@@ -33,7 +33,7 @@
     "registry_source": "sha256:bdd9930d1b28b538b7a2342f56317b28f6e0dc830502d5dec51d996e70bc97eb",
     "run_request_schema": "sha256:582ced995417c641c9247fce422887e7f637359945fd8ef3b3e442d15fde009e"
   },
-  "frozen_at_commit": "17958e52a1ee765512dc38cb7873afcbb75ecdeb",
+  "frozen_at_commit": "daae121ff0c16a8f6c4d271368cf52e36718dea2",
   "golden_tolerances": {
     "exit_price": {
       "atol": 1e-12,

@@ -4626,6 +4626,7 @@
     },
     "/api/runs/{run_id}/wfo/trials": {
       "get": {
+        "description": "Trial rows wrapped in an envelope that discloses the full population.\n\n``total_rows`` is the number of unique trials stored in the artifact\n(before any filter or ``top_n`` cap), so consumers never have to *infer*\n\"there may be more trials than this page\" from ``len(rows) == top_n``.",
         "operationId": "wfo_trials_api_runs__run_id__wfo_trials_get",
         "parameters": [
           {
@@ -4738,12 +4739,9 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "additionalProperties": true,
-                    "type": "object"
-                  },
+                  "additionalProperties": true,
                   "title": "Response Wfo Trials Api Runs  Run Id  Wfo Trials Get",
-                  "type": "array"
+                  "type": "object"
                 }
               }
             },

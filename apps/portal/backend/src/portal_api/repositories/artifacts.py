@@ -22,16 +22,32 @@ PORTAL_ARTIFACT_SCHEMA_VERSION = "1"
 PORTAL_ARTIFACT_PRODUCER = "portal-api"
 
 
-def with_portal_provenance(artifact: str, payload: Mapping[str, Any]) -> dict[str, Any]:
-    """Add the additive BAR-02 provenance fields to a Portal-written artifact."""
+def with_portal_provenance(
+    artifact: str,
+    payload: Mapping[str, Any],
+    *,
+    as_of: str | None = None,
+    source_digest: str | None = None,
+) -> dict[str, Any]:
+    """Add the additive BAR-02 provenance fields to a Portal-written artifact.
+
+    ``as_of`` pins the write instant (UTC ISO 8601) and ``source_digest``
+    names the artifact the payload was derived from, so display artifacts
+    (e.g. the fold plan) can be cited by consumers exactly like ``SeriesPayload``.
+    """
+    provenance: dict[str, Any] = {
+        "service": PORTAL_ARTIFACT_PRODUCER,
+        "artifact": artifact,
+        "version": __version__,
+    }
+    if as_of is not None:
+        provenance["as_of"] = as_of
+    if source_digest is not None:
+        provenance["source_artifact_digest"] = source_digest
     return {
         **payload,
         "artifact_schema_version": PORTAL_ARTIFACT_SCHEMA_VERSION,
-        "producer": {
-            "service": PORTAL_ARTIFACT_PRODUCER,
-            "artifact": artifact,
-            "version": __version__,
-        },
+        "producer": provenance,
     }
 
 
