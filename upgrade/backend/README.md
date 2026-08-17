@@ -133,6 +133,8 @@ authority.
 ## BAR-21 — Strategy Import & Quarantine Ingest foundation
 
 Quarantine write path for U14 (see `BAR_21_STRATEGY_IMPORT.md`):
-`POST /api/v1/alphas/import` + `GET /api/v1/alphas/imports`, digest-verified
-fail-closed import into a runtime quarantine store; the source registry stays
-immutable and imported alphas are never executable.
+`POST /api/v1/alphas/import` (source-reference JSON, R11 — no browser upload) +
+`GET /api/v1/alphas/imports`, digest-verified fail-closed import into a
+runtime quarantine store; the source registry stays immutable and imported
+alphas are never executable. Fixtures: `visual-baseline-run` (COMPLETED) +
+`visual-baseline-run-running` (RUNNING).

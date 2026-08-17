@@ -154,6 +154,7 @@ def create_app(
     app.state.alpha_import_service = AlphaImportService(
         registry_repository.registry_root,
         Path(os.getenv("PORTAL_ALPHA_IMPORT_ROOT", "artifacts/alpha-imports")),
+        Path(os.getenv("PORTAL_ALPHA_ARTIFACT_ROOT", "artifacts/alpha-inbox")),
     )
     app.state.snapshot_store = SnapshotStore(
         Path(os.getenv("PORTAL_SNAPSHOT_ROOT", str(Path(os.getenv("PORTAL_ARTIFACT_ROOT", "artifacts/runs")) / "snapshots")))

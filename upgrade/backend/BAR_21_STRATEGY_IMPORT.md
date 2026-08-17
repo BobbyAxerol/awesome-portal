@@ -12,11 +12,16 @@ BAR-21 opens the *write* path of the alpha lifecycle without letting the
 browser (or any request loop) execute arbitrary source, and without touching
 the immutable source registry (`alphas.v1.json` stays deploy-time only):
 
-- `POST /api/v1/alphas/import` accepts a `manifest` (alpha-manifest.v1 JSON
-  document) plus an `artifact` upload, validates the manifest against the
-  alpha schema, verifies the artifact digest against
-  `manifest.artifact.digest` and lands the package in a **runtime quarantine
-  store** — never in the registry.
+- `POST /api/v1/alphas/import` is **source-reference only** (R11, per
+  `STRATEGY_IMPORT_AND_RUNTIME_CONTRACT.md` §5: "Không chấp nhận import trực
+  tiếp file từ browser"). The client submits `{alpha_id, version,
+  artifact_relpath, expected_digest, git_ref?}`; the server reads a reviewed
+  artifact that CI/owner already staged in the ingest inbox
+  (`PORTAL_ALPHA_ARTIFACT_ROOT`) next to its `manifest.json`, validates the
+  manifest against the alpha schema, verifies the digest and lands the
+  package in a **runtime quarantine store** — never in the registry. No
+  bytes travel through the browser and the server never fetches an
+  arbitrary remote URI (no SSRF).
 - `GET /api/v1/alphas/imports` lists every import (state, digest_ok,
   received_at, reason) so the Import Wizard can render progress and failure
   reasons.
@@ -53,24 +58,31 @@ publication, certification/promotion of an imported alpha, Import Wizard UI
 ## 3. Implementation evidence
 
 - [x] `services/alpha_import.py` — `AlphaImportService.submit`:
-  jsonschema validation of the manifest (Draft 2020-12 + FormatChecker),
-  sha256 digest verification, source-registry duplicate check (via
-  `AlphaRegistry.get_version`), in-flight duplicate check, quarantine store
-  layout `{import_root}/{alpha_id}/{version}/{import.json, manifest.json,
-  artifact.bin}`.
+  inbox path resolution (path-traversal safe, must stay under
+  `PORTAL_ALPHA_ARTIFACT_ROOT`), jsonschema validation of the manifest
+  (Draft 2020-12 + FormatChecker), sha256 digest verification against both
+  the submitted `expected_digest` and `manifest.artifact.digest`,
+  source-registry duplicate check (via `AlphaRegistry.get_version`),
+  in-flight duplicate check, quarantine store layout
+  `{import_root}/{alpha_id}/{version}/{import.json, manifest.json,
+  artifact.bin}` (mismatch/invalid records are returned but never stored).
 - [x] States: `PENDING_DIGEST`, `DIGEST_MISMATCH`, `INVALID_MANIFEST`,
   `ALREADY_REGISTERED`, `QUARANTINED` (typed `ImportState` literal).
 - [x] `GET /api/v1/alphas/imports` (declared before `/{alpha_id}` so it is
-  not shadowed) + `POST /api/v1/alphas/import` multipart (manifest + artifact
-  uploads) with typed `AlphaImportRecord` / `PortalErrorResponse`; mutation
-  of the source registry remains impossible (no write path exists).
+  not shadowed) + `POST /api/v1/alphas/import` JSON body
+  (`AlphaImportRequest`) with typed `AlphaImportRecord` /
+  `PortalErrorResponse`; the former multipart shape is rejected (422).
+  Mutation of the source registry remains impossible (no write path
+  exists).
 - [x] Wiring: `create_app` instantiates `AlphaImportService` from
   `PORTAL_ALPHA_IMPORT_ROOT` (default `artifacts/alpha-imports`).
 - [x] `python-multipart` added to backend dependencies.
-- [x] BE suite: `8` import tests (service matrix + multipart endpoint flow)
-  + full Portal backend regression `376 passed, 1 skipped`; contracts
-  snapshot + OpenAPI regenerated; workspace verification passes including
-  the protected strategy hash.
+- [x] BE suite: `15` import tests (source-reference service matrix + JSON
+  endpoint flow + multipart-rejected) + full Portal backend regression
+  `395 passed, 1 skipped`; contracts snapshot + OpenAPI regenerated;
+  workspace verification passes including the protected strategy hash.
+- [x] R10: second read-only fixture `visual-baseline-run-running/` (RUNNING,
+  mid-study, trimmed console/trials) produced by the same exporter.
 
 Technical debt and rollback:
 

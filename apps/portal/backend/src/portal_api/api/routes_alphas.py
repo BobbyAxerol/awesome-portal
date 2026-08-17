@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, HTTPException, Request
 
 from portal_api.api.ingress import ingress_request_id
 from portal_api.domain.responses import PortalErrorDetail, PortalErrorResponse
 from portal_api.services.alpha_import import (
     AlphaImportError,
     AlphaImportRecord,
+    AlphaImportRequest,
     AlphaImportService,
 )
 from portal_api.services.alpha_registry import (
@@ -78,42 +79,19 @@ async def verify_alpha_version(alpha_id: str, version: str, request: Request) ->
     responses={400: {"description": "Import rejected.", "model": PortalErrorResponse}},
 )
 async def import_alpha(
-    request: Request,
-    manifest: UploadFile = File(description="alpha-manifest.v1 JSON document"),
-    artifact: UploadFile = File(description="alpha artifact (wheel or source bundle)"),
+    payload: AlphaImportRequest, request: Request
 ) -> AlphaImportRecord:
-    """Quarantine ingest: verify digest, never execute code.
+    """Quarantine ingest via source reference (R11, contract §5).
 
-    The source registry stays immutable; imports land in the runtime
-    quarantine store and block everything until a certification slice
-    promotes them.
+    The browser never uploads code: it submits a pointer to an artifact that
+    CI/owner already staged in the ingest inbox plus the expected digest. The
+    server reads that file, verifies the digest, and quarantines it. The
+    source registry stays immutable and imported alphas block everything
+    until a certification slice promotes them.
     """
     service: AlphaImportService = request.app.state.alpha_import_service
     try:
-        payload = json.loads((await manifest.read()).decode("utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-        raise HTTPException(
-            status_code=400,
-            detail=PortalErrorResponse(
-                error=PortalErrorDetail(
-                    code="ALPHA_IMPORT_INVALID_JSON", message="manifest is not valid JSON"
-                ),
-                request_id=ingress_request_id(request),
-            ).model_dump(mode="json"),
-        ) from exc
-    if not isinstance(payload, dict):
-        raise HTTPException(
-            status_code=400,
-            detail=PortalErrorResponse(
-                error=PortalErrorDetail(
-                    code="ALPHA_IMPORT_INVALID_MANIFEST",
-                    message="manifest must be a JSON object",
-                ),
-                request_id=ingress_request_id(request),
-            ).model_dump(mode="json"),
-        )
-    try:
-        record = service.submit(payload, await artifact.read())
+        record = service.submit(payload)
     except AlphaImportError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if record.state in {"INVALID_MANIFEST", "DIGEST_MISMATCH", "ALREADY_REGISTERED"}:
