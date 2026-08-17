@@ -1,14 +1,17 @@
-import { useState, type ChangeEvent } from "react";
-import { Button, Chip, Input, Modal, StateView, useToast } from "@/components/ui";
+import { useMemo, useState, type ChangeEvent } from "react";
+import { Button, Field, Input, Modal, Select, StateView, Textarea, useToast } from "@/components/ui";
 import type { ApiMode } from "@/lib/api";
+import { useTasks } from "../tasks/useTasks";
 import { ActivityTimeline } from "../shared/ActivityTimeline";
 import {
   PHASE_TONES,
   normalisePhase,
   normalisePhases,
   phaseDraft,
+  programHorizon,
   type RoadmapPhase,
 } from "./roadmap-model";
+import { RoadmapTimeline } from "./RoadmapTimeline";
 import { useRoadmap } from "./useRoadmap";
 
 function downloadJson(filename: string, value: unknown): void {
@@ -24,43 +27,98 @@ function downloadJson(filename: string, value: unknown): void {
 function PhaseEditor({ draft, idLocked, onChange }: { draft: RoadmapPhase; idLocked: boolean; onChange: (field: keyof RoadmapPhase, value: string | number) => void }) {
   return (
     <div className="feature-form-grid">
-      <label className="feature-field">
-        <span>ID</span>
-        <Input value={draft.id} onChange={(event) => onChange("id", event.target.value)} aria-label="Phase ID" disabled={idLocked} />
-        {idLocked && <small className="feature-field-help">Server IDs are immutable to preserve audit history.</small>}
-      </label>
-      <label className="feature-field">
-        <span>Name</span>
-        <Input value={draft.name} onChange={(event) => onChange("name", event.target.value)} aria-label="Phase name" autoFocus />
-      </label>
-      <label className="feature-field">
-        <span>Start week</span>
-        <Input type="number" min="1" max="24" value={draft.start} onChange={(event) => onChange("start", Number(event.target.value))} aria-label="Phase start week" />
-      </label>
-      <label className="feature-field">
-        <span>End week</span>
-        <Input type="number" min="1" max="24" value={draft.end} onChange={(event) => onChange("end", Number(event.target.value))} aria-label="Phase end week" />
-      </label>
-      <label className="feature-field">
-        <span>Owner</span>
-        <Input value={draft.owner} onChange={(event) => onChange("owner", event.target.value)} aria-label="Phase owner" />
-      </label>
-      <label className="feature-field">
-        <span>Tone</span>
-        <select value={draft.tone} onChange={(event) => onChange("tone", event.target.value)} aria-label="Phase tone">
-          {PHASE_TONES.map((tone) => <option key={tone}>{tone}</option>)}
-        </select>
-      </label>
-      <label className="feature-field feature-field-wide">
-        <span>Outcome</span>
-        <textarea value={draft.outcome} onChange={(event) => onChange("outcome", event.target.value)} aria-label="Phase outcome" rows={3} />
-      </label>
+      <Field label="ID" hint={idLocked ? "Server IDs are immutable to preserve audit history." : undefined}>
+        {(field) => (
+          <Input
+            {...field}
+            className="input input-mono"
+            value={draft.id}
+            onChange={(event) => onChange("id", event.target.value)}
+            aria-label="Phase ID"
+            disabled={idLocked}
+          />
+        )}
+      </Field>
+      <Field label="Name">
+        {(field) => (
+          <Input {...field} value={draft.name} onChange={(event) => onChange("name", event.target.value)} aria-label="Phase name" autoFocus />
+        )}
+      </Field>
+      <Field label="Start week">
+        {(field) => (
+          <Input {...field} className="input input-mono" type="number" min="1" max="24" value={draft.start} onChange={(event) => onChange("start", Number(event.target.value))} aria-label="Phase start week" />
+        )}
+      </Field>
+      <Field label="End week">
+        {(field) => (
+          <Input {...field} className="input input-mono" type="number" min="1" max="24" value={draft.end} onChange={(event) => onChange("end", Number(event.target.value))} aria-label="Phase end week" />
+        )}
+      </Field>
+      <Field label="Owner">
+        {(field) => (
+          <Input {...field} value={draft.owner} onChange={(event) => onChange("owner", event.target.value)} aria-label="Phase owner" />
+        )}
+      </Field>
+      <Field label="Tone">
+        {(field) => (
+          <Select {...field} value={draft.tone} onChange={(event) => onChange("tone", event.target.value)} aria-label="Phase tone">
+            {PHASE_TONES.map((tone) => <option key={tone}>{tone}</option>)}
+          </Select>
+        )}
+      </Field>
+      <Field label="Outcome" wide>
+        {(field) => (
+          <Textarea {...field} value={draft.outcome} onChange={(event) => onChange("outcome", event.target.value)} aria-label="Phase outcome" rows={3} />
+        )}
+      </Field>
     </div>
+  );
+}
+
+/**
+ * Program-level facts, all counted from the phases actually loaded.
+ *
+ * Nothing here is a target or an estimate: horizon is the furthest exit week,
+ * concurrency is the largest number of phases live in any single week.
+ */
+function ProgramSummary({ phases }: { phases: RoadmapPhase[] }) {
+  const horizon = programHorizon(phases);
+  const peakConcurrency = useMemo(() => {
+    let peak = 0;
+    for (let week = 1; week <= horizon; week += 1) {
+      peak = Math.max(peak, phases.filter((phase) => phase.start <= week && week <= phase.end).length);
+    }
+    return peak;
+  }, [phases, horizon]);
+  const owners = new Set(phases.map((phase) => phase.owner.trim()).filter(Boolean)).size;
+
+  return (
+    <dl className="program-summary" data-testid="program-summary">
+      <div>
+        <dt>Horizon</dt>
+        <dd className="mono">W1–W{horizon}</dd>
+      </div>
+      <div>
+        <dt>Phases</dt>
+        <dd className="mono">{phases.length}</dd>
+      </div>
+      <div>
+        <dt>Peak song song</dt>
+        <dd className="mono">{peakConcurrency} phase/tuần</dd>
+      </div>
+      <div>
+        <dt>Owner</dt>
+        <dd className="mono">{owners ? `${owners} nhóm` : "chưa gán"}</dd>
+      </div>
+    </dl>
   );
 }
 
 export function RoadmapFeature({ apiMode }: { apiMode: ApiMode }) {
   const { phases, persistence, syncState, syncError, needsInitialization, refresh, create, update, remove, replace, reset } = useRoadmap(apiMode);
+  // Read-only join: phase delivery is counted from the same tasks the board
+  // owns, so the roadmap cannot report progress the board disagrees with.
+  const { tasks } = useTasks(apiMode);
   const toast = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<RoadmapPhase | null>(null);
@@ -158,26 +216,16 @@ export function RoadmapFeature({ apiMode }: { apiMode: ApiMode }) {
       </div>
 
       {phases.length ? (
-        <div className="roadmap-card phase3-roadmap-card">
-          <div className="roadmap-week-header" aria-hidden="true">
-            <span>Phase</span>
-            <div>{Array.from({ length: 24 }, (_, index) => <span key={index}>W{index + 1}</span>)}</div>
-            <span>Outcome</span>
-          </div>
-          <div className="roadmap-rows">
-            {phases.map((phase) => (
-              <article className="phase3-roadmap-row" key={phase.id} data-testid={`roadmap-phase-${phase.id}`}>
-                <div className="roadmap-label"><strong>{phase.id} · {phase.name}</strong><span>{phase.owner || "Unassigned"}</span></div>
-                <div className="roadmap-track phase3-roadmap-track" aria-label={`${phase.id} runs from week ${phase.start} to week ${phase.end}`}>
-                  <div className={`roadmap-bar phase3-roadmap-bar phase-tone-${phase.tone}`} style={{ gridColumn: `${phase.start} / ${phase.end + 1}` }}>
-                    W{phase.start}–W{phase.end}
-                  </div>
-                </div>
-                <div className="roadmap-outcome"><p>{phase.outcome || "No outcome recorded"}</p><div><Chip>{phase.tone}</Chip><button type="button" onClick={() => openEdit(phase)}>Edit</button><button type="button" className="danger-text" onClick={() => deletePhase(phase)}>Delete</button></div></div>
-              </article>
-            ))}
-          </div>
-        </div>
+        <>
+          <ProgramSummary phases={phases} />
+          <RoadmapTimeline
+            phases={phases}
+            tasks={tasks}
+            onEdit={openEdit}
+            onActivity={persistence === "v1" ? (phase) => setActivityPhaseId(phase.id) : null}
+            onDelete={deletePhase}
+          />
+        </>
       ) : <StateView kind="empty" message="Chưa có phase nào. Nhấn “Add phase” để tạo." />}
 
       <Modal open={draft !== null} title={editingId ? `Edit ${editingId}` : "New phase"} onClose={closeEditor}>

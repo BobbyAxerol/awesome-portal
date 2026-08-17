@@ -271,108 +271,243 @@
   flex: 1;
 }
 
-.phase3-roadmap-card {
-  padding: 0;
-  overflow: auto;
-}
-
-.roadmap-week-header,
-.phase3-roadmap-row {
+/* --- Program timeline (v1.1) -------------------------------------------
+ * One component at every breakpoint. Above 1080px a shared week axis lines
+ * the phase bars up against each other; below it the axis and the grid
+ * collapse and each row reads as a self-describing card. No information is
+ * dropped on the way down — the week span, delivery and concurrency are all
+ * written out as text on the row itself. */
+.program-summary {
   display: grid;
-  grid-template-columns: 230px minmax(720px, 1fr) 260px;
-  gap: 14px;
-  min-width: 1240px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--paper-raised);
+  box-shadow: var(--shadow-e1);
 }
-
-.roadmap-week-header {
-  align-items: end;
-  padding: 16px 16px 8px;
-  border-bottom: 1px solid var(--line);
+.program-summary dt {
   font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--ink-faint);
+  font-size: var(--text-xs);
   text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+.program-summary dd {
+  margin-top: var(--space-1);
+  font-size: var(--text-lg);
+  color: var(--ink);
 }
 
-.roadmap-week-header > div,
-.phase3-roadmap-track {
+.roadmap-timeline {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--paper-raised);
+  box-shadow: var(--shadow-e1);
+  overflow: hidden;
+}
+
+.timeline-head {
   display: grid;
-  grid-template-columns: repeat(24, minmax(24px, 1fr));
+  grid-template-columns: 220px minmax(0, 1fr) 300px;
+  gap: var(--space-4);
+  align-items: end;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  background: var(--paper-sunken);
 }
 
-.roadmap-week-header > div span {
-  border-left: 1px solid var(--line-soft);
-  text-align: center;
+.timeline-axis {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
 }
 
-.phase3-roadmap-row {
+.phase-row {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 300px;
+  gap: var(--space-4);
   align-items: center;
-  padding: 14px 16px;
+  padding: var(--space-4);
   border-bottom: 1px solid var(--line-soft);
 }
-
-.phase3-roadmap-row:last-child {
+.phase-row:last-child {
   border-bottom: 0;
 }
 
-.roadmap-label {
-  display: grid;
-  gap: 3px;
-}
-
-.roadmap-label strong {
-  font-size: 13px;
-}
-
-.roadmap-label span,
-.roadmap-outcome p {
-  font-size: 12px;
-}
-
-.phase3-roadmap-track {
-  min-height: 32px;
-  align-items: center;
-  background-image: linear-gradient(to right, var(--line-soft) 1px, transparent 1px);
-  background-size: calc(100% / 24) 100%;
-}
-
-.phase3-roadmap-bar {
+.phase-identity {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
   min-width: 0;
-  border-radius: 6px;
-  padding: 5px 8px;
-  color: var(--paper-raised);
-  background: var(--accent);
-  font-family: var(--font-mono);
-  font-size: 10px;
+}
+
+/* The identity swatch carries the phase hue; the phase code beside it carries
+ * the same identity as text, so colour is never the only channel. */
+.phase-swatch {
+  flex: none;
+  width: 3px;
+  height: 34px;
+  border-radius: var(--radius-pill);
+  background: var(--phase-hue);
+}
+
+.phase-name {
+  font-size: var(--text-base);
+  line-height: var(--leading-tight);
+  color: var(--ink);
+}
+.phase-code {
+  color: var(--phase-hue);
   font-weight: 600;
-  text-align: center;
+}
+.phase-owner {
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.phase-track {
+  display: grid;
+  min-height: 26px;
+  align-items: center;
+  /* Four-week blocks, not 24 hairlines: the grid should be readable, not
+   * striped. */
+  background-image: linear-gradient(to right, var(--line-soft) 1px, transparent 1px);
+  background-size: calc(100% / 6) 100%;
+}
+
+.phase-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 22px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--phase-hue);
+  color: var(--paper-raised);
+}
+
+.phase-bar-label {
+  font-size: var(--text-2xs);
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.phase-tone-teal,
-.phase-tone-cyan {
+/* Milestone: the exit week is where the decision happens, so it gets a mark
+ * on the bar rather than a column in a table. */
+.phase-milestone {
+  position: absolute;
+  right: -4px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--phase-hue);
+  border-radius: 50%;
+  background: var(--paper-raised);
+}
+
+.phase-detail {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.phase-outcome {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--ink-soft);
+}
+
+.phase-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+}
+.phase-span {
+  color: var(--ink-faint);
+}
+
+.phase-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 120px;
+}
+.phase-progress-track {
+  flex: 1;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--line-soft);
+  overflow: hidden;
+}
+.phase-progress-fill {
+  height: 100%;
   background: var(--good);
 }
-
-.phase-tone-purple,
-.phase-tone-indigo,
-.phase-tone-orange {
-  background: var(--accent-2);
+.phase-progress-label {
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
 }
 
-.phase-tone-red {
-  background: var(--bad);
+/* A phase with no tasks has unknown delivery, not zero delivery. It is styled
+ * unlike a value so it cannot be misread as one. */
+.phase-progress-absent {
+  font-style: italic;
+  color: var(--ink-faint);
 }
 
-.roadmap-outcome {
-  display: grid;
-  gap: 8px;
+.phase-concurrent {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--accent-2);
 }
 
-.roadmap-outcome > div {
+.phase-actions {
+  display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.phase-actions button {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+.phase-actions button:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 1080px) {
+  .timeline-head {
+    display: none;
+  }
+  .phase-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+    align-items: stretch;
+  }
+  /* The bar keeps its proportions as a mini timeline rather than being cut. */
+  .phase-track {
+    min-height: 22px;
+  }
+}
+
+@media (max-width: 640px) {
+  .program-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .feature-context-bar {
