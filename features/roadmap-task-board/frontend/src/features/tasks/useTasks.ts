@@ -110,6 +110,8 @@ export function useTasks(apiMode: ApiMode) {
   const [syncState, setSyncState] = useState<"idle" | "loading" | "saving" | "error">("idle");
   const [syncError, setSyncError] = useState<TaskSyncError | null>(null);
   const [needsInitialization, setNeedsInitialization] = useState(false);
+  /** Task ids whose move is in flight — the board shows these as pending. */
+  const [pendingMoves, setPendingMoves] = useState<ReadonlySet<string>>(() => new Set());
   const recordsRef = useRef(records);
 
   useEffect(() => {
@@ -235,28 +237,41 @@ export function useTasks(apiMode: ApiMode) {
     if (mode === "v1" && needsInitialization) {
       throw new TaskSyncError("Server workspace trống. Hãy khởi tạo từ dữ liệu local trước khi chỉnh sửa.");
     }
+    // Optimistic: the card lands where it was dropped before the request goes
+    // out. `snapshot` is captured verbatim so a failure restores exactly the
+    // prior state — recomputing it on rollback would silently absorb whatever
+    // else changed in between.
+    const snapshot = current;
     const locallyMoved = moveRecords(current, taskId, status, position);
-    if (mode === "local") {
-      writeLocal(locallyMoved);
-      return;
-    }
+    writeLocal(locallyMoved);
+    if (mode === "local") return;
+
+    setPendingMoves((pending) => new Set(pending).add(taskId));
     setSyncState("saving");
     try {
       if (mode === "v1") {
         if (target.version === null) throw new TaskSyncError("Task chưa có phiên bản server; hãy tải lại.");
         await moveTaskV1<Task>(taskId, status, position, target.version);
+        // The server owns positions across the whole column, so its list
+        // replaces the optimistic guess once it arrives.
         const refreshed = await listV1<Task>("tasks");
         writeLocal(refreshed.map(toRecord));
       } else {
-        writeLocal(locallyMoved);
         await putLegacy("tasks", asLegacyRecords(orderedTasks(locallyMoved)));
       }
       setSyncState("idle");
     } catch (error) {
+      writeLocal(snapshot);
       const syncFailure = errorMessage(error);
       setSyncError(syncFailure);
       setSyncState("error");
       throw syncFailure;
+    } finally {
+      setPendingMoves((pending) => {
+        const next = new Set(pending);
+        next.delete(taskId);
+        return next;
+      });
     }
   }, [mode, needsInitialization, writeLocal]);
 
@@ -324,6 +339,7 @@ export function useTasks(apiMode: ApiMode) {
     syncState,
     syncError,
     needsInitialization,
+    pendingMoves,
     refresh,
     create,
     update,

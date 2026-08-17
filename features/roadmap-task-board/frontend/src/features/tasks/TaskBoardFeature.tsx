@@ -1,25 +1,48 @@
-import { useMemo, useState, type ChangeEvent, type DragEvent } from "react";
-import { Button, Chip, Input, Modal, StateView, useToast } from "@/components/ui";
+import { useCallback, useMemo, useState, type ChangeEvent, type DragEvent } from "react";
+import {
+  Button,
+  Checkbox,
+  Chip,
+  Field,
+  Input,
+  Modal,
+  Select,
+  StateView,
+  Textarea,
+  useToast,
+} from "@/components/ui";
 import type { ApiMode } from "@/lib/api";
 import { LS_BOARD_VIEW, storageGet, storageSet } from "@/lib/storage";
+import { workstreamSlots } from "@/lib/workstream";
 import { ActivityTimeline } from "../shared/ActivityTimeline";
 import {
   EMPTY_TASK_FILTERS,
+  GROUPING_LABELS,
+  TASK_GROUPINGS,
   TASK_STATUSES,
   filteredTasks,
-  milestoneLanes,
+  groupLanes,
   nextTaskId,
   normaliseTasks,
   optionValues,
   taskDraft,
+  type MilestoneLane,
   type Task,
   type TaskFilters,
   type TaskGrouping,
   type TaskStatus,
 } from "./task-model";
+import { TaskCard } from "./TaskCard";
 import { useTasks } from "./useTasks";
 
 type BoardView = "board" | "table";
+
+/** Where a dragged card would land: which column, and before which index. */
+interface DropTarget {
+  laneId: string;
+  status: TaskStatus;
+  index: number;
+}
 
 function initialBoardView(): BoardView {
   return storageGet(LS_BOARD_VIEW) === "table" ? "table" : "board";
@@ -39,120 +62,68 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function statusTone(status: TaskStatus): "neutral" | "accent" | "good" | "bad" {
-  if (status === "Done") return "good";
-  if (status === "In Progress") return "accent";
-  if (status === "Validating") return "bad";
-  return "neutral";
-}
-
-function TaskCard({ task, onEdit, onDelete, onDragStart, onDragEnd }: {
-  task: Task;
-  onEdit: (task: Task) => void;
-  onDelete: (task: Task) => void;
-  onDragStart: (event: DragEvent<HTMLElement>, taskId: string) => void;
-  onDragEnd: () => void;
-}) {
-  return (
-    <article
-      className="task-card phase3-task-card"
-      data-testid={`task-card-${task.id}`}
-      draggable
-      role="button"
-      tabIndex={0}
-      aria-label={`Edit task ${task.id}`}
-      onClick={() => onEdit(task)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onEdit(task);
-        }
-      }}
-      onDragStart={(event) => onDragStart(event, task.id)}
-      onDragEnd={onDragEnd}
-    >
-      <button
-        type="button"
-        className="task-del"
-        aria-label={`Delete task ${task.id}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          onDelete(task);
-        }}
-      >
-        ×
-      </button>
-      <p className="task-id">{task.id}</p>
-      <h3 className="task-title">{task.title}</h3>
-      <div className="task-meta">
-        <Chip tone={statusTone(task.status)}>{task.priority}</Chip>
-        {task.phase && <Chip>{task.phase}</Chip>}
-        {task.weeks && <Chip>{task.weeks}</Chip>}
-        <Chip>{task.owner}</Chip>
-      </div>
-      {task.workstream && <p className="feature-card-note">{task.workstream}</p>}
-      {task.depends.length > 0 && <p className="task-depends">Depends: {task.depends.join(", ")}</p>}
-    </article>
-  );
-}
-
 function TaskEditor({ draft, onChange }: { draft: Task; onChange: (field: keyof Task, value: string | string[]) => void }) {
   return (
     <div className="feature-form-grid">
-      <label className="feature-field feature-field-wide">
-        <span>Title</span>
-        <Input value={draft.title} onChange={(event) => onChange("title", event.target.value)} aria-label="Task title" autoFocus />
-      </label>
-      <label className="feature-field">
-        <span>Workstream</span>
-        <Input value={draft.workstream} onChange={(event) => onChange("workstream", event.target.value)} aria-label="Task workstream" />
-      </label>
-      <label className="feature-field">
-        <span>Owner</span>
-        <Input value={draft.owner} onChange={(event) => onChange("owner", event.target.value)} aria-label="Task owner" />
-      </label>
-      <label className="feature-field">
-        <span>Phase</span>
-        <Input value={draft.phase} onChange={(event) => onChange("phase", event.target.value)} aria-label="Task phase" placeholder="P0" />
-      </label>
-      <label className="feature-field">
-        <span>Weeks</span>
-        <Input value={draft.weeks} onChange={(event) => onChange("weeks", event.target.value)} aria-label="Task weeks" placeholder="W1–W2" />
-      </label>
-      <label className="feature-field">
-        <span>Priority</span>
-        <select value={draft.priority} onChange={(event) => onChange("priority", event.target.value)} aria-label="Task priority">
-          {["P0", "P1", "P2", "P3"].map((priority) => <option key={priority}>{priority}</option>)}
-        </select>
-      </label>
-      <label className="feature-field">
-        <span>Status</span>
-        <select value={draft.status} onChange={(event) => onChange("status", event.target.value)} aria-label="Task status">
-          {TASK_STATUSES.map((status) => <option key={status}>{status}</option>)}
-        </select>
-      </label>
-      <label className="feature-field feature-field-wide">
-        <span>Depends on (comma-separated IDs)</span>
-        <Input value={draft.depends.join(", ")} onChange={(event) => onChange("depends", event.target.value.split(",").map((item) => item.trim()).filter(Boolean))} aria-label="Task dependencies" />
-      </label>
-      <label className="feature-field feature-field-wide">
-        <span>Notes</span>
-        <textarea value={draft.notes} onChange={(event) => onChange("notes", event.target.value)} aria-label="Task notes" rows={4} />
-      </label>
+      <Field label="Title" wide>
+        {(field) => <Input {...field} value={draft.title} onChange={(event) => onChange("title", event.target.value)} aria-label="Task title" autoFocus />}
+      </Field>
+      <Field label="Workstream">
+        {(field) => <Input {...field} value={draft.workstream} onChange={(event) => onChange("workstream", event.target.value)} aria-label="Task workstream" />}
+      </Field>
+      <Field label="Owner">
+        {(field) => <Input {...field} value={draft.owner} onChange={(event) => onChange("owner", event.target.value)} aria-label="Task owner" />}
+      </Field>
+      <Field label="Phase">
+        {(field) => <Input {...field} className="input input-mono" value={draft.phase} onChange={(event) => onChange("phase", event.target.value)} aria-label="Task phase" placeholder="P0" />}
+      </Field>
+      <Field label="Weeks">
+        {(field) => <Input {...field} className="input input-mono" value={draft.weeks} onChange={(event) => onChange("weeks", event.target.value)} aria-label="Task weeks" placeholder="W1–W2" />}
+      </Field>
+      <Field label="Priority">
+        {(field) => (
+          <Select {...field} value={draft.priority} onChange={(event) => onChange("priority", event.target.value)} aria-label="Task priority">
+            {["P0", "P1", "P2", "P3"].map((priority) => <option key={priority}>{priority}</option>)}
+          </Select>
+        )}
+      </Field>
+      <Field label="Status">
+        {(field) => (
+          <Select {...field} value={draft.status} onChange={(event) => onChange("status", event.target.value)} aria-label="Task status">
+            {TASK_STATUSES.map((status) => <option key={status}>{status}</option>)}
+          </Select>
+        )}
+      </Field>
+      <Field label="Depends on (comma-separated IDs)" wide>
+        {(field) => (
+          <Input
+            {...field}
+            className="input input-mono"
+            value={draft.depends.join(", ")}
+            onChange={(event) => onChange("depends", event.target.value.split(",").map((item) => item.trim()).filter(Boolean))}
+            aria-label="Task dependencies"
+          />
+        )}
+      </Field>
+      <Field label="Notes" wide>
+        {(field) => <Textarea {...field} value={draft.notes} onChange={(event) => onChange("notes", event.target.value)} aria-label="Task notes" rows={4} />}
+      </Field>
     </div>
   );
 }
 
 export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
-  const { tasks, persistence, syncState, syncError, needsInitialization, refresh, create, update, move, remove, replace, reset } = useTasks(apiMode);
+  const { tasks, persistence, syncState, syncError, needsInitialization, pendingMoves, refresh, create, update, move, remove, replace, reset } = useTasks(apiMode);
   const toast = useToast();
   const [view, setView] = useState<BoardView>(initialBoardView);
   const [filters, setFilters] = useState<TaskFilters>(EMPTY_TASK_FILTERS);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Task | null>(null);
   const [activityTaskId, setActivityTaskId] = useState<string | null>(null);
   const [grouping, setGrouping] = useState<TaskGrouping>("status");
+  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
 
   const visibleTasks = useMemo(() => filteredTasks(tasks, filters), [tasks, filters]);
   const workstreams = useMemo(() => optionValues(tasks, "workstream"), [tasks]);
@@ -160,13 +131,15 @@ export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
   const phases = useMemo(() => optionValues(tasks, "phase"), [tasks]);
   const owners = useMemo(() => optionValues(tasks, "owner"), [tasks]);
 
-  // Milestone lanes are derived from the `phase` field the schema already
-  // carries; grouping never introduces a second milestone model.
-  const lanes = useMemo(
+  // Identity slots come from the WHOLE task set, not the filtered view, so
+  // narrowing the filter cannot repaint the workstreams that survive it.
+  const slots = useMemo(() => workstreamSlots(tasks.map((task) => task.workstream)), [tasks]);
+
+  const lanes: MilestoneLane[] = useMemo(
     () =>
-      grouping === "milestone"
-        ? milestoneLanes(visibleTasks)
-        : [{ id: "", label: "", tasks: visibleTasks, total: visibleTasks.length, done: 0 }],
+      grouping === "status"
+        ? [{ id: "", label: "", tasks: visibleTasks, total: visibleTasks.length, done: 0 }]
+        : groupLanes(visibleTasks, grouping),
     [grouping, visibleTasks],
   );
 
@@ -227,18 +200,54 @@ export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
       .then(() => {
         if (editingId === task.id) closeEditor();
         if (activityTaskId === task.id) setActivityTaskId(null);
+        setSelected((current) => {
+          const next = new Set(current);
+          next.delete(task.id);
+          return next;
+        });
         toast(`Đã xóa ${task.id}`, "info");
       })
       .catch((error: Error) => toast(error.message, "bad"));
   };
 
-  const moveTask = (taskId: string, status: TaskStatus) => {
-    const task = tasks.find((item) => item.id === taskId);
-    if (!task || task.status === status) return;
-    const position = tasks.filter((item) => item.status === status).length;
-    void move(taskId, status, position)
-      .then(() => toast(`${task.id} → ${status}`, "good"))
-      .catch((error: Error) => toast(error.message, "bad"));
+  /**
+   * Moves one task and reports the outcome.
+   *
+   * On the server workspace the same endpoint that records the transition also
+   * queues the owner notification, so the toast says the notification was
+   * *queued* — the frontend has no way to know it was delivered, and claiming
+   * otherwise would be inventing backend state. No webhook URL or secret is
+   * known here, referenced here, or logged here.
+   */
+  const moveTask = useCallback(
+    (taskId: string, status: TaskStatus, position: number) => {
+      const task = tasks.find((item) => item.id === taskId);
+      if (!task || (task.status === status && position < 0)) return;
+      const from = task.status;
+      void move(taskId, status, position)
+        .then(() => {
+          if (from === status) return;
+          toast(
+            persistence === "v1"
+              ? `${task.id}: ${from} → ${status} · đã xếp hàng thông báo cho ${task.owner}`
+              : `${task.id}: ${from} → ${status}`,
+            "good",
+          );
+        })
+        .catch((error: Error) => toast(`${task.id} không chuyển được — đã hoàn tác. ${error.message}`, "bad"));
+    },
+    [move, persistence, tasks, toast],
+  );
+
+  /** Keyboard equivalent of a drag: one column left or right. */
+  const nudgeTask = (task: Task, direction: -1 | 1) => {
+    const index = TASK_STATUSES.indexOf(task.status);
+    const nextStatus = TASK_STATUSES[index + direction];
+    if (!nextStatus) {
+      toast(`${task.id} đã ở cột ngoài cùng`, "info");
+      return;
+    }
+    moveTask(task.id, nextStatus, tasks.filter((item) => item.status === nextStatus).length);
   };
 
   const importTasks = (event: ChangeEvent<HTMLInputElement>) => {
@@ -261,11 +270,113 @@ export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
     event.dataTransfer.setData("text/plain", taskId);
   };
 
-  const dropOnStatus = (event: DragEvent<HTMLElement>, status: TaskStatus) => {
-    event.preventDefault();
-    const taskId = draggedTaskId ?? event.dataTransfer.getData("text/plain");
-    if (taskId) moveTask(taskId, status);
+  const endDrag = () => {
     setDraggedTaskId(null);
+    setDropTarget(null);
+  };
+
+  const commitDrop = (event: DragEvent<HTMLElement>, status: TaskStatus, index: number) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const taskId = draggedTaskId ?? event.dataTransfer.getData("text/plain");
+    endDrag();
+    if (taskId) moveTask(taskId, status, index);
+  };
+
+  const toggleSelected = (taskId: string, isSelected: boolean) =>
+    setSelected((current) => {
+      const next = new Set(current);
+      if (isSelected) next.add(taskId);
+      else next.delete(taskId);
+      return next;
+    });
+
+  /** Bulk transition: the same per-task move, applied in order. */
+  const bulkMove = (status: TaskStatus) => {
+    const ids = [...selected];
+    setSelected(new Set());
+    ids.forEach((id, offset) => {
+      const task = tasks.find((item) => item.id === id);
+      if (task && task.status !== status) {
+        moveTask(id, status, tasks.filter((item) => item.status === status).length + offset);
+      }
+    });
+  };
+
+  const selectableSelection = selected.size > 0;
+
+  const renderColumn = (lane: MilestoneLane, status: TaskStatus) => {
+    const tasksForStatus = lane.tasks.filter((task) => task.status === status);
+    const laneKey = lane.id || "__all__";
+    const isTarget = dropTarget?.laneId === laneKey && dropTarget.status === status;
+    const laneSelected = tasksForStatus.filter((task) => selected.has(task.id)).length;
+
+    /** A drop zone between two cards; index is the resulting position. */
+    const slotAt = (index: number) => (
+      <div
+        key={`slot-${index}`}
+        className="drop-slot"
+        data-active={isTarget && dropTarget.index === index}
+        onDragOver={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setDropTarget({ laneId: laneKey, status, index });
+        }}
+        onDrop={(event) => commitDrop(event, status, index)}
+      />
+    );
+
+    return (
+      <section
+        key={status}
+        className="kanban-col"
+        data-testid={lane.id ? `task-column-${lane.id}-${status}` : `task-column-${status}`}
+        data-drop-target={isTarget}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDropTarget({ laneId: laneKey, status, index: tasksForStatus.length });
+        }}
+        onDragLeave={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node)) setDropTarget(null);
+        }}
+        onDrop={(event) => commitDrop(event, status, tasksForStatus.length)}
+      >
+        <header className="kanban-head">
+          <span>{status}</span>
+          <span className="kanban-count">
+            {laneSelected > 0 && <Chip tone="accent">{laneSelected} chọn</Chip>}
+            <Chip>{tasksForStatus.length}</Chip>
+          </span>
+        </header>
+
+        <div className="task-list">
+          {slotAt(0)}
+          {tasksForStatus.map((task, index) => (
+            <div key={task.id} className="task-slot-group">
+              <TaskCard
+                task={task}
+                slot={slots.get(task.workstream) ?? 0}
+                pending={pendingMoves.has(task.id)}
+                selected={selected.has(task.id)}
+                selectable
+                onSelect={(isSelected) => toggleSelected(task.id, isSelected)}
+                onEdit={() => openEdit(task)}
+                onDelete={() => deleteTask(task)}
+                onActivity={persistence === "v1" ? () => setActivityTaskId(task.id) : null}
+                onNudge={(direction) => nudgeTask(task, direction)}
+                onDragStart={(event) => startDrag(event, task.id)}
+                onDragEnd={endDrag}
+              />
+              {slotAt(index + 1)}
+            </div>
+          ))}
+        </div>
+
+        <button type="button" className="add-card-btn" onClick={() => openNew(status)}>
+          + Add task
+        </button>
+      </section>
+    );
   };
 
   return (
@@ -297,32 +408,53 @@ export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
 
       <div className="feature-toolbar" aria-label="Task filters">
         <Input value={filters.query} onChange={(event) => setFilter("query", event.target.value)} placeholder="Search ID, title, owner…" aria-label="Search tasks" />
-        <select value={filters.workstream} onChange={(event) => setFilter("workstream", event.target.value)} aria-label="Filter workstream">
+        <Select value={filters.workstream} onChange={(event) => setFilter("workstream", event.target.value)} aria-label="Filter workstream">
           <option value="">All workstreams</option>{workstreams.map((value) => <option key={value}>{value}</option>)}
-        </select>
-        <select value={filters.priority} onChange={(event) => setFilter("priority", event.target.value)} aria-label="Filter priority">
+        </Select>
+        <Select value={filters.priority} onChange={(event) => setFilter("priority", event.target.value)} aria-label="Filter priority">
           <option value="">All priorities</option>{priorities.map((value) => <option key={value}>{value}</option>)}
-        </select>
-        <select value={filters.phase} onChange={(event) => setFilter("phase", event.target.value)} aria-label="Filter phase">
+        </Select>
+        <Select value={filters.phase} onChange={(event) => setFilter("phase", event.target.value)} aria-label="Filter phase">
           <option value="">All phases</option>{phases.map((value) => <option key={value}>{value}</option>)}
-        </select>
-        <select value={filters.owner} onChange={(event) => setFilter("owner", event.target.value)} aria-label="Filter owner">
+        </Select>
+        <Select value={filters.owner} onChange={(event) => setFilter("owner", event.target.value)} aria-label="Filter owner">
           <option value="">All owners</option>{owners.map((value) => <option key={value}>{value}</option>)}
-        </select>
+        </Select>
         <Button type="button" variant="ghost" onClick={() => setFilters(EMPTY_TASK_FILTERS)}>Clear</Button>
-        <select
+        <Select
           value={grouping}
           onChange={(event) => setGrouping(event.target.value as TaskGrouping)}
           aria-label="Group tasks"
         >
-          <option value="status">Nhóm theo status</option>
-          <option value="milestone">Nhóm theo milestone</option>
-        </select>
+          {TASK_GROUPINGS.map((value) => (
+            <option key={value} value={value}>{GROUPING_LABELS[value]}</option>
+          ))}
+        </Select>
         <div className="view-toggle" aria-label="Task presentation">
           <button type="button" className={view === "board" ? "active" : ""} onClick={() => setBoardView("board")}>Board</button>
           <button type="button" className={view === "table" ? "active" : ""} onClick={() => setBoardView("table")}>Table</button>
         </div>
       </div>
+
+      {/* Bulk actions appear only when a selection exists — a row action that
+        * does nothing is worse than no row action (v0.5 §13). */}
+      {selectableSelection && (
+        <div className="bulk-bar" role="region" aria-label="Bulk actions" data-testid="bulk-bar">
+          <Checkbox
+            checked
+            indeterminate
+            label={`${selected.size} task đã chọn`}
+            onCheckedChange={() => setSelected(new Set())}
+          />
+          <span className="bulk-bar-actions">
+            <span className="mono-label">Chuyển sang</span>
+            {TASK_STATUSES.map((status) => (
+              <button key={status} type="button" onClick={() => bulkMove(status)}>{status}</button>
+            ))}
+          </span>
+          <Button type="button" variant="ghost" onClick={() => setSelected(new Set())}>Bỏ chọn</Button>
+        </div>
+      )}
 
       {view === "board" ? (
         lanes.length === 0 ? (
@@ -330,31 +462,14 @@ export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
         ) : (
           lanes.map((lane) => (
             <div key={lane.id || "__all__"} className="milestone-lane" data-testid={`milestone-lane-${lane.id || "unassigned"}`}>
-              {grouping === "milestone" ? (
+              {grouping !== "status" ? (
                 <header className="milestone-lane-head">
                   <span className="milestone-lane-label">{lane.label}</span>
                   <Chip>{lane.done}/{lane.total} done</Chip>
                 </header>
               ) : null}
-              <div className="kanban phase3-kanban" aria-label={grouping === "milestone" ? `Kanban ${lane.label}` : "Task kanban board"}>
-                {TASK_STATUSES.map((status) => {
-                  const tasksForStatus = lane.tasks.filter((task) => task.status === status);
-                  return (
-                    <section
-                      key={status}
-                      className="kanban-col"
-                      data-testid={grouping === "milestone" ? `task-column-${lane.id || "unassigned"}-${status}` : `task-column-${status}`}
-                      onDragOver={(event) => event.preventDefault()}
-                      onDrop={(event) => dropOnStatus(event, status)}
-                    >
-                      <header className="kanban-head"><span>{status}</span><Chip>{tasksForStatus.length}</Chip></header>
-                      <div className="task-list">
-                        {tasksForStatus.map((task) => <TaskCard key={task.id} task={task} onEdit={openEdit} onDelete={deleteTask} onDragStart={startDrag} onDragEnd={() => setDraggedTaskId(null)} />)}
-                      </div>
-                      <button type="button" className="add-card-btn" onClick={() => openNew(status)}>+ Add task</button>
-                    </section>
-                  );
-                })}
+              <div className="kanban phase3-kanban" aria-label={lane.id ? `Kanban ${lane.label}` : "Task kanban board"}>
+                {TASK_STATUSES.map((status) => renderColumn(lane, status))}
               </div>
             </div>
           ))
@@ -362,10 +477,19 @@ export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
       ) : visibleTasks.length ? (
         <div className="table-wrap phase3-table-wrap">
           <table className="task-table">
-            <thead><tr><th>ID</th><th>Title</th><th>Workstream</th><th>Phase</th><th>Weeks</th><th>Priority</th><th>Owner</th><th>Status</th><th>Depends</th><th /></tr></thead>
+            <thead><tr><th /><th>ID</th><th>Title</th><th>Workstream</th><th>Phase</th><th>Weeks</th><th>Priority</th><th>Owner</th><th>Status</th><th>Depends</th><th /></tr></thead>
             <tbody>
               {visibleTasks.map((task) => (
-                <tr key={task.id} data-testid={`task-row-${task.id}`}>
+                <tr key={task.id} data-testid={`task-row-${task.id}`} data-selected={selected.has(task.id)}>
+                  <td>
+                    <Checkbox
+                      checked={selected.has(task.id)}
+                      loading={pendingMoves.has(task.id)}
+                      label={`Chọn ${task.id}`}
+                      labelHidden
+                      onCheckedChange={(isSelected) => toggleSelected(task.id, isSelected)}
+                    />
+                  </td>
                   <td>{task.id}</td><td>{task.title}</td><td>{task.workstream}</td><td>{task.phase}</td><td>{task.weeks}</td><td>{task.priority}</td><td>{task.owner}</td><td>{task.status}</td><td>{task.depends.join(", ")}</td>
                   <td className="table-actions"><button type="button" onClick={() => openEdit(task)}>Edit</button><button type="button" onClick={() => deleteTask(task)}>Delete</button></td>
                 </tr>

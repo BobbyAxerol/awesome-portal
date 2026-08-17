@@ -44,7 +44,7 @@ describe.sequential("Task Board v1 adapter", () => {
 
     render(<ToastProvider><TaskBoardFeature apiMode="api" /></ToastProvider>);
     await screen.findByTestId("task-card-API-1");
-    await user.click(screen.getByRole("button", { name: "Edit task API-1" }));
+    await user.click(screen.getByRole("button", { name: "Mở task API-1" }));
     await user.clear(screen.getByLabelText("Task title"));
     await user.type(screen.getByLabelText("Task title"), "Updated title");
     await user.click(screen.getByRole("button", { name: "Save task" }));
@@ -91,7 +91,7 @@ describe.sequential("Task Board v1 adapter", () => {
 
     render(<ToastProvider><TaskBoardFeature apiMode="api" /></ToastProvider>);
     await screen.findByTestId("task-card-API-1");
-    await user.click(screen.getByRole("button", { name: "Edit task API-1" }));
+    await user.click(screen.getByRole("button", { name: "Mở task API-1" }));
     await user.selectOptions(screen.getByLabelText("Task status"), "Done");
     await user.click(screen.getByRole("button", { name: "Save task" }));
 
@@ -125,7 +125,8 @@ describe.sequential("Task Board v1 adapter", () => {
     render(<ToastProvider><TaskBoardFeature apiMode="api" /></ToastProvider>);
     await screen.findByTestId("task-card-API-1");
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    await user.click(screen.getByRole("button", { name: "Edit task API-1" }));
+    // v1.1: activity is reachable straight from the card, without opening the
+    // editor first — the modal keeps its own Activity button as well.
     await user.click(screen.getByRole("button", { name: "Activity" }));
 
     expect(await screen.findByText("Task status changed")).toBeInTheDocument();
