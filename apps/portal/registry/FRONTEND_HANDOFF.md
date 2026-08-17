@@ -253,6 +253,19 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 
 **Đã đóng** (codex giao trong `b02f4c2` + `3f6c9c1`; cập nhật `2026-08-17`):
 
+14. ~~Preflight chỉ trả `valid: false` chung chung~~ → `POST /api/runs/preflight`
+    trả `checks: [{id, ok, missing[], detail}]` per-gate: `strategy`,
+    `parameter_space`, `dataset`, `required_columns` (kèm `missing` list),
+    `symbol`, `timeframe`, `quality`, `capability`, `windows`, `folds`.
+    `valid` = conjunction; `create_run` vẫn 422 qua `valid`. Response mang
+    `request_id` để correlate. FE hiển thị đúng check nào fail ở bước Review
+    và gate submit theo `valid`.
+15. ~~`determinism` không public~~ → thực ra schema + registry + model đã có
+    (`delta-rsi`: `seed_required: true`); gap là **projection**: đã thêm
+    `determinism {seed_required, external_io}` vào `AlphaStrategyPublic` /
+    `AlphaSummary` — FE gate seed theo `strategy.determinism.seed_required`
+    (đúng §6 mục 3).
+
 10. ~~Fixture run ở state `RUNNING`~~ → `registry/fixtures/runs/visual-baseline-run-running`
     (RUNNING, mid-study: status RUNNING, 16/32 trials, console "fold 8/20
     completed", fold_plan đủ 20 folds, metrics/selection đã bỏ — trung thực
@@ -266,6 +279,10 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
     bên, verify digest, ghi quarantine. **Browser không gửi code**, server
     không fetch URI tùy ý (không SSRF). Form upload multipart cũ bị chặn
     (422). UI dựng được ngay: 3 field + preflight + state.
+
+13. ~~Fixture -running run_id không nhất quán~~ → `visual-baseline-run-running`
+    giờ có run_id riêng (`status.json` + `manifest.json` + console) — hết
+    notice, snapshot sạch.
 
 **Chờ quyết định (không chặn code):**
 
