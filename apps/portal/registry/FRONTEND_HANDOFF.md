@@ -203,6 +203,7 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 | **RowEnvelope cho candidates/folds** | §8.3 request 8 | Cả 3 endpoint row-table dùng chung `rowPopulation()`; fold table có dòng "20/20 fold". |
 | **Type generated cho endpoint mới** | §8.3 request 6 | `RowEnvelope`/`FoldPlanDocument`/`ArtifactProducer` thay type khai tay. `FoldRow` vẫn khai local — contract để `folds` là record array (runner ghi cột theo protocol). |
 | **Visual baseline — Research screens** | §8.3 request 7, v0.4 §26 | 64 snapshot (từ 39): New Run + 5 run tab × 2 theme × laptop/workstation, trên `visual-baseline-run`. Có staleness gate theo digest fixture. |
+| **Reports như dữ liệu** | §8.6 cũ mục 1 (slice tự đề xuất) | `view-reports` parse thành model typed, render bằng primitive. Fragment **không sửa**, hash vẫn gated. Test content-equivalence hai chiều: không mất, không bịa. `RawViewFeature` xoá (dead code). 77 snapshot. |
 | **Alpha import inbox (U14 read half)** | strategy contract §5/§6 mục 4 | `/research/quantbt/imports`: 5 state contract khai báo, reason nguyên văn của service, verify digest on-demand (hiện cả hai digest, không chỉ verdict), empty ≠ failed. **Không có upload** — xem §8.4 điểm 3. 68 snapshot. |
 
 ### 8.2 Còn treo
@@ -327,12 +328,18 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 | Fixture inbox capture qua service thật | Inbox rỗng thì baseline không chứng minh được gì; nhưng tự viết record là bịa dữ liệu. | 2 manifest copy từ `alphas.v1.json` rồi re-identify, submit qua `AlphaImportService.submit` → state/`digest_ok`/reason là output thật của pipeline. Chỉ pin `import_id` + `received_at` (random + wall-clock). |
 | `SectionHeading` thay ModuleHeader thứ hai | Khai `maturity` cho một màn registry không mô tả = tự bịa static metadata — cùng lỗi với badge mâu thuẫn dữ liệu đã sửa ở roadmap. | Module QuantBT đã render header với maturity thật từ registry. |
 
+| Content-equivalence test hai chiều | "Render bằng primitive nhưng giữ nội dung" chỉ là lời nói nếu không kiểm. | Mọi string trong model phải có trong fragment (không bịa) **và** prose nhìn thấy của fragment phải được model tiêu thụ hết (không mất). Bỏ `.mermaid-source` trước khi so vì nó là bản `hidden` trùng với `<pre>`. |
+| `settle()` chờ mermaid xong | `planning-reports @ print` fail verify **lặp lại** — không phải flake random mà là chụp giữa lúc mermaid render. | Chờ mọi `.mermaid` chứa `svg`. Gỡ được cả một lớp flake cho mọi màn có sơ đồ. Verify ổn định 2 lần. |
+| Hai gate bỏ qua dòng comment | Doc comment nhắc `var(--muted)` mà nó vừa thay thế bị chính gate token-parity bắt. Văn xuôi không phải là tiêu thụ token. | Gate bắn vào prose là gate người ta học cách bỏ qua. Negative-test lại: `var(--nope-fake)` thật trong code vẫn fail. |
+
 ### 8.6 Đề xuất slice kế tiếp
 
-1. **Reports như dữ liệu** (ưu tiên 1 — không chờ ai) — gỡ fragment HTML legacy
-   cuối cùng khỏi Planning, parse thành model rồi render bằng primitive, giữ
-   content-integrity hash của nguồn. Đây là mục duy nhất còn lại **không bị chặn
-   bởi backend**.
-2. **Run Progress baseline** — cần request 10 (fixture run `RUNNING`).
-3. **Import Wizard nửa ghi** — cần request 11 (đường ingest không qua browser).
-4. **Command Center drill-down / Profile & Access** — chờ phase U10 / U07.
+Sau slice này **mọi mục còn lại đều chờ backend hoặc chờ phase**. Không còn việc
+frontend tự làm được mà chưa làm.
+
+1. **Run Progress baseline** — cần **request 10** (fixture run `RUNNING`).
+2. **Import Wizard nửa ghi** — cần **request 11** (đường ingest không qua browser).
+3. **Alpha Pool routing** — cần **request 12** (`maturity` cho `ALPHA_POOL`).
+4. **Command Center drill-down / Profile & Access** — chờ phase **U10** / **U07**.
+5. Việc nhỏ không chặn, có thể chen vào: mermaid theo print (§8.2), wire visual
+   baseline vào `ci.yml` (file của codex).
