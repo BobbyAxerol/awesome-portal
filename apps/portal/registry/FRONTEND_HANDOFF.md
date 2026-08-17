@@ -203,12 +203,14 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 | **RowEnvelope cho candidates/folds** | §8.3 request 8 | Cả 3 endpoint row-table dùng chung `rowPopulation()`; fold table có dòng "20/20 fold". |
 | **Type generated cho endpoint mới** | §8.3 request 6 | `RowEnvelope`/`FoldPlanDocument`/`ArtifactProducer` thay type khai tay. `FoldRow` vẫn khai local — contract để `folds` là record array (runner ghi cột theo protocol). |
 | **Visual baseline — Research screens** | §8.3 request 7, v0.4 §26 | 64 snapshot (từ 39): New Run + 5 run tab × 2 theme × laptop/workstation, trên `visual-baseline-run`. Có staleness gate theo digest fixture. |
+| **Alpha import inbox (U14 read half)** | strategy contract §5/§6 mục 4 | `/research/quantbt/imports`: 5 state contract khai báo, reason nguyên văn của service, verify digest on-demand (hiện cả hai digest, không chỉ verdict), empty ≠ failed. **Không có upload** — xem §8.4 điểm 3. 68 snapshot. |
 
 ### 8.2 Còn treo
 
 | Vùng | Trạng thái | Vì sao chưa sâu | Slice đề xuất |
 |---|---|---|---|
-| Import Wizard (U14) | Chưa có UI. Picker đã đọc `/api/v1/alphas` (typed); alpha chưa đăng ký runtime hiển thị kèm lý do. | **Không còn bị chặn** — backend đã giao `POST /api/v1/alphas/import` + quarantine + `AlphaImportRecord` (`74a3b57`). Đây giờ là việc frontend chưa tới lượt. | **Ưu tiên kế tiếp** — Import Flow A/B, digest verify, quarantine state. |
+| Import Wizard — nửa ghi (Flow A/B) | Nửa đọc đã xong (§8.1). Nửa **submit** chưa làm. | Chặn bởi **request 11**: contract §5 cấm import file trực tiếp từ browser, nhưng endpoint hiện tại là multipart upload. Không tự chọn một trong hai. | Sau request 11: form submit theo source reference (git ref + expected digest), preflight capability gate. |
+| Alpha Pool (`/research/alphas`) | `COMMISSIONED` → Feature Preview. Inbox tạm đặt dưới QuantBT. | Registry khai `COMMISSIONED`; render màn chạy được ở đó sẽ mâu thuẫn chính badge của nó. Registry là file backend. | Khi có certification slice: xin đổi maturity + chuyển inbox sang ALPHA_POOL. Đây là **request 12**. |
 | Command Center | Đủ 7 state, số liệu thật từ summary. Chưa có drill-down drawer. | Read model bền thuộc U10; drawer không có nguồn ổn định để mở. | Sau U10: evidence drawer + cross-filter. |
 | Planning: Docs / Reports | Nhúng nguyên feature body. Token và form control đã dùng chung; Reports vẫn render fragment HTML legacy đã khoá. | Fragment là bản byte-preserved của tài liệu gốc, refactor sẽ phá content-integrity hash. | Slice "Reports như dữ liệu" — parse fragment thành model rồi render bằng primitive, giữ hash của nguồn. |
 | Profile & Access | `COMMISSIONED` preview. | Chờ U07 wire gateway→BFF; login screens 01B/01C/01D chưa có backend. | Sau U10: Frames 01B–01D + session expired + maintenance screen kèm request ID. |
@@ -250,6 +252,20 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
     Đề xuất một fixture thứ hai, cùng cơ chế `export_run_fixture.py`, dừng ở
     giữa fold (vd fold 8/20) với `status.json` = `RUNNING` và console log cắt
     tương ứng. Đây là mảng cuối còn thiếu bằng chứng thị giác.
+11. **Đường ingest không qua browser upload.** Strategy import contract §5:
+    *"Không chấp nhận: import trực tiếp file từ browser"*. Nhưng
+    `POST /api/v1/alphas/import` hiện nhận **hai multipart file upload**
+    (manifest + artifact) — đúng hình dạng mà §5 loại bỏ. Endpoint tự nó an
+    toàn (không execute code, chỉ ghi quarantine), nhưng frontend **không dựng
+    form upload** vì đó là làm ngược tài liệu authority. Đề xuất: ingest theo
+    **source reference đã review** — `{git_ref, artifact_uri, expected_digest}`
+    — server tự fetch + verify; browser chỉ gửi con trỏ, không gửi code. Nếu
+    upload là chủ ý thì cần §5 được cập nhật (việc của codex) + khai báo
+    authority/permission trong registry để UI gate đúng.
+12. **`maturity` cho `ALPHA_POOL`.** Inbox hiện đặt ở `/research/quantbt/imports`
+    vì `ALPHA_POOL` là `COMMISSIONED` — render màn chạy được ở route đó sẽ mâu
+    thuẫn badge của chính nó. Khi có certification slice, xin đổi maturity để
+    chuyển inbox về đúng feature.
 
 **Ghi chú tồn đọng (không phải request):**
 
@@ -276,6 +292,14 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
    liệu gốc. **Cần Bobby quyết** nếu muốn sửa cả tài liệu gốc — việc đó phải
    đi kèm regenerate manifest và là thay đổi nội dung, không phải thay đổi UI.
 
+3. **Import qua browser upload.** Strategy import contract §5 cấm
+   *"import trực tiếp file từ browser"*, nhưng `POST /api/v1/alphas/import`
+   được giao dưới dạng hai multipart file upload. Theo authority order
+   (AGENTS.md trỏ tới design note này), tài liệu thắng code hiện hành, nên
+   v1.1 **chỉ làm nửa đọc** của U14 và escalate thành request 11 thay vì dựng
+   form. Cần codex quyết: sửa endpoint theo source-reference, hay cập nhật §5
+   nếu upload là chủ ý.
+
 ### 8.5 Việc làm thêm ngoài plan (track theo CLAUDE.md §7.3)
 
 | Việc | Vì sao làm | Bằng chứng |
@@ -300,12 +324,15 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 | `export_run_responses.py` + staleness digest | Fixture run là artifact (parquet); image Playwright là Node-only. Chạy qua app thật để body không phải do FE bịa; digest gate chặn baseline số liệu cũ. | Hai digest phải cùng sort key — `Path` của Python và absolute-string của Node không cùng thứ tự khi có thư mục con. |
 | Sửa `scripts/portal-web-visual.sh` | Bản gốc mount repo `:ro` nhưng lại chạy `npm ci`, và không map user → file root-owned. | Giữ nguyên ý định gate: tính "chỉ so sánh" đến từ **command** (`e2e:visual` không truyền `--update`), không phải từ mount. |
 
+| Fixture inbox capture qua service thật | Inbox rỗng thì baseline không chứng minh được gì; nhưng tự viết record là bịa dữ liệu. | 2 manifest copy từ `alphas.v1.json` rồi re-identify, submit qua `AlphaImportService.submit` → state/`digest_ok`/reason là output thật của pipeline. Chỉ pin `import_id` + `received_at` (random + wall-clock). |
+| `SectionHeading` thay ModuleHeader thứ hai | Khai `maturity` cho một màn registry không mô tả = tự bịa static metadata — cùng lỗi với badge mâu thuẫn dữ liệu đã sửa ở roadmap. | Module QuantBT đã render header với maturity thật từ registry. |
+
 ### 8.6 Đề xuất slice kế tiếp
 
-1. **Import Wizard (U14)** (ưu tiên 1) — backend đã giao đủ (`POST /api/v1/alphas/import`,
-   quarantine, `AlphaImportRecord`). Đây là mục lớn nhất trong plan giờ **không
-   còn bị chặn**, và picker đã sẵn sàng đọc kết quả.
-2. **Run Progress baseline** — cần request 10 (fixture run `RUNNING`). Là mảng
-   cuối còn thiếu bằng chứng thị giác.
-3. **Reports như dữ liệu** — gỡ nốt fragment HTML legacy cuối cùng khỏi Planning
-   mà vẫn giữ content-integrity hash của nguồn.
+1. **Reports như dữ liệu** (ưu tiên 1 — không chờ ai) — gỡ fragment HTML legacy
+   cuối cùng khỏi Planning, parse thành model rồi render bằng primitive, giữ
+   content-integrity hash của nguồn. Đây là mục duy nhất còn lại **không bị chặn
+   bởi backend**.
+2. **Run Progress baseline** — cần request 10 (fixture run `RUNNING`).
+3. **Import Wizard nửa ghi** — cần request 11 (đường ingest không qua browser).
+4. **Command Center drill-down / Profile & Access** — chờ phase U10 / U07.
