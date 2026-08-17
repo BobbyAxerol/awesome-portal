@@ -1,0 +1,39 @@
+{
+  "artifact_schema_version": "1",
+  "causality_claim": "retrospective_global_calibration",
+  "frozen_at": "2026-08-17T08:00:00Z",
+  "mean_decay": -3.3003372562921705,
+  "mean_is_sharpe": 12.568091646224701,
+  "mean_oos_sharpe": 15.868428902516873,
+  "n_folds": 20,
+  "n_studies": 1,
+  "objective": 9.652571440883097,
+  "oos_used_for_selection": true,
+  "optimization_mode": "mode_1_decay",
+  "optimization_schedule": "global",
+  "params": {
+    "len_atr1": 10,
+    "len_atr2": 38,
+    "len_vol": 36,
+    "rsi_l": 15,
+    "rvol": 1.4,
+    "signalLength": 3,
+    "slpercent": 1.3,
+    "window": 22
+  },
+  "params_semantics": "single_global_parameter_set",
+  "producer": {
+    "artifact": "selected_params.json",
+    "service": "portal-api",
+    "version": "0.1.0"
+  },
+  "trace": {
+    "capabilities": {
+      "per_trial_selection_breakdown": false
+    },
+    "params_semantics": "single_global_parameter_set",
+    "source": "QuantBT best_trial from walk_forward"
+  },
+  "trial_id": 7,
+  "validation_claim": "walk_forward_oos"
+}
