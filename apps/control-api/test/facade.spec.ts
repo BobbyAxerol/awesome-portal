@@ -178,6 +178,42 @@ describe("control api facade (proxy, workspaces, outbox)", () => {
     expect(response.statusCode).toBe(403);
   });
 
+  it("proxies read-only catalogs for USER sessions", async () => {
+    const upstreamPaths = [
+      "/api/v1/alphas",
+      "/api/v1/portal/capabilities",
+      "/api/config/options",
+    ];
+    for (const path of upstreamPaths) {
+      upstream.intercept({ path, method: "GET" }).reply(200, { path });
+    }
+    const { cookie } = await seedUser("stan", "USER");
+    for (const path of upstreamPaths) {
+      const response = await inject(path, { headers: { cookie } });
+      expect(response.statusCode).toBe(200);
+    }
+  });
+
+  it("keeps alpha import mutation ADMIN-only through the proxy", async () => {
+    upstream
+      .intercept({ path: "/api/v1/alphas/import", method: "POST" })
+      .reply(201, { state: "QUARANTINED" });
+    const user = await seedUser("stan", "USER");
+    const denied = await inject("/api/v1/alphas/import", {
+      method: "POST",
+      headers: { cookie: user.cookie },
+      payload: {},
+    });
+    expect(denied.statusCode).toBe(403);
+    const admin = await seedUser("bobby", "ADMIN");
+    const allowed = await inject("/api/v1/alphas/import", {
+      method: "POST",
+      headers: { cookie: admin.cookie },
+      payload: {},
+    });
+    expect(allowed.statusCode).toBe(201);
+  });
+
   it("serves workspace run read models with cross-workspace isolation", async () => {
     const bobby = await seedUser("bobby", "ADMIN");
     const stan = await seedUser("stan", "USER");

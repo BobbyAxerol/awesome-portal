@@ -29,9 +29,13 @@ const READ_ONLY_PORTAL_PATHS = new Set([
   "/api/ready",
   "/api/strategies",
   "/api/datasets",
+  "/api/config/options",
   "/api/v1/portal/registry",
   "/api/v1/portal/summary",
   "/api/v1/portal/links",
+  "/api/v1/portal/capabilities",
+  "/api/v1/alphas",
+  "/api/v1/alphas/imports",
 ]);
 
 const WRITE_PATHS_PREFIXES = ["/api/runs", "/api/v1/portal"];
@@ -90,7 +94,19 @@ export class FacadeController {
     };
   }
 
-  @All(["/api/runs", "/api/runs/*", "/api/strategies", "/api/strategies/*", "/api/datasets", "/api/v1/portal/*", "/api/health", "/api/ready"])
+  @All([
+    "/api/runs",
+    "/api/runs/*",
+    "/api/strategies",
+    "/api/strategies/*",
+    "/api/datasets",
+    "/api/config/options",
+    "/api/v1/portal/*",
+    "/api/v1/alphas",
+    "/api/v1/alphas/*",
+    "/api/health",
+    "/api/ready",
+  ])
   async portal(
     @Req() request: PortalRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
@@ -132,13 +148,15 @@ export class FacadeController {
     const traceparent =
       (request.headers["traceparent"] as string | undefined) ??
       "00-00000000000000000000000000000000-0000000000000000-01";
+    const contentType =
+      (request.headers["content-type"] as string | undefined) ?? undefined;
 
     if (write) {
-      const bodyText =
+      const bodyText: string | Buffer | undefined =
         body === undefined || body === null
           ? undefined
           : Buffer.isBuffer(body)
-            ? body.toString("utf8")
+            ? body // keep raw multipart bytes; utf8 coercion corrupts binaries
             : typeof body === "string"
               ? body
               : JSON.stringify(body);
@@ -147,6 +165,7 @@ export class FacadeController {
         path,
         query,
         body: bodyText,
+        contentType,
         requestId,
         traceparent,
         user,
@@ -163,6 +182,7 @@ export class FacadeController {
       path,
       query,
       body: undefined,
+      contentType,
       requestId,
       traceparent,
       user,
