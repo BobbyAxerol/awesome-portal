@@ -1,5 +1,10 @@
 /** Typed API client for the portal backend (schemas mirror portal_api contracts). */
-import type { FoldPlanDocument, RowEnvelope } from "../portal/contracts";
+import type {
+  AlphaImportRecord,
+  AlphaVerifyResult,
+  FoldPlanDocument,
+  RowEnvelope,
+} from "../portal/contracts";
 
 export interface DatasetDescriptor {
   dataset_id: string;
@@ -182,6 +187,17 @@ export const api = {
   strategies: () => request<StrategyResponse[]>("/api/strategies"),
   /** Imported alpha registry projection (strategy import contract §1). */
   alphas: () => request<unknown>("/api/v1/alphas"),
+  /** Quarantine inbox for imported alphas (strategy import contract §5). */
+  alphaImports: () => request<AlphaImportRecord[]>("/api/v1/alphas/imports"),
+  /**
+   * Re-verifies a registered alpha version's artifact digest.
+   *
+   * Read-only: it recomputes and compares, it does not promote anything.
+   */
+  verifyAlpha: (alphaId: string, version: string) =>
+    request<AlphaVerifyResult>(
+      `/api/v1/alphas/${encodeURIComponent(alphaId)}/versions/${encodeURIComponent(version)}/verify`,
+    ),
   /** Engine capability manifest for the installed release (§4). */
   engineCapabilities: () => request<unknown>("/api/v1/portal/capabilities"),
   capabilities: () => request<Record<string, unknown>[]>("/api/capabilities/walk-forward"),

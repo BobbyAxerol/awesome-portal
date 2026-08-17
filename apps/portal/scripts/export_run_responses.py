@@ -61,7 +61,30 @@ ENDPOINTS = [
     "/api/strategies",
     "/api/datasets",
     "/api/config/options",
+    "/api/v1/alphas/imports",
 ]
+
+# Two synthetic imports so the quarantine inbox baselines a populated screen
+# with both persisted states, instead of only the empty case. The manifests are
+# copied from the canonical alpha registry and re-identified, so they pass the
+# real alpha-manifest.v1 schema.
+IMPORT_ARTIFACT = b"synthetic-alpha-artifact-for-visual-baseline\n"
+IMPORT_CASES = [
+    ("vb-quarantined-alpha", "0.2.0", True),
+    ("vb-digest-mismatch-alpha", "0.1.0", False),
+]
+
+# `import_id` is random and `received_at` is wall-clock, so both are pinned
+# after capture. Nothing else is touched: state, digest_ok and the service's own
+# `reason` string stay exactly as the pipeline produced them.
+PINNED_IMPORT_IDS = {
+    "vb-quarantined-alpha": "a1b2c3d4e5f60001",
+    "vb-digest-mismatch-alpha": "a1b2c3d4e5f60002",
+}
+PINNED_RECEIVED_AT = {
+    "vb-quarantined-alpha": "2026-08-17T09:40:00+00:00",
+    "vb-digest-mismatch-alpha": "2026-08-17T09:12:00+00:00",
+}
 
 
 def artifact_digest(root: Path) -> str:
@@ -93,15 +116,49 @@ def slug(url: str) -> str:
     )
 
 
+def seed_imports(app: object) -> None:
+    """Submit the synthetic imports through the real quarantine service."""
+    import copy
+
+    source = json.loads(
+        (REPO_ROOT / "apps" / "portal" / "registry" / "alphas.v1.json").read_text(encoding="utf-8")
+    )["alphas"][0]
+    service = app.state.alpha_import_service  # type: ignore[attr-defined]
+    good_digest = "sha256:" + hashlib.sha256(IMPORT_ARTIFACT).hexdigest()
+
+    for alpha_id, version, digest_ok in IMPORT_CASES:
+        manifest = copy.deepcopy(source)
+        manifest["alpha_id"] = alpha_id
+        manifest["version"] = version
+        manifest["artifact"]["digest"] = good_digest if digest_ok else "sha256:" + "0" * 64
+        service.submit(manifest, IMPORT_ARTIFACT)
+
+
+def pin_imports(records: list[dict[str, object]]) -> list[dict[str, object]]:
+    """Replace the two non-deterministic identity fields with pinned values."""
+    for item in records:
+        alpha_id = str(item.get("alpha_id"))
+        if alpha_id in PINNED_IMPORT_IDS:
+            item["import_id"] = PINNED_IMPORT_IDS[alpha_id]
+            item["received_at"] = PINNED_RECEIVED_AT[alpha_id]
+    return sorted(records, key=lambda item: str(item.get("received_at")), reverse=True)
+
+
 def main() -> int:
+    import tempfile
+
     os.environ["PORTAL_ARTIFACT_ROOT"] = str(FIXTURE_ROOT)
     os.environ["PORTAL_REGISTRY_ROOT"] = str(REPO_ROOT / "apps" / "portal" / "registry")
+    # Quarantine writes real files; keep them out of the repository.
+    os.environ["PORTAL_ALPHA_IMPORT_ROOT"] = tempfile.mkdtemp(prefix="portal-alpha-imports-")
 
     from fastapi.testclient import TestClient
 
     from portal_api.main import create_app
 
-    client = TestClient(create_app())
+    app = create_app()
+    seed_imports(app)
+    client = TestClient(app)
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     for stale in OUT_DIR.glob("*.json"):
@@ -121,12 +178,15 @@ def main() -> int:
         if response.status_code != 200:
             failed.append(f"{response.status_code} {url}")
             continue
+        body = response.json()
+        if url.endswith("/alphas/imports"):
+            body = pin_imports(body)
         name = f"{slug(url)}.json"
         # Compact and key-sorted: these are regenerated wholesale, never hand
         # edited, and the series bodies are large enough that pretty-printing
         # costs ~25% of the committed size for no review benefit.
         OUT_DIR.joinpath(name).write_text(
-            json.dumps(response.json(), sort_keys=True, ensure_ascii=False, separators=(",", ":")) + "\n",
+            json.dumps(body, sort_keys=True, ensure_ascii=False, separators=(",", ":")) + "\n",
             encoding="utf-8",
         )
         endpoints[url] = name

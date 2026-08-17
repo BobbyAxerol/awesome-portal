@@ -102,6 +102,11 @@ const RUN_SCREENS: Screen[] = [
     ready: (page) => page.locator("figure[data-fig='1']"),
   },
   {
+    name: "alpha-imports",
+    path: "/research/quantbt/imports",
+    ready: (page) => page.getByTestId("import-summary"),
+  },
+  {
     name: "run-audit",
     path: `/research/quantbt/runs/${FIXTURE_RUN_ID}/audit`,
     ready: (page) => page.getByRole("heading", { level: 1 }),

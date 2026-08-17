@@ -12,7 +12,7 @@
  *  - progress/SSE behaviour and artifact/export routes are unchanged.
  */
 import { useQuery } from "@tanstack/react-query";
-import { Copy, Download, FolderOpen, Plus } from "lucide-react";
+import { Copy, Download, FolderOpen, Plus, ShieldAlert } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Link,
@@ -32,6 +32,7 @@ import { api, canOpenRunResults, isTerminal, type RunSummary } from "../../lib/a
 import { fmtShortHash } from "../../lib/format";
 import { AuditView } from "../audit/AuditView";
 import { ConfigWorkspace } from "../config/ConfigWorkspace";
+import { ImportInbox } from "../imports/ImportInbox";
 import { ExecutionView } from "../execution/ExecutionView";
 import { OptimizationView } from "../optimization/OptimizationView";
 import { OverviewView } from "../overview/OverviewView";
@@ -223,6 +224,10 @@ export function QuantBTModule() {
           </a>
         </>
       ) : null}
+      <Link to={`${QUANTBT_ROOT}/imports`} className="btn-ghost no-print" aria-label="Alpha imports">
+        <ShieldAlert size={12} />
+        Imports
+      </Link>
       <Link className="btn-primary no-print" to={`${QUANTBT_ROOT}/new`}>
         <Plus size={13} />
         New run
@@ -248,6 +253,11 @@ export function QuantBTModule() {
 
       <Routes>
         <Route path="new" element={<ConfigWorkspace />} />
+        {/* The quarantine inbox lives under QuantBT because it is about the
+          * strategies this module's picker can (and cannot) run. ALPHA_POOL is
+          * still COMMISSIONED in the registry, and rendering a working screen
+          * there would contradict its own badge. */}
+        <Route path="imports" element={<ImportInbox />} />
         <Route path="runs" element={<RunLibrary />} />
         <Route path="runs/:runId/*" element={<RunWorkspace />} />
         <Route path=":tab" element={<LegacyTabRedirect />} />

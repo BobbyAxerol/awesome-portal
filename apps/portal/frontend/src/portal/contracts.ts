@@ -65,6 +65,7 @@ export type ArtifactProducer = Schemas["ArtifactProducer"];
 
 /** Quarantine record for an imported alpha (U14 / BAR-21). */
 export type AlphaImportRecord = Schemas["AlphaImportRecord"];
+export type AlphaVerifyResult = Schemas["AlphaVerifyResult"];
 export type EngineReleasePublic = Schemas["EngineReleasePublic"];
 
 /**

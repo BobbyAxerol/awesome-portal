@@ -18,7 +18,8 @@
   "/api/runs/visual-baseline-run/wfo/folds": "run__wfo__folds.json",
   "/api/runs/visual-baseline-run/wfo/parameters": "run__wfo__parameters.json",
   "/api/runs/visual-baseline-run/wfo/trials?top_n=5000": "run__wfo__trials--top_n_5000.json",
-  "/api/strategies": "strategies.json"
+  "/api/strategies": "strategies.json",
+  "/api/v1/alphas/imports": "v1__alphas__imports.json"
  },
  "run_id": "visual-baseline-run",
  "source": "registry/fixtures/runs/visual-baseline-run",

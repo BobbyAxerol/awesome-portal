@@ -975,3 +975,95 @@
   margin-top: 2px;
   color: var(--state-degraded);
 }
+
+/* --- Alpha import inbox (U14) -------------------------------------------- */
+.import-list {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+.import-row {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--paper-raised);
+  box-shadow: var(--shadow-e1);
+  padding: var(--space-3) var(--space-4);
+}
+.import-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.import-alpha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-base);
+  color: var(--ink);
+}
+.import-alpha-id {
+  font-weight: 600;
+}
+.import-version,
+.import-received {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+.import-received {
+  margin-top: 2px;
+}
+.import-meaning {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--ink-soft);
+}
+/* The service's own wording, visually separated from our prose so a reader can
+ * tell which sentence came from the authority. */
+.import-reason {
+  margin-top: var(--space-2);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--state-denied);
+  font-size: var(--text-xs);
+  color: var(--state-denied);
+}
+.import-row-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line-soft);
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+.import-verify {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+}
+.import-verify dt {
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.import-verify dd {
+  color: var(--ink-soft);
+}
+.import-not-persisted {
+  color: var(--ink-faint);
+}
+
+/* A digest is 71 characters and a rejection reason quotes one in full, so both
+ * have to be allowed to break mid-token or they run off a narrow card. */
+.import-reason,
+.import-id,
+.import-digest-flag,
+.import-verify dd {
+  overflow-wrap: anywhere;
+}
