@@ -129,3 +129,10 @@ operational theo BAR-16 report.
 Agent chỉ được implement deep dive khi phase tương ứng đang active và owner đã
 giao scope. Tài liệu của phase sau là thiết kế trước, không phải implementation
 authority.
+
+## BAR-21 — Strategy Import & Quarantine Ingest foundation
+
+Quarantine write path for U14 (see `BAR_21_STRATEGY_IMPORT.md`):
+`POST /api/v1/alphas/import` + `GET /api/v1/alphas/imports`, digest-verified
+fail-closed import into a runtime quarantine store; the source registry stays
+immutable and imported alphas are never executable.

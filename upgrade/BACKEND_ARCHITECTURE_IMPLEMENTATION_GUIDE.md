@@ -631,6 +631,7 @@ Deep dives:
 - [`upgrade/backend/BAR_14_RUST_FAST_PATHS_GATE.md`](./backend/BAR_14_RUST_FAST_PATHS_GATE.md)
 - [`upgrade/backend/BAR_15_PLANNING_POSTGRES_CUTOVER.md`](./backend/BAR_15_PLANNING_POSTGRES_CUTOVER.md)
 - [`upgrade/backend/BAR_16_RELEASE_DR_HARDENING.md`](./backend/BAR_16_RELEASE_DR_HARDENING.md)
+- [`upgrade/backend/BAR_21_STRATEGY_IMPORT.md`](./backend/BAR_21_STRATEGY_IMPORT.md)
 
 The v0.5 adjustment guide extends the runway with four dual-cell slices —
 **BAR-17** Dual-Cell Deployment & Release Authority, **BAR-18** Inter-Cell
