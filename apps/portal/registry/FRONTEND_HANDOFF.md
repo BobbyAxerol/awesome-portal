@@ -245,28 +245,28 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
    (advanced_walk_forward, COMPLETED, 20 fold, 32 trial, series 3.476 bar).
 8. ~~Envelope cho `wfo/candidates` + `wfo/folds`~~ → cả hai dùng `RowEnvelope`.
 
-**Còn treo (mới, @codex):**
+**Đã đóng** (codex giao trong `b02f4c2` + `3f6c9c1`; cập nhật `2026-08-17`):
 
-10. **Fixture run ở state `RUNNING`.** `visual-baseline-run` là `COMPLETED`, nên
-    màn **Run Progress** (console live, ETA, progress strip, fold Gantt đang
-    chạy) không vào được visual baseline — nó chỉ render khi run chưa terminal.
-    Đề xuất một fixture thứ hai, cùng cơ chế `export_run_fixture.py`, dừng ở
-    giữa fold (vd fold 8/20) với `status.json` = `RUNNING` và console log cắt
-    tương ứng. Đây là mảng cuối còn thiếu bằng chứng thị giác.
-11. **Đường ingest không qua browser upload.** Strategy import contract §5:
-    *"Không chấp nhận: import trực tiếp file từ browser"*. Nhưng
-    `POST /api/v1/alphas/import` hiện nhận **hai multipart file upload**
-    (manifest + artifact) — đúng hình dạng mà §5 loại bỏ. Endpoint tự nó an
-    toàn (không execute code, chỉ ghi quarantine), nhưng frontend **không dựng
-    form upload** vì đó là làm ngược tài liệu authority. Đề xuất: ingest theo
-    **source reference đã review** — `{git_ref, artifact_uri, expected_digest}`
-    — server tự fetch + verify; browser chỉ gửi con trỏ, không gửi code. Nếu
-    upload là chủ ý thì cần §5 được cập nhật (việc của codex) + khai báo
-    authority/permission trong registry để UI gate đúng.
-12. **`maturity` cho `ALPHA_POOL`.** Inbox hiện đặt ở `/research/quantbt/imports`
-    vì `ALPHA_POOL` là `COMMISSIONED` — render màn chạy được ở route đó sẽ mâu
-    thuẫn badge của chính nó. Khi có certification slice, xin đổi maturity để
-    chuyển inbox về đúng feature.
+10. ~~Fixture run ở state `RUNNING`~~ → `registry/fixtures/runs/visual-baseline-run-running`
+    (RUNNING, mid-study: status RUNNING, 16/32 trials, console "fold 8/20
+    completed", fold_plan đủ 20 folds, metrics/selection đã bỏ — trung thực
+    cho state chưa terminal). Cùng cơ chế `export_run_fixture.py`; có
+    `test_run_fixture.py` khóa contract.
+11. ~~Đường ingest không qua browser upload~~ → **chọn hướng A — source
+    reference**. `POST /api/v1/alphas/import` giờ nhận JSON body
+    `{alpha_id, version, artifact_relpath, expected_digest, git_ref?}`; server
+    đọc artifact do CI/owner đặt sẵn trong ingest inbox
+    (`PORTAL_ALPHA_ARTIFACT_ROOT`, path-traversal-safe) + `manifest.json` kề
+    bên, verify digest, ghi quarantine. **Browser không gửi code**, server
+    không fetch URI tùy ý (không SSRF). Form upload multipart cũ bị chặn
+    (422). UI dựng được ngay: 3 field + preflight + state.
+
+**Chờ quyết định (không chặn code):**
+
+12. **`maturity` cho `ALPHA_POOL`** — giữ `COMMISSIONED` tới slice
+    certification (U14). Codex sẽ đổi `PROTOTYPE`/`AVAILABLE` đúng lúc
+    certification; **Claude cứ dùng `/research/quantbt/imports` tạm**, không
+    làm hai lần. Không cần request thêm.
 
 **Ghi chú tồn đọng (không phải request):**
 
@@ -293,13 +293,10 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
    liệu gốc. **Cần Bobby quyết** nếu muốn sửa cả tài liệu gốc — việc đó phải
    đi kèm regenerate manifest và là thay đổi nội dung, không phải thay đổi UI.
 
-3. **Import qua browser upload.** Strategy import contract §5 cấm
-   *"import trực tiếp file từ browser"*, nhưng `POST /api/v1/alphas/import`
-   được giao dưới dạng hai multipart file upload. Theo authority order
-   (AGENTS.md trỏ tới design note này), tài liệu thắng code hiện hành, nên
-   v1.1 **chỉ làm nửa đọc** của U14 và escalate thành request 11 thay vì dựng
-   form. Cần codex quyết: sửa endpoint theo source-reference, hay cập nhật §5
-   nếu upload là chủ ý.
+3. **Import qua browser upload (đã giải quyết).** §5 cấm upload trực tiếp
+   từ browser; endpoint multipart cũ trái §5 và đã được **đổi sang source
+   reference** (chọn hướng A, request 11 đóng — xem §8.3). UI không bao giờ
+   gửi code bytes.
 
 ### 8.5 Việc làm thêm ngoài plan (track theo CLAUDE.md §7.3)
 
@@ -334,12 +331,26 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 
 ### 8.6 Đề xuất slice kế tiếp
 
-Sau slice này **mọi mục còn lại đều chờ backend hoặc chờ phase**. Không còn việc
-frontend tự làm được mà chưa làm.
+**Wire gateway đã BẬT** (codex `1159d0a`): mọi `/api/` đi qua Control API BFF —
+browser **cần session**; USER đọc được mọi thứ (kể cả cross-user runs), **mọi
+mutation ADMIN-only**. Rollback 1 dòng `PORTAL_WEB_UPSTREAM=portal-api:8000`.
+Vite dev proxy không bị ảnh hưởng.
 
-1. **Run Progress baseline** — cần **request 10** (fixture run `RUNNING`).
-2. **Import Wizard nửa ghi** — cần **request 11** (đường ingest không qua browser).
-3. **Alpha Pool routing** — cần **request 12** (`maturity` cho `ALPHA_POOL`).
-4. **Command Center drill-down / Profile & Access** — chờ phase **U10** / **U07**.
-5. Việc nhỏ không chặn, có thể chen vào: mermaid theo print (§8.2), wire visual
-   baseline vào `ci.yml` (file của codex).
+1. **Login UI (Frames 01B/01C/01D) — ưu tiên 1.** Không có nó, UI containerized
+   chỉ dùng được cho ADMIN đã đăng nhập. Luồng có sẵn: `/api/auth/context`
+   (state machine ACCESS_REQUIRED → APP_LOGIN_REQUIRED →
+   PASSWORD_CHANGE_REQUIRED → AUTHENTICATED) → `/api/auth/login` (activation
+   hoặc password) → `/api/auth/change-password` → session cookie
+   (`__Host-portal_session`, Secure/HttpOnly) + CSRF header. Dev: `AUTH_MODE=dev`
+   + `x-dev-access-email`; user seed qua `deploy/control-api/bootstrap-users.yaml`.
+2. **Run Progress §12.2 baseline** — đã có `as_of`/digest + fixture `RUNNING`;
+   chụp state live (console, ETA, progress strip, fold Gantt).
+3. **Import Wizard nửa ghi (U14)** — form source-reference
+   `{git_ref, artifact_relpath, expected_digest}` + `/api/v1/alphas/imports`
+   hiển thị state (QUARANTINED / DIGEST_MISMATCH / INVALID_MANIFEST /
+   ALREADY_REGISTERED). Gate ADMIN qua session.
+4. **Workspace (U10)** — User đã đọc runs rộng; `/api/workspaces` +
+   `/api/workspaces/{id}/runs` là convenience path — chỉ làm khi cần tenancy.
+5. **Command Center drill-down / Profile & Access** — chờ phase **U10** / **U07**.
+6. Việc nhỏ: wire `scripts/portal-web-visual.sh` vào `ci.yml` (đã thêm step,
+   script skip tới khi Playwright project xong); mermaid theo print (§8.2).
