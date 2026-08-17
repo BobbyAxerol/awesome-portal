@@ -1,15 +1,29 @@
 /** Number & time formatting — single source (§27.7 rule 9). */
 
+/**
+ * Thousands grouping with a fixed number of decimals.
+ *
+ * `toFixed` alone printed `24837.88%` — a four-digit percentage with no grouping,
+ * which is the hardest possible way to read a number. Every formatter below goes
+ * through here so one rule covers percent, ratio and count alike.
+ */
+function grouped(value: number, digits: number): string {
+  return value.toLocaleString("en-US", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
 export function fmtPct(value: number | null | undefined, signed = false): string {
   if (value == null || Number.isNaN(value) || !Number.isFinite(value)) return "—";
   const prefix = signed && value > 0 ? "+" : "";
-  return `${prefix}${value.toFixed(2)}%`;
+  return `${prefix}${grouped(value, 2)}%`;
 }
 
 export function fmtDelta(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value) || !Number.isFinite(value)) return "—";
   const prefix = value > 0 ? "+" : "";
-  return `${prefix}${value.toFixed(2)}%`;
+  return `${prefix}${grouped(value, 2)}%`;
 }
 
 export function fmtMoney(value: number | null | undefined): string {
@@ -21,7 +35,7 @@ export function fmtMoney(value: number | null | undefined): string {
 
 export function fmtRatio(value: number | null | undefined, digits = 2): string {
   if (value == null || Number.isNaN(value) || !Number.isFinite(value)) return "—";
-  return value.toFixed(digits);
+  return grouped(value, digits);
 }
 
 export function fmtDecay(value: number | null | undefined): string {

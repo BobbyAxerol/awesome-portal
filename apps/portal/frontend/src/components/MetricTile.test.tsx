@@ -5,6 +5,7 @@
  * and as-of, and a value the engine did not compute never renders as
  * something a reader could mistake for a number.
  */
+import { fmtPct } from "../lib/format";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -52,13 +53,44 @@ describe("metric definitions", () => {
     expect(metricTone(metricDefinition("num_trades"), 0)).toBe("neutral");
   });
 
-  it("treats any non-zero drawdown as adverse", () => {
+  it("colours a signed metric by its sign, because crossing zero changes the outcome", () => {
+    expect(metricTone(metricDefinition("total_return_pct"), 12)).toBe("good");
+    expect(metricTone(metricDefinition("total_return_pct"), -12)).toBe("bad");
+    expect(metricTone(metricDefinition("total_return_pct"), 0)).toBe("neutral");
+  });
+
+  it("does not praise a level metric the engine reported without a verdict", () => {
+    // The old rule painted this green, which claimed a judgement nobody computed.
+    expect(metricTone(metricDefinition("sharpe"), 13.2)).toBe("neutral");
+    expect(metricTone(metricDefinition("calmar"), 7231)).toBe("neutral");
+    // The adverse side IS defined, so it still flags.
+    expect(metricTone(metricDefinition("sharpe"), -0.4)).toBe("bad");
+  });
+
+  it("uses the profit factor's own threshold, not zero", () => {
+    // Its definition says "dưới 1 nghĩa là lỗ ròng".
+    expect(metricTone(metricDefinition("profit_factor"), 0.8)).toBe("bad");
+    expect(metricTone(metricDefinition("profit_factor"), 1.4)).toBe("neutral");
+  });
+
+  it("leaves equity uncoloured, because a colour that never varies says nothing", () => {
+    expect(metricTone(metricDefinition("final_equity"), 161634)).toBe("neutral");
+    expect(metricTone(metricDefinition("final_equity"), 10)).toBe("neutral");
+  });
+
+  it("leaves drawdown uncoloured: every run has one and no threshold was published", () => {
     expect(metricTone(metricDefinition("max_drawdown_pct"), 0)).toBe("neutral");
-    expect(metricTone(metricDefinition("max_drawdown_pct"), 12)).toBe("bad");
+    expect(metricTone(metricDefinition("max_drawdown_pct"), 12)).toBe("neutral");
   });
 
   it("gives no tone at all when there is no value", () => {
     expect(metricTone(metricDefinition("sharpe"), null)).toBe("neutral");
+  });
+
+  it("groups a large percentage instead of printing a raw run of digits", () => {
+    expect(fmtPct(24837.88)).toBe("24,837.88%");
+    expect(fmtPct(3.43)).toBe("3.43%");
+    expect(fmtPct(708.17, true)).toBe("+708.17%");
   });
 });
 

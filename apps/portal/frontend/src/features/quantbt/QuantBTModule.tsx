@@ -217,6 +217,11 @@ export function QuantBTModule() {
     enabled: Boolean(activeRunId),
   });
 
+  // On a run route the passport strip below carries run, status, protocol,
+  // strategy, instrument and created-at. Repeating three of those in the module
+  // header printed the same identity twice, 40px apart.
+  const onRunRoute = /\/runs\/[^/]+/.test(location.pathname);
+
   const actions = (
     <>
       <Link to={`${QUANTBT_ROOT}/runs`} className="btn-ghost no-print" aria-label="Run library">
@@ -238,8 +243,10 @@ export function QuantBTModule() {
             aria-label="Copy run id"
           >
             <Copy size={12} />
-            {fmtShortHash(activeRunId)}
-            {copied ? " ✓" : ""}
+            {/* The verb has to be visible: the old label was the run id alone,
+              * which named a thing instead of saying what the button does. */}
+            {copied ? "Đã copy ✓" : "Copy id"}
+            <span className="mono text-ink-faint">{fmtShortHash(activeRunId)}</span>
           </button>
           <a className="btn-ghost no-print" href={`/api/runs/${activeRunId}/export`}>
             <Download size={12} />
@@ -262,16 +269,20 @@ export function QuantBTModule() {
     <>
       <ModuleHeader
         title={feature?.label ?? "QuantBT Research"}
-        description={feature?.description}
+        // The module description is orientation for someone arriving, not a
+        // caption to reprint on every sub-route.
+        description={onRunRoute ? undefined : feature?.description}
         maturity={feature?.maturity ?? "AVAILABLE"}
         dataMode={feature?.data_mode ?? "REAL"}
         actions={actions}
       >
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Chip>{strategies.data?.[0]?.strategy_id ?? "—"}</Chip>
-          {activeRunId ? <Chip>current {fmtShortHash(activeRunId)}</Chip> : null}
-          <RunStatusBadge status={activeRun.data?.status ?? null} />
-        </div>
+        {onRunRoute ? null : (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Chip>{strategies.data?.[0]?.strategy_id ?? "—"}</Chip>
+            {activeRunId ? <Chip>current {fmtShortHash(activeRunId)}</Chip> : null}
+            <RunStatusBadge status={activeRun.data?.status ?? null} />
+          </div>
+        )}
       </ModuleHeader>
 
       <Routes>

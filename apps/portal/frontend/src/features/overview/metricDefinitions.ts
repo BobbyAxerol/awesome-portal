@@ -19,6 +19,14 @@ export interface MetricDefinition {
   unit: MetricUnit;
   /** Which direction is favourable; `none` means it is descriptive only. */
   direction: "higher" | "lower" | "none";
+  /**
+   * What the sign of this metric means, for colour only.
+   *
+   * Separate from `direction` because "higher is better" does not imply "a high
+   * value is good news" — Sharpe higher is better, but 13.20 is still a level the
+   * engine reported, not a verdict it issued. Omitted = never coloured.
+   */
+  toneBasis?: "sign" | "adverse-below-zero" | "adverse-below-one";
   /** Whether the annualization calendar affects it — audit-relevant. */
   annualized?: boolean;
 }
@@ -44,6 +52,7 @@ const DEFINITIONS: MetricDefinition[] = [
     definition: "Thay đổi equity từ đầu đến cuối segment, tính theo phần trăm vốn ban đầu.",
     unit: "percent",
     direction: "higher",
+    toneBasis: "sign",
   },
   {
     key: "cagr_pct",
@@ -52,6 +61,7 @@ const DEFINITIONS: MetricDefinition[] = [
     unit: "percent",
     direction: "higher",
     annualized: true,
+    toneBasis: "sign",
   },
   {
     key: "sharpe",
@@ -60,6 +70,7 @@ const DEFINITIONS: MetricDefinition[] = [
     unit: "ratio",
     direction: "higher",
     annualized: true,
+    toneBasis: "adverse-below-zero",
   },
   {
     key: "sortino",
@@ -68,6 +79,7 @@ const DEFINITIONS: MetricDefinition[] = [
     unit: "ratio",
     direction: "higher",
     annualized: true,
+    toneBasis: "adverse-below-zero",
   },
   {
     key: "calmar",
@@ -76,6 +88,7 @@ const DEFINITIONS: MetricDefinition[] = [
     unit: "ratio",
     direction: "higher",
     annualized: true,
+    toneBasis: "adverse-below-zero",
   },
   {
     key: "max_drawdown_pct",
@@ -90,6 +103,7 @@ const DEFINITIONS: MetricDefinition[] = [
     definition: "Tổng lãi gộp chia tổng lỗ gộp. Dưới 1 nghĩa là lỗ ròng.",
     unit: "ratio",
     direction: "higher",
+    toneBasis: "adverse-below-one",
   },
   {
     key: "num_trades",
@@ -152,15 +166,41 @@ export const MATRIX_METRICS = [
 /**
  * Semantic tone for a value.
  *
- * Only applied when the metric has a direction; a descriptive metric such as
- * trade count is never coloured good or bad.
+ * The rule is narrow on purpose. The old rule coloured every `direction:
+ * "higher"` metric green at or above zero, which produced two lies:
+ *
+ *  - **Sharpe 13.20 in green.** The engine reported a level, not a verdict.
+ *    Portal painting it "good" is a judgement nobody computed — the same class of
+ *    inference §3.5 forbids for numbers, expressed in colour instead.
+ *  - **Equity always green.** Equity cannot be negative, so the colour never
+ *    varied; a colour that never varies carries no information, and it drains the
+ *    one colour that should mean something.
+ *
+ * So tone now comes from `toneBasis`, which says what — if anything — the sign of
+ * this particular metric means:
+ *
+ *  - `sign`: crossing zero is a real change of outcome (made money / lost money).
+ *  - `adverse-below-zero`, `adverse-below-one`: the adverse side is defined, the
+ *    favourable side is not a verdict. Adverse gets red; everything else stays
+ *    neutral rather than being praised.
+ *  - `none`: descriptive. Never coloured. A drawdown lives here: every run has
+ *    one, and calling any non-zero drawdown "bad" needs a threshold the engine
+ *    never published.
  */
 export function metricTone(
   definition: MetricDefinition,
   value: number | null,
 ): "good" | "bad" | "neutral" {
-  if (value === null || definition.direction === "none") return "neutral";
-  if (definition.direction === "higher") return value >= 0 ? "good" : "bad";
-  // A drawdown is reported as a magnitude; any non-zero value is adverse.
-  return value === 0 ? "neutral" : "bad";
+  if (value === null || Number.isNaN(value)) return "neutral";
+  switch (definition.toneBasis ?? "none") {
+    case "sign":
+      if (value > 0) return "good";
+      return value < 0 ? "bad" : "neutral";
+    case "adverse-below-zero":
+      return value < 0 ? "bad" : "neutral";
+    case "adverse-below-one":
+      return value < 1 ? "bad" : "neutral";
+    default:
+      return "neutral";
+  }
 }

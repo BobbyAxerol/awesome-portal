@@ -187,6 +187,12 @@ export function ConfigWorkspace() {
   );
 
   const [step, setStep] = useState<StepId>("strategy");
+  // Which steps the reader has actually opened. The first one is open on arrival.
+  const [visited, setVisited] = useState<Set<StepId>>(() => new Set<StepId>(["strategy"]));
+  const openStep = (id: StepId) => {
+    setStep(id);
+    setVisited((current) => (current.has(id) ? current : new Set(current).add(id)));
+  };
   const [strategyId, setStrategyId] = useState<string | null>(null);
   const [protocol, setProtocol] = useState<string>("");
   const [datasetId, setDatasetId] = useState("");
@@ -425,7 +431,7 @@ export function ConfigWorkspace() {
     },
     { id: "optimization", label: "Tối ưu", error: trialsError, complete: !trialsError },
     { id: "review", label: "Kiểm tra & chạy", complete: preflightValid },
-  ];
+  ].map((definition) => ({ ...definition, visited: visited.has(definition.id as StepId) }));
 
   /* --- Loading / error --------------------------------------------------- */
 
@@ -454,7 +460,7 @@ export function ConfigWorkspace() {
         description="Cấu hình một backtest walk-forward. Mỗi bước được kiểm tra riêng trước khi gửi preflight."
       />
 
-      <Stepper steps={steps} activeId={step} onSelect={(id) => setStep(id as StepId)} />
+      <Stepper steps={steps} activeId={step} onSelect={(id) => openStep(id as StepId)} />
 
       <div className="run-config-grid">
         <div className="min-w-0 space-y-4">
@@ -478,7 +484,7 @@ export function ConfigWorkspace() {
                 onSelect={(entry: CatalogEntry) => {
                   setStrategyId(entry.strategyId);
                   setTimeframe(entry.defaultTimeframe ?? "");
-                  setStep("data");
+                  openStep("data");
                 }}
               />
             </Panel>

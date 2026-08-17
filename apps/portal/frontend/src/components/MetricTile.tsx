@@ -30,7 +30,9 @@ function formatValue(definition: MetricDefinition, value: number): string {
     case "currency":
       return `$${fmtMoney(value)}`;
     case "percent":
-      return fmtPct(value, definition.direction === "higher");
+      // The "+" appears only where crossing zero means something. A percentage
+      // that cannot be negative does not need a sign to explain itself.
+      return fmtPct(value, definition.toneBasis === "sign");
     case "count":
       return fmtCount(value);
     default:

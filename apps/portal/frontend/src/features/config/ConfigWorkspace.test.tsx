@@ -134,6 +134,11 @@ function mount({ strategies = [BUILTIN], alphas = alphaProjection(), capabilitie
   );
 }
 
+/** The stepper button for a step label. */
+function stepButton(label: string): HTMLElement {
+  return screen.getByRole("button", { name: new RegExp(label) });
+}
+
 /** Clicks a step in the flow stepper. */
 function goToStep(label: string) {
   fireEvent.click(screen.getByRole("button", { name: new RegExp(label) }));
@@ -427,5 +432,31 @@ describe("seed gate (R15)", () => {
     goToStep("Dữ liệu");
     const panel = await screen.findByTestId("strategy-requirements");
     expect(panel.textContent).toMatch(/strategy chưa khai báo/);
+  });
+});
+
+describe("stepper honesty", () => {
+  it("does not tick a step nobody has opened", async () => {
+    mount();
+    await screen.findByText("Chọn strategy");
+
+    // Validation is trivially satisfied for empty steps, so the old rule ticked
+    // all of them on arrival — which reads as "already done".
+    expect(stepButton("Walk-forward").dataset.state).toBe("pending");
+    expect(stepButton("Tham số").dataset.state).toBe("pending");
+    expect(stepButton("Tối ưu").dataset.state).toBe("pending");
+    expect(stepButton("Walk-forward").textContent).toContain("chưa mở");
+  });
+
+  it("ticks a step once it has been opened and has no error", async () => {
+    mount();
+    await screen.findByText("Chọn strategy");
+
+    fireEvent.click(stepButton("Walk-forward"));
+
+    expect(stepButton("Walk-forward").dataset.state).toBe("complete");
+    expect(stepButton("Walk-forward").textContent).toContain("đã mở, không có lỗi");
+    // Opening one step does not tick the ones after it.
+    expect(stepButton("Tối ưu").dataset.state).toBe("pending");
   });
 });
