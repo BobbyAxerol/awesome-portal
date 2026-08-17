@@ -197,6 +197,20 @@ export async function settle(page: Page): Promise<void> {
     const pending = document.querySelectorAll("[role='status']").length;
     return pending === 0 || document.querySelector("main") !== null;
   });
+  // Mermaid renders asynchronously (dynamic import, then a layout pass), so a
+  // `pre.mermaid` that has not become an `svg` yet means the shutter would open
+  // mid-render. This was a real, repeatable failure on the Reports print shot.
+  await page.waitForFunction(
+    () => {
+      // mermaid keeps the `.mermaid` element and replaces its contents with an
+      // `<svg>`; a failed render removes the element entirely, so "no diagrams"
+      // and "all diagrams drawn" are both settled states.
+      const diagrams = Array.from(document.querySelectorAll(".mermaid"));
+      return diagrams.every((node) => node.querySelector("svg") !== null);
+    },
+    undefined,
+    { timeout: 15_000 },
+  );
   // One frame after layout, so canvas charts have painted at the final size.
   await page.evaluate(
     () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),

@@ -873,3 +873,57 @@ select.input,
 .checkbox-label {
   min-width: 0;
 }
+
+/* --- Reports (v1.1: primitives, not injected markup) ---------------------
+ * The legacy fragment shipped its own grid and inline styles. Rendering from
+ * the parsed model means this screen uses the same tokens as everything else,
+ * and the `var(--muted)` / `var(--primary)` variables the old markup referenced
+ * — which Fund Paper never defined — are gone with it. */
+.reports-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.reports-card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+.reports-card h3 {
+  font-size: var(--text-lg);
+}
+.reports-card p:not(.mono-label) {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--ink-soft);
+}
+/* The header gives actions a narrow column, so a two-word label wrapped to two
+ * cramped lines. */
+.feature-actions .btn-primary,
+.feature-actions .btn-ghost {
+  white-space: nowrap;
+}
+
+.reports-role {
+  align-items: flex-start;
+}
+.reports-role strong {
+  color: var(--ink);
+  font-size: var(--text-base);
+}
+.reports-role p {
+  margin-top: 2px;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+.reports-diagram {
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .reports-grid {
+    grid-template-columns: 1fr;
+  }
+}

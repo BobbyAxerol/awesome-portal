@@ -89,8 +89,15 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:${PORTAL_HTTP_PORT:-8080}:80"
+    environment:
+      # U10 façade wire: control-api:4000 routes every /api/ (except health,
+      # ready and SSE) through the auth/RBAC BFF. Rollback in one line:
+      # PORTAL_WEB_UPSTREAM=portal-api:8000.
+      PORTAL_WEB_UPSTREAM: ${PORTAL_WEB_UPSTREAM:-control-api:4000}
     depends_on:
       portal-api:
+        condition: service_healthy
+      control-api:
         condition: service_healthy
       roadmap-task-board-api:
         condition: service_healthy

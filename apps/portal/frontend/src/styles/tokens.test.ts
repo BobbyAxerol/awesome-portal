@@ -163,7 +163,13 @@ describe("embedded Planning token parity", () => {
 
     const missing = new Map<string, string>();
     for (const file of files) {
-      const source = readFileSync(file, "utf8");
+      // Comment prose is not consumption. A doc comment that names the legacy
+      // `var(--muted)` it replaced would otherwise fail this gate, and a gate
+      // that fires on prose is one people learn to ignore.
+      const source = readFileSync(file, "utf8")
+        .split("\n")
+        .filter((line) => !/^\s*(\*|\/\/|\/\*)/.test(line))
+        .join("\n");
       for (const match of source.matchAll(/var\((--[a-z0-9-]+)(\$\{)?/g)) {
         const [, token, interpolated] = match;
         if (LOCALLY_SCOPED.has(token)) continue;

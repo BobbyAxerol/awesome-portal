@@ -63,6 +63,14 @@ const SCREENS: Screen[] = [
     path: "/planning/board",
     ready: (page) => page.getByTestId("task-board-feature"),
   },
+  // Reports renders from the parsed document now rather than from injected
+  // legacy markup, so it belongs in the baseline: this is where a token or
+  // layout regression in that change would show.
+  {
+    name: "planning-reports",
+    path: "/planning/reports",
+    ready: (page) => page.getByTestId("reports-feature"),
+  },
 ];
 
 /**

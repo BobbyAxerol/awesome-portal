@@ -176,7 +176,13 @@ def test_only_the_web_gateway_exposes_a_public_port() -> None:
 def test_gateway_keeps_compatibility_proxies() -> None:
     conf = NGINX_CONF.read_text(encoding="utf-8")
 
-    assert "proxy_pass http://portal-api:8000" in conf
+    # The /api/ upstream is a template var so the façade wire can roll back
+    # in one env line; infra health, ready and SSE always stay on Python.
+    assert "proxy_pass http://${PORTAL_WEB_UPSTREAM};" in conf
+    assert "proxy_pass http://portal-api:8000;" in conf  # health/ready/SSE
+    assert "location = /api/health" in conf
+    assert "location = /api/ready" in conf
+    assert re.search(r"location ~ \^/api/runs/\[\^/\]\+/events\$", conf)
     assert "proxy_pass http://roadmap-task-board-api:8000/api/" in conf
     assert re.search(r"location \^\~ /roadmap-task-board/", conf)
     assert re.search(r"location /api/", conf)

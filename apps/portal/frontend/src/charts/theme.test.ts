@@ -88,6 +88,9 @@ describe("no CSS variables inside ECharts options", () => {
       readFileSync(file, "utf8")
         .split("\n")
         .forEach((line, index) => {
+          // Same reason as the token-parity gate: a comment describing a fixed
+          // violation must not be reported as one.
+          if (/^\s*(\*|\/\/|\/\*)/.test(line)) return;
           if (line.includes("var(--") && OPTION_KEYS.test(line)) {
             offenders.push(`${relative(process.cwd(), file)}:${index + 1}: ${line.trim()}`);
           }
