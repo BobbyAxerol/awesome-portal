@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Check, Eye, Maximize2, Minimize2, Pause, Play, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { useRunEvents, runPollInterval } from "./useRunEvents";
 import { api, isTerminal, rowParams, type RunDetail, type RunFoldPlan, type RunLedger } from "../../lib/api";
 import { CancelRunButton } from "./CancelRunButton";
 import { FoldGantt } from "../../components/FoldGantt";
@@ -80,20 +81,29 @@ function Stepper({ detail }: { detail: RunDetail }) {
 }
 
 export function RunProgress({ runId, onViewResults }: { runId: string; onViewResults?: () => void }) {
+  // SSE, when it is available, is what makes a state change appear immediately.
+  // Polling stays underneath at a slow floor: a stream that opens and then goes
+  // quiet must not look like a run that stopped progressing.
+  const { streaming } = useRunEvents(runId);
+  const live = (fast: number) => (query: { state: { data?: { status: string } } }) =>
+    query.state.data && isTerminal(query.state.data.status)
+      ? false
+      : runPollInterval(streaming, fast);
+
   const detail = useQuery({
     queryKey: ["run", runId],
     queryFn: () => api.getRun(runId),
-    refetchInterval: (query) => (query.state.data && isTerminal(query.state.data.status) ? false : 1200),
+    refetchInterval: live(1200),
   });
   const ledger = useQuery({
     queryKey: ["ledger", runId],
     queryFn: () => api.ledger(runId),
-    refetchInterval: (query) => (query.state.data && isTerminal(query.state.data.status) ? false : 1200),
+    refetchInterval: live(1200),
   });
   const consoleTail = useQuery({
     queryKey: ["console", runId],
     queryFn: () => api.console(runId, 5000),
-    refetchInterval: 1000,
+    refetchInterval: runPollInterval(streaming, 1000),
     enabled: !detail.data || !isTerminal(detail.data.status),
   });
   const foldPlan = useQuery({
@@ -105,7 +115,7 @@ export function RunProgress({ runId, onViewResults }: { runId: string; onViewRes
   const progress = useQuery({
     queryKey: ["progress", runId],
     queryFn: () => api.progress(runId),
-    refetchInterval: 1000,
+    refetchInterval: runPollInterval(streaming, 1000),
     enabled: !detail.data || !isTerminal(detail.data.status),
   });
   const config = useQuery({

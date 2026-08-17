@@ -39,8 +39,21 @@ const ANALYST = {
   disabled_at: null,
 };
 
-const ADMIN_PRINCIPAL: AuthPrincipal = { username: "bobby", role: "ADMIN", exp: 1 };
-const USER_PRINCIPAL: AuthPrincipal = { username: "analyst", role: "USER", exp: 1 };
+function principal(username: string, role: string): AuthPrincipal {
+  return {
+    principalId: `p-${username}`,
+    username,
+    role,
+    sessionId: `s-${username}`,
+    mustChangePassword: false,
+    authnMethods: ["access", "password"],
+    issuedAt: "2026-08-17T09:00:00+00:00",
+    exp: 1_800_000_000,
+  };
+}
+
+const ADMIN_PRINCIPAL = principal("bobby", "ADMIN");
+const USER_PRINCIPAL = principal("analyst", "USER");
 
 const originalFetch = globalThis.fetch;
 const calls: { url: string; method: string; csrf: string | undefined }[] = [];
@@ -167,7 +180,7 @@ describe("mutations", () => {
 
   it("reports a server 403 as the server's answer, with its request id", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
-    mount(ADMIN_PRINCIPAL, (url, init) =>
+    mount(ADMIN_PRINCIPAL, (_url, init) =>
       init?.method === "POST"
         ? json(
             {
