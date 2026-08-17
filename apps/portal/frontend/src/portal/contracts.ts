@@ -66,6 +66,10 @@ export type ArtifactProducer = Schemas["ArtifactProducer"];
 /** Quarantine record for an imported alpha (U14 / BAR-21). */
 export type AlphaImportRecord = Schemas["AlphaImportRecord"];
 export type AlphaVerifyResult = Schemas["AlphaVerifyResult"];
+/** One preflight gate result (R14): which check, and what it was missing. */
+export type PreflightCheck = Schemas["PreflightCheck"];
+export type AlphaDeterminismPublic = Schemas["AlphaDeterminismPublic"];
+
 /** Source-reference ingest body (R11): a pointer plus a digest, never a file. */
 export type AlphaImportRequest = Schemas["AlphaImportRequest"];
 export type EngineReleasePublic = Schemas["EngineReleasePublic"];

@@ -28,7 +28,7 @@ import {
   TextField,
   ToggleField,
 } from "../../components/form";
-import { Badge, Collapsible, DefinitionList, StateView } from "../../components/ui";
+import { Collapsible, DefinitionList, StateView } from "../../components/ui";
 import { Callout, Panel, SectionHeading, Stepper, Toolbar, type StepDefinition } from "../../components/surface";
 import { api, type ParameterSpec } from "../../lib/api";
 import { fmtCount } from "../../lib/format";
@@ -42,6 +42,7 @@ import {
 } from "../../portal/strategyCatalog";
 import { runPath } from "../quantbt/routes";
 import { ParameterEditor, ParameterSummary } from "./ParameterEditor";
+import { PreflightChecks } from "./PreflightChecks";
 import { StrategyDetail, StrategyPicker } from "./StrategyPicker";
 import { ThreeWindowEditor } from "./ThreeWindowEditor";
 import { WindowTimeline } from "./WindowTimeline";
@@ -319,7 +320,22 @@ export function ConfigWorkspace() {
       ? `Engine release công bố trần ${limits.maxTrials} trial.`
       : null;
 
-  const blockingError = strategyError ?? dataError ?? windowError ?? parameterError ?? trialsError;
+  /*
+   * Seed gate (R15).
+   *
+   * `seed_required` comes from the alpha manifest's `determinism` block, which
+   * the registry now publishes. `null` means nothing declared it — a built-in
+   * has no manifest — and unknown is NOT permission, so an undeclared strategy
+   * is not gated but is not silently blessed either: the field below says which
+   * of the three it is.
+   */
+  const seedError =
+    selected?.seedRequired === true && seed === null
+      ? "Strategy khai báo determinism.seed_required — cần random seed cố định."
+      : null;
+
+  const blockingError =
+    strategyError ?? dataError ?? windowError ?? parameterError ?? trialsError ?? seedError;
 
   /* --- Request payload — shape unchanged from the frozen contract -------- */
 
@@ -505,10 +521,20 @@ export function ConfigWorkspace() {
                     </dd>
                   </div>
                   <div>
+                    <dt className="label">Seed</dt>
+                    <dd className="mono">
+                      {selected.seedRequired === true
+                        ? "bắt buộc (determinism.seed_required)"
+                        : selected.seedRequired === false
+                          ? "không bắt buộc"
+                          : "strategy chưa khai báo"}
+                    </dd>
+                  </div>
+                  <div>
                     <dt className="label">Kiểm tra ở đâu</dt>
                     <dd>
-                      Timeframe được kiểm ngay tại form. Cột bắt buộc và warmup được server
-                      kiểm ở preflight — Portal không đoán nội dung frame.
+                      Timeframe và seed được kiểm ngay tại form. Cột bắt buộc và warmup do
+                      server kiểm ở preflight, và bước Kiểm tra hiển thị đúng gate nào fail.
                     </dd>
                   </div>
                 </dl>
@@ -677,9 +703,16 @@ export function ConfigWorkspace() {
                   <NumberField label="Early stopping" value={earlyStopping} min={1} step={1} onChange={setEarlyStopping} />
                   <NumberField
                     label="Random seed"
+                    hint={
+                      selected?.seedRequired === true
+                        ? "Strategy khai báo seed_required — bắt buộc."
+                        : selected?.seedRequired === false
+                          ? "Strategy khai báo seed không bắt buộc."
+                          : "Strategy chưa khai báo determinism, nên Portal không kết luận seed có bắt buộc."
+                    }
+                    error={seedError ?? undefined}
                     value={seed}
                     step={1}
-                    hint="Bắt buộc khi strategy khai báo determinism.seed_required."
                     onChange={setSeed}
                   />
                   <SelectField
@@ -807,10 +840,9 @@ export function ConfigWorkspace() {
 
               {preflight.data ? (
                 <div className="space-y-3">
+                  {/* Real gate results, not three fixed "pass" badges. */}
+                  <PreflightChecks checks={preflight.data.checks ?? []} />
                   <div className="flex flex-wrap gap-2">
-                    <Badge tone="pass">schema</Badge>
-                    <Badge tone="pass">boundaries</Badge>
-                    <Badge tone="pass">content hash</Badge>
                     {preflight.data.windows.map((window) => (
                       <span key={window.role} className="chip">
                         {window.role} · {fmtCount(window.bars)} bars

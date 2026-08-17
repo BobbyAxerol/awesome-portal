@@ -1396,3 +1396,38 @@
   color: var(--ink-soft);
   overflow-wrap: anywhere;
 }
+
+/* --- Preflight gate results (R14) ---------------------------------------- */
+.preflight-checks {
+  display: grid;
+  gap: var(--space-2);
+}
+.preflight-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.preflight-failures {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--state-denied);
+  border-radius: var(--radius-md);
+  background: var(--state-denied-bg);
+  font-size: var(--text-xs);
+}
+.preflight-failure dt {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--state-denied);
+}
+.preflight-failure dd {
+  margin-top: 2px;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.preflight-detail {
+  color: var(--ink-soft);
+}

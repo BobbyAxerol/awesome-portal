@@ -82,6 +82,9 @@ function alphaProjection() {
         input_kind: alpha.strategy.input_kind,
         supported_endpoint_ids: alpha.strategy.supported_endpoint_ids,
         execution_contracts: alpha.strategy.execution_contracts,
+        // The real projection publishes determinism (R15); omitting it here
+        // would let the helper drift from the contract it stands in for.
+        determinism: alpha.strategy.determinism,
       },
       data_requirements: {
         asset_classes: alpha.data_requirements.asset_classes,
@@ -302,8 +305,10 @@ describe("declared data requirements", () => {
     await waitFor(() => expect(screen.getByText("Delta RSI Polynomial")).toBeTruthy());
     goToStep("Dữ liệu");
     const panel = await screen.findByTestId("strategy-requirements");
+    // Timeframe and seed are gated here; columns and warmup are the server's,
+    // and the Review step now names which gate failed.
+    expect(panel.textContent).toMatch(/Timeframe và seed được kiểm ngay tại form/);
     expect(panel.textContent).toMatch(/server kiểm ở preflight/);
-    expect(panel.textContent).toMatch(/không đoán nội dung frame/);
   });
 
   it("reports an undeclared requirement rather than a plausible default", async () => {
@@ -318,5 +323,109 @@ describe("declared data requirements", () => {
     const panel = await screen.findByTestId("strategy-requirements");
     // Not "open, high, low, close, volume" guessed from `data_kind: ohlcv`.
     expect(panel.textContent).toMatch(/chưa khai báo/);
+  });
+});
+
+describe("preflight gate results (R14)", () => {
+  const CHECKS = [
+    { id: "strategy", ok: true },
+    { id: "dataset", ok: true },
+    { id: "timeframe", ok: true },
+    { id: "required_columns", ok: false, missing: ["funding_rate", "open_interest"] },
+    { id: "parameter_space", ok: false, detail: "window step 2 vượt ceiling" },
+  ];
+
+  function mountWithPreflight(body: unknown, status = 200) {
+    const previous = globalThis.fetch;
+    mount();
+    const stub = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).includes("/api/runs/preflight")) {
+        return new Response(JSON.stringify(body), {
+          status,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return stub(input, init);
+    }) as typeof fetch;
+    return () => {
+      globalThis.fetch = previous;
+    };
+  }
+
+  it("names each failed gate and lists the missing columns", async () => {
+    mountWithPreflight({
+      valid: false,
+      strategy_id: "delta-rsi-polynomial-alpha",
+      dataset_id: "crypto-binance-1m",
+      symbol: "BTCUSDT",
+      timeframe: "1h",
+      windows: [],
+      data_quality: { rows: 1, content_hash: "h", missing_bar_count: 0 },
+      config_hash: "c",
+      checks: CHECKS,
+    });
+    await waitFor(() => expect(screen.getByText("Delta RSI Polynomial")).toBeTruthy());
+    goToStep("Kiểm tra & chạy");
+    fireEvent.click(await screen.findByRole("button", { name: /Chạy backtest/ }));
+
+    const failures = await screen.findByTestId("preflight-failures");
+    // The names, not a count: that is what the analyst acts on.
+    expect(failures.textContent).toContain("funding_rate, open_interest");
+    expect(failures.textContent).toContain("window step 2 vượt ceiling");
+    // Passing gates are reported too, so the reader sees what did run.
+    expect(within(screen.getByTestId("preflight-checks")).getByText("Dataset")).toBeTruthy();
+  });
+
+  it("does not claim a gate passed when preflight reported none", async () => {
+    // The old Review step rendered three fixed "pass" badges regardless.
+    mountWithPreflight({
+      valid: false,
+      strategy_id: "s",
+      dataset_id: "d",
+      symbol: "BTCUSDT",
+      timeframe: "1h",
+      windows: [],
+      data_quality: { rows: 1, content_hash: "h", missing_bar_count: 0 },
+      config_hash: "c",
+      checks: [],
+    });
+    await waitFor(() => expect(screen.getByText("Delta RSI Polynomial")).toBeTruthy());
+    goToStep("Kiểm tra & chạy");
+    fireEvent.click(await screen.findByRole("button", { name: /Chạy backtest/ }));
+
+    expect(await screen.findByTestId("preflight-checks-absent")).toBeTruthy();
+    expect(screen.queryByText("content hash")).toBeNull();
+  });
+});
+
+describe("seed gate (R15)", () => {
+  it("blocks submission when the manifest declares seed_required and no seed is set", async () => {
+    mount();
+    await waitFor(() => expect(screen.getByText("Delta RSI Polynomial")).toBeTruthy());
+    goToStep("Tối ưu");
+    const seed = await waitFor(() => {
+      const input = screen.getByLabelText(/Random seed/);
+      if (!input) throw new Error("seed field not rendered yet");
+      return input as HTMLInputElement;
+    });
+    fireEvent.change(seed, { target: { value: "" } });
+
+    goToStep("Kiểm tra & chạy");
+    const run = await screen.findByRole("button", { name: /Chạy backtest/ });
+    expect(run.hasAttribute("disabled")).toBe(true);
+    expect(run.getAttribute("title")).toMatch(/seed_required/);
+  });
+
+  it("says when a strategy declared nothing, rather than implying seed is optional", async () => {
+    // Unknown is not permission. A built-in publishes no manifest.
+    mount({
+      strategies: [{ ...BUILTIN, display_name: "Bare builtin" }],
+      alphas: { schema_version: "alpha-manifest/v1", alphas: [] },
+    });
+    await waitFor(() => expect(screen.getByText("Bare builtin")).toBeTruthy());
+    goToStep("Dữ liệu");
+    const panel = await screen.findByTestId("strategy-requirements");
+    expect(panel.textContent).toMatch(/strategy chưa khai báo/);
   });
 });

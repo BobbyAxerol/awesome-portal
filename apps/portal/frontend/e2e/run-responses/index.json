@@ -112,7 +112,7 @@
  "run_id": "visual-baseline-run",
  "running_run_id": "visual-baseline-run-running",
  "running_source": "registry/fixtures/runs/visual-baseline-run-running",
- "running_source_digest": "sha256:a94b3a7c6f80860f794dfc598648fa610021cf4e727f2aa08838ab0530890f7c",
+ "running_source_digest": "sha256:dcaa19fbb4a80caa1de8fa10d9c273efe977625b3a8f17048a3e50a7b7b3f66f",
  "source": "registry/fixtures/runs/visual-baseline-run",
- "source_digest": "sha256:064ceba2626e967bd1bf5e9f6118767526cb3ab2a40802392b45cac930d7bb93"
+ "source_digest": "sha256:f610545af6aa306c02632ce68692173926ac1c023fe29779eeebb6d9eca56a67"
 }

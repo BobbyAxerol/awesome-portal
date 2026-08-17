@@ -149,6 +149,14 @@ export interface ImportedAlpha {
   timeframes: string[];
   warmupBars: number | null;
   managerExposed: string[];
+  /**
+   * Determinism the manifest declares (R15).
+   *
+   * `null` for a built-in with no manifest: unknown is not the same as "seed
+   * optional", so the caller must not read a missing value as permission.
+   */
+  seedRequired: boolean | null;
+  externalIo: boolean | null;
   lifecycleStage: string | null;
   quarantined: boolean;
   certification: string | null;
@@ -179,6 +187,14 @@ export function parseAlphas(raw: unknown): ImportedAlpha[] {
       timeframes: stringList(data.timeframes),
       warmupBars: typeof data.warmup_bars === "number" ? data.warmup_bars : null,
       managerExposed: stringList(parameters.manager_exposed),
+      seedRequired:
+        typeof strategy.determinism?.seed_required === "boolean"
+          ? strategy.determinism.seed_required
+          : null,
+      externalIo:
+        typeof strategy.determinism?.external_io === "boolean"
+          ? strategy.determinism.external_io
+          : null,
       lifecycleStage: typeof lifecycle.stage === "string" ? lifecycle.stage : null,
       quarantined: lifecycle.quarantined === true,
       certification: typeof lifecycle.certification === "string" ? lifecycle.certification : null,
@@ -208,6 +224,8 @@ export interface CatalogEntry {
   requiredColumns: string[];
   warmupBars: number | null;
   supportedEndpointIds: string[];
+  /** From the alpha manifest; `null` when nothing declared it. */
+  seedRequired: boolean | null;
   lifecycleStage: string | null;
   certification: string | null;
   quarantined: boolean;
@@ -278,6 +296,7 @@ export function buildCatalog(
       requiredColumns: alpha.columns.length ? alpha.columns : (runtime?.required_columns ?? []),
       warmupBars: alpha.warmupBars,
       supportedEndpointIds: alpha.supportedEndpointIds,
+      seedRequired: alpha.seedRequired,
       lifecycleStage: alpha.lifecycleStage,
       certification: alpha.certification,
       quarantined: alpha.quarantined,
@@ -300,6 +319,8 @@ export function buildCatalog(
       requiredColumns: strategy.required_columns,
       warmupBars: null,
       supportedEndpointIds: [],
+      // A built-in publishes no manifest, so determinism is unknown here.
+      seedRequired: null,
       lifecycleStage: null,
       certification: null,
       quarantined: false,

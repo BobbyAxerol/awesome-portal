@@ -1,6 +1,7 @@
 /** Typed API client for the portal backend (schemas mirror portal_api contracts). */
 import type {
   AlphaImportRecord,
+  PreflightCheck,
   AlphaImportRequest,
   AlphaVerifyResult,
   FoldPlanDocument,
@@ -55,6 +56,14 @@ export interface PreflightResponse {
     load_metadata?: Record<string, unknown>;
   };
   config_hash: string;
+  /**
+   * Per-gate results (R14).
+   *
+   * Before this the response only said `valid: true|false`, so the Review step
+   * could not name which gate failed — and it filled the gap with three
+   * hard-coded "pass" badges that asserted a result nobody had checked.
+   */
+  checks: PreflightCheck[];
 }
 
 export type ParameterSpec =
