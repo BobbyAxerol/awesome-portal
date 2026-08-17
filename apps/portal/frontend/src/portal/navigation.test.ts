@@ -22,6 +22,8 @@ import {
   filterPalette,
   legacyRouteOwners,
   lifecycleStages,
+  personaOptions,
+  personasForStage,
   screensForFeature,
   sidebarGroups,
 } from "./navigation";
@@ -220,5 +222,39 @@ describe("icons", () => {
     for (const key of requested) {
       expect(KNOWN_ICON_KEYS, `icon_key ${key} has no glyph`).toContain(key);
     }
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * Persona roll-up (Portal Map, v0.4 §P0.15)
+ * ---------------------------------------------------------------------- */
+
+describe("personas", () => {
+  it("offers exactly the personas the registry declares", () => {
+    const options = personaOptions(registry);
+    expect(options.length).toBeGreaterThan(0);
+    // Derived, never invented: every option must appear on a real screen.
+    const declared = new Set(registry.screens.map((screen) => screen.primary_persona));
+    for (const option of options) expect(declared.has(option)).toBe(true);
+    expect([...options].sort()).toEqual(options);
+  });
+
+  it("rolls a stage's personas up from the screens of its features", () => {
+    for (const stage of lifecycleStages(registry)) {
+      const features = new Set(stage.feature_ids);
+      const expected = [
+        ...new Set(
+          registry.screens
+            .filter((screen) => features.has(screen.feature_id) && screen.primary_persona)
+            .map((screen) => screen.primary_persona as string),
+        ),
+      ].sort();
+      expect(personasForStage(registry, stage), stage.id).toEqual(expected);
+    }
+  });
+
+  it("reports no persona rather than a default when a stage has no screens", () => {
+    const orphan = { ...lifecycleStages(registry)[0], feature_ids: ["NOT_A_FEATURE"] };
+    expect(personasForStage(registry, orphan)).toEqual([]);
   });
 });

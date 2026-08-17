@@ -176,33 +176,72 @@ Chỉ 3 type hiện được ủy quyền, thứ tự ưu tiên:
   enforcement.
 - Frontend không suy diễn backend health/permission/financial state.
 
-## 8. Backlog deep-dive (ghi bởi Claude — v1 packaging)
+## 8. Backlog deep-dive (ghi bởi Claude — cập nhật ở slice v1.1)
 
-Version v1 đóng gói theo nguyên tắc "làm được luồng nào chắc luồng đó". Mục
-này liệt kê phần **làm ở mức đủ dùng nhưng chưa deep-dive**, kèm lý do và
-slice đề xuất kế tiếp theo v0.5 §10–§12. Không có placeholder ẩn: mọi màn
-chưa implement đều là `COMMISSIONED` trong registry và mở ra Feature Preview.
+Nguyên tắc giữ nguyên từ v1: "làm được luồng nào chắc luồng đó". Mục này
+liệt kê phần **làm ở mức đủ dùng nhưng chưa deep-dive**, kèm lý do và slice
+đề xuất kế tiếp theo v0.5 §10–§12. Không có placeholder ẩn: mọi màn chưa
+implement đều là `COMMISSIONED` trong registry và mở ra Feature Preview.
 
-| Vùng | Trạng thái v1 | Vì sao chưa sâu | Slice đề xuất |
+### 8.1 Đã đóng trong slice v1.1
+
+| Vùng | Đóng bằng gì |
+|---|---|
+| Planning: Roadmap | Timeline mới thay bảng 24 cột `min-width:1240px`; delivery đếm từ task thật, phase không có task báo "chưa có task" chứ không phải 0%; concurrency + milestone marker; đọc được ở 4 breakpoint. |
+| Planning: Task Board | Drag optimistic + rollback nguyên snapshot; drop có vị trí (insertion line); Alt+Arrow là đường bàn phím tương đương; group theo milestone/workstream/owner; bulk transition; activity mở thẳng từ card. |
+| Design system Planning | Một control family (`.input`), type/spacing/radius scale, `Checkbox` đủ 5 state, `Select`/`Textarea`/`Field`; gate `design-tokens.test.ts` chặn colour literal ngoài `tokens.css`. |
+| Mermaid | Đọc token từ computed style thay vì 20 hex hard-code; node theo workstream ramp; scale theo container. |
+| INTERPRETATION / EVIDENCE / PORTAL PREVIEW | Gỡ sạch khỏi bundle: feature module, route, tab, fragment HTML, CSS. Test chặn tái xuất hiện. |
+| Portal Map — persona filter | Có filter persona, roll-up từ `screens[].primary_persona` (xem 8.3 điểm 3 để biết vì sao vẫn còn backend request). |
+
+### 8.2 Còn treo
+
+| Vùng | Trạng thái | Vì sao chưa sâu | Slice đề xuất |
 |---|---|---|---|
 | Import Wizard (U14) | Chưa có UI. Picker đã đọc `/api/v1/alphas`; alpha chưa đăng ký runtime hiển thị kèm lý do. | Backend slice `POST /api/v1/alphas/import` + quarantine pipeline chưa có (strategy contract §6). Làm UI trước sẽ là form không có authority. | Sau BAR-21: Import Flow A/B, digest verify, quarantine state. |
 | Run Progress | Giữ nguyên bản v0.1.1 (console + fold Gantt). | Đã hoạt động; chưa áp §12 envelope vì fold Gantt vẽ từ fold plan chứ không từ series artifact. | Chuẩn hoá Gantt theo §12.2, thêm as-of/digest, ETA có confidence. |
-| Optimization / Parameters / Execution tabs | Chart chưa mang envelope §12.2 đầy đủ (mới có ở Overview). | Ưu tiên Overview vì là màn quyết định chính; ba tab còn lại cần trial-level provenance mà artifact hiện chưa expose per-chart. | Một slice "chart envelope rollout" cho toàn bộ result tabs. |
+| Optimization / Parameters / Execution tabs | Chart chưa mang envelope §12.2 đầy đủ (mới có ở Overview: 7 `ChartFigure` còn dùng `sourceId` string thay vì `provenance`). | Cần trial-level provenance mà artifact hiện chưa expose per-chart, và `SeriesPayload` chưa có `source_rows` (backend request 2) nên envelope sẽ không nói thật được về downsample. | Một slice "chart envelope rollout" sau khi backend request 2 xong. |
 | Command Center | Đủ 7 state, số liệu thật từ summary. Chưa có drill-down drawer. | Read model bền thuộc U10; drawer không có nguồn ổn định để mở. | Sau U10: evidence drawer + cross-filter. |
-| Portal Map | Render lifecycle từ registry, chưa có filter theo persona/status (v0.4 §P0.15). | Registry chưa khai báo persona cho stage. | Backend thêm `persona` vào lifecycle stage → UI thêm filter. |
-| Planning: Roadmap / Docs / Reports / Evidence | Nhúng nguyên feature body, dùng chung token; chưa refactor sang primitive Portal. | Ưu tiên Task Board theo yêu cầu v1. Refactor rộng sẽ đụng content-integrity tests. | Slice "Planning primitive parity" — đổi `@/components/ui` sang shared layer, giữ content hash. |
+| Planning: Docs / Reports | Nhúng nguyên feature body. Token và form control đã dùng chung sau v1.1; Reports vẫn render fragment HTML legacy đã khoá. | Fragment là bản byte-preserved của tài liệu gốc, refactor sẽ phá content-integrity hash. | Slice "Reports như dữ liệu" — parse fragment thành model rồi render bằng primitive, giữ hash của nguồn. |
 | Profile & Access | `COMMISSIONED` preview. | Chờ U07 wire gateway→BFF; login screens 01B/01C/01D chưa có backend. | Sau U10: Frames 01B–01D + session expired + maintenance screen kèm request ID. |
-| Responsive / a11y | Có focus ring, aria-describedby cho field, reduced-motion, print layout, mobile drawer. Chưa có visual regression 4 breakpoint × 3 theme. | Cần hạ tầng screenshot (Playwright + baseline) chưa dựng cho `apps/portal/frontend`. | Slice "visual baseline": Playwright screenshot cho Research Light / Operations Dark / Print. |
-| Operations Dark | Token đầy đủ, đã kiểm bằng test parity; chưa review thị giác từng màn. | Chưa có visual baseline (trên). | Đi kèm slice visual baseline. |
+| Visual baseline 4 breakpoint × 3 theme | Chưa có. Playwright đã chạy được cho Planning (2 e2e xanh, image `mcr.microsoft.com/playwright`), nhưng `apps/portal/frontend` chưa có e2e project nào. | Cần dựng Playwright cho Portal + baseline screenshot; là slice riêng, không nhét vào slice UI. | Slice "visual baseline": Playwright cho Portal, screenshot Research Light / Operations Dark / Print. |
+| Operations Dark | Token đầy đủ và có parity test giữa hai token file; chưa review thị giác từng màn. | Chưa có visual baseline (trên). | Đi kèm slice visual baseline. |
 
-### Backend request còn treo (@codex)
+### 8.3 Backend request còn treo (@codex)
 
 1. `/api/v1/alphas` và `/api/v1/portal/capabilities` chưa có schema trong
    `components/schemas` — codegen ra `unknown`. Frontend đang narrow ở boundary
    (`portal/strategyCatalog.ts`) và có test theo file registry thật. Đề xuất
    đặt tên `AlphaRegistryDocument` + `EngineCapabilityDocument`.
+   *(Kiểm lại 2026-08-17: vẫn chưa có.)*
 2. `SeriesPayload` chưa công bố `source_rows` — chart envelope §12.2 cần
    "source_rows/returned_rows" để nói thật về downsample. Hiện UI hiển thị
    returned = source khi thiếu field, tức không khẳng định có downsample.
-3. Lifecycle stage chưa có `persona` → Portal Map không filter theo persona
-   như v0.4 §P0.15 mô tả.
+   Đây là thứ chặn slice "chart envelope rollout" ở 8.2.
+   *(Kiểm lại 2026-08-17: vẫn chưa có.)*
+3. `lifecycle_stages[]` chưa có `persona`. v1.1 đã làm filter bằng cách roll-up
+   `screens[].primary_persona` qua `feature_ids` của stage, và UI ghi rõ nguồn
+   ("persona (từ screen): …"). Hạn chế còn lại: stage **không có screen nào**
+   thì không có persona để lọc — UI hiện giữ nguyên stage đó thay vì ẩn, vì
+   registry chưa nói stage đó không liên quan tới persona nào. Một field
+   `persona` ở stage sẽ biến suy luận này thành khai báo.
+
+### 8.4 Discrepancy ghi nhận (v1.1)
+
+1. Plan v1.1 §2.1 ghi tài liệu gốc ở
+   `features/roadmap-task-board/backend/quant_trading_ecosystem_architecture_migration_portal_vi.html`.
+   Thực tế file nằm ở `features/roadmap-task-board/` (gốc feature), và
+   `legacy/portal.html` là bản byte-identical
+   (`sha256 3ed4e5eb62edccfdb825c9bd52fbc436b11155c6510a666b7e79b04d3621d8c0`
+   cho cả hai, khớp `source_sha256` trong content-integrity manifest).
+   Nội dung 16/16 doc page khớp đúng bản gốc — **không có page nào lệch hay
+   mất**, nên không sửa content.
+2. Plan v1.1 §2.2 yêu cầu gỡ EVIDENCE "kể cả node mermaid Backtest Evidence
+   Bundle". Node đó nằm trong doc page
+   `3-research-alpha-development-runtime-layer` §3.7, là artifact kiến trúc
+   giữa `QuantBT Worker` → `Quant / Risk / Manager Review`, không phải một
+   phần của màn Evidence. Nó bị khoá bởi content-integrity hash và bởi chính
+   §2.1 ("không viết lại nội dung"). v1.1 gỡ **ba màn** (Interpretation,
+   Evidence & Source Map, Portal Preview) và giữ node trong tài liệu gốc.
+   Cần Bobby quyết nếu muốn sửa cả tài liệu gốc — việc đó phải đi kèm
+   regenerate manifest và là thay đổi nội dung, không phải thay đổi UI.
