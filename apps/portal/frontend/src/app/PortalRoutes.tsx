@@ -9,18 +9,37 @@
  * Only bootstrap routes are hard-coded (FRONTEND_HANDOFF §2): registry error,
  * not-found, and the legacy compatibility redirects.
  */
-import type { ComponentType } from "react";
+import { Suspense, lazy, type ComponentType } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
-import { StateView } from "../components/ui";
+import { ResultsSkeleton, StateView } from "../components/ui";
 import { CommandCenter } from "../features/command-center/CommandCenter";
 import { PortalMap } from "../features/portal-map/PortalMap";
-import { PlanningModule } from "../features/planning/PlanningModule";
-import { UsersAccess } from "../features/admin/UsersAccess";
 import { FeaturePreview } from "../features/preview/FeaturePreview";
-import { QuantBTModule } from "../features/quantbt/QuantBTModule";
 import { QUANTBT_ROOT, canonicalQuantBTPath } from "../features/quantbt/routes";
 import type { PortalFeatureDefinition, PortalRegistryDocument } from "../portal/contracts";
+
+/**
+ * Heavy modules are loaded when their route is entered, not before.
+ *
+ * The Command Center renders a ledger bar, two summary cards and a list — and it
+ * was waiting on ECharts and the whole embedded Task Board to parse first, because
+ * a static import puts them in the entry chunk. The landing screen paid for every
+ * screen in the product.
+ *
+ * Only the two big ones are split: QuantBT (which owns the charts) and Planning
+ * (which owns the board and mermaid). The Command Center, Portal Map and the
+ * previews stay eager — they are small, and the shell needs them immediately.
+ */
+const QuantBTModule = lazy(() =>
+  import("../features/quantbt/QuantBTModule").then((m) => ({ default: m.QuantBTModule })),
+);
+const PlanningModule = lazy(() =>
+  import("../features/planning/PlanningModule").then((m) => ({ default: m.PlanningModule })),
+);
+const UsersAccess = lazy(() =>
+  import("../features/admin/UsersAccess").then((m) => ({ default: m.UsersAccess })),
+);
 
 /**
  * Registry feature id -> implemented module.
@@ -82,7 +101,10 @@ function NotFound() {
 
 export function PortalRoutes({ registry }: { registry: PortalRegistryDocument }) {
   return (
-    <Routes>
+    // The fallback reserves a screen-shaped footprint, so entering a split route
+    // does not collapse the layout for the frame it takes to arrive.
+    <Suspense fallback={<ResultsSkeleton message="Đang tải module…" />}>
+      <Routes>
       {registry.features.map((feature) => {
         const module = MODULES[feature.id];
         const element =
@@ -119,7 +141,8 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
           )),
       )}
 
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Suspense>
   );
 }

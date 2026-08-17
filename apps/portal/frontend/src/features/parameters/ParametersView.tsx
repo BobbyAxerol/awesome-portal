@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
 import { EChart } from "../../charts/EChart";
-import { baseOption, palette } from "../../charts/theme";
+import { baseOption } from "../../charts/theme";
+import { useChartTheme } from "../../charts/useChartTheme";
 import { ChartFigure } from "../../components/ChartFigure";
 import { Collapsible, DefinitionList, StateView } from "../../components/ui";
 import { api, rowParams } from "../../lib/api";
@@ -21,6 +22,9 @@ const TRIAL_QUERY_CAP = 5000;
 const PARALLEL_TOP_N = 200;
 
 export function ParametersView({ runId }: { runId: string }) {
+  // One dependency for every chart in this view; see useChartTheme.
+  const chart = useChartTheme();
+
   const parameters = useQuery({ queryKey: ["parameters", runId], queryFn: () => api.parameters(runId) });
   const trials = useQuery({ queryKey: ["trials", runId], queryFn: () => api.trials(runId, `top_n=${TRIAL_QUERY_CAP}`) });
   const strategies = useQuery({ queryKey: ["strategies"], queryFn: api.strategies });
@@ -84,10 +88,10 @@ export function ParametersView({ runId }: { runId: string }) {
           name: distributionParam,
           type: "bar",
           data: bins.map((bin) => bin.count),
-          itemStyle: { color: palette.accent, opacity: 0.7 },
+          itemStyle: { color: chart.palette.accent, opacity: 0.7 },
         }],
-      });
-  }, [distributionParam, rows]);
+      }, chart.theme);
+  }, [distributionParam, rows, chart]);
 
   const contourOption = useMemo(() => {
     const cells = buildObjectiveHeatmap(rows, pairA, pairB);
@@ -103,7 +107,7 @@ export function ParametersView({ runId }: { runId: string }) {
         right: 0,
         top: 20,
         calculable: true,
-        textStyle: { color: palette.inkFaint, fontSize: 10 },
+        textStyle: { color: chart.palette.inkFaint, fontSize: 10 },
       },
       tooltip: { trigger: "item", formatter: (params: unknown) => { const data = (params as { data: [number, number, number, number] }).data; return `${pairA}=${xValues[data[0]]}<br/>${pairB}=${yValues[data[1]]}<br/>mean objective=${data[2].toFixed(4)}<br/>n=${data[3]}`; } },
       xAxis: { type: "category", data: xValues },
@@ -115,8 +119,8 @@ export function ParametersView({ runId }: { runId: string }) {
           itemStyle: { borderColor: viz.cellBorder, borderWidth: 1 },
         },
       ],
-    });
-  }, [rows, pairA, pairB]);
+    }, chart.theme);
+  }, [rows, pairA, pairB, chart]);
 
   const parallelOption = useMemo(() => {
     const dims = paramKeys;
@@ -132,18 +136,18 @@ export function ParametersView({ runId }: { runId: string }) {
       parallelAxis: dims.map((key, index) => ({
         dim: index,
         name: key,
-        nameTextStyle: { color: palette.inkFaint, fontSize: 10 },
+        nameTextStyle: { color: chart.palette.inkFaint, fontSize: 10 },
       })),
       parallel: { top: 30, left: 40, right: 40, bottom: 40 },
       series: [
         {
           type: "parallel",
-          lineStyle: { color: palette.accent, opacity: 0.25, width: 1 },
+          lineStyle: { color: chart.palette.accent, opacity: 0.25, width: 1 },
           data: values,
         },
       ],
-    });
-  }, [rows, paramKeys]);
+    }, chart.theme);
+  }, [rows, paramKeys, chart]);
 
   if (parameters.isLoading || trials.isLoading) return <StateView kind="loading" />;
   if (parameters.isError || trials.isError)

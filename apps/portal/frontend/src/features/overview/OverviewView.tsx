@@ -6,10 +6,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import { EChart } from "../../charts/EChart";
-import { baseOption, roleColors } from "../../charts/theme";
+import { baseOption } from "../../charts/theme";
+import { useChartTheme } from "../../charts/useChartTheme";
 import { ChartFigure } from "../../components/ChartFigure";
 import { MetricTile, MetricTileRow } from "../../components/MetricTile";
-import { SegmentedControl, StateView } from "../../components/ui";
+import { ResultsSkeleton, SegmentedControl, StateView } from "../../components/ui";
 import { api, type SeriesPayload } from "../../lib/api";
 import { fmtCount, fmtPct, fmtRatio } from "../../lib/format";
 import { seriesProvenance, type RunEvidence } from "../quantbt/provenance";
@@ -25,6 +26,9 @@ const SEGMENT_LABELS: Record<string, string> = {
 };
 
 export function OverviewView({ runId }: { runId: string }) {
+  // One dependency for every chart in this view; see useChartTheme.
+  const chart = useChartTheme();
+
   const detail = useQuery({ queryKey: ["run", runId], queryFn: () => api.getRun(runId) });
   const protocol = detail.data?.protocol ?? "three_window_decay";
   const advanced = protocol === "advanced_walk_forward";
@@ -117,11 +121,11 @@ export function OverviewView({ runId }: { runId: string }) {
             showSymbol: false,
             connectNulls: false,
             data,
-            lineStyle: { width: 1.75, color: roleColors.oos },
-            itemStyle: { color: roleColors.oos },
+            lineStyle: { width: 1.75, color: chart.roleColors.oos },
+            itemStyle: { color: chart.roleColors.oos },
           },
         ],
-      });
+      }, chart.theme);
     }
     const payload = presentation.data;
     const series = SEGMENTS.filter((key) => selected === "compare" || key === selected).map((key) => {
@@ -133,8 +137,8 @@ export function OverviewView({ runId }: { runId: string }) {
         showSymbol: false,
         connectNulls: false,
         data,
-        lineStyle: { width: 1.75, color: roleColors[key] },
-        itemStyle: { color: roleColors[key] },
+        lineStyle: { width: 1.75, color: chart.roleColors[key] },
+        itemStyle: { color: chart.roleColors[key] },
       };
     });
     return baseOption({
@@ -142,8 +146,8 @@ export function OverviewView({ runId }: { runId: string }) {
       legend: { data: series.map((item) => item.name), top: 2, right: 12, left: "auto" },
       xAxis: { type: "time", splitNumber: 5, axisLabel: { hideOverlap: true, margin: 10 } },
       series,
-    });
-  }, [advanced, capitalMode, presentation.data, selected, stitchedQuery.data]);
+    }, chart.theme);
+  }, [advanced, capitalMode, presentation.data, selected, stitchedQuery.data, chart]);
 
   const underwaterOption = useMemo(() => {
     const active = segments.filter((segment) => segment.series);
@@ -151,23 +155,50 @@ export function OverviewView({ runId }: { runId: string }) {
       grid: { left: 56, right: 20, top: 20, bottom: 48, containLabel: true },
       legend: { show: false },
       xAxis: { type: "time", splitNumber: 5, axisLabel: { hideOverlap: true, margin: 10 } },
+      // A drawdown axis without its unit reads as a bare index. The series is
+      // already in percent (value * 100 below), so the suffix is a label, not a
+      // conversion.
+      yAxis: { axisLabel: { formatter: (value: number) => `${value}%` } },
       series: active.map((segment) => {
         const payload = segment.series!;
         const dd = payload.series.drawdown ?? [];
+        const color = chart.roleColors[advanced ? "oos" : segment.key] ?? chart.roleColors.oos;
         return {
           name: SEGMENT_LABELS[segment.key] ?? segment.key,
           type: "line",
           showSymbol: false,
           data: dd.map((value, index) => [payload.timestamps[index], value == null ? null : value * 100]),
-          lineStyle: { width: 1.25, color: roleColors[advanced ? "oos" : segment.key] ?? roleColors.oos, opacity: 0.8 },
-          itemStyle: { color: roleColors[advanced ? "oos" : segment.key] ?? roleColors.oos },
-          areaStyle: { color: roleColors[advanced ? "oos" : segment.key] ?? roleColors.oos, opacity: 0.07 },
+          lineStyle: { width: 1.25, color, opacity: 0.8 },
+          itemStyle: { color },
+          // Drawdown is an area by convention — it reads as depth below the
+          // previous peak, not as a wiggling line. At 0.07 the fill was
+          // invisible, so the chart was drawing the convention without showing it.
+          areaStyle: { color, opacity: 0.18 },
+          // The deepest point is the one the max-drawdown metric refers to; the
+          // chart and the metric strip should be pointing at the same place.
+          markPoint: {
+            symbol: "circle",
+            symbolSize: 7,
+            itemStyle: { color, borderColor: chart.palette.paperRaised, borderWidth: 1.5 },
+            label: {
+              show: true,
+              position: "top",
+              distance: 8,
+              color: chart.palette.ink,
+              fontFamily: "JetBrains Mono, monospace",
+              fontSize: 10,
+              formatter: (params: { value?: unknown }) =>
+                typeof params.value === "number" ? `${fmtRatio(params.value)}%` : "",
+            },
+            data: [{ type: "min", name: "đáy sâu nhất", valueIndex: 1 }],
+          },
         };
       }),
-    });
-  }, [segments, advanced]);
+    }, chart.theme);
+  }, [segments, advanced, chart]);
 
-  if (summary.isLoading || detail.isLoading || !loaded) return <StateView kind="loading" />;
+  if (summary.isLoading || detail.isLoading || !loaded)
+    return <ResultsSkeleton message="Đang tải kết quả run…" />;
   if (summary.isError) return <StateView kind="failed" message={summary.error.message} onRetry={() => summary.refetch()} />;
 
   return (
@@ -305,10 +336,13 @@ function MetricsCard({
               const definition = metricDefinition(key);
               return (
                 <tr key={key}>
-                  <td>
+                  <th scope="row" className="metric-row-label">
                     <span title={definition.definition}>{definition.label}</span>
-                    <span className="metric-row-unit mono"> · {definition.unit}</span>
-                  </td>
+                    {/* The unit belongs to the metric, so it rides with the row
+                      * label in its own quiet column rather than being repeated
+                      * as a chip inside eight sentences. */}
+                    <span className="metric-row-unit">{definition.unit}</span>
+                  </th>
                   {columns.map((column) => {
                     const text = format(key, segments[column]?.[key] ?? null);
                     return (
@@ -327,10 +361,24 @@ function MetricsCard({
           </tbody>
         </table>
       </div>
-      <p className="chart-provenance mono">
-        nguồn metrics/summary.json · as-of {asOf ?? "chưa công bố"}
-        {digest ? ` · dataset ${digest.slice(0, 19)}…` : ""}
-      </p>
+      <div className="chart-provenance">
+        <dl className="chart-provenance-grid">
+          <div className="chart-provenance-field" data-wide="true">
+            <dt>nguồn</dt>
+            <dd className="mono">metrics/summary.json</dd>
+          </div>
+          <div className="chart-provenance-field">
+            <dt>as-of</dt>
+            <dd className="mono">{asOf ?? "chưa công bố"}</dd>
+          </div>
+          {digest ? (
+            <div className="chart-provenance-field" data-wide="true">
+              <dt>dataset</dt>
+              <dd className="mono">{digest.slice(0, 19)}…</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
     </div>
   );
 }

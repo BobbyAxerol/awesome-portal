@@ -176,8 +176,11 @@ describe("legacy compatibility", () => {
 describe("embedding (U04/U05)", () => {
   it("mounts QuantBT under its canonical route with no nested topbar", async () => {
     mount({ route: "/research/quantbt/runs" });
-    await waitFor(() =>
-      expect(screen.getByRole("heading", { level: 1, name: "QuantBT Research" })).toBeTruthy(),
+    // QuantBT is a split chunk now (it owns ECharts), so the module arrives a
+    // dynamic import later than the shell around it.
+    await waitFor(
+      () => expect(screen.getByRole("heading", { level: 1, name: "QuantBT Research" })).toBeTruthy(),
+      { timeout: 5000 },
     );
     // Exactly one shell topbar: the module must not render a second one.
     expect(document.querySelectorAll(".portal-topbar").length).toBe(1);

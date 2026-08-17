@@ -3,10 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import { EChart } from "../../charts/EChart";
-import { baseOption, palette } from "../../charts/theme";
+import { baseOption } from "../../charts/theme";
+import { useChartTheme } from "../../charts/useChartTheme";
 import type { EChartsOption } from "echarts";
 import { ChartFigure } from "../../components/ChartFigure";
-import { Collapsible, DefinitionList, StateView } from "../../components/ui";
+import { Collapsible, DefinitionList, ResultsSkeleton, StateView } from "../../components/ui";
 import { FoldGantt } from "../../components/FoldGantt";
 import { api, rowParams } from "../../lib/api";
 import { fmtDecay, fmtRatio } from "../../lib/format";
@@ -25,6 +26,9 @@ const PROCESS_STAGES = [
 ];
 
 export function OptimizationView({ runId }: { runId: string }) {
+  // One dependency for every chart in this view; see useChartTheme.
+  const chart = useChartTheme();
+
   const trials = useQuery({ queryKey: ["trials", runId], queryFn: () => api.trials(runId, `top_n=${TRIAL_QUERY_CAP}`) });
   const foldPlan = useQuery({ queryKey: ["fold-plan", runId], queryFn: () => api.foldPlan(runId), retry: 1 });
   const detail = useQuery({ queryKey: ["run", runId], queryFn: () => api.getRun(runId) });
@@ -91,13 +95,13 @@ export function OptimizationView({ runId }: { runId: string }) {
           data,
           itemStyle: {
             color: (params: { data: number[] }) =>
-              params.data[0] === selectedId ? palette.ink : palette.accent,
+              params.data[0] === selectedId ? chart.palette.ink : chart.palette.accent,
             opacity: (params: { data: number[] }) => (params.data[0] === selectedId ? 1 : 0.6),
           },
         },
       ],
-    } as unknown as EChartsOption);
-  }, [rows, selectedId]);
+    } as unknown as EChartsOption, chart.theme);
+  }, [rows, selectedId, chart]);
 
   /** Rows each chart actually draws — the denominator of its provenance line. */
   const trialsPlotted = useMemo(
@@ -128,11 +132,11 @@ export function OptimizationView({ runId }: { runId: string }) {
           type: "scatter",
           symbolSize: (value: number[]) => (value[2] === selectedId ? 12 : 8),
           data,
-          itemStyle: { color: (params: unknown) => (params as { data: number[] }).data[2] === selectedId ? palette.ink : palette.accent, opacity: 0.75 },
+          itemStyle: { color: (params: unknown) => (params as { data: number[] }).data[2] === selectedId ? chart.palette.ink : chart.palette.accent, opacity: 0.75 },
         },
       ],
-    });
-  }, [candidateRows, selectedId]);
+    }, chart.theme);
+  }, [candidateRows, selectedId, chart]);
 
   const decayData = useMemo(
     () =>
@@ -155,14 +159,14 @@ export function OptimizationView({ runId }: { runId: string }) {
             data: decayData.map((row) => row.decay),
             itemStyle: {
               color: (params: { dataIndex: number }) =>
-                decayData[params.dataIndex].id === selectedId ? palette.ink : palette.accent,
+                decayData[params.dataIndex].id === selectedId ? chart.palette.ink : chart.palette.accent,
               opacity: (params: { dataIndex: number }) =>
                 decayData[params.dataIndex].id === selectedId ? 1 : 0.75,
             },
             barWidth: 14,
           },
         ],
-      } as EChartsOption),
+      } as EChartsOption, chart.theme),
     [decayData, selectedId],
   );
 
@@ -177,11 +181,12 @@ export function OptimizationView({ runId }: { runId: string }) {
       legend: { show: false },
       dataZoom: [],
       xAxis: { type: "value" },
-      series: [{ type: "line", showSymbol: false, data, lineStyle: { color: palette.accent, width: 1.75 } }],
-    });
-  }, [rows]);
+      series: [{ type: "line", showSymbol: false, data, lineStyle: { color: chart.palette.accent, width: 1.75 } }],
+    }, chart.theme);
+  }, [rows, chart]);
 
-  if (trials.isLoading || candidates.isLoading) return <StateView kind="loading" />;
+  if (trials.isLoading || candidates.isLoading)
+    return <ResultsSkeleton message="Đang tải trial ledger…" />;
   if (trials.isError || candidates.isError) return <StateView kind="failed" message="Không tải được dữ liệu optimization" onRetry={() => void (trials.refetch(), candidates.refetch())} />;
 
   const showFoldGantt =

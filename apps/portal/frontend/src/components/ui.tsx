@@ -108,6 +108,59 @@ export function StateView({
   );
 }
 
+/**
+ * Loading placeholder that reserves the shape of what is coming.
+ *
+ * A spinner tells the reader "wait"; it does not stop the page from jumping when
+ * the data lands. Every screen here went from one line of text to a full layout in
+ * a single frame, which is most of what "not smooth" means in practice. These
+ * blocks hold the same footprint as the content that replaces them.
+ *
+ * `aria-hidden` with a single live region: a screen reader should hear "đang tải",
+ * not a description of grey rectangles.
+ */
+export function Skeleton({
+  variant = "line",
+  count = 1,
+  height,
+}: {
+  variant?: "line" | "metric" | "chart" | "row";
+  count?: number;
+  height?: number;
+}) {
+  return (
+    <>
+      {Array.from({ length: count }).map((_, index) => (
+        <span
+          key={index}
+          className="skeleton"
+          data-variant={variant}
+          style={height ? { height } : undefined}
+          aria-hidden="true"
+        />
+      ))}
+    </>
+  );
+}
+
+/** The loading shape of a results screen: metric strip, chart, table rows. */
+export function ResultsSkeleton({ message }: { message?: string }) {
+  return (
+    <div className="space-y-4" data-testid="results-skeleton">
+      <span className="sr-only" role="status">
+        {message ?? "Đang tải…"}
+      </span>
+      <div className="skeleton-metric-row">
+        <Skeleton variant="metric" count={5} />
+      </div>
+      <Skeleton variant="chart" height={280} />
+      <div className="skeleton-rows">
+        <Skeleton variant="row" count={6} />
+      </div>
+    </div>
+  );
+}
+
 export function Collapsible({ title, children, defaultOpen = false }: { title: ReactNode; children: ReactNode; defaultOpen?: boolean }) {
   return (
     <details className="group border-b border-line-soft py-1 last:border-b-0" open={defaultOpen}>

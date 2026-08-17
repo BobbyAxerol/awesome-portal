@@ -201,4 +201,19 @@ describe("embedded Planning token parity", () => {
     }
     expect(portalRoot.get("--ws-other")).toBe(planningRoot.get("--ws-other"));
   });
+
+  it("keeps the type scale identical between the two token files", () => {
+    // Same reason as the ramp: the Portal ships Planning's feature stylesheets,
+    // so a scale that drifts on one side re-sizes the embedded screens only. The
+    // ramp gate would not have caught a 14px/15px split.
+    const portalRoot = declarationsIn(readFileSync(join(SRC, "styles/tokens.css"), "utf8"), ":root {");
+    const planningRoot = declarationsIn(readFileSync(join(PLANNING, "tokens.css"), "utf8"), ":root {");
+    for (const step of ["2xs", "xs", "sm", "base", "md", "lg", "xl", "2xl"]) {
+      const name = `--text-${step}`;
+      expect(portalRoot.get(name), name).toBe(planningRoot.get(name));
+    }
+    for (const name of ["--leading-tight", "--leading-normal", "--leading-loose"]) {
+      expect(portalRoot.get(name), name).toBe(planningRoot.get(name));
+    }
+  });
 });

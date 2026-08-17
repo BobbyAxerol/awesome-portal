@@ -980,8 +980,16 @@
   padding: var(--space-3);
   min-width: 0;
 }
+/* One primary number per strip. Five cards at identical weight left the reader
+ * to decide what the headline was; emphasis now changes size and ground, not just
+ * the border colour. */
 .metric-tile[data-emphasis="true"] {
   border-color: var(--accent);
+  background: linear-gradient(180deg, var(--accent-soft) 0%, var(--paper-raised) 62%);
+}
+.metric-tile[data-emphasis="true"] .metric-tile-value {
+  font-size: var(--text-2xl);
+  line-height: 36px;
 }
 .metric-tile-head {
   display: flex;
@@ -1028,8 +1036,15 @@
   letter-spacing: 0.03em;
 }
 
+/* Row label: the noun in prose, the unit under it in a mono micro-label. */
+.metric-row-label {
+  white-space: nowrap;
+}
 .metric-row-unit {
-  font-size: 10px;
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.05em;
   color: var(--ink-faint);
 }
 .metric-absent-inline {
@@ -1037,11 +1052,33 @@
   color: var(--state-unavailable);
 }
 
+/* The §12.2 envelope: label above value, on a grid that wraps by field rather
+ * than mid-sentence. Separated from the chart by a rule so it reads as apparatus,
+ * not as a caption competing with the title. */
 .chart-provenance {
-  margin-top: var(--space-2);
-  font-size: 10px;
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line-soft);
+  font-size: var(--text-2xs);
   line-height: 1.5;
   color: var(--ink-faint);
+}
+.chart-provenance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, max-content));
+  gap: var(--space-2) var(--space-5);
+}
+.chart-provenance-field[data-wide="true"] {
+  grid-column: span 2;
+}
+.chart-provenance-field dt {
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-faint);
+  opacity: 0.75;
+}
+.chart-provenance-field dd {
+  color: var(--ink-soft);
   overflow-wrap: anywhere;
 }
 .chart-warnings {
@@ -2026,4 +2063,74 @@
   border-radius: var(--radius-sm);
   background: var(--paper-raised);
   overflow-wrap: anywhere;
+}
+
+
+/* --- Loading skeletons ---------------------------------------------------
+ * Reserve the footprint, then hand it over. The sweep is slow and low-contrast
+ * on purpose: it should read as "not ready yet", not as an animation. Reduced
+ * motion keeps the block and drops the sweep. */
+.skeleton {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--paper-sunken) 0%,
+    var(--paper-raised) 45%,
+    var(--paper-sunken) 90%
+  );
+  background-size: 220% 100%;
+}
+.skeleton[data-variant="line"] {
+  height: 12px;
+}
+.skeleton[data-variant="metric"] {
+  height: 84px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+}
+.skeleton[data-variant="chart"] {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+}
+.skeleton[data-variant="row"] {
+  height: 34px;
+  border-bottom: 1px solid var(--line-soft);
+  border-radius: 0;
+}
+.skeleton-metric-row {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (min-width: 768px) {
+  .skeleton-metric-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1280px) {
+  .skeleton-metric-row {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+.skeleton-rows {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.skeleton-rows .skeleton:last-child {
+  border-bottom: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton {
+    animation: skeleton-sweep 1.6s ease-in-out infinite;
+  }
+}
+@keyframes skeleton-sweep {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -40% 0;
+  }
 }

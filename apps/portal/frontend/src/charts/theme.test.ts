@@ -11,7 +11,7 @@ import { join, relative } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { baseOption } from "./theme";
+import { baseOption, paletteNow, roleColorsNow } from "./theme";
 
 type Axis = { type?: string; axisLabel?: { formatter?: (value: number) => string } };
 
@@ -97,5 +97,51 @@ describe("no CSS variables inside ECharts options", () => {
         });
     }
     expect(offenders, offenders.join("\n")).toEqual([]);
+  });
+});
+
+/**
+ * Theme reactivity.
+ *
+ * The defect this locks is the one that shipped: the palette was captured in
+ * module constants at import time, before React had put `data-theme` on `<html>`,
+ * so every chart in Operations Dark was drawn from the Research Light palette. It
+ * was visible as a near-white dataZoom slider on a dark page and nowhere else,
+ * which is why it survived so long.
+ */
+describe("theme is read per call, not at import", () => {
+  type Zoom = { backgroundColor?: string; handleStyle?: { color?: string } };
+  const sliderOf = (theme: "research" | "operations"): Zoom =>
+    (baseOption({}, theme).dataZoom as Zoom[])[1];
+
+  it("builds a different palette for each theme from the same module", () => {
+    expect(sliderOf("operations").backgroundColor).not.toBe(sliderOf("research").backgroundColor);
+    expect(paletteNow("operations").ink).not.toBe(paletteNow("research").ink);
+    expect(roleColorsNow("operations").oos).not.toBe(roleColorsNow("research").oos);
+  });
+
+  it("lets an explicit theme win over the DOM attribute", () => {
+    // The attribute is applied in an effect, so on the render where the
+    // preference changes the DOM still reports the previous theme.
+    document.documentElement.setAttribute("data-theme", "research");
+    const explicit = sliderOf("operations");
+    const domDerived = (baseOption({}).dataZoom as Zoom[])[1];
+    expect(explicit.backgroundColor).not.toBe(domDerived.backgroundColor);
+    document.documentElement.removeAttribute("data-theme");
+  });
+
+  it("names every part of the zoom slider, so none of it falls back to the library default", () => {
+    const slider = sliderOf("operations") as Record<string, unknown>;
+    for (const key of [
+      "backgroundColor",
+      "borderColor",
+      "fillerColor",
+      "dataBackground",
+      "selectedDataBackground",
+      "handleStyle",
+      "moveHandleStyle",
+    ]) {
+      expect(slider[key], key).toBeDefined();
+    }
   });
 });

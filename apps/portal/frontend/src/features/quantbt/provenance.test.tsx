@@ -34,10 +34,24 @@ function series(overrides: Partial<SeriesPayload> = {}): SeriesPayload {
   };
 }
 
-/** Renders a figure and returns its provenance line. */
+/**
+ * Renders a figure and returns its provenance envelope as `label value` pairs.
+ *
+ * The envelope is a label/value grid rather than one joined sentence, so the
+ * assertions below read the pairs instead of substring-matching a line.
+ */
 function provenanceLine(node: React.ReactElement): string {
   const { container } = render(node);
-  return container.querySelector(".chart-provenance")?.textContent ?? "";
+  const root = container.querySelector(".chart-provenance");
+  if (!root) return "";
+  const fields = Array.from(root.querySelectorAll(".chart-provenance-field")).map(
+    (field) =>
+      `${field.querySelector("dt")?.textContent ?? ""} ${field.querySelector("dd")?.textContent ?? ""}`,
+  );
+  const warnings = Array.from(root.querySelectorAll(".chart-warnings li")).map(
+    (item) => item.textContent ?? "",
+  );
+  return [...fields, ...warnings].join(" · ");
 }
 
 describe("seriesProvenance", () => {
@@ -112,8 +126,8 @@ describe("rendered provenance line", () => {
     expect(text).toContain("đơn vị USD");
     expect(text).toContain("timezone UTC");
     expect(text).toContain("as-of 2026-08-15T18:00:00Z");
-    expect(text).toContain("5000/128400 điểm");
-    expect(text).toContain("giảm điểm: server stride 26");
+    expect(text).toContain("điểm 5000/128400");
+    expect(text).toContain("giảm điểm server stride 26");
     expect(text).toContain("digest sha256:4117b8700652");
   });
 
@@ -142,7 +156,7 @@ describe("rendered provenance line", () => {
         <div />
       </ChartFigure>,
     );
-    expect(text).toContain("giảm điểm: chưa rõ phương pháp");
+    expect(text).toContain("giảm điểm chưa rõ phương pháp");
     expect(text).not.toContain("max_points");
   });
 

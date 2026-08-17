@@ -44,28 +44,57 @@ export interface ChartFigureProps {
   children: ReactNode;
 }
 
+/**
+ * The §12.2 envelope, as labelled fields.
+ *
+ * It used to be one run-on line of eight values joined by `·`, ending in a
+ * half-printed digest — every fact present, and the whole thing reading as a log
+ * line under an otherwise careful chart. Nobody audits a log line.
+ *
+ * Same fields, same wording, now as label/value pairs on a micro-grid: the reader
+ * can find "as-of" without parsing the sentence, and a missing field still states
+ * itself ("as-of chưa công bố") instead of vanishing.
+ */
 function ProvenanceLine({ provenance }: { provenance: ChartProvenance }) {
-  const parts: string[] = [`nguồn ${provenance.source}`];
-  if (provenance.segment) parts.push(`segment ${provenance.segment}`);
-  if (provenance.units) parts.push(`đơn vị ${provenance.units}`);
-  parts.push(`timezone ${provenance.timezone ?? "UTC"}`);
-  parts.push(provenance.asOf ? `as-of ${provenance.asOf}` : "as-of chưa công bố");
+  const fields: { label: string; value: string; wide?: boolean }[] = [
+    { label: "nguồn", value: provenance.source, wide: true },
+  ];
+  if (provenance.segment) fields.push({ label: "segment", value: provenance.segment });
+  if (provenance.units) fields.push({ label: "đơn vị", value: provenance.units });
+  fields.push({ label: "timezone", value: provenance.timezone ?? "UTC" });
+  fields.push({ label: "as-of", value: provenance.asOf ?? "chưa công bố" });
   if (provenance.sourceRows != null && provenance.returnedRows != null) {
-    parts.push(`${provenance.returnedRows}/${provenance.sourceRows} điểm`);
+    fields.push({
+      label: "điểm",
+      value: `${provenance.returnedRows}/${provenance.sourceRows}`,
+    });
     if (provenance.returnedRows < provenance.sourceRows) {
       // The method is never guessed. Before the series envelope existed this
       // line printed a hard-coded "server max_points", which asserted a
       // reduction method the frontend had no way to know.
-      parts.push(provenance.downsample ? `giảm điểm: ${provenance.downsample}` : "giảm điểm: chưa rõ phương pháp");
+      fields.push({
+        label: "giảm điểm",
+        value: provenance.downsample ?? "chưa rõ phương pháp",
+        wide: true,
+      });
     }
   } else if (provenance.returnedRows != null) {
-    parts.push(`${provenance.returnedRows} điểm`);
+    fields.push({ label: "điểm", value: String(provenance.returnedRows) });
   }
-  if (provenance.digest) parts.push(`digest ${provenance.digest.slice(0, 19)}…`);
+  if (provenance.digest) {
+    fields.push({ label: "digest", value: `${provenance.digest.slice(0, 19)}…`, wide: true });
+  }
 
   return (
-    <div className="chart-provenance mono">
-      {parts.join(" · ")}
+    <div className="chart-provenance">
+      <dl className="chart-provenance-grid">
+        {fields.map((field) => (
+          <div key={field.label} className="chart-provenance-field" data-wide={field.wide ?? false}>
+            <dt>{field.label}</dt>
+            <dd className="mono">{field.value}</dd>
+          </div>
+        ))}
+      </dl>
       {provenance.warnings?.length ? (
         <ul className="chart-warnings">
           {provenance.warnings.map((warning) => (
@@ -115,7 +144,14 @@ export function ChartFigure({ figNumber, title, note, sourceId, provenance, chil
       {provenance ? (
         <ProvenanceLine provenance={provenance} />
       ) : sourceId ? (
-        <div className="chart-provenance mono">nguồn: {sourceId}</div>
+        <div className="chart-provenance">
+          <dl className="chart-provenance-grid">
+            <div className="chart-provenance-field" data-wide="true">
+              <dt>nguồn</dt>
+              <dd className="mono">{sourceId}</dd>
+            </div>
+          </dl>
+        </div>
       ) : null}
     </figure>
   );

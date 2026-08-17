@@ -10,7 +10,7 @@ import { runPath } from "../quantbt/routes";
 import { CancelRunButton } from "./CancelRunButton";
 import { api, type RunSummary } from "../../lib/api";
 import { fmtDuration, fmtShortHash, fmtTimestamp } from "../../lib/format";
-import { Badge, StateView } from "../../components/ui";
+import { Badge, Skeleton, StateView } from "../../components/ui";
 
 function CopyId({ runId }: { runId: string }) {
   const [copied, setCopied] = useState(false);
@@ -54,7 +54,14 @@ export function RunLibrary() {
       .catch((error: Error) => setPasteError(error.message));
   };
 
-  if (runs.isLoading) return <StateView kind="loading" />;
+  if (runs.isLoading) {
+    return (
+      <div className="skeleton-rows" data-testid="runs-skeleton">
+        <span className="sr-only" role="status">Đang tải run library…</span>
+        <Skeleton variant="row" count={8} />
+      </div>
+    );
+  }
   if (runs.isError) return <StateView kind="failed" message={runs.error.message} onRetry={() => runs.refetch()} />;
 
   const rows = runs.data ?? [];

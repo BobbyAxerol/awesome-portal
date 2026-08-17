@@ -5,9 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import { EChart } from "../../charts/EChart";
-import { baseOption, palette } from "../../charts/theme";
+import { baseOption } from "../../charts/theme";
+import { useChartTheme } from "../../charts/useChartTheme";
 import { ChartFigure } from "../../components/ChartFigure";
-import { SegmentedControl, StateView } from "../../components/ui";
+import { ResultsSkeleton, SegmentedControl, StateView } from "../../components/ui";
 import { api, type SeriesPayload } from "../../lib/api";
 import { entryPoints, exitPoints } from "../../lib/transitions";
 import { seriesProvenance, type RunEvidence } from "../quantbt/provenance";
@@ -36,7 +37,7 @@ export function ExecutionView({ runId }: { runId: string }) {
     asOf: typeof manifest.completed_at === "string" ? manifest.completed_at : null,
     digest: typeof manifest.dataset_content_hash === "string" ? manifest.dataset_content_hash : null,
   };
-  if (series.isLoading || detail.isLoading) return <StateView kind="loading" />;
+  if (series.isLoading || detail.isLoading) return <ResultsSkeleton message="Đang tải chuỗi execution…" />;
   if (series.isError) return <StateView kind="failed" message={series.error.message} onRetry={() => series.refetch()} />;
 
   return (
@@ -69,6 +70,9 @@ export function ExecutionView({ runId }: { runId: string }) {
 }
 
 function PriceChart({ payload, run }: { payload: SeriesPayload; run: RunEvidence }) {
+  // One dependency for every chart in this view; see useChartTheme.
+  const chart = useChartTheme();
+
   const option = useMemo(() => {
     const target = payload.series.signal_target ?? [];
     const close = payload.series.close ?? [];
@@ -91,7 +95,7 @@ function PriceChart({ payload, run }: { payload: SeriesPayload; run: RunEvidence
           type: "scatter",
           symbol: "triangle",
           symbolSize: 14,
-          itemStyle: { color: palette.good, borderColor: viz.markerLongBorder, borderWidth: 1 },
+          itemStyle: { color: chart.palette.good, borderColor: viz.markerLongBorder, borderWidth: 1 },
           data: entries.filter((entry) => entry.side === 1).map((entry) => [payload.timestamps[entry.index], entry.price]),
         },
         {
@@ -100,7 +104,7 @@ function PriceChart({ payload, run }: { payload: SeriesPayload; run: RunEvidence
           symbol: "triangle",
           symbolRotate: 180,
           symbolSize: 14,
-          itemStyle: { color: palette.bad, borderColor: viz.markerShortBorder, borderWidth: 1 },
+          itemStyle: { color: chart.palette.bad, borderColor: viz.markerShortBorder, borderWidth: 1 },
           data: entries.filter((entry) => entry.side === -1).map((entry) => [payload.timestamps[entry.index], entry.price]),
         },
         {
@@ -108,7 +112,7 @@ function PriceChart({ payload, run }: { payload: SeriesPayload; run: RunEvidence
           type: "scatter",
           symbol: "path://M-4,-4 L4,4 M4,-4 L-4,4",
           symbolSize: 13,
-          itemStyle: { color: palette.good, borderColor: palette.good, borderWidth: 1.5 },
+          itemStyle: { color: chart.palette.good, borderColor: chart.palette.good, borderWidth: 1.5 },
           data: exits.filter((exit) => exit.side === 1).map((exit) => [payload.timestamps[exit.index], exit.price]),
         },
         {
@@ -116,12 +120,12 @@ function PriceChart({ payload, run }: { payload: SeriesPayload; run: RunEvidence
           type: "scatter",
           symbol: "path://M-4,-4 L4,4 M4,-4 L-4,4",
           symbolSize: 13,
-          itemStyle: { color: palette.bad, borderColor: palette.bad, borderWidth: 1.5 },
+          itemStyle: { color: chart.palette.bad, borderColor: chart.palette.bad, borderWidth: 1.5 },
           data: exits.filter((exit) => exit.side === -1).map((exit) => [payload.timestamps[exit.index], exit.price]),
         },
       ],
-    });
-  }, [payload]);
+    }, chart.theme);
+  }, [payload, chart]);
   return (
     <ChartFigure
       figNumber={1}
@@ -138,6 +142,9 @@ function PriceChart({ payload, run }: { payload: SeriesPayload; run: RunEvidence
 }
 
 function PositionStrip({ payload, run }: { payload: SeriesPayload; run: RunEvidence }) {
+  // One dependency for every chart in this view; see useChartTheme.
+  const chart = useChartTheme();
+
   const option = useMemo(
     () =>
       baseOption({
@@ -153,11 +160,11 @@ function PositionStrip({ payload, run }: { payload: SeriesPayload; run: RunEvide
             step: "end",
             showSymbol: false,
             data: payload.series.accepted_position?.map((value, index) => [payload.timestamps[index], value]),
-            lineStyle: { color: palette.accent, width: 1.75 },
-            areaStyle: { color: withAlpha(palette.accent, 0.08) },
+            lineStyle: { color: chart.palette.accent, width: 1.75 },
+            areaStyle: { color: withAlpha(chart.palette.accent, 0.08) },
           },
         ],
-      }),
+      }, chart.theme),
     [payload],
   );
   return (
