@@ -208,6 +208,7 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 | **Run Progress baseline** | v0.4 §26, R10 | Stage strip + fold Gantt 20 fold (có provenance §12.2) + live console 20 dòng thật. Route id giờ là authority; body id lệch thì hiện notice. 97 snapshot. |
 | **Command Center evidence drawer** | v0.4 §P0.13 | Mở đủ authority/provenance/as-of/checked-at/unit/segment cho **mọi** metric của section — dữ liệu summary đã công bố, không tính thêm. History/cross-filter vẫn thuộc U10 và drawer nói rõ. |
 | **Strategy data requirements disclosure** | strategy contract §6 mục 3 (phần làm được) | Hiện `required_columns`, timeframes, `warmup_bars` ở bước Dữ liệu + nói rõ check nào ở đâu. Timeframe vẫn là gate thật. |
+| **Preflight gate per-check + seed gate** | strategy contract §6 mục 3, R14/R15 | Bước Review hiện từng gate kèm cột thiếu; bỏ 3 badge `pass` hard-code. Seed gate theo `determinism.seed_required`, phân biệt required / optional / **chưa khai báo**. |
 | **Reports như dữ liệu** | §8.6 cũ mục 1 (slice tự đề xuất) | `view-reports` parse thành model typed, render bằng primitive. Fragment **không sửa**, hash vẫn gated. Test content-equivalence hai chiều: không mất, không bịa. `RawViewFeature` xoá (dead code). 77 snapshot. |
 | **Alpha import inbox (U14 read half)** | strategy contract §5/§6 mục 4 | `/research/quantbt/imports`: 5 state contract khai báo, reason nguyên văn của service, verify digest on-demand (hiện cả hai digest, không chỉ verdict), empty ≠ failed. **Không có upload** — xem §8.4 điểm 3. 68 snapshot. |
 
@@ -221,7 +222,6 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 | Planning: Docs / Reports | Nhúng nguyên feature body. Token và form control đã dùng chung; Reports vẫn render fragment HTML legacy đã khoá. | Fragment là bản byte-preserved của tài liệu gốc, refactor sẽ phá content-integrity hash. | Slice "Reports như dữ liệu" — parse fragment thành model rồi render bằng primitive, giữ hash của nguồn. |
 | Profile & Access | `COMMISSIONED` preview. | Chờ U07 wire gateway→BFF; login screens 01B/01C/01D chưa có backend. | Sau U10: Frames 01B–01D + session expired + maintenance screen kèm request ID. |
 | Command Center — history / cross-filter | Evidence drawer đã xong (§8.1). Chuỗi theo thời gian và cross-filter thì chưa. | Chờ **U10** read model bền. Dựng chuỗi từ một snapshot là bịa dữ liệu. | Sau U10. |
-| Import preflight — column & seed gate | Timeframe đã gate. Hai check còn lại chưa làm được. | Chặn bởi **request 14** (dataset không công bố column list) và **request 15** (`determinism` không có trong `alpha-manifest.v1`). | Sau 14 + 15. |
 | Visual baseline — mobile/tablet cho Research | Chỉ chụp laptop + workstation. | Có chủ ý: v0.4 §26.1 đưa research work sang "open on desktop", nên baseline mobile sẽ chốt một layout không ai được yêu cầu làm việc trên đó. | Chỉ mở nếu §26.1 đổi. |
 
 ### 8.3 Backend request
@@ -321,6 +321,10 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
    reference** (chọn hướng A, request 11 đóng — xem §8.3). UI không bao giờ
    gửi code bytes.
 
+### 8.4b Ghi chú: mọi backend request đã đóng
+
+R1–R15 đã giao và đã thu hết. Không còn request nào treo tại 2026-08-17.
+
 ### 8.5 Việc làm thêm ngoài plan (track theo CLAUDE.md §7.3)
 
 | Việc | Vì sao làm | Bằng chứng |
@@ -360,6 +364,10 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 | Exporter ghi cả status code | `summary` trả 409 cho run chưa terminal; bỏ qua nó thì baseline mất một state thật. | Cũng phát hiện console phải capture ở `tail=5000` (RunProgress dùng số đó, không phải default của client) — nếu không console rỗng và baseline sẽ chốt một màn trông như hỏng. |
 | Evidence drawer giữ section theo `feature_id` | Refetch thay object section; giữ theo object thì drawer đóng băng snapshot cũ. | Drawer đi theo snapshot mới. |
 | Không dựng gate cho column/seed | Suy `ohlcv` → 5 cột là đoán nội dung frame (rule §3.5). `determinism` thì không tồn tại trong schema. | Làm phần disclosure thật, mở request 14 + 15 cho phần gate. |
+
+| Bỏ 3 badge `pass` hard-code ở Review | Chúng khẳng định schema/boundaries/content-hash pass **bất kể** preflight trả gì — kể cả khi `valid: false`. | Đây là fake state, không phải thiếu tính năng. Thay bằng đúng gate server báo; gate server không nhắc thì **không** hiện là pass. |
+| Seed gate giữ ba trạng thái, không hai | `seedRequired === null` (built-in không có manifest) khác `false`. Đọc im lặng thành "seed optional" là suy diễn. | Required → chặn submit; optional → nói rõ; chưa khai báo → nói rõ là chưa khai báo. |
+| Thêm `determinism` vào `alphaProjection()` của test | Helper build projection thủ công; thiếu field thì nó lệch với contract nó đại diện. | Nếu không sửa, seed gate sẽ "trông như đã test" trong khi test vẫn pass. |
 
 ### 8.6 Đề xuất slice kế tiếp
 
