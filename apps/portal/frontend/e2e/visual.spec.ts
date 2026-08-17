@@ -208,6 +208,12 @@ test.describe("print theme", () => {
 
       await page.goto(screen.path);
       await screen.ready(page).first().waitFor({ state: "visible" });
+      // Settle BEFORE switching media. mermaid measures text at render time, so
+      // letting the media switch race the render made the SVG geometry differ
+      // between runs — the repeatable `planning-reports @ print` failure. The
+      // diagram is therefore always laid out under screen CSS, and print only
+      // affects what CSS itself controls.
+      await settle(page);
       await page.emulateMedia({ media: "print" });
       await settle(page);
 
