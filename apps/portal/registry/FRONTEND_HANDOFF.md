@@ -196,18 +196,21 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 | Portal Map — persona filter | v0.4 §P0.15 | Đọc `lifecycle_stages[].personas` do backend khai báo. |
 | Chart envelope — toàn bộ result tab | v0.5 §12.2 | 7 `ChartFigure` còn lại (Optimization ×4, Parameters ×3, Execution ×2) đều mang envelope. Không còn chart nào dùng `sourceId` trần. |
 | Contract typed | §8.3 request 1–3 | Regenerate types + narrow tới generated schema; `SummaryMetric` thành alias của `EvidenceValue`. |
+| **Visual baseline** | v0.4 §26–§27, U02 exit gate | Playwright cho `apps/portal/frontend`: 39 snapshot = 4 màn × 4 breakpoint × 2 theme + print + 3 summary state. Đã verify tái lập (39/39 pass sau khi record). Runner: `scripts/portal-web-visual.sh`. |
+| **Operations Dark review** | v0.4 §26, v0.5 §10.2 | Xong cùng visual baseline. Xác nhận workstream ramp render đúng trên board nhúng trong shell dark. |
+| **Run Progress §12.2** | v0.5 §12.2, §8.3 request 5 | Fold Gantt có provenance footer (`config/fold_plan.json` · protocol · số fold · as-of · analysis-frame digest); plan cũ chưa có field thì ghi "chưa công bố". |
+| **Trials envelope** | §8.3 request 4 | `{total_rows, returned_rows, rows}`; bỏ suy luận `length >= cap`; chart đếm theo **artifact population**, không theo trang được trả. |
 
 ### 8.2 Còn treo
 
 | Vùng | Trạng thái | Vì sao chưa sâu | Slice đề xuất |
 |---|---|---|---|
 | Import Wizard (U14) | Chưa có UI. Picker đã đọc `/api/v1/alphas` (typed); alpha chưa đăng ký runtime hiển thị kèm lý do. | Backend slice `POST /api/v1/alphas/import` + quarantine pipeline chưa có (strategy contract §6). Làm UI trước sẽ là form không có authority. | Sau BAR-21: Import Flow A/B, digest verify, quarantine state. |
-| Run Progress | Giữ nguyên bản v0.1.1 (console + fold Gantt). | Fold Gantt vẽ từ fold **plan**, không phải series artifact, nên `seriesProvenance` không áp được; fold-plan chưa có `as_of`/`digest`. | Chuẩn hoá Gantt theo §12.2 sau khi có backend request 4 (dưới). |
 | Command Center | Đủ 7 state, số liệu thật từ summary. Chưa có drill-down drawer. | Read model bền thuộc U10; drawer không có nguồn ổn định để mở. | Sau U10: evidence drawer + cross-filter. |
 | Planning: Docs / Reports | Nhúng nguyên feature body. Token và form control đã dùng chung; Reports vẫn render fragment HTML legacy đã khoá. | Fragment là bản byte-preserved của tài liệu gốc, refactor sẽ phá content-integrity hash. | Slice "Reports như dữ liệu" — parse fragment thành model rồi render bằng primitive, giữ hash của nguồn. |
 | Profile & Access | `COMMISSIONED` preview. | Chờ U07 wire gateway→BFF; login screens 01B/01C/01D chưa có backend. | Sau U10: Frames 01B–01D + session expired + maintenance screen kèm request ID. |
-| Visual baseline 4 breakpoint × 3 theme | Chưa có. Playwright chạy được cho Planning (2 e2e xanh, image `mcr.microsoft.com/playwright:v1.62.1-noble`); `apps/portal/frontend` chưa có e2e project. | Cần dựng Playwright cho Portal + baseline screenshot; là slice riêng, không nhét vào slice UI. | **Ưu tiên kế tiếp** — xem §8.6. |
-| Operations Dark | Token đầy đủ + parity test giữa hai token file; chưa review thị giác từng màn. | Chưa có visual baseline (trên). | Đi kèm slice visual baseline. |
+| Visual baseline — độ phủ | Có 4 màn. **Chưa** có: New Run flow (6 step), Results tabs (Overview/Optimization/Parameters/Execution), Run Progress. | Các màn đó cần stub `/api/runs/*` (summary, series, trials, audit, fold-plan) — nhiều fixture hơn hẳn 4 màn đầu, và hiện repo **không có fixture run nào** dưới `registry/fixtures/`. | Slice "run fixtures": xin backend 1 bộ fixture run hoàn chỉnh (xem request 6), rồi mở rộng matrix. |
+| Run Progress — live states | Fold Gantt đã có provenance. Console/ETA/progress strip chưa vào visual baseline. | Phụ thuộc run fixtures như trên; trạng thái live còn phụ thuộc thời gian nên cần freeze clock + fixture theo từng stage. | Cùng slice "run fixtures". |
 
 ### 8.3 Backend request
 
@@ -223,16 +226,28 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
    (projection-derived, schema-optional, default `[]`). Roll-up tạm ở frontend
    đã xoá.
 
+4. ~~`total_rows` cho `wfo/trials`~~ → envelope `{total_rows, returned_rows, rows}`.
+   Suy luận `length >= cap` đã xoá; chart đếm theo artifact population.
+5. ~~`as_of` / `source_artifact_digest` cho `fold-plan`~~ → có trong
+   `producer`. Fold Gantt đã cite được.
+
 **Còn treo (mới, @codex):**
 
-4. `GET /api/runs/{run_id}/wfo/trials` chưa công bố tổng số trial của artifact.
-   Frontend đang gọi `top_n=5000` và **suy ra** "có thể còn trial ngoài tập
-   này" bằng cách so `length >= 5000` — suy luận, không phải khai báo. Đề xuất
-   thêm `total_rows` (hoặc bọc trong envelope giống `SeriesPayload`) để cảnh
-   báo trên chart trở thành sự thật được công bố. Cùng lý do như request 2.
-5. `GET /api/runs/{run_id}/fold-plan` chưa có `as_of` / `source_artifact_digest`.
-   Fold Gantt là chart duy nhất còn ngoài §12.2 envelope vì không có gì để
-   trích dẫn. Đề xuất thêm hai field đó vào response.
+6. **Response schema cho hai endpoint mới.** Cả
+   `GET /api/runs/{id}/wfo/trials` và `GET /api/runs/{id}/fold-plan` vẫn trả
+   `{additionalProperties: true}` trong OpenAPI, nên codegen không sinh type —
+   frontend lại phải khai `TrialsPayload` / `RunFoldPlan.producer` bằng tay ở
+   `src/lib/api.ts`. **Đúng cùng một lớp vấn đề như request 1** (alphas/
+   capabilities), đã được giải quyết ở đó bằng cách đặt tên schema. Đề xuất
+   `TrialsEnvelope` + `FoldPlanDocument` (kèm `ArtifactProducer`) trong
+   `components/schemas`. Không phải blocker — chỉ là chỗ rename ở backend sẽ
+   im lặng thành `undefined` thay vì lỗi build.
+7. **Fixture cho một run hoàn chỉnh.** `registry/fixtures/` có registry/summary/
+   links nhưng không có run nào, nên visual baseline không phủ được New Run,
+   Results tabs và Run Progress (xem §8.2). Đề xuất một bộ fixture read-only
+   cho 1 run `advanced_walk_forward` đã completed: `runs/{id}` detail, `summary`,
+   `audit`, `fold-plan`, `wfo/trials`, `wfo/candidates`, `series/{segment}`,
+   `presentation/{mode}` — cùng nguồn canonical như các fixture hiện có.
 
 ### 8.4 Discrepancy ghi nhận (v1.1)
 
@@ -266,14 +281,23 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 | Cảnh báo `top_n=5000` trên chart trial | Cap của query là thuộc tính của dữ liệu chart, không phải chi tiết fetch. | Hiện là **suy luận** → đã mở backend request 4 để biến thành khai báo. |
 | Regenerate `packages/contracts/generated/portal-api.d.ts` | Codex cập nhật OpenAPI nhưng chưa regenerate types (+202 dòng). Bước cơ học theo CLAUDE.md §7.6. | `cd packages/contracts && npm run generate`. |
 
+| Playwright cho Portal + `scripts/portal-web-visual.sh` | U02 exit gate cần bằng chứng thị giác; runner đóng gói theo đúng image pinned nên baseline so sánh được giữa máy. | 39 snapshot, verify tái lập 39/39. **Chưa wire vào `ci.yml`** — file đó là của codex và vừa được sửa; đề xuất thêm step ở §8.6. |
+| 4 defect do visual baseline phát hiện | Không unit test nào thấy được. | (1) chip `tone` mâu thuẫn màu swatch trên **cả 6** phase; (2) label bar bị cắt "W…" khi phase ≤ 12% timeline; (3) print còn hiện action (§26.6); (4) Delete cạnh Edit (§13). Đã sửa cả 4 + 3 unit test khoá lại. |
+| Print rule phải viết ở **cả hai** print.css | Portal load `features.css`/`legacy-views.css` của Planning nhưng **không** load `print.css` của nó. Sửa chỉ một bên thì màn Planning nhúng vẫn in ra kèm nút. | Cùng lớp bug với token parity. Đã ghi rule ở cả hai file. |
+| `trialsPopulation()` tách khỏi view | Cùng một quyết định "đã bị truncate chưa" sắp bị viết hai lần ở Optimization và Parameters. | 3 unit test, gồm case artifact **đúng bằng** cap (case mà suy luận cũ sai). |
+| Giữ nút `×` xoá task trên card | §13 nói destructive không cạnh row action thường. Nút này có từ trước v1.1, tách rời thị giác (góc trên phải, chỉ hiện khi hover) và có `window.confirm`. | Đã review, giữ nguyên có lý do; khác với Edit/Delete kề nhau ở roadmap row nên đã sửa chỗ đó. |
+
 ### 8.6 Đề xuất slice kế tiếp
 
-1. **Visual baseline** (ưu tiên 1) — dựng Playwright cho `apps/portal/frontend`,
-   screenshot 4 breakpoint × Research Light / Operations Dark / Print. Đây là
-   tiêu chí exit gate U02 duy nhất còn chưa chứng minh được, và nó cũng mở khoá
-   "Operations Dark review". Hạ tầng đã sẵn: image Playwright chạy được, Planning
-   đã có e2e project để copy cấu hình.
-2. **Run Progress §12.2** — sau khi có backend request 5 (`as_of`/digest cho
-   fold-plan).
+1. **Run fixtures + mở rộng visual baseline** (ưu tiên 1) — cần backend request 7.
+   Đây là mảng lớn nhất còn thiếu bằng chứng thị giác: New Run 6 step, 4 Results
+   tab và Run Progress. Không thể tự bịa fixture run (rule §3.2/§3.5), nên phải
+   xin bộ fixture canonical trước.
+2. **Wire visual baseline vào CI** — thêm step `scripts/portal-web-visual.sh`
+   vào `.github/workflows/ci.yml`. FE không sửa file đó; đề nghị codex thêm cạnh
+   `contracts-test` / `control-api-test`. Không có step này thì baseline chỉ
+   chạy khi có người nhớ chạy.
 3. **Reports như dữ liệu** — gỡ nốt fragment HTML legacy cuối cùng khỏi Planning
    mà vẫn giữ content-integrity hash của nguồn.
+4. **Request 6** — đặt tên schema cho hai endpoint mới để bỏ nốt hai type khai
+   tay trong `src/lib/api.ts`.
