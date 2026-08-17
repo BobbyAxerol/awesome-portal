@@ -12,6 +12,7 @@ import { MetricTile, MetricTileRow } from "../../components/MetricTile";
 import { SegmentedControl, StateView } from "../../components/ui";
 import { api, type SeriesPayload } from "../../lib/api";
 import { fmtCount, fmtPct, fmtRatio } from "../../lib/format";
+import { seriesProvenance, type RunEvidence } from "../quantbt/provenance";
 import { HEADLINE_METRICS, MATRIX_METRICS, metricDefinition } from "./metricDefinitions";
 
 const SEGMENTS = ["is", "oos", "holdout_live"] as const;
@@ -75,16 +76,17 @@ export function OverviewView({ runId }: { runId: string }) {
     typeof manifest.dataset_content_hash === "string" ? manifest.dataset_content_hash : null;
   const summaryWarnings = summary.data?.metrics.warnings ?? [];
 
-  // Point counts for the chart envelope. `sourceRows` is what the artifact
-  // holds; `returnedRows` is what the server actually sent after its
-  // max_points reduction — the two differing is what makes the downsample
-  // note honest rather than decorative.
+  // Chart envelope (v0.5 §12.2). The series endpoints publish
+  // source_rows/returned_rows/downsample_stride now, so the row counts and the
+  // reduction method are read rather than assumed — the cast-and-hope that
+  // stood here while `source_rows` was unpublished is gone.
   const activeSeries = advanced ? stitchedQuery.data : presentation.data;
-  const equityPoints = activeSeries?.timestamps.length ?? null;
-  const equitySourceRows =
-    typeof (activeSeries as { source_rows?: number } | undefined)?.source_rows === "number"
-      ? (activeSeries as unknown as { source_rows: number }).source_rows
-      : equityPoints;
+  const runEvidence: RunEvidence = {
+    runId,
+    asOf,
+    digest: datasetDigest,
+    warnings: summaryWarnings,
+  };
   const loaded =
     (advanced ? Boolean(stitchedQuery.data) : segments.every((segment) => segment.series)) &&
     Boolean(summary.data) &&
@@ -240,18 +242,13 @@ export function OverviewView({ runId }: { runId: string }) {
       <ChartFigure
         figNumber={1}
         title={`Equity — ${advanced ? "tài khoản stitched OOS" : capitalMode === "capital" ? "vốn tài khoản mới" : "rebased 100"}`}
-        provenance={{
-          source: advanced ? "series/stitched.parquet" : `presentation/${capitalMode === "capital" ? "calendar" : "rebased"}`,
-          runId,
+        provenance={seriesProvenance(activeSeries, runEvidence, {
+          source: advanced
+            ? "series/stitched.parquet"
+            : `presentation/${capitalMode === "capital" ? "calendar" : "rebased"}`,
           segment: advanced ? "stitched" : selected === "compare" ? "is+oos+holdout" : selected,
           units: capitalMode === "capital" ? "USD" : "index (100 = mốc)",
-          asOf,
-          digest: datasetDigest,
-          returnedRows: equityPoints,
-          sourceRows: equitySourceRows,
-          downsample: "server max_points=5000",
-          warnings: summaryWarnings,
-        }}
+        })}
       >
         <EChart option={equityOption} height={560} />
       </ChartFigure>
@@ -260,17 +257,11 @@ export function OverviewView({ runId }: { runId: string }) {
         figNumber={2}
         title="Underwater — drawdown suy ra từ equity"
         note="Drawdown là trình bày lại của chuỗi equity ở trên, không phải một metric riêng do engine tính."
-        provenance={{
+        provenance={seriesProvenance(activeSeries, runEvidence, {
           source: advanced ? "series/stitched.parquet" : "presentation/calendar",
-          runId,
           segment: advanced ? "stitched" : "is+oos+holdout",
           units: "% từ đỉnh trước",
-          asOf,
-          digest: datasetDigest,
-          returnedRows: equityPoints,
-          sourceRows: equitySourceRows,
-          downsample: "server max_points=5000",
-        }}
+        })}
       >
         <EChart option={underwaterOption} height={220} />
       </ChartFigure>

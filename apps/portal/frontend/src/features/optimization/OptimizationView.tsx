@@ -10,6 +10,10 @@ import { Collapsible, DefinitionList, StateView } from "../../components/ui";
 import { FoldGantt } from "../../components/FoldGantt";
 import { api, rowParams } from "../../lib/api";
 import { fmtDecay, fmtRatio } from "../../lib/format";
+import { tableProvenance, type RunEvidence } from "../quantbt/provenance";
+
+/** Server-side cap on the trials query; disclosed on every trial chart. */
+const TRIAL_QUERY_CAP = 5000;
 
 const PROCESS_STAGES = [
   "Optimize IS",
@@ -21,13 +25,28 @@ const PROCESS_STAGES = [
 ];
 
 export function OptimizationView({ runId }: { runId: string }) {
-  const trials = useQuery({ queryKey: ["trials", runId], queryFn: () => api.trials(runId, "top_n=5000") });
+  const trials = useQuery({ queryKey: ["trials", runId], queryFn: () => api.trials(runId, `top_n=${TRIAL_QUERY_CAP}`) });
   const foldPlan = useQuery({ queryKey: ["fold-plan", runId], queryFn: () => api.foldPlan(runId), retry: 1 });
   const detail = useQuery({ queryKey: ["run", runId], queryFn: () => api.getRun(runId) });
   const candidates = useQuery({ queryKey: ["candidates", runId], queryFn: () => api.candidates(runId) });
   const trace = useQuery({ queryKey: ["trace", runId], queryFn: () => api.trace(runId) });
   const folds = useQuery({ queryKey: ["folds", runId], queryFn: () => api.folds(runId) });
+  const audit = useQuery({ queryKey: ["audit", runId], queryFn: () => api.audit(runId), staleTime: 60_000 });
   const [selectedTrial, setSelectedTrial] = useState<number | null>(null);
+
+  const manifest = (audit.data?.manifest ?? {}) as Record<string, unknown>;
+  const run: RunEvidence = {
+    runId,
+    asOf: typeof manifest.completed_at === "string" ? manifest.completed_at : null,
+    digest: typeof manifest.dataset_content_hash === "string" ? manifest.dataset_content_hash : null,
+    // The trials query asks the server for the top 5.000 by objective. That
+    // cap is a property of the chart's data, not a detail of the fetch, so it
+    // is stated wherever a trial chart is drawn (v0.5 §12.2).
+    warnings:
+      (trials.data?.length ?? 0) >= TRIAL_QUERY_CAP
+        ? [`Server trả tối đa ${TRIAL_QUERY_CAP} trial theo objective — có thể còn trial ngoài tập này.`]
+        : undefined,
+  };
 
   const rows = useMemo(() => {
     const unique = new Map<string, Record<string, unknown>>();
@@ -69,6 +88,19 @@ export function OptimizationView({ runId }: { runId: string }) {
       ],
     } as unknown as EChartsOption);
   }, [rows, selectedId]);
+
+  /** Rows each chart actually draws — the denominator of its provenance line. */
+  const trialsPlotted = useMemo(
+    () => rows.filter((row) => typeof row.objective === "number").length,
+    [rows],
+  );
+  const candidatesPlotted = useMemo(
+    () =>
+      candidateRows.filter(
+        (row) => typeof row.mean_is_sharpe === "number" && typeof row.mean_oos_sharpe === "number",
+      ).length,
+    [candidateRows],
+  );
 
   const candidateScatter = useMemo(() => {
     const data: Array<[number, number, number]> = candidateRows
@@ -154,16 +186,60 @@ export function OptimizationView({ runId }: { runId: string }) {
       <SelectionFunnel rows={rows} candidates={candidateRows} />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <ChartFigure figNumber={1} title="Trials — IS objective theo trial id" sourceId="wfo/trials.parquet">
+        <ChartFigure
+          figNumber={1}
+          title="Trials — IS objective theo trial id"
+          provenance={tableProvenance(run, {
+            source: "wfo/trials.parquet",
+            segment: "is",
+            units: "objective",
+            available: rows.length,
+            plotted: trialsPlotted,
+            reduction: "bỏ trial chưa có objective",
+          })}
+        >
           <EChart option={trialScatter} height={360} />
         </ChartFigure>
-        <ChartFigure figNumber={2} title="Candidates — IS Sharpe vs OOS Sharpe" sourceId="wfo/candidates.parquet">
+        <ChartFigure
+          figNumber={2}
+          title="Candidates — IS Sharpe vs OOS Sharpe"
+          provenance={tableProvenance(run, {
+            source: "wfo/candidates.parquet",
+            segment: "is+oos",
+            units: "Sharpe (annualized)",
+            available: candidateRows.length,
+            plotted: candidatesPlotted,
+            reduction: "bỏ candidate thiếu IS hoặc OOS Sharpe",
+          })}
+        >
           <EChart option={candidateScatter} height={360} />
         </ChartFigure>
-        <ChartFigure figNumber={3} title="Decay lollipop — candidate decay" sourceId="wfo/candidates.parquet">
+        <ChartFigure
+          figNumber={3}
+          title="Decay lollipop — candidate decay"
+          provenance={tableProvenance(run, {
+            source: "wfo/candidates.parquet",
+            segment: "is→oos",
+            units: "decay",
+            available: candidateRows.length,
+            plotted: decayData.length,
+            reduction: "bỏ candidate chưa có mean_decay",
+          })}
+        >
           <EChart option={decayOption} height={320} />
         </ChartFigure>
-        <ChartFigure figNumber={4} title="Best-so-far convergence" sourceId="wfo/trials.parquet">
+        <ChartFigure
+          figNumber={4}
+          title="Best-so-far convergence"
+          note="Đường best-so-far chạy theo thứ tự trial đã tải, không phải theo thời gian thực của study."
+          provenance={tableProvenance(run, {
+            source: "wfo/trials.parquet",
+            segment: "is",
+            units: "objective",
+            available: rows.length,
+            plotted: rows.length,
+          })}
+        >
           <EChart option={convergenceOption} height={320} />
         </ChartFigure>
       </div>

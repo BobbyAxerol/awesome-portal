@@ -10,6 +10,7 @@ import { ChartFigure } from "../../components/ChartFigure";
 import { SegmentedControl, StateView } from "../../components/ui";
 import { api, type SeriesPayload } from "../../lib/api";
 import { entryPoints, exitPoints } from "../../lib/transitions";
+import { seriesProvenance, type RunEvidence } from "../quantbt/provenance";
 import { activeTheme, vizTokensFor, withAlpha } from "../../styles/tokens";
 
 const viz = vizTokensFor(activeTheme());
@@ -26,6 +27,15 @@ export function ExecutionView({ runId }: { runId: string }) {
     queryFn: () => api.series(runId, segment, 4000),
     staleTime: 60_000,
   });
+  // Same query key as every other result tab, so react-query serves the run
+  // manifest once and the as-of/digest on all charts come from one read.
+  const audit = useQuery({ queryKey: ["audit", runId], queryFn: () => api.audit(runId), staleTime: 60_000 });
+  const manifest = (audit.data?.manifest ?? {}) as Record<string, unknown>;
+  const run: RunEvidence = {
+    runId,
+    asOf: typeof manifest.completed_at === "string" ? manifest.completed_at : null,
+    digest: typeof manifest.dataset_content_hash === "string" ? manifest.dataset_content_hash : null,
+  };
   if (series.isLoading || detail.isLoading) return <StateView kind="loading" />;
   if (series.isError) return <StateView kind="failed" message={series.error.message} onRetry={() => series.refetch()} />;
 
@@ -44,8 +54,8 @@ export function ExecutionView({ runId }: { runId: string }) {
           ]}
         />
       )}
-      <PriceChart payload={series.data!} />
-      <PositionStrip payload={series.data!} />
+      <PriceChart payload={series.data!} run={run} />
+      <PositionStrip payload={series.data!} run={run} />
       <div className="card p-4">
         <div className="label mb-2">Cost timeline</div>
         <p className="text-[12px] leading-5 text-ink-faint">
@@ -58,7 +68,7 @@ export function ExecutionView({ runId }: { runId: string }) {
   );
 }
 
-function PriceChart({ payload }: { payload: SeriesPayload }) {
+function PriceChart({ payload, run }: { payload: SeriesPayload; run: RunEvidence }) {
   const option = useMemo(() => {
     const target = payload.series.signal_target ?? [];
     const close = payload.series.close ?? [];
@@ -117,14 +127,17 @@ function PriceChart({ payload }: { payload: SeriesPayload }) {
       figNumber={1}
       title="Close price + target transitions"
       note="▲▼ = entry · ✕ = exit. Markers là Target transition từ strategy signal (pos_weight), không phải audited fills."
-      sourceId="series/*"
+      provenance={seriesProvenance(payload, run, {
+        source: `series/${payload.segment}`,
+        units: "giá (đơn vị instrument)",
+      })}
     >
       <EChart option={option} height={640} />
     </ChartFigure>
   );
 }
 
-function PositionStrip({ payload }: { payload: SeriesPayload }) {
+function PositionStrip({ payload, run }: { payload: SeriesPayload; run: RunEvidence }) {
   const option = useMemo(
     () =>
       baseOption({
@@ -148,7 +161,14 @@ function PositionStrip({ payload }: { payload: SeriesPayload }) {
     [payload],
   );
   return (
-    <ChartFigure figNumber={2} title="Position regime strip" sourceId="series/*">
+    <ChartFigure
+      figNumber={2}
+      title="Position regime strip"
+      provenance={seriesProvenance(payload, run, {
+        source: `series/${payload.segment}`,
+        units: "accepted_position (−1…1)",
+      })}
+    >
       <EChart option={option} height={150} />
     </ChartFigure>
   );

@@ -53,8 +53,13 @@ function ProvenanceLine({ provenance }: { provenance: ChartProvenance }) {
   if (provenance.sourceRows != null && provenance.returnedRows != null) {
     parts.push(`${provenance.returnedRows}/${provenance.sourceRows} điểm`);
     if (provenance.returnedRows < provenance.sourceRows) {
-      parts.push(`downsample ${provenance.downsample ?? "server max_points"}`);
+      // The method is never guessed. Before the series envelope existed this
+      // line printed a hard-coded "server max_points", which asserted a
+      // reduction method the frontend had no way to know.
+      parts.push(provenance.downsample ? `giảm điểm: ${provenance.downsample}` : "giảm điểm: chưa rõ phương pháp");
     }
+  } else if (provenance.returnedRows != null) {
+    parts.push(`${provenance.returnedRows} điểm`);
   }
   if (provenance.digest) parts.push(`digest ${provenance.digest.slice(0, 19)}…`);
 

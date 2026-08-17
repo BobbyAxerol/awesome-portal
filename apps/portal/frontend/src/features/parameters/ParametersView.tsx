@@ -8,19 +8,38 @@ import { ChartFigure } from "../../components/ChartFigure";
 import { Collapsible, DefinitionList, StateView } from "../../components/ui";
 import { api, rowParams } from "../../lib/api";
 import type { StrategyResponse } from "../../lib/api";
+import { tableProvenance, type RunEvidence } from "../quantbt/provenance";
 import { buildHistogram, buildObjectiveHeatmap, numericValues } from "./analytics";
 import { activeTheme, vizTokensFor } from "../../styles/tokens";
 
 const viz = vizTokensFor(activeTheme());
 
+/** Server-side cap on the trials query; disclosed on every trial chart. */
+const TRIAL_QUERY_CAP = 5000;
+
+/** Rows the parallel-coordinates chart keeps. A client-side reduction. */
+const PARALLEL_TOP_N = 200;
+
 export function ParametersView({ runId }: { runId: string }) {
   const parameters = useQuery({ queryKey: ["parameters", runId], queryFn: () => api.parameters(runId) });
-  const trials = useQuery({ queryKey: ["trials", runId], queryFn: () => api.trials(runId, "top_n=5000") });
+  const trials = useQuery({ queryKey: ["trials", runId], queryFn: () => api.trials(runId, `top_n=${TRIAL_QUERY_CAP}`) });
   const strategies = useQuery({ queryKey: ["strategies"], queryFn: api.strategies });
+  const audit = useQuery({ queryKey: ["audit", runId], queryFn: () => api.audit(runId), staleTime: 60_000 });
 
   const selected = parameters.data?.selected.params ?? {};
   const ranges = strategies.data?.[0]?.parameter_space ?? {};
   const rows = trials.data ?? [];
+
+  const manifest = (audit.data?.manifest ?? {}) as Record<string, unknown>;
+  const run: RunEvidence = {
+    runId,
+    asOf: typeof manifest.completed_at === "string" ? manifest.completed_at : null,
+    digest: typeof manifest.dataset_content_hash === "string" ? manifest.dataset_content_hash : null,
+    warnings:
+      rows.length >= TRIAL_QUERY_CAP
+        ? [`Server trả tối đa ${TRIAL_QUERY_CAP} trial theo objective — có thể còn trial ngoài tập này.`]
+        : undefined,
+  };
 
   const paramKeys = Object.keys(selected);
   const numericKeys = paramKeys.filter((key) => rows.some((row) => typeof rowParams(row)[key] === "number"));
@@ -33,6 +52,18 @@ export function ParametersView({ runId }: { runId: string }) {
     if (!pairA && numericKeys.length) setPairA(numericKeys[0]);
     if (!pairB && numericKeys.length) setPairB(numericKeys[1] ?? numericKeys[0]);
   }, [distributionParam, numericKeys, pairA, pairB]);
+
+  /** Trials each chart actually consumes — the numerator of its provenance line. */
+  const distributionPlotted = useMemo(
+    () => numericValues(rows, distributionParam).length,
+    [rows, distributionParam],
+  );
+  const contourPlotted = useMemo(
+    // Every cell aggregates `count` trials, so the trials that reached the
+    // heatmap is the sum of the cell counts, not the number of cells.
+    () => buildObjectiveHeatmap(rows, pairA, pairB).reduce((total, cell) => total + cell.count, 0),
+    [rows, pairA, pairB],
+  );
 
   const coverageOption = useMemo(() => {
     const bins = buildHistogram(numericValues(rows, distributionParam));
@@ -83,7 +114,7 @@ export function ParametersView({ runId }: { runId: string }) {
 
   const parallelOption = useMemo(() => {
     const dims = paramKeys;
-    const topRows = [...rows].sort((a, b) => Number(b.objective ?? -Infinity) - Number(a.objective ?? -Infinity)).slice(0, 200);
+    const topRows = [...rows].sort((a, b) => Number(b.objective ?? -Infinity) - Number(a.objective ?? -Infinity)).slice(0, PARALLEL_TOP_N);
     const values: Array<(string | number)[]> = topRows.map((row) => {
       const params = rowParams(row);
       return dims.map((key) => (params[key] as string | number) ?? 0);
@@ -158,14 +189,50 @@ export function ParametersView({ runId }: { runId: string }) {
           </select>
         </div>
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <ChartFigure figNumber={1} title={`Trial distribution — ${distributionParam || "parameter"}`} sourceId="wfo/trials.parquet">
+          <ChartFigure
+            figNumber={1}
+            title={`Trial distribution — ${distributionParam || "parameter"}`}
+            provenance={tableProvenance(run, {
+              source: "wfo/trials.parquet",
+              segment: "is",
+              units: `${distributionParam || "parameter"} (số trial mỗi bin)`,
+              available: rows.length,
+              plotted: distributionPlotted,
+              reduction: `bỏ trial không có giá trị số cho ${distributionParam || "parameter"}`,
+            })}
+          >
             <EChart option={coverageOption} height={340} />
           </ChartFigure>
-          <ChartFigure figNumber={2} title="Objective contour — parameter sensitivity" sourceId="wfo/trials.parquet">
+          <ChartFigure
+            figNumber={2}
+            title="Objective contour — parameter sensitivity"
+            note="Mỗi ô là objective trung bình của các trial rơi vào cặp giá trị đó; ô trống là cặp chưa có trial nào, không phải objective bằng 0."
+            provenance={tableProvenance(run, {
+              source: "wfo/trials.parquet",
+              segment: "is",
+              units: "objective trung bình",
+              available: rows.length,
+              plotted: contourPlotted,
+              reduction: `bỏ trial thiếu ${pairA} hoặc ${pairB}`,
+            })}
+          >
             <EChart option={contourOption} height={340} />
           </ChartFigure>
         </div>
-        <ChartFigure figNumber={3} title="Parallel coordinates — top 200 trials by objective" sourceId="wfo/trials.parquet">
+        <ChartFigure
+          figNumber={3}
+          title={`Parallel coordinates — top ${PARALLEL_TOP_N} trials by objective`}
+          provenance={tableProvenance(run, {
+            source: "wfo/trials.parquet",
+            segment: "is",
+            units: "giá trị parameter đã chuẩn hoá",
+            available: rows.length,
+            plotted: Math.min(rows.length, PARALLEL_TOP_N),
+            // A client-side top-N, named as one: the tail is not missing from
+            // the artifact, it is simply not drawn.
+            reduction: `client top-${PARALLEL_TOP_N} theo objective`,
+          })}
+        >
           <EChart option={parallelOption} height={420} />
         </ChartFigure>
       </div>

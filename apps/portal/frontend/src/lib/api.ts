@@ -110,10 +110,25 @@ export interface RunDetail extends RunSummary {
   failure: { code: string; message: string } | null;
 }
 
+/**
+ * Series envelope (v0.5 §12.2).
+ *
+ * `source_rows` is the segment's row count **before** downsampling and before
+ * start/end clipping; `returned_rows` is what actually arrived; and
+ * `downsample_stride` is 1 when the payload was not thinned. The three
+ * together are what let a chart say "5.000/128.400 điểm, stride 26" instead of
+ * implying it drew everything.
+ *
+ * Delivered by codex on 2026-08-17; before that the frontend could only assume
+ * returned == source, which quietly understated every reduced chart.
+ */
 export interface SeriesPayload {
   segment: string;
   timestamps: string[];
   series: Record<string, (number | null)[]>;
+  source_rows: number;
+  returned_rows: number;
+  downsample_stride: number;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
