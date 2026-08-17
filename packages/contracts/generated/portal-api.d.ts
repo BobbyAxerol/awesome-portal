@@ -539,11 +539,13 @@ export interface paths {
         put?: never;
         /**
          * Import Alpha
-         * @description Quarantine ingest: verify digest, never execute code.
+         * @description Quarantine ingest via source reference (R11, contract §5).
          *
-         *     The source registry stays immutable; imports land in the runtime
-         *     quarantine store and block everything until a certification slice
-         *     promotes them.
+         *     The browser never uploads code: it submits a pointer to an artifact that
+         *     CI/owner already staged in the ingest inbox plus the expected digest. The
+         *     server reads that file, verifies the digest, and quarantines it. The
+         *     source registry stays immutable and imported alphas block everything
+         *     until a certification slice promotes them.
          */
         post: operations["import_alpha_api_v1_alphas_import_post"];
         delete?: never;
@@ -943,6 +945,19 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** AlphaImportRequest */
+        AlphaImportRequest: {
+            /** Alpha Id */
+            alpha_id: string;
+            /** Artifact Relpath */
+            artifact_relpath: string;
+            /** Expected Digest */
+            expected_digest: string;
+            /** Git Ref */
+            git_ref?: string | null;
+            /** Version */
+            version: string;
+        };
         /** AlphaLifecycleDetail */
         AlphaLifecycleDetail: {
             /** Certification */
@@ -1078,19 +1093,6 @@ export interface components {
             content_digest: string | null;
             /** Source Revision */
             source_revision: string | null;
-        };
-        /** Body_import_alpha_api_v1_alphas_import_post */
-        Body_import_alpha_api_v1_alphas_import_post: {
-            /**
-             * Artifact
-             * @description alpha artifact (wheel or source bundle)
-             */
-            artifact: string;
-            /**
-             * Manifest
-             * @description alpha-manifest.v1 JSON document
-             */
-            manifest: string;
         };
         /** CapabilityAvailability */
         CapabilityAvailability: {
@@ -3222,7 +3224,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "multipart/form-data": components["schemas"]["Body_import_alpha_api_v1_alphas_import_post"];
+                "application/json": components["schemas"]["AlphaImportRequest"];
             };
         };
         responses: {

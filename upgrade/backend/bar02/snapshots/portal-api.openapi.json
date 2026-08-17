@@ -338,6 +338,52 @@
         "title": "AlphaImportRecord",
         "type": "object"
       },
+      "AlphaImportRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "alpha_id": {
+            "pattern": "^[a-z][a-z0-9-]{2,63}$",
+            "title": "Alpha Id",
+            "type": "string"
+          },
+          "artifact_relpath": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Artifact Relpath",
+            "type": "string"
+          },
+          "expected_digest": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "title": "Expected Digest",
+            "type": "string"
+          },
+          "git_ref": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Git Ref"
+          },
+          "version": {
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "alpha_id",
+          "version",
+          "artifact_relpath",
+          "expected_digest"
+        ],
+        "title": "AlphaImportRequest",
+        "type": "object"
+      },
       "AlphaLifecycleDetail": {
         "additionalProperties": false,
         "properties": {
@@ -759,28 +805,6 @@
           "content_digest"
         ],
         "title": "AvailabilityProvenance",
-        "type": "object"
-      },
-      "Body_import_alpha_api_v1_alphas_import_post": {
-        "properties": {
-          "artifact": {
-            "contentMediaType": "application/octet-stream",
-            "description": "alpha artifact (wheel or source bundle)",
-            "title": "Artifact",
-            "type": "string"
-          },
-          "manifest": {
-            "contentMediaType": "application/octet-stream",
-            "description": "alpha-manifest.v1 JSON document",
-            "title": "Manifest",
-            "type": "string"
-          }
-        },
-        "required": [
-          "manifest",
-          "artifact"
-        ],
-        "title": "Body_import_alpha_api_v1_alphas_import_post",
         "type": "object"
       },
       "CapabilityAvailability": {
@@ -5232,13 +5256,13 @@
     },
     "/api/v1/alphas/import": {
       "post": {
-        "description": "Quarantine ingest: verify digest, never execute code.\n\nThe source registry stays immutable; imports land in the runtime\nquarantine store and block everything until a certification slice\npromotes them.",
+        "description": "Quarantine ingest via source reference (R11, contract §5).\n\nThe browser never uploads code: it submits a pointer to an artifact that\nCI/owner already staged in the ingest inbox plus the expected digest. The\nserver reads that file, verifies the digest, and quarantines it. The\nsource registry stays immutable and imported alphas block everything\nuntil a certification slice promotes them.",
         "operationId": "import_alpha_api_v1_alphas_import_post",
         "requestBody": {
           "content": {
-            "multipart/form-data": {
+            "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Body_import_alpha_api_v1_alphas_import_post"
+                "$ref": "#/components/schemas/AlphaImportRequest"
               }
             }
           },
