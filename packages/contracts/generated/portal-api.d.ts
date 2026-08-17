@@ -528,6 +528,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/alphas/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Alpha
+         * @description Quarantine ingest: verify digest, never execute code.
+         *
+         *     The source registry stays immutable; imports land in the runtime
+         *     quarantine store and block everything until a certification slice
+         *     promotes them.
+         */
+        post: operations["import_alpha_api_v1_alphas_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/alphas/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Alpha Imports */
+        get: operations["list_alpha_imports_api_v1_alphas_imports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/alphas/{alpha_id}": {
         parameters: {
             query?: never;
@@ -882,6 +923,26 @@ export interface components {
             /** Warmup Bars */
             warmup_bars: number;
         };
+        /** AlphaImportRecord */
+        AlphaImportRecord: {
+            /** Alpha Id */
+            alpha_id: string;
+            /** Digest Ok */
+            digest_ok: boolean;
+            /** Import Id */
+            import_id: string;
+            /** Reason */
+            reason?: string | null;
+            /** Received At */
+            received_at: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "PENDING_DIGEST" | "DIGEST_MISMATCH" | "INVALID_MANIFEST" | "ALREADY_REGISTERED" | "QUARANTINED";
+            /** Version */
+            version: string;
+        };
         /** AlphaLifecycleDetail */
         AlphaLifecycleDetail: {
             /** Certification */
@@ -989,6 +1050,19 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** ArtifactProducer */
+        ArtifactProducer: {
+            /** Artifact */
+            artifact: string;
+            /** As Of */
+            as_of?: string | null;
+            /** Service */
+            service: string;
+            /** Source Artifact Digest */
+            source_artifact_digest?: string | null;
+            /** Version */
+            version: string;
+        };
         /** AvailabilityAuthority */
         AvailabilityAuthority: {
             /** Contract */
@@ -1004,6 +1078,19 @@ export interface components {
             content_digest: string | null;
             /** Source Revision */
             source_revision: string | null;
+        };
+        /** Body_import_alpha_api_v1_alphas_import_post */
+        Body_import_alpha_api_v1_alphas_import_post: {
+            /**
+             * Artifact
+             * @description alpha artifact (wheel or source bundle)
+             */
+            artifact: string;
+            /**
+             * Manifest
+             * @description alpha-manifest.v1 JSON document
+             */
+            manifest: string;
         };
         /** CapabilityAvailability */
         CapabilityAvailability: {
@@ -1087,6 +1174,71 @@ export interface components {
             status: "OPEN" | "PARTIAL" | "VERIFIED_CURRENT" | "BLOCKED" | "NOT_APPLICABLE";
             /** Task Ids */
             task_ids: string[];
+        };
+        /** ConfigOptionsResponse */
+        ConfigOptionsResponse: {
+            /** Candidate Selection Metrics */
+            candidate_selection_metrics: string[];
+            /** Compatibility */
+            compatibility: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+            /** Defaults */
+            defaults: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
+            /** Optimization Modes */
+            optimization_modes: string[];
+            /** Optimization Schedules */
+            optimization_schedules: string[];
+            /** Position Boundary Policies */
+            position_boundary_policies: string[];
+            /** Protocols */
+            protocols: string[];
+            /** Schema Version */
+            schema_version: string;
+            /** Split Frequencies */
+            split_frequencies: string[];
+            /** Target Modes */
+            target_modes: string[];
+            /** Window Modes */
+            window_modes: string[];
+        };
+        /** DatasetDescriptorResponse */
+        DatasetDescriptorResponse: {
+            /**
+             * Availability
+             * @enum {string}
+             */
+            availability: "available" | "unavailable";
+            /** Data Kind */
+            data_kind: string;
+            /** Dataset Id */
+            dataset_id: string;
+            /** Dynamic Query */
+            dynamic_query: boolean;
+            /** Excluded Scopes */
+            excluded_scopes: string[];
+            /** Source Class */
+            source_class: string;
+            /** Source Timezone */
+            source_timezone: string;
+            /** Supported Timeframes */
+            supported_timeframes: string[];
+            /** Symbol */
+            symbol: string | null;
+            /** Timeframe */
+            timeframe: string | null;
+            /** Unavailable Reason */
+            unavailable_reason: string | null;
+            /** Usage Scopes */
+            usage_scopes: string[];
+            /** Venue */
+            venue: string;
         };
         /** DependenciesReport */
         DependenciesReport: {
@@ -1197,6 +1349,18 @@ export interface components {
             label: string;
             /** Order */
             order: number;
+        };
+        /** FoldPlanDocument */
+        FoldPlanDocument: {
+            /** Artifact Schema Version */
+            artifact_schema_version?: string | null;
+            /** Folds */
+            folds: {
+                [key: string]: unknown;
+            }[];
+            producer?: components["schemas"]["ArtifactProducer"] | null;
+            /** Protocol */
+            protocol: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1874,6 +2038,24 @@ export interface components {
             max_parameter_space_entries?: number | null;
         };
         /**
+         * RowEnvelope
+         * @description Disclosure envelope for row-table endpoints (v0.5 §12.2).
+         *
+         *     ``total_rows`` counts the rows stored in the artifact **before** any
+         *     filter or ``top_n`` cap, so consumers never infer truncation from
+         *     ``returned_rows == top_n``.
+         */
+        RowEnvelope: {
+            /** Returned Rows */
+            returned_rows: number;
+            /** Rows */
+            rows: {
+                [key: string]: unknown;
+            }[];
+            /** Total Rows */
+            total_rows: number;
+        };
+        /**
          * RunProtocol
          * @enum {string}
          */
@@ -2179,9 +2361,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ConfigOptionsResponse"];
                 };
             };
         };
@@ -2201,9 +2381,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
+                    "application/json": components["schemas"]["DatasetDescriptorResponse"][];
                 };
             };
         };
@@ -2604,9 +2782,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["FoldPlanDocument"];
                 };
             };
             /** @description Validation Error */
@@ -2847,9 +3023,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
+                    "application/json": components["schemas"]["RowEnvelope"];
                 };
             };
             /** @description Validation Error */
@@ -2883,9 +3057,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
+                    "application/json": components["schemas"]["RowEnvelope"];
                 };
             };
             /** @description Validation Error */
@@ -2956,9 +3128,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["RowEnvelope"];
                 };
             };
             /** @description Validation Error */
@@ -3039,6 +3209,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AlphaRegistryDocument"];
+                };
+            };
+        };
+    };
+    import_alpha_api_v1_alphas_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_alpha_api_v1_alphas_import_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlphaImportRecord"];
+                };
+            };
+            /** @description Import rejected. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_alpha_imports_api_v1_alphas_imports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlphaImportRecord"][];
                 };
             };
         };

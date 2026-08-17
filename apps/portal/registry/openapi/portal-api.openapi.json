@@ -281,6 +281,63 @@
         "title": "AlphaDataRequirementsPublic",
         "type": "object"
       },
+      "AlphaImportRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "alpha_id": {
+            "title": "Alpha Id",
+            "type": "string"
+          },
+          "digest_ok": {
+            "title": "Digest Ok",
+            "type": "boolean"
+          },
+          "import_id": {
+            "title": "Import Id",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "received_at": {
+            "title": "Received At",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "PENDING_DIGEST",
+              "DIGEST_MISMATCH",
+              "INVALID_MANIFEST",
+              "ALREADY_REGISTERED",
+              "QUARANTINED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "import_id",
+          "alpha_id",
+          "version",
+          "state",
+          "digest_ok",
+          "received_at"
+        ],
+        "title": "AlphaImportRecord",
+        "type": "object"
+      },
       "AlphaLifecycleDetail": {
         "additionalProperties": false,
         "properties": {
@@ -593,6 +650,52 @@
         "title": "AlphaVersionDetail",
         "type": "object"
       },
+      "ArtifactProducer": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact": {
+            "title": "Artifact",
+            "type": "string"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "service": {
+            "title": "Service",
+            "type": "string"
+          },
+          "source_artifact_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Artifact Digest"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "service",
+          "artifact",
+          "version"
+        ],
+        "title": "ArtifactProducer",
+        "type": "object"
+      },
       "AvailabilityAuthority": {
         "additionalProperties": false,
         "properties": {
@@ -656,6 +759,28 @@
           "content_digest"
         ],
         "title": "AvailabilityProvenance",
+        "type": "object"
+      },
+      "Body_import_alpha_api_v1_alphas_import_post": {
+        "properties": {
+          "artifact": {
+            "contentMediaType": "application/octet-stream",
+            "description": "alpha artifact (wheel or source bundle)",
+            "title": "Artifact",
+            "type": "string"
+          },
+          "manifest": {
+            "contentMediaType": "application/octet-stream",
+            "description": "alpha-manifest.v1 JSON document",
+            "title": "Manifest",
+            "type": "string"
+          }
+        },
+        "required": [
+          "manifest",
+          "artifact"
+        ],
+        "title": "Body_import_alpha_api_v1_alphas_import_post",
         "type": "object"
       },
       "CapabilityAvailability": {
@@ -949,6 +1074,212 @@
           "reviewed_at"
         ],
         "title": "ConcernDefinition",
+        "type": "object"
+      },
+      "ConfigOptionsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "candidate_selection_metrics": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Candidate Selection Metrics",
+            "type": "array"
+          },
+          "compatibility": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Compatibility",
+            "type": "object"
+          },
+          "defaults": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Defaults",
+            "type": "object"
+          },
+          "optimization_modes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Optimization Modes",
+            "type": "array"
+          },
+          "optimization_schedules": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Optimization Schedules",
+            "type": "array"
+          },
+          "position_boundary_policies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Position Boundary Policies",
+            "type": "array"
+          },
+          "protocols": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Protocols",
+            "type": "array"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "split_frequencies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Split Frequencies",
+            "type": "array"
+          },
+          "target_modes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Target Modes",
+            "type": "array"
+          },
+          "window_modes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Window Modes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "schema_version",
+          "protocols",
+          "target_modes",
+          "optimization_modes",
+          "optimization_schedules",
+          "split_frequencies",
+          "window_modes",
+          "position_boundary_policies",
+          "candidate_selection_metrics",
+          "compatibility",
+          "defaults"
+        ],
+        "title": "ConfigOptionsResponse",
+        "type": "object"
+      },
+      "DatasetDescriptorResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "availability": {
+            "enum": [
+              "available",
+              "unavailable"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "data_kind": {
+            "title": "Data Kind",
+            "type": "string"
+          },
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "dynamic_query": {
+            "title": "Dynamic Query",
+            "type": "boolean"
+          },
+          "excluded_scopes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Excluded Scopes",
+            "type": "array"
+          },
+          "source_class": {
+            "title": "Source Class",
+            "type": "string"
+          },
+          "source_timezone": {
+            "title": "Source Timezone",
+            "type": "string"
+          },
+          "supported_timeframes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Supported Timeframes",
+            "type": "array"
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symbol"
+          },
+          "timeframe": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeframe"
+          },
+          "unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unavailable Reason"
+          },
+          "usage_scopes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Usage Scopes",
+            "type": "array"
+          },
+          "venue": {
+            "title": "Venue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset_id",
+          "symbol",
+          "venue",
+          "timeframe",
+          "dynamic_query",
+          "supported_timeframes",
+          "source_class",
+          "data_kind",
+          "availability",
+          "unavailable_reason",
+          "usage_scopes",
+          "excluded_scopes",
+          "source_timezone"
+        ],
+        "title": "DatasetDescriptorResponse",
         "type": "object"
       },
       "DependenciesReport": {
@@ -1267,6 +1598,50 @@
           "order"
         ],
         "title": "FeatureGroupDefinition",
+        "type": "object"
+      },
+      "FoldPlanDocument": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_schema_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Schema Version"
+          },
+          "folds": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Folds",
+            "type": "array"
+          },
+          "producer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactProducer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "protocol": {
+            "title": "Protocol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "protocol",
+          "folds"
+        ],
+        "title": "FoldPlanDocument",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -2975,6 +3350,35 @@
         "title": "ResourceProfile",
         "type": "object"
       },
+      "RowEnvelope": {
+        "additionalProperties": false,
+        "description": "Disclosure envelope for row-table endpoints (v0.5 §12.2).\n\n``total_rows`` counts the rows stored in the artifact **before** any\nfilter or ``top_n`` cap, so consumers never infer truncation from\n``returned_rows == top_n``.",
+        "properties": {
+          "returned_rows": {
+            "title": "Returned Rows",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "total_rows": {
+            "title": "Total Rows",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_rows",
+          "returned_rows",
+          "rows"
+        ],
+        "title": "RowEnvelope",
+        "type": "object"
+      },
       "RunProtocol": {
         "enum": [
           "three_window_decay",
@@ -3580,9 +3984,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Config Options Api Config Options Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ConfigOptionsResponse"
                 }
               }
             },
@@ -3601,8 +4003,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "additionalProperties": true,
-                    "type": "object"
+                    "$ref": "#/components/schemas/DatasetDescriptorResponse"
                   },
                   "title": "Response Datasets Api Datasets Get",
                   "type": "array"
@@ -4079,9 +4480,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Run Fold Plan Api Runs  Run Id  Fold Plan Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/FoldPlanDocument"
                 }
               }
             },
@@ -4481,12 +4880,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "additionalProperties": true,
-                    "type": "object"
-                  },
-                  "title": "Response Wfo Candidates Api Runs  Run Id  Wfo Candidates Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/RowEnvelope"
                 }
               }
             },
@@ -4558,12 +4952,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "additionalProperties": true,
-                    "type": "object"
-                  },
-                  "title": "Response Wfo Folds Api Runs  Run Id  Wfo Folds Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/RowEnvelope"
                 }
               }
             },
@@ -4739,9 +5128,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Wfo Trials Api Runs  Run Id  Wfo Trials Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/RowEnvelope"
                 }
               }
             },
@@ -4838,6 +5225,83 @@
           }
         },
         "summary": "List Alphas",
+        "tags": [
+          "alphas"
+        ]
+      }
+    },
+    "/api/v1/alphas/import": {
+      "post": {
+        "description": "Quarantine ingest: verify digest, never execute code.\n\nThe source registry stays immutable; imports land in the runtime\nquarantine store and block everything until a certification slice\npromotes them.",
+        "operationId": "import_alpha_api_v1_alphas_import_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_alpha_api_v1_alphas_import_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaImportRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalErrorResponse"
+                }
+              }
+            },
+            "description": "Import rejected."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import Alpha",
+        "tags": [
+          "alphas"
+        ]
+      }
+    },
+    "/api/v1/alphas/imports": {
+      "get": {
+        "operationId": "list_alpha_imports_api_v1_alphas_imports_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AlphaImportRecord"
+                  },
+                  "title": "Response List Alpha Imports Api V1 Alphas Imports Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Alpha Imports",
         "tags": [
           "alphas"
         ]
