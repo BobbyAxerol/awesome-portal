@@ -49,6 +49,27 @@ def _discord_webhook_url() -> Optional[str]:
     return value
 
 
+def _lark_webhook_url() -> Optional[str]:
+    value = os.getenv("LARK_WEBHOOK_URL", "").strip()
+    if not value:
+        return None
+    parsed = urlparse(value)
+    if parsed.scheme != "https" or parsed.netloc != "open.larksuite.com":
+        raise ValueError("LARK_WEBHOOK_URL must be an HTTPS open.larksuite.com bot URL")
+    return value
+
+
+def _notification_channels() -> Tuple[str, ...]:
+    value = os.getenv("PORTAL_NOTIFY_CHANNELS", "").strip()
+    channels = _csv(value) if value else ("discord",)
+    unknown = sorted(set(channels) - {"discord", "lark"})
+    if unknown:
+        raise ValueError(f"PORTAL_NOTIFY_CHANNELS supports discord/lark only, got: {unknown}")
+    if not channels:
+        raise ValueError("PORTAL_NOTIFY_CHANNELS must not be empty")
+    return channels
+
+
 @dataclass(frozen=True)
 class Settings:
     """Only configuration that belongs to environment/runtime, never task data."""
@@ -60,6 +81,9 @@ class Settings:
     default_actor: str
     cors_origins: Tuple[str, ...]
     webhook_max_attempts: int
+    lark_webhook_url: Optional[str] = None
+    lark_webhook_sign_secret: Optional[str] = None
+    notification_channels: Tuple[str, ...] = ("discord",)
     environment: str = "development"
     webhook_retry_base_seconds: int = 60
     webhook_lease_seconds: int = 60
@@ -82,9 +106,12 @@ class Settings:
             database_path=database_path,
             portal_file=portal_file,
             discord_webhook_url=_discord_webhook_url(),
+            lark_webhook_url=_lark_webhook_url(),
+            lark_webhook_sign_secret=os.getenv("LARK_WEBHOOK_SIGN_SECRET", "").strip() or None,
             portal_url=os.getenv("PORTAL_PUBLIC_URL", "http://127.0.0.1:8000").rstrip("/"),
             default_actor=os.getenv("PORTAL_DEFAULT_ACTOR", "local-user"),
             cors_origins=cors_origins,
+            notification_channels=_notification_channels(),
             webhook_max_attempts=_positive_int("DISCORD_WEBHOOK_MAX_ATTEMPTS", 5),
             environment=environment,
             webhook_retry_base_seconds=_positive_int("DISCORD_WEBHOOK_RETRY_BASE_SECONDS", 60),

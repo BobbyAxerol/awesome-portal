@@ -47,8 +47,9 @@ def _future(seconds: int) -> str:
 class PortalRepository:
     """A small repository, intentionally without cross-aggregate task relationships."""
 
-    def __init__(self, database_path: Path):
+    def __init__(self, database_path: Path, notification_channels: Tuple[str, ...] = ("discord",)):
         self.database_path = database_path
+        self.notification_channels = notification_channels
 
     def initialize(self) -> None:
         initialize(self.database_path)
@@ -187,16 +188,17 @@ class PortalRepository:
         activity_id: str,
         status: str,
         created_at: str,
+        channel: str,
     ) -> None:
         if status not in NOTIFY_STATUSES:
             return
         connection.execute(
             """
             INSERT OR IGNORE INTO webhook_deliveries
-                (id, activity_id, event_type, status, attempt_count, created_at, next_attempt_at)
-            VALUES (?, ?, ?, 'pending', 0, ?, ?)
+                (id, activity_id, event_type, status, channel, attempt_count, created_at, next_attempt_at)
+            VALUES (?, ?, ?, 'pending', ?, 0, ?, ?)
             """,
-            (_identifier("whd"), activity_id, "task.status_changed", created_at, created_at),
+            (_identifier("whd"), activity_id, "task.status_changed", channel, created_at, created_at),
         )
 
     def _fetch_task(self, connection: sqlite3.Connection, task_id: str, include_deleted: bool = False) -> sqlite3.Row:
@@ -495,7 +497,10 @@ class PortalRepository:
             metadata={"from_status": old_status, "to_status": status},
         )
         if status != old_status:
-            self._queue_notification(connection, activity_id=event_id, status=status, created_at=now)
+            for channel in self.notification_channels:
+                self._queue_notification(
+                    connection, activity_id=event_id, status=status, created_at=now, channel=channel
+                )
         return self._public(after)
 
     def transition_task(
@@ -1022,12 +1027,13 @@ class PortalRepository:
         finally:
             connection.close()
 
-    def claim_due_deliveries(self, limit: int, lease_seconds: int) -> List[Dict[str, Any]]:
+    def claim_due_deliveries(self, limit: int, lease_seconds: int, channel: str = "discord") -> List[Dict[str, Any]]:
         """Claim deliveries atomically so concurrent workers cannot post twice.
 
         A lease makes a delivery recoverable if a worker dies between claiming
         and posting.  ``claim_token`` is checked again while finalising so an
-        expired worker cannot overwrite a newer attempt.
+        expired worker cannot overwrite a newer attempt.  Claims are scoped to
+        one notification channel so each provider only sees its own deliveries.
         """
         limit = min(max(1, limit), 100)
         now = _now()
@@ -1036,17 +1042,17 @@ class PortalRepository:
             candidates = connection.execute(
                 """
                 SELECT id FROM webhook_deliveries
-                WHERE (
-                    status IN ('pending', 'failed')
-                    AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
-                ) OR (
-                    status = 'processing'
-                    AND lease_expires_at IS NOT NULL AND lease_expires_at <= ?
+                WHERE channel = ?
+                AND (
+                    (status IN ('pending', 'failed')
+                    AND (next_attempt_at IS NULL OR next_attempt_at <= ?))
+                    OR (status = 'processing'
+                    AND lease_expires_at IS NOT NULL AND lease_expires_at <= ?)
                 )
                 ORDER BY created_at ASC
                 LIMIT ?
                 """,
-                (now, now, limit),
+                (channel, now, now, limit),
             ).fetchall()
             claims: Dict[str, str] = {}
             for candidate in candidates:
@@ -1056,12 +1062,12 @@ class PortalRepository:
                     """
                     UPDATE webhook_deliveries
                     SET status = 'processing', claim_token = ?, lease_expires_at = ?
-                    WHERE id = ? AND (
+                    WHERE id = ? AND channel = ? AND (
                         (status IN ('pending', 'failed') AND (next_attempt_at IS NULL OR next_attempt_at <= ?))
                         OR (status = 'processing' AND lease_expires_at IS NOT NULL AND lease_expires_at <= ?)
                     )
                     """,
-                    (claim_token, lease_expires_at, delivery_id, now, now),
+                    (claim_token, lease_expires_at, delivery_id, channel, now, now),
                 )
                 if updated.rowcount:
                     claims[delivery_id] = claim_token
