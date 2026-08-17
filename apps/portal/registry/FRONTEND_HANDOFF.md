@@ -246,8 +246,26 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
    links nhưng không có run nào, nên visual baseline không phủ được New Run,
    Results tabs và Run Progress (xem §8.2). Đề xuất một bộ fixture read-only
    cho 1 run `advanced_walk_forward` đã completed: `runs/{id}` detail, `summary`,
-   `audit`, `fold-plan`, `wfo/trials`, `wfo/candidates`, `series/{segment}`,
-   `presentation/{mode}` — cùng nguồn canonical như các fixture hiện có.
+   `audit`, `fold-plan`, `wfo/trials`, `wfo/candidates`, `wfo/folds`,
+   `wfo/parameters`, `selection/trace`, `series/{is,oos,holdout_live,stitched}`,
+   `presentation/{calendar,rebased}`, `ledger`, `progress`, `console`.
+   Cho màn New Run cần thêm `/api/datasets` và `/api/config/options`
+   (`alphas.v1.json` + `engine-capabilities.v1.json` đã có; `data-catalog.v1.json`
+   **không** cùng shape với `/api/datasets`). Cùng nguồn canonical như các
+   fixture hiện có.
+8. **Envelope cho `wfo/candidates` và `wfo/folds`.** Hai endpoint này nhận
+   `top_n` nhưng trả `list[dict]` trần — không có cách nào biết đã bị cắt hay
+   chưa. Hiện FE gọi **không** truyền `top_n` nên `available = rows.length` là
+   đúng, nhưng đó là đúng do tình cờ: thêm `top_n` ở bất kỳ đâu (hoặc backend
+   đặt cap mặc định) là dòng provenance lập tức thành sai — đúng failure mode
+   mà `wfo/trials` vừa sửa. Đề xuất cùng envelope
+   `{total_rows, returned_rows, rows}` cho cả hai, để câu chuyện §12.2 nhất
+   quán trên mọi chart đọc từ table.
+9. **`POST /api/v1/alphas/import` + quarantine pipeline** (strategy contract §6)
+   — chặn Import Wizard U14. Cần: nhận artifact + manifest, verify digest, đặt
+   alpha vào `quarantined` cho tới khi certify, và một endpoint đọc trạng thái
+   import để UI hiển thị tiến trình. Chưa có thì làm UI trước sẽ là form không
+   có authority (đã ghi ở §8.2 từ v1, nay nâng thành request chính thức).
 
 ### 8.4 Discrepancy ghi nhận (v1.1)
 
