@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Build the read-only completed-run fixture for the frontend visual baseline.
 
-Produces, under ``apps/portal/registry/fixtures/runs/visual-baseline-run/``,
-one fully completed ``advanced_walk_forward`` run whose artifacts were written
+Produces two read-only fixtures under ``apps/portal/registry/fixtures/runs/``:
+``visual-baseline-run/`` (COMPLETED) and ``visual-baseline-run-running/``
+(RUNNING, mid-study — R10). Both are ``advanced_walk_forward`` runs whose
+artifacts were written
 by the real runner against the golden market frame (extended to 3,500 hourly
 bars so ``source_rows > returned_rows`` holds for the Overview's
 ``max_points=3000`` fetch and the "giảm điểm" envelope line is real):
@@ -43,8 +45,11 @@ sys.path.insert(0, str(BACKEND_SRC))
 sys.path.insert(0, str(PORTAL_ROOT))
 sys.path.insert(0, str(TESTS_DIR))
 
+from portal_api.repositories.artifacts import with_portal_provenance
+
 RUN_ID = "visual-baseline-run"
 FIXTURE_ROOT = PORTAL_ROOT / "registry" / "fixtures" / "runs" / RUN_ID
+RUNNING_ROOT = PORTAL_ROOT / "registry" / "fixtures" / "runs" / f"{RUN_ID}-running"
 
 # Fixed clock so regeneration is deterministic (mirrors summary fixtures).
 PINNED_ISO = "2026-08-17T08:00:00Z"
@@ -201,7 +206,30 @@ def build_artifacts() -> dict[str, object]:
         encoding="utf-8",
     )
 
-    # Terminal run-manager status with a fixed clock.
+    _write_terminal_status(run_dir)
+    _write_console_log(run_dir, trials_done=None)
+
+    _write_running_variant(run_dir, fold_plan=fold_plan, source_digest=market.content_hash)
+
+    # Commit the staged run into the registry fixture tree.
+    shutil.rmtree(FIXTURE_ROOT, ignore_errors=True)
+    FIXTURE_ROOT.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(run_dir, FIXTURE_ROOT)
+    shutil.rmtree(artifacts.root, ignore_errors=True)
+
+    return {
+        "run_id": RUN_ID,
+        "n_folds": summary.get("n_folds"),
+        "n_studies": summary.get("n_studies"),
+        "bars": len(frame),
+        "fixture_root": str(FIXTURE_ROOT.relative_to(REPO_ROOT)),
+        "running_fixture_root": str(RUNNING_ROOT.relative_to(REPO_ROOT)),
+        "written_at": datetime.now(UTC).isoformat(),
+    }
+
+
+def _write_terminal_status(run_dir: Path) -> None:
+    """Terminal run-manager status with a fixed clock (completed variant)."""
     status = {
         "run_id": RUN_ID,
         "state": "COMPLETED",
@@ -227,25 +255,95 @@ def build_artifacts() -> dict[str, object]:
         encoding="utf-8",
     )
 
-    _write_console_log(run_dir, artifacts)
 
-    # Commit the staged run into the registry fixture tree.
-    shutil.rmtree(FIXTURE_ROOT, ignore_errors=True)
-    FIXTURE_ROOT.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(run_dir, FIXTURE_ROOT)
-    shutil.rmtree(artifacts.root, ignore_errors=True)
+def _write_running_variant(run_dir: Path, *, fold_plan, source_digest: str) -> None:
+    """Derive the RUNNING fixture (R10): mid-run state, non-terminal.
 
-    return {
+    Copies the completed artifacts, then rewrites status to RUNNING, trims
+    the console capture to ~half the trials and slices the trials table so
+    the Run Progress / ledger views have honest mid-run evidence.
+    """
+    import pandas as pd
+
+    running = RUNNING_ROOT
+    shutil.rmtree(running, ignore_errors=True)
+    running.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(run_dir, running)
+
+    status = {
         "run_id": RUN_ID,
-        "n_folds": summary.get("n_folds"),
-        "n_studies": summary.get("n_studies"),
-        "bars": len(frame),
-        "fixture_root": str(FIXTURE_ROOT.relative_to(REPO_ROOT)),
-        "written_at": datetime.now(UTC).isoformat(),
+        "state": "RUNNING",
+        "protocol": "advanced_walk_forward",
+        "strategy_id": "delta-rsi-polynomial-alpha",
+        "created_at": "2026-08-17T08:00:00Z",
+        "events": [
+            {"state": "QUEUED", "at": PINNED_EPOCH},
+            {"state": "VALIDATING_DATA", "at": PINNED_EPOCH + 1.0},
+            {"state": "RUNNING", "at": PINNED_EPOCH + 2.0},
+        ],
+        "failure": None,
+        "started_at": "2026-08-17T08:00:02Z",
     }
+    running.joinpath("status.json").write_text(
+        json.dumps(
+            with_portal_provenance("status.json", status),
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    trials_path = running / "wfo" / "trials.parquet"
+    trials = pd.read_parquet(trials_path)
+    cut = trials[trials["trial_id"] <= 15]
+    cut.to_parquet(trials_path, index=False)
+
+    running.joinpath("config/fold_plan.json").write_text(
+        json.dumps(
+            with_portal_provenance(
+                "fold_plan.json",
+                fold_plan,
+                as_of="2026-08-17T08:00:20Z",
+                source_digest=source_digest,
+            ),
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    # Console trimmed to the trials we actually claim to have run; the
+    # progress parser derives studyStarts/trialsDone/bestByStudy from it.
+    running.joinpath("status/console.log").write_text(
+        "\n".join(
+            [
+                f"[{PINNED_ISO}] portal worker started for run {RUN_ID}",
+                "[2026-08-17T08:00:03Z] A new study created with name: no-name",
+                *[
+                    f"[2026-08-17T08:00:03Z] Trial {t} finished with value: 0.5123 and parameters: {{...}}"
+                    for t in range(16)
+                ],
+                "[2026-08-17T08:00:04Z] Best is trial 11 with value: 0.5123.",
+                "[2026-08-17T08:00:05Z] fold 8/20 completed",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    # Selection/metrics are written only on completion; drop them so the
+    # RUNNING fixture is honest (no summary before the run finishes).
+    for relative in (
+        "selection/selected_params.json",
+        "selection/selection_trace.json",
+        "metrics.json",
+    ):
+        path = running / relative
+        if path.is_file():
+            path.unlink()
 
 
-def _write_console_log(run_dir: Path, artifacts) -> None:
+def _write_console_log(run_dir: Path, trials_done: int | None) -> None:
     """Deterministic console capture matching the progress parser.
 
     Lines mirror the real worker output format (``Trial N finished with

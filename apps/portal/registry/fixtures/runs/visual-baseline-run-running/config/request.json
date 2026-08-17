@@ -1,0 +1,154 @@
+{
+  "strategy_id": "delta-rsi-polynomial-alpha",
+  "dataset_id": "golden-fixture",
+  "symbol": "ETHUSDT",
+  "timeframe": "1h",
+  "protocol": "advanced_walk_forward",
+  "parameter_space": {
+    "window": {
+      "kind": "int_range",
+      "value": null,
+      "low": 20,
+      "high": 60,
+      "step": 2,
+      "values": null
+    },
+    "rsi_l": {
+      "kind": "int_range",
+      "value": null,
+      "low": 12,
+      "high": 30,
+      "step": 1,
+      "values": null
+    },
+    "signalLength": {
+      "kind": "int_range",
+      "value": null,
+      "low": 3,
+      "high": 20,
+      "step": 1,
+      "values": null
+    },
+    "len_atr1": {
+      "kind": "int_range",
+      "value": null,
+      "low": 5,
+      "high": 20,
+      "step": 1,
+      "values": null
+    },
+    "len_atr2": {
+      "kind": "int_range",
+      "value": null,
+      "low": 25,
+      "high": 60,
+      "step": 1,
+      "values": null
+    },
+    "rvol": {
+      "kind": "float_range",
+      "value": null,
+      "low": 1.0,
+      "high": 2.5,
+      "step": 0.1,
+      "values": null
+    },
+    "len_vol": {
+      "kind": "int_range",
+      "value": null,
+      "low": 8,
+      "high": 40,
+      "step": 2,
+      "values": null
+    },
+    "slpercent": {
+      "kind": "float_range",
+      "value": null,
+      "low": 0.7,
+      "high": 2.5,
+      "step": 0.1,
+      "values": null
+    }
+  },
+  "calibration": {
+    "data_start": "2024-01-01T12:00:00Z",
+    "data_end_exclusive": "2024-05-25T08:00:00Z",
+    "split_mode": "2024-01-08",
+    "split_frequency": "weekly",
+    "window_mode": "expanding",
+    "train_window": null,
+    "min_train_bars": 1,
+    "min_test_bars": 1,
+    "fill_value": 0.0,
+    "optimization_mode": "mode_1_decay",
+    "optimization_schedule": "global",
+    "fold_boundary_position_policy": "carry",
+    "optuna_trials": 32,
+    "optuna_early_stopping": null,
+    "random_seed": 42,
+    "optimization": {
+      "top_is_fraction": 0.1,
+      "top_is_k": null,
+      "decay_lambda": 0.5,
+      "decay_gamma": 0.5,
+      "candidate_decay_lambda": null,
+      "candidate_decay_gamma": null,
+      "candidate_selection_metric": "robust_decay",
+      "flat_top_fraction": 0.1,
+      "flat_eps": 0.15,
+      "flat_min_samples": 3,
+      "flat_selector": "medoid",
+      "plateau_quantile": 0.25,
+      "plateau_median_weight": 0.25,
+      "plateau_std_penalty": 0.5,
+      "plateau_size_bonus": 0.01,
+      "is_subperiods": 6,
+      "q25_weight": 0.3,
+      "dispersion_penalty": 0.5,
+      "temporal_weight": 0.65,
+      "plateau_weight": 0.35,
+      "use_bootstrap_penalty": false,
+      "use_complexity_penalty": false,
+      "sbb_samples": 256,
+      "sbb_block_length": 20,
+      "sbb_decay_lambda": 0.5,
+      "sbb_std_penalty": 0.1,
+      "sbb_simulation": "stationary",
+      "regime_count": 3,
+      "regime_lookback": 20,
+      "regime_weights": null,
+      "stress_vol_multiplier": 1.0,
+      "garch_p": 1,
+      "garch_q": 1,
+      "garch_dist": "t",
+      "garch_vol_multiplier": 1.0,
+      "scoring_backend": "endpoint",
+      "scoring_trading_days": 365,
+      "min_trades_per_year": 50.0,
+      "trade_penalty_factor": 0.5,
+      "use_numba": true
+    }
+  },
+  "account": {
+    "initial_capital": 20000.0,
+    "leverage": 1.0,
+    "maintenance_ratio": 0.005,
+    "contract_size": 1.0,
+    "alloc_per_trade": 0.5,
+    "canonical_one_way_fee_rate": 0.0005,
+    "funding_enabled": true,
+    "funding_rate": 0.0001,
+    "use_pyramiding": false
+  },
+  "execution": {
+    "slippage": 0.0001,
+    "target_mode": "pct_equity",
+    "backend": "auto"
+  },
+  "artifact_schema_version": "1",
+  "producer": {
+    "service": "portal-api",
+    "artifact": "request.json",
+    "version": "0.1.0"
+  }
+}

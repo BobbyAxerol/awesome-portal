@@ -1,0 +1,29 @@
+{
+  "run_id": "visual-baseline-run",
+  "state": "RUNNING",
+  "protocol": "advanced_walk_forward",
+  "strategy_id": "delta-rsi-polynomial-alpha",
+  "created_at": "2026-08-17T08:00:00Z",
+  "events": [
+    {
+      "state": "QUEUED",
+      "at": 1786968000.0
+    },
+    {
+      "state": "VALIDATING_DATA",
+      "at": 1786968001.0
+    },
+    {
+      "state": "RUNNING",
+      "at": 1786968002.0
+    }
+  ],
+  "failure": null,
+  "started_at": "2026-08-17T08:00:02Z",
+  "artifact_schema_version": "1",
+  "producer": {
+    "service": "portal-api",
+    "artifact": "status.json",
+    "version": "0.1.0"
+  }
+}

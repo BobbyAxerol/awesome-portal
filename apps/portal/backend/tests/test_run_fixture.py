@@ -91,3 +91,55 @@ def test_fold_plan_carries_provenance(fixture_root: Path) -> None:
     assert fold_plan["protocol"] == "advanced_walk_forward"
     assert fold_plan["producer"]["as_of"] == "2026-08-17T08:00:00Z"
     assert fold_plan["producer"]["source_artifact_digest"] == "golden-fixture-extended-v1"
+
+
+# ---------------------------------------------------------------- RUNNING (R10)
+
+RUNNING_FIXTURE = (
+    REPO_ROOT
+    / "apps"
+    / "portal"
+    / "registry"
+    / "fixtures"
+    / "runs"
+    / "visual-baseline-run-running"
+)
+
+
+@pytest.fixture(scope="module")
+def running_fixture_root() -> Path:
+    assert RUNNING_FIXTURE.is_dir(), "running fixture missing; run scripts/export_run_fixture.py"
+    return RUNNING_FIXTURE
+
+
+def test_running_fixture_is_mid_run(running_fixture_root: Path) -> None:
+    status = json.loads(
+        (running_fixture_root / "status.json").read_text(encoding="utf-8")
+    )
+    assert status["state"] == "RUNNING"
+    assert [event["state"] for event in status["events"]][-1] == "RUNNING"
+    assert "completed_at" not in status
+    assert "metrics.json" not in [p.name for p in running_fixture_root.iterdir()] or not (
+        running_fixture_root / "metrics.json"
+    ).is_file()
+
+
+def test_running_fixture_has_partial_trials_and_full_fold_plan(
+    running_fixture_root: Path,
+) -> None:
+    trials = pd.read_parquet(running_fixture_root / "wfo" / "trials.parquet")
+    assert len(trials) < 32  # mid-study: not the full completed population
+    assert trials["trial_id"].max() <= 15
+    fold_plan = json.loads(
+        (running_fixture_root / "config" / "fold_plan.json").read_text(encoding="utf-8")
+    )
+    assert len(fold_plan["folds"]) >= 2  # Gantt still renders mid-run
+    assert fold_plan["producer"]["as_of"] == "2026-08-17T08:00:20Z"
+
+
+def test_running_fixture_console_drives_progress(running_fixture_root: Path) -> None:
+    lines = (
+        running_fixture_root / "status" / "console.log"
+    ).read_text(encoding="utf-8").splitlines()
+    assert any("fold 8/20 completed" in line for line in lines)
+    assert any("Trial 15 finished" in line for line in lines)
