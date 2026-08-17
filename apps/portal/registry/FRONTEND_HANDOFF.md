@@ -205,6 +205,9 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 | **Visual baseline — Research screens** | §8.3 request 7, v0.4 §26 | 64 snapshot (từ 39): New Run + 5 run tab × 2 theme × laptop/workstation, trên `visual-baseline-run`. Có staleness gate theo digest fixture. |
 | **Login frames 01B/01C/01D** | v0.4 §21.1, U07 | `AuthGate` đứng trước shell, đọc `/api/auth/context`; state machine thuộc backend. Deep link tự sống vì router nằm trong `children`. State lạ → frame khắt khe nhất, không mở shell. 16 snapshot (2 theme × mobile/laptop × 4 frame). |
 | **Import Wizard nửa ghi** | strategy contract §5, R11 hướng A | Form source-reference `{alpha_id, version, artifact_relpath, expected_digest, git_ref?}`. **Không có file input** (2 test chặn). 403 hiện là "không đủ quyền", tách khỏi 400 "bị từ chối". |
+| **Run Progress baseline** | v0.4 §26, R10 | Stage strip + fold Gantt 20 fold (có provenance §12.2) + live console 20 dòng thật. Route id giờ là authority; body id lệch thì hiện notice. 97 snapshot. |
+| **Command Center evidence drawer** | v0.4 §P0.13 | Mở đủ authority/provenance/as-of/checked-at/unit/segment cho **mọi** metric của section — dữ liệu summary đã công bố, không tính thêm. History/cross-filter vẫn thuộc U10 và drawer nói rõ. |
+| **Strategy data requirements disclosure** | strategy contract §6 mục 3 (phần làm được) | Hiện `required_columns`, timeframes, `warmup_bars` ở bước Dữ liệu + nói rõ check nào ở đâu. Timeframe vẫn là gate thật. |
 | **Reports như dữ liệu** | §8.6 cũ mục 1 (slice tự đề xuất) | `view-reports` parse thành model typed, render bằng primitive. Fragment **không sửa**, hash vẫn gated. Test content-equivalence hai chiều: không mất, không bịa. `RawViewFeature` xoá (dead code). 77 snapshot. |
 | **Alpha import inbox (U14 read half)** | strategy contract §5/§6 mục 4 | `/research/quantbt/imports`: 5 state contract khai báo, reason nguyên văn của service, verify digest on-demand (hiện cả hai digest, không chỉ verdict), empty ≠ failed. **Không có upload** — xem §8.4 điểm 3. 68 snapshot. |
 
@@ -212,13 +215,13 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 
 | Vùng | Trạng thái | Vì sao chưa sâu | Slice đề xuất |
 |---|---|---|---|
-| Import Wizard — preflight capability gate | Form submit đã xong. Chưa có preflight kiểm `required_columns ⊆ frame` / timeframe / seed trước khi gửi (strategy contract §6 mục 3). | Những check đó thuộc backend preflight; FE chỉ nên hiển thị kết quả, chưa có endpoint trả về. | Xin endpoint preflight cho import, hoặc chờ certification slice. |
 | Alpha Pool (`/research/alphas`) | `COMMISSIONED` → Feature Preview. Inbox ở `/research/quantbt/imports`. | **Đã quyết** (R12): giữ `COMMISSIONED` tới slice certification. | Khi certification xong: đổi maturity + chuyển inbox, giữ redirect route cũ. |
 | Workspace / tenancy (`/api/workspaces`) | Chưa làm. | Topbar hiện ghi "Default Workspace · Prototype hiện chỉ có một workspace" — đúng sự thật hiện tại. Chỉ làm khi có tenancy thật. | Khi có nhiều workspace thật. |
 | Command Center | Đủ 7 state, số liệu thật từ summary. Chưa có drill-down drawer. | Read model bền thuộc U10; drawer không có nguồn ổn định để mở. | Sau U10: evidence drawer + cross-filter. |
 | Planning: Docs / Reports | Nhúng nguyên feature body. Token và form control đã dùng chung; Reports vẫn render fragment HTML legacy đã khoá. | Fragment là bản byte-preserved của tài liệu gốc, refactor sẽ phá content-integrity hash. | Slice "Reports như dữ liệu" — parse fragment thành model rồi render bằng primitive, giữ hash của nguồn. |
 | Profile & Access | `COMMISSIONED` preview. | Chờ U07 wire gateway→BFF; login screens 01B/01C/01D chưa có backend. | Sau U10: Frames 01B–01D + session expired + maintenance screen kèm request ID. |
-| Run Progress — live states | Fixture `RUNNING` đã có (R10). Nhưng **chưa baseline được** vì fixture mang `run_id` sai — xem **request 13**. | `GET /api/runs/visual-baseline-run-running` trả `run_id: "visual-baseline-run"` (id của run COMPLETED). `RunWorkspace` truyền `current.run_id` xuống `RunProgress`, nên mọi fetch con (`progress`, `console`, `ledger`) sẽ trỏ sang run COMPLETED → màn trộn status RUNNING với progress đã xong. | Sau request 13 (sửa 2 dòng `run_id` trong fixture) là chụp được ngay. |
+| Command Center — history / cross-filter | Evidence drawer đã xong (§8.1). Chuỗi theo thời gian và cross-filter thì chưa. | Chờ **U10** read model bền. Dựng chuỗi từ một snapshot là bịa dữ liệu. | Sau U10. |
+| Import preflight — column & seed gate | Timeframe đã gate. Hai check còn lại chưa làm được. | Chặn bởi **request 14** (dataset không công bố column list) và **request 15** (`determinism` không có trong `alpha-manifest.v1`). | Sau 14 + 15. |
 | Visual baseline — mobile/tablet cho Research | Chỉ chụp laptop + workstation. | Có chủ ý: v0.4 §26.1 đưa research work sang "open on desktop", nên baseline mobile sẽ chốt một layout không ai được yêu cầu làm việc trên đó. | Chỉ mở nếu §26.1 đổi. |
 
 ### 8.3 Backend request
@@ -335,6 +338,11 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 | AuthGate: gateway không ở trước thì vẫn render shell | `vite dev` và rollback `PORTAL_WEB_UPSTREAM=portal-api:8000` không serve `/api/auth/context`. Đó là Portal **không có** identity BFF, không phải cửa bị khoá. | 404/501 → render shell + banner nói rõ; mọi lỗi khác → chặn. Form login mà không backend nào trả lời được thì tệ hơn. |
 | `PortalApiError` có status/code/request_id | Client cũ throw `Error` chỉ có message, nên không phân biệt được 403 (thiếu quyền) với 400 (input sai) — đúng phân biệt mà gateway ADMIN-only tạo ra. | `message` vẫn là tham số đầu nên call site cũ không đổi. |
 | Print baseline settle **trước** khi đổi media | `planning-reports @ print` fail verify lặp lại. Nguyên nhân là **thứ tự**, không phải timing: mermaid đo text lúc render, `emulateMedia` đua với render nên geometry SVG khác nhau. | Giờ luôn layout dưới screen CSS rồi mới đổi media. Verify 3/3 lần. |
+
+| Route id là authority, không phải body id | FE đọc `current.run_id` từ response rồi truyền xuống mọi child — một field lệch là console/ledger/mọi result tab trỏ sang run khác. | Route là identity, response chỉ mô tả. Lệch nhau thì **hiện notice**, không normalise — swallow đúng là cách một màn trộn hai run mà không ai biết. |
+| Exporter ghi cả status code | `summary` trả 409 cho run chưa terminal; bỏ qua nó thì baseline mất một state thật. | Cũng phát hiện console phải capture ở `tail=5000` (RunProgress dùng số đó, không phải default của client) — nếu không console rỗng và baseline sẽ chốt một màn trông như hỏng. |
+| Evidence drawer giữ section theo `feature_id` | Refetch thay object section; giữ theo object thì drawer đóng băng snapshot cũ. | Drawer đi theo snapshot mới. |
+| Không dựng gate cho column/seed | Suy `ohlcv` → 5 cột là đoán nội dung frame (rule §3.5). `determinism` thì không tồn tại trong schema. | Làm phần disclosure thật, mở request 14 + 15 cho phần gate. |
 
 ### 8.6 Đề xuất slice kế tiếp
 
