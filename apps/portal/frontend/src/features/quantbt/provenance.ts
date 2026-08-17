@@ -21,7 +21,7 @@
  * or merely unplotted.
  */
 import type { ChartProvenance } from "../../components/ChartFigure";
-import type { SeriesPayload } from "../../lib/api";
+import type { SeriesPayload, TrialsPayload } from "../../lib/api";
 
 /** Run-level facts shared by every chart on a result screen. */
 export interface RunEvidence {
@@ -95,5 +95,31 @@ export function tableProvenance(
     returnedRows: options.plotted,
     downsample: reduced ? (options.reduction ?? "client-side subset") : null,
     warnings: run.warnings,
+  };
+}
+
+/**
+ * Population of the trials artifact behind a chart.
+ *
+ * `truncated` is read from the envelope, never inferred. The previous test
+ * compared `rows.length >= top_n`, which cannot tell a truncated artifact from
+ * one that happens to hold exactly `top_n` trials — so a run with 5.000 trials
+ * was warned about as if trials were missing.
+ *
+ * `total` is `null` until the payload arrives, so a chart says nothing about
+ * the population rather than claiming it drew all of an unknown number.
+ */
+export interface TrialsPopulation {
+  total: number | null;
+  returned: number | null;
+  truncated: boolean;
+}
+
+export function trialsPopulation(payload: TrialsPayload | undefined): TrialsPopulation {
+  if (!payload) return { total: null, returned: null, truncated: false };
+  return {
+    total: payload.total_rows,
+    returned: payload.returned_rows,
+    truncated: payload.returned_rows < payload.total_rows,
   };
 }

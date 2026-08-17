@@ -10,7 +10,7 @@ import { Collapsible, DefinitionList, StateView } from "../../components/ui";
 import { FoldGantt } from "../../components/FoldGantt";
 import { api, rowParams } from "../../lib/api";
 import { fmtDecay, fmtRatio } from "../../lib/format";
-import { tableProvenance, type RunEvidence } from "../quantbt/provenance";
+import { tableProvenance, trialsPopulation, type RunEvidence } from "../quantbt/provenance";
 
 /** Server-side cap on the trials query; disclosed on every trial chart. */
 const TRIAL_QUERY_CAP = 5000;
@@ -34,23 +34,29 @@ export function OptimizationView({ runId }: { runId: string }) {
   const audit = useQuery({ queryKey: ["audit", runId], queryFn: () => api.audit(runId), staleTime: 60_000 });
   const [selectedTrial, setSelectedTrial] = useState<number | null>(null);
 
+  // Population of the trials artifact, straight from the envelope.
+  const { total: trialsTotal, returned: trialsReturned, truncated: trialsTruncated } =
+    trialsPopulation(trials.data);
+
   const manifest = (audit.data?.manifest ?? {}) as Record<string, unknown>;
   const run: RunEvidence = {
     runId,
     asOf: typeof manifest.completed_at === "string" ? manifest.completed_at : null,
     digest: typeof manifest.dataset_content_hash === "string" ? manifest.dataset_content_hash : null,
-    // The trials query asks the server for the top 5.000 by objective. That
-    // cap is a property of the chart's data, not a detail of the fetch, so it
-    // is stated wherever a trial chart is drawn (v0.5 §12.2).
-    warnings:
-      (trials.data?.length ?? 0) >= TRIAL_QUERY_CAP
-        ? [`Server trả tối đa ${TRIAL_QUERY_CAP} trial theo objective — có thể còn trial ngoài tập này.`]
-        : undefined,
+    // Truncation is now DECLARED, not inferred. The old test compared
+    // `rows.length >= cap`, which cannot distinguish a truncated artifact from
+    // one that happens to hold exactly `cap` trials; `total_rows` says.
+    warnings: trialsTruncated
+      ? [
+          `Chart vẽ ${trialsReturned}/${trialsTotal} trial của artifact ` +
+            `(server cap top_n=${TRIAL_QUERY_CAP} theo objective).`,
+        ]
+      : undefined,
   };
 
   const rows = useMemo(() => {
     const unique = new Map<string, Record<string, unknown>>();
-    for (const row of trials.data ?? []) {
+    for (const row of trials.data?.rows ?? []) {
       const study = row.study_id ?? row.schedule_fold_id ?? "global";
       const key = `${String(study)}:${String(row.trial_id)}`;
       if (!unique.has(key)) unique.set(key, row);
@@ -193,9 +199,13 @@ export function OptimizationView({ runId }: { runId: string }) {
             source: "wfo/trials.parquet",
             segment: "is",
             units: "objective",
-            available: rows.length,
+            // Denominator is the artifact, not the page: a chart that says
+            // "200/200" while the artifact holds 40.000 is not honest.
+            available: trialsTotal,
             plotted: trialsPlotted,
-            reduction: "bỏ trial chưa có objective",
+            reduction: trialsTruncated
+              ? `server top_n=${TRIAL_QUERY_CAP} theo objective, rồi bỏ trial chưa có objective`
+              : "bỏ trial chưa có objective",
           })}
         >
           <EChart option={trialScatter} height={360} />
@@ -236,8 +246,11 @@ export function OptimizationView({ runId }: { runId: string }) {
             source: "wfo/trials.parquet",
             segment: "is",
             units: "objective",
-            available: rows.length,
+            available: trialsTotal,
             plotted: rows.length,
+            reduction: trialsTruncated
+              ? `server top_n=${TRIAL_QUERY_CAP} theo objective`
+              : undefined,
           })}
         >
           <EChart option={convergenceOption} height={320} />

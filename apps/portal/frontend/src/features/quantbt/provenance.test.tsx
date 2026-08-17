@@ -10,8 +10,9 @@ import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { ChartFigure } from "../../components/ChartFigure";
+import { FoldGantt } from "../../components/FoldGantt";
 import type { SeriesPayload } from "../../lib/api";
-import { seriesProvenance, tableProvenance, type RunEvidence } from "./provenance";
+import { seriesProvenance, tableProvenance, trialsPopulation, type RunEvidence } from "./provenance";
 
 afterEach(cleanup);
 
@@ -159,5 +160,79 @@ describe("rendered provenance line", () => {
       </ChartFigure>,
     );
     expect(container.querySelector(".chart-warnings")?.textContent).toContain("tối đa 5000 trial");
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * Fold plan provenance
+ * ---------------------------------------------------------------------- */
+
+describe("FoldPlanProvenance", () => {
+  const threeWindow = {
+    protocol: "three_window_decay",
+    folds: [
+      { fold_id: 0, role: "is", start: "2024-01-01T00:00:00Z", end: "2024-06-01T00:00:00Z" },
+      { fold_id: 1, role: "oos", start: "2024-06-01T00:00:00Z", end: "2024-09-01T00:00:00Z" },
+    ],
+  };
+
+  it("cites as-of and the analysis-frame digest when the plan carries them", () => {
+    const { container } = render(
+      <FoldGantt
+        plan={{
+          ...threeWindow,
+          producer: {
+            service: "portal-api",
+            artifact: "fold_plan.json",
+            as_of: "2026-08-17T05:00:00+00:00",
+            source_artifact_digest: "sha256:1f0e3dad99908345f7439f8ffabdffc4",
+          },
+        }}
+        studyStarts={0}
+        bestByStudy={[]}
+        running={false}
+      />,
+    );
+    const line = container.querySelector(".chart-provenance")?.textContent ?? "";
+    expect(line).toContain("nguồn config/fold_plan.json");
+    expect(line).toContain("protocol three_window_decay");
+    expect(line).toContain("2 fold");
+    expect(line).toContain("as-of 2026-08-17T05:00:00+00:00");
+    expect(line).toContain("analysis frame sha256:1f0e3dad9990");
+  });
+
+  it("says the provenance is unpublished for a plan written before it existed", () => {
+    // The fields are additive, so an older artifact has neither. Omitting the
+    // line would read as "no provenance needed".
+    const { container } = render(
+      <FoldGantt plan={threeWindow} studyStarts={0} bestByStudy={[]} running={false} />,
+    );
+    const line = container.querySelector(".chart-provenance")?.textContent ?? "";
+    expect(line).toContain("as-of chưa công bố");
+    expect(line).toContain("digest analysis frame chưa công bố");
+  });
+});
+
+describe("trialsPopulation", () => {
+  it("reads truncation from the envelope", () => {
+    expect(trialsPopulation({ total_rows: 42_000, returned_rows: 5_000, rows: [] })).toEqual({
+      total: 42_000,
+      returned: 5_000,
+      truncated: true,
+    });
+  });
+
+  it("does not call a full artifact truncated just because it fills the page", () => {
+    // This is the case the old `rows.length >= top_n` inference got wrong: a run
+    // holding exactly the cap was warned about as if trials were missing.
+    expect(trialsPopulation({ total_rows: 5_000, returned_rows: 5_000, rows: [] })).toEqual({
+      total: 5_000,
+      returned: 5_000,
+      truncated: false,
+    });
+  });
+
+  it("claims nothing about the population before the payload arrives", () => {
+    expect(trialsPopulation(undefined)).toEqual({ total: null, returned: null, truncated: false });
   });
 });

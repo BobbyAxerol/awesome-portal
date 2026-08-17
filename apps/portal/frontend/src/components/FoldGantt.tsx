@@ -16,6 +16,36 @@ const L = {
   train: vizTokensFor(theme).train,
 };
 
+/**
+ * Provenance footer for the fold plan (v0.5 §12.2).
+ *
+ * The fold Gantt was the last figure in the app with nothing to cite: it draws
+ * a fold *plan*, not a series artifact, so the series envelope did not apply.
+ * `config/fold_plan.json` now carries `producer.as_of` and
+ * `producer.source_artifact_digest` (BAR-02, 2026-08-17), which is what a
+ * reader needs to know whether the plan they are looking at belongs to the
+ * data they think it does.
+ *
+ * Both fields are additive, so a plan written before that landed has neither.
+ * That case says so rather than being omitted — an absent line would read as
+ * "no provenance needed".
+ */
+function FoldPlanProvenance({ plan }: { plan: RunFoldPlan }) {
+  const producer = plan.producer;
+  const parts = [
+    "nguồn config/fold_plan.json",
+    `protocol ${plan.protocol}`,
+    `${plan.folds.length} fold`,
+    producer?.as_of ? `as-of ${producer.as_of}` : "as-of chưa công bố",
+  ];
+  if (producer?.source_artifact_digest) {
+    parts.push(`analysis frame ${producer.source_artifact_digest.slice(0, 19)}…`);
+  } else {
+    parts.push("digest analysis frame chưa công bố");
+  }
+  return <div className="chart-provenance mono">{parts.join(" · ")}</div>;
+}
+
 export function FoldGantt({
   plan,
   studyStarts,
@@ -76,6 +106,7 @@ export function FoldGantt({
             </span>
           ))}
         </div>
+        <FoldPlanProvenance plan={plan} />
       </div>
     );
   }
@@ -133,6 +164,7 @@ export function FoldGantt({
           );
         })}
       </div>
+      <FoldPlanProvenance plan={plan} />
     </div>
   );
 }

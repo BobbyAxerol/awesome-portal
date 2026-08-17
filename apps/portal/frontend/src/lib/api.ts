@@ -90,6 +90,36 @@ export interface RunFoldPlan {
   folds: Array<
     | { fold_id: number; role?: string; start?: string; end?: string; train_start?: string; train_end?: string; test_start?: string; test_end?: string }
   >;
+  /**
+   * BAR-02 artifact provenance (delivered 2026-08-17).
+   *
+   * `as_of` pins the write instant and `source_artifact_digest` names the
+   * analysis frame the plan was derived from, so the fold Gantt can cite its
+   * source like any other §12.2 figure. Both are additive and therefore
+   * optional: a plan written before this landed has neither, and the UI must
+   * say "chưa công bố" rather than assume.
+   */
+  producer?: {
+    service?: string;
+    artifact?: string;
+    version?: string;
+    as_of?: string;
+    source_artifact_digest?: string;
+  };
+}
+
+/**
+ * Trials envelope (v0.5 §12.2).
+ *
+ * `total_rows` is the unique trial count stored in the artifact, before any
+ * filter or `top_n` cap. Before this existed the frontend inferred truncation
+ * from `rows.length === top_n`, which is a guess: a run with exactly `top_n`
+ * trials looks identical to a truncated one.
+ */
+export interface TrialsPayload {
+  total_rows: number;
+  returned_rows: number;
+  rows: Record<string, unknown>[];
 }
 
 export interface RunSummary {
@@ -194,7 +224,7 @@ export const api = {
       };
     }>(`/api/runs/${runId}/summary`),
   trials: (runId: string, params?: string) =>
-    request<Record<string, unknown>[]>(`/api/runs/${runId}/wfo/trials${params ? `?${params}` : ""}`),
+    request<TrialsPayload>(`/api/runs/${runId}/wfo/trials${params ? `?${params}` : ""}`),
   candidates: (runId: string) =>
     request<Record<string, unknown>[]>(`/api/runs/${runId}/wfo/candidates`),
   folds: (runId: string) => request<Record<string, unknown>[]>(`/api/runs/${runId}/wfo/folds`),

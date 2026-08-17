@@ -8,7 +8,7 @@ import { ChartFigure } from "../../components/ChartFigure";
 import { Collapsible, DefinitionList, StateView } from "../../components/ui";
 import { api, rowParams } from "../../lib/api";
 import type { StrategyResponse } from "../../lib/api";
-import { tableProvenance, type RunEvidence } from "../quantbt/provenance";
+import { tableProvenance, trialsPopulation, type RunEvidence } from "../quantbt/provenance";
 import { buildHistogram, buildObjectiveHeatmap, numericValues } from "./analytics";
 import { activeTheme, vizTokensFor } from "../../styles/tokens";
 
@@ -28,17 +28,23 @@ export function ParametersView({ runId }: { runId: string }) {
 
   const selected = parameters.data?.selected.params ?? {};
   const ranges = strategies.data?.[0]?.parameter_space ?? {};
-  const rows = trials.data ?? [];
+  const rows = trials.data?.rows ?? [];
+
+  const { total: trialsTotal, returned: trialsReturned, truncated: trialsTruncated } =
+    trialsPopulation(trials.data);
 
   const manifest = (audit.data?.manifest ?? {}) as Record<string, unknown>;
   const run: RunEvidence = {
     runId,
     asOf: typeof manifest.completed_at === "string" ? manifest.completed_at : null,
     digest: typeof manifest.dataset_content_hash === "string" ? manifest.dataset_content_hash : null,
-    warnings:
-      rows.length >= TRIAL_QUERY_CAP
-        ? [`Server trả tối đa ${TRIAL_QUERY_CAP} trial theo objective — có thể còn trial ngoài tập này.`]
-        : undefined,
+    // Declared, not inferred — see the same change in OptimizationView.
+    warnings: trialsTruncated
+      ? [
+          `Chart vẽ ${trialsReturned}/${trialsTotal} trial của artifact ` +
+            `(server cap top_n=${TRIAL_QUERY_CAP} theo objective).`,
+        ]
+      : undefined,
   };
 
   const paramKeys = Object.keys(selected);
@@ -196,7 +202,7 @@ export function ParametersView({ runId }: { runId: string }) {
               source: "wfo/trials.parquet",
               segment: "is",
               units: `${distributionParam || "parameter"} (số trial mỗi bin)`,
-              available: rows.length,
+              available: trialsTotal,
               plotted: distributionPlotted,
               reduction: `bỏ trial không có giá trị số cho ${distributionParam || "parameter"}`,
             })}
@@ -211,7 +217,7 @@ export function ParametersView({ runId }: { runId: string }) {
               source: "wfo/trials.parquet",
               segment: "is",
               units: "objective trung bình",
-              available: rows.length,
+              available: trialsTotal,
               plotted: contourPlotted,
               reduction: `bỏ trial thiếu ${pairA} hoặc ${pairB}`,
             })}
@@ -226,7 +232,7 @@ export function ParametersView({ runId }: { runId: string }) {
             source: "wfo/trials.parquet",
             segment: "is",
             units: "giá trị parameter đã chuẩn hoá",
-            available: rows.length,
+            available: trialsTotal,
             plotted: Math.min(rows.length, PARALLEL_TOP_N),
             // A client-side top-N, named as one: the tail is not missing from
             // the artifact, it is simply not drawn.
