@@ -24,30 +24,6 @@ interface PortalRequest extends FastifyRequest {
   portalWorkspaceId: string;
 }
 
-const READ_ONLY_PORTAL_PATHS = new Set([
-  "/api/health",
-  "/api/ready",
-  "/api/strategies",
-  "/api/datasets",
-  "/api/config/options",
-  "/api/v1/portal/registry",
-  "/api/v1/portal/summary",
-  "/api/v1/portal/links",
-  "/api/v1/portal/capabilities",
-  "/api/v1/alphas",
-  "/api/v1/alphas/imports",
-]);
-
-const WRITE_PATHS_PREFIXES = ["/api/runs", "/api/v1/portal"];
-
-function isReadOnlyAllowed(path: string): boolean {
-  return (
-    READ_ONLY_PORTAL_PATHS.has(path) ||
-    path.startsWith("/api/strategies/") ||
-    path.startsWith("/api/datasets")
-  );
-}
-
 @UseGuards(SessionGuard)
 @Controller()
 export class FacadeController {
@@ -125,15 +101,12 @@ export class FacadeController {
     const user = request.portalUser;
 
     const write = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
-    if (write && user.role !== "ADMIN" && !path.startsWith("/api/runs")) {
+    // Mutations (creating runs, importing alphas, editing config) are
+    // ADMIN-only. Every authenticated session — including cross-user — may
+    // READ runs and catalogs through the proxy; workspace read models remain
+    // available as a convenience but are no longer the only read path.
+    if (write && user.role !== "ADMIN") {
       throw new FacadeError("PERMISSION_DENIED", "Không được phép truy cập.", 403);
-    }
-    if (!write && !isReadOnlyAllowed(path) && user.role !== "ADMIN") {
-      throw new FacadeError(
-        "PERMISSION_DENIED",
-        "Đọc runs qua Control API cần quyền ADMIN; dùng workspace read model.",
-        403,
-      );
     }
     if (!write && path.startsWith("/api/runs/") && path.endsWith("/events")) {
       throw new FacadeError(

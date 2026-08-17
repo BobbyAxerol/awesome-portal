@@ -172,9 +172,23 @@ describe("control api facade (proxy, workspaces, outbox)", () => {
     expect(verified!.role).toBe("ADMIN");
   });
 
-  it("denies USER sessions from reading runs through the proxy", async () => {
+  it("lets any authenticated USER read runs through the proxy (cross-user)", async () => {
+    upstream
+      .intercept({ path: "/api/runs", method: "GET" })
+      .reply(200, { runs: [{ run_id: "run_cross", status: "COMPLETED" }] });
     const { cookie } = await seedUser("stan", "USER");
     const response = await inject("/api/runs", { headers: { cookie } });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().runs[0].run_id).toBe("run_cross");
+  });
+
+  it("denies USER sessions from writing runs (config) through the proxy", async () => {
+    const { cookie } = await seedUser("stan", "USER");
+    const response = await inject("/api/runs", {
+      method: "POST",
+      headers: { cookie, "content-type": "application/json" },
+      payload: {},
+    });
     expect(response.statusCode).toBe(403);
   });
 
