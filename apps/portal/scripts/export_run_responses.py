@@ -35,6 +35,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIXTURE_ROOT = REPO_ROOT / "apps" / "portal" / "registry" / "fixtures" / "runs"
 RUN_ID = "visual-baseline-run"
+RUNNING_RUN_ID = "visual-baseline-run-running"
 OUT_DIR = REPO_ROOT / "apps" / "portal" / "frontend" / "e2e" / "run-responses"
 
 # Exactly the URLs the result screens build, query strings included. The
@@ -62,7 +63,21 @@ ENDPOINTS = [
     "/api/datasets",
     "/api/config/options",
     "/api/v1/alphas/imports",
+    # Run Progress needs a non-terminal run. `summary` answers 409 for one, which
+    # is the truth for a run with no metrics yet, so the status is recorded and
+    # replayed rather than omitted.
+    f"/api/runs/{RUNNING_RUN_ID}",
+    f"/api/runs/{RUNNING_RUN_ID}/fold-plan",
+    f"/api/runs/{RUNNING_RUN_ID}/ledger",
+    f"/api/runs/{RUNNING_RUN_ID}/progress",
+    # RunProgress asks for tail=5000, not the client default.
+    f"/api/runs/{RUNNING_RUN_ID}/console?tail=5000",
+    f"/api/runs/{RUNNING_RUN_ID}/config",
+    f"/api/runs/{RUNNING_RUN_ID}/summary",
 ]
+
+# Endpoints whose non-200 answer is part of the state being captured.
+EXPECTED_NON_200 = {f"/api/runs/{RUNNING_RUN_ID}/summary": 409}
 
 # Two synthetic imports so the quarantine inbox baselines a populated screen
 # with both persisted states, instead of only the empty case. The manifests are
@@ -107,6 +122,7 @@ def slug(url: str) -> str:
     """Filesystem-safe name for a captured URL."""
     return (
         url.removeprefix("/api/")
+        .replace(f"runs/{RUNNING_RUN_ID}", "run-running")
         .replace(f"runs/{RUN_ID}", "run")
         .replace("/", "__")
         .replace("?", "--")
@@ -116,9 +132,15 @@ def slug(url: str) -> str:
     )
 
 
-def seed_imports(app: object) -> None:
-    """Submit the synthetic imports through the real quarantine service."""
+def seed_imports(app: object, inbox: Path) -> None:
+    """Stage artifacts in the ingest inbox, then submit source references.
+
+    This mirrors the real R11 flow: CI/owner puts `artifact` + `manifest.json`
+    in the inbox and the API is handed a pointer, never file content.
+    """
     import copy
+
+    from portal_api.services.alpha_import import AlphaImportRequest
 
     source = json.loads(
         (REPO_ROOT / "apps" / "portal" / "registry" / "alphas.v1.json").read_text(encoding="utf-8")
@@ -127,11 +149,26 @@ def seed_imports(app: object) -> None:
     good_digest = "sha256:" + hashlib.sha256(IMPORT_ARTIFACT).hexdigest()
 
     for alpha_id, version, digest_ok in IMPORT_CASES:
+        staged = inbox / alpha_id / version
+        staged.mkdir(parents=True, exist_ok=True)
+        (staged / "artifact.whl").write_bytes(IMPORT_ARTIFACT)
         manifest = copy.deepcopy(source)
         manifest["alpha_id"] = alpha_id
         manifest["version"] = version
+        # The digest the manifest claims is what the mismatch case falsifies.
         manifest["artifact"]["digest"] = good_digest if digest_ok else "sha256:" + "0" * 64
-        service.submit(manifest, IMPORT_ARTIFACT)
+        (staged / "manifest.json").write_text(
+            json.dumps(manifest, indent=1, sort_keys=True), encoding="utf-8"
+        )
+        service.submit(
+            AlphaImportRequest(
+                alpha_id=alpha_id,
+                version=version,
+                artifact_relpath=f"{alpha_id}/{version}/artifact.whl",
+                expected_digest=manifest["artifact"]["digest"],
+                git_ref=None,
+            )
+        )
 
 
 def pin_imports(records: list[dict[str, object]]) -> list[dict[str, object]]:
@@ -151,13 +188,15 @@ def main() -> int:
     os.environ["PORTAL_REGISTRY_ROOT"] = str(REPO_ROOT / "apps" / "portal" / "registry")
     # Quarantine writes real files; keep them out of the repository.
     os.environ["PORTAL_ALPHA_IMPORT_ROOT"] = tempfile.mkdtemp(prefix="portal-alpha-imports-")
+    inbox = Path(tempfile.mkdtemp(prefix="portal-alpha-inbox-"))
+    os.environ["PORTAL_ALPHA_ARTIFACT_ROOT"] = str(inbox)
 
     from fastapi.testclient import TestClient
 
     from portal_api.main import create_app
 
     app = create_app()
-    seed_imports(app)
+    seed_imports(app, inbox)
     client = TestClient(app)
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -167,16 +206,20 @@ def main() -> int:
     index: dict[str, object] = {
         "source": f"registry/fixtures/runs/{RUN_ID}",
         "source_digest": artifact_digest(FIXTURE_ROOT / RUN_ID),
+        "running_source": f"registry/fixtures/runs/{RUNNING_RUN_ID}",
+        "running_source_digest": artifact_digest(FIXTURE_ROOT / RUNNING_RUN_ID),
         "run_id": RUN_ID,
+        "running_run_id": RUNNING_RUN_ID,
         "endpoints": {},
     }
-    endpoints: dict[str, str] = {}
+    endpoints: dict[str, dict[str, object]] = {}
     failed: list[str] = []
 
     for url in ENDPOINTS:
         response = client.get(url)
-        if response.status_code != 200:
-            failed.append(f"{response.status_code} {url}")
+        expected = EXPECTED_NON_200.get(url, 200)
+        if response.status_code != expected:
+            failed.append(f"{response.status_code} (expected {expected}) {url}")
             continue
         body = response.json()
         if url.endswith("/alphas/imports"):
@@ -189,7 +232,7 @@ def main() -> int:
             json.dumps(body, sort_keys=True, ensure_ascii=False, separators=(",", ":")) + "\n",
             encoding="utf-8",
         )
-        endpoints[url] = name
+        endpoints[url] = {"file": name, "status": response.status_code}
 
     if failed:
         print("FAILED to capture:\n  " + "\n  ".join(failed), file=sys.stderr)

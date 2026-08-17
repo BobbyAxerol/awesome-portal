@@ -108,15 +108,36 @@ function RunWorkspace() {
 
   const current = run.data;
 
+  /*
+   * The route decides which run this is; the response only describes it.
+   *
+   * Every child read used `current.run_id` from the body, so one inconsistent
+   * field would silently redirect the console, ledger and every result tab to a
+   * different run's artifacts. The id the user navigated to is the identity.
+   *
+   * A disagreement is not normalised away either — it is a real inconsistency in
+   * whatever served the run, and hiding it is how a screen ends up mixing two
+   * runs without saying so.
+   */
+  const bodyIdMismatch = current.run_id && current.run_id !== runId ? current.run_id : null;
+  const mismatchNotice = bodyIdMismatch ? (
+    <div className="run-id-mismatch mono no-print" role="alert">
+      Run detail trả về <span>run_id {bodyIdMismatch}</span> nhưng URL yêu cầu{" "}
+      <span>{runId}</span>. Portal đọc artifact theo id trên URL; hai giá trị lệch nhau là
+      dấu hiệu dữ liệu run không nhất quán.
+    </div>
+  ) : null;
+
   if (!canOpenRunResults(current.status) || finishedNow) {
     return (
       <>
-        <RunPassport runId={current.run_id} status={current.status} />
+        {mismatchNotice}
+        <RunPassport runId={runId} status={current.status} />
         <RunProgress
-          runId={current.run_id}
+          runId={runId}
           onViewResults={() => {
             setFinishedNow(false);
-            navigate(runTabPath(current.run_id, "overview"));
+            navigate(runTabPath(runId, "overview"));
           }}
         />
       </>
@@ -125,15 +146,16 @@ function RunWorkspace() {
 
   return (
     <>
-      <RunPassport runId={current.run_id} status={current.status} />
-      <QuantBTSubnav runId={current.run_id} />
+      {mismatchNotice}
+      <RunPassport runId={runId} status={current.status} />
+      <QuantBTSubnav runId={runId} />
       <Routes>
-        <Route path="overview" element={<OverviewView runId={current.run_id} />} />
-        <Route path="optimization" element={<OptimizationView runId={current.run_id} />} />
-        <Route path="parameters" element={<ParametersView runId={current.run_id} />} />
-        <Route path="execution" element={<ExecutionView runId={current.run_id} />} />
-        <Route path="audit" element={<AuditView runId={current.run_id} />} />
-        <Route path="*" element={<Navigate to={runTabPath(current.run_id, "overview")} replace />} />
+        <Route path="overview" element={<OverviewView runId={runId} />} />
+        <Route path="optimization" element={<OptimizationView runId={runId} />} />
+        <Route path="parameters" element={<ParametersView runId={runId} />} />
+        <Route path="execution" element={<ExecutionView runId={runId} />} />
+        <Route path="audit" element={<AuditView runId={runId} />} />
+        <Route path="*" element={<Navigate to={runTabPath(runId, "overview")} replace />} />
       </Routes>
     </>
   );

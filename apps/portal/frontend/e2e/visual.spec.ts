@@ -22,6 +22,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import {
   BREAKPOINTS,
   FIXTURE_RUN_ID,
+  FIXTURE_RUNNING_RUN_ID,
   THEMES,
   freezeClock,
   runFixtureDigest,
@@ -109,6 +110,15 @@ const RUN_SCREENS: Screen[] = [
     path: `/research/quantbt/runs/${FIXTURE_RUN_ID}/execution`,
     ready: (page) => page.locator("figure[data-fig='1']"),
   },
+  // Run Progress renders only for a non-terminal run, which is why it needed
+  // its own fixture. The detail response still carries the completed run's id
+  // (backend request 13), so this shot also captures the mismatch notice — the
+  // honest rendering of an inconsistency rather than a silent normalisation.
+  {
+    name: "run-progress",
+    path: `/research/quantbt/runs/${FIXTURE_RUNNING_RUN_ID}/overview`,
+    ready: (page) => page.getByText(/fold timeline|Window timeline/i),
+  },
   {
     name: "alpha-imports",
     path: "/research/quantbt/imports",
@@ -129,13 +139,13 @@ const RUN_SCREENS: Screen[] = [
  * keep baselining numbers that no longer exist — silently. Comparing the
  * recorded digest against the fixture on disk is what makes that a failure.
  */
-test("recorded run responses match the committed run fixture", () => {
+test("recorded run responses match the committed run fixtures", () => {
   const index = runResponseIndex();
   expect(index.run_id).toBe(FIXTURE_RUN_ID);
-  expect(
-    index.source_digest,
-    "run fixture changed — re-run apps/portal/scripts/export_run_responses.py",
-  ).toBe(runFixtureDigest());
+  expect(index.running_run_id).toBe(FIXTURE_RUNNING_RUN_ID);
+  const hint = "run fixture changed — re-run apps/portal/scripts/export_run_responses.py";
+  expect(index.source_digest, hint).toBe(runFixtureDigest(FIXTURE_RUN_ID));
+  expect(index.running_source_digest, hint).toBe(runFixtureDigest(FIXTURE_RUNNING_RUN_ID));
 });
 
 for (const theme of THEMES) {

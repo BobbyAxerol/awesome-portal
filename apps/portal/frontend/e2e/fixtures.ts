@@ -53,16 +53,22 @@ const RUN_RESPONSES = join(dirname(fileURLToPath(import.meta.url)), "run-respons
 interface RunResponseIndex {
   source: string;
   source_digest: string;
+  running_source: string;
+  running_source_digest: string;
   run_id: string;
-  endpoints: Record<string, string>;
+  running_run_id: string;
+  /** Recorded status is replayed too: `summary` answers 409 for a live run. */
+  endpoints: Record<string, { file: string; status: number }>;
 }
 
 export function runResponseIndex(): RunResponseIndex {
   return JSON.parse(readFileSync(join(RUN_RESPONSES, "index.json"), "utf8")) as RunResponseIndex;
 }
 
-/** The run the recorded responses describe. */
+/** The completed run the recorded responses describe. */
 export const FIXTURE_RUN_ID = "visual-baseline-run";
+/** The non-terminal run, for the Run Progress screen. */
+export const FIXTURE_RUNNING_RUN_ID = "visual-baseline-run-running";
 
 /**
  * Digest of the run fixture directory, recomputed the same way the exporter does.
@@ -72,8 +78,8 @@ export const FIXTURE_RUN_ID = "visual-baseline-run";
  * numbers. Comparing this against `index.json` is what turns that into a
  * failing test instead of a silent lie.
  */
-export function runFixtureDigest(): string {
-  const root = join(REGISTRY, "fixtures/runs", FIXTURE_RUN_ID);
+export function runFixtureDigest(runId: string = FIXTURE_RUN_ID): string {
+  const root = join(REGISTRY, "fixtures/runs", runId);
   const files: string[] = [];
   const walk = (dir: string) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -102,13 +108,13 @@ export function runFixtureDigest(): string {
  */
 export async function stubRunApi(page: Page): Promise<void> {
   const index = runResponseIndex();
-  for (const [url, file] of Object.entries(index.endpoints)) {
-    const body = readFileSync(join(RUN_RESPONSES, file), "utf8");
+  for (const [url, recorded] of Object.entries(index.endpoints)) {
+    const body = readFileSync(join(RUN_RESPONSES, recorded.file), "utf8");
     // The recorded key includes the query string, so a view asking for a
     // different `max_points` does not silently get another view's envelope.
     const [pathname, search = ""] = url.split("?");
     await page.route(`**${pathname}${search ? `?${search}` : ""}`, (route) =>
-      route.fulfill({ status: 200, contentType: "application/json", body }),
+      route.fulfill({ status: recorded.status, contentType: "application/json", body }),
     );
   }
 }
