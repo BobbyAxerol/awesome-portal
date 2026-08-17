@@ -1,0 +1,26 @@
+{
+ "endpoints": {
+  "/api/config/options": "config__options.json",
+  "/api/datasets": "datasets.json",
+  "/api/runs": "runs.json",
+  "/api/runs/visual-baseline-run": "run.json",
+  "/api/runs/visual-baseline-run/audit": "run__audit.json",
+  "/api/runs/visual-baseline-run/config": "run__config.json",
+  "/api/runs/visual-baseline-run/console?tail=2000": "run__console--tail_2000.json",
+  "/api/runs/visual-baseline-run/fold-plan": "run__fold-plan.json",
+  "/api/runs/visual-baseline-run/ledger": "run__ledger.json",
+  "/api/runs/visual-baseline-run/progress": "run__progress.json",
+  "/api/runs/visual-baseline-run/selection/trace": "run__selection__trace.json",
+  "/api/runs/visual-baseline-run/series/stitched?max_points=3000": "run__series__stitched--max_points_3000.json",
+  "/api/runs/visual-baseline-run/series/stitched?max_points=4000": "run__series__stitched--max_points_4000.json",
+  "/api/runs/visual-baseline-run/summary": "run__summary.json",
+  "/api/runs/visual-baseline-run/wfo/candidates": "run__wfo__candidates.json",
+  "/api/runs/visual-baseline-run/wfo/folds": "run__wfo__folds.json",
+  "/api/runs/visual-baseline-run/wfo/parameters": "run__wfo__parameters.json",
+  "/api/runs/visual-baseline-run/wfo/trials?top_n=5000": "run__wfo__trials--top_n_5000.json",
+  "/api/strategies": "strategies.json"
+ },
+ "run_id": "visual-baseline-run",
+ "source": "registry/fixtures/runs/visual-baseline-run",
+ "source_digest": "sha256:064ceba2626e967bd1bf5e9f6118767526cb3ab2a40802392b45cac930d7bb93"
+}

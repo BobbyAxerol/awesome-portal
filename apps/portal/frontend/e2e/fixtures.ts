@@ -7,8 +7,9 @@
  * data is not a baseline, and inventing a response here would put a second
  * feature model in the repo (FRONTEND_HANDOFF §2).
  */
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { createHash } from "node:crypto";
+import { readFileSync, readdirSync } from "node:fs";
+import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { Page } from "@playwright/test";
@@ -45,6 +46,72 @@ export const BREAKPOINTS = [
  * so the shell renders its normal, non-stale state.
  */
 export const FROZEN_NOW = new Date("2026-08-17T12:00:00.000Z");
+
+/** Recorded run responses + the digest of the artifacts they came from. */
+const RUN_RESPONSES = join(dirname(fileURLToPath(import.meta.url)), "run-responses");
+
+interface RunResponseIndex {
+  source: string;
+  source_digest: string;
+  run_id: string;
+  endpoints: Record<string, string>;
+}
+
+export function runResponseIndex(): RunResponseIndex {
+  return JSON.parse(readFileSync(join(RUN_RESPONSES, "index.json"), "utf8")) as RunResponseIndex;
+}
+
+/** The run the recorded responses describe. */
+export const FIXTURE_RUN_ID = "visual-baseline-run";
+
+/**
+ * Digest of the run fixture directory, recomputed the same way the exporter does.
+ *
+ * The baseline replays recorded responses, so if the run fixture is regenerated
+ * and the responses are not, the screenshots would keep baselining stale
+ * numbers. Comparing this against `index.json` is what turns that into a
+ * failing test instead of a silent lie.
+ */
+export function runFixtureDigest(): string {
+  const root = join(REGISTRY, "fixtures/runs", FIXTURE_RUN_ID);
+  const files: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else files.push(relative(root, full).split(sep).join("/"));
+    }
+  };
+  walk(root);
+  // Sort key is the relative POSIX path, matching the exporter exactly — an
+  // absolute-string or per-directory sort disagrees with Python's ordering.
+  const hash = createHash("sha256");
+  for (const relativePath of files.sort()) {
+    hash.update(relativePath);
+    hash.update(readFileSync(join(root, relativePath)));
+  }
+  return `sha256:${hash.digest("hex")}`;
+}
+
+/**
+ * Serves the run endpoints from the recorded responses.
+ *
+ * Bodies come from `apps/portal/scripts/export_run_responses.py`, which serves
+ * the committed run fixture through the real FastAPI app — so these are the
+ * API's own output, not invented run data.
+ */
+export async function stubRunApi(page: Page): Promise<void> {
+  const index = runResponseIndex();
+  for (const [url, file] of Object.entries(index.endpoints)) {
+    const body = readFileSync(join(RUN_RESPONSES, file), "utf8");
+    // The recorded key includes the query string, so a view asking for a
+    // different `max_points` does not silently get another view's envelope.
+    const [pathname, search = ""] = url.split("?");
+    await page.route(`**${pathname}${search ? `?${search}` : ""}`, (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body }),
+    );
+  }
+}
 
 /** Serves the Portal contract endpoints from the canonical fixtures. */
 export async function stubPortalApi(page: Page, summary: SummaryState = "healthy"): Promise<void> {

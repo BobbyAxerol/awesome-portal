@@ -91,7 +91,7 @@ function PriceChart({ payload, run }: { payload: SeriesPayload; run: RunEvidence
           type: "scatter",
           symbol: "triangle",
           symbolSize: 14,
-          itemStyle: { color: "var(--good)", borderColor: viz.markerLongBorder, borderWidth: 1 },
+          itemStyle: { color: palette.good, borderColor: viz.markerLongBorder, borderWidth: 1 },
           data: entries.filter((entry) => entry.side === 1).map((entry) => [payload.timestamps[entry.index], entry.price]),
         },
         {
@@ -100,7 +100,7 @@ function PriceChart({ payload, run }: { payload: SeriesPayload; run: RunEvidence
           symbol: "triangle",
           symbolRotate: 180,
           symbolSize: 14,
-          itemStyle: { color: "var(--bad)", borderColor: viz.markerShortBorder, borderWidth: 1 },
+          itemStyle: { color: palette.bad, borderColor: viz.markerShortBorder, borderWidth: 1 },
           data: entries.filter((entry) => entry.side === -1).map((entry) => [payload.timestamps[entry.index], entry.price]),
         },
         {
@@ -108,7 +108,7 @@ function PriceChart({ payload, run }: { payload: SeriesPayload; run: RunEvidence
           type: "scatter",
           symbol: "path://M-4,-4 L4,4 M4,-4 L-4,4",
           symbolSize: 13,
-          itemStyle: { color: "var(--good)", borderColor: "var(--good)", borderWidth: 1.5 },
+          itemStyle: { color: palette.good, borderColor: palette.good, borderWidth: 1.5 },
           data: exits.filter((exit) => exit.side === 1).map((exit) => [payload.timestamps[exit.index], exit.price]),
         },
         {
@@ -116,7 +116,7 @@ function PriceChart({ payload, run }: { payload: SeriesPayload; run: RunEvidence
           type: "scatter",
           symbol: "path://M-4,-4 L4,4 M4,-4 L-4,4",
           symbolSize: 13,
-          itemStyle: { color: "var(--bad)", borderColor: "var(--bad)", borderWidth: 1.5 },
+          itemStyle: { color: palette.bad, borderColor: palette.bad, borderWidth: 1.5 },
           data: exits.filter((exit) => exit.side === -1).map((exit) => [payload.timestamps[exit.index], exit.price]),
         },
       ],

@@ -21,10 +21,14 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import {
   BREAKPOINTS,
+  FIXTURE_RUN_ID,
   THEMES,
   freezeClock,
+  runFixtureDigest,
+  runResponseIndex,
   settle,
   stubPortalApi,
+  stubRunApi,
   usePreferences,
 } from "./fixtures";
 
@@ -61,6 +65,66 @@ const SCREENS: Screen[] = [
   },
 ];
 
+/**
+ * The Research screens, served from the recorded run responses.
+ *
+ * These are the screens the backlog listed as unprovable: they need a completed
+ * run, and until `registry/fixtures/runs/visual-baseline-run` existed there was
+ * none. The fixture is an `advanced_walk_forward` run, which is why Overview
+ * and Execution read the stitched series rather than the per-segment ones.
+ */
+const RUN_SCREENS: Screen[] = [
+  {
+    name: "new-run",
+    path: "/research/quantbt/new",
+    // The level-1 heading is the module header ("QuantBT Research"); the
+    // flow's own title is level 2.
+    ready: (page) => page.getByRole("heading", { level: 2, name: "New Run" }),
+  },
+  {
+    name: "run-overview",
+    path: `/research/quantbt/runs/${FIXTURE_RUN_ID}/overview`,
+    ready: (page) => page.locator("figure[data-fig='1']"),
+  },
+  {
+    name: "run-optimization",
+    path: `/research/quantbt/runs/${FIXTURE_RUN_ID}/optimization`,
+    ready: (page) => page.locator("figure[data-fig='1']"),
+  },
+  {
+    name: "run-parameters",
+    path: `/research/quantbt/runs/${FIXTURE_RUN_ID}/parameters`,
+    ready: (page) => page.locator("figure[data-fig='1']"),
+  },
+  {
+    name: "run-execution",
+    path: `/research/quantbt/runs/${FIXTURE_RUN_ID}/execution`,
+    ready: (page) => page.locator("figure[data-fig='1']"),
+  },
+  {
+    name: "run-audit",
+    path: `/research/quantbt/runs/${FIXTURE_RUN_ID}/audit`,
+    ready: (page) => page.getByRole("heading", { level: 1 }),
+  },
+];
+
+/**
+ * Staleness gate.
+ *
+ * The baseline replays recorded responses. If the run fixture is regenerated
+ * and `export_run_responses.py` is not re-run, every Research screenshot would
+ * keep baselining numbers that no longer exist — silently. Comparing the
+ * recorded digest against the fixture on disk is what makes that a failure.
+ */
+test("recorded run responses match the committed run fixture", () => {
+  const index = runResponseIndex();
+  expect(index.run_id).toBe(FIXTURE_RUN_ID);
+  expect(
+    index.source_digest,
+    "run fixture changed — re-run apps/portal/scripts/export_run_responses.py",
+  ).toBe(runFixtureDigest());
+});
+
 for (const theme of THEMES) {
   test.describe(`${theme} theme`, () => {
     for (const breakpoint of BREAKPOINTS) {
@@ -70,6 +134,38 @@ for (const theme of THEMES) {
           await freezeClock(page);
           await usePreferences(page, theme);
           await stubPortalApi(page, "healthy");
+
+          await page.goto(screen.path);
+          await screen.ready(page).first().waitFor({ state: "visible" });
+          await settle(page);
+
+          await expect(page).toHaveScreenshot(`${screen.name}-${theme}-${breakpoint.name}.png`, {
+            fullPage: true,
+          });
+        });
+      }
+    }
+  });
+}
+
+/**
+ * Research screens, both themes, at the two widths they are designed for.
+ *
+ * Deliberately not the full 4x2 matrix: a result screen is a desktop analysis
+ * surface (v0.4 §26.1 sends research work to "open on desktop"), so mobile and
+ * tablet shots would baseline a layout nobody is asked to work in. Laptop and
+ * workstation are the real ones.
+ */
+for (const theme of THEMES) {
+  test.describe(`${theme} theme · research`, () => {
+    for (const breakpoint of BREAKPOINTS.filter((b) => b.name === "laptop" || b.name === "workstation")) {
+      for (const screen of RUN_SCREENS) {
+        test(`${screen.name} @ ${breakpoint.name}`, async ({ page }) => {
+          await page.setViewportSize({ width: breakpoint.width, height: breakpoint.height });
+          await freezeClock(page);
+          await usePreferences(page, theme);
+          await stubPortalApi(page, "healthy");
+          await stubRunApi(page);
 
           await page.goto(screen.path);
           await screen.ready(page).first().waitFor({ state: "visible" });

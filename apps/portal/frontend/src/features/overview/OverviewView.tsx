@@ -105,16 +105,11 @@ export function OverviewView({ runId }: { runId: string }) {
       return baseOption({
         grid: { left: 58, right: 24, top: 46, bottom: 54, containLabel: true },
         legend: { show: false },
-        xAxis: {
-          type: "time",
-          splitNumber: 5,
-          axisLabel: { hideOverlap: true, formatter: "{yyyy}", margin: 10 },
-        },
-        yAxis: {
-          type: "value",
-          axisLabel: { color: "var(--ink-faint)", fontSize: 11 },
-          splitLine: { lineStyle: { color: "var(--line-soft)", type: "dashed" } },
-        },
+        // Axis styling comes from the theme. It used to be re-declared here
+        // with `formatter: "{yyyy}"` — which is why an eight-month run showed
+        // four ticks all reading "2024" — and with `var(--ink-faint)`, which a
+        // canvas renderer cannot resolve at all.
+        xAxis: { type: "time", splitNumber: 5, axisLabel: { hideOverlap: true, margin: 10 } },
         series: [
           {
             name: "Stitched OOS",
@@ -145,16 +140,7 @@ export function OverviewView({ runId }: { runId: string }) {
     return baseOption({
       grid: { left: 58, right: 24, top: 46, bottom: 54, containLabel: true },
       legend: { data: series.map((item) => item.name), top: 2, right: 12, left: "auto" },
-      xAxis: {
-        type: "time",
-        splitNumber: 5,
-        axisLabel: { hideOverlap: true, formatter: "{yyyy}", margin: 10 },
-      },
-      yAxis: {
-        type: "value",
-        axisLabel: { color: "var(--ink-faint)", fontSize: 11 },
-        splitLine: { lineStyle: { color: "var(--line-soft)", type: "dashed" } },
-      },
+      xAxis: { type: "time", splitNumber: 5, axisLabel: { hideOverlap: true, margin: 10 } },
       series,
     });
   }, [advanced, capitalMode, presentation.data, selected, stitchedQuery.data]);
@@ -164,11 +150,7 @@ export function OverviewView({ runId }: { runId: string }) {
     return baseOption({
       grid: { left: 56, right: 20, top: 20, bottom: 48, containLabel: true },
       legend: { show: false },
-      xAxis: {
-        type: "time",
-        splitNumber: 5,
-        axisLabel: { hideOverlap: true, formatter: "{yyyy}", margin: 10 },
-      },
+      xAxis: { type: "time", splitNumber: 5, axisLabel: { hideOverlap: true, margin: 10 } },
       series: active.map((segment) => {
         const payload = segment.series!;
         const dd = payload.series.drawdown ?? [];

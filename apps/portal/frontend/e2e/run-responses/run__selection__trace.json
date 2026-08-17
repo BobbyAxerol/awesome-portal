@@ -1,0 +1,1 @@
+{"artifact_schema_version":"1","capabilities":{"per_trial_selection_breakdown":false},"params_semantics":"single_global_parameter_set","producer":{"artifact":"selection_trace.json","service":"portal-api","version":"0.1.0"},"source":"QuantBT best_trial from walk_forward"}
