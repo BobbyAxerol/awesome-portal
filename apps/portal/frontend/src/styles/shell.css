@@ -1431,3 +1431,30 @@
 .preflight-detail {
   color: var(--ink-soft);
 }
+
+/* --- Cancel run ---------------------------------------------------------- */
+.cancel-run {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* Destructive, so it reads as such on hover rather than shouting at rest. */
+.cancel-run-btn:hover:not(:disabled) {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+.cancel-run-compact {
+  padding: 2px 6px !important;
+}
+.cancel-run-denied,
+.cancel-run-error {
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+}
+.cancel-run-denied {
+  color: var(--state-denied);
+}
+.cancel-run-error {
+  color: var(--bad);
+}

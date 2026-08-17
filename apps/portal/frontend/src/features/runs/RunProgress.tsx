@@ -6,6 +6,7 @@ import { Check, Eye, Maximize2, Minimize2, Pause, Play, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { api, isTerminal, rowParams, type RunDetail, type RunFoldPlan, type RunLedger } from "../../lib/api";
+import { CancelRunButton } from "./CancelRunButton";
 import { FoldGantt } from "../../components/FoldGantt";
 import { annotateConsoleLines, estimateEtaSeconds, parseConsoleStats } from "../../lib/consoleStats";
 import { fmtDuration, fmtTimestamp } from "../../lib/format";
@@ -170,6 +171,7 @@ export function RunProgress({ runId, onViewResults }: { runId: string; onViewRes
     <div className="mx-auto max-w-[1280px] px-6 py-8">
       <div className="mb-2 flex flex-wrap items-baseline gap-3">
         <h1 className="section-title">{failed ? "Run failed" : cancelled ? "Run cancelled" : completed ? "Run completed" : "Run progress"}</h1>
+        <CancelRunButton runId={runId} status={data.status} />
         <span className="mono text-[12px] text-ink-faint">
           stage {data.stage_index ?? "—"} / {data.stage_count ?? "—"} · {fmtDuration(data.created_at)}
         </span>

@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { runPath } from "../quantbt/routes";
+import { CancelRunButton } from "./CancelRunButton";
 import { api, type RunSummary } from "../../lib/api";
 import { fmtDuration, fmtShortHash, fmtTimestamp } from "../../lib/format";
 import { Badge, StateView } from "../../components/ui";
@@ -129,6 +130,8 @@ export function RunLibrary() {
                   <td className="num text-ink-soft">{fmtTimestamp(run.completed_at)}</td>
                   <td className="num text-ink-soft">{fmtDuration(run.created_at, run.completed_at)}</td>
                   <td className="pr-4 text-right">
+                    {/* Only for a run that can still be cancelled. */}
+                    <CancelRunButton runId={run.run_id} status={run.status} compact />
                     <button
                       type="button"
                       className="btn-ghost no-print !px-1.5 !py-0.5"
