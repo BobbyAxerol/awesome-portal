@@ -203,6 +203,8 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 | **RowEnvelope cho candidates/folds** | §8.3 request 8 | Cả 3 endpoint row-table dùng chung `rowPopulation()`; fold table có dòng "20/20 fold". |
 | **Type generated cho endpoint mới** | §8.3 request 6 | `RowEnvelope`/`FoldPlanDocument`/`ArtifactProducer` thay type khai tay. `FoldRow` vẫn khai local — contract để `folds` là record array (runner ghi cột theo protocol). |
 | **Visual baseline — Research screens** | §8.3 request 7, v0.4 §26 | 64 snapshot (từ 39): New Run + 5 run tab × 2 theme × laptop/workstation, trên `visual-baseline-run`. Có staleness gate theo digest fixture. |
+| **Login frames 01B/01C/01D** | v0.4 §21.1, U07 | `AuthGate` đứng trước shell, đọc `/api/auth/context`; state machine thuộc backend. Deep link tự sống vì router nằm trong `children`. State lạ → frame khắt khe nhất, không mở shell. 16 snapshot (2 theme × mobile/laptop × 4 frame). |
+| **Import Wizard nửa ghi** | strategy contract §5, R11 hướng A | Form source-reference `{alpha_id, version, artifact_relpath, expected_digest, git_ref?}`. **Không có file input** (2 test chặn). 403 hiện là "không đủ quyền", tách khỏi 400 "bị từ chối". |
 | **Reports như dữ liệu** | §8.6 cũ mục 1 (slice tự đề xuất) | `view-reports` parse thành model typed, render bằng primitive. Fragment **không sửa**, hash vẫn gated. Test content-equivalence hai chiều: không mất, không bịa. `RawViewFeature` xoá (dead code). 77 snapshot. |
 | **Alpha import inbox (U14 read half)** | strategy contract §5/§6 mục 4 | `/research/quantbt/imports`: 5 state contract khai báo, reason nguyên văn của service, verify digest on-demand (hiện cả hai digest, không chỉ verdict), empty ≠ failed. **Không có upload** — xem §8.4 điểm 3. 68 snapshot. |
 
@@ -210,12 +212,13 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 
 | Vùng | Trạng thái | Vì sao chưa sâu | Slice đề xuất |
 |---|---|---|---|
-| Import Wizard — nửa ghi (Flow A/B) | Nửa đọc đã xong (§8.1). Nửa **submit** chưa làm. | Chặn bởi **request 11**: contract §5 cấm import file trực tiếp từ browser, nhưng endpoint hiện tại là multipart upload. Không tự chọn một trong hai. | Sau request 11: form submit theo source reference (git ref + expected digest), preflight capability gate. |
-| Alpha Pool (`/research/alphas`) | `COMMISSIONED` → Feature Preview. Inbox tạm đặt dưới QuantBT. | Registry khai `COMMISSIONED`; render màn chạy được ở đó sẽ mâu thuẫn chính badge của nó. Registry là file backend. | Khi có certification slice: xin đổi maturity + chuyển inbox sang ALPHA_POOL. Đây là **request 12**. |
+| Import Wizard — preflight capability gate | Form submit đã xong. Chưa có preflight kiểm `required_columns ⊆ frame` / timeframe / seed trước khi gửi (strategy contract §6 mục 3). | Những check đó thuộc backend preflight; FE chỉ nên hiển thị kết quả, chưa có endpoint trả về. | Xin endpoint preflight cho import, hoặc chờ certification slice. |
+| Alpha Pool (`/research/alphas`) | `COMMISSIONED` → Feature Preview. Inbox ở `/research/quantbt/imports`. | **Đã quyết** (R12): giữ `COMMISSIONED` tới slice certification. | Khi certification xong: đổi maturity + chuyển inbox, giữ redirect route cũ. |
+| Workspace / tenancy (`/api/workspaces`) | Chưa làm. | Topbar hiện ghi "Default Workspace · Prototype hiện chỉ có một workspace" — đúng sự thật hiện tại. Chỉ làm khi có tenancy thật. | Khi có nhiều workspace thật. |
 | Command Center | Đủ 7 state, số liệu thật từ summary. Chưa có drill-down drawer. | Read model bền thuộc U10; drawer không có nguồn ổn định để mở. | Sau U10: evidence drawer + cross-filter. |
 | Planning: Docs / Reports | Nhúng nguyên feature body. Token và form control đã dùng chung; Reports vẫn render fragment HTML legacy đã khoá. | Fragment là bản byte-preserved của tài liệu gốc, refactor sẽ phá content-integrity hash. | Slice "Reports như dữ liệu" — parse fragment thành model rồi render bằng primitive, giữ hash của nguồn. |
 | Profile & Access | `COMMISSIONED` preview. | Chờ U07 wire gateway→BFF; login screens 01B/01C/01D chưa có backend. | Sau U10: Frames 01B–01D + session expired + maintenance screen kèm request ID. |
-| Run Progress — live states | Fold Gantt có provenance; response fixture đã capture (`ledger`, `progress`, `console`). Nhưng **màn Run Progress chỉ render khi run chưa terminal**, còn fixture là `COMPLETED`, nên baseline không vào được state live. | Cần fixture run ở state `RUNNING` (mid-fold) — hoặc một cách override state ở client. Đây là **request 10**. | Slice "run progress baseline". |
+| Run Progress — live states | Fixture `RUNNING` đã có (R10). Nhưng **chưa baseline được** vì fixture mang `run_id` sai — xem **request 13**. | `GET /api/runs/visual-baseline-run-running` trả `run_id: "visual-baseline-run"` (id của run COMPLETED). `RunWorkspace` truyền `current.run_id` xuống `RunProgress`, nên mọi fetch con (`progress`, `console`, `ledger`) sẽ trỏ sang run COMPLETED → màn trộn status RUNNING với progress đã xong. | Sau request 13 (sửa 2 dòng `run_id` trong fixture) là chụp được ngay. |
 | Visual baseline — mobile/tablet cho Research | Chỉ chụp laptop + workstation. | Có chủ ý: v0.4 §26.1 đưa research work sang "open on desktop", nên baseline mobile sẽ chốt một layout không ai được yêu cầu làm việc trên đó. | Chỉ mở nếu §26.1 đổi. |
 
 ### 8.3 Backend request
@@ -328,6 +331,10 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 | Content-equivalence test hai chiều | "Render bằng primitive nhưng giữ nội dung" chỉ là lời nói nếu không kiểm. | Mọi string trong model phải có trong fragment (không bịa) **và** prose nhìn thấy của fragment phải được model tiêu thụ hết (không mất). Bỏ `.mermaid-source` trước khi so vì nó là bản `hidden` trùng với `<pre>`. |
 | `settle()` chờ mermaid xong | `planning-reports @ print` fail verify **lặp lại** — không phải flake random mà là chụp giữa lúc mermaid render. | Chờ mọi `.mermaid` chứa `svg`. Gỡ được cả một lớp flake cho mọi màn có sơ đồ. Verify ổn định 2 lần. |
 | Hai gate bỏ qua dòng comment | Doc comment nhắc `var(--muted)` mà nó vừa thay thế bị chính gate token-parity bắt. Văn xuôi không phải là tiêu thụ token. | Gate bắn vào prose là gate người ta học cách bỏ qua. Negative-test lại: `var(--nope-fake)` thật trong code vẫn fail. |
+
+| AuthGate: gateway không ở trước thì vẫn render shell | `vite dev` và rollback `PORTAL_WEB_UPSTREAM=portal-api:8000` không serve `/api/auth/context`. Đó là Portal **không có** identity BFF, không phải cửa bị khoá. | 404/501 → render shell + banner nói rõ; mọi lỗi khác → chặn. Form login mà không backend nào trả lời được thì tệ hơn. |
+| `PortalApiError` có status/code/request_id | Client cũ throw `Error` chỉ có message, nên không phân biệt được 403 (thiếu quyền) với 400 (input sai) — đúng phân biệt mà gateway ADMIN-only tạo ra. | `message` vẫn là tham số đầu nên call site cũ không đổi. |
+| Print baseline settle **trước** khi đổi media | `planning-reports @ print` fail verify lặp lại. Nguyên nhân là **thứ tự**, không phải timing: mermaid đo text lúc render, `emulateMedia` đua với render nên geometry SVG khác nhau. | Giờ luôn layout dưới screen CSS rồi mới đổi media. Verify 3/3 lần. |
 
 ### 8.6 Đề xuất slice kế tiếp
 
