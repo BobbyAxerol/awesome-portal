@@ -1,13 +1,16 @@
-import { Button } from "@/components/ui";
 import { RawViewFeature } from "@/features/shared/RawViewFeature";
 
-/** The raw Reports surface remains the default; Interpretation is an adjacent opt-in view. */
-export function ReportsFeature({ theme, onOpenInterpretation }: { theme: "light" | "dark"; onOpenInterpretation: () => void }) {
+/**
+ * Reports surface — the byte-preserved legacy fragment.
+ *
+ * The adjacent Interpretation view was removed in v1.1; Reports is now the
+ * whole surface rather than the default half of a pair.
+ */
+export function ReportsFeature({ theme }: { theme: "light" | "dark" }) {
   return (
     <section data-testid="reports-feature">
       <div className="feature-context-bar">
         <span>Reports giữ nguyên nội dung legacy đã khóa.</span>
-        <Button type="button" variant="ghost" onClick={onOpenInterpretation} data-testid="open-interpretation">Open interpretation</Button>
       </div>
       <RawViewFeature view="reports" theme={theme} />
     </section>

@@ -107,7 +107,10 @@ await writeFile(path.join(OUT, "pages", "index.ts"), index, "utf8");
 await writeFile(path.join(OUT, "content-integrity-manifest.json"), JSON.stringify(manifest, null, 2), "utf8");
 
 // ---- Phase 2: view panels (raw fragments) ----
-const VIEW_IDS = ["view-roadmap", "view-board", "view-reports", "view-evidence", "view-portal"];
+// v1.1 removed the Evidence and Portal Preview screens, so their fragments are
+// no longer extracted. `view-roadmap`/`view-board` remain extracted as the
+// frozen legacy baseline the React features were ported from.
+const VIEW_IDS = ["view-roadmap", "view-board", "view-reports"];
 function viewInner(id) {
   const open = source.indexOf(`id="${id}"`);
   if (open === -1) throw new Error(`view ${id} not found`);

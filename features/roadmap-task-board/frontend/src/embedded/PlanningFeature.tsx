@@ -29,19 +29,6 @@ const TaskBoardFeature = lazy(async () =>
 const ReportsFeature = lazy(async () =>
   import("@/features/reports/ReportsFeature").then((m) => ({ default: m.ReportsFeature })),
 );
-const EvidenceFeature = lazy(async () =>
-  import("@/features/evidence/EvidenceFeature").then((m) => ({ default: m.EvidenceFeature })),
-);
-const PortalMockupFeature = lazy(async () =>
-  import("@/features/portal-mockup/PortalMockupFeature").then((m) => ({
-    default: m.PortalMockupFeature,
-  })),
-);
-const InterpretationFeature = lazy(async () =>
-  import("@/features/interpretation/InterpretationFeature").then((m) => ({
-    default: m.InterpretationFeature,
-  })),
-);
 
 function FeatureLoading() {
   return (
@@ -90,25 +77,7 @@ export function PlanningFeatureBody({
     case "reports":
       return (
         <Suspense fallback={<FeatureLoading />}>
-          <ReportsFeature theme={theme} onOpenInterpretation={() => onNavigate("interpretation")} />
-        </Suspense>
-      );
-    case "interpretation":
-      return (
-        <Suspense fallback={<FeatureLoading />}>
-          <InterpretationFeature onOpenReports={() => onNavigate("reports")} />
-        </Suspense>
-      );
-    case "evidence":
-      return (
-        <Suspense fallback={<FeatureLoading />}>
-          <EvidenceFeature theme={theme} />
-        </Suspense>
-      );
-    case "portal":
-      return (
-        <Suspense fallback={<FeatureLoading />}>
-          <PortalMockupFeature theme={theme} />
+          <ReportsFeature theme={theme} />
         </Suspense>
       );
   }

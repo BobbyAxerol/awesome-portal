@@ -10,17 +10,19 @@ import type { View } from "@/lib/router";
 /** Canonical mount point inside the Portal shell. */
 export const PLANNING_ROOT = "/planning";
 
-/** Canonical path segment for each view, in navigation order. */
+/**
+ * Canonical path segment for each view, in navigation order.
+ *
+ * The `interpretation`, `evidence` and `portal-preview` segments were removed
+ * in v1.1. The registry only ever declared `/planning/roadmap` and
+ * `/planning/board` as screens, so nothing in the Portal contract depended on
+ * them; an old link now resolves to `docs` through `parsePlanningPath`.
+ */
 export const PLANNING_VIEWS: ReadonlyArray<{ view: View; segment: string; label: string }> = [
   { view: "docs", segment: "docs", label: "Documents" },
   { view: "roadmap", segment: "roadmap", label: "Roadmap" },
   { view: "board", segment: "board", label: "Task Board" },
   { view: "reports", segment: "reports", label: "Reports" },
-  { view: "interpretation", segment: "interpretation", label: "Interpretation" },
-  { view: "evidence", segment: "evidence", label: "Evidence" },
-  // `#view=portal` was the Planning-local Portal mockup. Inside the real
-  // Portal it is a preview of the product map, not a second product surface.
-  { view: "portal", segment: "portal-preview", label: "Portal Preview" },
 ];
 
 const BY_SEGMENT = new Map(PLANNING_VIEWS.map((entry) => [entry.segment, entry.view]));

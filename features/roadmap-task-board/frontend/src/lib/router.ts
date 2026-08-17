@@ -1,12 +1,11 @@
-/** Hash router — legacy-compatible: #view=<view>&page=<pageId>. */
-export type View =
-  | "docs"
-  | "roadmap"
-  | "board"
-  | "reports"
-  | "interpretation"
-  | "evidence"
-  | "portal";
+/**
+ * Hash router — legacy-compatible: #view=<view>&page=<pageId>.
+ *
+ * v1.1 removed the `interpretation`, `evidence` and `portal` (Portal Preview)
+ * views. They are gone rather than hidden, so their hashes are no longer valid
+ * and fall back to `docs` like any other unknown view.
+ */
+export type View = "docs" | "roadmap" | "board" | "reports";
 
 export interface Route {
   view: View;
@@ -17,7 +16,7 @@ export function parseHash(hash: string): Route {
   const params = new URLSearchParams(hash.replace(/^#/, ""));
   const view = (params.get("view") ?? "docs") as View;
   const page = params.get("page");
-  const valid: View[] = ["docs", "roadmap", "board", "reports", "interpretation", "evidence", "portal"];
+  const valid: View[] = ["docs", "roadmap", "board", "reports"];
   return { view: valid.includes(view) ? view : "docs", page };
 }
 

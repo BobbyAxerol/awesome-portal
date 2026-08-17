@@ -1,7 +1,7 @@
 import { VIEW_PANELS } from "@/content/views";
 import { useRawContent } from "@/lib/useRawContent";
 
-export type RawViewId = "reports" | "evidence" | "portal";
+export type RawViewId = "reports";
 
 /** A dedicated boundary around immutable Phase-2 fragments. */
 export function RawViewFeature({ view, theme }: { view: RawViewId; theme: "light" | "dark" }) {
