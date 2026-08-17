@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from portal_api.domain.enums import RunState
 from portal_api.domain.errors import PortalDomainError
 from portal_api.domain.requests import PortalRunRequest
+from portal_api.domain.responses import FoldPlanDocument, RowEnvelope
 from portal_api.repositories.artifacts import with_portal_provenance
 from portal_api.services.export_service import export_bundle
 
@@ -348,8 +349,8 @@ async def run_progress(run_id: str, request: Request, tail: int = 200_000) -> di
     }
 
 
-@router.get("/{run_id}/fold-plan")
-async def run_fold_plan(run_id: str, request: Request) -> dict:
+@router.get("/{run_id}/fold-plan", response_model=FoldPlanDocument)
+async def run_fold_plan(run_id: str, request: Request) -> FoldPlanDocument:
     """Fold timeline artifact (v0.1.1) — available while the run executes."""
     if _manager(request).status(run_id) is None:
         raise HTTPException(status_code=404, detail="run not found")
@@ -399,23 +400,24 @@ async def run_summary(run_id: str, request: Request) -> dict:
     }
 
 
-@router.get("/{run_id}/wfo/folds")
+@router.get("/{run_id}/wfo/folds", response_model=RowEnvelope)
 async def wfo_folds(
     run_id: str,
     request: Request,
     fold_id: int | None = None,
     top_n: Annotated[int | None, Query(ge=1)] = None,
-) -> list[dict]:
+) -> RowEnvelope:
     _require_completed(request, run_id)
     rows = _read_frame_records(request, run_id, "wfo/folds.parquet")
+    total_rows = len(rows)
     if fold_id is not None:
         rows = [row for row in rows if row.get("fold_id") == fold_id]
     if top_n is not None:
         rows = rows[:top_n]
-    return rows
+    return {"total_rows": total_rows, "returned_rows": len(rows), "rows": rows}
 
 
-@router.get("/{run_id}/wfo/trials")
+@router.get("/{run_id}/wfo/trials", response_model=RowEnvelope)
 async def wfo_trials(
     run_id: str,
     request: Request,
@@ -425,7 +427,7 @@ async def wfo_trials(
     top_n: Annotated[int | None, Query(ge=1)] = None,
     sort_by: str | None = None,
     sort_order: Literal["asc", "desc"] = "desc",
-) -> dict:
+) -> RowEnvelope:
     """Trial rows wrapped in an envelope that discloses the full population.
 
     ``total_rows`` is the number of unique trials stored in the artifact
@@ -456,17 +458,18 @@ async def wfo_trials(
     return {"total_rows": total_rows, "returned_rows": len(rows), "rows": rows}
 
 
-@router.get("/{run_id}/wfo/candidates")
+@router.get("/{run_id}/wfo/candidates", response_model=RowEnvelope)
 async def wfo_candidates(
     run_id: str,
     request: Request,
     top_n: Annotated[int | None, Query(ge=1)] = None,
-) -> list[dict]:
+) -> RowEnvelope:
     _require_completed(request, run_id)
     rows = _read_frame_records(request, run_id, "wfo/candidates.parquet")
+    total_rows = len(rows)
     if top_n is not None:
         rows = rows[:top_n]
-    return rows
+    return {"total_rows": total_rows, "returned_rows": len(rows), "rows": rows}
 
 
 @router.get("/{run_id}/wfo/parameters")

@@ -31,6 +31,8 @@ from portal_api.domain.responses import (
     ReadinessResponse,
     RegistryDependency,
     StrategyResponse,
+    ConfigOptionsResponse,
+    DatasetDescriptorResponse,
     WorkerDependency,
 )
 
@@ -168,8 +170,8 @@ async def strategy(strategy_id: str, request: Request) -> StrategyResponse:
     return _strategy_response(adapter)
 
 
-@router.get("/datasets")
-async def datasets(request: Request) -> list[dict[str, object]]:
+@router.get("/datasets", response_model=list[DatasetDescriptorResponse])
+async def datasets(request: Request) -> list[DatasetDescriptorResponse]:
     return [
         {
             "dataset_id": item.dataset_id,
@@ -195,8 +197,8 @@ async def walkforward_capabilities(request: Request) -> list[dict[str, object]]:
     return request.app.state.quantbt_gateway.walkforward_capabilities()
 
 
-@router.get("/config/options")
-async def config_options() -> dict[str, object]:
+@router.get("/config/options", response_model=ConfigOptionsResponse)
+async def config_options() -> ConfigOptionsResponse:
     """Curated UI contract backed by the same validated domain defaults."""
     return {
         "schema_version": "1",
