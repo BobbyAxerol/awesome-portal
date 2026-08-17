@@ -60,8 +60,13 @@
 }
 
 @layer components {
+  /* Field label: a micro-label in the prose face. It reads as an introduction to
+   * the value beside it, which is mono — two mono voices at the same size made
+   * every definition list look like a config dump. */
   .label {
-    @apply mono text-[11px] uppercase text-ink-faint;
+    @apply text-[10px] uppercase text-ink-faint;
+    letter-spacing: 0.07em;
+    font-weight: 500;
   }
   .card {
     @apply bg-raised border border-line rounded-lg shadow-e1;

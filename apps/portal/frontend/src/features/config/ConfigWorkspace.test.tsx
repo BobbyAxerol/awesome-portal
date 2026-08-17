@@ -460,3 +460,26 @@ describe("stepper honesty", () => {
     expect(stepButton("Tối ưu").dataset.state).toBe("pending");
   });
 });
+
+describe("first-screen hierarchy", () => {
+  it("shows the three facts that decide a run, and files the rest behind a disclosure", async () => {
+    mount();
+    await screen.findByText("Chọn strategy");
+
+    // Tier 1 is open: can this strategy run on my data?
+    expect(screen.getByText("Cột bắt buộc")).toBeTruthy();
+    expect(screen.getByText("Timeframe")).toBeTruthy();
+    expect(screen.getByText("Nguồn")).toBeTruthy();
+
+    // Tier 2 is present but closed — nothing is dropped, it is just not first.
+    // (`<details>` keeps its children in the DOM, so the claim is about which
+    // side of the disclosure a row sits on, not about existence.)
+    const disclosure = screen.getByText(/Contract chi tiết/);
+    const summary = disclosure.closest("details");
+    expect(summary?.hasAttribute("open")).toBe(false);
+    expect(screen.getByText("Entrypoint").closest("details")).toBe(summary);
+    expect(screen.getByText("Strategy ID").closest("details")).toBe(summary);
+    // …and the tier-1 rows are not behind it.
+    expect(screen.getByText("Cột bắt buộc").closest("details")).toBeNull();
+  });
+});

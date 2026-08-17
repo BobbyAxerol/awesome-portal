@@ -221,6 +221,10 @@ export function QuantBTModule() {
   // strategy, instrument and created-at. Repeating three of those in the module
   // header printed the same identity twice, 40px apart.
   const onRunRoute = /\/runs\/[^/]+/.test(location.pathname);
+  // New Run and the import inbox are their own tasks with their own headings; the
+  // active-run context strip above them was a fourth band of chrome before the
+  // first control, describing something the reader is not looking at.
+  const onTaskRoute = /\/(new|imports|alphas)(\/|$)/.test(location.pathname);
 
   const actions = (
     <>
@@ -276,7 +280,7 @@ export function QuantBTModule() {
         dataMode={feature?.data_mode ?? "REAL"}
         actions={actions}
       >
-        {onRunRoute ? null : (
+        {onRunRoute || onTaskRoute ? null : (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <Chip>{strategies.data?.[0]?.strategy_id ?? "—"}</Chip>
             {activeRunId ? <Chip>current {fmtShortHash(activeRunId)}</Chip> : null}

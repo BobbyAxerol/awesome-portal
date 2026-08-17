@@ -425,6 +425,20 @@ export function CommandCenter() {
 
       <RegistryCounts summary={data} />
 
+      {/* Reading order is act → measure → reference. What needs attention comes
+        * before the numbers that describe steady state, and the product-lifecycle
+        * metadata comes last: it is the least likely thing to change today. The
+        * priority list used to sit at the bottom of the scroll, under everything. */}
+      <section className="portal-block" aria-labelledby="priority-heading">
+        <h2 id="priority-heading" className="portal-block-title">
+          Mục ưu tiên
+        </h2>
+        <p className="dek">
+          Thứ tự do summary contract quyết định; chỉ ba loại hiện được uỷ quyền.
+        </p>
+        <PriorityList items={data.priority_items} />
+      </section>
+
       <div className="portal-grid-2">
         {data.sections.map((section) => (
           <SectionCard
@@ -447,15 +461,6 @@ export function CommandCenter() {
         <EvidenceDrawer section={openEvidence} onClose={() => setEvidenceFeatureId(null)} />
       ) : null}
 
-      <section className="portal-block" aria-labelledby="priority-heading">
-        <h2 id="priority-heading" className="portal-block-title">
-          Mục ưu tiên
-        </h2>
-        <p className="dek">
-          Thứ tự do summary contract quyết định; chỉ ba loại hiện được uỷ quyền.
-        </p>
-        <PriorityList items={data.priority_items} />
-      </section>
     </>
   );
 }

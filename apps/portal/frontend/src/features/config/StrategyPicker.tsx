@@ -14,7 +14,7 @@ import { Check, PackageOpen, Puzzle } from "lucide-react";
 
 import { AvailabilityBadge } from "../../components/semantic";
 import { Callout } from "../../components/surface";
-import { StateView } from "../../components/ui";
+import { Collapsible, StateView } from "../../components/ui";
 import type { CatalogEntry, StrategyOrigin } from "../../portal/strategyCatalog";
 
 function OriginBadge({ origin }: { origin: StrategyOrigin }) {
@@ -154,71 +154,70 @@ export function StrategyPicker({
 }
 
 /** Contract detail for the strategy currently selected. */
+/**
+ * The selected strategy's contract, in two tiers.
+ *
+ * All of it used to be one twelve-row list open at step 1 — entrypoint, artifact
+ * digest and lifecycle stage competing for attention with the three facts a reader
+ * actually needs before choosing a dataset. Nothing is dropped; the identity and
+ * audit rows move behind a disclosure, so the panel answers "can I run this on my
+ * data?" first and "what exactly is it?" on request.
+ */
 export function StrategyDetail({ entry }: { entry: CatalogEntry | null }) {
   if (!entry) {
     return <p className="field-hint">Chọn một strategy để xem contract của nó.</p>;
   }
   const manifest = entry.manifest;
+  const detail: [string, string][] = [
+    ["Strategy ID", entry.strategyId],
+    ["Version", entry.version],
+  ];
+  if (entry.warmupBars !== null) detail.push(["Warmup bars", String(entry.warmupBars)]);
+  if (entry.supportedEndpointIds.length)
+    detail.push(["Endpoint khai báo", entry.supportedEndpointIds.join(", ")]);
+  if (manifest?.entrypoint) detail.push(["Entrypoint", manifest.entrypoint]);
+  if (manifest?.artifactDigest)
+    detail.push(["Artifact digest", `${manifest.artifactDigest.slice(0, 23)}…`]);
+  if (entry.lifecycleStage) detail.push(["Lifecycle", entry.lifecycleStage]);
+
   return (
-    <dl className="portal-details">
-      <div className="portal-detail-row">
-        <dt className="label">Strategy ID</dt>
-        <dd className="mono">{entry.strategyId}</dd>
-      </div>
-      <div className="portal-detail-row">
-        <dt className="label">Version</dt>
-        <dd className="mono">{entry.version}</dd>
-      </div>
-      <div className="portal-detail-row">
-        <dt className="label">Nguồn</dt>
-        <dd className="mono">{entry.origin === "builtin" ? "built-in registry" : "imported alpha"}</dd>
-      </div>
-      <div className="portal-detail-row">
-        <dt className="label">Cột bắt buộc</dt>
-        <dd className="mono">{entry.requiredColumns.join(", ") || "—"}</dd>
-      </div>
-      <div className="portal-detail-row">
-        <dt className="label">Timeframe mặc định</dt>
-        <dd className="mono">{entry.defaultTimeframe ?? "—"}</dd>
-      </div>
-      {entry.timeframes.length ? (
+    <>
+      {/* Tier 1: what decides whether this strategy can run on the reader's data. */}
+      <dl className="portal-details">
         <div className="portal-detail-row">
-          <dt className="label">Timeframe hỗ trợ</dt>
-          <dd className="mono">{entry.timeframes.join(", ")}</dd>
-        </div>
-      ) : null}
-      {entry.warmupBars !== null ? (
-        <div className="portal-detail-row">
-          <dt className="label">Warmup bars</dt>
-          <dd className="mono">{entry.warmupBars}</dd>
-        </div>
-      ) : null}
-      {entry.supportedEndpointIds.length ? (
-        <div className="portal-detail-row">
-          <dt className="label">Endpoint khai báo</dt>
-          <dd className="mono">{entry.supportedEndpointIds.join(", ")}</dd>
-        </div>
-      ) : null}
-      {manifest?.entrypoint ? (
-        <div className="portal-detail-row">
-          <dt className="label">Entrypoint</dt>
-          <dd className="mono">{manifest.entrypoint}</dd>
-        </div>
-      ) : null}
-      {manifest?.artifactDigest ? (
-        <div className="portal-detail-row">
-          <dt className="label">Artifact digest</dt>
-          <dd className="mono" title={manifest.artifactDigest}>
-            {manifest.artifactDigest.slice(0, 23)}…
+          <dt className="label">Nguồn</dt>
+          <dd className="mono">
+            {entry.origin === "builtin" ? "built-in registry" : "imported alpha"} · v{entry.version}
           </dd>
         </div>
-      ) : null}
-      {entry.lifecycleStage ? (
         <div className="portal-detail-row">
-          <dt className="label">Lifecycle</dt>
-          <dd className="mono">{entry.lifecycleStage}</dd>
+          <dt className="label">Cột bắt buộc</dt>
+          <dd className="mono">{entry.requiredColumns.join(", ") || "—"}</dd>
         </div>
-      ) : null}
-    </dl>
+        <div className="portal-detail-row">
+          <dt className="label">Timeframe</dt>
+          <dd className="mono">
+            {entry.defaultTimeframe ?? "—"}
+            {entry.timeframes.length ? (
+              <span className="field-hint"> · hỗ trợ {entry.timeframes.join(", ")}</span>
+            ) : null}
+          </dd>
+        </div>
+      </dl>
+
+      {/* Tier 2: identity and audit trail, on request. */}
+      <Collapsible title={`Contract chi tiết (${detail.length})`}>
+        <dl className="portal-details">
+          {detail.map(([label, value]) => (
+            <div key={label} className="portal-detail-row">
+              <dt className="label">{label}</dt>
+              <dd className="mono" title={value}>
+                {value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </Collapsible>
+    </>
   );
 }

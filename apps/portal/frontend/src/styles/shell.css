@@ -637,8 +637,16 @@
   flex: 1;
   min-width: 0;
 }
+/* The route is orientation, not the label: it truncates with an ellipsis instead
+ * of being cut mid-path by the card edge. */
 .portal-priority-route {
-  font-size: 11px;
+  flex-shrink: 0;
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  font-size: var(--text-2xs);
   color: var(--ink-faint);
 }
 

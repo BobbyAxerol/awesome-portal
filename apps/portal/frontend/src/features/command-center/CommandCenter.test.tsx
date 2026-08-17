@@ -280,3 +280,24 @@ describe("evidence drawer", () => {
     expect(within(drawer).queryByText("0")).toBeNull();
   });
 });
+
+describe("reading order", () => {
+  it("puts what needs attention above the steady-state numbers and the reference metadata", async () => {
+    const { container } = mountWith(summaryFixture("healthy"));
+    // The module header renders in the loading state too, so waiting on the
+    // heading would sample the page before the snapshot arrives.
+    await waitFor(() => expect(container.querySelector(".portal-ledger")).toBeTruthy());
+
+    const order = Array.from(
+      container.querySelectorAll(
+        ".portal-ledger, #priority-heading, .portal-grid-2, #lifecycle-heading",
+      ),
+    ).map((node) =>
+      node.id || (node.classList.contains("portal-ledger") ? "ledger" : "sections"),
+    );
+
+    // act → measure → reference. The priority list used to be last, under
+    // everything else on the scroll.
+    expect(order).toEqual(["ledger", "priority-heading", "sections", "lifecycle-heading"]);
+  });
+});
