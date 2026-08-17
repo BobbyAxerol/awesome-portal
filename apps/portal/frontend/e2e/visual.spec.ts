@@ -272,6 +272,120 @@ for (const theme of THEMES) {
 }
 
 /**
+ * Administration and Alpha 360°.
+ *
+ * Both are screens whose whole job is to render consequence: one lists accounts
+ * with destructive controls beside them, the other says where an alpha version
+ * sits in a lifecycle it cannot move. A token or spacing regression here would
+ * show up as a danger action that no longer reads as one, which is exactly the
+ * kind of drift a unit test does not catch.
+ *
+ * The bodies below are pinned and obviously synthetic: no real principal, no real
+ * digest, no token of any kind.
+ */
+const ADMIN_USERS = {
+  users: [
+    {
+      user_id: "u-1",
+      username: "bobby",
+      display_name: "Bobby",
+      role: "ADMIN",
+      status: "ACTIVE",
+      must_change_password: false,
+      locked_until: null,
+      created_at: "2026-07-01T08:00:00+00:00",
+      disabled_at: null,
+    },
+    {
+      user_id: "u-2",
+      username: "analyst",
+      display_name: "Quant Analyst",
+      role: "USER",
+      status: "ACTIVE",
+      must_change_password: true,
+      locked_until: null,
+      created_at: "2026-08-02T08:00:00+00:00",
+      disabled_at: null,
+    },
+    {
+      user_id: "u-3",
+      username: "retired",
+      display_name: "Former Member",
+      role: "USER",
+      status: "DISABLED",
+      must_change_password: false,
+      locked_until: null,
+      created_at: "2026-05-11T08:00:00+00:00",
+      disabled_at: "2026-08-09T10:00:00+00:00",
+    },
+  ],
+};
+
+const ALPHA_VERSION = {
+  alpha_id: "vb-momentum-alpha",
+  version: "0.3.1",
+  name: "VB Momentum Alpha",
+  entrypoint: "alphas.vb_momentum:build",
+  artifact_digest: "sha256:11112222333344445555666677778888aaaabbbbccccddddeeeeffff00001111",
+  lifecycle: {
+    stage: "RESEARCH",
+    certification: null,
+    promotion_evidence: [],
+    quarantined: false,
+    quarantine_reason: null,
+  },
+};
+
+const ADMIN_SCREENS: Screen[] = [
+  {
+    name: "users-access",
+    path: "/administration/users",
+    ready: (page) => page.getByTestId("admin-users"),
+  },
+  {
+    name: "alpha-version",
+    path: "/research/quantbt/alphas/vb-momentum-alpha/0.3.1",
+    ready: (page) => page.getByTestId("alpha-lifecycle-rail"),
+  },
+];
+
+for (const theme of THEMES) {
+  test.describe(`${theme} theme · administration`, () => {
+    for (const screen of ADMIN_SCREENS) {
+      test(`${screen.name} @ laptop`, async ({ page }) => {
+        await page.setViewportSize({ width: 1280, height: 900 });
+        await freezeClock(page);
+        await usePreferences(page, theme);
+        await stubPortalApi(page, "healthy");
+        // Registered after the shared stubs so these win (reverse-order match).
+        await page.route("**/api/admin/users", (route) =>
+          route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify(ADMIN_USERS),
+          }),
+        );
+        await page.route("**/api/v1/alphas/*/versions/0.3.1", (route) =>
+          route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify(ALPHA_VERSION),
+          }),
+        );
+
+        await page.goto(screen.path);
+        await screen.ready(page).first().waitFor({ state: "visible" });
+        await settle(page);
+
+        await expect(page).toHaveScreenshot(`${screen.name}-${theme}-laptop.png`, {
+          fullPage: true,
+        });
+      });
+    }
+  });
+}
+
+/**
  * Summary states, at one breakpoint and one theme.
  *
  * The point here is not layout but that the states stay visually distinct:

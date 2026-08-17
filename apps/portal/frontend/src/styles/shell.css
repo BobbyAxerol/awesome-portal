@@ -347,13 +347,86 @@
 
 /* --- Command Center ----------------------------------------------------- */
 
+/* Registry composition: one proportion bar, then the figures it is made of. */
+.portal-ledger {
+  display: grid;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line-soft);
+  margin-bottom: var(--space-5);
+}
+.portal-ledger-bar {
+  display: flex;
+  gap: 2px; /* paper between segments, so adjacent maturities stay countable */
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--paper-sunken);
+}
+.portal-ledger-segment {
+  flex-basis: 0;
+  min-width: 4px;
+  border-radius: 2px;
+  background: var(--maturity-commissioned);
+}
+.portal-ledger-segment[data-maturity="AVAILABLE"] {
+  background: var(--maturity-available);
+}
+.portal-ledger-segment[data-maturity="PROTOTYPE"] {
+  background: var(--maturity-prototype);
+}
+.portal-ledger-segment[data-maturity="COMMISSIONED"] {
+  background: var(--maturity-commissioned);
+}
+.portal-ledger-segment[data-maturity="BLOCKED"] {
+  background: var(--maturity-blocked);
+}
+.portal-ledger-segment[data-maturity="DEPRECATED"] {
+  background: var(--maturity-deprecated);
+}
+.portal-ledger-caption {
+  font-size: var(--text-2xs);
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+/* The key repeats the bar's colour beside the word, which is what lets the bar
+ * be read at all — identity is in the label, colour only agrees with it. */
+.portal-count-key {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: var(--space-1);
+  border-radius: 2px;
+  vertical-align: baseline;
+  background: var(--maturity-commissioned);
+}
+.portal-count-key[data-maturity="AVAILABLE"] {
+  background: var(--maturity-available);
+}
+.portal-count-key[data-maturity="PROTOTYPE"] {
+  background: var(--maturity-prototype);
+}
+.portal-count-key[data-maturity="COMMISSIONED"] {
+  background: var(--maturity-commissioned);
+}
+.portal-count-key[data-maturity="BLOCKED"] {
+  background: var(--maturity-blocked);
+}
+.portal-count-key[data-maturity="DEPRECATED"] {
+  background: var(--maturity-deprecated);
+}
+/* A maturity with nothing in it stays visible but recedes: "zero PROTOTYPE" is a
+ * fact about the registry, not a gap to hide. */
+.portal-count[data-maturity] .portal-count-value {
+  font-variant-numeric: tabular-nums;
+}
+
 .portal-counts {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-4) var(--space-6);
-  padding: var(--space-3) 0 var(--space-4);
-  border-bottom: 1px solid var(--line-soft);
-  margin-bottom: var(--space-5);
+  padding: var(--space-2) 0 0;
 }
 .portal-count {
   display: flex;
@@ -1092,12 +1165,155 @@
   align-items: center;
 }
 
+/* Login is a full-height split, not a card floating in a white field: the plate
+ * column runs edge to edge and the form sits on plain paper beside it. The
+ * boundary between them is the composition, which is why it is one hairline and
+ * not a shadow.
+ *
+ * The plate is built from the paper tokens only — a shallow tint, no second
+ * palette — so it holds in Research Light and Operations Dark alike. */
+.auth-plate {
+  position: relative;
+}
+
+.auth-eyebrow {
+  letter-spacing: 0.14em;
+}
+/* A short accent rule instead of a full vertical bar: it marks where the column
+ * starts without drawing a cage around it. */
+.auth-eyebrow::before {
+  content: "";
+  display: block;
+  width: 28px;
+  height: 2px;
+  margin-bottom: var(--space-3);
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+@media (min-width: 901px) {
+  .auth-screen-plate {
+    align-items: stretch;
+    padding: 0;
+  }
+  .auth-screen-plate .auth-split {
+    width: 100%;
+    max-width: none;
+    min-height: 100vh;
+    gap: 0;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .auth-screen-plate .auth-plate {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: var(--space-7) var(--space-7) var(--space-7) 8vw;
+    border-right: 1px solid var(--line);
+    background:
+      radial-gradient(140% 100% at 0% 0%, var(--paper-raised) 0%, transparent 58%),
+      linear-gradient(180deg, var(--paper-sunken) 0%, var(--paper) 72%);
+  }
+  /* The narrative keeps a reading measure even when the column is wide. */
+  .auth-screen-plate .auth-plate > * {
+    max-width: 46ch;
+  }
+  .auth-screen-plate .auth-panel-lift {
+    align-self: center;
+    justify-self: start;
+    width: min(460px, 100%);
+    margin: var(--space-6) 8vw var(--space-6) var(--space-7);
+  }
+}
+
 .auth-narrative-title {
-  margin: var(--space-2) 0 var(--space-4);
+  margin: var(--space-2) 0 var(--space-3);
   font-family: var(--font-display);
   font-size: var(--text-2xl);
   line-height: var(--leading-tight);
+  text-wrap: balance;
   color: var(--ink);
+}
+/* The second line carries the claim, so it gets the emphasis the first does not. */
+.auth-narrative-title em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.auth-plate-lede {
+  max-width: 42ch;
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--ink-soft);
+}
+
+/* --- Walk-forward ribbon -------------------------------------------------
+ * The product's own instrument, drawn from tokens. Segments carry a 2px paper
+ * gap so adjacent windows stay countable, and each kind is in the legend as
+ * text — the colour is a second encoding, never the only one. */
+.auth-ribbon {
+  margin: var(--space-5) 0 0;
+  display: grid;
+  gap: var(--space-2);
+}
+.auth-ribbon-track {
+  display: flex;
+  gap: 2px;
+  height: 34px;
+  padding: 3px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--paper-raised);
+}
+.auth-ribbon-block {
+  flex-basis: 0;
+  min-width: 6px;
+  border-radius: 3px;
+}
+.auth-ribbon-block[data-kind="is"] {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.auth-ribbon-block[data-kind="oos"] {
+  background: var(--accent);
+}
+.auth-ribbon-block[data-kind="holdout"] {
+  background: var(--accent-2-soft);
+  box-shadow: inset 0 0 0 1px var(--accent-2);
+}
+.auth-ribbon-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  list-style: none;
+  font-size: var(--text-2xs);
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+.auth-ribbon-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.auth-ribbon-swatch {
+  width: 12px;
+  height: 8px;
+  border-radius: 2px;
+}
+.auth-ribbon-swatch[data-kind="is"] {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.auth-ribbon-swatch[data-kind="oos"] {
+  background: var(--accent);
+}
+.auth-ribbon-swatch[data-kind="holdout"] {
+  background: var(--accent-2-soft);
+  box-shadow: inset 0 0 0 1px var(--accent-2);
+}
+.auth-ribbon-caption {
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
 }
 .auth-narrative-list,
 .auth-capabilities {
@@ -1137,9 +1353,56 @@
   color: var(--ink);
 }
 .auth-panel-sub {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin-top: var(--space-1);
   font-size: var(--text-sm);
   color: var(--ink-soft);
+}
+
+/* The login card is the one thing on the page that should feel picked up off
+ * the plate: a slightly deeper shadow and a hairline accent rule at the top. */
+.auth-panel-lift {
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-raised);
+}
+.auth-panel-lift::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%);
+}
+
+.auth-identity .mono-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* One load sequence, and only on the frames rendered before the shell: the
+ * plate settles, then the card. Anything more would be an animation for its own
+ * sake on a screen people cross in four seconds. */
+@media (prefers-reduced-motion: no-preference) {
+  .auth-plate,
+  .auth-panel-lift {
+    animation: auth-rise 420ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+  .auth-panel-lift {
+    animation-delay: 90ms;
+  }
+}
+@keyframes auth-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 .auth-body {
   margin: var(--space-4) 0;
@@ -1595,23 +1858,51 @@
 }
 
 /* --- Alpha 360° ---------------------------------------------------------- */
+/* The lifecycle as a path, not a list of words.
+ *
+ * The distance still to travel is the information here — RESEARCH four stops from
+ * LIVE is the fact a reader needs — so the stages share one track, sit at equal
+ * intervals, and the segments already covered are drawn solid while the rest stay
+ * hairline. Position is carried by weight, fill and a ring, never by colour alone. */
 .alpha-rail {
   list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-4);
-  margin-bottom: var(--space-3);
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  margin-bottom: var(--space-4);
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--line-soft);
-  font-size: var(--text-xs);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.04em;
 }
 .alpha-rail-step {
-  display: inline-flex;
+  position: relative;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
+  padding-top: var(--space-1);
+  text-align: center;
   color: var(--ink-faint);
 }
-/* Position is carried by weight and a filled dot, not by colour alone. */
+/* The track: drawn per step so the covered part can differ from the rest. */
+.alpha-rail-step::before {
+  content: "";
+  position: absolute;
+  top: 9px;
+  right: 50%;
+  left: -50%;
+  height: 1px;
+  background: var(--line);
+}
+.alpha-rail-step:first-child::before {
+  display: none;
+}
+.alpha-rail-step[data-state="past"]::before,
+.alpha-rail-step[data-state="current"]::before {
+  height: 2px;
+  background: var(--accent);
+}
 .alpha-rail-step[data-state="past"] {
   color: var(--ink-soft);
 }
@@ -1620,14 +1911,28 @@
   font-weight: 600;
 }
 .alpha-rail-dot {
-  width: 7px;
-  height: 7px;
+  position: relative;
+  z-index: 1;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  border: 1px solid currentColor;
+  border: 1px solid var(--line);
+  background: var(--paper-raised);
 }
-.alpha-rail-step[data-state="past"] .alpha-rail-dot,
+.alpha-rail-step[data-state="past"] .alpha-rail-dot {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+/* Where the version actually is: filled, ringed, and the only label in full ink. */
 .alpha-rail-step[data-state="current"] .alpha-rail-dot {
-  background: currentColor;
+  width: 11px;
+  height: 11px;
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.alpha-rail-step > .mono {
+  overflow-wrap: anywhere;
 }
 .alpha-evidence {
   list-style: none;
@@ -1647,7 +1952,7 @@
 /* --- Users & Access (ADMIN) ---------------------------------------------- */
 .admin-table {
   width: 100%;
-  min-width: 900px;
+  min-width: 880px;
   border-collapse: collapse;
   font-size: var(--text-sm);
 }
@@ -1677,18 +1982,11 @@
   text-transform: uppercase;
   color: var(--accent);
 }
+/* The select is the only place the role appears: a badge beside it would be a
+ * second copy of the same fact, and the two could disagree mid-mutation. */
 .admin-role {
-  margin-right: var(--space-2);
-  min-height: 26px;
+  min-height: 28px;
   font-size: var(--text-xs);
-}
-.badge-state[data-role="ADMIN"] {
-  color: var(--state-degraded);
-  background: var(--state-degraded-bg);
-}
-.badge-state[data-role="USER"] {
-  color: var(--ink-soft);
-  background: var(--paper-sunken);
 }
 .admin-status[data-disabled="true"] {
   color: var(--state-denied);
@@ -1700,12 +1998,23 @@
 }
 .admin-created {
   font-size: var(--text-xs);
+  white-space: nowrap;
   color: var(--ink-faint);
 }
 .admin-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
   gap: var(--space-2);
+  white-space: nowrap;
+}
+/* The destructive action sits below a rule rather than beside the ordinary ones
+ * (v0.5 §13) — and stays inside the row, because a Disable button that has
+ * scrolled out of view is worse than one that is merely adjacent. */
+.admin-actions-danger {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line-soft);
 }
 .admin-danger:hover:not(:disabled) {
   border-color: var(--bad);

@@ -34,14 +34,6 @@ import {
   type UserRole,
 } from "./adminApi";
 
-function RoleBadge({ role }: { role: UserRole }) {
-  return (
-    <span className="badge-state" data-role={role}>
-      {role}
-    </span>
-  );
-}
-
 /** Status as a word plus a tone; never colour alone. */
 function StatusCell({ user }: { user: AdminUser }) {
   const disabled = user.status === "DISABLED" || Boolean(user.disabledAt);
@@ -215,13 +207,13 @@ export function UsersAccess() {
                           <option value="USER">USER</option>
                           <option value="ADMIN">ADMIN</option>
                         </select>
-                        <RoleBadge role={user.role} />
                       </td>
                       <td>
                         <StatusCell user={user} />
                       </td>
                       <td className="mono admin-created">{user.createdAt.slice(0, 10)}</td>
-                      <td className="admin-actions">
+                      <td>
+                        <div className="admin-actions">
                         <button
                           type="button"
                           className="btn-ghost"
@@ -260,8 +252,12 @@ export function UsersAccess() {
                           <LogOut size={12} />
                           Revoke sessions
                         </button>
-                        {/* Destructive, and last, so it is not adjacent to the
-                          * ordinary actions above it (v0.5 §13). */}
+                        </div>
+                        {/* Destructive, and on its own rule below the ordinary
+                          * actions: §13 asks that it not sit adjacent to them,
+                          * and a row that scrolls the danger button off-screen
+                          * would be worse than either. */}
+                        <div className="admin-actions admin-actions-danger">
                         <button
                           type="button"
                           className="btn-ghost admin-danger"
@@ -282,6 +278,7 @@ export function UsersAccess() {
                           <ShieldOff size={12} />
                           Disable
                         </button>
+                        </div>
                       </td>
                     </tr>
                   );

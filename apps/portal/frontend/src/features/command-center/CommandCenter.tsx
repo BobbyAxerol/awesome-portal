@@ -44,22 +44,80 @@ import {
  * Registry counts
  * ---------------------------------------------------------------------- */
 
+/**
+ * The registry, as one line of proportion.
+ *
+ * Six numbers side by side tell you the counts but not the shape: whether this
+ * Portal is mostly built or mostly planned is the first thing a reader wants, and
+ * it lives in the ratio. So the counts get a stacked bar above them, in a fixed
+ * maturity order (never re-ordered by size, or the same feature would move as the
+ * snapshot changes). Every segment is also a labelled figure below, so identity
+ * never rests on colour, and a segment with count 0 simply has no width instead of
+ * being drawn as a sliver that implies something is there.
+ *
+ * These are registry counts, not runtime health — the caption says so, because
+ * "AVAILABLE" as static metadata and "available" as a live state are different
+ * claims (§P0.14).
+ */
+const MATURITY_ORDER = ["AVAILABLE", "PROTOTYPE", "COMMISSIONED", "BLOCKED", "DEPRECATED"] as const;
+
 function RegistryCounts({ summary }: { summary: PortalSummaryV1 }) {
   const { by_maturity: byMaturity, blocking_concerns: blocking } = summary.registry_counts;
-  const order = ["AVAILABLE", "PROTOTYPE", "COMMISSIONED", "BLOCKED", "DEPRECATED"] as const;
+  const counts = MATURITY_ORDER.map((maturity) => ({
+    maturity,
+    count: byMaturity[maturity] ?? 0,
+  }));
+  const total = counts.reduce((sum, entry) => sum + entry.count, 0);
+
   return (
-    <div className="portal-counts">
-      {order.map((maturity) => (
-        <div key={maturity} className="portal-count">
-          <span className="portal-count-value mono">{byMaturity[maturity] ?? 0}</span>
-          <span className="portal-count-label mono">{maturity}</span>
+    <section className="portal-ledger" aria-labelledby="registry-ledger-heading">
+      <h2 id="registry-ledger-heading" className="sr-only">
+        Thành phần registry theo maturity
+      </h2>
+
+      {total > 0 ? (
+        <div className="portal-ledger-bar" role="img" aria-label={
+          counts
+            .filter((entry) => entry.count > 0)
+            .map((entry) => `${entry.count} ${entry.maturity}`)
+            .join(", ")
+        }>
+          {counts
+            // A zero has no segment: a minimum-width sliver would claim a feature
+            // that does not exist.
+            .filter((entry) => entry.count > 0)
+            .map((entry) => (
+              <span
+                key={entry.maturity}
+                className="portal-ledger-segment"
+                data-maturity={entry.maturity}
+                style={{ flexGrow: entry.count }}
+                title={`${entry.count} × ${entry.maturity}`}
+              />
+            ))}
         </div>
-      ))}
-      <div className="portal-count portal-count-emph">
-        <span className="portal-count-value mono">{blocking}</span>
-        <span className="portal-count-label mono">BLOCKING CONCERNS</span>
+      ) : null}
+
+      <div className="portal-counts">
+        {counts.map((entry) => (
+          <div key={entry.maturity} className="portal-count" data-maturity={entry.maturity}>
+            <span className="portal-count-value mono">{entry.count}</span>
+            <span className="portal-count-label mono">
+              <span className="portal-count-key" data-maturity={entry.maturity} aria-hidden="true" />
+              {entry.maturity}
+            </span>
+          </div>
+        ))}
+        <div className="portal-count portal-count-emph">
+          <span className="portal-count-value mono">{blocking}</span>
+          <span className="portal-count-label mono">BLOCKING CONCERNS</span>
+        </div>
       </div>
-    </div>
+
+      <p className="portal-ledger-caption mono">
+        {total} feature trong registry · metadata sản phẩm, không phải trạng thái runtime
+      </p>
+    </section>
   );
 }
 

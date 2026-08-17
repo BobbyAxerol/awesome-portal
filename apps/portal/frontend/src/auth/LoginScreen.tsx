@@ -14,6 +14,7 @@
  *  - submit is a real form submit so Enter works, and it cannot double-submit;
  *  - password managers and paste are allowed (no `onPaste` blocking).
  */
+import { Lock, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 
 import { ACCESS_LOGOUT_PATH, AuthRequestError, login, type AccessIdentity } from "./authApi";
@@ -24,6 +25,62 @@ const CAPABILITIES: { label: string; available: boolean }[] = [
   { label: "Roadmap / Task Board", available: true },
   { label: "Các module khác đang commissioned", available: false },
 ];
+
+/**
+ * The walk-forward split, as the plate motif.
+ *
+ * The panel next to a login form is usually filled with decoration. This draws
+ * the one diagram this product is actually about — train on in-sample windows,
+ * measure on the out-of-sample window that follows, keep a holdout nobody tunes
+ * against — so the plate says what the Portal is for instead of merely occupying
+ * space.
+ *
+ * It is a diagram of the method, labelled as such. It is not a run, and the
+ * caption says so: no visitor should read a number into it.
+ */
+const FOLD_RIBBON: { span: number; kind: "is" | "oos" | "holdout" }[] = [
+  { span: 3, kind: "is" },
+  { span: 1, kind: "oos" },
+  { span: 3, kind: "is" },
+  { span: 1, kind: "oos" },
+  { span: 2, kind: "is" },
+  { span: 1, kind: "oos" },
+  { span: 2, kind: "holdout" },
+];
+
+const FOLD_LEGEND: { kind: "is" | "oos" | "holdout"; label: string }[] = [
+  { kind: "is", label: "in-sample" },
+  { kind: "oos", label: "out-of-sample" },
+  { kind: "holdout", label: "holdout" },
+];
+
+function FoldRibbon() {
+  return (
+    <figure className="auth-ribbon" aria-labelledby="auth-ribbon-caption">
+      <div className="auth-ribbon-track" role="img" aria-label="Sơ đồ chia walk-forward: các cửa sổ in-sample, out-of-sample xen kẽ, kết thúc bằng holdout">
+        {FOLD_RIBBON.map((block, index) => (
+          <span
+            key={`${block.kind}-${index}`}
+            className="auth-ribbon-block"
+            data-kind={block.kind}
+            style={{ flexGrow: block.span }}
+          />
+        ))}
+      </div>
+      <ul className="auth-ribbon-legend mono">
+        {FOLD_LEGEND.map((item) => (
+          <li key={item.kind}>
+            <span className="auth-ribbon-swatch" data-kind={item.kind} aria-hidden="true" />
+            {item.label}
+          </li>
+        ))}
+      </ul>
+      <figcaption id="auth-ribbon-caption" className="auth-ribbon-caption">
+        Sơ đồ phương pháp walk-forward — không phải dữ liệu của một run nào.
+      </figcaption>
+    </figure>
+  );
+}
 
 export function LoginScreen({
   accessIdentity,
@@ -59,17 +116,21 @@ export function LoginScreen({
   };
 
   return (
-    <div className="auth-screen" data-testid="login-screen">
+    <div className="auth-screen auth-screen-plate" data-testid="login-screen">
       <div className="auth-split">
-        <aside className="auth-narrative">
-          <p className="mono-label">PrimusSpark / Quant Portal</p>
-          <h1 className="auth-narrative-title">Nền tảng nghiên cứu và vận hành alpha</h1>
-          <ul className="auth-narrative-list">
-            <li>Alpha research</li>
-            <li>QuantBT &amp; walk-forward</li>
-            <li>Migration planning</li>
-            <li>Paper → Sandbox → Live</li>
-          </ul>
+        <aside className="auth-narrative auth-plate">
+          <p className="mono-label auth-eyebrow">PrimusSpark · Quant Ecosystem</p>
+          <h1 className="auth-narrative-title">
+            Nghiên cứu alpha,
+            <br />
+            <em>bằng chứng đi kèm từng số.</em>
+          </h1>
+          <p className="auth-plate-lede">
+            Một Portal cho toàn bộ đường đi của một alpha: research, walk-forward, planning,
+            rồi paper → sandbox → live. Mỗi con số trên màn hình đều truy được về nguồn.
+          </p>
+
+          <FoldRibbon />
 
           <p className="mono-label auth-capability-label">Capability hiện có</p>
           <ul className="auth-capabilities">
@@ -83,12 +144,18 @@ export function LoginScreen({
           </ul>
         </aside>
 
-        <section className="auth-panel">
+        <section className="auth-panel auth-panel-lift">
           <h2 className="auth-panel-title">Đăng nhập Portal</h2>
-          <p className="auth-panel-sub">Được bảo vệ bởi Cloudflare Zero Trust.</p>
+          <p className="auth-panel-sub">
+            <ShieldCheck size={13} aria-hidden="true" />
+            Được bảo vệ bởi Cloudflare Zero Trust.
+          </p>
 
           <div className="auth-identity">
-            <span className="mono-label">Identity đã xác thực</span>
+            <span className="mono-label">
+              <Lock size={10} aria-hidden="true" />
+              Identity đã xác thực
+            </span>
             {/* Read-only: this comes from the verified Access assertion. */}
             <output className="mono auth-identity-email">
               {accessIdentity?.email ?? "chưa đọc được email từ Access"}
