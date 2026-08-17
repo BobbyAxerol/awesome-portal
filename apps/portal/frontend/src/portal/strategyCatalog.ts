@@ -13,20 +13,42 @@
  * endpoint id: a strategy is runnable only when the capability manifest of the
  * installed release says so (§4 — "khai báo, không suy đoán").
  *
- * DISCREPANCY (evidence: `apps/portal/registry/openapi/portal-api.openapi.json`
- * — `/api/v1/alphas` responds `{additionalProperties: true}` and
- * `/api/v1/portal/capabilities` responds `{}`): neither projection is named in
- * `components/schemas`, so codegen produces no type. Both are narrowed at the
- * boundary below and a Backend request is open with codex.
+ * Both projections were untyped in v1 and narrowed by guesswork. The backend
+ * published `AlphaRegistryDocument` and `EngineCapabilitiesDocument` on
+ * 2026-08-17, so the parsers below narrow *to the generated types*: a field
+ * renamed upstream is now a build error rather than a silent `undefined`.
+ * The guards themselves stay — a response is still network input, and the
+ * "manifest unreadable" path is a state the picker must be able to show.
  */
-import type { StrategyResponse } from "./contracts";
+import type {
+  AlphaSummary,
+  CapabilityPublic,
+  CapabilityRequirements,
+  EngineCapabilitiesDocument,
+  EngineReleasePublic,
+  StrategyResponse,
+} from "./contracts";
 
 /* -------------------------------------------------------------------------
- * Boundary narrowing for the untyped projections
+ * Boundary guards
+ *
+ * Typed shape, still validated: `parseX(raw: unknown)` is what lets a
+ * malformed or empty payload become an explicit UI state instead of a crash.
  * ---------------------------------------------------------------------- */
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Narrows a nested object to its declared shape, or to an empty one.
+ *
+ * `isRecord(x) ? x : {}` would collapse the type to `{}` and lose every field
+ * name; this keeps the schema type so a rename upstream still fails the build,
+ * while a missing sub-object still reads as "no fields" rather than throwing.
+ */
+function sub<T>(value: unknown): Partial<T> {
+  return isRecord(value) ? (value as Partial<T>) : {};
 }
 
 function stringOr(value: unknown, fallback: string): string {
@@ -67,9 +89,16 @@ export function parseCapabilities(raw: unknown): CapabilityDocument {
   if (!isRecord(raw)) {
     return { releases: [], capabilities: [], installedMatches: null, installedDetail: null };
   }
-  const releases = Array.isArray(raw.engine_releases) ? raw.engine_releases : [];
-  const capabilities = Array.isArray(raw.capabilities) ? raw.capabilities : [];
-  const installed = isRecord(raw.installed) ? raw.installed : null;
+  // Field names come from the generated types, so a rename upstream fails the
+  // build here rather than quietly yielding an empty capability list.
+  const document = raw as Partial<EngineCapabilitiesDocument>;
+  const releases: EngineReleasePublic[] = Array.isArray(document.engine_releases)
+    ? document.engine_releases
+    : [];
+  const capabilities: CapabilityPublic[] = Array.isArray(document.capabilities)
+    ? document.capabilities
+    : [];
+  const installed = isRecord(document.installed) ? document.installed : null;
 
   return {
     releases: releases.filter(isRecord).map((release) => ({
@@ -78,8 +107,12 @@ export function parseCapabilities(raw: unknown): CapabilityDocument {
       version: stringOr(release.version, ""),
     })),
     capabilities: capabilities.filter(isRecord).map((capability) => {
-      const requirements = isRecord(capability.requirements) ? capability.requirements : {};
-      const profile = isRecord(requirements.resource_profile) ? requirements.resource_profile : {};
+      const requirements = sub<CapabilityPublic["requirements"]>(capability.requirements);
+      // `resource_profile` is nullable in the schema, so unwrap it before
+      // narrowing — a capability with no declared ceiling is a real case.
+      const profile = sub<NonNullable<CapabilityRequirements["resource_profile"]>>(
+        requirements.resource_profile,
+      );
       return {
         capabilityId: stringOr(capability.capability_id, ""),
         protocol: stringOr(capability.protocol, ""),
@@ -123,12 +156,13 @@ export interface ImportedAlpha {
 
 export function parseAlphas(raw: unknown): ImportedAlpha[] {
   if (!isRecord(raw) || !Array.isArray(raw.alphas)) return [];
-  return raw.alphas.filter(isRecord).map((alpha) => {
-    const strategy = isRecord(alpha.strategy) ? alpha.strategy : {};
-    const data = isRecord(alpha.data_requirements) ? alpha.data_requirements : {};
-    const parameters = isRecord(alpha.parameters) ? alpha.parameters : {};
-    const lifecycle = isRecord(alpha.lifecycle) ? alpha.lifecycle : {};
-    const owner = isRecord(alpha.owner) ? alpha.owner : {};
+  const alphas = raw.alphas as AlphaSummary[];
+  return alphas.filter(isRecord).map((alpha) => {
+    const strategy = sub<AlphaSummary["strategy"]>(alpha.strategy);
+    const data = sub<AlphaSummary["data_requirements"]>(alpha.data_requirements);
+    const parameters = sub<AlphaSummary["parameters"]>(alpha.parameters);
+    const lifecycle = sub<AlphaSummary["lifecycle"]>(alpha.lifecycle);
+    const owner = sub<AlphaSummary["owner"]>(alpha.owner);
     return {
       alphaId: stringOr(alpha.alpha_id, ""),
       version: stringOr(alpha.version, ""),

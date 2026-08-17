@@ -78,7 +78,7 @@ export function PortalMap() {
       <ol className="portal-map">
         {stages.map((stage, index) => {
           const presentation = maturityPresentation(stage.maturity);
-          const stagePersonas = personasForStage(registry, stage);
+          const stagePersonas = personasForStage(stage);
           const declaresPersona = stagePersonas.length > 0;
           // A stage whose screens declare no persona is NOT filtered away: the
           // registry has not said it is irrelevant to this reader, and hiding
@@ -100,8 +100,8 @@ export function PortalMap() {
               <p className="portal-map-stage-desc">{stage.description}</p>
               <p className="portal-map-stage-personas mono">
                 {declaresPersona
-                  ? `persona (từ screen): ${stagePersonas.map(personaLabel).join(", ")}`
-                  : "chưa có screen nào khai báo persona cho stage này"}
+                  ? `persona: ${stagePersonas.map(personaLabel).join(", ")}`
+                  : "registry chưa khai báo persona cho stage này"}
               </p>
               <ul className="portal-map-features">
                 {stage.feature_ids.map((id) => {

@@ -226,34 +226,29 @@ export function lifecycleStages(registry: PortalRegistryDocument): LifecycleStag
 /* -------------------------------------------------------------------------
  * Persona
  *
- * A lifecycle stage carries no persona of its own, so the map reads the
- * `primary_persona` the registry already declares on each SCREEN and rolls it
- * up through the stage's features. This is a join over registry data, not an
- * inference: the map says the personas come from the stage's screens, and a
- * stage whose screens declare none reports exactly that instead of being
- * silently filtered away. A stage-level `persona` from the backend would still
- * be better — see the open request in FRONTEND_HANDOFF §8.
+ * `lifecycle_stages[].personas` is now a declared field: the backend rolls
+ * `primary_persona` up across each stage's feature screens at projection time
+ * (contract note on `LifecycleStageDefinition`, delivered 2026-08-17). v1.1
+ * computed the same roll-up in the frontend as a stopgap; that second model is
+ * gone — the registry is the authority, and the UI only reads it.
+ *
+ * The field is schema-optional and defaults to `[]`, which stays meaningful: a
+ * stage whose features have no screens yet declares no persona, and the map
+ * must not pretend otherwise.
  * ---------------------------------------------------------------------- */
 
-/** Personas declared by the screens of a stage's features, sorted and unique. */
-export function personasForStage(
-  registry: PortalRegistryDocument,
-  stage: LifecycleStageDefinition,
-): string[] {
-  const features = new Set(stage.feature_ids);
-  const personas = new Set<string>();
-  for (const screen of registry.screens) {
-    if (features.has(screen.feature_id) && screen.primary_persona) {
-      personas.add(screen.primary_persona);
-    }
-  }
-  return [...personas].sort();
+/** Personas the registry declares for a stage. Empty means "none declared". */
+export function personasForStage(stage: LifecycleStageDefinition): string[] {
+  return [...(stage.personas ?? [])].sort();
 }
 
-/** Every persona the registry declares, in a stable order. */
+/** Every persona any stage declares, in a stable order. */
 export function personaOptions(registry: PortalRegistryDocument): string[] {
-  return [...new Set(registry.screens.map((screen) => screen.primary_persona).filter(Boolean))]
-    .sort() as string[];
+  const seen = new Set<string>();
+  for (const stage of registry.lifecycle_stages) {
+    for (const persona of stage.personas ?? []) seen.add(persona);
+  }
+  return [...seen].sort();
 }
 
 /** Blocking, still-open concerns attached to a feature. */

@@ -864,6 +864,124 @@ export interface components {
              */
             window_mode: "expanding" | "rolling";
         };
+        /** AlphaDataRequirementsPublic */
+        AlphaDataRequirementsPublic: {
+            /** Asset Classes */
+            asset_classes: string[];
+            /** Columns */
+            columns: string[];
+            /** Timeframes */
+            timeframes: string[];
+            /** Warmup Bars */
+            warmup_bars: number;
+        };
+        /** AlphaLifecycleDetail */
+        AlphaLifecycleDetail: {
+            /** Certification */
+            certification?: string | null;
+            /**
+             * Promotion Evidence
+             * @default []
+             */
+            promotion_evidence: string[];
+            /** Quarantine Reason */
+            quarantine_reason?: string | null;
+            /** Quarantined */
+            quarantined: boolean;
+            /**
+             * Stage
+             * @enum {string}
+             */
+            stage: "DRAFT" | "REGISTERED" | "CANDIDATE" | "RESEARCH" | "PAPER" | "SANDBOX" | "LIVE";
+        };
+        /** AlphaLifecyclePublic */
+        AlphaLifecyclePublic: {
+            /** Certification */
+            certification?: string | null;
+            /** Quarantined */
+            quarantined: boolean;
+            /**
+             * Stage
+             * @enum {string}
+             */
+            stage: "DRAFT" | "REGISTERED" | "CANDIDATE" | "RESEARCH" | "PAPER" | "SANDBOX" | "LIVE";
+        };
+        /** AlphaOwnerPublic */
+        AlphaOwnerPublic: {
+            /** Team */
+            team: string;
+        };
+        /** AlphaParametersPublic */
+        AlphaParametersPublic: {
+            /** Manager Exposed */
+            manager_exposed: string[];
+        };
+        /** AlphaRegistryDocument */
+        AlphaRegistryDocument: {
+            /** Alphas */
+            alphas: components["schemas"]["AlphaSummary"][];
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: "alpha-manifest/v1";
+        };
+        /** AlphaStrategyPublic */
+        AlphaStrategyPublic: {
+            /** Execution Contracts */
+            execution_contracts: string[];
+            /** Family */
+            family: string;
+            /** Input Kind */
+            input_kind: string;
+            /** Supported Endpoint Ids */
+            supported_endpoint_ids: string[];
+        };
+        /** AlphaSummary */
+        AlphaSummary: {
+            /** Alpha Id */
+            alpha_id: string;
+            /** Artifact Digest */
+            artifact_digest: string;
+            data_requirements: components["schemas"]["AlphaDataRequirementsPublic"];
+            /** Entrypoint */
+            entrypoint: string;
+            lifecycle: components["schemas"]["AlphaLifecyclePublic"];
+            /** Name */
+            name: string;
+            owner: components["schemas"]["AlphaOwnerPublic"];
+            parameters: components["schemas"]["AlphaParametersPublic"];
+            strategy: components["schemas"]["AlphaStrategyPublic"];
+            /** Version */
+            version: string;
+        };
+        /** AlphaVerifyResult */
+        AlphaVerifyResult: {
+            /** Alpha Id */
+            alpha_id: string;
+            /** Computed Digest */
+            computed_digest: string;
+            /** Matches */
+            matches: boolean;
+            /** Registered Digest */
+            registered_digest: string;
+            /** Version */
+            version: string;
+        };
+        /** AlphaVersionDetail */
+        AlphaVersionDetail: {
+            /** Alpha Id */
+            alpha_id: string;
+            /** Artifact Digest */
+            artifact_digest: string;
+            /** Entrypoint */
+            entrypoint: string;
+            lifecycle: components["schemas"]["AlphaLifecycleDetail"];
+            /** Name */
+            name: string;
+            /** Version */
+            version: string;
+        };
         /** AvailabilityAuthority */
         AvailabilityAuthority: {
             /** Contract */
@@ -904,6 +1022,30 @@ export interface components {
              * @enum {string}
              */
             state: "available" | "unavailable" | "degraded" | "stale" | "denied" | "commissioned";
+        };
+        /** CapabilityPublic */
+        CapabilityPublic: {
+            /** Capability Id */
+            capability_id: string;
+            /** Certified */
+            certified: boolean;
+            /** Endpoint Id */
+            endpoint_id: string;
+            /** Engine Release Id */
+            engine_release_id: string;
+            /** Protocol */
+            protocol: string;
+            requirements: components["schemas"]["CapabilityRequirements"];
+        };
+        /** CapabilityRequirements */
+        CapabilityRequirements: {
+            /** Backend */
+            backend: string;
+            /** Data Class */
+            data_class: string[];
+            /** Methodology */
+            methodology: string;
+            resource_profile?: components["schemas"]["ResourceProfile"] | null;
         };
         /** ConcernDefinition */
         ConcernDefinition: {
@@ -978,6 +1120,30 @@ export interface components {
             status: "ok";
             /** Traceparent */
             traceparent: string;
+            /** Version */
+            version: string;
+        };
+        /** EngineCapabilitiesDocument */
+        EngineCapabilitiesDocument: {
+            /** Capabilities */
+            capabilities: components["schemas"]["CapabilityPublic"][];
+            /** Engine Releases */
+            engine_releases: components["schemas"]["EngineReleasePublic"][];
+            /** Installed */
+            installed: {
+                [key: string]: components["schemas"]["InstalledProbe"];
+            };
+            /** Manifest Revision */
+            manifest_revision: number;
+            /** Schema Version */
+            schema_version: string;
+        };
+        /** EngineReleasePublic */
+        EngineReleasePublic: {
+            /** Package */
+            package: string;
+            /** Release Id */
+            release_id: string;
             /** Version */
             version: string;
         };
@@ -1062,7 +1228,25 @@ export interface components {
             /** Forwarded Proto */
             forwarded_proto: string | null;
         };
-        /** LifecycleStageDefinition */
+        /** InstalledProbe */
+        InstalledProbe: {
+            /** Detail */
+            detail?: string | null;
+            /** Installed Record Sha256 */
+            installed_record_sha256?: string | null;
+            /** Installed Version */
+            installed_version?: string | null;
+            /** Ok */
+            ok: boolean;
+        };
+        /**
+         * LifecycleStageDefinition
+         * @description Roll-up of ``primary_persona`` across the stage's feature screens.
+         *
+         *     ``personas`` is derived at projection time (never stored in the source
+         *     registry document); stages whose features have no screens yet carry an
+         *     empty tuple so the UI can filter/hide them on persona mismatch.
+         */
         LifecycleStageDefinition: {
             /** Description */
             description: string;
@@ -1079,6 +1263,11 @@ export interface components {
             maturity: "AVAILABLE" | "PROTOTYPE" | "COMMISSIONED" | "BLOCKED" | "HIDDEN" | "DEPRECATED";
             /** Order */
             order: number;
+            /**
+             * Personas
+             * @default []
+             */
+            personas: string[];
         };
         /** NavigationDefinition */
         NavigationDefinition: {
@@ -1669,6 +1858,13 @@ export interface components {
              * @enum {string}
              */
             state: "ready" | "available" | "unavailable" | "disabled";
+        };
+        /** ResourceProfile */
+        ResourceProfile: {
+            /** Max Optuna Trials */
+            max_optuna_trials?: number | null;
+            /** Max Parameter Space Entries */
+            max_parameter_space_entries?: number | null;
         };
         /**
          * RunProtocol
@@ -2835,9 +3031,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AlphaRegistryDocument"];
                 };
             };
         };
@@ -2859,9 +3053,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AlphaRegistryDocument"];
                 };
             };
             /** @description Validation Error */
@@ -2893,9 +3085,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AlphaVersionDetail"];
                 };
             };
             /** @description Validation Error */
@@ -2927,9 +3117,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AlphaVerifyResult"];
                 };
             };
             /** @description Validation Error */
@@ -3072,7 +3260,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["EngineCapabilitiesDocument"];
                 };
             };
         };

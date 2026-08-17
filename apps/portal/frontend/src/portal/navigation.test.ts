@@ -230,31 +230,40 @@ describe("icons", () => {
  * ---------------------------------------------------------------------- */
 
 describe("personas", () => {
-  it("offers exactly the personas the registry declares", () => {
+  it("offers exactly the personas the registry declares on its stages", () => {
     const options = personaOptions(registry);
     expect(options.length).toBeGreaterThan(0);
-    // Derived, never invented: every option must appear on a real screen.
-    const declared = new Set(registry.screens.map((screen) => screen.primary_persona));
+    // Read, never derived: every option must appear on a real stage.
+    const declared = new Set(registry.lifecycle_stages.flatMap((stage) => stage.personas ?? []));
     for (const option of options) expect(declared.has(option)).toBe(true);
     expect([...options].sort()).toEqual(options);
   });
 
-  it("rolls a stage's personas up from the screens of its features", () => {
+  it("reads a stage's personas from the registry rather than recomputing them", () => {
+    for (const stage of lifecycleStages(registry)) {
+      expect(personasForStage(stage), stage.id).toEqual([...(stage.personas ?? [])].sort());
+    }
+  });
+
+  it("reports no persona rather than a default when the registry declares none", () => {
+    const undeclared = { ...lifecycleStages(registry)[0], personas: [] };
+    expect(personasForStage(undeclared)).toEqual([]);
+  });
+
+  it("still agrees with the screen roll-up the backend documents", () => {
+    // The backend derives `personas` from `screens[].primary_persona` at
+    // projection time. Checking the fixture against that rule is what would
+    // catch the projection silently changing meaning.
     for (const stage of lifecycleStages(registry)) {
       const features = new Set(stage.feature_ids);
-      const expected = [
+      const fromScreens = [
         ...new Set(
           registry.screens
             .filter((screen) => features.has(screen.feature_id) && screen.primary_persona)
             .map((screen) => screen.primary_persona as string),
         ),
       ].sort();
-      expect(personasForStage(registry, stage), stage.id).toEqual(expected);
+      expect(personasForStage(stage), stage.id).toEqual(fromScreens);
     }
-  });
-
-  it("reports no persona rather than a default when a stage has no screens", () => {
-    const orphan = { ...lifecycleStages(registry)[0], feature_ids: ["NOT_A_FEATURE"] };
-    expect(personasForStage(registry, orphan)).toEqual([]);
   });
 });
