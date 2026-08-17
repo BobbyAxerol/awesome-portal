@@ -1,10 +1,11 @@
 """Runtime configuration kept outside source control."""
 from __future__ import annotations
 
+import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 from urllib.parse import urlparse
 
 
@@ -70,6 +71,27 @@ def _notification_channels() -> Tuple[str, ...]:
     return channels
 
 
+def _lark_mention_map() -> Dict[str, str]:
+    """Team member name -> Lark open_id used for @-mentions in notifications.
+
+    Only the Portal team is mentioned; unknown owners are never mentioned.
+    Open IDs are runtime configuration (LARK_MENTION_MAP JSON), not secrets,
+    but the map must never be echoed into logs or UI payloads.
+    """
+    raw = os.getenv("LARK_MENTION_MAP", "").strip()
+    if not raw:
+        return {}
+    try:
+        mapping = json.loads(raw)
+    except ValueError as exc:
+        raise ValueError("LARK_MENTION_MAP must be a JSON object of name -> open_id") from exc
+    if not isinstance(mapping, dict) or not all(
+        isinstance(k, str) and isinstance(v, str) and v.startswith("ou_") for k, v in mapping.items()
+    ):
+        raise ValueError("LARK_MENTION_MAP values must be Lark open_ids (ou_...)")
+    return {str(name).strip(): open_id for name, open_id in mapping.items() if str(name).strip()}
+
+
 @dataclass(frozen=True)
 class Settings:
     """Only configuration that belongs to environment/runtime, never task data."""
@@ -83,6 +105,7 @@ class Settings:
     webhook_max_attempts: int
     lark_webhook_url: Optional[str] = None
     lark_webhook_sign_secret: Optional[str] = None
+    lark_mention_map: Dict[str, str] = field(default_factory=dict)
     notification_channels: Tuple[str, ...] = ("discord",)
     environment: str = "development"
     webhook_retry_base_seconds: int = 60
@@ -108,6 +131,7 @@ class Settings:
             discord_webhook_url=_discord_webhook_url(),
             lark_webhook_url=_lark_webhook_url(),
             lark_webhook_sign_secret=os.getenv("LARK_WEBHOOK_SIGN_SECRET", "").strip() or None,
+            lark_mention_map=_lark_mention_map(),
             portal_url=os.getenv("PORTAL_PUBLIC_URL", "http://127.0.0.1:8000").rstrip("/"),
             default_actor=os.getenv("PORTAL_DEFAULT_ACTOR", "local-user"),
             cors_origins=cors_origins,

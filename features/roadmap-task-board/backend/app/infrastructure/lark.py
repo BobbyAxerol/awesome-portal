@@ -39,6 +39,12 @@ class LarkWebhookService:
         digest = hmac.new(string_to_sign, digestmod=hashlib.sha256).digest()
         return base64.b64encode(digest).decode("ascii")
 
+    def _mention(self, owner: str) -> str:
+        open_id = self.settings.lark_mention_map.get(str(owner).strip())
+        if not open_id:
+            return ""
+        return f"<at user_id=\"{open_id}\">{owner}</at>"
+
     def _text(self, delivery: Dict[str, Any]) -> str:
         before = self._load(delivery.get("before_json"))
         after = self._load(delivery.get("after_json"))
@@ -51,12 +57,14 @@ class LarkWebhookService:
         owner = str(item.get("owner", "") or "Unassigned")
         workstream = str(item.get("workstream", "") or "General")
         portal = self.settings.portal_url
+        mention = self._mention(owner)
+        mention_line = f"{mention}\n" if mention else ""
         return (
             f"Task Board — nhiệm vụ chuyển trạng thái\n"
             f"`{task_id}` — {title}\n"
             f"Trạng thái: {from_status} -> {to_status}\n"
             f"Owner: {owner} · Workstream: {workstream}\n"
-            f"{portal}/roadmap-task-board"
+            f"{mention_line}{portal}/roadmap-task-board"
         )
 
     def _payload(self, delivery: Dict[str, Any]) -> Dict[str, Any]:
