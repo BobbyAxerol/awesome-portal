@@ -218,8 +218,8 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 |---|---|---|---|
 | Alpha Pool (`/research/alphas`) | `COMMISSIONED` → Feature Preview. Inbox ở `/research/quantbt/imports`. | **Đã quyết** (R12): giữ `COMMISSIONED` tới slice certification. | Khi certification xong: đổi maturity + chuyển inbox, giữ redirect route cũ. |
 | Workspace / tenancy (`/api/workspaces`) | Chưa làm. | Topbar hiện ghi "Default Workspace · Prototype hiện chỉ có một workspace" — đúng sự thật hiện tại. Chỉ làm khi có tenancy thật. | Khi có nhiều workspace thật. |
-| Command Center | Đủ 7 state, số liệu thật từ summary. Chưa có drill-down drawer. | Read model bền thuộc U10; drawer không có nguồn ổn định để mở. | Sau U10: evidence drawer + cross-filter. |
-| Planning: Docs / Reports | Nhúng nguyên feature body. Token và form control đã dùng chung; Reports vẫn render fragment HTML legacy đã khoá. | Fragment là bản byte-preserved của tài liệu gốc, refactor sẽ phá content-integrity hash. | Slice "Reports như dữ liệu" — parse fragment thành model rồi render bằng primitive, giữ hash của nguồn. |
+| Command Center history/cross-filter | Evidence drawer **đã đóng** (§8.1); phần history chuỗi thời gian + cross-filter còn treo. | Read model bền thuộc U10; dựng chuỗi từ 1 snapshot là bịa dữ liệu. | Sau U10. |
+| Planning: Reports | **Đã đóng** (§8.1 "Reports như dữ liệu" — render từ parsed model, hash gated). | — | — |
 | Profile & Access | `COMMISSIONED` preview. | Chờ U07 wire gateway→BFF; login screens 01B/01C/01D chưa có backend. | Sau U10: Frames 01B–01D + session expired + maintenance screen kèm request ID. |
 | Command Center — history / cross-filter | Evidence drawer đã xong (§8.1). Chuỗi theo thời gian và cross-filter thì chưa. | Chờ **U10** read model bền. Dựng chuỗi từ một snapshot là bịa dữ liệu. | Sau U10. |
 | Visual baseline — mobile/tablet cho Research | Chỉ chụp laptop + workstation. | Có chủ ý: v0.4 §26.1 đưa research work sang "open on desktop", nên baseline mobile sẽ chốt một layout không ai được yêu cầu làm việc trên đó. | Chỉ mở nếu §26.1 đổi. |
@@ -369,28 +369,63 @@ R1–R15 đã giao và đã thu hết. Không còn request nào treo tại 2026-
 | Seed gate giữ ba trạng thái, không hai | `seedRequired === null` (built-in không có manifest) khác `false`. Đọc im lặng thành "seed optional" là suy diễn. | Required → chặn submit; optional → nói rõ; chưa khai báo → nói rõ là chưa khai báo. |
 | Thêm `determinism` vào `alphaProjection()` của test | Helper build projection thủ công; thiếu field thì nó lệch với contract nó đại diện. | Nếu không sửa, seed gate sẽ "trông như đã test" trong khi test vẫn pass. |
 
-### 8.6 Đề xuất slice kế tiếp
+### 8.6 Slice kế tiếp — "đóng 2 domain cho chắc" (chốt 2026-08-17, Bobby)
 
-**Wire gateway đã BẬT** (codex `1159d0a`): mọi `/api/` đi qua Control API BFF —
-browser **cần session**; USER đọc được mọi thứ (kể cả cross-user runs), **mọi
-mutation ADMIN-only**. Rollback 1 dòng `PORTAL_WEB_UPSTREAM=portal-api:8000`.
-Vite dev proxy không bị ảnh hưởng.
+**Trạng thái:** login UI (01B/01C/01D), Run Progress baseline, Import Wizard
+(nửa ghi) và wire visual baseline vào ci.yml **đã xong** (ghi tại §8.1 — mục
+này được soát lại so với phiên bản trước). Wire gateway đang BẬT (`1159d0a`):
+cần session, USER đọc được mọi thứ, mutation ADMIN-only; rollback 1 dòng
+`PORTAL_WEB_UPSTREAM=portal-api:8000`.
 
-1. **Login UI (Frames 01B/01C/01D) — ưu tiên 1.** Không có nó, UI containerized
-   chỉ dùng được cho ADMIN đã đăng nhập. Luồng có sẵn: `/api/auth/context`
-   (state machine ACCESS_REQUIRED → APP_LOGIN_REQUIRED →
-   PASSWORD_CHANGE_REQUIRED → AUTHENTICATED) → `/api/auth/login` (activation
-   hoặc password) → `/api/auth/change-password` → session cookie
-   (`__Host-portal_session`, Secure/HttpOnly) + CSRF header. Dev: `AUTH_MODE=dev`
-   + `x-dev-access-email`; user seed qua `deploy/control-api/bootstrap-users.yaml`.
-2. **Run Progress §12.2 baseline** — đã có `as_of`/digest + fixture `RUNNING`;
-   chụp state live (console, ETA, progress strip, fold Gantt).
-3. **Import Wizard nửa ghi (U14)** — form source-reference
-   `{git_ref, artifact_relpath, expected_digest}` + `/api/v1/alphas/imports`
-   hiển thị state (QUARANTINED / DIGEST_MISMATCH / INVALID_MANIFEST /
-   ALREADY_REGISTERED). Gate ADMIN qua session.
-4. **Workspace (U10)** — User đã đọc runs rộng; `/api/workspaces` +
-   `/api/workspaces/{id}/runs` là convenience path — chỉ làm khi cần tenancy.
-5. **Command Center drill-down / Profile & Access** — chờ phase **U10** / **U07**.
+**Làm ngay, theo thứ tự (đều không chặn backend — không cần request mới):**
+
+1. **Cancel run UI** — nút Cancel + xác nhận trong RunLibrary/RunProgress cho
+   run chưa terminal. Backend đã sẵn: `POST /api/runs/{id}/cancel` →
+   `{run_id, status:"CANCELLING"}` + worker cancel marker; `api.cancelRun` đã có
+   trong `lib/api.ts`. Sau cancel: UI phản ánh state CANCELLING/CANCELLED, button
+   disabled ở terminal. Test: click cancel → gọi POST → state cập nhật; không cho
+   cancel khi `isTerminal(state)`.
+2. **Cross-link 2 chiều Planning ↔ Portal (U05 exit gate)** — 3 mảnh (v0.4
+   §P0.23): (a) task drawer có "Open Portal screen" (link tới canonical screen từ
+   registry); (b) FeaturePreview: `roadmap_epic_id`/`default_task_id` (đang chỉ
+   là text "chưa map") thành link mở roadmap epic/task; (c) concern brief liệt
+   kê `feature_ids` + `screen_ids` + `task_ids` ảnh hưởng (concern có sẵn trong
+   registry — `activation_gate`, `status`, `severity`). Đóng exit gate U05 "đi
+   lifecycle → feature → task → feature không mất context".
+3. **Command Center — 2 CTA tường minh** `[New run]` `[Import alpha]`
+   (v0.4 §21.3): nút primary ở Command Center header → `/research/quantbt/new`
+   và `/research/quantbt/imports`. Đã có sẵn route.
+4. **Portal Map — nốt §P0.15:** (a) filter theo status
+   available/prototype/commissioned/blocked (thêm cạnh persona filter đã có);
+   (b) click stage mở Feature Brief; (c) badge maturity + data-mode; (d) link
+   concern + roadmap epic từ stage. Registry đã có đủ dữ liệu (`maturity`,
+   `lifecycle_stages[].feature_ids`, concerns, `roadmap_epic_id`).
+5. **Users & Access UI (admin)** — màn quản lý user/session: list users, đổi
+   role, disable, revoke sessions, reset credential (in one-time activation
+   token). Backend đã sẵn đầy đủ: `GET/POST /api/admin/users`,
+   `PATCH /users/:id`, `POST /users/:id/{reset-credential,revoke-sessions,disable}`
+   (ADMIN-only). Gate: chỉ ADMIN thấy menu; USER không thấy. Dùng session cookie
+   + CSRF như login.
+6. **SSE thay polling cho run progress (tuỳ chọn)** — backend `GET
+   /api/runs/{id}/events` (SSE, passthrough nginx) có sẵn; nếu chuyển từ
+   `refetchInterval` (1–1.5s) sang `EventSource` thì thêm fallback polling + đóng
+   kết nối ở terminal. Không bắt buộc — chỉ khi muốn giảm polling.
+7. **Alpha 360° (version detail)** — màn chi tiết alpha từ
+   `GET /api/v1/alphas/{id}/versions/{v}` (trả `AlphaVersionDetail`: name,
+   entrypoint, artifact_digest, lifecycle đầy đủ — đã có backend). Mở từ catalog
+   (ImportInbox hoặc strategy picker): click alpha → xem lineage/version/lifecycle
+   + nút "verify digest" (đã có `api.verifyAlpha`). Chưa cần đổi maturity
+   ALPHA_POOL (vẫn COMMISSIONED — route tạm dưới quantbt như hiện tại).
+
+**Chờ phase (KHÔNG làm bây giờ):** Command Center history/cross-filter (U10 read
+model), workspace/tenancy thật (U10), maintenance screen external-access (U07
+production), Alpha Pool promotion + mining/composer/workbench (certification U14),
+mở rộng capability quantbt-engine (BAR-09/U12), mobile baseline research (cố ý,
+§26.1).
+
+**Việc nhỏ kèm:** soát §8.2 còn 2 dòng stale (Command Center drill-down đã đóng
+qua Evidence drawer; Reports "fragment legacy" đã đóng qua "Reports như dữ liệu")
++ sửa comment stale trong `ImportInbox.tsx` (còn nhắc multipart upload — đã đổi
+sang source-reference R11).
 6. Việc nhỏ: wire `scripts/portal-web-visual.sh` vào `ci.yml` (đã thêm step,
    script skip tới khi Playwright project xong); mermaid theo print (§8.2).
