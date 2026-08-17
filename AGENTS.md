@@ -109,6 +109,12 @@ Rules for these agents:
 - Do not commit credentials, market data, artifacts, databases, virtual
   environments, dependency caches, generated reports, or local configuration.
   Version only documented examples/templates.
+- Every slice or locked decision must be noted in the canonical tracking
+  markdowns in the same change: frontend slices in
+  `apps/portal/registry/FRONTEND_HANDOFF.md` (Claude's tracking), backend
+  state in `upgrade/BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md` §14.1 and
+  `upgrade/backend/README.md` (codex's tracking), so both agents read the
+  same current status without re-deriving it.
 
 ## Commands
 
