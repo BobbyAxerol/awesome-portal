@@ -13,7 +13,10 @@ import { useState } from "react";
 
 import { ModuleHeader } from "../../app/ModuleHeader";
 import { usePortalContext } from "../../app/context";
+import { PLANNING_TASK_ROUTE } from "../planning/planningLinks";
 import { StateView } from "../../components/ui";
+import { Link } from "react-router-dom";
+
 import type { PortalFeatureDefinition } from "../../portal/contracts";
 import { blockingConcernsFor, screensForFeature } from "../../portal/navigation";
 
@@ -101,11 +104,27 @@ export function FeaturePreview({ feature }: { feature: PortalFeatureDefinition }
             </div>
             <div className="portal-detail-row">
               <dt className="label">Roadmap epic</dt>
-              <dd className="mono">{feature.roadmap_epic_id ?? "chưa map"}</dd>
+              {/* U05 exit gate: the epic is a destination, not a label. An
+                * unmapped one still says so rather than linking nowhere. */}
+              <dd className="mono">
+                {feature.roadmap_epic_id ? (
+                  <Link to={PLANNING_TASK_ROUTE.roadmap}>{feature.roadmap_epic_id}</Link>
+                ) : (
+                  "chưa map"
+                )}
+              </dd>
             </div>
             <div className="portal-detail-row">
               <dt className="label">Task mặc định</dt>
-              <dd className="mono">{feature.default_task_id ?? "chưa map"}</dd>
+              <dd className="mono">
+                {feature.default_task_id ? (
+                  <Link to={PLANNING_TASK_ROUTE.task(feature.default_task_id)}>
+                    {feature.default_task_id}
+                  </Link>
+                ) : (
+                  "chưa map"
+                )}
+              </dd>
             </div>
             <div className="portal-detail-row">
               <dt className="label">Figma frame</dt>

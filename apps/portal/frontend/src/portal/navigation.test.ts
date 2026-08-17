@@ -267,3 +267,42 @@ describe("personas", () => {
     }
   });
 });
+
+/* -------------------------------------------------------------------------
+ * Portal Map filters and brief (v0.4 §P0.15)
+ * ---------------------------------------------------------------------- */
+
+describe("stage status filter", () => {
+  it("offers only maturities the stages actually declare", () => {
+    const declared = new Set(registry.lifecycle_stages.map((stage) => stage.maturity));
+    // A filter offering a state no stage is in would return nothing and read as
+    // a bug in the data.
+    for (const stage of registry.lifecycle_stages) {
+      expect(declared.has(stage.maturity)).toBe(true);
+    }
+    expect(declared.size).toBeGreaterThan(1);
+  });
+});
+
+describe("concerns reachable from a stage", () => {
+  it("links every stage to the concerns that name its features", () => {
+    // This is the §P0.23 chain: lifecycle → feature → concern → task.
+    const withConcerns = registry.lifecycle_stages.filter((stage) => {
+      const features = new Set(stage.feature_ids);
+      return registry.concerns.some((concern) =>
+        concern.feature_ids.some((id) => features.has(id)),
+      );
+    });
+    expect(withConcerns.length).toBeGreaterThan(0);
+  });
+
+  it("every concern carries the ids the brief renders", () => {
+    for (const concern of registry.concerns) {
+      expect(Array.isArray(concern.feature_ids), concern.id).toBe(true);
+      expect(Array.isArray(concern.screen_ids), concern.id).toBe(true);
+      expect(Array.isArray(concern.task_ids), concern.id).toBe(true);
+      expect(concern.severity, concern.id).toBeTruthy();
+      expect(concern.status, concern.id).toBeTruthy();
+    }
+  });
+});

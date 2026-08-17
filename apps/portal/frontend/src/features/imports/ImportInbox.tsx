@@ -15,12 +15,11 @@
  * registers anything — promotion belongs to the certification slice, and a
  * button that implied otherwise would be the screen lying about its authority.
  *
- * DISCREPANCY (recorded in FRONTEND_HANDOFF §8.4): the delivered
- * `POST /api/v1/alphas/import` takes two multipart file uploads, which is a
- * browser-upload shape. The endpoint itself is safe — it never executes code and
- * only writes to quarantine — but building the browser form §5 forbids is not
- * the frontend's call to make unilaterally. Backend request 11 proposes ingest
- * by reviewed source reference instead.
+ * RESOLVED (was FRONTEND_HANDOFF §8.4 / backend request 11): the endpoint used
+ * to take two multipart file uploads, which is the browser-upload shape §5 rules
+ * out. It now accepts a source reference — `{alpha_id, version, artifact_relpath,
+ * expected_digest, git_ref?}` — so the submit form below sends a pointer to an
+ * artifact CI already staged, and the multipart path is rejected outright.
  */
 import { useQuery } from "@tanstack/react-query";
 import { ShieldAlert } from "lucide-react";

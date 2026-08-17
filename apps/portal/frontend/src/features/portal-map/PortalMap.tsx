@@ -15,6 +15,8 @@ import { StateView } from "../../components/ui";
 import { maturityPresentation } from "../../lib/portalState";
 import { lifecycleStages, personaOptions, personasForStage } from "../../portal/navigation";
 import { iconFor } from "../../app/icons";
+import { useLinks } from "../../portal/hooks";
+import { StageBrief } from "./StageBrief";
 
 const PERSONA_LABELS: Record<string, string> = {
   manager: "Manager",
@@ -32,6 +34,9 @@ export function PortalMap() {
   const { registry } = usePortalContext();
   const feature = registry?.features.find((f) => f.id === "PORTAL_MAP") ?? null;
   const [persona, setPersona] = useState<string | null>(null);
+  const [maturity, setMaturity] = useState<string | null>(null);
+  const [briefStageId, setBriefStageId] = useState<string | null>(null);
+  const links = useLinks();
 
   if (!registry) {
     return <StateView kind="loading" message="Đang tải registry…" />;
@@ -40,6 +45,12 @@ export function PortalMap() {
   const stages = lifecycleStages(registry);
   const featureById = new Map(registry.features.map((f) => [f.id, f]));
   const personas = personaOptions(registry);
+  // Status filter (§P0.15). Options come from the maturities the stages actually
+  // declare, so the filter cannot offer a state no stage is in.
+  const maturities = [...new Set(stages.map((stage) => stage.maturity))].sort();
+  const briefStage = briefStageId
+    ? (stages.find((stage) => stage.id === briefStageId) ?? null)
+    : null;
 
   return (
     <>
@@ -75,6 +86,31 @@ export function PortalMap() {
         </div>
       )}
 
+      {maturities.length > 1 ? (
+        <div className="portal-map-personas" role="group" aria-label="Lọc theo status">
+          <span className="mono-label">Status</span>
+          <button
+            type="button"
+            className={`navtab ${maturity === null ? "navtab-active" : ""}`}
+            aria-pressed={maturity === null}
+            onClick={() => setMaturity(null)}
+          >
+            Tất cả
+          </button>
+          {maturities.map((option) => (
+            <button
+              key={option}
+              type="button"
+              className={`navtab ${maturity === option ? "navtab-active" : ""}`}
+              aria-pressed={maturity === option}
+              onClick={() => setMaturity(maturity === option ? null : option)}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <ol className="portal-map">
         {stages.map((stage, index) => {
           const presentation = maturityPresentation(stage.maturity);
@@ -83,18 +119,32 @@ export function PortalMap() {
           // A stage whose screens declare no persona is NOT filtered away: the
           // registry has not said it is irrelevant to this reader, and hiding
           // it would assert something the data does not support.
-          const dimmed = persona !== null && declaresPersona && !stagePersonas.includes(persona);
+          // Two independent filters; a stage dims if either excludes it. Status
+          // is always declared, so unlike persona there is no "undeclared" case
+          // to protect.
+          const personaDimmed = persona !== null && declaresPersona && !stagePersonas.includes(persona);
+          const maturityDimmed = maturity !== null && stage.maturity !== maturity;
+          const dimmed = personaDimmed || maturityDimmed;
 
           return (
             <li
               key={stage.id}
               className="portal-map-stage"
-              data-persona-match={persona === null ? undefined : !dimmed}
+              data-persona-match={persona === null && maturity === null ? undefined : !dimmed}
               style={{ opacity: dimmed ? 0.32 : presentation.opacity }}
             >
               <div className="portal-map-stage-head">
                 <span className="portal-map-step mono">{String(index + 1).padStart(2, "0")}</span>
-                <h2 className="portal-map-stage-title">{stage.label}</h2>
+                {/* The title opens the brief: the stage is the entry point to
+                  * everything the registry knows about it. */}
+                <button
+                  type="button"
+                  className="portal-map-stage-open"
+                  onClick={() => setBriefStageId(stage.id)}
+                  aria-label={`Feature brief cho ${stage.label}`}
+                >
+                  <h2 className="portal-map-stage-title">{stage.label}</h2>
+                </button>
                 <MaturityBadge maturity={stage.maturity} />
               </div>
               <p className="portal-map-stage-desc">{stage.description}</p>
@@ -123,6 +173,15 @@ export function PortalMap() {
           );
         })}
       </ol>
+
+      {briefStage ? (
+        <StageBrief
+          registry={registry}
+          links={links.data ?? null}
+          stage={briefStage}
+          onClose={() => setBriefStageId(null)}
+        />
+      ) : null}
 
       <p className="mono mt-4 text-[11px] text-ink-faint">
         Nguồn: registry revision {registry.revision} · digest {registry.content_digest.slice(0, 19)}…

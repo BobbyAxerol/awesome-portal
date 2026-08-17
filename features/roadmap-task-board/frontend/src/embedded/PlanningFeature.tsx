@@ -38,12 +38,27 @@ function FeatureLoading() {
   );
 }
 
+/**
+ * A Portal destination for a Planning entity, resolved by the host.
+ *
+ * Planning does not read the Feature Registry — only the Portal shell can map a
+ * task back to a canonical screen. Injecting the resolver keeps the dependency
+ * one-way: the standalone app simply gets `undefined` and renders no link, which
+ * is honest rather than a dead one.
+ */
+export interface PortalDestination {
+  href: string;
+  label: string;
+}
+
 export interface PlanningFeatureProps {
   view: View;
   page: string | null;
   theme: "light" | "dark";
   apiMode: ApiMode;
   onNavigate: (view: View, page?: string) => void;
+  /** Host-provided: where a task's owning Portal screen lives. */
+  portalScreenForTask?: (taskId: string) => PortalDestination | null;
   /** Host-provided toast surface. The standalone shell provides its own. */
   withToastProvider?: boolean;
 }
@@ -54,6 +69,7 @@ export function PlanningFeatureBody({
   theme,
   apiMode,
   onNavigate,
+  portalScreenForTask,
 }: Omit<PlanningFeatureProps, "withToastProvider">) {
   switch (view) {
     case "docs":
@@ -71,7 +87,7 @@ export function PlanningFeatureBody({
     case "board":
       return (
         <Suspense fallback={<FeatureLoading />}>
-          <TaskBoardFeature apiMode={apiMode} />
+          <TaskBoardFeature apiMode={apiMode} portalScreenForTask={portalScreenForTask} />
         </Suspense>
       );
     case "reports":

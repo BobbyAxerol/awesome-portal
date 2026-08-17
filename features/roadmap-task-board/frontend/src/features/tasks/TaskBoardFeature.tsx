@@ -112,7 +112,14 @@ function TaskEditor({ draft, onChange }: { draft: Task; onChange: (field: keyof 
   );
 }
 
-export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
+export function TaskBoardFeature({
+  apiMode,
+  portalScreenForTask,
+}: {
+  apiMode: ApiMode;
+  /** Injected by the Portal shell; absent in the standalone app. */
+  portalScreenForTask?: (taskId: string) => { href: string; label: string } | null;
+}) {
   const { tasks, persistence, syncState, syncError, needsInitialization, pendingMoves, refresh, create, update, move, remove, replace, reset } = useTasks(apiMode);
   const toast = useToast();
   const [view, setView] = useState<BoardView>(initialBoardView);
@@ -501,6 +508,16 @@ export function TaskBoardFeature({ apiMode }: { apiMode: ApiMode }) {
 
       <Modal open={draft !== null} title={editingId ? `Edit ${editingId}` : "New task"} onClose={closeEditor}>
         {draft && <TaskEditor draft={draft} onChange={updateDraft} />}
+        {/* Cross-link back to the Portal screen this task governs (§P0.23). Only
+          * rendered when the host resolved one — Planning has no registry of its
+          * own to guess from. */}
+        {editingId && portalScreenForTask?.(editingId) ? (
+          <p className="task-portal-link">
+            <a href={portalScreenForTask(editingId)!.href}>
+              Mở màn Portal: {portalScreenForTask(editingId)!.label}
+            </a>
+          </p>
+        ) : null}
         <div className="modal-actions">
           {editingId && draft && <Button type="button" variant="ghost" onClick={() => deleteTask(draft)}>Delete</Button>}
           {editingId && persistence === "v1" && <Button type="button" variant="ghost" onClick={() => setActivityTaskId(editingId)}>Activity</Button>}

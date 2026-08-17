@@ -9,7 +9,7 @@
  * Primary action, per the registry screen contract for COMMAND_CENTER_SCREEN,
  * is "open the highest-priority evidenced item".
  */
-import { RefreshCw } from "lucide-react";
+import { Plus, RefreshCw, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -28,6 +28,7 @@ import type { PortalSummarySection, PortalSummaryV1, PriorityItem } from "../../
 import { readMetric } from "../../portal/contracts";
 import { useSummary } from "../../portal/hooks";
 import { lifecycleStages } from "../../portal/navigation";
+import { QUANTBT_ROOT } from "../quantbt/routes";
 import { MaturityBadge } from "../../components/semantic";
 import { Distribution } from "./Distribution";
 import { EvidenceDrawer } from "./EvidenceDrawer";
@@ -319,6 +320,17 @@ export function CommandCenter() {
         dataMode={feature?.data_mode ?? "REAL"}
         actions={
           <>
+            {/* v0.4 §21.3: the Command Center opens the two actions a manager
+              * arrives wanting, instead of making them walk the nav to find
+              * them. Both are real routes from the QuantBT module. */}
+            <Link className="btn-ghost" to={`${QUANTBT_ROOT}/new`}>
+              <Plus size={12} />
+              New run
+            </Link>
+            <Link className="btn-ghost" to={`${QUANTBT_ROOT}/imports`}>
+              <ShieldAlert size={12} />
+              Import alpha
+            </Link>
             {top ? (
               <Link className="btn-primary" to={top.route}>
                 Mở mục ưu tiên cao nhất

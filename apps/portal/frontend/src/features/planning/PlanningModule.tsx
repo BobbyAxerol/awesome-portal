@@ -10,7 +10,7 @@
  * Planning's own topbar and sidebar are NOT rendered here — the shell provides
  * them, which is what removes the nested shell the U05 exit gate targets.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 
 import { PlanningFeature } from "@/embedded/PlanningFeature";
@@ -83,6 +83,26 @@ export function PlanningModule() {
   const [apiMode, setApiMode] = useState<ApiMode>("detecting");
   const links = useLinks();
 
+  /**
+   * Resolves a Planning task to the Portal screen it governs.
+   *
+   * The sidecar maps feature → task ids, so this walks it backwards. A task no
+   * entry claims returns `null` and the drawer renders no link — better than a
+   * link to a screen that does not own it.
+   */
+  const portalScreenForTask = useCallback(
+    (taskId: string) => {
+      const entry = (links.data?.entries ?? []).find((item) =>
+        item.planning_task_ids.includes(taskId),
+      );
+      if (!entry?.feature_id) return null;
+      const target = registry?.features.find((item) => item.id === entry.feature_id);
+      if (!target || target.maturity === "HIDDEN") return null;
+      return { href: target.canonical_route, label: target.label };
+    },
+    [links.data, registry],
+  );
+
   useEffect(() => {
     let cancelled = false;
     void detectApi().then((mode) => {
@@ -140,6 +160,10 @@ export function PlanningModule() {
 
       <div className="planning-embed">
         <PlanningFeature
+          // Portal→Planning is one direction; this is the other. Only the shell
+          // reads the Feature Registry, so it resolves the task→screen hop and
+          // Planning stays free of a registry dependency (§P0.23).
+          portalScreenForTask={portalScreenForTask}
           view={at.view}
           page={at.page}
           // Planning's views take a light/dark flag; the Portal's Operations

@@ -927,3 +927,11 @@ select.input,
     grid-template-columns: 1fr;
   }
 }
+
+/* Cross-link from a task back to the Portal screen it governs (§P0.23). */
+.task-portal-link {
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line-soft);
+  font-size: var(--text-sm);
+}
