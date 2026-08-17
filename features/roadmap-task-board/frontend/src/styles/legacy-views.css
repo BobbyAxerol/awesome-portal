@@ -3,11 +3,15 @@
 .eyebrow{font-size:12px;font-weight:750;letter-spacing:.12em;text-transform:uppercase;opacity:.78}
 .doc-page{max-width:1000px;margin:0 auto}
 .doc-page[hidden]{display:none!important}
-.diagram-card,.code-card{margin:18px 0 26px;border:1px solid var(--line);border-radius:9px;background:var(--paper-raised);overflow:hidden;box-shadow:0 1px 2px rgba(9,30,66,.06)}
+.diagram-card,.code-card{margin:18px 0 26px;border:1px solid var(--line);border-radius:9px;background:var(--paper-raised);overflow:hidden;box-shadow:var(--shadow-e1)}
 .artifact-toolbar{height:39px;padding:0 10px 0 13px;display:flex;align-items:center;justify-content:space-between;background:var(--surface-2);border-bottom:1px solid var(--line);font-size:12px;font-weight:700;color:var(--ink-soft)}
 .mini-btn{padding:4px 9px;font-size:11px}
-.diagram-card .mermaid{padding:20px;overflow:auto;background:var(--paper-raised);text-align:center;white-space:pre}
-.diagram-card svg{max-width:100%;height:auto}
+.diagram-card .mermaid{padding:var(--space-5) var(--space-4);overflow-x:auto;background:var(--paper-raised);text-align:center;white-space:pre}
+.diagram-card svg{max-width:100%;height:auto;font-family:var(--font-body)}
+/* Diagram text must stay legible when the SVG scales down at narrow
+ * breakpoints; mermaid sizes it in absolute px otherwise. */
+.diagram-card svg .nodeLabel,.diagram-card svg .edgeLabel,.diagram-card svg .cluster-label{font-size:var(--text-sm);line-height:var(--leading-tight)}
+@media (max-width:900px){.diagram-card .mermaid{padding:var(--space-4) var(--space-2)}}
 .section-divider{height:1px;border:0;background:var(--line);margin:35px 0}
 .panel-shell{padding:32px 38px 90px;max-width:1500px;margin:0 auto}
 .panel-header{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:24px}
@@ -21,24 +25,24 @@
 .dependency-card{margin-top:20px}
 .board-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px}
 .action-btn{padding:8px 12px}
-.action-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.action-btn.primary{background:var(--accent);border-color:var(--accent);color:var(--paper-raised)}
 .action-btn.danger{color:var(--bad)}
 .kanban{display:grid;grid-template-columns:repeat(5,minmax(270px,1fr));gap:12px;overflow:auto;padding-bottom:12px}
 .kanban-col{background:var(--surface-2);border:1px solid var(--line);border-radius:9px;min-height:520px;padding:10px}
 .kanban-head{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:13px;padding:3px 3px 10px}
-.task-card{background:var(--paper-raised);border:1px solid var(--line);border-radius:8px;padding:11px;margin-bottom:9px;box-shadow:0 1px 2px rgba(9,30,66,.08);cursor:grab}
+.task-card{background:var(--paper-raised);border:1px solid var(--line);border-radius:8px;padding:11px;margin-bottom:9px;box-shadow:var(--shadow-e1);cursor:grab}
 .task-card.dragging{opacity:.45}
 .report-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
 .report-grid-card{padding:18px}
 .report-grid-card h3{margin:3px 0 9px}
 .report-grid-card p{color:var(--ink-soft);font-size:13px}
-.status-banner{display:flex;align-items:center;gap:12px;background:linear-gradient(90deg,#e3f0ff,var(--paper-raised));border:1px solid #b9d8ff;border-radius:10px;padding:14px 16px;margin-bottom:18px}
-html[data-theme="dark"] .status-banner{background:linear-gradient(90deg,#0c2d4a,var(--paper-raised));border-color:#1c4d7e}
-.status-dot{width:10px;height:10px;border-radius:50%;background:var(--good);box-shadow:0 0 0 5px rgba(31,132,90,.13)}
+/* Flat tinted surface, not a gradient: v0.5 §10.3 rules out decorative
+ * gradients, and --surface-3 already carries the tint in both themes. */
+.status-banner{display:flex;align-items:center;gap:12px;background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:18px}
+.status-dot{width:10px;height:10px;border-radius:50%;background:var(--good);box-shadow:0 0 0 5px var(--halo-good)}
 .action-btn,.mini-btn{border-radius:999px}
 .mini-btn{padding:4px 10px}
 .artifact-toolbar{letter-spacing:.02em}
-.diagram-card .mermaid{padding:22px;background:radial-gradient(1200px 400px at 50% -60%,rgba(0,102,255,.05),transparent 70%),var(--paper-raised)}
 .task-card .task-del{position:absolute;top:7px;right:8px;border:0;background:transparent;color:var(--ink-soft);cursor:pointer;border-radius:5px;width:22px;height:22px;line-height:1;font-size:13px;opacity:0;transition:.15s}
 .task-card:hover .task-del{opacity:1}
 .task-card .task-del:hover{background:var(--surface-2);color:var(--bad)}
@@ -53,7 +57,7 @@ html[data-theme="dark"] .status-banner{background:linear-gradient(90deg,#0c2d4a,
 .task-table .trow-del:hover{color:var(--bad);background:var(--surface-2)}
 .view-toggle{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--paper-raised)}
 .view-toggle button{border:0;background:transparent;color:var(--ink-soft);padding:7px 13px;font-size:12.5px;font-weight:600;cursor:pointer}
-.view-toggle button.active{background:var(--accent);color:#fff}
+.view-toggle button.active{background:var(--accent);color:var(--paper-raised)}
 .phase-edit{display:flex;flex-direction:column;gap:6px;margin:8px 0 0;padding-top:8px;border-top:1px dashed var(--line)}
 .phase-edit .frow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .mermaid-hint{font-size:11px;color:var(--ink-soft)}

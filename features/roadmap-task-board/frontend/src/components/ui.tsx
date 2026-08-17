@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   forwardRef,
+  useId,
   useRef,
   useState,
   type ButtonHTMLAttributes,
@@ -52,6 +53,117 @@ export function Button({
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input(props, ref) {
   return <input ref={ref} className="input" {...props} />;
 });
+
+/** ── Form controls ──────────────────────────────────────────
+ * `Select` and `Textarea` exist so a form is not half design-system and half
+ * raw element. Before v1.1 the editors used bare `<select>`/`<textarea>`,
+ * which is how the typography drifted (v1.1 plan §3.1). */
+
+export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
+  function Select({ className = "", children, ...rest }, ref) {
+    return (
+      <select ref={ref} className={`input select-control ${className}`} {...rest}>
+        {children}
+      </select>
+    );
+  },
+);
+
+export const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
+  function Textarea({ className = "", ...rest }, ref) {
+    return <textarea ref={ref} className={`input textarea-control ${className}`} {...rest} />;
+  },
+);
+
+/** A labelled control with an optional hint, wired through `aria-describedby`. */
+export function Field({
+  label,
+  hint,
+  wide = false,
+  children,
+}: {
+  label: string;
+  hint?: ReactNode;
+  wide?: boolean;
+  children: (props: { id: string; "aria-describedby": string | undefined }) => ReactNode;
+}) {
+  const id = useId();
+  const hintId = hint ? `${id}-hint` : undefined;
+  return (
+    <div className={`feature-field ${wide ? "feature-field-wide" : ""}`}>
+      <label htmlFor={id}>{label}</label>
+      {children({ id, "aria-describedby": hintId })}
+      {hint ? (
+        <small className="feature-field-help" id={hintId}>
+          {hint}
+        </small>
+      ) : null}
+    </div>
+  );
+}
+
+/** ── Checkbox ───────────────────────────────────────────────
+ *
+ * A styled native `<input type="checkbox">` rather than a div pretending to be
+ * one: keyboard, focus, form association and screen-reader semantics stay
+ * native, and only the box is drawn by us.
+ *
+ * `indeterminate` is a DOM property with no HTML attribute, so it is applied
+ * through the ref. `loading` is its own state — the control is busy, not
+ * merely disabled, and saying so is what keeps a pending mutation honest.
+ */
+export interface CheckboxProps
+  extends Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "checked" | "onChange"> {
+  checked?: boolean;
+  indeterminate?: boolean;
+  loading?: boolean;
+  label?: ReactNode;
+  /** Visually hides the label but keeps it for assistive technology. */
+  labelHidden?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+}
+
+export function Checkbox({
+  checked = false,
+  indeterminate = false,
+  loading = false,
+  disabled = false,
+  label,
+  labelHidden = false,
+  onCheckedChange,
+  className = "",
+  ...rest
+}: CheckboxProps) {
+  const ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = indeterminate && !checked;
+  }, [indeterminate, checked]);
+
+  const state = loading ? "loading" : indeterminate && !checked ? "indeterminate" : checked ? "checked" : "unchecked";
+
+  return (
+    <label className={`checkbox ${className}`} data-state={state} data-disabled={disabled || loading}>
+      <input
+        ref={ref}
+        type="checkbox"
+        className="checkbox-input"
+        checked={checked}
+        disabled={disabled || loading}
+        aria-busy={loading || undefined}
+        // Guarded rather than left to the DOM: a change dispatched while a
+        // mutation is in flight must not queue a second one.
+        onChange={(event) => {
+          if (disabled || loading) return;
+          onCheckedChange?.(event.target.checked);
+        }}
+        {...rest}
+      />
+      <span className="checkbox-box" aria-hidden="true" />
+      {label ? <span className={labelHidden ? "sr-only" : "checkbox-label"}>{label}</span> : null}
+    </label>
+  );
+}
 
 export function NavTab({ active, onClick, children }: { active?: boolean; onClick?: () => void; children: ReactNode }) {
   return (
