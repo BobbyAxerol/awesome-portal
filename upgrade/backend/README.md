@@ -138,3 +138,17 @@ Quarantine write path for U14 (see `BAR_21_STRATEGY_IMPORT.md`):
 runtime quarantine store; the source registry stays immutable and imported
 alphas are never executable. Fixtures: `visual-baseline-run` (COMPLETED) +
 `visual-baseline-run-running` (RUNNING).
+
+## Backend state — 2026-08-17 (tracking snapshot)
+
+- Backend requests R1–R15 (FRONTEND_HANDOFF §8.3) all closed; see the
+  authoritative list there.
+- Gateway wire ON (`PORTAL_WEB_UPSTREAM=control-api:4000` default): /api/
+  through the Control API façade — session required, reads open (cross-user),
+  mutations ADMIN-only; rollback 1 line. control-api CMD migrates +
+  bootstraps at start; users in `deploy/control-api/bootstrap-users.yaml`.
+- Remaining backend is phase-scoped (not open requests): U14 certification
+  slice, capability expansion of quantbt-engine (BAR-09/U12), SSE through
+  façade (BAR-07), Command Center read model (U10), workspace tenancy (U10),
+  maintenance screen (U07), BAR-17→20 / U18 / U19. See
+  `BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md` §14.1 for detail.
