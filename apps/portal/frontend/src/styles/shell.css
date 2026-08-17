@@ -1067,3 +1067,191 @@
 .import-verify dd {
   overflow-wrap: anywhere;
 }
+
+/* ==========================================================================
+ * Auth frames 01B/01C/01D (v0.4 §21.1).
+ *
+ * Rendered before the shell exists, so nothing here depends on shell layout.
+ * Desktop is the split wireframe; below 900px the form comes first and the
+ * narrative collapses beneath it (§21.1 Responsive).
+ * ========================================================================== */
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5) var(--space-4);
+  background: var(--paper);
+}
+
+.auth-split {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: var(--space-7);
+  width: min(1040px, 100%);
+  align-items: center;
+}
+
+.auth-narrative-title {
+  margin: var(--space-2) 0 var(--space-4);
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  line-height: var(--leading-tight);
+  color: var(--ink);
+}
+.auth-narrative-list,
+.auth-capabilities {
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-base);
+  color: var(--ink-soft);
+}
+.auth-capability-label {
+  margin-top: var(--space-5);
+  margin-bottom: var(--space-2);
+}
+.auth-capabilities li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+/* Glyph plus text: availability is never carried by colour alone. */
+.auth-capabilities li[data-available="false"] {
+  color: var(--ink-faint);
+}
+
+.auth-panel {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--paper-raised);
+  box-shadow: var(--shadow);
+  padding: var(--space-6);
+}
+.auth-panel-centered {
+  width: min(520px, 100%);
+}
+.auth-panel-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  color: var(--ink);
+}
+.auth-panel-sub {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+.auth-body {
+  margin: var(--space-4) 0;
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--ink-soft);
+}
+
+.auth-identity {
+  display: grid;
+  gap: 2px;
+  margin: var(--space-4) 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--paper-sunken);
+}
+.auth-identity-email {
+  font-size: var(--text-base);
+  color: var(--ink);
+}
+
+.auth-field {
+  display: grid;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+.auth-field label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+.auth-field .input {
+  width: 100%;
+}
+.auth-credential-row {
+  display: flex;
+  gap: var(--space-2);
+}
+.auth-credential-row .input {
+  flex: 1;
+  min-width: 0;
+}
+.auth-hint {
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--ink-faint);
+}
+
+.auth-error {
+  margin: var(--space-3) 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--state-denied);
+  border-radius: var(--radius-md);
+  background: var(--state-denied-bg);
+  color: var(--state-denied);
+  font-size: var(--text-sm);
+}
+.auth-error-request {
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+
+.auth-submit {
+  width: 100%;
+  justify-content: center;
+  /* §21.1: touch target >= 44px. */
+  min-height: 44px;
+  margin-top: var(--space-2);
+}
+
+.auth-panel-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line-soft);
+  font-size: var(--text-sm);
+}
+.auth-panel-foot-start {
+  justify-content: flex-start;
+}
+
+/* The identity BFF is not in front of this build. */
+.auth-unwired {
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--state-degraded);
+  background: var(--state-degraded-bg);
+  color: var(--state-degraded);
+  font-size: var(--text-xs);
+}
+
+@media (max-width: 900px) {
+  .auth-screen {
+    align-items: flex-start;
+  }
+  .auth-split {
+    /* Form first, narrative under it. */
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+  }
+  .auth-narrative {
+    order: 2;
+  }
+  .auth-panel {
+    order: 1;
+    padding: var(--space-4);
+  }
+}

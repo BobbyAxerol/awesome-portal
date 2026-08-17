@@ -7,11 +7,17 @@
  */
 import { PortalShell } from "./app/PortalShell";
 import { PreferencesProvider } from "./app/preferences";
+import { AuthGate } from "./auth/AuthGate";
 
 export function App() {
   return (
     <PreferencesProvider>
-      <PortalShell />
+      {/* U07: the identity BFF decides whether the shell mounts at all. The
+        * router lives inside the shell, so the requested deep link survives the
+        * login detour without being stored anywhere. */}
+      <AuthGate>
+        <PortalShell />
+      </AuthGate>
     </PreferencesProvider>
   );
 }
