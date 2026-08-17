@@ -1378,3 +1378,21 @@
   padding-top: var(--space-3);
   border-top: 1px solid var(--line-soft);
 }
+
+/* Declared data requirements of the selected strategy (disclosure, not a gate). */
+.strategy-requirements {
+  display: grid;
+  grid-template-columns: minmax(0, 150px) minmax(0, 1fr);
+  gap: 2px var(--space-3);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line-soft);
+  font-size: var(--text-xs);
+}
+.strategy-requirements > div {
+  display: contents;
+}
+.strategy-requirements dd {
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}

@@ -470,6 +470,49 @@ export function ConfigWorkspace() {
 
           {step === "data" ? (
             <Panel title="Dữ liệu thị trường">
+              {/*
+                * What the selected strategy declares it needs.
+                *
+                * Disclosure, not a gate. The timeframe IS gated below because
+                * both sides declare it. The column and warmup checks are NOT
+                * done here: the dataset descriptor publishes no column list, and
+                * comparing against an assumed OHLCV set would be inferring
+                * rather than reading. Those checks belong to server preflight —
+                * see FRONTEND_HANDOFF §8.3 requests 14 and 15.
+                */}
+              {selected ? (
+                <dl className="strategy-requirements" data-testid="strategy-requirements">
+                  <div>
+                    <dt className="label">Cột bắt buộc</dt>
+                    <dd className="mono">
+                      {selected.requiredColumns.length
+                        ? selected.requiredColumns.join(", ")
+                        : "strategy chưa khai báo"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="label">Timeframe khai báo</dt>
+                    <dd className="mono">
+                      {selected.timeframes.length
+                        ? selected.timeframes.join(", ")
+                        : "strategy chưa khai báo"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="label">Warmup bars</dt>
+                    <dd className="mono">
+                      {selected.warmupBars ?? "strategy chưa khai báo"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="label">Kiểm tra ở đâu</dt>
+                    <dd>
+                      Timeframe được kiểm ngay tại form. Cột bắt buộc và warmup được server
+                      kiểm ở preflight — Portal không đoán nội dung frame.
+                    </dd>
+                  </div>
+                </dl>
+              ) : null}
               <FieldGrid>
                 <FieldSpan>
                   <SelectField

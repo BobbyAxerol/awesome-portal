@@ -282,3 +282,41 @@ describe("flow state", () => {
     );
   });
 });
+
+describe("declared data requirements", () => {
+  it("discloses the strategy's columns, timeframes and warmup", async () => {
+    mount();
+    await waitFor(() => expect(screen.getByText("Delta RSI Polynomial")).toBeTruthy());
+    goToStep("Dữ liệu");
+
+    const panel = await screen.findByTestId("strategy-requirements");
+    expect(panel.textContent).toContain("open, high, low, close, volume");
+    expect(panel.textContent).toContain("1h");
+    expect(panel.textContent).toContain("300");
+  });
+
+  it("says where each check happens instead of implying it gates them all", async () => {
+    // The column and warmup checks need the actual frame, which only the server
+    // has. Claiming to check them here would be inference, not reading.
+    mount();
+    await waitFor(() => expect(screen.getByText("Delta RSI Polynomial")).toBeTruthy());
+    goToStep("Dữ liệu");
+    const panel = await screen.findByTestId("strategy-requirements");
+    expect(panel.textContent).toMatch(/server kiểm ở preflight/);
+    expect(panel.textContent).toMatch(/không đoán nội dung frame/);
+  });
+
+  it("reports an undeclared requirement rather than a plausible default", async () => {
+    // Built-in only, with nothing declared: the imported manifest's columns take
+    // precedence when present, so both sources have to be empty to reach this.
+    mount({
+      strategies: [{ ...BUILTIN, display_name: "Bare builtin", required_columns: [] }],
+      alphas: { schema_version: "alpha-manifest/v1", alphas: [] },
+    });
+    await waitFor(() => expect(screen.getByText("Bare builtin")).toBeTruthy());
+    goToStep("Dữ liệu");
+    const panel = await screen.findByTestId("strategy-requirements");
+    // Not "open, high, low, close, volume" guessed from `data_kind: ohlcv`.
+    expect(panel.textContent).toMatch(/chưa khai báo/);
+  });
+});
