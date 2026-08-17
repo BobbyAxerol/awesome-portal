@@ -3,6 +3,7 @@ import type {
   AlphaImportRecord,
   PreflightCheck,
   AlphaImportRequest,
+  AlphaVersionDetail as AlphaVersionDetailResponse,
   AlphaVerifyResult,
   FoldPlanDocument,
   RowEnvelope,
@@ -251,6 +252,11 @@ export const api = {
    *
    * Read-only: it recomputes and compares, it does not promote anything.
    */
+  /** One version of one alpha: identity + lifecycle (Alpha 360°). */
+  alphaVersion: (alphaId: string, version: string) =>
+    request<AlphaVersionDetailResponse>(
+      `/api/v1/alphas/${encodeURIComponent(alphaId)}/versions/${encodeURIComponent(version)}`,
+    ),
   verifyAlpha: (alphaId: string, version: string) =>
     request<AlphaVerifyResult>(
       `/api/v1/alphas/${encodeURIComponent(alphaId)}/versions/${encodeURIComponent(version)}/verify`,

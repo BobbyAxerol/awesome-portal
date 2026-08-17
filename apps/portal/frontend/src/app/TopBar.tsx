@@ -6,12 +6,14 @@
  * has not answered we render nothing rather than defaulting to a guess — the
  * frontend does not infer which environment it is talking to (v0.5 §12.1).
  */
-import { Menu, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { Menu, PanelLeftClose, PanelLeftOpen, Search, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { useSession } from "../auth/session";
 import { EnvironmentBadge } from "../components/semantic";
 import type { PortalEnvironment } from "../portal/contracts";
 import type { Breadcrumb } from "../portal/navigation";
+import { ADMIN_USERS_ROUTE } from "./PortalRoutes";
 import { usePreferences } from "./preferences";
 
 export function TopBar({
@@ -26,6 +28,7 @@ export function TopBar({
   onToggleMobileNav: () => void;
 }) {
   const preferences = usePreferences();
+  const { isAdmin } = useSession();
 
   return (
     <header className="portal-topbar">
@@ -101,6 +104,15 @@ export function TopBar({
           <option value="operational">Operational</option>
         </select>
       </label>
+
+      {/* Account administration, next to the other session controls rather than
+          in the registry-driven nav. Hidden for a non-ADMIN as a courtesy — the
+          gateway is the boundary and the screen itself says `denied`. */}
+      {isAdmin ? (
+        <Link className="portal-icon-btn" to={ADMIN_USERS_ROUTE} title="Users & Access" aria-label="Users & Access">
+          <Users size={15} />
+        </Link>
+      ) : null}
 
       <label className="portal-pref-check mono" title="Ẩn/hiện module chưa triển khai trong điều hướng">
         <input

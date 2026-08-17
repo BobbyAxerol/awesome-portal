@@ -28,6 +28,7 @@ import {
 } from "./authApi";
 import { AccessProblemScreen, problemForState } from "./AccessProblemScreen";
 import { LoginScreen } from "./LoginScreen";
+import { SessionProvider } from "./session";
 import { PasswordChangeScreen } from "./PasswordChangeScreen";
 
 type Phase =
@@ -85,7 +86,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   if (phase.kind === "unwired") {
     return (
-      <>
+      <SessionProvider principal={null}>
         {/* Said out loud rather than hidden: a Portal with no session in front
           * is a different product from the deployed one, and a reader must be
           * able to tell which they are looking at. */}
@@ -93,13 +94,17 @@ export function AuthGate({ children }: { children: ReactNode }) {
           {phase.detail}
         </div>
         {children}
-      </>
+      </SessionProvider>
     );
   }
 
   const { state, principal, accessIdentity } = phase.context;
 
-  if (state === "AUTHENTICATED") return <>{children}</>;
+  if (state === "AUTHENTICATED") {
+    // The role travels with the shell so no screen has to re-read
+    // /api/auth/context and risk disagreeing with this decision.
+    return <SessionProvider principal={principal}>{children}</SessionProvider>;
+  }
 
   if (state === "APP_LOGIN_REQUIRED") {
     return <LoginScreen accessIdentity={accessIdentity} onAuthenticated={read} />;

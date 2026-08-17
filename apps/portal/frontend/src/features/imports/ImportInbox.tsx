@@ -23,15 +23,15 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { ShieldAlert } from "lucide-react";
-import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { Callout, Panel, SectionHeading } from "../../components/surface";
 import { StateView } from "../../components/ui";
 import { api } from "../../lib/api";
-import type { AlphaImportRecord, AlphaVerifyResult } from "../../portal/contracts";
+import type { AlphaImportRecord } from "../../portal/contracts";
 import { QUANTBT_ROOT } from "../quantbt/routes";
 import { ImportRequestForm } from "./ImportRequestForm";
+import { VerifyDigest } from "./VerifyDigest";
 import {
   IMPORT_STATES,
   importCounts,
@@ -56,60 +56,6 @@ function StateBadge({ state }: { state: AlphaImportRecord["state"] }) {
   );
 }
 
-/**
- * Digest re-verification for one import.
- *
- * Fetched only when asked. The result is stated as a comparison of two digests,
- * not as a verdict word: "matches" alone would hide which side disagreed.
- */
-function VerifyRow({ record }: { record: AlphaImportRecord }) {
-  const [enabled, setEnabled] = useState(false);
-  const verify = useQuery({
-    queryKey: ["alpha-verify", record.alpha_id, record.version],
-    queryFn: () => api.verifyAlpha(record.alpha_id, record.version),
-    enabled,
-    retry: false,
-  });
-
-  if (!enabled) {
-    return (
-      <button type="button" className="btn-ghost" onClick={() => setEnabled(true)}>
-        Verify digest
-      </button>
-    );
-  }
-  if (verify.isLoading) return <span className="mono text-[11px] text-ink-faint">đang verify…</span>;
-  if (verify.isError || !verify.data) {
-    return (
-      <span className="mono text-[11px]" style={{ color: "var(--state-unavailable)" }}>
-        không verify được — alpha version có thể chưa nằm trong registry bất biến
-      </span>
-    );
-  }
-  return <VerifyResult result={verify.data} />;
-}
-
-function VerifyResult({ result }: { result: AlphaVerifyResult }) {
-  return (
-    <dl className="import-verify mono">
-      <div>
-        <dt>registered</dt>
-        <dd>{result.registered_digest.slice(0, 23)}…</dd>
-      </div>
-      <div>
-        <dt>computed</dt>
-        <dd>{result.computed_digest.slice(0, 23)}…</dd>
-      </div>
-      <div>
-        <dt>kết quả</dt>
-        <dd style={{ color: result.matches ? "var(--state-available)" : "var(--state-denied)" }}>
-          {result.matches ? "hai digest khớp" : "hai digest KHÁC nhau"}
-        </dd>
-      </div>
-    </dl>
-  );
-}
-
 function ImportRow({ record }: { record: AlphaImportRecord }) {
   const presentation = importStatePresentation(record.state);
   return (
@@ -117,7 +63,13 @@ function ImportRow({ record }: { record: AlphaImportRecord }) {
       <div className="import-row-head">
         <div>
           <p className="import-alpha">
-            <span className="mono import-alpha-id">{record.alpha_id}</span>
+            {/* The alpha id opens its 360° view — lineage, lifecycle, digest. */}
+            <Link
+              className="mono import-alpha-id"
+              to={`${QUANTBT_ROOT}/alphas/${encodeURIComponent(record.alpha_id)}/${encodeURIComponent(record.version)}`}
+            >
+              {record.alpha_id}
+            </Link>
             <span className="mono import-version">v{record.version}</span>
           </p>
           <p className="mono import-received">nhận lúc {record.received_at}</p>
@@ -136,7 +88,7 @@ function ImportRow({ record }: { record: AlphaImportRecord }) {
           digest_ok = {String(record.digest_ok)}
         </span>
         <span className="mono import-id">import {record.import_id.slice(0, 12)}…</span>
-        <VerifyRow record={record} />
+        <VerifyDigest alphaId={record.alpha_id} version={record.version} />
       </div>
     </article>
   );

@@ -32,6 +32,7 @@ import { api, canOpenRunResults, isTerminal, type RunSummary } from "../../lib/a
 import { fmtShortHash } from "../../lib/format";
 import { AuditView } from "../audit/AuditView";
 import { ConfigWorkspace } from "../config/ConfigWorkspace";
+import { AlphaVersionDetail } from "../imports/AlphaVersionDetail";
 import { ImportInbox } from "../imports/ImportInbox";
 import { ExecutionView } from "../execution/ExecutionView";
 import { OptimizationView } from "../optimization/OptimizationView";
@@ -280,6 +281,7 @@ export function QuantBTModule() {
           * still COMMISSIONED in the registry, and rendering a working screen
           * there would contradict its own badge. */}
         <Route path="imports" element={<ImportInbox />} />
+        <Route path="alphas/:alphaId/:version" element={<AlphaVersionDetail />} />
         <Route path="runs" element={<RunLibrary />} />
         <Route path="runs/:runId/*" element={<RunWorkspace />} />
         <Route path=":tab" element={<LegacyTabRedirect />} />
