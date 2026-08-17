@@ -1279,3 +1279,102 @@
 .run-id-mismatch span {
   color: var(--ink);
 }
+
+/* --- Command Center evidence drawer (v0.4 §P0.13) ------------------------ */
+.evidence-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: flex-end;
+  background: var(--scrim);
+}
+.evidence-drawer {
+  width: min(560px, 96vw);
+  height: 100%;
+  overflow-y: auto;
+  padding: var(--space-4);
+  background: var(--paper);
+  border-left: 1px solid var(--line);
+}
+.evidence-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+.evidence-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  color: var(--ink);
+}
+.evidence-section-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+}
+.evidence-list {
+  display: grid;
+  gap: var(--space-3);
+}
+.evidence-metric {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--paper-raised);
+  padding: var(--space-3);
+}
+.evidence-metric-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--line-soft);
+}
+.evidence-metric-label {
+  font-size: var(--text-base);
+  color: var(--ink);
+}
+.evidence-metric-key {
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+}
+.evidence-metric-value {
+  font-size: var(--text-lg);
+  color: var(--ink);
+}
+.evidence-facts {
+  display: grid;
+  grid-template-columns: minmax(0, 130px) minmax(0, 1fr);
+  gap: 2px var(--space-3);
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+}
+.evidence-fact {
+  display: contents;
+}
+.evidence-facts dd {
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+/* A field the snapshot left null is styled unlike a value, so it cannot be
+ * misread as one. */
+.evidence-unpublished {
+  font-style: italic;
+  color: var(--ink-faint);
+}
+.evidence-empty,
+.evidence-foot {
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--ink-faint);
+}
+.evidence-foot {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line-soft);
+}

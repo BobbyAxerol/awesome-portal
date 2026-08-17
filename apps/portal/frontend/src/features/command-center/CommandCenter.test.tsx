@@ -7,7 +7,7 @@
  * into a zero.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { MemoryRouter } from "react-router-dom";
@@ -209,5 +209,74 @@ describe("Command Center — state separation", () => {
     expect(seen.get("healthy")).toBe("available");
     expect(seen.get("partial")).toBe("degraded");
     expect(seen.get("unavailable")).toBe("unavailable");
+  });
+});
+
+describe("evidence drawer", () => {
+  it("opens the full evidence for a section and traces each number to its authority", async () => {
+    mountWith(summaryFixture("healthy"));
+    const card = await screen.findByLabelText(/Evidence cho QuantBT Research/);
+    fireEvent.click(card);
+
+    const drawer = await screen.findByTestId("evidence-drawer");
+    // Every metric in the section, not just the headline ones the card shows.
+    const section = summaryFixture("healthy").sections.find(
+      (item) => item.feature_id === "QUANTBT_RESEARCH",
+    )!;
+    for (const key of Object.keys(section.metrics)) {
+      expect(within(drawer).getByTestId(`evidence-${key}`), key).toBeTruthy();
+    }
+    // The authority is what makes a number traceable.
+    expect(within(drawer).getAllByText(/quantbt-current-runs\.v1/).length).toBeGreaterThan(0);
+    expect(within(drawer).getAllByText(/\/api\/runs/).length).toBeGreaterThan(0);
+  });
+
+  it("separates as-of from checked-at", async () => {
+    // When the data was true and when we last asked are different facts;
+    // conflating them hides staleness.
+    mountWith(summaryFixture("healthy"));
+    fireEvent.click(await screen.findByLabelText(/Evidence cho QuantBT Research/));
+    const drawer = await screen.findByTestId("evidence-drawer");
+    expect(within(drawer).getAllByText("as-of").length).toBeGreaterThan(0);
+    expect(within(drawer).getAllByText("checked-at").length).toBeGreaterThan(0);
+  });
+
+  it("marks an unpublished field as unpublished, never as a value", async () => {
+    mountWith(summaryFixture("healthy"));
+    fireEvent.click(await screen.findByLabelText(/Evidence cho QuantBT Research/));
+    const drawer = await screen.findByTestId("evidence-drawer");
+    // The healthy fixture leaves segment/digest null on these metrics.
+    const unpublished = within(drawer).getAllByText("chưa công bố");
+    expect(unpublished.length).toBeGreaterThan(0);
+    for (const node of unpublished) {
+      expect(node.textContent).not.toMatch(/^0$/);
+    }
+  });
+
+  it("does not offer a history it has no data for", async () => {
+    // Cross-filter and time series need U10's read model; offering them here
+    // would mean inventing a series the snapshot does not contain.
+    mountWith(summaryFixture("healthy"));
+    fireEvent.click(await screen.findByLabelText(/Evidence cho QuantBT Research/));
+    const drawer = await screen.findByTestId("evidence-drawer");
+    expect(within(drawer).getByText(/read model bền của U10/)).toBeTruthy();
+    expect(within(drawer).queryByRole("button", { name: /lịch sử|history|chart/i })).toBeNull();
+  });
+
+  it("closes on Escape", async () => {
+    mountWith(summaryFixture("healthy"));
+    fireEvent.click(await screen.findByLabelText(/Evidence cho QuantBT Research/));
+    await screen.findByTestId("evidence-drawer");
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByTestId("evidence-drawer")).toBeNull());
+  });
+
+  it("shows an unavailable section's reason instead of blank metrics", async () => {
+    mountWith(summaryFixture("unavailable"));
+    const opener = await screen.findAllByLabelText(/^Evidence cho /);
+    fireEvent.click(opener[0]);
+    const drawer = await screen.findByTestId("evidence-drawer");
+    // An unavailable metric renders its state badge, not a zero.
+    expect(within(drawer).queryByText("0")).toBeNull();
   });
 });

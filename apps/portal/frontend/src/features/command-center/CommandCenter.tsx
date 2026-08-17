@@ -10,6 +10,7 @@
  * is "open the highest-priority evidenced item".
  */
 import { RefreshCw } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { ModuleHeader } from "../../app/ModuleHeader";
@@ -29,6 +30,7 @@ import { useSummary } from "../../portal/hooks";
 import { lifecycleStages } from "../../portal/navigation";
 import { MaturityBadge } from "../../components/semantic";
 import { Distribution } from "./Distribution";
+import { EvidenceDrawer } from "./EvidenceDrawer";
 import {
   SECTION_DETAIL_METRICS,
   SECTION_DISTRIBUTION_METRICS,
@@ -70,7 +72,13 @@ function scalarMetricKeys(section: PortalSummarySection): string[] {
     .slice(0, 6);
 }
 
-function SectionCard({ section }: { section: PortalSummarySection }) {
+function SectionCard({
+  section,
+  onOpenEvidence,
+}: {
+  section: PortalSummarySection;
+  onOpenEvidence: (section: PortalSummarySection) => void;
+}) {
   const { registry } = usePortalContext();
   const feature = registry?.features.find((f) => f.id === section.feature_id) ?? null;
   const state = componentStateFor(section.availability);
@@ -97,6 +105,16 @@ function SectionCard({ section }: { section: PortalSummarySection }) {
               Mở {feature.label}
             </Link>
           ) : null}
+          {/* Every number on this card has an authority and a provenance in the
+            * snapshot; without this they were unreachable. */}
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => onOpenEvidence(section)}
+            aria-label={`Evidence cho ${section.label}`}
+          >
+            Evidence
+          </button>
         </span>
       </div>
 
@@ -232,6 +250,7 @@ function LifecycleRibbon() {
 export function CommandCenter() {
   const { registry } = usePortalContext();
   const summary = useSummary();
+  const [evidenceFeatureId, setEvidenceFeatureId] = useState<string | null>(null);
   const feature = registry?.features.find((f) => f.id === "COMMAND_CENTER") ?? null;
 
   const header = (
@@ -285,6 +304,11 @@ export function CommandCenter() {
 
   const data = summary.data;
   const top = data.priority_items[0] ?? null;
+  // Held by feature_id, not by object: a refetch replaces the section objects,
+  // and an open drawer must follow the new snapshot rather than freeze the old.
+  const openEvidence = evidenceFeatureId
+    ? data.sections.find((section) => section.feature_id === evidenceFeatureId) ?? null
+    : null;
 
   return (
     <>
@@ -333,7 +357,11 @@ export function CommandCenter() {
 
       <div className="portal-grid-2">
         {data.sections.map((section) => (
-          <SectionCard key={section.feature_id} section={section} />
+          <SectionCard
+            key={section.feature_id}
+            section={section}
+            onOpenEvidence={(section) => setEvidenceFeatureId(section.feature_id)}
+          />
         ))}
       </div>
 
@@ -344,6 +372,10 @@ export function CommandCenter() {
         <p className="dek">Metadata sản phẩm từ registry — không phải trạng thái runtime.</p>
         <LifecycleRibbon />
       </section>
+
+      {openEvidence ? (
+        <EvidenceDrawer section={openEvidence} onClose={() => setEvidenceFeatureId(null)} />
+      ) : null}
 
       <section className="portal-block" aria-labelledby="priority-heading">
         <h2 id="priority-heading" className="portal-block-title">
