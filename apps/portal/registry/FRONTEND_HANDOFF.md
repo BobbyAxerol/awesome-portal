@@ -176,55 +176,63 @@ Chỉ 3 type hiện được ủy quyền, thứ tự ưu tiên:
   enforcement.
 - Frontend không suy diễn backend health/permission/financial state.
 
-## 8. Backlog deep-dive (ghi bởi Claude — cập nhật ở slice v1.1)
+## 8. Backlog deep-dive (ghi bởi Claude — cập nhật 2026-08-17, slice v1.1)
 
-Nguyên tắc giữ nguyên từ v1: "làm được luồng nào chắc luồng đó". Mục này
-liệt kê phần **làm ở mức đủ dùng nhưng chưa deep-dive**, kèm lý do và slice
-đề xuất kế tiếp theo v0.5 §10–§12. Không có placeholder ẩn: mọi màn chưa
-implement đều là `COMMISSIONED` trong registry và mở ra Feature Preview.
+Nguyên tắc giữ nguyên từ v1: "làm được luồng nào chắc luồng đó". Đây là
+**markdown tracking của frontend** (`upgrade/**` là docs của codex, không sửa).
+Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.5.
 
 ### 8.1 Đã đóng trong slice v1.1
 
-| Vùng | Đóng bằng gì |
-|---|---|
-| Planning: Roadmap | Timeline mới thay bảng 24 cột `min-width:1240px`; delivery đếm từ task thật, phase không có task báo "chưa có task" chứ không phải 0%; concurrency + milestone marker; đọc được ở 4 breakpoint. |
-| Planning: Task Board | Drag optimistic + rollback nguyên snapshot; drop có vị trí (insertion line); Alt+Arrow là đường bàn phím tương đương; group theo milestone/workstream/owner; bulk transition; activity mở thẳng từ card. |
-| Design system Planning | Một control family (`.input`), type/spacing/radius scale, `Checkbox` đủ 5 state, `Select`/`Textarea`/`Field`; gate `design-tokens.test.ts` chặn colour literal ngoài `tokens.css`. |
-| Mermaid | Đọc token từ computed style thay vì 20 hex hard-code; node theo workstream ramp; scale theo container. |
-| INTERPRETATION / EVIDENCE / PORTAL PREVIEW | Gỡ sạch khỏi bundle: feature module, route, tab, fragment HTML, CSS. Test chặn tái xuất hiện. |
-| Portal Map — persona filter | Có filter persona, roll-up từ `screens[].primary_persona` (xem 8.3 điểm 3 để biết vì sao vẫn còn backend request). |
+| Vùng | Thuộc mục | Đóng bằng gì |
+|---|---|---|
+| Gỡ INTERPRETATION / EVIDENCE / PORTAL PREVIEW | v1.1 §2.2 | Xoá khỏi bundle: feature module, route, tab, fragment HTML, CSS. Test chặn tái xuất hiện. |
+| Roadmap màn | v1.1 §2.4 | Timeline thay bảng 24 cột `min-width:1240px`; delivery đếm từ task thật, phase không có task báo "chưa có task" chứ không phải 0%; concurrency + milestone marker; đọc được ở 4 breakpoint. |
+| Mermaid | v1.1 §2.3 | Đọc token từ computed style thay 20 hex hard-code; node theo workstream ramp; scale theo container; nhãn theo type scale. |
+| Task Board — font/tickbox | v1.1 §3.1, §3.2 | Một control family; type/spacing/radius scale; `Checkbox` đủ 5 state (checked/unchecked/indeterminate/disabled/loading), native semantics. |
+| Task Board — tính năng | v1.1 §3.3 | Group theo milestone/workstream/owner; bulk transition; activity mở thẳng từ card; đếm task + đếm đã chọn theo cột. |
+| Task Board — flow kéo thả | v1.1 §3.4 | Optimistic apply → rollback nguyên snapshot khi lỗi; insertion line cho vị trí drop; Alt+Arrow là đường bàn phím tương đương. |
+| Webhook feedback | v1.1 §5 | Toast nói thông báo **đã xếp hàng** (không phải đã gửi — FE không quan sát được outbox). Test quét DOM chặn mọi chuỗi webhook/secret. |
+| Portal Map — persona filter | v0.4 §P0.15 | Đọc `lifecycle_stages[].personas` do backend khai báo. |
+| Chart envelope — toàn bộ result tab | v0.5 §12.2 | 7 `ChartFigure` còn lại (Optimization ×4, Parameters ×3, Execution ×2) đều mang envelope. Không còn chart nào dùng `sourceId` trần. |
+| Contract typed | §8.3 request 1–3 | Regenerate types + narrow tới generated schema; `SummaryMetric` thành alias của `EvidenceValue`. |
 
 ### 8.2 Còn treo
 
 | Vùng | Trạng thái | Vì sao chưa sâu | Slice đề xuất |
 |---|---|---|---|
-| Import Wizard (U14) | Chưa có UI. Picker đã đọc `/api/v1/alphas`; alpha chưa đăng ký runtime hiển thị kèm lý do. | Backend slice `POST /api/v1/alphas/import` + quarantine pipeline chưa có (strategy contract §6). Làm UI trước sẽ là form không có authority. | Sau BAR-21: Import Flow A/B, digest verify, quarantine state. |
-| Run Progress | Giữ nguyên bản v0.1.1 (console + fold Gantt). | Đã hoạt động; chưa áp §12 envelope vì fold Gantt vẽ từ fold plan chứ không từ series artifact. | Chuẩn hoá Gantt theo §12.2, thêm as-of/digest, ETA có confidence. |
-| Optimization / Parameters / Execution tabs | Chart chưa mang envelope §12.2 đầy đủ (mới có ở Overview: 7 `ChartFigure` còn dùng `sourceId` string thay vì `provenance`). | Cần trial-level provenance mà artifact hiện chưa expose per-chart, và `SeriesPayload` chưa có `source_rows` (backend request 2) nên envelope sẽ không nói thật được về downsample. | Một slice "chart envelope rollout" sau khi backend request 2 xong. |
+| Import Wizard (U14) | Chưa có UI. Picker đã đọc `/api/v1/alphas` (typed); alpha chưa đăng ký runtime hiển thị kèm lý do. | Backend slice `POST /api/v1/alphas/import` + quarantine pipeline chưa có (strategy contract §6). Làm UI trước sẽ là form không có authority. | Sau BAR-21: Import Flow A/B, digest verify, quarantine state. |
+| Run Progress | Giữ nguyên bản v0.1.1 (console + fold Gantt). | Fold Gantt vẽ từ fold **plan**, không phải series artifact, nên `seriesProvenance` không áp được; fold-plan chưa có `as_of`/`digest`. | Chuẩn hoá Gantt theo §12.2 sau khi có backend request 4 (dưới). |
 | Command Center | Đủ 7 state, số liệu thật từ summary. Chưa có drill-down drawer. | Read model bền thuộc U10; drawer không có nguồn ổn định để mở. | Sau U10: evidence drawer + cross-filter. |
-| Planning: Docs / Reports | Nhúng nguyên feature body. Token và form control đã dùng chung sau v1.1; Reports vẫn render fragment HTML legacy đã khoá. | Fragment là bản byte-preserved của tài liệu gốc, refactor sẽ phá content-integrity hash. | Slice "Reports như dữ liệu" — parse fragment thành model rồi render bằng primitive, giữ hash của nguồn. |
+| Planning: Docs / Reports | Nhúng nguyên feature body. Token và form control đã dùng chung; Reports vẫn render fragment HTML legacy đã khoá. | Fragment là bản byte-preserved của tài liệu gốc, refactor sẽ phá content-integrity hash. | Slice "Reports như dữ liệu" — parse fragment thành model rồi render bằng primitive, giữ hash của nguồn. |
 | Profile & Access | `COMMISSIONED` preview. | Chờ U07 wire gateway→BFF; login screens 01B/01C/01D chưa có backend. | Sau U10: Frames 01B–01D + session expired + maintenance screen kèm request ID. |
-| Visual baseline 4 breakpoint × 3 theme | Chưa có. Playwright đã chạy được cho Planning (2 e2e xanh, image `mcr.microsoft.com/playwright`), nhưng `apps/portal/frontend` chưa có e2e project nào. | Cần dựng Playwright cho Portal + baseline screenshot; là slice riêng, không nhét vào slice UI. | Slice "visual baseline": Playwright cho Portal, screenshot Research Light / Operations Dark / Print. |
-| Operations Dark | Token đầy đủ và có parity test giữa hai token file; chưa review thị giác từng màn. | Chưa có visual baseline (trên). | Đi kèm slice visual baseline. |
+| Visual baseline 4 breakpoint × 3 theme | Chưa có. Playwright chạy được cho Planning (2 e2e xanh, image `mcr.microsoft.com/playwright:v1.62.1-noble`); `apps/portal/frontend` chưa có e2e project. | Cần dựng Playwright cho Portal + baseline screenshot; là slice riêng, không nhét vào slice UI. | **Ưu tiên kế tiếp** — xem §8.6. |
+| Operations Dark | Token đầy đủ + parity test giữa hai token file; chưa review thị giác từng màn. | Chưa có visual baseline (trên). | Đi kèm slice visual baseline. |
 
-### 8.3 Backend request còn treo (@codex)
+### 8.3 Backend request
 
-1. `/api/v1/alphas` và `/api/v1/portal/capabilities` chưa có schema trong
-   `components/schemas` — codegen ra `unknown`. Frontend đang narrow ở boundary
-   (`portal/strategyCatalog.ts`) và có test theo file registry thật. Đề xuất
-   đặt tên `AlphaRegistryDocument` + `EngineCapabilityDocument`.
-   *(Kiểm lại 2026-08-17: vẫn chưa có.)*
-2. `SeriesPayload` chưa công bố `source_rows` — chart envelope §12.2 cần
-   "source_rows/returned_rows" để nói thật về downsample. Hiện UI hiển thị
-   returned = source khi thiếu field, tức không khẳng định có downsample.
-   Đây là thứ chặn slice "chart envelope rollout" ở 8.2.
-   *(Kiểm lại 2026-08-17: vẫn chưa có.)*
-3. `lifecycle_stages[]` chưa có `persona`. v1.1 đã làm filter bằng cách roll-up
-   `screens[].primary_persona` qua `feature_ids` của stage, và UI ghi rõ nguồn
-   ("persona (từ screen): …"). Hạn chế còn lại: stage **không có screen nào**
-   thì không có persona để lọc — UI hiện giữ nguyên stage đó thay vì ẩn, vì
-   registry chưa nói stage đó không liên quan tới persona nào. Một field
-   `persona` ở stage sẽ biến suy luận này thành khai báo.
+**Đã đóng** (codex giao trong `5e1ff6d`, frontend thu ở `ff5ddf8` + `a631205`):
+
+1. ~~Schema cho `/api/v1/alphas` và `/api/v1/portal/capabilities`~~ → `AlphaRegistryDocument`,
+   `EngineCapabilitiesDocument`. Frontend đã narrow tới generated type; đổi tên
+   field ở backend giờ là lỗi build chứ không phải `undefined` âm thầm.
+2. ~~`source_rows` trên `SeriesPayload`~~ → có cả `source_rows`,
+   `returned_rows`, `downsample_stride`. Đây là thứ mở khoá chart envelope
+   rollout ở §8.1.
+3. ~~`persona` cho lifecycle stage~~ → `lifecycle_stages[].personas`
+   (projection-derived, schema-optional, default `[]`). Roll-up tạm ở frontend
+   đã xoá.
+
+**Còn treo (mới, @codex):**
+
+4. `GET /api/runs/{run_id}/wfo/trials` chưa công bố tổng số trial của artifact.
+   Frontend đang gọi `top_n=5000` và **suy ra** "có thể còn trial ngoài tập
+   này" bằng cách so `length >= 5000` — suy luận, không phải khai báo. Đề xuất
+   thêm `total_rows` (hoặc bọc trong envelope giống `SeriesPayload`) để cảnh
+   báo trên chart trở thành sự thật được công bố. Cùng lý do như request 2.
+5. `GET /api/runs/{run_id}/fold-plan` chưa có `as_of` / `source_artifact_digest`.
+   Fold Gantt là chart duy nhất còn ngoài §12.2 envelope vì không có gì để
+   trích dẫn. Đề xuất thêm hai field đó vào response.
 
 ### 8.4 Discrepancy ghi nhận (v1.1)
 
@@ -241,7 +249,31 @@ implement đều là `COMMISSIONED` trong registry và mở ra Feature Preview.
    `3-research-alpha-development-runtime-layer` §3.7, là artifact kiến trúc
    giữa `QuantBT Worker` → `Quant / Risk / Manager Review`, không phải một
    phần của màn Evidence. Nó bị khoá bởi content-integrity hash và bởi chính
-   §2.1 ("không viết lại nội dung"). v1.1 gỡ **ba màn** (Interpretation,
-   Evidence & Source Map, Portal Preview) và giữ node trong tài liệu gốc.
-   Cần Bobby quyết nếu muốn sửa cả tài liệu gốc — việc đó phải đi kèm
-   regenerate manifest và là thay đổi nội dung, không phải thay đổi UI.
+   §2.1 ("không viết lại nội dung"). v1.1 gỡ **ba màn** và giữ node trong tài
+   liệu gốc. **Cần Bobby quyết** nếu muốn sửa cả tài liệu gốc — việc đó phải
+   đi kèm regenerate manifest và là thay đổi nội dung, không phải thay đổi UI.
+
+### 8.5 Việc làm thêm ngoài plan (track theo CLAUDE.md §7.3)
+
+| Việc | Vì sao làm | Bằng chứng |
+|---|---|---|
+| Gate `design-tokens.test.ts` (Planning) | "Không style lẻ" chỉ đúng nếu có kiểm. Gate chặn colour literal ngoài `tokens.css` và chặn dark ramp tái dùng giá trị light. | Bắt được 4 vi phạm thật khi viết. |
+| Gate token parity Portal ↔ Planning | Portal import `features.css` của Planning nhưng **không** import `tokens.css`; token mới của v1.1 chỉ có ở Planning → board/timeline nhúng trong shell mất màu. | Bản gate đầu **rỗng** (chỉ quét CSS, `--ws-*` đi qua inline style TSX). Bản hiện tại negative-test: xoá `--ws-1..8` fail, xoá `--text-sm` fail. |
+| Workstream categorical ramp (8 hue × 2 theme) | Mermaid + roadmap + task card cần identity colour; Fund Paper chưa có ramp categorical nào. | Validate OKLab + CVD Machado-Oliveira-Fernandes severity 1.0. Cả 2 mode pass 6/6 check, không WARN. Dark re-step riêng cho từng surface (`#182031`, `#161e2a`). |
+| `lib/workstream.ts` — slot cố định, không cycle | Hue thứ 9 mà lặp lại sẽ nói dối rằng hai workstream là một. Slot tính từ **toàn bộ** task set nên lọc không repaint. | Workstream thứ 9+ nhận `--ws-other` + luôn kèm nhãn chữ. |
+| Alt+Arrow chuyển cột trên task card | Drag-and-drop là affordance chỉ-chuột; đây là primary action của board (v0.4 §26.4). | Test bàn phím trong `task-board-drag.test.tsx`. |
+| Đường "giảm điểm: chưa rõ phương pháp" | Dòng cũ hard-code "server max_points", khẳng định một phương pháp mà FE không biết. | Test chặn chuỗi `max_points` xuất hiện khi không có method. |
+| Cảnh báo `top_n=5000` trên chart trial | Cap của query là thuộc tính của dữ liệu chart, không phải chi tiết fetch. | Hiện là **suy luận** → đã mở backend request 4 để biến thành khai báo. |
+| Regenerate `packages/contracts/generated/portal-api.d.ts` | Codex cập nhật OpenAPI nhưng chưa regenerate types (+202 dòng). Bước cơ học theo CLAUDE.md §7.6. | `cd packages/contracts && npm run generate`. |
+
+### 8.6 Đề xuất slice kế tiếp
+
+1. **Visual baseline** (ưu tiên 1) — dựng Playwright cho `apps/portal/frontend`,
+   screenshot 4 breakpoint × Research Light / Operations Dark / Print. Đây là
+   tiêu chí exit gate U02 duy nhất còn chưa chứng minh được, và nó cũng mở khoá
+   "Operations Dark review". Hạ tầng đã sẵn: image Playwright chạy được, Planning
+   đã có e2e project để copy cấu hình.
+2. **Run Progress §12.2** — sau khi có backend request 5 (`as_of`/digest cho
+   fold-plan).
+3. **Reports như dữ liệu** — gỡ nốt fragment HTML legacy cuối cùng khỏi Planning
+   mà vẫn giữ content-integrity hash của nguồn.
