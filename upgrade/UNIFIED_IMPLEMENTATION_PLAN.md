@@ -211,19 +211,19 @@ contract/schema → backend/domain tests → API/read model → UI states/wirefr
 | U04 | QuantBT Research embedding & parity | PARTIAL | QuantBT trong shell chung |
 | U05 | Planning embedding & cross-link | PARTIAL | Planning trong shell chung |
 | U06 | Secure edge/origin topology | EXTERNAL | Hostname private-origin an toàn |
-| U07 | Identity, local login, session & RBAC | NOT STARTED | M-1B auth hoàn chỉnh |
-| U08 | M0 reproducibility freeze | PARTIAL | Golden technical baseline |
-| U09 | Contract foundation & monorepo platform tooling | NOT STARTED | Contract/codegen/breaking CI |
-| U10 | TypeScript Control API façade | NOT STARTED | Browser đi qua TS authority |
-| U11 | Durable quant worker & immutable artifacts | NOT STARTED | Compute tách, retry đúng |
-| U12 | Engine Capability Registry & full QuantBT UI | NOT STARTED | Capability-driven platform |
-| U13 | Data Catalog, snapshots & query foundation | PARTIAL | Platform hóa data identity/quality |
-| U14 | Alpha Registry & research platform | NOT STARTED | Alpha artifact có governance |
-| U15 | Approval, Paper & Sandbox | NOT STARTED | Governed same-artifact promotion |
-| U16 | Live control & operational safety | EXTERNAL | Live không bypass risk engine |
-| U17 | Rust fast paths & scale certification | NOT STARTED | Tối ưu theo evidence |
-| U18 | Planning/Postgres cutover | PARTIAL | Retire SQLite companion an toàn |
-| U19 | Release, DR, open-source & product hardening | PARTIAL | Stable release-ready Portal |
+| U07 | Identity, local login, session & RBAC | INTEGRATION_PENDING | Foundation (BAR-04) xong; chờ wire gateway + auth thật sau Cloudflare |
+| U08 | M0 reproducibility freeze | FOUNDATION_COMPLETE | Golden technical baseline (BAR-05) |
+| U09 | Contract foundation & monorepo platform tooling | FOUNDATION_COMPLETE | Contract/codegen/breaking CI (BAR-06) |
+| U10 | TypeScript Control API façade | FOUNDATION_COMPLETE — BROWSER CUTOVER PENDING | Browser đi qua TS authority; mở route có kiểm soát (BAR-07) |
+| U11 | Durable quant worker & immutable artifacts | FOUNDATION_COMPLETE — PRODUCTION_INACTIVE | Compute tách, retry đúng; production adapter/outbox relay còn thiếu (BAR-08) |
+| U12 | Engine Capability Registry & full QuantBT UI | FOUNDATION_COMPLETE | Capability-driven platform; certify từng capability còn lại (BAR-09) |
+| U13 | Data Catalog, snapshots & query foundation | FOUNDATION_COMPLETE — OPERATIONAL_EVIDENCE_PENDING | Chưa family nào AVAILABLE tới khi có real digest/quality evidence (BAR-10) |
+| U14 | Alpha Registry & research platform | FOUNDATION_COMPLETE | Alpha artifact có governance; import/build/scan workflow là slice U14 (BAR-11) |
+| U15 | Approval, Paper & Sandbox | FOUNDATION_COMPLETE | Governed same-artifact promotion; chưa operational paper/sandbox (BAR-12) |
+| U16 | Live control & operational safety | FOUNDATION_COMPLETE — EXECUTION GATEWAY PENDING | Live không bypass risk engine; chưa nối private trading system (BAR-13) |
+| U17 | Rust fast paths & scale certification | NOT STARTED (gate chưa vượt) | Tối ưu theo evidence; BAR-14 benchmark gate giữ Rust đóng |
+| U18 | Planning/Postgres cutover | FOUNDATION_COMPLETE — CUTOVER PENDING | Production adapter + cutover thật chưa làm (BAR-15) |
+| U19 | Release, DR, open-source & product hardening | FOUNDATION_COMPLETE — OPERATIONAL_EVIDENCE_PENDING | Restore drill/game-day/dual-cell rollback chưa chạy thật (BAR-16) |
 
 Critical path:
 
@@ -231,6 +231,13 @@ Critical path:
 U00 → U01 → U01-BE → U02 → U03 → U04/U05 → U06 → U07 → U08 → U09 → U10
 → U11 → U12 → U13/U14 → U15 → U16 → U17 → U18 → U19
 ```
+
+Trạng thái phase từ U07 trở đi đọc theo vocabulary v0.5 §8.1
+(`CONTRACT_COMPLETE` / `FOUNDATION_COMPLETE` / `INTEGRATION_PENDING` /
+`PRODUCTION_INACTIVE` / `OPERATIONAL_EVIDENCE_PENDING`): một BAR pass test
+không nghĩa phase/product production hoàn tất — audit matrix §8.2 của v0.5
+liệt kê việc còn làm của từng BAR, và `deploy/compose.production.yaml` chưa
+active control-api/NATS/MinIO/worker (v0.5 §8.3.2).
 
 U01-BE chỉ khóa reader boundary và một Binance OHLCV hot path trên backend
 FastAPI hiện tại; không kéo toàn bộ Data Catalog lên trước. U13 có thể chuẩn bị

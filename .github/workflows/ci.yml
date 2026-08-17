@@ -32,6 +32,12 @@ jobs:
       - name: Lint GitHub Actions definitions
         run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7
 
+      - name: Test shared contracts workspace
+        run: ./scripts/contracts-test.sh
+
+      - name: Test Control API
+        run: ./scripts/control-api-test.sh
+
       - name: Set up Python
         uses: actions/setup-python@v7
         with:

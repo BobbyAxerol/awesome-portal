@@ -460,7 +460,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Wfo Trials */
+        /**
+         * Wfo Trials
+         * @description Trial rows wrapped in an envelope that discloses the full population.
+         *
+         *     ``total_rows`` is the number of unique trials stored in the artifact
+         *     (before any filter or ``top_n`` cap), so consumers never have to *infer*
+         *     "there may be more trials than this page" from ``len(rows) == top_n``.
+         */
         get: operations["wfo_trials_api_runs__run_id__wfo_trials_get"];
         put?: never;
         post?: never;
@@ -2951,7 +2958,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         [key: string]: unknown;
-                    }[];
+                    };
                 };
             };
             /** @description Validation Error */
