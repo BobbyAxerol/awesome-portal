@@ -10,7 +10,7 @@
   "protocol": "advanced_walk_forward",
   "quantbt_version": "1.0.8",
   "random_seed": 42,
-  "run_id": "visual-baseline-run",
+  "run_id": "visual-baseline-run-running",
   "started_at": "2026-08-17T08:00:00Z",
   "status": "COMPLETED",
   "strategy_id": "delta-rsi-polynomial-alpha",

@@ -925,6 +925,13 @@ export interface components {
             /** Warmup Bars */
             warmup_bars: number;
         };
+        /** AlphaDeterminismPublic */
+        AlphaDeterminismPublic: {
+            /** External Io */
+            external_io: boolean;
+            /** Seed Required */
+            seed_required: boolean;
+        };
         /** AlphaImportRecord */
         AlphaImportRecord: {
             /** Alpha Id */
@@ -1011,6 +1018,7 @@ export interface components {
         };
         /** AlphaStrategyPublic */
         AlphaStrategyPublic: {
+            determinism: components["schemas"]["AlphaDeterminismPublic"];
             /** Execution Contracts */
             execution_contracts: string[];
             /** Family */
@@ -1933,8 +1941,27 @@ export interface components {
             /** Sections */
             sections: components["schemas"]["PortalSummarySection"][];
         };
+        /**
+         * PreflightCheck
+         * @description One preflight gate result (R14): the UI shows which check failed.
+         */
+        PreflightCheck: {
+            /** Detail */
+            detail?: string | null;
+            /** Id */
+            id: string;
+            /** Missing */
+            missing?: string[] | null;
+            /** Ok */
+            ok: boolean;
+        };
         /** PreflightResponse */
         PreflightResponse: {
+            /**
+             * Checks
+             * @default []
+             */
+            checks: components["schemas"]["PreflightCheck"][];
             /** Config Hash */
             config_hash: string;
             /** Data Quality */
@@ -1947,6 +1974,8 @@ export interface components {
             fold_plan?: {
                 [key: string]: unknown;
             } | null;
+            /** Request Id */
+            request_id?: string | null;
             /** Strategy Id */
             strategy_id: string;
             /** Symbol */

@@ -33,6 +33,15 @@ class WindowSummary(ResponseModel):
     bars: int
 
 
+class PreflightCheck(ResponseModel):
+    """One preflight gate result (R14): the UI shows which check failed."""
+
+    id: str
+    ok: bool
+    missing: tuple[str, ...] | None = None
+    detail: str | None = None
+
+
 class PreflightResponse(ResponseModel):
     valid: bool
     strategy_id: str
@@ -43,6 +52,8 @@ class PreflightResponse(ResponseModel):
     data_quality: dict[str, Any]
     config_hash: str
     fold_plan: dict[str, Any] | None = None
+    checks: tuple[PreflightCheck, ...] = ()
+    request_id: str | None = None
 
 
 class StrategyResponse(ResponseModel):

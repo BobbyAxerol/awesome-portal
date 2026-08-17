@@ -281,6 +281,25 @@
         "title": "AlphaDataRequirementsPublic",
         "type": "object"
       },
+      "AlphaDeterminismPublic": {
+        "additionalProperties": false,
+        "properties": {
+          "external_io": {
+            "title": "External Io",
+            "type": "boolean"
+          },
+          "seed_required": {
+            "title": "Seed Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "seed_required",
+          "external_io"
+        ],
+        "title": "AlphaDeterminismPublic",
+        "type": "object"
+      },
       "AlphaImportRecord": {
         "additionalProperties": false,
         "properties": {
@@ -538,6 +557,9 @@
       "AlphaStrategyPublic": {
         "additionalProperties": false,
         "properties": {
+          "determinism": {
+            "$ref": "#/components/schemas/AlphaDeterminismPublic"
+          },
           "execution_contracts": {
             "items": {
               "type": "string"
@@ -565,7 +587,8 @@
           "family",
           "input_kind",
           "supported_endpoint_ids",
-          "execution_contracts"
+          "execution_contracts",
+          "determinism"
         ],
         "title": "AlphaStrategyPublic",
         "type": "object"
@@ -3083,9 +3106,62 @@
         "title": "PortalSummaryV1",
         "type": "object"
       },
+      "PreflightCheck": {
+        "additionalProperties": false,
+        "description": "One preflight gate result (R14): the UI shows which check failed.",
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "missing": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Missing"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "ok"
+        ],
+        "title": "PreflightCheck",
+        "type": "object"
+      },
       "PreflightResponse": {
         "additionalProperties": false,
         "properties": {
+          "checks": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PreflightCheck"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
           "config_hash": {
             "title": "Config Hash",
             "type": "string"
@@ -3110,6 +3186,17 @@
               }
             ],
             "title": "Fold Plan"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
           },
           "strategy_id": {
             "title": "Strategy Id",

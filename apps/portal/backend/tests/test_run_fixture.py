@@ -117,6 +117,11 @@ def test_running_fixture_is_mid_run(running_fixture_root: Path) -> None:
         (running_fixture_root / "status.json").read_text(encoding="utf-8")
     )
     assert status["state"] == "RUNNING"
+    assert status["run_id"] == "visual-baseline-run-running"
+    manifest = json.loads(
+        (running_fixture_root / "manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["run_id"] == "visual-baseline-run-running"
     assert [event["state"] for event in status["events"]][-1] == "RUNNING"
     assert "completed_at" not in status
     assert "metrics.json" not in [p.name for p in running_fixture_root.iterdir()] or not (

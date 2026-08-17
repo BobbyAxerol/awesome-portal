@@ -1,5 +1,5 @@
 {
-  "run_id": "visual-baseline-run",
+  "run_id": "visual-baseline-run-running",
   "state": "RUNNING",
   "protocol": "advanced_walk_forward",
   "strategy_id": "delta-rsi-polynomial-alpha",

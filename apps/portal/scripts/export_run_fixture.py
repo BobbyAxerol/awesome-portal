@@ -49,7 +49,8 @@ from portal_api.repositories.artifacts import with_portal_provenance
 
 RUN_ID = "visual-baseline-run"
 FIXTURE_ROOT = PORTAL_ROOT / "registry" / "fixtures" / "runs" / RUN_ID
-RUNNING_ROOT = PORTAL_ROOT / "registry" / "fixtures" / "runs" / f"{RUN_ID}-running"
+RUNNING_ID = "visual-baseline-run-running"
+RUNNING_ROOT = PORTAL_ROOT / "registry" / "fixtures" / "runs" / RUNNING_ID
 
 # Fixed clock so regeneration is deterministic (mirrors summary fixtures).
 PINNED_ISO = "2026-08-17T08:00:00Z"
@@ -270,8 +271,15 @@ def _write_running_variant(run_dir: Path, *, fold_plan, source_digest: str) -> N
     running.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(run_dir, running)
 
+    # The completed run's manifest carries the parent run_id; the RUNNING
+    # fixture is its own run, so its identity must not collide (R13).
+    manifest_path = running / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["run_id"] = RUNNING_ID
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
     status = {
-        "run_id": RUN_ID,
+        "run_id": RUNNING_ID,
         "state": "RUNNING",
         "protocol": "advanced_walk_forward",
         "strategy_id": "delta-rsi-polynomial-alpha",
@@ -317,7 +325,7 @@ def _write_running_variant(run_dir: Path, *, fold_plan, source_digest: str) -> N
     running.joinpath("status/console.log").write_text(
         "\n".join(
             [
-                f"[{PINNED_ISO}] portal worker started for run {RUN_ID}",
+                f"[{PINNED_ISO}] portal worker started for run {RUNNING_ID}",
                 "[2026-08-17T08:00:03Z] A new study created with name: no-name",
                 *[
                     f"[2026-08-17T08:00:03Z] Trial {t} finished with value: 0.5123 and parameters: {{...}}"
@@ -358,7 +366,7 @@ def _write_console_log(run_dir: Path, trials_done: int | None) -> None:
     best_trial = int(unique["trial_id"].max()) if trial_count else 0
 
     lines = [
-        f"[{PINNED_ISO}] portal worker started for run {RUN_ID}",
+        f"[{PINNED_ISO}] portal worker started for run {RUNNING_ID}",
         f"[{PINNED_ISO}] protocol=advanced_walk_forward strategy=delta-rsi-polynomial-alpha",
         "[2026-08-17T08:00:03Z] A new study created with name: no-name",
         "[2026-08-17T08:00:03Z] Trial 0 finished with value: 0.5123 and parameters: {...}",

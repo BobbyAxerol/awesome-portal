@@ -224,11 +224,14 @@ async def test_domain_validation_error_includes_request_id(run_request) -> None:
     finally:
         app.state.run_manager.shutdown()
 
-    assert response.status_code == 422
+    assert response.status_code == 200
     payload = response.json()
+    assert payload["valid"] is False
+    dataset_check = next(item for item in payload["checks"] if item["id"] == "dataset")
+    assert dataset_check["ok"] is False
+    # Preflight carries the ingress request_id for correlation even on 200.
     assert REQUEST_ID_PATTERN.fullmatch(payload["request_id"])
     assert payload["request_id"] == response.headers["x-request-id"]
-    assert payload["error"]["code"] == "DATASET_NOT_FOUND"
 
 
 @pytest.mark.anyio

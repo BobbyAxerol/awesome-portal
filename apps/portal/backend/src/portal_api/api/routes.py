@@ -244,4 +244,7 @@ async def config_options() -> ConfigOptionsResponse:
 
 @router.post("/runs/preflight", response_model=PreflightResponse)
 async def preflight(payload: PortalRunRequest, request: Request) -> PreflightResponse:
-    return request.app.state.preflight_service.run(payload)
+    result = request.app.state.preflight_service.run(payload)
+    return result.model_copy(
+        update={"request_id": ingress_request_id(request)}
+    )

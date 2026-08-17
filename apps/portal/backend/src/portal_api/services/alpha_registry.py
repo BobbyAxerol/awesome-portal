@@ -115,11 +115,17 @@ class AlphaOwnerPublic(AlphaModel):
     team: str
 
 
+class AlphaDeterminismPublic(AlphaModel):
+    seed_required: bool
+    external_io: bool
+
+
 class AlphaStrategyPublic(AlphaModel):
     family: str
     input_kind: str
     supported_endpoint_ids: tuple[str, ...]
     execution_contracts: tuple[str, ...]
+    determinism: AlphaDeterminismPublic
 
 
 class AlphaDataRequirementsPublic(AlphaModel):
@@ -287,6 +293,10 @@ class AlphaRegistry:
                         input_kind=alpha.strategy.input_kind,
                         supported_endpoint_ids=alpha.strategy.supported_endpoint_ids,
                         execution_contracts=alpha.strategy.execution_contracts,
+                        determinism=AlphaDeterminismPublic(
+                            seed_required=bool(alpha.strategy.determinism.get("seed_required")),
+                            external_io=bool(alpha.strategy.determinism.get("external_io")),
+                        ),
                     ),
                     data_requirements=AlphaDataRequirementsPublic(
                         asset_classes=alpha.data_requirements.asset_classes,
