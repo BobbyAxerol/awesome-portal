@@ -200,7 +200,7 @@ def test_synthetic_certified_capability_passes_preflight_without_code_change(
     assert result.capability_id == "CAP_SYNTHETIC_PROTOCOL"
     assert result.certified is True
     public = service.public_document()
-    protocols = [item["protocol"] for item in public["capabilities"]]
+    protocols = [item.protocol for item in public.capabilities]
     assert "synthetic_protocol" in protocols
 
 

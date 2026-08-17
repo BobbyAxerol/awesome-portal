@@ -311,12 +311,26 @@ def _public_projection(source: dict[str, Any]) -> dict[str, Any]:
         for concern in source["concerns"]
         if concern["id"] in visible_concern_ids
     ]
+    personas_by_feature: dict[str, list[str]] = {}
+    for screen in projected["screens"]:
+        persona = screen.get("primary_persona") or ""
+        if persona:
+            personas_by_feature.setdefault(screen["feature_id"], []).append(persona)
+
     projected["lifecycle_stages"] = [
         {
             **stage,
             "feature_ids": [
                 item for item in stage["feature_ids"] if item not in hidden_feature_ids
             ],
+            "personas": sorted(
+                {
+                    persona
+                    for feature_id in stage["feature_ids"]
+                    if feature_id not in hidden_feature_ids
+                    for persona in personas_by_feature.get(feature_id, ())
+                }
+            ),
         }
         for stage in source["lifecycle_stages"]
         if stage["id"] in visible_lifecycle_ids

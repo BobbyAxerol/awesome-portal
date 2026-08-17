@@ -78,6 +78,36 @@ class EngineCapabilitiesManifest(CapabilityModel):
     capabilities: tuple[EngineCapability, ...]
 
 
+class EngineReleasePublic(CapabilityModel):
+    release_id: str
+    package: str
+    version: str
+
+
+class CapabilityPublic(CapabilityModel):
+    capability_id: str
+    protocol: str
+    endpoint_id: str
+    engine_release_id: str
+    certified: bool
+    requirements: CapabilityRequirements
+
+
+class InstalledProbe(CapabilityModel):
+    ok: bool
+    installed_version: str | None = None
+    installed_record_sha256: str | None = None
+    detail: str | None = None
+
+
+class EngineCapabilitiesDocument(CapabilityModel):
+    schema_version: str
+    manifest_revision: int
+    engine_releases: tuple[EngineReleasePublic, ...]
+    capabilities: tuple[CapabilityPublic, ...]
+    installed: dict[str, InstalledProbe]
+
+
 def installed_dist_info_record_hash(package: str) -> str:
     """Digest of the installed distribution's RECORD file (wheel identity)."""
     try:
@@ -223,32 +253,32 @@ class EngineCapabilityService:
             certified=capability.certified,
         )
 
-    def public_document(self) -> dict[str, Any]:
+    def public_document(self) -> EngineCapabilitiesDocument:
         """Safe read-only projection for the API: no digests leak semantics."""
-        return {
-            "schema_version": self._manifest.schema_version,
-            "manifest_revision": self._manifest.manifest_revision,
-            "engine_releases": [
-                {
-                    "release_id": release.release_id,
-                    "package": release.package,
-                    "version": release.version,
-                }
+        return EngineCapabilitiesDocument(
+            schema_version=self._manifest.schema_version,
+            manifest_revision=self._manifest.manifest_revision,
+            engine_releases=tuple(
+                EngineReleasePublic(
+                    release_id=release.release_id,
+                    package=release.package,
+                    version=release.version,
+                )
                 for release in self._manifest.engine_releases
-            ],
-            "capabilities": [
-                {
-                    "capability_id": capability.capability_id,
-                    "protocol": capability.protocol,
-                    "endpoint_id": capability.endpoint_id,
-                    "engine_release_id": capability.engine_release_id,
-                    "certified": capability.certified,
-                    "requirements": capability.requirements.model_dump(mode="json"),
-                }
+            ),
+            capabilities=tuple(
+                CapabilityPublic(
+                    capability_id=capability.capability_id,
+                    protocol=capability.protocol,
+                    endpoint_id=capability.endpoint_id,
+                    engine_release_id=capability.engine_release_id,
+                    certified=capability.certified,
+                    requirements=capability.requirements,
+                )
                 for capability in self._manifest.capabilities
-            ],
-            "installed": self.verify_installed(),
-        }
+            ),
+            installed=self.verify_installed(),
+        )
 
 
 __all__ = [

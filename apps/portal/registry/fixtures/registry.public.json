@@ -224,7 +224,7 @@
       ]
     }
   ],
-  "content_digest": "sha256:0ac8910145aafeb544e362db6cba3382e578b4fa254b4943364eb82df4746a71",
+  "content_digest": "sha256:6f5e9f01b1c5d70deaea280c776786bd4adee37979222b56b4313b253b01b660",
   "feature_groups": [
     {
       "id": "command",
@@ -827,7 +827,10 @@
       "id": "ALPHA_IDEA",
       "label": "Alpha Idea",
       "maturity": "COMMISSIONED",
-      "order": 10
+      "order": 10,
+      "personas": [
+        "quant_researcher"
+      ]
     },
     {
       "description": "Create immutable alpha identity and import evidence.",
@@ -837,7 +840,10 @@
       "id": "IMPORT_REGISTRY",
       "label": "Import / Registry",
       "maturity": "COMMISSIONED",
-      "order": 20
+      "order": 20,
+      "personas": [
+        "quant_researcher"
+      ]
     },
     {
       "description": "Develop and evaluate research hypotheses; QuantBT is the available subset.",
@@ -850,7 +856,10 @@
       "id": "RESEARCH",
       "label": "Research",
       "maturity": "PROTOTYPE",
-      "order": 30
+      "order": 30,
+      "personas": [
+        "quant_researcher"
+      ]
     },
     {
       "description": "Run current QuantBT backtests and WFO with explicit evidence.",
@@ -860,7 +869,10 @@
       "id": "BACKTEST",
       "label": "Backtest",
       "maturity": "AVAILABLE",
-      "order": 40
+      "order": 40,
+      "personas": [
+        "quant_researcher"
+      ]
     },
     {
       "description": "Review exact artifacts and promotion evidence.",
@@ -870,7 +882,10 @@
       "id": "APPROVAL",
       "label": "Approval",
       "maturity": "COMMISSIONED",
-      "order": 50
+      "order": 50,
+      "personas": [
+        "manager"
+      ]
     },
     {
       "description": "Operate a separate simulated execution and account-state authority.",
@@ -880,7 +895,10 @@
       "id": "PAPER",
       "label": "Paper",
       "maturity": "COMMISSIONED",
-      "order": 60
+      "order": 60,
+      "personas": [
+        "operator"
+      ]
     },
     {
       "description": "Validate exchange integration in a governed non-live environment.",
@@ -890,7 +908,10 @@
       "id": "SANDBOX",
       "label": "Sandbox",
       "maturity": "COMMISSIONED",
-      "order": 70
+      "order": 70,
+      "personas": [
+        "operator"
+      ]
     },
     {
       "description": "Control approved live deployment through private risk authority.",
@@ -900,7 +921,10 @@
       "id": "LIVE",
       "label": "Live",
       "maturity": "COMMISSIONED",
-      "order": 80
+      "order": 80,
+      "personas": [
+        "operator"
+      ]
     },
     {
       "description": "Monitor execution and reconcile authoritative order, fill and account state.",
@@ -910,7 +934,10 @@
       "id": "MONITOR",
       "label": "Monitor / Reconcile",
       "maturity": "COMMISSIONED",
-      "order": 90
+      "order": 90,
+      "personas": [
+        "operator"
+      ]
     }
   ],
   "registry_id": "portal-default",

@@ -243,6 +243,356 @@
         "title": "AdvancedWalkForwardConfig",
         "type": "object"
       },
+      "AlphaDataRequirementsPublic": {
+        "additionalProperties": false,
+        "properties": {
+          "asset_classes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Asset Classes",
+            "type": "array"
+          },
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "timeframes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Timeframes",
+            "type": "array"
+          },
+          "warmup_bars": {
+            "title": "Warmup Bars",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "asset_classes",
+          "columns",
+          "timeframes",
+          "warmup_bars"
+        ],
+        "title": "AlphaDataRequirementsPublic",
+        "type": "object"
+      },
+      "AlphaLifecycleDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "certification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certification"
+          },
+          "promotion_evidence": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Promotion Evidence",
+            "type": "array"
+          },
+          "quarantine_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quarantine Reason"
+          },
+          "quarantined": {
+            "title": "Quarantined",
+            "type": "boolean"
+          },
+          "stage": {
+            "enum": [
+              "DRAFT",
+              "REGISTERED",
+              "CANDIDATE",
+              "RESEARCH",
+              "PAPER",
+              "SANDBOX",
+              "LIVE"
+            ],
+            "title": "Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage",
+          "quarantined"
+        ],
+        "title": "AlphaLifecycleDetail",
+        "type": "object"
+      },
+      "AlphaLifecyclePublic": {
+        "additionalProperties": false,
+        "properties": {
+          "certification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certification"
+          },
+          "quarantined": {
+            "title": "Quarantined",
+            "type": "boolean"
+          },
+          "stage": {
+            "enum": [
+              "DRAFT",
+              "REGISTERED",
+              "CANDIDATE",
+              "RESEARCH",
+              "PAPER",
+              "SANDBOX",
+              "LIVE"
+            ],
+            "title": "Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage",
+          "quarantined"
+        ],
+        "title": "AlphaLifecyclePublic",
+        "type": "object"
+      },
+      "AlphaOwnerPublic": {
+        "additionalProperties": false,
+        "properties": {
+          "team": {
+            "title": "Team",
+            "type": "string"
+          }
+        },
+        "required": [
+          "team"
+        ],
+        "title": "AlphaOwnerPublic",
+        "type": "object"
+      },
+      "AlphaParametersPublic": {
+        "additionalProperties": false,
+        "properties": {
+          "manager_exposed": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Manager Exposed",
+            "type": "array"
+          }
+        },
+        "required": [
+          "manager_exposed"
+        ],
+        "title": "AlphaParametersPublic",
+        "type": "object"
+      },
+      "AlphaRegistryDocument": {
+        "additionalProperties": false,
+        "properties": {
+          "alphas": {
+            "items": {
+              "$ref": "#/components/schemas/AlphaSummary"
+            },
+            "title": "Alphas",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": "alpha-manifest/v1",
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "alphas"
+        ],
+        "title": "AlphaRegistryDocument",
+        "type": "object"
+      },
+      "AlphaStrategyPublic": {
+        "additionalProperties": false,
+        "properties": {
+          "execution_contracts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Execution Contracts",
+            "type": "array"
+          },
+          "family": {
+            "title": "Family",
+            "type": "string"
+          },
+          "input_kind": {
+            "title": "Input Kind",
+            "type": "string"
+          },
+          "supported_endpoint_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Supported Endpoint Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "family",
+          "input_kind",
+          "supported_endpoint_ids",
+          "execution_contracts"
+        ],
+        "title": "AlphaStrategyPublic",
+        "type": "object"
+      },
+      "AlphaSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "alpha_id": {
+            "title": "Alpha Id",
+            "type": "string"
+          },
+          "artifact_digest": {
+            "title": "Artifact Digest",
+            "type": "string"
+          },
+          "data_requirements": {
+            "$ref": "#/components/schemas/AlphaDataRequirementsPublic"
+          },
+          "entrypoint": {
+            "title": "Entrypoint",
+            "type": "string"
+          },
+          "lifecycle": {
+            "$ref": "#/components/schemas/AlphaLifecyclePublic"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/AlphaOwnerPublic"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/AlphaParametersPublic"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/AlphaStrategyPublic"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "alpha_id",
+          "version",
+          "name",
+          "owner",
+          "entrypoint",
+          "artifact_digest",
+          "strategy",
+          "data_requirements",
+          "parameters",
+          "lifecycle"
+        ],
+        "title": "AlphaSummary",
+        "type": "object"
+      },
+      "AlphaVerifyResult": {
+        "additionalProperties": false,
+        "properties": {
+          "alpha_id": {
+            "title": "Alpha Id",
+            "type": "string"
+          },
+          "computed_digest": {
+            "title": "Computed Digest",
+            "type": "string"
+          },
+          "matches": {
+            "title": "Matches",
+            "type": "boolean"
+          },
+          "registered_digest": {
+            "title": "Registered Digest",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "alpha_id",
+          "version",
+          "registered_digest",
+          "computed_digest",
+          "matches"
+        ],
+        "title": "AlphaVerifyResult",
+        "type": "object"
+      },
+      "AlphaVersionDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "alpha_id": {
+            "title": "Alpha Id",
+            "type": "string"
+          },
+          "artifact_digest": {
+            "title": "Artifact Digest",
+            "type": "string"
+          },
+          "entrypoint": {
+            "title": "Entrypoint",
+            "type": "string"
+          },
+          "lifecycle": {
+            "$ref": "#/components/schemas/AlphaLifecycleDetail"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "alpha_id",
+          "version",
+          "name",
+          "entrypoint",
+          "artifact_digest",
+          "lifecycle"
+        ],
+        "title": "AlphaVersionDetail",
+        "type": "object"
+      },
       "AvailabilityAuthority": {
         "additionalProperties": false,
         "properties": {
@@ -408,6 +758,85 @@
           "provenance"
         ],
         "title": "CapabilityAvailability",
+        "type": "object"
+      },
+      "CapabilityPublic": {
+        "additionalProperties": false,
+        "properties": {
+          "capability_id": {
+            "title": "Capability Id",
+            "type": "string"
+          },
+          "certified": {
+            "title": "Certified",
+            "type": "boolean"
+          },
+          "endpoint_id": {
+            "title": "Endpoint Id",
+            "type": "string"
+          },
+          "engine_release_id": {
+            "title": "Engine Release Id",
+            "type": "string"
+          },
+          "protocol": {
+            "title": "Protocol",
+            "type": "string"
+          },
+          "requirements": {
+            "$ref": "#/components/schemas/CapabilityRequirements"
+          }
+        },
+        "required": [
+          "capability_id",
+          "protocol",
+          "endpoint_id",
+          "engine_release_id",
+          "certified",
+          "requirements"
+        ],
+        "title": "CapabilityPublic",
+        "type": "object"
+      },
+      "CapabilityRequirements": {
+        "additionalProperties": false,
+        "properties": {
+          "backend": {
+            "pattern": "^[a-z][a-z0-9_]{1,63}$",
+            "title": "Backend",
+            "type": "string"
+          },
+          "data_class": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Data Class",
+            "type": "array"
+          },
+          "methodology": {
+            "pattern": "^[a-z][a-z0-9_-]{1,63}$",
+            "title": "Methodology",
+            "type": "string"
+          },
+          "resource_profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResourceProfile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "backend",
+          "data_class",
+          "methodology"
+        ],
+        "title": "CapabilityRequirements",
         "type": "object"
       },
       "ConcernDefinition": {
@@ -634,6 +1063,73 @@
           "dependencies"
         ],
         "title": "DiagnosticsResponse",
+        "type": "object"
+      },
+      "EngineCapabilitiesDocument": {
+        "additionalProperties": false,
+        "properties": {
+          "capabilities": {
+            "items": {
+              "$ref": "#/components/schemas/CapabilityPublic"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "engine_releases": {
+            "items": {
+              "$ref": "#/components/schemas/EngineReleasePublic"
+            },
+            "title": "Engine Releases",
+            "type": "array"
+          },
+          "installed": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/InstalledProbe"
+            },
+            "title": "Installed",
+            "type": "object"
+          },
+          "manifest_revision": {
+            "title": "Manifest Revision",
+            "type": "integer"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "manifest_revision",
+          "engine_releases",
+          "capabilities",
+          "installed"
+        ],
+        "title": "EngineCapabilitiesDocument",
+        "type": "object"
+      },
+      "EngineReleasePublic": {
+        "additionalProperties": false,
+        "properties": {
+          "package": {
+            "title": "Package",
+            "type": "string"
+          },
+          "release_id": {
+            "title": "Release Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "release_id",
+          "package",
+          "version"
+        ],
+        "title": "EngineReleasePublic",
         "type": "object"
       },
       "EvidenceValue": {
@@ -890,8 +1386,56 @@
         "title": "IngressDiagnostics",
         "type": "object"
       },
+      "InstalledProbe": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "installed_record_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Installed Record Sha256"
+          },
+          "installed_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Installed Version"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "InstalledProbe",
+        "type": "object"
+      },
       "LifecycleStageDefinition": {
         "additionalProperties": false,
+        "description": "Roll-up of ``primary_persona`` across the stage's feature screens.\n\n``personas`` is derived at projection time (never stored in the source\nregistry document); stages whose features have no screens yet carry an\nempty tuple so the UI can filter/hide them on persona mismatch.",
         "properties": {
           "description": {
             "title": "Description",
@@ -927,6 +1471,14 @@
           "order": {
             "title": "Order",
             "type": "integer"
+          },
+          "personas": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Personas",
+            "type": "array"
           }
         },
         "required": [
@@ -2390,6 +2942,37 @@
           "digest"
         ],
         "title": "RegistryDependency",
+        "type": "object"
+      },
+      "ResourceProfile": {
+        "additionalProperties": false,
+        "properties": {
+          "max_optuna_trials": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Optuna Trials"
+          },
+          "max_parameter_space_entries": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Parameter Space Entries"
+          }
+        },
+        "title": "ResourceProfile",
         "type": "object"
       },
       "RunProtocol": {
@@ -4249,9 +4832,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response List Alphas Api V1 Alphas Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AlphaRegistryDocument"
                 }
               }
             },
@@ -4283,9 +4864,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Alpha Api V1 Alphas  Alpha Id  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AlphaRegistryDocument"
                 }
               }
             },
@@ -4336,9 +4915,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Alpha Version Api V1 Alphas  Alpha Id  Versions  Version  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AlphaVersionDetail"
                 }
               }
             },
@@ -4389,9 +4966,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Verify Alpha Version Api V1 Alphas  Alpha Id  Versions  Version  Verify Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AlphaVerifyResult"
                 }
               }
             },
@@ -4605,7 +5180,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/EngineCapabilitiesDocument"
+                }
               }
             },
             "description": "Successful Response"

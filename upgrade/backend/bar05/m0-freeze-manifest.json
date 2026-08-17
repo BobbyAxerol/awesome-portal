@@ -5,22 +5,22 @@
     "portal_producer": "portal-api"
   },
   "file_digests": {
-    "compose": "sha256:d62acbfcc763948e714f72055b7f12d1d30b84c5cc376ef3715d741e2daff4d9",
+    "compose": "sha256:c2fac5768b05dce7092184a397cf7a3c318814770512884258964042ec5561f2",
     "compose_production": "sha256:aac98d63440a3649d6eb2b3e9e0e6ba8ae364b5b8a873c69831b69d48ae0e532",
     "constraints_portal": "sha256:a16dcc4c1a3ded5c03a742ce38f351f8d13e738255518a6629da42ad65b900b2",
     "control_api_migrations": "sha256:7af62e52e20e1340882c50f033ab0cd690de99231c3cc4dbd150b2a2f0a000b8",
     "control_api_package": "sha256:ead2bbcf2b06822b60f9d7101208347f334830cdea7a8715a439202680bceaf0",
     "control_api_package_lock": "sha256:eefcd089e37ca98554d0d56747bc8b2039878d06ef57e3e62355a24968623276",
     "control_api_tsconfig": "sha256:505f416ac474f249e52523f39a227669a2be931f491d39d67aa76f657de71200",
-    "env_template": "sha256:79500f9259c32f1ebb7a1b1e6ba903f014e5767f9dfdef4f5f82f24682db0207",
+    "env_template": "sha256:2853efc72cd3ad605b494b758358a40485131beec0637ef4f8fde694826b1b01",
     "golden_market": "sha256:16131e4d930bc78b8375ad3fb14584b5d5b8191d7f89bec29ce502470e4646ae",
     "golden_metadata": "sha256:13128530dc74744e2bf5dc562eb3792d49b2e942a8579dcd01fb1b74b7c9a725",
     "golden_signals": "sha256:5a24f1b35566b9755b4f3c2a4f863c0e12541ecb173a5e6cec24ca32fd293c0c",
     "links_sidecar": "sha256:5fe5ea3ffa4c12bf78dc396bf1371d34bbcf6f47b099e12918d0a9957be0a1a6",
     "nginx_portal_conf": "sha256:4cc340ea6aec250fac2f5cc715ca35753d93edeace85ec9954526b730d3c9caf",
-    "openapi_planning_snapshot": "sha256:8c4977b136a60694fd334f4e1441df5f0058668105556878f47cd28e20704051",
-    "openapi_portal": "sha256:725f8541e536dafaf53147e9f3f4a6606202354dbec51a06005f01ff792c8487",
-    "openapi_portal_snapshot": "sha256:725f8541e536dafaf53147e9f3f4a6606202354dbec51a06005f01ff792c8487",
+    "openapi_planning_snapshot": "sha256:5c03e4311582f3ae5beb07d5d3f588b78ea9a1689f78712c062a25182bd5a9cf",
+    "openapi_portal": "sha256:6834eb10b6b4a8496672076b1b1ae375252be78e55b257bd9afb2a2afbd73ded",
+    "openapi_portal_snapshot": "sha256:6834eb10b6b4a8496672076b1b1ae375252be78e55b257bd9afb2a2afbd73ded",
     "planning_frontend_lock": "sha256:8d98e59a964741e0842fcd19d18179270d5e6c4934439ca8c2230b364f711f14",
     "planning_frontend_package": "sha256:2e53ca88ebbfeb25c2551ab29a2c45ef67c9b776595058b07e81d6caf5f59253",
     "planning_requirements": "sha256:89a5642e429cc00ba51f79f3854db39ade9e0e69fa098b16fc44cc54a1b1d053",
@@ -33,7 +33,7 @@
     "registry_source": "sha256:bdd9930d1b28b538b7a2342f56317b28f6e0dc830502d5dec51d996e70bc97eb",
     "run_request_schema": "sha256:582ced995417c641c9247fce422887e7f637359945fd8ef3b3e442d15fde009e"
   },
-  "frozen_at_commit": "521be5fd8581f569b8dd564acb853cfa5eaf1b6e",
+  "frozen_at_commit": "17958e52a1ee765512dc38cb7873afcbb75ecdeb",
   "golden_tolerances": {
     "exit_price": {
       "atol": 1e-12,
