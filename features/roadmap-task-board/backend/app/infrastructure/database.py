@@ -68,7 +68,6 @@ CREATE TABLE IF NOT EXISTS webhook_deliveries (
     sent_at TEXT,
     FOREIGN KEY(activity_id) REFERENCES activity_events(id)
 );
-CREATE UNIQUE INDEX IF NOT EXISTS idx_webhook_delivery_activity ON webhook_deliveries (activity_id);
 CREATE INDEX IF NOT EXISTS idx_webhook_due ON webhook_deliveries (status, next_attempt_at, created_at);
 """
 
