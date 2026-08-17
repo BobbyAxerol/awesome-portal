@@ -32,6 +32,7 @@ import { StateView } from "../../components/ui";
 import { api } from "../../lib/api";
 import type { AlphaImportRecord, AlphaVerifyResult } from "../../portal/contracts";
 import { QUANTBT_ROOT } from "../quantbt/routes";
+import { ImportRequestForm } from "./ImportRequestForm";
 import {
   IMPORT_STATES,
   importCounts,
@@ -239,15 +240,19 @@ export function ImportInbox() {
         </dl>
       </Panel>
 
-      <Callout tone="muted" title="Vì sao không có nút upload ở đây">
-        <span className="inline-flex items-center gap-1">
-          <ShieldAlert size={12} aria-hidden="true" />
-          Strategy import contract §5: <em>không chấp nhận import trực tiếp file từ
-          browser</em>.
-        </span>{" "}
-        Ingest chạy phía server từ source đã review. Endpoint hiện tại nhận multipart
-        upload — discrepancy này đã ghi ở FRONTEND_HANDOFF §8.4 kèm Backend request 11.
-      </Callout>
+      <Panel title="Gửi import request">
+        <p className="field-hint">
+          <span className="inline-flex items-center gap-1">
+            <ShieldAlert size={12} aria-hidden="true" />
+            Strategy import contract §5: <em>không chấp nhận import trực tiếp file từ
+            browser</em>.
+          </span>{" "}
+          Vì vậy đây là form <strong>source reference</strong>, không phải upload: browser gửi
+          con trỏ tới artifact đã được CI/owner staging sẵn cộng digest mong đợi, server đọc
+          và verify. Mọi mutation là ADMIN-only ở gateway.
+        </p>
+        <ImportRequestForm onSubmitted={() => void imports.refetch()} />
+      </Panel>
     </div>
   );
 }

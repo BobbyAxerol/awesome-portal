@@ -1255,3 +1255,12 @@
     padding: var(--space-4);
   }
 }
+
+.import-form {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+.import-form .btn-primary {
+  justify-self: start;
+}

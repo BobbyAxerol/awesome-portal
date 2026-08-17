@@ -1,6 +1,7 @@
 /** Typed API client for the portal backend (schemas mirror portal_api contracts). */
 import type {
   AlphaImportRecord,
+  AlphaImportRequest,
   AlphaVerifyResult,
   FoldPlanDocument,
   RowEnvelope,
@@ -166,17 +167,51 @@ export interface SeriesPayload {
   downsample_stride: number;
 }
 
+/**
+ * A failed API call, with the facts a caller needs to react correctly.
+ *
+ * The status matters: with writes gated to ADMIN at the gateway, a 403 means the
+ * request was fine and the authority was not, which is a different thing to tell
+ * a user than "rejected". `message` stays the first positional argument so the
+ * existing `error.message` call sites are unaffected.
+ */
+export class PortalApiError extends Error {
+  readonly status: number;
+  readonly code: string | null;
+  readonly requestId: string | null;
+
+  constructor(message: string, status: number, code: string | null, requestId: string | null) {
+    super(message);
+    this.name = "PortalApiError";
+    this.status = status;
+    this.code = code;
+    this.requestId = requestId;
+  }
+
+  /** True when the call failed because the session lacks the right, not the input. */
+  get isForbidden(): boolean {
+    return this.status === 401 || this.status === 403;
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, init);
   if (!response.ok) {
     let detail = `${response.status} ${response.statusText}`;
+    let code: string | null = null;
+    let requestId: string | null = response.headers.get("x-request-id");
     try {
       const body = await response.json();
+      // The backend nests its own copy under `error`; FastAPI validation
+      // failures use `detail`. Both are the server's words, not ours.
       if (body?.error?.message) detail = body.error.message;
+      else if (typeof body?.detail === "string") detail = body.detail;
+      code = body?.error?.code ?? null;
+      requestId = body?.error?.request_id ?? body?.request_id ?? requestId;
     } catch {
       /* non-JSON error body */
     }
-    throw new Error(detail);
+    throw new PortalApiError(detail, response.status, code, requestId);
   }
   return (await response.json()) as T;
 }
@@ -189,6 +224,19 @@ export const api = {
   alphas: () => request<unknown>("/api/v1/alphas"),
   /** Quarantine inbox for imported alphas (strategy import contract §5). */
   alphaImports: () => request<AlphaImportRecord[]>("/api/v1/alphas/imports"),
+  /**
+   * Submits a source reference for quarantine ingest (R11).
+   *
+   * The body is a pointer plus the expected digest — never file content. The
+   * server reads the staged artifact and verifies; §5 forbids the browser being
+   * the channel for code.
+   */
+  importAlpha: (payload: AlphaImportRequest) =>
+    request<AlphaImportRecord>("/api/v1/alphas/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
   /**
    * Re-verifies a registered alpha version's artifact digest.
    *
