@@ -211,6 +211,14 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 | **Preflight gate per-check + seed gate** | strategy contract §6 mục 3, R14/R15 | Bước Review hiện từng gate kèm cột thiếu; bỏ 3 badge `pass` hard-code. Seed gate theo `determinism.seed_required`, phân biệt required / optional / **chưa khai báo**. |
 | **Reports như dữ liệu** | §8.6 cũ mục 1 (slice tự đề xuất) | `view-reports` parse thành model typed, render bằng primitive. Fragment **không sửa**, hash vẫn gated. Test content-equivalence hai chiều: không mất, không bịa. `RawViewFeature` xoá (dead code). 77 snapshot. |
 | **Alpha import inbox (U14 read half)** | strategy contract §5/§6 mục 4 | `/research/quantbt/imports`: 5 state contract khai báo, reason nguyên văn của service, verify digest on-demand (hiện cả hai digest, không chỉ verdict), empty ≠ failed. **Không có upload** — xem §8.4 điểm 3. 68 snapshot. |
+| **Cancel run UI** | §8.6 mục 1 | `useCancelRun` quyết định riêng (test được một mình): `cancellable` chỉ khi status có và không terminal; confirm trước POST; `onSuccess` **invalidate** `["run",id]`+`["runs"]` chứ không tự set CANCELLING (state là của server). 403 hiện là thẩm quyền, tách khỏi lỗi khác. Nút không render khi terminal. 9 test. |
+| **Cross-link 2 chiều Planning ↔ Portal** | §8.6 mục 2, v0.4 §P0.23, U05 exit gate | (a) task editor có "Mở màn Portal" — resolver do **host** inject (`portalScreenForTask`), Planning không đọc registry; (b) `roadmap_epic_id`/`default_task_id` ở FeaturePreview thành link thật, "chưa map" chỉ khi thật chưa map; (c) StageBrief liệt kê feature/screen/task của concern. `planningLinks.ts` là chỗ duy nhất dựng deep link (task đi qua query, vì board địa chỉ hoá task bằng selection). |
+| **Command Center 2 CTA** | §8.6 mục 3, v0.4 §21.3 | `[New run]` `[Import alpha]` trong header → `/research/quantbt/new`, `/research/quantbt/imports`. |
+| **Portal Map — nốt §P0.15** | §8.6 mục 4 | Filter status (độc lập với persona filter — dim theo `personaDimmed \|\| maturityDimmed`), click stage mở `StageBrief` (feature + maturity/data-mode badge, concern kèm `activation_gate`, link concern + roadmap epic). Feature stage khai mà registry không định nghĩa → nói "không có trong registry", không ẩn. |
+| **Users & Access (ADMIN)** | §8.6 mục 5 | List/đổi role/reset credential/revoke sessions/disable. Mọi write mang `x-portal-csrf`, **fail closed** khi thiếu cookie CSRF. Role change nói trước là sẽ thu hồi session. One-time credential hiện **một lần**, không lưu, không log. Row của chính mình được đánh dấu. Non-ADMIN thấy `denied` và **không** gọi list (`enabled: isAdmin`) — biên vẫn là gateway, 403 báo nguyên văn. Route xem §8.4 điểm 4. 9 test + 2 snapshot. |
+| **SSE cho run events** | §8.6 mục 6 (tuỳ chọn — đã làm) | `useRunEvents` mở `/api/runs/{id}/events`; frame chỉ mang state nên **invalidate query**, không patch bản sao run vào cache. Không có `EventSource` hoặc mất kết nối → `streaming:false` và polling giữ nhịp cũ. Khi đang stream, polling **chậm lại (8s floor) chứ không tắt**: stream mở rồi im lặng không được trông giống run đứng yên. Đóng ở frame terminal và khi unmount. 10 test (gồm no-EventSource + dropped connection). |
+| **Alpha 360° (version detail)** | §8.6 mục 7 | `/research/quantbt/alphas/:alphaId/:version`. Lifecycle là **track chung** DRAFT→LIVE (khoảng cách tới live là thông tin, không chỉ tên stage); certification/evidence trống nói rõ là trống; quarantine trích nguyên văn lý do của service; verify digest hiện cả hai digest. **Không có nút promote** — chuyển stage thuộc certification. ALPHA_POOL vẫn `COMMISSIONED` nên màn nằm dưới quantbt. 9 test + 2 snapshot. |
+| **Login 01B + overview: pass sáng tạo** | v0.4 §21.1/§21.3, v0.5 §10.3 | Login thành split full-height (plate column + form trên paper, một hairline làm ranh giới) và plate mang **sơ đồ walk-forward** — instrument của chính sản phẩm, có caption "không phải dữ liệu của một run nào", legend bằng chữ (màu chỉ đồng thuận). Một load sequence, tắt dưới `prefers-reduced-motion`. Command Center: 6 con số registry giờ có thanh tỉ lệ theo thứ tự maturity cố định (không sắp theo độ lớn — feature sẽ nhảy chỗ giữa các snapshot), count 0 **không** vẽ segment, caption nhắc đây là metadata chứ không phải runtime. Không có màu nào ngoài token (gate token-parity phủ). |
 
 ### 8.2 Còn treo
 
@@ -218,10 +226,9 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 |---|---|---|---|
 | Alpha Pool (`/research/alphas`) | `COMMISSIONED` → Feature Preview. Inbox ở `/research/quantbt/imports`. | **Đã quyết** (R12): giữ `COMMISSIONED` tới slice certification. | Khi certification xong: đổi maturity + chuyển inbox, giữ redirect route cũ. |
 | Workspace / tenancy (`/api/workspaces`) | Chưa làm. | Topbar hiện ghi "Default Workspace · Prototype hiện chỉ có một workspace" — đúng sự thật hiện tại. Chỉ làm khi có tenancy thật. | Khi có nhiều workspace thật. |
-| Command Center history/cross-filter | Evidence drawer **đã đóng** (§8.1); phần history chuỗi thời gian + cross-filter còn treo. | Read model bền thuộc U10; dựng chuỗi từ 1 snapshot là bịa dữ liệu. | Sau U10. |
-| Planning: Reports | **Đã đóng** (§8.1 "Reports như dữ liệu" — render từ parsed model, hash gated). | — | — |
-| Profile & Access | `COMMISSIONED` preview. | Chờ U07 wire gateway→BFF; login screens 01B/01C/01D chưa có backend. | Sau U10: Frames 01B–01D + session expired + maintenance screen kèm request ID. |
 | Command Center — history / cross-filter | Evidence drawer đã xong (§8.1). Chuỗi theo thời gian và cross-filter thì chưa. | Chờ **U10** read model bền. Dựng chuỗi từ một snapshot là bịa dữ liệu. | Sau U10. |
+| Profile & Access (màn `PROFILE_ACCESS`) | `COMMISSIONED` preview. Phần **có backend** (Users & Access) đã làm và nằm ở route riêng — §8.4 điểm 4. | Profile của chính mình + danh sách session của chính mình chưa có endpoint. | Khi U07 công bố `/api/auth/sessions` + profile: gộp vào màn PROFILE_ACCESS và đổi maturity. |
+| Maintenance / external-access error screen | Chưa làm. | Thuộc U07 production (Cloudflare Access edge), không phải màn app. | Sau U07 production. |
 | Visual baseline — mobile/tablet cho Research | Chỉ chụp laptop + workstation. | Có chủ ý: v0.4 §26.1 đưa research work sang "open on desktop", nên baseline mobile sẽ chốt một layout không ai được yêu cầu làm việc trên đó. | Chỉ mở nếu §26.1 đổi. |
 
 ### 8.3 Backend request
@@ -321,6 +328,19 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
    reference** (chọn hướng A, request 11 đóng — xem §8.3). UI không bao giờ
    gửi code bytes.
 
+4. **Users & Access không nằm trên `PROFILE_ACCESS`.** Registry khai
+   `PROFILE_ACCESS` là `COMMISSIONED` (`/administration/profile-access`).
+   Render một màn chạy được sau badge `COMMISSIONED` là để badge nói sai — cùng
+   lý do Alpha 360° nằm dưới quantbt thay vì trên route `ALPHA_POOL`. Nên màn
+   admin nằm ở `/administration/users` (hard-code cạnh các bootstrap route,
+   `ADMIN_USERS_ROUTE`), vào từ topbar cạnh các control của session, **không**
+   xuất hiện trong nav dựng từ registry. Đây không phải feature model thứ hai:
+   không có nav/preview/task link nào của registry trỏ tới nó.
+   *Muốn sạch hơn thì cần registry entry* — đề xuất cho codex (chưa mở request
+   vì Bobby chốt slice này không cần backend): một feature `USERS_ACCESS`
+   (group `administration`, maturity theo thực tế, permission `users.admin`) để
+   nav và Portal Map biết màn này tồn tại.
+
 ### 8.4b Ghi chú: mọi backend request đã đóng
 
 R1–R15 đã giao và đã thu hết. Không còn request nào treo tại 2026-08-17.
@@ -369,6 +389,18 @@ R1–R15 đã giao và đã thu hết. Không còn request nào treo tại 2026-
 | Seed gate giữ ba trạng thái, không hai | `seedRequired === null` (built-in không có manifest) khác `false`. Đọc im lặng thành "seed optional" là suy diễn. | Required → chặn submit; optional → nói rõ; chưa khai báo → nói rõ là chưa khai báo. |
 | Thêm `determinism` vào `alphaProjection()` của test | Helper build projection thủ công; thiếu field thì nó lệch với contract nó đại diện. | Nếu không sửa, seed gate sẽ "trông như đã test" trong khi test vẫn pass. |
 
+| `SessionProvider` thay vì mỗi màn tự đọc `/api/auth/context` | `AuthGate` **đã** đọc context để chọn frame; màn admin đọc lần thứ hai thì hai lần đọc có thể bất đồng. | `principal: null` (chưa auth, hoặc gateway không ở trước build này) **không bao giờ** là ADMIN. Test phủ cả hai. |
+| Admin API: `role` lạ → `USER`, không phải ADMIN | Parse chống lỗi phải nghiêng về **ít quyền hơn**, không phải nhiều hơn. | `readUser` map snake_case→camelCase; `send()` throw `CSRF_REQUIRED` khi thiếu cookie thay vì gửi request server sẽ từ chối. |
+| Non-ADMIN **không** gọi `/api/admin/users` | Gateway trả 403 thật; vẫn gọi thì mỗi người đọc lỡ vào route để lại một request forbidden trong log. | `enabled: isAdmin`. Biên vẫn là gateway — màn chỉ không đi gõ cửa. |
+| Bỏ badge role cạnh select | Select đã là role; badge là bản sao thứ hai của cùng một fact và hai bản có thể lệch nhau giữa lúc mutate. | Cùng nguyên tắc với chip `tone` mâu thuẫn swatch đã sửa ở roadmap. |
+| Disable nằm dưới một rule **trong** row | §13 nói destructive không cạnh row action thường; nhưng bản đầu cho table scroll ngang và nút Disable trôi khỏi màn. | Nút bị scroll khỏi tầm mắt tệ hơn nút chỉ nằm gần. Tách bằng rule + gap, giữ trong khung. |
+| SSE **không tắt** polling, chỉ làm chậm | Stream mở rồi im lặng không phân biệt được với run đứng yên. Tắt polling khi "đang stream" là cách màn hình đóng băng mà không ai biết. | `runPollInterval(streaming, fast)` → floor 8s, không bao giờ `false`. Test khoá cả hai nhánh. |
+| SSE frame chỉ invalidate, không patch cache | Frame mang `state`, không mang run. Tự dựng object run từ event là đặt bản sao **đoán** của run state vào cache. | Frame không parse được thì bỏ qua, không dựng state. Test có case JSON rác. |
+| Alpha 360° không có nút promote | Contract có lifecycle nhưng không có endpoint chuyển stage; một nút promote sẽ nói quá thẩm quyền của màn. | Callout nói rõ việc chuyển stage thuộc slice certification. Test assert **không** có control promote. |
+| Login plate vẽ sơ đồ walk-forward, có caption phủ định | Panel cạnh form login thường là chỗ để decoration. Nhưng một sơ đồ trông như dữ liệu **là** dữ liệu trong mắt người đọc. | Caption "sơ đồ phương pháp — không phải dữ liệu của một run nào"; legend bằng chữ, màu chỉ đồng thuận với chữ. |
+| Thanh tỉ lệ registry giữ thứ tự maturity cố định | Sắp theo độ lớn thì cùng một maturity đổi chỗ giữa hai snapshot — reader học sai bản đồ. | Count 0 **không** vẽ segment (sliver tối thiểu sẽ khẳng định có feature không tồn tại). |
+| Baseline thêm Users & Access + Alpha 360° (101 shot) | Hai màn này tồn tại để render **hậu quả**; drift CSS làm nút danger thôi trông như danger là đúng thứ unit test không thấy. | Body fixture pin sẵn, hoàn toàn synthetic: không principal thật, không digest thật, không token. |
+
 ### 8.6 Slice kế tiếp — "đóng 2 domain cho chắc" (chốt 2026-08-17, Bobby)
 
 **Trạng thái:** login UI (01B/01C/01D), Run Progress baseline, Import Wizard
@@ -376,6 +408,12 @@ R1–R15 đã giao và đã thu hết. Không còn request nào treo tại 2026-
 này được soát lại so với phiên bản trước). Wire gateway đang BẬT (`1159d0a`):
 cần session, USER đọc được mọi thứ, mutation ADMIN-only; rollback 1 dòng
 `PORTAL_WEB_UPSTREAM=portal-api:8000`.
+
+**Cập nhật 2026-08-17 (sau slice này): cả 7 mục dưới đã đóng** — ghi ở §8.1
+(Cancel run, cross-link 2 chiều, 2 CTA, Portal Map §P0.15, Users & Access, SSE,
+Alpha 360°) cùng "việc nhỏ kèm" (comment stale `ImportInbox.tsx`, soát §8.2) và
+pass sáng tạo login/overview. Danh sách gốc giữ lại bên dưới để đối chiếu phạm vi
+đã cam kết.
 
 **Làm ngay, theo thứ tự (đều không chặn backend — không cần request mới):**
 
