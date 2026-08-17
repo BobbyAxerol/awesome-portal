@@ -115,3 +115,84 @@ describe("U02 token gate", () => {
     expect(withAlpha("#fff", 1)).toBe("rgba(255, 255, 255, 1)");
   });
 });
+
+/* -------------------------------------------------------------------------
+ * Embedded Planning parity
+ * ---------------------------------------------------------------------- */
+
+describe("embedded Planning token parity", () => {
+  const PLANNING_SRC = join(ROOT, "../../../features/roadmap-task-board/frontend/src");
+  const PLANNING = join(PLANNING_SRC, "styles");
+
+  /**
+   * `main.tsx` imports Planning's FEATURE stylesheets but deliberately not its
+   * tokens.css — the Portal owns tokens. That is only safe while every token
+   * the embedded code consumes is also declared here; otherwise the embedded
+   * Planning screens render with missing colours and no test notices.
+   *
+   * The scan covers the Planning components too, not only its stylesheets:
+   * `--ws-*` reaches the DOM through an inline style from `workstreamVar()`,
+   * so a CSS-only scan would pass while the board rendered colourless. Adding
+   * a token to Planning and forgetting the Portal is the bug this catches.
+   */
+  const IMPORTED_CSS = ["features.css", "legacy-views.css"];
+
+  /** Custom properties a component sets on itself before reading them. */
+  const LOCALLY_SCOPED = new Set(["--phase-hue", "--task-hue"]);
+
+  function planningSources(dir: string): string[] {
+    return readdirSync(dir).flatMap((entry) => {
+      const full = join(dir, entry);
+      if (statSync(full).isDirectory()) {
+        // Byte-preserved legacy fragments carry the golden document's own
+        // inline styles; they are not the Portal's tokens to declare.
+        return entry === "content" ? [] : planningSources(full);
+      }
+      return /\.(ts|tsx)$/.test(entry) ? [full] : [];
+    });
+  }
+
+  it("declares every token the embedded Planning code consumes", () => {
+    const portal = readFileSync(join(SRC, "styles/tokens.css"), "utf8");
+    const declared = new Set([...portal.matchAll(/(--[a-z0-9-]+)\s*:/g)].map((match) => match[1]));
+
+    const files = [
+      ...IMPORTED_CSS.map((file) => join(PLANNING, file)),
+      ...planningSources(PLANNING_SRC),
+    ];
+
+    const missing = new Map<string, string>();
+    for (const file of files) {
+      const source = readFileSync(file, "utf8");
+      for (const match of source.matchAll(/var\((--[a-z0-9-]+)(\$\{)?/g)) {
+        const [, token, interpolated] = match;
+        if (LOCALLY_SCOPED.has(token)) continue;
+        if (interpolated) {
+          // A template literal like `var(--ws-${slot})` names a family, not one
+          // token. Require the family to exist here; the ramp itself is
+          // compared value-by-value in the next test.
+          const family = [...declared].some((name) => name.startsWith(token));
+          if (!family) missing.set(`${token}*`, relative(ROOT, file));
+          continue;
+        }
+        if (!declared.has(token)) missing.set(token, relative(ROOT, file));
+      }
+    }
+    expect(
+      [...missing].map(([token, file]) => `${token} (used by ${file})`).sort(),
+      "declare these in apps/portal/frontend/src/styles/tokens.css",
+    ).toEqual([]);
+  });
+
+  it("keeps the workstream ramp identical between the two token files", () => {
+    // Same design system, not two: a Planning card and the same card embedded
+    // in the Portal must not be different colours.
+    const portalRoot = declarationsIn(readFileSync(join(SRC, "styles/tokens.css"), "utf8"), ":root {");
+    const planningRoot = declarationsIn(readFileSync(join(PLANNING, "tokens.css"), "utf8"), ":root {");
+    for (let slot = 1; slot <= 8; slot += 1) {
+      const name = `--ws-${slot}`;
+      expect(portalRoot.get(name), name).toBe(planningRoot.get(name));
+    }
+    expect(portalRoot.get("--ws-other")).toBe(planningRoot.get("--ws-other"));
+  });
+});

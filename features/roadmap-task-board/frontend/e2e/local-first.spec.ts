@@ -24,10 +24,12 @@ test.describe("Roadmap & Task Board local-first release flow", () => {
     await page.getByRole("button", { name: "+ Add phase" }).click();
     await page.getByLabel("Phase name").fill(name);
     await page.getByRole("button", { name: "Save phase" }).click();
-    await expect(page.getByText(new RegExp(`· ${name}$`))).toBeVisible();
+    // The seed carries P0–P5, so the new phase is P6. Addressed by test id
+    // because the timeline renders the code and the name as separate elements.
+    await expect(page.getByTestId("roadmap-phase-P6")).toContainText(name);
 
     await page.reload();
     await expect(page.getByTestId("roadmap-feature")).toBeVisible();
-    await expect(page.getByText(new RegExp(`· ${name}$`))).toBeVisible();
+    await expect(page.getByTestId("roadmap-phase-P6")).toContainText(name);
   });
 });
