@@ -113,8 +113,26 @@ export async function stubRunApi(page: Page): Promise<void> {
   }
 }
 
+/**
+ * Auth states the baseline can put the shell into.
+ *
+ * `AUTHENTICATED` is what every non-auth screenshot needs: the gateway is on
+ * now, so without this the AuthGate would block the shell and every snapshot
+ * would capture a login frame instead.
+ */
+export type AuthStubState =
+  | "AUTHENTICATED"
+  | "APP_LOGIN_REQUIRED"
+  | "PASSWORD_CHANGE_REQUIRED"
+  | "ACCESS_REQUIRED"
+  | "ACCOUNT_DISABLED";
+
 /** Serves the Portal contract endpoints from the canonical fixtures. */
-export async function stubPortalApi(page: Page, summary: SummaryState = "healthy"): Promise<void> {
+export async function stubPortalApi(
+  page: Page,
+  summary: SummaryState = "healthy",
+  authState: AuthStubState = "AUTHENTICATED",
+): Promise<void> {
   const registry = fixture("fixtures/registry.public.json");
   const links = fixture("fixtures/links.public.json");
   const summaryDocument = fixture(`fixtures/summary.${summary}.json`);
@@ -151,6 +169,27 @@ export async function stubPortalApi(page: Page, summary: SummaryState = "healthy
     void json(route, fixture("engine-capabilities.v1.json")),
   );
   await page.route("**/api/v1/alphas", (route) => void json(route, fixture("alphas.v1.json")));
+
+  // The identity BFF. Pinned values only: no real principal, no real token.
+  await page.route("**/api/auth/context", (route) =>
+    void json(route, {
+      state: authState,
+      principal:
+        authState === "AUTHENTICATED"
+          ? {
+              principalId: "principal-visual-baseline",
+              username: "bobby",
+              role: "ADMIN",
+              sessionId: "session-visual-baseline",
+              mustChangePassword: false,
+              authnMethods: ["access", "password"],
+              issuedAt: "2026-08-17T09:00:00+00:00",
+              exp: 2000000000,
+            }
+          : null,
+      access_identity: { sub: "access-sub-baseline", email: "name@azdag.com" },
+    }),
+  );
 }
 
 /**

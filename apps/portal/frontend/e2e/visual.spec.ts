@@ -217,6 +217,45 @@ test.describe("print theme", () => {
 });
 
 /**
+ * Auth frames 01B/01C/01D (v0.4 §21.1).
+ *
+ * These render instead of the shell, so they are addressed by auth state rather
+ * than by route. Mobile is included on purpose: unlike a result screen, a login
+ * form is something a user will genuinely meet on a phone, and §21.1 specifies
+ * the form-first collapse for exactly that case.
+ */
+const AUTH_FRAMES = [
+  { name: "login", state: "APP_LOGIN_REQUIRED", ready: "login-screen" },
+  { name: "password-change", state: "PASSWORD_CHANGE_REQUIRED", ready: "password-change-screen" },
+  { name: "access-denied", state: "ACCESS_REQUIRED", ready: "access-problem-screen" },
+  { name: "account-disabled", state: "ACCOUNT_DISABLED", ready: "access-problem-screen" },
+] as const;
+
+for (const theme of THEMES) {
+  test.describe(`${theme} theme · auth`, () => {
+    for (const breakpoint of BREAKPOINTS.filter((b) => b.name === "mobile" || b.name === "laptop")) {
+      for (const frame of AUTH_FRAMES) {
+        test(`auth-${frame.name} @ ${breakpoint.name}`, async ({ page }) => {
+          await page.setViewportSize({ width: breakpoint.width, height: breakpoint.height });
+          await freezeClock(page);
+          await usePreferences(page, theme);
+          await stubPortalApi(page, "healthy", frame.state);
+
+          await page.goto("/");
+          await page.getByTestId(frame.ready).waitFor({ state: "visible" });
+          await settle(page);
+
+          await expect(page).toHaveScreenshot(
+            `auth-${frame.name}-${theme}-${breakpoint.name}.png`,
+            { fullPage: true },
+          );
+        });
+      }
+    }
+  });
+}
+
+/**
  * Summary states, at one breakpoint and one theme.
  *
  * The point here is not layout but that the states stay visually distinct:
