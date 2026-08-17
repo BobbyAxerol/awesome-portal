@@ -724,3 +724,232 @@
   border-bottom: 1px solid var(--line-soft);
   vertical-align: middle;
 }
+
+/* --- New Run configuration flow ---------------------------------------- */
+
+.run-config-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+@media (min-width: 1280px) {
+  .run-config-grid {
+    grid-template-columns: minmax(0, 1fr) 380px;
+  }
+}
+.run-config-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.request-preview {
+  max-height: 420px;
+  overflow: auto;
+  border-radius: var(--radius-sm);
+  background: var(--paper-sunken);
+  padding: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+/* --- Strategy picker ---------------------------------------------------- */
+
+.strategy-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.strategy-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper-raised);
+  transition: border-color var(--motion-fast) var(--motion-easing);
+}
+.strategy-row:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.strategy-row-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.strategy-row[data-blocked="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.strategy-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.strategy-row-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink);
+}
+.strategy-row-id {
+  font-size: 11px;
+  color: var(--ink-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.strategy-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+.strategy-row-reason {
+  font-size: 11px;
+  color: var(--state-unavailable);
+  padding: 2px var(--space-3) var(--space-2);
+}
+
+/* --- Parameter editor --------------------------------------------------- */
+
+.param-row {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  background: var(--paper-raised);
+}
+.param-row[data-invalid="true"] {
+  border-color: var(--bad);
+}
+.param-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.param-name {
+  font-size: 12px;
+  color: var(--ink);
+  font-weight: 500;
+}
+.param-declared {
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+.param-points {
+  font-size: 10px;
+  color: var(--ink-faint);
+  margin-left: auto;
+}
+.param-kind {
+  width: 130px;
+}
+.param-warning {
+  font-size: 11px;
+  color: var(--state-degraded);
+  margin-top: 4px;
+}
+
+/* --- Metric tiles and chart provenance (v0.6 §6) ------------------------ */
+
+.metric-tile-row {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (min-width: 768px) {
+  .metric-tile-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1280px) {
+  .metric-tile-row {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.metric-tile {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--paper-raised);
+  padding: var(--space-3);
+  min-width: 0;
+}
+.metric-tile[data-emphasis="true"] {
+  border-color: var(--accent);
+}
+.metric-tile-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.metric-tile-info {
+  color: var(--ink-faint);
+  display: inline-flex;
+  cursor: help;
+}
+.metric-tile-info:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.metric-tile-value {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 30px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+/* Deliberately not styled like a value: a missing metric must not be
+ * mistakable for a number at a glance. */
+.metric-tile-absent {
+  font-size: 11px;
+  line-height: 30px;
+  color: var(--state-unavailable);
+  margin-top: 2px;
+}
+.metric-tile-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+.metric-tile-segment {
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.metric-row-unit {
+  font-size: 10px;
+  color: var(--ink-faint);
+}
+.metric-absent-inline {
+  font-size: 11px;
+  color: var(--state-unavailable);
+}
+
+.chart-provenance {
+  margin-top: var(--space-2);
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+.chart-warnings {
+  margin-top: 2px;
+  color: var(--state-degraded);
+}

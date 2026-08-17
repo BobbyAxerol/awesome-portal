@@ -135,6 +135,10 @@ export const api = {
   health: () => request<{ status: string; version: string }>("/api/health"),
   datasets: () => request<DatasetDescriptor[]>("/api/datasets"),
   strategies: () => request<StrategyResponse[]>("/api/strategies"),
+  /** Imported alpha registry projection (strategy import contract §1). */
+  alphas: () => request<unknown>("/api/v1/alphas"),
+  /** Engine capability manifest for the installed release (§4). */
+  engineCapabilities: () => request<unknown>("/api/v1/portal/capabilities"),
   capabilities: () => request<Record<string, unknown>[]>("/api/capabilities/walk-forward"),
   configOptions: () => request<ConfigOptions>("/api/config/options"),
   preflight: (payload: unknown) =>

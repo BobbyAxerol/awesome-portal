@@ -450,3 +450,26 @@
     flex-direction: column;
   }
 }
+
+/* --- Milestone lanes (v1) ----------------------------------------------
+ * Grouping the board by milestone keeps the status columns intact and adds a
+ * lane header per milestone, so a manager reads progress per milestone
+ * without losing the workflow columns. */
+.milestone-lane + .milestone-lane {
+  margin-top: 20px;
+}
+.milestone-lane-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+.milestone-lane-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}

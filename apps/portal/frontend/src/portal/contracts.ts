@@ -29,6 +29,10 @@ export type SummaryLinkItem = Schemas["SummaryLinkItem"];
 export type RegistryCounts = Schemas["RegistryCounts"];
 
 export type PortalLinksDocument = Schemas["PortalLinksDocument"];
+
+/** QuantBT runtime contract for a built-in strategy (`GET /api/strategies`). */
+export type StrategyResponse = Schemas["StrategyResponse"];
+export type ParameterSpaceConfig = Schemas["ParameterSpaceConfig"];
 export type PortalErrorResponse = Schemas["PortalErrorResponse"];
 
 /** Runtime health of a capability. Drives every badge (handoff §3). */
