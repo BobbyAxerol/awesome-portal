@@ -48,7 +48,7 @@ jobs:
 
       - name: Derive API image metadata
         id: api-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ steps.image-prefix.outputs.value }}-portal-api
           tags: |
@@ -59,7 +59,7 @@ jobs:
 
       - name: Derive web image metadata
         id: web-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ steps.image-prefix.outputs.value }}-portal-web
           tags: |
@@ -70,7 +70,7 @@ jobs:
 
       - name: Derive Control API image metadata
         id: control-api-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ steps.image-prefix.outputs.value }}-control-api
           tags: |
@@ -81,7 +81,7 @@ jobs:
 
       - name: Derive Roadmap & Task Board API image metadata
         id: roadmap-task-board-api-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ steps.image-prefix.outputs.value }}-roadmap-task-board-api
           tags: |
