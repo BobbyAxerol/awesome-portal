@@ -68,6 +68,17 @@ jobs:
             type=ref,event=tag
             type=raw,value=latest,enable={{is_default_branch}}
 
+      - name: Derive Control API image metadata
+        id: control-api-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image-prefix.outputs.value }}-control-api
+          tags: |
+            type=raw,value=sha-${{ github.sha }}
+            type=ref,event=branch
+            type=ref,event=tag
+            type=raw,value=latest,enable={{is_default_branch}}
+
       - name: Derive Roadmap & Task Board API image metadata
         id: roadmap-task-board-api-meta
         uses: docker/metadata-action@v5
@@ -118,6 +129,17 @@ jobs:
           labels: ${{ steps.web-meta.outputs.labels }}
           cache-from: type=gha,scope=portal-web
           cache-to: type=gha,mode=max,scope=portal-web
+
+      - name: Build and publish Control API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/images/control-api.Dockerfile
+          push: true
+          tags: ${{ steps.control-api-meta.outputs.tags }}
+          labels: ${{ steps.control-api-meta.outputs.labels }}
+          cache-from: type=gha,scope=control-api
+          cache-to: type=gha,mode=max,scope=control-api
 
       - name: Build and publish Roadmap & Task Board API image
         uses: docker/build-push-action@v6
