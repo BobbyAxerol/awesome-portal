@@ -27,6 +27,6 @@ ingress:
         required: true
         teamName: primussparkquant
         audTag:
-          - <PORTAL_ACCESS_APPLICATION_AUD>
+          - 564a9f0023fbaa7af966e1056687ae4f6d9523f052b75b83be623678ac70684e
 
   - service: http_status:404
