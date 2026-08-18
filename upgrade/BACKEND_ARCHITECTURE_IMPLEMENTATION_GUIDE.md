@@ -678,6 +678,10 @@ deep-dive → ADR → slice → evidence discipline documented above.
   scheme/host/port before `fetch`; this addresses the CodeQL SSRF finding
   without suppressing it. Local evidence: contracts 6/6, Control API 49/49,
   TypeScript typecheck/build, actionlint 1.7.7 and `portal verify` all passed.
+  The composed-smoke trap now tears down an explicitly scoped project even
+  when `compose up` fails partway, preventing stale containers from breaking
+  retries; the full stack passed on isolated project `portal-smoke-pr35` at
+  port 18081 and removed its containers/volumes afterward.
   Remote GitHub CodeQL/CI confirmation remains required after the fix branch
   is merged into `dev`.
 - **Rust execution scope clarification (owner decision, 2026-08-18):** when
