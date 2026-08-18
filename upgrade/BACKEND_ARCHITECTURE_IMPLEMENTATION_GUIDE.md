@@ -684,6 +684,12 @@ deep-dive → ADR → slice → evidence discipline documented above.
   port 18081 and removed its containers/volumes afterward.
   Remote GitHub CodeQL/CI confirmation remains required after the fix branch
   is merged into `dev`.
+- **PR #36 clean-run remediation (2026-08-18):** BAR-09 no longer hashes the
+  installer-mutated RECORD file verbatim. pip and uv reorder rows and add
+  local metadata/bytecode for the same `quantbt-engine==1.0.8` wheel; the
+  inspector now hashes canonical sorted wheel-owned rows only. pip target,
+  uv archive and uv venv all converge on `0963c05b…73c9`; payload-row drift
+  still changes the fingerprint and fails closed.
 - **Rust execution scope clarification (owner decision, 2026-08-18):** when
   the Rust backend runway is activated, its product focus is the heavy,
   latency-sensitive **Paper → Sandbox → Live Canary → Live** Execution Cell

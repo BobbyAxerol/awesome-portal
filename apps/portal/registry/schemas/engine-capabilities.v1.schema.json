@@ -28,7 +28,11 @@
         "release_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$"},
         "package": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{1,63}$"},
         "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+[a-z0-9.+]*$"},
-        "dist_info_record_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        "dist_info_record_sha256": {
+          "type": "string",
+          "description": "SHA-256 of canonical sorted wheel-owned RECORD rows; installer-managed rows are excluded.",
+          "pattern": "^[0-9a-f]{64}$"
+        }
       }
     },
     "capability": {

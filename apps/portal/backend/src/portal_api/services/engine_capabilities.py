@@ -10,11 +10,13 @@ certified capability in the manifest needs no dispatch-code change.
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import importlib.metadata
+import io
 import json
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
@@ -26,6 +28,9 @@ from portal_api.domain.errors import PortalDomainError
 CAPABILITIES_FILE = "engine-capabilities.v1.json"
 CAPABILITIES_SCHEMA = "engine-capabilities.v1.schema.json"
 MAX_CAPABILITIES_FILE_BYTES = 256 * 1024
+INSTALLER_MANAGED_RECORD_FILES = frozenset(
+    {"INSTALLER", "REQUESTED", "direct_url.json"}
+)
 
 
 class EngineCapabilityError(PortalDomainError):
@@ -108,14 +113,56 @@ class EngineCapabilitiesDocument(CapabilityModel):
     installed: dict[str, InstalledProbe]
 
 
+def canonical_dist_info_record_hash(record: Path) -> str:
+    """Return an installer-independent fingerprint of wheel-owned RECORD rows.
+
+    Installers may reorder RECORD and add local metadata or bytecode rows.
+    Hashing the installed file verbatim therefore makes the same wheel
+    disagree between pip and uv. Wheel-owned rows carry a content digest;
+    sorting those rows while excluding known installer-owned dist-info files
+    preserves payload identity across installers.
+    """
+    dist_info_dir = record.parent.name
+    installer_paths = {
+        f"{dist_info_dir}/{name}" for name in INSTALLER_MANAGED_RECORD_FILES
+    }
+    try:
+        with record.open(encoding="utf-8", newline="") as stream:
+            source_rows = list(csv.reader(stream))
+    except (OSError, csv.Error, UnicodeError) as exc:
+        raise EngineCapabilityError("engine distribution RECORD cannot be read") from exc
+
+    rows: list[tuple[str, str, str]] = []
+    seen_paths: set[str] = set()
+    for row in source_rows:
+        if len(row) != 3:
+            raise EngineCapabilityError("engine distribution RECORD is malformed")
+        path, digest, size = row
+        normalized_path = PurePosixPath(path).as_posix()
+        if not normalized_path or normalized_path in seen_paths:
+            raise EngineCapabilityError("engine distribution RECORD has invalid paths")
+        seen_paths.add(normalized_path)
+        if not digest or normalized_path in installer_paths:
+            continue
+        rows.append((normalized_path, digest, size))
+
+    if not rows:
+        raise EngineCapabilityError("engine distribution RECORD has no wheel payload")
+
+    canonical = io.StringIO(newline="")
+    writer = csv.writer(canonical, lineterminator="\n")
+    writer.writerows(sorted(rows, key=lambda item: item[0]))
+    return hashlib.sha256(canonical.getvalue().encode("utf-8")).hexdigest()
+
+
 def installed_dist_info_record_hash(package: str) -> str:
-    """Digest of the installed distribution's RECORD file (wheel identity)."""
+    """Canonical RECORD fingerprint for an installed wheel distribution."""
     try:
         dist = importlib.metadata.distribution(package)
     except importlib.metadata.PackageNotFoundError as exc:
         raise EngineCapabilityError(f"engine package {package} is not installed") from exc
     record = Path(dist._path) / "RECORD"  # noqa: SLF001 - dist-info identity
-    return hashlib.sha256(record.read_bytes()).hexdigest()
+    return canonical_dist_info_record_hash(record)
 
 
 @dataclass(frozen=True, slots=True)
@@ -289,5 +336,6 @@ __all__ = [
     "EngineCapabilityService",
     "EngineCapabilitiesManifest",
     "EngineRelease",
+    "canonical_dist_info_record_hash",
     "installed_dist_info_record_hash",
 ]

@@ -70,7 +70,8 @@ Chúng không thay thế phase hoặc exit gate trong
   bundle 17 files, redelivery không duplicate). ADR-004/006 Proposed.
 - [BAR-09 — Engine Capability Authority](./BAR_09_ENGINE_CAPABILITY_AUTHORITY.md)
   — U12 authority. **Complete:** manifest `engine-capabilities.v1` pin
-  `quantbt-engine==1.0.8` (dist-info RECORD sha256) + 2 certified
+  `quantbt-engine==1.0.8` (installer-independent canonical dist-info RECORD
+  sha256) + 2 certified
   capabilities, loader fail-closed lúc startup, inspector verify installed
   wheel, capability preflight trong mọi run/preflight (protocol/data
   class/optuna trials/parameter space), reject unadvertised/uncertified dù
