@@ -589,6 +589,18 @@ sang source-reference R11).
 
 ### 8.7 Sẵn sàng push / merge / build (soát 2026-08-17, cập nhật 2026-08-18)
 
+> **Cập nhật PR #36 CI 2026-08-18.** Visual gate đã được tái hiện từ Git
+> archive sạch: Playwright cài dependencies của Portal nhưng production build
+> compile trực tiếp source Planning nhúng, nên TypeScript không resolve được
+> `react`, `react/jsx-runtime` và `mermaid` khi Planning chưa có
+> `node_modules`. `scripts/portal-web-visual.sh` nay bootstrap cả hai package
+> graph trong cùng container pinned trước khi khởi động webServer; điều này
+> loại bỏ việc local pass nhờ cache trong khi clean GitHub runner fail. Gate
+> sạch sau đó còn chỉ ra hai fixture `status/console.log` bị wildcard `*.log`
+> loại khỏi Git dù digest/index và console-response đều phụ thuộc chúng;
+> `.gitignore` nay whitelist chính xác hai log tổng hợp này, không mở runtime
+> logs nói chung. Không thay UI hay visual snapshots.
+>
 > **Cập nhật PR #35 CI 2026-08-18.** Clean `npm ci` tái hiện 3 unhandled
 > rejection từ Mermaid khi Docs component unmount trước lúc computed design
 > tokens sẵn sàng (`Unsupported color format: ""`). `renderMermaid()` trước
