@@ -18,7 +18,7 @@ dependencies = [
   "nats-py>=2.10,<3",
   "numpy>=2,<3",
   "pandas>=2.2,<3",
-  "pyarrow>=18,<25",
+  "pyarrow>=18,<26",
   "pydantic>=2.10,<3",
   "python-multipart>=0.0.9,<1",
   "quantbt-engine[optimization]==1.0.8",
