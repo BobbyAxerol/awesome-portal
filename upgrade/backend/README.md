@@ -164,3 +164,7 @@ alphas are never executable. Fixtures: `visual-baseline-run` (COMPLETED) +
   must match before dispatch. Evidence: contracts 6/6, Control API 49/49,
   typecheck/build, actionlint and workspace verify passed locally; remote
   checks are pending merge of the fix branch into `dev`.
+- Owner scope is locked: future Rust backend work concentrates on measured
+  Paper→Sandbox→Live-Canary→Live Execution Cell fast paths. TypeScript keeps
+  control/approval authority; Python keeps research/QuantBT compute; BAR-14
+  profiling, parity, shadow and rollback gates remain mandatory.

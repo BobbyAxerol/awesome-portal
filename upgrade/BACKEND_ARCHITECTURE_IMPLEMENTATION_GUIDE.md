@@ -680,6 +680,14 @@ deep-dive → ADR → slice → evidence discipline documented above.
   TypeScript typecheck/build, actionlint 1.7.7 and `portal verify` all passed.
   Remote GitHub CodeQL/CI confirmation remains required after the fix branch
   is merged into `dev`.
+- **Rust execution scope clarification (owner decision, 2026-08-18):** when
+  the Rust backend runway is activated, its product focus is the heavy,
+  latency-sensitive **Paper → Sandbox → Live Canary → Live** Execution Cell
+  path (market/order/fill streams, risk/execution read paths, reconciliation
+  and realtime fan-out). TypeScript remains the approval/workflow/control
+  authority and Python remains research/QuantBT compute. This focus does not
+  waive BAR-14: each Rust extraction still needs profiling evidence, parity,
+  shadow comparison and rollback before it becomes authoritative.
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**
