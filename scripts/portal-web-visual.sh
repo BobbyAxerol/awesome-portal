@@ -47,6 +47,13 @@ docker run --rm \
   "${IMAGE}" \
   sh -lc "
     set -e
+    # Portal compiles the embedded Planning source in-place. In a clean
+    # checkout TypeScript resolves that source's React/Mermaid imports from
+    # Planning's own node_modules, so both package graphs must exist before
+    # Playwright starts its production-build web server.
+    if [ ! -d /repo/features/roadmap-task-board/frontend/node_modules ]; then
+      npm ci --prefix /repo/features/roadmap-task-board/frontend --no-audit --no-fund
+    fi
     if [ ! -d node_modules ]; then
       npm ci --no-audit --no-fund
     fi

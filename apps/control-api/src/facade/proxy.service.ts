@@ -18,6 +18,7 @@ export class FacadeError extends Error {
 }
 
 const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+const PORTAL_API_PATH = /^\/api(?:\/[A-Za-z0-9._~!$&'()*+,;=:@%/-]*)?$/;
 const FORWARD_HEADERS = new Set([
   "accept",
   "content-type",
@@ -52,6 +53,65 @@ export interface WriteRecord {
   replayed: boolean;
 }
 
+/**
+ * Build a request URL without ever allowing request input to select the
+ * upstream origin. PORTAL_API_BASE_URL is validated as an origin-only config
+ * value; request paths are restricted to this service's /api namespace and
+ * assigned as URL components instead of being parsed as an absolute URL.
+ */
+export function buildPortalUpstreamUrl(
+  configuredOrigin: string,
+  path: string,
+  query: string | undefined,
+): URL {
+  const base = new URL(configuredOrigin);
+  if (
+    !["http:", "https:"].includes(base.protocol) ||
+    base.username !== "" ||
+    base.password !== "" ||
+    base.pathname !== "/" ||
+    base.search !== "" ||
+    base.hash !== ""
+  ) {
+    throw new FacadeError(
+      "UPSTREAM_ORIGIN_INVALID",
+      "The configured Portal API origin is invalid.",
+      500,
+    );
+  }
+
+  let decodedPath: string;
+  try {
+    decodedPath = decodeURIComponent(path);
+  } catch {
+    throw new FacadeError("UPSTREAM_PATH_INVALID", "The Portal API path is invalid.", 400);
+  }
+  const segments = decodedPath.split("/");
+  if (
+    !PORTAL_API_PATH.test(path) ||
+    decodedPath.includes("\\") ||
+    decodedPath.includes("?") ||
+    decodedPath.includes("#") ||
+    decodedPath.includes("//") ||
+    segments.includes(".") ||
+    segments.includes("..")
+  ) {
+    throw new FacadeError("UPSTREAM_PATH_INVALID", "The Portal API path is invalid.", 400);
+  }
+
+  const target = new URL(base.origin);
+  target.pathname = path;
+  target.search = query ?? "";
+  if (
+    target.protocol !== base.protocol ||
+    target.hostname !== base.hostname ||
+    target.port !== base.port
+  ) {
+    throw new FacadeError("UPSTREAM_ORIGIN_MISMATCH", "The Portal API origin changed.", 400);
+  }
+  return target;
+}
+
 export class PortalProxyService {
   constructor(
     private readonly config: ControlApiConfig,
@@ -66,7 +126,11 @@ export class PortalProxyService {
   }
 
   async proxy(input: ProxyInput): Promise<ProxyResult> {
-    const url = new URL(input.path + (input.query ? `?${input.query}` : ""), this.config.PORTAL_API_BASE_URL);
+    const url = buildPortalUpstreamUrl(
+      this.config.PORTAL_API_BASE_URL,
+      input.path,
+      input.query,
+    );
     const headers: Record<string, string> = {
       "x-request-id": input.requestId,
       traceparent: input.traceparent,

@@ -33,19 +33,18 @@ export ROADMAP_TASK_BOARD_PUBLIC_URL="${ROADMAP_TASK_BOARD_PUBLIC_URL:-http://12
 
 mkdir -p "${PORTAL_HISTORICAL_DATA_DIR}"
 COMPOSE=(docker compose --project-directory "${ROOT_DIR}" -f "${ROOT_DIR}/compose.yaml")
-started=false
 health_file="$(mktemp /tmp/portal-smoke-health.XXXXXX)"
 
 cleanup() {
-  if [[ "${started}" == true ]]; then
-    "${COMPOSE[@]}" down --volumes --remove-orphans >/dev/null || true
-  fi
+  # `compose up` may create only part of the project and then fail before it
+  # returns. Always tear down the explicitly scoped smoke project so retries
+  # cannot collide with containers left by a partial startup.
+  "${COMPOSE[@]}" down --volumes --remove-orphans >/dev/null || true
   rm -f -- "${health_file}"
 }
 trap cleanup EXIT
 
 "${COMPOSE[@]}" up --detach --build
-started=true
 
 health_url="http://127.0.0.1:${PORTAL_HTTP_PORT}/api/health"
 health_ready=false

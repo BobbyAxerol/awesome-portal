@@ -19,10 +19,12 @@ docker run --rm --name "${NODE_CONTAINER}" \
   -v "${ROOT_DIR}:/repo:ro" \
   -v "${CONTRACTS_DIR}:/work" \
   -w /work \
+  -e HOME=/tmp \
+  -e npm_config_cache=/tmp/.npm \
   node:22-alpine sh -c '
     set -e
     if [ ! -d node_modules ]; then
-      npm install --no-audit --no-fund
+      npm ci --no-audit --no-fund
     fi
     npx vitest run
     npx openapi-typescript /repo/apps/portal/registry/openapi/portal-api.openapi.json -o /tmp/portal-api.d.ts

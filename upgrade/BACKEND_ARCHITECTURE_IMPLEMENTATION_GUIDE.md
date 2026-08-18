@@ -670,6 +670,34 @@ deep-dive → ADR → slice → evidence discipline documented above.
   users in `deploy/control-api/bootstrap-users.yaml`.
 - `control-api` suite: 34 tests; Portal backend regression 396 passed,
   1 skipped; contracts/parity/M0 snapshots regenerated.
+- **PR #35 CI remediation (2026-08-18):** the shared-contract and Control API
+  clean-container installers now use `npm ci` with a writable unprivileged
+  npm cache, removing the runner-only `EACCES`/exit-243 failure. The façade
+  now validates an origin-only `PORTAL_API_BASE_URL`, confines request paths
+  to `/api`, rejects encoded traversal/authority tricks and checks the final
+  scheme/host/port before `fetch`; this addresses the CodeQL SSRF finding
+  without suppressing it. Local evidence: contracts 6/6, Control API 49/49,
+  TypeScript typecheck/build, actionlint 1.7.7 and `portal verify` all passed.
+  The composed-smoke trap now tears down an explicitly scoped project even
+  when `compose up` fails partway, preventing stale containers from breaking
+  retries; the full stack passed on isolated project `portal-smoke-pr35` at
+  port 18081 and removed its containers/volumes afterward.
+  Remote GitHub CodeQL/CI confirmation remains required after the fix branch
+  is merged into `dev`.
+- **PR #36 clean-run remediation (2026-08-18):** BAR-09 no longer hashes the
+  installer-mutated RECORD file verbatim. pip and uv reorder rows and add
+  local metadata/bytecode for the same `quantbt-engine==1.0.8` wheel; the
+  inspector now hashes canonical sorted wheel-owned rows only. pip target,
+  uv archive and uv venv all converge on `0963c05b…73c9`; payload-row drift
+  still changes the fingerprint and fails closed.
+- **Rust execution scope clarification (owner decision, 2026-08-18):** when
+  the Rust backend runway is activated, its product focus is the heavy,
+  latency-sensitive **Paper → Sandbox → Live Canary → Live** Execution Cell
+  path (market/order/fill streams, risk/execution read paths, reconciliation
+  and realtime fan-out). TypeScript remains the approval/workflow/control
+  authority and Python remains research/QuantBT compute. This focus does not
+  waive BAR-14: each Rust extraction still needs profiling evidence, parity,
+  shadow comparison and rollback before it becomes authoritative.
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**

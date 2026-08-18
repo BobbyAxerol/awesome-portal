@@ -15,13 +15,14 @@ from portal_api.services.engine_capabilities import (
     EngineCapabilityError,
     EngineCapabilityLoadError,
     EngineCapabilityService,
+    canonical_dist_info_record_hash,
     installed_dist_info_record_hash,
 )
 
 
 PORTAL_ROOT = Path(__file__).resolve().parents[2]
 REGISTRY_ROOT = PORTAL_ROOT / "registry"
-PINNED_RECORD_SHA256 = "48c09e6b8f26b06c9ab695f9f44467dfa5c7118c9fa9d765b4199a6f5b2db832"
+PINNED_RECORD_SHA256 = "0963c05b3f68aaf875c0ec95f71db551cc22a3b39538ffe8ac072028405173c9"
 
 
 def _load_json(path: Path) -> dict[str, object]:
@@ -73,6 +74,43 @@ def test_installed_engine_matches_pinned_dist_info_record() -> None:
     assert installed_dist_info_record_hash("quantbt-engine") == PINNED_RECORD_SHA256
     results = _service().verify_installed()
     assert results["er_quantbt_108"]["ok"] is True
+
+
+def test_record_fingerprint_is_installer_independent_and_payload_sensitive(
+    tmp_path: Path,
+) -> None:
+    wheel_rows = [
+        "quantbt/__init__.py,sha256=payload-a,12",
+        "quantbt/core.py,sha256=payload-b,34",
+        "quantbt_engine-1.0.8.dist-info/METADATA,sha256=metadata,56",
+        "quantbt_engine-1.0.8.dist-info/RECORD,,",
+    ]
+    uv_record = tmp_path / "uv" / "quantbt_engine-1.0.8.dist-info" / "RECORD"
+    pip_record = tmp_path / "pip" / "quantbt_engine-1.0.8.dist-info" / "RECORD"
+    uv_record.parent.mkdir(parents=True)
+    pip_record.parent.mkdir(parents=True)
+    uv_record.write_text(
+        "\n".join(reversed(wheel_rows))
+        + "\nquantbt_engine-1.0.8.dist-info/INSTALLER,sha256=uv,2\n",
+        encoding="utf-8",
+    )
+    pip_record.write_text(
+        "quantbt/__pycache__/__init__.cpython-312.pyc,,\n"
+        + "\n".join(wheel_rows)
+        + "\nquantbt_engine-1.0.8.dist-info/REQUESTED,sha256=empty,0\n",
+        encoding="utf-8",
+    )
+
+    uv_fingerprint = canonical_dist_info_record_hash(uv_record)
+    assert canonical_dist_info_record_hash(pip_record) == uv_fingerprint
+
+    pip_record.write_text(
+        pip_record.read_text(encoding="utf-8").replace(
+            "sha256=payload-b", "sha256=tampered"
+        ),
+        encoding="utf-8",
+    )
+    assert canonical_dist_info_record_hash(pip_record) != uv_fingerprint
 
 
 @pytest.mark.parametrize(

@@ -70,7 +70,8 @@ Chúng không thay thế phase hoặc exit gate trong
   bundle 17 files, redelivery không duplicate). ADR-004/006 Proposed.
 - [BAR-09 — Engine Capability Authority](./BAR_09_ENGINE_CAPABILITY_AUTHORITY.md)
   — U12 authority. **Complete:** manifest `engine-capabilities.v1` pin
-  `quantbt-engine==1.0.8` (dist-info RECORD sha256) + 2 certified
+  `quantbt-engine==1.0.8` (installer-independent canonical dist-info RECORD
+  sha256) + 2 certified
   capabilities, loader fail-closed lúc startup, inspector verify installed
   wheel, capability preflight trong mọi run/preflight (protocol/data
   class/optuna trials/parameter space), reject unadvertised/uncertified dù
@@ -152,3 +153,23 @@ alphas are never executable. Fixtures: `visual-baseline-run` (COMPLETED) +
   façade (BAR-07), Command Center read model (U10), workspace tenancy (U10),
   maintenance screen (U07), BAR-17→20 / U18 / U19. See
   `BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md` §14.1 for detail.
+
+## Backend state — 2026-08-18 (PR #35 CI recovery)
+
+- Fixed clean-runner npm permissions for contracts and Control API by setting
+  a writable unprivileged cache and using `npm ci`; the reproduced
+  `EACCES`/exit-243 failure no longer occurs.
+- Hardened the Control API façade against the CodeQL SSRF finding: configured
+  upstream must be an origin-only HTTP(S) URL, request path remains inside
+  `/api`, traversal/authority tricks are rejected, and final scheme/host/port
+  must match before dispatch. Evidence: contracts 6/6, Control API 49/49,
+  typecheck/build, actionlint and workspace verify passed locally; remote
+  checks are pending merge of the fix branch into `dev`.
+- Made composed-smoke cleanup unconditional for its scoped Compose project,
+  including partial `compose up` failure. Full build/health/web/Planning
+  create-transition-activity smoke passed on `portal-smoke-pr35:18081` and
+  teardown removed all test containers and volumes.
+- Owner scope is locked: future Rust backend work concentrates on measured
+  Paper→Sandbox→Live-Canary→Live Execution Cell fast paths. TypeScript keeps
+  control/approval authority; Python keeps research/QuantBT compute; BAR-14
+  profiling, parity, shadow and rollback gates remain mandatory.

@@ -7,6 +7,7 @@ import { AuthService } from "../src/auth/auth.service";
 import { Argon2CredentialService, sha256 } from "../src/auth/argon";
 import { AdminService } from "../src/admin/admin.service";
 import { PrincipalService } from "../src/auth/principal";
+import { buildPortalUpstreamUrl } from "../src/facade/proxy.service";
 
 const DATABASE_URL =
   process.env.TEST_DATABASE_URL ??
@@ -20,6 +21,42 @@ function cookies(response: { headers: Record<string, unknown> }): string {
     .map((v) => v.split(";")[0])
     .join("; ");
 }
+
+describe("Portal upstream URL boundary", () => {
+  it("keeps an allowed API path and query on the configured origin", () => {
+    const target = buildPortalUpstreamUrl(
+      "http://portal-api:8000",
+      "/api/runs/run_01",
+      "limit=25&cursor=next",
+    );
+    expect(target.href).toBe(
+      "http://portal-api:8000/api/runs/run_01?limit=25&cursor=next",
+    );
+  });
+
+  it.each([
+    "https://attacker.example/api/runs",
+    "//attacker.example/api/runs",
+    "/api/runs/../admin",
+    "/api/runs/%2e%2e/admin",
+    "/api/runs/%5c%5cattacker.example",
+    "/not-api/runs",
+  ])("rejects an unsafe upstream path: %s", (path) => {
+    expect(() =>
+      buildPortalUpstreamUrl("http://portal-api:8000", path, undefined),
+    ).toThrowError(/Portal API path is invalid/);
+  });
+
+  it.each([
+    "file:///tmp/portal-api",
+    "http://user:password@portal-api:8000",
+    "http://portal-api:8000/internal",
+  ])("rejects an unsafe configured upstream origin: %s", (origin) => {
+    expect(() =>
+      buildPortalUpstreamUrl(origin, "/api/runs", undefined),
+    ).toThrowError(/configured Portal API origin is invalid/);
+  });
+});
 
 describe("control api facade (proxy, workspaces, outbox)", () => {
   let mockAgent: MockAgent;

@@ -1,6 +1,21 @@
 import { z } from "zod";
 import { AUTH_MODES } from "./domain";
 
+const PortalApiBaseUrlSchema = z
+  .string()
+  .url()
+  .refine((value) => {
+    const url = new URL(value);
+    return (
+      ["http:", "https:"].includes(url.protocol) &&
+      url.username === "" &&
+      url.password === "" &&
+      url.pathname === "/" &&
+      url.search === "" &&
+      url.hash === ""
+    );
+  }, "PORTAL_API_BASE_URL must be an HTTP(S) origin without credentials, path, query or fragment");
+
 const EnvSchema = z.object({
   NODE_ENV: z.string().default("development"),
   PORTAL_ENV: z.enum(["local", "research", "paper", "sandbox", "live"]).default("research"),
@@ -38,7 +53,7 @@ const EnvSchema = z.object({
   LOGIN_LOCK_ATTEMPTS: z.coerce.number().int().positive().default(10),
   LOGIN_LOCK_SECONDS: z.coerce.number().int().positive().default(15 * 60),
   JWKS_CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(300),
-  PORTAL_API_BASE_URL: z.string().min(1).default("http://portal-api:8000"),
+  PORTAL_API_BASE_URL: PortalApiBaseUrlSchema.default("http://portal-api:8000"),
   FEATURE_PROXY_PORTAL: z
     .enum(["true", "false"])
     .default("true"),
