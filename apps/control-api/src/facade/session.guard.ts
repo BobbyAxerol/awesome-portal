@@ -27,15 +27,15 @@ export class SessionGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
     const token = sessionTokenFrom(request);
     if (!token) {
-      throw new UnauthorizedException("Phiên đăng nhập không hợp lệ.");
+      throw new UnauthorizedException("Invalid session.");
     }
     const session = await this.auth.sessionFromToken(token);
     if (!session || session.state !== "ACTIVE") {
-      throw new UnauthorizedException("Phiên đăng nhập không hợp lệ.");
+      throw new UnauthorizedException("Invalid session.");
     }
     const user = await this.auth.users.findById(session.userId);
     if (!user || user.status !== "ACTIVE" || user.mustChangePassword) {
-      throw new UnauthorizedException("Phiên đăng nhập không hợp lệ.");
+      throw new UnauthorizedException("Invalid session.");
     }
     const workspaceId = await this.workspaces.ensurePersonal(user.userId, user.username);
     const state = request as unknown as {

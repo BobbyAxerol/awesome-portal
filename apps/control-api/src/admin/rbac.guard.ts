@@ -21,18 +21,18 @@ export class AdminGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
     const token = sessionTokenFrom(request);
     if (!token) {
-      throw new UnauthorizedException("Phiên đăng nhập không hợp lệ.");
+      throw new UnauthorizedException("Invalid session.");
     }
     const session = await this.auth.sessionFromToken(token);
     if (!session || session.state !== "ACTIVE") {
-      throw new UnauthorizedException("Phiên đăng nhập không hợp lệ.");
+      throw new UnauthorizedException("Invalid session.");
     }
     const user = await this.auth.users.findById(session.userId);
     if (!user || user.status !== "ACTIVE") {
-      throw new UnauthorizedException("Phiên đăng nhập không hợp lệ.");
+      throw new UnauthorizedException("Invalid session.");
     }
     if (user.role !== "ADMIN") {
-      throw new UnauthorizedException("Không được phép truy cập.");
+      throw new UnauthorizedException("Access denied.");
     }
     (request as unknown as { portalUser: unknown }).portalUser = user;
     return true;

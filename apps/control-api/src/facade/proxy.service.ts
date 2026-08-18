@@ -155,7 +155,7 @@ export class PortalProxyService {
       });
       throw new FacadeError(
         "IDEMPOTENCY_KEY_REUSE",
-        "Idempotency key đã dùng cho payload khác.",
+        "Idempotency key was already used for a different payload.",
         409,
       );
     }

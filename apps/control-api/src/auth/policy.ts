@@ -45,7 +45,7 @@ export function validatePassword(password: string): PasswordPolicyError | null {
     if (lowered.includes(blocked)) {
       return {
         code: "PASSWORD_BLOCKLISTED",
-        message: "Mật khẩu này nằm trong danh sách cấm; hãy chọn giá trị khác.",
+        message: "This password is blocklisted; choose a different value.",
       };
     }
   }

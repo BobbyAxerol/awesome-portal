@@ -53,7 +53,7 @@ export class FacadeController {
     @Param("workspace_id") workspaceId: string,
   ) {
     if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
-      throw new FacadeError("WORKSPACE_NOT_FOUND", "Workspace không tồn tại.", 404);
+      throw new FacadeError("WORKSPACE_NOT_FOUND", "Workspace not found.", 404);
     }
     const runs = await this.runs.listForWorkspace(workspaceId);
     return {
@@ -91,7 +91,7 @@ export class FacadeController {
     if (!this.proxyService.enabled()) {
       throw new FacadeError(
         "FAÇADE_PROXY_DISABLED",
-        "Control API façade proxy đang tắt; dùng legacy gateway path.",
+        "The Control API façade proxy is disabled; use the legacy gateway path.",
         404,
       );
     }
@@ -106,12 +106,12 @@ export class FacadeController {
     // READ runs and catalogs through the proxy; workspace read models remain
     // available as a convenience but are no longer the only read path.
     if (write && user.role !== "ADMIN") {
-      throw new FacadeError("PERMISSION_DENIED", "Không được phép truy cập.", 403);
+      throw new FacadeError("PERMISSION_DENIED", "Access denied.", 403);
     }
     if (!write && path.startsWith("/api/runs/") && path.endsWith("/events")) {
       throw new FacadeError(
         "SSE_NOT_MIGRATED",
-        "SSE stream chưa migrate qua façade; dùng legacy gateway path.",
+        "SSE is not migrated through the façade; use the legacy gateway path.",
         404,
       );
     }

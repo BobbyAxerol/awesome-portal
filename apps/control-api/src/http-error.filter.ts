@@ -37,10 +37,10 @@ export class HttpErrorFilter implements ExceptionFilter {
           code: status === 401 ? "SESSION_REQUIRED" : "REQUEST_REJECTED",
           message:
             status === 401
-              ? "Phiên đăng nhập không hợp lệ."
+              ? "Invalid session."
               : status === 403
-                ? "Không được phép truy cập."
-                : "Yêu cầu không hợp lệ.",
+                ? "Access denied."
+                : "Invalid request.",
         },
         request_id: requestId,
       });
@@ -48,7 +48,7 @@ export class HttpErrorFilter implements ExceptionFilter {
     }
     this.logger.error(exception);
     void reply.status(500).send({
-      error: { code: "INTERNAL_ERROR", message: "Lỗi nội bộ." },
+      error: { code: "INTERNAL_ERROR", message: "Internal error." },
       request_id: requestId,
     });
   }
