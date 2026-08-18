@@ -2142,3 +2142,54 @@
     background-position: -40% 0;
   }
 }
+
+/* --- Stage strip ---------------------------------------------------------
+ * The run's real stage sequence, with each bar proportional to how long that
+ * stage held. It replaced a fixed row of chips that named the protocol's
+ * stages from a constant, identical for every run and therefore unreadable as
+ * information. Widths come from `status.json` timestamps; the label and the
+ * duration are always printed, so the bar is decoration over a stated number
+ * rather than the only carrier of the value. */
+.stage-strip {
+  display: grid;
+  gap: 2px;
+}
+.stage-strip-item {
+  display: grid;
+  grid-template-columns: minmax(9rem, 12rem) 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 2px 0;
+}
+.stage-strip-bar {
+  height: 6px;
+  min-width: 3px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line, var(--line-soft));
+}
+@media (max-width: 640px) {
+  .stage-strip-item {
+    grid-template-columns: 1fr auto;
+  }
+  .stage-strip-bar {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+}
+
+/* --- Claim caution -------------------------------------------------------
+ * Used where a published field changes how every other number on the screen
+ * should be read (`oos_used_for_selection: true`). It is a stated caveat, not
+ * an error, so it takes the warning surface without the failure glyph or the
+ * red of a broken state. */
+.claim-caution {
+  margin-bottom: var(--space-3);
+  border-left: 3px solid var(--accent-2, var(--line));
+  background: var(--paper-sunken);
+  padding: var(--space-3);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}

@@ -1,4 +1,16 @@
-/** Optimization: process timeline, trial/candidate scatter, decay lollipop, convergence, table (§15). */
+/**
+ * Optimization — how the parameter set was chosen (§15).
+ *
+ * Reading order follows what the analyst has to decide, not what the artifacts
+ * happen to contain: the selected trial first, then how wide the search that
+ * produced it was, then when the engine did the work, then the evidence charts,
+ * then the raw tables. The previous order opened on a static row of stage chips
+ * that said the same six words for every run.
+ *
+ * Every artifact is read through `artifactTable`, so a run that never wrote
+ * `wfo/candidates.parquet` explains itself instead of turning the whole screen
+ * into a failure — and never contributes a `0` to a count.
+ */
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
@@ -7,75 +19,73 @@ import { baseOption } from "../../charts/theme";
 import { useChartTheme } from "../../charts/useChartTheme";
 import type { EChartsOption } from "echarts";
 import { ChartFigure } from "../../components/ChartFigure";
-import { Collapsible, DefinitionList, ResultsSkeleton, StateView } from "../../components/ui";
+import { Collapsible, DefinitionList, ResultsSkeleton, Skeleton, StateView } from "../../components/ui";
 import { FoldGantt } from "../../components/FoldGantt";
 import { api, rowParams } from "../../lib/api";
 import { fmtDecay, fmtRatio } from "../../lib/format";
-import { tableProvenance, rowPopulation, type RowPopulation, type RunEvidence } from "../quantbt/provenance";
+import { artifactExplanation, artifactStateKind, artifactTable, type ArtifactTable } from "../quantbt/artifacts";
+import { tableProvenance, type RowPopulation, type RunEvidence } from "../quantbt/provenance";
 
 /** Server-side cap on the trials query; disclosed on every trial chart. */
 const TRIAL_QUERY_CAP = 5000;
-
-const PROCESS_STAGES = [
-  "Optimize IS",
-  "Top candidates",
-  "Replay OOS",
-  "Select",
-  "Freeze",
-  "Evaluate",
-];
 
 export function OptimizationView({ runId }: { runId: string }) {
   // One dependency for every chart in this view; see useChartTheme.
   const chart = useChartTheme();
 
-  const trials = useQuery({ queryKey: ["trials", runId], queryFn: () => api.trials(runId, `top_n=${TRIAL_QUERY_CAP}`) });
+  const trialsQuery = useQuery({ queryKey: ["trials", runId], queryFn: () => api.trials(runId, `top_n=${TRIAL_QUERY_CAP}`) });
   const foldPlan = useQuery({ queryKey: ["fold-plan", runId], queryFn: () => api.foldPlan(runId), retry: 1 });
   const detail = useQuery({ queryKey: ["run", runId], queryFn: () => api.getRun(runId) });
-  const candidates = useQuery({ queryKey: ["candidates", runId], queryFn: () => api.candidates(runId) });
+  const candidatesQuery = useQuery({
+    queryKey: ["candidates", runId],
+    queryFn: () => api.candidates(runId),
+    // An absent artifact is an answer, not a flake: retrying a 404 four times
+    // only delays the explanation the screen is about to render.
+    retry: (failureCount, error) =>
+      failureCount < 2 && !(error as { status?: number })?.status,
+  });
   const trace = useQuery({ queryKey: ["trace", runId], queryFn: () => api.trace(runId) });
-  const folds = useQuery({ queryKey: ["folds", runId], queryFn: () => api.folds(runId) });
+  const foldsQuery = useQuery({ queryKey: ["folds", runId], queryFn: () => api.folds(runId) });
   const audit = useQuery({ queryKey: ["audit", runId], queryFn: () => api.audit(runId), staleTime: 60_000 });
   const [selectedTrial, setSelectedTrial] = useState<number | null>(null);
 
-  // Population of the trials artifact, straight from the envelope.
-  const { total: trialsTotal, returned: trialsReturned, truncated: trialsTruncated } =
-    rowPopulation(trials.data);
+  const trials = artifactTable(trialsQuery);
+  const candidates = artifactTable(candidatesQuery);
+  const folds = artifactTable(foldsQuery);
 
   const manifest = (audit.data?.manifest ?? {}) as Record<string, unknown>;
   const run: RunEvidence = {
     runId,
     asOf: typeof manifest.completed_at === "string" ? manifest.completed_at : null,
     digest: typeof manifest.dataset_content_hash === "string" ? manifest.dataset_content_hash : null,
-    // Truncation is now DECLARED, not inferred. The old test compared
-    // `rows.length >= cap`, which cannot distinguish a truncated artifact from
-    // one that happens to hold exactly `cap` trials; `total_rows` says.
-    warnings: trialsTruncated
+    // Truncation is DECLARED, not inferred. Comparing `rows.length >= cap`
+    // cannot distinguish a truncated artifact from one holding exactly `cap`.
+    warnings: trials.population.truncated
       ? [
-          `Chart vẽ ${trialsReturned}/${trialsTotal} trial của artifact ` +
-            `(server cap top_n=${TRIAL_QUERY_CAP} theo objective).`,
+          `Charts draw ${trials.population.returned} of ${trials.population.total} trials in the artifact ` +
+            `(server cap top_n=${TRIAL_QUERY_CAP} by objective).`,
         ]
       : undefined,
   };
 
   const rows = useMemo(() => {
     const unique = new Map<string, Record<string, unknown>>();
-    for (const row of trials.data?.rows ?? []) {
+    for (const row of trials.rows) {
       const study = row.study_id ?? row.schedule_fold_id ?? "global";
       const key = `${String(study)}:${String(row.trial_id)}`;
       if (!unique.has(key)) unique.set(key, row);
     }
     return [...unique.values()];
-  }, [trials.data]);
-  const candidateRows = useMemo(() => candidates.data?.rows ?? [], [candidates.data]);
-  // Candidates and folds carry the same RowEnvelope as trials, so their charts
-  // and tables count against the artifact instead of against the page.
-  const candidatePopulation = rowPopulation(candidates.data);
-  const foldPopulation = rowPopulation(folds.data);
+  }, [trials.rows]);
+  const candidateRows = candidates.rows;
+
+  const tracedTrialId = (trace.data?.selected_trial_id as number | null | undefined) ?? null;
   const selectedId =
     selectedTrial ??
-    ((trace.data?.selected_trial_id as number | null | undefined) ?? null) ??
-    ((candidateRows[0]?.trial_id as number | null | undefined) ?? (candidateRows[0]?.source_trial_id as number | null | undefined) ?? null);
+    tracedTrialId ??
+    ((candidateRows[0]?.trial_id as number | null | undefined) ??
+      (candidateRows[0]?.source_trial_id as number | null | undefined) ??
+      null);
 
   const trialScatter = useMemo(() => {
     const data: Array<[number, number, number, number, number]> = rows
@@ -86,8 +96,8 @@ export function OptimizationView({ runId }: { runId: string }) {
       legend: { show: false },
       dataZoom: [],
       tooltip: { trigger: "item", formatter: (p: { data: number[] }) => `trial #${p.data[0]}<br/>objective ${fmtRatio(p.data[1])}<br/>IS ${fmtRatio(p.data[2])} · OOS ${fmtRatio(p.data[3])}<br/>decay ${fmtDecay(p.data[4])}` },
-      xAxis: { type: "value" },
-      yAxis: { type: "value" },
+      xAxis: { type: "value", name: "trial id", nameLocation: "middle", nameGap: 26 },
+      yAxis: { type: "value", name: "objective", nameLocation: "middle", nameGap: 40 },
       series: [
         {
           type: "scatter",
@@ -103,7 +113,7 @@ export function OptimizationView({ runId }: { runId: string }) {
     } as unknown as EChartsOption, chart.theme);
   }, [rows, selectedId, chart]);
 
-  /** Rows each chart actually draws — the denominator of its provenance line. */
+  /** Rows each chart actually draws — the numerator of its provenance line. */
   const trialsPlotted = useMemo(
     () => rows.filter((row) => typeof row.objective === "number").length,
     [rows],
@@ -125,8 +135,8 @@ export function OptimizationView({ runId }: { runId: string }) {
       legend: { show: false },
       dataZoom: [],
       tooltip: { trigger: "item", formatter: (params: unknown) => { const data = (params as { data: number[] }).data; return `trial #${data[2]}<br/>IS ${fmtRatio(data[0])}<br/>OOS ${fmtRatio(data[1])}`; } },
-      xAxis: { type: "value" },
-      yAxis: { type: "value" },
+      xAxis: { type: "value", name: "IS Sharpe", nameLocation: "middle", nameGap: 26 },
+      yAxis: { type: "value", name: "OOS Sharpe", nameLocation: "middle", nameGap: 40 },
       series: [
         {
           type: "scatter",
@@ -153,6 +163,7 @@ export function OptimizationView({ runId }: { runId: string }) {
         dataZoom: [],
         tooltip: { trigger: "axis" },
         xAxis: { type: "category", data: decayData.map((row) => `#${row.id}`) },
+        yAxis: { type: "value", name: "decay", nameLocation: "middle", nameGap: 40 },
         series: [
           {
             type: "bar",
@@ -167,7 +178,7 @@ export function OptimizationView({ runId }: { runId: string }) {
           },
         ],
       } as EChartsOption, chart.theme),
-    [decayData, selectedId],
+    [decayData, selectedId, chart],
   );
 
   const convergenceOption = useMemo(() => {
@@ -180,14 +191,26 @@ export function OptimizationView({ runId }: { runId: string }) {
       grid: { left: 56, right: 20, top: 20, bottom: 40, containLabel: true },
       legend: { show: false },
       dataZoom: [],
-      xAxis: { type: "value" },
+      xAxis: { type: "value", name: "trials loaded", nameLocation: "middle", nameGap: 26 },
+      yAxis: { type: "value", name: "best objective", nameLocation: "middle", nameGap: 40 },
       series: [{ type: "line", showSymbol: false, data, lineStyle: { color: chart.palette.accent, width: 1.75 } }],
     }, chart.theme);
   }, [rows, chart]);
 
-  if (trials.isLoading || candidates.isLoading)
-    return <ResultsSkeleton message="Đang tải trial ledger…" />;
-  if (trials.isError || candidates.isError) return <StateView kind="failed" message="Không tải được dữ liệu optimization" onRetry={() => void (trials.refetch(), candidates.refetch())} />;
+  if (trials.state === "loading") return <ResultsSkeleton message="Loading the trial ledger…" />;
+
+  // Trials are the spine of this screen: every chart and both tables read from
+  // them. Candidates are not — an absent candidate artifact is explained in
+  // place, below, rather than replacing the trials the run really does have.
+  if (trials.state !== "ready" && trials.state !== "empty") {
+    return (
+      <StateView
+        kind={artifactStateKind(trials.state)}
+        message={artifactExplanation(trials, "wfo/trials.parquet")}
+        onRetry={() => void trialsQuery.refetch()}
+      />
+    );
+  }
 
   const showFoldGantt =
     foldPlan.data?.protocol === "advanced_walk_forward" &&
@@ -196,25 +219,31 @@ export function OptimizationView({ runId }: { runId: string }) {
 
   return (
     <div className="space-y-6">
+      <SelectionOutcome
+        trace={trace.data}
+        selectedTrialId={tracedTrialId}
+        loading={trace.isPending}
+      />
+      <SearchFunnel trials={trials} rows={rows} candidates={candidates} selectedTrialId={tracedTrialId} />
+      <StageTimeline events={detail.data?.events ?? []} />
+
       {showFoldGantt ? <FoldGantt plan={foldPlan.data!} studyStarts={0} bestByStudy={[]} running={false} /> : null}
-      <ProcessTimeline />
-      <SelectionFunnel rows={rows} candidates={candidateRows} />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <ChartFigure
           figNumber={1}
-          title="Trials — IS objective theo trial id"
+          title="Trials — IS objective by trial id"
           provenance={tableProvenance(run, {
             source: "wfo/trials.parquet",
             segment: "is",
             units: "objective",
             // Denominator is the artifact, not the page: a chart that says
-            // "200/200" while the artifact holds 40.000 is not honest.
-            available: trialsTotal,
+            // "200/200" while the artifact holds 40,000 is not honest.
+            available: trials.population.total,
             plotted: trialsPlotted,
-            reduction: trialsTruncated
-              ? `server top_n=${TRIAL_QUERY_CAP} theo objective, rồi bỏ trial chưa có objective`
-              : "bỏ trial chưa có objective",
+            reduction: trials.population.truncated
+              ? `server top_n=${TRIAL_QUERY_CAP} by objective, then trials without an objective dropped`
+              : "trials without an objective dropped",
           })}
         >
           <EChart option={trialScatter} height={360} />
@@ -226,43 +255,47 @@ export function OptimizationView({ runId }: { runId: string }) {
             source: "wfo/candidates.parquet",
             segment: "is+oos",
             units: "Sharpe (annualized)",
-            available: candidatePopulation.total,
-            plotted: candidatesPlotted,
-            reduction: candidatePopulation.truncated
-              ? "server top_n, rồi bỏ candidate thiếu IS hoặc OOS Sharpe"
-              : "bỏ candidate thiếu IS hoặc OOS Sharpe",
+            available: candidates.population.total,
+            plotted: candidates.state === "ready" ? candidatesPlotted : null,
+            reduction: candidates.population.truncated
+              ? "server top_n, then candidates missing IS or OOS Sharpe dropped"
+              : "candidates missing IS or OOS Sharpe dropped",
           })}
         >
-          <EChart option={candidateScatter} height={360} />
+          <ArtifactPanel table={candidates} artifact="wfo/candidates.parquet" height={360}>
+            <EChart option={candidateScatter} height={360} />
+          </ArtifactPanel>
         </ChartFigure>
         <ChartFigure
           figNumber={3}
-          title="Decay lollipop — candidate decay"
+          title="Decay by candidate"
           provenance={tableProvenance(run, {
             source: "wfo/candidates.parquet",
             segment: "is→oos",
             units: "decay",
-            available: candidatePopulation.total,
-            plotted: decayData.length,
-            reduction: candidatePopulation.truncated
-              ? "server top_n, rồi bỏ candidate chưa có mean_decay"
-              : "bỏ candidate chưa có mean_decay",
+            available: candidates.population.total,
+            plotted: candidates.state === "ready" ? decayData.length : null,
+            reduction: candidates.population.truncated
+              ? "server top_n, then candidates without mean_decay dropped"
+              : "candidates without mean_decay dropped",
           })}
         >
-          <EChart option={decayOption} height={320} />
+          <ArtifactPanel table={candidates} artifact="wfo/candidates.parquet" height={320}>
+            <EChart option={decayOption} height={320} />
+          </ArtifactPanel>
         </ChartFigure>
         <ChartFigure
           figNumber={4}
           title="Best-so-far convergence"
-          note="Đường best-so-far chạy theo thứ tự trial đã tải, không phải theo thời gian thực của study."
+          note="The best-so-far line follows the order the trials were loaded in, not the study's wall-clock order."
           provenance={tableProvenance(run, {
             source: "wfo/trials.parquet",
             segment: "is",
             units: "objective",
-            available: trialsTotal,
+            available: trials.population.total,
             plotted: rows.length,
-            reduction: trialsTruncated
-              ? `server top_n=${TRIAL_QUERY_CAP} theo objective`
+            reduction: trials.population.truncated
+              ? `server top_n=${TRIAL_QUERY_CAP} by objective`
               : undefined,
           })}
         >
@@ -270,94 +303,241 @@ export function OptimizationView({ runId }: { runId: string }) {
         </ChartFigure>
       </div>
 
-      <TrialTable rows={rows} selectedId={selectedId} onSelect={setSelectedTrial} />
-      {foldPopulation.total ? <FoldTable rows={folds.data!.rows} population={foldPopulation} /> : null}
-
-      <div className="card p-4">
-        <Collapsible title="Selection trace" defaultOpen={Boolean(trace.data)}>
-          <DefinitionList
-            rows={[
-              ["Selected trial", trace.data?.selected_trial_id != null ? `#${String(trace.data.selected_trial_id)}` : "—"],
-              ["Source", String(trace.data?.source ?? "—")],
-              [
-                "Per-trial breakdown",
-                String(
-                  (trace.data?.capabilities as Record<string, unknown> | undefined)
-                    ?.per_trial_selection_breakdown ?? "—",
-                ),
-              ],
-            ]}
-          />
-        </Collapsible>
-      </div>
+      <TrialTable rows={rows} population={trials.population} selectedId={selectedId} onSelect={setSelectedTrial} />
+      <FoldTable table={folds} />
+      <SelectionTrace trace={trace.data} />
     </div>
   );
 }
 
-function ProcessTimeline() {
+/**
+ * Wraps a figure body that depends on an artifact which may not exist.
+ *
+ * The frame, title and provenance line still render, so the reader sees which
+ * evidence was expected and why it is not on screen — an empty canvas with a
+ * confident caption is worse than a stated absence.
+ */
+function ArtifactPanel({
+  table,
+  artifact,
+  height,
+  children,
+}: {
+  table: ArtifactTable;
+  artifact: string;
+  height: number;
+  children: React.ReactNode;
+}) {
+  if (table.state === "ready") return <>{children}</>;
+  if (table.state === "loading") {
+    return <Skeleton variant="chart" height={height} />;
+  }
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {PROCESS_STAGES.map((stage, index) => (
-        <span key={stage} className="flex items-center gap-1.5">
-          <span className="mono rounded-full border border-accent/40 bg-accent-soft px-2.5 py-1 text-[11px] text-accent">
-            {stage}
-          </span>
-          {index < PROCESS_STAGES.length - 1 ? <span className="mono text-ink-faint">→</span> : null}
-        </span>
-      ))}
+    <div style={{ minHeight: height }} className="flex items-center justify-center">
+      <StateView kind={artifactStateKind(table.state)} message={artifactExplanation(table, artifact)} />
     </div>
   );
 }
 
-function SelectionFunnel({ rows, candidates }: { rows: Record<string, unknown>[]; candidates: Record<string, unknown>[] }) {
-  const valid = rows.filter((row) => row.pruned !== true).length;
-  const selected = candidates.length ? 1 : 0;
-  const steps = [
-    { label: "sampled", value: rows.length },
-    { label: "valid", value: valid },
-    { label: "candidates", value: candidates.length },
-    { label: "selected", value: selected },
+/**
+ * What the run decided.
+ *
+ * This is the answer the tab exists to give, so it leads. `selection_trace.json`
+ * publishes a `fields` block whose members are frequently null — those are
+ * printed as "not published" rather than dropped, because a reader auditing a
+ * selection needs to know the engine did not record the number, not be left to
+ * assume the field was never part of the contract.
+ */
+function SelectionOutcome({
+  trace,
+  selectedTrialId,
+  loading,
+}: {
+  trace: Record<string, unknown> | undefined;
+  selectedTrialId: number | null;
+  loading: boolean;
+}) {
+  if (loading) return <Skeleton variant="chart" height={104} />;
+
+  const fields = (trace?.fields ?? {}) as Record<string, number | boolean | null>;
+  const source = typeof trace?.source === "string" ? trace.source : null;
+  const semantics = typeof trace?.params_semantics === "string" ? trace.params_semantics : null;
+
+  const readings: Array<{ label: string; value: number | null | undefined; format: (v: number) => string }> = [
+    { label: "Objective", value: fields.is_objective as number | null, format: (v) => fmtRatio(v, 4) },
+    { label: "OOS Sharpe", value: fields.oos_sharpe_raw as number | null, format: (v) => fmtRatio(v) },
+    { label: "Decay", value: fields.decay as number | null, format: fmtDecay },
+  ];
+
+  return (
+    <section className="card p-4" aria-labelledby="selection-outcome">
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+        <h3 id="selection-outcome" className="font-display text-[15px] text-ink">
+          Selected parameter set
+        </h3>
+        {source ? <span className="mono text-[11px] text-ink-faint">{source}</span> : null}
+      </div>
+      <div className="flex flex-wrap items-end gap-x-10 gap-y-4">
+        <div>
+          <div className="label">Trial</div>
+          <div className="mono text-[26px] font-semibold leading-none text-ink">
+            {selectedTrialId != null ? `#${selectedTrialId}` : "not recorded"}
+          </div>
+        </div>
+        {readings.map((reading) => (
+          <div key={reading.label}>
+            <div className="label">{reading.label}</div>
+            <div className="mono text-[18px] font-semibold leading-none text-ink">
+              {typeof reading.value === "number" ? reading.format(reading.value) : "not published"}
+            </div>
+          </div>
+        ))}
+      </div>
+      {semantics ? (
+        <p className="mt-3 text-[12px] leading-5 text-ink-faint">
+          Parameter semantics: <span className="mono">{semantics}</span>
+        </p>
+      ) : null}
+      {selectedTrialId == null ? (
+        <p className="mt-3 text-[12px] leading-5 text-ink-faint">
+          This run's selection trace carries no trial id — the protocol evaluated one global
+          parameter set rather than choosing between trials.
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+/**
+ * How wide the search was.
+ *
+ * Each step reads from a different artifact, and any of them can be legitimately
+ * absent, so each renders its own value or an em dash — never a zero standing in
+ * for a number nobody produced.
+ */
+function SearchFunnel({
+  trials,
+  rows,
+  candidates,
+  selectedTrialId,
+}: {
+  trials: ArtifactTable;
+  rows: Record<string, unknown>[];
+  candidates: ArtifactTable;
+  selectedTrialId: number | null;
+}) {
+  const steps: Array<{ label: string; value: number | null; hint?: string }> = [
+    { label: "sampled", value: trials.population.total },
+    {
+      label: "valid",
+      value: trials.state === "ready" ? rows.filter((row) => row.pruned !== true).length : null,
+      hint: trials.population.truncated ? "of the trials loaded" : undefined,
+    },
+    {
+      label: "candidates",
+      value: candidates.state === "ready" ? candidates.population.total : null,
+      hint: candidates.state === "absent" ? "no candidate stage" : undefined,
+    },
+    { label: "selected", value: selectedTrialId != null ? 1 : null },
   ];
   return (
-    <div className="card flex flex-wrap items-center gap-2 p-4">
+    <section className="card flex flex-wrap items-start gap-x-3 gap-y-4 p-4" aria-label="Search funnel">
       {steps.map((step, index) => (
-        <span key={step.label} className="flex items-center gap-2">
+        <span key={step.label} className="flex items-start gap-3">
           <span className="flex flex-col">
             <span className="label">{step.label}</span>
-            <span className="mono text-[16px] font-semibold text-ink">{step.value}</span>
+            <span className="mono text-[18px] font-semibold leading-tight text-ink">
+              {step.value ?? "—"}
+            </span>
+            {step.hint ? <span className="text-[11px] leading-4 text-ink-faint">{step.hint}</span> : null}
           </span>
-          {index < steps.length - 1 ? <span className="mono text-ink-faint">→</span> : null}
+          {index < steps.length - 1 ? (
+            <span className="mono mt-4 text-ink-faint" aria-hidden="true">
+              →
+            </span>
+          ) : null}
         </span>
       ))}
-    </div>
+    </section>
+  );
+}
+
+/**
+ * When the engine did the work.
+ *
+ * This replaces a fixed row of six stage names that read identically for every
+ * run and carried no information. The states and their timestamps come from
+ * `status.json`, so the strip now shows the stages this run actually entered and
+ * how long each one held.
+ */
+function StageTimeline({ events }: { events: Array<{ state: string; at: number }> }) {
+  if (events.length === 0) return null;
+  const spans = events.map((event, index) => {
+    const next = events[index + 1];
+    return {
+      state: event.state,
+      seconds: next ? Math.max(0, next.at - event.at) : null,
+    };
+  });
+  const longest = Math.max(1, ...spans.map((span) => span.seconds ?? 0));
+  return (
+    <section className="card p-4" aria-label="Run stages">
+      <div className="label mb-3">Stages</div>
+      <ol className="stage-strip">
+        {spans.map((span, index) => (
+          <li key={`${span.state}-${index}`} className="stage-strip-item">
+            <span className="mono text-[11px] text-ink-soft">{span.state.toLowerCase().replace(/_/g, " ")}</span>
+            <span
+              className="stage-strip-bar"
+              style={{ width: `${Math.max(4, ((span.seconds ?? 0) / longest) * 100)}%` }}
+              aria-hidden="true"
+            />
+            <span className="mono text-[10px] text-ink-faint">
+              {span.seconds == null ? "final" : `${span.seconds.toFixed(1)}s`}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
 function TrialTable({
   rows,
+  population,
   selectedId,
   onSelect,
 }: {
   rows: Record<string, unknown>[];
+  population: RowPopulation;
   selectedId: number | null;
   onSelect: (id: number) => void;
 }) {
+  const shown = rows.slice(0, 200);
   return (
     <div className="card overflow-x-auto p-4">
-      <div className="label mb-2">Trial explorer</div>
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+        <span className="label">Trial explorer</span>
+        {/* A table is a figure too: saying which rows of the artifact are on
+         * screen is the same §12.2 obligation the charts carry. */}
+        <span className="mono text-[11px] text-ink-faint">
+          {shown.length} of {population.total ?? "—"} trials
+          {population.truncated ? " · server top_n" : ""}
+        </span>
+      </div>
       <table className="w-full min-w-[720px] text-[12px]">
         <thead>
           <tr>
-            <th className="mono pb-2 text-left text-[11px] uppercase text-ink-faint">trial</th>
-            <th className="mono pb-2 text-right text-[11px] uppercase text-ink-faint">objective</th>
-            <th className="mono pb-2 text-right text-[11px] uppercase text-ink-faint">IS Sharpe</th>
-            <th className="mono pb-2 text-right text-[11px] uppercase text-ink-faint">OOS Sharpe</th>
-            <th className="mono pb-2 text-right text-[11px] uppercase text-ink-faint">decay</th>
-            <th className="mono pb-2 text-left text-[11px] uppercase text-ink-faint">params</th>
+            <th className="pb-2 text-left">trial</th>
+            <th className="pb-2 text-right">objective</th>
+            <th className="pb-2 text-right">IS Sharpe</th>
+            <th className="pb-2 text-right">OOS Sharpe</th>
+            <th className="pb-2 text-right">decay</th>
+            <th className="pb-2 text-left">params</th>
           </tr>
         </thead>
         <tbody>
-          {rows.slice(0, 200).map((row, index) => {
+          {shown.map((row, index) => {
             const id = row.trial_id as number;
             return (
               <tr
@@ -372,7 +552,7 @@ function TrialTable({
                 <td className="num">{fmtRatio(row.mean_is_sharpe as number)}</td>
                 <td className="num">{fmtRatio(row.mean_oos_sharpe as number)}</td>
                 <td className="num">{fmtDecay(row.mean_decay as number)}</td>
-                <td className="max-w-[280px] truncate text-ink-faint">
+                <td className="mono max-w-[280px] truncate text-[11px] text-ink-faint">
                   {JSON.stringify(rowParams(row))}
                 </td>
               </tr>
@@ -384,27 +564,30 @@ function TrialTable({
   );
 }
 
-function FoldTable({
-  rows,
-  population,
-}: {
-  rows: Record<string, unknown>[];
-  population: RowPopulation;
-}) {
+function FoldTable({ table }: { table: ArtifactTable }) {
+  if (table.state === "loading") return null;
+  if (table.state !== "ready") {
+    // A run without folds is normal; saying so costs one line and prevents the
+    // reader wondering whether the table failed to load.
+    return (
+      <div className="card p-4">
+        <div className="label mb-2">Fold map</div>
+        <StateView kind={artifactStateKind(table.state)} message={artifactExplanation(table, "wfo/folds.parquet")} />
+      </div>
+    );
+  }
   return (
     <div className="card overflow-x-auto p-4">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
         <span className="label">Fold map</span>
-        {/* A table is a figure too: saying which rows of the artifact are on
-         * screen is the same §12.2 obligation the charts carry. */}
         <span className="mono text-[11px] text-ink-faint">
-          {population.returned}/{population.total} fold
-          {population.truncated ? " · server top_n" : ""}
+          {table.population.returned} of {table.population.total} folds
+          {table.population.truncated ? " · server top_n" : ""}
         </span>
       </div>
       <table className="w-full min-w-[760px] text-[12px]">
-        <thead><tr>{["fold", "train start", "train end", "test start", "test end", "train bars", "test bars"].map((label) => <th key={label} className="mono pb-2 text-left text-[11px] uppercase text-ink-faint">{label}</th>)}</tr></thead>
-        <tbody>{rows.map((row, index) => <tr key={`${String(row.fold_id)}-${index}`} className="border-t border-line-soft">
+        <thead><tr>{["fold", "train start", "train end", "test start", "test end", "train bars", "test bars"].map((label) => <th key={label} className="pb-2 text-left">{label}</th>)}</tr></thead>
+        <tbody>{table.rows.map((row, index) => <tr key={`${String(row.fold_id)}-${index}`} className="border-t border-line-soft">
           <td className="num py-1.5">{String(row.fold_id ?? index)}</td>
           <td className="mono text-[11px]">{shortDate(row.train_start)}</td>
           <td className="mono text-[11px]">{shortDate(row.train_end)}</td>
@@ -414,6 +597,53 @@ function FoldTable({
           <td className="num">{String(row.test_bars ?? "—")}</td>
         </tr>)}</tbody>
       </table>
+    </div>
+  );
+}
+
+/**
+ * The full selection trace.
+ *
+ * `capabilities` used to print as the strings "true"/"false" in a definition
+ * list, which tells a reader nothing about what the engine can show them. It is
+ * now a sentence per capability, and the null members of `fields` are named as
+ * unpublished rather than silently skipped.
+ */
+function SelectionTrace({ trace }: { trace: Record<string, unknown> | undefined }) {
+  if (!trace) return null;
+  const capabilities = (trace.capabilities ?? {}) as Record<string, boolean>;
+  const fields = (trace.fields ?? {}) as Record<string, number | boolean | null>;
+  return (
+    <div className="card p-4">
+      <Collapsible title="Selection trace — full record" defaultOpen={false}>
+        <DefinitionList
+          rows={[
+            ["Artifact", String(trace.artifact_schema_version ? `selection_trace.json v${trace.artifact_schema_version}` : "selection_trace.json")],
+            ["Source", String(trace.source ?? "not published")],
+            ...Object.entries(fields).map(
+              ([key, value]) =>
+                [
+                  key.replace(/_/g, " "),
+                  value === null || value === undefined
+                    ? "not published"
+                    : typeof value === "number"
+                      ? fmtRatio(value, 4)
+                      : String(value),
+                ] as [string, string],
+            ),
+          ]}
+        />
+        {Object.keys(capabilities).length ? (
+          <ul className="mt-3 space-y-1 text-[12px] leading-5 text-ink-faint">
+            {Object.entries(capabilities).map(([key, enabled]) => (
+              <li key={key}>
+                {enabled ? "✓" : "○"} {key.replace(/_/g, " ")}
+                {enabled ? " is available for this run" : " is not recorded by this run's engine"}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </Collapsible>
     </div>
   );
 }
