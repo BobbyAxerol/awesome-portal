@@ -176,6 +176,16 @@ export async function stubPortalApi(
   );
   await page.route("**/api/v1/alphas", (route) => void json(route, fixture("alphas.v1.json")));
 
+  // Service health, read by the sign-in plate before any session exists. Pinned
+  // versions: the strip prints them, so a real deployment's version would
+  // rewrite the baseline on every release.
+  await page.route("**/api/health", (route) =>
+    void json(route, { status: "ok", service: "portal-api", version: "0.1.0" }),
+  );
+  await page.route("**/api/control/healthz", (route) =>
+    void json(route, { status: "ok", service: "control-api", version: "0.1.0" }),
+  );
+
   // The identity BFF. Pinned values only: no real principal, no real token.
   await page.route("**/api/auth/context", (route) =>
     void json(route, {

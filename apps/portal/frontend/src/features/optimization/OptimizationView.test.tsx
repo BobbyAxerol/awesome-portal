@@ -146,8 +146,10 @@ describe("OptimizationView with an absent candidates artifact", () => {
   it("does not claim a selected trial when the trace records none", async () => {
     renderView();
     await waitFor(() => expect(screen.getByText("Selected parameter set")).toBeTruthy());
-    expect(screen.getByText("not recorded")).toBeTruthy();
-    expect(screen.getByText(/evaluated one global\s+parameter set/)).toBeTruthy();
+    // No trial id and no published field: one sentence, not four large blanks
+    // rendered at the weight of a result.
+    expect(screen.getByText(/records no trial id and no selection figures/)).toBeTruthy();
+    expect(screen.queryByText("not published")).toBeNull();
   });
 
   it("draws the stages the run actually entered", async () => {

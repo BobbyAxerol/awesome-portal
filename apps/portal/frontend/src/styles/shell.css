@@ -1249,26 +1249,38 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     align-items: stretch;
   }
+  /* Three bands, not one centred block: masthead at the top edge, the argument
+   * optically centred, the deployment's own facts on the bottom rule. Centring
+   * everything left two thirds of a 900px-tall column empty, which reads as an
+   * unfinished page rather than as composure. */
   .auth-screen-plate .auth-plate {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: var(--space-7) var(--space-7) var(--space-7) 8vw;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: var(--space-7) var(--space-7) var(--space-6) 8vw;
     border-right: 1px solid var(--line);
     background:
       radial-gradient(140% 100% at 0% 0%, var(--paper-raised) 0%, transparent 58%),
       linear-gradient(180deg, var(--paper-sunken) 0%, var(--paper) 72%);
   }
-  /* The narrative keeps a reading measure even when the column is wide. */
-  .auth-screen-plate .auth-plate > * {
-    max-width: 46ch;
+  .auth-screen-plate .auth-plate-body {
+    align-self: center;
   }
   .auth-screen-plate .auth-panel-lift {
     align-self: center;
-    justify-self: start;
-    width: min(460px, 100%);
-    margin: var(--space-6) 8vw var(--space-6) var(--space-7);
+    justify-self: center;
+    width: min(440px, calc(100% - 2 * var(--space-7)));
+    margin: var(--space-6) 0;
   }
+}
+
+/* The narrative keeps a reading measure even when the column is wide. */
+.auth-plate-masthead,
+.auth-plate-body > * {
+  max-width: 46ch;
+}
+.auth-plate-body {
+  display: grid;
+  gap: var(--space-5);
 }
 
 .auth-narrative-title {
@@ -1293,38 +1305,43 @@
 }
 
 /* --- Walk-forward ribbon -------------------------------------------------
- * The product's own instrument, drawn from tokens. Segments carry a 2px paper
- * gap so adjacent windows stay countable, and each kind is in the legend as
- * text — the colour is a second encoding, never the only one. */
+ * The product's own instrument, drawn from tokens.
+ *
+ * It was a row of individually rounded, outlined blocks inside a bordered
+ * container, which at this size is the exact shape of a row of empty text
+ * inputs — beside a login form that misread badly. It is now one continuous
+ * period bar split by hairlines, with an axis beneath it: a schedule, which is
+ * what a walk-forward split is. Each kind is named in the legend as text, so
+ * colour is a second encoding and never the only one. */
 .auth-ribbon {
-  margin: var(--space-5) 0 0;
+  margin: 0;
   display: grid;
   gap: var(--space-2);
 }
 .auth-ribbon-track {
   display: flex;
-  gap: 2px;
-  height: 34px;
-  padding: 3px;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-md);
-  background: var(--paper-raised);
+  height: 22px;
+  border-radius: 2px;
+  overflow: hidden;
+  /* The axis the windows sit on. */
+  border-bottom: 2px solid var(--ink-faint);
 }
 .auth-ribbon-block {
   flex-basis: 0;
   min-width: 6px;
-  border-radius: 3px;
+  border-right: 1px solid var(--paper);
+}
+.auth-ribbon-block:last-child {
+  border-right: 0;
 }
 .auth-ribbon-block[data-kind="is"] {
   background: var(--accent-soft);
-  box-shadow: inset 0 0 0 1px var(--accent);
 }
 .auth-ribbon-block[data-kind="oos"] {
   background: var(--accent);
 }
 .auth-ribbon-block[data-kind="holdout"] {
-  background: var(--accent-2-soft);
-  box-shadow: inset 0 0 0 1px var(--accent-2);
+  background: var(--accent-2);
 }
 .auth-ribbon-legend {
   display: flex;
@@ -1343,43 +1360,119 @@
 .auth-ribbon-swatch {
   width: 12px;
   height: 8px;
-  border-radius: 2px;
+  border-radius: 1px;
 }
 .auth-ribbon-swatch[data-kind="is"] {
   background: var(--accent-soft);
-  box-shadow: inset 0 0 0 1px var(--accent);
 }
 .auth-ribbon-swatch[data-kind="oos"] {
   background: var(--accent);
 }
 .auth-ribbon-swatch[data-kind="holdout"] {
-  background: var(--accent-2-soft);
-  box-shadow: inset 0 0 0 1px var(--accent-2);
+  background: var(--accent-2);
 }
 .auth-ribbon-caption {
   font-size: var(--text-2xs);
   color: var(--ink-faint);
 }
-.auth-narrative-list,
-.auth-capabilities {
+.auth-narrative-list {
   list-style: none;
   display: grid;
   gap: var(--space-1);
   font-size: var(--text-base);
   color: var(--ink-soft);
 }
-.auth-capability-label {
-  margin-top: var(--space-5);
-  margin-bottom: var(--space-2);
+
+/* --- Service strip -------------------------------------------------------
+ * Two rows of fact, read live from the unauthenticated health endpoints. It
+ * replaced a hard-coded list of product capabilities: that list duplicated the
+ * Feature Registry, could not be checked, and read as advertising on a screen
+ * whose whole job is to establish what system you are entering.
+ *
+ * `data-reachable="false"` is stated in the value text as well as the tint, so
+ * an unreachable service survives greyscale and colour blindness. */
+.auth-services {
+  max-width: 46ch;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
 }
-.auth-capabilities li {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-}
-/* Glyph plus text: availability is never carried by colour alone. */
-.auth-capabilities li[data-available="false"] {
+.auth-services-pending {
+  font-size: var(--text-xs);
   color: var(--ink-faint);
+}
+.auth-services-grid {
+  margin-top: var(--space-2);
+  display: grid;
+  gap: 2px;
+}
+.auth-services-grid > div {
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) 1fr;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: 3px 0;
+  border-top: 1px solid var(--line-soft);
+  font-size: var(--text-xs);
+}
+.auth-services-grid dt {
+  color: var(--ink-soft);
+}
+.auth-services-grid dd {
+  color: var(--ink);
+}
+.auth-services-grid > div[data-reachable="false"] dd {
+  color: var(--bad);
+}
+
+/* --- Authorisation chain -------------------------------------------------
+ * Three steps, with the outstanding one marked. A visitor who has just passed a
+ * Cloudflare login and meets a second form deserves to be told why, in place,
+ * rather than filing a support request about it. */
+.auth-chain {
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-4) 0;
+  padding: var(--space-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--paper-sunken);
+}
+.auth-chain li {
+  display: grid;
+  grid-template-columns: 1rem 1fr;
+  gap: var(--space-2);
+  align-items: baseline;
+  color: var(--ink-faint);
+}
+.auth-chain li[data-done="true"] {
+  color: var(--ink-soft);
+}
+.auth-chain li[data-current="true"] {
+  color: var(--ink);
+}
+.auth-chain-mark {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.auth-chain li[data-done="true"] .auth-chain-mark {
+  color: var(--good);
+}
+.auth-chain-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+}
+.auth-chain-label {
+  font-size: var(--text-sm);
+}
+.auth-chain-detail {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+.auth-hint-warn {
+  color: var(--accent-2);
 }
 
 .auth-panel {
@@ -1418,7 +1511,9 @@
   position: absolute;
   inset: 0 0 auto 0;
   height: 2px;
-  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%);
+  /* One accent, not a two-stop gradient: a sign-in card does not need a
+   * flourish, and a hue sweep is the first thing that reads as decoration. */
+  background: var(--accent);
 }
 
 .auth-identity .mono-label {

@@ -8,7 +8,7 @@
  *
  * The deep link survives on its own: the router is inside `children`, so once
  * the state becomes AUTHENTICATED the shell mounts at whatever URL the browser
- * already has. That is v0.4's "deep link chỉ restore sau authorization" without
+ * already has. That is v0.4's "a deep link is restored only after authorization" without
  * the frontend storing a redirect target anywhere.
  *
  * When auth is not wired (`vite dev` against portal-api directly, or the
@@ -53,7 +53,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
           setPhase({
             kind: "unwired",
             detail:
-              "Identity BFF không có ở build này (dev server hoặc rollback upstream). Portal chạy không có session.",
+              "The identity BFF is absent from this build (dev server, or an upstream rollback). The Portal is running without a session.",
           });
           return;
         }
@@ -69,7 +69,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (phase.kind === "loading") {
     return (
       <div className="auth-screen">
-        <StateView kind="loading" message="Đang kiểm tra phiên đăng nhập…" />
+        <StateView kind="loading" message="Checking your session…" />
       </div>
     );
   }

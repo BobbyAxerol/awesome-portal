@@ -40,9 +40,9 @@ export function PasswordChangeScreen({
 
   const localProblem =
     next && next.length < MIN_LENGTH
-      ? `Password cần ít nhất ${MIN_LENGTH} ký tự.`
+      ? `The password needs at least ${MIN_LENGTH} characters.`
       : next && confirm && next !== confirm
-        ? "Hai lần nhập password không khớp."
+        ? "The two passwords do not match."
         : null;
 
   const submit = (event: React.FormEvent) => {
@@ -58,7 +58,7 @@ export function PasswordChangeScreen({
           setError(failure.message);
           setRequestId(failure.requestId);
         } else {
-          setError("Không đổi được password.");
+          setError("The password could not be changed.");
         }
         setNext("");
         setConfirm("");
@@ -69,20 +69,20 @@ export function PasswordChangeScreen({
   return (
     <div className="auth-screen" data-testid="password-change-screen">
       <section className="auth-panel auth-panel-centered">
-        <h2 className="auth-panel-title">Bảo mật tài khoản</h2>
+        <h2 className="auth-panel-title">Secure your account</h2>
         <p className="auth-panel-sub">
-          <span className="mono">{username ?? "tài khoản của bạn"}</span>
-          {email ? <> · identity đã xác thực: <span className="mono">{email}</span></> : null}
+          <span className="mono">{username ?? "your account"}</span>
+          {email ? <> · verified identity: <span className="mono">{email}</span></> : null}
         </p>
 
         <p className="auth-body">
-          Credential một lần đã được chấp nhận. Bạn phải đặt password riêng trước khi vào
+          The one-time credential was accepted. Set your own password before entering the
           Portal.
         </p>
 
         <form onSubmit={submit} noValidate>
           <div className="auth-field">
-            <label htmlFor="auth-current">Credential hiện tại</label>
+            <label htmlFor="auth-current">Current credential</label>
             <input
               id="auth-current"
               className="input"
@@ -96,7 +96,7 @@ export function PasswordChangeScreen({
           </div>
 
           <div className="auth-field">
-            <label htmlFor="auth-new">Password mới</label>
+            <label htmlFor="auth-new">New password</label>
             <input
               id="auth-new"
               className="input"
@@ -110,7 +110,7 @@ export function PasswordChangeScreen({
           </div>
 
           <div className="auth-field">
-            <label htmlFor="auth-confirm">Nhập lại password mới</label>
+            <label htmlFor="auth-confirm">Repeat the new password</label>
             <input
               id="auth-confirm"
               className="input"
@@ -123,8 +123,8 @@ export function PasswordChangeScreen({
           </div>
 
           <p className="auth-hint" id="auth-policy">
-            Tối thiểu {MIN_LENGTH} ký tự · giá trị phổ biến hoặc đã rò rỉ sẽ bị từ chối ·
-            password manager và paste đều dùng được.
+            At least {MIN_LENGTH} characters · common or breached values are rejected ·
+            password managers and paste both work.
           </p>
 
           {localProblem ? (
@@ -147,7 +147,7 @@ export function PasswordChangeScreen({
             className="btn-primary auth-submit"
             disabled={submitting || Boolean(localProblem) || !next || !confirm}
           >
-            {submitting ? "Đang đặt password…" : "Đặt password và vào Portal"}
+            {submitting ? "Setting password…" : "Set password and enter the Portal"}
           </button>
         </form>
 
@@ -159,7 +159,7 @@ export function PasswordChangeScreen({
               void logout().finally(onSignOut);
             }}
           >
-            Đăng xuất
+            Sign out
           </button>
         </div>
       </section>

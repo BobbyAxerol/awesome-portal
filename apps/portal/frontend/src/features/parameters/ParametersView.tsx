@@ -181,6 +181,13 @@ export function ParametersView({ runId }: { runId: string }) {
         top: 20,
         calculable: true,
         textStyle: { color: chart.palette.inkFaint, fontSize: 10 },
+        // ECharts' default ramp is its own blue, which is the one palette on
+        // the screen that belongs to no token. Low-to-high runs from the
+        // sunken paper through the accent to ink, so the ramp reads in both
+        // themes and stays inside the documented colours.
+        inRange: {
+          color: [chart.tokens.paperSunken, chart.palette.accent, chart.palette.ink],
+        },
       },
       tooltip: { trigger: "item", formatter: (params: unknown) => { const data = (params as { data: [number, number, number, number] }).data; return `${pairA}=${xValues[data[0]]}<br/>${pairB}=${yValues[data[1]]}<br/>mean objective=${data[2].toFixed(4)}<br/>n=${data[3]}`; } },
       xAxis: { type: "category", data: xValues, name: pairA, nameLocation: "middle", nameGap: 26 },

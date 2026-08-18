@@ -107,7 +107,7 @@ async function failure(response: Response): Promise<AuthRequestError> {
     body?.error?.code ?? "AUTH_REQUEST_FAILED",
     // The server's own copy is used verbatim: it is written to avoid leaking
     // whether an account exists, and rewording it here could undo that.
-    body?.error?.message ?? body?.message ?? body?.detail ?? "Không thực hiện được yêu cầu.",
+    body?.error?.message ?? body?.message ?? body?.detail ?? "The request could not be completed.",
     requestId,
   );
 }
@@ -216,7 +216,7 @@ export async function changePassword(
     throw new AuthRequestError(
       403,
       "CSRF_REQUIRED",
-      "Thiếu CSRF token của phiên. Hãy đăng nhập lại.",
+      "The session CSRF token is missing. Sign in again.",
       null,
     );
   }

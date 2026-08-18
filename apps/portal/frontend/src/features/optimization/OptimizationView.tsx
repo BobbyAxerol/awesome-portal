@@ -369,14 +369,42 @@ function SelectionOutcome({
     { label: "Decay", value: fields.decay as number | null, format: fmtDecay },
   ];
 
+  const published = readings.filter((reading) => typeof reading.value === "number");
+
+  const header = (
+    <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+      <h3 id="selection-outcome" className="font-display text-[15px] text-ink">
+        Selected parameter set
+      </h3>
+      {source ? <span className="mono text-[11px] text-ink-faint">{source}</span> : null}
+    </div>
+  );
+
+  // A protocol that records neither a trial id nor a single field would
+  // otherwise open the screen with four large "not published" slots — an
+  // absence rendered at the weight of a result. One sentence says the same
+  // thing and leaves the emphasis to the evidence further down.
+  if (selectedTrialId == null && published.length === 0) {
+    return (
+      <section className="card p-4" aria-labelledby="selection-outcome">
+        {header}
+        <p className="text-[13px] leading-6 text-ink-soft">
+          This run's selection trace records no trial id and no selection figures — the protocol
+          evaluated one global parameter set rather than choosing between trials.
+          {semantics ? (
+            <>
+              {" "}
+              Parameter semantics: <span className="mono">{semantics}</span>.
+            </>
+          ) : null}
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section className="card p-4" aria-labelledby="selection-outcome">
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h3 id="selection-outcome" className="font-display text-[15px] text-ink">
-          Selected parameter set
-        </h3>
-        {source ? <span className="mono text-[11px] text-ink-faint">{source}</span> : null}
-      </div>
+      {header}
       <div className="flex flex-wrap items-end gap-x-10 gap-y-4">
         <div>
           <div className="label">Trial</div>
@@ -588,7 +616,7 @@ function FoldTable({ table }: { table: ArtifactTable }) {
       <table className="w-full min-w-[760px] text-[12px]">
         <thead><tr>{["fold", "train start", "train end", "test start", "test end", "train bars", "test bars"].map((label) => <th key={label} className="pb-2 text-left">{label}</th>)}</tr></thead>
         <tbody>{table.rows.map((row, index) => <tr key={`${String(row.fold_id)}-${index}`} className="border-t border-line-soft">
-          <td className="num py-1.5">{String(row.fold_id ?? index)}</td>
+          <td className="num w-16 py-1.5 pr-4">{String(row.fold_id ?? index)}</td>
           <td className="mono text-[11px]">{shortDate(row.train_start)}</td>
           <td className="mono text-[11px]">{shortDate(row.train_end)}</td>
           <td className="mono text-[11px]">{shortDate(row.test_start)}</td>

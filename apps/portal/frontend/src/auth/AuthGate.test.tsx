@@ -96,7 +96,7 @@ describe("gateway not in front", () => {
     // can answer would be worse than saying so.
     mount(() => json({ detail: "not found" }, 404));
     expect(await screen.findByTestId("shell")).toBeTruthy();
-    expect(screen.getByText(/Identity BFF không có ở build này/)).toBeTruthy();
+    expect(screen.getByText(/identity BFF is absent from this build/)).toBeTruthy();
   });
 
   it("distinguishes an outage from an absent gateway", async () => {
@@ -123,27 +123,27 @@ describe("Frame 01B", () => {
     await screen.findByTestId("login-screen");
     expect(screen.getByLabelText("Username").getAttribute("autocomplete")).toBe("username");
     expect(
-      screen.getByLabelText(/Password hoặc activation credential/).getAttribute("autocomplete"),
+      screen.getByLabelText(/Password or activation credential/).getAttribute("autocomplete"),
     ).toBe("current-password");
   });
 
   it("shows the server's generic message with a request id, and clears the credential", async () => {
     mount((url) =>
       url.endsWith("/login")
-        ? json({ error: { code: "AUTH_FAILED", message: "Đăng nhập không thành công.", request_id: "req-42" } }, 401)
+        ? json({ error: { code: "AUTH_FAILED", message: "Sign-in failed.", request_id: "req-42" } }, 401)
         : context("APP_LOGIN_REQUIRED"),
     );
     await screen.findByTestId("login-screen");
 
     fireEvent.change(screen.getByLabelText("Username"), { target: { value: "bobby" } });
-    const credential = screen.getByLabelText(/Password hoặc activation credential/);
+    const credential = screen.getByLabelText(/Password or activation credential/);
     fireEvent.change(credential, { target: { value: "one-time-code" } });
-    fireEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
-    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Đăng nhập không thành công."));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Sign-in failed."));
     expect(screen.getByRole("alert").textContent).toContain("req-42");
     // No hint about whether the account exists.
-    expect(screen.getByRole("alert").textContent).not.toMatch(/không tồn tại|not found|unknown user/i);
+    expect(screen.getByRole("alert").textContent).not.toMatch(/does not exist|not found|unknown user/i);
     // The username survives a bad credential; the credential does not.
     expect((screen.getByLabelText("Username") as HTMLInputElement).value).toBe("bobby");
     expect((credential as HTMLInputElement).value).toBe("");
@@ -161,10 +161,10 @@ describe("Frame 01B", () => {
     await screen.findByTestId("login-screen");
 
     fireEvent.change(screen.getByLabelText("Username"), { target: { value: "bobby" } });
-    fireEvent.change(screen.getByLabelText(/Password hoặc activation credential/), {
+    fireEvent.change(screen.getByLabelText(/Password or activation credential/), {
       target: { value: "code" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
     expect(await screen.findByTestId("password-change-screen")).toBeTruthy();
   });
@@ -179,7 +179,7 @@ describe("Frame 01B", () => {
       return context("APP_LOGIN_REQUIRED");
     });
     await screen.findByTestId("login-screen");
-    const submit = screen.getByRole("button", { name: "Đăng nhập" });
+    const submit = screen.getByRole("button", { name: "Sign in" });
     fireEvent.click(submit);
     fireEvent.click(submit);
     await waitFor(() => expect(logins).toBe(1));
@@ -190,7 +190,7 @@ describe("Frame 01C", () => {
   it("has no skip affordance", async () => {
     mount(() => context("PASSWORD_CHANGE_REQUIRED"));
     await screen.findByTestId("password-change-screen");
-    expect(screen.queryByRole("button", { name: /skip|bỏ qua|để sau/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /skip|later/i })).toBeNull();
   });
 
   it("blocks a short or mismatched password before calling the server", async () => {
@@ -204,17 +204,17 @@ describe("Frame 01C", () => {
     });
     await screen.findByTestId("password-change-screen");
 
-    fireEvent.change(screen.getByLabelText("Password mới"), { target: { value: "short" } });
-    expect(screen.getByRole("alert").textContent).toContain("ít nhất 15 ký tự");
-    expect((screen.getByRole("button", { name: /Đặt password/ }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("New password"), { target: { value: "short" } });
+    expect(screen.getByRole("alert").textContent).toContain("at least 15 characters");
+    expect((screen.getByRole("button", { name: /Set password/ }) as HTMLButtonElement).disabled).toBe(true);
 
-    fireEvent.change(screen.getByLabelText("Password mới"), {
+    fireEvent.change(screen.getByLabelText("New password"), {
       target: { value: "a-long-enough-password" },
     });
-    fireEvent.change(screen.getByLabelText("Nhập lại password mới"), {
+    fireEvent.change(screen.getByLabelText("Repeat the new password"), {
       target: { value: "different-but-long-enough" },
     });
-    expect(screen.getByRole("alert").textContent).toContain("không khớp");
+    expect(screen.getByRole("alert").textContent).toContain("do not match");
     expect(posts).toBe(0);
   });
 
@@ -227,12 +227,12 @@ describe("Frame 01C", () => {
     await screen.findByTestId("password-change-screen");
     expect(csrfTokenFromCookie()).toBeNull();
 
-    fireEvent.change(screen.getByLabelText("Credential hiện tại"), { target: { value: "old" } });
-    fireEvent.change(screen.getByLabelText("Password mới"), { target: { value: "a-long-enough-password" } });
-    fireEvent.change(screen.getByLabelText("Nhập lại password mới"), {
+    fireEvent.change(screen.getByLabelText("Current credential"), { target: { value: "old" } });
+    fireEvent.change(screen.getByLabelText("New password"), { target: { value: "a-long-enough-password" } });
+    fireEvent.change(screen.getByLabelText("Repeat the new password"), {
       target: { value: "a-long-enough-password" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Đặt password/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Set password/ }));
 
     await waitFor(() => expect(screen.getByRole("alert").textContent).toMatch(/CSRF/));
   });
@@ -253,12 +253,12 @@ describe("Frame 01C", () => {
     });
     await screen.findByTestId("password-change-screen");
 
-    fireEvent.change(screen.getByLabelText("Credential hiện tại"), { target: { value: "old" } });
-    fireEvent.change(screen.getByLabelText("Password mới"), { target: { value: "a-long-enough-password" } });
-    fireEvent.change(screen.getByLabelText("Nhập lại password mới"), {
+    fireEvent.change(screen.getByLabelText("Current credential"), { target: { value: "old" } });
+    fireEvent.change(screen.getByLabelText("New password"), { target: { value: "a-long-enough-password" } });
+    fireEvent.change(screen.getByLabelText("Repeat the new password"), {
       target: { value: "a-long-enough-password" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Đặt password/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Set password/ }));
 
     expect(await screen.findByTestId("login-screen")).toBeTruthy();
     expect(screen.queryByTestId("shell")).toBeNull();
@@ -271,6 +271,6 @@ describe("Frame 01D", () => {
     await screen.findByTestId("access-problem-screen");
     const text = container.textContent ?? "";
     expect(text).not.toMatch(/eyJ|Bearer |CF_Authorization|policy_id/);
-    expect(text).not.toMatch(/account (không tồn tại|not found)/i);
+    expect(text).not.toMatch(/account (does not exist|not found)/i);
   });
 });

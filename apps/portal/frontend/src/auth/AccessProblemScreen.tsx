@@ -24,26 +24,26 @@ interface Presentation {
 
 const PRESENTATION: Record<AccessProblem, Presentation> = {
   ACCESS_REQUIRED: {
-    title: "Identity chưa được xác thực",
+    title: "Identity not verified",
     body:
-      "Cloudflare Access chưa xác thực được identity của bạn, hoặc identity này không nằm trong policy truy cập Portal. Liên hệ admin nếu bạn cho rằng đây là nhầm lẫn.",
-    action: { kind: "access-logout", label: "Đăng xuất Access" },
+      "Cloudflare Access could not verify your identity, or this identity is not covered by the Portal access policy. Contact an admin if you believe this is a mistake.",
+    action: { kind: "access-logout", label: "Sign out of Access" },
   },
   ACCOUNT_DISABLED: {
-    title: "Account đã bị thu hồi truy cập",
-    body: "Quyền truy cập Portal của account này đã bị thu hồi. Liên hệ admin để biết thêm.",
-    action: { kind: "access-logout", label: "Đăng xuất" },
+    title: "Account access revoked",
+    body: "This account's access to the Portal has been revoked. Contact an admin for details.",
+    action: { kind: "access-logout", label: "Sign out" },
   },
   SESSION_EXPIRED: {
-    title: "Phiên Portal đã hết hạn",
-    body: "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để tiếp tục.",
-    action: { kind: "retry", label: "Đăng nhập lại" },
+    title: "Portal session expired",
+    body: "Your session has expired. Sign in again to continue.",
+    action: { kind: "retry", label: "Sign in again" },
   },
   IDENTITY_UNAVAILABLE: {
-    title: "Không xác minh được identity",
+    title: "Identity could not be verified",
     body:
-      "Dịch vụ xác minh identity hiện không phản hồi. Đây không phải lỗi tài khoản của bạn — thử lại sau, kèm request ID nếu cần hỗ trợ.",
-    action: { kind: "retry", label: "Thử lại" },
+      "The identity verification service is not responding. This is not a problem with your account — try again shortly, and quote the request ID if you need support.",
+    action: { kind: "retry", label: "Retry" },
   },
 };
 
