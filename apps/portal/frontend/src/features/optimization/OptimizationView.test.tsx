@@ -113,7 +113,7 @@ describe("OptimizationView with an absent candidates artifact", () => {
     renderView();
     // The trial explorer is proof the screen did not collapse into a failure.
     await waitFor(() => expect(screen.getByText("Trial explorer")).toBeTruthy());
-    expect(screen.queryByText(/Có lỗi xảy ra|Something went wrong/)).toBeNull();
+    expect(screen.queryByText(/Something went wrong/)).toBeNull();
   });
 
   it("explains the absence in place of the candidate figures", async () => {

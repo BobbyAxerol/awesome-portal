@@ -190,7 +190,7 @@ export function OverviewView({ runId }: { runId: string }) {
               formatter: (params: { value?: unknown }) =>
                 typeof params.value === "number" ? `${fmtRatio(params.value)}%` : "",
             },
-            data: [{ type: "min", name: "đáy sâu nhất", valueIndex: 1 }],
+            data: [{ type: "min", name: "deepest trough", valueIndex: 1 }],
           },
         };
       }),
@@ -198,7 +198,7 @@ export function OverviewView({ runId }: { runId: string }) {
   }, [segments, advanced, chart]);
 
   if (summary.isLoading || detail.isLoading || !loaded)
-    return <ResultsSkeleton message="Đang tải kết quả run…" />;
+    return <ResultsSkeleton message="Loading run results…" />;
   if (summary.isError) return <StateView kind="failed" message={summary.error.message} onRetry={() => summary.refetch()} />;
 
   return (
@@ -254,13 +254,13 @@ export function OverviewView({ runId }: { runId: string }) {
 
       <ChartFigure
         figNumber={1}
-        title={`Equity — ${advanced ? "tài khoản stitched OOS" : capitalMode === "capital" ? "vốn tài khoản mới" : "rebased 100"}`}
+        title={`Equity — ${advanced ? "stitched OOS account" : capitalMode === "capital" ? "fresh account capital" : "rebased to 100"}`}
         provenance={seriesProvenance(activeSeries, runEvidence, {
           source: advanced
             ? "series/stitched.parquet"
             : `presentation/${capitalMode === "capital" ? "calendar" : "rebased"}`,
           segment: advanced ? "stitched" : selected === "compare" ? "is+oos+holdout" : selected,
-          units: capitalMode === "capital" ? "USD" : "index (100 = mốc)",
+          units: capitalMode === "capital" ? "USD" : "index (100 = baseline)",
         })}
       >
         <EChart option={equityOption} height={560} />
@@ -268,12 +268,12 @@ export function OverviewView({ runId }: { runId: string }) {
 
       <ChartFigure
         figNumber={2}
-        title="Underwater — drawdown suy ra từ equity"
-        note="Drawdown là trình bày lại của chuỗi equity ở trên, không phải một metric riêng do engine tính."
+        title="Underwater — drawdown derived from equity"
+        note="Drawdown is a restatement of the equity series above, not a separate metric the engine computes."
         provenance={seriesProvenance(activeSeries, runEvidence, {
           source: advanced ? "series/stitched.parquet" : "presentation/calendar",
           segment: advanced ? "stitched" : "is+oos+holdout",
-          units: "% từ đỉnh trước",
+          units: "% from prior peak",
         })}
       >
         <EChart option={underwaterOption} height={220} />
@@ -317,7 +317,7 @@ function MetricsCard({
   return (
     <div className="card p-4">
       <div className="label mb-3">
-        {advanced ? "Metrics — tài khoản stitched OOS" : "Ma trận đối chiếu — IS / OOS / Holdout Live"}
+        {advanced ? "Metrics — stitched OOS account" : "Reconciliation matrix — IS / OOS / Holdout Live"}
       </div>
       <div className="table-wrap">
         <table>
@@ -348,8 +348,8 @@ function MetricsCard({
                     return (
                       <td key={column} className="num">
                         {text ?? (
-                          <span className="metric-absent-inline mono" title={`Engine không tính ${definition.label} cho segment ${column}.`}>
-                            không tính
+                          <span className="metric-absent-inline mono" title={`The engine did not compute ${definition.label} for the ${column} segment.`}>
+                            not computed
                           </span>
                         )}
                       </td>
@@ -364,12 +364,12 @@ function MetricsCard({
       <div className="chart-provenance">
         <dl className="chart-provenance-grid">
           <div className="chart-provenance-field" data-wide="true">
-            <dt>nguồn</dt>
+            <dt>source</dt>
             <dd className="mono">metrics/summary.json</dd>
           </div>
           <div className="chart-provenance-field">
             <dt>as-of</dt>
-            <dd className="mono">{asOf ?? "chưa công bố"}</dd>
+            <dd className="mono">{asOf ?? "not published"}</dd>
           </div>
           {digest ? (
             <div className="chart-provenance-field" data-wide="true">

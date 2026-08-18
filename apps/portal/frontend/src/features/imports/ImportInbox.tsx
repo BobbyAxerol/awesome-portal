@@ -3,7 +3,7 @@
  *
  * The strategy import contract §5 is explicit about what this screen is NOT:
  *
- *   "Không chấp nhận: import trực tiếp file từ browser"
+ *   direct file upload from the browser is not accepted
  *
  * So there is no upload control here. The browser is not the channel by which
  * code enters the system; ingest happens server-side from reviewed source. What
@@ -72,7 +72,7 @@ function ImportRow({ record }: { record: AlphaImportRecord }) {
             </Link>
             <span className="mono import-version">v{record.version}</span>
           </p>
-          <p className="mono import-received">nhận lúc {record.received_at}</p>
+          <p className="mono import-received">received {record.received_at}</p>
         </div>
         <StateBadge state={record.state} />
       </div>
@@ -110,25 +110,24 @@ export function ImportInbox() {
         * in the words of the contract. */}
       <SectionHeading
         title="Alpha imports"
-        description="Quarantine inbox cho alpha đã import: state, lý do, và verify digest. Read-only."
+        description="Quarantine inbox for imported alphas: state, reason, and digest verification. Read-only."
       />
 
       {/* Stated up front, because it is the single most important fact about
         * this pipeline and the easiest thing for a reader to assume wrong. */}
-      <Callout tone="warning" title="Quarantine là fail-closed">
-        Không state nào ở đây nghĩa là "chạy được". Digest khớp chỉ đưa alpha vào
-        hàng đợi; việc đăng ký vào runtime registry thuộc slice certification. Strategy
-        picker ở{" "}
-        <Link to={`${QUANTBT_ROOT}/new`}>New Run</Link> vẫn hiển thị các alpha này kèm
-        lý do chưa chạy được.
+      <Callout tone="warning" title="Quarantine is fail-closed">
+        No state here means "runnable". A matching digest only queues the alpha; registering it in the
+        runtime registry belongs to the certification slice. The strategy picker in{" "}
+        <Link to={`${QUANTBT_ROOT}/new`}>New Run</Link> still lists these alphas, each with the reason
+        it cannot run.
       </Callout>
 
       {imports.isLoading ? (
-        <StateView kind="loading" message="Đang tải quarantine inbox…" />
+        <StateView kind="loading" message="Loading the quarantine inbox…" />
       ) : imports.isError ? (
         <StateView
           kind="failed"
-          message={`Không đọc được /api/v1/alphas/imports nên Portal không hiển thị inbox rỗng thay thế. ${
+          message={`/api/v1/alphas/imports could not be read, so no empty inbox is shown in its place. ${
             imports.error instanceof Error ? imports.error.message : ""
           }`}
           onRetry={() => void imports.refetch()}
@@ -154,7 +153,7 @@ export function ImportInbox() {
           {records.length === 0 ? (
             <StateView
               kind="empty"
-              message="Chưa có import nào trong quarantine. Đây là inbox rỗng thật, không phải lỗi đọc."
+              message="No import is in quarantine. That is a genuinely empty inbox, not a read failure."
             />
           ) : (
             <div className="import-list">
@@ -166,10 +165,10 @@ export function ImportInbox() {
         </>
       )}
 
-      <Panel title="Các state contract khai báo">
+      <Panel title="States the contract declares">
         <p className="field-hint">
-          Hai state đầu được ghi vào inbox. Ba state còn lại là phản hồi khi từ chối —
-          chúng không tạo record, nên sẽ không xuất hiện ở danh sách trên.
+          The first two are written into the inbox. The other three are rejection responses — they create
+          no record, so they never appear in the list above.
         </p>
         <dl className="portal-details">
           {IMPORT_STATES.map((state) => {
@@ -182,7 +181,7 @@ export function ImportInbox() {
                 <dd>
                   {presentation.meaning}
                   {!presentation.persisted ? (
-                    <span className="mono import-not-persisted"> · không ghi vào inbox</span>
+                    <span className="mono import-not-persisted"> · not written to the inbox</span>
                   ) : null}
                 </dd>
               </div>
@@ -191,16 +190,16 @@ export function ImportInbox() {
         </dl>
       </Panel>
 
-      <Panel title="Gửi import request">
+      <Panel title="Submit an import request">
         <p className="field-hint">
           <span className="inline-flex items-center gap-1">
             <ShieldAlert size={12} aria-hidden="true" />
-            Strategy import contract §5: <em>không chấp nhận import trực tiếp file từ
-            browser</em>.
+            Strategy import contract §5: <em>direct file upload from the browser is not
+            accepted</em>.
           </span>{" "}
-          Vì vậy đây là form <strong>source reference</strong>, không phải upload: browser gửi
-          con trỏ tới artifact đã được CI/owner staging sẵn cộng digest mong đợi, server đọc
-          và verify. Mọi mutation là ADMIN-only ở gateway.
+          So this is a <strong>source reference</strong> form, not an upload: the browser sends a pointer to
+          an artifact CI or an owner already staged, plus the expected digest, and the server reads and
+          verifies it. Every mutation is ADMIN-only at the gateway.
         </p>
         <ImportRequestForm onSubmitted={() => void imports.refetch()} />
       </Panel>

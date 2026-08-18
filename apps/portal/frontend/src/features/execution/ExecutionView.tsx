@@ -37,7 +37,7 @@ export function ExecutionView({ runId }: { runId: string }) {
     asOf: typeof manifest.completed_at === "string" ? manifest.completed_at : null,
     digest: typeof manifest.dataset_content_hash === "string" ? manifest.dataset_content_hash : null,
   };
-  if (series.isLoading || detail.isLoading) return <ResultsSkeleton message="Đang tải chuỗi execution…" />;
+  if (series.isLoading || detail.isLoading) return <ResultsSkeleton message="Loading the execution series…" />;
   if (series.isError) return <StateView kind="failed" message={series.error.message} onRetry={() => series.refetch()} />;
 
   return (
@@ -60,8 +60,8 @@ export function ExecutionView({ runId }: { runId: string }) {
       <div className="card p-4">
         <div className="label mb-2">Cost timeline</div>
         <p className="text-[12px] leading-5 text-ink-faint">
-          Fee/funding/margin series chưa được QuantBT expose (capability gap — xem ARCHITECTURE.md); cost
-          timeline sẽ xuất hiện khi backend cung cấp.
+          QuantBT does not expose fee, funding or margin series yet (capability gap — see ARCHITECTURE.md);
+          the cost timeline appears once the backend publishes them.
         </p>
       </div>
       <TransitionTable payload={series.data!} />
@@ -130,10 +130,10 @@ function PriceChart({ payload, run }: { payload: SeriesPayload; run: RunEvidence
     <ChartFigure
       figNumber={1}
       title="Close price + target transitions"
-      note="▲▼ = entry · ✕ = exit. Markers là Target transition từ strategy signal (pos_weight), không phải audited fills."
+      note="▲▼ = entry · ✕ = exit. Markers are target transitions from the strategy signal (pos_weight), not audited fills."
       provenance={seriesProvenance(payload, run, {
         source: `series/${payload.segment}`,
-        units: "giá (đơn vị instrument)",
+        units: "price (instrument units)",
       })}
     >
       <EChart option={option} height={640} />
@@ -203,7 +203,7 @@ function TransitionTable({ payload }: { payload: SeriesPayload }) {
   }
   return (
     <div className="card overflow-x-auto p-4">
-      <div className="label mb-2">Transition table — target only (không phải fills)</div>
+      <div className="label mb-2">Transition table — targets only, not fills</div>
       <table className="w-full min-w-[520px] text-[12px]">
         <thead>
           <tr>

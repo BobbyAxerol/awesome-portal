@@ -87,12 +87,12 @@ export function StrategyPicker({
   isError: boolean;
   onRetry: () => void;
 }) {
-  if (isLoading) return <StateView kind="loading" message="Đang tải danh mục strategy…" />;
+  if (isLoading) return <StateView kind="loading" message="Loading the strategy catalogue…" />;
   if (isError) {
     return (
       <StateView
         kind="failed"
-        message="Không đọc được danh mục strategy. Không hiển thị strategy suy đoán."
+        message="The strategy catalogue could not be read. No inferred strategy is shown."
         onRetry={onRetry}
       />
     );
@@ -101,7 +101,7 @@ export function StrategyPicker({
     return (
       <StateView
         kind="empty"
-        message="Registry chưa công bố strategy nào — chưa có gì để chạy."
+        message="The registry publishes no strategy yet — there is nothing to run."
       />
     );
   }
@@ -114,7 +114,7 @@ export function StrategyPicker({
       <section>
         <h3 className="subsection-title mb-2">Built-in ({builtin.length})</h3>
         {builtin.length === 0 ? (
-          <p className="field-hint">Không có strategy built-in nào trong registry hiện tại.</p>
+          <p className="field-hint">The current registry carries no built-in strategy.</p>
         ) : (
           <ul className="strategy-list">
             {builtin.map((entry) => (
@@ -133,8 +133,8 @@ export function StrategyPicker({
         <h3 className="subsection-title mb-2">Imported alpha ({imported.length})</h3>
         {imported.length === 0 ? (
           <Callout tone="muted">
-            Chưa có alpha nào được import. Import Wizard thuộc slice U14 — cho tới lúc đó, alpha
-            được đăng ký qua pipeline review ở backend, không upload từ trình duyệt.
+            No alpha has been imported yet. The Import Wizard belongs to slice U14 — until then an alpha
+            is registered through the backend review pipeline, not uploaded from the browser.
           </Callout>
         ) : (
           <ul className="strategy-list">
@@ -165,7 +165,7 @@ export function StrategyPicker({
  */
 export function StrategyDetail({ entry }: { entry: CatalogEntry | null }) {
   if (!entry) {
-    return <p className="field-hint">Chọn một strategy để xem contract của nó.</p>;
+    return <p className="field-hint">Select a strategy to see its contract.</p>;
   }
   const manifest = entry.manifest;
   const detail: [string, string][] = [
@@ -174,7 +174,7 @@ export function StrategyDetail({ entry }: { entry: CatalogEntry | null }) {
   ];
   if (entry.warmupBars !== null) detail.push(["Warmup bars", String(entry.warmupBars)]);
   if (entry.supportedEndpointIds.length)
-    detail.push(["Endpoint khai báo", entry.supportedEndpointIds.join(", ")]);
+    detail.push(["Declared endpoints", entry.supportedEndpointIds.join(", ")]);
   if (manifest?.entrypoint) detail.push(["Entrypoint", manifest.entrypoint]);
   if (manifest?.artifactDigest)
     detail.push(["Artifact digest", `${manifest.artifactDigest.slice(0, 23)}…`]);
@@ -185,13 +185,13 @@ export function StrategyDetail({ entry }: { entry: CatalogEntry | null }) {
       {/* Tier 1: what decides whether this strategy can run on the reader's data. */}
       <dl className="portal-details">
         <div className="portal-detail-row">
-          <dt className="label">Nguồn</dt>
+          <dt className="label">Source</dt>
           <dd className="mono">
             {entry.origin === "builtin" ? "built-in registry" : "imported alpha"} · v{entry.version}
           </dd>
         </div>
         <div className="portal-detail-row">
-          <dt className="label">Cột bắt buộc</dt>
+          <dt className="label">Required columns</dt>
           <dd className="mono">{entry.requiredColumns.join(", ") || "—"}</dd>
         </div>
         <div className="portal-detail-row">
@@ -199,14 +199,14 @@ export function StrategyDetail({ entry }: { entry: CatalogEntry | null }) {
           <dd className="mono">
             {entry.defaultTimeframe ?? "—"}
             {entry.timeframes.length ? (
-              <span className="field-hint"> · hỗ trợ {entry.timeframes.join(", ")}</span>
+              <span className="field-hint"> · supports {entry.timeframes.join(", ")}</span>
             ) : null}
           </dd>
         </div>
       </dl>
 
       {/* Tier 2: identity and audit trail, on request. */}
-      <Collapsible title={`Contract chi tiết (${detail.length})`}>
+      <Collapsible title={`Full contract (${detail.length})`}>
         <dl className="portal-details">
           {detail.map(([label, value]) => (
             <div key={label} className="portal-detail-row">

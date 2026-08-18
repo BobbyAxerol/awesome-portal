@@ -5,8 +5,8 @@
  * outside the declared space is refused here rather than at preflight, after
  * the user has filled in the rest of the form.
  *
- * The declared bounds are shown next to each control: without them "high vượt
- * giới hạn" is a message the user cannot act on.
+ * The declared bounds are shown next to each control: without them "high is above
+ * the declared bound" is a message the user cannot act on.
  */
 import { RotateCcw } from "lucide-react";
 
@@ -57,14 +57,14 @@ function ParameterRow({
       <div className="param-row-head">
         <span className="param-name mono">{name}</span>
         {declared ? (
-          <span className="param-declared mono" title="Khoảng strategy công bố">
+          <span className="param-declared mono" title="The range the strategy declares">
             [{declared.low} … {declared.high}] step {declared.step}
           </span>
         ) : (
-          <span className="param-declared mono">không có khai báo</span>
+          <span className="param-declared mono">not declared</span>
         )}
-        <span className="param-points mono" title="Số điểm lưới của tham số này">
-          {gridPoints(spec)} điểm
+        <span className="param-points mono" title="Grid points for this parameter">
+          {gridPoints(spec)} points
         </span>
         <select
           className="input param-kind"
@@ -91,8 +91,8 @@ function ParameterRow({
           <button
             type="button"
             className="portal-icon-btn"
-            aria-label={`Đặt lại ${name} về khoảng công bố`}
-            title="Đặt lại về khoảng strategy công bố"
+            aria-label={`Reset ${name} to the declared range`}
+            title="Reset to the range the strategy declares"
             onClick={onReset}
           >
             <RotateCcw size={13} />
@@ -129,7 +129,7 @@ function ParameterRow({
           label="values"
           value={spec.values.join(", ")}
           placeholder="value1, value2"
-          hint="Ngăn cách bằng dấu phẩy."
+          hint="Comma-separated."
           error={errorFor("values")}
           onChange={(value) =>
             onChange({
@@ -184,12 +184,12 @@ export function ParameterEditor({
     <div className="space-y-3">
       <div className="toolbar" data-align="between">
         <span className="mono text-[11px] text-ink-soft">
-          {validation.searchedCount}/{names.length} tham số được search ·{" "}
-          {validation.combinations.toLocaleString("vi-VN")} tổ hợp lưới
+          {validation.searchedCount}/{names.length} parameters searched ·{" "}
+          {validation.combinations.toLocaleString("en-US")} grid combinations
         </span>
         <button type="button" className="btn-ghost" onClick={onResetAll}>
           <RotateCcw size={12} />
-          Đặt lại toàn bộ
+          Reset all
         </button>
       </div>
 
@@ -224,8 +224,8 @@ export function ParameterEditor({
 function StateEmpty() {
   return (
     <Callout tone="muted">
-      Strategy đang chọn không công bố parameter space nào, nên không có gì để tinh chỉnh. Run sẽ
-      dùng đúng contract mặc định của strategy.
+      The selected strategy publishes no parameter space, so there is nothing to tune here. The run
+      uses the strategy's own defaults.
     </Callout>
   );
 }
@@ -244,10 +244,10 @@ export function ParameterSummary({
       <table>
         <thead>
           <tr>
-            <th>Tham số</th>
+            <th>Parameter</th>
             <th>Kind</th>
-            <th>Khoảng</th>
-            <th className="text-right">Điểm</th>
+            <th>Range</th>
+            <th className="text-right">Points</th>
           </tr>
         </thead>
         <tbody>

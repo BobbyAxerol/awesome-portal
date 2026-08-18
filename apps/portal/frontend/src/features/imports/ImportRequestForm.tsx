@@ -42,16 +42,16 @@ const EMPTY: Draft = {
 
 /** Local checks only avoid a round-trip the server would certainly reject. */
 function localProblem(draft: Draft): string | null {
-  if (!draft.alphaId.trim()) return "Cần alpha_id.";
-  if (!draft.version.trim()) return "Cần version.";
-  if (!draft.artifactRelpath.trim()) return "Cần artifact_relpath trong ingest inbox.";
+  if (!draft.alphaId.trim()) return "alpha_id is required.";
+  if (!draft.version.trim()) return "version is required.";
+  if (!draft.artifactRelpath.trim()) return "artifact_relpath inside the ingest inbox is required.";
   if (draft.artifactRelpath.includes("..")) {
     // The server is path-traversal safe; saying so here is faster feedback, not
     // the security boundary.
-    return "artifact_relpath không được chứa `..` — server chỉ đọc trong ingest inbox.";
+    return "artifact_relpath may not contain `..` — the server reads only inside the ingest inbox.";
   }
   if (!DIGEST_PATTERN.test(draft.expectedDigest.trim())) {
-    return "expected_digest phải có dạng sha256:<64 hex>.";
+    return "expected_digest must look like sha256:<64 hex>.";
   }
   return null;
 }
@@ -91,11 +91,11 @@ export function ImportRequestForm({ onSubmitted }: { onSubmitted: () => void }) 
       })
       .catch((error: unknown) => {
         if (error instanceof PortalApiError && error.isForbidden) {
-          setDenied(error.message || "Không đủ quyền để import. Mutation là ADMIN-only ở gateway.");
+          setDenied(error.message || "Not authorised to import — mutations are ADMIN-only at the gateway.");
           return;
         }
         setRejection({
-          message: error instanceof Error ? error.message : "Import bị từ chối.",
+          message: error instanceof Error ? error.message : "The import was rejected.",
           requestId: error instanceof PortalApiError ? error.requestId : null,
         });
       })
@@ -105,8 +105,8 @@ export function ImportRequestForm({ onSubmitted }: { onSubmitted: () => void }) 
   return (
     <form className="import-form" onSubmit={submit} noValidate data-testid="import-request-form">
       <p className="field-hint">
-        Artifact phải được CI hoặc owner đặt sẵn trong ingest inbox của server. Form này chỉ
-        gửi <strong>con trỏ</strong> tới file đó cộng digest mong đợi — browser không gửi code
+        CI or an owner must stage the artifact in the server's ingest inbox first. This form sends only a
+        <strong>pointer</strong> to that file plus the expected digest — the browser never carries code
         (contract §5).
       </p>
 
@@ -124,13 +124,13 @@ export function ImportRequestForm({ onSubmitted }: { onSubmitted: () => void }) 
         <FieldSpan>
           <TextField
             label="artifact_relpath"
-            hint="Đường dẫn tương đối trong ingest inbox của server."
+            hint="Path relative to the server's ingest inbox."
             placeholder="delta-rsi/0.2.0/artifact.whl"
             value={draft.artifactRelpath}
             onChange={(value) => set("artifactRelpath", value)}
             error={
               draft.artifactRelpath.includes("..")
-                ? "Không được chứa `..` — server chỉ đọc trong ingest inbox."
+                ? "May not contain `..` — the server reads only inside the ingest inbox."
                 : undefined
             }
           />
@@ -138,13 +138,13 @@ export function ImportRequestForm({ onSubmitted }: { onSubmitted: () => void }) 
         <FieldSpan>
           <TextField
             label="expected_digest"
-            hint="sha256:<64 hex> — server tự tính lại và so."
+            hint="sha256:<64 hex> — the server recomputes it and compares."
             placeholder="sha256:…"
             value={draft.expectedDigest}
             onChange={(value) => set("expectedDigest", value)}
             error={
               draft.expectedDigest && !DIGEST_PATTERN.test(draft.expectedDigest.trim())
-                ? "Digest phải có dạng sha256:<64 hex>."
+                ? "The digest must look like sha256:<64 hex>."
                 : undefined
             }
           />
@@ -152,7 +152,7 @@ export function ImportRequestForm({ onSubmitted }: { onSubmitted: () => void }) 
         <FieldSpan>
           <TextField
             label="git_ref"
-            hint="Tùy chọn — commit đã review sinh ra artifact này."
+            hint="Optional — the reviewed commit this artifact was built from."
             value={draft.gitRef}
             onChange={(value) => set("gitRef", value)}
           />
@@ -163,13 +163,13 @@ export function ImportRequestForm({ onSubmitted }: { onSubmitted: () => void }) 
 
       {denied ? (
         // Not a validation error: the input was fine, the authority was not.
-        <Callout tone="danger" title="Không đủ quyền">
+        <Callout tone="danger" title="Not authorised">
           {denied}
         </Callout>
       ) : null}
 
       {rejection ? (
-        <Callout tone="danger" title="Import bị từ chối">
+        <Callout tone="danger" title="Import rejected">
           <p>{rejection.message}</p>
           {rejection.requestId ? (
             <p className="mono field-hint">request_id {rejection.requestId}</p>
@@ -178,13 +178,13 @@ export function ImportRequestForm({ onSubmitted }: { onSubmitted: () => void }) 
       ) : null}
 
       {accepted ? (
-        <Callout tone="warning" title="Đã nhận vào quarantine">
+        <Callout tone="warning" title="Accepted into quarantine">
           {/* "Accepted" is not "runnable": that distinction is the pipeline. */}
           <p>
             <span className="mono">{accepted.alpha_id}</span> v
             <span className="mono">{accepted.version}</span> — state{" "}
-            <span className="mono">{accepted.state}</span>. Alpha vẫn chưa chạy được cho tới khi
-            có slice certification.
+            <span className="mono">{accepted.state}</span>. The alpha still cannot run until the
+            certification slice lands.
           </p>
         </Callout>
       ) : null}
@@ -195,7 +195,7 @@ export function ImportRequestForm({ onSubmitted }: { onSubmitted: () => void }) 
         disabled={submitting || Boolean(problem)}
         title={problem ?? undefined}
       >
-        {submitting ? "Đang gửi…" : "Gửi import request"}
+        {submitting ? "Submitting…" : "Submit import request"}
       </button>
     </form>
   );

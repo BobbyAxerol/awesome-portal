@@ -28,7 +28,7 @@ export function CancelRunButton({
       <button
         type="button"
         className={`btn-ghost no-print cancel-run-btn${compact ? " cancel-run-compact" : ""}`}
-        aria-label={`Hủy run ${runId}`}
+        aria-label={`Cancel run ${runId}`}
         disabled={cancel.pending}
         onClick={(event) => {
           event.stopPropagation();
@@ -36,7 +36,7 @@ export function CancelRunButton({
         }}
       >
         <XCircle size={compact ? 11 : 13} aria-hidden="true" />
-        {compact ? null : cancel.pending ? "Đang hủy…" : "Hủy run"}
+        {compact ? null : cancel.pending ? "Cancelling…" : "Cancel run"}
       </button>
 
       {cancel.denied ? (

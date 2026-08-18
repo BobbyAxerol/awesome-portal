@@ -42,7 +42,7 @@ describe("when the control exists", () => {
   it("offers cancel for a run that is still running", () => {
     vi.stubGlobal("confirm", vi.fn(() => true));
     mount("RUNNING");
-    expect(screen.getByRole("button", { name: /Hủy run r1/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Cancel run r1/ })).toBeTruthy();
   });
 
   it.each(["COMPLETED", "FAILED", "CANCELLED"])(
@@ -50,14 +50,14 @@ describe("when the control exists", () => {
     (status) => {
       mount(status);
       // A control that cannot work is worse than no control (v0.5 §13).
-      expect(screen.queryByRole("button", { name: /Hủy run/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: /Cancel run/ })).toBeNull();
     },
   );
 
   it("offers nothing when the status is unknown", () => {
     // Without a state we cannot claim the run is still running.
     mount(null);
-    expect(screen.queryByRole("button", { name: /Hủy run/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Cancel run/ })).toBeNull();
   });
 });
 
@@ -68,7 +68,7 @@ describe("confirmation", () => {
     const fetchMock = vi.fn(() => new Response("{}", { status: 200 }));
     mount("RUNNING", fetchMock);
 
-    fireEvent.click(screen.getByRole("button", { name: /Hủy run r1/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Cancel run r1/ }));
     expect(confirm).toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -84,7 +84,7 @@ describe("confirmation", () => {
       });
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /Hủy run r1/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Cancel run r1/ }));
     await waitFor(() => expect(calls.length).toBe(1));
     expect(calls[0][0]).toContain("/api/runs/r1/cancel");
     expect(calls[0][1]?.method).toBe("POST");
@@ -97,14 +97,14 @@ describe("failures", () => {
     mount(
       "RUNNING",
       () =>
-        new Response(JSON.stringify({ error: { message: "Chỉ ADMIN được hủy run." } }), {
+        new Response(JSON.stringify({ error: { message: "Only an ADMIN may cancel a run." } }), {
           status: 403,
           headers: { "Content-Type": "application/json" },
         }),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Hủy run r1/ }));
-    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Chỉ ADMIN"));
+    fireEvent.click(screen.getByRole("button", { name: /Cancel run r1/ }));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Only an ADMIN"));
   });
 
   it("shows the server's message and request id for any other failure", async () => {
@@ -113,13 +113,13 @@ describe("failures", () => {
       "RUNNING",
       () =>
         new Response(
-          JSON.stringify({ error: { message: "worker không phản hồi", request_id: "req-5" } }),
+          JSON.stringify({ error: { message: "the worker did not respond", request_id: "req-5" } }),
           { status: 502, headers: { "Content-Type": "application/json" } },
         ),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Hủy run r1/ }));
-    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("worker không phản hồi"));
+    fireEvent.click(screen.getByRole("button", { name: /Cancel run r1/ }));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("the worker did not respond"));
     expect(screen.getByRole("alert").textContent).toContain("req-5");
   });
 });

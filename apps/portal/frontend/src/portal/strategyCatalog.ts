@@ -11,7 +11,7 @@
  *
  * Nothing here hard-codes `delta-rsi-polynomial-alpha`, a protocol list or an
  * endpoint id: a strategy is runnable only when the capability manifest of the
- * installed release says so (§4 — "khai báo, không suy đoán").
+ * installed release says so (§4 — declared, never inferred).
  *
  * Both projections were untyped in v1 and narrowed by guesswork. The backend
  * published `AlphaRegistryDocument` and `EngineCapabilitiesDocument` on
@@ -274,11 +274,11 @@ export function buildCatalog(
       alpha.supportedEndpointIds.some((id) => certifiedEndpoints.has(id));
 
     const blockedReason = alpha.quarantined
-      ? "Alpha đang bị quarantine — không thể chạy cho tới khi gỡ."
+      ? "This alpha is quarantined and cannot run until it is released."
       : !runtime
-        ? "Alpha đã import nhưng chưa đăng ký vào runtime registry, nên chưa chạy được."
+        ? "This alpha is imported but not yet registered in the runtime registry, so it cannot run."
         : !endpointCertified
-          ? `Engine release hiện tại chưa certify endpoint ${alpha.supportedEndpointIds.join(", ")}.`
+          ? `The installed engine release does not certify the ${alpha.supportedEndpointIds.join(", ")} endpoint.`
           : null;
 
     if (runtime) claimed.add(runtime.strategy_id);

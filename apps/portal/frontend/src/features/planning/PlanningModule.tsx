@@ -34,7 +34,7 @@ import { PlanningCrossLinks } from "./PlanningCrossLinks";
 /** API vs LOCAL must always be visible: local state is not shared state. */
 function ApiModeBadge({ mode }: { mode: ApiMode }) {
   if (mode === "detecting") {
-    return <span className="mono text-[11px] text-ink-faint">đang dò API…</span>;
+    return <span className="mono text-[11px] text-ink-faint">detecting the API…</span>;
   }
   const isApi = mode !== "local";
   return (
@@ -47,8 +47,8 @@ function ApiModeBadge({ mode }: { mode: ApiMode }) {
       data-api-mode={mode}
       title={
         isApi
-          ? "Đọc/ghi qua Planning API — state dùng chung."
-          : "Local-first: state chỉ nằm trong trình duyệt này, không phải shared server state."
+          ? "Reads and writes through the Planning API — shared state."
+          : "Local-first: this state lives in this browser only, and is not shared server state."
       }
     >
       <span aria-hidden="true">{isApi ? "●" : "◐"}</span>

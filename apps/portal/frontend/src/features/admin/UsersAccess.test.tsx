@@ -97,7 +97,7 @@ afterEach(() => {
 describe("authority", () => {
   it("shows denied to a USER session instead of an empty table", async () => {
     mount(USER_PRINCIPAL);
-    expect(await screen.findByText(/Chỉ ADMIN xem được màn này/)).toBeTruthy();
+    expect(await screen.findByText(/This screen is ADMIN-only/)).toBeTruthy();
     expect(screen.queryByTestId("admin-users")).toBeNull();
     // Nothing is even asked for: an unauthorised reader does not probe the route.
     expect(calls).toHaveLength(0);
@@ -105,7 +105,7 @@ describe("authority", () => {
 
   it("treats an absent session as not ADMIN", async () => {
     mount(null);
-    expect(await screen.findByText(/Chỉ ADMIN xem được màn này/)).toBeTruthy();
+    expect(await screen.findByText(/This screen is ADMIN-only/)).toBeTruthy();
   });
 
   it("marks the caller's own row, the one change with no undo here", async () => {
@@ -150,9 +150,9 @@ describe("mutations", () => {
     await screen.findByTestId("admin-users");
     calls.length = 0;
 
-    fireEvent.change(screen.getByLabelText("Role của analyst"), { target: { value: "ADMIN" } });
+    fireEvent.change(screen.getByLabelText("Role for analyst"), { target: { value: "ADMIN" } });
 
-    expect(confirm.mock.calls[0][0]).toContain("thu hồi");
+    expect(confirm.mock.calls[0][0]).toContain("revoked");
     await waitFor(() => expect(calls.some((call) => call.method === "PATCH")).toBe(true));
     expect(calls.find((call) => call.method === "PATCH")!.url).toBe("/api/admin/users/u-2");
   });
@@ -169,12 +169,12 @@ describe("mutations", () => {
     fireEvent.click(screen.getAllByRole("button", { name: /Reset credential/ })[1]);
 
     expect(await screen.findByText("one-time-abc123")).toBeTruthy();
-    expect(screen.getByText(/Chỉ hiện/)).toBeTruthy();
+    expect(screen.getByText(/Shown/)).toBeTruthy();
     // Never persisted anywhere a later session could read it.
     expect(window.localStorage.getItem("portal.admin.token")).toBeNull();
     expect(JSON.stringify(window.localStorage)).not.toContain("one-time-abc123");
 
-    fireEvent.click(screen.getByRole("button", { name: "Đã lưu, ẩn đi" }));
+    fireEvent.click(screen.getByRole("button", { name: "Saved — hide it" }));
     await waitFor(() => expect(screen.queryByText("one-time-abc123")).toBeNull());
   });
 
@@ -186,7 +186,7 @@ describe("mutations", () => {
             {
               error: {
                 code: "FORBIDDEN",
-                message: "Chỉ ADMIN được đổi account.",
+                message: "Only an ADMIN may change an account.",
                 request_id: "req-777",
               },
             },
@@ -198,7 +198,7 @@ describe("mutations", () => {
 
     fireEvent.click(screen.getAllByRole("button", { name: /Revoke sessions/ })[1]);
 
-    expect(await screen.findByText("Chỉ ADMIN được đổi account.")).toBeTruthy();
+    expect(await screen.findByText("Only an ADMIN may change an account.")).toBeTruthy();
     expect(screen.getByText(/req-777/)).toBeTruthy();
   });
 
@@ -207,7 +207,7 @@ describe("mutations", () => {
     // `retry: 1` means the failure is not instant; the point is that it arrives
     // as a failure and never as "0 account".
     expect(
-      await screen.findByText(/Không đọc được \/api\/admin\/users/, {}, { timeout: 3000 }),
+      await screen.findByText(/Could not read \/api\/admin\/users/, {}, { timeout: 3000 }),
     ).toBeTruthy();
     expect(screen.queryByText(/0 account/)).toBeNull();
   });

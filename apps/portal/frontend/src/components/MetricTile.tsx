@@ -57,8 +57,8 @@ export function MetricTile({
 
   const provenance = [
     `segment ${evidence.segment}`,
-    `nguồn ${evidence.source}`,
-    evidence.asOf ? `as-of ${evidence.asOf}` : "as-of chưa công bố",
+    `source ${evidence.source}`,
+    evidence.asOf ? `as-of ${evidence.asOf}` : "as-of not published",
     evidence.digest ? `digest ${evidence.digest.slice(0, 19)}…` : null,
   ]
     .filter(Boolean)
@@ -73,15 +73,15 @@ export function MetricTile({
           tabIndex={0}
           role="note"
           aria-label={`${definition.label}: ${definition.definition}`}
-          title={`${definition.definition}${definition.annualized ? " Chịu ảnh hưởng của lịch annualization trong config." : ""}`}
+          title={`${definition.definition}${definition.annualized ? " Depends on the annualization calendar recorded in the run config." : ""}`}
         >
           <Info size={11} aria-hidden="true" />
         </span>
       </div>
 
       {absent ? (
-        <div className="metric-tile-absent mono" title="Engine không tính metric này cho segment đang xem.">
-          không có cho segment này
+        <div className="metric-tile-absent mono" title="The engine did not compute this metric for the segment on screen.">
+          not available for this segment
         </div>
       ) : (
         <div
@@ -99,7 +99,7 @@ export function MetricTile({
         {definition.annualized ? (
           <>
             <span aria-hidden="true">·</span>
-            <span title="Phụ thuộc lịch annualization đã ghi trong config">annualized</span>
+            <span title="Depends on the annualization calendar recorded in the run config">annualized</span>
           </>
         ) : null}
       </div>

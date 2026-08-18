@@ -97,7 +97,7 @@ export function Toolbar({ children, align = "start" }: { children: ReactNode; al
 /**
  * Numbered flow stepper.
  *
- * Research configuration is a sequence with a required order (v0.4 §P0.9);
+ * Backtest configuration is a sequence with a required order (v0.4 §P0.9);
  * showing where the user is prevents the "one enormous form" failure mode.
  */
 export interface StepDefinition {
@@ -127,7 +127,7 @@ export function Stepper({
   onSelect: (id: string) => void;
 }) {
   return (
-    <ol className="stepper" aria-label="Các bước cấu hình run">
+    <ol className="stepper" aria-label="Run configuration steps">
       {steps.map((step, index) => {
         // A tick means "opened and clean", never "no blocking error yet".
         // Ticking a step nobody has opened reads as "already done", which is a
@@ -153,10 +153,10 @@ export function Stepper({
               <span className="stepper-label">{step.label}</span>
               <span className="sr-only">
                 {step.error
-                  ? `— có lỗi: ${step.error}`
+                  ? `— has an error: ${step.error}`
                   : state === "complete"
-                    ? "— đã mở, không có lỗi"
-                    : "— chưa mở"}
+                    ? "— opened, no errors"
+                    : "— not opened yet"}
               </span>
             </button>
           </li>

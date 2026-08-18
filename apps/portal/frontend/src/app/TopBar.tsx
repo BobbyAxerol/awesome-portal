@@ -35,7 +35,7 @@ export function TopBar({
       <button
         type="button"
         className="portal-icon-btn lg:hidden"
-        aria-label="Mở điều hướng"
+        aria-label="Open navigation"
         onClick={onToggleMobileNav}
       >
         <Menu size={16} />
@@ -44,7 +44,7 @@ export function TopBar({
       <button
         type="button"
         className="portal-icon-btn hidden lg:inline-flex"
-        aria-label={preferences.sidebarCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+        aria-label={preferences.sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         aria-pressed={preferences.sidebarCollapsed}
         onClick={() => preferences.set("sidebarCollapsed", !preferences.sidebarCollapsed)}
       >
@@ -55,7 +55,7 @@ export function TopBar({
         Quant Ecosystem Portal
       </Link>
 
-      <span className="portal-workspace mono" title="Prototype hiện chỉ có một workspace">
+      <span className="portal-workspace mono" title="The prototype has a single workspace">
         Default Workspace
       </span>
 
@@ -72,7 +72,7 @@ export function TopBar({
 
       <button type="button" className="portal-search-btn" onClick={onOpenPalette}>
         <Search size={13} aria-hidden="true" />
-        <span>Tìm kiếm</span>
+        <span>Search</span>
         <kbd className="mono">⌘K</kbd>
       </button>
 
@@ -114,13 +114,13 @@ export function TopBar({
         </Link>
       ) : null}
 
-      <label className="portal-pref-check mono" title="Ẩn/hiện module chưa triển khai trong điều hướng">
+      <label className="portal-pref-check mono" title="Show or hide modules that are not built yet">
         <input
           type="checkbox"
           checked={preferences.showCommissioned}
           onChange={(event) => preferences.set("showCommissioned", event.target.checked)}
         />
-        Module dự kiến
+        Planned modules
       </label>
     </header>
   );

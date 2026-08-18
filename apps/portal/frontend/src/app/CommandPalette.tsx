@@ -63,8 +63,8 @@ export function CommandPalette({
           ref={inputRef}
           className="portal-palette-input"
           value={query}
-          placeholder="Tìm feature hoặc màn hình…"
-          aria-label="Tìm feature hoặc màn hình"
+          placeholder="Search features and screens…"
+          aria-label="Search features and screens"
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Escape") {
@@ -83,9 +83,9 @@ export function CommandPalette({
           }}
         />
         {results.length === 0 ? (
-          <div className="portal-palette-empty mono">Không có kết quả khớp.</div>
+          <div className="portal-palette-empty mono">No matches.</div>
         ) : (
-          <ul className="portal-palette-list" role="listbox" aria-label="Kết quả">
+          <ul className="portal-palette-list" role="listbox" aria-label="Results">
             {results.map((entry, index) => (
               <li key={`${entry.kind}:${entry.id}`}>
                 <button

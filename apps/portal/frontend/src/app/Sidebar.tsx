@@ -28,7 +28,7 @@ export function Sidebar({
   const groups = sidebarGroups(registry, options);
 
   return (
-    <nav className="portal-sidebar" aria-label="Điều hướng chính" data-collapsed={collapsed}>
+    <nav className="portal-sidebar" aria-label="Primary navigation" data-collapsed={collapsed}>
       {groups.map(({ group, features }) => (
         <div key={group.id} className="portal-navgroup">
           {collapsed ? (

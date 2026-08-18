@@ -39,7 +39,7 @@ export function PortalMap() {
   const links = useLinks();
 
   if (!registry) {
-    return <StateView kind="loading" message="Đang tải registry…" />;
+    return <StateView kind="loading" message="Loading the registry…" />;
   }
 
   const stages = lifecycleStages(registry);
@@ -56,13 +56,13 @@ export function PortalMap() {
     <>
       <ModuleHeader
         title="Portal Map"
-        description="Vòng đời từ ý tưởng alpha đến vận hành live, kèm capability thật đang có ở mỗi chặng."
+        description="The lifecycle from alpha idea to live operation, with the capability that really exists at each stage."
         maturity={feature?.maturity ?? "PROTOTYPE"}
         dataMode={feature?.data_mode ?? "STATIC_PREVIEW"}
       />
 
       {personas.length > 0 && (
-        <div className="portal-map-personas" role="group" aria-label="Lọc theo persona">
+        <div className="portal-map-personas" role="group" aria-label="Filter by persona">
           <span className="mono-label">Persona</span>
           <button
             type="button"
@@ -70,7 +70,7 @@ export function PortalMap() {
             aria-pressed={persona === null}
             onClick={() => setPersona(null)}
           >
-            Tất cả
+            All
           </button>
           {personas.map((option) => (
             <button
@@ -87,7 +87,7 @@ export function PortalMap() {
       )}
 
       {maturities.length > 1 ? (
-        <div className="portal-map-personas" role="group" aria-label="Lọc theo status">
+        <div className="portal-map-personas" role="group" aria-label="Filter by status">
           <span className="mono-label">Status</span>
           <button
             type="button"
@@ -95,7 +95,7 @@ export function PortalMap() {
             aria-pressed={maturity === null}
             onClick={() => setMaturity(null)}
           >
-            Tất cả
+            All
           </button>
           {maturities.map((option) => (
             <button
@@ -151,7 +151,7 @@ export function PortalMap() {
               <p className="portal-map-stage-personas mono">
                 {declaresPersona
                   ? `persona: ${stagePersonas.map(personaLabel).join(", ")}`
-                  : "registry chưa khai báo persona cho stage này"}
+                  : "the registry declares no persona for this stage"}
               </p>
               <ul className="portal-map-features">
                 {stage.feature_ids.map((id) => {
@@ -184,7 +184,7 @@ export function PortalMap() {
       ) : null}
 
       <p className="mono mt-4 text-[11px] text-ink-faint">
-        Nguồn: registry revision {registry.revision} · digest {registry.content_digest.slice(0, 19)}…
+        Source: registry revision {registry.revision} · digest {registry.content_digest.slice(0, 19)}…
       </p>
     </>
   );

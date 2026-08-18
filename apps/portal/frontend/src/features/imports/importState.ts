@@ -30,35 +30,35 @@ const PRESENTATION: Record<ImportState, ImportStatePresentation> = {
   QUARANTINED: {
     label: "Quarantined",
     meaning:
-      "Digest khớp và manifest hợp lệ. Alpha đang nằm trong quarantine, chưa đăng ký vào runtime — chưa chạy được cho tới khi có slice certification.",
+      "The digest matches and the manifest is valid. The alpha sits in quarantine, unregistered in the runtime, and cannot run until the certification slice lands.",
     tone: "degraded",
     persisted: true,
   },
   DIGEST_MISMATCH: {
     label: "Digest mismatch",
     meaning:
-      "Artifact nhận được không khớp digest mà manifest công bố. Import bị giữ lại; không có gì được đăng ký.",
+      "The artifact received does not match the digest the manifest publishes. The import is held; nothing was registered.",
     tone: "denied",
     persisted: true,
   },
   INVALID_MANIFEST: {
     label: "Invalid manifest",
     meaning:
-      "Manifest không đạt schema alpha-manifest.v1. Bị từ chối ngay khi nhận, không có gì được ghi.",
+      "The manifest does not satisfy the alpha-manifest.v1 schema. Rejected on receipt; nothing was written.",
     tone: "denied",
     persisted: false,
   },
   ALREADY_REGISTERED: {
     label: "Already registered",
     meaning:
-      "Alpha version này đã có trong registry bất biến hoặc đã có import trước đó. Registry không bị ghi đè.",
+      "This alpha version already exists in the immutable registry, or a previous import claimed it. The registry is never overwritten.",
     tone: "unavailable",
     persisted: false,
   },
   PENDING_DIGEST: {
     label: "Pending digest",
     meaning:
-      "Đang chờ verify digest. Contract khai báo state này nhưng pipeline hiện tại chưa sinh ra nó.",
+      "Waiting on digest verification. The contract declares this state, but the current pipeline does not produce it.",
     tone: "stale",
     persisted: false,
   },
@@ -68,7 +68,7 @@ export function importStatePresentation(state: ImportState): ImportStatePresenta
   return (
     PRESENTATION[state] ?? {
       label: state,
-      meaning: "State không có trong contract frontend đang biết — không suy diễn ý nghĩa.",
+      meaning: "A state absent from the contract this frontend knows — no meaning is inferred for it.",
       tone: "unavailable",
       persisted: false,
     }

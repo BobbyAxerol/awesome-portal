@@ -18,7 +18,7 @@ const LABELS: Record<string, string> = {
   dataset: "Dataset",
   symbol: "Symbol",
   timeframe: "Timeframe",
-  required_columns: "Cột bắt buộc",
+  required_columns: "Required columns",
   parameter_space: "Parameter space",
 };
 
@@ -30,7 +30,7 @@ export function PreflightChecks({ checks }: { checks: readonly PreflightCheck[] 
   if (checks.length === 0) {
     return (
       <p className="field-hint" data-testid="preflight-checks-absent">
-        Preflight không trả về danh sách check nào, nên Portal không suy ra gate nào đã chạy.
+        Preflight returned no list of checks, so the Portal infers nothing about which gates ran.
       </p>
     );
   }
@@ -57,13 +57,13 @@ export function PreflightChecks({ checks }: { checks: readonly PreflightCheck[] 
                   * not a count. */}
                 {check.missing?.length ? (
                   <p>
-                    Thiếu: <span className="mono">{check.missing.join(", ")}</span>
+                    Missing: <span className="mono">{check.missing.join(", ")}</span>
                   </p>
                 ) : null}
                 {check.detail ? <p className="preflight-detail">{check.detail}</p> : null}
                 {!check.missing?.length && !check.detail ? (
                   <p className="preflight-detail">
-                    Server báo gate này fail nhưng không kèm chi tiết.
+                    The server reported this gate as failed without saying why.
                   </p>
                 ) : null}
               </dd>

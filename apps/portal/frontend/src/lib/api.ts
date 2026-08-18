@@ -109,7 +109,7 @@ export interface RunLedger {
  * names the analysis frame the plan was derived from, so the fold Gantt can
  * cite its source like any other §12.2 figure. Both are nullable in the
  * schema: a plan written before they existed has neither, and the UI says
- * "chưa công bố" rather than assuming.
+ * "not published" rather than assuming.
  *
  * The row shape stays declared here because `FoldPlanDocument.folds` is an
  * untyped record array in the contract — the runner writes protocol-specific
@@ -162,7 +162,7 @@ export interface RunDetail extends RunSummary {
  * `source_rows` is the segment's row count **before** downsampling and before
  * start/end clipping; `returned_rows` is what actually arrived; and
  * `downsample_stride` is 1 when the payload was not thinned. The three
- * together are what let a chart say "5.000/128.400 điểm, stride 26" instead of
+ * together are what let a chart say "5,000/128,400 points, stride 26" instead of
  * implying it drew everything.
  *
  * Delivered by codex on 2026-08-17; before that the frontend could only assume

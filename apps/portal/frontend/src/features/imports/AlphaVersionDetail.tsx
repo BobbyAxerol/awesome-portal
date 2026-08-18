@@ -87,11 +87,11 @@ export function AlphaVersionDetail() {
       />
 
       {detail.isLoading ? (
-        <StateView kind="loading" message="Đang tải alpha version…" />
+        <StateView kind="loading" message="Loading the alpha version…" />
       ) : detail.isError || !detail.data ? (
         <StateView
           kind="failed"
-          message={`Không đọc được alpha version này. ${
+          message={`This alpha version could not be read. ${
             detail.error instanceof Error ? detail.error.message : ""
           }`}
           onRetry={() => void detail.refetch()}
@@ -102,10 +102,10 @@ export function AlphaVersionDetail() {
             <LifecycleRail stage={detail.data.lifecycle.stage} />
 
             {detail.data.lifecycle.quarantined ? (
-              <Callout tone="danger" title="Đang quarantine">
+              <Callout tone="danger" title="Quarantined">
                 {/* The reason is the service's, quoted. */}
                 {detail.data.lifecycle.quarantine_reason ??
-                  "Service không kèm lý do quarantine cho version này."}
+                  "The service gave no quarantine reason for this version."}
               </Callout>
             ) : null}
 
@@ -118,7 +118,7 @@ export function AlphaVersionDetail() {
                 <dt className="label">Certification</dt>
                 <dd className="mono">
                   {detail.data.lifecycle.certification ?? (
-                    <span className="alpha-absent">chưa certify</span>
+                    <span className="alpha-absent">not certified</span>
                   )}
                 </dd>
               </div>
@@ -134,7 +134,7 @@ export function AlphaVersionDetail() {
                   ) : (
                     /* No evidence is a fact about the promotion trail, not a
                      * missing field to hide. */
-                    <span className="alpha-absent">chưa có evidence nào được ghi</span>
+                    <span className="alpha-absent">no evidence recorded yet</span>
                   )}
                 </dd>
               </div>
@@ -156,8 +156,8 @@ export function AlphaVersionDetail() {
           </Panel>
 
           <Callout tone="muted">
-            Màn này chỉ đọc. Việc chuyển stage thuộc slice certification — Portal không có
-            thẩm quyền promote từ đây.
+            This screen is read-only. Moving a stage belongs to the certification slice — the Portal has
+            no authority to promote from here.
           </Callout>
         </>
       )}

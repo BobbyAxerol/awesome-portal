@@ -72,7 +72,7 @@ function RegistryCounts({ summary }: { summary: PortalSummaryV1 }) {
   return (
     <section className="portal-ledger" aria-labelledby="registry-ledger-heading">
       <h2 id="registry-ledger-heading" className="sr-only">
-        Thành phần registry theo maturity
+        Registry composition by maturity
       </h2>
 
       {total > 0 ? (
@@ -115,7 +115,7 @@ function RegistryCounts({ summary }: { summary: PortalSummaryV1 }) {
       </div>
 
       <p className="portal-ledger-caption mono">
-        {total} feature trong registry · metadata sản phẩm, không phải trạng thái runtime
+        {total} features in the registry · product metadata, not runtime state
       </p>
     </section>
   );
@@ -161,7 +161,7 @@ function SectionCard({
           <FreshnessIndicator availability={section.availability} />
           {feature ? (
             <Link className="btn-ghost" to={feature.canonical_route}>
-              Mở {feature.label}
+              Open {feature.label}
             </Link>
           ) : null}
           {/* Every number on this card has an authority and a provenance in the
@@ -170,7 +170,7 @@ function SectionCard({
             type="button"
             className="btn-ghost"
             onClick={() => onOpenEvidence(section)}
-            aria-label={`Evidence cho ${section.label}`}
+            aria-label={`Evidence for ${section.label}`}
           >
             Evidence
           </button>
@@ -189,7 +189,7 @@ function SectionCard({
       {state === "unavailable" || state === "failed-retryable" || state === "denied" ? (
         <StateView
           kind={state === "denied" ? "denied" : "unavailable"}
-          message="Nguồn không trả về số liệu cho snapshot này. Không có giá trị nào được thay bằng 0."
+          message="The source returned no figures for this snapshot. No value has been replaced by a zero."
         />
       ) : (
         <>
@@ -206,7 +206,7 @@ function SectionCard({
 
           {distribution ? (
             <div className="mt-4">
-              <Distribution section={section} keys={distribution} caption="Phân bố" />
+              <Distribution section={section} keys={distribution} caption="Distribution" />
             </div>
           ) : null}
 
@@ -259,7 +259,7 @@ function PriorityList({ items }: { items: PriorityItem[] }) {
     return (
       <StateView
         kind="empty"
-        message="Không có mục ưu tiên nào được evidence trong snapshot này."
+        message="No priority item is evidenced in this snapshot."
       />
     );
   }
@@ -290,7 +290,7 @@ function LifecycleRibbon() {
   if (!registry) return null;
   const stages = lifecycleStages(registry);
   return (
-    <ol className="portal-lifecycle" aria-label="Vòng đời sản phẩm">
+    <ol className="portal-lifecycle" aria-label="Product lifecycle">
       {stages.map((stage) => (
         <li key={stage.id} className="portal-lifecycle-stage" data-maturity={stage.maturity}>
           <span className="portal-lifecycle-label">{stage.label}</span>
@@ -315,7 +315,7 @@ export function CommandCenter() {
   const header = (
     <ModuleHeader
       title="Command Center"
-      description="Product lifecycle, capability hiện có và tiến độ migration — chỉ từ authority thật."
+      description="Product lifecycle, the capability that exists today, and migration progress — from real authorities only."
       maturity={feature?.maturity ?? "PROTOTYPE"}
       dataMode={feature?.data_mode ?? "REAL"}
       actions={
@@ -326,7 +326,7 @@ export function CommandCenter() {
           disabled={summary.isFetching}
         >
           <RefreshCw size={13} className={summary.isFetching ? "animate-spin" : undefined} />
-          Làm mới
+          Refresh
         </button>
       }
     />
@@ -336,7 +336,7 @@ export function CommandCenter() {
     return (
       <>
         {header}
-        <StateView kind="loading" message="Đang thu thập summary…" />
+        <StateView kind="loading" message="Collecting the summary…" />
       </>
     );
   }
@@ -352,7 +352,7 @@ export function CommandCenter() {
           kind="failed"
           code={requestId ? `request_id ${requestId}` : undefined}
           message={
-            "Summary contract lỗi nên Command Center không hiển thị số liệu nào. " +
+            "The summary contract failed, so the Command Center shows no figures at all. " +
             (error instanceof Error ? error.message : "")
           }
           onRetry={retryable ? () => void summary.refetch() : undefined}
@@ -373,7 +373,7 @@ export function CommandCenter() {
     <>
       <ModuleHeader
         title="Command Center"
-        description="Product lifecycle, capability hiện có và tiến độ migration — chỉ từ authority thật."
+        description="Product lifecycle, the capability that exists today, and migration progress — from real authorities only."
         maturity={feature?.maturity ?? "PROTOTYPE"}
         dataMode={feature?.data_mode ?? "REAL"}
         actions={
@@ -391,11 +391,11 @@ export function CommandCenter() {
             </Link>
             {top ? (
               <Link className="btn-primary" to={top.route}>
-                Mở mục ưu tiên cao nhất
+                Open the highest-priority item
               </Link>
             ) : (
-              <button className="btn-primary" type="button" disabled title="Snapshot hiện không có mục ưu tiên nào">
-                Mở mục ưu tiên cao nhất
+              <button className="btn-primary" type="button" disabled title="This snapshot carries no priority item">
+                Open the highest-priority item
               </button>
             )}
             <button
@@ -405,7 +405,7 @@ export function CommandCenter() {
               disabled={summary.isFetching}
             >
               <RefreshCw size={13} className={summary.isFetching ? "animate-spin" : undefined} />
-              Làm mới
+              Refresh
             </button>
           </>
         }
@@ -431,10 +431,10 @@ export function CommandCenter() {
         * priority list used to sit at the bottom of the scroll, under everything. */}
       <section className="portal-block" aria-labelledby="priority-heading">
         <h2 id="priority-heading" className="portal-block-title">
-          Mục ưu tiên
+          Priority items
         </h2>
         <p className="dek">
-          Thứ tự do summary contract quyết định; chỉ ba loại hiện được uỷ quyền.
+          The summary contract fixes the order; only three kinds are authorised today.
         </p>
         <PriorityList items={data.priority_items} />
       </section>
@@ -451,9 +451,9 @@ export function CommandCenter() {
 
       <section className="portal-block" aria-labelledby="lifecycle-heading">
         <h2 id="lifecycle-heading" className="portal-block-title">
-          Vòng đời sản phẩm
+          Product lifecycle
         </h2>
-        <p className="dek">Metadata sản phẩm từ registry — không phải trạng thái runtime.</p>
+        <p className="dek">Product metadata from the registry — not runtime state.</p>
         <LifecycleRibbon />
       </section>
 

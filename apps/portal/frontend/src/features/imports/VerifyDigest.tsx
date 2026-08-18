@@ -28,9 +28,9 @@ function Result({ result }: { result: AlphaVerifyResult }) {
         <dd>{result.computed_digest.slice(0, 23)}…</dd>
       </div>
       <div>
-        <dt>kết quả</dt>
+        <dt>result</dt>
         <dd style={{ color: result.matches ? "var(--state-available)" : "var(--state-denied)" }}>
-          {result.matches ? "hai digest khớp" : "hai digest KHÁC nhau"}
+          {result.matches ? "the digests match" : "the digests DIFFER"}
         </dd>
       </div>
     </dl>
@@ -54,12 +54,12 @@ export function VerifyDigest({ alphaId, version }: { alphaId: string; version: s
     );
   }
   if (verify.isLoading) {
-    return <span className="mono text-[11px] text-ink-faint">đang verify…</span>;
+    return <span className="mono text-[11px] text-ink-faint">verifying…</span>;
   }
   if (verify.isError || !verify.data) {
     return (
       <span className="mono text-[11px]" style={{ color: "var(--state-unavailable)" }}>
-        không verify được — alpha version có thể chưa nằm trong registry bất biến
+        cannot be verified — the alpha version may not be in the immutable registry yet
       </span>
     );
   }

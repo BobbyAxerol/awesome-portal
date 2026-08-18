@@ -29,8 +29,8 @@ export function PlanningCrossLinks({
   if (isLoading) {
     return (
       <details className="portal-crosslinks">
-        <summary>Liên kết Portal ↔ Planning</summary>
-        <StateView kind="loading" message="Đang tải cross-link sidecar…" />
+        <summary>Portal ↔ Planning links</summary>
+        <StateView kind="loading" message="Loading the cross-link sidecar…" />
       </details>
     );
   }
@@ -38,10 +38,10 @@ export function PlanningCrossLinks({
   if (isError || !links || !Array.isArray(links.entries)) {
     return (
       <details className="portal-crosslinks">
-        <summary>Liên kết Portal ↔ Planning</summary>
+        <summary>Portal ↔ Planning links</summary>
         <StateView
           kind="unavailable"
-          message="Không đọc được cross-link sidecar. Không hiển thị liên kết suy đoán."
+          message="The cross-link sidecar could not be read. No inferred links are shown."
         />
       </details>
     );
@@ -56,7 +56,7 @@ export function PlanningCrossLinks({
   return (
     <details className="portal-crosslinks">
       <summary>
-        Liên kết Portal ↔ Planning
+        Portal ↔ Planning links
         <span className="mono text-[11px] text-ink-faint">
           {" "}
           · {links.integrity.dangling_links} dangling · revision {links.links_revision}
@@ -70,7 +70,7 @@ export function PlanningCrossLinks({
             <th>Roadmap epic</th>
             <th>Planning tasks</th>
             <th>Figma</th>
-            <th>Mở màn hình</th>
+            <th>Open screen</th>
           </tr>
         </thead>
         <tbody>
@@ -89,17 +89,17 @@ export function PlanningCrossLinks({
                   {entry.planning_task_ids.length ? (
                     entry.planning_task_ids.join(", ")
                   ) : (
-                    <span className="text-ink-faint">chưa có authority mapping</span>
+                    <span className="text-ink-faint">no authority mapping</span>
                   )}
                 </td>
                 <td className="mono">{entry.figma_frame_id ?? "—"}</td>
                 <td>
                   {route ? (
                     <Link className="btn-ghost" to={route}>
-                      Mở
+                      Open
                     </Link>
                   ) : (
-                    <span className="mono text-[11px] text-ink-faint">không có route</span>
+                    <span className="mono text-[11px] text-ink-faint">no route</span>
                   )}
                 </td>
               </tr>

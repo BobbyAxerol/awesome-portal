@@ -1,5 +1,5 @@
 /**
- * New Run — the QuantBT Research configuration flow.
+ * New Run — the QuantBT Backtest configuration flow.
  *
  * The flow is explicit and ordered (v0.4 §P0.9): strategy → data → windows →
  * parameters → optimization → review. Each step is validated on its own, so a
@@ -148,12 +148,12 @@ const PROTOCOL_LABELS: Record<string, string> = {
 };
 
 const ACCOUNT_LABELS: Record<string, string> = {
-  initial_capital: "Vốn ban đầu",
-  leverage: "Đòn bẩy",
+  initial_capital: "Initial capital",
+  leverage: "Leverage",
   maintenance_ratio: "Maintenance ratio",
   contract_size: "Contract size",
-  alloc_per_trade: "Phân bổ mỗi lệnh",
-  canonical_one_way_fee_rate: "Phí một chiều",
+  alloc_per_trade: "Allocation per trade",
+  canonical_one_way_fee_rate: "One-way fee",
   funding_rate: "Funding rate",
 };
 
@@ -272,37 +272,37 @@ export function ConfigWorkspace() {
       : ["15m", "1h", "4h", "1d"];
 
   const strategyError = !selected
-    ? "Chưa chọn strategy."
+    ? "No strategy selected."
     : (selected.blockedReason ?? null);
 
   const dataError =
     !dataset
-      ? "Chưa có dataset nào khả dụng."
+      ? "No dataset is available."
       : dataset.availability !== "available"
-        ? (dataset.unavailable_reason ?? "Dữ liệu historical cho backtest không khả dụng.")
+        ? (dataset.unavailable_reason ?? "Historical data for backtesting is unavailable.")
         : !symbol
-          ? "Cần nhập symbol."
+          ? "A symbol is required."
           : !timeframe
-            ? "Cần chọn timeframe."
+            ? "A timeframe is required."
             : selected && selected.timeframes.length && !selected.timeframes.includes(timeframe)
-              ? `Strategy chỉ khai báo timeframe ${selected.timeframes.join(", ")}.`
+              ? `The strategy declares only ${selected.timeframes.join(", ")}.`
               : null;
 
   const windowError = useMemo(() => {
     if (protocol === "three_window_decay") {
-      if (windows.isEnd !== windows.oosStart) return "OOS phải bắt đầu đúng nơi IS kết thúc.";
-      if (windows.oosEnd !== windows.holdoutStart) return "Holdout phải bắt đầu đúng nơi OOS kết thúc.";
+      if (windows.isEnd !== windows.oosStart) return "OOS must begin exactly where IS ends.";
+      if (windows.oosEnd !== windows.holdoutStart) return "Holdout must begin exactly where OOS ends.";
       if (windows.isStart >= windows.isEnd || windows.oosStart >= windows.oosEnd) {
-        return "Mọi window phải có độ dài dương.";
+        return "Every window must have a positive length.";
       }
-      if (!windows.holdoutEnd) return "Cần holdout end-exclusive cho truy vấn historical.";
+      if (!windows.holdoutEnd) return "A holdout end-exclusive is required for the historical query.";
       return null;
     }
     if (protocol === "advanced_walk_forward") {
       if (!advanced.dataStart || !advanced.dataEnd) {
-        return "Cần analysis start và end-exclusive cho truy vấn historical.";
+        return "An analysis start and end-exclusive are required for the historical query.";
       }
-      if (advanced.dataStart >= advanced.dataEnd) return "Analysis end phải sau analysis start.";
+      if (advanced.dataStart >= advanced.dataEnd) return "Analysis end must be after analysis start.";
       return null;
     }
     return null;
@@ -318,12 +318,12 @@ export function ConfigWorkspace() {
   );
   const parameterError =
     validation.errors.length > 0
-      ? `${validation.errors.length} tham số nằm ngoài parameter space đã công bố.`
+      ? `${validation.errors.length} parameters fall outside the declared parameter space.`
       : ceilingError;
 
   const trialsError =
     limits.maxTrials !== null && trials > limits.maxTrials
-      ? `Engine release công bố trần ${limits.maxTrials} trial.`
+      ? `The engine release publishes a ceiling of ${limits.maxTrials} trials.`
       : null;
 
   /*
@@ -337,7 +337,7 @@ export function ConfigWorkspace() {
    */
   const seedError =
     selected?.seedRequired === true && seed === null
-      ? "Strategy khai báo determinism.seed_required — cần random seed cố định."
+      ? "The strategy declares determinism.seed_required — a fixed random seed is required."
       : null;
 
   const blockingError =
@@ -421,16 +421,16 @@ export function ConfigWorkspace() {
 
   const steps: StepDefinition[] = [
     { id: "strategy", label: "Strategy", error: strategyError, complete: !strategyError },
-    { id: "data", label: "Dữ liệu", error: dataError, complete: !dataError },
+    { id: "data", label: "Data", error: dataError, complete: !dataError },
     { id: "windows", label: "Walk-forward", error: windowError, complete: !windowError },
     {
       id: "parameters",
-      label: "Tham số",
+      label: "Parameters",
       error: parameterError,
       complete: !parameterError && Object.keys(searchSpace).length > 0,
     },
-    { id: "optimization", label: "Tối ưu", error: trialsError, complete: !trialsError },
-    { id: "review", label: "Kiểm tra & chạy", complete: preflightValid },
+    { id: "optimization", label: "Optimization", error: trialsError, complete: !trialsError },
+    { id: "review", label: "Review & run", complete: preflightValid },
   ].map((definition) => ({ ...definition, visited: visited.has(definition.id as StepId) }));
 
   /* --- Loading / error --------------------------------------------------- */
@@ -438,12 +438,12 @@ export function ConfigWorkspace() {
   const bootstrapping = strategies.isLoading || datasets.isLoading || options.isLoading;
   const bootstrapFailed = strategies.isError || datasets.isError || options.isError;
 
-  if (bootstrapping) return <StateView kind="loading" message="Đang tải contract cấu hình…" />;
+  if (bootstrapping) return <StateView kind="loading" message="Loading the configuration contract…" />;
   if (bootstrapFailed) {
     return (
       <StateView
         kind="failed"
-        message="Không tải được contract cấu hình. Portal không dựng form tạm để tránh gửi run sai."
+        message="The configuration contract could not be loaded. The Portal builds no stand-in form, so no run can be submitted against guesses."
         onRetry={() => {
           void strategies.refetch();
           void datasets.refetch();
@@ -457,7 +457,7 @@ export function ConfigWorkspace() {
     <div className="space-y-4">
       <SectionHeading
         title="New Run"
-        description="Cấu hình một backtest walk-forward. Mỗi bước được kiểm tra riêng trước khi gửi preflight."
+        description="Configure a walk-forward backtest. Each step is validated on its own before preflight runs."
       />
 
       <Stepper steps={steps} activeId={step} onSelect={(id) => openStep(id as StepId)} />
@@ -465,11 +465,11 @@ export function ConfigWorkspace() {
       <div className="run-config-grid">
         <div className="min-w-0 space-y-4">
           {step === "strategy" ? (
-            <Panel title="Chọn strategy">
+            <Panel title="Strategy & protocol">
               {capabilities.isError ? (
-                <Callout tone="warning" title="Capability manifest không đọc được">
-                  Không xác nhận được engine release nào đang certify endpoint nào, nên danh sách
-                  protocol bên dưới lấy nguyên từ config options thay vì lọc theo capability.
+                <Callout tone="warning" title="Capability manifest unreadable">
+                  Which engine release certifies which endpoint could not be confirmed, so the protocol
+                  list below comes straight from the config options rather than being filtered by capability.
                 </Callout>
               ) : null}
               <StrategyPicker
@@ -491,7 +491,7 @@ export function ConfigWorkspace() {
           ) : null}
 
           {step === "data" ? (
-            <Panel title="Dữ liệu thị trường">
+            <Panel title="Market data">
               {/*
                 * What the selected strategy declares it needs.
                 *
@@ -505,42 +505,42 @@ export function ConfigWorkspace() {
               {selected ? (
                 <dl className="strategy-requirements" data-testid="strategy-requirements">
                   <div>
-                    <dt className="label">Cột bắt buộc</dt>
+                    <dt className="label">Required columns</dt>
                     <dd className="mono">
                       {selected.requiredColumns.length
                         ? selected.requiredColumns.join(", ")
-                        : "strategy chưa khai báo"}
+                        : "not declared by the strategy"}
                     </dd>
                   </div>
                   <div>
-                    <dt className="label">Timeframe khai báo</dt>
+                    <dt className="label">Declared timeframes</dt>
                     <dd className="mono">
                       {selected.timeframes.length
                         ? selected.timeframes.join(", ")
-                        : "strategy chưa khai báo"}
+                        : "not declared by the strategy"}
                     </dd>
                   </div>
                   <div>
                     <dt className="label">Warmup bars</dt>
                     <dd className="mono">
-                      {selected.warmupBars ?? "strategy chưa khai báo"}
+                      {selected.warmupBars ?? "not declared by the strategy"}
                     </dd>
                   </div>
                   <div>
                     <dt className="label">Seed</dt>
                     <dd className="mono">
                       {selected.seedRequired === true
-                        ? "bắt buộc (determinism.seed_required)"
+                        ? "required (determinism.seed_required)"
                         : selected.seedRequired === false
-                          ? "không bắt buộc"
-                          : "strategy chưa khai báo"}
+                          ? "optional"
+                          : "not declared by the strategy"}
                     </dd>
                   </div>
                   <div>
-                    <dt className="label">Kiểm tra ở đâu</dt>
+                    <dt className="label">Where it is checked</dt>
                     <dd>
-                      Timeframe và seed được kiểm ngay tại form. Cột bắt buộc và warmup do
-                      server kiểm ở preflight, và bước Kiểm tra hiển thị đúng gate nào fail.
+                      Timeframe and seed are checked in this form. Required columns and warmup are checked by
+                      the server at preflight, and the Review step names whichever gate failed.
                     </dd>
                   </div>
                 </dl>
@@ -555,7 +555,7 @@ export function ConfigWorkspace() {
                       label: `${item.dataset_id} · ${item.availability}`,
                     }))}
                     onChange={setDatasetId}
-                    hint="Nguồn historical — chỉ dùng cho backtest/research. Realtime và paper là service riêng."
+                    hint="Historical source — backtest only. Realtime and paper are separate services."
                   />
                 </FieldSpan>
                 <TextField
@@ -570,7 +570,7 @@ export function ConfigWorkspace() {
                   value={timeframe}
                   options={timeframes}
                   onChange={setTimeframe}
-                  hint={selected?.timeframes.length ? `Strategy khai báo: ${selected.timeframes.join(", ")}` : undefined}
+                  hint={selected?.timeframes.length ? `Declared by the strategy: ${selected.timeframes.join(", ")}` : undefined}
                   required
                 />
                 <FieldSpan>
@@ -584,8 +584,8 @@ export function ConfigWorkspace() {
                     onChange={setProtocol}
                     hint={
                       certified.length
-                        ? `Chỉ hiện protocol mà engine release đang cài đã certify (${certified.length}).`
-                        : "Capability manifest chưa xác nhận — đang hiện toàn bộ protocol từ config options."
+                        ? `Showing only the protocols the installed engine release certifies (${certified.length}).`
+                        : "The capability manifest is unconfirmed — showing every protocol from the config options."
                     }
                   />
                 </FieldSpan>
@@ -595,7 +595,7 @@ export function ConfigWorkspace() {
           ) : null}
 
           {step === "windows" ? (
-            <Panel title={protocol === "three_window_decay" ? "Ba cửa sổ" : "Fold walk-forward"}>
+            <Panel title={protocol === "three_window_decay" ? "Three windows" : "Walk-forward folds"}>
               {protocol === "three_window_decay" ? (
                 <ThreeWindowEditor windows={windows} onChange={setWindows} />
               ) : (
@@ -612,13 +612,13 @@ export function ConfigWorkspace() {
                   />
                   <FieldSpan>
                     <TextField
-                      label="Split mode / OOS đầu tiên"
+                      label="Split mode / first OOS"
                       value={advanced.splitMode}
                       onChange={(value) => setAdvanced({ ...advanced, splitMode: value })}
                     />
                   </FieldSpan>
                   <SelectField
-                    label="Tần suất"
+                    label="Frequency"
                     value={advanced.splitFrequency}
                     options={options.data?.split_frequencies ?? []}
                     onChange={(value) => setAdvanced({ ...advanced, splitFrequency: value })}
@@ -678,7 +678,7 @@ export function ConfigWorkspace() {
 
           {step === "optimization" ? (
             <>
-              <Panel title="Tối ưu">
+              <Panel title="Optimization">
                 <FieldGrid>
                   {protocol === "advanced_walk_forward" ? (
                     <>
@@ -703,7 +703,7 @@ export function ConfigWorkspace() {
                     step={1}
                     max={limits.maxTrials ?? undefined}
                     error={trialsError}
-                    hint={limits.maxTrials !== null ? `Trần công bố: ${limits.maxTrials}` : undefined}
+                    hint={limits.maxTrials !== null ? `Published ceiling: ${limits.maxTrials}` : undefined}
                     onChange={(value) => setTrials(value ?? 1)}
                   />
                   <NumberField label="Early stopping" value={earlyStopping} min={1} step={1} onChange={setEarlyStopping} />
@@ -711,10 +711,10 @@ export function ConfigWorkspace() {
                     label="Random seed"
                     hint={
                       selected?.seedRequired === true
-                        ? "Strategy khai báo seed_required — bắt buộc."
+                        ? "The strategy declares seed_required — this is mandatory."
                         : selected?.seedRequired === false
-                          ? "Strategy khai báo seed không bắt buộc."
-                          : "Strategy chưa khai báo determinism, nên Portal không kết luận seed có bắt buộc."
+                          ? "The strategy declares the seed as optional."
+                          : "The strategy declares no determinism block, so the Portal draws no conclusion about the seed."
                     }
                     error={seedError ?? undefined}
                     value={seed}
@@ -726,15 +726,15 @@ export function ConfigWorkspace() {
                     value={String(protocol === "three_window_decay" ? "robust_decay" : optimization.candidate_selection_metric)}
                     options={options.data?.candidate_selection_metrics ?? []}
                     disabled={protocol === "three_window_decay"}
-                    disabledReason="Three-Window Decay khoá metric ở robust_decay."
+                    disabledReason="Three-Window Decay locks the metric to robust_decay."
                     onChange={(value) => setOptimization((c) => ({ ...c, candidate_selection_metric: value }))}
                   />
                   <NumberField
-                    label="Trading days / năm"
+                    label="Trading days / year"
                     value={Number(optimization.scoring_trading_days)}
                     min={1}
                     step={1}
-                    hint="Lịch annualization cho Sharpe/Sortino: 365 crypto, 252 equities. Ghi vào config/request.json."
+                    hint="Annualization calendar for Sharpe/Sortino: 365 for crypto, 252 for equities. Written into config/request.json."
                     onChange={(value) => setOptimization((c) => ({ ...c, scoring_trading_days: value ?? 365 }))}
                   />
                 </FieldGrid>
@@ -781,7 +781,7 @@ export function ConfigWorkspace() {
                 />
               </Collapsible>
 
-              <Collapsible title="Tài khoản & khớp lệnh">
+              <Collapsible title="Account & execution">
                 <FieldGrid>
                   {(
                     [
@@ -832,10 +832,10 @@ export function ConfigWorkspace() {
           {step === "review" ? (
             <Panel title="Preflight TermSheet">
               {validatedKey && validatedKey !== payloadKey ? (
-                <Callout tone="warning">Cấu hình đã đổi sau lần validate gần nhất — cần validate lại.</Callout>
+                <Callout tone="warning">The configuration changed after the last validation — validate again.</Callout>
               ) : null}
               {blockingError ? <Callout tone="danger">{blockingError}</Callout> : null}
-              {preflight.isPending ? <StateView kind="loading" message="Đang validate market tape và run contract…" /> : null}
+              {preflight.isPending ? <StateView kind="loading" message="Validating the market tape and the run contract…" /> : null}
               {preflight.isError ? (
                 <StateView
                   kind="failed"
@@ -868,7 +868,7 @@ export function ConfigWorkspace() {
                   />
                 </div>
               ) : (
-                <p className="field-hint">Validate cấu hình hiện tại trước khi gửi run.</p>
+                <p className="field-hint">Validate the current configuration before submitting a run.</p>
               )}
 
               <div className="mt-4">
@@ -894,7 +894,7 @@ export function ConfigWorkspace() {
                   onClick={handleRun}
                 >
                   <Play size={13} />
-                  {createRun.isPending ? "Đang gửi…" : preflight.isPending ? "Đang validate…" : "Chạy backtest"}
+                  {createRun.isPending ? "Submitting…" : preflight.isPending ? "Validating…" : "Run backtest"}
                 </button>
                 {createRun.isError ? <span className="mono text-[12px] text-bad">{createRun.error.message}</span> : null}
               </Toolbar>
@@ -903,7 +903,7 @@ export function ConfigWorkspace() {
         </div>
 
         <aside className="run-config-aside">
-          <Panel title="Strategy đang chọn">
+          <Panel title="Selected strategy">
             <StrategyDetail entry={selected} />
           </Panel>
 

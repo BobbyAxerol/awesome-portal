@@ -41,8 +41,8 @@ function StatusCell({ user }: { user: AdminUser }) {
   return (
     <span className="admin-status" data-disabled={disabled}>
       <span className="mono">{user.status}</span>
-      {locked ? <span className="admin-flag">locked tới {user.lockedUntil}</span> : null}
-      {user.mustChangePassword ? <span className="admin-flag">phải đổi password</span> : null}
+      {locked ? <span className="admin-flag">locked until {user.lockedUntil}</span> : null}
+      {user.mustChangePassword ? <span className="admin-flag">must change password</span> : null}
     </span>
   );
 }
@@ -65,7 +65,7 @@ export function UsersAccess() {
   const rows = users.data ?? [];
 
   const report = (error: unknown) => {
-    setFailure(error instanceof Error ? error.message : "Không thực hiện được yêu cầu.");
+    setFailure(error instanceof Error ? error.message : "The request could not be completed.");
     setRequestId(error instanceof AuthRequestError ? error.requestId : null);
   };
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
@@ -105,7 +105,7 @@ export function UsersAccess() {
         <SectionHeading title="Users & Access" />
         <StateView
           kind="denied"
-          message="Chỉ ADMIN xem được màn này. Nếu bạn cần quyền, liên hệ owner — Portal không tự nâng quyền."
+          message="This screen is ADMIN-only. If you need access, ask the owner — the Portal never elevates a role on its own."
         />
       </div>
     );
@@ -115,35 +115,35 @@ export function UsersAccess() {
     <div className="space-y-4">
       <SectionHeading
         title="Users & Access"
-        description="Quản lý account, role và phiên đăng nhập. Mọi hành động ở đây đổi quyền truy cập thật."
+        description="Manage accounts, roles and sessions. Every action here changes real access."
       />
 
       {issuedToken ? (
-        <Callout tone="warning" title={`Credential một lần cho ${issuedToken.username}`}>
+        <Callout tone="warning" title={`One-time credential for ${issuedToken.username}`}>
           <p className="mono admin-token">{issuedToken.token}</p>
           <p>
-            Chỉ hiện <strong>một lần</strong> và không được lưu ở đâu. Gửi cho người dùng qua kênh
-            an toàn; họ sẽ phải đặt password riêng ở lần đăng nhập đầu.
+            Shown <strong>once</strong> and stored nowhere. Send it over a secure channel; they set their
+            own password on first sign-in.
           </p>
           <button type="button" className="btn-ghost" onClick={() => setIssuedToken(null)}>
-            Đã lưu, ẩn đi
+            Saved — hide it
           </button>
         </Callout>
       ) : null}
 
       {failure ? (
-        <Callout tone="danger" title="Không thực hiện được">
+        <Callout tone="danger" title="Could not complete">
           <p>{failure}</p>
           {requestId ? <p className="mono field-hint">request_id {requestId}</p> : null}
         </Callout>
       ) : null}
 
       {users.isLoading ? (
-        <StateView kind="loading" message="Đang tải danh sách user…" />
+        <StateView kind="loading" message="Loading accounts…" />
       ) : users.isError ? (
         <StateView
           kind="failed"
-          message={`Không đọc được /api/admin/users. ${
+          message={`Could not read /api/admin/users. ${
             users.error instanceof Error ? users.error.message : ""
           }`}
           onRetry={() => void users.refetch()}
@@ -155,11 +155,11 @@ export function UsersAccess() {
               <thead>
                 <tr>
                   <th>Username</th>
-                  <th>Tên</th>
+                  <th>Name</th>
                   <th>Role</th>
                   <th>Status</th>
-                  <th>Tạo lúc</th>
-                  <th aria-label="Hành động" />
+                  <th>Created</th>
+                  <th aria-label="Actions" />
                 </tr>
               </thead>
               <tbody>
@@ -176,13 +176,13 @@ export function UsersAccess() {
                       <td className="mono">
                         {user.username}
                         {/* The one mistake with no undo from this screen. */}
-                        {isSelf ? <span className="admin-self">bạn</span> : null}
+                        {isSelf ? <span className="admin-self">you</span> : null}
                       </td>
                       <td>{user.displayName}</td>
                       <td>
                         <select
                           className="input select-control admin-role"
-                          aria-label={`Role của ${user.username}`}
+                          aria-label={`Role for ${user.username}`}
                           value={user.role}
                           disabled={busy || disabled}
                           onChange={(event) => {
@@ -191,9 +191,9 @@ export function UsersAccess() {
                             clear();
                             if (
                               !window.confirm(
-                                `Đổi role của ${user.username} thành ${role}?\n\n` +
-                                  `Mọi phiên đăng nhập hiện tại của họ sẽ bị thu hồi ngay.` +
-                                  (isSelf ? `\n\nĐây là chính bạn — bạn sẽ phải đăng nhập lại.` : ""),
+                                `Change ${user.username} to ${role}?\n\n` +
+                                  `Every session they currently hold is revoked immediately.` +
+                                  (isSelf ? `\n\nThis is your own account — you will have to sign in again.` : ""),
                               )
                             ) {
                               // Put the select back: it is a controlled value, so
@@ -222,8 +222,8 @@ export function UsersAccess() {
                             clear();
                             if (
                               window.confirm(
-                                `Cấp credential một lần mới cho ${user.username}?\n\n` +
-                                  `Credential cũ sẽ không dùng được nữa và họ phải đặt password mới.`,
+                                `Issue a new one-time credential for ${user.username}?\n\n` +
+                                  `Their current credential stops working and they must set a new password.`,
                               )
                             ) {
                               resetMutation.mutate(user);
@@ -241,8 +241,8 @@ export function UsersAccess() {
                             clear();
                             if (
                               window.confirm(
-                                `Thu hồi mọi phiên của ${user.username}?\n\n` +
-                                  `Họ sẽ bị đăng xuất khỏi mọi thiết bị ngay lập tức.`,
+                                `Revoke every session for ${user.username}?\n\n` +
+                                  `They are signed out of every device immediately.`,
                               )
                             ) {
                               revokeMutation.mutate(user.userId);
@@ -266,9 +266,9 @@ export function UsersAccess() {
                             clear();
                             if (
                               window.confirm(
-                                `Vô hiệu hoá account ${user.username}?\n\n` +
-                                  `Họ sẽ mất quyền truy cập Portal và mọi phiên bị thu hồi.` +
-                                  (isSelf ? `\n\nĐây là chính bạn.` : ""),
+                                `Disable the account ${user.username}?\n\n` +
+                                  `They lose access to the Portal and every session is revoked.` +
+                                  (isSelf ? `\n\nThis is your own account.` : ""),
                               )
                             ) {
                               disableMutation.mutate(user.userId);
@@ -290,9 +290,9 @@ export function UsersAccess() {
       )}
 
       <Callout tone="muted">
-        Portal không tạo account mới ở màn này trong v1.1 — provisioning đi qua
-        <span className="mono"> deploy/control-api/bootstrap-users.yaml</span> để một account
-        không thể xuất hiện mà không có bản ghi trong repo.
+        The Portal does not create accounts on this screen in v1.1 — provisioning goes through
+        <span className="mono"> deploy/control-api/bootstrap-users.yaml</span>, so no account can
+        appear without a record in the repository.
       </Callout>
     </div>
   );

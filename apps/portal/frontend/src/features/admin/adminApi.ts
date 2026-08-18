@@ -75,7 +75,7 @@ async function failure(response: Response): Promise<AuthRequestError> {
   return new AuthRequestError(
     response.status,
     body?.error?.code ?? "ADMIN_REQUEST_FAILED",
-    body?.error?.message ?? "Không thực hiện được yêu cầu.",
+    body?.error?.message ?? "The request could not be completed.",
     body?.error?.request_id ?? response.headers.get("x-request-id"),
   );
 }
@@ -88,7 +88,7 @@ async function send(path: string, method: "POST" | "PATCH", payload?: unknown): 
     throw new AuthRequestError(
       403,
       "CSRF_REQUIRED",
-      "Thiếu CSRF token của phiên. Hãy tải lại trang hoặc đăng nhập lại.",
+      "The session CSRF token is missing. Reload the page, or sign in again.",
       null,
     );
   }

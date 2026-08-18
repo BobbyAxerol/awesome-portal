@@ -21,7 +21,7 @@ import { ACCESS_LOGOUT_PATH, AuthRequestError, login, type AccessIdentity } from
 
 /** Product capabilities, from the wireframe. Not the signed-in user's rights. */
 const CAPABILITIES: { label: string; available: boolean }[] = [
-  { label: "QuantBT Research", available: true },
+  { label: "QuantBT Backtest", available: true },
   { label: "Roadmap / Task Board", available: true },
   { label: "Các module khác đang commissioned", available: false },
 ];

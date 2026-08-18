@@ -82,8 +82,8 @@ describe("populated inbox", () => {
   it("never says a quarantined alpha can run", async () => {
     mount(() => json([QUARANTINED]));
     const row = await screen.findByTestId("import-vb-quarantined-alpha-0.2.0");
-    expect(within(row).getByText(/chưa chạy được/)).toBeTruthy();
-    expect(screen.getByText(/Quarantine là fail-closed/)).toBeTruthy();
+    expect(within(row).getByText(/cannot run until/)).toBeTruthy();
+    expect(screen.getByText(/Quarantine is fail-closed/)).toBeTruthy();
   });
 
   it("counts what it read", async () => {
@@ -99,14 +99,14 @@ describe("populated inbox", () => {
       expect(screen.getByText(label)).toBeTruthy();
     }
     // One marker per non-persisted state, and the prose must not repeat it.
-    expect(screen.getAllByText(/không ghi vào inbox/).length).toBe(3);
+    expect(screen.getAllByText(/not written to the inbox/).length).toBe(3);
   });
 });
 
 describe("empty vs failed", () => {
   it("says an empty inbox is really empty", async () => {
     mount(() => json([]));
-    expect(await screen.findByText(/inbox rỗng thật, không phải lỗi đọc/)).toBeTruthy();
+    expect(await screen.findByText(/genuinely empty inbox, not a read failure/)).toBeTruthy();
   });
 
   it("does not substitute an empty inbox when the read fails", async () => {
@@ -114,10 +114,10 @@ describe("empty vs failed", () => {
     // The query retries once before giving up, so the error state legitimately
     // takes longer than the default findBy window.
     await waitFor(
-      () => expect(screen.getByText(/Không đọc được \/api\/v1\/alphas\/imports/)).toBeTruthy(),
+      () => expect(screen.getByText(/\/api\/v1\/alphas\/imports could not be read/)).toBeTruthy(),
       { timeout: 5000 },
     );
-    expect(screen.queryByText(/inbox rỗng thật/)).toBeNull();
+    expect(screen.queryByText(/genuinely empty inbox/)).toBeNull();
     expect(screen.queryByTestId("import-summary")).toBeNull();
   });
 });
@@ -139,7 +139,7 @@ describe("digest verification", () => {
     const row = await screen.findByTestId("import-vb-quarantined-alpha-0.2.0");
     fireEvent.click(within(row).getByRole("button", { name: "Verify digest" }));
 
-    await waitFor(() => expect(within(row).getByText(/hai digest khớp/)).toBeTruthy());
+    await waitFor(() => expect(within(row).getByText(/the digests match/)).toBeTruthy());
     expect(within(row).getByText("registered")).toBeTruthy();
     expect(within(row).getByText("computed")).toBeTruthy();
   });
@@ -156,9 +156,9 @@ describe("digest verification", () => {
     const row = await screen.findByTestId("import-vb-quarantined-alpha-0.2.0");
     fireEvent.click(within(row).getByRole("button", { name: "Verify digest" }));
     await waitFor(() =>
-      expect(within(row).getByText(/không verify được/)).toBeTruthy(),
+      expect(within(row).getByText(/cannot be verified/)).toBeTruthy(),
     );
-    expect(within(row).queryByText(/hai digest khớp/)).toBeNull();
+    expect(within(row).queryByText(/the digests match/)).toBeNull();
   });
 });
 
@@ -166,9 +166,9 @@ describe("no browser upload", () => {
   it("offers no file input and says why", async () => {
     const { container } = mount(() => json([QUARANTINED]));
     await screen.findByTestId("import-summary");
-    // §5: "không chấp nhận import trực tiếp file từ browser".
+    // §5: direct file upload from the browser is not accepted.
     expect(container.querySelector('input[type="file"]')).toBeNull();
-    expect(screen.getByText(/không chấp nhận import trực tiếp file từ browser/)).toBeTruthy();
+    expect(screen.getByText(/direct file upload from the browser is not\s+accepted/)).toBeTruthy();
   });
 });
 
@@ -203,7 +203,7 @@ describe("source-reference submit (R11)", () => {
     });
     await screen.findByTestId("import-request-form");
     fill();
-    fireEvent.click(screen.getByRole("button", { name: /Gửi import request/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Submit import request/ }));
 
     await waitFor(() => expect(calls.length).toBe(1));
     const body = JSON.parse(String(calls[0].body));
@@ -238,13 +238,13 @@ describe("source-reference submit (R11)", () => {
 
     fill();
     fireEvent.change(screen.getByLabelText(/expected_digest/), { target: { value: "sha256:nope" } });
-    expect((screen.getByRole("button", { name: /Gửi import request/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: /Submit import request/ }) as HTMLButtonElement).disabled).toBe(true);
 
     fireEvent.change(screen.getByLabelText(/expected_digest/), { target: { value: DIGEST } });
     fireEvent.change(screen.getByLabelText(/artifact_relpath/), {
       target: { value: "../etc/passwd" },
     });
-    expect((screen.getByRole("button", { name: /Gửi import request/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: /Submit import request/ }) as HTMLButtonElement).disabled).toBe(true);
     expect(posts).toBe(0);
   });
 
@@ -252,16 +252,16 @@ describe("source-reference submit (R11)", () => {
     // Writes are ADMIN-only at the gateway; the input was fine.
     mount((url) =>
       url.endsWith("/alphas/import")
-        ? json({ error: { code: "FORBIDDEN", message: "Chỉ ADMIN được import." } }, 403)
+        ? json({ error: { code: "FORBIDDEN", message: "Only an ADMIN may import." } }, 403)
         : json([]),
     );
     await screen.findByTestId("import-request-form");
     fill();
-    fireEvent.click(screen.getByRole("button", { name: /Gửi import request/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Submit import request/ }));
 
-    await waitFor(() => expect(screen.getByText(/Không đủ quyền/)).toBeTruthy());
-    expect(screen.getByText(/Chỉ ADMIN được import/)).toBeTruthy();
-    expect(screen.queryByText(/Import bị từ chối/)).toBeNull();
+    await waitFor(() => expect(screen.getByText(/Not authorised/)).toBeTruthy());
+    expect(screen.getByText(/Only an ADMIN may import/)).toBeTruthy();
+    expect(screen.queryByText(/Import rejected/)).toBeNull();
   });
 
   it("shows a rejection with its request id", async () => {
@@ -281,12 +281,12 @@ describe("source-reference submit (R11)", () => {
     );
     await screen.findByTestId("import-request-form");
     fill();
-    fireEvent.click(screen.getByRole("button", { name: /Gửi import request/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Submit import request/ }));
 
-    await waitFor(() => expect(screen.getByText(/Import bị từ chối/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/Import rejected/)).toBeTruthy());
     expect(screen.getByText(/artifact digest mismatch/)).toBeTruthy();
     expect(screen.getByText(/req-77/)).toBeTruthy();
-    expect(screen.queryByText(/Không đủ quyền/)).toBeNull();
+    expect(screen.queryByText(/Not authorised/)).toBeNull();
   });
 
   it("says an accepted import still cannot run", async () => {
@@ -305,14 +305,14 @@ describe("source-reference submit (R11)", () => {
     );
     await screen.findByTestId("import-request-form");
     fill();
-    fireEvent.click(screen.getByRole("button", { name: /Gửi import request/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Submit import request/ }));
 
     // Accepted is not approved — that distinction IS the pipeline.
-    await waitFor(() => expect(screen.getByText(/Đã nhận vào quarantine/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/Accepted into quarantine/)).toBeTruthy());
     // Scoped to the success callout: the reference panel below repeats the same
     // sentence for the QUARANTINED state.
-    const callout = screen.getByText(/Đã nhận vào quarantine/).closest(".callout")!;
-    expect(within(callout as HTMLElement).getByText(/chưa chạy được cho tới khi/)).toBeTruthy();
+    const callout = screen.getByText(/Accepted into quarantine/).closest(".callout")!;
+    expect(within(callout as HTMLElement).getByText(/cannot run until the/)).toBeTruthy();
     expect(within(callout as HTMLElement).getByText("QUARANTINED")).toBeTruthy();
   });
 });

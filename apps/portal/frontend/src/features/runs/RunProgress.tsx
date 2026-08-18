@@ -148,7 +148,7 @@ export function RunProgress({ runId, onViewResults }: { runId: string; onViewRes
     : cancelled
       ? "Run cancelled"
       : completed
-        ? "Run hoàn thành — nhấn “Xem kết quả” để mở Overview."
+        ? "Run complete — open Overview with “View results”."
         : "";
 
   const protocol = data.protocol ?? "";
@@ -201,7 +201,7 @@ export function RunProgress({ runId, onViewResults }: { runId: string; onViewRes
             {completed && onViewResults ? (
               <button type="button" className="btn-primary" onClick={onViewResults}>
                 <Eye size={13} />
-                Xem kết quả
+                View results
               </button>
             ) : null}
           </div>
@@ -319,7 +319,7 @@ function ProgressStrip({
         </div>
         <span className="mono text-[12px] text-ink-faint">
           ETA <span className="font-semibold text-accent">{etaText}</span>{" "}
-          <span className="text-ink-faint/70">(ước tính)</span>
+          <span className="text-ink-faint/70">(estimate)</span>
         </span>
       </div>
 
@@ -351,7 +351,7 @@ function ProgressStrip({
         </div>
       )}
       <div className="mono mt-1.5 text-[10px] text-ink-faint">
-        {perFold ? `${totalStudies} folds · ${total} trials total (mỗi fold ${Math.round(total / totalStudies)})` : `${total} trials · 1 study`}
+        {perFold ? `${totalStudies} folds · ${total} trials total (${Math.round(total / totalStudies)} per fold)` : `${total} trials · 1 study`}
       </div>
     </div>
   );
@@ -654,7 +654,7 @@ function StageLog({
         ) : null}
 
         {!trials.length && !candidates.length && !["COMPLETED", "FAILED", "CANCELLED"].includes(status) ? (
-          <div style={{ color: C.faint }}>Structured records sẽ xuất hiện khi mỗi stage hoàn thành…</div>
+          <div style={{ color: C.faint }}>Structured records appear as each stage completes…</div>
         ) : null}
       </div>
     </div>

@@ -2,7 +2,7 @@
  * U02 exit-gate tests for the token layer.
  *
  * 1. No raw color literal may exist outside the two declared token files.
- *    This is the "không có raw color mới ngoài documented token/visualization
+ *    This is the "no new raw colour outside the documented token/visualization
  *    exception" gate from the Unified Plan U02 exit criteria.
  * 2. The canvas mirror in `tokens.ts` must equal what `tokens.css` declares,
  *    per theme. Without this the "documented exception" would be free to drift

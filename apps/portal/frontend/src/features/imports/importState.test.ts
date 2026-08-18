@@ -56,7 +56,7 @@ describe("state presentation", () => {
   it("never presents a quarantined import as good", () => {
     // `degraded`, not `available`: the digest matched, the alpha still cannot run.
     expect(importStatePresentation("QUARANTINED").tone).toBe("degraded");
-    expect(importStatePresentation("QUARANTINED").meaning).toMatch(/chưa chạy được/);
+    expect(importStatePresentation("QUARANTINED").meaning).toMatch(/cannot run until/);
   });
 
   it("marks a rejection as denied, not merely unavailable", () => {
@@ -76,7 +76,7 @@ describe("state presentation", () => {
   it("describes an unknown state without inventing a meaning", () => {
     const presentation = importStatePresentation("SOMETHING_NEW" as AlphaImportRecord["state"]);
     expect(presentation.label).toBe("SOMETHING_NEW");
-    expect(presentation.meaning).toMatch(/không suy diễn/);
+    expect(presentation.meaning).toMatch(/no meaning is inferred/);
   });
 });
 

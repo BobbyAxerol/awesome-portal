@@ -33,15 +33,15 @@ const L = {
 function FoldPlanProvenance({ plan }: { plan: RunFoldPlan }) {
   const producer = plan.producer;
   const parts = [
-    "nguồn config/fold_plan.json",
+    "source config/fold_plan.json",
     `protocol ${plan.protocol}`,
     `${plan.folds.length} fold`,
-    producer?.as_of ? `as-of ${producer.as_of}` : "as-of chưa công bố",
+    producer?.as_of ? `as-of ${producer.as_of}` : "as-of not published",
   ];
   if (producer?.source_artifact_digest) {
     parts.push(`analysis frame ${producer.source_artifact_digest.slice(0, 19)}…`);
   } else {
-    parts.push("digest analysis frame chưa công bố");
+    parts.push("analysis-frame digest not published");
   }
   return <div className="chart-provenance mono">{parts.join(" · ")}</div>;
 }

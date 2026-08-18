@@ -1,5 +1,5 @@
 /**
- * Research → Planning hand-off (U05 cross-link, v0.4 §P0.23).
+ * Backtest → Planning hand-off (U05 cross-link, v0.4 §P0.23).
  *
  * Closes the New Run flow: once a run has results, the analyst can carry it
  * into the governance surface that tracks the work.
@@ -23,12 +23,12 @@ export function PlanningLinkPanel({ runId }: { runId: string }) {
   const [copied, setCopied] = useState(false);
 
   const body = (() => {
-    if (links.isLoading) return <StateView kind="loading" message="Đang tải cross-link sidecar…" />;
+    if (links.isLoading) return <StateView kind="loading" message="Loading the cross-link sidecar…" />;
     if (links.isError || !links.data || !Array.isArray(links.data.entries)) {
       return (
         <StateView
           kind="unavailable"
-          message="Không đọc được cross-link sidecar, nên không hiển thị liên kết suy đoán."
+          message="The cross-link sidecar could not be read, so no inferred links are shown."
           onRetry={() => void links.refetch()}
         />
       );
@@ -38,8 +38,8 @@ export function PlanningLinkPanel({ runId }: { runId: string }) {
     if (!entry) {
       return (
         <Callout tone="muted">
-          Sidecar chưa map QuantBT Research sang epic/task nào. Chưa có authority mapping — Portal
-          không bịa link.
+          The sidecar maps QuantBT Backtest to no epic or task. With no authority mapping, the
+          Portal invents no link.
         </Callout>
       );
     }
@@ -52,18 +52,18 @@ export function PlanningLinkPanel({ runId }: { runId: string }) {
         <dl className="portal-details">
           <div className="portal-detail-row">
             <dt className="label">Roadmap epic</dt>
-            <dd className="mono">{entry.roadmap_epic_id ?? "chưa map"}</dd>
+            <dd className="mono">{entry.roadmap_epic_id ?? "not mapped"}</dd>
           </div>
           <div className="portal-detail-row">
             <dt className="label">Planning task</dt>
             <dd className="mono">
               {entry.planning_task_ids.length
                 ? entry.planning_task_ids.join(", ")
-                : "chưa có authority mapping"}
+                : "no authority mapping"}
             </dd>
           </div>
           <div className="portal-detail-row">
-            <dt className="label">Run tham chiếu</dt>
+            <dt className="label">Run reference</dt>
             <dd className="mono">{runId}</dd>
           </div>
         </dl>
@@ -86,29 +86,29 @@ export function PlanningLinkPanel({ runId }: { runId: string }) {
             }}
           >
             <Copy size={12} />
-            {copied ? "Đã copy" : "Copy tham chiếu run"}
+            {copied ? "Copied" : "Copy run reference"}
           </button>
 
           {planningRoute ? (
             <Link className="btn-primary" to={`${planningRoute}/board`}>
               <ExternalLink size={13} />
-              Mở Task Board
+              Open Task Board
             </Link>
           ) : (
-            <button type="button" className="btn-primary" disabled title="Registry chưa khai báo route Planning">
+            <button type="button" className="btn-primary" disabled title="The registry declares no Planning route">
               <ExternalLink size={13} />
-              Mở Task Board
+              Open Task Board
             </button>
           )}
         </Toolbar>
 
         <p className="field-hint">
-          Portal không ghi trực tiếp vào Planning từ màn này: task là authority riêng, nên liên kết
-          được dán vào task thay vì được tạo ngầm.
+          The Portal does not write into Planning from this screen: a task is its own authority, so the
+          link is pasted into the task rather than created behind the reader's back.
         </p>
       </>
     );
   })();
 
-  return <Panel title="Liên kết sang Planning">{body}</Panel>;
+  return <Panel title="Links into Planning">{body}</Panel>;
 }

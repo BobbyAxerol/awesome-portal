@@ -94,7 +94,7 @@ function NotFound() {
   return (
     <StateView
       kind="empty"
-      message="Route này không thuộc feature nào trong registry hiện tại."
+      message="No feature in the current registry claims this route."
     />
   );
 }
@@ -103,7 +103,7 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
   return (
     // The fallback reserves a screen-shaped footprint, so entering a split route
     // does not collapse the layout for the frame it takes to arrive.
-    <Suspense fallback={<ResultsSkeleton message="Đang tải module…" />}>
+    <Suspense fallback={<ResultsSkeleton message="Loading module…" />}>
       <Routes>
       {registry.features.map((feature) => {
         const module = MODULES[feature.id];

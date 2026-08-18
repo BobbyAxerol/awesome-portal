@@ -39,8 +39,8 @@ export interface CancelState {
  */
 function confirmCancel(runId: string): boolean {
   return window.confirm(
-    `Hủy run ${runId}?\n\nRun đang chạy sẽ bị dừng và không thể tiếp tục. ` +
-      `Artifact đã ghi vẫn được giữ.`,
+    `Cancel run ${runId}?\n\nA running job stops and cannot be resumed. ` +
+      `Artifacts already written are kept.`,
   );
 }
 
@@ -60,10 +60,10 @@ export function useCancelRun(status: string | null | undefined): CancelState {
     },
     onError: (failure: unknown) => {
       if (failure instanceof PortalApiError && failure.isForbidden) {
-        setDenied(failure.message || "Không đủ quyền hủy run. Mutation là ADMIN-only ở gateway.");
+        setDenied(failure.message || "Not authorised to cancel a run — mutations are ADMIN-only at the gateway.");
         return;
       }
-      setError(failure instanceof Error ? failure.message : "Không hủy được run.");
+      setError(failure instanceof Error ? failure.message : "The run could not be cancelled.");
       setRequestId(failure instanceof PortalApiError ? failure.requestId : null);
     },
   });

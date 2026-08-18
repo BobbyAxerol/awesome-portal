@@ -49,7 +49,7 @@ export function PortalShell() {
   );
 
   if (registry.isLoading) {
-    return <StateView kind="loading" message="Đang tải Feature Registry…" />;
+    return <StateView kind="loading" message="Loading the Feature Registry…" />;
   }
 
   if (registry.isError || !registry.data) {
@@ -61,8 +61,8 @@ export function PortalShell() {
           kind="failed"
           code={requestId ? `request_id ${requestId}` : undefined}
           message={
-            "Không tải được Feature Registry nên shell không thể dựng điều hướng. " +
-            "Portal không dựng nav tạm để tránh hiển thị sai capability. " +
+            "The Feature Registry could not be loaded, so the shell cannot build navigation. " +
+            "The Portal builds no stand-in nav, because a guessed one would misstate capability. " +
             (error instanceof Error ? error.message : "")
           }
           onRetry={() => void registry.refetch()}
@@ -100,7 +100,7 @@ export function PortalShell() {
                 if (event.target === event.currentTarget) setMobileNavOpen(false);
               }}
             >
-              <div className="portal-drawer" role="dialog" aria-modal="true" aria-label="Điều hướng">
+              <div className="portal-drawer" role="dialog" aria-modal="true" aria-label="Navigation">
                 <Sidebar
                   registry={registry.data}
                   options={navOptions}

@@ -3,8 +3,9 @@
  *
  * QuantBT computes every value; this file only says how to READ one —
  * definition, unit, precision and which direction is good (v0.6 §6.2, strategy
- * import contract §3: "Metric do QuantBT endpoint tính — Portal không tính
- * lại; UI hiển thị kèm definition/unit/segment/source/as_of").
+ * import contract §3: the QuantBT endpoint computes every metric — the Portal
+ * never recomputes one, and shows it with its definition, unit, segment, source
+ * and as-of.
  *
  * Nothing here derives, rescales or combines numbers.
  */
@@ -34,22 +35,22 @@ export interface MetricDefinition {
 const DEFINITIONS: MetricDefinition[] = [
   {
     key: "final_equity",
-    label: "Equity cuối kỳ",
-    definition: "Giá trị tài khoản tại bar cuối cùng của segment, sau phí và funding.",
+    label: "Final equity",
+    definition: "Account value at the segment's last bar, after fees and funding.",
     unit: "currency",
     direction: "higher",
   },
   {
     key: "initial_capital",
-    label: "Vốn ban đầu",
-    definition: "Vốn cấp cho tài khoản khi segment bắt đầu. Mỗi segment ba-cửa-sổ dùng tài khoản mới.",
+    label: "Initial capital",
+    definition: "Capital the account starts the segment with. Each three-window segment opens a fresh account.",
     unit: "currency",
     direction: "none",
   },
   {
     key: "total_return_pct",
-    label: "Tổng lợi nhuận",
-    definition: "Thay đổi equity từ đầu đến cuối segment, tính theo phần trăm vốn ban đầu.",
+    label: "Total return",
+    definition: "Change in equity across the segment, as a percentage of initial capital.",
     unit: "percent",
     direction: "higher",
     toneBasis: "sign",
@@ -57,7 +58,7 @@ const DEFINITIONS: MetricDefinition[] = [
   {
     key: "cagr_pct",
     label: "CAGR",
-    definition: "Tốc độ tăng trưởng kép hằng năm, quy đổi theo lịch annualization đã ghi trong config.",
+    definition: "Compound annual growth rate, annualized on the calendar recorded in the run config.",
     unit: "percent",
     direction: "higher",
     annualized: true,
@@ -66,7 +67,7 @@ const DEFINITIONS: MetricDefinition[] = [
   {
     key: "sharpe",
     label: "Sharpe",
-    definition: "Lợi nhuận vượt trội trên một đơn vị độ lệch chuẩn, annualized theo cùng lịch.",
+    definition: "Excess return per unit of standard deviation, annualized on the same calendar.",
     unit: "ratio",
     direction: "higher",
     annualized: true,
@@ -75,7 +76,7 @@ const DEFINITIONS: MetricDefinition[] = [
   {
     key: "sortino",
     label: "Sortino",
-    definition: "Như Sharpe nhưng chỉ phạt biến động giảm, nên bỏ qua biến động tăng.",
+    definition: "Sharpe, but penalising only downside deviation — upside volatility is ignored.",
     unit: "ratio",
     direction: "higher",
     annualized: true,
@@ -84,7 +85,7 @@ const DEFINITIONS: MetricDefinition[] = [
   {
     key: "calmar",
     label: "Calmar",
-    definition: "CAGR chia cho max drawdown — lợi nhuận trên mỗi đơn vị sụt giảm sâu nhất.",
+    definition: "CAGR divided by max drawdown — return per unit of deepest decline.",
     unit: "ratio",
     direction: "higher",
     annualized: true,
@@ -93,29 +94,29 @@ const DEFINITIONS: MetricDefinition[] = [
   {
     key: "max_drawdown_pct",
     label: "Max drawdown",
-    definition: "Mức sụt giảm sâu nhất từ đỉnh equity trước đó trong segment.",
+    definition: "Deepest fall from a prior equity peak within the segment.",
     unit: "percent",
     direction: "lower",
   },
   {
     key: "profit_factor",
     label: "Profit factor",
-    definition: "Tổng lãi gộp chia tổng lỗ gộp. Dưới 1 nghĩa là lỗ ròng.",
+    definition: "Gross profit divided by gross loss. Below 1 means a net loss.",
     unit: "ratio",
     direction: "higher",
     toneBasis: "adverse-below-one",
   },
   {
     key: "num_trades",
-    label: "Số lệnh",
-    definition: "Số lệnh đã đóng trong segment. Mẫu quá nhỏ làm mọi tỉ số kém tin cậy.",
+    label: "Trades",
+    definition: "Trades closed within the segment. A small sample makes every ratio unreliable.",
     unit: "count",
     direction: "none",
   },
   {
     key: "win_rate_pct",
-    label: "Tỉ lệ thắng",
-    definition: "Phần trăm lệnh đóng có lãi. Không phản ánh độ lớn lãi/lỗ.",
+    label: "Win rate",
+    definition: "Share of closed trades that were profitable. Says nothing about the size of wins or losses.",
     unit: "percent",
     direction: "none",
   },
@@ -135,7 +136,7 @@ export function metricDefinition(key: string): MetricDefinition {
     BY_KEY.get(key) ?? {
       key,
       label: key.replace(/_/g, " "),
-      definition: "Chưa có định nghĩa curated cho metric này trong Portal.",
+      definition: "The Portal carries no curated definition for this metric yet.",
       unit: key.endsWith("_pct") ? "percent" : key.startsWith("num_") ? "count" : "ratio",
       direction: "none",
     }

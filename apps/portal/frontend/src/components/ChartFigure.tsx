@@ -53,19 +53,19 @@ export interface ChartFigureProps {
  *
  * Same fields, same wording, now as label/value pairs on a micro-grid: the reader
  * can find "as-of" without parsing the sentence, and a missing field still states
- * itself ("as-of chưa công bố") instead of vanishing.
+ * itself ("as-of not published") instead of vanishing.
  */
 function ProvenanceLine({ provenance }: { provenance: ChartProvenance }) {
   const fields: { label: string; value: string; wide?: boolean }[] = [
-    { label: "nguồn", value: provenance.source, wide: true },
+    { label: "source", value: provenance.source, wide: true },
   ];
   if (provenance.segment) fields.push({ label: "segment", value: provenance.segment });
-  if (provenance.units) fields.push({ label: "đơn vị", value: provenance.units });
+  if (provenance.units) fields.push({ label: "units", value: provenance.units });
   fields.push({ label: "timezone", value: provenance.timezone ?? "UTC" });
-  fields.push({ label: "as-of", value: provenance.asOf ?? "chưa công bố" });
+  fields.push({ label: "as-of", value: provenance.asOf ?? "not published" });
   if (provenance.sourceRows != null && provenance.returnedRows != null) {
     fields.push({
-      label: "điểm",
+      label: "points",
       value: `${provenance.returnedRows}/${provenance.sourceRows}`,
     });
     if (provenance.returnedRows < provenance.sourceRows) {
@@ -73,13 +73,13 @@ function ProvenanceLine({ provenance }: { provenance: ChartProvenance }) {
       // line printed a hard-coded "server max_points", which asserted a
       // reduction method the frontend had no way to know.
       fields.push({
-        label: "giảm điểm",
-        value: provenance.downsample ?? "chưa rõ phương pháp",
+        label: "reduction",
+        value: provenance.downsample ?? "method unknown",
         wide: true,
       });
     }
   } else if (provenance.returnedRows != null) {
-    fields.push({ label: "điểm", value: String(provenance.returnedRows) });
+    fields.push({ label: "points", value: String(provenance.returnedRows) });
   }
   if (provenance.digest) {
     fields.push({ label: "digest", value: `${provenance.digest.slice(0, 19)}…`, wide: true });
@@ -133,7 +133,7 @@ export function ChartFigure({ figNumber, title, note, sourceId, provenance, chil
         <button
           type="button"
           className="btn-ghost no-print shrink-0"
-          aria-label={`Tải EChart ${figNumber} dạng PNG`}
+          aria-label={`Download EChart ${figNumber} as PNG`}
           onClick={downloadPng}
         >
           <Download size={12} />
@@ -147,7 +147,7 @@ export function ChartFigure({ figNumber, title, note, sourceId, provenance, chil
         <div className="chart-provenance">
           <dl className="chart-provenance-grid">
             <div className="chart-provenance-field" data-wide="true">
-              <dt>nguồn</dt>
+              <dt>source</dt>
               <dd className="mono">{sourceId}</dd>
             </div>
           </dl>

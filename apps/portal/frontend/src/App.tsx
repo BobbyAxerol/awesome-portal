@@ -1,7 +1,7 @@
 /**
  * Application root.
  *
- * The Portal shell owns every route now; QuantBT Research is one module inside
+ * The Portal shell owns every route now; QuantBT Backtest is one module inside
  * it rather than the application itself (U03). Feature-level routing lives in
  * `app/PortalRoutes.tsx` and is generated from the Feature Registry.
  */

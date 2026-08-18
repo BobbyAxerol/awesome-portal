@@ -89,7 +89,7 @@ export function StageBrief({
             <p className="mono-label">Lifecycle stage · order {stage.order}</p>
             <h2 className="brief-title">{stage.label}</h2>
           </div>
-          <button type="button" className="portal-icon-btn" aria-label="Đóng" onClick={onClose}>
+          <button type="button" className="portal-icon-btn" aria-label="Close" onClick={onClose}>
             <X size={14} />
           </button>
         </header>
@@ -98,7 +98,7 @@ export function StageBrief({
 
         <Section title="Feature trong stage">
           {stage.feature_ids.length === 0 ? (
-            <Absent>Registry chưa gán feature nào cho stage này.</Absent>
+            <Absent>The registry assigns no feature to this stage.</Absent>
           ) : (
             <ul className="brief-features">
               {stage.feature_ids.map((id) => {
@@ -109,7 +109,7 @@ export function StageBrief({
                       {/* A stage naming a feature the registry does not define is
                         * an inconsistency worth showing, not hiding. */}
                       <span className="mono">{id}</span>
-                      <span className="brief-absent">không có trong registry</span>
+                      <span className="brief-absent">not in the registry</span>
                     </li>
                   );
                 }
@@ -131,9 +131,9 @@ export function StageBrief({
           )}
         </Section>
 
-        <Section title="Concern đang gate stage">
+        <Section title="Concerns gating this stage">
           {concerns.length === 0 ? (
-            <Absent>Không có concern nào trong registry trỏ vào feature của stage này.</Absent>
+            <Absent>No concern in the registry points at a feature of this stage.</Absent>
           ) : (
             <ul className="brief-concerns">
               {concerns.map((concern) => (
@@ -161,7 +161,7 @@ export function StageBrief({
 
         <Section title="Roadmap &amp; task">
           {linkEntries.length === 0 ? (
-            <Absent>Cross-link sidecar chưa map feature nào của stage sang epic/task.</Absent>
+            <Absent>The cross-link sidecar maps none of this stage's features to an epic or task.</Absent>
           ) : (
             <ul className="brief-links">
               {linkEntries.map((entry) => (
@@ -172,7 +172,7 @@ export function StageBrief({
                     {typeof entry.roadmap_epic_id === "string" && entry.roadmap_epic_id ? (
                       <Link to={PLANNING_TASK_ROUTE.roadmap}>{entry.roadmap_epic_id}</Link>
                     ) : (
-                      <span className="brief-absent">chưa map</span>
+                      <span className="brief-absent">not mapped</span>
                     )}
                   </span>
                   <span>
@@ -184,7 +184,7 @@ export function StageBrief({
                         </Link>
                       ))
                     ) : (
-                      <span className="brief-absent">chưa map</span>
+                      <span className="brief-absent">not mapped</span>
                     )}
                   </span>
                 </li>

@@ -111,7 +111,7 @@ describe("sidebar", () => {
         {
           ...registry.features.find((f) => f.id === "ALPHA_POOL")!,
           id: "NEW_COMMISSIONED",
-          label: "Feature hoàn toàn mới",
+          label: "A brand-new feature",
           canonical_route: "/research/brand-new",
         },
       ],

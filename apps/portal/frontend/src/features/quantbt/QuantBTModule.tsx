@@ -1,5 +1,5 @@
 /**
- * QuantBT Research as a module of the Portal shell — U04.
+ * QuantBT Backtest as a module of the Portal shell — U04.
  *
  * The feature body is unchanged; what moved is the shell around it. The
  * standalone `TopBar` became the module header's context and actions, and run
@@ -94,14 +94,14 @@ function RunWorkspace() {
   }, [run.data?.status]);
 
   if (run.isLoading && !run.data) {
-    return <StateView kind="loading" message="Đang tải run…" />;
+    return <StateView kind="loading" message="Loading run…" />;
   }
   if (run.isError || !run.data) {
     return (
       <StateView
         kind="failed"
         code={runId}
-        message={run.error instanceof Error ? run.error.message : "Không đọc được run này."}
+        message={run.error instanceof Error ? run.error.message : "This run could not be read."}
         onRetry={() => void run.refetch()}
       />
     );
@@ -123,9 +123,9 @@ function RunWorkspace() {
   const bodyIdMismatch = current.run_id && current.run_id !== runId ? current.run_id : null;
   const mismatchNotice = bodyIdMismatch ? (
     <div className="run-id-mismatch mono no-print" role="alert">
-      Run detail trả về <span>run_id {bodyIdMismatch}</span> nhưng URL yêu cầu{" "}
-      <span>{runId}</span>. Portal đọc artifact theo id trên URL; hai giá trị lệch nhau là
-      dấu hiệu dữ liệu run không nhất quán.
+      Run detail returned <span>run_id {bodyIdMismatch}</span> but the URL asked for{" "}
+      <span>{runId}</span>. The Portal reads artifacts by the id in the URL, so two different
+      values mean this run's data is inconsistent.
     </div>
   ) : null;
 
@@ -174,7 +174,7 @@ function RunWorkspace() {
  */
 function ResolveDefaultRun({ tab }: { tab?: string }) {
   const runs = useQuery({ queryKey: ["runs"], queryFn: api.listRuns });
-  if (runs.isLoading) return <StateView kind="loading" message="Đang tìm run mặc định…" />;
+  if (runs.isLoading) return <StateView kind="loading" message="Resolving the default run…" />;
   const target = defaultRun(runs.data);
   if (!target) return <Navigate to={`${QUANTBT_ROOT}/new`} replace />;
   const safeTab = tab && isQuantBTTab(tab) ? tab : "overview";
@@ -249,7 +249,7 @@ export function QuantBTModule() {
             <Copy size={12} />
             {/* The verb has to be visible: the old label was the run id alone,
               * which named a thing instead of saying what the button does. */}
-            {copied ? "Đã copy ✓" : "Copy id"}
+            {copied ? "Copied ✓" : "Copy id"}
             <span className="mono text-ink-faint">{fmtShortHash(activeRunId)}</span>
           </button>
           <a className="btn-ghost no-print" href={`/api/runs/${activeRunId}/export`}>
@@ -272,7 +272,7 @@ export function QuantBTModule() {
   return (
     <>
       <ModuleHeader
-        title={feature?.label ?? "QuantBT Research"}
+        title={feature?.label ?? "QuantBT Backtest"}
         // The module description is orientation for someone arriving, not a
         // caption to reprint on every sub-route.
         description={onRunRoute ? undefined : feature?.description}

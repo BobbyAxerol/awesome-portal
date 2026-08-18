@@ -43,13 +43,13 @@ describe("ResultsSkeleton", () => {
   });
 
   it("says what is loading, once, in words", () => {
-    render(<ResultsSkeleton message="Đang tải kết quả run…" />);
+    render(<ResultsSkeleton message="Loading run results…" />);
     const status = screen.getByRole("status");
-    expect(status.textContent).toBe("Đang tải kết quả run…");
+    expect(status.textContent).toBe("Loading run results…");
   });
 
   it("falls back to a generic message rather than announcing nothing", () => {
     render(<ResultsSkeleton />);
-    expect(screen.getByRole("status").textContent).toBe("Đang tải…");
+    expect(screen.getByRole("status").textContent).toBe("Loading…");
   });
 });

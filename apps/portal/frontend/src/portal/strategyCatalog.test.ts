@@ -147,7 +147,7 @@ describe("catalog", () => {
 
   it("blocks an imported alpha that has no runtime registration", () => {
     const catalog = buildCatalog([], alphas, capabilities);
-    expect(catalog[0].blockedReason).toContain("chưa đăng ký vào runtime registry");
+    expect(catalog[0].blockedReason).toContain("not yet registered in the runtime registry");
   });
 
   it("blocks a quarantined alpha even when it is registered", () => {
@@ -159,7 +159,7 @@ describe("catalog", () => {
   it("blocks an alpha whose endpoint the installed release has not certified", () => {
     const exotic = alphas.map((alpha) => ({ ...alpha, supportedEndpointIds: ["portfolio_rebalance"] }));
     const catalog = buildCatalog([builtin], exotic, capabilities);
-    expect(catalog[0].blockedReason).toContain("chưa certify endpoint");
+    expect(catalog[0].blockedReason).toContain("does not certify the");
   });
 
   it("lists a built-in that no manifest claims", () => {

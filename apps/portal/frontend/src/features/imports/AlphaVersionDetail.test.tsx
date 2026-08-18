@@ -78,8 +78,8 @@ describe("lifecycle", () => {
 
   it("states an absent certification and an empty promotion trail as facts", async () => {
     mount(() => json(DETAIL));
-    expect(await screen.findByText("chưa certify")).toBeTruthy();
-    expect(screen.getByText("chưa có evidence nào được ghi")).toBeTruthy();
+    expect(await screen.findByText("not certified")).toBeTruthy();
+    expect(screen.getByText("no evidence recorded yet")).toBeTruthy();
     // Never a zero or a dash standing in for "the trail is empty".
     expect(screen.queryByText("0")).toBeNull();
   });
@@ -107,7 +107,7 @@ describe("lifecycle", () => {
         lifecycle: { ...DETAIL.lifecycle, quarantined: true, quarantine_reason: null },
       }),
     );
-    expect(await screen.findByText(/không kèm lý do quarantine/)).toBeTruthy();
+    expect(await screen.findByText(/gave no quarantine reason/)).toBeTruthy();
   });
 });
 
@@ -116,14 +116,14 @@ describe("authority", () => {
     mount(() => json(DETAIL));
     await screen.findByTestId("alpha-lifecycle-rail");
     expect(screen.queryByRole("button", { name: /promote/i })).toBeNull();
-    expect(screen.getByText(/Việc chuyển stage thuộc slice certification/)).toBeTruthy();
+    expect(screen.getByText(/Moving a stage belongs to the certification slice/)).toBeTruthy();
   });
 
   it("reports a failed read as failed rather than an empty alpha", async () => {
     mount(() => json({ error: { code: "NOT_FOUND" } }, 404));
     // The screen retries once before giving up, so the failure is not instant.
     expect(
-      await screen.findByText(/Không đọc được alpha version này/, {}, { timeout: 3000 }),
+      await screen.findByText(/This alpha version could not be read/, {}, { timeout: 3000 }),
     ).toBeTruthy();
     expect(screen.queryByTestId("alpha-lifecycle-rail")).toBeNull();
   });
@@ -148,7 +148,7 @@ describe("verify digest", () => {
     fireEvent.click(button);
 
     await waitFor(() => expect(requested.some((url) => url.endsWith("/verify"))).toBe(true));
-    expect(await screen.findByText("hai digest khớp")).toBeTruthy();
+    expect(await screen.findByText("the digests match")).toBeTruthy();
     // Both sides are shown, so a reader can see which one disagreed.
     expect(screen.getByText("registered")).toBeTruthy();
     expect(screen.getByText("computed")).toBeTruthy();
@@ -167,13 +167,13 @@ describe("verify digest", () => {
         : json(DETAIL),
     );
     fireEvent.click(await screen.findByRole("button", { name: "Verify digest" }));
-    expect(await screen.findByText("hai digest KHÁC nhau")).toBeTruthy();
+    expect(await screen.findByText("the digests DIFFER")).toBeTruthy();
   });
 
   it("does not claim a match when verification itself failed", async () => {
     mount((url) => (url.endsWith("/verify") ? json({}, 500) : json(DETAIL)));
     fireEvent.click(await screen.findByRole("button", { name: "Verify digest" }));
-    expect(await screen.findByText(/không verify được/)).toBeTruthy();
-    expect(screen.queryByText("hai digest khớp")).toBeNull();
+    expect(await screen.findByText(/cannot be verified/)).toBeTruthy();
+    expect(screen.queryByText("the digests match")).toBeNull();
   });
 });

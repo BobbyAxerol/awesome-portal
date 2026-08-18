@@ -121,13 +121,13 @@ describe("rendered provenance line", () => {
         <div />
       </ChartFigure>,
     );
-    expect(text).toContain("nguồn series/oos");
+    expect(text).toContain("source series/oos");
     expect(text).toContain("segment oos");
-    expect(text).toContain("đơn vị USD");
+    expect(text).toContain("units USD");
     expect(text).toContain("timezone UTC");
     expect(text).toContain("as-of 2026-08-15T18:00:00Z");
-    expect(text).toContain("điểm 5000/128400");
-    expect(text).toContain("giảm điểm server stride 26");
+    expect(text).toContain("points 5000/128400");
+    expect(text).toContain("reduction server stride 26");
     expect(text).toContain("digest sha256:4117b8700652");
   });
 
@@ -141,7 +141,7 @@ describe("rendered provenance line", () => {
         <div />
       </ChartFigure>,
     );
-    expect(text).toContain("as-of chưa công bố");
+    expect(text).toContain("as-of not published");
   });
 
   it("never guesses the reduction method when rows differ but none was named", () => {
@@ -156,7 +156,7 @@ describe("rendered provenance line", () => {
         <div />
       </ChartFigure>,
     );
-    expect(text).toContain("giảm điểm chưa rõ phương pháp");
+    expect(text).toContain("reduction method unknown");
     expect(text).not.toContain("max_points");
   });
 
@@ -166,14 +166,14 @@ describe("rendered provenance line", () => {
         figNumber={1}
         title="Trials"
         provenance={tableProvenance(
-          { ...run, warnings: ["Server trả tối đa 5000 trial theo objective."] },
+          { ...run, warnings: ["The server returned at most 5000 trials by objective."] },
           { source: "wfo/trials.parquet", available: 5_000, plotted: 5_000 },
         )}
       >
         <div />
       </ChartFigure>,
     );
-    expect(container.querySelector(".chart-warnings")?.textContent).toContain("tối đa 5000 trial");
+    expect(container.querySelector(".chart-warnings")?.textContent).toContain("at most 5000 trials");
   });
 });
 
@@ -209,7 +209,7 @@ describe("FoldPlanProvenance", () => {
       />,
     );
     const line = container.querySelector(".chart-provenance")?.textContent ?? "";
-    expect(line).toContain("nguồn config/fold_plan.json");
+    expect(line).toContain("source config/fold_plan.json");
     expect(line).toContain("protocol three_window_decay");
     expect(line).toContain("2 fold");
     expect(line).toContain("as-of 2026-08-17T05:00:00+00:00");
@@ -223,8 +223,8 @@ describe("FoldPlanProvenance", () => {
       <FoldGantt plan={threeWindow} studyStarts={0} bestByStudy={[]} running={false} />,
     );
     const line = container.querySelector(".chart-provenance")?.textContent ?? "";
-    expect(line).toContain("as-of chưa công bố");
-    expect(line).toContain("digest analysis frame chưa công bố");
+    expect(line).toContain("as-of not published");
+    expect(line).toContain("analysis-frame digest not published");
   });
 });
 

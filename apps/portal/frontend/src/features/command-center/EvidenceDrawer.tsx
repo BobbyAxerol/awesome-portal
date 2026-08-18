@@ -44,7 +44,7 @@ function Fact({ term, children }: { term: string; children: React.ReactNode }) {
  * absence is itself worth seeing.
  */
 function Unpublished() {
-  return <span className="evidence-unpublished">chưa công bố</span>;
+  return <span className="evidence-unpublished">not published</span>;
 }
 
 function MetricEvidence({ name, metric }: { name: string; metric: SummaryMetric }) {
@@ -76,7 +76,7 @@ function MetricEvidence({ name, metric }: { name: string; metric: SummaryMetric 
       </header>
 
       <dl className="evidence-facts">
-        <Fact term="Đơn vị">{metric.unit ?? <Unpublished />}</Fact>
+        <Fact term="Unit">{metric.unit ?? <Unpublished />}</Fact>
         <Fact term="Segment">{metric.segment ?? <Unpublished />}</Fact>
         <Fact term="Authority">
           {authority ? (
@@ -148,7 +148,7 @@ export function EvidenceDrawer({
             <p className="mono-label">Evidence</p>
             <h2 className="evidence-title">{section.label}</h2>
           </div>
-          <button type="button" className="portal-icon-btn" aria-label="Đóng" onClick={onClose}>
+          <button type="button" className="portal-icon-btn" aria-label="Close" onClick={onClose}>
             <X size={14} />
           </button>
         </header>
@@ -164,8 +164,8 @@ export function EvidenceDrawer({
 
         {names.length === 0 ? (
           <p className="evidence-empty">
-            Snapshot không kèm metric nào cho section này. Đây là dữ liệu rỗng thật, không phải
-            lỗi đọc.
+            The snapshot carries no metric for this section. That is genuinely empty data, not a read
+            failure.
           </p>
         ) : (
           <div className="evidence-list">
@@ -180,7 +180,7 @@ export function EvidenceDrawer({
                     * envelope does not parse, and that is not the same as a
                     * metric the source declined to publish. */}
                   <p className="evidence-unpublished">
-                    Envelope của metric này không đọc được, nên Portal không suy diễn giá trị.
+                    This metric's envelope could not be read, so the Portal infers no value.
                   </p>
                 </section>
               );
@@ -189,8 +189,8 @@ export function EvidenceDrawer({
         )}
 
         <p className="evidence-foot">
-          Mọi giá trị ở đây đến từ snapshot summary. Lịch sử theo thời gian và cross-filter cần
-          read model bền của U10 — drawer này không dựng chuỗi mà snapshot không có.
+          Every value here comes from the summary snapshot. History over time and cross-filtering need
+          U10's durable read model — this drawer builds no series the snapshot does not carry.
         </p>
       </aside>
     </div>

@@ -68,7 +68,7 @@ describe("metric definitions", () => {
   });
 
   it("uses the profit factor's own threshold, not zero", () => {
-    // Its definition says "dưới 1 nghĩa là lỗ ròng".
+    // Its definition says "below 1 means a net loss".
     expect(metricTone(metricDefinition("profit_factor"), 0.8)).toBe("bad");
     expect(metricTone(metricDefinition("profit_factor"), 1.4)).toBe("neutral");
   });
@@ -118,7 +118,7 @@ describe("MetricTile", () => {
     const { container } = render(
       <MetricTile metricKey="sharpe" value={1} evidence={{ ...evidence, asOf: null }} />,
     );
-    expect(container.querySelector(".sr-only")?.textContent).toContain("as-of chưa công bố");
+    expect(container.querySelector(".sr-only")?.textContent).toContain("as-of not published");
   });
 
   it("renders a null metric as an explicit absent state, not a dash", () => {
