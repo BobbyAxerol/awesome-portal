@@ -1,0 +1,20 @@
+{
+  "analysis_content_hash": "0c8552fd9bd707336d92e8b7bef5bc6f0e014f898096f0efb0b99bbc7da12b2f",
+  "artifact_schema_version": "1",
+  "completed_at": "2026-08-17T08:00:00Z",
+  "config_hash": "2992fd3002ea89fffdfe6e17db59d4aa149d587a97afda31d4bb2dc18ee7766c",
+  "dataset_content_hash": "golden-fixture-extended-v1",
+  "dataset_id": "golden-fixture",
+  "failure": null,
+  "portal_version": "0.1.0",
+  "protocol": "advanced_walk_forward",
+  "quantbt_version": "1.0.8",
+  "random_seed": 42,
+  "run_id": "visual-baseline-run-running",
+  "started_at": "2026-08-17T08:00:00Z",
+  "status": "COMPLETED",
+  "strategy_id": "delta-rsi-polynomial-alpha",
+  "symbol": "ETHUSDT",
+  "timeframe": "1h",
+  "warnings": []
+}

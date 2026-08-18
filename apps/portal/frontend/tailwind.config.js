@@ -14,7 +14,7 @@ export default {
         "line-soft": "var(--line-soft)",
         accent: "var(--accent)",
         "accent-soft": "var(--accent-soft)",
-        "accent-700": "#226173",
+        "accent-700": "var(--accent-strong)",
         "accent-2": "var(--accent-2)",
         "accent-2-soft": "var(--accent-2-soft)",
         good: "var(--good)",
@@ -22,6 +22,8 @@ export default {
         bad: "var(--bad)",
         "bad-bg": "var(--bad-bg)",
         panel: "var(--ink-panel)",
+        "surface-2": "var(--surface-2)",
+        "surface-3": "var(--surface-3)",
         "panel-fg": "var(--ink-panel-fg)",
       },
       fontFamily: {

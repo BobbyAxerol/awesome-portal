@@ -1,0 +1,118 @@
+{
+ "endpoints": {
+  "/api/config/options": {
+   "file": "config__options.json",
+   "status": 200
+  },
+  "/api/datasets": {
+   "file": "datasets.json",
+   "status": 200
+  },
+  "/api/runs": {
+   "file": "runs.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run": {
+   "file": "run.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run-running": {
+   "file": "run-running.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run-running/config": {
+   "file": "run-running__config.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run-running/console?tail=5000": {
+   "file": "run-running__console--tail_5000.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run-running/fold-plan": {
+   "file": "run-running__fold-plan.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run-running/ledger": {
+   "file": "run-running__ledger.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run-running/progress": {
+   "file": "run-running__progress.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run-running/summary": {
+   "file": "run-running__summary.json",
+   "status": 409
+  },
+  "/api/runs/visual-baseline-run/audit": {
+   "file": "run__audit.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run/config": {
+   "file": "run__config.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run/console?tail=2000": {
+   "file": "run__console--tail_2000.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run/fold-plan": {
+   "file": "run__fold-plan.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run/ledger": {
+   "file": "run__ledger.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run/progress": {
+   "file": "run__progress.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run/selection/trace": {
+   "file": "run__selection__trace.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run/series/stitched?max_points=3000": {
+   "file": "run__series__stitched--max_points_3000.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run/series/stitched?max_points=4000": {
+   "file": "run__series__stitched--max_points_4000.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run/summary": {
+   "file": "run__summary.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run/wfo/candidates": {
+   "file": "run__wfo__candidates.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run/wfo/folds": {
+   "file": "run__wfo__folds.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run/wfo/parameters": {
+   "file": "run__wfo__parameters.json",
+   "status": 200
+  },
+  "/api/runs/visual-baseline-run/wfo/trials?top_n=5000": {
+   "file": "run__wfo__trials--top_n_5000.json",
+   "status": 200
+  },
+  "/api/strategies": {
+   "file": "strategies.json",
+   "status": 200
+  },
+  "/api/v1/alphas/imports": {
+   "file": "v1__alphas__imports.json",
+   "status": 200
+  }
+ },
+ "run_id": "visual-baseline-run",
+ "running_run_id": "visual-baseline-run-running",
+ "running_source": "registry/fixtures/runs/visual-baseline-run-running",
+ "running_source_digest": "sha256:dcaa19fbb4a80caa1de8fa10d9c273efe977625b3a8f17048a3e50a7b7b3f66f",
+ "source": "registry/fixtures/runs/visual-baseline-run",
+ "source_digest": "sha256:f610545af6aa306c02632ce68692173926ac1c023fe29779eeebb6d9eca56a67"
+}

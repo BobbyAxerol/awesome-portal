@@ -9,10 +9,46 @@ from typing import Any, Mapping
 
 import pandas as pd
 
+from portal_api import __version__
 from portal_api.domain.errors import ArtifactPathError
 from portal_api.serialization import canonicalize
 
 _RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
+
+# BAR-02 additive compatibility metadata: every Portal-written JSON artifact
+# carries these two top-level fields. The engine-owned manifest.json keeps its
+# own existing artifact_schema_version/portal_version contract.
+PORTAL_ARTIFACT_SCHEMA_VERSION = "1"
+PORTAL_ARTIFACT_PRODUCER = "portal-api"
+
+
+def with_portal_provenance(
+    artifact: str,
+    payload: Mapping[str, Any],
+    *,
+    as_of: str | None = None,
+    source_digest: str | None = None,
+) -> dict[str, Any]:
+    """Add the additive BAR-02 provenance fields to a Portal-written artifact.
+
+    ``as_of`` pins the write instant (UTC ISO 8601) and ``source_digest``
+    names the artifact the payload was derived from, so display artifacts
+    (e.g. the fold plan) can be cited by consumers exactly like ``SeriesPayload``.
+    """
+    provenance: dict[str, Any] = {
+        "service": PORTAL_ARTIFACT_PRODUCER,
+        "artifact": artifact,
+        "version": __version__,
+    }
+    if as_of is not None:
+        provenance["as_of"] = as_of
+    if source_digest is not None:
+        provenance["source_artifact_digest"] = source_digest
+    return {
+        **payload,
+        "artifact_schema_version": PORTAL_ARTIFACT_SCHEMA_VERSION,
+        "producer": provenance,
+    }
 
 
 def _json_default(value: Any) -> Any:

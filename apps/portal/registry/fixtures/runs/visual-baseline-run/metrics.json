@@ -1,0 +1,34 @@
+{
+  "artifact_schema_version": "1",
+  "producer": {
+    "artifact": "metrics.json",
+    "service": "portal-api",
+    "version": "0.1.0"
+  },
+  "reconciliation": {},
+  "segments": {
+    "stitched": {
+      "avg_dd_duration_days": 2,
+      "avg_drawdown_pct": 0.39660356343512093,
+      "avg_loss_pct": -0.47131645760028734,
+      "avg_win_pct": 3.52639270302473,
+      "cagr_pct": 24837.878843231007,
+      "calmar": 7231.820453851775,
+      "expectancy_pct": 0.9395607512032362,
+      "final_equity": 161634.33237290816,
+      "initial_capital": 20000.0,
+      "liquidated": false,
+      "long_hitrate_pct": 70.58428475486905,
+      "max_dd_duration_days": 4,
+      "max_drawdown_pct": 3.434526479429116,
+      "num_trades": 42,
+      "omega": 25.77135501846637,
+      "profit_factor": 25.77135501846637,
+      "sharpe": 13.200140051849504,
+      "short_hitrate_pct": 0.0,
+      "sortino": 33.17508160737844,
+      "total_return_pct": 708.1716618645407
+    }
+  },
+  "warnings": []
+}

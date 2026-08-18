@@ -15,19 +15,37 @@
     font-family: "Newsreader", Georgia, serif;
     font-weight: 500;
   }
+  /* Numbers wear mono; words wear the body face.
+   *
+   * The old rule put `table td, table th` in JetBrains Mono, so every label
+   * column and every sentence inside a table was monospaced — which is the single
+   * reason the data screens read as a terminal dump rather than as an
+   * institutional table. Vietnamese diacritics in 12px mono were the worst of it.
+   * The measure stays in mono (that is what keeps columns aligned); the noun goes
+   * back to prose. */
   .mono,
-  table td,
-  table th {
+  td.num,
+  th.num {
     font-family: "JetBrains Mono", ui-monospace, monospace;
     font-feature-settings: "tnum" 1;
+    font-variant-numeric: tabular-nums;
   }
-  td.num {
+  td.num,
+  th.num {
     text-align: right;
-    font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  /* Column headers are micro-labels: small, uppercase, letterspaced, prose face.
+   * A table that declares its own `th` classes keeps them. */
+  table th {
+    font-size: var(--text-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+    color: var(--ink-faint);
   }
   ::selection {
     background: var(--accent-2);
-    color: #fff;
+    color: var(--paper-raised);
   }
   :focus-visible {
     outline: 2px solid var(--accent);
@@ -42,8 +60,13 @@
 }
 
 @layer components {
+  /* Field label: a micro-label in the prose face. It reads as an introduction to
+   * the value beside it, which is mono — two mono voices at the same size made
+   * every definition list look like a config dump. */
   .label {
-    @apply mono text-[11px] uppercase text-ink-faint;
+    @apply text-[10px] uppercase text-ink-faint;
+    letter-spacing: 0.07em;
+    font-weight: 500;
   }
   .card {
     @apply bg-raised border border-line rounded-lg shadow-e1;
@@ -102,5 +125,486 @@
   }
   .seg-legend {
     @apply mono inline-flex items-center gap-1.5 text-[11px] text-ink-soft;
+  }
+
+  /* --- U02 semantic components ----------------------------------------- */
+
+  /* Runtime availability. Colour arrives inline from the semantic token; the
+   * glyph and label carry the same information without colour. */
+  .badge-state {
+    @apply mono inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold;
+  }
+
+  /* Registry maturity: outline, never filled, so it never competes with a
+   * runtime state badge sitting next to it. */
+  .badge-maturity {
+    @apply mono inline-flex items-center rounded-sm border px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide;
+    background: transparent;
+  }
+  .badge-maturity-dashed {
+    border-style: dashed;
+  }
+
+  .badge-env {
+    @apply mono inline-flex items-center rounded-sm border px-1.5 py-px text-[10px] font-semibold tracking-wide;
+    background: transparent;
+  }
+
+  .metric-value {
+    @apply mono text-[20px] font-semibold text-ink;
+    font-variant-numeric: tabular-nums;
+    line-height: 26px;
+  }
+  /* No number exists here. Deliberately not styled like a value so it can
+   * never be misread as one. */
+  .metric-absent {
+    @apply inline-flex items-center;
+  }
+  .metric-cell {
+    @apply rounded-md border border-line-soft px-3 py-2;
+    background: var(--paper-raised);
+    min-width: 132px;
+  }
+  .metric-strip {
+    @apply flex flex-wrap gap-2;
+  }
+
+  /* --- Primitives promoted from Planning (U02/U05) ----------------------
+   * Used by both domains once Planning is embedded, so they belong to the
+   * shared layer rather than to one feature's stylesheet. Values are the
+   * Planning definitions expressed in Portal tokens; the standalone Planning
+   * entry keeps its own copy for the parity window (U02 technical debt). */
+
+  .collapsible {
+    border-bottom: 1px solid var(--line-soft);
+    padding: 4px 0;
+  }
+  .collapsible:last-child {
+    border-bottom: 0;
+  }
+  .collapsible summary {
+    font-family: var(--font-mono);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding: 4px 0;
+    list-style: none;
+  }
+  .collapsible summary:hover {
+    color: var(--ink);
+  }
+  .collapsible summary::-webkit-details-marker {
+    display: none;
+  }
+  .collapsible[open] .chevron {
+    transform: rotate(90deg);
+  }
+
+  .definition-list {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: var(--space-1) var(--space-3);
+  }
+  .definition-list dt {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .definition-list dd {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink);
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--paper-raised);
+  }
+  .table-wrap table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  /* Column header: micro-label in the prose face. Mono here was fighting the
+   * numbers below it for attention instead of introducing them. */
+  .table-wrap thead th {
+    font-family: var(--font-body);
+    font-size: var(--text-2xs);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--ink-faint);
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+    padding: var(--space-2) var(--space-3);
+    white-space: nowrap;
+  }
+  /* A row-scope header is a row label, not a column header: it reads as prose and
+   * carries the same rule as the cells beside it. */
+  .table-wrap tbody th {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--ink);
+    text-align: left;
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: top;
+  }
+  .table-wrap tbody tr:last-child th {
+    border-bottom: 0;
+  }
+  .table-wrap td {
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: top;
+  }
+  .table-wrap tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  .table-wrap tbody tr:hover {
+    background: var(--paper-sunken);
+  }
+
+  .chart-figure {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--paper-raised);
+    padding: var(--space-3);
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: var(--scrim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-5);
+  }
+  .modal-panel {
+    width: min(640px, 100%);
+    max-height: 82vh;
+    overflow: auto;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-raised);
+  }
+  .modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .modal-head h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 18px;
+  }
+  .modal-body {
+    padding: 18px;
+  }
+
+  .toast-stack {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 3000;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .toast {
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line);
+    background: var(--paper-raised);
+    color: var(--ink);
+    box-shadow: var(--shadow-raised);
+    font-size: 13px;
+  }
+  .toast-good {
+    border-color: var(--good);
+    color: var(--good);
+  }
+  .toast-bad {
+    border-color: var(--bad);
+    color: var(--bad);
+  }
+
+  .chip-accent {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .chip-good {
+    border-color: var(--good);
+    color: var(--good);
+  }
+  .chip-bad {
+    border-color: var(--bad);
+    color: var(--bad);
+  }
+  .feature-loading {
+    padding: var(--space-6) 0;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-faint);
+  }
+}
+
+@layer utilities {
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}
+
+/* ==========================================================================
+ * v1 design system — form and surface primitives.
+ * Everything resolves through the U02 tokens; no literal colour or size.
+ * ========================================================================== */
+
+@layer components {
+  /* --- Fields ----------------------------------------------------------- */
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+  .field-label {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--ink-faint);
+  }
+  .field-required {
+    color: var(--bad);
+  }
+  .field-suffix {
+    margin-left: auto;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--ink-faint);
+  }
+  .field-hint {
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--ink-faint);
+  }
+  .field-error {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--bad);
+  }
+  /* The invalid border is paired with the message above; colour alone would
+   * not survive greyscale or convey the reason. */
+  .field[data-invalid="true"] .input {
+    border-color: var(--bad);
+  }
+
+  .field-grid {
+    display: grid;
+    gap: var(--space-2) var(--space-3);
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 640px) {
+    .field-grid[data-columns="2"] {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .field-grid[data-columns="3"] {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .field-span {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .toggle-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: 6px 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .toggle-field:last-child {
+    border-bottom: 0;
+  }
+  .toggle-field-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+
+  /* --- Surfaces --------------------------------------------------------- */
+
+  .panel {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--paper-raised);
+  }
+  .panel-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .panel-title {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .subsection-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-faint);
+  }
+  .panel-actions {
+    margin-left: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .panel-body {
+    padding: var(--space-4);
+  }
+
+  .section-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+  .section-heading-actions {
+    margin-left: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .toolbar[data-align="end"] {
+    justify-content: flex-end;
+  }
+  .toolbar[data-align="between"] {
+    justify-content: space-between;
+  }
+
+  .callout {
+    border-left: 2px solid var(--ink-faint);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    background: var(--paper-sunken);
+    padding: var(--space-2) var(--space-3);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+  .callout[data-tone="warning"] {
+    border-left-color: var(--state-degraded);
+  }
+  .callout[data-tone="danger"] {
+    border-left-color: var(--bad);
+  }
+  .callout[data-tone="muted"] {
+    border-left-color: var(--line);
+  }
+  .callout-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+
+  /* --- Stepper ---------------------------------------------------------- */
+
+  .stepper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+  .stepper-step {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 5px var(--space-3);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    color: var(--ink-soft);
+    transition: background var(--motion-fast) var(--motion-easing);
+  }
+  .stepper-step:hover {
+    background: var(--paper-sunken);
+    color: var(--ink);
+  }
+  .stepper-step-active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .stepper-index {
+    font-size: 10px;
+    min-width: 16px;
+    text-align: center;
+    color: var(--ink-faint);
+  }
+  .stepper-step[data-state="complete"] .stepper-index {
+    color: var(--good);
+  }
+  .stepper-step[data-state="error"] .stepper-index {
+    color: var(--bad);
+  }
+  .stepper-step[data-state="error"] .stepper-label {
+    color: var(--bad);
   }
 }

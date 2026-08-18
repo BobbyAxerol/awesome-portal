@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/portal-registry.v1.schema.json",
+  "title": "Portal Registry Public Document v1",
+  "allOf": [
+    {
+      "$ref": "https://schemas.primusspark.com/portal/portal-registry-source.v1.schema.json#/$defs/registryCore"
+    },
+    {
+      "type": "object",
+      "required": ["content_digest"],
+      "properties": {
+        "content_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    }
+  ],
+  "unevaluatedProperties": false
+}

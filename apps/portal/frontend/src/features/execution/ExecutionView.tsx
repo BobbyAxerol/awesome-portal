@@ -5,11 +5,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import { EChart } from "../../charts/EChart";
-import { baseOption, palette } from "../../charts/theme";
+import { baseOption } from "../../charts/theme";
+import { useChartTheme } from "../../charts/useChartTheme";
 import { ChartFigure } from "../../components/ChartFigure";
-import { SegmentedControl, StateView } from "../../components/ui";
+import { ResultsSkeleton, SegmentedControl, StateView } from "../../components/ui";
 import { api, type SeriesPayload } from "../../lib/api";
 import { entryPoints, exitPoints } from "../../lib/transitions";
+import { seriesProvenance, type RunEvidence } from "../quantbt/provenance";
+import { activeTheme, vizTokensFor, withAlpha } from "../../styles/tokens";
+
+const viz = vizTokensFor(activeTheme());
 
 const SEGMENTS = ["is", "oos", "holdout_live"] as const;
 type SegmentKey = (typeof SEGMENTS)[number];
@@ -23,7 +28,16 @@ export function ExecutionView({ runId }: { runId: string }) {
     queryFn: () => api.series(runId, segment, 4000),
     staleTime: 60_000,
   });
-  if (series.isLoading || detail.isLoading) return <StateView kind="loading" />;
+  // Same query key as every other result tab, so react-query serves the run
+  // manifest once and the as-of/digest on all charts come from one read.
+  const audit = useQuery({ queryKey: ["audit", runId], queryFn: () => api.audit(runId), staleTime: 60_000 });
+  const manifest = (audit.data?.manifest ?? {}) as Record<string, unknown>;
+  const run: RunEvidence = {
+    runId,
+    asOf: typeof manifest.completed_at === "string" ? manifest.completed_at : null,
+    digest: typeof manifest.dataset_content_hash === "string" ? manifest.dataset_content_hash : null,
+  };
+  if (series.isLoading || detail.isLoading) return <ResultsSkeleton message="Loading the execution series…" />;
   if (series.isError) return <StateView kind="failed" message={series.error.message} onRetry={() => series.refetch()} />;
 
   return (
@@ -41,13 +55,13 @@ export function ExecutionView({ runId }: { runId: string }) {
           ]}
         />
       )}
-      <PriceChart payload={series.data!} />
-      <PositionStrip payload={series.data!} />
+      <PriceChart payload={series.data!} run={run} />
+      <PositionStrip payload={series.data!} run={run} />
       <div className="card p-4">
         <div className="label mb-2">Cost timeline</div>
         <p className="text-[12px] leading-5 text-ink-faint">
-          Fee/funding/margin series chưa được QuantBT expose (capability gap — xem ARCHITECTURE.md); cost
-          timeline sẽ xuất hiện khi backend cung cấp.
+          QuantBT does not expose fee, funding or margin series yet (capability gap — see ARCHITECTURE.md);
+          the cost timeline appears once the backend publishes them.
         </p>
       </div>
       <TransitionTable payload={series.data!} />
@@ -55,7 +69,10 @@ export function ExecutionView({ runId }: { runId: string }) {
   );
 }
 
-function PriceChart({ payload }: { payload: SeriesPayload }) {
+function PriceChart({ payload, run }: { payload: SeriesPayload; run: RunEvidence }) {
+  // One dependency for every chart in this view; see useChartTheme.
+  const chart = useChartTheme();
+
   const option = useMemo(() => {
     const target = payload.series.signal_target ?? [];
     const close = payload.series.close ?? [];
@@ -70,15 +87,15 @@ function PriceChart({ payload }: { payload: SeriesPayload }) {
           type: "line",
           showSymbol: false,
           data: payload.series.close?.map((value, index) => [payload.timestamps[index], value]),
-          lineStyle: { width: 1.25, color: "#5d7b93" },
-          itemStyle: { color: "#5d7b93" },
+          lineStyle: { width: 1.25, color: viz.price },
+          itemStyle: { color: viz.price },
         },
         {
           name: "Long entry",
           type: "scatter",
           symbol: "triangle",
           symbolSize: 14,
-          itemStyle: { color: "var(--good)", borderColor: "#0f5c3a", borderWidth: 1 },
+          itemStyle: { color: chart.palette.good, borderColor: viz.markerLongBorder, borderWidth: 1 },
           data: entries.filter((entry) => entry.side === 1).map((entry) => [payload.timestamps[entry.index], entry.price]),
         },
         {
@@ -87,7 +104,7 @@ function PriceChart({ payload }: { payload: SeriesPayload }) {
           symbol: "triangle",
           symbolRotate: 180,
           symbolSize: 14,
-          itemStyle: { color: "var(--bad)", borderColor: "#7c2626", borderWidth: 1 },
+          itemStyle: { color: chart.palette.bad, borderColor: viz.markerShortBorder, borderWidth: 1 },
           data: entries.filter((entry) => entry.side === -1).map((entry) => [payload.timestamps[entry.index], entry.price]),
         },
         {
@@ -95,7 +112,7 @@ function PriceChart({ payload }: { payload: SeriesPayload }) {
           type: "scatter",
           symbol: "path://M-4,-4 L4,4 M4,-4 L-4,4",
           symbolSize: 13,
-          itemStyle: { color: "var(--good)", borderColor: "var(--good)", borderWidth: 1.5 },
+          itemStyle: { color: chart.palette.good, borderColor: chart.palette.good, borderWidth: 1.5 },
           data: exits.filter((exit) => exit.side === 1).map((exit) => [payload.timestamps[exit.index], exit.price]),
         },
         {
@@ -103,25 +120,31 @@ function PriceChart({ payload }: { payload: SeriesPayload }) {
           type: "scatter",
           symbol: "path://M-4,-4 L4,4 M4,-4 L-4,4",
           symbolSize: 13,
-          itemStyle: { color: "var(--bad)", borderColor: "var(--bad)", borderWidth: 1.5 },
+          itemStyle: { color: chart.palette.bad, borderColor: chart.palette.bad, borderWidth: 1.5 },
           data: exits.filter((exit) => exit.side === -1).map((exit) => [payload.timestamps[exit.index], exit.price]),
         },
       ],
-    });
-  }, [payload]);
+    }, chart.theme);
+  }, [payload, chart]);
   return (
     <ChartFigure
       figNumber={1}
       title="Close price + target transitions"
-      note="▲▼ = entry · ✕ = exit. Markers là Target transition từ strategy signal (pos_weight), không phải audited fills."
-      sourceId="series/*"
+      note="▲▼ = entry · ✕ = exit. Markers are target transitions from the strategy signal (pos_weight), not audited fills."
+      provenance={seriesProvenance(payload, run, {
+        source: `series/${payload.segment}`,
+        units: "price (instrument units)",
+      })}
     >
       <EChart option={option} height={640} />
     </ChartFigure>
   );
 }
 
-function PositionStrip({ payload }: { payload: SeriesPayload }) {
+function PositionStrip({ payload, run }: { payload: SeriesPayload; run: RunEvidence }) {
+  // One dependency for every chart in this view; see useChartTheme.
+  const chart = useChartTheme();
+
   const option = useMemo(
     () =>
       baseOption({
@@ -137,15 +160,22 @@ function PositionStrip({ payload }: { payload: SeriesPayload }) {
             step: "end",
             showSymbol: false,
             data: payload.series.accepted_position?.map((value, index) => [payload.timestamps[index], value]),
-            lineStyle: { color: palette.accent, width: 1.75 },
-            areaStyle: { color: "rgba(15,76,92,.08)" },
+            lineStyle: { color: chart.palette.accent, width: 1.75 },
+            areaStyle: { color: withAlpha(chart.palette.accent, 0.08) },
           },
         ],
-      }),
+      }, chart.theme),
     [payload],
   );
   return (
-    <ChartFigure figNumber={2} title="Position regime strip" sourceId="series/*">
+    <ChartFigure
+      figNumber={2}
+      title="Position regime strip"
+      provenance={seriesProvenance(payload, run, {
+        source: `series/${payload.segment}`,
+        units: "accepted_position (−1…1)",
+      })}
+    >
       <EChart option={option} height={150} />
     </ChartFigure>
   );
@@ -173,7 +203,7 @@ function TransitionTable({ payload }: { payload: SeriesPayload }) {
   }
   return (
     <div className="card overflow-x-auto p-4">
-      <div className="label mb-2">Transition table — target only (không phải fills)</div>
+      <div className="label mb-2">Transition table — targets only, not fills</div>
       <table className="w-full min-w-[520px] text-[12px]">
         <thead>
           <tr>

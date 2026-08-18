@@ -1,0 +1,171 @@
+{
+  "schema_version": "data-catalog.v1",
+  "catalog_revision": 1,
+  "families": [
+    {
+      "family_id": "binance-perp-1m",
+      "label": "Binance perpetual 1m candles",
+      "kind": "candle",
+      "schema_version": "candle.v1",
+      "activated": false,
+      "release_manifest": {
+        "manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "accepted_at": "2026-08-15T00:00:00Z"
+      },
+      "quality": {
+        "max_gap_ratio": 0.05,
+        "max_duplicate_rows": 0
+      }
+    },
+    {
+      "family_id": "binance-quarterly-1m",
+      "label": "Binance quarterly 1m candles",
+      "kind": "candle",
+      "schema_version": "candle.v1",
+      "activated": false,
+      "release_manifest": {
+        "manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "accepted_at": "2026-08-15T00:00:00Z"
+      },
+      "quality": {
+        "max_gap_ratio": 0.05,
+        "max_duplicate_rows": 0
+      }
+    },
+    {
+      "family_id": "binance-spot-1m",
+      "label": "Binance spot 1m candles",
+      "kind": "candle",
+      "schema_version": "candle.v1",
+      "activated": false,
+      "release_manifest": {
+        "manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "accepted_at": "2026-08-15T00:00:00Z"
+      },
+      "quality": {
+        "max_gap_ratio": 0.05,
+        "max_duplicate_rows": 0
+      }
+    },
+    {
+      "family_id": "binance-daily-matrix",
+      "label": "Binance daily matrix",
+      "kind": "matrix",
+      "schema_version": "matrix.v1",
+      "activated": false,
+      "release_manifest": {
+        "manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "accepted_at": "2026-08-15T00:00:00Z"
+      },
+      "quality": {
+        "max_gap_ratio": 0.02,
+        "max_duplicate_rows": 0
+      }
+    },
+    {
+      "family_id": "binance-futures-metrics-5m",
+      "label": "Binance futures metrics 5m",
+      "kind": "metrics",
+      "schema_version": "metrics.v1",
+      "activated": false,
+      "release_manifest": {
+        "manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "accepted_at": "2026-08-15T00:00:00Z"
+      },
+      "quality": {
+        "max_gap_ratio": 0.05,
+        "max_duplicate_rows": 0
+      }
+    },
+    {
+      "family_id": "binance-orderbook-1h",
+      "label": "Binance order book 1h snapshots",
+      "kind": "orderbook",
+      "schema_version": "orderbook.v1",
+      "activated": false,
+      "release_manifest": {
+        "manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "accepted_at": "2026-08-15T00:00:00Z"
+      },
+      "quality": {
+        "max_gap_ratio": 0.1,
+        "max_duplicate_rows": 0
+      }
+    },
+    {
+      "family_id": "vn-equity-daily",
+      "label": "VN equity daily candles",
+      "kind": "candle",
+      "schema_version": "candle.v1",
+      "activated": false,
+      "release_manifest": {
+        "manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "accepted_at": "2026-08-15T00:00:00Z"
+      },
+      "quality": {
+        "max_gap_ratio": 0.05,
+        "max_duplicate_rows": 0
+      }
+    },
+    {
+      "family_id": "vn-daily-matrix",
+      "label": "VN daily matrix",
+      "kind": "matrix",
+      "schema_version": "matrix.v1",
+      "activated": false,
+      "release_manifest": {
+        "manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "accepted_at": "2026-08-15T00:00:00Z"
+      },
+      "quality": {
+        "max_gap_ratio": 0.02,
+        "max_duplicate_rows": 0
+      }
+    },
+    {
+      "family_id": "vn30f1m-continuous",
+      "label": "VN30F1M continuous futures candles",
+      "kind": "candle",
+      "schema_version": "candle.v1",
+      "activated": false,
+      "release_manifest": {
+        "manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "accepted_at": "2026-08-15T00:00:00Z"
+      },
+      "quality": {
+        "max_gap_ratio": 0.05,
+        "max_duplicate_rows": 0
+      }
+    },
+    {
+      "family_id": "deribit-options",
+      "label": "Deribit options (not yet accepted)",
+      "kind": "candle",
+      "schema_version": "candle.v1",
+      "activated": false,
+      "release_manifest": {
+        "manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "accepted_at": "2026-08-15T00:00:00Z"
+      },
+      "quality": {
+        "max_gap_ratio": 0.05,
+        "max_duplicate_rows": 0
+      }
+    },
+    {
+      "family_id": "vn-raw-1m",
+      "label": "VN raw 1m (not yet accepted)",
+      "kind": "candle",
+      "schema_version": "candle.v1",
+      "activated": false,
+      "release_manifest": {
+        "manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "accepted_at": "2026-08-15T00:00:00Z"
+      },
+      "quality": {
+        "max_gap_ratio": 0.05,
+        "max_duplicate_rows": 0
+      }
+    }
+  ]
+}

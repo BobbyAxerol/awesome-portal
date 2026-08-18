@@ -1,0 +1,736 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/portal-registry-source.v1.schema.json",
+  "title": "Portal Registry Source v1",
+  "$ref": "#/$defs/registryCore",
+  "unevaluatedProperties": false,
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
+    },
+    "featureGroupId": {
+      "enum": [
+        "command",
+        "research",
+        "backtests",
+        "deployments",
+        "data_ops",
+        "planning",
+        "administration"
+      ]
+    },
+    "featureMaturity": {
+      "enum": [
+        "AVAILABLE",
+        "PROTOTYPE",
+        "COMMISSIONED",
+        "BLOCKED",
+        "HIDDEN",
+        "DEPRECATED"
+      ]
+    },
+    "featureDataMode": {
+      "enum": [
+        "REAL",
+        "FIXTURE",
+        "STATIC_PREVIEW",
+        "NONE"
+      ]
+    },
+    "portalEnvironment": {
+      "enum": [
+        "local",
+        "research",
+        "paper",
+        "sandbox",
+        "live"
+      ]
+    },
+    "permission": {
+      "enum": [
+        "portal.command.read",
+        "portal.map.read",
+        "quantbt.research.read",
+        "quantbt.run.submit",
+        "planning.read",
+        "alpha.read",
+        "approval.read",
+        "data.catalog.read",
+        "paper.read",
+        "sandbox.read",
+        "live.read",
+        "profile.read"
+      ]
+    },
+    "route": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "pattern": "^/"
+    },
+    "nullableString": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "identifierArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/identifier"
+      },
+      "uniqueItems": true,
+      "maxItems": 128
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      },
+      "uniqueItems": true,
+      "maxItems": 128
+    },
+    "permissionArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/permission"
+      },
+      "uniqueItems": true,
+      "maxItems": 32
+    },
+    "environmentArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/portalEnvironment"
+      },
+      "uniqueItems": true,
+      "minItems": 1,
+      "maxItems": 5
+    },
+    "featureGroup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "order"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/featureGroupId"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        }
+      }
+    },
+    "navigation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "order",
+        "icon_key",
+        "show_in_sidebar",
+        "show_in_command_palette"
+      ],
+      "properties": {
+        "order": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "icon_key": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{1,63}$"
+        },
+        "show_in_sidebar": {
+          "type": "boolean"
+        },
+        "show_in_command_palette": {
+          "type": "boolean"
+        }
+      }
+    },
+    "feature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "group",
+        "label",
+        "description",
+        "canonical_route",
+        "legacy_routes",
+        "maturity",
+        "data_mode",
+        "permissions",
+        "environments",
+        "source_module",
+        "prototype_frame_id",
+        "roadmap_epic_id",
+        "default_task_id",
+        "screen_ids",
+        "concern_ids",
+        "lifecycle_stage_ids",
+        "summary_source_ids",
+        "hidden_for_roles",
+        "activation_gate",
+        "navigation"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "group": {
+          "$ref": "#/$defs/featureGroupId"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "canonical_route": {
+          "$ref": "#/$defs/route"
+        },
+        "legacy_routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/route"
+          },
+          "uniqueItems": true,
+          "maxItems": 32
+        },
+        "maturity": {
+          "$ref": "#/$defs/featureMaturity"
+        },
+        "data_mode": {
+          "$ref": "#/$defs/featureDataMode"
+        },
+        "permissions": {
+          "$ref": "#/$defs/permissionArray"
+        },
+        "environments": {
+          "$ref": "#/$defs/environmentArray"
+        },
+        "source_module": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^(apps|features)/[a-z0-9][a-z0-9-]*(?:/[a-z0-9][a-z0-9-]*)*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "prototype_frame_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "roadmap_epic_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "default_task_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "screen_ids": {
+          "$ref": "#/$defs/identifierArray"
+        },
+        "concern_ids": {
+          "$ref": "#/$defs/identifierArray"
+        },
+        "lifecycle_stage_ids": {
+          "$ref": "#/$defs/identifierArray"
+        },
+        "summary_source_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{2,63}$"
+          },
+          "uniqueItems": true,
+          "maxItems": 32
+        },
+        "hidden_for_roles": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "activation_gate": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "navigation": {
+          "$ref": "#/$defs/navigation"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "maturity": {
+                "enum": [
+                  "COMMISSIONED",
+                  "BLOCKED"
+                ]
+              }
+            },
+            "required": [
+              "maturity"
+            ]
+          },
+          "then": {
+            "properties": {
+              "activation_gate": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "anyOf": [
+              {
+                "properties": {
+                  "roadmap_epic_id": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "default_task_id": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "data_mode": {
+                "const": "REAL"
+              }
+            },
+            "required": [
+              "data_mode"
+            ]
+          },
+          "then": {
+            "properties": {
+              "source_module": {
+                "type": "string",
+                "minLength": 1
+              },
+              "summary_source_ids": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "maturity": {
+                "const": "HIDDEN"
+              }
+            },
+            "required": [
+              "maturity"
+            ]
+          },
+          "then": {
+            "properties": {
+              "navigation": {
+                "properties": {
+                  "show_in_sidebar": {
+                    "const": false
+                  },
+                  "show_in_command_palette": {
+                    "const": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "screenInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "authority",
+        "required"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{1,63}$"
+        },
+        "authority": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_.-]{2,127}$"
+        },
+        "required": {
+          "type": "boolean"
+        }
+      }
+    },
+    "screen": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "screen_id",
+        "contract_revision",
+        "feature_id",
+        "maturity",
+        "data_mode",
+        "route",
+        "primary_persona",
+        "primary_decision",
+        "primary_action",
+        "permissions",
+        "inputs",
+        "backend_dependency_ids",
+        "concern_ids",
+        "related_repositories",
+        "related_task_ids",
+        "activation_gate"
+      ],
+      "properties": {
+        "screen_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "contract_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "feature_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "maturity": {
+          "$ref": "#/$defs/featureMaturity"
+        },
+        "data_mode": {
+          "$ref": "#/$defs/featureDataMode"
+        },
+        "route": {
+          "$ref": "#/$defs/route"
+        },
+        "primary_persona": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "primary_decision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "primary_action": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "permissions": {
+          "$ref": "#/$defs/permissionArray"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/screenInput"
+          },
+          "maxItems": 64
+        },
+        "backend_dependency_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{2,63}$"
+          },
+          "uniqueItems": true,
+          "maxItems": 64
+        },
+        "concern_ids": {
+          "$ref": "#/$defs/identifierArray"
+        },
+        "related_repositories": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "related_task_ids": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "activation_gate": {
+          "$ref": "#/$defs/nullableString"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "data_mode": {
+                "const": "REAL"
+              }
+            },
+            "required": [
+              "data_mode"
+            ]
+          },
+          "then": {
+            "properties": {
+              "inputs": {
+                "minItems": 1
+              },
+              "backend_dependency_ids": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "maturity": {
+                "enum": [
+                  "COMMISSIONED",
+                  "BLOCKED"
+                ]
+              }
+            },
+            "required": [
+              "maturity"
+            ]
+          },
+          "then": {
+            "properties": {
+              "activation_gate": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "concernCategory": {
+      "enum": [
+        "PRODUCT_DECISION",
+        "AUTHORIZATION",
+        "SOURCE_OF_TRUTH",
+        "BACKEND_CONTRACT",
+        "STATE_MACHINE",
+        "RESILIENCE_STATE",
+        "QUANT_SEMANTICS",
+        "PERFORMANCE",
+        "AUDIT_LINEAGE",
+        "SECURITY",
+        "ACCESSIBILITY",
+        "TEST_EVIDENCE",
+        "DEPENDENCY",
+        "ACTIVATION_GATE"
+      ]
+    },
+    "concernStatus": {
+      "enum": [
+        "OPEN",
+        "PARTIAL",
+        "VERIFIED_CURRENT",
+        "BLOCKED",
+        "NOT_APPLICABLE"
+      ]
+    },
+    "concernSeverity": {
+      "enum": [
+        "BLOCKING",
+        "HIGH",
+        "MEDIUM",
+        "LOW"
+      ]
+    },
+    "concern": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "category",
+        "status",
+        "severity",
+        "statement",
+        "feature_ids",
+        "screen_ids",
+        "evidence_refs",
+        "task_ids",
+        "activation_gate",
+        "reviewed_at"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "category": {
+          "$ref": "#/$defs/concernCategory"
+        },
+        "status": {
+          "$ref": "#/$defs/concernStatus"
+        },
+        "severity": {
+          "$ref": "#/$defs/concernSeverity"
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "feature_ids": {
+          "$ref": "#/$defs/identifierArray"
+        },
+        "screen_ids": {
+          "$ref": "#/$defs/identifierArray"
+        },
+        "evidence_refs": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "task_ids": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "activation_gate": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "reviewed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "lifecycleStage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "order",
+        "feature_ids",
+        "maturity",
+        "description"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "feature_ids": {
+          "$ref": "#/$defs/identifierArray"
+        },
+        "maturity": {
+          "$ref": "#/$defs/featureMaturity"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "personas": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "uniqueItems": true,
+          "description": "Derived roll-up of primary_persona across the stage's feature screens; empty when no screen is visible yet. Never stored in the source registry document."
+        }
+      }
+    },
+    "registryCore": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "registry_id",
+        "revision",
+        "feature_groups",
+        "lifecycle_stages",
+        "features",
+        "screens",
+        "concerns"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "portal.registry.v1"
+        },
+        "registry_id": {
+          "const": "portal-default"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "feature_groups": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/featureGroup"
+          },
+          "minItems": 1,
+          "maxItems": 32
+        },
+        "lifecycle_stages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/lifecycleStage"
+          },
+          "minItems": 1,
+          "maxItems": 64
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/feature"
+          },
+          "minItems": 1,
+          "maxItems": 256
+        },
+        "screens": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/screen"
+          },
+          "minItems": 1,
+          "maxItems": 512
+        },
+        "concerns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/concern"
+          },
+          "maxItems": 1024
+        }
+      }
+    }
+  }
+}

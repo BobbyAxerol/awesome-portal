@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/engine-capabilities.v1.schema.json",
+  "title": "Portal Engine Capability Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "manifest_revision", "engine_releases", "capabilities"],
+  "properties": {
+    "schema_version": {"const": "engine-capabilities.v1"},
+    "manifest_revision": {"type": "integer", "minimum": 1},
+    "engine_releases": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/engineRelease"},
+      "maxItems": 16
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/capability"},
+      "maxItems": 64
+    }
+  },
+  "$defs": {
+    "engineRelease": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["release_id", "package", "version", "dist_info_record_sha256"],
+      "properties": {
+        "release_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$"},
+        "package": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{1,63}$"},
+        "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+[a-z0-9.+]*$"},
+        "dist_info_record_sha256": {
+          "type": "string",
+          "description": "SHA-256 of canonical sorted wheel-owned RECORD rows; installer-managed rows are excluded.",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capability_id",
+        "protocol",
+        "endpoint_id",
+        "engine_release_id",
+        "certified",
+        "requirements"
+      ],
+      "properties": {
+        "capability_id": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,63}$"},
+        "protocol": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "endpoint_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "engine_release_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$"},
+        "certified": {"type": "boolean"},
+        "requirements": {"$ref": "#/$defs/requirements"}
+      }
+    },
+    "requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backend", "data_class", "methodology"],
+      "properties": {
+        "backend": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "data_class": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+          "minItems": 1,
+          "maxItems": 8
+        },
+        "methodology": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{1,63}$"},
+        "resource_profile": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_optuna_trials": {"type": "integer", "minimum": 1},
+            "max_parameter_space_entries": {"type": "integer", "minimum": 1}
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+# Cloudflare Tunnel configuration template (guide §P0.25A.16).
+#
+# This is a TEMPLATE: copy to /etc/cloudflared/config.yml on the VPS and
+# replace every <PLACEHOLDER> with the real value from your Cloudflare Zero
+# Trust dashboard. Never commit the credentials JSON or real values.
+
+tunnel: <TUNNEL_UUID>
+credentials-file: /etc/cloudflared/<TUNNEL_UUID>.json
+
+loglevel: info
+metrics: 127.0.0.1:2000
+
+ingress:
+  - hostname: portal.primusspark.com
+    service: https://127.0.0.1:443
+    originRequest:
+      originServerName: portal.primusspark.com
+      httpHostHeader: portal.primusspark.com
+      noTLSVerify: false
+      connectTimeout: 10s
+      tlsTimeout: 10s
+      keepAliveTimeout: 90s
+
+      # Defense-in-depth: cloudflared re-verifies the Access JWT before the
+      # origin. teamName and audTag must match the Access application exactly.
+      access:
+        required: true
+        teamName: primussparkquant
+        audTag:
+          - 564a9f0023fbaa7af966e1056687ae4f6d9523f052b75b83be623678ac70684e
+
+  - service: http_status:404

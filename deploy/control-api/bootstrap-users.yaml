@@ -1,0 +1,15 @@
+# Bootstrap users for the Control API identity BFF (U07 / BAR-04).
+#
+# Idempotent: re-running seeds the same INVITED users and prints one-time
+# activation credentials exactly once (never stored in plaintext). Roles
+# follow the RBAC matrix: ADMIN for owners/operators, USER for analysts.
+#
+# Production must set the real identities via this file before the gateway
+# wires the façade; local/dev defaults keep the research stack usable.
+users:
+  - username: bobby
+    role: ADMIN
+  - username: stan
+    role: USER
+  - username: thanhvuong
+    role: USER

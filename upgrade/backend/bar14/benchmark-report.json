@@ -1,0 +1,16 @@
+{
+  "decision": "rust-extraction-eligible",
+  "gate_met": true,
+  "generated_at": "2026-08-16T06:36:35.073033+00:00",
+  "iterations": 20,
+  "latency_ms": {
+    "max": 131.195,
+    "p50": 78.862,
+    "p95": 87.601,
+    "p99": 87.601
+  },
+  "peak_traced_bytes": 21122252,
+  "rows": 200000,
+  "schema_version": "bar14.benchmark.v1",
+  "target_p95_ms": 200.0
+}

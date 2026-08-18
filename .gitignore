@@ -6,6 +6,7 @@
 !*.env.*.example
 !*.env.template
 .envrc
+/.portal-contributor-workspace
 *.pem
 *.key
 *.p12
@@ -23,6 +24,10 @@
 /logs/
 /backups/
 *.log
+# Deterministic visual fixtures, not runtime logs. Keep the exceptions exact so
+# arbitrary run output remains ignored.
+!apps/portal/registry/fixtures/runs/visual-baseline-run/status/console.log
+!apps/portal/registry/fixtures/runs/visual-baseline-run-running/status/console.log
 *.pid
 *.seed
 *.sqlite
@@ -69,6 +74,7 @@ docker-compose.override.yml
 .docker/
 *.tar
 *.tar.gz
+/vendor/hmd-reader/*.whl
 
 # Editors and operating-system files
 .DS_Store

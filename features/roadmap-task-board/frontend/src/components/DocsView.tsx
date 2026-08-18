@@ -50,7 +50,7 @@ export function DocsView({
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Tìm kiếm tài liệu…"
+            placeholder="Search the document…"
             aria-label="Search documents"
           />
         </div>

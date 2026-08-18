@@ -25,7 +25,10 @@ from portal_api.domain.requests import (
     AdvancedWalkForwardConfig,
     PortalRunRequest,
 )
-from portal_api.repositories.artifacts import ArtifactRepository
+from portal_api.repositories.artifacts import (
+    ArtifactRepository,
+    with_portal_provenance,
+)
 from portal_api.serialization import canonicalize
 from portal_api.services.three_window_runner import (
     ARTIFACT_SCHEMA_VERSION,
@@ -186,8 +189,16 @@ class AdvancedWalkForwardRunner:
 
         self._write_wfo_artifacts(run_id, wf)
         selected = _freeze_deployment_selection(wf, config)
-        self._artifacts.write_json(run_id, "selection/selected_params.json", selected)
-        self._artifacts.write_json(run_id, "selection/selection_trace.json", selected["trace"])
+        self._artifacts.write_json(
+            run_id,
+            "selection/selected_params.json",
+            with_portal_provenance("selected_params.json", selected),
+        )
+        self._artifacts.write_json(
+            run_id,
+            "selection/selection_trace.json",
+            with_portal_provenance("selection_trace.json", selected["trace"]),
+        )
 
         metrics = self._gateway.metrics(
             endpoint, trading_days=int(config.optimization.scoring_trading_days)
@@ -201,17 +212,26 @@ class AdvancedWalkForwardRunner:
         self._artifacts.write_json(
             run_id,
             "metrics.json",
-            {"segments": clean_metrics, "reconciliation": {}, "warnings": warnings},
+            with_portal_provenance(
+                "metrics.json",
+                {"segments": clean_metrics, "reconciliation": {}, "warnings": warnings},
+            ),
         )
         self._artifacts.write_json(
             run_id,
             "config.json",
-            canonicalize(request.model_dump(mode="json")),
+            with_portal_provenance(
+                "config.json", canonicalize(request.model_dump(mode="json"))
+            ),
         )
         # Parity with the three-window runner: strategy.json feeds the audit
         # endpoint, which 404s without it (v0.1.1 bugfix).
         spec = StrategyRegistry().get(request.strategy_id).specification
-        self._artifacts.write_json(run_id, "strategy.json", _strategy_artifact(spec))
+        self._artifacts.write_json(
+            run_id,
+            "strategy.json",
+            with_portal_provenance("strategy.json", _strategy_artifact(spec)),
+        )
         self._artifacts.write_json(
             run_id,
             "manifest.json",
@@ -261,7 +281,13 @@ class AdvancedWalkForwardRunner:
                 self._artifacts.write_frame(run_id, f"wfo/{name}.parquet", table)
         params_by_fold = wf.get("params_by_fold")
         if params_by_fold:
-            self._artifacts.write_json(run_id, "wfo/params_by_fold.json", canonicalize(params_by_fold))
+            self._artifacts.write_json(
+                run_id,
+                "wfo/params_by_fold.json",
+                with_portal_provenance(
+                    "params_by_fold.json", canonicalize(params_by_fold)
+                ),
+            )
         for name, key in (("trials", "trial_table"), ("candidates", "candidate_table")):
             table = wf.get(key)
             if isinstance(table, pd.DataFrame) and not table.empty:

@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
 from backend.app.api.schemas import (
+    PlanningSummaryResponse,
     RestoreRequest,
     RoadmapMove,
     RoadmapPhaseCreate,
@@ -30,6 +31,7 @@ from backend.app.config import Settings
 from backend.app.domain.constants import ENTITY_ROADMAP_PHASE, ENTITY_TASK
 from backend.app.domain.errors import DomainError, ReadinessError
 from backend.app.infrastructure.discord import DiscordWebhookService
+from backend.app.infrastructure.lark import LarkWebhookService
 from backend.app.infrastructure.repository import PortalRepository
 
 
@@ -55,7 +57,7 @@ class JsonLogFormatter(logging.Formatter):
 
 def configure_logging(level: str) -> None:
     """Configure portal loggers once without changing the host application's root logger."""
-    for name in ("portal.api", "portal.discord"):
+    for name in ("portal.api", "portal.discord", "portal.lark"):
         logger = logging.getLogger(name)
         logger.setLevel(level)
         logger.propagate = False
@@ -92,6 +94,7 @@ async def _delivery_loop(app: FastAPI) -> None:
     while True:
         try:
             await asyncio.to_thread(app.state.discord.flush_pending)
+            await asyncio.to_thread(app.state.lark.flush_pending)
         except Exception:  # Worker failure is observable but must not take down API traffic.
             LOGGER.exception("discord_worker_cycle_failed")
         await asyncio.sleep(15)
@@ -100,8 +103,9 @@ async def _delivery_loop(app: FastAPI) -> None:
 def create_app(settings: Optional[Settings] = None) -> FastAPI:
     runtime = settings or Settings.from_environment()
     configure_logging(runtime.log_level)
-    repository = PortalRepository(runtime.database_path)
+    repository = PortalRepository(runtime.database_path, runtime.notification_channels)
     discord = DiscordWebhookService(repository, runtime)
+    lark = LarkWebhookService(repository, runtime)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -119,7 +123,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     app = FastAPI(
         title="Quant Ecosystem Portal API",
         version="0.2.0",
-        description="Lightweight Task Board, Roadmap and Discord notification backend.",
+        description="Lightweight Task Board, Roadmap and Discord/Lark notification backend.",
         docs_url="/api/docs",
         openapi_url="/api/openapi.json",
         lifespan=lifespan,
@@ -127,6 +131,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     app.state.settings = runtime
     app.state.repository = repository
     app.state.discord = discord
+    app.state.lark = lark
     if runtime.cors_origins:
         app.add_middleware(
             CORSMiddleware,
@@ -206,6 +211,16 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             return repository.readiness()
         except Exception as error:
             raise ReadinessError("Database is not ready") from error
+
+    @app.get(
+        "/api/v1/summary",
+        response_model=PlanningSummaryResponse,
+        tags=["operations"],
+    )
+    def planning_summary(
+        recent_limit: int = Query(default=5, ge=1, le=5),
+    ) -> Dict[str, Any]:
+        return repository.planning_summary(recent_limit=recent_limit)
 
     @app.get("/api/tasks", tags=["compatibility"])
     def legacy_tasks() -> Dict[str, Any]:
@@ -317,7 +332,10 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
 
     @app.post("/api/v1/internal/webhooks/flush", tags=["operations"], include_in_schema=False)
     def flush_webhooks() -> Dict[str, Any]:
-        return {"delivered": discord.flush_pending(), "outbox": repository.delivery_summary()}
+        return {
+            "delivered": {"discord": discord.flush_pending(), "lark": lark.flush_pending()},
+            "outbox": repository.delivery_summary(),
+        }
 
     @app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], include_in_schema=False)
     def api_not_found(path: str) -> None:

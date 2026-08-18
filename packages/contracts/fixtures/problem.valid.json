@@ -1,0 +1,10 @@
+{
+  "type": "https://schemas.primusspark.com/portal/problems/conflict.v1",
+  "code": "AGGREGATE_VERSION_CONFLICT",
+  "title": "Aggregate version conflict",
+  "detail": "Tài nguyên đã thay đổi; hãy tải lại và thử lại.",
+  "status": 409,
+  "request_id": "nginx-request-123",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "occurred_at": "2026-08-15T12:00:00.000000Z"
+}

@@ -1,0 +1,269 @@
+{
+  "entries": [
+    {
+      "activation_gate": null,
+      "concern_id": null,
+      "feature_id": "QUANTBT_RESEARCH",
+      "figma_frame_id": "P0.17",
+      "id": "LINK_QUANTBT_RESEARCH",
+      "planning_task_ids": [
+        "QBT-020"
+      ],
+      "prototype_route": "/research/quantbt",
+      "repository_scope": [
+        "portal-monorepo",
+        "quantbt-research"
+      ],
+      "roadmap_epic_id": "U04",
+      "screen_id": null
+    },
+    {
+      "activation_gate": null,
+      "concern_id": null,
+      "feature_id": "PLANNING",
+      "figma_frame_id": "P0.18",
+      "id": "LINK_PLANNING",
+      "planning_task_ids": [
+        "MGR-PLATFORM-001"
+      ],
+      "prototype_route": "/planning",
+      "repository_scope": [
+        "portal-monorepo",
+        "planning-board"
+      ],
+      "roadmap_epic_id": "U05",
+      "screen_id": null
+    },
+    {
+      "activation_gate": null,
+      "concern_id": null,
+      "feature_id": "COMMAND_CENTER",
+      "figma_frame_id": "P0.14",
+      "id": "LINK_COMMAND_CENTER",
+      "planning_task_ids": [
+        "PRT-012"
+      ],
+      "prototype_route": "/",
+      "repository_scope": [
+        "portal-monorepo"
+      ],
+      "roadmap_epic_id": "U03",
+      "screen_id": null
+    },
+    {
+      "activation_gate": null,
+      "concern_id": null,
+      "feature_id": "PORTAL_MAP",
+      "figma_frame_id": "P0.15",
+      "id": "LINK_PORTAL_MAP",
+      "planning_task_ids": [
+        "PRT-003"
+      ],
+      "prototype_route": "/portal-map",
+      "repository_scope": [
+        "portal-monorepo"
+      ],
+      "roadmap_epic_id": "U03",
+      "screen_id": null
+    },
+    {
+      "activation_gate": null,
+      "concern_id": null,
+      "feature_id": null,
+      "figma_frame_id": "P0.17",
+      "id": "LINK_QUANTBT_NEW_RUN_SCREEN",
+      "planning_task_ids": [],
+      "prototype_route": "/research/quantbt/new",
+      "repository_scope": [
+        "portal-monorepo",
+        "quantbt-research"
+      ],
+      "roadmap_epic_id": "U04",
+      "screen_id": "QUANTBT_NEW_RUN_SCREEN"
+    },
+    {
+      "activation_gate": null,
+      "concern_id": null,
+      "feature_id": null,
+      "figma_frame_id": "P0.17",
+      "id": "LINK_QUANTBT_RUN_LIBRARY_SCREEN",
+      "planning_task_ids": [],
+      "prototype_route": "/research/quantbt/runs",
+      "repository_scope": [
+        "portal-monorepo",
+        "quantbt-research"
+      ],
+      "roadmap_epic_id": "U04",
+      "screen_id": "QUANTBT_RUN_LIBRARY_SCREEN"
+    },
+    {
+      "activation_gate": null,
+      "concern_id": null,
+      "feature_id": null,
+      "figma_frame_id": "P0.17",
+      "id": "LINK_QUANTBT_RUN_PROGRESS_SCREEN",
+      "planning_task_ids": [],
+      "prototype_route": "/research/quantbt/runs/:runId/progress",
+      "repository_scope": [
+        "portal-monorepo",
+        "quantbt-research"
+      ],
+      "roadmap_epic_id": "U04",
+      "screen_id": "QUANTBT_RUN_PROGRESS_SCREEN"
+    },
+    {
+      "activation_gate": null,
+      "concern_id": null,
+      "feature_id": null,
+      "figma_frame_id": "P0.17",
+      "id": "LINK_QUANTBT_RUN_DETAIL_SCREEN",
+      "planning_task_ids": [],
+      "prototype_route": "/research/quantbt/runs/:runId/overview",
+      "repository_scope": [
+        "portal-monorepo",
+        "quantbt-research"
+      ],
+      "roadmap_epic_id": "U04",
+      "screen_id": "QUANTBT_RUN_DETAIL_SCREEN"
+    },
+    {
+      "activation_gate": null,
+      "concern_id": null,
+      "feature_id": null,
+      "figma_frame_id": "P0.18",
+      "id": "LINK_PLANNING_ROADMAP_SCREEN",
+      "planning_task_ids": [],
+      "prototype_route": "/planning/roadmap",
+      "repository_scope": [
+        "portal-monorepo",
+        "planning-board"
+      ],
+      "roadmap_epic_id": "U05",
+      "screen_id": "PLANNING_ROADMAP_SCREEN"
+    },
+    {
+      "activation_gate": null,
+      "concern_id": null,
+      "feature_id": null,
+      "figma_frame_id": "P0.18",
+      "id": "LINK_PLANNING_TASK_BOARD_SCREEN",
+      "planning_task_ids": [],
+      "prototype_route": "/planning/board",
+      "repository_scope": [
+        "portal-monorepo",
+        "planning-board"
+      ],
+      "roadmap_epic_id": "U05",
+      "screen_id": "PLANNING_TASK_BOARD_SCREEN"
+    },
+    {
+      "activation_gate": null,
+      "concern_id": null,
+      "feature_id": null,
+      "figma_frame_id": "P0.14",
+      "id": "LINK_COMMAND_CENTER_SCREEN",
+      "planning_task_ids": [],
+      "prototype_route": "/",
+      "repository_scope": [
+        "portal-monorepo"
+      ],
+      "roadmap_epic_id": "U03",
+      "screen_id": "COMMAND_CENTER_SCREEN"
+    },
+    {
+      "activation_gate": null,
+      "concern_id": null,
+      "feature_id": null,
+      "figma_frame_id": "P0.15",
+      "id": "LINK_PORTAL_MAP_SCREEN",
+      "planning_task_ids": [],
+      "prototype_route": "/portal-map",
+      "repository_scope": [
+        "portal-monorepo"
+      ],
+      "roadmap_epic_id": "U03",
+      "screen_id": "PORTAL_MAP_SCREEN"
+    },
+    {
+      "activation_gate": null,
+      "concern_id": "CONCERN_REGISTRY_AUTHORITY",
+      "feature_id": null,
+      "figma_frame_id": null,
+      "id": "LINK_CONCERN_REGISTRY_AUTHORITY",
+      "planning_task_ids": [],
+      "prototype_route": null,
+      "repository_scope": [
+        "portal-monorepo"
+      ],
+      "roadmap_epic_id": null,
+      "screen_id": null
+    },
+    {
+      "activation_gate": null,
+      "concern_id": "CONCERN_COMMAND_CENTER_TRUTH",
+      "feature_id": null,
+      "figma_frame_id": null,
+      "id": "LINK_CONCERN_COMMAND_CENTER_TRUTH",
+      "planning_task_ids": [],
+      "prototype_route": null,
+      "repository_scope": [
+        "portal-monorepo"
+      ],
+      "roadmap_epic_id": null,
+      "screen_id": null
+    },
+    {
+      "activation_gate": null,
+      "concern_id": "CONCERN_PORTAL_AUTHORIZATION",
+      "feature_id": null,
+      "figma_frame_id": null,
+      "id": "LINK_CONCERN_PORTAL_AUTHORIZATION",
+      "planning_task_ids": [],
+      "prototype_route": null,
+      "repository_scope": [
+        "portal-monorepo"
+      ],
+      "roadmap_epic_id": null,
+      "screen_id": null
+    },
+    {
+      "activation_gate": null,
+      "concern_id": "CONCERN_HISTORICAL_DEPLOYMENT",
+      "feature_id": null,
+      "figma_frame_id": null,
+      "id": "LINK_CONCERN_HISTORICAL_DEPLOYMENT",
+      "planning_task_ids": [],
+      "prototype_route": null,
+      "repository_scope": [
+        "portal-monorepo"
+      ],
+      "roadmap_epic_id": null,
+      "screen_id": null
+    },
+    {
+      "activation_gate": null,
+      "concern_id": "CONCERN_FUTURE_AUTHORITY",
+      "feature_id": null,
+      "figma_frame_id": null,
+      "id": "LINK_CONCERN_FUTURE_AUTHORITY",
+      "planning_task_ids": [],
+      "prototype_route": null,
+      "repository_scope": [
+        "portal-monorepo"
+      ],
+      "roadmap_epic_id": null,
+      "screen_id": null
+    }
+  ],
+  "integrity": {
+    "concerns_linked": 5,
+    "dangling_links": 0,
+    "features_linked": 4,
+    "planning_tasks_referenced": 4,
+    "screens_linked": 8,
+    "status": "valid"
+  },
+  "links_revision": 1,
+  "reviewed_at": "2026-08-15T00:00:00Z",
+  "schema_version": "portal.links.v1"
+}

@@ -71,6 +71,51 @@ export function phaseDraft(phases: RoadmapPhase[]): RoadmapPhase {
   };
 }
 
+/** Inclusive week count of a phase; a one-week phase spans 1, not 0. */
+export function phaseWeeks(phase: RoadmapPhase): number {
+  return phase.end - phase.start + 1;
+}
+
+/** Last week any phase reaches — the width the timeline axis has to cover. */
+export function programHorizon(phases: RoadmapPhase[]): number {
+  return phases.reduce((max, phase) => Math.max(max, phase.end), 0);
+}
+
+export interface PhaseProgress {
+  total: number;
+  done: number;
+}
+
+/**
+ * Delivery progress of a phase, counted from real tasks.
+ *
+ * Returns `null` when no task is assigned to the phase. That is deliberately
+ * NOT `{total: 0, done: 0}`: "no tasks planned yet" and "0 of 12 done" are
+ * different facts, and rendering the first as 0% would be the "0 from null"
+ * the display contract forbids.
+ */
+export function phaseProgress(
+  phaseId: string,
+  tasks: readonly { phase: string; status: string }[],
+): PhaseProgress | null {
+  const inPhase = tasks.filter((task) => task.phase.trim() === phaseId);
+  if (!inPhase.length) return null;
+  return { total: inPhase.length, done: inPhase.filter((task) => task.status === "Done").length };
+}
+
+/**
+ * Phases whose spans overlap the given phase.
+ *
+ * The roadmap's real risk is concurrency, not sequence: P3 starting inside P2
+ * is what makes a week expensive. Surfacing it is a read of existing data, not
+ * a new planning model.
+ */
+export function concurrentPhases(phase: RoadmapPhase, phases: RoadmapPhase[]): RoadmapPhase[] {
+  return phases.filter(
+    (other) => other.id !== phase.id && other.start <= phase.end && phase.start <= other.end,
+  );
+}
+
 export function replacePhase(phases: RoadmapPhase[], next: RoadmapPhase, previousId = next.id): RoadmapPhase[] {
   const index = phases.findIndex((phase) => phase.id === previousId);
   const updated = index < 0 ? [...phases, next] : phases.map((phase) => (phase.id === previousId ? next : phase));

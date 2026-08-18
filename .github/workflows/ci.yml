@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Check out Portal source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -31,6 +31,15 @@ jobs:
 
       - name: Lint GitHub Actions definitions
         run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7
+
+      - name: Test shared contracts workspace
+        run: ./scripts/contracts-test.sh
+
+      - name: Test Control API
+        run: ./scripts/control-api-test.sh
+
+      - name: Portal web visual baseline
+        run: ./scripts/portal-web-visual.sh
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -98,5 +107,6 @@ jobs:
           PORTAL_HTTP_PORT: "18080"
           PORTAL_IMAGE_PREFIX: local/portal-ci
           PORTAL_IMAGE_TAG: ${{ github.sha }}
-          PORTAL_MARKET_DATA_DIR: ./runtime/market-data
+          PORTAL_HISTORICAL_DATA_MODE: disabled
+          PORTAL_HISTORICAL_DATA_DIR: ./runtime/historical-market-data
         run: ./scripts/portal smoke

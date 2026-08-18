@@ -137,6 +137,80 @@ export function taskDraft(status: TaskStatus = "Backlog"): Task {
   };
 }
 
+/**
+ * How the board groups its lanes.
+ *
+ * `status` is the flat board — one row of status columns. The others add a
+ * lane per value of a field the task schema already carries, so grouping never
+ * introduces a second model of milestone, workstream or ownership.
+ */
+export const TASK_GROUPINGS = ["status", "milestone", "workstream", "owner"] as const;
+export type TaskGrouping = (typeof TASK_GROUPINGS)[number];
+
+export const GROUPING_LABELS: Record<TaskGrouping, string> = {
+  status: "Group by status",
+  milestone: "Group by milestone",
+  workstream: "Group by workstream",
+  owner: "Group by owner",
+};
+
+/** Field each grouping reads, and what an empty value is called. */
+const GROUPING_FIELD: Record<Exclude<TaskGrouping, "status">, { field: keyof Task; empty: string }> = {
+  milestone: { field: "phase", empty: "No milestone" },
+  workstream: { field: "workstream", empty: "No workstream" },
+  owner: { field: "owner", empty: "No owner" },
+};
+
+export interface MilestoneLane {
+  /** Lane key; "" is the unassigned lane. */
+  id: string;
+  label: string;
+  tasks: Task[];
+  /** Progress counters, computed from real task status only. */
+  total: number;
+  done: number;
+}
+
+/**
+ * Groups tasks into lanes by one of the fields the schema already carries.
+ *
+ * Tasks with no value are kept in an explicit "no …" lane rather than
+ * dropped, so the lane counts always add up to the filtered total.
+ */
+export function groupLanes(tasks: Task[], grouping: Exclude<TaskGrouping, "status">): MilestoneLane[] {
+  const { field, empty } = GROUPING_FIELD[grouping];
+  const buckets = new Map<string, Task[]>();
+  for (const task of tasks) {
+    const raw = task[field];
+    const key = typeof raw === "string" ? raw.trim() : "";
+    const bucket = buckets.get(key);
+    if (bucket) bucket.push(task);
+    else buckets.set(key, [task]);
+  }
+
+  return [...buckets.entries()]
+    .sort(([a], [b]) => {
+      // The unassigned lane sorts last; everything else is natural order, so
+      // P2 precedes P10.
+      if (a === b) return 0;
+      if (!a) return 1;
+      if (!b) return -1;
+      return a.localeCompare(b, undefined, { numeric: true });
+    })
+    .map(([id, laneTasks]) => ({
+      id,
+      label: id || empty,
+      tasks: laneTasks,
+      total: laneTasks.length,
+      done: laneTasks.filter((task) => task.status === "Done").length,
+    }));
+}
+
+/** Milestone lanes — the original v1 grouping, now one case of `groupLanes`. */
+export function milestoneLanes(tasks: Task[]): MilestoneLane[] {
+  return groupLanes(tasks, "milestone");
+}
+
 export function replaceTask(tasks: Task[], next: Task): Task[] {
   const index = tasks.findIndex((task) => task.id === next.id);
   if (index < 0) return [...tasks, next];

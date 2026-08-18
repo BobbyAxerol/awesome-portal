@@ -8,7 +8,7 @@ await page.getByRole("button", { name: /Run backtest/ }).first().click();
 await page.waitForTimeout(3000);
 for (let i = 0; i < 50; i++) {
   await page.waitForTimeout(3000);
-  if (await page.getByRole("button", { name: /Xem kết quả/ }).isVisible().catch(() => false)) break;
+  if (await page.getByRole("button", { name: /View results/ }).isVisible().catch(() => false)) break;
 }
 // auto-switched to Stage log on completion; count structured rows
 await page.waitForTimeout(1000);

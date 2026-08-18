@@ -214,12 +214,18 @@ async def test_wfo_and_series_endpoints(client) -> None:
     persisted_trials.to_parquet(trial_path, index=True)
 
     trials = (await http.get(f"/api/runs/{run_id}/wfo/trials?sort_by=objective&top_n=5")).json()
-    assert len(trials) >= 1
-    assert "trial_id" in trials[0]
-    assert len({item["trial_id"] for item in trials}) == len(trials)
+    assert trials["total_rows"] >= 1
+    assert trials["returned_rows"] == len(trials["rows"])
+    assert trials["returned_rows"] <= 5
+    assert "trial_id" in trials["rows"][0]
+    assert len({item["trial_id"] for item in trials["rows"]}) == len(trials["rows"])
 
     candidates = (await http.get(f"/api/runs/{run_id}/wfo/candidates")).json()
-    assert isinstance(candidates, list)
+    assert candidates["total_rows"] >= 1
+    assert candidates["returned_rows"] == len(candidates["rows"])
+    folds = (await http.get(f"/api/runs/{run_id}/wfo/folds")).json()
+    assert folds["total_rows"] == folds["returned_rows"]
+    assert folds["total_rows"] >= 1
 
     series = (await http.get(f"/api/runs/{run_id}/series/is?max_points=50")).json()
     assert series["segment"] == "is"

@@ -13,6 +13,7 @@ python3 -m venv .venv
 
 - API docs: `http://127.0.0.1:8000/api/docs`
 - Liveness / readiness: `/api/health` / `/api/ready`
+- Bounded Portal read model: `GET /api/v1/summary?recent_limit=5`
 - Runtime config: [`backend/.env.example`](.env.example)
 - Domain, rollout and backup runbook: [`docs/TASK_ROADMAP_BACKEND.md`](../docs/TASK_ROADMAP_BACKEND.md)
 
@@ -27,3 +28,6 @@ python -m backend.scripts.portal_db backup \
 
 Do not expose write APIs publicly until the parent portal supplies an approved
 access-control boundary. Discord webhook URLs belong only in runtime secrets.
+The summary endpoint is read-only and content-minimal: exact counts plus at
+most five task/roadmap IDs and timestamps. It never returns titles, notes,
+owners, outcomes, audit bodies or Discord state.
