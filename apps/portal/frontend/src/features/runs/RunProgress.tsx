@@ -5,7 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Check, Eye, Maximize2, Minimize2, Pause, Play, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { useRunEvents, runPollInterval } from "./useRunEvents";
 import { api, isTerminal, rowParams, type RunDetail, type RunFoldPlan, type RunLedger } from "../../lib/api";
+import { CancelRunButton } from "./CancelRunButton";
 import { FoldGantt } from "../../components/FoldGantt";
 import { annotateConsoleLines, estimateEtaSeconds, parseConsoleStats } from "../../lib/consoleStats";
 import { fmtDuration, fmtTimestamp } from "../../lib/format";
@@ -79,20 +81,29 @@ function Stepper({ detail }: { detail: RunDetail }) {
 }
 
 export function RunProgress({ runId, onViewResults }: { runId: string; onViewResults?: () => void }) {
+  // SSE, when it is available, is what makes a state change appear immediately.
+  // Polling stays underneath at a slow floor: a stream that opens and then goes
+  // quiet must not look like a run that stopped progressing.
+  const { streaming } = useRunEvents(runId);
+  const live = (fast: number) => (query: { state: { data?: { status: string } } }) =>
+    query.state.data && isTerminal(query.state.data.status)
+      ? false
+      : runPollInterval(streaming, fast);
+
   const detail = useQuery({
     queryKey: ["run", runId],
     queryFn: () => api.getRun(runId),
-    refetchInterval: (query) => (query.state.data && isTerminal(query.state.data.status) ? false : 1200),
+    refetchInterval: live(1200),
   });
   const ledger = useQuery({
     queryKey: ["ledger", runId],
     queryFn: () => api.ledger(runId),
-    refetchInterval: (query) => (query.state.data && isTerminal(query.state.data.status) ? false : 1200),
+    refetchInterval: live(1200),
   });
   const consoleTail = useQuery({
     queryKey: ["console", runId],
     queryFn: () => api.console(runId, 5000),
-    refetchInterval: 1000,
+    refetchInterval: runPollInterval(streaming, 1000),
     enabled: !detail.data || !isTerminal(detail.data.status),
   });
   const foldPlan = useQuery({
@@ -104,7 +115,7 @@ export function RunProgress({ runId, onViewResults }: { runId: string; onViewRes
   const progress = useQuery({
     queryKey: ["progress", runId],
     queryFn: () => api.progress(runId),
-    refetchInterval: 1000,
+    refetchInterval: runPollInterval(streaming, 1000),
     enabled: !detail.data || !isTerminal(detail.data.status),
   });
   const config = useQuery({
@@ -137,7 +148,7 @@ export function RunProgress({ runId, onViewResults }: { runId: string; onViewRes
     : cancelled
       ? "Run cancelled"
       : completed
-        ? "Run hoàn thành — nhấn “Xem kết quả” để mở Overview."
+        ? "Run complete — open Overview with “View results”."
         : "";
 
   const protocol = data.protocol ?? "";
@@ -170,6 +181,7 @@ export function RunProgress({ runId, onViewResults }: { runId: string; onViewRes
     <div className="mx-auto max-w-[1280px] px-6 py-8">
       <div className="mb-2 flex flex-wrap items-baseline gap-3">
         <h1 className="section-title">{failed ? "Run failed" : cancelled ? "Run cancelled" : completed ? "Run completed" : "Run progress"}</h1>
+        <CancelRunButton runId={runId} status={data.status} />
         <span className="mono text-[12px] text-ink-faint">
           stage {data.stage_index ?? "—"} / {data.stage_count ?? "—"} · {fmtDuration(data.created_at)}
         </span>
@@ -189,7 +201,7 @@ export function RunProgress({ runId, onViewResults }: { runId: string; onViewRes
             {completed && onViewResults ? (
               <button type="button" className="btn-primary" onClick={onViewResults}>
                 <Eye size={13} />
-                Xem kết quả
+                View results
               </button>
             ) : null}
           </div>
@@ -307,7 +319,7 @@ function ProgressStrip({
         </div>
         <span className="mono text-[12px] text-ink-faint">
           ETA <span className="font-semibold text-accent">{etaText}</span>{" "}
-          <span className="text-ink-faint/70">(ước tính)</span>
+          <span className="text-ink-faint/70">(estimate)</span>
         </span>
       </div>
 
@@ -339,7 +351,7 @@ function ProgressStrip({
         </div>
       )}
       <div className="mono mt-1.5 text-[10px] text-ink-faint">
-        {perFold ? `${totalStudies} folds · ${total} trials total (mỗi fold ${Math.round(total / totalStudies)})` : `${total} trials · 1 study`}
+        {perFold ? `${totalStudies} folds · ${total} trials total (${Math.round(total / totalStudies)} per fold)` : `${total} trials · 1 study`}
       </div>
     </div>
   );
@@ -642,7 +654,7 @@ function StageLog({
         ) : null}
 
         {!trials.length && !candidates.length && !["COMPLETED", "FAILED", "CANCELLED"].includes(status) ? (
-          <div style={{ color: C.faint }}>Structured records sẽ xuất hiện khi mỗi stage hoàn thành…</div>
+          <div style={{ color: C.faint }}>Structured records appear as each stage completes…</div>
         ) : null}
       </div>
     </div>

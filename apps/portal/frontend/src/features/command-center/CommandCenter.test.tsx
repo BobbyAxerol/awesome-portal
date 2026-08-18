@@ -7,7 +7,7 @@
  * into a zero.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { MemoryRouter } from "react-router-dom";
@@ -84,7 +84,7 @@ describe("Command Center — healthy", () => {
   it("renders real counts from the summary authority", async () => {
     mountWith(summaryFixture("healthy"));
     const section = await waitFor(() => sectionFor("QUANTBT_RESEARCH"));
-    expect(within(section).getByText("Tổng số run").parentElement?.textContent).toContain("3");
+    expect(within(section).getByText("Total runs").parentElement?.textContent).toContain("3");
   });
 
   it("shows the registry maturity counts, not a frontend tally", async () => {
@@ -98,7 +98,7 @@ describe("Command Center — healthy", () => {
   it("offers the highest-priority item as the primary action", async () => {
     const fixture = summaryFixture("healthy");
     mountWith(fixture);
-    const link = await screen.findByRole("link", { name: "Mở mục ưu tiên cao nhất" });
+    const link = await screen.findByRole("link", { name: "Open the highest-priority item" });
     expect(link.getAttribute("href")).toBe(fixture.priority_items[0].route);
   });
 });
@@ -107,12 +107,12 @@ describe("Command Center — empty", () => {
   it("renders a real zero as a number", async () => {
     mountWith(summaryFixture("empty"));
     const section = await waitFor(() => sectionFor("QUANTBT_RESEARCH"));
-    expect(within(section).getByText("Tổng số run").parentElement?.textContent).toContain("0");
+    expect(within(section).getByText("Total runs").parentElement?.textContent).toContain("0");
   });
 
   it("says the zero is evidenced rather than unknown", async () => {
     mountWith(summaryFixture("empty"));
-    await waitFor(() => expect(screen.getAllByText(/số 0 thật từ authority/).length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByText(/real zero from the authority/).length).toBeGreaterThan(0));
   });
 });
 
@@ -120,7 +120,7 @@ describe("Command Center — partial (Planning local-only)", () => {
   it("keeps QuantBT numbers while marking Planning unavailable", async () => {
     mountWith(summaryFixture("partial"));
     const quantbt = await waitFor(() => sectionFor("QUANTBT_RESEARCH"));
-    expect(within(quantbt).getByText("Tổng số run").parentElement?.textContent).toContain("3");
+    expect(within(quantbt).getByText("Total runs").parentElement?.textContent).toContain("3");
 
     const planning = sectionFor("PLANNING");
     expect(planning.querySelector("[data-availability='unavailable']")).not.toBeNull();
@@ -145,7 +145,7 @@ describe("Command Center — denied", () => {
     mountWith(summaryFixture("denied"));
     const planning = await waitFor(() => sectionFor("PLANNING"));
     expect(planning.querySelector("[data-availability='denied']")).not.toBeNull();
-    expect(within(planning).queryByRole("button", { name: "Thử lại" })).toBeNull();
+    expect(within(planning).queryByRole("button", { name: "Retry" })).toBeNull();
     expect(planning.querySelectorAll(".metric-value").length).toBe(0);
   });
 });
@@ -155,7 +155,7 @@ describe("Command Center — stale", () => {
     mountWith(summaryFixture("stale"));
     const quantbt = await waitFor(() => sectionFor("QUANTBT_RESEARCH"));
     expect(quantbt.querySelector("[data-availability='stale']")).not.toBeNull();
-    expect(within(quantbt).getByText("Tổng số run").parentElement?.textContent).toContain("3");
+    expect(within(quantbt).getByText("Total runs").parentElement?.textContent).toContain("3");
   });
 });
 
@@ -169,7 +169,7 @@ describe("Command Center — unavailable", () => {
   it("states explicitly that nothing was substituted with zero", async () => {
     mountWith(summaryFixture("unavailable"));
     await waitFor(() =>
-      expect(screen.getAllByText(/Không có giá trị nào được thay bằng 0/).length).toBeGreaterThan(0),
+      expect(screen.getAllByText(/No value has been replaced by a zero/).length).toBeGreaterThan(0),
     );
   });
 });
@@ -183,13 +183,13 @@ describe("Command Center — terminal failure", () => {
 
   it("offers retry for a retryable failure", async () => {
     mountWith({ status: 500 });
-    await waitFor(() => expect(screen.getByRole("button", { name: "Thử lại" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy());
   });
 
   it("does not offer retry for a permission failure", async () => {
     mountWith({ status: 403 });
-    await waitFor(() => expect(screen.getByText(/Summary contract lỗi/)).toBeTruthy());
-    expect(screen.queryByRole("button", { name: "Thử lại" })).toBeNull();
+    await waitFor(() => expect(screen.getByText(/The summary contract failed/)).toBeTruthy());
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
   });
 });
 
@@ -209,5 +209,95 @@ describe("Command Center — state separation", () => {
     expect(seen.get("healthy")).toBe("available");
     expect(seen.get("partial")).toBe("degraded");
     expect(seen.get("unavailable")).toBe("unavailable");
+  });
+});
+
+describe("evidence drawer", () => {
+  it("opens the full evidence for a section and traces each number to its authority", async () => {
+    mountWith(summaryFixture("healthy"));
+    const card = await screen.findByLabelText(/Evidence for QuantBT/);
+    fireEvent.click(card);
+
+    const drawer = await screen.findByTestId("evidence-drawer");
+    // Every metric in the section, not just the headline ones the card shows.
+    const section = summaryFixture("healthy").sections.find(
+      (item) => item.feature_id === "QUANTBT_RESEARCH",
+    )!;
+    for (const key of Object.keys(section.metrics)) {
+      expect(within(drawer).getByTestId(`evidence-${key}`), key).toBeTruthy();
+    }
+    // The authority is what makes a number traceable.
+    expect(within(drawer).getAllByText(/quantbt-current-runs\.v1/).length).toBeGreaterThan(0);
+    expect(within(drawer).getAllByText(/\/api\/runs/).length).toBeGreaterThan(0);
+  });
+
+  it("separates as-of from checked-at", async () => {
+    // When the data was true and when we last asked are different facts;
+    // conflating them hides staleness.
+    mountWith(summaryFixture("healthy"));
+    fireEvent.click(await screen.findByLabelText(/Evidence for QuantBT/));
+    const drawer = await screen.findByTestId("evidence-drawer");
+    expect(within(drawer).getAllByText("as-of").length).toBeGreaterThan(0);
+    expect(within(drawer).getAllByText("checked-at").length).toBeGreaterThan(0);
+  });
+
+  it("marks an unpublished field as unpublished, never as a value", async () => {
+    mountWith(summaryFixture("healthy"));
+    fireEvent.click(await screen.findByLabelText(/Evidence for QuantBT/));
+    const drawer = await screen.findByTestId("evidence-drawer");
+    // The healthy fixture leaves segment/digest null on these metrics.
+    const unpublished = within(drawer).getAllByText("not published");
+    expect(unpublished.length).toBeGreaterThan(0);
+    for (const node of unpublished) {
+      expect(node.textContent).not.toMatch(/^0$/);
+    }
+  });
+
+  it("does not offer a history it has no data for", async () => {
+    // Cross-filter and time series need U10's read model; offering them here
+    // would mean inventing a series the snapshot does not contain.
+    mountWith(summaryFixture("healthy"));
+    fireEvent.click(await screen.findByLabelText(/Evidence for QuantBT/));
+    const drawer = await screen.findByTestId("evidence-drawer");
+    expect(within(drawer).getByText(/U10.s durable read model/)).toBeTruthy();
+    expect(within(drawer).queryByRole("button", { name: /history|chart/i })).toBeNull();
+  });
+
+  it("closes on Escape", async () => {
+    mountWith(summaryFixture("healthy"));
+    fireEvent.click(await screen.findByLabelText(/Evidence for QuantBT/));
+    await screen.findByTestId("evidence-drawer");
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByTestId("evidence-drawer")).toBeNull());
+  });
+
+  it("shows an unavailable section's reason instead of blank metrics", async () => {
+    mountWith(summaryFixture("unavailable"));
+    const opener = await screen.findAllByLabelText(/^Evidence for /);
+    fireEvent.click(opener[0]);
+    const drawer = await screen.findByTestId("evidence-drawer");
+    // An unavailable metric renders its state badge, not a zero.
+    expect(within(drawer).queryByText("0")).toBeNull();
+  });
+});
+
+describe("reading order", () => {
+  it("puts what needs attention above the steady-state numbers and the reference metadata", async () => {
+    const { container } = mountWith(summaryFixture("healthy"));
+    // The module header renders in the loading state too, so waiting on the
+    // heading would sample the page before the snapshot arrives.
+    await waitFor(() => expect(container.querySelector(".portal-ledger")).toBeTruthy());
+
+    const order = Array.from(
+      container.querySelectorAll(
+        ".portal-ledger, #priority-heading, .portal-grid-2, #lifecycle-heading",
+      ),
+    ).map((node) =>
+      node.id || (node.classList.contains("portal-ledger") ? "ledger" : "sections"),
+    );
+
+    // act → measure → reference. The priority list used to be last, under
+    // everything else on the scroll.
+    expect(order).toEqual(["ledger", "priority-heading", "sections", "lifecycle-heading"]);
   });
 });

@@ -64,11 +64,11 @@ export class AuthController {
     @Body() body: unknown,
   ) {
     if (!originAllowed(request, this.auth.config.PORTAL_PUBLIC_ORIGIN)) {
-      throw new AuthError("ORIGIN_DENIED", "Origin không được phép.", 403);
+      throw new AuthError("ORIGIN_DENIED", "Origin not allowed.", 403);
     }
     const parsed = LoginSchema.safeParse(body);
     if (!parsed.success) {
-      throw new AuthError("INVALID_REQUEST", "Dữ liệu đăng nhập không hợp lệ.", 400);
+      throw new AuthError("INVALID_REQUEST", "Invalid login data.", 400);
     }
     const assertion = request.headers[ACCESS_ASSERTION_HEADER] as string | undefined;
     const devEmail =
@@ -99,26 +99,26 @@ export class AuthController {
     @Body() body: unknown,
   ) {
     if (!originAllowed(request, this.auth.config.PORTAL_PUBLIC_ORIGIN)) {
-      throw new AuthError("ORIGIN_DENIED", "Origin không được phép.", 403);
+      throw new AuthError("ORIGIN_DENIED", "Origin not allowed.", 403);
     }
     const parsed = ChangePasswordSchema.safeParse(body);
     if (!parsed.success) {
-      throw new AuthError("INVALID_REQUEST", "Dữ liệu không hợp lệ.", 400);
+      throw new AuthError("INVALID_REQUEST", "Invalid data.", 400);
     }
     const sessionToken = sessionTokenFrom(request);
     if (!sessionToken) {
-      throw new AuthError("SESSION_REQUIRED", "Phiên đăng nhập không hợp lệ.", 401);
+      throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
     }
     const csrfHeader = request.headers[CSRF_HEADER] as string | undefined;
     if (!csrfHeader) {
-      throw new AuthError("CSRF_REQUIRED", "CSRF token bị thiếu.", 403);
+      throw new AuthError("CSRF_REQUIRED", "CSRF token is missing.", 403);
     }
     const session = await this.auth.sessionFromToken(sessionToken);
     if (!session || session.state !== "ACTIVE") {
-      throw new AuthError("SESSION_REQUIRED", "Phiên đăng nhập không hợp lệ.", 401);
+      throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
     }
     if (!constantTimeEqual(sha256(csrfHeader), session.csrfSecretHash)) {
-      throw new AuthError("CSRF_INVALID", "CSRF token không hợp lệ.", 403);
+      throw new AuthError("CSRF_INVALID", "CSRF token is invalid.", 403);
     }
     await this.auth.changePassword({
       sessionToken,
@@ -137,7 +137,7 @@ export class AuthController {
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
     if (!originAllowed(request, this.auth.config.PORTAL_PUBLIC_ORIGIN)) {
-      throw new AuthError("ORIGIN_DENIED", "Origin không được phép.", 403);
+      throw new AuthError("ORIGIN_DENIED", "Origin not allowed.", 403);
     }
     await this.auth.logout(
       sessionTokenFrom(request),

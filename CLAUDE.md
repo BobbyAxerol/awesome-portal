@@ -143,3 +143,34 @@ tài liệu mâu thuẫn (theo v0.5 §2): `AGENTS.md` → guide v0.5 → guide v
 (nếu làm paper→live) → `UNIFIED_IMPLEMENTATION_PLAN.md` → guide v0.4 → BAR
 deep dives → `FRONTEND_HANDOFF.md` → code hiện hành. Code và tài liệu không khớp thì ghi discrepancy + evidence,
 không tự chọn mô tả tiện lợi.
+
+## 7. Bám plan và tracking (bắt buộc)
+
+1. **Làm chỉn chu từng phần, bám sát plan**: mỗi slice phải trỏ được về đúng
+   mục trong markdown plan/guide đang active (vd "v1.1 plan §3.4", "v0.5
+   §12.2"). Không gộp nhiều mục vào một commit mờ nghĩa; không "làm tắt" rồi
+   hứa slice sau.
+2. **Sáng tạo trong khuôn khổ**: được thiết kế mới khi nó đọc từ dữ liệu đã
+   có và làm người dùng quyết định tốt hơn — nhưng phải nêu rõ nguồn dữ liệu
+   và không được bịa thêm state (v0.5 §10.3, rule §3.3/§3.5 ở trên).
+3. **Làm thêm gì cũng phải note vào markdown chính để track**: bất cứ thứ gì
+   ngoài phạm vi plan (component mới, gate mới, đổi contract phía FE, quyết
+   định thiết kế) đều ghi vào `apps/portal/registry/FRONTEND_HANDOFF.md` §8 —
+   đó là markdown tracking **của frontend**. `upgrade/**` là docs của codex,
+   **không được sửa**; muốn đổi plan thì viết đề xuất trong §8 rồi để codex/
+   Bobby cập nhật.
+4. **Báo cáo cuối mỗi lần làm phải trả lời đủ 4 câu**:
+   - **Đã làm gì** — liệt kê theo commit, kèm bằng chứng (test/gate đã chạy).
+   - **Thuộc phần nào** — map từng việc về mục plan (§ nào, guide nào).
+   - **Còn những phần nào trong plan** — cái gì chưa xong, vì sao chưa
+     (blocked bởi backend request nào, hay chỉ là chưa tới lượt).
+   - **Tiếp theo nên làm gì** — đề xuất slice kế tiếp và lý do ưu tiên.
+5. **Không tự đánh dấu xong**: một mục chỉ được coi là đóng khi có gate xanh
+   (`npm test` + `npm run build` ở frontend liên quan, e2e nếu có) và được ghi
+   vào §8.1 "Đã đóng"; phần còn treo nằm ở §8.2 kèm lý do thật.
+6. **Backend request phải được kiểm lại**: mỗi lần bắt đầu slice mới, verify
+   lại từng request đang treo trong §8.3 (còn thiếu hay đã giao) và ghi ngày
+   kiểm. Khi backend giao contract mới, regenerate
+   `packages/contracts/generated/portal-api.d.ts` từ OpenAPI họ publish
+   (`cd packages/contracts && npm run generate`) — đây là bước cơ học, không
+   phải tự tác giả contract.

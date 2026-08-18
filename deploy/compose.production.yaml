@@ -72,12 +72,70 @@ services:
     depends_on:
       portal-api:
         condition: service_healthy
+      control-api:
+        condition: service_healthy
       roadmap-task-board-api:
         condition: service_healthy
+    environment:
+      PORTAL_WEB_UPSTREAM: ${PORTAL_WEB_UPSTREAM:-control-api:4000}
     networks:
       - portal
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  control-api:
+    image: ${PORTAL_IMAGE_PREFIX:?Set PORTAL_IMAGE_PREFIX}-control-api:${PORTAL_IMAGE_TAG:?Set PORTAL_IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      PORTAL_ENV: production
+      AUTH_MODE: ${CONTROL_API_AUTH_MODE:?Set CONTROL_API_AUTH_MODE (cloudflare_access_local_password)}
+      DATABASE_URL: postgres://${PORTAL_CONTROL_DB_USER:-portal}:${PORTAL_CONTROL_DB_PASSWORD:?Set PORTAL_CONTROL_DB_PASSWORD}@portal-postgres:5432/${PORTAL_CONTROL_DB_NAME:-portal_control}
+      PORTAL_PUBLIC_ORIGIN: ${PORTAL_PUBLIC_ORIGIN:?Set PORTAL_PUBLIC_ORIGIN (https://portal.primusspark.com)}
+      PORTAL_API_BASE_URL: http://portal-api:8000
+      FEATURE_PROXY_PORTAL: "true"
+      INTERNAL_PRINCIPAL_SECRET: ${CONTROL_API_INTERNAL_PRINCIPAL_SECRET:?Set CONTROL_API_INTERNAL_PRINCIPAL_SECRET}
+      CLOUDFLARE_TEAM_DOMAIN: ${CLOUDFLARE_TEAM_DOMAIN:?Set CLOUDFLARE_TEAM_DOMAIN}
+      CLOUDFLARE_ACCESS_ISSUER: ${CLOUDFLARE_ACCESS_ISSUER:?Set CLOUDFLARE_ACCESS_ISSUER}
+      CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:?Set CLOUDFLARE_ACCESS_AUD}
+      CLOUDFLARE_ACCESS_JWKS_URI: ${CLOUDFLARE_ACCESS_JWKS_URI:?Set CLOUDFLARE_ACCESS_JWKS_URI}
+      CLOUDFLARE_ALLOWED_EMAIL_DOMAIN: ${CLOUDFLARE_ALLOWED_EMAIL_DOMAIN:-azdag.com}
+    depends_on:
+      portal-postgres:
+        condition: service_healthy
+    expose:
+      - "4000"
+    networks:
+      - portal
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:4000/api/control/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+  portal-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PORTAL_CONTROL_DB_USER:-portal}
+      POSTGRES_PASSWORD: ${PORTAL_CONTROL_DB_PASSWORD:?Set PORTAL_CONTROL_DB_PASSWORD}
+      POSTGRES_DB: ${PORTAL_CONTROL_DB_NAME:-portal_control}
+    volumes:
+      - portal-postgres-data:/var/lib/postgresql/data
+    expose:
+      - "5432"
+    networks:
+      - portal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PORTAL_CONTROL_DB_USER:-portal} -d ${PORTAL_CONTROL_DB_NAME:-portal_control}"]
       interval: 10s
       timeout: 5s
       retries: 6
@@ -90,3 +148,4 @@ networks:
 volumes:
   portal-artifacts:
   roadmap-task-board-data:
+  portal-postgres-data:

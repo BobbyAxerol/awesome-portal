@@ -83,7 +83,7 @@ export interface AuthSession {
   absoluteExpiresAt: Date;
 }
 
-export const GENERIC_LOGIN_ERROR = "Tên đăng nhập hoặc thông tin xác thực không hợp lệ.";
+export const GENERIC_LOGIN_ERROR = "Invalid username or credentials.";
 
 export function randomId(prefix: string): string {
   return `${prefix}_${crypto.randomUUID().replaceAll("-", "")}`;

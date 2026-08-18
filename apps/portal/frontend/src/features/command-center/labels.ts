@@ -6,28 +6,28 @@
  * dropped, so a new metric shows up as data instead of disappearing.
  */
 const METRIC_LABELS: Record<string, string> = {
-  active_runs: "Đang chạy",
-  cancelled_runs: "Đã huỷ",
-  completed_runs: "Hoàn tất",
-  failed_runs: "Thất bại",
+  active_runs: "Running",
+  cancelled_runs: "Cancelled",
+  completed_runs: "Completed",
+  failed_runs: "Failed",
   historical_data_state: "Historical data",
-  historical_dataset_count: "Dataset lịch sử",
-  latest_run_id: "Run gần nhất",
-  latest_run_observed_at: "Quan sát lúc",
+  historical_dataset_count: "Historical datasets",
+  latest_run_id: "Latest run",
+  latest_run_observed_at: "Observed at",
   latest_run_protocol: "Protocol",
-  latest_run_status: "Trạng thái run",
+  latest_run_status: "Run status",
   latest_run_strategy: "Strategy",
-  queued_runs: "Hàng đợi",
-  total_runs: "Tổng số run",
-  current_phase_id: "Phase hiện tại (ID)",
-  current_phase_name: "Phase hiện tại",
-  roadmap_phase_count: "Số phase roadmap",
+  queued_runs: "Queued",
+  total_runs: "Total runs",
+  current_phase_id: "Current phase (id)",
+  current_phase_name: "Current phase",
+  roadmap_phase_count: "Roadmap phases",
   tasks_backlog: "Backlog",
   tasks_done: "Done",
   tasks_in_progress: "In Progress",
   tasks_ready: "Ready",
   tasks_validating: "Validating",
-  total_tasks: "Tổng task",
+  total_tasks: "Total tasks",
 };
 
 export function metricLabel(key: string): string {
@@ -83,9 +83,9 @@ export const SECTION_DETAIL_METRICS: Record<string, string[]> = {
 export function priorityTypeLabel(type: string): string {
   switch (type) {
     case "RUN_FAILED":
-      return "Run thất bại";
+      return "Run failed";
     case "HISTORICAL_DATA_UNAVAILABLE":
-      return "Historical data không khả dụng";
+      return "Historical data unavailable";
     case "REGISTRY_BLOCKING_CONCERN":
       return "Blocking concern";
     default:

@@ -104,7 +104,7 @@
       "PROTOTYPE": 2
     }
   },
-  "registry_digest": "sha256:0ac8910145aafeb544e362db6cba3382e578b4fa254b4943364eb82df4746a71",
+  "registry_digest": "sha256:714c1d20f021a4755a35b84e1200a47fe2680c9ad0cecf7869b8cfb1e72ea210",
   "requested_at": "2026-08-15T18:00:00Z",
   "schema_version": "portal.summary.v1",
   "sections": [
@@ -128,7 +128,7 @@
         "state": "unavailable"
       },
       "feature_id": "QUANTBT_RESEARCH",
-      "label": "QuantBT Research",
+      "label": "QuantBT Backtest",
       "metrics": {
         "active_runs": {
           "availability": {

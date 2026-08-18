@@ -30,11 +30,13 @@ workspace read model.
 
 ## 2. Locked decisions
 
-1. **Proxy is ADMIN-first.** Read-only metadata paths (health/ready,
-   strategies, datasets, registry/summary/links) are session-authenticated
-   for both roles; runs read paths and writes through the proxy require
-   ADMIN until their native slices migrate. USER sessions read runs through
-   the workspace read model — cross-workspace access fails closed (404).
+1. **Reads are open to every authenticated session; writes are ADMIN-only.**
+   All read paths (runs, series, catalogs — including cross-user) are
+   session-authenticated for both roles and proxied through to the Python
+   services; mutations (create runs, import alphas, cancel, edit config)
+   require ADMIN. Workspace read models remain available as a convenience
+   read path (cross-workspace access fails closed 404), not the only path
+   (owner decision 2026-08-17).
 2. **Writes are idempotent by contract.** POST writes accept
    `X-Portal-Idempotency-Key` (auto-derived from method+path+payload hash
    when absent); replay returns the stored response without an upstream

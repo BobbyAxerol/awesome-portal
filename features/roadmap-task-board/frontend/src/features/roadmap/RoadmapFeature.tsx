@@ -1,14 +1,17 @@
-import { useState, type ChangeEvent } from "react";
-import { Button, Chip, Input, Modal, StateView, useToast } from "@/components/ui";
+import { useMemo, useState, type ChangeEvent } from "react";
+import { Button, Field, Input, Modal, Select, StateView, Textarea, useToast } from "@/components/ui";
 import type { ApiMode } from "@/lib/api";
+import { useTasks } from "../tasks/useTasks";
 import { ActivityTimeline } from "../shared/ActivityTimeline";
 import {
   PHASE_TONES,
   normalisePhase,
   normalisePhases,
   phaseDraft,
+  programHorizon,
   type RoadmapPhase,
 } from "./roadmap-model";
+import { RoadmapTimeline } from "./RoadmapTimeline";
 import { useRoadmap } from "./useRoadmap";
 
 function downloadJson(filename: string, value: unknown): void {
@@ -24,43 +27,98 @@ function downloadJson(filename: string, value: unknown): void {
 function PhaseEditor({ draft, idLocked, onChange }: { draft: RoadmapPhase; idLocked: boolean; onChange: (field: keyof RoadmapPhase, value: string | number) => void }) {
   return (
     <div className="feature-form-grid">
-      <label className="feature-field">
-        <span>ID</span>
-        <Input value={draft.id} onChange={(event) => onChange("id", event.target.value)} aria-label="Phase ID" disabled={idLocked} />
-        {idLocked && <small className="feature-field-help">Server IDs are immutable to preserve audit history.</small>}
-      </label>
-      <label className="feature-field">
-        <span>Name</span>
-        <Input value={draft.name} onChange={(event) => onChange("name", event.target.value)} aria-label="Phase name" autoFocus />
-      </label>
-      <label className="feature-field">
-        <span>Start week</span>
-        <Input type="number" min="1" max="24" value={draft.start} onChange={(event) => onChange("start", Number(event.target.value))} aria-label="Phase start week" />
-      </label>
-      <label className="feature-field">
-        <span>End week</span>
-        <Input type="number" min="1" max="24" value={draft.end} onChange={(event) => onChange("end", Number(event.target.value))} aria-label="Phase end week" />
-      </label>
-      <label className="feature-field">
-        <span>Owner</span>
-        <Input value={draft.owner} onChange={(event) => onChange("owner", event.target.value)} aria-label="Phase owner" />
-      </label>
-      <label className="feature-field">
-        <span>Tone</span>
-        <select value={draft.tone} onChange={(event) => onChange("tone", event.target.value)} aria-label="Phase tone">
-          {PHASE_TONES.map((tone) => <option key={tone}>{tone}</option>)}
-        </select>
-      </label>
-      <label className="feature-field feature-field-wide">
-        <span>Outcome</span>
-        <textarea value={draft.outcome} onChange={(event) => onChange("outcome", event.target.value)} aria-label="Phase outcome" rows={3} />
-      </label>
+      <Field label="ID" hint={idLocked ? "Server IDs are immutable to preserve audit history." : undefined}>
+        {(field) => (
+          <Input
+            {...field}
+            className="input input-mono"
+            value={draft.id}
+            onChange={(event) => onChange("id", event.target.value)}
+            aria-label="Phase ID"
+            disabled={idLocked}
+          />
+        )}
+      </Field>
+      <Field label="Name">
+        {(field) => (
+          <Input {...field} value={draft.name} onChange={(event) => onChange("name", event.target.value)} aria-label="Phase name" autoFocus />
+        )}
+      </Field>
+      <Field label="Start week">
+        {(field) => (
+          <Input {...field} className="input input-mono" type="number" min="1" max="24" value={draft.start} onChange={(event) => onChange("start", Number(event.target.value))} aria-label="Phase start week" />
+        )}
+      </Field>
+      <Field label="End week">
+        {(field) => (
+          <Input {...field} className="input input-mono" type="number" min="1" max="24" value={draft.end} onChange={(event) => onChange("end", Number(event.target.value))} aria-label="Phase end week" />
+        )}
+      </Field>
+      <Field label="Owner">
+        {(field) => (
+          <Input {...field} value={draft.owner} onChange={(event) => onChange("owner", event.target.value)} aria-label="Phase owner" />
+        )}
+      </Field>
+      <Field label="Tone">
+        {(field) => (
+          <Select {...field} value={draft.tone} onChange={(event) => onChange("tone", event.target.value)} aria-label="Phase tone">
+            {PHASE_TONES.map((tone) => <option key={tone}>{tone}</option>)}
+          </Select>
+        )}
+      </Field>
+      <Field label="Outcome" wide>
+        {(field) => (
+          <Textarea {...field} value={draft.outcome} onChange={(event) => onChange("outcome", event.target.value)} aria-label="Phase outcome" rows={3} />
+        )}
+      </Field>
     </div>
+  );
+}
+
+/**
+ * Program-level facts, all counted from the phases actually loaded.
+ *
+ * Nothing here is a target or an estimate: horizon is the furthest exit week,
+ * concurrency is the largest number of phases live in any single week.
+ */
+function ProgramSummary({ phases }: { phases: RoadmapPhase[] }) {
+  const horizon = programHorizon(phases);
+  const peakConcurrency = useMemo(() => {
+    let peak = 0;
+    for (let week = 1; week <= horizon; week += 1) {
+      peak = Math.max(peak, phases.filter((phase) => phase.start <= week && week <= phase.end).length);
+    }
+    return peak;
+  }, [phases, horizon]);
+  const owners = new Set(phases.map((phase) => phase.owner.trim()).filter(Boolean)).size;
+
+  return (
+    <dl className="program-summary" data-testid="program-summary">
+      <div>
+        <dt>Horizon</dt>
+        <dd className="mono">W1–W{horizon}</dd>
+      </div>
+      <div>
+        <dt>Phases</dt>
+        <dd className="mono">{phases.length}</dd>
+      </div>
+      <div>
+        <dt>Peak concurrency</dt>
+        <dd className="mono">{peakConcurrency} phases/week</dd>
+      </div>
+      <div>
+        <dt>Owner</dt>
+        <dd className="mono">{owners ? `${owners} teams` : "unassigned"}</dd>
+      </div>
+    </dl>
   );
 }
 
 export function RoadmapFeature({ apiMode }: { apiMode: ApiMode }) {
   const { phases, persistence, syncState, syncError, needsInitialization, refresh, create, update, remove, replace, reset } = useRoadmap(apiMode);
+  // Read-only join: phase delivery is counted from the same tasks the board
+  // owns, so the roadmap cannot report progress the board disagrees with.
+  const { tasks } = useTasks(apiMode);
   const toast = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<RoadmapPhase | null>(null);
@@ -89,29 +147,29 @@ export function RoadmapFeature({ apiMode }: { apiMode: ApiMode }) {
     if (!draft) return;
     const next = normalisePhase({ ...draft }, draft.id || "P0");
     if (!next.id.trim() || !next.name.trim()) {
-      toast("Phase cần có ID và name", "bad");
+      toast("A phase needs an id and a name", "bad");
       return;
     }
     if (phases.some((phase) => phase.id === next.id && phase.id !== editingId)) {
-      toast(`ID ${next.id} đã tồn tại`, "bad");
+      toast(`The id ${next.id} already exists`, "bad");
       return;
     }
     const saved = { ...next, id: next.id.trim(), name: next.name.trim() };
     void (editingId ? update(saved, editingId) : create(saved))
       .then(() => {
         closeEditor();
-        toast(editingId ? "Phase đã cập nhật" : "Phase mới đã thêm", "good");
+        toast(editingId ? "Phase updated" : "Phase added", "good");
       })
       .catch((error: Error) => toast(error.message, "bad"));
   };
 
   const deletePhase = (phase: RoadmapPhase) => {
-    if (!window.confirm(`Xóa phase ${phase.id}?`)) return;
+    if (!window.confirm(`Delete phase ${phase.id}?`)) return;
     void remove(phase.id)
       .then(() => {
         if (editingId === phase.id) closeEditor();
         if (activityPhaseId === phase.id) setActivityPhaseId(null);
-        toast(`Đã xóa ${phase.id}`, "info");
+        toast(`Deleted ${phase.id}`, "info");
       })
       .catch((error: Error) => toast(error.message, "bad"));
   };
@@ -126,8 +184,8 @@ export function RoadmapFeature({ apiMode }: { apiMode: ApiMode }) {
         if (!Array.isArray(parsed)) throw new Error("Expected a JSON array");
         return replace(normalisePhases(parsed as Record<string, unknown>[]));
       })
-      .then(() => toast("Đã import roadmap", "good"))
-      .catch(() => toast("File JSON roadmap không hợp lệ", "bad"));
+      .then(() => toast("Roadmap imported", "good"))
+      .catch(() => toast("That roadmap JSON file is not valid", "bad"));
   };
 
   return (
@@ -142,8 +200,8 @@ export function RoadmapFeature({ apiMode }: { apiMode: ApiMode }) {
           <Button type="button" variant="ghost" onClick={() => downloadJson("quant-roadmap-phases.json", phases)}>Export JSON</Button>
           <label className="btn-ghost file-button">Import JSON<input type="file" accept="application/json" onChange={importPhases} /></label>
           <Button type="button" variant="ghost" onClick={() => {
-            if (window.confirm("Reset roadmap về bản mặc định?")) {
-              void reset().then(() => toast("Roadmap đã reset", "good")).catch((error: Error) => toast(error.message, "bad"));
+            if (window.confirm("Reset the roadmap to its defaults?")) {
+              void reset().then(() => toast("Roadmap reset", "good")).catch((error: Error) => toast(error.message, "bad"));
             }
           }}>Reset</Button>
           <Button type="button" onClick={openNew}>+ Add phase</Button>
@@ -151,34 +209,23 @@ export function RoadmapFeature({ apiMode }: { apiMode: ApiMode }) {
       </header>
 
       <div className={`sync-notice ${syncState === "error" ? "sync-notice-error" : ""}`} role={syncState === "error" ? "alert" : "status"}>
-        <span>{syncState === "loading" ? "Đang tải workspace…" : syncState === "saving" ? "Đang lưu an toàn…" : persistence === "v1" ? "Server workspace · versioned & audited" : persistence === "legacy" ? "Compatibility API sync" : "Local-only workspace"}</span>
+        <span>{syncState === "loading" ? "Loading the workspace…" : syncState === "saving" ? "Saving safely…" : persistence === "v1" ? "Server workspace · versioned & audited" : persistence === "legacy" ? "Compatibility API sync" : "Local-only workspace"}</span>
         {persistence !== "local" && <button type="button" onClick={() => void refresh()}>Refresh</button>}
-        {needsInitialization && <button type="button" onClick={() => void replace(phases).then(() => toast("Đã khởi tạo server từ snapshot local", "good")).catch((error: Error) => toast(error.message, "bad"))}>Initialize server from local</button>}
+        {needsInitialization && <button type="button" onClick={() => void replace(phases).then(() => toast("Server initialized from the local snapshot", "good")).catch((error: Error) => toast(error.message, "bad"))}>Initialize server from local</button>}
         {syncError && <span>{syncError.message}</span>}
       </div>
 
       {phases.length ? (
-        <div className="roadmap-card phase3-roadmap-card">
-          <div className="roadmap-week-header" aria-hidden="true">
-            <span>Phase</span>
-            <div>{Array.from({ length: 24 }, (_, index) => <span key={index}>W{index + 1}</span>)}</div>
-            <span>Outcome</span>
-          </div>
-          <div className="roadmap-rows">
-            {phases.map((phase) => (
-              <article className="phase3-roadmap-row" key={phase.id} data-testid={`roadmap-phase-${phase.id}`}>
-                <div className="roadmap-label"><strong>{phase.id} · {phase.name}</strong><span>{phase.owner || "Unassigned"}</span></div>
-                <div className="roadmap-track phase3-roadmap-track" aria-label={`${phase.id} runs from week ${phase.start} to week ${phase.end}`}>
-                  <div className={`roadmap-bar phase3-roadmap-bar phase-tone-${phase.tone}`} style={{ gridColumn: `${phase.start} / ${phase.end + 1}` }}>
-                    W{phase.start}–W{phase.end}
-                  </div>
-                </div>
-                <div className="roadmap-outcome"><p>{phase.outcome || "No outcome recorded"}</p><div><Chip>{phase.tone}</Chip><button type="button" onClick={() => openEdit(phase)}>Edit</button><button type="button" className="danger-text" onClick={() => deletePhase(phase)}>Delete</button></div></div>
-              </article>
-            ))}
-          </div>
-        </div>
-      ) : <StateView kind="empty" message="Chưa có phase nào. Nhấn “Add phase” để tạo." />}
+        <>
+          <ProgramSummary phases={phases} />
+          <RoadmapTimeline
+            phases={phases}
+            tasks={tasks}
+            onEdit={openEdit}
+            onActivity={persistence === "v1" ? (phase) => setActivityPhaseId(phase.id) : null}
+          />
+        </>
+      ) : <StateView kind="empty" message="No phases yet — use “Add phase” to create one." />}
 
       <Modal open={draft !== null} title={editingId ? `Edit ${editingId}` : "New phase"} onClose={closeEditor}>
         {draft && <PhaseEditor draft={draft} idLocked={Boolean(editingId && persistence === "v1")} onChange={updateDraft} />}

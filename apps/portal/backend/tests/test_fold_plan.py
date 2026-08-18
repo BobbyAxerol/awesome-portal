@@ -145,7 +145,6 @@ def test_fold_plan_rejects_bad_split_mode() -> None:
 def test_preflight_fold_config_error_is_422_not_500() -> None:
     """v0.1.1 bugfix: a fold plan that cannot be built (e.g. data_start after
     split_mode) must surface as a clean validation error, never a 500."""
-    from portal_api.domain.errors import DataSchemaError
     from portal_api.domain.requests import PortalRunRequest, ThreeWindowConfig
     from portal_api.services.preflight import PreflightService
 
@@ -190,5 +189,8 @@ def test_preflight_fold_config_error_is_422_not_500() -> None:
         execution=ExecutionConfig(),
     )
     preflight = PreflightService(provider=provider, strategies=StrategyRegistry(), quantbt_gateway=None)
-    with pytest.raises(DataSchemaError, match="fold configuration"):
-        preflight.run(request)
+    response = preflight.run(request)
+    assert response.valid is False
+    folds_check = next(item for item in response.checks if item.id == "folds")
+    assert folds_check.ok is False
+    assert folds_check.detail  # concrete reason, never a bare 500

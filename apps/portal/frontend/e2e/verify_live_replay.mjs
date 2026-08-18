@@ -25,7 +25,7 @@ console.log("L1 PASS (streams during run):", liveTrials >= 3);
 // wait for completion, then check replay on stage log
 for (let i = 0; i < 40; i++) {
   await page.waitForTimeout(3000);
-  if (await page.getByRole("button", { name: /Xem kết quả/ }).isVisible().catch(() => false)) break;
+  if (await page.getByRole("button", { name: /View results/ }).isVisible().catch(() => false)) break;
 }
 // grab the "replaying x/total" indicator early in replay
 await page.waitForTimeout(800);

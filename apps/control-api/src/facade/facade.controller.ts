@@ -24,26 +24,6 @@ interface PortalRequest extends FastifyRequest {
   portalWorkspaceId: string;
 }
 
-const READ_ONLY_PORTAL_PATHS = new Set([
-  "/api/health",
-  "/api/ready",
-  "/api/strategies",
-  "/api/datasets",
-  "/api/v1/portal/registry",
-  "/api/v1/portal/summary",
-  "/api/v1/portal/links",
-]);
-
-const WRITE_PATHS_PREFIXES = ["/api/runs", "/api/v1/portal"];
-
-function isReadOnlyAllowed(path: string): boolean {
-  return (
-    READ_ONLY_PORTAL_PATHS.has(path) ||
-    path.startsWith("/api/strategies/") ||
-    path.startsWith("/api/datasets")
-  );
-}
-
 @UseGuards(SessionGuard)
 @Controller()
 export class FacadeController {
@@ -73,7 +53,7 @@ export class FacadeController {
     @Param("workspace_id") workspaceId: string,
   ) {
     if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
-      throw new FacadeError("WORKSPACE_NOT_FOUND", "Workspace không tồn tại.", 404);
+      throw new FacadeError("WORKSPACE_NOT_FOUND", "Workspace not found.", 404);
     }
     const runs = await this.runs.listForWorkspace(workspaceId);
     return {
@@ -90,7 +70,19 @@ export class FacadeController {
     };
   }
 
-  @All(["/api/runs", "/api/runs/*", "/api/strategies", "/api/strategies/*", "/api/datasets", "/api/v1/portal/*", "/api/health", "/api/ready"])
+  @All([
+    "/api/runs",
+    "/api/runs/*",
+    "/api/strategies",
+    "/api/strategies/*",
+    "/api/datasets",
+    "/api/config/options",
+    "/api/v1/portal/*",
+    "/api/v1/alphas",
+    "/api/v1/alphas/*",
+    "/api/health",
+    "/api/ready",
+  ])
   async portal(
     @Req() request: PortalRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
@@ -99,7 +91,7 @@ export class FacadeController {
     if (!this.proxyService.enabled()) {
       throw new FacadeError(
         "FAÇADE_PROXY_DISABLED",
-        "Control API façade proxy đang tắt; dùng legacy gateway path.",
+        "The Control API façade proxy is disabled; use the legacy gateway path.",
         404,
       );
     }
@@ -109,20 +101,17 @@ export class FacadeController {
     const user = request.portalUser;
 
     const write = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
-    if (write && user.role !== "ADMIN" && !path.startsWith("/api/runs")) {
-      throw new FacadeError("PERMISSION_DENIED", "Không được phép truy cập.", 403);
-    }
-    if (!write && !isReadOnlyAllowed(path) && user.role !== "ADMIN") {
-      throw new FacadeError(
-        "PERMISSION_DENIED",
-        "Đọc runs qua Control API cần quyền ADMIN; dùng workspace read model.",
-        403,
-      );
+    // Mutations (creating runs, importing alphas, editing config) are
+    // ADMIN-only. Every authenticated session — including cross-user — may
+    // READ runs and catalogs through the proxy; workspace read models remain
+    // available as a convenience but are no longer the only read path.
+    if (write && user.role !== "ADMIN") {
+      throw new FacadeError("PERMISSION_DENIED", "Access denied.", 403);
     }
     if (!write && path.startsWith("/api/runs/") && path.endsWith("/events")) {
       throw new FacadeError(
         "SSE_NOT_MIGRATED",
-        "SSE stream chưa migrate qua façade; dùng legacy gateway path.",
+        "SSE is not migrated through the façade; use the legacy gateway path.",
         404,
       );
     }
@@ -132,13 +121,15 @@ export class FacadeController {
     const traceparent =
       (request.headers["traceparent"] as string | undefined) ??
       "00-00000000000000000000000000000000-0000000000000000-01";
+    const contentType =
+      (request.headers["content-type"] as string | undefined) ?? undefined;
 
     if (write) {
-      const bodyText =
+      const bodyText: string | Buffer | undefined =
         body === undefined || body === null
           ? undefined
           : Buffer.isBuffer(body)
-            ? body.toString("utf8")
+            ? body // keep raw multipart bytes; utf8 coercion corrupts binaries
             : typeof body === "string"
               ? body
               : JSON.stringify(body);
@@ -147,6 +138,7 @@ export class FacadeController {
         path,
         query,
         body: bodyText,
+        contentType,
         requestId,
         traceparent,
         user,
@@ -163,6 +155,7 @@ export class FacadeController {
       path,
       query,
       body: undefined,
+      contentType,
       requestId,
       traceparent,
       user,

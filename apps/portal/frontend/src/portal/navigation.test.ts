@@ -22,6 +22,8 @@ import {
   filterPalette,
   legacyRouteOwners,
   lifecycleStages,
+  personaOptions,
+  personasForStage,
   screensForFeature,
   sidebarGroups,
 } from "./navigation";
@@ -109,7 +111,7 @@ describe("sidebar", () => {
         {
           ...registry.features.find((f) => f.id === "ALPHA_POOL")!,
           id: "NEW_COMMISSIONED",
-          label: "Feature hoàn toàn mới",
+          label: "A brand-new feature",
           canonical_route: "/research/brand-new",
         },
       ],
@@ -159,7 +161,7 @@ describe("route resolution", () => {
 
   it("builds a group -> feature breadcrumb trail", () => {
     const crumbs = breadcrumbsFor(registry, "/research/quantbt/overview");
-    expect(crumbs.map((c) => c.label)).toEqual(["Research", "QuantBT Research"]);
+    expect(crumbs.map((c) => c.label)).toEqual(["Research", "QuantBT Backtest"]);
     expect(crumbs[0].route).toBeNull();
   });
 
@@ -219,6 +221,88 @@ describe("icons", () => {
     const requested = new Set(registry.features.map((f) => f.navigation.icon_key));
     for (const key of requested) {
       expect(KNOWN_ICON_KEYS, `icon_key ${key} has no glyph`).toContain(key);
+    }
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * Persona roll-up (Portal Map, v0.4 §P0.15)
+ * ---------------------------------------------------------------------- */
+
+describe("personas", () => {
+  it("offers exactly the personas the registry declares on its stages", () => {
+    const options = personaOptions(registry);
+    expect(options.length).toBeGreaterThan(0);
+    // Read, never derived: every option must appear on a real stage.
+    const declared = new Set(registry.lifecycle_stages.flatMap((stage) => stage.personas ?? []));
+    for (const option of options) expect(declared.has(option)).toBe(true);
+    expect([...options].sort()).toEqual(options);
+  });
+
+  it("reads a stage's personas from the registry rather than recomputing them", () => {
+    for (const stage of lifecycleStages(registry)) {
+      expect(personasForStage(stage), stage.id).toEqual([...(stage.personas ?? [])].sort());
+    }
+  });
+
+  it("reports no persona rather than a default when the registry declares none", () => {
+    const undeclared = { ...lifecycleStages(registry)[0], personas: [] };
+    expect(personasForStage(undeclared)).toEqual([]);
+  });
+
+  it("still agrees with the screen roll-up the backend documents", () => {
+    // The backend derives `personas` from `screens[].primary_persona` at
+    // projection time. Checking the fixture against that rule is what would
+    // catch the projection silently changing meaning.
+    for (const stage of lifecycleStages(registry)) {
+      const features = new Set(stage.feature_ids);
+      const fromScreens = [
+        ...new Set(
+          registry.screens
+            .filter((screen) => features.has(screen.feature_id) && screen.primary_persona)
+            .map((screen) => screen.primary_persona as string),
+        ),
+      ].sort();
+      expect(personasForStage(stage), stage.id).toEqual(fromScreens);
+    }
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * Portal Map filters and brief (v0.4 §P0.15)
+ * ---------------------------------------------------------------------- */
+
+describe("stage status filter", () => {
+  it("offers only maturities the stages actually declare", () => {
+    const declared = new Set(registry.lifecycle_stages.map((stage) => stage.maturity));
+    // A filter offering a state no stage is in would return nothing and read as
+    // a bug in the data.
+    for (const stage of registry.lifecycle_stages) {
+      expect(declared.has(stage.maturity)).toBe(true);
+    }
+    expect(declared.size).toBeGreaterThan(1);
+  });
+});
+
+describe("concerns reachable from a stage", () => {
+  it("links every stage to the concerns that name its features", () => {
+    // This is the §P0.23 chain: lifecycle → feature → concern → task.
+    const withConcerns = registry.lifecycle_stages.filter((stage) => {
+      const features = new Set(stage.feature_ids);
+      return registry.concerns.some((concern) =>
+        concern.feature_ids.some((id) => features.has(id)),
+      );
+    });
+    expect(withConcerns.length).toBeGreaterThan(0);
+  });
+
+  it("every concern carries the ids the brief renders", () => {
+    for (const concern of registry.concerns) {
+      expect(Array.isArray(concern.feature_ids), concern.id).toBe(true);
+      expect(Array.isArray(concern.screen_ids), concern.id).toBe(true);
+      expect(Array.isArray(concern.task_ids), concern.id).toBe(true);
+      expect(concern.severity, concern.id).toBeTruthy();
+      expect(concern.status, concern.id).toBeTruthy();
     }
   });
 });

@@ -84,7 +84,7 @@ export function ThreeWindowEditor({ windows, onChange }: ThreeWindowEditorProps)
           endPlaceholder="dataset end"
         />
         <p className="mono text-[10px] leading-4 text-ink-faint">
-          Half-open: end-exclusive · Holdout Live rỗng = chạy tới bar cuối dataset
+          Half-open: end-exclusive · an empty Holdout Live runs to the dataset's last bar
         </p>
       </div>
     </div>

@@ -54,7 +54,7 @@ export function Distribution({
         <div className="mt-1 flex items-center gap-2">
           <AvailabilityBadge state={state} detail={reason} />
           <span className="mono text-[11px] text-ink-soft">
-            Không dựng phân bố khi thiếu thành phần “{metricLabel(missing.key)}”.
+            No distribution is drawn while the “{metricLabel(missing.key)}” component is missing.
           </span>
         </div>
       </div>
@@ -71,13 +71,13 @@ export function Distribution({
     <div className="portal-distribution">
       <div className="flex items-baseline justify-between gap-2">
         <span className="label">{caption}</span>
-        <span className="mono text-[11px] text-ink-faint">tổng {total}</span>
+        <span className="mono text-[11px] text-ink-faint">total {total}</span>
       </div>
 
       {total === 0 ? (
         // A real zero, evidenced by the authority — distinct from "unknown".
         <p className="mono mt-1 text-[11px] text-ink-soft">
-          — Chưa có bản ghi nào; đây là số 0 thật từ authority.
+          — No records yet; this is a real zero from the authority.
         </p>
       ) : (
         <div className="portal-bar" role="img" aria-label={`${caption}: ${values.map((v) => `${metricLabel(v.key)} ${v.value}`).join(", ")}`}>

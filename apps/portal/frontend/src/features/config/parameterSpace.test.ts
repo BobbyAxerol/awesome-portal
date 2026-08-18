@@ -74,7 +74,7 @@ describe("range validation", () => {
 
   it("requires an integer step for int_range", () => {
     const issues = validateSpec("window", { kind: "int_range", low: 20, high: 60, step: 1.5 }, declared.window);
-    expect(issues.some((i) => i.message.includes("step nguyên"))).toBe(true);
+    expect(issues.some((i) => i.message.includes("integer step"))).toBe(true);
   });
 
   it("warns — not blocks — on a finer step than the declared grid", () => {

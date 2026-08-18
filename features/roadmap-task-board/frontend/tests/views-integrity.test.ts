@@ -25,7 +25,15 @@ describe("view panel integrity", () => {
   });
 
   it("viewport: every view id is a valid route", () => {
-    const valid = new Set(["docs", "roadmap", "board", "reports", "evidence", "portal"]);
+    const valid = new Set(["docs", "roadmap", "board", "reports"]);
     for (const v of VIEW_PANELS) expect(valid.has(v.id.replace("view-", "")), v.id).toBe(true);
+  });
+
+  it("no longer carries the fragments of the screens removed in v1.1", () => {
+    // Removed, not hidden: the Evidence and Portal Preview markup must not be
+    // shipped in the bundle at all, not merely be unreachable.
+    const ids = VIEW_PANELS.map((panel) => panel.id);
+    expect(ids).not.toContain("view-evidence");
+    expect(ids).not.toContain("view-portal");
   });
 });

@@ -39,6 +39,7 @@ from portal_api.repositories import ArtifactRepository
 from portal_api.repositories.portal_links import PortalLinksRepository
 from portal_api.repositories.portal_registry import PortalRegistryRepository
 from portal_api.services import PreflightService
+from portal_api.services.alpha_import import AlphaImportService
 from portal_api.services.alpha_registry import AlphaRegistry
 from portal_api.services.data_catalog import DataCatalogService, SnapshotStore
 from portal_api.services.engine_capabilities import EngineCapabilityService
@@ -150,6 +151,11 @@ def create_app(
     )
     app.state.data_catalog = DataCatalogService(registry_repository.registry_root)
     app.state.alpha_registry = AlphaRegistry(registry_repository.registry_root)
+    app.state.alpha_import_service = AlphaImportService(
+        registry_repository.registry_root,
+        Path(os.getenv("PORTAL_ALPHA_IMPORT_ROOT", "artifacts/alpha-imports")),
+        Path(os.getenv("PORTAL_ALPHA_ARTIFACT_ROOT", "artifacts/alpha-inbox")),
+    )
     app.state.snapshot_store = SnapshotStore(
         Path(os.getenv("PORTAL_SNAPSHOT_ROOT", str(Path(os.getenv("PORTAL_ARTIFACT_ROOT", "artifacts/runs")) / "snapshots")))
     )

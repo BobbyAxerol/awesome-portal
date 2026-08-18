@@ -1,4 +1,13 @@
 /** Typed API client for the portal backend (schemas mirror portal_api contracts). */
+import type {
+  AlphaImportRecord,
+  PreflightCheck,
+  AlphaImportRequest,
+  AlphaVersionDetail as AlphaVersionDetailResponse,
+  AlphaVerifyResult,
+  FoldPlanDocument,
+  RowEnvelope,
+} from "../portal/contracts";
 
 export interface DatasetDescriptor {
   dataset_id: string;
@@ -48,6 +57,14 @@ export interface PreflightResponse {
     load_metadata?: Record<string, unknown>;
   };
   config_hash: string;
+  /**
+   * Per-gate results (R14).
+   *
+   * Before this the response only said `valid: true|false`, so the Review step
+   * could not name which gate failed — and it filled the gap with three
+   * hard-coded "pass" badges that asserted a result nobody had checked.
+   */
+  checks: PreflightCheck[];
 }
 
 export type ParameterSpec =
@@ -85,12 +102,41 @@ export interface RunLedger {
   trial_ledger_ready: boolean;
 }
 
-export interface RunFoldPlan {
-  protocol: string;
-  folds: Array<
-    | { fold_id: number; role?: string; start?: string; end?: string; train_start?: string; train_end?: string; test_start?: string; test_end?: string }
-  >;
-}
+/**
+ * Fold plan, with its BAR-02 provenance.
+ *
+ * `producer.as_of` pins the write instant and `producer.source_artifact_digest`
+ * names the analysis frame the plan was derived from, so the fold Gantt can
+ * cite its source like any other §12.2 figure. Both are nullable in the
+ * schema: a plan written before they existed has neither, and the UI says
+ * "not published" rather than assuming.
+ *
+ * The row shape stays declared here because `FoldPlanDocument.folds` is an
+ * untyped record array in the contract — the runner writes protocol-specific
+ * columns, which OpenAPI does not model.
+ */
+export type FoldRow = {
+  fold_id: number;
+  role?: string;
+  start?: string;
+  end?: string;
+  train_start?: string;
+  train_end?: string;
+  test_start?: string;
+  test_end?: string;
+};
+
+export type RunFoldPlan = Omit<FoldPlanDocument, "folds"> & { folds: FoldRow[] };
+
+/**
+ * Envelope shared by every row-table endpoint (v0.5 §12.2).
+ *
+ * `total_rows` counts the rows stored in the artifact before any filter or
+ * `top_n` cap, so truncation is read rather than inferred from
+ * `returned_rows === top_n` — which cannot distinguish a truncated artifact
+ * from one that happens to hold exactly the cap.
+ */
+export type RowsPayload = RowEnvelope;
 
 export interface RunSummary {
   run_id: string;
@@ -110,23 +156,72 @@ export interface RunDetail extends RunSummary {
   failure: { code: string; message: string } | null;
 }
 
+/**
+ * Series envelope (v0.5 §12.2).
+ *
+ * `source_rows` is the segment's row count **before** downsampling and before
+ * start/end clipping; `returned_rows` is what actually arrived; and
+ * `downsample_stride` is 1 when the payload was not thinned. The three
+ * together are what let a chart say "5,000/128,400 points, stride 26" instead of
+ * implying it drew everything.
+ *
+ * Delivered by codex on 2026-08-17; before that the frontend could only assume
+ * returned == source, which quietly understated every reduced chart.
+ */
 export interface SeriesPayload {
   segment: string;
   timestamps: string[];
   series: Record<string, (number | null)[]>;
+  source_rows: number;
+  returned_rows: number;
+  downsample_stride: number;
+}
+
+/**
+ * A failed API call, with the facts a caller needs to react correctly.
+ *
+ * The status matters: with writes gated to ADMIN at the gateway, a 403 means the
+ * request was fine and the authority was not, which is a different thing to tell
+ * a user than "rejected". `message` stays the first positional argument so the
+ * existing `error.message` call sites are unaffected.
+ */
+export class PortalApiError extends Error {
+  readonly status: number;
+  readonly code: string | null;
+  readonly requestId: string | null;
+
+  constructor(message: string, status: number, code: string | null, requestId: string | null) {
+    super(message);
+    this.name = "PortalApiError";
+    this.status = status;
+    this.code = code;
+    this.requestId = requestId;
+  }
+
+  /** True when the call failed because the session lacks the right, not the input. */
+  get isForbidden(): boolean {
+    return this.status === 401 || this.status === 403;
+  }
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, init);
   if (!response.ok) {
     let detail = `${response.status} ${response.statusText}`;
+    let code: string | null = null;
+    let requestId: string | null = response.headers.get("x-request-id");
     try {
       const body = await response.json();
+      // The backend nests its own copy under `error`; FastAPI validation
+      // failures use `detail`. Both are the server's words, not ours.
       if (body?.error?.message) detail = body.error.message;
+      else if (typeof body?.detail === "string") detail = body.detail;
+      code = body?.error?.code ?? null;
+      requestId = body?.error?.request_id ?? body?.request_id ?? requestId;
     } catch {
       /* non-JSON error body */
     }
-    throw new Error(detail);
+    throw new PortalApiError(detail, response.status, code, requestId);
   }
   return (await response.json()) as T;
 }
@@ -137,6 +232,35 @@ export const api = {
   strategies: () => request<StrategyResponse[]>("/api/strategies"),
   /** Imported alpha registry projection (strategy import contract §1). */
   alphas: () => request<unknown>("/api/v1/alphas"),
+  /** Quarantine inbox for imported alphas (strategy import contract §5). */
+  alphaImports: () => request<AlphaImportRecord[]>("/api/v1/alphas/imports"),
+  /**
+   * Submits a source reference for quarantine ingest (R11).
+   *
+   * The body is a pointer plus the expected digest — never file content. The
+   * server reads the staged artifact and verifies; §5 forbids the browser being
+   * the channel for code.
+   */
+  importAlpha: (payload: AlphaImportRequest) =>
+    request<AlphaImportRecord>("/api/v1/alphas/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  /**
+   * Re-verifies a registered alpha version's artifact digest.
+   *
+   * Read-only: it recomputes and compares, it does not promote anything.
+   */
+  /** One version of one alpha: identity + lifecycle (Alpha 360°). */
+  alphaVersion: (alphaId: string, version: string) =>
+    request<AlphaVersionDetailResponse>(
+      `/api/v1/alphas/${encodeURIComponent(alphaId)}/versions/${encodeURIComponent(version)}`,
+    ),
+  verifyAlpha: (alphaId: string, version: string) =>
+    request<AlphaVerifyResult>(
+      `/api/v1/alphas/${encodeURIComponent(alphaId)}/versions/${encodeURIComponent(version)}/verify`,
+    ),
   /** Engine capability manifest for the installed release (§4). */
   engineCapabilities: () => request<unknown>("/api/v1/portal/capabilities"),
   capabilities: () => request<Record<string, unknown>[]>("/api/capabilities/walk-forward"),
@@ -179,10 +303,10 @@ export const api = {
       };
     }>(`/api/runs/${runId}/summary`),
   trials: (runId: string, params?: string) =>
-    request<Record<string, unknown>[]>(`/api/runs/${runId}/wfo/trials${params ? `?${params}` : ""}`),
+    request<RowsPayload>(`/api/runs/${runId}/wfo/trials${params ? `?${params}` : ""}`),
   candidates: (runId: string) =>
-    request<Record<string, unknown>[]>(`/api/runs/${runId}/wfo/candidates`),
-  folds: (runId: string) => request<Record<string, unknown>[]>(`/api/runs/${runId}/wfo/folds`),
+    request<RowsPayload>(`/api/runs/${runId}/wfo/candidates`),
+  folds: (runId: string) => request<RowsPayload>(`/api/runs/${runId}/wfo/folds`),
   parameters: (runId: string) =>
     request<{ params_by_fold: Record<string, unknown>; selected: { params: Record<string, number> } }>(
       `/api/runs/${runId}/wfo/parameters`,

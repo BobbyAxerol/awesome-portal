@@ -9,6 +9,7 @@ from portal_api.domain.portal_links import PortalLinksDocument
 from portal_api.domain.portal_registry import PortalRegistryDocument
 from portal_api.domain.portal_summary import PortalSummaryV1
 from portal_api.domain.responses import PortalErrorResponse
+from portal_api.services.engine_capabilities import EngineCapabilitiesDocument
 
 
 router = APIRouter(prefix="/api/v1/portal", tags=["portal"])
@@ -45,9 +46,9 @@ async def portal_summary(request: Request) -> JSONResponse:
     return JSONResponse(content=summary.model_dump(mode="json"), headers=service.headers)
 
 
-@router.get("/capabilities")
-async def portal_capabilities(request: Request) -> JSONResponse:
-    return JSONResponse(content=request.app.state.engine_capabilities.public_document())
+@router.get("/capabilities", response_model=EngineCapabilitiesDocument)
+async def portal_capabilities(request: Request) -> EngineCapabilitiesDocument:
+    return request.app.state.engine_capabilities.public_document()
 
 
 @router.get(

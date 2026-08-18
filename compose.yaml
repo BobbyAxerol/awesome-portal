@@ -11,6 +11,8 @@ services:
     restart: unless-stopped
     environment:
       PORTAL_ARTIFACT_ROOT: /var/lib/portal/artifacts/runs
+      PORTAL_ALPHA_IMPORT_ROOT: /var/lib/portal/artifacts/alpha-imports
+      PORTAL_ALPHA_ARTIFACT_ROOT: /var/lib/portal/artifacts/alpha-inbox
       PORTAL_HISTORICAL_DATA_MODE: ${PORTAL_HISTORICAL_DATA_MODE:-disabled}
       HISTORICAL_MARKET_DATA_ROOT: /data
       PORTAL_CRYPTO_RESAMPLE_ENGINE: ${PORTAL_CRYPTO_RESAMPLE_ENGINE:-duckdb}
@@ -89,8 +91,15 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:${PORTAL_HTTP_PORT:-8080}:80"
+    environment:
+      # U10 façade wire: control-api:4000 routes every /api/ (except health,
+      # ready and SSE) through the auth/RBAC BFF. Rollback in one line:
+      # PORTAL_WEB_UPSTREAM=portal-api:8000.
+      PORTAL_WEB_UPSTREAM: ${PORTAL_WEB_UPSTREAM:-control-api:4000}
     depends_on:
       portal-api:
+        condition: service_healthy
+      control-api:
         condition: service_healthy
       roadmap-task-board-api:
         condition: service_healthy
@@ -213,6 +222,8 @@ services:
     environment:
       NATS_URL: nats://portal-nats:4222
       PORTAL_ARTIFACT_ROOT: /var/lib/portal/artifacts/runs
+      PORTAL_ALPHA_IMPORT_ROOT: /var/lib/portal/artifacts/alpha-imports
+      PORTAL_ALPHA_ARTIFACT_ROOT: /var/lib/portal/artifacts/alpha-inbox
       PORTAL_HISTORICAL_DATA_MODE: disabled
       PORTAL_CRYPTO_RESAMPLE_ENGINE: ${PORTAL_CRYPTO_RESAMPLE_ENGINE:-duckdb}
       PORTAL_WORKER_LEASE_SECONDS: ${PORTAL_WORKER_LEASE_SECONDS:-60}

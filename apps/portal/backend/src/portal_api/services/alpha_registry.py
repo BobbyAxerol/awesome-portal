@@ -111,6 +111,87 @@ class AlphaManifest(AlphaModel):
     lifecycle: AlphaLifecycle
 
 
+class AlphaOwnerPublic(AlphaModel):
+    team: str
+
+
+class AlphaDeterminismPublic(AlphaModel):
+    seed_required: bool
+    external_io: bool
+
+
+class AlphaStrategyPublic(AlphaModel):
+    family: str
+    input_kind: str
+    supported_endpoint_ids: tuple[str, ...]
+    execution_contracts: tuple[str, ...]
+    determinism: AlphaDeterminismPublic
+
+
+class AlphaDataRequirementsPublic(AlphaModel):
+    asset_classes: tuple[str, ...]
+    columns: tuple[str, ...]
+    timeframes: tuple[str, ...]
+    warmup_bars: int
+
+
+class AlphaParametersPublic(AlphaModel):
+    manager_exposed: tuple[str, ...]
+
+
+class AlphaLifecyclePublic(AlphaModel):
+    stage: Literal[
+        "DRAFT", "REGISTERED", "CANDIDATE", "RESEARCH", "PAPER", "SANDBOX", "LIVE"
+    ]
+    quarantined: bool
+    certification: str | None = None
+
+
+class AlphaSummary(AlphaModel):
+    alpha_id: str
+    version: str
+    name: str
+    owner: AlphaOwnerPublic
+    entrypoint: str
+    artifact_digest: str
+    strategy: AlphaStrategyPublic
+    data_requirements: AlphaDataRequirementsPublic
+    parameters: AlphaParametersPublic
+    lifecycle: AlphaLifecyclePublic
+
+
+class AlphaRegistryDocument(AlphaModel):
+    schema_version: Literal["alpha-manifest/v1"]
+    alphas: tuple[AlphaSummary, ...]
+
+
+class AlphaLifecycleDetail(AlphaModel):
+    stage: Literal[
+        "DRAFT", "REGISTERED", "CANDIDATE", "RESEARCH", "PAPER", "SANDBOX", "LIVE"
+    ]
+    quarantined: bool
+    quarantine_reason: str | None = None
+    certification: str | None = None
+    promotion_evidence: tuple[str, ...] = ()
+
+
+class AlphaVersionDetail(AlphaModel):
+    alpha_id: str
+    version: str
+    name: str
+    entrypoint: str
+    artifact_digest: str
+    lifecycle: AlphaLifecycleDetail
+
+
+class AlphaVerifyResult(AlphaModel):
+    alpha_id: str
+    version: str
+    registered_digest: str
+    computed_digest: str
+    matches: bool
+
+
 class AlphaRegistry:
     def __init__(self, registry_root: Path) -> None:
         self._registry_root = registry_root
@@ -196,41 +277,45 @@ class AlphaRegistry:
             "matches": computed == alpha.artifact.digest,
         }
 
-    def public_document(self) -> dict[str, Any]:
-        return {
-            "schema_version": "alpha-manifest/v1",
-            "alphas": [
-                {
-                    "alpha_id": alpha.alpha_id,
-                    "version": alpha.version,
-                    "name": alpha.name,
-                    "owner": {"team": alpha.owner.team},
-                    "entrypoint": alpha.entrypoint,
-                    "artifact_digest": alpha.artifact.digest,
-                    "strategy": {
-                        "family": alpha.strategy.family,
-                        "input_kind": alpha.strategy.input_kind,
-                        "supported_endpoint_ids": list(alpha.strategy.supported_endpoint_ids),
-                        "execution_contracts": list(alpha.strategy.execution_contracts),
-                    },
-                    "data_requirements": {
-                        "asset_classes": list(alpha.data_requirements.asset_classes),
-                        "columns": list(alpha.data_requirements.columns),
-                        "timeframes": list(alpha.data_requirements.timeframes),
-                        "warmup_bars": alpha.data_requirements.warmup_bars,
-                    },
-                    "parameters": {
-                        "manager_exposed": list(alpha.parameters.manager_exposed),
-                    },
-                    "lifecycle": {
-                        "stage": alpha.lifecycle.stage,
-                        "quarantined": alpha.lifecycle.quarantined,
-                        "certification": alpha.lifecycle.certification,
-                    },
-                }
+    def public_document(self) -> AlphaRegistryDocument:
+        return AlphaRegistryDocument(
+            schema_version="alpha-manifest/v1",
+            alphas=tuple(
+                AlphaSummary(
+                    alpha_id=alpha.alpha_id,
+                    version=alpha.version,
+                    name=alpha.name,
+                    owner=AlphaOwnerPublic(team=alpha.owner.team),
+                    entrypoint=alpha.entrypoint,
+                    artifact_digest=alpha.artifact.digest,
+                    strategy=AlphaStrategyPublic(
+                        family=alpha.strategy.family,
+                        input_kind=alpha.strategy.input_kind,
+                        supported_endpoint_ids=alpha.strategy.supported_endpoint_ids,
+                        execution_contracts=alpha.strategy.execution_contracts,
+                        determinism=AlphaDeterminismPublic(
+                            seed_required=bool(alpha.strategy.determinism.get("seed_required")),
+                            external_io=bool(alpha.strategy.determinism.get("external_io")),
+                        ),
+                    ),
+                    data_requirements=AlphaDataRequirementsPublic(
+                        asset_classes=alpha.data_requirements.asset_classes,
+                        columns=alpha.data_requirements.columns,
+                        timeframes=alpha.data_requirements.timeframes,
+                        warmup_bars=alpha.data_requirements.warmup_bars,
+                    ),
+                    parameters=AlphaParametersPublic(
+                        manager_exposed=alpha.parameters.manager_exposed,
+                    ),
+                    lifecycle=AlphaLifecyclePublic(
+                        stage=alpha.lifecycle.stage,
+                        quarantined=alpha.lifecycle.quarantined,
+                        certification=alpha.lifecycle.certification,
+                    ),
+                )
                 for alpha in self._alphas
-            ],
-        }
+            )
+        )
 
 
 __all__ = ["AlphaManifest", "AlphaRegistry", "AlphaRegistryError", "AlphaRegistryLoadError", "LIFECYCLE_ORDER"]

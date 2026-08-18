@@ -80,7 +80,7 @@ export interface StatePresentation {
 
 const AVAILABILITY_PRESENTATION: Record<AvailabilityState, StatePresentation> = {
   available: {
-    label: "Sẵn sàng",
+    label: "Available",
     tone: "good",
     colorVar: "var(--state-available)",
     bgVar: "var(--state-available-bg)",
@@ -88,7 +88,7 @@ const AVAILABILITY_PRESENTATION: Record<AvailabilityState, StatePresentation> = 
     rendersValue: true,
   },
   degraded: {
-    label: "Suy giảm",
+    label: "Degraded",
     tone: "warning",
     colorVar: "var(--state-degraded)",
     bgVar: "var(--state-degraded-bg)",
@@ -96,7 +96,7 @@ const AVAILABILITY_PRESENTATION: Record<AvailabilityState, StatePresentation> = 
     rendersValue: true,
   },
   stale: {
-    label: "Dữ liệu cũ",
+    label: "Stale",
     tone: "warning",
     colorVar: "var(--state-stale)",
     bgVar: "var(--state-stale-bg)",
@@ -104,7 +104,7 @@ const AVAILABILITY_PRESENTATION: Record<AvailabilityState, StatePresentation> = 
     rendersValue: true,
   },
   unavailable: {
-    label: "Không khả dụng",
+    label: "Unavailable",
     tone: "muted",
     colorVar: "var(--state-unavailable)",
     bgVar: "var(--state-unavailable-bg)",
@@ -112,7 +112,7 @@ const AVAILABILITY_PRESENTATION: Record<AvailabilityState, StatePresentation> = 
     rendersValue: false,
   },
   denied: {
-    label: "Không có quyền",
+    label: "Denied",
     tone: "bad",
     colorVar: "var(--state-denied)",
     bgVar: "var(--state-denied-bg)",
@@ -120,7 +120,7 @@ const AVAILABILITY_PRESENTATION: Record<AvailabilityState, StatePresentation> = 
     rendersValue: false,
   },
   commissioned: {
-    label: "Chưa triển khai",
+    label: "Not built yet",
     tone: "muted",
     colorVar: "var(--state-commissioned)",
     bgVar: "var(--state-commissioned-bg)",
@@ -156,15 +156,15 @@ export function componentStateFor(availability: CapabilityAvailability): Compone
  * ---------------------------------------------------------------------- */
 
 const REASON_COPY: Record<AvailabilityReasonCode, string> = {
-  CAPABILITY_NOT_IMPLEMENTED: "Capability chưa được triển khai trong phase hiện tại.",
-  UPSTREAM_UNAVAILABLE: "Nguồn dữ liệu upstream không phản hồi.",
-  UPSTREAM_TIMEOUT: "Nguồn upstream vượt quá deadline của summary.",
-  INCOMPATIBLE_CONTRACT: "Contract của nguồn không tương thích với schema hiện tại.",
-  SOURCE_DATA_UNAVAILABLE: "Nguồn hoạt động nhưng chưa có dữ liệu authority.",
-  LOCAL_ONLY_STATE: "Planning đang chạy local-first; state cục bộ không phải shared server state.",
-  PERMISSION_DENIED: "Tài khoản hiện tại không được cấp quyền đọc nguồn này.",
-  STALE_OBSERVATION: "Evidence cũ hơn freshness contract của nguồn.",
-  PARTIAL_SOURCE_FAILURE: "Một phần nguồn lỗi; phần còn lại vẫn là số thật.",
+  CAPABILITY_NOT_IMPLEMENTED: "This capability is not implemented in the current phase.",
+  UPSTREAM_UNAVAILABLE: "The upstream data source did not respond.",
+  UPSTREAM_TIMEOUT: "The upstream source exceeded the summary deadline.",
+  INCOMPATIBLE_CONTRACT: "The source contract is incompatible with the current schema.",
+  SOURCE_DATA_UNAVAILABLE: "The source is up but has no authoritative data yet.",
+  LOCAL_ONLY_STATE: "Planning is running local-first; local state is not shared server state.",
+  PERMISSION_DENIED: "This account is not granted read access to the source.",
+  STALE_OBSERVATION: "The evidence is older than the source's freshness contract.",
+  PARTIAL_SOURCE_FAILURE: "Some sources failed; the rest are still real numbers.",
 };
 
 /**
@@ -246,11 +246,11 @@ export function dataModeBanner(mode: FeatureDataMode): string | null {
     case "REAL":
       return null;
     case "FIXTURE":
-      return "Prototype data — không dùng cho quyết định vận hành.";
+      return "Prototype data — not for operational decisions.";
     case "STATIC_PREVIEW":
-      return "Commissioned — chưa có runtime kết nối; đây là brief và wireframe.";
+      return "Commissioned — no runtime is wired yet; this is the brief and the wireframe.";
     case "NONE":
-      return "Chưa có contract dữ liệu; xem dependency brief.";
+      return "No data contract yet — see the dependency brief.";
   }
 }
 
@@ -295,7 +295,7 @@ export function renderMetric(
       kind: "state",
       state: "unavailable",
       label: availabilityPresentation("unavailable").label,
-      reason: "Không có metric này trong summary contract.",
+      reason: "The summary contract carries no such metric.",
     };
   }
   const state = metric.availability.state;

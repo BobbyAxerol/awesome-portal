@@ -223,6 +223,34 @@ export function lifecycleStages(registry: PortalRegistryDocument): LifecycleStag
   return [...registry.lifecycle_stages].sort(byOrder);
 }
 
+/* -------------------------------------------------------------------------
+ * Persona
+ *
+ * `lifecycle_stages[].personas` is now a declared field: the backend rolls
+ * `primary_persona` up across each stage's feature screens at projection time
+ * (contract note on `LifecycleStageDefinition`, delivered 2026-08-17). v1.1
+ * computed the same roll-up in the frontend as a stopgap; that second model is
+ * gone — the registry is the authority, and the UI only reads it.
+ *
+ * The field is schema-optional and defaults to `[]`, which stays meaningful: a
+ * stage whose features have no screens yet declares no persona, and the map
+ * must not pretend otherwise.
+ * ---------------------------------------------------------------------- */
+
+/** Personas the registry declares for a stage. Empty means "none declared". */
+export function personasForStage(stage: LifecycleStageDefinition): string[] {
+  return [...(stage.personas ?? [])].sort();
+}
+
+/** Every persona any stage declares, in a stable order. */
+export function personaOptions(registry: PortalRegistryDocument): string[] {
+  const seen = new Set<string>();
+  for (const stage of registry.lifecycle_stages) {
+    for (const persona of stage.personas ?? []) seen.add(persona);
+  }
+  return [...seen].sort();
+}
+
 /** Blocking, still-open concerns attached to a feature. */
 export function blockingConcernsFor(registry: PortalRegistryDocument, featureId: string) {
   const unresolved = new Set(["OPEN", "PARTIAL", "BLOCKED"]);

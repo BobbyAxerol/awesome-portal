@@ -6,12 +6,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import { EChart } from "../../charts/EChart";
-import { baseOption, roleColors } from "../../charts/theme";
+import { baseOption } from "../../charts/theme";
+import { useChartTheme } from "../../charts/useChartTheme";
 import { ChartFigure } from "../../components/ChartFigure";
 import { MetricTile, MetricTileRow } from "../../components/MetricTile";
-import { SegmentedControl, StateView } from "../../components/ui";
+import { ResultsSkeleton, SegmentedControl, StateView } from "../../components/ui";
 import { api, type SeriesPayload } from "../../lib/api";
 import { fmtCount, fmtPct, fmtRatio } from "../../lib/format";
+import { seriesProvenance, type RunEvidence } from "../quantbt/provenance";
 import { HEADLINE_METRICS, MATRIX_METRICS, metricDefinition } from "./metricDefinitions";
 
 const SEGMENTS = ["is", "oos", "holdout_live"] as const;
@@ -24,6 +26,9 @@ const SEGMENT_LABELS: Record<string, string> = {
 };
 
 export function OverviewView({ runId }: { runId: string }) {
+  // One dependency for every chart in this view; see useChartTheme.
+  const chart = useChartTheme();
+
   const detail = useQuery({ queryKey: ["run", runId], queryFn: () => api.getRun(runId) });
   const protocol = detail.data?.protocol ?? "three_window_decay";
   const advanced = protocol === "advanced_walk_forward";
@@ -75,16 +80,17 @@ export function OverviewView({ runId }: { runId: string }) {
     typeof manifest.dataset_content_hash === "string" ? manifest.dataset_content_hash : null;
   const summaryWarnings = summary.data?.metrics.warnings ?? [];
 
-  // Point counts for the chart envelope. `sourceRows` is what the artifact
-  // holds; `returnedRows` is what the server actually sent after its
-  // max_points reduction — the two differing is what makes the downsample
-  // note honest rather than decorative.
+  // Chart envelope (v0.5 §12.2). The series endpoints publish
+  // source_rows/returned_rows/downsample_stride now, so the row counts and the
+  // reduction method are read rather than assumed — the cast-and-hope that
+  // stood here while `source_rows` was unpublished is gone.
   const activeSeries = advanced ? stitchedQuery.data : presentation.data;
-  const equityPoints = activeSeries?.timestamps.length ?? null;
-  const equitySourceRows =
-    typeof (activeSeries as { source_rows?: number } | undefined)?.source_rows === "number"
-      ? (activeSeries as unknown as { source_rows: number }).source_rows
-      : equityPoints;
+  const runEvidence: RunEvidence = {
+    runId,
+    asOf,
+    digest: datasetDigest,
+    warnings: summaryWarnings,
+  };
   const loaded =
     (advanced ? Boolean(stitchedQuery.data) : segments.every((segment) => segment.series)) &&
     Boolean(summary.data) &&
@@ -103,16 +109,11 @@ export function OverviewView({ runId }: { runId: string }) {
       return baseOption({
         grid: { left: 58, right: 24, top: 46, bottom: 54, containLabel: true },
         legend: { show: false },
-        xAxis: {
-          type: "time",
-          splitNumber: 5,
-          axisLabel: { hideOverlap: true, formatter: "{yyyy}", margin: 10 },
-        },
-        yAxis: {
-          type: "value",
-          axisLabel: { color: "var(--ink-faint)", fontSize: 11 },
-          splitLine: { lineStyle: { color: "var(--line-soft)", type: "dashed" } },
-        },
+        // Axis styling comes from the theme. It used to be re-declared here
+        // with `formatter: "{yyyy}"` — which is why an eight-month run showed
+        // four ticks all reading "2024" — and with `var(--ink-faint)`, which a
+        // canvas renderer cannot resolve at all.
+        xAxis: { type: "time", splitNumber: 5, axisLabel: { hideOverlap: true, margin: 10 } },
         series: [
           {
             name: "Stitched OOS",
@@ -120,11 +121,11 @@ export function OverviewView({ runId }: { runId: string }) {
             showSymbol: false,
             connectNulls: false,
             data,
-            lineStyle: { width: 1.75, color: roleColors.oos },
-            itemStyle: { color: roleColors.oos },
+            lineStyle: { width: 1.75, color: chart.roleColors.oos },
+            itemStyle: { color: chart.roleColors.oos },
           },
         ],
-      });
+      }, chart.theme);
     }
     const payload = presentation.data;
     const series = SEGMENTS.filter((key) => selected === "compare" || key === selected).map((key) => {
@@ -136,54 +137,68 @@ export function OverviewView({ runId }: { runId: string }) {
         showSymbol: false,
         connectNulls: false,
         data,
-        lineStyle: { width: 1.75, color: roleColors[key] },
-        itemStyle: { color: roleColors[key] },
+        lineStyle: { width: 1.75, color: chart.roleColors[key] },
+        itemStyle: { color: chart.roleColors[key] },
       };
     });
     return baseOption({
       grid: { left: 58, right: 24, top: 46, bottom: 54, containLabel: true },
       legend: { data: series.map((item) => item.name), top: 2, right: 12, left: "auto" },
-      xAxis: {
-        type: "time",
-        splitNumber: 5,
-        axisLabel: { hideOverlap: true, formatter: "{yyyy}", margin: 10 },
-      },
-      yAxis: {
-        type: "value",
-        axisLabel: { color: "var(--ink-faint)", fontSize: 11 },
-        splitLine: { lineStyle: { color: "var(--line-soft)", type: "dashed" } },
-      },
+      xAxis: { type: "time", splitNumber: 5, axisLabel: { hideOverlap: true, margin: 10 } },
       series,
-    });
-  }, [advanced, capitalMode, presentation.data, selected, stitchedQuery.data]);
+    }, chart.theme);
+  }, [advanced, capitalMode, presentation.data, selected, stitchedQuery.data, chart]);
 
   const underwaterOption = useMemo(() => {
     const active = segments.filter((segment) => segment.series);
     return baseOption({
       grid: { left: 56, right: 20, top: 20, bottom: 48, containLabel: true },
       legend: { show: false },
-      xAxis: {
-        type: "time",
-        splitNumber: 5,
-        axisLabel: { hideOverlap: true, formatter: "{yyyy}", margin: 10 },
-      },
+      xAxis: { type: "time", splitNumber: 5, axisLabel: { hideOverlap: true, margin: 10 } },
+      // A drawdown axis without its unit reads as a bare index. The series is
+      // already in percent (value * 100 below), so the suffix is a label, not a
+      // conversion.
+      yAxis: { axisLabel: { formatter: (value: number) => `${value}%` } },
       series: active.map((segment) => {
         const payload = segment.series!;
         const dd = payload.series.drawdown ?? [];
+        const color = chart.roleColors[advanced ? "oos" : segment.key] ?? chart.roleColors.oos;
         return {
           name: SEGMENT_LABELS[segment.key] ?? segment.key,
           type: "line",
           showSymbol: false,
           data: dd.map((value, index) => [payload.timestamps[index], value == null ? null : value * 100]),
-          lineStyle: { width: 1.25, color: roleColors[advanced ? "oos" : segment.key] ?? roleColors.oos, opacity: 0.8 },
-          itemStyle: { color: roleColors[advanced ? "oos" : segment.key] ?? roleColors.oos },
-          areaStyle: { color: roleColors[advanced ? "oos" : segment.key] ?? roleColors.oos, opacity: 0.07 },
+          lineStyle: { width: 1.25, color, opacity: 0.8 },
+          itemStyle: { color },
+          // Drawdown is an area by convention — it reads as depth below the
+          // previous peak, not as a wiggling line. At 0.07 the fill was
+          // invisible, so the chart was drawing the convention without showing it.
+          areaStyle: { color, opacity: 0.18 },
+          // The deepest point is the one the max-drawdown metric refers to; the
+          // chart and the metric strip should be pointing at the same place.
+          markPoint: {
+            symbol: "circle",
+            symbolSize: 7,
+            itemStyle: { color, borderColor: chart.palette.paperRaised, borderWidth: 1.5 },
+            label: {
+              show: true,
+              position: "top",
+              distance: 8,
+              color: chart.palette.ink,
+              fontFamily: "JetBrains Mono, monospace",
+              fontSize: 10,
+              formatter: (params: { value?: unknown }) =>
+                typeof params.value === "number" ? `${fmtRatio(params.value)}%` : "",
+            },
+            data: [{ type: "min", name: "deepest trough", valueIndex: 1 }],
+          },
         };
       }),
-    });
-  }, [segments, advanced]);
+    }, chart.theme);
+  }, [segments, advanced, chart]);
 
-  if (summary.isLoading || detail.isLoading || !loaded) return <StateView kind="loading" />;
+  if (summary.isLoading || detail.isLoading || !loaded)
+    return <ResultsSkeleton message="Loading run results…" />;
   if (summary.isError) return <StateView kind="failed" message={summary.error.message} onRetry={() => summary.refetch()} />;
 
   return (
@@ -239,38 +254,27 @@ export function OverviewView({ runId }: { runId: string }) {
 
       <ChartFigure
         figNumber={1}
-        title={`Equity — ${advanced ? "tài khoản stitched OOS" : capitalMode === "capital" ? "vốn tài khoản mới" : "rebased 100"}`}
-        provenance={{
-          source: advanced ? "series/stitched.parquet" : `presentation/${capitalMode === "capital" ? "calendar" : "rebased"}`,
-          runId,
+        title={`Equity — ${advanced ? "stitched OOS account" : capitalMode === "capital" ? "fresh account capital" : "rebased to 100"}`}
+        provenance={seriesProvenance(activeSeries, runEvidence, {
+          source: advanced
+            ? "series/stitched.parquet"
+            : `presentation/${capitalMode === "capital" ? "calendar" : "rebased"}`,
           segment: advanced ? "stitched" : selected === "compare" ? "is+oos+holdout" : selected,
-          units: capitalMode === "capital" ? "USD" : "index (100 = mốc)",
-          asOf,
-          digest: datasetDigest,
-          returnedRows: equityPoints,
-          sourceRows: equitySourceRows,
-          downsample: "server max_points=5000",
-          warnings: summaryWarnings,
-        }}
+          units: capitalMode === "capital" ? "USD" : "index (100 = baseline)",
+        })}
       >
         <EChart option={equityOption} height={560} />
       </ChartFigure>
 
       <ChartFigure
         figNumber={2}
-        title="Underwater — drawdown suy ra từ equity"
-        note="Drawdown là trình bày lại của chuỗi equity ở trên, không phải một metric riêng do engine tính."
-        provenance={{
+        title="Underwater — drawdown derived from equity"
+        note="Drawdown is a restatement of the equity series above, not a separate metric the engine computes."
+        provenance={seriesProvenance(activeSeries, runEvidence, {
           source: advanced ? "series/stitched.parquet" : "presentation/calendar",
-          runId,
           segment: advanced ? "stitched" : "is+oos+holdout",
-          units: "% từ đỉnh trước",
-          asOf,
-          digest: datasetDigest,
-          returnedRows: equityPoints,
-          sourceRows: equitySourceRows,
-          downsample: "server max_points=5000",
-        }}
+          units: "% from prior peak",
+        })}
       >
         <EChart option={underwaterOption} height={220} />
       </ChartFigure>
@@ -313,7 +317,7 @@ function MetricsCard({
   return (
     <div className="card p-4">
       <div className="label mb-3">
-        {advanced ? "Metrics — tài khoản stitched OOS" : "Ma trận đối chiếu — IS / OOS / Holdout Live"}
+        {advanced ? "Metrics — stitched OOS account" : "Reconciliation matrix — IS / OOS / Holdout Live"}
       </div>
       <div className="table-wrap">
         <table>
@@ -332,17 +336,20 @@ function MetricsCard({
               const definition = metricDefinition(key);
               return (
                 <tr key={key}>
-                  <td>
+                  <th scope="row" className="metric-row-label">
                     <span title={definition.definition}>{definition.label}</span>
-                    <span className="metric-row-unit mono"> · {definition.unit}</span>
-                  </td>
+                    {/* The unit belongs to the metric, so it rides with the row
+                      * label in its own quiet column rather than being repeated
+                      * as a chip inside eight sentences. */}
+                    <span className="metric-row-unit">{definition.unit}</span>
+                  </th>
                   {columns.map((column) => {
                     const text = format(key, segments[column]?.[key] ?? null);
                     return (
                       <td key={column} className="num">
                         {text ?? (
-                          <span className="metric-absent-inline mono" title={`Engine không tính ${definition.label} cho segment ${column}.`}>
-                            không tính
+                          <span className="metric-absent-inline mono" title={`The engine did not compute ${definition.label} for the ${column} segment.`}>
+                            not computed
                           </span>
                         )}
                       </td>
@@ -354,10 +361,24 @@ function MetricsCard({
           </tbody>
         </table>
       </div>
-      <p className="chart-provenance mono">
-        nguồn metrics/summary.json · as-of {asOf ?? "chưa công bố"}
-        {digest ? ` · dataset ${digest.slice(0, 19)}…` : ""}
-      </p>
+      <div className="chart-provenance">
+        <dl className="chart-provenance-grid">
+          <div className="chart-provenance-field" data-wide="true">
+            <dt>source</dt>
+            <dd className="mono">metrics/summary.json</dd>
+          </div>
+          <div className="chart-provenance-field">
+            <dt>as-of</dt>
+            <dd className="mono">{asOf ?? "not published"}</dd>
+          </div>
+          {digest ? (
+            <div className="chart-provenance-field" data-wide="true">
+              <dt>dataset</dt>
+              <dd className="mono">{digest.slice(0, 19)}…</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
     </div>
   );
 }

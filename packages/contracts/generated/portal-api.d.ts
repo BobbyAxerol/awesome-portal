@@ -460,7 +460,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Wfo Trials */
+        /**
+         * Wfo Trials
+         * @description Trial rows wrapped in an envelope that discloses the full population.
+         *
+         *     ``total_rows`` is the number of unique trials stored in the artifact
+         *     (before any filter or ``top_n`` cap), so consumers never have to *infer*
+         *     "there may be more trials than this page" from ``len(rows) == top_n``.
+         */
         get: operations["wfo_trials_api_runs__run_id__wfo_trials_get"];
         put?: never;
         post?: never;
@@ -513,6 +520,49 @@ export interface paths {
         };
         /** List Alphas */
         get: operations["list_alphas_api_v1_alphas_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/alphas/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Alpha
+         * @description Quarantine ingest via source reference (R11, contract §5).
+         *
+         *     The browser never uploads code: it submits a pointer to an artifact that
+         *     CI/owner already staged in the ingest inbox plus the expected digest. The
+         *     server reads that file, verifies the digest, and quarantines it. The
+         *     source registry stays immutable and imported alphas block everything
+         *     until a certification slice promotes them.
+         */
+        post: operations["import_alpha_api_v1_alphas_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/alphas/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Alpha Imports */
+        get: operations["list_alpha_imports_api_v1_alphas_imports_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -864,6 +914,178 @@ export interface components {
              */
             window_mode: "expanding" | "rolling";
         };
+        /** AlphaDataRequirementsPublic */
+        AlphaDataRequirementsPublic: {
+            /** Asset Classes */
+            asset_classes: string[];
+            /** Columns */
+            columns: string[];
+            /** Timeframes */
+            timeframes: string[];
+            /** Warmup Bars */
+            warmup_bars: number;
+        };
+        /** AlphaDeterminismPublic */
+        AlphaDeterminismPublic: {
+            /** External Io */
+            external_io: boolean;
+            /** Seed Required */
+            seed_required: boolean;
+        };
+        /** AlphaImportRecord */
+        AlphaImportRecord: {
+            /** Alpha Id */
+            alpha_id: string;
+            /** Digest Ok */
+            digest_ok: boolean;
+            /** Import Id */
+            import_id: string;
+            /** Reason */
+            reason?: string | null;
+            /** Received At */
+            received_at: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "PENDING_DIGEST" | "DIGEST_MISMATCH" | "INVALID_MANIFEST" | "ALREADY_REGISTERED" | "QUARANTINED";
+            /** Version */
+            version: string;
+        };
+        /** AlphaImportRequest */
+        AlphaImportRequest: {
+            /** Alpha Id */
+            alpha_id: string;
+            /** Artifact Relpath */
+            artifact_relpath: string;
+            /** Expected Digest */
+            expected_digest: string;
+            /** Git Ref */
+            git_ref?: string | null;
+            /** Version */
+            version: string;
+        };
+        /** AlphaLifecycleDetail */
+        AlphaLifecycleDetail: {
+            /** Certification */
+            certification?: string | null;
+            /**
+             * Promotion Evidence
+             * @default []
+             */
+            promotion_evidence: string[];
+            /** Quarantine Reason */
+            quarantine_reason?: string | null;
+            /** Quarantined */
+            quarantined: boolean;
+            /**
+             * Stage
+             * @enum {string}
+             */
+            stage: "DRAFT" | "REGISTERED" | "CANDIDATE" | "RESEARCH" | "PAPER" | "SANDBOX" | "LIVE";
+        };
+        /** AlphaLifecyclePublic */
+        AlphaLifecyclePublic: {
+            /** Certification */
+            certification?: string | null;
+            /** Quarantined */
+            quarantined: boolean;
+            /**
+             * Stage
+             * @enum {string}
+             */
+            stage: "DRAFT" | "REGISTERED" | "CANDIDATE" | "RESEARCH" | "PAPER" | "SANDBOX" | "LIVE";
+        };
+        /** AlphaOwnerPublic */
+        AlphaOwnerPublic: {
+            /** Team */
+            team: string;
+        };
+        /** AlphaParametersPublic */
+        AlphaParametersPublic: {
+            /** Manager Exposed */
+            manager_exposed: string[];
+        };
+        /** AlphaRegistryDocument */
+        AlphaRegistryDocument: {
+            /** Alphas */
+            alphas: components["schemas"]["AlphaSummary"][];
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: "alpha-manifest/v1";
+        };
+        /** AlphaStrategyPublic */
+        AlphaStrategyPublic: {
+            determinism: components["schemas"]["AlphaDeterminismPublic"];
+            /** Execution Contracts */
+            execution_contracts: string[];
+            /** Family */
+            family: string;
+            /** Input Kind */
+            input_kind: string;
+            /** Supported Endpoint Ids */
+            supported_endpoint_ids: string[];
+        };
+        /** AlphaSummary */
+        AlphaSummary: {
+            /** Alpha Id */
+            alpha_id: string;
+            /** Artifact Digest */
+            artifact_digest: string;
+            data_requirements: components["schemas"]["AlphaDataRequirementsPublic"];
+            /** Entrypoint */
+            entrypoint: string;
+            lifecycle: components["schemas"]["AlphaLifecyclePublic"];
+            /** Name */
+            name: string;
+            owner: components["schemas"]["AlphaOwnerPublic"];
+            parameters: components["schemas"]["AlphaParametersPublic"];
+            strategy: components["schemas"]["AlphaStrategyPublic"];
+            /** Version */
+            version: string;
+        };
+        /** AlphaVerifyResult */
+        AlphaVerifyResult: {
+            /** Alpha Id */
+            alpha_id: string;
+            /** Computed Digest */
+            computed_digest: string;
+            /** Matches */
+            matches: boolean;
+            /** Registered Digest */
+            registered_digest: string;
+            /** Version */
+            version: string;
+        };
+        /** AlphaVersionDetail */
+        AlphaVersionDetail: {
+            /** Alpha Id */
+            alpha_id: string;
+            /** Artifact Digest */
+            artifact_digest: string;
+            /** Entrypoint */
+            entrypoint: string;
+            lifecycle: components["schemas"]["AlphaLifecycleDetail"];
+            /** Name */
+            name: string;
+            /** Version */
+            version: string;
+        };
+        /** ArtifactProducer */
+        ArtifactProducer: {
+            /** Artifact */
+            artifact: string;
+            /** As Of */
+            as_of?: string | null;
+            /** Service */
+            service: string;
+            /** Source Artifact Digest */
+            source_artifact_digest?: string | null;
+            /** Version */
+            version: string;
+        };
         /** AvailabilityAuthority */
         AvailabilityAuthority: {
             /** Contract */
@@ -905,6 +1127,30 @@ export interface components {
              */
             state: "available" | "unavailable" | "degraded" | "stale" | "denied" | "commissioned";
         };
+        /** CapabilityPublic */
+        CapabilityPublic: {
+            /** Capability Id */
+            capability_id: string;
+            /** Certified */
+            certified: boolean;
+            /** Endpoint Id */
+            endpoint_id: string;
+            /** Engine Release Id */
+            engine_release_id: string;
+            /** Protocol */
+            protocol: string;
+            requirements: components["schemas"]["CapabilityRequirements"];
+        };
+        /** CapabilityRequirements */
+        CapabilityRequirements: {
+            /** Backend */
+            backend: string;
+            /** Data Class */
+            data_class: string[];
+            /** Methodology */
+            methodology: string;
+            resource_profile?: components["schemas"]["ResourceProfile"] | null;
+        };
         /** ConcernDefinition */
         ConcernDefinition: {
             /** Activation Gate */
@@ -938,6 +1184,71 @@ export interface components {
             status: "OPEN" | "PARTIAL" | "VERIFIED_CURRENT" | "BLOCKED" | "NOT_APPLICABLE";
             /** Task Ids */
             task_ids: string[];
+        };
+        /** ConfigOptionsResponse */
+        ConfigOptionsResponse: {
+            /** Candidate Selection Metrics */
+            candidate_selection_metrics: string[];
+            /** Compatibility */
+            compatibility: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+            /** Defaults */
+            defaults: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
+            /** Optimization Modes */
+            optimization_modes: string[];
+            /** Optimization Schedules */
+            optimization_schedules: string[];
+            /** Position Boundary Policies */
+            position_boundary_policies: string[];
+            /** Protocols */
+            protocols: string[];
+            /** Schema Version */
+            schema_version: string;
+            /** Split Frequencies */
+            split_frequencies: string[];
+            /** Target Modes */
+            target_modes: string[];
+            /** Window Modes */
+            window_modes: string[];
+        };
+        /** DatasetDescriptorResponse */
+        DatasetDescriptorResponse: {
+            /**
+             * Availability
+             * @enum {string}
+             */
+            availability: "available" | "unavailable";
+            /** Data Kind */
+            data_kind: string;
+            /** Dataset Id */
+            dataset_id: string;
+            /** Dynamic Query */
+            dynamic_query: boolean;
+            /** Excluded Scopes */
+            excluded_scopes: string[];
+            /** Source Class */
+            source_class: string;
+            /** Source Timezone */
+            source_timezone: string;
+            /** Supported Timeframes */
+            supported_timeframes: string[];
+            /** Symbol */
+            symbol: string | null;
+            /** Timeframe */
+            timeframe: string | null;
+            /** Unavailable Reason */
+            unavailable_reason: string | null;
+            /** Usage Scopes */
+            usage_scopes: string[];
+            /** Venue */
+            venue: string;
         };
         /** DependenciesReport */
         DependenciesReport: {
@@ -978,6 +1289,30 @@ export interface components {
             status: "ok";
             /** Traceparent */
             traceparent: string;
+            /** Version */
+            version: string;
+        };
+        /** EngineCapabilitiesDocument */
+        EngineCapabilitiesDocument: {
+            /** Capabilities */
+            capabilities: components["schemas"]["CapabilityPublic"][];
+            /** Engine Releases */
+            engine_releases: components["schemas"]["EngineReleasePublic"][];
+            /** Installed */
+            installed: {
+                [key: string]: components["schemas"]["InstalledProbe"];
+            };
+            /** Manifest Revision */
+            manifest_revision: number;
+            /** Schema Version */
+            schema_version: string;
+        };
+        /** EngineReleasePublic */
+        EngineReleasePublic: {
+            /** Package */
+            package: string;
+            /** Release Id */
+            release_id: string;
             /** Version */
             version: string;
         };
@@ -1025,6 +1360,18 @@ export interface components {
             /** Order */
             order: number;
         };
+        /** FoldPlanDocument */
+        FoldPlanDocument: {
+            /** Artifact Schema Version */
+            artifact_schema_version?: string | null;
+            /** Folds */
+            folds: {
+                [key: string]: unknown;
+            }[];
+            producer?: components["schemas"]["ArtifactProducer"] | null;
+            /** Protocol */
+            protocol: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1062,7 +1409,25 @@ export interface components {
             /** Forwarded Proto */
             forwarded_proto: string | null;
         };
-        /** LifecycleStageDefinition */
+        /** InstalledProbe */
+        InstalledProbe: {
+            /** Detail */
+            detail?: string | null;
+            /** Installed Record Sha256 */
+            installed_record_sha256?: string | null;
+            /** Installed Version */
+            installed_version?: string | null;
+            /** Ok */
+            ok: boolean;
+        };
+        /**
+         * LifecycleStageDefinition
+         * @description Roll-up of ``primary_persona`` across the stage's feature screens.
+         *
+         *     ``personas`` is derived at projection time (never stored in the source
+         *     registry document); stages whose features have no screens yet carry an
+         *     empty tuple so the UI can filter/hide them on persona mismatch.
+         */
         LifecycleStageDefinition: {
             /** Description */
             description: string;
@@ -1079,6 +1444,11 @@ export interface components {
             maturity: "AVAILABLE" | "PROTOTYPE" | "COMMISSIONED" | "BLOCKED" | "HIDDEN" | "DEPRECATED";
             /** Order */
             order: number;
+            /**
+             * Personas
+             * @default []
+             */
+            personas: string[];
         };
         /** NavigationDefinition */
         NavigationDefinition: {
@@ -1571,8 +1941,27 @@ export interface components {
             /** Sections */
             sections: components["schemas"]["PortalSummarySection"][];
         };
+        /**
+         * PreflightCheck
+         * @description One preflight gate result (R14): the UI shows which check failed.
+         */
+        PreflightCheck: {
+            /** Detail */
+            detail?: string | null;
+            /** Id */
+            id: string;
+            /** Missing */
+            missing?: string[] | null;
+            /** Ok */
+            ok: boolean;
+        };
         /** PreflightResponse */
         PreflightResponse: {
+            /**
+             * Checks
+             * @default []
+             */
+            checks: components["schemas"]["PreflightCheck"][];
             /** Config Hash */
             config_hash: string;
             /** Data Quality */
@@ -1585,6 +1974,8 @@ export interface components {
             fold_plan?: {
                 [key: string]: unknown;
             } | null;
+            /** Request Id */
+            request_id?: string | null;
             /** Strategy Id */
             strategy_id: string;
             /** Symbol */
@@ -1669,6 +2060,31 @@ export interface components {
              * @enum {string}
              */
             state: "ready" | "available" | "unavailable" | "disabled";
+        };
+        /** ResourceProfile */
+        ResourceProfile: {
+            /** Max Optuna Trials */
+            max_optuna_trials?: number | null;
+            /** Max Parameter Space Entries */
+            max_parameter_space_entries?: number | null;
+        };
+        /**
+         * RowEnvelope
+         * @description Disclosure envelope for row-table endpoints (v0.5 §12.2).
+         *
+         *     ``total_rows`` counts the rows stored in the artifact **before** any
+         *     filter or ``top_n`` cap, so consumers never infer truncation from
+         *     ``returned_rows == top_n``.
+         */
+        RowEnvelope: {
+            /** Returned Rows */
+            returned_rows: number;
+            /** Rows */
+            rows: {
+                [key: string]: unknown;
+            }[];
+            /** Total Rows */
+            total_rows: number;
         };
         /**
          * RunProtocol
@@ -1976,9 +2392,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ConfigOptionsResponse"];
                 };
             };
         };
@@ -1998,9 +2412,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
+                    "application/json": components["schemas"]["DatasetDescriptorResponse"][];
                 };
             };
         };
@@ -2401,9 +2813,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["FoldPlanDocument"];
                 };
             };
             /** @description Validation Error */
@@ -2644,9 +3054,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
+                    "application/json": components["schemas"]["RowEnvelope"];
                 };
             };
             /** @description Validation Error */
@@ -2680,9 +3088,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
+                    "application/json": components["schemas"]["RowEnvelope"];
                 };
             };
             /** @description Validation Error */
@@ -2753,9 +3159,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
+                    "application/json": components["schemas"]["RowEnvelope"];
                 };
             };
             /** @description Validation Error */
@@ -2835,9 +3239,69 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AlphaRegistryDocument"];
+                };
+            };
+        };
+    };
+    import_alpha_api_v1_alphas_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AlphaImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlphaImportRecord"];
+                };
+            };
+            /** @description Import rejected. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_alpha_imports_api_v1_alphas_imports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlphaImportRecord"][];
                 };
             };
         };
@@ -2859,9 +3323,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AlphaRegistryDocument"];
                 };
             };
             /** @description Validation Error */
@@ -2893,9 +3355,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AlphaVersionDetail"];
                 };
             };
             /** @description Validation Error */
@@ -2927,9 +3387,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AlphaVerifyResult"];
                 };
             };
             /** @description Validation Error */
@@ -3072,7 +3530,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["EngineCapabilitiesDocument"];
                 };
             };
         };

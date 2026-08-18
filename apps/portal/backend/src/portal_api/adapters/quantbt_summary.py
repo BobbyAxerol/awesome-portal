@@ -290,7 +290,7 @@ class QuantBTSummaryAdapter:
             section=PortalSummarySection(
                 source_id=self.source_id,
                 feature_id="QUANTBT_RESEARCH",
-                label="QuantBT Research",
+                label="QuantBT Backtest",
                 availability=availability,
                 metrics={**run_metrics, **historical_metrics},
                 recent_items=recent_items,

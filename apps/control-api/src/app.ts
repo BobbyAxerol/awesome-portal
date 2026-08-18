@@ -20,6 +20,17 @@ export async function createControlApiApp(
   );
   app.useGlobalFilters(new HttpErrorFilter());
 
+  // Alpha import posts multipart bodies; the façade forwards them as raw
+  // buffers so the alpha service stays the only authority that parses them.
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .addContentTypeParser(
+      "multipart/form-data",
+      { parseAs: "buffer" },
+      (_, body, done) => done(null, body),
+    );
+
   await app.register(fastifyCookie as never);
   await app.register(fastifyRateLimit as never, {
     max: 20,

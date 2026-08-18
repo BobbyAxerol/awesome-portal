@@ -15,15 +15,33 @@
     font-family: "Newsreader", Georgia, serif;
     font-weight: 500;
   }
+  /* Numbers wear mono; words wear the body face.
+   *
+   * The old rule put `table td, table th` in JetBrains Mono, so every label
+   * column and every sentence inside a table was monospaced — which is the single
+   * reason the data screens read as a terminal dump rather than as an
+   * institutional table. Vietnamese diacritics in 12px mono were the worst of it.
+   * The measure stays in mono (that is what keeps columns aligned); the noun goes
+   * back to prose. */
   .mono,
-  table td,
-  table th {
+  td.num,
+  th.num {
     font-family: "JetBrains Mono", ui-monospace, monospace;
     font-feature-settings: "tnum" 1;
+    font-variant-numeric: tabular-nums;
   }
-  td.num {
+  td.num,
+  th.num {
     text-align: right;
-    font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  /* Column headers are micro-labels: small, uppercase, letterspaced, prose face.
+   * A table that declares its own `th` classes keeps them. */
+  table th {
+    font-size: var(--text-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+    color: var(--ink-faint);
   }
   ::selection {
     background: var(--accent-2);
@@ -42,8 +60,13 @@
 }
 
 @layer components {
+  /* Field label: a micro-label in the prose face. It reads as an introduction to
+   * the value beside it, which is mono — two mono voices at the same size made
+   * every definition list look like a config dump. */
   .label {
-    @apply mono text-[11px] uppercase text-ink-faint;
+    @apply text-[10px] uppercase text-ink-faint;
+    letter-spacing: 0.07em;
+    font-weight: 500;
   }
   .card {
     @apply bg-raised border border-line rounded-lg shadow-e1;
@@ -210,16 +233,36 @@
     border-collapse: collapse;
     font-size: 13px;
   }
-  .table-wrap th {
-    font-family: var(--font-mono);
-    font-size: 11.5px;
+  /* Column header: micro-label in the prose face. Mono here was fighting the
+   * numbers below it for attention instead of introducing them. */
+  .table-wrap thead th {
+    font-family: var(--font-body);
+    font-size: var(--text-2xs);
+    font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.07em;
     color: var(--ink-faint);
     text-align: left;
-    border-bottom: 2px solid var(--line);
+    border-bottom: 1px solid var(--line);
     padding: var(--space-2) var(--space-3);
     white-space: nowrap;
+  }
+  /* A row-scope header is a row label, not a column header: it reads as prose and
+   * carries the same rule as the cells beside it. */
+  .table-wrap tbody th {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--ink);
+    text-align: left;
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: top;
+  }
+  .table-wrap tbody tr:last-child th {
+    border-bottom: 0;
   }
   .table-wrap td {
     padding: var(--space-2) var(--space-3);

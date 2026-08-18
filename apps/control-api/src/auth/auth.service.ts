@@ -445,14 +445,14 @@ export class AuthService {
   }): Promise<void> {
     const session = await this.sessionFromToken(input.sessionToken);
     if (!session || session.state !== "ACTIVE") {
-      throw new AuthError("SESSION_REQUIRED", "Phiên đăng nhập không hợp lệ.", 401);
+      throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
     }
     if (!constantTimeEqual(sha256(input.csrfToken), session.csrfSecretHash)) {
-      throw new AuthError("CSRF_INVALID", "CSRF token không hợp lệ.", 403);
+      throw new AuthError("CSRF_INVALID", "CSRF token is invalid.", 403);
     }
     const user = await this.users.findById(session.userId);
     if (!user) {
-      throw new AuthError("SESSION_REQUIRED", "Phiên đăng nhập không hợp lệ.", 401);
+      throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
     }
     const credential = await this.credentials.findPassword(user.userId);
     if (credential && !(await this.argon2.verify(credential.passwordHash, input.currentPassword))) {
@@ -470,7 +470,7 @@ export class AuthService {
       throw new AuthError(policyError.code, policyError.message, 422);
     }
     if (!isAcceptablePassword(input.newPassword)) {
-      throw new AuthError("PASSWORD_REJECTED", "Mật khẩu không đạt chính sách.", 422);
+      throw new AuthError("PASSWORD_REJECTED", "Password does not meet the policy.", 422);
     }
     const { hash, parametersJson } = await this.argon2.hash(input.newPassword);
     await this.credentials.upsertPassword({

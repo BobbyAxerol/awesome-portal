@@ -17,15 +17,10 @@ import {
 } from "@/embedded/planningRoutes";
 import { parseHash, type View } from "@/lib/router";
 
-const LEGACY_VIEWS: View[] = [
-  "docs",
-  "roadmap",
-  "board",
-  "reports",
-  "interpretation",
-  "evidence",
-  "portal",
-];
+const LEGACY_VIEWS: View[] = ["docs", "roadmap", "board", "reports"];
+
+/** Views removed outright in v1.1 — no segment, no redirect, no hidden route. */
+const REMOVED_VIEWS = ["interpretation", "evidence", "portal"];
 
 describe("view coverage", () => {
   it("maps every view the legacy hash router accepts", () => {
@@ -83,10 +78,15 @@ describe("legacy hash adapter", () => {
     );
   });
 
-  it("renames the Planning-local portal mockup to a preview route", () => {
-    // Inside the real Portal this view is a preview, not a second product
-    // surface (v0.4 §P0.7).
-    expect(canonicalPlanningPathFromHash("#view=portal")).toBe(`${PLANNING_ROOT}/portal-preview`);
+  it("no longer resolves the screens removed in v1.1", () => {
+    // These must not translate to a canonical path at all: a stale hash is
+    // left alone and then handled as an unknown route, rather than being
+    // redirected to a screen the build no longer contains.
+    for (const removed of REMOVED_VIEWS) {
+      expect(canonicalPlanningPathFromHash(`#view=${removed}`), removed).toBeNull();
+      expect(parsePlanningPath(`${PLANNING_ROOT}/${removed}`).view, removed).toBe("docs");
+    }
+    expect(parsePlanningPath(`${PLANNING_ROOT}/portal-preview`).view).toBe("docs");
   });
 
   it("leaves the location alone for an empty or unknown hash", () => {

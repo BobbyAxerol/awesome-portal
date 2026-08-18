@@ -6,12 +6,14 @@
  * has not answered we render nothing rather than defaulting to a guess — the
  * frontend does not infer which environment it is talking to (v0.5 §12.1).
  */
-import { Menu, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { Menu, PanelLeftClose, PanelLeftOpen, Search, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { useSession } from "../auth/session";
 import { EnvironmentBadge } from "../components/semantic";
 import type { PortalEnvironment } from "../portal/contracts";
 import type { Breadcrumb } from "../portal/navigation";
+import { ADMIN_USERS_ROUTE } from "./PortalRoutes";
 import { usePreferences } from "./preferences";
 
 export function TopBar({
@@ -26,13 +28,14 @@ export function TopBar({
   onToggleMobileNav: () => void;
 }) {
   const preferences = usePreferences();
+  const { isAdmin } = useSession();
 
   return (
     <header className="portal-topbar">
       <button
         type="button"
         className="portal-icon-btn lg:hidden"
-        aria-label="Mở điều hướng"
+        aria-label="Open navigation"
         onClick={onToggleMobileNav}
       >
         <Menu size={16} />
@@ -41,7 +44,7 @@ export function TopBar({
       <button
         type="button"
         className="portal-icon-btn hidden lg:inline-flex"
-        aria-label={preferences.sidebarCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+        aria-label={preferences.sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         aria-pressed={preferences.sidebarCollapsed}
         onClick={() => preferences.set("sidebarCollapsed", !preferences.sidebarCollapsed)}
       >
@@ -52,7 +55,7 @@ export function TopBar({
         Quant Ecosystem Portal
       </Link>
 
-      <span className="portal-workspace mono" title="Prototype hiện chỉ có một workspace">
+      <span className="portal-workspace mono" title="The prototype has a single workspace">
         Default Workspace
       </span>
 
@@ -69,7 +72,7 @@ export function TopBar({
 
       <button type="button" className="portal-search-btn" onClick={onOpenPalette}>
         <Search size={13} aria-hidden="true" />
-        <span>Tìm kiếm</span>
+        <span>Search</span>
         <kbd className="mono">⌘K</kbd>
       </button>
 
@@ -102,13 +105,22 @@ export function TopBar({
         </select>
       </label>
 
-      <label className="portal-pref-check mono" title="Ẩn/hiện module chưa triển khai trong điều hướng">
+      {/* Account administration, next to the other session controls rather than
+          in the registry-driven nav. Hidden for a non-ADMIN as a courtesy — the
+          gateway is the boundary and the screen itself says `denied`. */}
+      {isAdmin ? (
+        <Link className="portal-icon-btn" to={ADMIN_USERS_ROUTE} title="Users & Access" aria-label="Users & Access">
+          <Users size={15} />
+        </Link>
+      ) : null}
+
+      <label className="portal-pref-check mono" title="Show or hide modules that are not built yet">
         <input
           type="checkbox"
           checked={preferences.showCommissioned}
           onChange={(event) => preferences.set("showCommissioned", event.target.checked)}
         />
-        Module dự kiến
+        Planned modules
       </label>
     </header>
   );

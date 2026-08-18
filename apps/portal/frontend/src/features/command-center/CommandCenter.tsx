@@ -9,7 +9,8 @@
  * Primary action, per the registry screen contract for COMMAND_CENTER_SCREEN,
  * is "open the highest-priority evidenced item".
  */
-import { RefreshCw } from "lucide-react";
+import { Plus, RefreshCw, ShieldAlert } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { ModuleHeader } from "../../app/ModuleHeader";
@@ -27,8 +28,10 @@ import type { PortalSummarySection, PortalSummaryV1, PriorityItem } from "../../
 import { readMetric } from "../../portal/contracts";
 import { useSummary } from "../../portal/hooks";
 import { lifecycleStages } from "../../portal/navigation";
+import { QUANTBT_ROOT } from "../quantbt/routes";
 import { MaturityBadge } from "../../components/semantic";
 import { Distribution } from "./Distribution";
+import { EvidenceDrawer } from "./EvidenceDrawer";
 import {
   SECTION_DETAIL_METRICS,
   SECTION_DISTRIBUTION_METRICS,
@@ -41,22 +44,80 @@ import {
  * Registry counts
  * ---------------------------------------------------------------------- */
 
+/**
+ * The registry, as one line of proportion.
+ *
+ * Six numbers side by side tell you the counts but not the shape: whether this
+ * Portal is mostly built or mostly planned is the first thing a reader wants, and
+ * it lives in the ratio. So the counts get a stacked bar above them, in a fixed
+ * maturity order (never re-ordered by size, or the same feature would move as the
+ * snapshot changes). Every segment is also a labelled figure below, so identity
+ * never rests on colour, and a segment with count 0 simply has no width instead of
+ * being drawn as a sliver that implies something is there.
+ *
+ * These are registry counts, not runtime health — the caption says so, because
+ * "AVAILABLE" as static metadata and "available" as a live state are different
+ * claims (§P0.14).
+ */
+const MATURITY_ORDER = ["AVAILABLE", "PROTOTYPE", "COMMISSIONED", "BLOCKED", "DEPRECATED"] as const;
+
 function RegistryCounts({ summary }: { summary: PortalSummaryV1 }) {
   const { by_maturity: byMaturity, blocking_concerns: blocking } = summary.registry_counts;
-  const order = ["AVAILABLE", "PROTOTYPE", "COMMISSIONED", "BLOCKED", "DEPRECATED"] as const;
+  const counts = MATURITY_ORDER.map((maturity) => ({
+    maturity,
+    count: byMaturity[maturity] ?? 0,
+  }));
+  const total = counts.reduce((sum, entry) => sum + entry.count, 0);
+
   return (
-    <div className="portal-counts">
-      {order.map((maturity) => (
-        <div key={maturity} className="portal-count">
-          <span className="portal-count-value mono">{byMaturity[maturity] ?? 0}</span>
-          <span className="portal-count-label mono">{maturity}</span>
+    <section className="portal-ledger" aria-labelledby="registry-ledger-heading">
+      <h2 id="registry-ledger-heading" className="sr-only">
+        Registry composition by maturity
+      </h2>
+
+      {total > 0 ? (
+        <div className="portal-ledger-bar" role="img" aria-label={
+          counts
+            .filter((entry) => entry.count > 0)
+            .map((entry) => `${entry.count} ${entry.maturity}`)
+            .join(", ")
+        }>
+          {counts
+            // A zero has no segment: a minimum-width sliver would claim a feature
+            // that does not exist.
+            .filter((entry) => entry.count > 0)
+            .map((entry) => (
+              <span
+                key={entry.maturity}
+                className="portal-ledger-segment"
+                data-maturity={entry.maturity}
+                style={{ flexGrow: entry.count }}
+                title={`${entry.count} × ${entry.maturity}`}
+              />
+            ))}
         </div>
-      ))}
-      <div className="portal-count portal-count-emph">
-        <span className="portal-count-value mono">{blocking}</span>
-        <span className="portal-count-label mono">BLOCKING CONCERNS</span>
+      ) : null}
+
+      <div className="portal-counts">
+        {counts.map((entry) => (
+          <div key={entry.maturity} className="portal-count" data-maturity={entry.maturity}>
+            <span className="portal-count-value mono">{entry.count}</span>
+            <span className="portal-count-label mono">
+              <span className="portal-count-key" data-maturity={entry.maturity} aria-hidden="true" />
+              {entry.maturity}
+            </span>
+          </div>
+        ))}
+        <div className="portal-count portal-count-emph">
+          <span className="portal-count-value mono">{blocking}</span>
+          <span className="portal-count-label mono">BLOCKING CONCERNS</span>
+        </div>
       </div>
-    </div>
+
+      <p className="portal-ledger-caption mono">
+        {total} features in the registry · product metadata, not runtime state
+      </p>
+    </section>
   );
 }
 
@@ -70,7 +131,13 @@ function scalarMetricKeys(section: PortalSummarySection): string[] {
     .slice(0, 6);
 }
 
-function SectionCard({ section }: { section: PortalSummarySection }) {
+function SectionCard({
+  section,
+  onOpenEvidence,
+}: {
+  section: PortalSummarySection;
+  onOpenEvidence: (section: PortalSummarySection) => void;
+}) {
   const { registry } = usePortalContext();
   const feature = registry?.features.find((f) => f.id === section.feature_id) ?? null;
   const state = componentStateFor(section.availability);
@@ -94,9 +161,19 @@ function SectionCard({ section }: { section: PortalSummarySection }) {
           <FreshnessIndicator availability={section.availability} />
           {feature ? (
             <Link className="btn-ghost" to={feature.canonical_route}>
-              Mở {feature.label}
+              Open {feature.label}
             </Link>
           ) : null}
+          {/* Every number on this card has an authority and a provenance in the
+            * snapshot; without this they were unreachable. */}
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => onOpenEvidence(section)}
+            aria-label={`Evidence for ${section.label}`}
+          >
+            Evidence
+          </button>
         </span>
       </div>
 
@@ -112,7 +189,7 @@ function SectionCard({ section }: { section: PortalSummarySection }) {
       {state === "unavailable" || state === "failed-retryable" || state === "denied" ? (
         <StateView
           kind={state === "denied" ? "denied" : "unavailable"}
-          message="Nguồn không trả về số liệu cho snapshot này. Không có giá trị nào được thay bằng 0."
+          message="The source returned no figures for this snapshot. No value has been replaced by a zero."
         />
       ) : (
         <>
@@ -129,7 +206,7 @@ function SectionCard({ section }: { section: PortalSummarySection }) {
 
           {distribution ? (
             <div className="mt-4">
-              <Distribution section={section} keys={distribution} caption="Phân bố" />
+              <Distribution section={section} keys={distribution} caption="Distribution" />
             </div>
           ) : null}
 
@@ -182,7 +259,7 @@ function PriorityList({ items }: { items: PriorityItem[] }) {
     return (
       <StateView
         kind="empty"
-        message="Không có mục ưu tiên nào được evidence trong snapshot này."
+        message="No priority item is evidenced in this snapshot."
       />
     );
   }
@@ -213,7 +290,7 @@ function LifecycleRibbon() {
   if (!registry) return null;
   const stages = lifecycleStages(registry);
   return (
-    <ol className="portal-lifecycle" aria-label="Vòng đời sản phẩm">
+    <ol className="portal-lifecycle" aria-label="Product lifecycle">
       {stages.map((stage) => (
         <li key={stage.id} className="portal-lifecycle-stage" data-maturity={stage.maturity}>
           <span className="portal-lifecycle-label">{stage.label}</span>
@@ -232,12 +309,13 @@ function LifecycleRibbon() {
 export function CommandCenter() {
   const { registry } = usePortalContext();
   const summary = useSummary();
+  const [evidenceFeatureId, setEvidenceFeatureId] = useState<string | null>(null);
   const feature = registry?.features.find((f) => f.id === "COMMAND_CENTER") ?? null;
 
   const header = (
     <ModuleHeader
       title="Command Center"
-      description="Product lifecycle, capability hiện có và tiến độ migration — chỉ từ authority thật."
+      description="Product lifecycle, the capability that exists today, and migration progress — from real authorities only."
       maturity={feature?.maturity ?? "PROTOTYPE"}
       dataMode={feature?.data_mode ?? "REAL"}
       actions={
@@ -248,7 +326,7 @@ export function CommandCenter() {
           disabled={summary.isFetching}
         >
           <RefreshCw size={13} className={summary.isFetching ? "animate-spin" : undefined} />
-          Làm mới
+          Refresh
         </button>
       }
     />
@@ -258,7 +336,7 @@ export function CommandCenter() {
     return (
       <>
         {header}
-        <StateView kind="loading" message="Đang thu thập summary…" />
+        <StateView kind="loading" message="Collecting the summary…" />
       </>
     );
   }
@@ -274,7 +352,7 @@ export function CommandCenter() {
           kind="failed"
           code={requestId ? `request_id ${requestId}` : undefined}
           message={
-            "Summary contract lỗi nên Command Center không hiển thị số liệu nào. " +
+            "The summary contract failed, so the Command Center shows no figures at all. " +
             (error instanceof Error ? error.message : "")
           }
           onRetry={retryable ? () => void summary.refetch() : undefined}
@@ -285,23 +363,39 @@ export function CommandCenter() {
 
   const data = summary.data;
   const top = data.priority_items[0] ?? null;
+  // Held by feature_id, not by object: a refetch replaces the section objects,
+  // and an open drawer must follow the new snapshot rather than freeze the old.
+  const openEvidence = evidenceFeatureId
+    ? data.sections.find((section) => section.feature_id === evidenceFeatureId) ?? null
+    : null;
 
   return (
     <>
       <ModuleHeader
         title="Command Center"
-        description="Product lifecycle, capability hiện có và tiến độ migration — chỉ từ authority thật."
+        description="Product lifecycle, the capability that exists today, and migration progress — from real authorities only."
         maturity={feature?.maturity ?? "PROTOTYPE"}
         dataMode={feature?.data_mode ?? "REAL"}
         actions={
           <>
+            {/* v0.4 §21.3: the Command Center opens the two actions a manager
+              * arrives wanting, instead of making them walk the nav to find
+              * them. Both are real routes from the QuantBT module. */}
+            <Link className="btn-ghost" to={`${QUANTBT_ROOT}/new`}>
+              <Plus size={12} />
+              New run
+            </Link>
+            <Link className="btn-ghost" to={`${QUANTBT_ROOT}/imports`}>
+              <ShieldAlert size={12} />
+              Import alpha
+            </Link>
             {top ? (
               <Link className="btn-primary" to={top.route}>
-                Mở mục ưu tiên cao nhất
+                Open the highest-priority item
               </Link>
             ) : (
-              <button className="btn-primary" type="button" disabled title="Snapshot hiện không có mục ưu tiên nào">
-                Mở mục ưu tiên cao nhất
+              <button className="btn-primary" type="button" disabled title="This snapshot carries no priority item">
+                Open the highest-priority item
               </button>
             )}
             <button
@@ -311,7 +405,7 @@ export function CommandCenter() {
               disabled={summary.isFetching}
             >
               <RefreshCw size={13} className={summary.isFetching ? "animate-spin" : undefined} />
-              Làm mới
+              Refresh
             </button>
           </>
         }
@@ -331,29 +425,42 @@ export function CommandCenter() {
 
       <RegistryCounts summary={data} />
 
+      {/* Reading order is act → measure → reference. What needs attention comes
+        * before the numbers that describe steady state, and the product-lifecycle
+        * metadata comes last: it is the least likely thing to change today. The
+        * priority list used to sit at the bottom of the scroll, under everything. */}
+      <section className="portal-block" aria-labelledby="priority-heading">
+        <h2 id="priority-heading" className="portal-block-title">
+          Priority items
+        </h2>
+        <p className="dek">
+          The summary contract fixes the order; only three kinds are authorised today.
+        </p>
+        <PriorityList items={data.priority_items} />
+      </section>
+
       <div className="portal-grid-2">
         {data.sections.map((section) => (
-          <SectionCard key={section.feature_id} section={section} />
+          <SectionCard
+            key={section.feature_id}
+            section={section}
+            onOpenEvidence={(section) => setEvidenceFeatureId(section.feature_id)}
+          />
         ))}
       </div>
 
       <section className="portal-block" aria-labelledby="lifecycle-heading">
         <h2 id="lifecycle-heading" className="portal-block-title">
-          Vòng đời sản phẩm
+          Product lifecycle
         </h2>
-        <p className="dek">Metadata sản phẩm từ registry — không phải trạng thái runtime.</p>
+        <p className="dek">Product metadata from the registry — not runtime state.</p>
         <LifecycleRibbon />
       </section>
 
-      <section className="portal-block" aria-labelledby="priority-heading">
-        <h2 id="priority-heading" className="portal-block-title">
-          Mục ưu tiên
-        </h2>
-        <p className="dek">
-          Thứ tự do summary contract quyết định; chỉ ba loại hiện được uỷ quyền.
-        </p>
-        <PriorityList items={data.priority_items} />
-      </section>
+      {openEvidence ? (
+        <EvidenceDrawer section={openEvidence} onClose={() => setEvidenceFeatureId(null)} />
+      ) : null}
+
     </>
   );
 }

@@ -91,37 +91,37 @@ export function validateSpec(
 
   if (spec.kind === "int_range" || spec.kind === "float_range") {
     if (!isFiniteNumber(spec.low) || !isFiniteNumber(spec.high) || !isFiniteNumber(spec.step)) {
-      issues.push({ parameter, message: "low, high và step đều phải là số.", severity: "error" });
+      issues.push({ parameter, message: "low, high and step must all be numbers.", severity: "error" });
       return issues;
     }
     if (gt(spec.low, spec.high)) {
-      issues.push({ parameter, message: "low không được lớn hơn high.", severity: "error" });
+      issues.push({ parameter, message: "low cannot be greater than high.", severity: "error" });
     }
     if (spec.step <= 0) {
-      issues.push({ parameter, message: "step phải lớn hơn 0.", severity: "error" });
+      issues.push({ parameter, message: "step must be greater than 0.", severity: "error" });
     }
     if (spec.kind === "int_range" && !Number.isInteger(spec.step)) {
-      issues.push({ parameter, message: "int_range yêu cầu step nguyên.", severity: "error" });
+      issues.push({ parameter, message: "int_range requires an integer step.", severity: "error" });
     }
     if (declared) {
       if (gt(declared.low, spec.low)) {
         issues.push({
           parameter,
-          message: `low nhỏ hơn giới hạn strategy công bố (${declared.low}).`,
+          message: `low is below the bound the strategy declares (${declared.low}).`,
           severity: "error",
         });
       }
       if (gt(spec.high, declared.high)) {
         issues.push({
           parameter,
-          message: `high vượt giới hạn strategy công bố (${declared.high}).`,
+          message: `high is above the bound the strategy declares (${declared.high}).`,
           severity: "error",
         });
       }
       if (gt(declared.step, spec.step)) {
         issues.push({
           parameter,
-          message: `step mịn hơn step công bố (${declared.step}) — search sẽ đánh giá điểm ngoài lưới đã kiểm chứng.`,
+          message: `step is finer than the declared step (${declared.step}) — the search would evaluate points off the validated grid.`,
           severity: "warning",
         });
       }
@@ -130,12 +130,12 @@ export function validateSpec(
 
   if (spec.kind === "fixed") {
     if (spec.value === null || spec.value === undefined || spec.value === "") {
-      issues.push({ parameter, message: "fixed cần một giá trị.", severity: "error" });
+      issues.push({ parameter, message: "fixed needs a value.", severity: "error" });
     } else if (declared && isFiniteNumber(spec.value)) {
       if (gt(declared.low, spec.value) || gt(spec.value, declared.high)) {
         issues.push({
           parameter,
-          message: `giá trị nằm ngoài [${declared.low}, ${declared.high}] mà strategy công bố.`,
+          message: `value falls outside the [${declared.low}, ${declared.high}] the strategy declares.`,
           severity: "error",
         });
       }
@@ -144,14 +144,14 @@ export function validateSpec(
 
   if (spec.kind === "categorical") {
     if (!spec.values.length) {
-      issues.push({ parameter, message: "categorical cần ít nhất một giá trị.", severity: "error" });
+      issues.push({ parameter, message: "categorical needs at least one value.", severity: "error" });
     }
   }
 
   if (!declared) {
     issues.push({
       parameter,
-      message: "Không có trong parameter space strategy công bố — preflight có thể từ chối.",
+      message: "Not part of the parameter space the strategy declares — preflight may reject it.",
       severity: "warning",
     });
   }
@@ -217,5 +217,5 @@ export function checkResourceCeiling(
 ): string | null {
   if (maxParameterSpaceEntries === null) return null;
   if (entryCount <= maxParameterSpaceEntries) return null;
-  return `Parameter space có ${entryCount} entry, vượt trần ${maxParameterSpaceEntries} mà engine release công bố.`;
+  return `The parameter space has ${entryCount} entries, above the ${maxParameterSpaceEntries} ceiling the engine release publishes.`;
 }

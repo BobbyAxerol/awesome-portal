@@ -100,7 +100,7 @@ function errorMessage(error: unknown): TaskSyncError {
   if (error instanceof Error) {
     return new TaskSyncError(error.message, "code" in error && (error as { code?: string }).code === "version_conflict");
   }
-  return new TaskSyncError("Không thể đồng bộ task. Hãy thử lại.");
+  return new TaskSyncError("Tasks could not be synced. Try again.");
 }
 
 export function useTasks(apiMode: ApiMode) {
@@ -110,6 +110,8 @@ export function useTasks(apiMode: ApiMode) {
   const [syncState, setSyncState] = useState<"idle" | "loading" | "saving" | "error">("idle");
   const [syncError, setSyncError] = useState<TaskSyncError | null>(null);
   const [needsInitialization, setNeedsInitialization] = useState(false);
+  /** Task ids whose move is in flight — the board shows these as pending. */
+  const [pendingMoves, setPendingMoves] = useState<ReadonlySet<string>>(() => new Set());
   const recordsRef = useRef(records);
 
   useEffect(() => {
@@ -158,7 +160,7 @@ export function useTasks(apiMode: ApiMode) {
     const current = recordsRef.current;
     const localRecord: TaskRecord = { task, version: null, position: current.filter((record) => record.task.status === task.status).length };
     if (mode === "v1" && needsInitialization) {
-      throw new TaskSyncError("Server workspace trống. Hãy khởi tạo từ dữ liệu local trước khi chỉnh sửa.");
+      throw new TaskSyncError("The server workspace is empty. Initialize it from local data before editing.");
     }
     if (mode === "local") {
       writeLocal([...current, localRecord]);
@@ -187,7 +189,7 @@ export function useTasks(apiMode: ApiMode) {
     const target = current.find((record) => record.task.id === task.id);
     if (!target) return create(task);
     if (mode === "v1" && needsInitialization) {
-      throw new TaskSyncError("Server workspace trống. Hãy khởi tạo từ dữ liệu local trước khi chỉnh sửa.");
+      throw new TaskSyncError("The server workspace is empty. Initialize it from local data before editing.");
     }
     if (mode === "local") {
       writeLocal(current.map((record) => record.task.id === task.id ? { ...record, task } : record));
@@ -196,7 +198,7 @@ export function useTasks(apiMode: ApiMode) {
     setSyncState("saving");
     try {
       if (mode === "v1") {
-        if (target.version === null) throw new TaskSyncError("Task chưa có phiên bản server; hãy tải lại.");
+        if (target.version === null) throw new TaskSyncError("This task has no server version yet — reload.");
         let latest: VersionedItem<Task> = {
           item: target.task,
           version: target.version,
@@ -233,30 +235,43 @@ export function useTasks(apiMode: ApiMode) {
     const target = current.find((record) => record.task.id === taskId);
     if (!target) return;
     if (mode === "v1" && needsInitialization) {
-      throw new TaskSyncError("Server workspace trống. Hãy khởi tạo từ dữ liệu local trước khi chỉnh sửa.");
+      throw new TaskSyncError("The server workspace is empty. Initialize it from local data before editing.");
     }
+    // Optimistic: the card lands where it was dropped before the request goes
+    // out. `snapshot` is captured verbatim so a failure restores exactly the
+    // prior state — recomputing it on rollback would silently absorb whatever
+    // else changed in between.
+    const snapshot = current;
     const locallyMoved = moveRecords(current, taskId, status, position);
-    if (mode === "local") {
-      writeLocal(locallyMoved);
-      return;
-    }
+    writeLocal(locallyMoved);
+    if (mode === "local") return;
+
+    setPendingMoves((pending) => new Set(pending).add(taskId));
     setSyncState("saving");
     try {
       if (mode === "v1") {
-        if (target.version === null) throw new TaskSyncError("Task chưa có phiên bản server; hãy tải lại.");
+        if (target.version === null) throw new TaskSyncError("This task has no server version yet — reload.");
         await moveTaskV1<Task>(taskId, status, position, target.version);
+        // The server owns positions across the whole column, so its list
+        // replaces the optimistic guess once it arrives.
         const refreshed = await listV1<Task>("tasks");
         writeLocal(refreshed.map(toRecord));
       } else {
-        writeLocal(locallyMoved);
         await putLegacy("tasks", asLegacyRecords(orderedTasks(locallyMoved)));
       }
       setSyncState("idle");
     } catch (error) {
+      writeLocal(snapshot);
       const syncFailure = errorMessage(error);
       setSyncError(syncFailure);
       setSyncState("error");
       throw syncFailure;
+    } finally {
+      setPendingMoves((pending) => {
+        const next = new Set(pending);
+        next.delete(taskId);
+        return next;
+      });
     }
   }, [mode, needsInitialization, writeLocal]);
 
@@ -265,7 +280,7 @@ export function useTasks(apiMode: ApiMode) {
     const target = current.find((record) => record.task.id === taskId);
     if (!target) return;
     if (mode === "v1" && needsInitialization) {
-      throw new TaskSyncError("Server workspace trống. Hãy khởi tạo từ dữ liệu local trước khi chỉnh sửa.");
+      throw new TaskSyncError("The server workspace is empty. Initialize it from local data before editing.");
     }
     const next = current.filter((record) => record.task.id !== taskId);
     if (mode === "local") {
@@ -275,7 +290,7 @@ export function useTasks(apiMode: ApiMode) {
     setSyncState("saving");
     try {
       if (mode === "v1") {
-        if (target.version === null) throw new TaskSyncError("Task chưa có phiên bản server; hãy tải lại.");
+        if (target.version === null) throw new TaskSyncError("This task has no server version yet — reload.");
         await deleteV1<Task>("tasks", taskId, target.version);
         writeLocal((await listV1<Task>("tasks")).map(toRecord));
       } else {
@@ -324,6 +339,7 @@ export function useTasks(apiMode: ApiMode) {
     syncState,
     syncError,
     needsInitialization,
+    pendingMoves,
     refresh,
     create,
     update,

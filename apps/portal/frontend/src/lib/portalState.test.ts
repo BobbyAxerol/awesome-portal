@@ -126,7 +126,7 @@ describe("renderMetric — a missing number never becomes zero", () => {
     expect(rendered.kind).toBe("state");
     if (rendered.kind === "state") {
       expect(rendered.state).toBe("denied");
-      expect(rendered.reason).toContain("quyền");
+      expect(rendered.reason).toContain("read access");
     }
   });
 

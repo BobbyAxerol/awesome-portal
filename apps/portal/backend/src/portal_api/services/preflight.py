@@ -12,7 +12,7 @@ from portal_api.adapters.market_data import (
 from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.domain.errors import DataSchemaError
 from portal_api.domain.requests import AdvancedWalkForwardConfig, PortalRunRequest, ThreeWindowConfig
-from portal_api.domain.responses import PreflightResponse, WindowSummary
+from portal_api.domain.responses import PreflightCheck, PreflightResponse, WindowSummary
 from portal_api.services.engine_capabilities import EngineCapabilityService
 from portal_api.strategies import StrategyRegistry
 
@@ -86,81 +86,154 @@ class PreflightService:
             )
 
     def run(self, request: PortalRunRequest) -> PreflightResponse:
+        """Per-check preflight (R14): never raises for data/config issues.
+
+        Every gate is reported as a ``PreflightCheck`` so the UI can show
+        exactly which one failed (columns, symbol, timeframe, capability,
+        quality, windows, folds) instead of a generic "preflight failed".
+        ``valid`` is the conjunction; ``create_run`` still turns a failing
+        preflight into a 422 via ``preflight.valid``.
+        """
+        checks: list[PreflightCheck] = []
+
         strategy = self._strategies.get(request.strategy_id)
-        strategy.validate_parameter_space(request.parameter_space)
-        market = self._provider.load(
-            market_data_query_for_run(
-                request,
-                columns=tuple(strategy.specification.required_columns),
+        checks.append(
+            PreflightCheck(
+                id="strategy",
+                ok=strategy is not None,
+                detail=None if strategy is not None else "unknown strategy",
+            )
+        )
+        if strategy is None:
+            return self._invalid(request, checks)
+
+        try:
+            strategy.validate_parameter_space(request.parameter_space)
+            checks.append(PreflightCheck(id="parameter_space", ok=True))
+        except Exception as exc:  # noqa: BLE001 - reported as a check
+            checks.append(
+                PreflightCheck(id="parameter_space", ok=False, detail=str(exc))
+            )
+
+        try:
+            market = self._provider.load(
+                market_data_query_for_run(
+                    request,
+                    columns=tuple(strategy.specification.required_columns),
+                )
+            )
+            checks.append(PreflightCheck(id="dataset", ok=True))
+        except Exception as exc:  # noqa: BLE001 - reported as a check
+            checks.append(
+                PreflightCheck(id="dataset", ok=False, detail=str(exc))
+            )
+            return self._invalid(request, checks)
+
+        required = tuple(strategy.specification.required_columns)
+        frame_columns = set(market.frame.columns)
+        missing = [column for column in required if column not in frame_columns]
+        checks.append(
+            PreflightCheck(
+                id="required_columns",
+                ok=not missing,
+                missing=tuple(missing),
+                detail=None if not missing else f"missing columns: {', '.join(missing)}",
             )
         )
 
         descriptor = market.descriptor
-        if descriptor.source_class == "historical_market_data":
-            self._quality_preflight(market.frame, descriptor)
-        self._capabilities.preflight(
-            protocol=request.protocol.value,
-            data_class=descriptor.source_class or "historical_market_data",
-            optuna_trials=request.calibration.optuna_trials,
-            parameter_space_entries=len(request.parameter_space.root),
+        symbol_ok = descriptor.symbol is None or request.symbol == descriptor.symbol
+        checks.append(
+            PreflightCheck(
+                id="symbol",
+                ok=symbol_ok,
+                detail=None
+                if symbol_ok
+                else f"request symbol {request.symbol!r} does not match dataset symbol {descriptor.symbol!r}",
+            )
         )
-        if descriptor.symbol is not None and request.symbol != descriptor.symbol:
-            raise DataSchemaError(
-                f"request symbol {request.symbol!r} does not match dataset symbol {descriptor.symbol!r}"
+        timeframe_ok = descriptor.timeframe is None or request.timeframe == descriptor.timeframe
+        checks.append(
+            PreflightCheck(
+                id="timeframe",
+                ok=timeframe_ok,
+                detail=None
+                if timeframe_ok
+                else f"request timeframe {request.timeframe!r} does not match dataset timeframe {descriptor.timeframe!r}",
             )
-        if descriptor.timeframe is not None and request.timeframe != descriptor.timeframe:
-            raise DataSchemaError(
-                f"request timeframe {request.timeframe!r} does not match dataset timeframe {descriptor.timeframe!r}"
-            )
+        )
 
-        if isinstance(request.calibration, ThreeWindowConfig):
-            windows = partition_three_windows(market, request.calibration)
-            analysis_frame = pd.concat(
-                [windows.is_frame, windows.oos_frame, windows.holdout_frame]
+        try:
+            if descriptor.source_class == "historical_market_data":
+                self._quality_preflight(market.frame, descriptor)
+            checks.append(PreflightCheck(id="quality", ok=True))
+        except Exception as exc:  # noqa: BLE001 - reported as a check
+            checks.append(PreflightCheck(id="quality", ok=False, detail=str(exc)))
+
+        try:
+            self._capabilities.preflight(
+                protocol=request.protocol.value,
+                data_class=descriptor.source_class or "historical_market_data",
+                optuna_trials=request.calibration.optuna_trials,
+                parameter_space_entries=len(request.parameter_space.root),
             )
-            summaries = (
-                WindowSummary(
-                    role="IS",
-                    start_inclusive=request.calibration.is_start,
-                    end_exclusive=request.calibration.is_end_exclusive,
-                    bars=len(windows.is_frame),
-                ),
-                WindowSummary(
-                    role="OOS",
-                    start_inclusive=request.calibration.oos_start,
-                    end_exclusive=request.calibration.oos_end_exclusive,
-                    bars=len(windows.oos_frame),
-                ),
-                WindowSummary(
-                    role="HOLDOUT_LIVE",
-                    start_inclusive=request.calibration.holdout_start,
-                    end_exclusive=windows.holdout_end_exclusive.to_pydatetime(warn=False),
-                    bars=len(windows.holdout_frame),
-                ),
-            )
-        elif isinstance(request.calibration, AdvancedWalkForwardConfig):
-            active_market = slice_market_range(
-                market,
-                start=request.calibration.data_start,
-                end_exclusive=request.calibration.data_end_exclusive,
-            )
-            summaries = (
-                WindowSummary(
-                    role="DATASET",
-                    start_inclusive=active_market.frame.index[0].to_pydatetime(warn=False),
-                    end_exclusive=(
-                        pd.Timestamp(request.calibration.data_end_exclusive).to_pydatetime(warn=False)
-                        if request.calibration.data_end_exclusive is not None
-                        else (active_market.frame.index[-1] + pd.Timedelta(1, unit="ns")).to_pydatetime(warn=False)
+            checks.append(PreflightCheck(id="capability", ok=True))
+        except Exception as exc:  # noqa: BLE001 - reported as a check
+            checks.append(PreflightCheck(id="capability", ok=False, detail=str(exc)))
+
+        try:
+            if isinstance(request.calibration, ThreeWindowConfig):
+                windows = partition_three_windows(market, request.calibration)
+                analysis_frame = pd.concat(
+                    [windows.is_frame, windows.oos_frame, windows.holdout_frame]
+                )
+                summaries = (
+                    WindowSummary(
+                        role="IS",
+                        start_inclusive=request.calibration.is_start,
+                        end_exclusive=request.calibration.is_end_exclusive,
+                        bars=len(windows.is_frame),
                     ),
-                    bars=len(active_market.frame),
-                ),
-            )
-            analysis_frame = active_market.frame
-            if self._quantbt_gateway is not None:
-                self._validate_advanced(request.calibration)
-        else:  # pragma: no cover - closed Pydantic union
-            raise TypeError("unsupported calibration config")
+                    WindowSummary(
+                        role="OOS",
+                        start_inclusive=request.calibration.oos_start,
+                        end_exclusive=request.calibration.oos_end_exclusive,
+                        bars=len(windows.oos_frame),
+                    ),
+                    WindowSummary(
+                        role="HOLDOUT_LIVE",
+                        start_inclusive=request.calibration.holdout_start,
+                        end_exclusive=windows.holdout_end_exclusive.to_pydatetime(warn=False),
+                        bars=len(windows.holdout_frame),
+                    ),
+                )
+            elif isinstance(request.calibration, AdvancedWalkForwardConfig):
+                active_market = slice_market_range(
+                    market,
+                    start=request.calibration.data_start,
+                    end_exclusive=request.calibration.data_end_exclusive,
+                )
+                summaries = (
+                    WindowSummary(
+                        role="DATASET",
+                        start_inclusive=active_market.frame.index[0].to_pydatetime(warn=False),
+                        end_exclusive=(
+                            pd.Timestamp(request.calibration.data_end_exclusive).to_pydatetime(warn=False)
+                            if request.calibration.data_end_exclusive is not None
+                            else (active_market.frame.index[-1] + pd.Timedelta(1, unit="ns")).to_pydatetime(warn=False)
+                        ),
+                        bars=len(active_market.frame),
+                    ),
+                )
+                analysis_frame = active_market.frame
+                if self._quantbt_gateway is not None:
+                    self._validate_advanced(request.calibration)
+            else:  # pragma: no cover - closed Pydantic union
+                raise TypeError("unsupported calibration config")
+            checks.append(PreflightCheck(id="windows", ok=True))
+        except Exception as exc:  # noqa: BLE001 - reported as a check
+            checks.append(PreflightCheck(id="windows", ok=False, detail=str(exc)))
+            return self._invalid(request, checks)
 
         canonical = request.config_hash()
         data_quality = dict(market.quality)
@@ -176,14 +249,17 @@ class PreflightService:
 
             try:
                 fold_plan = compute_run_fold_plan(request, analysis_frame.index)
-            except Exception as exc:  # noqa: BLE001 - fold plan is deterministic; a bad
-                # combination (e.g. data_start after split_mode) must be a clean 422,
-                # never a 500 (v0.1.1 bugfix).
-                raise DataSchemaError(
-                    f"unsupported walk-forward fold configuration: {exc}"
-                ) from exc
+                checks.append(PreflightCheck(id="folds", ok=True))
+            except Exception as exc:  # noqa: BLE001 - reported as a check
+                checks.append(
+                    PreflightCheck(id="folds", ok=False, detail=str(exc))
+                )
+        else:
+            checks.append(PreflightCheck(id="folds", ok=True))
+
+        valid = all(check.ok for check in checks)
         return PreflightResponse(
-            valid=True,
+            valid=valid,
             strategy_id=request.strategy_id,
             dataset_id=request.dataset_id,
             symbol=request.symbol,
@@ -192,6 +268,23 @@ class PreflightService:
             data_quality=data_quality,
             config_hash=canonical,
             fold_plan=fold_plan,
+            checks=tuple(checks),
+        )
+
+    def _invalid(
+        self, request: PortalRunRequest, checks: list[PreflightCheck]
+    ) -> PreflightResponse:
+        return PreflightResponse(
+            valid=False,
+            strategy_id=request.strategy_id,
+            dataset_id=request.dataset_id,
+            symbol=request.symbol,
+            timeframe=request.timeframe,
+            windows=(),
+            data_quality={},
+            config_hash=request.config_hash(),
+            fold_plan=None,
+            checks=tuple(checks),
         )
 
     def _validate_advanced(self, calibration: AdvancedWalkForwardConfig) -> None:

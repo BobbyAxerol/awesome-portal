@@ -59,7 +59,7 @@ export function AvailabilityBadge({
     >
       <span aria-hidden="true">{presentation.glyph}</span>
       {compact ? null : presentation.label}
-      <span className="sr-only">{`Trạng thái: ${presentation.label}${reason ? `. ${reason}` : ""}`}</span>
+      <span className="sr-only">{`State: ${presentation.label}${reason ? `. ${reason}` : ""}`}</span>
     </span>
   );
 }
@@ -121,16 +121,16 @@ export function FreshnessIndicator({
 }) {
   const freshness = freshnessOf(availability, now);
   if (freshness.asOf === null) {
-    return <span className="mono text-[11px] text-ink-faint">as-of không được công bố</span>;
+    return <span className="mono text-[11px] text-ink-faint">as-of not published</span>;
   }
   const relative =
     freshness.ageSeconds === null
-      ? "thời điểm không hợp lệ"
+      ? "invalid timestamp"
       : freshness.ageSeconds < 60
-        ? `${freshness.ageSeconds}s trước`
+        ? `${freshness.ageSeconds}s ago`
         : freshness.ageSeconds < 3600
-          ? `${Math.floor(freshness.ageSeconds / 60)}m trước`
-          : `${Math.floor(freshness.ageSeconds / 3600)}h trước`;
+          ? `${Math.floor(freshness.ageSeconds / 60)}m ago`
+          : `${Math.floor(freshness.ageSeconds / 3600)}h ago`;
   return (
     <span
       className="mono text-[11px]"

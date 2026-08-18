@@ -134,12 +134,20 @@ class ConcernDefinition(RegistryModel):
 
 
 class LifecycleStageDefinition(RegistryModel):
+    """Roll-up of ``primary_persona`` across the stage's feature screens.
+
+    ``personas`` is derived at projection time (never stored in the source
+    registry document); stages whose features have no screens yet carry an
+    empty tuple so the UI can filter/hide them on persona mismatch.
+    """
+
     id: str
     label: str
     order: int
     feature_ids: tuple[str, ...]
     maturity: FeatureMaturity
     description: str
+    personas: tuple[str, ...] = ()
 
 
 class PortalRegistrySource(RegistryModel):

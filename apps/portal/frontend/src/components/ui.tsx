@@ -62,14 +62,14 @@ export type StateViewKind =
 
 /** Title + non-colour glyph per state, so greyscale and print stay readable. */
 const STATE_META: Record<Exclude<StateViewKind, "loading">, { title: string; glyph: string }> = {
-  empty: { title: "Chưa có dữ liệu", glyph: "—" },
-  partial: { title: "Dữ liệu một phần", glyph: "◐" },
-  stale: { title: "Dữ liệu cũ", glyph: "◔" },
-  denied: { title: "Không có quyền truy cập", glyph: "⊘" },
-  unavailable: { title: "Nguồn không khả dụng", glyph: "○" },
-  commissioned: { title: "Chưa triển khai", glyph: "◌" },
-  failed: { title: "Có lỗi xảy ra", glyph: "✕" },
-  cancelled: { title: "Run đã bị huỷ", glyph: "⊗" },
+  empty: { title: "No data yet", glyph: "—" },
+  partial: { title: "Partial data", glyph: "◐" },
+  stale: { title: "Stale data", glyph: "◔" },
+  denied: { title: "Access denied", glyph: "⊘" },
+  unavailable: { title: "Source unavailable", glyph: "○" },
+  commissioned: { title: "Not built yet", glyph: "◌" },
+  failed: { title: "Something went wrong", glyph: "✕" },
+  cancelled: { title: "Run cancelled", glyph: "⊗" },
 };
 
 export function StateView({
@@ -87,7 +87,7 @@ export function StateView({
     return (
       <div className="flex items-center justify-center gap-2 py-12 text-ink-soft" role="status">
         <Loader2 size={16} className="animate-spin" />
-        <span className="mono text-[12px]">{message ?? "Đang tải…"}</span>
+        <span className="mono text-[12px]">{message ?? "Loading…"}</span>
       </div>
     );
   }
@@ -101,9 +101,62 @@ export function StateView({
       {message ? <div className="max-w-md text-center text-[13px] text-ink-soft">{message}</div> : null}
       {onRetry && (kind === "failed" || kind === "unavailable") ? (
         <button type="button" className="btn-ghost mt-2" onClick={onRetry}>
-          Thử lại
+          Retry
         </button>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * Loading placeholder that reserves the shape of what is coming.
+ *
+ * A spinner tells the reader "wait"; it does not stop the page from jumping when
+ * the data lands. Every screen here went from one line of text to a full layout in
+ * a single frame, which is most of what "not smooth" means in practice. These
+ * blocks hold the same footprint as the content that replaces them.
+ *
+ * `aria-hidden` with a single live region: a screen reader should hear "loading",
+ * not a description of grey rectangles.
+ */
+export function Skeleton({
+  variant = "line",
+  count = 1,
+  height,
+}: {
+  variant?: "line" | "metric" | "chart" | "row";
+  count?: number;
+  height?: number;
+}) {
+  return (
+    <>
+      {Array.from({ length: count }).map((_, index) => (
+        <span
+          key={index}
+          className="skeleton"
+          data-variant={variant}
+          style={height ? { height } : undefined}
+          aria-hidden="true"
+        />
+      ))}
+    </>
+  );
+}
+
+/** The loading shape of a results screen: metric strip, chart, table rows. */
+export function ResultsSkeleton({ message }: { message?: string }) {
+  return (
+    <div className="space-y-4" data-testid="results-skeleton">
+      <span className="sr-only" role="status">
+        {message ?? "Loading…"}
+      </span>
+      <div className="skeleton-metric-row">
+        <Skeleton variant="metric" count={5} />
+      </div>
+      <Skeleton variant="chart" height={280} />
+      <div className="skeleton-rows">
+        <Skeleton variant="row" count={6} />
+      </div>
     </div>
   );
 }

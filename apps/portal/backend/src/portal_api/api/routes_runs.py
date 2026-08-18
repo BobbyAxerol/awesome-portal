@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Annotated, Literal
+from datetime import UTC, datetime
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, StreamingResponse
@@ -12,6 +13,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from portal_api.domain.enums import RunState
 from portal_api.domain.errors import PortalDomainError
 from portal_api.domain.requests import PortalRunRequest
+from portal_api.domain.responses import FoldPlanDocument, RowEnvelope
 from portal_api.repositories.artifacts import with_portal_provenance
 from portal_api.services.export_service import export_bundle
 
@@ -152,9 +154,12 @@ def _trial_stage(row: dict) -> str | None:
     return None
 
 
-def _downsample_frame(frame, max_points: int | None):
+def _downsample_frame(frame, max_points: int | None) -> tuple[Any, int]:
+    """Return ``(frame, stride)`` where stride is 1 when no downsampling ran."""
     if max_points is None or len(frame) <= max_points:
-        return frame
+        return frame, 1
+    import math
+
     import numpy as np
 
     stride = len(frame) / max_points
@@ -166,14 +171,31 @@ def _downsample_frame(frame, max_points: int | None):
         transitions = np.flatnonzero(valid[1:] != valid[:-1]) + 1
         for index in transitions:
             keep.update({max(0, int(index) - 1), int(index)})
-    return frame.iloc[sorted(keep)]
+    return frame.iloc[sorted(keep)], math.ceil(len(frame) / max_points)
 
 
-def _frame_series_payload(frame, *, segment: str) -> dict:
+def _frame_series_payload(
+    frame,
+    *,
+    segment: str,
+    source_rows: int | None = None,
+    downsample_stride: int = 1,
+) -> dict:
+    """Build the series payload envelope.
+
+    ``source_rows`` is the row count of the segment **before** downsampling
+    (and before start/end clipping), ``returned_rows`` is the number of rows
+    actually carried, and ``downsample_stride`` tells consumers whether the
+    payload was thinned (1 = untouched). The frontend uses the envelope to
+    present "source rows vs rendered rows" truthfully.
+    """
     import pandas as pd
 
     return {
         "segment": segment,
+        "source_rows": source_rows if source_rows is not None else len(frame),
+        "returned_rows": len(frame),
+        "downsample_stride": downsample_stride,
         "timestamps": [str(ts) for ts in frame.index],
         "series": {
             column: [None if pd.isna(value) else value for value in frame[column].tolist()]
@@ -192,10 +214,20 @@ async def create_run(payload: PortalRunRequest, request: Request) -> dict:
     # Write the deterministic fold plan immediately so the UI can render the
     # fold timeline from second zero (the worker re-writes the same artifact).
     if preflight.fold_plan is not None:
+        source_digest = (
+            preflight.data_quality.get("analysis", {}).get("content_hash")
+            if preflight.data_quality
+            else None
+        )
         _artifacts(request).write_json(
             run_id,
             "config/fold_plan.json",
-            with_portal_provenance("fold_plan.json", preflight.fold_plan),
+            with_portal_provenance(
+                "fold_plan.json",
+                preflight.fold_plan,
+                as_of=datetime.now(UTC).isoformat(),
+                source_digest=source_digest,
+            ),
         )
     return {"run_id": run_id, "status": RunState.QUEUED.value}
 
@@ -317,8 +349,8 @@ async def run_progress(run_id: str, request: Request, tail: int = 200_000) -> di
     }
 
 
-@router.get("/{run_id}/fold-plan")
-async def run_fold_plan(run_id: str, request: Request) -> dict:
+@router.get("/{run_id}/fold-plan", response_model=FoldPlanDocument)
+async def run_fold_plan(run_id: str, request: Request) -> FoldPlanDocument:
     """Fold timeline artifact (v0.1.1) — available while the run executes."""
     if _manager(request).status(run_id) is None:
         raise HTTPException(status_code=404, detail="run not found")
@@ -368,23 +400,24 @@ async def run_summary(run_id: str, request: Request) -> dict:
     }
 
 
-@router.get("/{run_id}/wfo/folds")
+@router.get("/{run_id}/wfo/folds", response_model=RowEnvelope)
 async def wfo_folds(
     run_id: str,
     request: Request,
     fold_id: int | None = None,
     top_n: Annotated[int | None, Query(ge=1)] = None,
-) -> list[dict]:
+) -> RowEnvelope:
     _require_completed(request, run_id)
     rows = _read_frame_records(request, run_id, "wfo/folds.parquet")
+    total_rows = len(rows)
     if fold_id is not None:
         rows = [row for row in rows if row.get("fold_id") == fold_id]
     if top_n is not None:
         rows = rows[:top_n]
-    return rows
+    return {"total_rows": total_rows, "returned_rows": len(rows), "rows": rows}
 
 
-@router.get("/{run_id}/wfo/trials")
+@router.get("/{run_id}/wfo/trials", response_model=RowEnvelope)
 async def wfo_trials(
     run_id: str,
     request: Request,
@@ -394,11 +427,18 @@ async def wfo_trials(
     top_n: Annotated[int | None, Query(ge=1)] = None,
     sort_by: str | None = None,
     sort_order: Literal["asc", "desc"] = "desc",
-) -> list[dict]:
+) -> RowEnvelope:
+    """Trial rows wrapped in an envelope that discloses the full population.
+
+    ``total_rows`` is the number of unique trials stored in the artifact
+    (before any filter or ``top_n`` cap), so consumers never have to *infer*
+    "there may be more trials than this page" from ``len(rows) == top_n``.
+    """
     _require_completed(request, run_id)
     rows = _unique_trial_rows(
         _read_frame_records(request, run_id, "wfo/trials.parquet")
     )
+    total_rows = len(rows)
     if fold_id is not None:
         rows = [row for row in rows if row.get("fold_id") == fold_id or row.get("study_id") == fold_id]
     if stage is not None:
@@ -415,20 +455,21 @@ async def wfo_trials(
         ) + missing
     if top_n is not None:
         rows = rows[:top_n]
-    return rows
+    return {"total_rows": total_rows, "returned_rows": len(rows), "rows": rows}
 
 
-@router.get("/{run_id}/wfo/candidates")
+@router.get("/{run_id}/wfo/candidates", response_model=RowEnvelope)
 async def wfo_candidates(
     run_id: str,
     request: Request,
     top_n: Annotated[int | None, Query(ge=1)] = None,
-) -> list[dict]:
+) -> RowEnvelope:
     _require_completed(request, run_id)
     rows = _read_frame_records(request, run_id, "wfo/candidates.parquet")
+    total_rows = len(rows)
     if top_n is not None:
         rows = rows[:top_n]
-    return rows
+    return {"total_rows": total_rows, "returned_rows": len(rows), "rows": rows}
 
 
 @router.get("/{run_id}/wfo/parameters")
@@ -474,8 +515,14 @@ async def segment_series(
         frame = frame.loc[frame.index >= pd.Timestamp(start)]
     if end:
         frame = frame.loc[frame.index < pd.Timestamp(end)]
-    frame = _downsample_frame(frame, max_points)
-    return _frame_series_payload(frame, segment=segment)
+    source_rows = len(frame)
+    frame, downsample_stride = _downsample_frame(frame, max_points)
+    return _frame_series_payload(
+        frame,
+        segment=segment,
+        source_rows=source_rows,
+        downsample_stride=downsample_stride,
+    )
 
 
 @router.get("/{run_id}/presentation/{mode}")
@@ -495,8 +542,14 @@ async def presentation_series(
         frame = pd.read_parquet(_artifacts(request).run_directory(run_id) / path)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=f"presentation {mode} not available") from exc
-    frame = _downsample_frame(frame, max_points)
-    return _frame_series_payload(frame, segment=mode)
+    source_rows = len(frame)
+    frame, downsample_stride = _downsample_frame(frame, max_points)
+    return _frame_series_payload(
+        frame,
+        segment=mode,
+        source_rows=source_rows,
+        downsample_stride=downsample_stride,
+    )
 
 
 @router.get("/{run_id}/audit")

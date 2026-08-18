@@ -30,7 +30,8 @@ interface ProxyInput {
   method: string;
   path: string;
   query: string | undefined;
-  body: string | undefined;
+  body: string | Buffer | undefined;
+  contentType: string | undefined;
   requestId: string;
   traceparent: string;
   user: PortalUser;
@@ -70,6 +71,9 @@ export class PortalProxyService {
       "x-request-id": input.requestId,
       traceparent: input.traceparent,
     };
+    if (input.contentType !== undefined) {
+      headers["content-type"] = input.contentType;
+    }
     const principal = new PrincipalService(this.requirePrincipalSecret()).sign({
       principalId: input.user.userId,
       username: input.user.username,
@@ -151,7 +155,7 @@ export class PortalProxyService {
       });
       throw new FacadeError(
         "IDEMPOTENCY_KEY_REUSE",
-        "Idempotency key đã dùng cho payload khác.",
+        "Idempotency key was already used for a different payload.",
         409,
       );
     }
@@ -195,7 +199,9 @@ export class PortalProxyService {
       if (runId) {
         const bodyJson = (() => {
           try {
-            return JSON.parse(input.body ?? "{}") as Record<string, unknown>;
+            return JSON.parse(
+              typeof input.body === "string" ? input.body : "{}",
+            ) as Record<string, unknown>;
           } catch {
             return {};
           }

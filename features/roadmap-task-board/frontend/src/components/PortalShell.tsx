@@ -15,17 +15,19 @@ export interface ShellProps {
   children?: ReactNode;
 }
 
-/** Top-level navigation — Portal không nổi bật ở đây (xem docs/MIGRATION_TRACKER_PURPOSE.md). */
+/**
+ * Top-level navigation.
+ *
+ * v1.1 removed the Evidence tab together with the Interpretation view and the
+ * Settings → Portal Preview entry; the standalone shell now offers exactly the
+ * four surfaces that still exist.
+ */
 export const TOP_TABS: { id: View; label: string }[] = [
   { id: "docs", label: "Docs" },
   { id: "roadmap", label: "Roadmap" },
   { id: "board", label: "Board" },
   { id: "reports", label: "Reports" },
-  { id: "evidence", label: "Evidence" },
 ];
-
-/** Portal chỉ truy cập từ sidebar, nhóm Settings. */
-export const SETTINGS_TABS: { id: View; label: string }[] = [{ id: "portal", label: "Portal" }];
 
 export function Topbar({ view, theme, apiMode, onNavigate, onToggleTheme, sidebarOpen = false, onToggleSidebar, onPrint }: ShellProps) {
   return (
@@ -93,33 +95,8 @@ export function Sidebar({ view, page, onNavigate, sidebarOpen = false }: ShellPr
         </>
       ) : (
         <nav>
-          <p className="mono-label">Quản lý Task</p>
+          <p className="mono-label">Task management</p>
           {TOP_TABS.filter((v) => v.id !== "docs").map((v) => (
-            <button
-              key={v.id}
-              type="button"
-              className={`nav-item ${view === v.id ? "active" : ""}`}
-              onClick={() => onNavigate(v.id)}
-            >
-              <span className="nav-icon" aria-hidden="true" />
-              <span className="nav-text">{v.label}</span>
-            </button>
-          ))}
-          {(view === "reports" || view === "interpretation") && (
-            <>
-              <p className="mono-label">Report workflow</p>
-              <button type="button" className={`nav-item ${view === "reports" ? "active" : ""}`} onClick={() => onNavigate("reports")}>
-                <span className="nav-icon" aria-hidden="true" />
-                <span className="nav-text">Reports source</span>
-              </button>
-              <button type="button" className={`nav-item ${view === "interpretation" ? "active" : ""}`} onClick={() => onNavigate("interpretation")}>
-                <span className="nav-icon" aria-hidden="true" />
-                <span className="nav-text">Interpretation</span>
-              </button>
-            </>
-          )}
-          <p className="mono-label">Settings</p>
-          {SETTINGS_TABS.map((v) => (
             <button
               key={v.id}
               type="button"

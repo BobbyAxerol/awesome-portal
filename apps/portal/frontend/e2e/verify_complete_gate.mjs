@@ -14,12 +14,12 @@ await page.waitForTimeout(4000);
 const runParam = new URL(page.url()).searchParams.get("run");
 console.log("submitted run:", runParam);
 
-// wait until COMPLETED banner with Xem kết quả appears (max 150s)
+// wait until COMPLETED banner with View results appears (max 150s)
 let buttonVisible = false;
 let stillProgress = false;
 for (let i = 0; i < 50; i++) {
   await page.waitForTimeout(3000);
-  const btn = page.getByRole("button", { name: /Xem kết quả/ });
+  const btn = page.getByRole("button", { name: /View results/ });
   if (await btn.isVisible().catch(() => false)) {
     buttonVisible = true;
     stillProgress = new URL(page.url()).searchParams.get("run") === runParam;
@@ -29,9 +29,9 @@ for (let i = 0; i < 50; i++) {
 }
 console.log("G1 PASS (completed shows button, stays on progress):", buttonVisible && stillProgress);
 
-// click Xem kết quả -> must land on /overview?run=X
+// click View results -> must land on /overview?run=X
 if (buttonVisible) {
-  await page.getByRole("button", { name: /Xem kết quả/ }).click();
+  await page.getByRole("button", { name: /View results/ }).click();
   await page.waitForTimeout(3000);
   const url = page.url();
   console.log("after click:", url);

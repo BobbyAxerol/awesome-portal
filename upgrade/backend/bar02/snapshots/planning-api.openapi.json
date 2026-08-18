@@ -707,7 +707,7 @@
     }
   },
   "info": {
-    "description": "Lightweight Task Board, Roadmap and Discord notification backend.",
+    "description": "Lightweight Task Board, Roadmap and Discord/Lark notification backend.",
     "title": "Quant Ecosystem Portal API",
     "version": "0.2.0"
   },

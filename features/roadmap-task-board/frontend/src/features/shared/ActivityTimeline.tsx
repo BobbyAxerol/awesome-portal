@@ -71,7 +71,7 @@ export function ActivityTimeline({
       setState("idle");
     } catch (failure) {
       setState("error");
-      setError(failure instanceof Error ? failure.message : "Không thể tải activity history.");
+      setError(failure instanceof Error ? failure.message : "The activity history could not be loaded.");
     }
   }, [collection, entityId]);
 
@@ -86,9 +86,9 @@ export function ActivityTimeline({
         <p>Immutable server audit history. Notes and webhook secrets are never shown here.</p>
         <Button type="button" variant="ghost" onClick={() => void load()} disabled={state === "loading"}>Refresh</Button>
       </div>
-      {state === "loading" && !events.length ? <StateView kind="loading" message="Đang tải activity history…" /> : null}
+      {state === "loading" && !events.length ? <StateView kind="loading" message="Loading activity history…" /> : null}
       {state === "error" ? <StateView kind="failed" message={error ?? undefined} /> : null}
-      {state !== "loading" && state !== "error" && !events.length ? <StateView kind="empty" message="Chưa có activity nào." /> : null}
+      {state !== "loading" && state !== "error" && !events.length ? <StateView kind="empty" message="No activity yet." /> : null}
       {events.length ? (
         <ol className="activity-timeline" data-testid={`activity-timeline-${collection}-${entityId}`}>
           {events.map((event) => {

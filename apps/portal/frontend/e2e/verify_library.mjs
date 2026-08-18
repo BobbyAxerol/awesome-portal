@@ -23,7 +23,7 @@ const runs = await page.evaluate(async () => {
 });
 const target = runs.find((id) => id !== "real_backend_fix_20260810") ?? runs[0];
 console.log("L2 paste target:", target);
-await page.getByLabel("Paste run id để mở").fill(target);
+await page.getByLabel("Paste a run id to open it").fill(target);
 await page.getByRole("button", { name: "Open", exact: true }).click();
 await page.waitForTimeout(3000);
 const url = page.url();

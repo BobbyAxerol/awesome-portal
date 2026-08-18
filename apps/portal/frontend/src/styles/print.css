@@ -6,6 +6,23 @@
   .toc-rail {
     display: none !important;
   }
+  /* §26.6 hides navigation AND actions. The embedded Planning views bring
+   * their own action rows, and the Portal does NOT load Planning's print.css
+   * (only its features.css / legacy-views.css — see main.tsx), so the same
+   * rules have to exist here or a printed Planning screen carries buttons.
+   * The visual baseline caught exactly that. */
+  .feature-actions,
+  .feature-toolbar,
+  .phase-actions,
+  .bulk-bar,
+  .add-card-btn,
+  .task-del,
+  .task-activity,
+  .view-toggle,
+  .portal-map-personas,
+  .sync-notice button {
+    display: none !important;
+  }
   body {
     background: var(--paper);
   }

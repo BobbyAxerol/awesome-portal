@@ -195,7 +195,7 @@ async def test_alpha_endpoints_are_read_only_and_safe() -> None:
 
 def test_public_document_never_leaks_owner_internals_or_paths() -> None:
     document = _registry().public_document()
-    encoded = json.dumps(document)
+    encoded = json.dumps(document.model_dump(mode="json"))
     assert "/srv/" not in encoded
     assert "maintainers" not in encoded
     assert "lock_digest" not in encoded

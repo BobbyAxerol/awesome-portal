@@ -631,6 +631,7 @@ Deep dives:
 - [`upgrade/backend/BAR_14_RUST_FAST_PATHS_GATE.md`](./backend/BAR_14_RUST_FAST_PATHS_GATE.md)
 - [`upgrade/backend/BAR_15_PLANNING_POSTGRES_CUTOVER.md`](./backend/BAR_15_PLANNING_POSTGRES_CUTOVER.md)
 - [`upgrade/backend/BAR_16_RELEASE_DR_HARDENING.md`](./backend/BAR_16_RELEASE_DR_HARDENING.md)
+- [`upgrade/backend/BAR_21_STRATEGY_IMPORT.md`](./backend/BAR_21_STRATEGY_IMPORT.md)
 
 The v0.5 adjustment guide extends the runway with four dual-cell slices —
 **BAR-17** Dual-Cell Deployment & Release Authority, **BAR-18** Inter-Cell
@@ -646,3 +647,51 @@ adapter with a real cutover run, Rust extraction only if heavier-path
 profiling crosses the §15.6 gate, and the owner-operational release/DR
 execution from the BAR-16 report. Any new authority must follow the same
 deep-dive → ADR → slice → evidence discipline documented above.
+
+### 14.1 Current backend state (tracking snapshot — 2026-08-17)
+
+**Delivered since the runway note above** (commits on
+`chore/v1.1-roadmap-taskboard`):
+
+- Backend requests R1–R15 from `apps/portal/registry/FRONTEND_HANDOFF.md`
+  §8.3 are **all closed** — the authoritative list lives there. Highlights:
+  typed alpha/capabilities schemas; series envelope (`source_rows`,
+  `returned_rows`, `downsample_stride`); `lifecycle_stages[].personas`;
+  `RowEnvelope` on wfo/trials+candidates+folds; `fold-plan`
+  `producer.as_of`/`source_artifact_digest`; completed + RUNNING run
+  fixtures; alpha import is **source-reference only** (R11, no browser
+  upload, no SSRF); per-gate preflight `checks` (R14) + public
+  `determinism` on `AlphaSummary` (R15).
+- **Gateway wire is ON** (`deploy/nginx/portal.conf`): every `/api/` (except
+  health/ready/SSE) goes through the Control API façade — session required;
+  reads open to all authenticated users (including cross-user runs); **all
+  mutations ADMIN-only**. Rollback: `PORTAL_WEB_UPSTREAM=portal-api:8000`.
+  Control API CMD now runs migrations + bootstrap before serving; bootstrap
+  users in `deploy/control-api/bootstrap-users.yaml`.
+- `control-api` suite: 34 tests; Portal backend regression 396 passed,
+  1 skipped; contracts/parity/M0 snapshots regenerated.
+
+**Remaining backend work — phase-scoped (NOT open requests; wait for owner
+activation or the phase):**
+
+- **U14 certification slice** (BAR-21 continuation): quarantine → hermetic
+  build → lock/SBOM/secret/license scan → contract/determinism/no-lookahead/
+  QuantBT smoke → signed publication; lifecycle/promotion transitions
+  versioned + audited. Unblocks Alpha Pool (`ALPHA_POOL` maturity change)
+  and runtime execution of imported alphas.
+- **Capability expansion of quantbt-engine** (BAR-09/U12): only
+  `three_window_decay` + `advanced_walk_forward` are certified today; the
+  engine (1.0.8 from PyPI) also ships event-driven, multi-symbol portfolio
+  and options engines — expose them through the same manifest → preflight →
+  runner → artifact pattern when prioritized.
+- **SSE migrate through the façade** (BAR-07): nginx still passthroughs
+  `/api/runs/*/events`; façade returns `SSE_NOT_MIGRATED` by design.
+- **Command Center authoritative read model** (U10) — replaces summary
+  proxy passthrough; unlocks history/cross-filter.
+- **Workspace tenancy real UI** (U10) — `/api/workspaces` exists as a
+  convenience path.
+- **Maintenance/external-access screen wiring** (U07 production).
+- **BAR-17→20** (dual-cell), **U18** Planning/PostgreSQL cutover, **U19**
+  DR/game-day — per §14 above; the v0.5 §8.2 audit matrix + §8.3
+  discrepancies (compose.production, publish-images, deploy.yml
+  environments) are binding review items before BAR-17 starts.

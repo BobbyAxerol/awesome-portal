@@ -64,7 +64,7 @@ describe("AvailabilityBadge", () => {
       <AvailabilityBadge state="denied" reasonCode="PERMISSION_DENIED" />,
     );
     const badge = container.querySelector("[data-availability='denied']");
-    expect(badge?.getAttribute("title")).toContain("quyền");
+    expect(badge?.getAttribute("title")).toContain("read access");
   });
 });
 
@@ -92,7 +92,7 @@ describe("EnvironmentBadge", () => {
 describe("FreshnessIndicator", () => {
   it("says so when the source published no as-of", () => {
     render(<FreshnessIndicator availability={availability()} />);
-    expect(screen.getByText(/as-of không được công bố/)).toBeTruthy();
+    expect(screen.getByText(/as-of not published/)).toBeTruthy();
   });
 
   it("shows relative age with an absolute tooltip", () => {
@@ -103,7 +103,7 @@ describe("FreshnessIndicator", () => {
       />,
     );
     const node = container.firstElementChild;
-    expect(node?.textContent).toBe("2m trước");
+    expect(node?.textContent).toBe("2m ago");
     expect(node?.getAttribute("data-stale")).toBe("false");
     expect(node?.getAttribute("title")).toBeTruthy();
   });
@@ -148,7 +148,9 @@ describe("MetricValue", () => {
   it("hides the unit when there is no value to attach it to", () => {
     const { container } = render(
       <MetricCell
-        label="Tổng số run"
+        // A label that does not itself contain the unit word, so the assertion
+        // below can only be satisfied by the unit really being withheld.
+        label="Executed backtests"
         unit="runs"
         metric={metric({ value: null, availability: availability({ state: "denied" }) })}
       />,
@@ -157,7 +159,7 @@ describe("MetricValue", () => {
   });
 
   it("shows the unit alongside a real value", () => {
-    const { container } = render(<MetricCell label="Tổng số run" unit="runs" metric={metric()} />);
+    const { container } = render(<MetricCell label="Total runs" unit="runs" metric={metric()} />);
     expect(container.textContent).toContain("runs");
     expect(container.querySelector(".metric-value")?.textContent).toBe("3");
   });

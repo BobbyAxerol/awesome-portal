@@ -69,7 +69,7 @@ export class AdminController {
   async createUser(@Body() body: unknown) {
     const parsed = CreateUserSchema.safeParse(body);
     if (!parsed.success) {
-      throw new AuthError("INVALID_REQUEST", "Dữ liệu không hợp lệ.", 400);
+      throw new AuthError("INVALID_REQUEST", "Invalid data.", 400);
     }
     try {
       const user = await this.admin.createUser({
@@ -81,7 +81,7 @@ export class AdminController {
     } catch (error) {
       throw new AuthError(
         "USER_CREATE_FAILED",
-        error instanceof Error ? error.message : "Tạo user thất bại.",
+        error instanceof Error ? error.message : "User creation failed.",
         409,
       );
     }
@@ -91,7 +91,7 @@ export class AdminController {
   async patchUser(@Param("user_id") userId: string, @Body() body: unknown) {
     const parsed = PatchUserSchema.safeParse(body);
     if (!parsed.success) {
-      throw new AuthError("INVALID_REQUEST", "Dữ liệu không hợp lệ.", 400);
+      throw new AuthError("INVALID_REQUEST", "Invalid data.", 400);
     }
     const user = await this.auth.users.update({
       userId,
@@ -99,7 +99,7 @@ export class AdminController {
       role: parsed.data.role,
     });
     if (!user) {
-      throw new AuthError("USER_NOT_FOUND", "User không tồn tại.", 404);
+      throw new AuthError("USER_NOT_FOUND", "User not found.", 404);
     }
     if (parsed.data.role) {
       await this.auth.users.bumpSessionVersion(userId);
@@ -122,7 +122,7 @@ export class AdminController {
     } catch (error) {
       throw new AuthError(
         "RESET_FAILED",
-        error instanceof Error ? error.message : "Reset thất bại.",
+        error instanceof Error ? error.message : "Credential reset failed.",
         404,
       );
     }
@@ -136,7 +136,7 @@ export class AdminController {
     } catch (error) {
       throw new AuthError(
         "REVOKE_FAILED",
-        error instanceof Error ? error.message : "Revoke thất bại.",
+        error instanceof Error ? error.message : "Session revocation failed.",
         404,
       );
     }
@@ -150,7 +150,7 @@ export class AdminController {
     } catch (error) {
       throw new AuthError(
         "DISABLE_FAILED",
-        error instanceof Error ? error.message : "Disable thất bại.",
+        error instanceof Error ? error.message : "Disable failed.",
         404,
       );
     }

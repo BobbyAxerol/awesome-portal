@@ -46,7 +46,10 @@ RUN npm run build -- --base=/roadmap-task-board/
 
 FROM nginx:1.27-alpine
 
-COPY deploy/nginx/portal.conf /etc/nginx/conf.d/default.conf
+# portal.conf is a template: the official nginx envsubst entrypoint renders
+# /etc/nginx/templates/*.template into /etc/nginx/conf.d/ using container env
+# (PORTAL_WEB_UPSTREAM selects the façade vs. the legacy Python upstream).
+COPY deploy/nginx/portal.conf /etc/nginx/templates/default.conf.template
 COPY --from=portal-build /repo/apps/portal/frontend/dist /usr/share/nginx/html
 COPY --from=roadmap-task-board-build /opt/roadmap-task-board/frontend/dist /usr/share/nginx/html/roadmap-task-board
 
