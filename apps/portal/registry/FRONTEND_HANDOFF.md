@@ -182,6 +182,18 @@ Nguyên tắc giữ nguyên từ v1: "làm được luồng nào chắc luồng 
 **markdown tracking của frontend** (`upgrade/**` là docs của codex, không sửa).
 Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.5.
 
+### 8.1b Đã đóng trong pass deep-dive 2026-08-18
+
+| Việc | Thuộc mục | Commit | Gate |
+|---|---|---|---|
+| Mỗi artifact `wfo/*` có state riêng: ready/empty/absent/denied/malformed/failed. Candidate 404 không còn giết cả màn Optimization; funnel không in `0` từ artifact vắng mặt | rule §3.3 + §3.4, v0.5 §12.2 | `fa750d5` | `artifacts.test.ts` 9, `OptimizationView.test.tsx` 7 |
+| Parameters: strategy theo `strategy_id` của run; percentile không còn bị nén ở range hẹp; publish `oos_used_for_selection` + causality/validation/semantics | rule §3.5, v0.5 §13 | `fa750d5` | `rangePosition.test.ts` 6, `ParametersView.test.tsx` 7 |
+| Stage strip đọc events thật; heatmap cell-border token đọc theo theme | v0.5 §12.3 | `fa750d5` | trong `OptimizationView.test.tsx` |
+| Toàn bộ UI copy sang tiếng Anh; module đổi tên hiển thị thành Backtest ở mọi chuỗi frontend sở hữu | Bobby chốt 2026-08-18 | `2c0cf9e`, `b23619f` | Portal 383 unit, Planning 79 unit |
+| Login: authorisation chain + service facts thật thay danh sách capability hard-code; plate 3 band; ribbon thành thanh chu kỳ; caps-lock | v0.4 §21.1, rule §3.2 | `a13f0d7` | `AuthGate.test.tsx` 18, baseline auth 16 shot |
+| Docs migration: navigation trong feature, chế độ đọc toàn văn, CSS tài liệu về `features.css`, token `--rail-w` | §8.5b | `9cd62db` | `docs-feature.test.tsx` 8, token gate Portal |
+| Visual baseline re-record 101 shot | v0.4 §26 | `6a712c5` | record + verify lại |
+
 ### 8.1 Đã đóng trong slice v1.1
 
 | Vùng | Thuộc mục | Đóng bằng gì |
@@ -347,14 +359,73 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
    (group `administration`, maturity theo thực tế, permission `users.admin`) để
    nav và Portal Map biết màn này tồn tại.
 
-### 8.4b Ghi chú: mọi backend request đã đóng
+### 8.4b Backend request đang mở (soát 2026-08-18)
 
-R1–R15 đã giao và đã thu hết. Không còn request nào treo tại 2026-08-17.
+R1–R15 đã giao và đã thu hết. Ba request mới mở sau pass deep-dive
+2026-08-18 — **@codex**:
+
+**R16 — đổi tên feature `QUANTBT_RESEARCH` thành Backtest**
+
+```text
+Backend request
+- Endpoint/field cần: registry.json feature QUANTBT_RESEARCH →
+  label "QuantBT Backtest"; (tuỳ codex) canonical_route "/backtest/quantbt"
+  với "/research/quantbt" thêm vào legacy_routes.
+- Lý do UI: Bobby chốt module này gọi là Backtest, không phải Research
+  (2026-08-18). Frontend đã đổi mọi chuỗi nó sở hữu — subnav, module header
+  fallback, login, Planning hand-off. Sidebar/breadcrumb/Command Palette đọc
+  `label` từ registry nên vẫn hiện "QuantBT Research": tên hiển thị chính
+  của module là thứ duy nhất còn sai, và frontend không được sửa registry.
+- Ảnh hưởng hiện tại: không route nào thiếu — chỉ là nhãn.
+  Nếu đổi cả canonical_route thì `canonicalQuantBTPath` + `navigation.test.ts`
+  đã có sẵn cơ chế legacy redirect, frontend chỉ cần regenerate.
+- Đề xuất schema: không đổi schema, chỉ đổi giá trị.
+```
+
+**R17 — thông điệp lỗi của control-api đang là tiếng Việt**
+
+```text
+Backend request
+- Endpoint/field cần: control-api error envelope, ví dụ
+  GET /api/v1/portal/registry khi chưa có session trả
+  {"error":{"code":"SESSION_REQUIRED","message":"Phiên đăng nhập không hợp lệ."}}
+- Lý do UI: UI đã chuyển sang tiếng Anh toàn bộ. Rule hiện hành là hiển thị
+  **nguyên văn** message của server (không dịch lại ở client, vì dịch tức là
+  bịa lại lời của authority) — nên một câu tiếng Việt từ backend sẽ lọt lên
+  màn hình tiếng Anh.
+- Ảnh hưởng hiện tại: mọi StateView/Callout render `error.message`.
+- Đề xuất schema: giữ nguyên `code`, đổi `message` sang tiếng Anh.
+```
+
+**R18 — `/api/runs/{id}/wfo/*` của image đang chạy chưa có RowEnvelope**
+
+```text
+Backend request
+- Endpoint/field cần: không cần code mới — source đã đúng (routes_runs.py
+  :417/:458/:472 trả {total_rows, returned_rows, rows}). Cần **rebuild +
+  redeploy portal-api**.
+- Lý do UI: image portal-api đang chạy (dựng ~2026-08-16) trả mảng JSON trần.
+  Frontend đọc theo envelope, nên trước pass này charts vẽ rỗng mà provenance
+  vẫn nói "không thiếu gì". Giờ `artifactTable` gọi đúng tên: `malformed`,
+  kèm câu "API đang chạy build cũ hơn UI".
+- Ảnh hưởng hiện tại: Optimization + Parameters của mọi run trên stack hiện
+  tại đều rơi vào trạng thái malformed cho tới khi rebuild.
+- Đề xuất schema: không đổi.
+```
 
 ### 8.5 Việc làm thêm ngoài plan (track theo CLAUDE.md §7.3)
 
 | Việc | Vì sao làm | Bằng chứng |
 |---|---|---|
+| `features/quantbt/artifacts.ts` — phân loại state cho mọi endpoint `wfo/*` | Một run `advanced_walk_forward` với `optimization_mode: "none"` không ghi `wfo/candidates.parquet`, API trả 404. Optimization biến việc đó thành failure toàn màn, và funnel in `candidates 0 → selected 0` — hai con số không artifact nào sinh ra. | `artifacts.test.ts` 9 test + `OptimizationView.test.tsx` 7 test; trạng thái `absent` giữ population `null` nên không có `0` nào được suy ra. |
+| State `malformed` cho response không phải RowEnvelope | `data?.rows ?? []` đọc mảng trần (build API cũ) thành "artifact rỗng": chart trắng dưới một dòng provenance nói không thiếu gì. Đây là chính cái mismatch Bobby báo 2026-08-18. | Test "refuses to render an empty screen when the response is not the row envelope". Backend request R18. |
+| `rangePosition` thay `Math.max(1, high - low)` | Guard chống chia 0 âm thầm nén mọi range hẹp hơn 1 đơn vị: `rvol` đứng đỉnh `[1.2,1.6]` in "p40". | `rangePosition.test.ts` 6 test, có case p100 và case range rộng 0 → không có percentile. |
+| Parameters đọc strategy theo `strategy_id` của run | Trước lấy `strategies[0]`. Với một strategy đã đăng ký thì vô hình; với alpha import thì mọi percentile và "immutable thesis" thuộc về strategy khác. | `ParametersView.test.tsx` để decoy đứng đầu list và kiểm p35/p100 + tên strategy trong Structural contract. |
+| Surface `oos_used_for_selection` / `causality_claim` / `validation_claim` / `params_semantics` | Backend đã publish trong `selected_params.json`; UI chỉ vẽ 8 con số. Người đọc lấy OOS Sharpe làm giá trị mặt trong khi chính payload nói OOS đã được dùng để chọn. | Panel "What this parameter set claims" + test "states that the OOS segment was consulted while selecting". |
+| Stage strip đọc `status.json` events | Dải 6 chip "Optimize IS → … → Evaluate" là hằng số, giống hệt nhau ở mọi run. | Test "draws the stages the run actually entered". |
+| `auth/deployment.ts` — service facts ở màn login | Danh sách 3 capability hard-code là feature model thứ hai và không thể đúng (registry nằm sau session). Thay bằng version thật của portal-api/control-api đọc từ health endpoint không cần auth. | Fixture visual pin version; service không trả lời hiện "unreachable". |
+| Chuyển toàn bộ UI copy sang tiếng Anh | Bobby chốt 2026-08-18. Trước đó tiếng Việt và thuật ngữ Anh trộn trong cùng một câu. | ~70 file Portal + ~25 file Planning; content migration (`content/pages`, `content/views.ts`) giữ nguyên vì là tài liệu gốc có hash. |
+| Docs: navigation + chế độ đọc toàn văn + CSS đọc tài liệu về `features.css` | Xem §8.5b. | `docs-feature.test.tsx` 8 test. |
 | Gate `design-tokens.test.ts` (Planning) | "Không style lẻ" chỉ đúng nếu có kiểm. Gate chặn colour literal ngoài `tokens.css` và chặn dark ramp tái dùng giá trị light. | Bắt được 4 vi phạm thật khi viết. |
 | Gate token parity Portal ↔ Planning | Portal import `features.css` của Planning nhưng **không** import `tokens.css`; token mới của v1.1 chỉ có ở Planning → board/timeline nhúng trong shell mất màu. | Bản gate đầu **rỗng** (chỉ quét CSS, `--ws-*` đi qua inline style TSX). Bản hiện tại negative-test: xoá `--ws-1..8` fail, xoá `--text-sm` fail. |
 | Workstream categorical ramp (8 hue × 2 theme) | Mermaid + roadmap + task card cần identity colour; Fund Paper chưa có ramp categorical nào. | Validate OKLab + CVD Machado-Oliveira-Fernandes severity 1.0. Cả 2 mode pass 6/6 check, không WARN. Dark re-step riêng cho từng surface (`#182031`, `#161e2a`). |
@@ -414,6 +485,19 @@ R1–R15 đã giao và đã thu hết. Không còn request nào treo tại 2026-
 | Budget entry bundle 140 KB gz | Split route là một dòng `React.lazy`; **bỏ** split cũng là một dòng static import. Không test nào khác thấy được. | Gate đọc `dist/` thật, skip có tiếng khi chưa build (không pass rỗng). Đo được: 346 → 91 KB gz, ECharts ra khỏi entry. |
 | Bỏ end-label equity sau khi xem ảnh | Nhãn bị chart clip ở rìa phải **và** lặp lại đúng con số của hero tile ngay trên nó. | Ví dụ vì sao visual baseline là gate chứ không phải trang trí: viết ra thấy hợp lý, nhìn ảnh thấy sai cả hai mặt. |
 | Skeleton không lọt accessibility tree | Placeholder là hình dạng, không phải nội dung; screen reader phải nghe "đang tải", không nghe mô tả các khối xám. | `aria-hidden` trên từng khối + đúng một `role="status"` bằng chữ. |
+
+### 8.5b Docs migration — ba lỗi, không lỗi nào là "thiếu nội dung"
+
+Bobby báo `/planning/docs` "không đầy đủ nội dung như html legacy cũ"
+(2026-08-18). Soát ra nội dung **đủ**: 16/16 page có mặt và hash khớp legacy
+HTML (`tests/content-integrity.test.ts`, `content-integrity-manifest.json`).
+Cái thiếu là mọi đường **đến** nội dung đó.
+
+| Lỗi | Nguyên nhân | Sửa |
+|---|---|---|
+| Chỉ đọc được page 1 | Điều hướng tài liệu nằm ở sidebar của app standalone. Portal shell cố tình không render sidebar của Planning (§P0.10 — bỏ nested shell), nên khi nhúng thì **không có** điều hướng nào. 15/16 page không tới được dù đã migrate đủ. | Picker + chỉ số vị trí + pager prev/next thuộc về chính DocsFeature, nên tồn tại ở cả hai host. |
+| Không đọc được toàn văn | Một tài liệu tham chiếu bị cắt thành 16 trang địa chỉ riêng thì không đọc tuần tự, không Ctrl-F toàn văn, không in trọn được. | Chế độ "Whole document": render đủ 16 section theo thứ tự, mỗi section có marker riêng; contents rail mở rộng theo. Mặc định vẫn là 1 section (tra cứu là ca phổ biến, và first paint chỉ một page markup). |
+| Rail contents rơi xuống dưới bài, chữ không style | `.doc-layout`, `.toc-rail`, `.doc-article`, `.toc-item` nằm trong `shell.css` của Planning — file Portal **không** import (rule `.app`/`.workspace` sẽ đánh nhau với host). Không rule nào trong số đó mô tả shell; chúng mô tả một tài liệu. | Chuyển sang `features.css` (file cả hai host đều load). Việc chuyển làm token gate của Portal fail ở `--rail-w` — đúng cái đáng fail từ đầu: rail width không tồn tại ở Portal chính là lý do grid im lặng sập về 1 cột. Token đã khai, gate xanh. |
 
 ### 8.6 Slice kế tiếp — "đóng 2 domain cho chắc" (chốt 2026-08-17, Bobby)
 
@@ -482,7 +566,19 @@ sang source-reference R11).
 6. Việc nhỏ: wire `scripts/portal-web-visual.sh` vào `ci.yml` (đã thêm step,
    script skip tới khi Playwright project xong); mermaid theo print (§8.2).
 
-### 8.7 Sẵn sàng push / merge / build (soát 2026-08-17)
+### 8.7 Sẵn sàng push / merge / build (soát 2026-08-17, cập nhật 2026-08-18)
+
+> **Cập nhật 2026-08-18.** Định danh đã deploy thật: `portal_users` có bobby
+> (ADMIN, ACTIVE), stan và thanhvuong (INVITED); gateway đã route `/api/` qua
+> `control-api:4000`; `GET /api/auth/context` trả `ACCESS_REQUIRED` đúng shape.
+> Hai giá trị `.env` ở bảng bên dưới **đã được xử lý phía deploy** và
+> `825b411` đã bỏ `--generate-one-time-credentials` khỏi CMD, nên rủi ro token
+> rơi vào log đã đóng. Phần còn treo duy nhất là **rebuild portal-api**
+> (backend request R18): image đang chạy cũ hơn commit `2d7c5ec`, trả mảng JSON
+> trần thay vì RowEnvelope, nên Optimization/Parameters sẽ báo `malformed` cho
+> tới khi build lại.
+
+
 
 **Phía frontend: sẵn sàng.** Gate xanh toàn bộ — Portal 354 unit (1 skip khi chưa
 build), Planning 71 unit, visual baseline 101 shot (record + verify lại 2 lần),
