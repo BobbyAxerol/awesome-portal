@@ -107,7 +107,7 @@ jobs:
             | sha256sum -c -
 
       - name: Build and publish API image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: deploy/images/portal-api.Dockerfile
@@ -120,7 +120,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=portal-api
 
       - name: Build and publish web image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: deploy/images/portal-web.Dockerfile
@@ -131,7 +131,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=portal-web
 
       - name: Build and publish Control API image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: deploy/images/control-api.Dockerfile
@@ -142,7 +142,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=control-api
 
       - name: Build and publish Roadmap & Task Board API image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: deploy/images/roadmap-task-board-api.Dockerfile
