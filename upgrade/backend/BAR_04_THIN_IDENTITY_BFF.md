@@ -128,8 +128,11 @@ Implementation evidence — 2026-08-15:
   with fail-closed startup guards (dev only with `PORTAL_ENV=local`; non-dev
   requires the full Cloudflare config).
 - [x] Bootstrap CLI (`dist/cli/bootstrap.js`) seeds `bobby/ADMIN`,
-  `stan/USER`, `thanhvuong/USER` idempotently and prints one-time credentials
-  exactly once; nothing secret is committed or logged.
+  `stan/USER`, `thanhvuong/USER` idempotently; the container CMD seeds users
+  INVITED and **never prints credentials** (a one-time token is a secret and
+  must not land in `docker compose logs` or the on-disk JSON log). Handover
+  runs `--print-one-time-credentials` once, manually, to print fresh
+  activation tokens exactly once.
 - [x] Compose gains private `control-api` + `portal-postgres` services (no
   public ports) with healthchecks; `.env.example` documents the Cloudflare
   runtime secrets without values; `scripts/control-api-test.sh` runs the

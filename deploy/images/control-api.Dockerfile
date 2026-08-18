@@ -26,4 +26,7 @@ EXPOSE 4000
 
 # Apply migrations before serving; the web gateway now routes /api/ through
 # this façade, so the DB must be migrated at startup (idempotent).
-CMD ["sh", "-c", "./node_modules/.bin/node-pg-migrate -m migrations up && node dist/cli/bootstrap.js --file bootstrap-users.yaml --generate-one-time-credentials && node dist/main.js"]
+# Migrations + seed users INVITED (never prints credentials — one-time tokens
+# are handed over manually with --print-one-time-credentials, see
+# apps/control-api/src/cli/bootstrap.ts).
+CMD ["sh", "-c", "./node_modules/.bin/node-pg-migrate -m migrations up && node dist/cli/bootstrap.js --file bootstrap-users.yaml && node dist/main.js"]

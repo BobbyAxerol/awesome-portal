@@ -6,66 +6,63 @@ import { AdminService } from "../admin/admin.service";
 import { AuthService } from "../auth/auth.service";
 import { Argon2CredentialService } from "../auth/argon";
 
-interface BootstrapUser {
+export interface BootstrapUser {
   username: string;
   role: "ADMIN" | "USER";
+}
+
+export interface BootstrapIO {
+  log: (line: string) => void;
+}
+
+export interface BootstrapDeps {
+  auth: AuthService;
+  admin: AdminService;
 }
 
 /**
  * Idempotent bootstrap CLI (guide P0.25A.5):
  *
- *   node dist/cli/bootstrap.js --file bootstrap-users.yaml \
- *     [--generate-one-time-credentials]
+ *   node dist/cli/bootstrap.js --file bootstrap-users.yaml
+ *   node dist/cli/bootstrap.js --file bootstrap-users.yaml --print-one-time-credentials
  *
- * Seeds bobby/ADMIN, stan/USER, thanhvuong/USER as INVITED users and, when
- * requested, prints one-time activation credentials exactly once. Credentials
- * are never written to any file, log or database row in plaintext.
+ * Default run seeds the users as INVITED and prints **no credentials** — a
+ * one-time token is a secret and must never land in container logs or the
+ * on-disk JSON log. Handover runs the second form once (manual, stdout only)
+ * to print fresh one-time activation credentials exactly once.
  */
-async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-  const fileIndex = args.indexOf("--file");
-  if (fileIndex === -1) {
-    throw new Error("--file <bootstrap-users.yaml> is required");
-  }
-  const config = loadConfig();
-  const pool = buildPool(config.DATABASE_URL);
-  const auth = new AuthService(
-    pool,
-    config,
-    new Argon2CredentialService({
-      memoryKib: config.ARGON2_MEMORY_KIB,
-      iterations: config.ARGON2_ITERATIONS,
-      parallelism: config.ARGON2_PARALLELISM,
-    }),
-  );
-  const admin = new AdminService(pool, config, auth);
-
-  const raw = readFileSync(args[fileIndex + 1], "utf8");
-  const users = parseBootstrapUsers(raw);
-  const generated = args.includes("--generate-one-time-credentials");
-
+export async function runBootstrap(
+  users: BootstrapUser[],
+  io: BootstrapIO,
+  options: { printOneTime: boolean },
+  deps: BootstrapDeps,
+): Promise<void> {
   for (const entry of users) {
-    const existing = await auth.users.findByUsername(entry.username);
+    const existing = await deps.auth.users.findByUsername(entry.username);
     if (existing) {
-      console.log(`user ${entry.username} already exists; skipped`);
+      if (options.printOneTime) {
+        const { activationToken } = await deps.admin.resetCredential(existing.userId);
+        io.log(`ONE_TIME ${entry.username} ${activationToken}`);
+      } else {
+        io.log(`user ${entry.username} already exists; skipped`);
+      }
       continue;
     }
-    const user = await admin.createUser({
+    const user = await deps.admin.createUser({
       username: entry.username,
       displayName: entry.username,
       role: entry.role,
     });
-    if (generated) {
-      const { activationToken } = await admin.resetCredential(user.userId);
-      console.log(`ONE_TIME ${entry.username} ${activationToken}`);
+    if (options.printOneTime) {
+      const { activationToken } = await deps.admin.resetCredential(user.userId);
+      io.log(`ONE_TIME ${entry.username} ${activationToken}`);
     } else {
-      console.log(`created ${entry.username} (${entry.role})`);
+      io.log(`created ${entry.username} (${entry.role})`);
     }
   }
-  await pool.end();
 }
 
-function parseBootstrapUsers(raw: string): BootstrapUser[] {
+export function parseBootstrapUsers(raw: string): BootstrapUser[] {
   const users: BootstrapUser[] = [];
   let current: Partial<BootstrapUser> = {};
   for (const line of raw.split("\n")) {
@@ -89,4 +86,38 @@ function parseBootstrapUsers(raw: string): BootstrapUser[] {
   return users;
 }
 
-void main();
+async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  const fileIndex = args.indexOf("--file");
+  if (fileIndex === -1) {
+    throw new Error("--file <bootstrap-users.yaml> is required");
+  }
+  const config = loadConfig();
+  const pool = buildPool(config.DATABASE_URL);
+  const auth = new AuthService(
+    pool,
+    config,
+    new Argon2CredentialService({
+      memoryKib: config.ARGON2_MEMORY_KIB,
+      iterations: config.ARGON2_ITERATIONS,
+      parallelism: config.ARGON2_PARALLELISM,
+    }),
+  );
+  const admin = new AdminService(pool, config, auth);
+
+  const raw = readFileSync(args[fileIndex + 1], "utf8");
+  const users = parseBootstrapUsers(raw);
+  await runBootstrap(
+    users,
+    { log: (line) => console.log(line) },
+    { printOneTime: args.includes("--print-one-time-credentials") },
+    { auth, admin },
+  );
+  await pool.end();
+}
+
+// Only run as the CLI entrypoint; importing the module (tests, other CLIs)
+// must not trigger a side-effectful bootstrap.
+if (require.main === module) {
+  void main();
+}
