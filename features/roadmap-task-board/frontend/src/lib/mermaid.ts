@@ -84,8 +84,13 @@ export async function renderMermaid(container: HTMLElement, theme: "light" | "da
     node.removeAttribute("data-processed");
     node.textContent = source;
   }
-  await initMermaid(theme);
   try {
+    // Theme tokens can be temporarily unavailable while the embedded feature
+    // is mounting or unmounting (notably during route changes and jsdom test
+    // cleanup). Treat initialization failure like any other renderer failure
+    // so the caller can show its deterministic fallback instead of leaking an
+    // unhandled promise rejection.
+    await initMermaid(theme);
     await mermaid.run({ nodes });
     for (const node of nodes) {
       const svg = node.querySelector("svg");
