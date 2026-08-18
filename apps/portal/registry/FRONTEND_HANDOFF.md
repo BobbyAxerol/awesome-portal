@@ -503,3 +503,45 @@ smoke thật sau build — login → Command Center → mở một run → cance
 `__Host-*` cookie + CSRF + Access chỉ đúng dưới HTTPS thật, không môi trường CI nào
 ở đây kiểm được. `PORTAL_WEB_UPSTREAM` không cần sửa: `.env` không set nên compose
 lấy default `control-api:4000` (`compose.yaml:98`) — đúng.
+
+#### 8.7.1 Trạng thái stack đang chạy (soát 2026-08-18) — không chỉ là account
+
+Soát trực tiếp stack local đang chạy (41h uptime) thì phần định danh **chưa từng
+được deploy**, không phải "thiếu mỗi user":
+
+| Bằng chứng | Kết quả |
+|---|---|
+| `docker inspect` `.Config.Cmd` của `control-api` | `["node","dist/main.js"]` — image cũ hơn CMD hiện tại của `deploy/images/control-api.Dockerfile:65` (`node-pg-migrate up && bootstrap.js && main.js`) |
+| `information_schema.tables` trong DB `portal_control` | **0 bảng ứng dụng**; `portal_users` (migration `1723680000000_init-identity.sql`) không tồn tại ở bất kỳ DB nào |
+| `grep proxy_pass /etc/nginx/conf.d/*.conf` trong container `portal-web` | `http://portal-api:8000` — image build trước khi `portal.conf` thành template envsubst (`deploy/images/portal-web.Dockerfile:52`); container không có env `PORTAL_WEB_UPSTREAM` |
+| `GET /api/auth/context`, `GET /api/control/healthz` qua gateway `:8080` | `404` với thân lỗi kiểu FastAPI (`detail`/`request_id`) → `/api/` vẫn đi thẳng portal-api, façade U10 không nằm trong đường request |
+
+Hệ quả: **rebuild image là bắt buộc, không phải tuỳ chọn** — chỉ đổi `.env` rồi
+restart sẽ không đưa control-api vào đường đi, và cũng không tạo schema định danh.
+Sau rebuild, CMD tự chạy migrate + bootstrap nên account sinh ra theo
+`deploy/control-api/bootstrap-users.yaml` (bobby/ADMIN, stan/USER, thanhvuong/USER,
+trạng thái `INVITED` + `must_change_password`). Màn Users & Access hiện gọi
+`/api/admin/users` sẽ 404 cho tới lúc đó — đúng như thiết kế, không phải lỗi UI.
+
+Đính chính §8.7 phía trên: câu "`PORTAL_WEB_UPSTREAM` không cần sửa" đúng về giá trị
+(compose default `control-api:4000`) nhưng **chưa đủ** — giá trị đó chỉ có tác dụng
+với image dựng lại từ template.
+
+Về `CONTROL_API_AUTH_MODE`: `loadConfig` (`apps/control-api/src/config.ts:67`) chặn
+`dev` khi `PORTAL_ENV != local`. Hiện `.env` chỉ có `PORTAL_ENVIRONMENT=research`
+(biến khác, dành cho portal-api tại `compose.yaml:20`), còn `PORTAL_ENV` không set nên
+control-api nhận default `local` — tức guard đang **được thoả một cách tình cờ**. Khi
+chuyển sang `cloudflare_access_local_password` phải cấp đủ 4 giá trị Cloudflare
+(`.env:27-29` đang comment, `CLOUDFLARE_TEAM_DOMAIN` chưa có dòng nào) và một
+`CONTROL_API_INTERNAL_PRINCIPAL_SECRET` thật — default trong `compose.yaml` là chuỗi
+`local-dev-principal-secret-0123456789`.
+
+**Backend request (@codex) — activation token rơi vào log:** CMD của
+`control-api.Dockerfile:65` chạy `bootstrap.js --generate-one-time-credentials`, in
+`ONE_TIME <username> <token>` ra stdout. Lần boot đầu sau rebuild, ba token kích hoạt
+sẽ nằm nguyên văn trong `docker compose logs control-api` và trong file json-log trên
+đĩa — đọc lại được bởi bất kỳ ai vào được host. Đề xuất (codex quyết): bỏ
+`--generate-one-time-credentials` khỏi CMD và chạy bootstrap thủ công một lần khi bàn
+giao credential, hoặc ghi token ra fd riêng/secret store thay vì stdout. Frontend
+không chạm được phần này; màn Users & Access vẫn là đường chính thức để reset về sau
+(token chỉ hiện một lần, không lưu, không log).
