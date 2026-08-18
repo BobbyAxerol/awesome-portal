@@ -359,10 +359,23 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
    (group `administration`, maturity theo thực tế, permission `users.admin`) để
    nav và Portal Map biết màn này tồn tại.
 
-### 8.4b Backend request đang mở (soát 2026-08-18)
+### 8.4b Backend request (soát lại 2026-08-18, chiều)
 
-R1–R15 đã giao và đã thu hết. Ba request mới mở sau pass deep-dive
-2026-08-18 — **@codex**:
+R1–R15 đã giao và thu hết. **R16–R18 mở sáng 2026-08-18 và đã đóng cùng ngày**
+(`6286d81`, `0743aad`, + rebuild portal-api). Frontend đã verify từng cái trên
+stack đang chạy:
+
+| Request | Bằng chứng đã thu |
+|---|---|
+| R16 label → Backtest | `registry.json` `label: "QuantBT Backtest"`; sidebar + breadcrumb + module header đọc đúng. `canonical_route` giữ `/research/quantbt` — codex chốt, cơ chế legacy redirect đã phủ. 3 snapshot baseline đổi theo, đã re-record. |
+| R17 message tiếng Anh | `GET /api/v1/portal/registry` không session trả `{"code":"SESSION_REQUIRED","message":"Invalid session."}`. |
+| R18 RowEnvelope | `GET /api/runs/097b4c6be1a241d1/wfo/trials?top_n=3` → `{"total_rows":353,"returned_rows":3,"rows":[…]}`; `wfo/candidates` của run three-window trả envelope, của run walk-forward vẫn 404 — đúng ca `absent` mà `artifactTable` xử lý. |
+
+**Còn treo: không có.** Nội dung ba request giữ lại bên dưới để tra cứu.
+
+<details>
+<summary>Nội dung R16–R18 (đã đóng)</summary>
+
 
 **R16 — đổi tên feature `QUANTBT_RESEARCH` thành Backtest**
 
@@ -412,6 +425,14 @@ Backend request
   tại đều rơi vào trạng thái malformed cho tới khi rebuild.
 - Đề xuất schema: không đổi.
 ```
+
+</details>
+
+**Quan sát chưa mở thành request** (để codex/Bobby quyết): sidebar `group` của
+`QUANTBT_RESEARCH` vẫn là `research`, nên breadcrumb đọc "Research / QuantBT
+Backtest" và section header sidebar là RESEARCH, trong khi có sẵn một section
+BACKTESTS chỉ chứa `APPROVALS`. Taxonomy group là của registry; frontend không
+suy diễn. Nếu muốn nhất quán thì đây là chỗ sửa, một dòng.
 
 ### 8.5 Việc làm thêm ngoài plan (track theo CLAUDE.md §7.3)
 
@@ -568,6 +589,13 @@ sang source-reference R11).
 
 ### 8.7 Sẵn sàng push / merge / build (soát 2026-08-17, cập nhật 2026-08-18)
 
+> **Cập nhật 2026-08-18 (chiều).** R16–R18 đã đóng, không còn backend request
+> nào treo. Gate chạy lại trên state đã merge: Portal 383 unit + build, Planning
+> 79 unit + build + e2e 2, visual baseline 101/101 (re-record 3 shot vì đổi
+> label, verify lại xanh), `contracts-test.sh`, `control-api-test.sh`,
+> `./scripts/portal verify`. **Không còn gì chặn push/merge phía frontend.**
+> Việc còn lại là build lại image từ code mới nhất rồi smoke thật trên HTTPS.
+>
 > **Cập nhật 2026-08-18.** Định danh đã deploy thật: `portal_users` có bobby
 > (ADMIN, ACTIVE), stan và thanhvuong (INVITED); gateway đã route `/api/` qua
 > `control-api:4000`; `GET /api/auth/context` trả `ACCESS_REQUIRED` đúng shape.
