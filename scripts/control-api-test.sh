@@ -43,11 +43,13 @@ docker run --rm --name "${NODE_CONTAINER}" --network "${NETWORK}" \
   -v "${ROOT_DIR}:/repo:ro" \
   -v "${APP_DIR}:/work" \
   -w /work \
+  -e HOME=/tmp \
+  -e npm_config_cache=/tmp/.npm \
   -e TEST_DATABASE_URL="postgres://portal:portal@${PG_CONTAINER}:5432/portal_control_test" \
   node:22-alpine sh -c '
     set -e
     if [ ! -d node_modules ]; then
-      npm install --no-audit --no-fund
+      npm ci --no-audit --no-fund
     fi
     npx vitest run
   '

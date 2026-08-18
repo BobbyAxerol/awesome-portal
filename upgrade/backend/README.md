@@ -152,3 +152,15 @@ alphas are never executable. Fixtures: `visual-baseline-run` (COMPLETED) +
   façade (BAR-07), Command Center read model (U10), workspace tenancy (U10),
   maintenance screen (U07), BAR-17→20 / U18 / U19. See
   `BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md` §14.1 for detail.
+
+## Backend state — 2026-08-18 (PR #35 CI recovery)
+
+- Fixed clean-runner npm permissions for contracts and Control API by setting
+  a writable unprivileged cache and using `npm ci`; the reproduced
+  `EACCES`/exit-243 failure no longer occurs.
+- Hardened the Control API façade against the CodeQL SSRF finding: configured
+  upstream must be an origin-only HTTP(S) URL, request path remains inside
+  `/api`, traversal/authority tricks are rejected, and final scheme/host/port
+  must match before dispatch. Evidence: contracts 6/6, Control API 49/49,
+  typecheck/build, actionlint and workspace verify passed locally; remote
+  checks are pending merge of the fix branch into `dev`.

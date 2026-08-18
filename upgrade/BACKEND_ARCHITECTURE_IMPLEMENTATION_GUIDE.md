@@ -670,6 +670,16 @@ deep-dive → ADR → slice → evidence discipline documented above.
   users in `deploy/control-api/bootstrap-users.yaml`.
 - `control-api` suite: 34 tests; Portal backend regression 396 passed,
   1 skipped; contracts/parity/M0 snapshots regenerated.
+- **PR #35 CI remediation (2026-08-18):** the shared-contract and Control API
+  clean-container installers now use `npm ci` with a writable unprivileged
+  npm cache, removing the runner-only `EACCES`/exit-243 failure. The façade
+  now validates an origin-only `PORTAL_API_BASE_URL`, confines request paths
+  to `/api`, rejects encoded traversal/authority tricks and checks the final
+  scheme/host/port before `fetch`; this addresses the CodeQL SSRF finding
+  without suppressing it. Local evidence: contracts 6/6, Control API 49/49,
+  TypeScript typecheck/build, actionlint 1.7.7 and `portal verify` all passed.
+  Remote GitHub CodeQL/CI confirmation remains required after the fix branch
+  is merged into `dev`.
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**
