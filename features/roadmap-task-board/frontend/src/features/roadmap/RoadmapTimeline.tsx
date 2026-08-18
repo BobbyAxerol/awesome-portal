@@ -60,7 +60,7 @@ function WeekAxis({ horizon }: { horizon: number }) {
 function ProgressBar({ done, total }: { done: number; total: number }) {
   const pct = Math.round((done / total) * 100);
   return (
-    <div className="phase-progress" title={`${done}/${total} task đã Done`}>
+    <div className="phase-progress" title={`${done}/${total} tasks done`}>
       <div className="phase-progress-track">
         <div className="phase-progress-fill" style={{ width: `${pct}%` }} />
       </div>
@@ -101,7 +101,7 @@ function PhaseRow({
           <p className="phase-name">
             <span className="mono phase-code">{phase.id}</span> {phase.name}
           </p>
-          <p className="phase-owner">{phase.owner || "Chưa gán owner"}</p>
+          <p className="phase-owner">{phase.owner || "No owner"}</p>
         </div>
       </div>
 
@@ -111,7 +111,7 @@ function PhaseRow({
         <div
           className="phase-bar"
           style={{ gridColumn: `${phase.start} / ${phase.end + 1}` }}
-          title={`${phase.id}: W${phase.start}–W${phase.end} (${weeks} tuần)`}
+          title={`${phase.id}: W${phase.start}–W${phase.end} (${weeks} weeks)`}
         >
           {/* A short phase has no room for its own label — a one-week phase is
            * 1/24 of the track, and the visual baseline showed "W1–W1" clipped
@@ -129,22 +129,22 @@ function PhaseRow({
       </div>
 
       <div className="phase-detail">
-        <p className="phase-outcome">{phase.outcome || "Chưa ghi exit outcome"}</p>
+        <p className="phase-outcome">{phase.outcome || "No exit outcome recorded"}</p>
 
         <div className="phase-facts">
           <span className="mono phase-span">
-            {weeks} tuần · W{phase.start}→W{phase.end}
+            {weeks} weeks · W{phase.start}→W{phase.end}
           </span>
           {progress ? (
             <ProgressBar done={progress.done} total={progress.total} />
           ) : (
-            <span className="phase-progress-absent">chưa có task gán vào phase này</span>
+            <span className="phase-progress-absent">no task is assigned to this phase</span>
           )}
         </div>
 
         {concurrent.length > 0 && (
           <p className="phase-concurrent">
-            Chạy song song: {concurrent.map((other) => other.id).join(", ")}
+            Runs alongside: {concurrent.map((other) => other.id).join(", ")}
           </p>
         )}
 

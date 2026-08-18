@@ -30,7 +30,7 @@ describe("view panel integrity", () => {
   });
 
   it("no longer carries the fragments of the screens removed in v1.1", () => {
-    // "Gỡ sạch, không ẩn": the Evidence and Portal Preview markup must not be
+    // Removed, not hidden: the Evidence and Portal Preview markup must not be
     // shipped in the bundle at all, not merely be unreachable.
     const ids = VIEW_PANELS.map((panel) => panel.id);
     expect(ids).not.toContain("view-evidence");

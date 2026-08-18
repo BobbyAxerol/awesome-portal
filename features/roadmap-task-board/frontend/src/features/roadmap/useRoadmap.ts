@@ -75,7 +75,7 @@ function errorMessage(error: unknown): RoadmapSyncError {
   if (error instanceof Error) {
     return new RoadmapSyncError(error.message, "code" in error && (error as { code?: string }).code === "version_conflict");
   }
-  return new RoadmapSyncError("Không thể đồng bộ roadmap. Hãy thử lại.");
+  return new RoadmapSyncError("The roadmap could not be synced. Try again.");
 }
 
 export function useRoadmap(apiMode: ApiMode) {
@@ -132,7 +132,7 @@ export function useRoadmap(apiMode: ApiMode) {
     const current = recordsRef.current;
     const localRecord: RoadmapRecord = { phase, version: null, position: current.length };
     if (mode === "v1" && needsInitialization) {
-      throw new RoadmapSyncError("Server workspace trống. Hãy khởi tạo từ dữ liệu local trước khi chỉnh sửa.");
+      throw new RoadmapSyncError("The server workspace is empty. Initialize it from local data before editing.");
     }
     if (mode === "local") {
       writeLocal([...current, localRecord]);
@@ -160,10 +160,10 @@ export function useRoadmap(apiMode: ApiMode) {
     const target = current.find((record) => record.phase.id === previousId);
     if (!target) return create(phase);
     if (mode === "v1" && needsInitialization) {
-      throw new RoadmapSyncError("Server workspace trống. Hãy khởi tạo từ dữ liệu local trước khi chỉnh sửa.");
+      throw new RoadmapSyncError("The server workspace is empty. Initialize it from local data before editing.");
     }
     if (previousId !== phase.id && mode === "v1") {
-      throw new RoadmapSyncError("API v1 giữ phase ID bất biến. Hãy tạo phase mới và xoá phase cũ.");
+      throw new RoadmapSyncError("API v1 keeps a phase id immutable. Create a new phase and delete the old one.");
     }
     if (mode === "local") {
       writeLocal(current.map((record) => record.phase.id === previousId ? { ...record, phase } : record));
@@ -172,7 +172,7 @@ export function useRoadmap(apiMode: ApiMode) {
     setSyncState("saving");
     try {
       if (mode === "v1") {
-        if (target.version === null) throw new RoadmapSyncError("Phase chưa có phiên bản server; hãy tải lại.");
+        if (target.version === null) throw new RoadmapSyncError("This phase has no server version yet — reload.");
         if (samePhasePatch(target.phase, phase)) {
           writeLocal(current);
         } else {
@@ -198,7 +198,7 @@ export function useRoadmap(apiMode: ApiMode) {
     const target = current.find((record) => record.phase.id === phaseId);
     if (!target) return;
     if (mode === "v1" && needsInitialization) {
-      throw new RoadmapSyncError("Server workspace trống. Hãy khởi tạo từ dữ liệu local trước khi chỉnh sửa.");
+      throw new RoadmapSyncError("The server workspace is empty. Initialize it from local data before editing.");
     }
     const next = current.filter((record) => record.phase.id !== phaseId);
     if (mode === "local") {
@@ -208,7 +208,7 @@ export function useRoadmap(apiMode: ApiMode) {
     setSyncState("saving");
     try {
       if (mode === "v1") {
-        if (target.version === null) throw new RoadmapSyncError("Phase chưa có phiên bản server; hãy tải lại.");
+        if (target.version === null) throw new RoadmapSyncError("This phase has no server version yet — reload.");
         await deleteV1<RoadmapPhase>("roadmap", phaseId, target.version);
         writeLocal((await listV1<RoadmapPhase>("roadmap")).map(toRecord));
       } else {

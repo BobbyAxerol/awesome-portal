@@ -115,7 +115,7 @@ describe.sequential("board drag flow", () => {
       expect(within(ready).getByTestId("task-card-API-1")).toBeInTheDocument();
     });
     expect(within(screen.getByTestId("task-column-Done")).queryByTestId("task-card-API-1")).toBeNull();
-    expect(await screen.findByText(/không chuyển được — đã hoàn tác/)).toBeInTheDocument();
+    expect(await screen.findByText(/could not be moved — the change was rolled back/)).toBeInTheDocument();
   });
 
   it("sends the position the insertion line showed, not an append", async () => {
@@ -170,7 +170,7 @@ describe.sequential("board drag flow", () => {
 
     // Queued, not delivered: the frontend cannot observe the outbox result, so
     // it must not claim one.
-    const toast = await screen.findByText(/đã xếp hàng thông báo cho Thanh Vuong/);
+    const toast = await screen.findByText(/notification queued for Thanh Vuong/);
     expect(toast).toBeInTheDocument();
     // No webhook URL, host or secret may reach the DOM.
     expect(container.innerHTML).not.toMatch(/lark|feishu|webhook|hook\.|secret/i);
@@ -215,7 +215,7 @@ describe("board grouping and bulk actions", () => {
 
     await user.click(screen.getAllByRole("checkbox")[0]);
     expect(await screen.findByTestId("bulk-bar")).toBeInTheDocument();
-    expect(screen.getByText(/1 task đã chọn/)).toBeInTheDocument();
+    expect(screen.getByText(/1 tasks selected/)).toBeInTheDocument();
   });
 
   it("moves a task with the keyboard, so drag is not the only path", async () => {
@@ -226,7 +226,7 @@ describe("board grouping and bulk actions", () => {
     const first = within(backlog).getAllByTestId(/^task-card-/)[0];
     const id = first.getAttribute("data-testid")!.replace("task-card-", "");
 
-    within(first).getByRole("button", { name: `Mở task ${id}` }).focus();
+    within(first).getByRole("button", { name: `Open task ${id}` }).focus();
     await user.keyboard("{Alt>}{ArrowRight}{/Alt}");
 
     await waitFor(() => {

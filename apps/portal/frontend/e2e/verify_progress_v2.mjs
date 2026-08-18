@@ -7,7 +7,7 @@ const out = await page.evaluate(() => {
   const body = document.body.innerText.toLowerCase();
   return {
     strip: document.body.innerText.match(/Fold \d+\/\d+/)?.[0] ?? null,
-    eta: body.includes("ước tính"),
+    eta: body.includes("(estimate)"),
     gantt: body.includes("fold timeline"),
     separator: body.includes("fold 1 — study started"),
     foldsRendered: (body.match(/fold \d+/g) || []).length,

@@ -10,8 +10,8 @@
  * This parses the same fragment into a typed model so the screen can be built
  * from design-system primitives. The fragment is NOT edited and NOT duplicated:
  * it stays the single source, its hash stays gated, and the model is derived
- * from it at runtime. That is the whole point — "render bằng primitive, giữ
- * content-integrity hash của nguồn".
+ * from it at runtime. That is the whole point: render with primitives while
+ * keeping the source's content-integrity hash.
  *
  * Parsing is strict. A fragment that does not match this shape means the parser
  * is wrong about a document that cannot silently change, so it throws rather

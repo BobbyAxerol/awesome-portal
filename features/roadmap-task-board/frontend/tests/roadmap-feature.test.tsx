@@ -49,7 +49,7 @@ describe("RoadmapFeature", () => {
 
     // P1 has no tasks: unknown delivery must not render as 0/0 or 0%.
     const withoutTasks = screen.getByTestId("roadmap-phase-P1");
-    expect(within(withoutTasks).getByText(/chưa có task gán vào phase/)).toBeInTheDocument();
+    expect(within(withoutTasks).getByText(/no task is assigned to this phase/)).toBeInTheDocument();
     expect(within(withoutTasks).queryByText("0/0")).toBeNull();
   });
 

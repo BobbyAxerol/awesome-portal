@@ -56,7 +56,7 @@ describe("milestone grouping", () => {
   it("keeps unassigned tasks in an explicit lane, sorted last", () => {
     const lanes = milestoneLanes([task("A", ""), task("B", "P0")]);
     expect(lanes.map((lane) => lane.id)).toEqual(["P0", ""]);
-    expect(lanes[1].label).toBe("Chưa gán milestone");
+    expect(lanes[1].label).toBe("No milestone");
   });
 
   it("never drops a task, so lane counts add up to the input", () => {

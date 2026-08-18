@@ -68,7 +68,7 @@ function DiagramFigure({
       </div>
       <div ref={container}>
         {failed ? (
-          <StateView kind="failed" message="Không render được sơ đồ mermaid." />
+          <StateView kind="failed" message="The mermaid diagram could not be rendered." />
         ) : (
           <pre className="mermaid">{source}</pre>
         )}
@@ -132,7 +132,7 @@ function ReportsBody({ document: doc, theme }: { document: ReportsDocument; them
 export function ReportsFeature({ theme }: { theme: "light" | "dark" }) {
   const parsed = useMemo(() => {
     const panel = VIEW_PANELS.find((item) => item.id === "view-reports");
-    if (!panel) return { error: "Không tìm thấy fragment view-reports trong bundle." } as const;
+    if (!panel) return { error: "The view-reports fragment is not in the bundle." } as const;
     try {
       return { document: parseReportsFragment(panel.html) } as const;
     } catch (error) {
@@ -140,7 +140,7 @@ export function ReportsFeature({ theme }: { theme: "light" | "dark" }) {
         error:
           error instanceof ReportsParseError
             ? error.message
-            : "Không đọc được fragment view-reports.",
+            : "The view-reports fragment could not be read.",
       } as const;
     }
   }, []);

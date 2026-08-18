@@ -95,7 +95,7 @@ export function Sidebar({ view, page, onNavigate, sidebarOpen = false }: ShellPr
         </>
       ) : (
         <nav>
-          <p className="mono-label">Quản lý Task</p>
+          <p className="mono-label">Task management</p>
           {TOP_TABS.filter((v) => v.id !== "docs").map((v) => (
             <button
               key={v.id}

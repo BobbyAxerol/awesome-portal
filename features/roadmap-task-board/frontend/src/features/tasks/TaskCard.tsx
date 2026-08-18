@@ -82,7 +82,7 @@ export function TaskCard({
           <Checkbox
             checked={selected}
             loading={pending}
-            label={`Chọn ${task.id}`}
+            label={`Select ${task.id}`}
             labelHidden
             onCheckedChange={onSelect}
           />
@@ -90,7 +90,7 @@ export function TaskCard({
         <button
           type="button"
           className="task-open"
-          aria-label={`Mở task ${task.id}`}
+          aria-label={`Open task ${task.id}`}
           onClick={onEdit}
           onKeyDown={onKeyDown}
         >
@@ -100,7 +100,7 @@ export function TaskCard({
         <button
           type="button"
           className="task-del"
-          aria-label={`Xóa task ${task.id}`}
+          aria-label={`Delete task ${task.id}`}
           onClick={onDelete}
         >
           ×
@@ -123,7 +123,7 @@ export function TaskCard({
       {task.depends.length > 0 && <p className="task-depends">Depends: {task.depends.join(", ")}</p>}
 
       <div className="task-card-foot">
-        {pending ? <span className="task-pending mono">đang lưu…</span> : <span />}
+        {pending ? <span className="task-pending mono">saving…</span> : <span />}
         {onActivity && (
           <button type="button" className="task-activity" onClick={onActivity}>
             Activity

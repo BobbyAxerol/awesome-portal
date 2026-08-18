@@ -22,9 +22,9 @@ function wrapper(container: HTMLElement) {
 
 describe("Checkbox", () => {
   it("keeps native checkbox semantics", () => {
-    render(<Checkbox label="Chọn task" />);
+    render(<Checkbox label="Select task" />);
     expect(box().type).toBe("checkbox");
-    expect(screen.getByLabelText("Chọn task")).toBe(box());
+    expect(screen.getByLabelText("Select task")).toBe(box());
   });
 
   it("reports each state distinctly", () => {
@@ -74,7 +74,7 @@ describe("Checkbox", () => {
   });
 
   it("keeps a hidden label reachable for assistive technology", () => {
-    render(<Checkbox label="Chọn ACQ-001" labelHidden />);
-    expect(screen.getByLabelText("Chọn ACQ-001")).toBe(box());
+    render(<Checkbox label="Select ACQ-001" labelHidden />);
+    expect(screen.getByLabelText("Select ACQ-001")).toBe(box());
   });
 });

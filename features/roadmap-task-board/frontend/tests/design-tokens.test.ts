@@ -1,7 +1,7 @@
 /**
  * Design-system gate (v1.1 plan §3.1, U02 exit gate).
  *
- * "Không style lẻ" only holds if it is checked. This walks the source and
+ * "No one-off styles" only holds if it is checked. This walks the source and
  * fails on a colour literal written anywhere except the token file, and on a
  * workstream ramp that drifts between the two theme blocks.
  *

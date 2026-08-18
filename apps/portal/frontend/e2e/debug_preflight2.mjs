@@ -15,7 +15,7 @@ await page.getByRole("button", { name: "Advanced WFO" }).click();
 await page.waitForTimeout(800);
 await page.getByRole("button", { name: /Validate/ }).first().click();
 await page.waitForTimeout(5000);
-const visible = await page.evaluate(() => document.body.innerText.includes("Có lỗi xảy ra") || document.body.innerText.includes("Internal Server Error"));
+const visible = await page.evaluate(() => document.body.innerText.includes("Something went wrong") || document.body.innerText.includes("Internal Server Error"));
 console.log("preflight responses:", JSON.stringify(preflights));
 console.log("error visible:", visible);
 await browser.close();

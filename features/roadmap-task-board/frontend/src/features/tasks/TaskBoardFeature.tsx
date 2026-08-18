@@ -180,7 +180,7 @@ export function TaskBoardFeature({
     if (!draft) return;
     const title = draft.title.trim();
     if (!title) {
-      toast("Cần nhập title cho task", "bad");
+      toast("A task needs a title", "bad");
       return;
     }
     const existing = editingId ? tasks.find((task) => task.id === editingId) : undefined;
@@ -196,13 +196,13 @@ export function TaskBoardFeature({
     void (existing ? update(next) : create(next))
       .then(() => {
         closeEditor();
-        toast(existing ? "Task đã cập nhật" : "Task đã tạo", "good");
+        toast(existing ? "Task updated" : "Task created", "good");
       })
       .catch((error: Error) => toast(error.message, "bad"));
   };
 
   const deleteTask = (task: Task) => {
-    if (!window.confirm(`Xóa task ${task.id}?`)) return;
+    if (!window.confirm(`Delete task ${task.id}?`)) return;
     void remove(task.id)
       .then(() => {
         if (editingId === task.id) closeEditor();
@@ -212,7 +212,7 @@ export function TaskBoardFeature({
           next.delete(task.id);
           return next;
         });
-        toast(`Đã xóa ${task.id}`, "info");
+        toast(`Deleted ${task.id}`, "info");
       })
       .catch((error: Error) => toast(error.message, "bad"));
   };
@@ -236,12 +236,12 @@ export function TaskBoardFeature({
           if (from === status) return;
           toast(
             persistence === "v1"
-              ? `${task.id}: ${from} → ${status} · đã xếp hàng thông báo cho ${task.owner}`
+              ? `${task.id}: ${from} → ${status} · notification queued for ${task.owner}`
               : `${task.id}: ${from} → ${status}`,
             "good",
           );
         })
-        .catch((error: Error) => toast(`${task.id} không chuyển được — đã hoàn tác. ${error.message}`, "bad"));
+        .catch((error: Error) => toast(`${task.id} could not be moved — the change was rolled back. ${error.message}`, "bad"));
     },
     [move, persistence, tasks, toast],
   );
@@ -251,7 +251,7 @@ export function TaskBoardFeature({
     const index = TASK_STATUSES.indexOf(task.status);
     const nextStatus = TASK_STATUSES[index + direction];
     if (!nextStatus) {
-      toast(`${task.id} đã ở cột ngoài cùng`, "info");
+      toast(`${task.id} is already in the outermost column`, "info");
       return;
     }
     moveTask(task.id, nextStatus, tasks.filter((item) => item.status === nextStatus).length);
@@ -267,8 +267,8 @@ export function TaskBoardFeature({
         if (!Array.isArray(parsed)) throw new Error("Expected a JSON array");
         return replace(normaliseTasks(parsed as Record<string, unknown>[]));
       })
-      .then(() => toast("Đã import task board", "good"))
-      .catch(() => toast("File JSON task không hợp lệ", "bad"));
+      .then(() => toast("Task board imported", "good"))
+      .catch(() => toast("That task JSON file is not valid", "bad"));
   };
 
   const startDrag = (event: DragEvent<HTMLElement>, taskId: string) => {
@@ -351,7 +351,7 @@ export function TaskBoardFeature({
         <header className="kanban-head">
           <span>{status}</span>
           <span className="kanban-count">
-            {laneSelected > 0 && <Chip tone="accent">{laneSelected} chọn</Chip>}
+            {laneSelected > 0 && <Chip tone="accent">{laneSelected} selected</Chip>}
             <Chip>{tasksForStatus.length}</Chip>
           </span>
         </header>
@@ -398,8 +398,8 @@ export function TaskBoardFeature({
           <Button type="button" variant="ghost" onClick={() => downloadJson("quant-migration-tasks.json", tasks)}>Export JSON</Button>
           <label className="btn-ghost file-button">Import JSON<input type="file" accept="application/json" onChange={importTasks} /></label>
           <Button type="button" variant="ghost" onClick={() => {
-            if (window.confirm("Reset toàn bộ trạng thái task về bản mặc định?")) {
-              void reset().then(() => toast("Task board đã reset", "good")).catch((error: Error) => toast(error.message, "bad"));
+            if (window.confirm("Reset every task back to the defaults?")) {
+              void reset().then(() => toast("Task board reset", "good")).catch((error: Error) => toast(error.message, "bad"));
             }
           }}>Reset</Button>
           <Button type="button" onClick={() => openNew()}>+ Add task</Button>
@@ -407,9 +407,9 @@ export function TaskBoardFeature({
       </header>
 
       <div className={`sync-notice ${syncState === "error" ? "sync-notice-error" : ""}`} role={syncState === "error" ? "alert" : "status"}>
-        <span>{syncState === "loading" ? "Đang tải workspace…" : syncState === "saving" ? "Đang lưu an toàn…" : persistence === "v1" ? "Server workspace · versioned & audited" : persistence === "legacy" ? "Compatibility API sync" : "Local-only workspace"}</span>
+        <span>{syncState === "loading" ? "Loading the workspace…" : syncState === "saving" ? "Saving safely…" : persistence === "v1" ? "Server workspace · versioned & audited" : persistence === "legacy" ? "Compatibility API sync" : "Local-only workspace"}</span>
         {persistence !== "local" && <button type="button" onClick={() => void refresh()}>Refresh</button>}
-        {needsInitialization && <button type="button" onClick={() => void replace(tasks).then(() => toast("Đã khởi tạo server từ snapshot local", "good")).catch((error: Error) => toast(error.message, "bad"))}>Initialize server from local</button>}
+        {needsInitialization && <button type="button" onClick={() => void replace(tasks).then(() => toast("Server initialized from the local snapshot", "good")).catch((error: Error) => toast(error.message, "bad"))}>Initialize server from local</button>}
         {syncError && <span>{syncError.message}</span>}
       </div>
 
@@ -450,22 +450,22 @@ export function TaskBoardFeature({
           <Checkbox
             checked
             indeterminate
-            label={`${selected.size} task đã chọn`}
+            label={`${selected.size} tasks selected`}
             onCheckedChange={() => setSelected(new Set())}
           />
           <span className="bulk-bar-actions">
-            <span className="mono-label">Chuyển sang</span>
+            <span className="mono-label">Move to</span>
             {TASK_STATUSES.map((status) => (
               <button key={status} type="button" onClick={() => bulkMove(status)}>{status}</button>
             ))}
           </span>
-          <Button type="button" variant="ghost" onClick={() => setSelected(new Set())}>Bỏ chọn</Button>
+          <Button type="button" variant="ghost" onClick={() => setSelected(new Set())}>Clear selection</Button>
         </div>
       )}
 
       {view === "board" ? (
         lanes.length === 0 ? (
-          <StateView kind="empty" message="Không có task khớp bộ lọc." />
+          <StateView kind="empty" message="No task matches the filter." />
         ) : (
           lanes.map((lane) => (
             <div key={lane.id || "__all__"} className="milestone-lane" data-testid={`milestone-lane-${lane.id || "unassigned"}`}>
@@ -492,7 +492,7 @@ export function TaskBoardFeature({
                     <Checkbox
                       checked={selected.has(task.id)}
                       loading={pendingMoves.has(task.id)}
-                      label={`Chọn ${task.id}`}
+                      label={`Select ${task.id}`}
                       labelHidden
                       onCheckedChange={(isSelected) => toggleSelected(task.id, isSelected)}
                     />
@@ -504,7 +504,7 @@ export function TaskBoardFeature({
             </tbody>
           </table>
         </div>
-      ) : <StateView kind="empty" message="Không có task khớp bộ lọc." />}
+      ) : <StateView kind="empty" message="No task matches the filter." />}
 
       <Modal open={draft !== null} title={editingId ? `Edit ${editingId}` : "New task"} onClose={closeEditor}>
         {draft && <TaskEditor draft={draft} onChange={updateDraft} />}
@@ -514,7 +514,7 @@ export function TaskBoardFeature({
         {editingId && portalScreenForTask?.(editingId) ? (
           <p className="task-portal-link">
             <a href={portalScreenForTask(editingId)!.href}>
-              Mở màn Portal: {portalScreenForTask(editingId)!.label}
+              Open the Portal screen: {portalScreenForTask(editingId)!.label}
             </a>
           </p>
         ) : null}

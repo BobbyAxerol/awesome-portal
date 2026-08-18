@@ -148,17 +148,17 @@ export const TASK_GROUPINGS = ["status", "milestone", "workstream", "owner"] as 
 export type TaskGrouping = (typeof TASK_GROUPINGS)[number];
 
 export const GROUPING_LABELS: Record<TaskGrouping, string> = {
-  status: "Nhóm theo status",
-  milestone: "Nhóm theo milestone",
-  workstream: "Nhóm theo workstream",
-  owner: "Nhóm theo owner",
+  status: "Group by status",
+  milestone: "Group by milestone",
+  workstream: "Group by workstream",
+  owner: "Group by owner",
 };
 
 /** Field each grouping reads, and what an empty value is called. */
 const GROUPING_FIELD: Record<Exclude<TaskGrouping, "status">, { field: keyof Task; empty: string }> = {
-  milestone: { field: "phase", empty: "Chưa gán milestone" },
-  workstream: { field: "workstream", empty: "Chưa gán workstream" },
-  owner: { field: "owner", empty: "Chưa gán owner" },
+  milestone: { field: "phase", empty: "No milestone" },
+  workstream: { field: "workstream", empty: "No workstream" },
+  owner: { field: "owner", empty: "No owner" },
 };
 
 export interface MilestoneLane {
@@ -174,7 +174,7 @@ export interface MilestoneLane {
 /**
  * Groups tasks into lanes by one of the fields the schema already carries.
  *
- * Tasks with no value are kept in an explicit "chưa gán …" lane rather than
+ * Tasks with no value are kept in an explicit "no …" lane rather than
  * dropped, so the lane counts always add up to the filtered total.
  */
 export function groupLanes(tasks: Task[], grouping: Exclude<TaskGrouping, "status">): MilestoneLane[] {

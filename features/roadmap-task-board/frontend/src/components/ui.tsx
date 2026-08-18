@@ -179,7 +179,7 @@ export function StateView({ kind, message }: { kind: StateKind; message?: string
   return (
     <div className={`state-${kind}`} role={kind === "failed" ? "alert" : "status"}>
       <span className="mono-label">{icon}</span>
-      <p>{message ?? (kind === "loading" ? "Đang tải…" : kind === "empty" ? "Không có dữ liệu" : "Đã xảy ra lỗi")}</p>
+      <p>{message ?? (kind === "loading" ? "Loading…" : kind === "empty" ? "No data" : "Something went wrong")}</p>
     </div>
   );
 }
@@ -247,7 +247,7 @@ export function Modal({ open, title, onClose, children }: { open: boolean; title
       <div className="modal-panel" role="dialog" aria-modal="true" aria-label={title} onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h3>{title}</h3>
-          <button type="button" className="icon-btn" aria-label="Đóng" onClick={onClose}>
+          <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}>
             ✕
           </button>
         </div>
