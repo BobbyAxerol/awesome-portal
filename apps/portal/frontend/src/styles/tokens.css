@@ -202,6 +202,12 @@
   --content-gutter: 32px;
   --content-max: 1440px;
   --drawer-w: 460px;
+  /* Contents rail beside a long document. Planning's document stylesheet reads
+   * it, and the embedded reader is the only place that stylesheet runs — the
+   * token gate below is what turned its absence from "the rail silently
+   * collapsed under the article" into a failing test. Same value as the
+   * Planning token file. */
+  --rail-w: 250px;
   --row-h: 40px;
 
   /* Scrim behind modal surfaces. A transparency, not a new hue. */

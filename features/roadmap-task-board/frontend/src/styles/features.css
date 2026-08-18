@@ -935,3 +935,278 @@ select.input,
   border-top: 1px solid var(--line-soft);
   font-size: var(--text-sm);
 }
+
+/* =========================================================================
+ * Document reading (Planning · Documents)
+ *
+ * These rules used to live in `shell.css`, which only the standalone Planning
+ * entry loads. Embedded in the Portal shell — the path every reader actually
+ * takes — `shell.css` is deliberately not imported, because its `.app`/
+ * `.workspace` rules would fight the host. The document rules went with it, so
+ * `/planning/docs` rendered with no reading grid, no sticky contents rail and
+ * no table-of-contents styling: the whole right rail collapsed under the
+ * article as unstyled text.
+ *
+ * They belong here. `features.css` is the stylesheet both hosts load, and none
+ * of these rules describe a shell — they describe a document.
+ * ====================================================================== */
+/* Doc layout inside content */
+.doc-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--rail-w);
+  gap: 28px;
+  align-items: start;
+}
+.doc-main {
+  min-width: 0;
+}
+.toc-rail {
+  position: sticky;
+  top: calc(var(--topbar-h) + 16px);
+  border-left: 1px solid var(--line);
+  padding-left: 14px;
+  max-height: calc(100vh - var(--topbar-h) - 40px);
+  overflow-y: auto;
+}
+.toc-link {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-soft);
+  padding: 3px 0;
+  border-left: 2px solid transparent;
+  padding-left: 8px;
+  margin-left: -15px;
+}
+.toc-link:hover {
+  color: var(--ink);
+  text-decoration: none;
+}
+.toc-link.active {
+  color: var(--accent);
+  border-left-color: var(--accent);
+}
+
+.context-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+/* Docs layout extras */
+.doc-article {
+  max-width: var(--content-max);
+}
+.doc-article h1 {
+  font-family: var(--font-display);
+  font-size: 30px;
+  letter-spacing: -0.01em;
+  margin: 0 0 14px;
+}
+.doc-article h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  margin: 28px 0 10px;
+}
+.doc-article h3 {
+  font-size: 16px;
+  margin: 20px 0 8px;
+}
+.doc-article p,
+.doc-article li {
+  line-height: 1.62;
+  color: var(--ink-soft);
+}
+.doc-article ul,
+.doc-article ol {
+  padding-left: 22px;
+}
+.doc-article a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.doc-article a:hover {
+  text-decoration: underline;
+}
+
+/* Search results overlay */
+.search-results {
+  position: absolute;
+  z-index: 800;
+  margin-top: 6px;
+  width: min(560px, calc(100% - 48px));
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow-raised);
+  max-height: 58vh;
+  overflow: auto;
+  padding: 6px;
+}
+.search-result {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 10px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  border-radius: 6px;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.search-result:hover {
+  background: var(--line-soft);
+}
+
+/* TOC rail */
+.toc-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  line-height: 1.45;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.toc-item:hover {
+  color: var(--ink);
+  background: var(--line-soft);
+}
+.toc-l2 {
+  padding-left: 16px;
+}
+.toc-l3 {
+  padding-left: 24px;
+  font-size: 12px;
+}
+
+/* The contents rail folds below the reading measure; it is a companion to the
+ * article, never a competitor for its width. */
+@media (max-width: 1024px) {
+  .doc-layout {
+    grid-template-columns: 1fr;
+  }
+  .toc-rail {
+    display: none;
+  }
+}
+
+/* --- Document controls ---------------------------------------------------
+ * Section picker, reading mode and search on one row. Navigation belongs to the
+ * feature rather than to a host sidebar: the Portal shell renders no Planning
+ * sidebar, and without this row an embedded reader could not leave page one. */
+.doc-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px 18px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.doc-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 18rem;
+}
+.doc-picker .mono-label {
+  flex: none;
+}
+.doc-page-select {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.doc-position {
+  flex: none;
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+.doc-search {
+  position: relative;
+  flex: 1 1 13rem;
+  min-width: 11rem;
+}
+.doc-search .input {
+  width: 100%;
+}
+
+.doc-mode {
+  display: inline-flex;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.doc-mode-btn {
+  border: 0;
+  background: none;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.doc-mode-btn + .doc-mode-btn {
+  border-left: 1px solid var(--line);
+}
+.doc-mode-btn:hover {
+  color: var(--ink);
+  background: var(--line-soft);
+}
+.doc-mode-btn.is-active {
+  background: var(--accent);
+  color: var(--paper-raised);
+}
+
+/* Continuous mode: each section keeps its own marker so a reader scrolling
+ * through sixteen of them always knows where they are. */
+.doc-section + .doc-section {
+  margin-top: 56px;
+  padding-top: 32px;
+  border-top: 2px solid var(--line);
+}
+.doc-section-marker {
+  margin-bottom: 10px;
+  color: var(--ink-faint);
+}
+
+/* --- Section pager -------------------------------------------------------
+ * A reference document is read in order at least once. Without these, moving
+ * to the next section meant going back to a picker every time. */
+.doc-pager {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 48px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.doc-pager-btn {
+  display: grid;
+  gap: 3px;
+  max-width: 22rem;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper-raised);
+  padding: 10px 14px;
+  color: var(--ink);
+  font-size: 13px;
+  cursor: pointer;
+}
+.doc-pager-btn:hover {
+  border-color: var(--accent);
+}
+.doc-pager-next {
+  text-align: right;
+  justify-items: end;
+}
