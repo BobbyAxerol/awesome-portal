@@ -232,7 +232,7 @@
     {
       "id": "QUANTBT_RESEARCH",
       "group": "research",
-      "label": "QuantBT Research",
+      "label": "QuantBT Backtest",
       "description": "Current QuantBT backtest, WFO, results and audit capability.",
       "canonical_route": "/research/quantbt",
       "legacy_routes": [

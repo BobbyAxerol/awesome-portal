@@ -2,7 +2,7 @@
  * What can be known about this deployment before anyone signs in.
  *
  * The sign-in plate used to carry a hard-coded list of three product
- * capabilities — "QuantBT Research", "Roadmap / Task Board", "other modules are
+ * capabilities — "QuantBT Backtest", "Roadmap / Task Board", "other modules are
  * commissioned". That list was a second feature model: the Feature Registry is
  * the authority for what exists, and a constant beside it can only drift, and
  * can only ever be marketing. It also could not be true, since the registry is

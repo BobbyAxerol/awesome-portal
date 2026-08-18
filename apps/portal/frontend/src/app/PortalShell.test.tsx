@@ -161,7 +161,7 @@ describe("commissioned preview", () => {
 describe("legacy compatibility", () => {
   it("redirects a legacy QuantBT deep link and preserves ?run=", async () => {
     mount({ route: "/overview?run=completed-1" });
-    await waitFor(() => expect(screen.getByText("QuantBT Research")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("QuantBT Backtest")).toBeTruthy());
     // The passport/subnav only appear once a run resolves; the redirect itself
     // is asserted by the module owning the canonical route being mounted.
     expect(screen.queryByText(/No feature in the current registry claims this route/)).toBeNull();
@@ -179,7 +179,7 @@ describe("embedding (U04/U05)", () => {
     // QuantBT is a split chunk now (it owns ECharts), so the module arrives a
     // dynamic import later than the shell around it.
     await waitFor(
-      () => expect(screen.getByRole("heading", { level: 1, name: "QuantBT Research" })).toBeTruthy(),
+      () => expect(screen.getByRole("heading", { level: 1, name: "QuantBT Backtest" })).toBeTruthy(),
       { timeout: 5000 },
     );
     // Exactly one shell topbar: the module must not render a second one.
@@ -217,7 +217,7 @@ describe("embedding (U04/U05)", () => {
   it("sends the legacy /?new=1 bookmark to the canonical new-run route", async () => {
     mount({ route: "/?new=1" });
     await waitFor(() =>
-      expect(screen.getByRole("heading", { level: 1, name: "QuantBT Research" })).toBeTruthy(),
+      expect(screen.getByRole("heading", { level: 1, name: "QuantBT Backtest" })).toBeTruthy(),
     );
     // The Command Center must not also be mounted at the root.
     expect(screen.queryByRole("heading", { level: 1, name: "Command Center" })).toBeNull();

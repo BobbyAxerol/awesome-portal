@@ -161,7 +161,7 @@ describe("route resolution", () => {
 
   it("builds a group -> feature breadcrumb trail", () => {
     const crumbs = breadcrumbsFor(registry, "/research/quantbt/overview");
-    expect(crumbs.map((c) => c.label)).toEqual(["Research", "QuantBT Research"]);
+    expect(crumbs.map((c) => c.label)).toEqual(["Research", "QuantBT Backtest"]);
     expect(crumbs[0].route).toBeNull();
   });
 

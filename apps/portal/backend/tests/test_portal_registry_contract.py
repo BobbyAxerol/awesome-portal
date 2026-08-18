@@ -249,7 +249,7 @@ def _summary_fixture(source: dict[str, Any]) -> dict[str, Any]:
             {
                 "source_id": "quantbt_current",
                 "feature_id": "QUANTBT_RESEARCH",
-                "label": "QuantBT Research",
+                "label": "QuantBT Backtest",
                 "availability": _availability("available"),
                 "metrics": {
                     "total_runs": {

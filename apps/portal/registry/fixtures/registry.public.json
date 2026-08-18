@@ -224,7 +224,7 @@
       ]
     }
   ],
-  "content_digest": "sha256:6f5e9f01b1c5d70deaea280c776786bd4adee37979222b56b4313b253b01b660",
+  "content_digest": "sha256:714c1d20f021a4755a35b84e1200a47fe2680c9ad0cecf7869b8cfb1e72ea210",
   "feature_groups": [
     {
       "id": "command",
@@ -375,7 +375,7 @@
       "group": "research",
       "hidden_for_roles": [],
       "id": "QUANTBT_RESEARCH",
-      "label": "QuantBT Research",
+      "label": "QuantBT Backtest",
       "legacy_routes": [
         "/runs",
         "/overview",
