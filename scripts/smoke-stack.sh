@@ -107,7 +107,7 @@ if [[ -z "${activation_token}" ]]; then
   printf 'Could not provision the isolated smoke ADMIN session.\n' >&2
   exit 1
 fi
-smoke_password='smoke-gateway-credential-2026-unique'
+smoke_credential='smoke-gateway-credential-2026-unique'
 printf 'Smoke: activate bootstrap administrator\n'
 curl --fail-with-body --silent --show-error --cookie-jar "${cookie_file}" \
   --request POST "http://127.0.0.1:${PORTAL_HTTP_PORT}/api/auth/login" \
@@ -125,7 +125,7 @@ curl --fail-with-body --silent --show-error --cookie "${cookie_file}" \
   --header 'Content-Type: application/json' \
   --header 'x-dev-access-email: bobby@azdag.com' \
   --header "x-portal-csrf: ${csrf_token}" \
-  --data "{\"current_password\":\"${activation_token}\",\"new_password\":\"${smoke_password}\"}" >/dev/null
+  --data "{\"current_password\":\"${activation_token}\",\"new_password\":\"${smoke_credential}\"}" >/dev/null
 unset activation_token
 : >"${cookie_file}"
 printf 'Smoke: authenticate with rotated credential\n'
@@ -133,8 +133,8 @@ curl --fail-with-body --silent --show-error --cookie-jar "${cookie_file}" \
   --request POST "http://127.0.0.1:${PORTAL_HTTP_PORT}/api/auth/login" \
   --header 'Content-Type: application/json' \
   --header 'x-dev-access-email: bobby@azdag.com' \
-  --data "{\"username\":\"bobby\",\"credential\":\"${smoke_password}\"}" >/dev/null
-unset smoke_password
+  --data "{\"username\":\"bobby\",\"credential\":\"${smoke_credential}\"}" >/dev/null
+unset smoke_credential
 csrf_token="$(awk '$6 == "__Host-portal_csrf" { print $7; exit }' "${cookie_file}")"
 
 roadmap_task_board_api_ready=false
@@ -181,6 +181,16 @@ activity="$(curl --fail-with-body --silent --show-error --cookie "${cookie_file}
   "${roadmap_task_board_api_url}/v1/tasks/SMOKE-PHASE5/activity")"
 [[ "${activity}" == *'"task.status_changed"'* && "${activity}" == *'"actor":"bobby"'* && "${activity}" != *'forged-browser-actor'* ]] || {
   printf 'Roadmap task activity response was unexpected: %s\n' "${activity}" >&2
+  exit 1
+}
+
+printf 'Smoke: delete Planning task without a request body through authenticated gateway\n'
+deleted_task="$(curl --fail-with-body --silent --show-error --request DELETE \
+  "${roadmap_task_board_api_url}/v1/tasks/SMOKE-PHASE5?expected_version=2" \
+  --cookie "${cookie_file}" \
+  --header "x-portal-csrf: ${csrf_token}")"
+[[ "${deleted_task}" == *'"id":"SMOKE-PHASE5"'* && "${deleted_task}" == *'"version":3'* && "${deleted_task}" == *'"deleted_at":'* ]] || {
+  printf 'Roadmap task delete response was unexpected: %s\n' "${deleted_task}" >&2
   exit 1
 }
 

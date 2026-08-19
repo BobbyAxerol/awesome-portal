@@ -185,8 +185,10 @@ alphas are never executable. Fixtures: `visual-baseline-run` (COMPLETED) +
   import/delete/restore and Roadmap writes remain ADMIN-only.
 - Lark transition text identifies the actor separately from the task owner;
   production Compose passes only runtime Lark configuration, never secrets in
-  source. Local gates: Control API 59/59, Planning backend 30/30, Planning
-  frontend 79/79 + build, Portal frontend 381 passed/3 skipped + build.
+  source. A release audit also fixed bodyless DELETE requests incorrectly
+  declaring JSON and failing in Fastify before CSRF/RBAC. Local gates: Control
+  API 62/62, Planning backend 30/30, Planning frontend 80/80 + build, Portal
+  frontend 381 passed/3 skipped + build.
 - This closes the stable Task Tracking operational gap only. BAR-15/U18 remains
   the authority for moving Planning persistence from SQLite to PostgreSQL.
 

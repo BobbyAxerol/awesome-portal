@@ -293,6 +293,97 @@ describe("control api facade (proxy, workspaces, outbox)", () => {
     expect(denied.json().error.code).toBe("PERMISSION_DENIED");
   });
 
+  it("allows USER task creation and edits while preserving the session actor", async () => {
+    const captured: Array<Record<string, unknown>> = [];
+    planningUpstream
+      .intercept({ path: "/api/v1/tasks", method: "POST" })
+      .reply(201, (options) => {
+        captured.push({ ...options.headers });
+        return { item: { id: "TASK-3", title: "Created" }, version: 1 };
+      });
+    planningUpstream
+      .intercept({ path: "/api/v1/tasks/TASK-3", method: "PATCH" })
+      .reply(200, (options) => {
+        captured.push({ ...options.headers });
+        return { item: { id: "TASK-3", title: "Edited" }, version: 2 };
+      });
+    const { cookie, csrf } = await seedUser("stan", "USER", "Stan");
+    const headers = {
+      cookie,
+      "x-portal-csrf": csrf,
+      "content-type": "application/json",
+      "x-portal-actor": "forged-browser-actor",
+    };
+
+    const created = await inject("/roadmap-task-board/api/v1/tasks", {
+      method: "POST",
+      headers,
+      payload: { id: "TASK-3", title: "Created" },
+    });
+    const edited = await inject("/roadmap-task-board/api/v1/tasks/TASK-3", {
+      method: "PATCH",
+      headers,
+      payload: { title: "Edited", expected_version: 1 },
+    });
+
+    expect(created.statusCode).toBe(201);
+    expect(edited.statusCode).toBe(200);
+    expect(captured).toHaveLength(2);
+    expect(captured.every((item) => item["x-portal-actor"] === "Stan")).toBe(true);
+  });
+
+  it("denies USER task deletion and every Roadmap mutation", async () => {
+    const { cookie, csrf } = await seedUser("stan", "USER", "Stan");
+    const mutationHeaders = {
+      cookie,
+      "x-portal-csrf": csrf,
+    };
+    const deleted = await inject(
+      "/roadmap-task-board/api/v1/tasks/TASK-3?expected_version=2",
+      { method: "DELETE", headers: mutationHeaders },
+    );
+    const roadmap = await inject("/roadmap-task-board/api/v1/roadmap", {
+      method: "POST",
+      headers: { ...mutationHeaders, "content-type": "application/json" },
+      payload: { id: "P1", name: "Restricted", start: 1, end: 2 },
+    });
+
+    for (const response of [deleted, roadmap]) {
+      expect(response.statusCode).toBe(403);
+      expect(response.json().error.code).toBe("PERMISSION_DENIED");
+    }
+  });
+
+  it("allows ADMIN snapshot initialization and rejects foreign origins", async () => {
+    planningUpstream
+      .intercept({ path: "/api/v1/tasks/import", method: "POST" })
+      .reply(200, { items: [] });
+    const { cookie, csrf } = await seedUser("bobby", "ADMIN", "Bobby");
+    const allowed = await inject("/roadmap-task-board/api/v1/tasks/import", {
+      method: "POST",
+      headers: {
+        cookie,
+        "x-portal-csrf": csrf,
+        "content-type": "application/json",
+      },
+      payload: { items: [], confirm_replace: true },
+    });
+    expect(allowed.statusCode).toBe(200);
+
+    const denied = await inject("/roadmap-task-board/api/v1/tasks/import", {
+      method: "POST",
+      headers: {
+        cookie,
+        "x-portal-csrf": csrf,
+        "content-type": "application/json",
+        origin: "https://attacker.example",
+      },
+      payload: { items: [], confirm_replace: true },
+    });
+    expect(denied.statusCode).toBe(403);
+    expect(denied.json().error.code).toBe("ORIGIN_DENIED");
+  });
+
   it("proxies read-only portal metadata with parity and freshness passthrough", async () => {
     upstream
       .intercept({ path: "/api/v1/portal/summary", method: "GET" })

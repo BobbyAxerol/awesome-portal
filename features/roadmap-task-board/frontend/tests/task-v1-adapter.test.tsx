@@ -142,4 +142,28 @@ describe.sequential("Task Board v1 adapter", () => {
     expect(screen.getByTestId("activity-timeline-tasks-API-1")).toHaveTextContent("Ready → Done");
     expect(fetchMock.mock.calls[1]?.[0]).toBe("api/v1/tasks/API-1/activity");
   });
+
+  it("sends CSRF but no JSON content-type on bodyless DELETE", async () => {
+    vi.spyOn(document, "cookie", "get").mockReturnValue(
+      "__Host-portal_csrf=delete-csrf",
+    );
+    const fetchMock = vi.fn().mockResolvedValue(response({
+      item: task,
+      version: 4,
+      position: 0,
+      created_at: "now",
+      updated_at: "now",
+      deleted_at: "now",
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { deleteV1 } = await import("../src/lib/api");
+
+    await deleteV1("tasks", "API-1", 3);
+
+    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("api/v1/tasks/API-1?expected_version=3");
+    expect(options.method).toBe("DELETE");
+    expect(options.body).toBeUndefined();
+    expect(options.headers).toEqual({ "x-portal-csrf": "delete-csrf" });
+  });
 });

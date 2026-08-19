@@ -183,7 +183,12 @@ def test_gateway_keeps_compatibility_proxies() -> None:
     assert "location = /api/health" in conf
     assert "location = /api/ready" in conf
     assert re.search(r"location ~ \^/api/runs/\[\^/\]\+/events\$", conf)
-    assert "proxy_pass http://roadmap-task-board-api:8000/api/" in conf
+    planning_api = conf.split(
+        "location ^~ /roadmap-task-board/api/ {", 1
+    )[1].split("\n    location ", 1)[0]
+    assert "proxy_pass http://${PORTAL_WEB_UPSTREAM};" in planning_api
+    assert "roadmap-task-board-api:8000" not in planning_api
+    assert "proxy_set_header Cookie $http_cookie;" in planning_api
     assert re.search(r"location \^\~ /roadmap-task-board/", conf)
     assert re.search(r"location /api/", conf)
 

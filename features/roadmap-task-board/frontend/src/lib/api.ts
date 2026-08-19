@@ -100,6 +100,7 @@ async function readError(response: Response): Promise<PortalApiError> {
 
 async function requestJson<T>(url: string, options?: RequestInit): Promise<T> {
   const method = (options?.method ?? "GET").toUpperCase();
+  const hasBody = options?.body !== undefined && options.body !== null;
   const csrf = ["POST", "PUT", "PATCH", "DELETE"].includes(method)
     ? csrfTokenFromCookie()
     : null;
@@ -108,7 +109,7 @@ async function requestJson<T>(url: string, options?: RequestInit): Promise<T> {
     credentials: "same-origin",
     ...options,
     headers: {
-      "Content-Type": "application/json",
+      ...(hasBody ? { "Content-Type": "application/json" } : {}),
       ...(csrf ? { [CSRF_HEADER]: csrf } : {}),
       ...(options?.headers ?? {}),
     },

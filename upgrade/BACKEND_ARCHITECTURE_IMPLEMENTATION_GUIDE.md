@@ -707,8 +707,10 @@ deep-dive → ADR → slice → evidence discipline documented above.
   overwrites any client actor with the authenticated user's display name before
   the private SQLite compatibility service records immutable activity and its
   Lark outbox delivery. Lark copy now distinguishes transition actor from task
-  owner. Evidence: Control API 59/59, Planning backend 30/30, Planning frontend
-  79/79 + build, Portal frontend 381 passed/3 skipped + build. This is a
+  owner. Bodyless DELETE requests no longer advertise JSON, so Fastify reaches
+  the CSRF/RBAC controller instead of rejecting ADMIN deletes in its parser.
+  Evidence: Control API 62/62, Planning backend 30/30, Planning frontend
+  80/80 + build, Portal frontend 381 passed/3 skipped + build. This is a
   compatibility hotfix; it does not replace BAR-15/U18 PostgreSQL cutover.
 - **v1.0.1 HMD reader-permission remediation (2026-08-19):** WFO/three-window
   failures were traced to numeric identity drift, not Parquet or QuantBT:
