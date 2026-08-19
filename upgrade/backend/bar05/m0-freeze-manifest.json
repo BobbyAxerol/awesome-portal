@@ -12,7 +12,7 @@
     "control_api_package": "sha256:ead2bbcf2b06822b60f9d7101208347f334830cdea7a8715a439202680bceaf0",
     "control_api_package_lock": "sha256:eefcd089e37ca98554d0d56747bc8b2039878d06ef57e3e62355a24968623276",
     "control_api_tsconfig": "sha256:505f416ac474f249e52523f39a227669a2be931f491d39d67aa76f657de71200",
-    "env_template": "sha256:83d2b8dbd4891a00d7a53a7c91a286da7af91b93f18cb97a58bebc5cb40dd961",
+    "env_template": "sha256:bbc54d0dfc2754407d5ac8bba487820f12af159b00d8a8b7a462a09f0ee8b9a7",
     "golden_market": "sha256:16131e4d930bc78b8375ad3fb14584b5d5b8191d7f89bec29ce502470e4646ae",
     "golden_metadata": "sha256:13128530dc74744e2bf5dc562eb3792d49b2e942a8579dcd01fb1b74b7c9a725",
     "golden_signals": "sha256:5a24f1b35566b9755b4f3c2a4f863c0e12541ecb173a5e6cec24ca32fd293c0c",
@@ -33,7 +33,7 @@
     "registry_source": "sha256:90c821d03916e1be929659791b06ad69fc01af9094fa462cbb27a13d778915c2",
     "run_request_schema": "sha256:582ced995417c641c9247fce422887e7f637359945fd8ef3b3e442d15fde009e"
   },
-  "frozen_at_commit": "5235443e3158bd469a19cd8f54defc5f8a3f6bb2",
+  "frozen_at_commit": "d6da1f5a8b0027d1cff37595809065698441c884",
   "golden_tolerances": {
     "exit_price": {
       "atol": 1e-12,

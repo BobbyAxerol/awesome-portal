@@ -710,6 +710,15 @@ deep-dive → ADR → slice → evidence discipline documented above.
   owner. Evidence: Control API 59/59, Planning backend 30/30, Planning frontend
   79/79 + build, Portal frontend 381 passed/3 skipped + build. This is a
   compatibility hotfix; it does not replace BAR-15/U18 PostgreSQL cutover.
+- **v1.0.1 HMD reader-permission remediation (2026-08-19):** WFO/three-window
+  failures were traced to numeric identity drift, not Parquet or QuantBT:
+  canonical storage grants its named reader ACL to host GID `996`, while the
+  Portal stack was recreated with `PORTAL_HMD_READER_GID=10001`. The API could
+  traverse `/data` but could not read the `0640` release manifest. The
+  source-managed launcher now validates the rendered read-only bind and
+  effective POSIX ACL/GID before `up`/`run`; `hmd-doctor` executes the
+  installed-reader doctor under the exact Compose identity. Runtime repair
+  uses the host reader GID and never weakens storage permissions.
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**

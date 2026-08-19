@@ -189,3 +189,18 @@ alphas are never executable. Fixtures: `visual-baseline-run` (COMPLETED) +
   frontend 79/79 + build, Portal frontend 381 passed/3 skipped + build.
 - This closes the stable Task Tracking operational gap only. BAR-15/U18 remains
   the authority for moving Planning persistence from SQLite to PostgreSQL.
+
+## Backend state — 2026-08-19 (v1.0.1 HMD mount permission hotfix)
+
+- Root cause for WFO/three-window `PermissionError` was a numeric group
+  mismatch: host ACL grants `primus-market-data-readers` GID `996`, while
+  Portal Compose used `10001` (the container's own portal group). No market
+  data, release manifest, reader wheel or QuantBT artifact was corrupt.
+- `scripts/portal up|run` now fail before container creation when the rendered
+  `/data:ro` bind, manifest or effective ACL cannot satisfy UID 10001 plus the
+  configured reader GID. `scripts/portal hmd-doctor` verifies the installed
+  wheel and accepted release under the exact Compose identity.
+- Operational repair is to set `PORTAL_HMD_READER_GID` to the numeric host
+  reader group and recreate `portal-api`; never chmod canonical storage
+  world-readable. Real doctor, bounded market-data smoke, three-window and WFO
+  regression evidence are required before merge.
