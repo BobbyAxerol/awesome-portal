@@ -30,6 +30,16 @@ change.
    `PORTAL_HISTORICAL_DATA_DIR=/srv/primus/historical-market-data/storage` and
    the numeric `PORTAL_HMD_READER_GID`. The mount is read-only and only serves
    backtest/research; it does not provide realtime or paper-trading state.
+   Resolve the GID from the host reader group rather than copying the Portal
+   container UID:
+
+   ```bash
+   getent group primus-market-data-readers | cut -d: -f3
+   ```
+
+   Before `up`, `./scripts/portal` now fails fast if that GID cannot traverse
+   the mount or read `_primus_metadata/release_manifest.json`. Do not work
+   around a mismatch by making market data world-readable.
 4. If the GHCR package is private, authenticate the host with an account or
    token permitted to pull it.
 5. Put TLS, authentication and public-network policy in a reverse proxy or load
@@ -41,6 +51,13 @@ Run manually on the host:
 cd /srv/portal
 docker compose --env-file .env.production -f deploy/compose.production.yaml pull
 docker compose --env-file .env.production -f deploy/compose.production.yaml up -d --remove-orphans
+```
+
+For the source-managed local/stable stack, verify the exact container identity,
+reader wheel and accepted release without loading bars:
+
+```bash
+./scripts/portal hmd-doctor
 ```
 
 `deploy/systemd/portal.service.example` is available when the host should keep

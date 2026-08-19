@@ -16,6 +16,7 @@ Commands:
   status   Show status for every portal service.
   build    Build every portal service image from source.
   config   Render and validate the composed deployment configuration.
+  hmd-doctor Validate the HMD mount, installed reader and release manifest.
   verify   Validate tracked source, source contracts and Compose config.
   smoke    Build, start, probe and tear down an isolated local portal stack.
 EOF
@@ -36,6 +37,11 @@ require_docker_access() {
   fi
 }
 
+validate_historical_data_mount() {
+  "${COMPOSE[@]}" config --format json \
+    | python3 "${ROOT_DIR}/scripts/validate_historical_data_mount.py" -
+}
+
 command="${1:-help}"
 if [[ $# -gt 0 ]]; then
   shift
@@ -44,10 +50,12 @@ fi
 case "${command}" in
   up)
     require_docker_access
+    validate_historical_data_mount
     exec "${COMPOSE[@]}" up --detach --build "$@"
     ;;
   run)
     require_docker_access
+    validate_historical_data_mount
     exec "${COMPOSE[@]}" up --build "$@"
     ;;
   down)
@@ -69,6 +77,12 @@ case "${command}" in
   config)
     require_docker_cli
     exec "${COMPOSE[@]}" config "$@"
+    ;;
+  hmd-doctor)
+    require_docker_access
+    validate_historical_data_mount
+    exec "${COMPOSE[@]}" run --rm --no-deps portal-api \
+      python -m portal_api.historical_data_doctor "$@"
     ;;
   verify)
     exec "${ROOT_DIR}/scripts/verify-workspace.sh" "$@"
