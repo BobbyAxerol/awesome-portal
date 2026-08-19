@@ -62,6 +62,7 @@ def test_lark_success_marks_outbox_delivery_sent(client, monkeypatch):
     assert payload["msg_type"] == "text"
     assert payload["sign"] == _expected_sign(payload["timestamp"], "sign-secret")
     assert "Done" in payload["content"]["text"]
+    assert "bobby đã chuyển trạng thái nhiệm vụ" in payload["content"]["text"]
     remaining = client.app.state.repository.due_deliveries()
     assert len(remaining) == 1
     assert remaining[0]["channel"] == "discord"

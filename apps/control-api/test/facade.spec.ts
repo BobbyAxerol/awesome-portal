@@ -7,7 +7,10 @@ import { AuthService } from "../src/auth/auth.service";
 import { Argon2CredentialService, sha256 } from "../src/auth/argon";
 import { AdminService } from "../src/admin/admin.service";
 import { PrincipalService } from "../src/auth/principal";
-import { buildPortalUpstreamUrl } from "../src/facade/proxy.service";
+import {
+  buildPortalUpstreamUrl,
+  planningUpstreamPath,
+} from "../src/facade/proxy.service";
 
 const DATABASE_URL =
   process.env.TEST_DATABASE_URL ??
@@ -20,6 +23,17 @@ function cookies(response: { headers: Record<string, unknown> }): string {
     .filter((v): v is string => typeof v === "string")
     .map((v) => v.split(";")[0])
     .join("; ");
+}
+
+function csrfCookie(response: { headers: Record<string, unknown> }): string {
+  const setCookie = response.headers["set-cookie"];
+  const values = Array.isArray(setCookie) ? setCookie : [setCookie];
+  const value = values.find(
+    (item): item is string =>
+      typeof item === "string" && item.startsWith("__Host-portal_csrf="),
+  );
+  if (!value) throw new Error("csrf cookie missing");
+  return value.split(";")[0].split("=")[1];
 }
 
 describe("Portal upstream URL boundary", () => {
@@ -58,15 +72,37 @@ describe("Portal upstream URL boundary", () => {
   });
 });
 
+describe("Planning upstream path boundary", () => {
+  it("maps only the public Planning API prefix", () => {
+    expect(
+      planningUpstreamPath("/roadmap-task-board/api/v1/tasks/TASK-1/move"),
+    ).toBe("/api/v1/tasks/TASK-1/move");
+  });
+
+  it.each([
+    "/api/v1/tasks",
+    "/roadmap-task-board/api/../admin",
+    "/roadmap-task-board/api/%2e%2e/admin",
+    "/roadmap-task-board/api/%5cattacker",
+    "//attacker.example/roadmap-task-board/api/v1/tasks",
+  ])("rejects an unsafe Planning path: %s", (path) => {
+    expect(() => planningUpstreamPath(path)).toThrowError(
+      /Planning API path is invalid/,
+    );
+  });
+});
+
 describe("control api facade (proxy, workspaces, outbox)", () => {
   let mockAgent: MockAgent;
   let upstream: ReturnType<MockAgent["get"]>;
+  let planningUpstream: ReturnType<MockAgent["get"]>;
 
   beforeAll(async () => {
     await migrateTestDatabase(DATABASE_URL);
     mockAgent = new MockAgent();
     mockAgent.disableNetConnect();
     upstream = mockAgent.get("http://portal-api:8000");
+    planningUpstream = mockAgent.get("http://roadmap-task-board-api:8000");
     setGlobalDispatcher(mockAgent);
   });
   afterAll(async () => {
@@ -120,8 +156,12 @@ describe("control api facade (proxy, workspaces, outbox)", () => {
     });
   };
 
-  async function seedUser(username: string, role: "ADMIN" | "USER") {
-    await admin.createUser({ username, displayName: username, role });
+  async function seedUser(
+    username: string,
+    role: "ADMIN" | "USER",
+    displayName = username,
+  ) {
+    await admin.createUser({ username, displayName, role });
     const user = await auth.users.findByUsername(username);
     const { activationToken } = await admin.resetCredential(user!.userId);
     const login = await inject("/api/auth/login", {
@@ -153,12 +193,104 @@ describe("control api facade (proxy, workspaces, outbox)", () => {
       payload: { username, credential: `${username}-secure-phrase-2026-ok` },
     });
     expect(login2.statusCode).toBe(201);
-    return { userId: user!.userId, cookie: cookies(login2) };
+    return {
+      userId: user!.userId,
+      cookie: cookies(login2),
+      csrf: csrfCookie(login2),
+    };
   }
 
   it("requires an authenticated session on facade paths", async () => {
     const response = await inject("/api/v1/portal/summary");
     expect(response.statusCode).toBe(401);
+  });
+
+  it("requires an authenticated session on Planning API paths", async () => {
+    const response = await inject("/roadmap-task-board/api/v1/tasks");
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("derives the Planning actor from the authenticated session", async () => {
+    let captured: Record<string, unknown> = {};
+    planningUpstream
+      .intercept({ path: "/api/v1/tasks/TASK-1/move", method: "POST" })
+      .reply(200, (options) => {
+        captured = { ...options.headers };
+        return {
+          item: { id: "TASK-1", status: "In Progress" },
+          version: 2,
+        };
+      });
+
+    const { cookie, csrf } = await seedUser("bobby", "ADMIN", "Bobby");
+    const response = await inject(
+      "/roadmap-task-board/api/v1/tasks/TASK-1/move",
+      {
+        method: "POST",
+        headers: {
+          cookie,
+          "x-portal-csrf": csrf,
+          "content-type": "application/json",
+        },
+        payload: { status: "In Progress", position: 0, expected_version: 1 },
+      },
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(captured["x-portal-actor"]).toBe("Bobby");
+    const principal = new PrincipalService(
+      ctx.config.INTERNAL_PRINCIPAL_SECRET!,
+    ).verify(captured["x-portal-principal"] as string);
+    expect(principal?.username).toBe("bobby");
+  });
+
+  it("requires CSRF for Planning mutations", async () => {
+    const { cookie } = await seedUser("bobby", "ADMIN", "Bobby");
+    const response = await inject(
+      "/roadmap-task-board/api/v1/tasks/TASK-1/transition",
+      {
+        method: "POST",
+        headers: { cookie, "content-type": "application/json" },
+        payload: { status: "Done", expected_version: 1 },
+      },
+    );
+    expect(response.statusCode).toBe(403);
+    expect(response.json().error.code).toBe("CSRF_REQUIRED");
+  });
+
+  it("allows USER task moves but denies destructive imports", async () => {
+    planningUpstream
+      .intercept({ path: "/api/v1/tasks/TASK-2/transition", method: "POST" })
+      .reply(200, {
+        item: { id: "TASK-2", status: "Validating" },
+        version: 3,
+      });
+    const { cookie, csrf } = await seedUser("stan", "USER", "Stan");
+    const moved = await inject(
+      "/roadmap-task-board/api/v1/tasks/TASK-2/transition",
+      {
+        method: "POST",
+        headers: {
+          cookie,
+          "x-portal-csrf": csrf,
+          "content-type": "application/json",
+        },
+        payload: { status: "Validating", expected_version: 2 },
+      },
+    );
+    expect(moved.statusCode).toBe(200);
+
+    const denied = await inject("/roadmap-task-board/api/v1/tasks/import", {
+      method: "POST",
+      headers: {
+        cookie,
+        "x-portal-csrf": csrf,
+        "content-type": "application/json",
+      },
+      payload: { items: [], confirm_replace: true },
+    });
+    expect(denied.statusCode).toBe(403);
+    expect(denied.json().error.code).toBe("PERMISSION_DENIED");
   });
 
   it("proxies read-only portal metadata with parity and freshness passthrough", async () => {

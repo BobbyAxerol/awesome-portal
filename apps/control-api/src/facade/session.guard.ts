@@ -41,9 +41,11 @@ export class SessionGuard implements CanActivate {
     const state = request as unknown as {
       portalUser: PortalUser;
       portalWorkspaceId: string;
+      portalSession: typeof session;
     };
     state.portalUser = user;
     state.portalWorkspaceId = workspaceId;
+    state.portalSession = session;
     return true;
   }
 }

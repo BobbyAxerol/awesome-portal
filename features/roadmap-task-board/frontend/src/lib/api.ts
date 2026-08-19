@@ -59,6 +59,17 @@ export type CollectionName = "tasks" | "roadmap";
 const apiBase = (import.meta.env.VITE_ROADMAP_TASK_BOARD_API_BASE ?? "api").replace(/\/$/, "");
 const localOnly = import.meta.env.VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY === "true";
 const configuredPersistence = import.meta.env.VITE_ROADMAP_TASK_BOARD_PERSISTENCE ?? "legacy";
+const CSRF_COOKIE = "__Host-portal_csrf";
+const CSRF_HEADER = "x-portal-csrf";
+
+function csrfTokenFromCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${CSRF_COOKIE}=`));
+  return match ? decodeURIComponent(match.slice(CSRF_COOKIE.length + 1)) : null;
+}
 
 function apiPath(path: "health" | "tasks" | "roadmap" | "ready"): string {
   return `${apiBase}/${path}`;
@@ -88,10 +99,19 @@ async function readError(response: Response): Promise<PortalApiError> {
 }
 
 async function requestJson<T>(url: string, options?: RequestInit): Promise<T> {
+  const method = (options?.method ?? "GET").toUpperCase();
+  const csrf = ["POST", "PUT", "PATCH", "DELETE"].includes(method)
+    ? csrfTokenFromCookie()
+    : null;
   const response = await fetch(url, {
     cache: "no-store",
+    credentials: "same-origin",
     ...options,
-    headers: { "Content-Type": "application/json", ...(options?.headers ?? {}) },
+    headers: {
+      "Content-Type": "application/json",
+      ...(csrf ? { [CSRF_HEADER]: csrf } : {}),
+      ...(options?.headers ?? {}),
+    },
   });
   if (!response.ok) throw await readError(response);
   return response.json() as Promise<T>;
@@ -100,7 +120,10 @@ async function requestJson<T>(url: string, options?: RequestInit): Promise<T> {
 export async function detectApi(): Promise<ApiMode> {
   if (localOnly) return "local";
   try {
-    const res = await fetch(apiPath("health"), { cache: "no-store" });
+    const res = await fetch(apiPath("health"), {
+      cache: "no-store",
+      credentials: "same-origin",
+    });
     if (res.ok) {
       const body = (await res.json()) as LegacyHealth;
       if (body?.ok) return "api";

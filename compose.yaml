@@ -84,8 +84,8 @@ services:
       context: .
       dockerfile: deploy/images/portal-web.Dockerfile
       args:
-        ROADMAP_TASK_BOARD_LOCAL_ONLY: ${ROADMAP_TASK_BOARD_LOCAL_ONLY:-true}
-        ROADMAP_TASK_BOARD_PERSISTENCE: ${ROADMAP_TASK_BOARD_PERSISTENCE:-legacy}
+        ROADMAP_TASK_BOARD_LOCAL_ONLY: ${ROADMAP_TASK_BOARD_LOCAL_ONLY:-false}
+        ROADMAP_TASK_BOARD_PERSISTENCE: ${ROADMAP_TASK_BOARD_PERSISTENCE:-v1}
         ROADMAP_TASK_BOARD_API_BASE: ${ROADMAP_TASK_BOARD_API_BASE:-/roadmap-task-board/api}
     image: ${PORTAL_IMAGE_PREFIX:-local/portal}-portal-web:${PORTAL_IMAGE_TAG:-dev}
     restart: unless-stopped
@@ -126,7 +126,9 @@ services:
       DATABASE_URL: postgres://portal:portal@portal-postgres:5432/portal_control
       PORTAL_PUBLIC_ORIGIN: ${PORTAL_PUBLIC_ORIGIN:-http://localhost:8080}
       PORTAL_API_BASE_URL: http://portal-api:8000
+      PLANNING_API_BASE_URL: http://roadmap-task-board-api:8000
       FEATURE_PROXY_PORTAL: ${CONTROL_API_FEATURE_PROXY_PORTAL:-true}
+      FEATURE_PROXY_PLANNING: ${CONTROL_API_FEATURE_PROXY_PLANNING:-true}
       INTERNAL_PRINCIPAL_SECRET: ${CONTROL_API_INTERNAL_PRINCIPAL_SECRET:-local-dev-principal-secret-0123456789}
       CLOUDFLARE_TEAM_DOMAIN: ${CLOUDFLARE_TEAM_DOMAIN:-}
       CLOUDFLARE_ACCESS_ISSUER: ${CLOUDFLARE_ACCESS_ISSUER:-}

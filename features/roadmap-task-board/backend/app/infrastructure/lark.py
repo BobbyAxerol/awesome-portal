@@ -56,11 +56,12 @@ class LarkWebhookService:
         title = str(item.get("title", "Untitled task"))
         owner = str(item.get("owner", "") or "Unassigned")
         workstream = str(item.get("workstream", "") or "General")
+        actor = str(delivery.get("actor", "") or "System")
         portal = self.settings.portal_url
         mention = self._mention(owner)
         mention_line = f"{mention}\n" if mention else ""
         return (
-            f"Task Board — nhiệm vụ chuyển trạng thái\n"
+            f"Task Board — {actor} đã chuyển trạng thái nhiệm vụ\n"
             f"`{task_id}` — {title}\n"
             f"Trạng thái: {from_status} -> {to_status}\n"
             f"Owner: {owner} · Workstream: {workstream}\n"

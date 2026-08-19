@@ -19,6 +19,7 @@ export class FacadeError extends Error {
 
 const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const PORTAL_API_PATH = /^\/api(?:\/[A-Za-z0-9._~!$&'()*+,;=:@%/-]*)?$/;
+const PLANNING_PUBLIC_PATH = /^\/roadmap-task-board\/api(?:\/[A-Za-z0-9._~!$&'()*+,;=:@%/-]*)?$/;
 const FORWARD_HEADERS = new Set([
   "accept",
   "content-type",
@@ -112,6 +113,29 @@ export function buildPortalUpstreamUrl(
   return target;
 }
 
+/** Map the public Planning prefix onto the sidecar's fixed `/api` namespace. */
+export function planningUpstreamPath(publicPath: string): string {
+  let decodedPath: string;
+  try {
+    decodedPath = decodeURIComponent(publicPath);
+  } catch {
+    throw new FacadeError("UPSTREAM_PATH_INVALID", "The Planning API path is invalid.", 400);
+  }
+  const segments = decodedPath.split("/");
+  if (
+    !PLANNING_PUBLIC_PATH.test(publicPath) ||
+    decodedPath.includes("\\") ||
+    decodedPath.includes("?") ||
+    decodedPath.includes("#") ||
+    decodedPath.includes("//") ||
+    segments.includes(".") ||
+    segments.includes("..")
+  ) {
+    throw new FacadeError("UPSTREAM_PATH_INVALID", "The Planning API path is invalid.", 400);
+  }
+  return decodedPath.slice("/roadmap-task-board".length) || "/api";
+}
+
 export class PortalProxyService {
   constructor(
     private readonly config: ControlApiConfig,
@@ -125,15 +149,33 @@ export class PortalProxyService {
     return this.config.FEATURE_PROXY_PORTAL === "true";
   }
 
+  planningEnabled(): boolean {
+    return this.config.FEATURE_PROXY_PLANNING === "true";
+  }
+
   async proxy(input: ProxyInput): Promise<ProxyResult> {
-    const url = buildPortalUpstreamUrl(
-      this.config.PORTAL_API_BASE_URL,
-      input.path,
-      input.query,
+    return this.proxyTo(this.config.PORTAL_API_BASE_URL, input);
+  }
+
+  async proxyPlanning(input: ProxyInput): Promise<ProxyResult> {
+    const path = planningUpstreamPath(input.path);
+    return this.proxyTo(
+      this.config.PLANNING_API_BASE_URL,
+      { ...input, path },
+      { "x-portal-actor": input.user.displayName || input.user.username },
     );
+  }
+
+  private async proxyTo(
+    configuredOrigin: string,
+    input: ProxyInput,
+    additionalHeaders: Record<string, string> = {},
+  ): Promise<ProxyResult> {
+    const url = buildPortalUpstreamUrl(configuredOrigin, input.path, input.query);
     const headers: Record<string, string> = {
       "x-request-id": input.requestId,
       traceparent: input.traceparent,
+      ...additionalHeaders,
     };
     if (input.contentType !== undefined) {
       headers["content-type"] = input.contentType;

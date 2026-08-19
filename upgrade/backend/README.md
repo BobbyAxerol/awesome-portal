@@ -173,3 +173,19 @@ alphas are never executable. Fixtures: `visual-baseline-run` (COMPLETED) +
   Paper→Sandbox→Live-Canary→Live Execution Cell fast paths. TypeScript keeps
   control/approval authority; Python keeps research/QuantBT compute; BAR-14
   profiling, parity, shadow and rollback gates remain mandatory.
+
+## Backend state — 2026-08-19 (stable v1.0.1 Planning hotfix)
+
+- Planning is no longer browser-local in the deployable Portal: the web build
+  defaults to `v1` persistence and sends same-origin session + CSRF credentials.
+- The gateway routes `/roadmap-task-board/api/*` through an authenticated
+  Control API façade. Actor is derived from the active Portal session and
+  overwrites all browser input before the private compatibility service writes
+  activity/outbox state. USER may perform normal task collaboration; destructive
+  import/delete/restore and Roadmap writes remain ADMIN-only.
+- Lark transition text identifies the actor separately from the task owner;
+  production Compose passes only runtime Lark configuration, never secrets in
+  source. Local gates: Control API 59/59, Planning backend 30/30, Planning
+  frontend 79/79 + build, Portal frontend 381 passed/3 skipped + build.
+- This closes the stable Task Tracking operational gap only. BAR-15/U18 remains
+  the authority for moving Planning persistence from SQLite to PostgreSQL.

@@ -31,6 +31,7 @@ describe.sequential("Task Board v1 adapter", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it("loads a versioned task then PATCHes only mutable fields", async () => {
@@ -79,6 +80,9 @@ describe.sequential("Task Board v1 adapter", () => {
   });
 
   it("uses the transition command instead of PATCH when a task status changes", async () => {
+    vi.spyOn(document, "cookie", "get").mockReturnValue(
+      "__Host-portal_csrf=csrf-token",
+    );
     const doneTask = { ...task, status: "Done" };
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response({ items: [{ item: task, version: 3, position: 0, created_at: "now", updated_at: "now", deleted_at: null }] }))
@@ -97,7 +101,12 @@ describe.sequential("Task Board v1 adapter", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     expect(fetchMock.mock.calls[1]?.[0]).toBe("api/v1/tasks/API-1/transition");
-    expect(JSON.parse(String((fetchMock.mock.calls[1]?.[1] as RequestInit).body))).toEqual({ status: "Done", expected_version: 3 });
+    const transitionOptions = fetchMock.mock.calls[1]?.[1] as RequestInit;
+    expect(JSON.parse(String(transitionOptions.body))).toEqual({ status: "Done", expected_version: 3 });
+    expect(
+      (transitionOptions.headers as Record<string, string>)["x-portal-csrf"],
+    ).toBe("csrf-token");
+    expect(transitionOptions.credentials).toBe("same-origin");
     expect(fetchMock.mock.calls.map(([url]) => url)).not.toContain("api/v1/tasks/API-1");
   });
 

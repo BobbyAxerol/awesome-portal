@@ -18,8 +18,8 @@ COPY features/roadmap-task-board/frontend features/roadmap-task-board/frontend
 # contracts workspace is a build input rather than a runtime dependency.
 COPY packages/contracts/generated packages/contracts/generated
 COPY apps/portal/frontend apps/portal/frontend
-ARG ROADMAP_TASK_BOARD_LOCAL_ONLY=true
-ARG ROADMAP_TASK_BOARD_PERSISTENCE=legacy
+ARG ROADMAP_TASK_BOARD_LOCAL_ONLY=false
+ARG ROADMAP_TASK_BOARD_PERSISTENCE=v1
 ARG ROADMAP_TASK_BOARD_API_BASE=/roadmap-task-board/api
 # The embedded Planning views address the gateway prefix absolutely, because
 # they render under /planning/* rather than under /roadmap-task-board/.
@@ -31,8 +31,8 @@ RUN cd apps/portal/frontend && npm run build
 FROM node:22-alpine AS roadmap-task-board-build
 
 WORKDIR /opt/roadmap-task-board/frontend
-ARG ROADMAP_TASK_BOARD_LOCAL_ONLY=true
-ARG ROADMAP_TASK_BOARD_PERSISTENCE=legacy
+ARG ROADMAP_TASK_BOARD_LOCAL_ONLY=false
+ARG ROADMAP_TASK_BOARD_PERSISTENCE=v1
 ARG ROADMAP_TASK_BOARD_API_BASE=/roadmap-task-board/api
 COPY features/roadmap-task-board/frontend/package.json features/roadmap-task-board/frontend/package-lock.json ./
 RUN npm ci

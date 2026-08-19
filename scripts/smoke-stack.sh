@@ -34,13 +34,14 @@ export ROADMAP_TASK_BOARD_PUBLIC_URL="${ROADMAP_TASK_BOARD_PUBLIC_URL:-http://12
 mkdir -p "${PORTAL_HISTORICAL_DATA_DIR}"
 COMPOSE=(docker compose --project-directory "${ROOT_DIR}" -f "${ROOT_DIR}/compose.yaml")
 health_file="$(mktemp /tmp/portal-smoke-health.XXXXXX)"
+cookie_file="$(mktemp /tmp/portal-smoke-cookie.XXXXXX)"
 
 cleanup() {
   # `compose up` may create only part of the project and then fail before it
   # returns. Always tear down the explicitly scoped smoke project so retries
   # cannot collide with containers left by a partial startup.
   "${COMPOSE[@]}" down --volumes --remove-orphans >/dev/null || true
-  rm -f -- "${health_file}"
+  rm -f -- "${health_file}" "${cookie_file}"
 }
 trap cleanup EXIT
 
@@ -94,9 +95,52 @@ if [[ "${roadmap_task_board_ready}" != true ]]; then
 fi
 
 roadmap_task_board_api_url="http://127.0.0.1:${PORTAL_HTTP_PORT}/roadmap-task-board/api"
+
+# The public Planning route is session/CSRF protected. Activate the isolated
+# smoke DB's bootstrap ADMIN, rotate the one-time credential immediately, and
+# keep every secret inside a 0600 temporary cookie/variable that cleanup removes.
+activation_output="$("${COMPOSE[@]}" exec -T control-api \
+  node dist/cli/bootstrap.js --file bootstrap-users.yaml --print-one-time-credentials)"
+activation_token="$(printf '%s\n' "${activation_output}" | awk '$1 == "ONE_TIME" && $2 == "bobby" { print $3; exit }')"
+unset activation_output
+if [[ -z "${activation_token}" ]]; then
+  printf 'Could not provision the isolated smoke ADMIN session.\n' >&2
+  exit 1
+fi
+smoke_password='smoke-gateway-credential-2026-unique'
+printf 'Smoke: activate bootstrap administrator\n'
+curl --fail-with-body --silent --show-error --cookie-jar "${cookie_file}" \
+  --request POST "http://127.0.0.1:${PORTAL_HTTP_PORT}/api/auth/login" \
+  --header 'Content-Type: application/json' \
+  --header 'x-dev-access-email: bobby@azdag.com' \
+  --data "{\"username\":\"bobby\",\"credential\":\"${activation_token}\"}" >/dev/null
+csrf_token="$(awk '$6 == "__Host-portal_csrf" { print $7; exit }' "${cookie_file}")"
+if [[ -z "${csrf_token}" ]]; then
+  printf 'Smoke login did not issue a CSRF cookie.\n' >&2
+  exit 1
+fi
+printf 'Smoke: rotate bootstrap credential\n'
+curl --fail-with-body --silent --show-error --cookie "${cookie_file}" \
+  --request POST "http://127.0.0.1:${PORTAL_HTTP_PORT}/api/auth/change-password" \
+  --header 'Content-Type: application/json' \
+  --header 'x-dev-access-email: bobby@azdag.com' \
+  --header "x-portal-csrf: ${csrf_token}" \
+  --data "{\"current_password\":\"${activation_token}\",\"new_password\":\"${smoke_password}\"}" >/dev/null
+unset activation_token
+: >"${cookie_file}"
+printf 'Smoke: authenticate with rotated credential\n'
+curl --fail-with-body --silent --show-error --cookie-jar "${cookie_file}" \
+  --request POST "http://127.0.0.1:${PORTAL_HTTP_PORT}/api/auth/login" \
+  --header 'Content-Type: application/json' \
+  --header 'x-dev-access-email: bobby@azdag.com' \
+  --data "{\"username\":\"bobby\",\"credential\":\"${smoke_password}\"}" >/dev/null
+unset smoke_password
+csrf_token="$(awk '$6 == "__Host-portal_csrf" { print $7; exit }' "${cookie_file}")"
+
 roadmap_task_board_api_ready=false
 for _ in $(seq 1 15); do
-  if curl --fail --silent "${roadmap_task_board_api_url}/ready" | grep --quiet '"ok":true'; then
+  if curl --fail --silent --cookie "${cookie_file}" \
+    "${roadmap_task_board_api_url}/ready" | grep --quiet '"ok":true'; then
     roadmap_task_board_api_ready=true
     break
   fi
@@ -108,26 +152,34 @@ if [[ "${roadmap_task_board_api_ready}" != true ]]; then
   exit 1
 fi
 
-created_task="$(curl --fail --silent --show-error --request POST "${roadmap_task_board_api_url}/v1/tasks" \
+printf 'Smoke: create Planning task through authenticated gateway\n'
+created_task="$(curl --fail-with-body --silent --show-error --request POST "${roadmap_task_board_api_url}/v1/tasks" \
+  --cookie "${cookie_file}" \
   --header 'Content-Type: application/json' \
-  --header 'X-Portal-Actor: smoke' \
+  --header "x-portal-csrf: ${csrf_token}" \
+  --header 'X-Portal-Actor: forged-browser-actor' \
   --data '{"id":"SMOKE-PHASE5","title":"Phase 5 gateway smoke","workstream":"Portal","phase":"P5","owner":"smoke"}')"
 [[ "${created_task}" == *'"id":"SMOKE-PHASE5"'* && "${created_task}" == *'"version":1'* ]] || {
   printf 'Roadmap task create response was unexpected: %s\n' "${created_task}" >&2
   exit 1
 }
 
-transitioned_task="$(curl --fail --silent --show-error --request POST "${roadmap_task_board_api_url}/v1/tasks/SMOKE-PHASE5/transition" \
+printf 'Smoke: transition Planning task through authenticated gateway\n'
+transitioned_task="$(curl --fail-with-body --silent --show-error --request POST "${roadmap_task_board_api_url}/v1/tasks/SMOKE-PHASE5/transition" \
+  --cookie "${cookie_file}" \
   --header 'Content-Type: application/json' \
-  --header 'X-Portal-Actor: smoke' \
+  --header "x-portal-csrf: ${csrf_token}" \
+  --header 'X-Portal-Actor: forged-browser-actor' \
   --data '{"status":"Done","expected_version":1}')"
 [[ "${transitioned_task}" == *'"status":"Done"'* && "${transitioned_task}" == *'"version":2'* ]] || {
   printf 'Roadmap task transition response was unexpected: %s\n' "${transitioned_task}" >&2
   exit 1
 }
 
-activity="$(curl --fail --silent --show-error "${roadmap_task_board_api_url}/v1/tasks/SMOKE-PHASE5/activity")"
-[[ "${activity}" == *'"task.status_changed"'* ]] || {
+printf 'Smoke: verify authenticated actor in Planning audit trail\n'
+activity="$(curl --fail-with-body --silent --show-error --cookie "${cookie_file}" \
+  "${roadmap_task_board_api_url}/v1/tasks/SMOKE-PHASE5/activity")"
+[[ "${activity}" == *'"task.status_changed"'* && "${activity}" == *'"actor":"bobby"'* && "${activity}" != *'forged-browser-actor'* ]] || {
   printf 'Roadmap task activity response was unexpected: %s\n' "${activity}" >&2
   exit 1
 }

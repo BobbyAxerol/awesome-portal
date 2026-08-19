@@ -10,6 +10,7 @@ import { HealthController } from "./health/health.controller";
 import { ControlApiConfig } from "./config";
 import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "./tokens";
 import { FacadeController } from "./facade/facade.controller";
+import { PlanningFacadeController } from "./facade/planning.controller";
 import { PortalProxyService } from "./facade/proxy.service";
 import { SessionGuard } from "./facade/session.guard";
 import { WorkspacesRepository } from "./repos/workspaces";
@@ -21,7 +22,13 @@ export class AppModule {
   static register(config: ControlApiConfig, pool: Pool): DynamicModule {
     return {
       module: AppModule,
-      controllers: [HealthController, AuthController, AdminController, FacadeController],
+      controllers: [
+        HealthController,
+        AuthController,
+        AdminController,
+        FacadeController,
+        PlanningFacadeController,
+      ],
       providers: [
         { provide: CONTROL_API_CONFIG, useValue: config },
         { provide: CONTROL_API_POOL, useValue: pool },

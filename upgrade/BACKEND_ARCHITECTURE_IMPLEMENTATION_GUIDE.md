@@ -698,6 +698,18 @@ deep-dive → ADR → slice → evidence discipline documented above.
   authority and Python remains research/QuantBT compute. This focus does not
   waive BAR-14: each Rust extraction still needs profiling evidence, parity,
   shadow comparison and rollback before it becomes authoritative.
+- **Stable v1.0.1 Planning identity/Lark hotfix (2026-08-19):** the embedded
+  Planning client now ships in server-backed `v1` mode instead of silently
+  stopping at browser `localStorage`. `/roadmap-task-board/api/*` enters a
+  dedicated Control API façade guarded by Portal session, origin, CSRF and
+  explicit RBAC: authenticated USER may read/create/edit/transition tasks;
+  import/delete/restore and Roadmap mutations remain ADMIN-only. The façade
+  overwrites any client actor with the authenticated user's display name before
+  the private SQLite compatibility service records immutable activity and its
+  Lark outbox delivery. Lark copy now distinguishes transition actor from task
+  owner. Evidence: Control API 59/59, Planning backend 30/30, Planning frontend
+  79/79 + build, Portal frontend 381 passed/3 skipped + build. This is a
+  compatibility hotfix; it does not replace BAR-15/U18 PostgreSQL cutover.
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**
