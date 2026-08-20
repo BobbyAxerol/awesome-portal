@@ -44,7 +44,7 @@ ENV VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY=${ROADMAP_TASK_BOARD_LOCAL_ONLY} \
     VITE_ROADMAP_TASK_BOARD_API_BASE=${ROADMAP_TASK_BOARD_API_BASE}
 RUN npm run build -- --base=/roadmap-task-board/
 
-FROM nginx:1.27-alpine
+FROM nginx:1.30-alpine
 
 # portal.conf is a template: the official nginx envsubst entrypoint renders
 # /etc/nginx/templates/*.template into /etc/nginx/conf.d/ using container env
