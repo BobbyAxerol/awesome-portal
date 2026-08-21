@@ -1684,3 +1684,146 @@
   align-items: center;
   gap: var(--space-3);
 }
+
+/* ---------------------------------------------------------------------------
+ * Subscription and completeness — making M3 visible
+ * ------------------------------------------------------------------------ */
+
+/* Renders only when the stream is NOT live. A banner that is always there is a
+ * banner nobody reads. */
+.exec-stream {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--ink-faint);
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+}
+
+.exec-stream[data-tone="warn"] {
+  border-left-color: var(--warn);
+  background: var(--warn-bg);
+}
+
+.exec-stream[data-tone="bad"] {
+  border-left-color: var(--bad);
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+
+.exec-stream-phase {
+  color: var(--ink);
+  letter-spacing: 0.08em;
+}
+
+.exec-stream[data-tone="bad"] .exec-stream-phase {
+  color: var(--bad);
+}
+
+.exec-stream-note {
+  font-family: var(--font-body);
+  letter-spacing: 0;
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+}
+
+/* The number that separates "this is old" from "this might be old". */
+.exec-stream-asof,
+.exec-stream-wait {
+  color: var(--ink-soft);
+}
+
+.exec-stream-cursor {
+  margin-left: auto;
+  color: var(--ink-mute);
+}
+
+/* Completeness is not freshness. Freshness answers how old; this answers
+ * whether it is all of it. */
+.exec-completeness {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+}
+
+.exec-completeness-label {
+  padding: 0 var(--space-2);
+  border: 1px solid currentColor;
+  letter-spacing: 0.06em;
+}
+
+.exec-completeness[data-tone="good"] { color: var(--good); }
+.exec-completeness[data-tone="warn"] { color: var(--warn); }
+.exec-completeness[data-tone="bad"] { color: var(--bad); }
+
+/* The subscription lifecycle walk. A fixture rather than a product control:
+ * the unhappy states are the ones worth getting right, and they are exactly
+ * what a screenshot of a working system never shows. */
+.exec-walk {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.exec-walk-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.exec-walk-step {
+  padding: 2px var(--space-2);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  cursor: pointer;
+}
+
+.exec-walk-step[data-done="true"] {
+  color: var(--ink-soft);
+}
+
+.exec-walk-step[data-active="true"] {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.exec-walk-note {
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+  max-width: 90ch;
+}
+
+.exec-walk-state {
+  display: grid;
+  grid-template-columns: minmax(120px, max-content) 1fr;
+  gap: 2px var(--space-3);
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+
+.exec-walk-state > div {
+  display: contents;
+}
+
+.exec-walk-state dt {
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.exec-walk-state dd {
+  margin: 0;
+  color: var(--ink-soft);
+}

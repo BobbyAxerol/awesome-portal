@@ -33,6 +33,9 @@ import { GuardBand, LifecycleRail, ObservationProgress, stageRail } from "./comp
 import { VenueIdentity, VenueScope } from "./components/scope";
 import { CapNotice, CommissionedPanel, PanelState } from "./components/states";
 import { KeysetTable, type Column } from "./components/table";
+import { CompletenessNote, SubscriptionBanner } from "./components/stream";
+import { SubscriptionWalk } from "./components/streamDemo";
+import { INITIAL_SUBSCRIPTION, type SubscriptionState } from "./subscription";
 import { ApprovalInbox, type ApprovalRow } from "./screens/ApprovalInbox";
 import { GateR1Review } from "./screens/GateR1Review";
 import { GateR2Review } from "./screens/GateR2Review";
@@ -289,6 +292,60 @@ const DECIDED_FIXTURE_ROWS: ApprovalRow[] = [
     quorumRequired: 1,
     inert: null,
     needsYou: false,
+  },
+];
+
+/* One instance of each unhappy state, so they can be read side by side. */
+const LIVE_BASE: SubscriptionState = {
+  ...INITIAL_SUBSCRIPTION,
+  phase: "live",
+  epoch: "ep_7f21",
+  sequence: 8810,
+  resumeToken: "ep_7f21:8810",
+  lastGoodAsOf: "2026-08-21T10:42:01Z",
+  freshness: "OK",
+};
+
+const STREAM_STATES: { caption: string; state: SubscriptionState }[] = [
+  { caption: "live — renders nothing, deliberately", state: LIVE_BASE },
+  {
+    caption: "gap — three events not delivered; resume token voided",
+    state: {
+      ...LIVE_BASE,
+      phase: "gap",
+      freshness: "STALE",
+      resumeToken: null,
+      note: "Events 8811–8813 were not delivered. Re-snapshotting.",
+    },
+  },
+  {
+    caption: "projection rebuilt — waiting for the server's window",
+    state: {
+      ...LIVE_BASE,
+      phase: "epoch_changed",
+      freshness: "STALE",
+      resumeToken: null,
+      resnapshotNotBefore: "2026-08-21T10:45:00Z",
+      note: "The projection was rebuilt. Showing the previous epoch, ageing.",
+    },
+  },
+  {
+    caption: "reconnecting — last good values kept, token kept",
+    state: {
+      ...LIVE_BASE,
+      phase: "reconnecting",
+      freshness: "STALE",
+      note: "Disconnected. The values below are the last good ones.",
+    },
+  },
+  {
+    caption: "failed — nothing to show and nothing pending",
+    state: {
+      ...INITIAL_SUBSCRIPTION,
+      phase: "failed",
+      freshness: "UNKNOWN",
+      note: "The governance edge is unreachable.",
+    },
   },
 ];
 
@@ -895,6 +952,47 @@ export default function ExecutionFixtures() {
                 danger
                 confirmWord="CLOSE"
               />
+            </Case>
+          </div>
+        </Group>
+
+        <Group
+          title="Mechanism M3 — a subscription through its whole lifecycle"
+          note="The states worth getting right are the unhappy ones, which are exactly what a screenshot of a working system never shows. This drives the real reducer, not a copy of it: subscribe, snapshot, deltas, three dropped events, a rebuild with the server's wait window, then a disconnect."
+        >
+          <div className="exec-fixtures-stack">
+            <Case caption="walk it — each step is a real reducer transition">
+              <SubscriptionWalk />
+            </Case>
+          </div>
+        </Group>
+
+        <Group
+          title="Subscription states, side by side"
+          note="Live renders no banner at all — a banner that is always there is a banner nobody reads. Everything else carries what happened, how old the values below are, and what is being done."
+        >
+          <div className="exec-fixtures-stack">
+            {STREAM_STATES.map(({ caption, state }) => (
+              <Case caption={caption} key={caption}>
+                <SubscriptionBanner state={state} now="2026-08-21T10:44:00Z" />
+              </Case>
+            ))}
+          </div>
+        </Group>
+
+        <Group
+          title="Source completeness — not the same question as freshness"
+          note="Freshness answers how old this is; completeness answers whether it is all of it. A panel can be one second old and still be missing every transition that happened between two polls. At the current runtime only ORDER_STATUS is event-sourced, so POLL_BOUNDED is the normal case."
+        >
+          <div className="exec-fixtures-row">
+            <Case caption="EVENT_SOURCED">
+              <CompletenessNote completeness="EVENT_SOURCED" />
+            </Case>
+            <Case caption="POLL_BOUNDED — states its interval">
+              <CompletenessNote completeness="POLL_BOUNDED" pollIntervalMs={5000} />
+            </Case>
+            <Case caption="UNKNOWN — blocks continuity claims">
+              <CompletenessNote completeness="UNKNOWN" />
             </Case>
           </div>
         </Group>

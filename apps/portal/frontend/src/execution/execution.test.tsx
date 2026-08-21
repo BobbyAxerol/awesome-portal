@@ -39,6 +39,13 @@ import {
 } from "./profile";
 import { KeysetTable, type Column } from "./components/table";
 import {
+  canClaimContinuity,
+  CompletenessNote,
+  continuityCaveat,
+  SubscriptionBanner,
+} from "./components/stream";
+import { SubscriptionWalk } from "./components/streamDemo";
+import {
   blockingCount,
   ConditionRow,
   draftBlockers,
@@ -3493,5 +3500,158 @@ describe("typed conditions composer (§2 — conditions attach to the decision)"
   it("states an unowned condition rather than rendering it blank", () => {
     render(<ConditionRow condition={{ text: "cap capacity", owner: null, blocking: false }} />);
     expect(screen.getByText("unassigned")).toBeTruthy();
+  });
+});
+
+/* ===========================================================================
+ * Making M3 visible — gap, epoch cutover, completeness
+ * ======================================================================== */
+
+const liveState = (over: Partial<SubscriptionState> = {}): SubscriptionState => ({
+  ...INITIAL_SUBSCRIPTION,
+  phase: "live",
+  epoch: "ep_7f21",
+  sequence: 8810,
+  resumeToken: "ep_7f21:8810",
+  lastGoodAsOf: "2026-08-21T10:42:01Z",
+  freshness: "OK",
+  ...over,
+});
+
+describe("subscription banner — anything that is not live must look like it", () => {
+  it("renders nothing while live, so the banner stays worth reading", () => {
+    const { container } = render(<SubscriptionBanner state={liveState()} />);
+    expect(container.querySelector(".exec-stream")).toBeNull();
+  });
+
+  it("says a gap happened and keeps the last good as_of on screen", () => {
+    // A blank would be worse than a stale number: an operator can act on a
+    // value they know is old.
+    const { container } = render(
+      <SubscriptionBanner
+        state={liveState({ phase: "gap", freshness: "STALE", note: "Events 8811–8813 were not delivered." })}
+      />,
+    );
+    expect(container.querySelector('.exec-stream[data-phase="gap"]')).not.toBeNull();
+    expect(screen.getByText(/8811–8813/)).toBeTruthy();
+    expect(screen.getByText(/values as of 2026-08-21T10:42:01Z/)).toBeTruthy();
+  });
+
+  it("shows the server's re-snapshot window and does not invent one", () => {
+    // A hundred clients re-snapshotting at once would hit a projection whose
+    // caches are cold because it has just been rebuilt.
+    render(
+      <SubscriptionBanner
+        state={liveState({
+          phase: "epoch_changed",
+          resnapshotNotBefore: "2026-08-21T10:45:00Z",
+          freshness: "STALE",
+        })}
+        now="2026-08-21T10:44:00Z"
+      />,
+    );
+    expect(screen.getByText(/on the server's schedule/)).toBeTruthy();
+    expect(screen.getByText(/2026-08-21T10:45:00Z/)).toBeTruthy();
+  });
+
+  it("stops showing the wait once the window opens", () => {
+    render(
+      <SubscriptionBanner
+        state={liveState({ phase: "epoch_changed", resnapshotNotBefore: "2026-08-21T10:45:00Z" })}
+        now="2026-08-21T10:45:01Z"
+      />,
+    );
+    expect(screen.queryByText(/on the server's schedule/)).toBeNull();
+  });
+
+  it("says plainly when nothing has ever arrived", () => {
+    const { container } = render(
+      <SubscriptionBanner state={{ ...INITIAL_SUBSCRIPTION, phase: "snapshotting" }} />,
+    );
+    expect(container.textContent).toContain("no values have been received");
+  });
+
+  it("tones a failed subscription worse than a gap", () => {
+    const gap = render(<SubscriptionBanner state={liveState({ phase: "gap" })} />).container;
+    expect(gap.querySelector('[data-tone="warn"]')).not.toBeNull();
+    cleanup();
+    const failed = render(<SubscriptionBanner state={liveState({ phase: "failed" })} />).container;
+    expect(failed.querySelector('[data-tone="bad"]')).not.toBeNull();
+  });
+});
+
+describe("source completeness is not freshness", () => {
+  it("says what a polled source cannot see", () => {
+    render(<CompletenessNote completeness="POLL_BOUNDED" pollIntervalMs={5000} />);
+    expect(screen.getByText(/changed and changed back between polls/)).toBeTruthy();
+    expect(screen.getByText(/every 5s/)).toBeTruthy();
+  });
+
+  it("refuses a continuity claim for anything but an event-sourced class", () => {
+    // A timeline built from polled facts looks exactly like one built from
+    // events, and the difference only shows when somebody asks about a gap.
+    const base: Envelope = { authority: "EXECUTION", asOf: null, freshness: "OK" };
+    expect(canClaimContinuity({ ...base, sourceCompleteness: "EVENT_SOURCED" })).toBe(true);
+    expect(canClaimContinuity({ ...base, sourceCompleteness: "POLL_BOUNDED" })).toBe(false);
+    expect(canClaimContinuity({ ...base, sourceCompleteness: "UNKNOWN" })).toBe(false);
+    // Absent is not event-sourced either.
+    expect(canClaimContinuity(base)).toBe(false);
+  });
+
+  it("gives a polled panel a caveat that names the interval", () => {
+    const caveat = continuityCaveat({
+      authority: "EXECUTION",
+      asOf: null,
+      freshness: "OK",
+      sourceCompleteness: "POLL_BOUNDED",
+      pollIntervalMs: 30_000,
+    });
+    expect(caveat).toContain("unproven rather than absent");
+    expect(caveat).toContain("every 30s");
+  });
+
+  it("gives an event-sourced panel no caveat at all", () => {
+    expect(
+      continuityCaveat({
+        authority: "EXECUTION",
+        asOf: null,
+        freshness: "OK",
+        sourceCompleteness: "EVENT_SOURCED",
+      }),
+    ).toBeNull();
+  });
+
+  it("tones UNKNOWN worse than POLL_BOUNDED", () => {
+    const poll = render(<CompletenessNote completeness="POLL_BOUNDED" />).container;
+    expect(poll.querySelector('[data-tone="warn"]')).not.toBeNull();
+    cleanup();
+    const unknown = render(<CompletenessNote completeness="UNKNOWN" />).container;
+    expect(unknown.querySelector('[data-tone="bad"]')).not.toBeNull();
+  });
+});
+
+describe("the subscription walk drives the real reducer", () => {
+  it("reaches live, then goes stale on the dropped events", () => {
+    const { container } = render(<SubscriptionWalk />);
+    // Step 2 is the snapshot: live, so no banner.
+    fireEvent.click(screen.getByRole("button", { name: "snapshot" }));
+    expect(container.querySelector(".exec-stream")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /three missed/ }));
+    expect(container.querySelector('.exec-stream[data-phase="gap"]')).not.toBeNull();
+    expect(container.textContent).toContain("voided");
+  });
+
+  it("blocks the re-snapshot until the server's window opens", () => {
+    const { container } = render(<SubscriptionWalk />);
+    fireEvent.click(screen.getByRole("button", { name: "projection rebuilt" }));
+    expect(container.textContent).toContain("not before 2026-08-21T10:45:00Z");
+  });
+
+  it("keeps the last good values through a disconnect", () => {
+    const { container } = render(<SubscriptionWalk />);
+    fireEvent.click(screen.getByRole("button", { name: "disconnect" }));
+    expect(container.querySelector('.exec-stream[data-phase="reconnecting"]')).not.toBeNull();
+    expect(container.textContent).toContain("values as of");
   });
 });
