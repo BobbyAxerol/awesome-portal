@@ -122,7 +122,9 @@ inter-cell gateway, single-domain routing & emergency ops, production
 activation/DR). §8 audit matrix + §8.3 discrepancies là review bắt buộc trước
 BAR-17. Paper→live theo 2 supplement (không thay thế):
 `upgrade/PAPER_TO_LIVE_EXECUTION_PORTAL_BACKEND_UIUX_ADJUSTMENT_SPEC_v0.6_vi.md`
-và `upgrade/DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md` (88 tables/2 views). Phần còn lại là các slice theo phase:
+và `upgrade/DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md` (schema prose còn ghi
+88 tables/2 views; runtime contract pack hiện quan sát 94 tables/2 views và
+được ưu tiên khi có drift). Phần còn lại là các slice theo phase:
 façade cutover gateway, Planning PG production adapter + real cutover, Rust
 chỉ khi heavier-path profiling vượt gate §15.6, và release/DR owner-
 operational theo BAR-16 report.
@@ -144,12 +146,15 @@ authority.
   trong đó đúng 17 `EXECUTION_*` routes. Evidence: 53 focused contract/API tests
   và root `./scripts/portal verify`; Docker contract suite chưa chạy được vì
   daemon không khả dụng và không được ghi nhận là pass.
-- Cả 15 `BR-EX-*` đã được quyết định trong master plan §15.1. Backend runway
-  dùng EX-BE-00→08 nhưng status/evidence vẫn ghi theo đúng phase 0→18 trong
-  shared `PHASE_TRACKER.md`; không tạo product roadmap thứ hai.
-- Production integration chưa được kích hoạt. Bước kế tiếp là EX-BE-01: Rust
-  workspace + canonical contracts + generated `ts-contract-v1` adapter + full
-  vocabulary reconciliation, sau đó EX-BE-02 auth/capability negotiation.
+- Phản biện `BACKEND_PLAN_REVIEW.md` đã được reconcile: cả 22 `BR-EX-*` có
+  quyết định tại master plan §15.1 và F-1–F-9 có disposition tại §15.4. Runway
+  tách `EX-BE-04a/05a` TypeScript governance khỏi `EX-BE-01→02→03→04b→06`
+  Rust cross-cell; Approval Inbox/Gate R1 không còn chờ AWS hay Trading System.
+- Production integration chưa được kích hoạt. Thứ tự gần nhất là `EX-BE-00R4`
+  (delivery profile contract), rồi `EX-BE-04a→05a`; song song khi được giao là
+  `EX-BE-01` Rust workspace + canonical `ts-contract-v1` adapter, sau đó
+  `EX-BE-02` auth/capability negotiation. Runtime evidence luôn thắng schema/
+  rollout prose; Portal chỉ dùng versioned HTTP API, không đọc DB/Redis/CLI nội bộ.
 
 ## BAR-21 — Strategy Import & Quarantine Ingest foundation
 

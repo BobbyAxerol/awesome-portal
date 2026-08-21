@@ -37,24 +37,24 @@ These qualify what is complete; they do not mean frontend `DONE`.
 
 | # | Screen (WF) | FE | BE | Needs | Evidence |
 |---|---|---|---|---|---|
-| 0 | Shell & shared components | **DONE** (components) · `READY` (nav) | `CONTRACT_COMPLETE` | — nav unblocked by `e78a597` | FE: 42 tests · build · visual baseline **drifted, see §9**; BE: `e78a597` · 53 contract/API tests · root verify |
-| 1 | Approval Inbox (4a) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-04/05; BR-EX-01/02/03 accepted | backend contract: master plan §§10.1, 12.2 |
-| 2 | Gate R1 Review (1a) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05 integration | existing approval/audit foundation; master plan §§10.2, 12.2 |
-| 3 | Gate R2 Review (1b) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/05/07 capital preview | master plan §§10.3, 12.2 |
-| 4 | Paper Workbench (1c) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/04; M7 evidence | BR-EX-04 modified; master plan §§10.4, 15.1 |
-| 5 | Paper Exit Review (4b) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/05 evidence integration | master plan §§10.5, 12.2 |
-| 6 | Admin Action Drawer (1i) | `READY`¹ | `FOUNDATION_COMPLETE` | EX-BE-02/05; TS command capability | drawer shell built in Phase 0; backend plan/apply/verify contract §7.3 |
-| 7 | Operations Queue (4e) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-04/05 | BR-EX-01/02/09 accepted; master plan §§10.7, 15.1 |
-| 8 | Incident Detail (4d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05/06 integration | master plan §§10.8, 12.2 |
-| 9 | Command Center (5a) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04/06 | BR-EX-08/10 accepted; master plan §§10.9, 15.1 |
-| 10 | Sandbox Certification (1d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/05; TS sandbox capability | production commands inactive; master plan §10.10 |
-| 11 | Canary Control Room (1e) | `BLOCKED` | `PRODUCTION_INACTIVE` | EX-BE-03–06; owner live-canary gate | BR-EX-04 modified; master plan §10.11 |
-| 12 | Live Full Operations (1f) | `BLOCKED` | `PRODUCTION_INACTIVE` | phase 11 evidence; EX-BE-08 | BR-EX-04/11 modified; master plan §10.12 |
-| 13 | Paper Workbench VNM (4h) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04; venue/ATO/ATC decision | BR-EX-12 accepted; master plan §10.13 |
-| 14 | Full Blotter (4c) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04/07 | BR-EX-01/02/03/13 accepted; master plan §10.14 |
-| 15 | Alpha 360° (2a+2b) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04/07 | BR-EX-04 modified; 06/15 accepted; master plan §10.15 |
-| 16 | Portfolio 360° (1h→3a) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04/07 | BR-EX-07 modified; master plan §10.16 |
-| 17 | Account/Broker 360° (1g) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04/07 | BR-EX-14 accepted; master plan §10.17 |
+| 0 | Shell & shared components | **DONE** (components) · `READY` (nav) | `CONTRACT_COMPLETE` | EX-BE-00R4 profile contract; nav unblocked by `e78a597` | FE: 42 tests · build · visual baseline **drifted, see §9**; BE: `e78a597` · 53 contract/API tests · root verify |
+| 1 | Approval Inbox (4a) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-04a/05a only | backend contract: master plan §§10.1, 12.2; no AWS dependency |
+| 2 | Gate R1 Review (1a) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a integration | existing approval/audit foundation; master plan §§10.2, 12.2 |
+| 3 | Gate R2 Review (1b) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/05a/07 capital preview | master plan §§10.3, 12.2 |
+| 4 | Paper Workbench (1c) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/04b; M7 evidence | adaptive six-rung server charts; master plan §§10.4, 15.1 |
+| 5 | Paper Exit Review (4b) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/05a evidence integration | master plan §§10.5, 12.2 |
+| 6 | Admin Action Drawer (1i) | `READY`¹ | `FOUNDATION_COMPLETE` | EX-BE-02/05b; TS command capability | request-key/UNCERTAIN contract §7.3; production disabled |
+| 7 | Operations Queue (4e) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-04a/05b | bidirectional keyset + ack≠resolve; master plan §§10.7, 15.1 |
+| 8 | Incident Detail (4d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a/05b/06 integration | source completeness required; master plan §§10.8, 12.2 |
+| 9 | Command Center (5a) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04b/06 | overlap+jitter SSE recovery; master plan §§10.9, 15.1 |
+| 10 | Sandbox Certification (1d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/05a/05b; TS sandbox capability | production commands inactive; master plan §10.10 |
+| 11 | Canary Control Room (1e) | `BLOCKED` | `PRODUCTION_INACTIVE` | EX-BE-00R4/03/04b/05b/06; owner live-canary gate | profile-labelled shadow parity; master plan §10.11 |
+| 12 | Live Full Operations (1f) | `BLOCKED` | `PRODUCTION_INACTIVE` | phase 11 evidence; EX-BE-00R4/08 | source completeness + UNCERTAIN policy; master plan §10.12 |
+| 13 | Paper Workbench VNM (4h) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04b; venue/ATO/ATC decision | server age/timezone contract; master plan §10.13 |
+| 14 | Full Blotter (4c) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04b/07 | bidirectional keyset/cold-retention/funnel contract; master plan §10.14 |
+| 15 | Alpha 360° (2a+2b) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04b/07 | adaptive charts + batched previews/portfolio context; master plan §10.15 |
+| 16 | Portfolio 360° (1h→3a) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04b/07 | 150×150 cap; master plan §10.16 |
+| 17 | Account/Broker 360° (1g) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04b/07 | full-binding aggregate; master plan §10.17 |
 | 18 | Hardening | `BLOCKED` | `OPERATIONAL_EVIDENCE_PENDING` | EX-BE-08; implemented target subset | master plan §§13–14 |
 
 ¹ Phase 6's drawer shell, state machine and blocking rules are already built and
@@ -163,24 +163,41 @@ longer blocked on backend registry work; frontend nav wiring remains frontend-ow
 
 The binding contract is
 [`EXECUTION_LOOP_PORTAL_BACKEND_AND_HIFI_MASTER_PLAN.md`](../../EXECUTION_LOOP_PORTAL_BACKEND_AND_HIFI_MASTER_PLAN.md)
-§15.1. All fifteen requests now have a decision:
+§15.1. All twenty-two requests now have a decision:
 
 | Requests | Decision | Consequence |
 |---|---|---|
 | BR-EX-01, 02, 03 | **ACCEPT** | keyset, server filter/sort and exact counts unblock scalable phases 1/7/14 |
-| BR-EX-04 | **MODIFY** | server selects interval ladder and guarantees ≤5,000 points |
-| BR-EX-05 | **MODIFY** | measure edge p50/p95/p99 plus RSS/scan cost at locked scale |
+| BR-EX-04 | **MODIFY** | server selects the adaptive six-rung interval ladder and guarantees ≤5,000 points |
+| BR-EX-05 | **ACCEPT + MODIFY** | zoom re-queries at the next finer rung; qualification records p50/p95/p99/RSS/scan cost |
 | BR-EX-06 | **ACCEPT** | capped batched insight previews |
 | BR-EX-07 | **MODIFY** | packed correlation through 150; ranked pairs/clusters above cap |
 | BR-EX-08, 09, 10 | **ACCEPT** | ranked triage, typed grouping with ack≠resolve, one multiplexed SSE |
 | BR-EX-11 | **MODIFY** | nullable true source sequence; Portal epoch/sequence + cursor and gap/resnapshot semantics |
 | BR-EX-12, 13, 14, 15 | **ACCEPT** | server precision, funnel, full binding aggregate, required/echoed portfolio context |
+| BR-EX-16, 17 | **ACCEPT** | source completeness and bidirectional keyset remove false continuity/navigation claims |
+| BR-EX-18, 21 | **ACCEPT** | plan request-key idempotency and explicit target-aware `UNCERTAIN` safety policy |
+| BR-EX-19, 20 | **ACCEPT** | server age/lag semantics and registry revision 4 delivery-profile propagation |
+| BR-EX-22 | **ACCEPT** | v0.7 §21.4 budgets are provisional until measured owner-approved baselines replace them |
 
 These decisions remove frontend contract uncertainty; they do not imply the real
 Trading System authority is wired. Each screen's production status remains in the
 BE column and the detailed gate is in master plan §12.2.
 
-### 6.3 Remaining external/owner dependencies
+### 6.3 Backend disposition of the frontend review
+
+`BACKEND_PLAN_REVIEW.md` F-1–F-9 were all accepted, with F-9 refined so safety is
+target- and command-aware rather than a blanket lock. The immediate backend runway is:
+
+1. `EX-BE-04a` TypeScript control-plane query primitives;
+2. `EX-BE-05a` governance/evidence workflow, with external panels honestly unavailable;
+3. in parallel, `EX-BE-01→02→03→04b→06` for the Rust AWS read/projection/realtime path;
+4. `EX-BE-05b` only after source command/auth capability is proven.
+
+This closes the architectural disagreement: Approval Inbox and Gate R1 do not wait
+for AWS networking, a Rust projection or a Trading System change.
+
+### 6.4 Remaining external/owner dependencies
 
 - Approve SGP↔AWS private connectivity, mTLS/delegated JWT and Portal-owned AWS
   projection database.
@@ -191,10 +208,12 @@ BE column and the detailed gate is in master plan §12.2.
 - Decide VNM calendar authority and ATO/ATC behavior.
 - Approve risk-tier/SoD/WebAuthn policy and separate Live protective from
   risk-increasing activation.
+- Choose the display-timezone default and approve HTTP/2/HTTP/3 evidence for the
+  production same-origin SSE path.
 
 No Portal agent may resolve these dependencies by modifying Trading System, reading
-its database directly without an approved role, or treating fixture/shadow data as
-production authority.
+its database/Redis directly, shelling into its hosts, calling its CLI, or treating
+fixture/shadow data as production authority.
 
 ---
 
@@ -248,12 +267,12 @@ much cheaper than after.
 
 ## 9. Backend master plan — reviewed
 
-Codex delivered `EXECUTION_LOOP_PORTAL_BACKEND_AND_HIFI_MASTER_PLAN.md`
+Codex delivered the initial `EXECUTION_LOOP_PORTAL_BACKEND_AND_HIFI_MASTER_PLAN.md`
 (`29c9b17`, 907 lines) on 2026-08-21. The frontend review is
 [`BACKEND_PLAN_REVIEW.md`](BACKEND_PLAN_REVIEW.md).
 
-**Settled by the plan:** all fifteen `BR-EX-*` ruled (11 ACCEPT, 4 MODIFY, none
-refused); `BrokerSync` and `UNKNOWN` resolved exactly as slice S1 concluded
+**Settled by the initial plan:** the original fifteen `BR-EX-*` were ruled
+(11 ACCEPT, 4 MODIFY, none refused); `BrokerSync` and `UNKNOWN` resolved exactly as slice S1 concluded
 independently; nine panel states and five freshness values match verbatim;
 `PromotionStage` confirmed Portal-owned.
 
@@ -267,14 +286,10 @@ resumes on `{epoch}:{sequence}`, and §3.1's ladder is restated as "finest
 interval that fits" rather than fixed brackets — that last one corrects a mistake
 this side made first.
 
-**Open with codex** — seven new requests, `BR-EX-16 … BR-EX-22`, in review §4.
-The four that gate a frontend slice: **BR-EX-17** bidirectional keyset (blocks
-S2), **BR-EX-19** server-computed age (blocks S3), **BR-EX-20** delivery profile
-in the registry (blocks S3), **BR-EX-16** source completeness class (blocks S4).
-
-**The one architectural disagreement** is review F-1: phases 1 and 2 read and
-write only Portal-owned records and need no Trading System, yet the build order
-places them behind three Rust slices, two of which wait on an owner decision
-about private networking. The ask is to split `EX-BE-04` into a control-plane
-half and a projection half, so Approval Inbox and Gate R1 can reach real data
-while that approval is pending.
+**Backend response recorded** — all seven new requests `BR-EX-16 … BR-EX-22`
+are ruled in master plan §15.1, and F-1–F-9 are dispositioned in §15.4. The
+architectural disagreement is closed by splitting `EX-BE-04a/04b` and
+`EX-BE-05a/05b`: Approval Inbox and Gate R1 now start on TypeScript/control-plane
+PostgreSQL without waiting on Rust, AWS connectivity, a projection database or a
+Trading System change. Registry revision 4 remains an implementation dependency;
+the decision and contract are complete, but no code delivery is claimed here.

@@ -1,6 +1,6 @@
 # Execution Loop — Portal Backend and HiFi Master Plan
 
-> Status: architecture and delivery plan  
+> Status: architecture and delivery plan, review revision 2  
 > Baseline date: 2026-08-21  
 > Branch: `feat/execution_loop`  
 > Registry baseline: revision 3, commit `e78a597`  
@@ -22,7 +22,10 @@ Read these sources before implementing a slice:
 5. [Execution cluster guide](upgrade_frontend_plan_hifi/hifi_execution_loop/Design%20system%20discussion%20request_version2/EXECUTION_CLUSTER_GUIDE.md), [design system](upgrade_frontend_plan_hifi/hifi_execution_loop/Design%20system%20discussion%20request_version2/DESIGN_SYSTEM_EXECUTION.md), and [canonical cast](upgrade_frontend_plan_hifi/hifi_execution_loop/Design%20system%20discussion%20request_version2/CANONICAL_CAST.md) — screen semantics, not backend ownership.
 6. [Alpha Pool to Live v0.7](upgrade_frontend_plan_hifi/hifi_execution_loop/Design%20system%20discussion%20request_version2/uploads/ALPHA_POOL_TO_LIVE_PORTFOLIO_PORTAL_DESIGN_SPEC_v0.7_vi.md) §§17–25 — authority, SLOs, additive backend gaps, and APX delivery.
 7. [Trading System compatibility discovery](TRADING_SYSTEM_PORTAL_COMPATIBILITY_DISCOVERY_HANDOFF.md) and the immutable [contract pack](upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack/CONNECTOR-CONTRACT.md) — the only evidence for the current external boundary.
-8. [Backend architecture guide](BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md) and [backend index](backend/README.md) — existing Portal control-plane foundation and status vocabulary.
+8. [Trading System database schema guide](DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md) — entity relationships, exact numeric/accounting invariants, current-state projections and maintenance governance; it is not authorization for direct Portal DB access.
+9. [Trading System unified implementation plan](upgrade_frontend_plan_hifi/hifi_execution_loop/Design%20system%20discussion%20request_version2/uploads/TRADING_SYSTEM_UNIFIED_IMPLEMENTATION_PLAN.md) — target boundaries, V1 compatibility, journal/recovery and latest rollout evidence. Its planned or locally implemented state is not assumed deployed.
+10. [Frontend review](upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_PLAN_REVIEW.md) — F-1–F-9 and BR-EX-16–22; dispositions are recorded in §15.4.
+11. [Backend architecture guide](BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md) and [backend index](backend/README.md) — existing Portal control-plane foundation and status vocabulary.
 
 The wireframes remain the visual authority. This plan is authoritative for data
 ownership, endpoint shape, compatibility, security, freshness, sequencing, and
@@ -45,7 +48,9 @@ Every panel value must carry `source_authority`:
 - `RESEARCH`: research registry/artifact result owned by the Research plane.
 - `EXECUTION`: authoritative value returned by Trading System or broker through Trading System.
 - `BROKER`: broker-observed value relayed by Trading System; never synthesized by Portal.
-- `DERIVED`: Portal projection/aggregation with a non-empty `formula_version` and source timestamp.
+- `DERIVED`: a Portal-computed transformation/aggregation with a non-empty
+  `formula_version` and source timestamp. A pass-through fact stored in a Portal
+  projection retains `EXECUTION` or `BROKER`; storage location never changes authority.
 
 Portal workflow records have a separate `owner_plane: PORTAL`; they are not a fifth
 `AuthorityBadge` value. Any numeric/data panel nested in a workflow screen still
@@ -85,6 +90,30 @@ System owner, not permission for a Portal-side workaround.
 | Commands | Journal exists, rollout off; acknowledgement false; 430/430 observed DEAD | No command production activation until Trading System evidence and owner gate pass |
 | Paging | Offset-style source surfaces and incomplete source contract | Portal Query API exposes keyset paging; edge adapters absorb source limitations |
 
+### 2.1.1 Evidence precedence and known documentation drift
+
+The connector resolves disagreement in this strict order:
+
+1. read-only probes and the signed contract pack from the running image;
+2. the running gateway's `/v1/contracts`, revision headers, capability and health responses;
+3. the immutable deployed image/tag manifest and migration ledger;
+4. generated schemas/fixtures tied to that exact revision;
+5. implementation logs in the Trading System unified plan;
+6. schema/design prose and target architecture.
+
+This prevents two concrete errors:
+
+- the schema guide heading still summarizes 88 tables/2 views while the runtime extract records
+  94 tables/2 views and 1,291 columns; runtime inventory wins, while the guide remains useful for
+  entity invariants and migration-41 current-state projections;
+- the Trading System plan records durable-journal engineering and release work, but the delivered
+  contract pack observes rollout `OFF`, acknowledgement false and 430/430 DEAD. Portal therefore
+  keeps command integration disabled until a new runtime pack proves otherwise.
+
+No endpoint, event type, table, rollout state or command capability is inferred from an
+implementation-plan checkbox. The edge publishes the evidence source and capability snapshot used
+for every decision.
+
 ### 2.2 Vocabulary ownership
 
 | Vocabulary | Owner | Canonical values / rule |
@@ -107,9 +136,10 @@ silently map to a known state.
 
 The initial design is sized for 3–5 portfolios, 150–500 deployments, 5 venues,
 1,000 orders plus fills per day, approximately 182,000 six-month rows, 0.7 events
-per minute average and 14 per minute burst, matrices up to 100×100, and charts
-capped at 5,000 points. These are qualification fixtures, not permission to write
-N+1 queries or load the full blotter into a browser.
+per minute average and 14 per minute burst, a normal 100-asset correlation view
+with a qualification/contract cap of 150×150, and charts capped at 5,000 points.
+These are qualification fixtures, not permission to write N+1 queries or load the
+full blotter into a browser.
 
 ## 3. Dual-cell architecture
 
@@ -124,7 +154,7 @@ SGP Research cell
                          │ short-lived asymmetric delegated JWT
                          ▼
 AWS HK execution cell
-  portal-execution-edge-rs ── Trading System HTTP/CLI contract
+  portal-execution-edge-rs ── Trading System versioned HTTP API contract
        │          │                         │
        │          └── Portal-owned projection PostgreSQL
        └── query/aggregation + SSE          └── Trading System-owned stores/brokers
@@ -146,6 +176,19 @@ the business control plane in SGP. Browser traffic never bypasses TypeScript.
 5. TypeScript applies field/action policy, records relevant access audit, and
    returns the contract without fabricating freshness.
 
+The three route namespaces are intentionally different:
+
+| Boundary | Namespace | Purpose |
+|---|---|---|
+| Browser → Portal | `/api/v1/execution/*` | stable same-origin Portal product contract |
+| TypeScript → Rust edge | private versioned edge contract | normalized query/SSE/relay contract; never publicly routable |
+| Rust edge → Trading System | discovered `/v1/*` V1 routes | exact adapter-bound source contract such as health/contracts/orders/fills/positions/accounts/portfolio/events |
+
+The edge may call only routes proven by the selected adapter and current capability snapshot. It
+never consumes Trading System Redis Streams directly, never shells into a Trading System host, and
+never turns CLI documentation into a hidden transport. Missing HTTP capability stays disabled or
+becomes an explicit request in §15.2.
+
 ### 3.2 Command path
 
 1. TypeScript validates role, separation of duties, scope, environment, and approval evidence.
@@ -157,6 +200,10 @@ the business control plane in SGP. Browser traffic never bypasses TypeScript.
    Trading System contract, then records a relay receipt without claiming success.
 5. `verify` observes Trading System state until a terminal/uncertain/expired result;
    `202` remains non-terminal.
+
+The relay maps a Portal operation to one exact Trading System V1/admin command contract. It sends
+the Portal operation/idempotency reference in a supported correlation/idempotency field or adapter
+header, but never bypasses Gateway/Risk through Redis, database writes or broker SDK calls.
 
 ### 3.3 Failure containment
 
@@ -201,8 +248,14 @@ tracing and OpenTelemetry. Exact versions are pinned only when EX-BE-01 creates
 - No N+1 request per deployment/account/order.
 - JSON is default; Arrow may be added only for measured matrix/tabular paths behind
   content negotiation. Browser contracts remain stable.
-- Charts use the server-selected ladder: `≤3d=1m`, `≤30d=15m`, `≤6mo=1h`,
-  `≤2y=4h`, `>2y=1d`, with hard result cap 5,000.
+- Charts use the server-selected supported ladder `1m → 5m → 15m → 1h → 4h → 1d`.
+  The server selects the finest interval whose inclusive bucket count is ≤5,000; it returns the
+  chosen interval, source/returned row counts and coverage. The 5m rung preserves 4–17 day
+  incident/review resolution that the former fixed brackets unnecessarily lost.
+- Zooming into a range that supports a finer rung triggers a server round-trip for that exact
+  range/intent. The browser never interpolates or reshapes an already aggregated series as if finer
+  observations existed. Responses are abortable/cacheable so rapid zoom does not create stale race
+  wins.
 - Correlation returns a packed triangle plus order/labels through 150 assets; beyond
   that, return ranked pairs/clusters and an explicit cap notice.
 - Query list default 100, hard maximum 250; frontend residency target at most 2,000.
@@ -212,11 +265,17 @@ tracing and OpenTelemetry. Exact versions are pinned only when EX-BE-01 creates
 
 The edge is anti-corruption middleware, not a fork of Trading System. On startup it:
 
-1. records gateway digest, database schema version, and reported capabilities;
+1. calls the proven health/contracts surfaces, records gateway digest, contract/revision headers,
+   database migration/schema version, and per-capability rollout state;
 2. selects an exact adapter from a tested compatibility matrix;
 3. runs read-only semantic probes;
 4. exposes only capabilities proven by adapter plus probes;
 5. refuses unsupported command capabilities while keeping compatible reads alive.
+
+If `/v1/contracts` is absent or incomplete, the edge may use the pinned contract-pack adapter only
+for the exact known image digest. It must not downgrade silently to a “closest” adapter. Capability
+snapshots retain `source_revision`, `observed_runtime_revision`, probe timestamps and reason codes
+so Portal can distinguish contract compatibility from deployment activation.
 
 Supporting a new Trading System contract means adding a versioned adapter and
 golden corpus, not changing frontend contracts or modifying Trading System.
@@ -308,10 +367,14 @@ All Execution Query API responses use snake_case and include:
   "source_sequence": null,
   "projection_epoch": "uuid",
   "projection_sequence": 42,
+  "source_completeness": "EVENT_SOURCED|POLL_BOUNDED|UNKNOWN",
+  "poll_interval_ms": null,
   "freshness_state": "OK|AGING|STALE|PAUSED|UNKNOWN",
-  "lag_ms": 120,
+  "age_seconds": 12,
+  "lag_ms": null,
   "formula_version": null,
   "capability_snapshot_id": "cap_…",
+  "delivery_profile": "fixture|shadow|paper|sandbox|live_canary|live_full",
   "panel_state": "ok|partial|stale|denied|unavailable|insufficient_data|…",
   "warnings": [],
   "data": {}
@@ -322,10 +385,25 @@ All Execution Query API responses use snake_case and include:
 Trading System supplies one. `projection_sequence` orders only the Portal projection
 within a `projection_epoch`; it must never be labelled as a source sequence.
 
+The edge computes `age_seconds = read_at - as_of` using its trusted clock. A future
+`as_of` outside clock-skew tolerance produces `UNKNOWN` plus a warning, not a clamped zero.
+`lag_ms` means observable projection processing lag from edge source-read receipt to committed
+projection visibility; it is nullable when those timestamps cannot be compared. It is not source
+age and does not prove that a polled transition was never missed.
+
+`source_completeness` states the stronger limitation explicitly. `EVENT_SOURCED` means the selected
+entity class is covered by the proven event contract; `POLL_BOUNDED` includes the effective poll
+interval and can only claim states observed at polls; `UNKNOWN` blocks continuity-sensitive claims.
+At the current runtime, only proven `ORDER_STATUS` coverage may be event-sourced. Runtime, risk,
+account, fill and reconciliation classes remain `POLL_BOUNDED` or `UNKNOWN` until a later contract
+pack proves broader event coverage.
+
 ### 7.2 List and analytical query contract
 
-- Keyset pagination: opaque signed `after`, stable tie-break by immutable ID, exact
-  `total_count`, `has_more`, and `next_cursor`.
+- Bidirectional keyset pagination: mutually exclusive opaque signed `after`/`before`, stable
+  sort plus immutable-ID tie-break, exact `total_count`, forward/backward availability,
+  `next_cursor`, and `prev_cursor`. Reverse scans restore evicted pages without restarting from
+  the first row or violating the 2,000-row browser residency budget.
 - Filters and sort are allowlisted server-side and echoed in response metadata.
 - Precision and rounding are server-owned and returned as decimal strings plus
   currency/instrument metadata.
@@ -345,11 +423,25 @@ POST /api/v1/execution/operations/{operation_id}/apply
 GET  /api/v1/execution/operations/{operation_id}
 ```
 
+A plan request requires a client-generated, opaque `request_key`. Its idempotency scope is actor,
+workspace, environment, command type and target. Repeating the same key plus payload hash while the
+plan is valid returns the existing operation; reusing it with a different hash returns `409`, and a
+new intent after expiry requires a new key.
+
 A plan contains command type/version, normalized target and expected state/version,
 payload hash, risk tier, blockers, warnings, required approvals, fresh-auth demand,
 expiry, and one-time apply token reference. Apply returns `202` plus operation ID and
 receipt only. Verification reports `PENDING`, `ACKNOWLEDGED`, `SUCCEEDED`, `FAILED`,
 `DENIED`, `PARTIAL`, `UNCERTAIN`, or `EXPIRED` without coercion.
+
+`UNCERTAIN` is terminal for the automatic retry loop but non-terminal for operational truth. It
+never ages into `EXPIRED`: the external effect may have happened. On the verification deadline,
+Portal keeps `UNCERTAIN`, opens/escalates an incident and continues bounded reconciliation until
+authoritative evidence resolves it. Risk-increasing commands against the same serialized target
+are blocked. A protective desired-state command is not blanket-blocked: the server replans against
+fresh authority and may allow it only when the upstream operation is provably idempotent or the new
+plan is a safe monotonic protection; non-idempotent close/quantity actions remain blocked pending
+reconciliation. `EXPIRED` applies to unapplied plans or operations proven never dispatched.
 
 ### 7.4 Realtime event contract
 
@@ -365,6 +457,12 @@ Each event contains:
 On reconnect, `Last-Event-ID` resumes only within a retained epoch. Missing history,
 epoch mismatch, or detected source-cursor discontinuity emits `projection.gap`, marks
 affected views stale, and requires a bounded snapshot before deltas resume.
+
+Contiguous projection IDs prove edge→browser delivery only. They do not prove source→edge
+completeness for `POLL_BOUNDED` entities. An epoch cutover retains the preceding epoch read-only for
+a bounded overlap and emits a server-assigned `resnapshot_not_before` jitter deadline. Clients keep
+the old snapshot visibly aging until that deadline, then fetch the new epoch under server rate
+limits; they do not all hit a cold projection simultaneously.
 
 ### 7.5 Artifact contract
 
@@ -388,6 +486,15 @@ reducers. Initial ingestion combines scoped `/v1/events` polling, the documented
 synthetic order-lifecycle replay, and bounded authoritative snapshot reconciliation.
 Direct access to Trading System PostgreSQL is not assumed.
 
+Adapters prefer compact authoritative/current HTTP projections over raw historical snapshots:
+`account_sync_current_state`/`broker_account_sync_current_state` semantics, effective sync state,
+orders/fills/positions, execution sessions, reconciliation findings, performance/equity snapshots
+and broker valuation current state. These schema names describe required meaning, not permission to
+query tables. If the running V1 API does not expose a required projection, the capability is
+`DISABLED`/`PARTIAL` and becomes an explicit Trading System HTTP request; Portal does not open a DB
+backdoor. Immutable `domain_events` remain order/fill/bracket audit/recovery evidence, not a claim
+of complete market-data or all-entity event history.
+
 Projection tables are purpose-built read models, not copies of all 94 source tables:
 
 - deployment/runtime/account/broker-binding summaries;
@@ -396,6 +503,14 @@ Projection tables are purpose-built read models, not copies of all 94 source tab
 - freshness/capability state;
 - aggregate time buckets and correlation caches;
 - projection checkpoints, epochs, dead letters, and replay audit.
+
+Account identity is the Trading System internal `account_id`, scoped by its strategy,
+mode and venue semantics; `external_account_ref` is a broker-binding dimension, not a
+unique account key. Multiple internal accounts may share one external binding, so
+Account 360 preserves each account while binding exposure aggregates the complete
+filtered set. Current/change-only sync projections are used for present state; immutable
+orders, fills, capital-ledger entries, source operator operations and relevant domain
+events remain evidence/history and are never overwritten to make a current view agree.
 
 Every row retains source identifiers, timestamps, authority, adapter version, and
 last projection sequence. Rebuilding swaps to a new epoch atomically after parity.
@@ -433,6 +548,12 @@ market is `PAUSED`, not `STALE`.
 
 The projection may be discarded and rebuilt. Portal workflow, audit, and idempotency
 records may not.
+
+Queries outside hot retention never return an ordinary empty collection. They return a typed
+availability block such as `COLD_REQUESTABLE` with hot boundary, requested range, authority,
+retention policy version and an authorized access-request link; `PURGED` and `UNKNOWN` remain
+distinct. Cold restore/import is an administrator workflow with immutable evidence, never an
+automatic full-history scan on an interactive request.
 
 ## 9. Authentication and security
 
@@ -614,7 +735,8 @@ envelope in §7.1 and all money/quantity fields are decimal strings.
 ### 10.16 Portfolio 360° — `/deployments/portfolios/:portfolioId`
 
 - Query: allocation/runtime/account facts, capital ledger, series, correlation and
-  concentration. Server returns packed 100×100 matrix or ranked pairs beyond cap.
+  concentration. Server returns a packed matrix through 150×150 or ranked
+  pairs/clusters beyond that contract cap.
 - Currency: return independent buckets unless a versioned FX conversion is present.
 - Authority: capital/accounting `EXECUTION`; broker exposure `BROKER`; correlation,
   headroom and concentration `DERIVED`; portfolio governance is Portal-owned.
@@ -668,19 +790,24 @@ so one slice may unlock several screens without inventing a second product roadm
 | Slice | Priority | Deliverable | Unlocks |
 |---|---:|---|---|
 | EX-BE-00 | P0 | Registry revision 3 and canonical routes | Phase 0 navigation and routing for 1–17 |
+| EX-BE-00R4 | P0 | Registry revision 4 adds per-screen delivery profile/policy, echoed by composed envelopes | fixture/shadow truth for all screens, especially 11–12 |
+| EX-BE-04a | P0 | TypeScript bidirectional keyset/filter/sort/exact-count primitives over control-plane PostgreSQL | phases 1, 2 and Portal-owned portions of 5/7/8 |
+| EX-BE-05a | P0 | TypeScript governance/evidence/approval workflow and audit, with external panels allowed unavailable | phases 1–2 on real Portal data without AWS |
 | EX-BE-01 | P0 | Rust workspace, canonical contracts, `ts-contract-v1`, vocabulary reconciliation and golden corpus | all real-source screen contracts |
 | EX-BE-02 | P0 | mTLS/delegated-auth boundary, capability negotiation, read-only probes | safe AWS integration |
 | EX-BE-03 | P0 | projection schema, reducer, cursor/epoch/replay/snapshot and freshness evaluator | phases 4, 9–17 |
-| EX-BE-04 | P1 | query primitives: keyset, filter/sort/count, series ladder, exact decimals | phases 1, 4, 7, 11–17 |
-| EX-BE-05 | P1 | TypeScript governance, evidence, operations and plan/apply/verify plus Rust relay | phases 1–8, 10–12 |
+| EX-BE-04b | P1 | Rust projection query primitives: bidirectional keyset, filter/sort/count, adaptive series ladder and exact decimals | phases 4, 9, 11–17 |
+| EX-BE-05b | P1 | TypeScript operations/plan/apply/verify plus authenticated Rust relay | phases 6–12 mutation/operation paths |
 | EX-BE-06 | P1 | multiplexed SSE, gap recovery, backpressure and same-origin proxy | phase 9 and live screens |
 | EX-BE-07 | P2 | correlation, exposure, funnel, capital-ledger and batched preview analytics | phases 3, 14–17 |
 | EX-BE-08 | P2 | security/load/soak/DR/rollback evidence and production profiles | phase 18 and production activation |
 
-Build order is EX-BE-01→02→03→04, with EX-BE-05 contract work parallel only after
-canonical contracts are frozen. EX-BE-06 follows projection sequencing. EX-BE-07
-follows query primitives. This does not reorder frontend phases; fixtures continue
-independently, while production wiring waits for the listed shared dependency.
+EX-BE-04a→05a starts immediately and has no AWS, Rust, Trading System or projection dependency.
+It delivers Approval Inbox and Gate R1 from real control-plane data while linked execution panels
+honestly render unavailable. In parallel, the cross-cell runway is EX-BE-01→02→03→04b→06;
+EX-BE-05b follows canonical command/auth contracts and a proven Trading System capability.
+EX-BE-07 follows the appropriate 04a/04b query primitive. This preserves the frontend phase order
+while removing an unrelated infrastructure approval from the first useful backend screens.
 
 ### 12.2 Per-phase backend slices
 
@@ -696,23 +823,23 @@ Statuses use the architecture vocabulary, never bare `COMPLETE`:
 | Phase | Goal | Endpoints / events | Authority + freshness | Status | Depends on | Exit gate |
 |---:|---|---|---|---|---|---|
 | 0 Shell/shared | Registry renders all 17 canonical routes and groups without data coupling | `/api/v1/portal/registry` rev 3 | Portal registry; no execution freshness | `CONTRACT_COMPLETE` | none | 17 unique `EXECUTION_*` screens, schema/API/frontend handoff tests, root verify; delivered `e78a597` |
-| 1 Approval Inbox | scalable approval queue | `GET /governance/approvals` | Portal record; linked source facts keep their own envelopes | `INTEGRATION_PENDING` | EX-BE-04/05 | keyset/filter/sort/exact-count contract tests at 182k fixture rows; RBAC tests |
-| 2 Gate R1 | immutable evidence and valid SoD approval | `GET /governance/approvals/{id}/r1`; plan/apply decision | Portal decision; evidence source-attributed | `FOUNDATION_COMPLETE` | BAR approval/audit foundation + EX-BE-05 | concurrent-version, SoD, evidence-hash, deny/approve audit tests |
-| 3 Gate R2 | safe capital preview and R2 decision | R2 detail, `/capital-preview`, command plan | Portal decision; EXECUTION/BROKER inputs; DERIVED preview | `FOUNDATION_COMPLETE` | EX-BE-03/05/07 | multi-currency buckets, stale blocker and dual-approval tests |
-| 4 Paper Workbench | real Paper observation without client aggregation | deployment summary/series; operation status | EXECUTION/BROKER/DERIVED; per-panel policy | `FOUNDATION_COMPLETE` | EX-BE-03/04; M7 gate evidence | 500-deployment corpus, ≤5k chart points, Paper action disabled unless verified |
-| 5 Paper Exit Review | server evaluates observation exit evidence | exit-review read/decision | Portal record; DERIVED with source-attributed inputs | `FOUNDATION_COMPLETE` | EX-BE-03/05 | deterministic policy replay, missing/stale evidence states, audit proof |
-| 6 Admin Action Drawer | generic safe plan→apply→verify | command catalog, plan, apply, operation poll | Portal policy record; EXECUTION terminal outcome | `FOUNDATION_COMPLETE` | EX-BE-02/05; TS command capability | blocker completeness, idempotency, replay/duplicate/uncertain tests; production flag remains off |
-| 7 Operations Queue | scalable, typed operations triage | `GET /operations`; ack/resolve | Portal workflow record plus EXECUTION result | `INTEGRATION_PENDING` | EX-BE-04/05 | 182k keyset/order tests, ack≠resolve tests, exact count |
-| 8 Incident Detail | correlated evidence and explicit incident workflow | incident detail, assign/ack/annotate/resolve | Portal workflow record; source-attributed findings | `FOUNDATION_COMPLETE` | EX-BE-05/06 | optimistic concurrency, evidence-required resolution and redaction tests |
-| 9 Command Center | ranked snapshot plus loss-detectable realtime | command-center snapshot and SSE | mixed per row; DERIVED ranking; epoch/sequence freshness | `INTEGRATION_PENDING` | EX-BE-03/04/06 | snapshot/SSE parity, reconnect/gap/resnapshot, slow-consumer and auth-expiry tests |
-| 10 Sandbox Certification | auditable certification state machine | certification read/decide/promote plan | Portal record; EXECUTION/BROKER/DERIVED panels | `FOUNDATION_COMPLETE` | EX-BE-03/05; TS sandbox capabilities | state-transition/property tests, stale evidence denial, command production inactive |
-| 11 Canary Control Room | observe versioned envelope and guarded live canary | canary query/series; later protective operations | EXECUTION/BROKER/DERIVED panels; Portal envelope record | `PRODUCTION_INACTIVE` | EX-BE-03–06; owner live-canary gate | read shadow parity, envelope/rollback tests, dual approval, explicit activation decision |
-| 12 Live Full Operations | continuous live truth with gap visibility | live query/series/SSE; later R3/R4 operations | EXECUTION/BROKER/DERIVED; gaps become stale | `PRODUCTION_INACTIVE` | phase 11 evidence + EX-BE-08 | no-gap soak, ambiguous-result drills, capital envelope and rollback rehearsal |
-| 13 Paper Workbench VNM | venue-aware Paper behavior | deployment query + venue session | EXECUTION plus authoritative venue calendar | `INTEGRATION_PENDING` | EX-BE-03/04; venue contract; ATO/ATC decision | open/lunch/closed/holiday/timezone fixtures; precision contract; no browser clock inference |
-| 14 Full Blotter | 182k-row scalable blotter and lifecycle | blotter page/aggregate/funnel | EXECUTION/BROKER/DERIVED | `INTEGRATION_PENDING` | EX-BE-03/04/07 | no offset drift, exact count, full-filter aggregate, missing-stage funnel and decimal tests |
-| 15 Alpha 360 | portfolio-specific alpha execution view | alpha detail/series/batched previews | RESEARCH/EXECUTION/DERIVED | `INTEGRATION_PENDING` | EX-BE-03/04/07 | required echoed `portfolio_id`, capped batch, no N+1, lineage/evidence links |
-| 16 Portfolio 360 | scalable portfolio analytics without false totals | portfolio detail/correlation/capital ledger | EXECUTION/BROKER/DERIVED | `INTEGRATION_PENDING` | EX-BE-03/04/07 | 100×100 load, packed symmetry, ranked-pair fallback, currency isolation |
-| 17 Account/Broker 360 | binding-wide exposure over full population | account detail + binding exposure | EXECUTION/BROKER/DERIVED | `INTEGRATION_PENDING` | EX-BE-03/04/07 | 500 accounts/~5 bindings fixture; page-independent totals; partial source handling |
+| 1 Approval Inbox | scalable approval queue | `GET /governance/approvals` | Portal record; linked source facts keep their own envelopes | `INTEGRATION_PENDING` | EX-BE-04a/05a only | bidirectional keyset/filter/sort/exact-count contract tests at 182k fixture rows; RBAC tests |
+| 2 Gate R1 | immutable evidence and valid SoD approval | `GET /governance/approvals/{id}/r1`; plan/apply decision | Portal decision; evidence source-attributed | `FOUNDATION_COMPLETE` | BAR approval/audit foundation + EX-BE-05a | concurrent-version, SoD, evidence-hash, deny/approve audit tests; no AWS dependency |
+| 3 Gate R2 | safe capital preview and R2 decision | R2 detail, `/capital-preview`, command plan | Portal decision; EXECUTION/BROKER inputs; DERIVED preview | `FOUNDATION_COMPLETE` | EX-BE-03/05a/07 | multi-currency buckets, stale blocker and dual-approval tests |
+| 4 Paper Workbench | real Paper observation without client aggregation | deployment summary/series; operation status | EXECUTION/BROKER/DERIVED; per-panel policy | `FOUNDATION_COMPLETE` | EX-BE-03/04b; M7 gate evidence | 500-deployment corpus, adaptive ≤5k chart points, Paper action disabled unless verified |
+| 5 Paper Exit Review | server evaluates observation exit evidence | exit-review read/decision | Portal record; DERIVED with source-attributed inputs | `FOUNDATION_COMPLETE` | EX-BE-03/05a | deterministic policy replay, missing/stale evidence states, audit proof |
+| 6 Admin Action Drawer | generic safe plan→apply→verify | command catalog, plan, apply, operation poll | Portal policy record; EXECUTION terminal outcome | `FOUNDATION_COMPLETE` | EX-BE-02/05b; TS command capability | plan `request_key`, blocker completeness, duplicate/uncertain reconciliation tests; production flag remains off |
+| 7 Operations Queue | scalable, typed operations triage | `GET /operations`; ack/resolve | Portal workflow record plus EXECUTION result | `INTEGRATION_PENDING` | EX-BE-04a/05b | 182k bidirectional keyset tests, ack≠resolve tests, exact count |
+| 8 Incident Detail | correlated evidence and explicit incident workflow | incident detail, assign/ack/annotate/resolve | Portal workflow record; source-attributed findings | `FOUNDATION_COMPLETE` | EX-BE-05a/05b/06 | completeness badges, optimistic concurrency, evidence-required resolution and redaction tests |
+| 9 Command Center | ranked snapshot plus loss-detectable realtime | command-center snapshot and SSE | mixed per row; DERIVED ranking; epoch/sequence freshness | `INTEGRATION_PENDING` | EX-BE-03/04b/06 | snapshot/SSE parity, completeness, overlap+jitter resnapshot, slow-consumer and auth-expiry tests |
+| 10 Sandbox Certification | auditable certification state machine | certification read/decide/promote plan | Portal record; EXECUTION/BROKER/DERIVED panels | `FOUNDATION_COMPLETE` | EX-BE-03/05a/05b; TS sandbox capabilities | state-transition/property tests, stale evidence denial, command production inactive |
+| 11 Canary Control Room | observe versioned envelope and guarded live canary | canary query/series; later protective operations | EXECUTION/BROKER/DERIVED panels; Portal envelope record | `PRODUCTION_INACTIVE` | EX-BE-00R4/03/04b/05b/06; owner live-canary gate | profile-labelled read shadow parity, envelope/rollback tests, dual approval, explicit activation decision |
+| 12 Live Full Operations | continuous live truth with gap visibility | live query/series/SSE; later R3/R4 operations | EXECUTION/BROKER/DERIVED; gaps become stale | `PRODUCTION_INACTIVE` | phase 11 evidence + EX-BE-00R4/08 | no-gap soak, ambiguous-result drills, capital envelope and rollback rehearsal |
+| 13 Paper Workbench VNM | venue-aware Paper behavior | deployment query + venue session | EXECUTION plus authoritative venue calendar | `INTEGRATION_PENDING` | EX-BE-03/04b; venue contract; ATO/ATC decision | open/lunch/closed/holiday/timezone fixtures; server age/precision contract; no browser clock inference |
+| 14 Full Blotter | 182k-row scalable blotter and lifecycle | blotter page/aggregate/funnel | EXECUTION/BROKER/DERIVED | `INTEGRATION_PENDING` | EX-BE-03/04b/07 | bidirectional keyset, exact count, full-filter aggregate, missing-stage funnel and decimal tests |
+| 15 Alpha 360 | portfolio-specific alpha execution view | alpha detail/series/batched previews | RESEARCH/EXECUTION/DERIVED | `INTEGRATION_PENDING` | EX-BE-03/04b/07 | required echoed `portfolio_id`, capped batch, no N+1, lineage/evidence links |
+| 16 Portfolio 360 | scalable portfolio analytics without false totals | portfolio detail/correlation/capital ledger | EXECUTION/BROKER/DERIVED | `INTEGRATION_PENDING` | EX-BE-03/04b/07 | 150×150 load, packed symmetry, ranked-pair fallback, currency isolation |
+| 17 Account/Broker 360 | binding-wide exposure over full population | account detail + binding exposure | EXECUTION/BROKER/DERIVED | `INTEGRATION_PENDING` | EX-BE-03/04b/07 | 500 accounts/~5 bindings fixture; page-independent totals; partial source handling |
 | 18 Hardening | release evidence, observability, rollback and DR | health/capabilities/metrics/admin diagnostics | all authority preserved | `OPERATIONAL_EVIDENCE_PENDING` | phases 1–17 target subset + EX-BE-08 | contract/integration/replay/load/security gates, SLO burn test, restore and rollback rehearsal |
 
 ### 12.3 Delivery profiles and stop gates
@@ -725,6 +852,13 @@ Every screen moves independently through:
 4. `sandbox`: sandbox capabilities after certification evidence;
 5. `live_canary`: live reads first, then tightly scoped protective commands;
 6. `live_full`: only after owner approval, operational evidence, and rollback rehearsal.
+
+Registry revision 4 is the authority for the active profile and policy of every
+commissioned screen. Every backend envelope echoes `delivery_profile`; a composed
+screen may return a stricter profile on an individual panel. `fixture` and `shadow`
+must be visibly labelled by the frontend's `ProfileBadge`. A shadow response contains
+real observations but is never rendered or audited as live authority. A registry/
+envelope mismatch is fail-closed and makes the affected panel `UNAVAILABLE`.
 
 Feature flags are separate for query, projection ingestion, SSE, Paper commands,
 Sandbox commands, Live protective commands, and Live risk-increasing commands.
@@ -744,11 +878,11 @@ System to make a Portal test pass.
 | Registry/contracts | schema validation, route/ID uniqueness, revision compatibility, generated fixture parity, unknown-enum handling, Decimal and RFC3339 round trips |
 | Adapter | golden source requests/responses/errors for every supported digest/schema; capability probe snapshots; incompatible-version fail-closed |
 | Projection | reducer property tests, duplicate/out-of-order input, cursor collision, epoch swap, dead-letter replay, snapshot+delta parity, six-month rebuild |
-| Query | keyset stability under inserts, filter/sort allowlist, exact counts, full-population aggregate, currency isolation, ≤5,000 point ladder, missing/partial data |
-| Realtime | snapshot/SSE convergence, reconnect within retention, epoch mismatch, injected gaps, heartbeats, slow consumer, bounded buffers, token expiry/revocation |
-| Commands | plan hash, expiry, stale expected version, SoD, idempotent apply, duplicate delivery, timeout, 202 non-terminal, DEAD/PARTIAL/UNCERTAIN, verify and rollback |
+| Query | bidirectional keyset stability under inserts/eviction, filter/sort allowlist, exact counts, full-population aggregate, currency isolation, adaptive ≤5,000-point ladder with zoom re-query, typed cold-retention and missing/partial data |
+| Realtime | snapshot/SSE convergence, source-completeness labels, reconnect within retention, overlapping epoch cutover with server jitter, injected gaps, heartbeats, slow consumer, bounded buffers, token expiry/revocation |
+| Commands | plan `request_key` replay/hash conflict/expiry, stale expected version, SoD, idempotent apply, duplicate delivery, timeout, 202 non-terminal, DEAD/PARTIAL/UNCERTAIN target-lock matrix, reconciliation, verify and rollback |
 | Security | RBAC/ABAC matrix, CSRF, mTLS failure, JWT audience/scope/replay, secret/log redaction, artifact URL expiry, rate-limit and privilege escalation tests |
-| Operational | SLO metrics, trace propagation SGP→AWS→TS, backup restore, projection rebuild, adapter rollback, network partition and dependency degradation |
+| Operational | server-age/clock-skew and nullable lag semantics, profile propagation, cold-retention response, SLO metrics, trace propagation SGP→AWS→TS, backup restore, projection rebuild, adapter rollback, network partition and dependency degradation |
 
 ### 13.2 Performance qualification
 
@@ -758,15 +892,32 @@ Use deterministic synthetic/captured-redacted corpora at the locked scale:
 - 182,000 six-month order/fill rows with concurrent inserts;
 - ~100 accounts per broker binding for aggregate correctness;
 - event burst 14/min plus explicit 10× safety burst for buffer behavior;
-- 100×100 correlations and >150 fallback corpus;
+- 100-asset normal correlations, 150×150 qualification cap, and >150 fallback corpus;
 - worst-window chart requests proving hard cap 5,000;
 - 100 concurrent SSE clients initially, then measure before setting production cap.
 
 Targets are measured at the Portal edge, not asserted from unit tests: query p50/p95/
 p99, upstream time, rows scanned, memory/RSS, allocation pressure, projection lag,
-SSE queue depth/drops/reconnects, and TypeScript proxy overhead. The initial product
-target is p95 under the screen SLO at locked scale; p99 and RSS are release evidence,
-not omitted because p95 passed.
+SSE queue depth/drops/reconnects, and TypeScript proxy overhead.
+
+The provisional product budgets from the v0.7 design spec apply until measured,
+owner-approved baselines replace them:
+
+| Query class | Provisional p95 budget |
+|---|---:|
+| Current-state read inside one cell | <200 ms |
+| Cross-cell Browser/BFF read | <500 ms |
+| Cached chart | <500 ms |
+| Uncached medium chart | <1.5 s |
+| First Portal event after an authoritative source commit | <2 s target, only for an event-supported source class |
+| Correlation snapshot age | <5 minutes by default |
+| Command-plan acknowledgement | <500 ms |
+
+There is deliberately no invented end-to-end command-completion SLO: it depends on
+the source command, broker and reconciliation contract. These are interaction budgets,
+not availability promises. Qualification records p50/p95/p99, upstream time, RSS,
+rows scanned and the exact corpus/revision. A budget may be replaced only by measured
+evidence and an owner decision; p99 and RSS remain release evidence even when p95 passes.
 
 ### 13.3 CI gates
 
@@ -799,6 +950,15 @@ and long-lived SSE/command soak. No gate is reported passed when its dependency
 Separate security groups deny browser ingress to the Rust edge and deny all Portal
 access to broker networks except the explicit Trading System API path. Environments
 have separate identities, databases, keys, flags, and audit streams.
+
+Browser→Cloudflare/origin production qualification must prove HTTP/2 or HTTP/3 for
+the same-origin SSE route and ordinary fetches. An HTTP/1.1 downgrade is a failed
+realtime gate because per-origin connection limits can let long-lived streams starve
+queries. The application opens at most one multiplexed SSE connection per active
+screen, exposes the negotiated protocol in diagnostics, and continuously probes
+snapshot/fetch latency while that stream is open. Private TypeScript→Rust transport
+uses independently pooled authenticated connections and cannot consume the browser's
+connection budget.
 
 ### 14.2 Release sequence
 
@@ -841,19 +1001,20 @@ an explicit contract version; it does not discover behavior by trial on a mutati
   edge records a hashed source correlation ID and documents the break.
 
 Recovery objectives and final SLO numbers require owner approval after measured
-baseline. Until then, they are release criteria to define, not invented guarantees.
+baseline. Until then, §13.2 budgets guide UX and qualification but are not production
+availability guarantees.
 
 ## 15. BR-EX rulings and explicit Trading System requests
 
-### 15.1 Decisions on all fifteen frontend requests
+### 15.1 Decisions on all twenty-two frontend requests
 
 | Request | Ruling | Backend contract and reason | Unblocks |
 |---|---|---|---|
 | BR-EX-01 keyset pagination | **ACCEPT** | opaque signed cursor, stable ID tie-break, default 100/max 250; prevents offset drift at 182k rows | 1, 7, 14 |
 | BR-EX-02 server filter/sort | **ACCEPT** | allowlisted filters/sorts execute before count/page/aggregate and are echoed; browser filtering is not truth | 1, 7, 14 |
 | BR-EX-03 exact counts | **ACCEPT** | exact `total_count` for workflow/blotter safety surfaces; never “loaded row count” | 1, 14 |
-| BR-EX-04 chart downsampling | **MODIFY** | client requests range/intent; server selects the interval ladder and enforces ≤5,000, returning chosen interval | 4, 11, 12, 15 |
-| BR-EX-05 performance target | **MODIFY** | qualify p95 at edge against product SLO and record p50/p99/RSS/rows scanned; a latency number without source/scale is invalid | hardening |
+| BR-EX-04 chart downsampling | **MODIFY** | client requests range/intent; server selects the `1m/5m/15m/1h/4h/1d` ladder's finest interval at ≤5,000 points and returns it | 4, 11, 12, 15 |
+| BR-EX-05 zoom/performance | **ACCEPT + MODIFY** | zoom that admits a finer rung re-queries the server; qualify p95 at edge and record p50/p99/RSS/rows scanned at a named source/scale | 4, 11, 12, 15, hardening |
 | BR-EX-06 batched previews | **ACCEPT** | one capped typed batch with per-item errors/freshness; eliminates N+1 | 15 |
 | BR-EX-07 correlation payload | **MODIFY** | packed triangle + labels/clusters through 150; ranked pairs/clusters above cap, never an unbounded square JSON matrix | 16 |
 | BR-EX-08 ranked triage | **ACCEPT** | server ranks a capped candidate set; formula/version/input freshness returned | 9 |
@@ -864,8 +1025,15 @@ baseline. Until then, they are release criteria to define, not invented guarante
 | BR-EX-13 order funnel | **ACCEPT** | server reconstructs ordered lifecycle with source IDs/times and explicit missing/partial stages | 14 |
 | BR-EX-14 binding aggregate exposure | **ACCEPT** | aggregate across all virtual accounts behind a binding and full filter population, bucketed by currency, independent of page | 17 |
 | BR-EX-15 portfolio context | **ACCEPT** | `portfolio_id` required and echoed for portfolio-dependent alpha metrics/cache keys | 15 |
+| BR-EX-16 source completeness | **ACCEPT** | each entity class is `EVENT_SOURCED`, `POLL_BOUNDED` with interval, or `UNKNOWN`; projection sequence cannot overclaim source completeness | 8, 11, 12 |
+| BR-EX-17 bidirectional keyset | **ACCEPT** | mutually exclusive `after`/`before` plus `next_cursor`/`prev_cursor`, stable sort and immutable-ID tie-break | 1, 7, 14 |
+| BR-EX-18 idempotent plan | **ACCEPT** | client `request_key` deduplicates same intent within plan validity; mismatched reuse is `409` | 6 |
+| BR-EX-19 server age and lag | **ACCEPT** | server computes `age_seconds`; `lag_ms` is nullable observable projection-processing lag, never source completeness | 3, 13 |
+| BR-EX-20 delivery profile | **ACCEPT** | registry revision 4 carries per-screen profile; every envelope echoes it and panels may be stricter | 0, 11, 12 |
+| BR-EX-21 uncertain outcome | **ACCEPT with safety split** | automatic retry stops, reconciliation/incident continues, risk-increasing same-target commands block; only freshly replanned provably safe protective desired state may proceed | 6, 8, 11, 12 |
+| BR-EX-22 provisional SLOs | **ACCEPT** | §13.2 adopts v0.7 §21.4 budgets until measured owner-approved baselines replace them | 1–18 |
 
-These decisions remove BR-EX design uncertainty. They do not mark production
+These twenty-two decisions remove BR-EX design uncertainty. They do not mark production
 integration complete; each phase still depends on the implementation and evidence
 listed in §12.
 
@@ -877,15 +1045,16 @@ production-activation requests, prioritized as follows:
 | Priority | Request | Why Portal needs it | Safe behavior while absent |
 |---:|---|---|---|
 | P0 | mandatory auth on every gateway route; dedicated per-environment read and command credentials | current optional `X-API-Key` is insufficient as an external boundary | private edge only; commands disabled |
-| P0 | stable capability/version endpoint tied to image digest and schema | deterministic adapter selection | pin known digest and fail closed on mismatch |
+| P0 | complete runtime `/v1/contracts`/revision/capability identity tied to image digest and schema | deterministic adapter selection and rollout truth | pin known digest and fail closed on mismatch |
 | P0 | command-journal rollout evidence, acknowledgement semantics, idempotency and terminal-state corpus | all observed journal rows are DEAD and ack false | read/shadow only; no production command activation |
 | P0 | global monotonic event/delta contract or equivalent cursor guarantee | loss detection and efficient realtime projection | use tuple cursor + snapshots; show gaps/staleness explicitly |
 | P1 | event coverage beyond `ORDER_STATUS` for runtime/risk/account/fill/reconciliation changes | accurate low-lag Command Center and live screens | bounded polling/snapshot; affected panels PARTIAL |
 | P1 | server-side keyset/source paging and change-watermark reads | scalable projection and lower upstream load | edge keyset over local projection; bounded source polls |
+| P1 | compact authenticated HTTP reads for current account/broker-sync state, performance/equity, risk, reconciliation and valuation projections | avoid expensive raw-history polling and preserve schema-guide semantics | mark capability partial/unavailable; never query source tables directly |
 | P1 | trace/correlation IDs and operational metrics | end-to-end diagnosis and SLO attribution | edge correlation plus documented trace break |
 | P1 | HTTP equivalents for any CLI-only read/command gaps | typed, authenticated, observable integration | capability disabled; no shelling into TS hosts |
 | P1 | authoritative venue calendar/session/auction capability, including ATO/ATC decision | correct VNM PAUSED/open/action policy | calendar display with source label; auction actions disabled |
-| P2 | optional SELECT-only database role scoped to documented views | only if API projection cannot meet verified SLO/correctness | remain API-only; no direct DB assumption |
+| P2 | jointly reviewed versioned HTTP projection endpoint if existing V1 reads cannot meet verified SLO/correctness | preserve the API boundary while reducing source load | remain API-only; no direct DB assumption |
 
 Any granted request becomes a new contract-pack revision, adapter fixture, threat-model
 update, compatibility test, and owner activation decision. It does not silently
@@ -901,7 +1070,34 @@ change Portal behavior.
 5. Decide VNM authoritative calendar source and ATO/ATC scope.
 6. Approve command-journal readiness evidence from the Trading System owner.
 7. Approve SLOs and activation profiles after measured shadow/load baselines.
+8. Choose the default display timezone. Wire/storage remains RFC3339 UTC; user
+   preferences use an IANA timezone, and venue-session labels additionally show the
+   venue timezone. Freshness is always server-computed, never derived from browser time.
+9. Approve HTTP/2/HTTP/3 production evidence for the public same-origin SSE path.
 
 Until these decisions and their phase gates pass, the correct backend posture is
 contracts, fixtures, adapters, shadow reads, and explicit `PRODUCTION_INACTIVE` —
 not an undocumented shortcut into the Trading System.
+
+### 15.4 Disposition of `BACKEND_PLAN_REVIEW.md`
+
+| Finding | Disposition | Plan change |
+|---|---|---|
+| F-1 governance behind Rust/AWS | **ACCEPT** | split EX-BE-04a/04b and EX-BE-05a/05b; 04a→05a starts without AWS |
+| F-2 missing 5m rung | **ACCEPT** | adaptive six-rung ladder, finest interval at ≤5,000 points |
+| F-3 no backward cursor | **ACCEPT** | bidirectional keyset in §7.2 |
+| F-4 projection sequence overclaim | **ACCEPT** | source-completeness classification and edge→browser-only continuity claim |
+| F-5 epoch thundering herd | **ACCEPT** | previous-epoch overlap plus server-assigned resnapshot jitter |
+| F-6 non-idempotent plan | **ACCEPT** | client request key and payload-conflict semantics |
+| F-7 age/lag ambiguity | **ACCEPT** | trusted-server age and explicit nullable processing-lag definition |
+| F-8 profile invisible | **ACCEPT** | EX-BE-00R4, registry authority and envelope propagation |
+| F-9 uncertain follow-up | **ACCEPT with safety split** | no blind retry/expiry; incident/reconciliation plus target-aware command policy |
+| Smaller: 100 vs 150 | **ACCEPT** | 100 normal view, 150 contract/qualification cap, fallback above |
+| Smaller: HTTP/2 | **ACCEPT** | protocol becomes an explicit realtime deployment gate |
+| Smaller: cold retention | **ACCEPT** | typed `COLD_REQUESTABLE`, never an ordinary empty result |
+| Smaller: timezone | **OWNER DECISION** | UTC wire, IANA user preference and venue-zone labels are the proposed rule |
+
+This reconciliation changes only Portal contracts, sequencing and integration requests.
+It does not authorize a Trading System change or direct access to its PostgreSQL,
+Redis, broker network, host shell or CLI. A future Trading System contract revision is
+absorbed by a new Rust adapter and golden corpus behind the stable Portal contract.

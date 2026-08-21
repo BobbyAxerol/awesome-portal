@@ -734,6 +734,19 @@ deep-dive → ADR → slice → evidence discipline documented above.
   execution/risk/fill/accounting authority and Portal agents must not modify
   it. TypeScript remains Portal workflow/security authority; Python remains
   Research/QuantBT compute. No production integration has been activated.
+- **Execution Loop review reconciliation (2026-08-21):** frontend review
+  `BACKEND_PLAN_REVIEW.md` F-1–F-9 and BR-EX-16–22 are absorbed by master-plan
+  revision 2. Governance/query work is split into TypeScript `EX-BE-04a/05a`
+  and starts without AWS; Rust `EX-BE-01→02→03→04b→06` remains authoritative
+  for the Portal AWS-HK compatibility/projection/query/realtime fast path from
+  its first slice. The older BAR-14 profiling gate continues to govern optional
+  extraction from existing Research Python paths; it does not postpone this
+  explicitly approved Execution edge. `EX-BE-00R4` adds visible per-screen
+  delivery profiles before shadow/live wiring. Runtime probes/contract pack win
+  over schema prose or rollout checklists (currently 94 tables/2 views at runtime
+  versus 88 in the guide, and command journal observed OFF/ACK false/DEAD).
+  Portal requests versioned HTTP capabilities from Trading System and never
+  compensates with direct PostgreSQL, Redis, broker, shell or CLI access.
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**
