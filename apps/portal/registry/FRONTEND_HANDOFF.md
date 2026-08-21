@@ -692,3 +692,45 @@ sẽ nằm nguyên văn trong `docker compose logs control-api` và trong file j
 giao credential, hoặc ghi token ra fd riêng/secret store thay vì stdout. Frontend
 không chạm được phần này; màn Users & Access vẫn là đường chính thức để reset về sau
 (token chỉ hiện một lần, không lưu, không log).
+
+### 8.7 Execution Loop — scale & refine pass (2026-08-21)
+
+Bobby khoá scope đợt upgrade này về **Execution Loop** (Approval Gate trở về sau)
+và chốt số quy mô. Ghi ở `CLAUDE.md` §0 + §8; refine chi tiết nằm ở
+`upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/EXECUTION_SCALE_AND_REFINE.md`
+— thư mục đó là carve-out có chủ ý của rule "không sửa `upgrade/**`", phần
+`upgrade/**` còn lại vẫn nguyên là docs của codex.
+
+**Số Bobby chốt:** 50 alpha deploy · 5 venue · 1.000 order+fill/ngày · giữ
+order/fill 6 tháng · chart mặc định 1h tuỳ biến theo window.
+
+**Điều số liệu thật làm thay đổi kế hoạch** — ba lo ngại bị loại, không phải
+hoãn: (a) blotter 182k dòng thì `COUNT` chính xác chạy trong mili-giây → **bỏ
+approximate count**, không có nhãn `~` nào; (b) 1.000 event/ngày = 0,7/phút →
+**bỏ coalescing** và **bỏ WebSocket**, SSE phủ hết (spec §16.4 để dành WS cho
+"dense tape", đây không phải); (c) 5 venue vừa chip row như hi-fi → **không làm**
+overflow pattern. Ghi lại để sau này không ai mở lại ba việc đó.
+
+**Ba thứ thật sự vỡ và phải làm:** correlation 50×50 = 2.500 ô (matrix có nhãn
+→ heatmap clustering — spec §16.3 vốn đã viết "heatmap", lưới có nhãn trong hi-fi
+chỉ là hệ quả của cast 9 alpha); blotter 182k dòng cần keyset + virtualization,
+mà **funnel bung inline làm chiều cao dòng biến thiên — đúng thứ phá
+virtualization**; và 12 tile Insight Charts = 52k điểm trên một màn.
+
+**Thang resolution** suy từ trần ≤5.000 điểm/series của §16.4: ≤3d→1m ·
+≤30d→15m · ≤6mo→**1h mặc định** · ≤2y→4h · >2y→1d. Mọi nấc lọt dưới trần nên
+**không nấc nào cần downsample mất mát** — ta chọn interval đã aggregate sẵn chứ
+không decimate. Đây là cách sạch nhất thoả §16.3 "không smoothing làm đổi
+extrema", vì stride sampling chính là thứ xoá mất cây nến sụt giá.
+
+**13 Backend request `BR-EX-01..13`** nằm ở §4 tài liệu trên (keyset cursor,
+filter/sort server-side, count chính xác, series envelope, batch tile, correlation
+snapshot kèm clustering order, ranked triage, alert grouping, single subscription,
+sequence-gap semantics, instrument precision, funnel endpoint riêng). **Chưa gửi
+codex** — chờ backend plan để gửi một lượt thay vì nhỏ giọt.
+
+**Quyết định còn treo cho Bobby** (§7 tài liệu trên): vị trí theme Carbon (chặn
+mọi component dùng chung); funnel drawer hay virtualization biến thiên chiều cao
+(đề xuất: drawer); order/fill quá 6 tháng còn truy được không; và 50 alpha là
+**mỗi portfolio hay toàn hệ thống** — cái này đổi hẳn kích thước ma trận
+correlation, chọn sai thì phải dựng lại Phase 16.
