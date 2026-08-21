@@ -23,7 +23,7 @@ import {
 } from "../adapter";
 import type { RiskTier } from "../contracts";
 import { commandBlockedReason, type DeliveryPolicy } from "../profile";
-import { readApprovalRow, readGateR1Detail } from "./rows";
+import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./rows";
 import type {
   ApplyReceipt,
   ExecutionApi,
@@ -138,6 +138,28 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       return detail
         ? { ok: true as const, value: detail, warnings: detail.gaps }
         : unavailable("The review response could not be read.");
+    },
+
+    async getGateR2(approvalId: string) {
+      const blocked = readBlocked();
+      if (blocked) return unavailable(blocked);
+      const response = await get(`/governance/approvals/${encodeURIComponent(approvalId)}/r2`, signal);
+      if (!response.ok) return problem(response);
+      const detail = readGateR2Detail(await response.json());
+      return detail
+        ? { ok: true as const, value: detail, warnings: detail.gaps }
+        : unavailable("The R2 review response could not be read.");
+    },
+
+    async getPaperExit(reviewId: string) {
+      const blocked = readBlocked();
+      if (blocked) return unavailable(blocked);
+      const response = await get(`/governance/exit-reviews/${encodeURIComponent(reviewId)}`, signal);
+      if (!response.ok) return problem(response);
+      const detail = readPaperExitDetail(await response.json());
+      return detail
+        ? { ok: true as const, value: detail, warnings: detail.gaps }
+        : unavailable("The exit review response could not be read.");
     },
 
     async planDecision(input) {

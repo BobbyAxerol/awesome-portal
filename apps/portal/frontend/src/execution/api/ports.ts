@@ -12,7 +12,7 @@
  */
 import type { KeysetPage, PanelStatus } from "../contracts";
 import type { ApprovalRow } from "../screens/ApprovalInbox";
-import type { GateR1Detail } from "./rows";
+import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "./rows";
 
 export type Result<T> =
   | { ok: true; value: T; warnings?: readonly string[] }
@@ -50,10 +50,21 @@ export interface ExecutionApi {
   listApprovals(query: InboxQuery): Promise<Result<InboxResult>>;
   /** `GET /api/v1/execution/governance/approvals/{id}/r1` */
   getGateR1(approvalId: string): Promise<Result<GateR1Detail>>;
+  /** `GET /api/v1/execution/governance/approvals/{id}/r2` */
+  getGateR2(approvalId: string): Promise<Result<GateR2Detail>>;
+  /** `GET /api/v1/execution/governance/exit-reviews/{id}` */
+  getPaperExit(reviewId: string): Promise<Result<PaperExitDetail>>;
   /** `POST /api/v1/execution/commands/plans` */
   planDecision(input: {
+    /** Approval or exit-review identifier. One command type, two subjects. */
     approvalId: string;
-    decision: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION";
+    decision:
+      | "APPROVE"
+      | "DENY"
+      | "APPROVE_WITH_CONDITION"
+      | "PROMOTE"
+      | "EXTEND_OBSERVATION"
+      | "REJECT";
     reason: string;
     /** Optimistic concurrency. Rejected server-side if the approval moved. */
     expectedVersion: string | null;

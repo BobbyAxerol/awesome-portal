@@ -300,3 +300,271 @@ export function readGateR1Detail(raw: unknown): GateR1Detail | null {
 
 /** Re-exported so callers do not reach past this module into the adapter. */
 export { readDecimal, type MaybeKnown };
+
+/* ---------------------------------------------------------------------------
+ * Gate R2 (§10.3) and Paper Exit Review (§10.5)
+ * ------------------------------------------------------------------------ */
+
+import type {
+  CapitalDelta,
+  R1State,
+  R2Lock,
+  ReadinessGroup,
+} from "../screens/GateR2Review";
+import type { EvidencePanelSpec, ExitFinding } from "../screens/PaperExitReview";
+
+const R1_STATES: readonly R1State[] = [
+  "APPROVED",
+  "APPROVED_WITH_CONDITION",
+  "EXPIRED",
+  "DENIED",
+  "PENDING",
+  "MISSING",
+];
+
+const R2_LOCKS: readonly R2Lock[] = [
+  "SELF_APPROVAL",
+  "R1_NOT_VALID",
+  "CAPITAL_BREACH",
+  "EXPIRED",
+  "NOT_ELIGIBLE",
+];
+
+/**
+ * One row of the capital preview.
+ *
+ * `currency` is read separately rather than parsed out of the formatted value.
+ * Scale-refine note I-4: the capital diff is **per currency**, so a strip that
+ * implies one number is wrong the moment a portfolio holds two. A row that does
+ * not state its currency is returned with `currency: null` and the screen says
+ * so — guessing it from the digits is how a USDT figure and a VND figure end up
+ * stacked as though they added up.
+ */
+export function readCapitalDelta(raw: unknown): CapitalDelta | null {
+  const o = obj(raw);
+  if (!o) return null;
+  const label = str(o.label);
+  const before = str(o.before);
+  const after = str(o.after);
+  if (!label || !before || !after) return null;
+  return {
+    label,
+    before,
+    after,
+    currency: str(o.currency),
+    note: str(o.note),
+    breach: o.breach === true,
+  };
+}
+
+export function readReadinessGroup(raw: unknown): ReadinessGroup | null {
+  const o = obj(raw);
+  if (!o) return null;
+  const title = str(o.title);
+  if (!title) return null;
+  const entries = Array.isArray(o.entries)
+    ? o.entries.flatMap((e) => {
+        const eo = obj(e);
+        const label = eo && str(eo.label);
+        const value = eo && str(eo.value);
+        return label && value ? [{ label, value, revision: str(eo!.revision) }] : [];
+      })
+    : [];
+  return { title, entries };
+}
+
+export interface GateR2Detail {
+  approvalId: ApprovalId;
+  subject: string;
+  r1Id: ApprovalId | null;
+  r1State: R1State;
+  /** Where the R1 decision can be read. A reference nobody can open is a claim. */
+  r1Href: string | null;
+  deploymentCandidate: string | null;
+  releaseCandidate: string | null;
+  artifactDigest: string | null;
+  policyVersion: string;
+  planAuthor: string;
+  actor: string;
+  quorumMet: number;
+  quorumRequired: number;
+  sla: Sla | null;
+  readiness: readonly ReadinessGroup[];
+  capital: readonly CapitalDelta[];
+  grantName: string | null;
+  locks: readonly R2Lock[];
+  eligibility: Eligibility;
+  expectedVersion: string | null;
+  gaps: readonly string[];
+}
+
+export function readGateR2Detail(raw: unknown): GateR2Detail | null {
+  const o = obj(raw);
+  if (!o) return null;
+  const data = obj(o.data) ?? o;
+  const approval = obj(data.approval) ?? data;
+  const approvalId = readId(approval.approval_id ?? data.approval_id) as ApprovalId | null;
+  if (!approvalId) return null;
+
+  const gaps: string[] = [];
+  const r1 = obj(data.r1_reference) ?? {};
+  const r1Parsed = readEnum(r1.state ?? data.r1_state, R1_STATES);
+  if (r1Parsed && !r1Parsed.known) gaps.push(`r1.state="${r1Parsed.raw}"`);
+
+  const capitalRaw = Array.isArray(data.capital) ? data.capital : [];
+  const capital = capitalRaw.map(readCapitalDelta).filter((c): c is CapitalDelta => c !== null);
+  const unnamed = capital.filter((c) => !c.currency).length;
+  if (unnamed > 0) gaps.push(`${unnamed} capital rows did not state a currency`);
+
+  const locks: R2Lock[] = [];
+  const eligibilityObj = obj(data.eligibility);
+  for (const entry of Array.isArray(eligibilityObj?.locks) ? eligibilityObj.locks : []) {
+    const parsed = readEnum(entry, R2_LOCKS);
+    if (parsed?.known) locks.push(parsed.value);
+    else if (parsed) {
+      locks.push("NOT_ELIGIBLE");
+      gaps.push(`lock="${parsed.raw}" treated as NOT_ELIGIBLE`);
+    }
+  }
+
+  return {
+    approvalId,
+    subject: str(approval.subject_label) ?? approvalId,
+    r1Id: (readId(r1.approval_id ?? data.r1_id) as ApprovalId | null) ?? null,
+    // An unreadable R1 state is MISSING, the value that blocks. A reference we
+    // cannot understand is not a reference we may proceed on.
+    r1State: r1Parsed?.known ? r1Parsed.value : "MISSING",
+    r1Href: str(r1.href),
+    deploymentCandidate: str(approval.deployment_candidate),
+    releaseCandidate: str(approval.release_candidate),
+    artifactDigest: str(approval.artifact_digest),
+    policyVersion: str(approval.policy_version ?? data.policy_version) ?? "unversioned",
+    planAuthor: str(approval.plan_author ?? data.plan_author) ?? "unknown",
+    actor: str(data.actor) ?? "unknown",
+    quorumMet: int(approval.quorum_met) ?? 0,
+    quorumRequired: int(approval.quorum_required) ?? 0,
+    sla: readSla(approval.sla),
+    readiness: (Array.isArray(data.readiness) ? data.readiness : [])
+      .map(readReadinessGroup)
+      .filter((g): g is ReadinessGroup => g !== null),
+    capital,
+    grantName: str(data.grant_name),
+    locks,
+    eligibility: readEligibility(data.eligibility),
+    expectedVersion: str(approval.expected_version),
+    gaps,
+  };
+}
+
+/** One evidence finding, with the source it can be checked against. */
+export function readExitFinding(raw: unknown): ExitFinding | null {
+  const o = obj(raw);
+  if (!o) return null;
+  const label = str(o.label);
+  const outcome = readEnum(o.outcome, MARKS);
+  if (!label || !outcome) return null;
+  const base = {
+    label,
+    carriesTo: str(o.carries_to),
+    // §5's "Must work": every evidence number links its source. A number with
+    // nowhere to check it is an assertion, and this screen decides promotions.
+    href: str(o.href),
+    sourceLabel: str(o.source_label),
+  };
+  return outcome.known
+    ? { ...base, outcome: outcome.value }
+    : { ...base, label: `${label} — server reported "${outcome.raw}"`, outcome: "insufficient" };
+}
+
+export function readEvidencePanel(raw: unknown): EvidencePanelSpec | null {
+  const o = obj(raw);
+  if (!o) return null;
+  const title = str(o.title);
+  if (!title) return null;
+  return {
+    title,
+    source: str(o.source),
+    findings: (Array.isArray(o.findings) ? o.findings : [])
+      .map(readExitFinding)
+      .filter((f): f is ExitFinding => f !== null),
+    status: str(o.status) === "unavailable" ? "unavailable" : undefined,
+    reason: str(o.reason) ?? undefined,
+  };
+}
+
+export interface LineageRef {
+  label: string;
+  value: string;
+  href: string | null;
+}
+
+export interface PaperExitDetail {
+  reviewId: ApprovalId;
+  deploymentId: string;
+  subject: string;
+  promoteTo: string;
+  /** Server-evaluated. Never derived from the coverage numbers beside it. */
+  gateMet: boolean;
+  gateSummary: string | null;
+  policyId: string | null;
+  quorumMet: number;
+  quorumRequired: number;
+  approverRole: string | null;
+  sla: Sla | null;
+  /** artifact · R1 · R2 · observation policy · evidence pack digest (§5). */
+  lineage: readonly LineageRef[];
+  panels: readonly EvidencePanelSpec[];
+  recommendation: string | null;
+  expectedVersion: string | null;
+  eligibility: Eligibility;
+  gaps: readonly string[];
+}
+
+export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
+  const o = obj(raw);
+  if (!o) return null;
+  const data = obj(o.data) ?? o;
+  const review = obj(data.review) ?? data;
+  const reviewId = readId(review.review_id ?? data.review_id) as ApprovalId | null;
+  if (!reviewId) return null;
+
+  const gaps: string[] = [];
+  const lineage = (Array.isArray(data.lineage) ? data.lineage : []).flatMap((e) => {
+    const eo = obj(e);
+    const label = eo && str(eo.label);
+    const value = eo && str(eo.value);
+    return label && value ? [{ label, value, href: str(eo!.href) }] : [];
+  });
+
+  const panels = (Array.isArray(data.panels) ? data.panels : [])
+    .map(readEvidencePanel)
+    .filter((p): p is EvidencePanelSpec => p !== null);
+
+  const unlinked = panels.flatMap((p) => p.findings).filter((f) => !f.href).length;
+  if (unlinked > 0) gaps.push(`${unlinked} evidence findings carry no source link`);
+
+  // Never inferred from coverage: the policy can require more than the numbers
+  // beside it show. Absent means not met, which is the safe direction.
+  const gateMet = data.gate_met === true;
+  if (typeof data.gate_met !== "boolean") gaps.push("gate_met was not published; treated as unmet");
+
+  return {
+    reviewId,
+    deploymentId: readId(review.deployment_id) ?? "unknown",
+    subject: str(review.subject_label) ?? reviewId,
+    promoteTo: str(review.promote_to) ?? "the next stage",
+    gateMet,
+    gateSummary: str(data.gate_summary),
+    policyId: str(data.policy_id),
+    quorumMet: int(review.quorum_met) ?? 0,
+    quorumRequired: int(review.quorum_required) ?? 0,
+    approverRole: str(data.approver_role),
+    sla: readSla(review.sla),
+    lineage,
+    panels,
+    recommendation: str(data.recommendation),
+    expectedVersion: str(review.expected_version),
+    eligibility: readEligibility(data.eligibility),
+    gaps,
+  };
+}

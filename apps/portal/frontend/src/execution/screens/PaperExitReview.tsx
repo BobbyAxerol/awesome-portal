@@ -30,6 +30,14 @@ export interface ExitFinding {
   outcome: EvidenceMark;
   /** Where an `insufficient` finding goes next, e.g. sandbox certification. */
   carriesTo?: string | null;
+  /**
+   * Where this number can be checked — the sessions tab, the blotter, the
+   * portfolio panel. §5's "Must work" line asks for it on **every** evidence
+   * number, and the reason is that this screen decides a promotion: a figure
+   * with nowhere to check it is an assertion, and an assertion is not evidence.
+   */
+  href?: string | null;
+  sourceLabel?: string | null;
 }
 
 export interface EvidencePanelSpec {
@@ -45,10 +53,27 @@ export interface EvidencePanelSpec {
 /** The three branches. Each writes a different state — see `EXIT_OUTCOME`. */
 export type ExitOutcome = "PROMOTE" | "EXTEND_OBSERVATION" | "REJECT";
 
+/**
+ * The three branches, labelled with their consequence rather than their verb.
+ *
+ * §5 names them precisely — "Extend observation +14d", "Reject — back to Paper
+ * HELD", "Approve promotion" — and the specifics are the point. "Reject" alone
+ * does not tell a reviewer the deployment stops trading; "back to Paper HELD"
+ * does, and that is the difference between an informed decision and a verb.
+ */
 export const EXIT_OUTCOME: Record<ExitOutcome, { label: string; writes: string }> = {
-  PROMOTE: { label: "Approve promotion", writes: "promotion request created; the deployment stays in Paper until it is applied" },
-  EXTEND_OBSERVATION: { label: "Extend observation", writes: "observation window extended; the deployment continues in Paper" },
-  REJECT: { label: "Reject", writes: "exit denied; the deployment stays in Paper and the reason is recorded" },
+  PROMOTE: {
+    label: "Approve promotion",
+    writes: "promotion request created; the deployment stays in Paper until it is applied",
+  },
+  EXTEND_OBSERVATION: {
+    label: "Extend observation +14d",
+    writes: "observation window extended by 14 days; the deployment continues in Paper",
+  },
+  REJECT: {
+    label: "Reject — back to Paper HELD",
+    writes: "exit denied; the deployment returns to Paper HELD and the reason is recorded",
+  },
 };
 
 const MARK_TONE: Record<EvidenceMark, "good" | "warn" | "bad" | "mute"> = {
@@ -80,6 +105,15 @@ function Findings({ panel }: { panel: EvidencePanelSpec }) {
           {f.outcome === "insufficient" && f.carriesTo ? (
             <span className="exec-exit-carries">carries into {f.carriesTo}</span>
           ) : null}
+          {f.href ? (
+            <a className="exec-exit-source" href={f.href}>
+              {f.sourceLabel ?? "check source"} →
+            </a>
+          ) : (
+            // Stated, not omitted. An unlinked number on a promotion screen is
+            // the difference between evidence and an assertion.
+            <span className="exec-exit-unlinked">no source link</span>
+          )}
         </li>
       ))}
     </ul>
@@ -94,6 +128,7 @@ export function PaperExitReview({
   gateMet,
   gateSummary,
   policyId,
+  lineage,
   quorumMet,
   quorumRequired,
   approverRole,
@@ -122,6 +157,12 @@ export function PaperExitReview({
   /** `30 / 30 days · 312 / 300 trades · 2 / 2 restart cycles` */
   gateSummary?: string;
   policyId?: string;
+  /**
+   * artifact · R1 · R2 · observation policy · evidence-pack digest (§5).
+   * The chain that says what this promotion rests on; without it the reviewer
+   * is asked to trust four earlier decisions they cannot see.
+   */
+  lineage?: readonly { label: string; value: string; href?: string | null }[];
   quorumMet: number;
   quorumRequired: number;
   approverRole?: string;
@@ -175,6 +216,16 @@ export function PaperExitReview({
           {sla ? <SlaCell sla={sla} /> : null}
         </div>
         {gateSummary ? <div className="exec-exit-summary">{gateSummary}</div> : null}
+        {lineage?.length ? (
+          <div className="exec-exit-lineage">
+            {lineage.map((l) => (
+              <span key={l.label}>
+                <span className="exec-exit-lineage-label">{l.label}</span>{" "}
+                {l.href ? <a href={l.href}>{l.value}</a> : l.value}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </header>
 
       {status === "partial" ? (

@@ -38,9 +38,14 @@ import {
   screenDeliveryProfile,
 } from "./profile";
 import { KeysetTable, type Column } from "./components/table";
-import { readApprovalRow, readGateR1Detail } from "./api/rows";
+import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./api/rows";
 import { createFixtureApi } from "./api/fixtureApi";
-import { ApprovalInboxContainer, GateR1ReviewContainer } from "./screens/containers";
+import {
+  ApprovalInboxContainer,
+  GateR1ReviewContainer,
+  GateR2ReviewContainer,
+  PaperExitReviewContainer,
+} from "./screens/containers";
 import { createHttpApi } from "./api/httpApi";
 import {
   decisionReducer,
@@ -3185,5 +3190,173 @@ describe("the fixture API pages, so the container's paging is exercised", () => 
     if (!r.ok) return;
     expect(r.value.page.rows.length).toBe(2);
     expect(r.value.inertCount).toBe(2);
+  });
+});
+
+/* ===========================================================================
+ * Phase 3 and 5 — read back against IMPLEMENTATION_PHASES §3/§5 and the
+ * scale-refine cells, the same way Phase 1 was
+ * ======================================================================== */
+
+describe("Gate R2 — the capital preview names its currency", () => {
+  it("prints a currency for every row", () => {
+    // Scale-refine note I-4: the diff is per currency. A strip that implies one
+    // number is wrong the moment a portfolio holds two, and nothing about a
+    // stacked layout says otherwise.
+    render(
+      r2({
+        capital: [
+          { label: "allocated capital", currency: "USDT", before: "0.00", after: "50,000.00" },
+          { label: "portfolio weight", currency: "%", before: "0.0", after: "12.0" },
+        ],
+      }),
+    );
+    expect(screen.getByText("USDT")).toBeTruthy();
+    expect(screen.getByText("%")).toBeTruthy();
+  });
+
+  it("states a missing currency instead of implying one", () => {
+    const { container } = render(
+      r2({ capital: [{ label: "allocated capital", before: "0.00", after: "50,000.00" }] }),
+    );
+    const cells = [...container.querySelectorAll(".exec-gate-capital tbody td")].map(
+      (c) => c.textContent,
+    );
+    expect(cells).toContain("not stated");
+  });
+
+  it("reports unnamed currencies as a mapping gap", () => {
+    const d = readGateR2Detail({
+      data: {
+        approval: { approval_id: "AP-207" },
+        capital: [
+          { label: "a", before: "1", after: "2" },
+          { label: "b", currency: "USDT", before: "1", after: "2" },
+        ],
+      },
+    });
+    expect(d?.gaps.join(" ")).toContain("1 capital rows did not state a currency");
+  });
+});
+
+describe("Gate R2 — the R1 reference is openable", () => {
+  it("links to the R1 decision when a link was published", () => {
+    render(r2({ r1Href: "/governance/approvals/AP-201/r1" }));
+    const link = screen.getByRole("link");
+    expect(link.getAttribute("href")).toBe("/governance/approvals/AP-201/r1");
+  });
+
+  it("says so when no link was published rather than rendering a dead reference", () => {
+    const { container } = render(r2());
+    expect(container.querySelector("a")).toBeNull();
+    expect(screen.getByTitle(/No link to the R1 decision/)).toBeTruthy();
+  });
+
+  it("treats an unreadable R1 state as MISSING, which blocks", () => {
+    const d = readGateR2Detail({
+      data: { approval: { approval_id: "AP-207" }, r1_reference: { state: "PROBABLY_FINE" } },
+    });
+    expect(d?.r1State).toBe("MISSING");
+    expect(d?.gaps.join(" ")).toContain("PROBABLY_FINE");
+  });
+});
+
+describe("Paper Exit — evidence links its source", () => {
+  const linked = [
+    {
+      title: "Observation coverage",
+      findings: [
+        { label: "30 / 30 days", outcome: "pass" as const, href: "/deployments/paper/dep_94#sessions", sourceLabel: "sessions" },
+      ],
+    },
+  ];
+
+  it("renders a link for a number that has a source", () => {
+    // §5's "Must work": every evidence number links its source. This screen
+    // decides a promotion, and a figure with nowhere to check it is an
+    // assertion rather than evidence.
+    render(exitReview({ panels: linked }));
+    expect(screen.getByRole("link", { name: /sessions/ }).getAttribute("href")).toBe(
+      "/deployments/paper/dep_94#sessions",
+    );
+  });
+
+  it("states the absence of a source rather than leaving it blank", () => {
+    render(exitReview({ panels: [{ title: "Limits", findings: [{ label: "max DD ok", outcome: "pass" as const }] }] }));
+    expect(screen.getByText("no source link")).toBeTruthy();
+  });
+
+  it("counts unlinked findings as a mapping gap", () => {
+    const d = readPaperExitDetail({
+      data: {
+        review: { review_id: "EX-771" },
+        gate_met: true,
+        panels: [{ title: "x", findings: [{ label: "a", outcome: "pass" }, { label: "b", outcome: "pass", href: "/x" }] }],
+      },
+    });
+    expect(d?.gaps.join(" ")).toContain("1 evidence findings carry no source link");
+  });
+});
+
+describe("Paper Exit — lineage and consequence labels", () => {
+  it("shows what the promotion rests on", () => {
+    // Without it the reviewer is asked to trust four earlier decisions they
+    // cannot see.
+    render(
+      exitReview({
+        lineage: [
+          { label: "R1", value: "AP-118", href: "/governance/approvals/AP-118/r1" },
+          { label: "evidence pack", value: "ep_4471" },
+        ],
+      }),
+    );
+    expect(screen.getByRole("link", { name: "AP-118" })).toBeTruthy();
+    expect(screen.getByText("ep_4471")).toBeTruthy();
+  });
+
+  it("labels the branches with their consequence, not their verb", () => {
+    // "Reject" alone does not tell a reviewer the deployment stops trading.
+    render(exitReview());
+    expect(screen.getByRole("button", { name: "Extend observation +14d" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Reject — back to Paper HELD" })).toBeTruthy();
+  });
+
+  it("treats an unpublished gate verdict as unmet", () => {
+    // Absent is not met. Inferring it from the coverage numbers is the exact
+    // thing this screen must not do.
+    const d = readPaperExitDetail({ data: { review: { review_id: "EX-771" } } });
+    expect(d?.gateMet).toBe(false);
+    expect(d?.gaps.join(" ")).toContain("gate_met was not published");
+  });
+});
+
+describe("Gate R2 and Paper Exit on the port", () => {
+  it("loads an R2 review through the port with its currencies named", async () => {
+    const { container } = render(<GateR2ReviewContainer api={createFixtureApi()} approvalId="AP-207" />);
+    expect(await screen.findByText(/Capital change preview/)).toBeTruthy();
+    const cells = [...container.querySelectorAll(".exec-gate-capital tbody td")].map((c) => c.textContent);
+    expect(cells).toContain("USDT");
+    expect(cells).not.toContain("not stated");
+  });
+
+  it("loads an exit review through the port with every number linked", async () => {
+    const { container } = render(<PaperExitReviewContainer api={createFixtureApi()} reviewId="EX-771" />);
+    expect(await screen.findByText(/Observation coverage/)).toBeTruthy();
+    expect(container.querySelector(".exec-exit-unlinked")).toBeNull();
+    expect(container.querySelectorAll(".exec-exit-source").length).toBeGreaterThan(4);
+  });
+
+  it("blocks an R2 whose review could not be read, rather than rendering a blank gate", async () => {
+    const api = createFixtureApi({ unavailableEndpoints: ["getGateR2"] });
+    render(<GateR2ReviewContainer api={api} approvalId="AP-207" />);
+    expect(await screen.findByText(/not wired to a real endpoint/)).toBeTruthy();
+    expect(screen.getByText(/GATE R2/)).toBeTruthy();
+  });
+
+  it("runs an exit decision through the same 202 discipline", async () => {
+    render(<PaperExitReviewContainer api={createFixtureApi()} reviewId="EX-771" />);
+    const promote = await screen.findByRole("button", { name: "Approve promotion" });
+    promote.click();
+    expect(await screen.findByText(/This command has not been confirmed/)).toBeTruthy();
   });
 });

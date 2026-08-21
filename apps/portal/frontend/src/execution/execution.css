@@ -1440,3 +1440,50 @@
   color: var(--ink-mute);
   font-weight: 400;
 }
+
+/* §3: the R1 reference must be openable. A reference nobody can open is a
+ * claim, and this screen asks a reviewer to rely on it. */
+.exec-gate-r1link {
+  text-decoration: none;
+}
+
+/* §5: every evidence number links its source. An unlinked figure on a promotion
+ * screen is an assertion, so the absence is stated rather than left blank. */
+.exec-exit-source {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-decoration: none;
+}
+
+.exec-exit-source:hover {
+  text-decoration: underline;
+}
+
+.exec-exit-unlinked {
+  color: var(--warn);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+
+/* The lineage line: artifact · R1 · R2 · observation policy · evidence pack.
+ * What this promotion rests on, in one row. */
+.exec-exit-lineage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-soft);
+}
+
+.exec-exit-lineage-label {
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.exec-exit-lineage a {
+  color: var(--accent);
+  text-decoration: none;
+}

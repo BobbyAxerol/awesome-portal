@@ -12,7 +12,7 @@
  * finished `ApprovalRow` objects would test nothing.
  */
 import { readKeysetPage } from "../adapter";
-import { readApprovalRow, readGateR1Detail } from "./rows";
+import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./rows";
 import type {
   ApplyReceipt,
   ExecutionApi,
@@ -127,6 +127,106 @@ const R1_DETAIL: Record<string, unknown> = {
   ],
 };
 
+/* Wire-shaped, per master plan §10.3. Every capital row names its currency:
+ * a strip that implies one number is wrong the moment a portfolio holds two. */
+const R2_DETAIL: Record<string, unknown> = {
+  approval: {
+    approval_id: "AP-207",
+    subject_label: "Carry v3.2 → PF-MAIN · Paper · BINANCE",
+    deployment_candidate: "DC-91",
+    release_candidate: "RC-41",
+    artifact_digest: "sha256:9f3c1a…e2",
+    policy_version: "approval.v3",
+    plan_author: "Stan",
+    quorum_met: 0,
+    quorum_required: 2,
+    expected_version: "v3",
+    sla: { age_minutes: 960, budget_minutes: 1440 },
+  },
+  actor: "Lan",
+  r1_reference: { approval_id: "AP-201", state: "APPROVED", href: "/governance/approvals/AP-201/r1" },
+  eligibility: { can_approve: true, can_approve_with_condition: true, can_deny: true, locks: [] },
+  grant_name: "paper_activation_authorization",
+  readiness: [
+    {
+      title: "Account & risk plan",
+      entries: [
+        { label: "account (new)", value: "paper-binance-carry-v32", revision: "account policy rev 7" },
+        { label: "margin", value: "MARGIN · CROSS · 2x · settle USDT", revision: "account policy rev 7" },
+        { label: "risk profile", value: "max order 5,000 · DD 8% · daily loss 3%", revision: "rev 12" },
+        { label: "matcher config", value: "taker 4.0bp · latency 120ms", revision: "rev 3" },
+      ],
+    },
+  ],
+  capital: [
+    { label: "allocated capital", currency: "USDT", before: "0.00", after: "50,000.00" },
+    { label: "max capital", currency: "USDT", before: "0.00", after: "100,000.00" },
+    { label: "portfolio weight", currency: "%", before: "0.0", after: "12.0" },
+    { label: "concentration top-3", currency: "%", before: "44.0", after: "46.0", note: "within policy ceiling 55%" },
+  ],
+};
+
+const EXIT_DETAIL: Record<string, unknown> = {
+  review: {
+    review_id: "EX-771",
+    deployment_id: "dep_94",
+    subject_label: "Grid v2.1 · dep_94 · DERIBIT",
+    promote_to: "SANDBOX_VALIDATION",
+    quorum_met: 0,
+    quorum_required: 1,
+    expected_version: "v2",
+    sla: { age_minutes: 240, budget_minutes: 2880 },
+  },
+  actor: "Lan",
+  approver_role: "Ops Approver",
+  gate_met: true,
+  gate_summary: "30 / 30 days · 312 / 300 trades · 2 / 2 restart cycles",
+  policy_id: "obs_29",
+  eligibility: { can_approve: true, can_approve_with_condition: true, can_deny: true },
+  recommendation: "Approve promotion with the carried capacity condition.",
+  lineage: [
+    { label: "artifact", value: "sha256:41bb7d…c4" },
+    { label: "R1", value: "AP-118", href: "/governance/approvals/AP-118/r1" },
+    { label: "R2", value: "AP-152", href: "/governance/approvals/AP-152/r2" },
+    { label: "observation policy", value: "obs_29" },
+    { label: "evidence pack", value: "ep_4471 · digest e9a2…" },
+  ],
+  panels: [
+    {
+      title: "Observation coverage",
+      source: "obs_29",
+      findings: [
+        { label: "30 / 30 days · 312 / 300 trades · 2 / 2 restart cycles", outcome: "pass", href: "/deployments/paper/dep_94#sessions", source_label: "sessions" },
+        { label: "data freshness violations: 0 · coverage 99.6%", outcome: "pass", href: "/deployments/paper/dep_94#sessions", source_label: "sessions" },
+      ],
+    },
+    {
+      title: "Drift vs approved evidence",
+      source: "run_5498",
+      findings: [
+        { label: "hit rate −1.1pt · avg trade net −0.04pt — within band", outcome: "pass", href: "/research/quantbt/runs/run_5498", source_label: "run 5498" },
+        { label: "fee drag +0.006pt · signal→fill +70ms — non-blocking", outcome: "watch", href: "/deployments/blotter?deployment=dep_94", source_label: "blotter" },
+        { label: "slippage", outcome: "insufficient", carries_to: "sandbox certification", href: "/deployments/blotter?deployment=dep_94", source_label: "blotter" },
+      ],
+    },
+    {
+      title: "Limits & operational health",
+      findings: [
+        { label: "max DD −1.4% / 6% · worst daily loss −0.6% / 3%", outcome: "pass", href: "/deployments/paper/dep_94", source_label: "workbench" },
+        { label: "rejects 0.2% / 0.5% · dead letters 0", outcome: "pass", href: "/execution/operations?deployment=dep_94", source_label: "operations" },
+      ],
+    },
+    {
+      title: "Portfolio fit — observed vs expected",
+      source: "720 samples · corr.v1",
+      findings: [
+        { label: "ρ vs benchmark: expected 0.18 → observed 0.21 — within band", outcome: "pass", href: "/deployments/portfolios/pf_main", source_label: "portfolio" },
+        { label: "contribution +1,842.00 USDC · concentration unchanged", outcome: "pass", href: "/deployments/portfolios/pf_main", source_label: "portfolio" },
+      ],
+    },
+  ],
+};
+
 /**
  * The verification sequence a poll walks.
  *
@@ -234,6 +334,30 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       return detail
         ? { ok: true as const, value: detail, warnings: detail.gaps }
         : unavailable("The review response could not be read.");
+    },
+
+    async getGateR2(approvalId: string) {
+      const blocked = gate<ReturnType<typeof readGateR2Detail>>("getGateR2");
+      if (blocked) return blocked as Result<never>;
+      const detail = readGateR2Detail({
+        ...R2_DETAIL,
+        approval: { ...(R2_DETAIL.approval as object), approval_id: approvalId },
+      });
+      return detail
+        ? { ok: true as const, value: detail, warnings: detail.gaps }
+        : unavailable("The R2 review response could not be read.");
+    },
+
+    async getPaperExit(reviewId: string) {
+      const blocked = gate<ReturnType<typeof readPaperExitDetail>>("getPaperExit");
+      if (blocked) return blocked as Result<never>;
+      const detail = readPaperExitDetail({
+        ...EXIT_DETAIL,
+        review: { ...(EXIT_DETAIL.review as object), review_id: reviewId },
+      });
+      return detail
+        ? { ok: true as const, value: detail, warnings: detail.gaps }
+        : unavailable("The exit review response could not be read.");
     },
 
     async planDecision(input) {

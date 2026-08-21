@@ -36,7 +36,12 @@ import { KeysetTable, type Column } from "./components/table";
 import { ApprovalInbox, type ApprovalRow } from "./screens/ApprovalInbox";
 import { GateR1Review } from "./screens/GateR1Review";
 import { GateR2Review } from "./screens/GateR2Review";
-import { ApprovalInboxContainer, GateR1ReviewContainer } from "./screens/containers";
+import {
+  ApprovalInboxContainer,
+  GateR1ReviewContainer,
+  GateR2ReviewContainer,
+  PaperExitReviewContainer,
+} from "./screens/containers";
 import { createFixtureApi } from "./api/fixtureApi";
 import { PaperExitReview } from "./screens/PaperExitReview";
 import {
@@ -263,11 +268,13 @@ const R2_READINESS = [
   },
 ];
 
+/* Currency is its own column, not baked into the value. Two rows in different
+ * currencies stacked as bare numbers read as though they add up. */
 const R2_CAPITAL = [
-  { label: "allocated capital", before: "0.00 USDT", after: "50,000.00 USDT" },
-  { label: "max capital", before: "0.00 USDT", after: "100,000.00 USDT" },
-  { label: "portfolio weight", before: "0.0%", after: "12.0%" },
-  { label: "concentration top-3", before: "44.0%", after: "46.0%", note: "within policy ceiling 55%" },
+  { label: "allocated capital", currency: "USDT", before: "0.00", after: "50,000.00" },
+  { label: "max capital", currency: "USDT", before: "0.00", after: "100,000.00" },
+  { label: "portfolio weight", currency: "%", before: "0.0", after: "12.0" },
+  { label: "concentration top-3", currency: "%", before: "44.0", after: "46.0", note: "within policy ceiling 55%" },
 ];
 
 const R2_CAPITAL_ENVELOPE: Envelope = {
@@ -951,6 +958,12 @@ export default function ExecutionFixtures() {
             </Case>
             <Case caption="an operation that ends UNCERTAIN — the trail stays, because the question does">
               <GateR1ReviewContainer api={UNCERTAIN_API} approvalId="AP-201" />
+            </Case>
+            <Case caption="gate R2 through the port — every capital row names its currency">
+              <GateR2ReviewContainer api={WIRED_API} approvalId="AP-207" />
+            </Case>
+            <Case caption="paper exit through the port — every evidence number links its source">
+              <PaperExitReviewContainer api={WIRED_API} reviewId="EX-771" />
             </Case>
           </div>
         </Group>

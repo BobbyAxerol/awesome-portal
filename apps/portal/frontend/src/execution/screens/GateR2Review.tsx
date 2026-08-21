@@ -47,11 +47,22 @@ const R1_TONE: Record<R1State, "good" | "warn" | "bad" | "mute"> = {
   MISSING: "bad",
 };
 
-/** One `before → after` row of the capital preview. */
+/**
+ * One `before → after` row of the capital preview.
+ *
+ * `currency` is its own field, and the screen refuses to render a row without
+ * one. Scale-refine note I-4: the capital diff is **per currency**, so a strip
+ * that implies a single number is wrong the moment a portfolio holds two —
+ * a USDT figure stacked above a VND figure reads as though they add up, and
+ * nothing about the layout says otherwise. A percentage row is the exception
+ * and declares itself with `currency: "%"`.
+ */
 export interface CapitalDelta {
   label: string;
   before: string;
   after: string;
+  /** Currency code, or `%` for a ratio. `null` renders as a stated gap. */
+  currency?: string | null;
   /** `within policy ceiling 55%` — the rule the after value was checked against. */
   note?: string | null;
   /** True when `after` breaches a policy ceiling. Blocks approval. */
@@ -92,6 +103,7 @@ export function GateR2Review({
   subject,
   r1Id,
   r1State,
+  r1Href,
   deploymentCandidate,
   releaseCandidate,
   artifactDigest,
@@ -119,6 +131,8 @@ export function GateR2Review({
   subject: string;
   r1Id: ApprovalId | null;
   r1State: R1State;
+  /** Where the R1 decision can be read. A reference nobody can open is a claim. */
+  r1Href?: string | null;
   deploymentCandidate?: string;
   releaseCandidate?: string;
   artifactDigest?: string;
@@ -182,10 +196,23 @@ export function GateR2Review({
         <div className="exec-gate-kicker">GATE R2 · Operational Readiness</div>
         <div className="exec-tile-title">{subject}</div>
         <div className="exec-gate-meta">
-          <StatusChip
-            label={r1Id ? `R1 ${r1State} · ${r1Id}` : `R1 ${r1State}`}
-            tone={R1_TONE[r1State]}
-          />
+          {/* §3 "Must work": the R1 reference links to the R1 decision. A
+              reviewer asked to rely on a prior approval has to be able to open
+              it, and a reference that cannot be opened is only a claim. */}
+          {r1Href ? (
+            <a href={r1Href} className="exec-gate-r1link">
+              <StatusChip
+                label={r1Id ? `R1 ${r1State} · ${r1Id}` : `R1 ${r1State}`}
+                tone={R1_TONE[r1State]}
+              />
+            </a>
+          ) : (
+            <StatusChip
+              label={r1Id ? `R1 ${r1State} · ${r1Id}` : `R1 ${r1State}`}
+              tone={R1_TONE[r1State]}
+              title={r1Id ? "No link to the R1 decision was published." : undefined}
+            />
+          )}
           <StatusChip
             label={`PENDING ${quorumMet}/${quorumRequired}`}
             tone={quorumMet >= quorumRequired ? "good" : "mute"}
@@ -264,6 +291,7 @@ export function GateR2Review({
               <thead>
                 <tr>
                   <th scope="col" />
+                  <th scope="col">currency</th>
                   <th scope="col">before</th>
                   <th scope="col">after approval</th>
                 </tr>
@@ -272,6 +300,11 @@ export function GateR2Review({
                 {capital.map((row) => (
                   <tr key={row.label} data-breach={row.breach ? "true" : undefined}>
                     <th scope="row">{row.label}</th>
+                    <td>
+                      {row.currency ?? (
+                        <span className="exec-gate-unverified">not stated</span>
+                      )}
+                    </td>
                     <td>{row.before}</td>
                     <td>
                       {row.after}

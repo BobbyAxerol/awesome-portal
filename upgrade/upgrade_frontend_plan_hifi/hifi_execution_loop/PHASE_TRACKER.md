@@ -40,9 +40,9 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 0 | Shell & shared components | **DONE** | `CONTRACT_COMPLETE` | — EX-BE-00R4 delivered | FE: 42 tests · build · visual baseline **drifted, see §9**; BE: registry rev 4 · 17 fixture profiles · fail-closed policy tests · generated OpenAPI/TS contract |
 | 1 | Approval Inbox (4a) | `WIP` (screen + adapter complete; awaiting data) | `OPERATIONAL_EVIDENCE_PENDING` | registry activation (`query_enabled`) — **not** the fresh-PG rerun | EX-BE-05a endpoint over EX-BE-04a; FE adapter reconciled against the §5 field map; FE runs on `createFixtureApi` |
 | 2 | Gate R1 Review (1a) | `WIP` (adapter built, on the port) | `OPERATIONAL_EVIDENCE_PENDING` | registry activation (`query_enabled`) — **not** the fresh-PG rerun | immutable evidence + plan/apply/poll + SoD/concurrency/audit implemented; FE obeys `eligibility.can_*` separately |
-| 3 | Gate R2 Review (1b) | `WIP` (states built) | `FOUNDATION_COMPLETE` | EX-BE-03/05a/07 capital preview | master plan §§10.3, 12.2 |
+| 3 | Gate R2 Review (1b) | `WIP` (screen + adapter, on the port) | `FOUNDATION_COMPLETE` | EX-BE-03/05a/07 capital preview | master plan §§10.3, 12.2 |
 | 4 | Paper Workbench (1c) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/04b; M7 evidence | adaptive six-rung server charts; master plan §§10.4, 15.1 |
-| 5 | Paper Exit Review (4b) | `WIP` (states built) | `FOUNDATION_COMPLETE` | EX-BE-03/05a evidence integration | master plan §§10.5, 12.2 |
+| 5 | Paper Exit Review (4b) | `WIP` (screen + adapter, on the port) | `FOUNDATION_COMPLETE` | EX-BE-03/05a evidence integration | master plan §§10.5, 12.2 |
 | 6 | Admin Action Drawer (1i) | `READY`¹ | `FOUNDATION_COMPLETE` | EX-BE-02/05b; TS command capability | request-key/UNCERTAIN contract §7.3; production disabled |
 | 7 | Operations Queue (4e) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-05b operation integration | EX-BE-04a bidirectional keyset delivered; ack≠resolve remains |
 | 8 | Incident Detail (4d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a/05b/06 integration | source completeness required; master plan §§10.8, 12.2 |
@@ -137,8 +137,8 @@ nav — it is the Phase 0 exit gate, not a product screen).
 | `GateR1Review` | `screens/GateR1Review.tsx` | self-approval is derived, not trusted; **self-denial is allowed**, Deny locks only on EXPIRED/NOT_ELIGIBLE |
 | `api/` + `decision.ts` | `api/ports.ts`, `api/rows.ts`, `api/fixtureApi.ts`, `api/httpApi.ts`, `decision.ts` | a 202 lands in `accepted`, never in `settled`; a refused read never becomes an empty list |
 | `containers.tsx` | `screens/containers.tsx` | list · detail · plan · apply · poll, on the port |
-| `GateR2Review` | `screens/GateR2Review.tsx` | an expired R1 locks the bar; a capital preview without an envelope is refused |
-| `PaperExitReview` | `screens/PaperExitReview.tsx` | `met` is the server's; INSUFFICIENT_DATA is a third outcome that carries forward |
+| `GateR2Review` | `screens/GateR2Review.tsx` | an expired R1 locks the bar; a capital preview without an envelope is refused; **every capital row names its currency** |
+| `PaperExitReview` | `screens/PaperExitReview.tsx` | `met` is the server's; INSUFFICIENT_DATA carries forward; **every evidence number links its source** |
 | `series.ts` (M2) | `series.ts` | finest interval that fits; a series that misdescribes its own resolution is caught |
 | `subscription.ts` (M3) | `subscription.ts` | a gap voids the resume token; an epoch cutover waits for the server's deadline |
 
@@ -543,3 +543,46 @@ The screen is finished. What is left is not frontend work:
    has **PAPER**/**SANDBOX** chips the hi-fi does not. The frontend currently
    follows the backend's eight, since a chip that filters nothing is worse than
    a missing one — but the two lists should agree before phase 1 closes.
+
+
+---
+
+## 13. Phases 3 and 5 — on the port, and read back the same way
+
+Both screens now run through `ExecutionApi` — `getGateR2` and `getPaperExit`
+alongside the inbox and R1 — and share one decision machine, because a
+governance verdict is a plan/apply/poll like any other command and a `202` means
+the same thing on all four screens.
+
+Then `IMPLEMENTATION_PHASES` §3 and §5 were read back against what had been
+built, the way §1 was. That found six gaps in Phase 1; it found six here.
+
+| # | What §3 or §5 asks for | Now |
+|---|---|---|
+| 1 | Scale-refine I-4: the capital diff is **per currency** — "the strip must name its currency rather than implying a single number" | `currency` is its own column and its own field. A row that does not state one renders `not stated` and the adapter counts it as a gap. Currency was previously baked into the value string, so a USDT row above a VND row read as though they added up |
+| 2 | §3 "Must work": **the R1 reference links to the R1 decision** | linked when a href is published; when none is, the chip says so rather than looking clickable. A reference a reviewer cannot open is a claim |
+| 3 | An unreadable R1 state | maps to `MISSING`, which **blocks**. A reference we cannot understand is not one we may proceed on |
+| 4 | §5 "Must work": **every evidence number links its source** (sessions tab, blotter, portfolio panel) | `href` + `sourceLabel` per finding; an unlinked one prints `no source link` and the adapter counts it. This screen decides a promotion, and a figure with nowhere to check it is an assertion rather than evidence |
+| 5 | §5 layout: **lineage line** — artifact · R1 · R2 · observation policy · evidence-pack digest | rendered, with links where published. Without it a reviewer is asked to trust four earlier decisions they cannot see |
+| 6 | §5 footer: "**Extend observation +14d** / **Reject — back to Paper HELD** / Approve promotion" | the labels carry their consequence. "Reject" alone does not tell a reviewer the deployment stops trading; "back to Paper HELD" does |
+
+One more, from the adapter rather than the layout: an unpublished `gate_met` is
+read as **unmet** and recorded as a gap. Absent is not met, and inferring it
+from the coverage numbers printed beside it is precisely what this screen must
+not do.
+
+**Evidence:** 665 tests, `tsc` clean, build clean, visual baseline **101/101**.
+
+### 13.1 Still open on these two
+
+- **Phase 3 layout.** §3 asks for the decision bar **pinned top** and a
+  two-column split, with the capital preview as a **dark-on-light strip**. The
+  current build is a single column with the bar at the bottom. That is a visual
+  gap, not a correctness one, and it is worth doing against the hi-fi rather
+  than from the prose — logged here so it is not mistaken for finished.
+- **Phase 3 "capital preview recomputes from requested amount".** Static today.
+  It needs either a client recompute rule or a server preview endpoint; the
+  second is correct, because a client that recomputes capital is a client
+  inventing a number. Backend request when the phase is next picked up.
+- **Conditions composer** (§3 "R2 approval creates typed conditions"): the
+  decision path exists, the typed composer does not.

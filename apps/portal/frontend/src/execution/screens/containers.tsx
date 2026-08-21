@@ -25,9 +25,11 @@ import {
   type DecisionState,
 } from "../decision";
 import type { ExecutionApi } from "../api/ports";
-import type { GateR1Detail } from "../api/rows";
+import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "../api/rows";
 import { ApprovalInbox, type ApprovalRow, type InboxCounts, type InboxFilter } from "./ApprovalInbox";
 import { GateR1Review } from "./GateR1Review";
+import { GateR2Review } from "./GateR2Review";
+import { PaperExitReview, type ExitOutcome } from "./PaperExitReview";
 
 const EMPTY_PAGE: KeysetPage<ApprovalRow> = { rows: [], totalCount: 0 };
 
@@ -258,5 +260,194 @@ export function DecisionTrail({ decision }: { decision: DecisionState }) {
         <span className="exec-decision-note">This command has not been confirmed.</span>
       ) : null}
     </div>
+  );
+}
+
+
+/**
+ * Gate R2 and Paper Exit share the container shape with Gate R1 rather than
+ * inventing their own. The decision machine is the same one -- a governance
+ * verdict is a plan/apply/poll like any other command, and a 202 means the same
+ * thing on all three screens.
+ */
+function useDecision(api: ExecutionApi) {
+  const [decision, dispatch] = useReducer(decisionReducer, undefined, () =>
+    initialDecision(newRequestKey()),
+  );
+  const ref = useRef<DecisionState>(decision);
+  ref.current = decision;
+
+  useEffect(() => {
+    if (!shouldPoll(decision) || !decision.operationId || decision.polls >= MAX_POLLS) return;
+    const id = setTimeout(() => {
+      void api.pollOperation(decision.operationId as string).then((result) => {
+        if (!result.ok) {
+          dispatch({ type: "POLL_FAILED", error: result.reason });
+          return;
+        }
+        dispatch({
+          type: "POLLED",
+          status: null,
+          verification: result.value.verificationRaw
+            ? { known: true, value: result.value.verificationRaw as never }
+            : null,
+        });
+      });
+    }, POLL_MS);
+    return () => clearTimeout(id);
+  }, [api, decision]);
+
+  const decide = useCallback(
+    async (
+      subjectId: string,
+      verdict: Parameters<ExecutionApi["planDecision"]>[0]["decision"],
+      reason: string,
+      expectedVersion: string | null,
+    ) => {
+      dispatch({ type: "PLAN_REQUESTED" });
+      const planned = await api.planDecision({
+        approvalId: subjectId,
+        decision: verdict,
+        reason,
+        expectedVersion,
+        requestKey: ref.current.requestKey,
+      });
+      if (!planned.ok) {
+        dispatch(
+          planned.reason.includes("REQUEST_KEY_CONFLICT")
+            ? { type: "PLAN_CONFLICT" }
+            : { type: "PLAN_FAILED", error: planned.reason },
+        );
+        return;
+      }
+      dispatch({ type: "PLANNED", planId: planned.value.planId });
+      dispatch({ type: "APPLY_REQUESTED" });
+      const applied = await api.applyPlan(planned.value.planId, ref.current.requestKey);
+      if (!applied.ok) {
+        dispatch({ type: "APPLY_FAILED", error: applied.reason });
+        return;
+      }
+      dispatch({ type: "APPLY_ACCEPTED", ...applied.value });
+    },
+    [api],
+  );
+
+  return { decision, decide };
+}
+
+export function GateR2ReviewContainer({ api, approvalId }: { api: ExecutionApi; approvalId: string }) {
+  const [state, setState] = useState<LoadState<GateR2Detail>>(loading);
+  const { decision, decide } = useDecision(api);
+
+  useEffect(() => {
+    let cancelled = false;
+    setState(loading);
+    void api.getGateR2(approvalId).then((result) => {
+      if (cancelled) return;
+      setState(
+        result.ok
+          ? { status: result.warnings?.length ? "partial" : "ok", value: result.value, warnings: result.warnings ?? [] }
+          : { status: result.status, reason: result.reason, value: null, warnings: [] },
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, approvalId]);
+
+  const d = state.value;
+  const run = (verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION", reason: string) =>
+    void decide(approvalId, verdict, reason, d?.expectedVersion ?? null);
+
+  return (
+    <>
+      <GateR2Review
+        approvalId={d?.approvalId ?? approvalId}
+        subject={d?.subject ?? approvalId}
+        r1Id={d?.r1Id ?? null}
+        // Absent means MISSING, which blocks. A reference we could not read is
+        // not a reference we may proceed on.
+        r1State={d?.r1State ?? "MISSING"}
+        r1Href={d?.r1Href}
+        deploymentCandidate={d?.deploymentCandidate ?? undefined}
+        releaseCandidate={d?.releaseCandidate ?? undefined}
+        artifactDigest={d?.artifactDigest ?? undefined}
+        policyVersion={d?.policyVersion ?? "unversioned"}
+        planAuthor={d?.planAuthor ?? "unknown"}
+        actor={d?.actor ?? "unknown"}
+        quorumMet={d?.quorumMet ?? 0}
+        quorumRequired={d?.quorumRequired ?? 0}
+        sla={d?.sla ?? undefined}
+        readiness={d?.readiness ?? []}
+        capital={d?.capital ?? []}
+        capitalEnvelope={
+          d
+            ? { authority: "DERIVED", asOf: null, freshness: "UNKNOWN", formulaVersion: "capital.v2" }
+            : undefined
+        }
+        grantName={d?.grantName ?? undefined}
+        locks={d?.locks ?? []}
+        status={state.status}
+        reason={state.reason}
+        partialReason={state.warnings.length ? state.warnings.join("; ") : undefined}
+        onApprove={() => run("APPROVE", "Operational readiness accepted.")}
+        onDeny={() => run("DENY", "Operational readiness rejected.")}
+        onRequestCondition={() => run("APPROVE_WITH_CONDITION", "Approved with a condition.")}
+      />
+      {decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : null}
+    </>
+  );
+}
+
+export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi; reviewId: string }) {
+  const [state, setState] = useState<LoadState<PaperExitDetail>>(loading);
+  const { decision, decide } = useDecision(api);
+
+  useEffect(() => {
+    let cancelled = false;
+    setState(loading);
+    void api.getPaperExit(reviewId).then((result) => {
+      if (cancelled) return;
+      setState(
+        result.ok
+          ? { status: result.warnings?.length ? "partial" : "ok", value: result.value, warnings: result.warnings ?? [] }
+          : { status: result.status, reason: result.reason, value: null, warnings: [] },
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, reviewId]);
+
+  const d = state.value;
+
+  return (
+    <>
+      <PaperExitReview
+        reviewId={d?.reviewId ?? reviewId}
+        deploymentId={d?.deploymentId ?? "unknown"}
+        subject={d?.subject ?? reviewId}
+        promoteTo={d?.promoteTo ?? "the next stage"}
+        // Never inferred from the coverage numbers beside it: the policy can
+        // require more than they show, and absent means unmet.
+        gateMet={d?.gateMet ?? false}
+        gateSummary={d?.gateSummary ?? undefined}
+        policyId={d?.policyId ?? undefined}
+        lineage={d?.lineage}
+        quorumMet={d?.quorumMet ?? 0}
+        quorumRequired={d?.quorumRequired ?? 0}
+        approverRole={d?.approverRole ?? undefined}
+        sla={d?.sla ?? undefined}
+        panels={d?.panels ?? []}
+        recommendation={d?.recommendation ?? undefined}
+        status={state.status}
+        reason={state.reason}
+        partialReason={state.warnings.length ? state.warnings.join("; ") : undefined}
+        onDecide={(outcome: ExitOutcome) =>
+          void decide(reviewId, outcome, `Exit review decision: ${outcome}.`, d?.expectedVersion ?? null)
+        }
+      />
+      {decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : null}
+    </>
   );
 }
