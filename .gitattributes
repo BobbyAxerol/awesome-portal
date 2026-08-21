@@ -13,7 +13,11 @@
 *.toml text
 *.ini text
 *.cfg text
-*.md text
+# Markdown keeps trailing whitespace: two trailing spaces are a hard line
+# break, and .editorconfig already exempts *.md from trimming. Without
+# -whitespace the pre-commit `git diff --cached --check` rejects that valid
+# syntax, which would force us to damage documents to satisfy a lint.
+*.md text -whitespace
 *.sh text eol=lf
 Dockerfile* text eol=lf
 Makefile text eol=lf
