@@ -275,6 +275,43 @@ export type VnSessionStatus = "OPEN_HEALTHY" | "OPEN_STALE" | "MARKET_CLOSED" | 
 export type SourceCompleteness = "EVENT_SOURCED" | "POLL_BOUNDED" | "UNKNOWN";
 
 /* ---------------------------------------------------------------------------
+ * Retention (EX-BE-04b §3)
+ * ------------------------------------------------------------------------ */
+
+/**
+ * What the requested range means against the retention policy.
+ *
+ * The contract's own sentence is the rule this vocabulary exists to encode:
+ * `COLD_REQUESTABLE`, `PURGED` and `UNKNOWN` "may have no points, but are not
+ * semantically an ordinary empty hot series".
+ *
+ * So a screen that renders zero rows must first ask *why* zero. "Nothing
+ * matched your filter", "this is older than we keep online", "this was deleted"
+ * and "we do not know what we keep" are four different answers, and only the
+ * first is `empty`. Collapsing them tells an operator their query found nothing
+ * when the truth is that nobody looked.
+ */
+export type RetentionOutcome =
+  /** Fully inside the hot window. An empty result here really is empty. */
+  | "HOT"
+  /** The range starts before the hot window; only its hot suffix was queried. */
+  | "PARTIAL_HOT"
+  /** Archived. Restoring it is an administrative workflow, not a wider query. */
+  | "COLD_REQUESTABLE"
+  /** Deleted under policy. No request will bring it back. */
+  | "PURGED"
+  /** No retention policy is published for this scope, so nothing can be said. */
+  | "UNKNOWN";
+
+export interface RetentionState {
+  outcome: RetentionOutcome;
+  /** Oldest instant still online, when the policy publishes one. */
+  hotFrom?: string | null;
+  /** Which policy version produced this, so a later answer can be compared. */
+  policyVersion?: string | null;
+}
+
+/* ---------------------------------------------------------------------------
  * Keyset list contract (master plan §7.2, BR-EX-01/02/03/17)
  * ------------------------------------------------------------------------ */
 
@@ -319,6 +356,41 @@ export interface KeysetPage<T> {
   /** What the server actually filtered and sorted by, not what was requested. */
   appliedFilters?: readonly FilterEcho[];
   appliedSort?: readonly SortSpec[];
+  /**
+   * Why this page holds what it holds. Absent means the endpoint published no
+   * retention policy, which is not the same as everything being online.
+   */
+  retention?: RetentionState | null;
+}
+
+/**
+ * The query shape a cursor was issued against.
+ *
+ * `EX-BE-04b`: "Changing filter, sort, limit, epoch, scope, resource or cursor
+ * direction makes an old cursor fail closed." The server enforces it; the
+ * client tracks it so a stale cursor is dropped before the request rather than
+ * bounced after, and so the reader is told the page reset rather than watching
+ * it silently jump.
+ */
+export interface CursorScope {
+  filter: string;
+  sort: string;
+  limit: number;
+  resource: string;
+  /** Projection epoch, when the resource has one. */
+  epoch?: string | null;
+}
+
+/** Would a cursor issued under `a` still be valid under `b`? */
+export function cursorStillValid(a: CursorScope | null, b: CursorScope): boolean {
+  if (!a) return false;
+  return (
+    a.filter === b.filter &&
+    a.sort === b.sort &&
+    a.limit === b.limit &&
+    a.resource === b.resource &&
+    (a.epoch ?? null) === (b.epoch ?? null)
+  );
 }
 
 /* ---------------------------------------------------------------------------

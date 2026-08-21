@@ -264,6 +264,14 @@ export function ApprovalInbox({
   onLoadOlder?: () => void;
   onLoadNewer?: () => void;
 }) {
+  // Empty because a view narrowed it, versus empty because there is nothing.
+  // The server's filtered count is what separates them; without it the screen
+  // cannot tell, so it says the weaker thing.
+  const emptyInThisView =
+    page.rows.length === 0 &&
+    ((page.filteredCount ?? 0) === 0) &&
+    (counts?.pending ?? 0) > 0;
+
   return (
     <section className="exec-inbox" aria-label="Approval Inbox">
       <header className="exec-inbox-head">
@@ -321,7 +329,18 @@ export function ApprovalInbox({
         neverVirtualize
         overflowNotice="This queue is over 200 pending items. That is an operational condition, not a display limit — it is shown in full on purpose."
         status={status}
-        reason={reason ?? (status === "ok" && page.rows.length === 0 ? "Inbox zero." : undefined)}
+        reason={
+          reason ??
+          (status === "ok" && page.rows.length === 0
+            ? // "Inbox zero" is a claim about the QUEUE. Saying it under an
+              // active filter announces the queue is clear while five requests
+              // sit in it — the filtered-empty result and the empty queue look
+              // identical and mean opposite things.
+              emptyInThisView
+              ? `Nothing in ${FILTER_LABEL[filter]}. ${counts?.pending ?? 0} still pending in the queue.`
+              : "Inbox zero."
+            : undefined)
+        }
         onRowClick={onOpenRequest ? (r) => onOpenRequest(r.id) : undefined}
         onLoadOlder={onLoadOlder}
         onLoadNewer={onLoadNewer}

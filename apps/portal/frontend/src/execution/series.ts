@@ -121,8 +121,10 @@ export function validateSeries(
     }
   }
 
-  // Aggregation is lossless by construction; decimation is not. A series that
-  // decimated must say how, so a missing method on a reduced series is a gap.
+  // EX-BE-04b §3 fixes the vocabulary: a non-1m result declares
+  // `canonical_preaggregated`, a 1m result declares `none`, and stride sampling
+  // is never used. So `none` is a DECLARED method rather than an absent one,
+  // and the gap to catch is a reduced series that declares nothing at all.
   if (
     envelope.sourceRows != null &&
     returned != null &&
@@ -130,6 +132,25 @@ export function validateSeries(
     !envelope.downsampleMethod
   ) {
     warnings.push("Points were reduced but no downsample method was declared.");
+  }
+
+  // A method this build does not recognise is stated rather than trusted: the
+  // two the contract defines are lossless, and a third would not be.
+  if (
+    envelope.downsampleMethod &&
+    !["canonical_preaggregated", "none"].includes(envelope.downsampleMethod)
+  ) {
+    warnings.push(
+      `Downsample method "${envelope.downsampleMethod}" is outside the canonical set, so this series may have moved its extrema.`,
+    );
+  }
+
+  // `none` on a coarser rung would mean the points were not aggregated, which
+  // for anything but 1m is a contradiction.
+  if (envelope.downsampleMethod === "none" && envelope.interval !== "1m") {
+    warnings.push(
+      `Served at ${envelope.interval} but declared no aggregation; only a 1m series can claim that.`,
+    );
   }
 
   if (envelope.coverage != null && envelope.coverage < 1) {

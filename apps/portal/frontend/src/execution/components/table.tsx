@@ -31,6 +31,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import type { KeysetPage, PanelStatus } from "../contracts";
+import { emptyMeansEmpty, RetentionNotice, retentionReason } from "./retention";
 import { PanelState } from "./states";
 
 /** DS §8: 7px vertical padding, ~16px line, 1px hairline. */
@@ -165,6 +166,17 @@ export function KeysetTable<T>({
     return <PanelState status={status} reason={reason} />;
   }
   if (rows.length === 0) {
+    // Zero rows because a filter matched nothing, and zero rows because the
+    // range is archived, look identical and mean opposite things. The server
+    // says which; absent is not "everything is online" (EX-BE-04b §3).
+    if (!emptyMeansEmpty(page.retention)) {
+      return (
+        <PanelState
+          status={page.retention ? "unavailable" : "empty"}
+          reason={reason ?? retentionReason(page.retention) ?? undefined}
+        />
+      );
+    }
     return <PanelState status="empty" reason={reason ?? "No rows match this filter."} />;
   }
 
@@ -183,6 +195,12 @@ export function KeysetTable<T>({
   return (
     <div className="exec-table" data-virtualized={virtualized ? "true" : "false"}>
       {notice ? <div className="exec-table-notice">{notice}</div> : null}
+      {/* Rows AND a retention caveat: a partly-hot range has real rows and is
+          still incomplete, so the notice sits above them rather than replacing
+          them. */}
+      {page.retention && page.retention.outcome !== "HOT" ? (
+        <RetentionNotice retention={page.retention} />
+      ) : null}
 
       <div
         className="exec-table-scroll"

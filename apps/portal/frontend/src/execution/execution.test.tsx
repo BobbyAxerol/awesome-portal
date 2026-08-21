@@ -39,6 +39,13 @@ import {
 } from "./profile";
 import { KeysetTable, type Column } from "./components/table";
 import {
+  emptyMeansEmpty,
+  panelStatusForRetention,
+  RangeTooWideNotice,
+  RetentionNotice,
+  retentionReason,
+} from "./components/retention";
+import {
   canClaimContinuity,
   CompletenessNote,
   continuityCaveat,
@@ -3189,9 +3196,12 @@ describe("Approval Inbox — a row opens the review its gate owns", () => {
 describe("the fixture API pages, so the container's paging is exercised", () => {
   it("moves forward on a cursor rather than returning the same page", async () => {
     const api = createFixtureApi();
+    // INBOX is "mine" — the three rows flagged needs_you, not the whole queue.
     const first = await api.listApprovals({ filter: "INBOX", limit: 2 });
     expect(first.ok).toBe(true);
     if (!first.ok) return;
+    expect(first.value.page.filteredCount).toBe(3);
+    expect(first.value.page.totalCount).toBe(5);
     expect(first.value.page.rows.map((r) => r.id)).toEqual(["AP-352", "AP-201"]);
     expect(first.value.page.hasPrevious).toBe(false);
     expect(first.value.page.hasMore).toBe(true);
@@ -3203,7 +3213,8 @@ describe("the fixture API pages, so the container's paging is exercised", () => 
     });
     expect(second.ok).toBe(true);
     if (!second.ok) return;
-    expect(second.value.page.rows.map((r) => r.id)).toEqual(["EX-771", "AP-360"]);
+    // AP-360 is not "mine", so the INBOX view ends after EX-771.
+    expect(second.value.page.rows.map((r) => r.id)).toEqual(["EX-771"]);
     expect(second.value.page.hasPrevious).toBe(true);
   });
 
@@ -3232,11 +3243,16 @@ describe("the fixture API pages, so the container's paging is exercised", () => 
 
   it("counts inert rows over the whole filter, not the page", async () => {
     const api = createFixtureApi();
-    const r = await api.listApprovals({ filter: "INBOX", limit: 2 });
-    if (!r.ok) return;
-    expect(r.value.page.rows.length).toBe(2);
-    // AP-360 blocked before review, AP-311 separation of duty.
-    expect(r.value.inertCount).toBe(2);
+    // Over ALL, both inert rows are in view: AP-360 blocked before review and
+    // AP-311 separation of duty. Neither is "mine", so INBOX has none.
+    const all = await api.listApprovals({ filter: "ALL", limit: 2 });
+    if (!all.ok) return;
+    expect(all.value.page.rows.length).toBe(2);
+    expect(all.value.inertCount).toBe(2);
+
+    const mine = await api.listApprovals({ filter: "INBOX", limit: 2 });
+    if (!mine.ok) return;
+    expect(mine.value.inertCount).toBe(0);
   });
 });
 
@@ -3713,5 +3729,226 @@ describe("the subscription walk drives the real reducer", () => {
     fireEvent.click(screen.getByRole("button", { name: "disconnect" }));
     expect(container.querySelector('.exec-stream[data-phase="reconnecting"]')).not.toBeNull();
     expect(container.textContent).toContain("values as of");
+  });
+});
+
+/* ===========================================================================
+ * Audit follow-up: the filter actually filters, and retention is not empty
+ * ======================================================================== */
+
+describe("the filter chips filter (EX-BE-05a §3's eight views)", () => {
+  it("narrows INBOX to what this actor is expected to act on", async () => {
+    // "Mine" is not "everything I can see" — that is ALL, and conflating them
+    // is how a triage queue stops being one.
+    const api = createFixtureApi();
+    const mine = await api.listApprovals({ filter: "INBOX", limit: 20 });
+    const all = await api.listApprovals({ filter: "ALL", limit: 20 });
+    if (!mine.ok || !all.ok) return;
+    expect(mine.value.page.rows.length).toBeLessThan(all.value.page.rows.length);
+    expect(mine.value.page.rows.every((r) => r.needsYou)).toBe(true);
+  });
+
+  it("gives each view a different result rather than echoing the same rows", async () => {
+    // The fixture used to echo the view back and return the same rows, which
+    // is worse than an unwired chip: indistinguishable from a working one.
+    const api = createFixtureApi();
+    const seen = new Map<string, string>();
+    for (const view of ["ALL", "INBOX", "R1", "SANDBOX", "LIVE_GATES", "EXIT_REVIEWS", "OVERDUE"]) {
+      const r = await api.listApprovals({ filter: view, limit: 20 });
+      if (!r.ok) continue;
+      seen.set(view, r.value.page.rows.map((x) => x.id).join(","));
+    }
+    // At least five distinct row sets across seven views.
+    expect(new Set(seen.values()).size).toBeGreaterThanOrEqual(5);
+    expect(seen.get("R1")).toBe("AP-201,AP-360");
+    expect(seen.get("EXIT_REVIEWS")).toBe("EX-771");
+    expect(seen.get("OVERDUE")).toBe("AP-352");
+  });
+
+  it("returns nothing for a view it does not recognise, rather than everything", async () => {
+    // Falling back to ALL would show a full queue under a filter that was never
+    // applied — the same lie in the other direction.
+    const api = createFixtureApi();
+    const r = await api.listApprovals({ filter: "NOT_A_VIEW", limit: 20 });
+    if (!r.ok) return;
+    expect(r.value.page.rows).toEqual([]);
+    expect(r.value.page.filteredCount).toBe(0);
+  });
+
+  it("keeps the queue total while the view count follows the filter", async () => {
+    const api = createFixtureApi();
+    const r = await api.listApprovals({ filter: "OVERDUE", limit: 20 });
+    if (!r.ok) return;
+    expect(r.value.page.filteredCount).toBe(1);
+    expect(r.value.page.totalCount).toBe(5);
+  });
+
+  it("does not announce inbox zero when a filter emptied the view", () => {
+    // Selecting Overdue with five pending requests would otherwise say the
+    // queue is clear.
+    render(
+      <ApprovalInbox
+        page={{ rows: [], totalCount: 5, filteredCount: 0 }}
+        counts={{ pending: 5, overdue: 1, dueSoon: 1 }}
+        filter="OVERDUE"
+      />,
+    );
+    expect(screen.getByText(/Nothing in Overdue/)).toBeTruthy();
+    expect(screen.getByText(/5 still pending in the queue/)).toBeTruthy();
+    expect(screen.queryByText(/Inbox zero/)).toBeNull();
+  });
+
+  it("still says inbox zero when the queue really is clear", () => {
+    render(
+      <ApprovalInbox
+        page={{ rows: [], totalCount: 0, filteredCount: 0 }}
+        counts={{ pending: 0, overdue: 0, dueSoon: 0 }}
+        filter="INBOX"
+      />,
+    );
+    expect(screen.getByText(/Inbox zero/)).toBeTruthy();
+  });
+});
+
+describe("a failing checklist item locks Approve without being told to", () => {
+  it("derives the lock from the checklist rather than from a prop", () => {
+    // §2 "Must work": decision buttons enabled only when the checklist is
+    // complete. The count was computed, printed in the tally, and never used.
+    render(
+      gate({
+        checklist: [
+          { label: "engine pinned by digest", outcome: "pass" as const },
+          { label: "holdout untouched by selection", outcome: "fail" as const },
+        ],
+      }),
+    );
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
+    expect(screen.getByText(/checklist has blocking findings/)).toBeTruthy();
+  });
+
+  it("still lets a reviewer deny precisely because of the failure", () => {
+    render(gate({ checklist: [{ label: "holdout untouched", outcome: "fail" as const }] }));
+    expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", false);
+  });
+
+  it("does not lock on a watch item", () => {
+    render(gate({ checklist: [{ label: "capacity evidence", outcome: "watch" as const }] }));
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", false);
+  });
+});
+
+describe("retention — an empty range is not an empty result", () => {
+  const cols: readonly Column<{ id: string }>[] = [
+    { key: "id", header: "id", render: (r) => r.id },
+  ];
+
+  it("treats a cold range as unavailable, not as no rows", () => {
+    // EX-BE-04b §3: COLD_REQUESTABLE, PURGED and UNKNOWN "may have no points,
+    // but are not semantically an ordinary empty hot series".
+    const { container } = render(
+      <KeysetTable
+        label="Orders"
+        columns={cols}
+        rowKey={(r) => r.id}
+        page={{
+          rows: [],
+          totalCount: 0,
+          retention: { outcome: "COLD_REQUESTABLE", hotFrom: "2026-02-21T00:00:00Z" },
+        }}
+      />,
+    );
+    expect(container.querySelector('.exec-state[data-status="unavailable"]')).not.toBeNull();
+    expect(screen.getByText(/archived rather than missing/)).toBeTruthy();
+    expect(screen.getByText(/Online history begins/)).toBeTruthy();
+  });
+
+  it("keeps the rows and warns when only part of the range is online", () => {
+    const { container } = render(
+      <KeysetTable
+        label="Orders"
+        columns={cols}
+        rowKey={(r) => r.id}
+        page={{ rows: [{ id: "ord_1" }], totalCount: 1, retention: { outcome: "PARTIAL_HOT" } }}
+      />,
+    );
+    expect(container.querySelector("tbody tr")).not.toBeNull();
+    expect(screen.getByText(/real and incomplete/)).toBeTruthy();
+  });
+
+  it("says an ordinary empty is empty only when the range is hot", () => {
+    const { container } = render(
+      <KeysetTable
+        label="Orders"
+        columns={cols}
+        rowKey={(r) => r.id}
+        page={{ rows: [], totalCount: 0, retention: { outcome: "HOT" } }}
+      />,
+    );
+    expect(container.querySelector('.exec-state[data-status="empty"]')).not.toBeNull();
+  });
+
+  it("treats an absent retention state as unproven, not as everything online", () => {
+    expect(emptyMeansEmpty(null)).toBe(false);
+    expect(emptyMeansEmpty({ outcome: "HOT" })).toBe(true);
+    expect(retentionReason(null)).toContain("cannot be read as complete");
+  });
+
+  it("maps each outcome to the panel state that matches its claim", () => {
+    expect(panelStatusForRetention("HOT")).toBe("ok");
+    expect(panelStatusForRetention("PARTIAL_HOT")).toBe("partial");
+    for (const o of ["COLD_REQUESTABLE", "PURGED", "UNKNOWN"] as const) {
+      expect(panelStatusForRetention(o), o).toBe("unavailable");
+    }
+  });
+
+  it("offers a restore only where a restore is possible", () => {
+    const { container, rerender } = render(
+      <RetentionNotice retention={{ outcome: "COLD_REQUESTABLE" }} onRequestRestore={() => {}} />,
+    );
+    expect(screen.getByRole("button", { name: /Request a restore/ })).toBeTruthy();
+    // Purged is terminal. Offering a restore would be offering a lie.
+    rerender(<RetentionNotice retention={{ outcome: "PURGED" }} onRequestRestore={() => {}} />);
+    expect(container.querySelector("button")).toBeNull();
+  });
+
+  it("separates a too-wide question from a missing answer", () => {
+    render(<RangeTooWideNotice requestedDays={7300} />);
+    expect(screen.getByText(/7,300 days/)).toBeTruthy();
+    expect(screen.getByText(/The data is not missing/)).toBeTruthy();
+  });
+});
+
+describe("series validation follows the EX-BE-04b vocabulary", () => {
+  const base: ChartEnvelope = {
+    window: "30d",
+    interval: "15m",
+    asOf: "2026-08-21T10:42:01Z",
+    authority: "DERIVED",
+    returnedRows: 2880,
+    sourceRows: 100_000,
+  };
+
+  it("accepts canonical pre-aggregation as a declared method", () => {
+    const w = validateSeries({ ...base, downsampleMethod: "canonical_preaggregated" }, 30 * 86_400);
+    expect(w.join(" ")).not.toContain("no downsample method");
+  });
+
+  it("flags a method outside the canonical set as possibly lossy", () => {
+    const w = validateSeries({ ...base, downsampleMethod: "stride" }, 30 * 86_400);
+    expect(w.join(" ")).toContain("outside the canonical set");
+  });
+
+  it("refuses `none` on anything coarser than a minute", () => {
+    // Only a 1m series can claim it did not aggregate.
+    const w = validateSeries({ ...base, downsampleMethod: "none" }, 30 * 86_400);
+    expect(w.join(" ")).toContain("only a 1m series can claim that");
+  });
+
+  it("accepts `none` on a 1m series", () => {
+    const w = validateSeries(
+      { ...base, interval: "1m", returnedRows: 4320, sourceRows: 4320, downsampleMethod: "none" },
+      3 * 86_400,
+    );
+    expect(w).toEqual([]);
   });
 });

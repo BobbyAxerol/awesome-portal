@@ -322,3 +322,94 @@ describe("Carbon surface contrast", () => {
     }
   });
 });
+
+/* -------------------------------------------------------------------------
+ * Contrast, derived from the stylesheet rather than from a list
+ *
+ * The hand-written pair list above missed a real defect: the one solid button
+ * per screen set `color: var(--ink)` over `background: var(--accent-strong)`,
+ * which measures 2.32:1 on the light surface — on the Approve label, the most
+ * consequential string a governance screen renders. No token pair in the list
+ * was wrong; the pairing the COMPONENT made was never in the list.
+ *
+ * So this scan finds the pairs itself: any rule that sets both a foreground and
+ * a background token in the same block is a pairing the browser will actually
+ * render, and it is checked in both themes. A gate that only knows the pairs
+ * somebody remembered to write down will keep missing the ones they forgot.
+ * ---------------------------------------------------------------------- */
+
+describe("contrast of pairs the stylesheet itself declares", () => {
+  function channel(v: number): number {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  }
+  function luminance(hex: string): number {
+    const h = hex.replace("#", "");
+    const full = h.length === 3 ? [...h].map((c) => c + c).join("") : h;
+    const [r, g, b] = [0, 2, 4].map((i) => Number.parseInt(full.slice(i, i + 2), 16));
+    return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+  }
+  function contrast(a: string, b: string): number {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  }
+  function tokensFor(theme: string): Map<string, string> {
+    const css = readFileSync(join(SRC, "styles/tokens.css"), "utf8");
+    const start = css.indexOf(`[data-theme="${theme}"]`);
+    const end = css.indexOf("\n}", start);
+    const out = new Map<string, string>();
+    for (const m of css.slice(start, end).matchAll(/(--[a-z0-9-]+)\s*:\s*(#[0-9a-fA-F]{3,8})\s*;/g)) {
+      out.set(m[1], m[2]);
+    }
+    return out;
+  }
+
+  /**
+   * Every rule that names both a colour and a background token.
+   *
+   * Shorthand `background:` with a gradient or a non-token value is skipped —
+   * the pair is only checkable when both sides resolve to a flat token.
+   */
+  function declaredPairs(): { selector: string; fg: string; bg: string }[] {
+    const css = readFileSync(join(SRC, "execution/execution.css"), "utf8");
+    const pairs: { selector: string; fg: string; bg: string }[] = [];
+    for (const block of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const selector = block[1].trim().split("\n").pop()!.trim();
+      const body = block[2];
+      const fg = /(?:^|[\s;])color\s*:\s*var\((--[a-z0-9-]+)\)/.exec(body)?.[1];
+      const bg = /(?:^|[\s;])background(?:-color)?\s*:\s*var\((--[a-z0-9-]+)\)\s*;/.exec(body)?.[1];
+      if (fg && bg) pairs.push({ selector, fg, bg });
+    }
+    return pairs;
+  }
+
+  const pairs = declaredPairs();
+
+  it("finds pairs to check at all, so a refactor cannot silently empty this gate", () => {
+    // A scan that matches nothing passes vacuously, which is the failure mode
+    // of every regex-based gate.
+    expect(pairs.length).toBeGreaterThan(8);
+  });
+
+  for (const theme of ["operations-carbon", "operations-carbon-light"]) {
+    it(`keeps every declared foreground/background pair legible on ${theme}`, () => {
+      const tokens = tokensFor(theme);
+      const failures: string[] = [];
+      for (const { selector, fg, bg } of pairs) {
+        const f = tokens.get(fg);
+        const b = tokens.get(bg);
+        // A pair naming a token this theme does not declare is its own bug, and
+        // one the ramp test would not see either.
+        if (!f || !b) {
+          failures.push(`${selector} uses ${!f ? fg : bg}, which ${theme} does not declare`);
+          continue;
+        }
+        const ratio = contrast(f, b);
+        if (ratio < 4.5) {
+          failures.push(`${selector} — ${fg} on ${bg} is ${ratio.toFixed(2)}:1`);
+        }
+      }
+      expect(failures, failures.join("\n")).toEqual([]);
+    });
+  }
+});

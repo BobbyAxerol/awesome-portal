@@ -636,7 +636,7 @@
   padding: var(--space-2) var(--space-4);
   border: 1px solid var(--accent-strong);
   background: var(--accent-strong);
-  color: var(--ink);
+  color: var(--on-accent);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   letter-spacing: 0.06em;
@@ -670,9 +670,14 @@
   color: var(--ink-mute);
 }
 
+/* The destructive variant needs its own FILL, not just its own border. It had
+ * inherited the accent fill from `.exec-btn-apply`, so red text on blue measured
+ * 1.56:1 and read as neither legible nor destructive — the two things the
+ * variant exists to be. */
 .exec-btn-danger {
   border-color: var(--bad);
-  color: var(--bad);
+  background: var(--bad);
+  color: var(--on-danger);
 }
 
 /* ---------------------------------------------------------------------------
@@ -1845,4 +1850,106 @@
   color: var(--ink-faint);
   border-top: 1px solid var(--line-soft);
   padding-top: var(--space-2);
+}
+
+/* ---------------------------------------------------------------------------
+ * Retention notices (EX-BE-04b §3)
+ *
+ * Deliberately not styled like the empty state. Zero rows because a filter
+ * matched nothing and zero rows because the range is archived look identical
+ * and mean opposite things, so they are given different shapes here.
+ * ------------------------------------------------------------------------ */
+
+.exec-retention {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3);
+  border: 1px dashed var(--line-strong);
+  background: var(--surface-2);
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.exec-retention-title {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+
+.exec-retention-text {
+  flex: 1 1 26ch;
+  min-width: 0;
+}
+
+/* Partly online is a warning: what is on screen is real and incomplete. */
+.exec-retention[data-outcome="PARTIAL_HOT"] {
+  border-style: solid;
+  border-color: var(--warn);
+  background: var(--warn-bg);
+}
+
+/* Purged is terminal. Nothing anyone does brings it back, so it does not get
+ * the dashed "come back later" treatment the requestable one has. */
+.exec-retention[data-outcome="PURGED"] {
+  border-style: solid;
+  border-color: var(--line-strong);
+}
+
+.exec-retention[data-outcome="UNKNOWN"] .exec-retention-title {
+  color: var(--warn);
+}
+
+/* ---------------------------------------------------------------------------
+ * Retention notices (EX-BE-04b §3)
+ *
+ * Deliberately not shaped like the empty state. Zero rows because a filter
+ * matched nothing and zero rows because the range is archived look identical
+ * and mean opposite things.
+ * ------------------------------------------------------------------------ */
+
+.exec-retention {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3);
+  border: 1px dashed var(--line-strong);
+  background: var(--surface-2);
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.exec-retention-title {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+
+.exec-retention-text {
+  flex: 1 1 26ch;
+  min-width: 0;
+}
+
+/* Partly online is a warning: what is on screen is real and incomplete. */
+.exec-retention[data-outcome="PARTIAL_HOT"] {
+  border-style: solid;
+  border-color: var(--warn);
+  background: var(--warn-bg);
+}
+
+/* Purged is terminal. Nothing anyone does brings it back, so it does not get
+ * the dashed "come back later" treatment the requestable one has. */
+.exec-retention[data-outcome="PURGED"] {
+  border-style: solid;
+  border-color: var(--line-strong);
+}
+
+.exec-retention[data-outcome="UNKNOWN"] .exec-retention-title {
+  color: var(--warn);
 }

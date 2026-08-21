@@ -194,17 +194,28 @@ export function GateR1Review({
   // Derived rather than trusted from the caller: a screen that renders a clean
   // SoD line because a prop said so would be one bad prop away from permitting
   // the thing this screen exists to refuse.
-  const effectiveLocks = selfApproval
-    ? Array.from(new Set<DecisionLock>(["SELF_APPROVAL", ...locks]))
-    : locks;
+  const blocking = checklist.filter((c) => c.outcome === "fail").length;
+  const warnings = checklist.filter((c) => c.outcome === "watch").length;
+  const insufficient = checklist.filter((c) => c.outcome === "insufficient").length;
+
+  // Both derived, for the same reason. §2's "Must work" is "decision buttons
+  // enabled only when checklist complete", and a condition that depends on the
+  // caller remembering to pass a lock is a condition that will eventually not
+  // be passed. The count was previously computed, printed in the tally, and
+  // never fed into the lock set — so a checklist with a failing item left
+  // Approve enabled unless somebody also passed BLOCKING_FINDINGS by hand.
+  const effectiveLocks = Array.from(
+    new Set<DecisionLock>([
+      ...(selfApproval ? (["SELF_APPROVAL"] as DecisionLock[]) : []),
+      ...(blocking > 0 ? (["BLOCKING_FINDINGS"] as DecisionLock[]) : []),
+      ...locks,
+    ]),
+  );
 
   // A decided gate is a record. Every control goes rather than being disabled:
   // a greyed Approve on an approved request reads as "not yet", which is the
   // opposite of what happened.
   const isDecided = Boolean(decided);
-  const blocking = checklist.filter((c) => c.outcome === "fail").length;
-  const warnings = checklist.filter((c) => c.outcome === "watch").length;
-  const insufficient = checklist.filter((c) => c.outcome === "insufficient").length;
   const locked = effectiveLocks.length > 0;
 
   // Deny is gated by a strictly smaller set. Self-approval and blocking

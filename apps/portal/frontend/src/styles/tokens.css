@@ -369,6 +369,15 @@
   --accent: #78a9ff;
   --accent-soft: #001d6c;
   --accent-strong: #0f62fe;
+  /* Ink for text sitting ON a filled accent or danger surface.
+   *
+   * It exists because the solid button had been taking --ink, which is correct
+   * against the page and measured 2.32:1 against the blue fill on the light
+   * surface — on the Approve label, the most consequential string a governance
+   * screen renders. The pairing a component actually makes is not the pairing
+   * its tokens suggest. */
+  --on-accent: #ffffff;
+  --on-danger: #161616;
   --accent-2: #ff832b;
   --accent-2-soft: #4e2900;
   --good: #42be65;
@@ -540,6 +549,15 @@
   --accent: #0f62fe;
   --accent-soft: #d0e2ff;
   --accent-strong: #0043ce;
+  /* Ink for text sitting ON a filled accent or danger surface.
+   *
+   * It exists because the solid button had been taking --ink, which is correct
+   * against the page and measured 2.32:1 against the blue fill on the light
+   * surface — on the Approve label, the most consequential string a governance
+   * screen renders. The pairing a component actually makes is not the pairing
+   * its tokens suggest. */
+  --on-accent: #ffffff;
+  --on-danger: #ffffff;
   --accent-2: #ba4e00;
   --accent-2-soft: #fff2e8;
 

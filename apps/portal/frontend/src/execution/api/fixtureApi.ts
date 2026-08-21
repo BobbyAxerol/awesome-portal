@@ -305,6 +305,55 @@ const EXIT_DETAIL: Record<string, unknown> = {
  */
 const VERIFICATION_WALK = ["PENDING", "ACKNOWLEDGED", "SUCCEEDED"] as const;
 
+/**
+ * The eight views `EX-BE-05a` §3 supports, as a predicate.
+ *
+ * The fixture applied none of them: it echoed the view back and returned the
+ * same rows, so every chip looked wired and changed nothing. That is worse than
+ * an unwired chip, because it is indistinguishable from a working one.
+ *
+ * The real filters are server-side and allowlisted (BR-EX-02) — this is the
+ * shape of the answer, not the implementation of it. What it exercises is the
+ * client's half: that a view change resets the cursor, that the counts follow
+ * the view, and that an empty view is not reported as an empty queue.
+ */
+function matchesView(row: Record<string, unknown>, view: string): boolean {
+  const gate = String(row.gate ?? "");
+  const target = String(row.target ?? "").toLowerCase();
+  const sla = (row.sla ?? {}) as Record<string, unknown>;
+  const overdue =
+    typeof sla.age_minutes === "number" &&
+    typeof sla.budget_minutes === "number" &&
+    sla.age_minutes > sla.budget_minutes;
+
+  switch (view) {
+    case "ALL":
+      return true;
+    // "Mine" in the hi-fi: what this actor is expected to act on. It is not
+    // "everything I can see" — that is ALL, and conflating them is how a
+    // triage queue stops being a triage queue.
+    case "INBOX":
+      return row.needs_you === true;
+    case "R1":
+      return gate === "R1";
+    case "PAPER":
+      return target.includes("paper");
+    case "SANDBOX":
+      return target.includes("sandbox");
+    case "LIVE_GATES":
+      return gate === "LIVE_GATE" || target.includes("live");
+    case "EXIT_REVIEWS":
+      return gate === "PAPER_EXIT" || gate === "SANDBOX_EXIT";
+    case "OVERDUE":
+      return overdue;
+    default:
+      // An unrecognised view returns nothing rather than everything. Falling
+      // back to ALL would show a full queue under a filter that was never
+      // applied, which is the same lie in a different direction.
+      return false;
+  }
+}
+
 /** Opaque to the caller, which is the only property that matters here. */
 function encodeCursor(row: Record<string, unknown>): string {
   return `c_${String(row.approval_id)}`;
@@ -344,16 +393,22 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       // Cursors are honoured rather than ignored. A fixture that returns the
       // same page whatever the cursor lets a paging bug through unnoticed,
       // which is the one thing the container's paging code needs exercised.
+      // Filter first, then page. Paging a filtered set is the only order that
+      // makes the cursor mean anything — a cursor into the unfiltered list
+      // would land somewhere arbitrary once a view is applied, which is exactly
+      // why the contract voids a cursor when the filter changes.
+      const inView = APPROVAL_ROWS.filter((r) => matchesView(r, query.filter));
+
       const size = query.limit ?? 2;
       const start = query.after
-        ? APPROVAL_ROWS.findIndex((r) => r.approval_id === decodeCursor(query.after as string)) + 1
+        ? inView.findIndex((r) => r.approval_id === decodeCursor(query.after as string)) + 1
         : query.before
           ? Math.max(
               0,
-              APPROVAL_ROWS.findIndex((r) => r.approval_id === decodeCursor(query.before as string)) - size,
+              inView.findIndex((r) => r.approval_id === decodeCursor(query.before as string)) - size,
             )
           : 0;
-      const slice = APPROVAL_ROWS.slice(start, start + size);
+      const slice = inView.slice(start, start + size);
 
       const gaps: string[] = [];
       // Through the same mapper the HTTP client uses. The point of the fixture
@@ -361,11 +416,17 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       const page = readKeysetPage(
         {
           rows: slice,
+          // Total is the whole queue; filtered is this view. Two numbers,
+          // because "5 pending, 1 in this view" is the sentence an operator
+          // needs and one number cannot say it.
           total_count: APPROVAL_ROWS.length,
-          filtered_count: APPROVAL_ROWS.length,
-          next_cursor: start + size < APPROVAL_ROWS.length ? encodeCursor(slice[slice.length - 1]) : null,
+          filtered_count: inView.length,
+          next_cursor:
+            start + size < inView.length && slice.length > 0
+              ? encodeCursor(slice[slice.length - 1])
+              : null,
           prev_cursor: start > 0 ? encodeCursor(slice[0]) : null,
-          has_more: start + size < APPROVAL_ROWS.length,
+          has_more: start + size < inView.length,
           has_previous: start > 0,
           applied_filters: [{ field: "view", op: "eq", value: query.filter }],
           applied_sort: [
@@ -387,7 +448,9 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
           counts: { pending: APPROVAL_ROWS.length, overdue: 1, dueSoon: 1 },
           // Counted over the whole filter, not the page: that is what makes a
           // dropped separation-of-duty row visible.
-          inertCount: APPROVAL_ROWS.filter((r) => r.inert !== null).length,
+          // Counted over the view, so a filter that drops separation-of-duty
+          // rows makes the count and the rows disagree in public.
+          inertCount: inView.filter((r) => r.inert !== null).length,
           decided: readKeysetPage(
             { rows: DECIDED_ROWS, total_count: DECIDED_ROWS.length, filtered_count: DECIDED_ROWS.length },
             (row) => readApprovalRow(row).row,
