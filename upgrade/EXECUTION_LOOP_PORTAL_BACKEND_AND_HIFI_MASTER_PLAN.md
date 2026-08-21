@@ -792,7 +792,7 @@ so one slice may unlock several screens without inventing a second product roadm
 | EX-BE-00 | P0 | Registry revision 3 and canonical routes | Phase 0 navigation and routing for 1–17 |
 | EX-BE-00R4 | P0 / delivered | Registry revision 4 adds per-screen delivery profile/policy, echoed by composed envelopes | fixture/shadow truth for all screens, especially 11–12 |
 | EX-BE-04a | P0 / delivered | TypeScript bidirectional keyset/filter/sort/exact-count primitives over control-plane PostgreSQL | phases 1, 2 and Portal-owned portions of 5/7/8 |
-| EX-BE-05a | P0 / implementation complete; PG gate pending | TypeScript governance/evidence/approval workflow and audit, with external panels allowed unavailable | phases 1–2 on real Portal data without AWS |
+| EX-BE-05a | P0 / fresh-PG gate green | TypeScript governance/evidence/approval workflow and audit, with external panels allowed unavailable | phases 1–2 on real Portal data without AWS |
 | EX-BE-01 | P0 | Rust workspace, canonical contracts, `ts-contract-v1`, vocabulary reconciliation and golden corpus | all real-source screen contracts |
 | EX-BE-02 | P0 | mTLS/delegated-auth boundary, capability negotiation, read-only probes | safe AWS integration |
 | EX-BE-03 | P0 | projection schema, reducer, cursor/epoch/replay/snapshot and freshness evaluator | phases 4, 9–17 |
@@ -831,9 +831,10 @@ decision plans, apply/poll, quorum/conditions, optimistic concurrency and atomic
 audit/outbox. Query and apply tokens use separate rotatable keyrings. External
 Research/Execution panels remain complete `unavailable` envelopes and registry
 delivery remains `fixture`; there is no AWS/Rust/Trading-System dependency or
-authority claim. Status is `OPERATIONAL_EVIDENCE_PENDING`: strict typecheck and
-isolated token/key rotation tests pass, while the final fresh-PostgreSQL rerun is
-explicitly pending because the current sandbox cannot access Docker. Detailed
+authority claim. The fresh PostgreSQL 16 gate is green at 95/95 tests, including
+14/14 governance tests on 182,000 rows, and the isolated migrate→bootstrap→API
+Compose lifecycle passes. Status remains `OPERATIONAL_EVIDENCE_PENDING` only for
+the wider EX-BE-08 load/security/soak/DR evidence. Detailed
 evidence and frontend mapping are in
 [`EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md`](backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md).
 
@@ -851,8 +852,8 @@ Statuses use the architecture vocabulary, never bare `COMPLETE`:
 | Phase | Goal | Endpoints / events | Authority + freshness | Status | Depends on | Exit gate |
 |---:|---|---|---|---|---|---|
 | 0 Shell/shared | Registry renders all 17 canonical routes and explicit delivery profiles without data coupling | `/api/v1/portal/registry` rev 4 | Portal registry; no execution freshness | `CONTRACT_COMPLETE` | none | 17 unique `EXECUTION_*` screens; fixture policy fail-closed; schema/API/OpenAPI/generated-type sync and root verify |
-| 1 Approval Inbox | scalable approval queue | `GET /governance/approvals` | Portal record; linked source facts keep their own envelopes | `OPERATIONAL_EVIDENCE_PENDING` | EX-BE-04a/05a; final fresh-PG gate | bidirectional keyset/filter/sort/exact-count contract tests at 182k rows; RBAC tests |
-| 2 Gate R1 | immutable evidence and valid SoD approval | `GET /governance/approvals/{id}/r1`; plan/apply/poll decision | Portal decision; evidence source-attributed | `OPERATIONAL_EVIDENCE_PENDING` | EX-BE-05a; final fresh-PG gate | concurrent-version, SoD, evidence-hash, expiry, quorum, deny/approve/condition audit tests; no AWS dependency |
+| 1 Approval Inbox | scalable approval queue | `GET /governance/approvals` | Portal record; linked source facts keep their own envelopes | `OPERATIONAL_EVIDENCE_PENDING` | EX-BE-04a/05a; EX-BE-08 qualification | fresh-PG bidirectional keyset/filter/sort/exact-count tests at 182k rows; RBAC tests |
+| 2 Gate R1 | immutable evidence and valid SoD approval | `GET /governance/approvals/{id}/r1`; plan/apply/poll decision | Portal decision; evidence source-attributed | `OPERATIONAL_EVIDENCE_PENDING` | EX-BE-05a; EX-BE-08 qualification | fresh-PG concurrent-version, SoD, evidence-hash, expiry, quorum, deny/approve/condition audit tests; no AWS dependency |
 | 3 Gate R2 | safe capital preview and R2 decision | R2 detail, `/capital-preview`, command plan | Portal decision; EXECUTION/BROKER inputs; DERIVED preview | `FOUNDATION_COMPLETE` | EX-BE-03/05a/07 | multi-currency buckets, stale blocker and dual-approval tests |
 | 4 Paper Workbench | real Paper observation without client aggregation | deployment summary/series; operation status | EXECUTION/BROKER/DERIVED; per-panel policy | `FOUNDATION_COMPLETE` | EX-BE-03/04b; M7 gate evidence | 500-deployment corpus, adaptive ≤5k chart points, Paper action disabled unless verified |
 | 5 Paper Exit Review | server evaluates observation exit evidence | exit-review read/decision | Portal record; DERIVED with source-attributed inputs | `FOUNDATION_COMPLETE` | EX-BE-03/05a | deterministic policy replay, missing/stale evidence states, audit proof |

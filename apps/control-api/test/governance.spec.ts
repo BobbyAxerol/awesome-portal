@@ -298,7 +298,11 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
   it("requires a valid session and hides non-member workspace scope", async () => {
     expect((await rawInject("/api/v1/execution/governance/approvals")).statusCode).toBe(401);
     const lanWorkspaces = await inject(lan, "/api/workspaces");
-    const otherWorkspaceId = lanWorkspaces.json().workspaces[0].workspace_id;
+    const otherWorkspace = lanWorkspaces
+      .json()
+      .workspaces.find((item: { owner_user_id: string }) => item.owner_user_id === lan.userId);
+    expect(otherWorkspace).toBeDefined();
+    const otherWorkspaceId = otherWorkspace.workspace_id;
     const denied = await inject(bobby, `/api/v1/execution/governance/approvals?workspace_id=${otherWorkspaceId}`);
     expect(denied.statusCode).toBe(404);
     expect(denied.json().error.code).toBe("WORKSPACE_NOT_FOUND");
@@ -526,7 +530,9 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
       bobby,
       planPayload("AP-HASH", seeded.evidenceHashes, { request_key: "r1:AP-HASH:good" }),
     );
-    const forged = `${good.json().apply_token.slice(0, -1)}A`;
+    const tokenParts = good.json().apply_token.split(".");
+    tokenParts[3] = `${tokenParts[3][0] === "A" ? "B" : "A"}${tokenParts[3].slice(1)}`;
+    const forged = tokenParts.join(".");
     const response = await apply(bobby, good.json().operation_id, forged);
     expect(response.statusCode).toBe(403);
     expect(response.json().error.code).toBe("APPLY_TOKEN_INVALID");

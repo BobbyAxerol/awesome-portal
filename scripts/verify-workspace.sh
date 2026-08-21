@@ -217,6 +217,7 @@ for required in \
   "${ROOT_DIR}/apps/control-api/src/db/pool.ts" \
   "${ROOT_DIR}/apps/control-api/src/health/health.controller.ts" \
   "${ROOT_DIR}/apps/control-api/src/cli/bootstrap.ts" \
+  "${ROOT_DIR}/apps/control-api/test/health.spec.ts" \
   "${ROOT_DIR}/apps/control-api/test/harness.ts" \
   "${ROOT_DIR}/apps/control-api/test/repos.spec.ts" \
   "${ROOT_DIR}/apps/control-api/test/auth.spec.ts" \
@@ -435,6 +436,7 @@ for tracked_source in \
   apps/control-api/src/db/pool.ts \
   apps/control-api/src/health/health.controller.ts \
   apps/control-api/src/cli/bootstrap.ts \
+  apps/control-api/test/health.spec.ts \
   apps/control-api/test/harness.ts \
   apps/control-api/test/repos.spec.ts \
   apps/control-api/test/auth.spec.ts \

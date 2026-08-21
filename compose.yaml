@@ -1,5 +1,37 @@
 name: ${PORTAL_STACK_NAME:-portal}
 
+x-control-api-image: &control-api-image
+  build:
+    context: .
+    dockerfile: deploy/images/control-api.Dockerfile
+  image: ${PORTAL_IMAGE_PREFIX:-local/portal}-control-api:${PORTAL_IMAGE_TAG:-dev}
+
+x-control-api-environment: &control-api-environment
+  PORTAL_ENV: ${PORTAL_ENV:-local}
+  AUTH_MODE: ${CONTROL_API_AUTH_MODE:-dev}
+  DATABASE_URL: postgres://portal:portal@portal-postgres:5432/portal_control
+  PORTAL_PUBLIC_ORIGIN: ${PORTAL_PUBLIC_ORIGIN:-http://localhost:8080}
+  PORTAL_API_BASE_URL: http://portal-api:8000
+  PLANNING_API_BASE_URL: http://roadmap-task-board-api:8000
+  FEATURE_PROXY_PORTAL: ${CONTROL_API_FEATURE_PROXY_PORTAL:-true}
+  FEATURE_PROXY_PLANNING: ${CONTROL_API_FEATURE_PROXY_PLANNING:-true}
+  INTERNAL_PRINCIPAL_SECRET: ${CONTROL_API_INTERNAL_PRINCIPAL_SECRET:-local-dev-principal-secret-0123456789}
+  CLOUDFLARE_TEAM_DOMAIN: ${CLOUDFLARE_TEAM_DOMAIN:-}
+  CLOUDFLARE_ACCESS_ISSUER: ${CLOUDFLARE_ACCESS_ISSUER:-}
+  CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:-}
+  CLOUDFLARE_ACCESS_JWKS_URI: ${CLOUDFLARE_ACCESS_JWKS_URI:-}
+  CLOUDFLARE_ALLOWED_EMAIL_DOMAIN: ${CLOUDFLARE_ALLOWED_EMAIL_DOMAIN:-azdag.com}
+
+x-control-api-hardening: &control-api-hardening
+  init: true
+  read_only: true
+  tmpfs:
+    - /tmp:rw,nosuid,nodev,noexec,size=16m
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+
 # This is the Portal monorepo entry point. `./scripts/portal up` builds every
 # tracked module into one coherent stack with one public gateway.
 services:
@@ -112,32 +144,41 @@ services:
       retries: 6
       start_period: 10s
 
-  # U07 thin identity BFF: first Control API slice. Private until the U10
-  # facade wires the gateway to it; it owns no run/data/alpha authority.
-  control-api:
-    build:
-      context: .
-      dockerfile: deploy/images/control-api.Dockerfile
-    image: ${PORTAL_IMAGE_PREFIX:-local/portal}-control-api:${PORTAL_IMAGE_TAG:-dev}
-    restart: unless-stopped
-    environment:
-      PORTAL_ENV: ${PORTAL_ENV:-local}
-      AUTH_MODE: ${CONTROL_API_AUTH_MODE:-dev}
-      DATABASE_URL: postgres://portal:portal@portal-postgres:5432/portal_control
-      PORTAL_PUBLIC_ORIGIN: ${PORTAL_PUBLIC_ORIGIN:-http://localhost:8080}
-      PORTAL_API_BASE_URL: http://portal-api:8000
-      PLANNING_API_BASE_URL: http://roadmap-task-board-api:8000
-      FEATURE_PROXY_PORTAL: ${CONTROL_API_FEATURE_PROXY_PORTAL:-true}
-      FEATURE_PROXY_PLANNING: ${CONTROL_API_FEATURE_PROXY_PLANNING:-true}
-      INTERNAL_PRINCIPAL_SECRET: ${CONTROL_API_INTERNAL_PRINCIPAL_SECRET:-local-dev-principal-secret-0123456789}
-      CLOUDFLARE_TEAM_DOMAIN: ${CLOUDFLARE_TEAM_DOMAIN:-}
-      CLOUDFLARE_ACCESS_ISSUER: ${CLOUDFLARE_ACCESS_ISSUER:-}
-      CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:-}
-      CLOUDFLARE_ACCESS_JWKS_URI: ${CLOUDFLARE_ACCESS_JWKS_URI:-}
-      CLOUDFLARE_ALLOWED_EMAIL_DOMAIN: ${CLOUDFLARE_ALLOWED_EMAIL_DOMAIN:-azdag.com}
+  # One-shot schema owner. node-pg-migrate uses its PostgreSQL advisory lock,
+  # so API replicas never race migrations during a rollout.
+  control-api-migrate:
+    <<: [*control-api-image, *control-api-hardening]
+    restart: "no"
+    command: ["./node_modules/.bin/node-pg-migrate", "-m", "migrations", "up"]
+    environment: *control-api-environment
     depends_on:
       portal-postgres:
         condition: service_healthy
+    networks:
+      - portal
+
+  # Idempotently creates INVITED identities after the schema exists. It never
+  # prints activation credentials; that remains an explicit operator command.
+  control-api-bootstrap:
+    <<: [*control-api-image, *control-api-hardening]
+    restart: "no"
+    command: ["node", "dist/cli/bootstrap.js", "--file", "bootstrap-users.yaml"]
+    environment: *control-api-environment
+    depends_on:
+      control-api-migrate:
+        condition: service_completed_successfully
+    networks:
+      - portal
+
+  # U07/U10 Control API. It only starts after schema/bootstrap jobs complete;
+  # the long-running process never owns deployment-time mutations.
+  control-api:
+    <<: [*control-api-image, *control-api-hardening]
+    restart: unless-stopped
+    environment: *control-api-environment
+    depends_on:
+      control-api-bootstrap:
+        condition: service_completed_successfully
     expose:
       - "4000"
     networks:
@@ -147,7 +188,7 @@ services:
         - CMD
         - node
         - -e
-        - "fetch('http://127.0.0.1:4000/api/control/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+        - "fetch('http://127.0.0.1:4000/api/control/readyz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
       interval: 10s
       timeout: 5s
       retries: 6

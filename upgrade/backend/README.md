@@ -200,8 +200,9 @@ alphas are never executable. Fixtures: `visual-baseline-run` (COMPLETED) +
   authoritative list there.
 - Gateway wire ON (`PORTAL_WEB_UPSTREAM=control-api:4000` default): /api/
   through the Control API façade — session required, reads open (cross-user),
-  mutations ADMIN-only; rollback 1 line. control-api CMD migrates +
-  bootstraps at start; users in `deploy/control-api/bootstrap-users.yaml`.
+  mutations ADMIN-only; rollback 1 line. Separate one-shot Compose services run
+  migrations and idempotent bootstrap before the hardened long-lived API starts;
+  users are declared in `deploy/control-api/bootstrap-users.yaml`.
 - Remaining backend is phase-scoped (not open requests): U14 certification
   slice, capability expansion of quantbt-engine (BAR-09/U12), SSE through
   façade (BAR-07), Command Center read model (U10), workspace tenancy (U10),

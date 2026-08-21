@@ -10,23 +10,31 @@ NODE_CONTAINER="control-api-test-node"
 PG_PORT="${CONTROL_API_TEST_PG_PORT:-55432}"
 
 command -v docker >/dev/null 2>&1 || { printf 'Docker CLI is required.\n' >&2; exit 1; }
-docker info >/dev/null 2>&1 || { printf 'Cannot access the Docker daemon.\n' >&2; exit 1; }
+DOCKER=(docker)
+if ! "${DOCKER[@]}" info >/dev/null 2>&1; then
+  if command -v sudo >/dev/null 2>&1 && sudo -n docker info >/dev/null 2>&1; then
+    DOCKER=(sudo -n docker)
+  else
+    printf 'Cannot access the Docker daemon directly or through passwordless sudo.\n' >&2
+    exit 1
+  fi
+fi
 
 cleanup() {
-  docker rm -f "${NODE_CONTAINER}" "${PG_CONTAINER}" >/dev/null 2>&1 || true
-  docker network rm "${NETWORK}" >/dev/null 2>&1 || true
+  "${DOCKER[@]}" rm -f "${NODE_CONTAINER}" "${PG_CONTAINER}" >/dev/null 2>&1 || true
+  "${DOCKER[@]}" network rm "${NETWORK}" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
-docker network create "${NETWORK}" >/dev/null
+"${DOCKER[@]}" network create "${NETWORK}" >/dev/null
 
-docker run -d --name "${PG_CONTAINER}" --network "${NETWORK}" \
+"${DOCKER[@]}" run -d --name "${PG_CONTAINER}" --network "${NETWORK}" \
   -e POSTGRES_USER=portal -e POSTGRES_PASSWORD=portal -e POSTGRES_DB=portal_control_test \
   postgres:16-alpine >/dev/null
 
 ready=false
 for _ in $(seq 1 30); do
-  if docker exec "${PG_CONTAINER}" pg_isready -U portal -d portal_control_test >/dev/null 2>&1; then
+  if "${DOCKER[@]}" exec "${PG_CONTAINER}" pg_isready -U portal -d portal_control_test >/dev/null 2>&1; then
     ready=true
     break
   fi
@@ -34,23 +42,22 @@ for _ in $(seq 1 30); do
 done
 if [[ "${ready}" != true ]]; then
   printf 'PostgreSQL did not become ready.\n' >&2
-  docker logs "${PG_CONTAINER}" >&2
+  "${DOCKER[@]}" logs "${PG_CONTAINER}" >&2
   exit 1
 fi
 
-docker run --rm --name "${NODE_CONTAINER}" --network "${NETWORK}" \
+"${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" --network "${NETWORK}" \
   -u "${HOST_UID:-$(id -u)}:${HOST_GID:-$(id -g)}" \
   -v "${ROOT_DIR}:/repo:ro" \
   -v "${APP_DIR}:/work" \
+  --tmpfs /work/node_modules:rw,exec,mode=1777,size=512m \
   -w /work \
   -e HOME=/tmp \
   -e npm_config_cache=/tmp/.npm \
   -e TEST_DATABASE_URL="postgres://portal:portal@${PG_CONTAINER}:5432/portal_control_test" \
   node:22-alpine sh -c '
     set -e
-    if [ ! -d node_modules ]; then
-      npm ci --no-audit --no-fund
-    fi
+    npm ci --no-audit --no-fund
     npx vitest run
   '
 printf 'Control API tests passed against a real PostgreSQL container.\n'

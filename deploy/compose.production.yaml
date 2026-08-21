@@ -1,5 +1,39 @@
 name: ${PORTAL_STACK_NAME:-portal}
 
+x-control-api-image: &control-api-image
+  image: ${PORTAL_IMAGE_PREFIX:?Set PORTAL_IMAGE_PREFIX}-control-api:${PORTAL_IMAGE_TAG:?Set PORTAL_IMAGE_TAG}
+
+x-control-api-environment: &control-api-environment
+  PORTAL_ENV: ${CONTROL_API_PORTAL_ENV:-research}
+  AUTH_MODE: ${CONTROL_API_AUTH_MODE:?Set CONTROL_API_AUTH_MODE (cloudflare_access_local_password)}
+  DATABASE_URL: postgres://${PORTAL_CONTROL_DB_USER:-portal}:${PORTAL_CONTROL_DB_PASSWORD:?Set PORTAL_CONTROL_DB_PASSWORD}@portal-postgres:5432/${PORTAL_CONTROL_DB_NAME:-portal_control}
+  PORTAL_PUBLIC_ORIGIN: ${PORTAL_PUBLIC_ORIGIN:?Set PORTAL_PUBLIC_ORIGIN (https://portal.primusspark.com)}
+  PORTAL_API_BASE_URL: http://portal-api:8000
+  PLANNING_API_BASE_URL: http://roadmap-task-board-api:8000
+  FEATURE_PROXY_PORTAL: "true"
+  FEATURE_PROXY_PLANNING: "true"
+  INTERNAL_PRINCIPAL_SECRET: ${CONTROL_API_INTERNAL_PRINCIPAL_SECRET:?Set CONTROL_API_INTERNAL_PRINCIPAL_SECRET}
+  QUERY_CURSOR_ACTIVE_KEY_ID: ${CONTROL_API_QUERY_CURSOR_ACTIVE_KEY_ID:-query-k1}
+  QUERY_CURSOR_KEYS_JSON: '${CONTROL_API_QUERY_CURSOR_KEYS_JSON:?Set CONTROL_API_QUERY_CURSOR_KEYS_JSON}'
+  GOVERNANCE_APPLY_ACTIVE_KEY_ID: ${CONTROL_API_GOVERNANCE_APPLY_ACTIVE_KEY_ID:-governance-k1}
+  GOVERNANCE_APPLY_KEYS_JSON: '${CONTROL_API_GOVERNANCE_APPLY_KEYS_JSON:?Set CONTROL_API_GOVERNANCE_APPLY_KEYS_JSON}'
+  GOVERNANCE_PLAN_TTL_SECONDS: ${CONTROL_API_GOVERNANCE_PLAN_TTL_SECONDS:-300}
+  CLOUDFLARE_TEAM_DOMAIN: ${CLOUDFLARE_TEAM_DOMAIN:?Set CLOUDFLARE_TEAM_DOMAIN}
+  CLOUDFLARE_ACCESS_ISSUER: ${CLOUDFLARE_ACCESS_ISSUER:?Set CLOUDFLARE_ACCESS_ISSUER}
+  CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:?Set CLOUDFLARE_ACCESS_AUD}
+  CLOUDFLARE_ACCESS_JWKS_URI: ${CLOUDFLARE_ACCESS_JWKS_URI:?Set CLOUDFLARE_ACCESS_JWKS_URI}
+  CLOUDFLARE_ALLOWED_EMAIL_DOMAIN: ${CLOUDFLARE_ALLOWED_EMAIL_DOMAIN:-azdag.com}
+
+x-control-api-hardening: &control-api-hardening
+  init: true
+  read_only: true
+  tmpfs:
+    - /tmp:rw,nosuid,nodev,noexec,size=16m
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+
 # Image-only deployment definition. CI publishes images from the Portal
 # monorepo. Provision .env.production on the host from .env.production.example;
 # do not put deployment secrets in this repository.
@@ -91,32 +125,35 @@ services:
       retries: 6
       start_period: 10s
 
-  control-api:
-    image: ${PORTAL_IMAGE_PREFIX:?Set PORTAL_IMAGE_PREFIX}-control-api:${PORTAL_IMAGE_TAG:?Set PORTAL_IMAGE_TAG}
-    restart: unless-stopped
-    environment:
-      PORTAL_ENV: ${CONTROL_API_PORTAL_ENV:-research}
-      AUTH_MODE: ${CONTROL_API_AUTH_MODE:?Set CONTROL_API_AUTH_MODE (cloudflare_access_local_password)}
-      DATABASE_URL: postgres://${PORTAL_CONTROL_DB_USER:-portal}:${PORTAL_CONTROL_DB_PASSWORD:?Set PORTAL_CONTROL_DB_PASSWORD}@portal-postgres:5432/${PORTAL_CONTROL_DB_NAME:-portal_control}
-      PORTAL_PUBLIC_ORIGIN: ${PORTAL_PUBLIC_ORIGIN:?Set PORTAL_PUBLIC_ORIGIN (https://portal.primusspark.com)}
-      PORTAL_API_BASE_URL: http://portal-api:8000
-      PLANNING_API_BASE_URL: http://roadmap-task-board-api:8000
-      FEATURE_PROXY_PORTAL: "true"
-      FEATURE_PROXY_PLANNING: "true"
-      INTERNAL_PRINCIPAL_SECRET: ${CONTROL_API_INTERNAL_PRINCIPAL_SECRET:?Set CONTROL_API_INTERNAL_PRINCIPAL_SECRET}
-      QUERY_CURSOR_ACTIVE_KEY_ID: ${CONTROL_API_QUERY_CURSOR_ACTIVE_KEY_ID:-query-k1}
-      QUERY_CURSOR_KEYS_JSON: '${CONTROL_API_QUERY_CURSOR_KEYS_JSON:?Set CONTROL_API_QUERY_CURSOR_KEYS_JSON}'
-      GOVERNANCE_APPLY_ACTIVE_KEY_ID: ${CONTROL_API_GOVERNANCE_APPLY_ACTIVE_KEY_ID:-governance-k1}
-      GOVERNANCE_APPLY_KEYS_JSON: '${CONTROL_API_GOVERNANCE_APPLY_KEYS_JSON:?Set CONTROL_API_GOVERNANCE_APPLY_KEYS_JSON}'
-      GOVERNANCE_PLAN_TTL_SECONDS: ${CONTROL_API_GOVERNANCE_PLAN_TTL_SECONDS:-300}
-      CLOUDFLARE_TEAM_DOMAIN: ${CLOUDFLARE_TEAM_DOMAIN:?Set CLOUDFLARE_TEAM_DOMAIN}
-      CLOUDFLARE_ACCESS_ISSUER: ${CLOUDFLARE_ACCESS_ISSUER:?Set CLOUDFLARE_ACCESS_ISSUER}
-      CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:?Set CLOUDFLARE_ACCESS_AUD}
-      CLOUDFLARE_ACCESS_JWKS_URI: ${CLOUDFLARE_ACCESS_JWKS_URI:?Set CLOUDFLARE_ACCESS_JWKS_URI}
-      CLOUDFLARE_ALLOWED_EMAIL_DOMAIN: ${CLOUDFLARE_ALLOWED_EMAIL_DOMAIN:-azdag.com}
+  control-api-migrate:
+    <<: [*control-api-image, *control-api-hardening]
+    restart: "no"
+    command: ["./node_modules/.bin/node-pg-migrate", "-m", "migrations", "up"]
+    environment: *control-api-environment
     depends_on:
       portal-postgres:
         condition: service_healthy
+    networks:
+      - portal
+
+  control-api-bootstrap:
+    <<: [*control-api-image, *control-api-hardening]
+    restart: "no"
+    command: ["node", "dist/cli/bootstrap.js", "--file", "bootstrap-users.yaml"]
+    environment: *control-api-environment
+    depends_on:
+      control-api-migrate:
+        condition: service_completed_successfully
+    networks:
+      - portal
+
+  control-api:
+    <<: [*control-api-image, *control-api-hardening]
+    restart: unless-stopped
+    environment: *control-api-environment
+    depends_on:
+      control-api-bootstrap:
+        condition: service_completed_successfully
     expose:
       - "4000"
     networks:
@@ -126,7 +163,7 @@ services:
         - CMD
         - node
         - -e
-        - "fetch('http://127.0.0.1:4000/api/control/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+        - "fetch('http://127.0.0.1:4000/api/control/readyz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
       interval: 10s
       timeout: 5s
       retries: 6

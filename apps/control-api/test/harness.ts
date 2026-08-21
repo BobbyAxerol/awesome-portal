@@ -1,4 +1,4 @@
-import migrate from "node-pg-migrate";
+import { runner as migrate } from "node-pg-migrate";
 import { Pool } from "pg";
 import { loadConfig } from "../src/config";
 import { buildPool } from "../src/db/pool";

@@ -666,8 +666,10 @@ deep-dive → ADR → slice → evidence discipline documented above.
   health/ready/SSE) goes through the Control API façade — session required;
   reads open to all authenticated users (including cross-user runs); **all
   mutations ADMIN-only**. Rollback: `PORTAL_WEB_UPSTREAM=portal-api:8000`.
-  Control API CMD now runs migrations + bootstrap before serving; bootstrap
-  users in `deploy/control-api/bootstrap-users.yaml`.
+  Separate one-shot Control API migration and bootstrap services complete before
+  the long-lived API serves; bootstrap users remain declared in
+  `deploy/control-api/bootstrap-users.yaml`. The API has database-backed
+  readiness, a read-only root filesystem and least-privilege container settings.
 - `control-api` suite: 34 tests; Portal backend regression 396 passed,
   1 skipped; contracts/parity/M0 snapshots regenerated.
 - **PR #35 CI remediation (2026-08-18):** the shared-contract and Control API
@@ -777,10 +779,10 @@ deep-dive → ADR → slice → evidence discipline documented above.
   and atomic audit/outbox. Apply authorization uses a dedicated rotatable HMAC
   keyring independent from query cursors; HTTP 202 remains non-terminal and the
   operation poll is authoritative. External panels and the registry profile
-  stay honestly `unavailable`/`fixture`. Status is
-  `OPERATIONAL_EVIDENCE_PENDING`: strict typecheck and isolated token tests pass,
-  but the final fresh-PostgreSQL suite is not marked passed while Docker access
-  is unavailable. Deep dive and Claude mapping:
+  stay honestly `unavailable`/`fixture`. The fresh PostgreSQL 16 gate is green:
+  9 suites/95 tests, including governance 14/14 at 182,000 rows and fail-closed
+  database readiness. Status stays `OPERATIONAL_EVIDENCE_PENDING` only for the
+  wider EX-BE-08 load/security/soak/DR evidence. Deep dive and Claude mapping:
   [`EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md`](./backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md).
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner

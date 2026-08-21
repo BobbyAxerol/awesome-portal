@@ -140,11 +140,14 @@ Current local evidence:
 
 - TypeScript strict typecheck: pass;
 - isolated keyring/token tests: 3/3 pass;
-- pre-fix PostgreSQL run: existing Control API 76/76 pass; EX-BE-05a 6/11
-  pass and exposed three implementation defects (lazy workspace fixture, SQL
-  parameter inference, same-client concurrent queries); all three are corrected;
-- final fresh-PostgreSQL rerun: pending because the active Codex sandbox cannot
-  access the Docker daemon. No passing claim is made for that unavailable gate.
+- authoritative fresh-PostgreSQL 16 run: 9 suites and 95/95 tests pass;
+- governance coverage: 14/14 tests pass against the real 182,000-row corpus;
+- liveness/readiness coverage: 2/2 tests pass, including fail-closed database
+  readiness;
+- isolated Compose lifecycle: migration and bootstrap jobs exit 0, the API
+  becomes healthy, `/readyz` returns 200, and the service runs as `node` with a
+  read-only root filesystem, all Linux capabilities dropped and
+  `no-new-privileges` enabled.
 
 Run the authoritative gate when Docker access is available:
 
@@ -152,8 +155,9 @@ Run the authoritative gate when Docker access is available:
 ./scripts/control-api-test.sh
 ```
 
-Only after that fresh run is green should this document and the phase board move
-from `OPERATIONAL_EVIDENCE_PENDING` to the next release-qualified state.
+The fresh-database implementation gate is green. Status remains
+`OPERATIONAL_EVIDENCE_PENDING` only because the wider EX-BE-08 load, security,
+soak, restore and rollback evidence has not been completed.
 
 ## 7. Deployment and rollback
 
@@ -168,6 +172,11 @@ The migration is additive. Rollback disables screen query/command delivery in
 registry policy first, then returns to the prior Control API image. Database
 down migration is only for a proven empty/non-production slice; immutable
 governance evidence must not be destroyed to make an application rollback easy.
+
+Compose runs migration and bootstrap as separate one-shot services before the
+long-lived API starts. The API container never mutates schema or creates users in
+its process command, and readiness checks PostgreSQL rather than reporting a
+false positive from process liveness alone.
 
 ## 8. Next backend slice
 
