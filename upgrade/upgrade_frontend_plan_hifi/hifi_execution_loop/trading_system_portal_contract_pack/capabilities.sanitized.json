@@ -1,0 +1,163 @@
+{
+ "status": "READY",
+ "ts": 1787304533.8014736,
+ "capabilities": {
+  "broker:binance_futures": {
+   "mode": "sandbox",
+   "venue": "BINANCE",
+   "errors": [],
+   "market": "USD_M_FUTURES",
+   "status": "READY",
+   "adapter": "binance_futures",
+   "circuit_open": false,
+   "client_count": 4,
+   "failure_count": 0,
+   "client_sources": [
+    "python_binance",
+    "python_binance",
+    "python_binance",
+    "python_binance"
+   ],
+   "cooldown_seconds": 120.0
+  },
+  "broker:binance_futures_user_stream": {
+   "venue": "BINANCE",
+   "errors": [],
+   "market": "USD_M_FUTURES",
+   "status": "READY",
+   "adapter": "binance_futures_user_stream",
+   "client_count": 4,
+   "socket_count": 4,
+   "retry_seconds": 60.0
+  }
+ },
+ "venue_products": [
+  {
+   "venue": "BINANCE",
+   "product": "USD_M",
+   "supported_modes": [
+    "paper",
+    "sandbox",
+    "live"
+   ],
+   "execution_available": true,
+   "market_data_available": true,
+   "private_events_available": true,
+   "account_sync_available": true,
+   "reconciliation_available": true,
+   "position_modes": [
+    "ONE_WAY",
+    "HEDGE"
+   ],
+   "credential_scope": "binance:{mode}:{external_account_ref}",
+   "rate_limit_scope": "binance:{mode}:{credential_ref}",
+   "time_sync_scope": "binance:{mode}",
+   "rollout_state": "ACTIVE"
+  },
+  {
+   "venue": "BINANCE",
+   "product": "SPOT",
+   "supported_modes": [
+    "paper"
+   ],
+   "execution_available": false,
+   "market_data_available": true,
+   "private_events_available": false,
+   "account_sync_available": false,
+   "reconciliation_available": false,
+   "position_modes": [
+    "NET"
+   ],
+   "credential_scope": "binance:spot:{external_account_ref}",
+   "rate_limit_scope": "binance:spot:{credential_ref}",
+   "time_sync_scope": "binance:spot",
+   "rollout_state": "MARKET_DATA_ONLY"
+  },
+  {
+   "venue": "DNSE",
+   "product": "VN_EQUITY",
+   "supported_modes": [
+    "paper",
+    "live"
+   ],
+   "execution_available": true,
+   "market_data_available": true,
+   "private_events_available": true,
+   "account_sync_available": true,
+   "reconciliation_available": true,
+   "position_modes": [
+    "NET"
+   ],
+   "credential_scope": "dnse:{external_account_ref}",
+   "rate_limit_scope": "dnse:{credential_ref}",
+   "time_sync_scope": "dnse",
+   "rollout_state": "ACTIVE"
+  },
+  {
+   "venue": "DNSE",
+   "product": "VN_DERIVATIVE",
+   "supported_modes": [
+    "paper"
+   ],
+   "execution_available": true,
+   "market_data_available": true,
+   "private_events_available": false,
+   "account_sync_available": false,
+   "reconciliation_available": false,
+   "position_modes": [
+    "NET"
+   ],
+   "credential_scope": "dnse:{external_account_ref}",
+   "rate_limit_scope": "dnse:{credential_ref}",
+   "time_sync_scope": "dnse",
+   "rollout_state": "PAPER_ONLY"
+  },
+  {
+   "venue": "OKX",
+   "product": "SWAP",
+   "supported_modes": [
+    "sandbox",
+    "live"
+   ],
+   "execution_available": false,
+   "market_data_available": true,
+   "private_events_available": true,
+   "account_sync_available": true,
+   "reconciliation_available": true,
+   "position_modes": [
+    "NET",
+    "LONG_SHORT"
+   ],
+   "credential_scope": "okx:{mode}:{external_account_ref}",
+   "rate_limit_scope": "okx:{mode}:{credential_ref}",
+   "time_sync_scope": "okx:{mode}",
+   "rollout_state": "DISABLED_PENDING_ACCEPTANCE"
+  },
+  {
+   "venue": "OKX",
+   "product": "FUTURES",
+   "supported_modes": [
+    "sandbox",
+    "live"
+   ],
+   "execution_available": false,
+   "market_data_available": true,
+   "private_events_available": true,
+   "account_sync_available": true,
+   "reconciliation_available": true,
+   "position_modes": [
+    "NET",
+    "LONG_SHORT"
+   ],
+   "credential_scope": "okx:{mode}:{external_account_ref}",
+   "rate_limit_scope": "okx:{mode}:{credential_ref}",
+   "time_sync_scope": "okx:{mode}",
+   "rollout_state": "DISABLED_PENDING_ACCEPTANCE"
+  }
+ ],
+ "_provenance": {
+  "captured_utc": "2026-08-21",
+  "endpoint": "GET /v1/health/capabilities (public)",
+  "note": "Live capture. Shape changed vs the 2026-08-20 file (capabilities_summary -> capabilities)."
+ }
+}

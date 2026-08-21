@@ -1,0 +1,132 @@
+version: v1
+captured_at_utc: '2026-08-20T10:55:00Z'
+commands:
+- action: inspect/list/get
+  risk: R0
+  method: GET /v1/admin/*
+  plan: false
+  apply: false
+  verify: false
+  auth: admin
+  idempotent: true
+  terminal: response
+- action: portfolio create/update
+  risk: R1
+  method: POST/PATCH /v1/admin/portfolios
+  plan: false
+  apply: true
+  verify: false
+  auth: admin
+  idempotent: true
+  terminal: state ACTIVE
+  rollback: state revert
+- action: allocation add/change/withdraw/rebalance
+  risk: R1-R4
+  method: POST /v1/admin/portfolio-allocations, POST /v1/portfolio-targets/rebalance
+  plan: false
+  apply: true
+  verify: false
+  auth: admin/alpha
+  idempotent: true
+  terminal: allocation rows
+  rollback: rebalance nguoc
+- action: account create/update/seed
+  risk: R1
+  method: POST /v1/admin/accounts/paper/seed, PUT /v1/admin/accounts/{id}/policy
+  plan: false
+  apply: true
+  verify: false
+  auth: admin
+  idempotent: true
+  terminal: state
+  rollback: delete lab account
+- action: risk profile/limit change
+  risk: R1-R4
+  method: PATCH /v1/admin/alphas/{id}/risk, GET /v1/accounts/{id}/preflight
+  plan: false
+  apply: true
+  verify: false
+  auth: admin
+  idempotent: true
+  terminal: preflight OK
+  rollback: revert profile
+- action: deployment create/configure
+  risk: R1
+  method: POST /v1/admin/alphas/register
+  plan: false
+  apply: true
+  verify: false
+  auth: admin
+  idempotent: true
+  terminal: registered
+  rollback: deactivate
+- action: deployment start/resume
+  risk: R1-R4
+  method: POST /v1/admin/trading-state
+  plan: false
+  apply: true
+  verify: false
+  auth: admin
+  idempotent: true
+  terminal: state ACTIVE
+  rollback: HALTED
+- action: deployment halt/reduce
+  risk: R1-R3
+  method: PATCH /v1/admin/deployments/{id}/state, emergency-close plan
+  plan: false
+  apply: true
+  verify: false
+  auth: admin
+  idempotent: true
+  terminal: state HALTED
+  rollback: resume
+- action: broker sync
+  risk: R2
+  method: POST /v1/admin/accounts/{id}/sync, broker-bindings/{ref}/reconcile-*
+  plan: false
+  apply: true
+  verify: false
+  auth: admin
+  idempotent: true
+  terminal: sync state
+  rollback: re-sync
+- action: reconciliation dry-run
+  risk: R2
+  method: GET state/preflight, CLI ops findings
+  plan: false
+  apply: false
+  verify: false
+  auth: admin
+  idempotent: true
+  terminal: findings
+  rollback: n/a
+- action: reconciliation apply
+  risk: R2-R3
+  method: POST /v1/admin/accounts/{id}/reconcile-positions|open-orders
+  plan: false
+  apply: true
+  verify: false
+  auth: admin
+  idempotent: true
+  terminal: positions corrected
+  rollback: re-reconcile
+- action: emergency close/protective action
+  risk: R3
+  method: GET /v1/admin/ops/emergency-close/plan -> POST -> GET /{op_id}/verify
+  plan: true
+  apply: true
+  verify: true
+  auth: admin
+  idempotent: true
+  terminal: verified op
+  rollback: resume protocol
+- action: reset/destructive lab operation
+  risk: BLOCKED
+  method: '-'
+  plan: false
+  apply: false
+  verify: false
+  auth: '-'
+  idempotent: false
+  terminal: '-'
+  rollback: '- (khong expose)'

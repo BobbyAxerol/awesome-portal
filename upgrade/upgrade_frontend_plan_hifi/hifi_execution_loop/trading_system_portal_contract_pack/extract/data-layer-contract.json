@@ -1,0 +1,2165 @@
+{
+  "provenance": {
+    "generated_by": "scripts/45_data_layer.py",
+    "read_only": true,
+    "trading_system_commit": "9081397de9e981c43b4e0f67fabe747e7ed964c7",
+    "sources": [
+      "runtime GET 127.0.0.1:8100/openapi.json",
+      "data_layer/app/api/routes_*.py"
+    ],
+    "note": "Derived from source/runtime read-only inspection. No Trading System file was modified."
+  },
+  "status": "CONFIRMED_RUNTIME",
+  "why_portal_needs_this": "The Trading System gateway carries neither market data nor the VN session calendar. Any Portal screen showing prices, the VN board, or MARKET_CLOSED/OPEN state must read data_layer, not trading_system.",
+  "contrast_with_trading_system": {
+    "trading_system_openapi": "0 query params, 0 request bodies, 0 security schemes — unusable for codegen",
+    "data_layer_openapi": "17 operations declare query params, 4 declare request bodies, typed component schemas present — usable for codegen directly",
+    "consequence": "generate the data_layer client from its own OpenAPI; generate the trading_system client from extract/api-surface.json"
+  },
+  "summary": {
+    "openapi_version": "3.1.0",
+    "service_version": "0.1.0",
+    "operations": 40,
+    "operations_with_query_params": 17,
+    "operations_with_request_body": 4,
+    "component_schemas": [
+      "FeedDemandItem",
+      "FeedLeaseRequest",
+      "HTTPValidationError",
+      "ValidationError"
+    ],
+    "security_schemes": null,
+    "route_groups": {
+      "binance": 15,
+      "control": 9,
+      "crypto": 3,
+      "fallback": 2,
+      "health": 2,
+      "preload": 6,
+      "vn": 3
+    },
+    "source_routes_found": 40
+  },
+  "auth_note": "No securitySchemes and no auth dependency in the route modules — data_layer is unauthenticated and bound to 127.0.0.1:8100. Any Portal access path must terminate authentication at the Portal edge.",
+  "operations": [
+    {
+      "method": "POST",
+      "path": "/v1/binance/futures/basis-bundle",
+      "operation_id": "post_basis_bundle_v1_binance_futures_basis_bundle_post",
+      "summary": "Post Basis Bundle",
+      "path_params": [],
+      "query_params": [],
+      "request_body": true,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/binance/futures/basis/{pair}",
+      "operation_id": "get_basis_v1_binance_futures_basis__pair__get",
+      "summary": "Get Basis",
+      "path_params": [
+        "pair"
+      ],
+      "query_params": [
+        {
+          "name": "contract_type",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "CURRENT_QUARTER",
+            "title": "Contract Type"
+          }
+        },
+        {
+          "name": "period",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "1d",
+            "title": "Period"
+          }
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 500,
+            "minimum": 1,
+            "default": 30,
+            "title": "Limit"
+          }
+        },
+        {
+          "name": "start_time",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          }
+        },
+        {
+          "name": "end_time",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          }
+        }
+      ],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/v1/binance/futures/continuous-basis-bundle",
+      "operation_id": "post_continuous_basis_bundle_v1_binance_futures_continuous_basis_bundle_post",
+      "summary": "Post Continuous Basis Bundle",
+      "path_params": [],
+      "query_params": [],
+      "request_body": true,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/binance/futures/depth/{symbol}",
+      "operation_id": "get_derivative_depth_v1_binance_futures_depth__symbol__get",
+      "summary": "Get Derivative Depth",
+      "path_params": [
+        "symbol"
+      ],
+      "query_params": [
+        {
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "default": 5,
+            "title": "Limit"
+          }
+        }
+      ],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/binance/futures/exchange-info",
+      "operation_id": "get_exchange_info_v1_binance_futures_exchange_info_get",
+      "summary": "Get Exchange Info",
+      "path_params": [],
+      "query_params": [
+        {
+          "name": "symbol",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symbol"
+          }
+        }
+      ],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/binance/futures/funding-rate/{symbol}",
+      "operation_id": "get_funding_rate_v1_binance_futures_funding_rate__symbol__get",
+      "summary": "Get Funding Rate",
+      "path_params": [
+        "symbol"
+      ],
+      "query_params": [
+        {
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 1000,
+            "minimum": 1,
+            "default": 100,
+            "title": "Limit"
+          }
+        },
+        {
+          "name": "start_time",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          }
+        },
+        {
+          "name": "end_time",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          }
+        }
+      ],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/binance/futures/klines/{symbol}",
+      "operation_id": "get_derivative_klines_v1_binance_futures_klines__symbol__get",
+      "summary": "Get Derivative Klines",
+      "path_params": [
+        "symbol"
+      ],
+      "query_params": [
+        {
+          "name": "interval",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "Binance kline interval",
+            "default": "1d",
+            "title": "Interval"
+          }
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 1500,
+            "minimum": 1,
+            "default": 30,
+            "title": "Limit"
+          }
+        },
+        {
+          "name": "start_time",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          }
+        },
+        {
+          "name": "end_time",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          }
+        }
+      ],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/binance/futures/long-short/{kind}/{symbol}",
+      "operation_id": "get_long_short_ratio_v1_binance_futures_long_short__kind___symbol__get",
+      "summary": "Get Long Short Ratio",
+      "path_params": [
+        "kind",
+        "symbol"
+      ],
+      "query_params": [
+        {
+          "name": "period",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "1d",
+            "title": "Period"
+          }
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 500,
+            "minimum": 1,
+            "default": 30,
+            "title": "Limit"
+          }
+        },
+        {
+          "name": "start_time",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          }
+        },
+        {
+          "name": "end_time",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          }
+        }
+      ],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/binance/futures/open-interest-history/{symbol}",
+      "operation_id": "get_open_interest_history_v1_binance_futures_open_interest_history__symbol__get",
+      "summary": "Get Open Interest History",
+      "path_params": [
+        "symbol"
+      ],
+      "query_params": [
+        {
+          "name": "period",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "1d",
+            "title": "Period"
+          }
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 500,
+            "minimum": 1,
+            "default": 30,
+            "title": "Limit"
+          }
+        },
+        {
+          "name": "start_time",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          }
+        },
+        {
+          "name": "end_time",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          }
+        }
+      ],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/binance/futures/open-interest/{symbol}",
+      "operation_id": "get_open_interest_v1_binance_futures_open_interest__symbol__get",
+      "summary": "Get Open Interest",
+      "path_params": [
+        "symbol"
+      ],
+      "query_params": [],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/binance/futures/taker-long-short/{symbol}",
+      "operation_id": "get_taker_long_short_ratio_v1_binance_futures_taker_long_short__symbol__get",
+      "summary": "Get Taker Long Short Ratio",
+      "path_params": [
+        "symbol"
+      ],
+      "query_params": [
+        {
+          "name": "period",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "1d",
+            "title": "Period"
+          }
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 500,
+            "minimum": 1,
+            "default": 30,
+            "title": "Limit"
+          }
+        },
+        {
+          "name": "start_time",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          }
+        },
+        {
+          "name": "end_time",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          }
+        }
+      ],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/binance/kline/{symbol}",
+      "operation_id": "get_binance_kline_v1_binance_kline__symbol__get",
+      "summary": "Get Binance Kline",
+      "path_params": [
+        "symbol"
+      ],
+      "query_params": [
+        {
+          "name": "interval",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "1m",
+            "title": "Interval"
+          }
+        }
+      ],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/binance/klines/{symbol}",
+      "operation_id": "get_binance_klines_v1_binance_klines__symbol__get",
+      "summary": "Get Binance Klines",
+      "path_params": [
+        "symbol"
+      ],
+      "query_params": [
+        {
+          "name": "interval",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "1m",
+            "title": "Interval"
+          }
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 1500,
+            "minimum": 1,
+            "default": 500,
+            "title": "Limit"
+          }
+        },
+        {
+          "name": "start_time",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          }
+        },
+        {
+          "name": "end_time",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          }
+        },
+        {
+          "name": "market",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "auto, spot, usdm/futures",
+            "default": "auto",
+            "title": "Market"
+          }
+        }
+      ],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/binance/price-last/{symbol}",
+      "operation_id": "get_binance_price_last_v1_binance_price_last__symbol__get",
+      "summary": "Get Binance Price Last",
+      "path_params": [
+        "symbol"
+      ],
+      "query_params": [
+        {
+          "name": "market",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "auto",
+            "title": "Market"
+          }
+        }
+      ],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/binance/price/{symbol}",
+      "operation_id": "get_binance_price_v1_binance_price__symbol__get",
+      "summary": "Get Binance Price",
+      "path_params": [
+        "symbol"
+      ],
+      "query_params": [
+        {
+          "name": "market",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "auto",
+            "title": "Market"
+          }
+        }
+      ],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/control/feed-demands",
+      "operation_id": "feed_demands_v1_control_feed_demands_get",
+      "summary": "Feed Demands",
+      "path_params": [],
+      "query_params": [],
+      "request_body": false,
+      "response_codes": [
+        "200"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/v1/control/feed-leases",
+      "operation_id": "renew_feed_leases_v1_control_feed_leases_post",
+      "summary": "Renew Feed Leases",
+      "path_params": [],
+      "query_params": [],
+      "request_body": true,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/control/feed-leases/{owner_id}",
+      "operation_id": "release_feed_leases_v1_control_feed_leases__owner_id__delete",
+      "summary": "Release Feed Leases",
+      "path_params": [
+        "owner_id"
+      ],
+      "query_params": [],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/control/provider-priority",
+      "operation_id": "provider_priority_v1_control_provider_priority_get",
+      "summary": "Provider Priority",
+      "path_params": [],
+      "query_params": [],
+      "request_body": false,
+      "response_codes": [
+        "200"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/control/runtime-roles",
+      "operation_id": "runtime_roles_v1_control_runtime_roles_get",
+      "summary": "Runtime Roles",
+      "path_params": [],
+      "query_params": [],
+      "request_body": false,
+      "response_codes": [
+        "200"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/control/session-calendar",
+      "operation_id": "session_calendar_v1_control_session_calendar_get",
+      "summary": "Session Calendar",
+      "path_params": [],
+      "query_params": [],
+      "request_body": false,
+      "response_codes": [
+        "200"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/control/universe/active",
+      "operation_id": "active_universe_v1_control_universe_active_get",
+      "summary": "Active Universe",
+      "path_params": [],
+      "query_params": [],
+      "request_body": false,
+      "response_codes": [
+        "200"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/control/universe/configured",
+      "operation_id": "configured_universe_v1_control_universe_configured_get",
+      "summary": "Configured Universe",
+      "path_params": [],
+      "query_params": [],
+      "request_body": false,
+      "response_codes": [
+        "200"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/control/universe/priority",
+      "operation_id": "priority_universe_v1_control_universe_priority_get",
+      "summary": "Priority Universe",
+      "path_params": [],
+      "query_params": [],
+      "request_body": false,
+      "response_codes": [
+        "200"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/v1/crypto/ohlcv/{provider}/batch",
+      "operation_id": "post_crypto_ohlcv_batch_v1_crypto_ohlcv__provider__batch_post",
+      "summary": "Post Crypto Ohlcv Batch",
+      "path_params": [
+        "provider"
+      ],
+      "query_params": [],
+      "request_body": true,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/crypto/ohlcv/{provider}/{symbol}",
+      "operation_id": "get_crypto_ohlcv_v1_crypto_ohlcv__provider___symbol__get",
+      "summary": "Get Crypto Ohlcv",
+      "path_params": [
+        "provider",
+        "symbol"
+      ],
+      "query_params": [
+        {
+          "name": "interval",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "1m",
+            "title": "Interval"
+          }
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 1500,
+            "minimum": 1,
+            "default": 500,
+            "title": "Limit"
+          }
+        },
+        {
+          "name": "start_time",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          }
+        },
+        {
+          "name": "end_time",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          }
+        },
+        {
+          "name": "market",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "Binance only: auto, spot, usdm/futures",
+            "default": "auto",
+            "title": "Market"
+          }
+        }
+      ],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/crypto/ohlcv/{provider}/{symbol}/{interval}",
+      "operation_id": "get_crypto_ohlcv_v1_crypto_ohlcv__provider___symbol___interval__get",
+      "summary": "Get Crypto Ohlcv",
+      "path_params": [
+        "provider",
+        "symbol",
+        "interval"
+      ],
+      "query_params": [
+        {
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 1500,
+            "minimum": 1,
+            "default": 500,
+            "title": "Limit"
+          }
+        },
+        {
+          "name": "start_time",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          }
+        },
+        {
+          "name": "end_time",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          }
+        },
+        {
+          "name": "market",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "Binance only: auto, spot, usdm/futures",
+            "default": "auto",
+            "title": "Market"
+          }
+        }
+      ],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/fallback/crypto/reference/{symbol}",
+      "operation_id": "get_crypto_fallback_reference_v1_fallback_crypto_reference__symbol__get",
+      "summary": "Get Crypto Fallback Reference",
+      "path_params": [
+        "symbol"
+      ],
+      "query_params": [
+        {
+          "name": "feed",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "kline or trade. Trade fallback uses latest OKX candle close as reference.",
+            "default": "kline",
+            "title": "Feed"
+          }
+        },
+        {
+          "name": "interval",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "OKX candle interval used for fallback reference",
+            "default": "1m",
+            "title": "Interval"
+          }
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 300,
+            "minimum": 1,
+            "default": 1,
+            "title": "Limit"
+          }
+        },
+        {
+          "name": "force",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "description": "Operator-forced fallback reference lookup",
+            "default": false,
+            "title": "Force"
+          }
+        },
+        {
+          "name": "include_data",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "description": "Fetch OKX reference data when fallback is activated",
+            "default": true,
+            "title": "Include Data"
+          }
+        }
+      ],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/fallback/crypto/status/{symbol}",
+      "operation_id": "get_crypto_fallback_status_v1_fallback_crypto_status__symbol__get",
+      "summary": "Get Crypto Fallback Status",
+      "path_params": [
+        "symbol"
+      ],
+      "query_params": [
+        {
+          "name": "interval",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "Binance kline interval to inspect",
+            "default": "1m",
+            "title": "Interval"
+          }
+        }
+      ],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/health",
+      "operation_id": "health_v1_health_get",
+      "summary": "Health",
+      "path_params": [],
+      "query_params": [],
+      "request_body": false,
+      "response_codes": [
+        "200"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/health/streams",
+      "operation_id": "health_streams_v1_health_streams_get",
+      "summary": "Health Streams",
+      "path_params": [],
+      "query_params": [],
+      "request_body": false,
+      "response_codes": [
+        "200"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/v1/preload/append/{symbol}",
+      "operation_id": "trigger_append_v1_preload_append__symbol__post",
+      "summary": "Trigger Append",
+      "path_params": [
+        "symbol"
+      ],
+      "query_params": [],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/v1/preload/materialize",
+      "operation_id": "trigger_materialize_all_v1_preload_materialize_post",
+      "summary": "Trigger Materialize All",
+      "path_params": [],
+      "query_params": [],
+      "request_body": false,
+      "response_codes": [
+        "200"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/v1/preload/materialize/{symbol}",
+      "operation_id": "trigger_materialize_symbol_v1_preload_materialize__symbol__post",
+      "summary": "Trigger Materialize Symbol",
+      "path_params": [
+        "symbol"
+      ],
+      "query_params": [],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/v1/preload/run",
+      "operation_id": "trigger_preload_v1_preload_run_post",
+      "summary": "Trigger Preload",
+      "path_params": [],
+      "query_params": [],
+      "request_body": false,
+      "response_codes": [
+        "200"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/preload/status",
+      "operation_id": "preload_status_v1_preload_status_get",
+      "summary": "Preload Status",
+      "path_params": [],
+      "query_params": [],
+      "request_body": false,
+      "response_codes": [
+        "200"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/preload/{symbol}",
+      "operation_id": "get_preload_data_v1_preload__symbol__get",
+      "summary": "Get Preload Data",
+      "path_params": [
+        "symbol"
+      ],
+      "query_params": [
+        {
+          "name": "interval",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "VN warmup interval: 1m, 5m, 10m, 15m, 30m, 1h, 4h",
+            "default": "1m",
+            "title": "Interval"
+          }
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 20000,
+            "minimum": 1,
+            "description": "Latest N candles for warm-up lookback",
+            "default": 1000,
+            "title": "Limit"
+          }
+        },
+        {
+          "name": "fresh",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "description": "Top up existing canonical 1m parquet if it is stale before reading",
+            "default": true,
+            "title": "Fresh"
+          }
+        }
+      ],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/vn/board",
+      "operation_id": "get_vn_board_v1_vn_board_get",
+      "summary": "Get Vn Board",
+      "path_params": [],
+      "query_params": [],
+      "request_body": false,
+      "response_codes": [
+        "200"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/vn/quote-last/{symbol}",
+      "operation_id": "get_vn_quote_last_v1_vn_quote_last__symbol__get",
+      "summary": "Get Vn Quote Last",
+      "path_params": [
+        "symbol"
+      ],
+      "query_params": [],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/vn/quote/{symbol}",
+      "operation_id": "get_vn_quote_v1_vn_quote__symbol__get",
+      "summary": "Get Vn Quote",
+      "path_params": [
+        "symbol"
+      ],
+      "query_params": [],
+      "request_body": false,
+      "response_codes": [
+        "200",
+        "422"
+      ]
+    }
+  ],
+  "source_routes": [
+    {
+      "method": "GET",
+      "path_suffix": "/exchange-info",
+      "handler": "get_exchange_info",
+      "module": "app/api/routes_binance_derivatives.py",
+      "line": 27,
+      "signature_params": [
+        {
+          "name": "symbol",
+          "type": "str | None",
+          "default": "None",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/klines/{symbol}",
+      "handler": "get_derivative_klines",
+      "module": "app/api/routes_binance_derivatives.py",
+      "line": 35,
+      "signature_params": [
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "interval",
+          "type": "str",
+          "default": "Query('1d', description='Binance kline interval')",
+          "required": false
+        },
+        {
+          "name": "limit",
+          "type": "int",
+          "default": "Query(30, ge=1, le=1500)",
+          "required": false
+        },
+        {
+          "name": "start_time",
+          "type": "int | None",
+          "default": "None",
+          "required": false
+        },
+        {
+          "name": "end_time",
+          "type": "int | None",
+          "default": "None",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/depth/{symbol}",
+      "handler": "get_derivative_depth",
+      "module": "app/api/routes_binance_derivatives.py",
+      "line": 51,
+      "signature_params": [
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "limit",
+          "type": "int",
+          "default": "Query(5)",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/open-interest/{symbol}",
+      "handler": "get_open_interest",
+      "module": "app/api/routes_binance_derivatives.py",
+      "line": 61,
+      "signature_params": [
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/open-interest-history/{symbol}",
+      "handler": "get_open_interest_history",
+      "module": "app/api/routes_binance_derivatives.py",
+      "line": 69,
+      "signature_params": [
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "period",
+          "type": "str",
+          "default": "Query('1d')",
+          "required": false
+        },
+        {
+          "name": "limit",
+          "type": "int",
+          "default": "Query(30, ge=1, le=500)",
+          "required": false
+        },
+        {
+          "name": "start_time",
+          "type": "int | None",
+          "default": "None",
+          "required": false
+        },
+        {
+          "name": "end_time",
+          "type": "int | None",
+          "default": "None",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/long-short/{kind}/{symbol}",
+      "handler": "get_long_short_ratio",
+      "module": "app/api/routes_binance_derivatives.py",
+      "line": 92,
+      "signature_params": [
+        {
+          "name": "kind",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "period",
+          "type": "str",
+          "default": "Query('1d')",
+          "required": false
+        },
+        {
+          "name": "limit",
+          "type": "int",
+          "default": "Query(30, ge=1, le=500)",
+          "required": false
+        },
+        {
+          "name": "start_time",
+          "type": "int | None",
+          "default": "None",
+          "required": false
+        },
+        {
+          "name": "end_time",
+          "type": "int | None",
+          "default": "None",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/taker-long-short/{symbol}",
+      "handler": "get_taker_long_short_ratio",
+      "module": "app/api/routes_binance_derivatives.py",
+      "line": 116,
+      "signature_params": [
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "period",
+          "type": "str",
+          "default": "Query('1d')",
+          "required": false
+        },
+        {
+          "name": "limit",
+          "type": "int",
+          "default": "Query(30, ge=1, le=500)",
+          "required": false
+        },
+        {
+          "name": "start_time",
+          "type": "int | None",
+          "default": "None",
+          "required": false
+        },
+        {
+          "name": "end_time",
+          "type": "int | None",
+          "default": "None",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/funding-rate/{symbol}",
+      "handler": "get_funding_rate",
+      "module": "app/api/routes_binance_derivatives.py",
+      "line": 138,
+      "signature_params": [
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "limit",
+          "type": "int",
+          "default": "Query(100, ge=1, le=1000)",
+          "required": false
+        },
+        {
+          "name": "start_time",
+          "type": "int | None",
+          "default": "None",
+          "required": false
+        },
+        {
+          "name": "end_time",
+          "type": "int | None",
+          "default": "None",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/basis/{pair}",
+      "handler": "get_basis",
+      "module": "app/api/routes_binance_derivatives.py",
+      "line": 153,
+      "signature_params": [
+        {
+          "name": "pair",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "contract_type",
+          "type": "str",
+          "default": "Query('CURRENT_QUARTER')",
+          "required": false
+        },
+        {
+          "name": "period",
+          "type": "str",
+          "default": "Query('1d')",
+          "required": false
+        },
+        {
+          "name": "limit",
+          "type": "int",
+          "default": "Query(30, ge=1, le=500)",
+          "required": false
+        },
+        {
+          "name": "start_time",
+          "type": "int | None",
+          "default": "None",
+          "required": false
+        },
+        {
+          "name": "end_time",
+          "type": "int | None",
+          "default": "None",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path_suffix": "/continuous-basis-bundle",
+      "handler": "post_continuous_basis_bundle",
+      "module": "app/api/routes_binance_derivatives.py",
+      "line": 177,
+      "signature_params": [
+        {
+          "name": "body",
+          "type": "dict[str, Any]",
+          "default": "Body(...)",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path_suffix": "/basis-bundle",
+      "handler": "post_basis_bundle",
+      "module": "app/api/routes_binance_derivatives.py",
+      "line": 201,
+      "signature_params": [
+        {
+          "name": "body",
+          "type": "dict[str, Any]",
+          "default": "Body(...)",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/runtime-roles",
+      "handler": "runtime_roles",
+      "module": "app/api/routes_control_plane.py",
+      "line": 47,
+      "signature_params": []
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/universe/configured",
+      "handler": "configured_universe",
+      "module": "app/api/routes_control_plane.py",
+      "line": 73,
+      "signature_params": []
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/universe/active",
+      "handler": "active_universe",
+      "module": "app/api/routes_control_plane.py",
+      "line": 78,
+      "signature_params": []
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/universe/priority",
+      "handler": "priority_universe",
+      "module": "app/api/routes_control_plane.py",
+      "line": 83,
+      "signature_params": []
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/feed-demands",
+      "handler": "feed_demands",
+      "module": "app/api/routes_control_plane.py",
+      "line": 88,
+      "signature_params": [
+        {
+          "name": "ctx",
+          "type": "DataLayerContext",
+          "default": "Depends(get_context)",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path_suffix": "/feed-leases",
+      "handler": "renew_feed_leases",
+      "module": "app/api/routes_control_plane.py",
+      "line": 93,
+      "signature_params": [
+        {
+          "name": "ctx",
+          "type": "DataLayerContext",
+          "default": "Depends(get_context)",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path_suffix": "/feed-leases/{owner_id}",
+      "handler": "release_feed_leases",
+      "module": "app/api/routes_control_plane.py",
+      "line": 109,
+      "signature_params": [
+        {
+          "name": "owner_id",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "ctx",
+          "type": "DataLayerContext",
+          "default": "Depends(get_context)",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/provider-priority",
+      "handler": "provider_priority",
+      "module": "app/api/routes_control_plane.py",
+      "line": 114,
+      "signature_params": []
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/session-calendar",
+      "handler": "session_calendar",
+      "module": "app/api/routes_control_plane.py",
+      "line": 119,
+      "signature_params": []
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/crypto/reference/{symbol}",
+      "handler": "get_crypto_fallback_reference",
+      "module": "app/api/routes_fallback.py",
+      "line": 14,
+      "signature_params": [
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "feed",
+          "type": "str",
+          "default": "Query('kline', description='kline or trade. Trade fallback uses latest OKX candle close as reference.')",
+          "required": false
+        },
+        {
+          "name": "interval",
+          "type": "str",
+          "default": "Query('1m', description='OKX candle interval used for fallback reference')",
+          "required": false
+        },
+        {
+          "name": "limit",
+          "type": "int",
+          "default": "Query(1, ge=1, le=300)",
+          "required": false
+        },
+        {
+          "name": "force",
+          "type": "bool",
+          "default": "Query(False, description='Operator-forced fallback reference lookup')",
+          "required": false
+        },
+        {
+          "name": "include_data",
+          "type": "bool",
+          "default": "Query(True, description='Fetch OKX reference data when fallback is activated')",
+          "required": false
+        },
+        {
+          "name": "ctx",
+          "type": "DataLayerContext",
+          "default": "Depends(get_context)",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/crypto/status/{symbol}",
+      "handler": "get_crypto_fallback_status",
+      "module": "app/api/routes_fallback.py",
+      "line": 56,
+      "signature_params": [
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "interval",
+          "type": "str",
+          "default": "Query('1m', description='Binance kline interval to inspect')",
+          "required": false
+        },
+        {
+          "name": "ctx",
+          "type": "DataLayerContext",
+          "default": "Depends(get_context)",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/health",
+      "handler": "health",
+      "module": "app/api/routes_health.py",
+      "line": 20,
+      "signature_params": [
+        {
+          "name": "ctx",
+          "type": "DataLayerContext",
+          "default": "Depends(get_context)",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/health/streams",
+      "handler": "health_streams",
+      "module": "app/api/routes_health.py",
+      "line": 49,
+      "signature_params": [
+        {
+          "name": "ctx",
+          "type": "DataLayerContext",
+          "default": "Depends(get_context)",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/binance/klines/{symbol}",
+      "handler": "get_binance_klines",
+      "module": "app/api/routes_history.py",
+      "line": 23,
+      "signature_params": [
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "interval",
+          "type": "str",
+          "default": "'1m'",
+          "required": false
+        },
+        {
+          "name": "limit",
+          "type": "int",
+          "default": "Query(500, ge=1, le=1500)",
+          "required": false
+        },
+        {
+          "name": "start_time",
+          "type": "int | None",
+          "default": "None",
+          "required": false
+        },
+        {
+          "name": "end_time",
+          "type": "int | None",
+          "default": "None",
+          "required": false
+        },
+        {
+          "name": "market",
+          "type": "str",
+          "default": "Query('auto', description='auto, spot, usdm/futures')",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/crypto/ohlcv/{provider}/{symbol}",
+      "handler": "get_crypto_ohlcv",
+      "module": "app/api/routes_history.py",
+      "line": 43,
+      "signature_params": [
+        {
+          "name": "provider",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "interval",
+          "type": "str",
+          "default": "'1m'",
+          "required": false
+        },
+        {
+          "name": "limit",
+          "type": "int",
+          "default": "Query(500, ge=1, le=1500)",
+          "required": false
+        },
+        {
+          "name": "start_time",
+          "type": "int | None",
+          "default": "None",
+          "required": false
+        },
+        {
+          "name": "end_time",
+          "type": "int | None",
+          "default": "None",
+          "required": false
+        },
+        {
+          "name": "market",
+          "type": "str",
+          "default": "Query('auto', description='Binance only: auto, spot, usdm/futures')",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/crypto/ohlcv/{provider}/{symbol}/{interval}",
+      "handler": "get_crypto_ohlcv",
+      "module": "app/api/routes_history.py",
+      "line": 43,
+      "signature_params": [
+        {
+          "name": "provider",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "interval",
+          "type": "str",
+          "default": "'1m'",
+          "required": false
+        },
+        {
+          "name": "limit",
+          "type": "int",
+          "default": "Query(500, ge=1, le=1500)",
+          "required": false
+        },
+        {
+          "name": "start_time",
+          "type": "int | None",
+          "default": "None",
+          "required": false
+        },
+        {
+          "name": "end_time",
+          "type": "int | None",
+          "default": "None",
+          "required": false
+        },
+        {
+          "name": "market",
+          "type": "str",
+          "default": "Query('auto', description='Binance only: auto, spot, usdm/futures')",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path_suffix": "/crypto/ohlcv/{provider}/batch",
+      "handler": "post_crypto_ohlcv_batch",
+      "module": "app/api/routes_history.py",
+      "line": 95,
+      "signature_params": [
+        {
+          "name": "provider",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "body",
+          "type": "dict[str, Any]",
+          "default": "Body(...)",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/binance/price/{symbol}",
+      "handler": "get_binance_price",
+      "module": "app/api/routes_latest.py",
+      "line": 18,
+      "signature_params": [
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "market",
+          "type": "str",
+          "default": "'auto'",
+          "required": false
+        },
+        {
+          "name": "ctx",
+          "type": "DataLayerContext",
+          "default": "Depends(get_context)",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/binance/price-last/{symbol}",
+      "handler": "get_binance_price_last",
+      "module": "app/api/routes_latest.py",
+      "line": 32,
+      "signature_params": [
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "market",
+          "type": "str",
+          "default": "'auto'",
+          "required": false
+        },
+        {
+          "name": "ctx",
+          "type": "DataLayerContext",
+          "default": "Depends(get_context)",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/binance/kline/{symbol}",
+      "handler": "get_binance_kline",
+      "module": "app/api/routes_latest.py",
+      "line": 52,
+      "signature_params": [
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "interval",
+          "type": "str",
+          "default": "'1m'",
+          "required": false
+        },
+        {
+          "name": "ctx",
+          "type": "DataLayerContext",
+          "default": "Depends(get_context)",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/vn/quote/{symbol}",
+      "handler": "get_vn_quote",
+      "module": "app/api/routes_latest.py",
+      "line": 71,
+      "signature_params": [
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "ctx",
+          "type": "DataLayerContext",
+          "default": "Depends(get_context)",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/vn/quote-last/{symbol}",
+      "handler": "get_vn_quote_last",
+      "module": "app/api/routes_latest.py",
+      "line": 85,
+      "signature_params": [
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "ctx",
+          "type": "DataLayerContext",
+          "default": "Depends(get_context)",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/vn/board",
+      "handler": "get_vn_board",
+      "module": "app/api/routes_latest.py",
+      "line": 104,
+      "signature_params": [
+        {
+          "name": "ctx",
+          "type": "DataLayerContext",
+          "default": "Depends(get_context)",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/status",
+      "handler": "preload_status",
+      "module": "app/api/routes_preload.py",
+      "line": 35,
+      "signature_params": []
+    },
+    {
+      "method": "GET",
+      "path_suffix": "/{symbol}",
+      "handler": "get_preload_data",
+      "module": "app/api/routes_preload.py",
+      "line": 84,
+      "signature_params": [
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "interval",
+          "type": "str",
+          "default": "Query('1m', description='VN warmup interval: 1m, 5m, 10m, 15m, 30m, 1h, 4h')",
+          "required": false
+        },
+        {
+          "name": "limit",
+          "type": "int",
+          "default": "Query(1000, ge=1, le=20000, description='Latest N candles for warm-up lookback')",
+          "required": false
+        },
+        {
+          "name": "fresh",
+          "type": "bool",
+          "default": "Query(True, description='Top up existing canonical 1m parquet if it is stale before reading')",
+          "required": false
+        },
+        {
+          "name": "ctx",
+          "type": "DataLayerContext",
+          "default": "Depends(get_context)",
+          "required": false
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path_suffix": "/run",
+      "handler": "trigger_preload",
+      "module": "app/api/routes_preload.py",
+      "line": 142,
+      "signature_params": []
+    },
+    {
+      "method": "POST",
+      "path_suffix": "/append/{symbol}",
+      "handler": "trigger_append",
+      "module": "app/api/routes_preload.py",
+      "line": 154,
+      "signature_params": [
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path_suffix": "/materialize",
+      "handler": "trigger_materialize_all",
+      "module": "app/api/routes_preload.py",
+      "line": 166,
+      "signature_params": []
+    },
+    {
+      "method": "POST",
+      "path_suffix": "/materialize/{symbol}",
+      "handler": "trigger_materialize_symbol",
+      "module": "app/api/routes_preload.py",
+      "line": 178,
+      "signature_params": [
+        {
+          "name": "symbol",
+          "type": "str",
+          "default": null,
+          "required": true
+        }
+      ]
+    }
+  ]
+}

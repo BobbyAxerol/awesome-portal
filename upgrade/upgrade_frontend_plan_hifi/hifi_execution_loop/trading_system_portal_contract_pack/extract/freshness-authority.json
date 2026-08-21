@@ -1,0 +1,158 @@
+{
+  "provenance": {
+    "generated_by": "scripts/95_freshness_authority.py",
+    "read_only": true,
+    "trading_system_commit": "9081397de9e981c43b4e0f67fabe747e7ed964c7",
+    "sources": [
+      "services/monitor/service_heartbeats.py",
+      "services/gateway/main.py",
+      "services/engine_authority/*.py",
+      "core/config.py",
+      "data_layer/app/stream/supervisor.py",
+      "data_layer/app/stream/dnse_ws.py",
+      "extract/runtime-probes.json"
+    ],
+    "note": "Derived from source/runtime read-only inspection. No Trading System file was modified."
+  },
+  "portal_envelope_mapping": {
+    "as_of": "no server-supplied `as_of` on list endpoints; use the row-level `updated_at` / `ts` / `trade_time` column, or `/v1/health.ts` for health-scoped answers. The connector MUST stamp its own read time separately and never present it as Trading System authority.",
+    "source_sequence": "MISSING on HTTP responses. Available only as copy_event_outbox.sequence_id (not exposed over HTTP) and domain_events ordering by (event_ts, created_at).",
+    "aggregate_version": "PARTIAL — order groups expose `version` with `expected_version` optimistic concurrency (409 VERSION_OR_STATE_CONFLICT). No other aggregate has one.",
+    "freshness_state": "derive from: /v1/health.checks.stale_or_bad_services (service heartbeat age > threshold), broker adapter circuit_open, and data-layer feed staleness. Trading System does not emit a single freshness enum.",
+    "projection_lag_ms": "not emitted; connector must compute now - max(row.updated_at) itself and label it as connector-derived, not Trading System truth.",
+    "source_authority": "constant EXECUTION_CELL for every Trading System answer; per-venue authority is in /v1/health/capabilities rollout_state."
+  },
+  "service_heartbeat": {
+    "status": "CONFIRMED_SOURCE",
+    "source": "services/monitor/service_heartbeats.py",
+    "defaults": {
+      "stale_after_seconds": 180
+    },
+    "state_values": [
+      "STARTING",
+      "READY",
+      "DEGRADED",
+      "STOPPING",
+      "FAILED"
+    ],
+    "state_source": "DB CHECK on service_heartbeats.status"
+  },
+  "data_layer_feed_freshness": {
+    "status": "CONFIRMED_SOURCE",
+    "source": "data_layer/app/stream/supervisor.py, data_layer/app/main.py",
+    "defaults": {
+      "stale_after_seconds": 180.0
+    }
+  },
+  "gateway_config_defaults": {
+    "GATEWAY_RATE_LIMIT_PER_SECOND": 300,
+    "GATEWAY_RATE_LIMIT_SCOPE": "account",
+    "GATEWAY_LEGACY_PLAINTEXT_API_KEYS_ENABLED": true,
+    "CONTRACT_SHADOW_ENABLED": false,
+    "COMMAND_JOURNAL_ROLLOUT": "OFF",
+    "COMMAND_JOURNAL_MAX_ATTEMPTS": 10,
+    "COMMAND_JOURNAL_STREAM_MAXLEN": 20000,
+    "COMMAND_JOURNAL_ACK_REQUIRED": false,
+    "REPLAY_V2_ENABLED": false
+  },
+  "vn_trading_calendar": {
+    "status": "CONFIRMED_SOURCE",
+    "source": "data_layer/app/stream/dnse_ws.py:_is_market_open",
+    "timezone_utc_offset_hours": 7,
+    "session_windows_local": [
+      "9:00",
+      "11:30",
+      "13:00",
+      "14:30"
+    ],
+    "weekdays": "Mon-Fri",
+    "session_status_values": [
+      "BROKEN",
+      "MARKET_CLOSED",
+      "OPEN_HEALTHY",
+      "OPEN_STALE"
+    ],
+    "note": "Calendar lives in the data layer, NOT in trading_system. A Portal connector reading only the gateway cannot see VN session state; it must read the data-layer health surface (dnse_stream.status)."
+  },
+  "engine_authority": {
+    "status": "CONFIRMED_SOURCE",
+    "modules": [
+      "services/engine_authority/__init__.py",
+      "services/engine_authority/controller.py",
+      "services/engine_authority/models.py",
+      "services/engine_authority/repository.py"
+    ],
+    "claim_states": [
+      "BLOCKED",
+      "FAILED"
+    ],
+    "authority_reasons": [
+      "AUTHORITY_SCOPE_BLOCKED",
+      "AUTHORITY_SCOPE_HALTED",
+      "CREATE_SCOPE",
+      "ENGINE_AUTHORITY_DECISION_BUSY",
+      "ENGINE_AUTHORITY_DISABLED_WITH_ACTIVE_RUST_SCOPES",
+      "ENGINE_AUTHORITY_DIVERGENCE",
+      "ENGINE_AUTHORITY_ENABLED",
+      "ENGINE_AUTHORITY_ERROR",
+      "ENGINE_AUTHORITY_EVALUATION_ERROR",
+      "ENGINE_AUTHORITY_LEASE_LOST",
+      "ENGINE_AUTHORITY_LEASE_SECONDS",
+      "ENGINE_AUTHORITY_SCOPE_BLOCKED",
+      "ENGINE_AUTHORITY_SEMANTIC_DIVERGENCE",
+      "ENGINE_AUTHORITY_TIMEOUT",
+      "ENGINE_AUTHORITY_TIMEOUT_MS",
+      "ENGINE_AUTHORITY_VERSION_MISMATCH",
+      "PERSISTED_AUTHORITY_DECISION_DIGEST_MISMATCH",
+      "PYTHON_AUTHORITY_ENGINE_VERSION_MISMATCH",
+      "RUST_AUTHORITATIVE_PAPER_SCOPE",
+      "RUST_AUTHORITY_BACKEND_UNAVAILABLE",
+      "RUST_AUTHORITY_ENGINE_VERSION_MISMATCH",
+      "RUST_AUTHORITY_NON_PAPER_SCOPE",
+      "RUST_AUTHORITY_PANIC",
+      "UNKNOWN_AUTHORITY_BACKEND"
+    ]
+  },
+  "live_health_surface": {
+    "gateway_health_keys": [
+      "capabilities",
+      "checks",
+      "command_journal",
+      "market_cache",
+      "market_cache_telemetry",
+      "services",
+      "status",
+      "ts",
+      "venue_products"
+    ],
+    "gateway_readiness_rule": "status READY unless checks.redis/postgres false or stale_or_bad_services non-empty (services/gateway/main.py:v1_health)",
+    "gateway_checks": {
+      "redis": "bool",
+      "market_redis": "bool",
+      "postgres": "bool",
+      "stale_or_bad_services": []
+    },
+    "gateway_command_journal_telemetry": {
+      "rollout": "DURABLE_ACCEPT_PAPER",
+      "status": "READY",
+      "pending": "int",
+      "dispatched_unacked": "int",
+      "dead": "int",
+      "dead_operator_quarantined": "int",
+      "dead_actionable": "int",
+      "oldest_pending_seconds": "int",
+      "max_attempts": "int",
+      "uncertain": "int"
+    },
+    "data_layer_health_keys": [
+      "binance_kline_stream",
+      "binance_stream",
+      "binance_trade_stream",
+      "dnse_stream",
+      "feed_demands",
+      "preload_topup",
+      "redis",
+      "status"
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+ "_provenance": {
+  "kind": "SYNTHETIC_EXAMPLE",
+  "warning": "Hand-written. NOT captured from runtime. At runtime only ORDER_STATUS events exist; the fact this file illustrates may have zero instances.",
+  "authoritative_source": "extract/event-catalog.json"
+ },
+ "schema_version": "v1",
+ "event_type": "fill.created",
+ "event_id": "synth-ev-0002",
+ "trade_id": "synth-trade-0001",
+ "client_order_id": "synth-order-0001",
+ "alpha_id": "alpha-paper-0001",
+ "symbol": "BTCUSDT",
+ "side": "BUY",
+ "quantity": "0.00100000",
+ "price": "50000.00",
+ "fee_quote": "0.00000000",
+ "mode": "paper",
+ "venue": "BINANCE",
+ "trade_time": "2026-08-20T10:00:05Z"
+}

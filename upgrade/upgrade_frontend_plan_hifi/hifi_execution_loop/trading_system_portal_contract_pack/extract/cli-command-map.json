@@ -1,0 +1,1452 @@
+{
+  "provenance": {
+    "generated_by": "scripts/70_cli_map.py",
+    "read_only": true,
+    "trading_system_commit": "9081397de9e981c43b4e0f67fabe747e7ed964c7",
+    "sources": [
+      "cli/__main__.py",
+      "extract/api-surface.json"
+    ],
+    "note": "Derived from source/runtime read-only inspection. No Trading System file was modified."
+  },
+  "summary": {
+    "cli_command_groups": 19,
+    "cli_actions": 64,
+    "by_access_path": {
+      "HTTP": 47,
+      "HTTP,POSTGRES_DIRECT,REDIS_DIRECT": 10,
+      "POSTGRES_DIRECT": 2,
+      "REDIS_DIRECT": 5
+    },
+    "actions_with_no_http_equivalent": 7,
+    "by_risk_tier_proposed": {
+      "R0_READ": 47,
+      "R1_PAPER_MUTATION": 7,
+      "R2_SANDBOX": 5,
+      "R3_LIVE_PROTECTIVE": 2,
+      "UNCLASSIFIED": 3
+    }
+  },
+  "note": "`portal_reachable: NO` means the operator capability exists only through direct Postgres/Redis access from the CLI host. The Portal is forbidden from that path (handoff §2.3), so these are genuine capability gaps, not just convenience gaps.",
+  "commands": [
+    {
+      "command": "account",
+      "action": "state",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_account",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/accounts/paper/seed",
+        "/v1/admin/accounts/{args.account_id}/policy",
+        "/v1/admin/accounts/{args.account_id}/reconcile-open-orders",
+        "/v1/admin/accounts/{args.account_id}/reconcile-positions",
+        "/v1/admin/accounts/{args.account_id}/state",
+        "/v1/admin/accounts/{args.account_id}/sync"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1690"
+    },
+    {
+      "command": "account",
+      "action": "policy",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_account",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/accounts/paper/seed",
+        "/v1/admin/accounts/{args.account_id}/policy",
+        "/v1/admin/accounts/{args.account_id}/reconcile-open-orders",
+        "/v1/admin/accounts/{args.account_id}/reconcile-positions",
+        "/v1/admin/accounts/{args.account_id}/state",
+        "/v1/admin/accounts/{args.account_id}/sync"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1690"
+    },
+    {
+      "command": "account",
+      "action": "seed-paper",
+      "risk_tier_proposed": "R1_PAPER_MUTATION",
+      "handler": "cmd_account",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/accounts/paper/seed",
+        "/v1/admin/accounts/{args.account_id}/policy",
+        "/v1/admin/accounts/{args.account_id}/reconcile-open-orders",
+        "/v1/admin/accounts/{args.account_id}/reconcile-positions",
+        "/v1/admin/accounts/{args.account_id}/state",
+        "/v1/admin/accounts/{args.account_id}/sync"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1690"
+    },
+    {
+      "command": "account",
+      "action": "sync",
+      "risk_tier_proposed": "R2_SANDBOX",
+      "handler": "cmd_account",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/accounts/paper/seed",
+        "/v1/admin/accounts/{args.account_id}/policy",
+        "/v1/admin/accounts/{args.account_id}/reconcile-open-orders",
+        "/v1/admin/accounts/{args.account_id}/reconcile-positions",
+        "/v1/admin/accounts/{args.account_id}/state",
+        "/v1/admin/accounts/{args.account_id}/sync"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1690"
+    },
+    {
+      "command": "account",
+      "action": "reconcile-positions",
+      "risk_tier_proposed": "R2_SANDBOX",
+      "handler": "cmd_account",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/accounts/paper/seed",
+        "/v1/admin/accounts/{args.account_id}/policy",
+        "/v1/admin/accounts/{args.account_id}/reconcile-open-orders",
+        "/v1/admin/accounts/{args.account_id}/reconcile-positions",
+        "/v1/admin/accounts/{args.account_id}/state",
+        "/v1/admin/accounts/{args.account_id}/sync"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1690"
+    },
+    {
+      "command": "account",
+      "action": "reconcile-open-orders",
+      "risk_tier_proposed": "R2_SANDBOX",
+      "handler": "cmd_account",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/accounts/paper/seed",
+        "/v1/admin/accounts/{args.account_id}/policy",
+        "/v1/admin/accounts/{args.account_id}/reconcile-open-orders",
+        "/v1/admin/accounts/{args.account_id}/reconcile-positions",
+        "/v1/admin/accounts/{args.account_id}/state",
+        "/v1/admin/accounts/{args.account_id}/sync"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1690"
+    },
+    {
+      "command": "allocation",
+      "action": "<root>",
+      "risk_tier_proposed": "UNCLASSIFIED",
+      "handler": "cmd_allocation",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/portfolio-allocations"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1617"
+    },
+    {
+      "command": "alpha",
+      "action": "inspect",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_alpha",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/alphas/register",
+        "/v1/admin/alphas/{args.alpha_id}"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1570"
+    },
+    {
+      "command": "alpha",
+      "action": "register",
+      "risk_tier_proposed": "R1_PAPER_MUTATION",
+      "handler": "cmd_alpha",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/alphas/register",
+        "/v1/admin/alphas/{args.alpha_id}"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1570"
+    },
+    {
+      "command": "authority",
+      "action": "list",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_authority",
+      "access_paths": [
+        "POSTGRES_DIRECT"
+      ],
+      "http_paths": [],
+      "portal_reachable": "NO — no HTTP equivalent",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2333"
+    },
+    {
+      "command": "authority",
+      "action": "create",
+      "risk_tier_proposed": "R1_PAPER_MUTATION",
+      "handler": "cmd_authority",
+      "access_paths": [
+        "POSTGRES_DIRECT"
+      ],
+      "http_paths": [],
+      "portal_reachable": "NO — no HTTP equivalent",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2333"
+    },
+    {
+      "command": "bracket-audit",
+      "action": "<root>",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_bracket_audit",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/order-brackets/lifecycle-audit"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2218"
+    },
+    {
+      "command": "broker",
+      "action": "bindings",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_broker",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/broker-bindings",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/exposure",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/reconcile-open-orders",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/reconcile-positions",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/state"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1655"
+    },
+    {
+      "command": "broker",
+      "action": "state",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_broker",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/broker-bindings",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/exposure",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/reconcile-open-orders",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/reconcile-positions",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/state"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1655"
+    },
+    {
+      "command": "broker",
+      "action": "exposure",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_broker",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/broker-bindings",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/exposure",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/reconcile-open-orders",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/reconcile-positions",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/state"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1655"
+    },
+    {
+      "command": "broker",
+      "action": "reconcile-positions",
+      "risk_tier_proposed": "R2_SANDBOX",
+      "handler": "cmd_broker",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/broker-bindings",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/exposure",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/reconcile-open-orders",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/reconcile-positions",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/state"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1655"
+    },
+    {
+      "command": "broker",
+      "action": "reconcile-open-orders",
+      "risk_tier_proposed": "R2_SANDBOX",
+      "handler": "cmd_broker",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/broker-bindings",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/exposure",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/reconcile-open-orders",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/reconcile-positions",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/state"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1655"
+    },
+    {
+      "command": "capital",
+      "action": "history",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_capital",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/portfolio-capital/history"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1636"
+    },
+    {
+      "command": "config",
+      "action": "plan",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_config",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/accounts/{account_id}/policy",
+        "/v1/admin/alphas/register",
+        "/v1/admin/alphas/{alpha_id}/risk",
+        "/v1/admin/copy/policies/{strategy_id}",
+        "/v1/admin/portfolio-allocations",
+        "/v1/admin/portfolios",
+        "/v1/admin/symbols/sync",
+        "/v1/admin/trading-state"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1842"
+    },
+    {
+      "command": "config",
+      "action": "apply",
+      "risk_tier_proposed": "R1_PAPER_MUTATION",
+      "handler": "cmd_config",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/accounts/{account_id}/policy",
+        "/v1/admin/alphas/register",
+        "/v1/admin/alphas/{alpha_id}/risk",
+        "/v1/admin/copy/policies/{strategy_id}",
+        "/v1/admin/portfolio-allocations",
+        "/v1/admin/portfolios",
+        "/v1/admin/symbols/sync",
+        "/v1/admin/trading-state"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1842"
+    },
+    {
+      "command": "copy",
+      "action": "policies",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_copy",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/copy/policies",
+        "/v1/admin/copy/policies/{args.strategy_id}"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1823"
+    },
+    {
+      "command": "copy",
+      "action": "policy",
+      "risk_tier_proposed": "UNCLASSIFIED",
+      "handler": "cmd_copy",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/copy/policies",
+        "/v1/admin/copy/policies/{args.strategy_id}"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1823"
+    },
+    {
+      "command": "deployment",
+      "action": "state",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_deployment",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/deployments/{args.deployment_id}/state"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1612"
+    },
+    {
+      "command": "health",
+      "action": "<root>",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_health",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/health"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1566"
+    },
+    {
+      "command": "ops",
+      "action": "trace-order",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_ops",
+      "access_paths": [
+        "HTTP",
+        "POSTGRES_DIRECT",
+        "REDIS_DIRECT"
+      ],
+      "http_paths": [
+        "/v1/admin/ops/emergency-close",
+        "/v1/admin/ops/emergency-close/plan?{",
+        "/v1/admin/ops/emergency-close/{args.operation_id}/verify"
+      ],
+      "portal_reachable": "PARTIAL — mixed access",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1985"
+    },
+    {
+      "command": "ops",
+      "action": "dead-letters",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_ops",
+      "access_paths": [
+        "HTTP",
+        "POSTGRES_DIRECT",
+        "REDIS_DIRECT"
+      ],
+      "http_paths": [
+        "/v1/admin/ops/emergency-close",
+        "/v1/admin/ops/emergency-close/plan?{",
+        "/v1/admin/ops/emergency-close/{args.operation_id}/verify"
+      ],
+      "portal_reachable": "PARTIAL — mixed access",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1985"
+    },
+    {
+      "command": "ops",
+      "action": "findings",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_ops",
+      "access_paths": [
+        "HTTP",
+        "POSTGRES_DIRECT",
+        "REDIS_DIRECT"
+      ],
+      "http_paths": [
+        "/v1/admin/ops/emergency-close",
+        "/v1/admin/ops/emergency-close/plan?{",
+        "/v1/admin/ops/emergency-close/{args.operation_id}/verify"
+      ],
+      "portal_reachable": "PARTIAL — mixed access",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1985"
+    },
+    {
+      "command": "ops",
+      "action": "streams",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_ops",
+      "access_paths": [
+        "HTTP",
+        "POSTGRES_DIRECT",
+        "REDIS_DIRECT"
+      ],
+      "http_paths": [
+        "/v1/admin/ops/emergency-close",
+        "/v1/admin/ops/emergency-close/plan?{",
+        "/v1/admin/ops/emergency-close/{args.operation_id}/verify"
+      ],
+      "portal_reachable": "PARTIAL — mixed access",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1985"
+    },
+    {
+      "command": "ops",
+      "action": "command-journal",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_ops",
+      "access_paths": [
+        "HTTP",
+        "POSTGRES_DIRECT",
+        "REDIS_DIRECT"
+      ],
+      "http_paths": [
+        "/v1/admin/ops/emergency-close",
+        "/v1/admin/ops/emergency-close/plan?{",
+        "/v1/admin/ops/emergency-close/{args.operation_id}/verify"
+      ],
+      "portal_reachable": "PARTIAL — mixed access",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1985"
+    },
+    {
+      "command": "ops",
+      "action": "redis-retention",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_ops",
+      "access_paths": [
+        "HTTP",
+        "POSTGRES_DIRECT",
+        "REDIS_DIRECT"
+      ],
+      "http_paths": [
+        "/v1/admin/ops/emergency-close",
+        "/v1/admin/ops/emergency-close/plan?{",
+        "/v1/admin/ops/emergency-close/{args.operation_id}/verify"
+      ],
+      "portal_reachable": "PARTIAL — mixed access",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1985"
+    },
+    {
+      "command": "ops",
+      "action": "alerts",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_ops",
+      "access_paths": [
+        "HTTP",
+        "POSTGRES_DIRECT",
+        "REDIS_DIRECT"
+      ],
+      "http_paths": [
+        "/v1/admin/ops/emergency-close",
+        "/v1/admin/ops/emergency-close/plan?{",
+        "/v1/admin/ops/emergency-close/{args.operation_id}/verify"
+      ],
+      "portal_reachable": "PARTIAL — mixed access",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1985"
+    },
+    {
+      "command": "ops",
+      "action": "alpha-activity",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_ops",
+      "access_paths": [
+        "HTTP",
+        "POSTGRES_DIRECT",
+        "REDIS_DIRECT"
+      ],
+      "http_paths": [
+        "/v1/admin/ops/emergency-close",
+        "/v1/admin/ops/emergency-close/plan?{",
+        "/v1/admin/ops/emergency-close/{args.operation_id}/verify"
+      ],
+      "portal_reachable": "PARTIAL — mixed access",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1985"
+    },
+    {
+      "command": "ops",
+      "action": "emergency-close",
+      "risk_tier_proposed": "R3_LIVE_PROTECTIVE",
+      "handler": "cmd_ops",
+      "access_paths": [
+        "HTTP",
+        "POSTGRES_DIRECT",
+        "REDIS_DIRECT"
+      ],
+      "http_paths": [
+        "/v1/admin/ops/emergency-close",
+        "/v1/admin/ops/emergency-close/plan?{",
+        "/v1/admin/ops/emergency-close/{args.operation_id}/verify"
+      ],
+      "portal_reachable": "PARTIAL — mixed access",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1985"
+    },
+    {
+      "command": "ops",
+      "action": "emergency-close-verify",
+      "risk_tier_proposed": "R3_LIVE_PROTECTIVE",
+      "handler": "cmd_ops",
+      "access_paths": [
+        "HTTP",
+        "POSTGRES_DIRECT",
+        "REDIS_DIRECT"
+      ],
+      "http_paths": [
+        "/v1/admin/ops/emergency-close",
+        "/v1/admin/ops/emergency-close/plan?{",
+        "/v1/admin/ops/emergency-close/{args.operation_id}/verify"
+      ],
+      "portal_reachable": "PARTIAL — mixed access",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1985"
+    },
+    {
+      "command": "order-group",
+      "action": "list",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_order_group",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/order-groups",
+        "/v1/admin/order-groups/{args.group_id}",
+        "/v1/admin/order-groups/{args.group_id}/{args.action}"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2169"
+    },
+    {
+      "command": "order-group",
+      "action": "show",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_order_group",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/order-groups",
+        "/v1/admin/order-groups/{args.group_id}",
+        "/v1/admin/order-groups/{args.group_id}/{args.action}"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2169"
+    },
+    {
+      "command": "performance",
+      "action": "account",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_performance",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/performance/accounts/latest",
+        "/v1/admin/performance/accounts/{args.account_id}/history?limit={args.limit}",
+        "/v1/admin/performance/dashboard",
+        "/v1/admin/performance/instruments/latest",
+        "/v1/admin/performance/portfolios/{args.portfolio_id}/history?limit={args.limit}",
+        "/v1/admin/performance/portfolios/{args.portfolio_id}/latest"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2034"
+    },
+    {
+      "command": "performance",
+      "action": "account-history",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_performance",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/performance/accounts/latest",
+        "/v1/admin/performance/accounts/{args.account_id}/history?limit={args.limit}",
+        "/v1/admin/performance/dashboard",
+        "/v1/admin/performance/instruments/latest",
+        "/v1/admin/performance/portfolios/{args.portfolio_id}/history?limit={args.limit}",
+        "/v1/admin/performance/portfolios/{args.portfolio_id}/latest"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2034"
+    },
+    {
+      "command": "performance",
+      "action": "instrument",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_performance",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/performance/accounts/latest",
+        "/v1/admin/performance/accounts/{args.account_id}/history?limit={args.limit}",
+        "/v1/admin/performance/dashboard",
+        "/v1/admin/performance/instruments/latest",
+        "/v1/admin/performance/portfolios/{args.portfolio_id}/history?limit={args.limit}",
+        "/v1/admin/performance/portfolios/{args.portfolio_id}/latest"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2034"
+    },
+    {
+      "command": "performance",
+      "action": "portfolio",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_performance",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/performance/accounts/latest",
+        "/v1/admin/performance/accounts/{args.account_id}/history?limit={args.limit}",
+        "/v1/admin/performance/dashboard",
+        "/v1/admin/performance/instruments/latest",
+        "/v1/admin/performance/portfolios/{args.portfolio_id}/history?limit={args.limit}",
+        "/v1/admin/performance/portfolios/{args.portfolio_id}/latest"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2034"
+    },
+    {
+      "command": "performance",
+      "action": "portfolio-history",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_performance",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/performance/accounts/latest",
+        "/v1/admin/performance/accounts/{args.account_id}/history?limit={args.limit}",
+        "/v1/admin/performance/dashboard",
+        "/v1/admin/performance/instruments/latest",
+        "/v1/admin/performance/portfolios/{args.portfolio_id}/history?limit={args.limit}",
+        "/v1/admin/performance/portfolios/{args.portfolio_id}/latest"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2034"
+    },
+    {
+      "command": "performance",
+      "action": "dashboard",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_performance",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/performance/accounts/latest",
+        "/v1/admin/performance/accounts/{args.account_id}/history?limit={args.limit}",
+        "/v1/admin/performance/dashboard",
+        "/v1/admin/performance/instruments/latest",
+        "/v1/admin/performance/portfolios/{args.portfolio_id}/history?limit={args.limit}",
+        "/v1/admin/performance/portfolios/{args.portfolio_id}/latest"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2034"
+    },
+    {
+      "command": "portfolio",
+      "action": "create",
+      "risk_tier_proposed": "R1_PAPER_MUTATION",
+      "handler": "cmd_portfolio",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/portfolios",
+        "/v1/admin/portfolios/{args.portfolio_id}/state"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1592"
+    },
+    {
+      "command": "portfolio",
+      "action": "state",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_portfolio",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/portfolios",
+        "/v1/admin/portfolios/{args.portfolio_id}/state"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1592"
+    },
+    {
+      "command": "portfolio",
+      "action": "list",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_portfolio",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/portfolios",
+        "/v1/admin/portfolios/{args.portfolio_id}/state"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1592"
+    },
+    {
+      "command": "redis",
+      "action": "get",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_redis",
+      "access_paths": [
+        "REDIS_DIRECT"
+      ],
+      "http_paths": [],
+      "portal_reachable": "NO — no HTTP equivalent",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1936"
+    },
+    {
+      "command": "redis",
+      "action": "scan",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_redis",
+      "access_paths": [
+        "REDIS_DIRECT"
+      ],
+      "http_paths": [],
+      "portal_reachable": "NO — no HTTP equivalent",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1936"
+    },
+    {
+      "command": "redis",
+      "action": "alpha-auth",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_redis",
+      "access_paths": [
+        "REDIS_DIRECT"
+      ],
+      "http_paths": [],
+      "portal_reachable": "NO — no HTTP equivalent",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1936"
+    },
+    {
+      "command": "redis",
+      "action": "trading-state",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_redis",
+      "access_paths": [
+        "REDIS_DIRECT"
+      ],
+      "http_paths": [],
+      "portal_reachable": "NO — no HTTP equivalent",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1936"
+    },
+    {
+      "command": "redis",
+      "action": "stream",
+      "risk_tier_proposed": "UNCLASSIFIED",
+      "handler": "cmd_redis",
+      "access_paths": [
+        "REDIS_DIRECT"
+      ],
+      "http_paths": [],
+      "portal_reachable": "NO — no HTTP equivalent",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1936"
+    },
+    {
+      "command": "replay",
+      "action": "events",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_replay",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/events",
+        "/v1/admin/replay/compare",
+        "/v1/admin/replay/export",
+        "/v1/admin/replay/jobs",
+        "/v1/admin/replay/jobs/{args.replay_id}",
+        "/v1/admin/replay/jobs/{args.replay_id}/run",
+        "/v1/admin/replay/jobs?limit={args.limit}",
+        "/v1/admin/replay/order-lifecycle",
+        "/v1/admin/replay/quantbt-diff"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2123"
+    },
+    {
+      "command": "replay",
+      "action": "lifecycle",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_replay",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/events",
+        "/v1/admin/replay/compare",
+        "/v1/admin/replay/export",
+        "/v1/admin/replay/jobs",
+        "/v1/admin/replay/jobs/{args.replay_id}",
+        "/v1/admin/replay/jobs/{args.replay_id}/run",
+        "/v1/admin/replay/jobs?limit={args.limit}",
+        "/v1/admin/replay/order-lifecycle",
+        "/v1/admin/replay/quantbt-diff"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2123"
+    },
+    {
+      "command": "replay",
+      "action": "compare",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_replay",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/events",
+        "/v1/admin/replay/compare",
+        "/v1/admin/replay/export",
+        "/v1/admin/replay/jobs",
+        "/v1/admin/replay/jobs/{args.replay_id}",
+        "/v1/admin/replay/jobs/{args.replay_id}/run",
+        "/v1/admin/replay/jobs?limit={args.limit}",
+        "/v1/admin/replay/order-lifecycle",
+        "/v1/admin/replay/quantbt-diff"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2123"
+    },
+    {
+      "command": "replay",
+      "action": "jobs",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_replay",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/events",
+        "/v1/admin/replay/compare",
+        "/v1/admin/replay/export",
+        "/v1/admin/replay/jobs",
+        "/v1/admin/replay/jobs/{args.replay_id}",
+        "/v1/admin/replay/jobs/{args.replay_id}/run",
+        "/v1/admin/replay/jobs?limit={args.limit}",
+        "/v1/admin/replay/order-lifecycle",
+        "/v1/admin/replay/quantbt-diff"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2123"
+    },
+    {
+      "command": "replay",
+      "action": "show",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_replay",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/events",
+        "/v1/admin/replay/compare",
+        "/v1/admin/replay/export",
+        "/v1/admin/replay/jobs",
+        "/v1/admin/replay/jobs/{args.replay_id}",
+        "/v1/admin/replay/jobs/{args.replay_id}/run",
+        "/v1/admin/replay/jobs?limit={args.limit}",
+        "/v1/admin/replay/order-lifecycle",
+        "/v1/admin/replay/quantbt-diff"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2123"
+    },
+    {
+      "command": "replay",
+      "action": "run",
+      "risk_tier_proposed": "R1_PAPER_MUTATION",
+      "handler": "cmd_replay",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/events",
+        "/v1/admin/replay/compare",
+        "/v1/admin/replay/export",
+        "/v1/admin/replay/jobs",
+        "/v1/admin/replay/jobs/{args.replay_id}",
+        "/v1/admin/replay/jobs/{args.replay_id}/run",
+        "/v1/admin/replay/jobs?limit={args.limit}",
+        "/v1/admin/replay/order-lifecycle",
+        "/v1/admin/replay/quantbt-diff"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2123"
+    },
+    {
+      "command": "replay",
+      "action": "create",
+      "risk_tier_proposed": "R1_PAPER_MUTATION",
+      "handler": "cmd_replay",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/events",
+        "/v1/admin/replay/compare",
+        "/v1/admin/replay/export",
+        "/v1/admin/replay/jobs",
+        "/v1/admin/replay/jobs/{args.replay_id}",
+        "/v1/admin/replay/jobs/{args.replay_id}/run",
+        "/v1/admin/replay/jobs?limit={args.limit}",
+        "/v1/admin/replay/order-lifecycle",
+        "/v1/admin/replay/quantbt-diff"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2123"
+    },
+    {
+      "command": "replay",
+      "action": "quantbt-diff",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_replay",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/events",
+        "/v1/admin/replay/compare",
+        "/v1/admin/replay/export",
+        "/v1/admin/replay/jobs",
+        "/v1/admin/replay/jobs/{args.replay_id}",
+        "/v1/admin/replay/jobs/{args.replay_id}/run",
+        "/v1/admin/replay/jobs?limit={args.limit}",
+        "/v1/admin/replay/order-lifecycle",
+        "/v1/admin/replay/quantbt-diff"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2123"
+    },
+    {
+      "command": "replay",
+      "action": "export",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_replay",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/events",
+        "/v1/admin/replay/compare",
+        "/v1/admin/replay/export",
+        "/v1/admin/replay/jobs",
+        "/v1/admin/replay/jobs/{args.replay_id}",
+        "/v1/admin/replay/jobs/{args.replay_id}/run",
+        "/v1/admin/replay/jobs?limit={args.limit}",
+        "/v1/admin/replay/order-lifecycle",
+        "/v1/admin/replay/quantbt-diff"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2123"
+    },
+    {
+      "command": "risk",
+      "action": "state",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_risk",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/alphas/{args.alpha_id}/risk",
+        "/v1/admin/trading-state"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1783"
+    },
+    {
+      "command": "risk",
+      "action": "profile",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_risk",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/alphas/{args.alpha_id}/risk",
+        "/v1/admin/trading-state"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:1783"
+    },
+    {
+      "command": "sizing",
+      "action": "history",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_sizing",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/sizing/decisions",
+        "/v1/admin/sizing/decisions/summary",
+        "/v1/admin/sizing/decisions/{args.decision_id}"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2079"
+    },
+    {
+      "command": "sizing",
+      "action": "summary",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_sizing",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/sizing/decisions",
+        "/v1/admin/sizing/decisions/summary",
+        "/v1/admin/sizing/decisions/{args.decision_id}"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2079"
+    },
+    {
+      "command": "sizing",
+      "action": "decision",
+      "risk_tier_proposed": "R0_READ",
+      "handler": "cmd_sizing",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/sizing/decisions",
+        "/v1/admin/sizing/decisions/summary",
+        "/v1/admin/sizing/decisions/{args.decision_id}"
+      ],
+      "portal_reachable": "YES",
+      "http_paths_not_in_openapi": [],
+      "source": "cli/__main__.py:2079"
+    }
+  ],
+  "handlers": {
+    "cmd_health": {
+      "handler": "cmd_health",
+      "source": "cli/__main__.py:1566",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/health"
+      ],
+      "portal_reachable": "YES"
+    },
+    "cmd_alpha": {
+      "handler": "cmd_alpha",
+      "source": "cli/__main__.py:1570",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/alphas/register",
+        "/v1/admin/alphas/{args.alpha_id}"
+      ],
+      "portal_reachable": "YES"
+    },
+    "cmd_portfolio": {
+      "handler": "cmd_portfolio",
+      "source": "cli/__main__.py:1592",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/portfolios",
+        "/v1/admin/portfolios/{args.portfolio_id}/state"
+      ],
+      "portal_reachable": "YES"
+    },
+    "cmd_deployment": {
+      "handler": "cmd_deployment",
+      "source": "cli/__main__.py:1612",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/deployments/{args.deployment_id}/state"
+      ],
+      "portal_reachable": "YES"
+    },
+    "cmd_allocation": {
+      "handler": "cmd_allocation",
+      "source": "cli/__main__.py:1617",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/portfolio-allocations"
+      ],
+      "portal_reachable": "YES"
+    },
+    "cmd_capital": {
+      "handler": "cmd_capital",
+      "source": "cli/__main__.py:1636",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/portfolio-capital/history"
+      ],
+      "portal_reachable": "YES"
+    },
+    "cmd_broker": {
+      "handler": "cmd_broker",
+      "source": "cli/__main__.py:1655",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/broker-bindings",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/exposure",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/reconcile-open-orders",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/reconcile-positions",
+        "/v1/admin/broker-bindings/{args.external_account_ref}/state"
+      ],
+      "portal_reachable": "YES"
+    },
+    "cmd_account": {
+      "handler": "cmd_account",
+      "source": "cli/__main__.py:1690",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/accounts/paper/seed",
+        "/v1/admin/accounts/{args.account_id}/policy",
+        "/v1/admin/accounts/{args.account_id}/reconcile-open-orders",
+        "/v1/admin/accounts/{args.account_id}/reconcile-positions",
+        "/v1/admin/accounts/{args.account_id}/state",
+        "/v1/admin/accounts/{args.account_id}/sync"
+      ],
+      "portal_reachable": "YES"
+    },
+    "cmd_risk": {
+      "handler": "cmd_risk",
+      "source": "cli/__main__.py:1783",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/alphas/{args.alpha_id}/risk",
+        "/v1/admin/trading-state"
+      ],
+      "portal_reachable": "YES"
+    },
+    "cmd_copy": {
+      "handler": "cmd_copy",
+      "source": "cli/__main__.py:1823",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/copy/policies",
+        "/v1/admin/copy/policies/{args.strategy_id}"
+      ],
+      "portal_reachable": "YES"
+    },
+    "cmd_config": {
+      "handler": "cmd_config",
+      "source": "cli/__main__.py:1842",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/accounts/{account_id}/policy",
+        "/v1/admin/alphas/register",
+        "/v1/admin/alphas/{alpha_id}/risk",
+        "/v1/admin/copy/policies/{strategy_id}",
+        "/v1/admin/portfolio-allocations",
+        "/v1/admin/portfolios",
+        "/v1/admin/symbols/sync",
+        "/v1/admin/trading-state"
+      ],
+      "portal_reachable": "YES"
+    },
+    "cmd_redis": {
+      "handler": "cmd_redis",
+      "source": "cli/__main__.py:1936",
+      "access_paths": [
+        "REDIS_DIRECT"
+      ],
+      "http_paths": [],
+      "portal_reachable": "NO — no HTTP equivalent"
+    },
+    "cmd_ops": {
+      "handler": "cmd_ops",
+      "source": "cli/__main__.py:1985",
+      "access_paths": [
+        "HTTP",
+        "POSTGRES_DIRECT",
+        "REDIS_DIRECT"
+      ],
+      "http_paths": [
+        "/v1/admin/ops/emergency-close",
+        "/v1/admin/ops/emergency-close/plan?{",
+        "/v1/admin/ops/emergency-close/{args.operation_id}/verify"
+      ],
+      "portal_reachable": "PARTIAL — mixed access"
+    },
+    "cmd_performance": {
+      "handler": "cmd_performance",
+      "source": "cli/__main__.py:2034",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/performance/accounts/latest",
+        "/v1/admin/performance/accounts/{args.account_id}/history?limit={args.limit}",
+        "/v1/admin/performance/dashboard",
+        "/v1/admin/performance/instruments/latest",
+        "/v1/admin/performance/portfolios/{args.portfolio_id}/history?limit={args.limit}",
+        "/v1/admin/performance/portfolios/{args.portfolio_id}/latest"
+      ],
+      "portal_reachable": "YES"
+    },
+    "cmd_sizing": {
+      "handler": "cmd_sizing",
+      "source": "cli/__main__.py:2079",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/sizing/decisions",
+        "/v1/admin/sizing/decisions/summary",
+        "/v1/admin/sizing/decisions/{args.decision_id}"
+      ],
+      "portal_reachable": "YES"
+    },
+    "cmd_replay": {
+      "handler": "cmd_replay",
+      "source": "cli/__main__.py:2123",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/events",
+        "/v1/admin/replay/compare",
+        "/v1/admin/replay/export",
+        "/v1/admin/replay/jobs",
+        "/v1/admin/replay/jobs/{args.replay_id}",
+        "/v1/admin/replay/jobs/{args.replay_id}/run",
+        "/v1/admin/replay/jobs?limit={args.limit}",
+        "/v1/admin/replay/order-lifecycle",
+        "/v1/admin/replay/quantbt-diff"
+      ],
+      "portal_reachable": "YES"
+    },
+    "cmd_order_group": {
+      "handler": "cmd_order_group",
+      "source": "cli/__main__.py:2169",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/order-groups",
+        "/v1/admin/order-groups/{args.group_id}",
+        "/v1/admin/order-groups/{args.group_id}/{args.action}"
+      ],
+      "portal_reachable": "YES"
+    },
+    "cmd_bracket_audit": {
+      "handler": "cmd_bracket_audit",
+      "source": "cli/__main__.py:2218",
+      "access_paths": [
+        "HTTP"
+      ],
+      "http_paths": [
+        "/v1/admin/order-brackets/lifecycle-audit"
+      ],
+      "portal_reachable": "YES"
+    },
+    "cmd_authority": {
+      "handler": "cmd_authority",
+      "source": "cli/__main__.py:2333",
+      "access_paths": [
+        "POSTGRES_DIRECT"
+      ],
+      "http_paths": [],
+      "portal_reachable": "NO — no HTTP equivalent"
+    }
+  }
+}

@@ -1,0 +1,1512 @@
+{
+  "provenance": {
+    "generated_by": "scripts/85_config_surface.py",
+    "read_only": true,
+    "trading_system_commit": "9081397de9e981c43b4e0f67fabe747e7ed964c7",
+    "sources": [
+      "shared/config.py"
+    ],
+    "note": "Derived from source/runtime read-only inspection. No Trading System file was modified."
+  },
+  "redaction_guarantee": "Only source-declared defaults are read. The process environment, *_FILE targets, docker inspect and compose config were never read. Secret-shaped settings appear by name and type only.",
+  "summary": {
+    "settings_declared": 159,
+    "secret_shaped_redacted": 17,
+    "by_category": {
+      "datastore": 10,
+      "endpoint": 1,
+      "event/command plane": 20,
+      "feature flag": 30,
+      "gateway/admin": 10,
+      "other": 16,
+      "timing": 49,
+      "venue/broker": 23
+    }
+  },
+  "portal_relevant_highlights": {
+    "RISK_DATA_LAYER_RECOVERY_TIMEOUT_SECONDS": 3.0,
+    "GATEWAY_RATE_LIMIT_PER_SECOND": 300,
+    "GATEWAY_RATE_LIMIT_SCOPE": "account",
+    "CONTRACT_SHADOW_ENABLED": false,
+    "CONTRACT_SHADOW_SAMPLE_RATE": 1.0,
+    "CONTRACT_SHADOW_MAX_ALPHA_SCOPES": 256,
+    "COMMAND_JOURNAL_ROLLOUT": "OFF",
+    "COMMAND_JOURNAL_CANARY_SCOPES": "",
+    "COMMAND_JOURNAL_POLL_INTERVAL_MS": 50,
+    "COMMAND_JOURNAL_BATCH_SIZE": 100,
+    "COMMAND_JOURNAL_LEASE_SECONDS": 30,
+    "COMMAND_JOURNAL_MAX_ATTEMPTS": 10,
+    "COMMAND_JOURNAL_DISPATCH_DEDUP_TTL_SECONDS": 604800,
+    "COMMAND_JOURNAL_STREAM_MAXLEN": 20000,
+    "COMMAND_JOURNAL_ACK_REQUIRED": false,
+    "COMMAND_JOURNAL_RETENTION_ENABLED": false,
+    "COMMAND_JOURNAL_RETENTION_MIN_AGE_SECONDS": 86400,
+    "COMMAND_JOURNAL_RETENTION_INTERVAL_SECONDS": 60,
+    "COMMAND_JOURNAL_RETENTION_STREAMS": "order.inbound,order.requests,commands.execution.paper,commands.execution.sandbox,commands.execution.live",
+    "COMMAND_JOURNAL_RETENTION_DRY_RUN": true,
+    "COMMAND_JOURNAL_RETENTION_APPLY_CONFIRMATION": "",
+    "COMMAND_JOURNAL_RETENTION_POLICY_REVISION": "",
+    "COMMAND_JOURNAL_LEGACY_CUTOVERS": "{}",
+    "COMMAND_JOURNAL_ARCHIVE_DIGESTS": "{}",
+    "COMMAND_JOURNAL_ARCHIVE_ROOT": "/app/state/redis-archive",
+    "COMMAND_JOURNAL_ARCHIVE_BATCH_SIZE": 1000,
+    "COMMAND_JOURNAL_LOOP_BACKOFF_BASE_SECONDS": 1.0,
+    "COMMAND_JOURNAL_LOOP_BACKOFF_MAX_SECONDS": 30.0,
+    "EXECUTOR_RETRY_MAX_ATTEMPTS": 2,
+    "COPY_OUTBOX_MAX_ATTEMPTS": 10,
+    "COPY_OUTBOX_STREAM_MAXLEN": 500000,
+    "COPY_DELIVERY_CONSUMER_STALE_SECONDS": 180.0,
+    "ORDER_GROUP_SHADOW_BRACKETS_ENABLED": false,
+    "ORDER_GROUP_MAX_ATTEMPTS": 10,
+    "ORDER_GROUP_COMMAND_ACK_TIMEOUT_SECONDS": 60,
+    "REPLAY_V2_ENABLED": false,
+    "TRADING_MARKET_REDIS_SOCKET_TIMEOUT_SECONDS": 2.0,
+    "TRADING_MARKET_REDIS_CONNECT_TIMEOUT_SECONDS": 2.0,
+    "MARKET_REDIS_ROLLOUT": "CORE_ONLY",
+    "MARKET_REDIS_SHADOW_COMPARE_SAMPLE_RATE": 0.01,
+    "BINANCE_FUTURES_REST_TIMEOUT_SECONDS": 8.0,
+    "PERFORMANCE_DATA_LAYER_MARK_RECOVERY_TIMEOUT_SECONDS": 3.0,
+    "RUST_SHADOW_MODE": "OFF",
+    "RUST_SHADOW_COMPONENTS": "RISK",
+    "RUST_SHADOW_ACCOUNT_IDS": "",
+    "RUST_SHADOW_TRADING_MODES": "paper",
+    "RUST_SHADOW_VENUES": "BINANCE,DNSE",
+    "RUST_SHADOW_SAMPLE_RATE": 1.0,
+    "RUST_SHADOW_TIMEOUT_MS": 25.0,
+    "RUST_SHADOW_MAX_EVIDENCE_BYTES": 65536,
+    "ENGINE_AUTHORITY_TIMEOUT_MS": 25.0
+  },
+  "settings": [
+    {
+      "name": "IS_TESTNET",
+      "type": "bool",
+      "declared_default": true,
+      "is_secret_shaped": false,
+      "category": "other",
+      "class": "Settings",
+      "source": "shared/config.py:13"
+    },
+    {
+      "name": "DEFAULT_TRADING_MODE",
+      "type": "str",
+      "declared_default": "paper",
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:14"
+    },
+    {
+      "name": "LOG_LEVEL",
+      "type": "str",
+      "declared_default": "INFO",
+      "is_secret_shaped": false,
+      "category": "other",
+      "class": "Settings",
+      "source": "shared/config.py:15"
+    },
+    {
+      "name": "TRADING_ADMIN_USER",
+      "type": "str",
+      "declared_default": "bobby",
+      "is_secret_shaped": false,
+      "category": "gateway/admin",
+      "class": "Settings",
+      "source": "shared/config.py:16"
+    },
+    {
+      "name": "TRADING_ADMIN_PASSWORD",
+      "type": "str",
+      "declared_default": "<redacted — secret-shaped setting; declaration only>",
+      "is_secret_shaped": true,
+      "category": "gateway/admin",
+      "class": "Settings",
+      "source": "shared/config.py:17"
+    },
+    {
+      "name": "TRADING_ADMIN_TOKEN",
+      "type": "str",
+      "declared_default": "<redacted — secret-shaped setting; declaration only>",
+      "is_secret_shaped": true,
+      "category": "gateway/admin",
+      "class": "Settings",
+      "source": "shared/config.py:18"
+    },
+    {
+      "name": "TRADING_ADMIN_PASSWORD_FILE",
+      "type": "str",
+      "declared_default": "<redacted — secret-shaped setting; declaration only>",
+      "is_secret_shaped": true,
+      "category": "gateway/admin",
+      "class": "Settings",
+      "source": "shared/config.py:19"
+    },
+    {
+      "name": "TRADING_ADMIN_TOKEN_FILE",
+      "type": "str",
+      "declared_default": "<redacted — secret-shaped setting; declaration only>",
+      "is_secret_shaped": true,
+      "category": "gateway/admin",
+      "class": "Settings",
+      "source": "shared/config.py:20"
+    },
+    {
+      "name": "PERFORMANCE_SNAPSHOT_INTERVAL_SECONDS",
+      "type": "int",
+      "declared_default": 60,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:21"
+    },
+    {
+      "name": "PERFORMANCE_INSTRUMENT_SNAPSHOT_INTERVAL_SECONDS",
+      "type": "int",
+      "declared_default": 600,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:22"
+    },
+    {
+      "name": "PERFORMANCE_ACTIVE_SNAPSHOT_INTERVAL_SECONDS",
+      "type": "int",
+      "declared_default": 600,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:23"
+    },
+    {
+      "name": "PERFORMANCE_PENDING_SNAPSHOT_INTERVAL_SECONDS",
+      "type": "int",
+      "declared_default": 600,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:24"
+    },
+    {
+      "name": "PERFORMANCE_IDLE_SNAPSHOT_INTERVAL_SECONDS",
+      "type": "int",
+      "declared_default": 900,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:25"
+    },
+    {
+      "name": "PERFORMANCE_MARK_PRICE_MAX_AGE_SECONDS",
+      "type": "int",
+      "declared_default": 180,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:26"
+    },
+    {
+      "name": "BROKER_SYNC_VALUATION_BUCKET_SECONDS",
+      "type": "int",
+      "declared_default": 900,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:27"
+    },
+    {
+      "name": "BROKER_SYNC_LEGACY_SNAPSHOT_WRITE_ENABLED",
+      "type": "bool",
+      "declared_default": false,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:28"
+    },
+    {
+      "name": "RISK_MARKET_DATA_MAX_AGE_SECONDS",
+      "type": "int",
+      "declared_default": 180,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:29"
+    },
+    {
+      "name": "RISK_DATA_LAYER_RECOVERY_ENABLED",
+      "type": "bool",
+      "declared_default": true,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:30"
+    },
+    {
+      "name": "RISK_DATA_LAYER_RECOVERY_TIMEOUT_SECONDS",
+      "type": "float",
+      "declared_default": 3.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:31"
+    },
+    {
+      "name": "RISK_ORDER_INTENT_MAX_AGE_SECONDS",
+      "type": "float",
+      "declared_default": 30.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:32"
+    },
+    {
+      "name": "GATEWAY_RATE_LIMIT_PER_SECOND",
+      "type": "int",
+      "declared_default": 300,
+      "is_secret_shaped": false,
+      "category": "gateway/admin",
+      "class": "Settings",
+      "source": "shared/config.py:33"
+    },
+    {
+      "name": "GATEWAY_RATE_LIMIT_SCOPE",
+      "type": "str",
+      "declared_default": "account",
+      "is_secret_shaped": false,
+      "category": "gateway/admin",
+      "class": "Settings",
+      "source": "shared/config.py:34"
+    },
+    {
+      "name": "GATEWAY_API_KEY_PEPPER",
+      "type": "str",
+      "declared_default": "<redacted — secret-shaped setting; declaration only>",
+      "is_secret_shaped": true,
+      "category": "gateway/admin",
+      "class": "Settings",
+      "source": "shared/config.py:35"
+    },
+    {
+      "name": "GATEWAY_API_KEY_PEPPER_FILE",
+      "type": "str",
+      "declared_default": "<redacted — secret-shaped setting; declaration only>",
+      "is_secret_shaped": true,
+      "category": "gateway/admin",
+      "class": "Settings",
+      "source": "shared/config.py:36"
+    },
+    {
+      "name": "GATEWAY_LEGACY_PLAINTEXT_API_KEYS_ENABLED",
+      "type": "bool",
+      "declared_default": "<redacted — secret-shaped setting; declaration only>",
+      "is_secret_shaped": true,
+      "category": "gateway/admin",
+      "class": "Settings",
+      "source": "shared/config.py:37"
+    },
+    {
+      "name": "COMPATIBILITY_TELEMETRY_TTL_DAYS",
+      "type": "int",
+      "declared_default": 120,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:38"
+    },
+    {
+      "name": "CONTRACT_SHADOW_ENABLED",
+      "type": "bool",
+      "declared_default": false,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:39"
+    },
+    {
+      "name": "CONTRACT_SHADOW_SAMPLE_RATE",
+      "type": "float",
+      "declared_default": 1.0,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:40"
+    },
+    {
+      "name": "CONTRACT_SHADOW_MAX_ALPHA_SCOPES",
+      "type": "int",
+      "declared_default": 256,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:41"
+    },
+    {
+      "name": "COMMAND_JOURNAL_ROLLOUT",
+      "type": "str",
+      "declared_default": "OFF",
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:42"
+    },
+    {
+      "name": "COMMAND_JOURNAL_CANARY_SCOPES",
+      "type": "str",
+      "declared_default": "",
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:43"
+    },
+    {
+      "name": "COMMAND_JOURNAL_POLL_INTERVAL_MS",
+      "type": "int",
+      "declared_default": 50,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:44"
+    },
+    {
+      "name": "COMMAND_JOURNAL_BATCH_SIZE",
+      "type": "int",
+      "declared_default": 100,
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:45"
+    },
+    {
+      "name": "COMMAND_JOURNAL_LEASE_SECONDS",
+      "type": "int",
+      "declared_default": 30,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:46"
+    },
+    {
+      "name": "COMMAND_JOURNAL_MAX_ATTEMPTS",
+      "type": "int",
+      "declared_default": 10,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:47"
+    },
+    {
+      "name": "COMMAND_JOURNAL_DISPATCH_DEDUP_TTL_SECONDS",
+      "type": "int",
+      "declared_default": 604800,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:48"
+    },
+    {
+      "name": "COMMAND_JOURNAL_STREAM_MAXLEN",
+      "type": "int",
+      "declared_default": 20000,
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:49"
+    },
+    {
+      "name": "COMMAND_JOURNAL_ACK_REQUIRED",
+      "type": "bool",
+      "declared_default": false,
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:50"
+    },
+    {
+      "name": "COMMAND_JOURNAL_RETENTION_ENABLED",
+      "type": "bool",
+      "declared_default": false,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:51"
+    },
+    {
+      "name": "COMMAND_JOURNAL_RETENTION_MIN_AGE_SECONDS",
+      "type": "int",
+      "declared_default": 86400,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:52"
+    },
+    {
+      "name": "COMMAND_JOURNAL_RETENTION_INTERVAL_SECONDS",
+      "type": "int",
+      "declared_default": 60,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:53"
+    },
+    {
+      "name": "COMMAND_JOURNAL_RETENTION_STREAMS",
+      "type": "str",
+      "declared_default": "order.inbound,order.requests,commands.execution.paper,commands.execution.sandbox,commands.execution.live",
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:54"
+    },
+    {
+      "name": "COMMAND_JOURNAL_RETENTION_DRY_RUN",
+      "type": "bool",
+      "declared_default": true,
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:55"
+    },
+    {
+      "name": "COMMAND_JOURNAL_RETENTION_APPLY_CONFIRMATION",
+      "type": "str",
+      "declared_default": "",
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:56"
+    },
+    {
+      "name": "COMMAND_JOURNAL_RETENTION_POLICY_REVISION",
+      "type": "str",
+      "declared_default": "",
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:57"
+    },
+    {
+      "name": "COMMAND_JOURNAL_LEGACY_CUTOVERS",
+      "type": "str",
+      "declared_default": "{}",
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:58"
+    },
+    {
+      "name": "COMMAND_JOURNAL_ARCHIVE_DIGESTS",
+      "type": "str",
+      "declared_default": "{}",
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:59"
+    },
+    {
+      "name": "COMMAND_JOURNAL_ARCHIVE_ROOT",
+      "type": "str",
+      "declared_default": "/app/state/redis-archive",
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:60"
+    },
+    {
+      "name": "COMMAND_JOURNAL_ARCHIVE_BATCH_SIZE",
+      "type": "int",
+      "declared_default": 1000,
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:61"
+    },
+    {
+      "name": "COMMAND_JOURNAL_LOOP_BACKOFF_BASE_SECONDS",
+      "type": "float",
+      "declared_default": 1.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:62"
+    },
+    {
+      "name": "COMMAND_JOURNAL_LOOP_BACKOFF_MAX_SECONDS",
+      "type": "float",
+      "declared_default": 30.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:63"
+    },
+    {
+      "name": "MONITOR_ALERT_FALLBACK_INTERVAL_SECONDS",
+      "type": "float",
+      "declared_default": 60.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:64"
+    },
+    {
+      "name": "BATCH_PRE_RISK_ENABLED",
+      "type": "bool",
+      "declared_default": false,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:65"
+    },
+    {
+      "name": "RISK_GRANT_TTL_SECONDS",
+      "type": "int",
+      "declared_default": 20,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:66"
+    },
+    {
+      "name": "RISK_GRANT_MAX_ORDERS",
+      "type": "int",
+      "declared_default": 250,
+      "is_secret_shaped": false,
+      "category": "other",
+      "class": "Settings",
+      "source": "shared/config.py:67"
+    },
+    {
+      "name": "RISK_GRANT_REDIS_PREFIX",
+      "type": "str",
+      "declared_default": "risk:grant",
+      "is_secret_shaped": false,
+      "category": "datastore",
+      "class": "Settings",
+      "source": "shared/config.py:68"
+    },
+    {
+      "name": "EXECUTOR_CONCURRENT_SEND_ENABLED",
+      "type": "bool",
+      "declared_default": false,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:69"
+    },
+    {
+      "name": "EXECUTOR_PAPER_CONCURRENCY",
+      "type": "int",
+      "declared_default": 30,
+      "is_secret_shaped": false,
+      "category": "other",
+      "class": "Settings",
+      "source": "shared/config.py:70"
+    },
+    {
+      "name": "EXECUTOR_BINANCE_CONCURRENCY",
+      "type": "int",
+      "declared_default": 5,
+      "is_secret_shaped": false,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:71"
+    },
+    {
+      "name": "EXECUTOR_DNSE_CONCURRENCY",
+      "type": "int",
+      "declared_default": 1,
+      "is_secret_shaped": false,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:72"
+    },
+    {
+      "name": "EXECUTOR_OKX_CONCURRENCY",
+      "type": "int",
+      "declared_default": 3,
+      "is_secret_shaped": false,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:73"
+    },
+    {
+      "name": "EXECUTOR_RETRY_MAX_ATTEMPTS",
+      "type": "int",
+      "declared_default": 2,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:74"
+    },
+    {
+      "name": "EXECUTOR_RETRY_BASE_SECONDS",
+      "type": "float",
+      "declared_default": 0.25,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:75"
+    },
+    {
+      "name": "EXECUTOR_RETRY_MAX_SECONDS",
+      "type": "float",
+      "declared_default": 2.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:76"
+    },
+    {
+      "name": "EXECUTOR_PENDING_CLAIM_IDLE_MS",
+      "type": "int",
+      "declared_default": 30000,
+      "is_secret_shaped": false,
+      "category": "other",
+      "class": "Settings",
+      "source": "shared/config.py:77"
+    },
+    {
+      "name": "PORTFOLIO_FILL_MICROBATCH_ENABLED",
+      "type": "bool",
+      "declared_default": false,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:78"
+    },
+    {
+      "name": "LEGACY_PORTFOLIO_STATS_ENABLED",
+      "type": "bool",
+      "declared_default": false,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:79"
+    },
+    {
+      "name": "COPY_OUTBOX_DEFAULT_STREAM",
+      "type": "str",
+      "declared_default": "copy:events:v1",
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:80"
+    },
+    {
+      "name": "COPY_OUTBOX_BATCH_SIZE",
+      "type": "int",
+      "declared_default": 100,
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:81"
+    },
+    {
+      "name": "COPY_OUTBOX_POLL_MS",
+      "type": "int",
+      "declared_default": 250,
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:82"
+    },
+    {
+      "name": "COPY_OUTBOX_MAX_ATTEMPTS",
+      "type": "int",
+      "declared_default": 10,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:83"
+    },
+    {
+      "name": "COPY_OUTBOX_STREAM_MAXLEN",
+      "type": "int",
+      "declared_default": 500000,
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:84"
+    },
+    {
+      "name": "COPY_DELIVERY_CONSUMER_GROUP",
+      "type": "str",
+      "declared_default": "copy_trading_server_v1",
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:85"
+    },
+    {
+      "name": "COPY_DELIVERY_LAG_WARNING",
+      "type": "int",
+      "declared_default": 100,
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:86"
+    },
+    {
+      "name": "COPY_DELIVERY_OLDEST_WARNING_SECONDS",
+      "type": "float",
+      "declared_default": 300.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:87"
+    },
+    {
+      "name": "COPY_DELIVERY_CONSUMER_STALE_SECONDS",
+      "type": "float",
+      "declared_default": 180.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:88"
+    },
+    {
+      "name": "ORDER_GROUP_ENGINE_V2_ENABLED",
+      "type": "bool",
+      "declared_default": false,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:89"
+    },
+    {
+      "name": "ORDER_GROUP_SHADOW_BRACKETS_ENABLED",
+      "type": "bool",
+      "declared_default": false,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:90"
+    },
+    {
+      "name": "ORDER_GROUP_POLL_INTERVAL_MS",
+      "type": "int",
+      "declared_default": 100,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:91"
+    },
+    {
+      "name": "ORDER_GROUP_BATCH_SIZE",
+      "type": "int",
+      "declared_default": 100,
+      "is_secret_shaped": false,
+      "category": "other",
+      "class": "Settings",
+      "source": "shared/config.py:92"
+    },
+    {
+      "name": "ORDER_GROUP_MAX_ATTEMPTS",
+      "type": "int",
+      "declared_default": 10,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:93"
+    },
+    {
+      "name": "ORDER_GROUP_DISPATCH_DEDUP_TTL_SECONDS",
+      "type": "int",
+      "declared_default": 30,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:94"
+    },
+    {
+      "name": "ORDER_GROUP_COMMAND_ACK_TIMEOUT_SECONDS",
+      "type": "int",
+      "declared_default": 60,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:95"
+    },
+    {
+      "name": "ORDER_GROUP_RECOVERY_INTERVAL_SECONDS",
+      "type": "float",
+      "declared_default": 10.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:96"
+    },
+    {
+      "name": "ORDER_GROUP_LOOP_BACKOFF_BASE_SECONDS",
+      "type": "float",
+      "declared_default": 1.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:97"
+    },
+    {
+      "name": "ORDER_GROUP_LOOP_BACKOFF_MAX_SECONDS",
+      "type": "float",
+      "declared_default": 30.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:98"
+    },
+    {
+      "name": "OKX_EXECUTION_ENABLED",
+      "type": "bool",
+      "declared_default": false,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:99"
+    },
+    {
+      "name": "OKX_EXECUTION_ACCEPTANCE_APPROVED",
+      "type": "bool",
+      "declared_default": false,
+      "is_secret_shaped": false,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:100"
+    },
+    {
+      "name": "OKX_DEMO_TRADING",
+      "type": "bool",
+      "declared_default": true,
+      "is_secret_shaped": false,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:101"
+    },
+    {
+      "name": "OKX_API_KEY",
+      "type": "str",
+      "declared_default": "<redacted — secret-shaped setting; declaration only>",
+      "is_secret_shaped": true,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:102"
+    },
+    {
+      "name": "OKX_API_SECRET",
+      "type": "str",
+      "declared_default": "<redacted — secret-shaped setting; declaration only>",
+      "is_secret_shaped": true,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:103"
+    },
+    {
+      "name": "OKX_API_PASSPHRASE",
+      "type": "str",
+      "declared_default": "",
+      "is_secret_shaped": false,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:104"
+    },
+    {
+      "name": "OKX_API_KEY_FILE",
+      "type": "str",
+      "declared_default": "<redacted — secret-shaped setting; declaration only>",
+      "is_secret_shaped": true,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:105"
+    },
+    {
+      "name": "OKX_API_SECRET_FILE",
+      "type": "str",
+      "declared_default": "<redacted — secret-shaped setting; declaration only>",
+      "is_secret_shaped": true,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:106"
+    },
+    {
+      "name": "OKX_API_PASSPHRASE_FILE",
+      "type": "str",
+      "declared_default": "",
+      "is_secret_shaped": false,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:107"
+    },
+    {
+      "name": "OKX_REST_URL",
+      "type": "str",
+      "declared_default": "https://www.okx.com",
+      "is_secret_shaped": false,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:108"
+    },
+    {
+      "name": "REPLAY_V2_ENABLED",
+      "type": "bool",
+      "declared_default": false,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:109"
+    },
+    {
+      "name": "REPLAY_ARTIFACT_ROOT",
+      "type": "str",
+      "declared_default": "/app/state/replay",
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:110"
+    },
+    {
+      "name": "REPLAY_MAX_EVENTS",
+      "type": "int",
+      "declared_default": 100000,
+      "is_secret_shaped": false,
+      "category": "event/command plane",
+      "class": "Settings",
+      "source": "shared/config.py:111"
+    },
+    {
+      "name": "TRADING_REDIS_URL",
+      "type": "str",
+      "declared_default": "redis://redis_service:6379/0",
+      "is_secret_shaped": false,
+      "category": "datastore",
+      "class": "Settings",
+      "source": "shared/config.py:117"
+    },
+    {
+      "name": "DATA_LAYER_REDIS_URL",
+      "type": "str",
+      "declared_default": "redis://redis_marketdata:6379/0",
+      "is_secret_shaped": false,
+      "category": "datastore",
+      "class": "Settings",
+      "source": "shared/config.py:118"
+    },
+    {
+      "name": "TRADING_MARKET_REDIS_URL",
+      "type": "str",
+      "declared_default": "redis://redis_marketdata:6379/1",
+      "is_secret_shaped": false,
+      "category": "datastore",
+      "class": "Settings",
+      "source": "shared/config.py:119"
+    },
+    {
+      "name": "TRADING_REDIS_MAX_CONNECTIONS",
+      "type": "int",
+      "declared_default": 100,
+      "is_secret_shaped": false,
+      "category": "datastore",
+      "class": "Settings",
+      "source": "shared/config.py:120"
+    },
+    {
+      "name": "DATA_LAYER_REDIS_MAX_CONNECTIONS",
+      "type": "int",
+      "declared_default": 50,
+      "is_secret_shaped": false,
+      "category": "datastore",
+      "class": "Settings",
+      "source": "shared/config.py:121"
+    },
+    {
+      "name": "TRADING_MARKET_REDIS_MAX_CONNECTIONS",
+      "type": "int",
+      "declared_default": 100,
+      "is_secret_shaped": false,
+      "category": "datastore",
+      "class": "Settings",
+      "source": "shared/config.py:122"
+    },
+    {
+      "name": "TRADING_MARKET_REDIS_SOCKET_TIMEOUT_SECONDS",
+      "type": "float",
+      "declared_default": 2.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:123"
+    },
+    {
+      "name": "TRADING_MARKET_REDIS_CONNECT_TIMEOUT_SECONDS",
+      "type": "float",
+      "declared_default": 2.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:124"
+    },
+    {
+      "name": "TRADING_MARKET_REDIS_HEALTH_CHECK_INTERVAL_SECONDS",
+      "type": "int",
+      "declared_default": 15,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:125"
+    },
+    {
+      "name": "MARKET_REDIS_ROLLOUT",
+      "type": "str",
+      "declared_default": "CORE_ONLY",
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:126"
+    },
+    {
+      "name": "MARKET_REDIS_SHADOW_COMPARE_SAMPLE_RATE",
+      "type": "float",
+      "declared_default": 0.01,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:127"
+    },
+    {
+      "name": "MARKET_REDIS_METRICS_INTERVAL_SECONDS",
+      "type": "float",
+      "declared_default": 10.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:128"
+    },
+    {
+      "name": "MARKET_DATA_ACTIVE_SCOPE_ENABLED",
+      "type": "bool",
+      "declared_default": true,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:129"
+    },
+    {
+      "name": "MARKET_DATA_ACTIVE_SCOPE_REFRESH_SECONDS",
+      "type": "float",
+      "declared_default": 30.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:130"
+    },
+    {
+      "name": "REDIS_URL",
+      "type": "str",
+      "declared_default": "redis://redis_service:6379/0",
+      "is_secret_shaped": false,
+      "category": "datastore",
+      "class": "Settings",
+      "source": "shared/config.py:133"
+    },
+    {
+      "name": "DATA_LAYER_URL",
+      "type": "str",
+      "declared_default": "http://data_layer:8100",
+      "is_secret_shaped": false,
+      "category": "endpoint",
+      "class": "Settings",
+      "source": "shared/config.py:134"
+    },
+    {
+      "name": "POSTGRES_DSN",
+      "type": "str",
+      "declared_default": "",
+      "is_secret_shaped": false,
+      "category": "datastore",
+      "class": "Settings",
+      "source": "shared/config.py:137"
+    },
+    {
+      "name": "POSTGRES_DSN_FILE",
+      "type": "str",
+      "declared_default": "",
+      "is_secret_shaped": false,
+      "category": "datastore",
+      "class": "Settings",
+      "source": "shared/config.py:138"
+    },
+    {
+      "name": "BINANCE_LIVE_KEYS",
+      "type": "str",
+      "declared_default": "[]",
+      "is_secret_shaped": false,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:141"
+    },
+    {
+      "name": "BINANCE_TESTNET_KEYS",
+      "type": "str",
+      "declared_default": "[]",
+      "is_secret_shaped": false,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:142"
+    },
+    {
+      "name": "BINANCE_LIVE_KEYS_FILE",
+      "type": "str",
+      "declared_default": "",
+      "is_secret_shaped": false,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:143"
+    },
+    {
+      "name": "BINANCE_TESTNET_KEYS_FILE",
+      "type": "str",
+      "declared_default": "",
+      "is_secret_shaped": false,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:144"
+    },
+    {
+      "name": "BINANCE_DIRECT_REST_FALLBACK_ENABLED",
+      "type": "bool",
+      "declared_default": true,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:145"
+    },
+    {
+      "name": "BINANCE_FUTURES_REST_TIMEOUT_SECONDS",
+      "type": "float",
+      "declared_default": 8.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:146"
+    },
+    {
+      "name": "BINANCE_CIRCUIT_FAILURE_THRESHOLD",
+      "type": "int",
+      "declared_default": 3,
+      "is_secret_shaped": false,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:147"
+    },
+    {
+      "name": "BINANCE_CIRCUIT_COOLDOWN_SECONDS",
+      "type": "float",
+      "declared_default": 120.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:148"
+    },
+    {
+      "name": "BINANCE_FUTURES_TESTNET_REST_URLS",
+      "type": "str",
+      "declared_default": "https://testnet.binancefuture.com,https://demo-fapi.binance.com",
+      "is_secret_shaped": false,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:149"
+    },
+    {
+      "name": "BINANCE_FUTURES_LIVE_REST_URLS",
+      "type": "str",
+      "declared_default": "https://fapi.binance.com",
+      "is_secret_shaped": false,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:150"
+    },
+    {
+      "name": "BINANCE_SPOT_TESTNET_REST_URLS",
+      "type": "str",
+      "declared_default": "https://testnet.binance.vision",
+      "is_secret_shaped": false,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:151"
+    },
+    {
+      "name": "BINANCE_SPOT_LIVE_REST_URLS",
+      "type": "str",
+      "declared_default": "https://api.binance.com",
+      "is_secret_shaped": false,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:152"
+    },
+    {
+      "name": "LISTENER_API_KEY",
+      "type": "str | None",
+      "declared_default": "<redacted — secret-shaped setting; declaration only>",
+      "is_secret_shaped": true,
+      "category": "other",
+      "class": "Settings",
+      "source": "shared/config.py:155"
+    },
+    {
+      "name": "LISTENER_API_SECRET",
+      "type": "str | None",
+      "declared_default": "<redacted — secret-shaped setting; declaration only>",
+      "is_secret_shaped": true,
+      "category": "other",
+      "class": "Settings",
+      "source": "shared/config.py:156"
+    },
+    {
+      "name": "LISTENER_API_KEY_FILE",
+      "type": "str",
+      "declared_default": "<redacted — secret-shaped setting; declaration only>",
+      "is_secret_shaped": true,
+      "category": "other",
+      "class": "Settings",
+      "source": "shared/config.py:157"
+    },
+    {
+      "name": "LISTENER_API_SECRET_FILE",
+      "type": "str",
+      "declared_default": "<redacted — secret-shaped setting; declaration only>",
+      "is_secret_shaped": true,
+      "category": "other",
+      "class": "Settings",
+      "source": "shared/config.py:158"
+    },
+    {
+      "name": "TCBS_USER",
+      "type": "str | None",
+      "declared_default": null,
+      "is_secret_shaped": false,
+      "category": "other",
+      "class": "Settings",
+      "source": "shared/config.py:161"
+    },
+    {
+      "name": "TCBS_PASSWORD",
+      "type": "str | None",
+      "declared_default": "<redacted — secret-shaped setting; declaration only>",
+      "is_secret_shaped": true,
+      "category": "other",
+      "class": "Settings",
+      "source": "shared/config.py:162"
+    },
+    {
+      "name": "TCBS_2FA_SECRET",
+      "type": "str | None",
+      "declared_default": "<redacted — secret-shaped setting; declaration only>",
+      "is_secret_shaped": true,
+      "category": "other",
+      "class": "Settings",
+      "source": "shared/config.py:163"
+    },
+    {
+      "name": "SYMBOL_CONFIG_PATH",
+      "type": "str",
+      "declared_default": "./shared/symbols.json",
+      "is_secret_shaped": false,
+      "category": "other",
+      "class": "Settings",
+      "source": "shared/config.py:165"
+    },
+    {
+      "name": "MARKET_DATA_BINANCE_SYMBOLS",
+      "type": "str",
+      "declared_default": "",
+      "is_secret_shaped": false,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:166"
+    },
+    {
+      "name": "MARKET_DATA_VN_SYMBOLS",
+      "type": "str",
+      "declared_default": "",
+      "is_secret_shaped": false,
+      "category": "other",
+      "class": "Settings",
+      "source": "shared/config.py:167"
+    },
+    {
+      "name": "MARKET_DATA_BINANCE_SYMBOL_LIMIT",
+      "type": "int",
+      "declared_default": 300,
+      "is_secret_shaped": false,
+      "category": "venue/broker",
+      "class": "Settings",
+      "source": "shared/config.py:168"
+    },
+    {
+      "name": "MARKET_DATA_VN_SYMBOL_LIMIT",
+      "type": "int",
+      "declared_default": 120,
+      "is_secret_shaped": false,
+      "category": "other",
+      "class": "Settings",
+      "source": "shared/config.py:169"
+    },
+    {
+      "name": "MARKET_DATA_RECONNECT_BASE_SECONDS",
+      "type": "float",
+      "declared_default": 1.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:170"
+    },
+    {
+      "name": "MARKET_DATA_RECONNECT_MAX_SECONDS",
+      "type": "float",
+      "declared_default": 30.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:171"
+    },
+    {
+      "name": "PAPER_MATCHER_POLL_INTERVAL_SECONDS",
+      "type": "float",
+      "declared_default": 0.5,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:172"
+    },
+    {
+      "name": "PAPER_DATA_LAYER_MARKET_RECOVERY_ENABLED",
+      "type": "bool",
+      "declared_default": true,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:173"
+    },
+    {
+      "name": "PAPER_DATA_LAYER_MARKET_RECOVERY_MAX_AGE_SECONDS",
+      "type": "float",
+      "declared_default": 180.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:174"
+    },
+    {
+      "name": "PERFORMANCE_DATA_LAYER_MARK_RECOVERY_ENABLED",
+      "type": "bool",
+      "declared_default": true,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:175"
+    },
+    {
+      "name": "PERFORMANCE_DATA_LAYER_MARK_RECOVERY_TIMEOUT_SECONDS",
+      "type": "float",
+      "declared_default": 3.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:176"
+    },
+    {
+      "name": "RUST_SHADOW_MODE",
+      "type": "str",
+      "declared_default": "OFF",
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:177"
+    },
+    {
+      "name": "RUST_SHADOW_COMPONENTS",
+      "type": "str",
+      "declared_default": "RISK",
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:178"
+    },
+    {
+      "name": "RUST_SHADOW_ACCOUNT_IDS",
+      "type": "str",
+      "declared_default": "",
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:179"
+    },
+    {
+      "name": "RUST_SHADOW_TRADING_MODES",
+      "type": "str",
+      "declared_default": "paper",
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:180"
+    },
+    {
+      "name": "RUST_SHADOW_VENUES",
+      "type": "str",
+      "declared_default": "BINANCE,DNSE",
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:181"
+    },
+    {
+      "name": "RUST_SHADOW_SAMPLE_RATE",
+      "type": "float",
+      "declared_default": 1.0,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:182"
+    },
+    {
+      "name": "RUST_SHADOW_TIMEOUT_MS",
+      "type": "float",
+      "declared_default": 25.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:183"
+    },
+    {
+      "name": "RUST_SHADOW_MAX_EVIDENCE_BYTES",
+      "type": "int",
+      "declared_default": 65536,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:184"
+    },
+    {
+      "name": "ENGINE_AUTHORITY_ENABLED",
+      "type": "bool",
+      "declared_default": false,
+      "is_secret_shaped": false,
+      "category": "feature flag",
+      "class": "Settings",
+      "source": "shared/config.py:185"
+    },
+    {
+      "name": "ENGINE_AUTHORITY_LEASE_SECONDS",
+      "type": "int",
+      "declared_default": 30,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:186"
+    },
+    {
+      "name": "ENGINE_AUTHORITY_TIMEOUT_MS",
+      "type": "float",
+      "declared_default": 25.0,
+      "is_secret_shaped": false,
+      "category": "timing",
+      "class": "Settings",
+      "source": "shared/config.py:187"
+    }
+  ]
+}

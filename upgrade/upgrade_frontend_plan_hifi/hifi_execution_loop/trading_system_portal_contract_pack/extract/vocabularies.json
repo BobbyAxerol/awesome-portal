@@ -1,0 +1,3758 @@
+{
+  "provenance": {
+    "generated_by": "scripts/50_vocabularies.py",
+    "read_only": true,
+    "trading_system_commit": "9081397de9e981c43b4e0f67fabe747e7ed964c7",
+    "sources": [
+      "domain/**/*.py",
+      "services/**/*.py",
+      "services/venues/registry.py",
+      "services/gateway/contracts/revisions.py",
+      "core/config.py",
+      "contracts/compatibility/*.json",
+      "extract/db-schema.json"
+    ],
+    "note": "Derived from source/runtime read-only inspection. No Trading System file was modified."
+  },
+  "summary": {
+    "python_enums": 22,
+    "db_check_constraints": 91,
+    "db_check_distinct_fields": 33,
+    "db_fields_conflated_across_tables": 7,
+    "venue_product_profiles": 6,
+    "crosschecked_concepts": 6,
+    "crosscheck_divergences": 3
+  },
+  "python_enums": [
+    {
+      "enum": "TradingMode",
+      "bases": [
+        "StrEnum"
+      ],
+      "source": "domain/enums.py:11",
+      "values": [
+        "paper",
+        "sandbox",
+        "live",
+        "replay",
+        "backtest"
+      ],
+      "members": [
+        {
+          "name": "PAPER",
+          "value": "paper"
+        },
+        {
+          "name": "SANDBOX",
+          "value": "sandbox"
+        },
+        {
+          "name": "LIVE",
+          "value": "live"
+        },
+        {
+          "name": "REPLAY",
+          "value": "replay"
+        },
+        {
+          "name": "BACKTEST",
+          "value": "backtest"
+        }
+      ]
+    },
+    {
+      "enum": "AccountType",
+      "bases": [
+        "StrEnum"
+      ],
+      "source": "domain/enums.py:19",
+      "values": [
+        "CASH",
+        "MARGIN",
+        "BETTING"
+      ],
+      "members": [
+        {
+          "name": "CASH",
+          "value": "CASH"
+        },
+        {
+          "name": "MARGIN",
+          "value": "MARGIN"
+        },
+        {
+          "name": "BETTING",
+          "value": "BETTING"
+        }
+      ]
+    },
+    {
+      "enum": "OrderSide",
+      "bases": [
+        "StrEnum"
+      ],
+      "source": "domain/enums.py:25",
+      "values": [
+        "BUY",
+        "SELL"
+      ],
+      "members": [
+        {
+          "name": "BUY",
+          "value": "BUY"
+        },
+        {
+          "name": "SELL",
+          "value": "SELL"
+        }
+      ]
+    },
+    {
+      "enum": "PositionSide",
+      "bases": [
+        "StrEnum"
+      ],
+      "source": "domain/enums.py:34",
+      "values": [
+        "FLAT",
+        "LONG",
+        "SHORT",
+        "BOTH"
+      ],
+      "members": [
+        {
+          "name": "FLAT",
+          "value": "FLAT"
+        },
+        {
+          "name": "LONG",
+          "value": "LONG"
+        },
+        {
+          "name": "SHORT",
+          "value": "SHORT"
+        },
+        {
+          "name": "BOTH",
+          "value": "BOTH"
+        }
+      ]
+    },
+    {
+      "enum": "OrderType",
+      "bases": [
+        "StrEnum"
+      ],
+      "source": "domain/enums.py:41",
+      "values": [
+        "MARKET",
+        "LIMIT",
+        "STOP_MARKET",
+        "STOP_LIMIT",
+        "TAKE_PROFIT",
+        "TAKE_PROFIT_MARKET",
+        "TRAILING_STOP_MARKET",
+        "ATO",
+        "ATC"
+      ],
+      "members": [
+        {
+          "name": "MARKET",
+          "value": "MARKET"
+        },
+        {
+          "name": "LIMIT",
+          "value": "LIMIT"
+        },
+        {
+          "name": "STOP_MARKET",
+          "value": "STOP_MARKET"
+        },
+        {
+          "name": "STOP_LIMIT",
+          "value": "STOP_LIMIT"
+        },
+        {
+          "name": "TAKE_PROFIT",
+          "value": "TAKE_PROFIT"
+        },
+        {
+          "name": "TAKE_PROFIT_MARKET",
+          "value": "TAKE_PROFIT_MARKET"
+        },
+        {
+          "name": "TRAILING_STOP_MARKET",
+          "value": "TRAILING_STOP_MARKET"
+        },
+        {
+          "name": "ATO",
+          "value": "ATO"
+        },
+        {
+          "name": "ATC",
+          "value": "ATC"
+        }
+      ]
+    },
+    {
+      "enum": "TimeInForce",
+      "bases": [
+        "StrEnum"
+      ],
+      "source": "domain/enums.py:53",
+      "values": [
+        "GTC",
+        "IOC",
+        "FOK",
+        "GTD",
+        "GTX"
+      ],
+      "members": [
+        {
+          "name": "GTC",
+          "value": "GTC"
+        },
+        {
+          "name": "IOC",
+          "value": "IOC"
+        },
+        {
+          "name": "FOK",
+          "value": "FOK"
+        },
+        {
+          "name": "GTD",
+          "value": "GTD"
+        },
+        {
+          "name": "GTX",
+          "value": "GTX"
+        }
+      ]
+    },
+    {
+      "enum": "OrderStatus",
+      "bases": [
+        "StrEnum"
+      ],
+      "source": "domain/enums.py:61",
+      "values": [
+        "INITIALIZED",
+        "SUBMITTED",
+        "ACCEPTED",
+        "REJECTED",
+        "DENIED",
+        "PENDING_UPDATE",
+        "PENDING_CANCEL",
+        "PARTIALLY_FILLED",
+        "FILLED",
+        "CANCELED",
+        "EXPIRED",
+        "TRIGGERED"
+      ],
+      "members": [
+        {
+          "name": "INITIALIZED",
+          "value": "INITIALIZED"
+        },
+        {
+          "name": "SUBMITTED",
+          "value": "SUBMITTED"
+        },
+        {
+          "name": "ACCEPTED",
+          "value": "ACCEPTED"
+        },
+        {
+          "name": "REJECTED",
+          "value": "REJECTED"
+        },
+        {
+          "name": "DENIED",
+          "value": "DENIED"
+        },
+        {
+          "name": "PENDING_UPDATE",
+          "value": "PENDING_UPDATE"
+        },
+        {
+          "name": "PENDING_CANCEL",
+          "value": "PENDING_CANCEL"
+        },
+        {
+          "name": "PARTIALLY_FILLED",
+          "value": "PARTIALLY_FILLED"
+        },
+        {
+          "name": "FILLED",
+          "value": "FILLED"
+        },
+        {
+          "name": "CANCELED",
+          "value": "CANCELED"
+        },
+        {
+          "name": "EXPIRED",
+          "value": "EXPIRED"
+        },
+        {
+          "name": "TRIGGERED",
+          "value": "TRIGGERED"
+        }
+      ]
+    },
+    {
+      "enum": "LiquiditySide",
+      "bases": [
+        "StrEnum"
+      ],
+      "source": "domain/enums.py:76",
+      "values": [
+        "MAKER",
+        "TAKER",
+        "UNKNOWN"
+      ],
+      "members": [
+        {
+          "name": "MAKER",
+          "value": "MAKER"
+        },
+        {
+          "name": "TAKER",
+          "value": "TAKER"
+        },
+        {
+          "name": "UNKNOWN",
+          "value": "UNKNOWN"
+        }
+      ]
+    },
+    {
+      "enum": "TradingState",
+      "bases": [
+        "StrEnum"
+      ],
+      "source": "domain/enums.py:82",
+      "values": [
+        "ACTIVE",
+        "REDUCING",
+        "HALTED"
+      ],
+      "members": [
+        {
+          "name": "ACTIVE",
+          "value": "ACTIVE"
+        },
+        {
+          "name": "REDUCING",
+          "value": "REDUCING"
+        },
+        {
+          "name": "HALTED",
+          "value": "HALTED"
+        }
+      ]
+    },
+    {
+      "enum": "SettlementPolicy",
+      "bases": [
+        "StrEnum"
+      ],
+      "source": "domain/enums.py:88",
+      "values": [
+        "IMMEDIATE",
+        "VN_T_PLUS"
+      ],
+      "members": [
+        {
+          "name": "IMMEDIATE",
+          "value": "IMMEDIATE"
+        },
+        {
+          "name": "VN_T_PLUS",
+          "value": "VN_T_PLUS"
+        }
+      ]
+    },
+    {
+      "enum": "SettlementStatus",
+      "bases": [
+        "StrEnum"
+      ],
+      "source": "domain/enums.py:93",
+      "values": [
+        "SCHEDULED",
+        "SETTLED",
+        "FAILED",
+        "CANCELED"
+      ],
+      "members": [
+        {
+          "name": "SCHEDULED",
+          "value": "SCHEDULED"
+        },
+        {
+          "name": "SETTLED",
+          "value": "SETTLED"
+        },
+        {
+          "name": "FAILED",
+          "value": "FAILED"
+        },
+        {
+          "name": "CANCELED",
+          "value": "CANCELED"
+        }
+      ]
+    },
+    {
+      "enum": "ContingencyType",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "source": "domain/order_groups.py:11",
+      "values": [
+        "NONE",
+        "OTO",
+        "OCO",
+        "OUO",
+        "BRACKET"
+      ],
+      "members": [
+        {
+          "name": "NONE",
+          "value": "NONE"
+        },
+        {
+          "name": "OTO",
+          "value": "OTO"
+        },
+        {
+          "name": "OCO",
+          "value": "OCO"
+        },
+        {
+          "name": "OUO",
+          "value": "OUO"
+        },
+        {
+          "name": "BRACKET",
+          "value": "BRACKET"
+        }
+      ]
+    },
+    {
+      "enum": "GroupState",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "source": "domain/order_groups.py:19",
+      "values": [
+        "CREATED",
+        "VALIDATED",
+        "SUBMITTING",
+        "ACTIVE",
+        "PARTIALLY_EXECUTED",
+        "CANCELING",
+        "UPDATING",
+        "OVERFILLED",
+        "COMPENSATING",
+        "CLOSED",
+        "CANCELED",
+        "DEGRADED_RECONCILIATION_REQUIRED",
+        "ERROR"
+      ],
+      "members": [
+        {
+          "name": "CREATED",
+          "value": "CREATED"
+        },
+        {
+          "name": "VALIDATED",
+          "value": "VALIDATED"
+        },
+        {
+          "name": "SUBMITTING",
+          "value": "SUBMITTING"
+        },
+        {
+          "name": "ACTIVE",
+          "value": "ACTIVE"
+        },
+        {
+          "name": "PARTIALLY_EXECUTED",
+          "value": "PARTIALLY_EXECUTED"
+        },
+        {
+          "name": "CANCELING",
+          "value": "CANCELING"
+        },
+        {
+          "name": "UPDATING",
+          "value": "UPDATING"
+        },
+        {
+          "name": "OVERFILLED",
+          "value": "OVERFILLED"
+        },
+        {
+          "name": "COMPENSATING",
+          "value": "COMPENSATING"
+        },
+        {
+          "name": "CLOSED",
+          "value": "CLOSED"
+        },
+        {
+          "name": "CANCELED",
+          "value": "CANCELED"
+        },
+        {
+          "name": "DEGRADED_RECONCILIATION_REQUIRED",
+          "value": "DEGRADED_RECONCILIATION_REQUIRED"
+        },
+        {
+          "name": "ERROR",
+          "value": "ERROR"
+        }
+      ]
+    },
+    {
+      "enum": "LegState",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "source": "domain/order_groups.py:35",
+      "values": [
+        "WAITING",
+        "PENDING_SUBMIT",
+        "OPEN",
+        "PARTIALLY_FILLED",
+        "FILLED",
+        "PENDING_CANCEL",
+        "CANCELED",
+        "REJECTED",
+        "EXPIRED"
+      ],
+      "members": [
+        {
+          "name": "WAITING",
+          "value": "WAITING"
+        },
+        {
+          "name": "PENDING_SUBMIT",
+          "value": "PENDING_SUBMIT"
+        },
+        {
+          "name": "OPEN",
+          "value": "OPEN"
+        },
+        {
+          "name": "PARTIALLY_FILLED",
+          "value": "PARTIALLY_FILLED"
+        },
+        {
+          "name": "FILLED",
+          "value": "FILLED"
+        },
+        {
+          "name": "PENDING_CANCEL",
+          "value": "PENDING_CANCEL"
+        },
+        {
+          "name": "CANCELED",
+          "value": "CANCELED"
+        },
+        {
+          "name": "REJECTED",
+          "value": "REJECTED"
+        },
+        {
+          "name": "EXPIRED",
+          "value": "EXPIRED"
+        }
+      ]
+    },
+    {
+      "enum": "ExecutionTrigger",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "source": "domain/order_groups.py:47",
+      "values": [
+        "ON_FIRST_FILL",
+        "ON_FULL_FILL",
+        "ON_TARGET_QUANTITY",
+        "ON_TERMINAL"
+      ],
+      "members": [
+        {
+          "name": "ON_FIRST_FILL",
+          "value": "ON_FIRST_FILL"
+        },
+        {
+          "name": "ON_FULL_FILL",
+          "value": "ON_FULL_FILL"
+        },
+        {
+          "name": "ON_TARGET_QUANTITY",
+          "value": "ON_TARGET_QUANTITY"
+        },
+        {
+          "name": "ON_TERMINAL",
+          "value": "ON_TERMINAL"
+        }
+      ]
+    },
+    {
+      "enum": "RemainderPolicy",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "source": "domain/order_groups.py:54",
+      "values": [
+        "KEEP_REMAINDER",
+        "CANCEL_REMAINDER"
+      ],
+      "members": [
+        {
+          "name": "KEEP_REMAINDER",
+          "value": "KEEP_REMAINDER"
+        },
+        {
+          "name": "CANCEL_REMAINDER",
+          "value": "CANCEL_REMAINDER"
+        }
+      ]
+    },
+    {
+      "enum": "LateFillPolicy",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "source": "domain/order_groups.py:59",
+      "values": [
+        "HALT_AND_RECONCILE",
+        "AUTO_REDUCE_EXCESS",
+        "ACCEPT_WITHIN_MAX_EXPOSURE"
+      ],
+      "members": [
+        {
+          "name": "HALT_AND_RECONCILE",
+          "value": "HALT_AND_RECONCILE"
+        },
+        {
+          "name": "AUTO_REDUCE_EXCESS",
+          "value": "AUTO_REDUCE_EXCESS"
+        },
+        {
+          "name": "ACCEPT_WITHIN_MAX_EXPOSURE",
+          "value": "ACCEPT_WITHIN_MAX_EXPOSURE"
+        }
+      ]
+    },
+    {
+      "enum": "EffectType",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "source": "domain/order_groups.py:65",
+      "values": [
+        "PLACE",
+        "CANCEL",
+        "AMEND",
+        "COMPENSATE"
+      ],
+      "members": [
+        {
+          "name": "PLACE",
+          "value": "PLACE"
+        },
+        {
+          "name": "CANCEL",
+          "value": "CANCEL"
+        },
+        {
+          "name": "AMEND",
+          "value": "AMEND"
+        },
+        {
+          "name": "COMPENSATE",
+          "value": "COMPENSATE"
+        }
+      ]
+    },
+    {
+      "enum": "RiskDenyReason",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "source": "domain/risk.py:13",
+      "values": [
+        "TRADING_HALTED",
+        "REDUCE_ONLY_REQUIRED",
+        "INSTRUMENT_NOT_FOUND",
+        "SESSION_CLOSED",
+        "PRICE_INVALID",
+        "QUANTITY_INVALID",
+        "NOTIONAL_LIMIT",
+        "EXPOSURE_LIMIT",
+        "INSUFFICIENT_BALANCE",
+        "RATE_LIMIT"
+      ],
+      "members": [
+        {
+          "name": "TRADING_HALTED",
+          "value": "TRADING_HALTED"
+        },
+        {
+          "name": "REDUCE_ONLY_REQUIRED",
+          "value": "REDUCE_ONLY_REQUIRED"
+        },
+        {
+          "name": "INSTRUMENT_NOT_FOUND",
+          "value": "INSTRUMENT_NOT_FOUND"
+        },
+        {
+          "name": "SESSION_CLOSED",
+          "value": "SESSION_CLOSED"
+        },
+        {
+          "name": "PRICE_INVALID",
+          "value": "PRICE_INVALID"
+        },
+        {
+          "name": "QUANTITY_INVALID",
+          "value": "QUANTITY_INVALID"
+        },
+        {
+          "name": "NOTIONAL_LIMIT",
+          "value": "NOTIONAL_LIMIT"
+        },
+        {
+          "name": "EXPOSURE_LIMIT",
+          "value": "EXPOSURE_LIMIT"
+        },
+        {
+          "name": "INSUFFICIENT_BALANCE",
+          "value": "INSUFFICIENT_BALANCE"
+        },
+        {
+          "name": "RATE_LIMIT",
+          "value": "RATE_LIMIT"
+        }
+      ]
+    },
+    {
+      "enum": "StreamDataClass",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "source": "services/command_journal/stream_policy.py:10",
+      "values": [
+        "DURABLE_COMMAND",
+        "DURABLE_EVENT_PROJECTION",
+        "DELIVERY_OUTBOX",
+        "EPHEMERAL_TELEMETRY"
+      ],
+      "members": [
+        {
+          "name": "DURABLE_COMMAND",
+          "value": "DURABLE_COMMAND"
+        },
+        {
+          "name": "DURABLE_EVENT_PROJECTION",
+          "value": "DURABLE_EVENT_PROJECTION"
+        },
+        {
+          "name": "DELIVERY_OUTBOX",
+          "value": "DELIVERY_OUTBOX"
+        },
+        {
+          "name": "EPHEMERAL_TELEMETRY",
+          "value": "EPHEMERAL_TELEMETRY"
+        }
+      ]
+    },
+    {
+      "enum": "RetentionMode",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "source": "services/command_journal/stream_policy.py:17",
+      "values": [
+        "ACK_AUTHORITY_MINID",
+        "APPROXIMATE_MAXLEN",
+        "DISABLED"
+      ],
+      "members": [
+        {
+          "name": "ACK_AUTHORITY_MINID",
+          "value": "ACK_AUTHORITY_MINID"
+        },
+        {
+          "name": "APPROXIMATE_MAXLEN",
+          "value": "APPROXIMATE_MAXLEN"
+        },
+        {
+          "name": "DISABLED",
+          "value": "DISABLED"
+        }
+      ]
+    },
+    {
+      "enum": "ReplayEventType",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "source": "services/replay/contracts.py:14",
+      "values": [
+        "MARKET_EVENT",
+        "EXECUTION_COMMAND",
+        "EXECUTION_EVENT",
+        "GROUP_DEFINE",
+        "GROUP_EVENT",
+        "RISK_DECISION",
+        "RESERVATION",
+        "ACCOUNTING_EVENT",
+        "FUNDING_EVENT",
+        "FEE_EVENT",
+        "MARGIN_EVENT"
+      ],
+      "members": [
+        {
+          "name": "MARKET",
+          "value": "MARKET_EVENT"
+        },
+        {
+          "name": "EXECUTION_COMMAND",
+          "value": "EXECUTION_COMMAND"
+        },
+        {
+          "name": "EXECUTION_EVENT",
+          "value": "EXECUTION_EVENT"
+        },
+        {
+          "name": "GROUP_DEFINE",
+          "value": "GROUP_DEFINE"
+        },
+        {
+          "name": "GROUP_EVENT",
+          "value": "GROUP_EVENT"
+        },
+        {
+          "name": "RISK_DECISION",
+          "value": "RISK_DECISION"
+        },
+        {
+          "name": "RESERVATION",
+          "value": "RESERVATION"
+        },
+        {
+          "name": "ACCOUNTING",
+          "value": "ACCOUNTING_EVENT"
+        },
+        {
+          "name": "FUNDING",
+          "value": "FUNDING_EVENT"
+        },
+        {
+          "name": "FEE",
+          "value": "FEE_EVENT"
+        },
+        {
+          "name": "MARGIN",
+          "value": "MARGIN_EVENT"
+        }
+      ]
+    }
+  ],
+  "db_check_vocabularies": {
+    "by_table_column": {
+      "account_equity_snapshots.mode": {
+        "table": "account_equity_snapshots",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "account_policies.account_type": {
+        "table": "account_policies",
+        "column": "account_type",
+        "values": [
+          "BETTING",
+          "CASH",
+          "MARGIN"
+        ]
+      },
+      "account_policies.margin_mode": {
+        "table": "account_policies",
+        "column": "margin_mode",
+        "values": [
+          "CROSS",
+          "ISOLATED",
+          "NONE"
+        ]
+      },
+      "account_policies.mode": {
+        "table": "account_policies",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "account_policies.position_accounting_mode": {
+        "table": "account_policies",
+        "column": "position_accounting_mode",
+        "values": [
+          "HEDGE",
+          "NET"
+        ]
+      },
+      "account_policies.settlement_policy": {
+        "table": "account_policies",
+        "column": "settlement_policy",
+        "values": [
+          "IMMEDIATE",
+          "VN_T_PLUS"
+        ]
+      },
+      "account_reservations.margin_mode": {
+        "table": "account_reservations",
+        "column": "margin_mode",
+        "values": [
+          "CROSS",
+          "ISOLATED",
+          "NONE"
+        ]
+      },
+      "account_reservations.mode": {
+        "table": "account_reservations",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "account_reservations.reservation_type": {
+        "table": "account_reservations",
+        "column": "reservation_type",
+        "values": [
+          "CASH",
+          "MARGIN",
+          "SECURITY"
+        ]
+      },
+      "account_reservations.status": {
+        "table": "account_reservations",
+        "column": "status",
+        "values": [
+          "CONSUMED",
+          "FAILED",
+          "PARTIALLY_CONSUMED",
+          "RELEASED",
+          "RESERVED"
+        ]
+      },
+      "account_sync_current_state.status": {
+        "table": "account_sync_current_state",
+        "column": "status",
+        "values": [
+          "ERROR",
+          "MISMATCH",
+          "OK",
+          "STALE"
+        ]
+      },
+      "account_sync_snapshots.mode": {
+        "table": "account_sync_snapshots",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "account_sync_snapshots.status": {
+        "table": "account_sync_snapshots",
+        "column": "status",
+        "values": [
+          "ERROR",
+          "MISMATCH",
+          "OK",
+          "STALE"
+        ]
+      },
+      "accounts.account_type": {
+        "table": "accounts",
+        "column": "account_type",
+        "values": [
+          "BETTING",
+          "CASH",
+          "MARGIN"
+        ]
+      },
+      "accounts.mode": {
+        "table": "accounts",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "broker_account_sync_current_state.status": {
+        "table": "broker_account_sync_current_state",
+        "column": "status",
+        "values": [
+          "ERROR",
+          "MISMATCH",
+          "OK",
+          "STALE"
+        ]
+      },
+      "broker_account_sync_snapshots.mode": {
+        "table": "broker_account_sync_snapshots",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "broker_account_sync_snapshots.status": {
+        "table": "broker_account_sync_snapshots",
+        "column": "status",
+        "values": [
+          "ERROR",
+          "MISMATCH",
+          "OK",
+          "STALE"
+        ]
+      },
+      "broker_sync_raw_hot.scope_type": {
+        "table": "broker_sync_raw_hot",
+        "column": "scope_type",
+        "values": [
+          "ACCOUNT",
+          "PHYSICAL_BINDING"
+        ]
+      },
+      "broker_sync_state_history.scope_type": {
+        "table": "broker_sync_state_history",
+        "column": "scope_type",
+        "values": [
+          "ACCOUNT",
+          "PHYSICAL_BINDING"
+        ]
+      },
+      "broker_sync_valuation_current_state.scope_type": {
+        "table": "broker_sync_valuation_current_state",
+        "column": "scope_type",
+        "values": [
+          "ACCOUNT",
+          "PHYSICAL_BINDING"
+        ]
+      },
+      "command_ack_evidence.outcome_class": {
+        "table": "command_ack_evidence",
+        "column": "outcome_class",
+        "values": [
+          "ACCEPTED",
+          "BUSINESS_REJECTED",
+          "RETRYABLE",
+          "TERMINAL",
+          "UNCERTAIN"
+        ]
+      },
+      "command_broker_attempts.state": {
+        "table": "command_broker_attempts",
+        "column": "state",
+        "values": [
+          "ACCEPTED",
+          "BUSINESS_REJECTED",
+          "REQUESTING",
+          "TERMINAL",
+          "UNCERTAIN"
+        ]
+      },
+      "command_delivery_attempts.outcome_class": {
+        "table": "command_delivery_attempts",
+        "column": "outcome_class",
+        "values": [
+          "DISPATCHED",
+          "RETRYABLE",
+          "TERMINAL",
+          "UNCERTAIN"
+        ]
+      },
+      "command_dispatch_outbox.state": {
+        "table": "command_dispatch_outbox",
+        "column": "state",
+        "values": [
+          "ACKNOWLEDGED",
+          "CANCELLED",
+          "DEAD",
+          "DISPATCHED",
+          "LEASED",
+          "PENDING"
+        ]
+      },
+      "command_journal.command_kind": {
+        "table": "command_journal",
+        "column": "command_kind",
+        "values": [
+          "AMEND",
+          "CANCEL",
+          "EMERGENCY_CLOSE",
+          "PLACE"
+        ]
+      },
+      "command_journal.mode": {
+        "table": "command_journal",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "command_journal.state": {
+        "table": "command_journal",
+        "column": "state",
+        "values": [
+          "ACCEPTED",
+          "ACKNOWLEDGED",
+          "BUSINESS_REJECTED",
+          "DEAD",
+          "DISPATCHED",
+          "DISPATCH_PENDING",
+          "SHADOW_OBSERVED",
+          "SUPERSEDED",
+          "UNCERTAIN"
+        ]
+      },
+      "compatibility_surface_registry.support_state": {
+        "table": "compatibility_surface_registry",
+        "column": "support_state",
+        "values": [
+          "MIGRATE_ON_SUCCESS",
+          "READ_COMPATIBILITY",
+          "RETIRED",
+          "SUPPORTED_COMPATIBILITY",
+          "ZERO_USE_CANDIDATE"
+        ]
+      },
+      "conditional_order_group_legs.state": {
+        "table": "conditional_order_group_legs",
+        "column": "state",
+        "values": [
+          "CANCELED",
+          "EXPIRED",
+          "FILLED",
+          "OPEN",
+          "PARTIALLY_FILLED",
+          "PENDING_CANCEL",
+          "PENDING_SUBMIT",
+          "REJECTED",
+          "WAITING"
+        ]
+      },
+      "conditional_order_groups.contingency_type": {
+        "table": "conditional_order_groups",
+        "column": "contingency_type",
+        "values": [
+          "BRACKET",
+          "NONE",
+          "OCO",
+          "OTO",
+          "OUO"
+        ]
+      },
+      "conditional_order_groups.execution_trigger": {
+        "table": "conditional_order_groups",
+        "column": "execution_trigger",
+        "values": [
+          "ON_FIRST_FILL",
+          "ON_FULL_FILL",
+          "ON_TARGET_QUANTITY",
+          "ON_TERMINAL"
+        ]
+      },
+      "conditional_order_groups.late_fill_policy": {
+        "table": "conditional_order_groups",
+        "column": "late_fill_policy",
+        "values": [
+          "ACCEPT_WITHIN_MAX_EXPOSURE",
+          "AUTO_REDUCE_EXCESS",
+          "HALT_AND_RECONCILE"
+        ]
+      },
+      "conditional_order_groups.mode": {
+        "table": "conditional_order_groups",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "conditional_order_groups.remainder_policy": {
+        "table": "conditional_order_groups",
+        "column": "remainder_policy",
+        "values": [
+          "CANCEL_REMAINDER",
+          "KEEP_REMAINDER"
+        ]
+      },
+      "conditional_order_groups.state": {
+        "table": "conditional_order_groups",
+        "column": "state",
+        "values": [
+          "ACTIVE",
+          "CANCELED",
+          "CANCELING",
+          "CLOSED",
+          "COMPENSATING",
+          "CREATED",
+          "DEGRADED_RECONCILIATION_REQUIRED",
+          "ERROR",
+          "OVERFILLED",
+          "PARTIALLY_EXECUTED",
+          "SUBMITTING",
+          "UPDATING",
+          "VALIDATED"
+        ]
+      },
+      "copy_event_outbox.mode": {
+        "table": "copy_event_outbox",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "copy_event_outbox.status": {
+        "table": "copy_event_outbox",
+        "column": "status",
+        "values": [
+          "DEAD_LETTER",
+          "DISABLED",
+          "PENDING",
+          "PUBLISHED",
+          "PUBLISHING"
+        ]
+      },
+      "copy_publish_policies.mode": {
+        "table": "copy_publish_policies",
+        "column": "mode",
+        "values": [
+          "*",
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "dnse_trading_tokens.token_status": {
+        "table": "dnse_trading_tokens",
+        "column": "token_status",
+        "values": [
+          "ACTIVE",
+          "EXPIRED",
+          "REVOKED"
+        ]
+      },
+      "domain_events.mode": {
+        "table": "domain_events",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "engine_authority_decisions.authoritative_backend": {
+        "table": "engine_authority_decisions",
+        "column": "authoritative_backend",
+        "values": [
+          "PYTHON",
+          "RUST"
+        ]
+      },
+      "engine_authority_decisions.state": {
+        "table": "engine_authority_decisions",
+        "column": "state",
+        "values": [
+          "DECIDED",
+          "EVALUATING",
+          "FAILED"
+        ]
+      },
+      "engine_authority_scopes.authoritative_backend": {
+        "table": "engine_authority_scopes",
+        "column": "authoritative_backend",
+        "values": [
+          "PYTHON",
+          "RUST"
+        ]
+      },
+      "engine_authority_scopes.lifecycle_state": {
+        "table": "engine_authority_scopes",
+        "column": "lifecycle_state",
+        "values": [
+          "ACTIVE",
+          "DRAINING",
+          "HALTED"
+        ]
+      },
+      "engine_authority_scopes.mode": {
+        "table": "engine_authority_scopes",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "engine_authority_scopes.rollout_state": {
+        "table": "engine_authority_scopes",
+        "column": "rollout_state",
+        "values": [
+          "PYTHON_AUTHORITATIVE",
+          "PYTHON_WITH_RUST_SHADOW",
+          "RUST_AUTHORITATIVE_PAPER_SCOPE",
+          "RUST_WITH_PYTHON_SHADOW_PAPER_CANARY",
+          "SANDBOX_PREFLIGHT_CANARY"
+        ]
+      },
+      "execution_command_outbox.command_type": {
+        "table": "execution_command_outbox",
+        "column": "command_type",
+        "values": [
+          "AMEND",
+          "CANCEL",
+          "COMPENSATE",
+          "PLACE"
+        ]
+      },
+      "execution_command_outbox.state": {
+        "table": "execution_command_outbox",
+        "column": "state",
+        "values": [
+          "ACKNOWLEDGED",
+          "DEAD",
+          "DISPATCHED",
+          "DISPATCHING",
+          "PENDING"
+        ]
+      },
+      "execution_replay_jobs.status": {
+        "table": "execution_replay_jobs",
+        "column": "status",
+        "values": [
+          "COMPLETED",
+          "FAILED",
+          "PENDING",
+          "RUNNING"
+        ]
+      },
+      "fills.mode": {
+        "table": "fills",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "fills.side": {
+        "table": "fills",
+        "column": "side",
+        "values": [
+          "BUY",
+          "SELL"
+        ]
+      },
+      "funding_accruals.mode": {
+        "table": "funding_accruals",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "margin_ledger.margin_mode": {
+        "table": "margin_ledger",
+        "column": "margin_mode",
+        "values": [
+          "CROSS",
+          "ISOLATED"
+        ]
+      },
+      "operator_operations.scope_type": {
+        "table": "operator_operations",
+        "column": "scope_type",
+        "values": [
+          "ACCOUNT",
+          "ALPHA"
+        ]
+      },
+      "operator_operations.status": {
+        "table": "operator_operations",
+        "column": "status",
+        "values": [
+          "FAILED",
+          "INTENTS_QUEUED",
+          "PARTIAL",
+          "PLANNED",
+          "VERIFIED"
+        ]
+      },
+      "order_bracket_legs.leg_type": {
+        "table": "order_bracket_legs",
+        "column": "leg_type",
+        "values": [
+          "ENTRY",
+          "STOP",
+          "TP",
+          "TRAILING"
+        ]
+      },
+      "order_bracket_legs.side": {
+        "table": "order_bracket_legs",
+        "column": "side",
+        "values": [
+          "BUY",
+          "SELL"
+        ]
+      },
+      "order_brackets.mode": {
+        "table": "order_brackets",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "order_brackets.state": {
+        "table": "order_brackets",
+        "column": "state",
+        "values": [
+          "ACTIVE",
+          "CANCELLED",
+          "CLOSED",
+          "CLOSING",
+          "CREATED",
+          "ENTRY_FILLED",
+          "ENTRY_SUBMITTED",
+          "ERROR",
+          "PARTIALLY_CLOSED"
+        ]
+      },
+      "order_group_event_inbox.state": {
+        "table": "order_group_event_inbox",
+        "column": "state",
+        "values": [
+          "DEAD",
+          "PENDING",
+          "PROCESSED",
+          "PROCESSING"
+        ]
+      },
+      "orders.mode": {
+        "table": "orders",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "orders.side": {
+        "table": "orders",
+        "column": "side",
+        "values": [
+          "BUY",
+          "SELL"
+        ]
+      },
+      "paper_matcher_config.default_settlement_policy": {
+        "table": "paper_matcher_config",
+        "column": "default_settlement_policy",
+        "values": [
+          "IMMEDIATE",
+          "VN_T_PLUS"
+        ]
+      },
+      "paper_open_orders.side": {
+        "table": "paper_open_orders",
+        "column": "side",
+        "values": [
+          "BUY",
+          "SELL"
+        ]
+      },
+      "performance_projection_current_state.scope_type": {
+        "table": "performance_projection_current_state",
+        "column": "scope_type",
+        "values": [
+          "ACCOUNT",
+          "PORTFOLIO"
+        ]
+      },
+      "performance_snapshots.mode": {
+        "table": "performance_snapshots",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "portfolio_allocations.mode": {
+        "table": "portfolio_allocations",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "portfolio_allocations.state": {
+        "table": "portfolio_allocations",
+        "column": "state",
+        "values": [
+          "ACTIVE",
+          "ARCHIVED",
+          "HALTED",
+          "REDUCING"
+        ]
+      },
+      "portfolio_capital_ledger.mode": {
+        "table": "portfolio_capital_ledger",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "portfolio_capital_ledger.movement_type": {
+        "table": "portfolio_capital_ledger",
+        "column": "movement_type",
+        "values": [
+          "ADJUST",
+          "ALLOCATE",
+          "INITIAL_ALLOCATE",
+          "REBALANCE",
+          "WITHDRAW"
+        ]
+      },
+      "portfolios.state": {
+        "table": "portfolios",
+        "column": "state",
+        "values": [
+          "ACTIVE",
+          "ARCHIVED",
+          "HALTED",
+          "REDUCING"
+        ]
+      },
+      "positions_v2.mode": {
+        "table": "positions_v2",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "positions_v2.side": {
+        "table": "positions_v2",
+        "column": "side",
+        "values": [
+          "FLAT",
+          "LONG",
+          "SHORT"
+        ]
+      },
+      "reconciliation_findings.mode": {
+        "table": "reconciliation_findings",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "reconciliation_findings.severity": {
+        "table": "reconciliation_findings",
+        "column": "severity",
+        "values": [
+          "CRITICAL",
+          "ERROR",
+          "INFO",
+          "WARNING"
+        ]
+      },
+      "reconciliation_findings.status": {
+        "table": "reconciliation_findings",
+        "column": "status",
+        "values": [
+          "ACKED",
+          "OPEN",
+          "RESOLVED"
+        ]
+      },
+      "risk_profiles.mode": {
+        "table": "risk_profiles",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "risk_profiles.trading_state": {
+        "table": "risk_profiles",
+        "column": "trading_state",
+        "values": [
+          "ACTIVE",
+          "HALTED",
+          "REDUCING"
+        ]
+      },
+      "schema_migration_ledger.apply_mode": {
+        "table": "schema_migration_ledger",
+        "column": "apply_mode",
+        "values": [
+          "APPLIED",
+          "BASELINED"
+        ]
+      },
+      "schema_object_ownership.object_type": {
+        "table": "schema_object_ownership",
+        "column": "object_type",
+        "values": [
+          "MATERIALIZED_VIEW",
+          "TABLE",
+          "VIEW"
+        ]
+      },
+      "service_heartbeats.status": {
+        "table": "service_heartbeats",
+        "column": "status",
+        "values": [
+          "DEGRADED",
+          "FAILED",
+          "READY",
+          "STARTING",
+          "STOPPING"
+        ]
+      },
+      "settlement_buckets.bucket_type": {
+        "table": "settlement_buckets",
+        "column": "bucket_type",
+        "values": [
+          "AVAILABLE",
+          "LOCKED",
+          "PAYABLE",
+          "RECEIVABLE"
+        ]
+      },
+      "settlements.direction": {
+        "table": "settlements",
+        "column": "direction",
+        "values": [
+          "PAYABLE",
+          "RECEIVABLE"
+        ]
+      },
+      "settlements.mode": {
+        "table": "settlements",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "settlements.settlement_type": {
+        "table": "settlements",
+        "column": "settlement_type",
+        "values": [
+          "CASH",
+          "SECURITY"
+        ]
+      },
+      "settlements.status": {
+        "table": "settlements",
+        "column": "status",
+        "values": [
+          "CANCELED",
+          "FAILED",
+          "SCHEDULED",
+          "SETTLED"
+        ]
+      },
+      "storage_archive_manifests.status": {
+        "table": "storage_archive_manifests",
+        "column": "status",
+        "values": [
+          "FAILED",
+          "PURGED",
+          "RESTORE_VERIFIED",
+          "VERIFIED",
+          "WRITTEN"
+        ]
+      },
+      "strategy_deployments.mode": {
+        "table": "strategy_deployments",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "venue_credentials.mode": {
+        "table": "venue_credentials",
+        "column": "mode",
+        "values": [
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ]
+      },
+      "venue_rate_limits.window_kind": {
+        "table": "venue_rate_limits",
+        "column": "window_kind",
+        "values": [
+          "DAY",
+          "HOUR",
+          "MINUTE",
+          "SECOND"
+        ]
+      }
+    },
+    "by_field": {
+      "account_type": {
+        "field": "account_type",
+        "per_table": {
+          "accounts": [
+            "BETTING",
+            "CASH",
+            "MARGIN"
+          ],
+          "account_policies": [
+            "BETTING",
+            "CASH",
+            "MARGIN"
+          ]
+        },
+        "union_values": [
+          "BETTING",
+          "CASH",
+          "MARGIN"
+        ],
+        "conflated": false,
+        "values": [
+          "BETTING",
+          "CASH",
+          "MARGIN"
+        ],
+        "tables": [
+          "account_policies",
+          "accounts"
+        ]
+      },
+      "apply_mode": {
+        "field": "apply_mode",
+        "per_table": {
+          "schema_migration_ledger": [
+            "APPLIED",
+            "BASELINED"
+          ]
+        },
+        "union_values": [
+          "APPLIED",
+          "BASELINED"
+        ],
+        "conflated": false,
+        "values": [
+          "APPLIED",
+          "BASELINED"
+        ],
+        "tables": [
+          "schema_migration_ledger"
+        ]
+      },
+      "authoritative_backend": {
+        "field": "authoritative_backend",
+        "per_table": {
+          "engine_authority_scopes": [
+            "PYTHON",
+            "RUST"
+          ],
+          "engine_authority_decisions": [
+            "PYTHON",
+            "RUST"
+          ]
+        },
+        "union_values": [
+          "PYTHON",
+          "RUST"
+        ],
+        "conflated": false,
+        "values": [
+          "PYTHON",
+          "RUST"
+        ],
+        "tables": [
+          "engine_authority_decisions",
+          "engine_authority_scopes"
+        ]
+      },
+      "bucket_type": {
+        "field": "bucket_type",
+        "per_table": {
+          "settlement_buckets": [
+            "AVAILABLE",
+            "LOCKED",
+            "PAYABLE",
+            "RECEIVABLE"
+          ]
+        },
+        "union_values": [
+          "AVAILABLE",
+          "LOCKED",
+          "PAYABLE",
+          "RECEIVABLE"
+        ],
+        "conflated": false,
+        "values": [
+          "AVAILABLE",
+          "LOCKED",
+          "PAYABLE",
+          "RECEIVABLE"
+        ],
+        "tables": [
+          "settlement_buckets"
+        ]
+      },
+      "command_kind": {
+        "field": "command_kind",
+        "per_table": {
+          "command_journal": [
+            "AMEND",
+            "CANCEL",
+            "EMERGENCY_CLOSE",
+            "PLACE"
+          ]
+        },
+        "union_values": [
+          "AMEND",
+          "CANCEL",
+          "EMERGENCY_CLOSE",
+          "PLACE"
+        ],
+        "conflated": false,
+        "values": [
+          "AMEND",
+          "CANCEL",
+          "EMERGENCY_CLOSE",
+          "PLACE"
+        ],
+        "tables": [
+          "command_journal"
+        ]
+      },
+      "command_type": {
+        "field": "command_type",
+        "per_table": {
+          "execution_command_outbox": [
+            "AMEND",
+            "CANCEL",
+            "COMPENSATE",
+            "PLACE"
+          ]
+        },
+        "union_values": [
+          "AMEND",
+          "CANCEL",
+          "COMPENSATE",
+          "PLACE"
+        ],
+        "conflated": false,
+        "values": [
+          "AMEND",
+          "CANCEL",
+          "COMPENSATE",
+          "PLACE"
+        ],
+        "tables": [
+          "execution_command_outbox"
+        ]
+      },
+      "contingency_type": {
+        "field": "contingency_type",
+        "per_table": {
+          "conditional_order_groups": [
+            "BRACKET",
+            "NONE",
+            "OCO",
+            "OTO",
+            "OUO"
+          ]
+        },
+        "union_values": [
+          "BRACKET",
+          "NONE",
+          "OCO",
+          "OTO",
+          "OUO"
+        ],
+        "conflated": false,
+        "values": [
+          "BRACKET",
+          "NONE",
+          "OCO",
+          "OTO",
+          "OUO"
+        ],
+        "tables": [
+          "conditional_order_groups"
+        ]
+      },
+      "default_settlement_policy": {
+        "field": "default_settlement_policy",
+        "per_table": {
+          "paper_matcher_config": [
+            "IMMEDIATE",
+            "VN_T_PLUS"
+          ]
+        },
+        "union_values": [
+          "IMMEDIATE",
+          "VN_T_PLUS"
+        ],
+        "conflated": false,
+        "values": [
+          "IMMEDIATE",
+          "VN_T_PLUS"
+        ],
+        "tables": [
+          "paper_matcher_config"
+        ]
+      },
+      "direction": {
+        "field": "direction",
+        "per_table": {
+          "settlements": [
+            "PAYABLE",
+            "RECEIVABLE"
+          ]
+        },
+        "union_values": [
+          "PAYABLE",
+          "RECEIVABLE"
+        ],
+        "conflated": false,
+        "values": [
+          "PAYABLE",
+          "RECEIVABLE"
+        ],
+        "tables": [
+          "settlements"
+        ]
+      },
+      "execution_trigger": {
+        "field": "execution_trigger",
+        "per_table": {
+          "conditional_order_groups": [
+            "ON_FIRST_FILL",
+            "ON_FULL_FILL",
+            "ON_TARGET_QUANTITY",
+            "ON_TERMINAL"
+          ]
+        },
+        "union_values": [
+          "ON_FIRST_FILL",
+          "ON_FULL_FILL",
+          "ON_TARGET_QUANTITY",
+          "ON_TERMINAL"
+        ],
+        "conflated": false,
+        "values": [
+          "ON_FIRST_FILL",
+          "ON_FULL_FILL",
+          "ON_TARGET_QUANTITY",
+          "ON_TERMINAL"
+        ],
+        "tables": [
+          "conditional_order_groups"
+        ]
+      },
+      "late_fill_policy": {
+        "field": "late_fill_policy",
+        "per_table": {
+          "conditional_order_groups": [
+            "ACCEPT_WITHIN_MAX_EXPOSURE",
+            "AUTO_REDUCE_EXCESS",
+            "HALT_AND_RECONCILE"
+          ]
+        },
+        "union_values": [
+          "ACCEPT_WITHIN_MAX_EXPOSURE",
+          "AUTO_REDUCE_EXCESS",
+          "HALT_AND_RECONCILE"
+        ],
+        "conflated": false,
+        "values": [
+          "ACCEPT_WITHIN_MAX_EXPOSURE",
+          "AUTO_REDUCE_EXCESS",
+          "HALT_AND_RECONCILE"
+        ],
+        "tables": [
+          "conditional_order_groups"
+        ]
+      },
+      "leg_type": {
+        "field": "leg_type",
+        "per_table": {
+          "order_bracket_legs": [
+            "ENTRY",
+            "STOP",
+            "TP",
+            "TRAILING"
+          ]
+        },
+        "union_values": [
+          "ENTRY",
+          "STOP",
+          "TP",
+          "TRAILING"
+        ],
+        "conflated": false,
+        "values": [
+          "ENTRY",
+          "STOP",
+          "TP",
+          "TRAILING"
+        ],
+        "tables": [
+          "order_bracket_legs"
+        ]
+      },
+      "lifecycle_state": {
+        "field": "lifecycle_state",
+        "per_table": {
+          "engine_authority_scopes": [
+            "ACTIVE",
+            "DRAINING",
+            "HALTED"
+          ]
+        },
+        "union_values": [
+          "ACTIVE",
+          "DRAINING",
+          "HALTED"
+        ],
+        "conflated": false,
+        "values": [
+          "ACTIVE",
+          "DRAINING",
+          "HALTED"
+        ],
+        "tables": [
+          "engine_authority_scopes"
+        ]
+      },
+      "margin_mode": {
+        "field": "margin_mode",
+        "per_table": {
+          "account_policies": [
+            "CROSS",
+            "ISOLATED",
+            "NONE"
+          ],
+          "account_reservations": [
+            "CROSS",
+            "ISOLATED",
+            "NONE"
+          ],
+          "margin_ledger": [
+            "CROSS",
+            "ISOLATED"
+          ]
+        },
+        "union_values": [
+          "CROSS",
+          "ISOLATED",
+          "NONE"
+        ],
+        "conflated": true,
+        "values": [
+          "CROSS",
+          "ISOLATED",
+          "NONE"
+        ],
+        "tables": [
+          "account_policies",
+          "account_reservations",
+          "margin_ledger"
+        ]
+      },
+      "mode": {
+        "field": "mode",
+        "per_table": {
+          "domain_events": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "accounts": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "orders": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "fills": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "positions_v2": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "risk_profiles": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "venue_credentials": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "settlements": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "reconciliation_findings": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "strategy_deployments": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "performance_snapshots": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "account_equity_snapshots": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "funding_accruals": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "portfolio_allocations": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "portfolio_capital_ledger": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "account_policies": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "account_sync_snapshots": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "account_reservations": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "copy_publish_policies": [
+            "*",
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "copy_event_outbox": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "broker_account_sync_snapshots": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "order_brackets": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "conditional_order_groups": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "command_journal": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ],
+          "engine_authority_scopes": [
+            "backtest",
+            "live",
+            "paper",
+            "replay",
+            "sandbox"
+          ]
+        },
+        "union_values": [
+          "*",
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ],
+        "conflated": true,
+        "values": [
+          "*",
+          "backtest",
+          "live",
+          "paper",
+          "replay",
+          "sandbox"
+        ],
+        "tables": [
+          "account_equity_snapshots",
+          "account_policies",
+          "account_reservations",
+          "account_sync_snapshots",
+          "accounts",
+          "broker_account_sync_snapshots",
+          "command_journal",
+          "conditional_order_groups",
+          "copy_event_outbox",
+          "copy_publish_policies",
+          "domain_events",
+          "engine_authority_scopes",
+          "fills",
+          "funding_accruals",
+          "order_brackets",
+          "orders",
+          "performance_snapshots",
+          "portfolio_allocations",
+          "portfolio_capital_ledger",
+          "positions_v2",
+          "reconciliation_findings",
+          "risk_profiles",
+          "settlements",
+          "strategy_deployments",
+          "venue_credentials"
+        ]
+      },
+      "movement_type": {
+        "field": "movement_type",
+        "per_table": {
+          "portfolio_capital_ledger": [
+            "ADJUST",
+            "ALLOCATE",
+            "INITIAL_ALLOCATE",
+            "REBALANCE",
+            "WITHDRAW"
+          ]
+        },
+        "union_values": [
+          "ADJUST",
+          "ALLOCATE",
+          "INITIAL_ALLOCATE",
+          "REBALANCE",
+          "WITHDRAW"
+        ],
+        "conflated": false,
+        "values": [
+          "ADJUST",
+          "ALLOCATE",
+          "INITIAL_ALLOCATE",
+          "REBALANCE",
+          "WITHDRAW"
+        ],
+        "tables": [
+          "portfolio_capital_ledger"
+        ]
+      },
+      "object_type": {
+        "field": "object_type",
+        "per_table": {
+          "schema_object_ownership": [
+            "MATERIALIZED_VIEW",
+            "TABLE",
+            "VIEW"
+          ]
+        },
+        "union_values": [
+          "MATERIALIZED_VIEW",
+          "TABLE",
+          "VIEW"
+        ],
+        "conflated": false,
+        "values": [
+          "MATERIALIZED_VIEW",
+          "TABLE",
+          "VIEW"
+        ],
+        "tables": [
+          "schema_object_ownership"
+        ]
+      },
+      "outcome_class": {
+        "field": "outcome_class",
+        "per_table": {
+          "command_delivery_attempts": [
+            "DISPATCHED",
+            "RETRYABLE",
+            "TERMINAL",
+            "UNCERTAIN"
+          ],
+          "command_ack_evidence": [
+            "ACCEPTED",
+            "BUSINESS_REJECTED",
+            "RETRYABLE",
+            "TERMINAL",
+            "UNCERTAIN"
+          ]
+        },
+        "union_values": [
+          "ACCEPTED",
+          "BUSINESS_REJECTED",
+          "DISPATCHED",
+          "RETRYABLE",
+          "TERMINAL",
+          "UNCERTAIN"
+        ],
+        "conflated": true,
+        "values": [
+          "ACCEPTED",
+          "BUSINESS_REJECTED",
+          "DISPATCHED",
+          "RETRYABLE",
+          "TERMINAL",
+          "UNCERTAIN"
+        ],
+        "tables": [
+          "command_ack_evidence",
+          "command_delivery_attempts"
+        ]
+      },
+      "position_accounting_mode": {
+        "field": "position_accounting_mode",
+        "per_table": {
+          "account_policies": [
+            "HEDGE",
+            "NET"
+          ]
+        },
+        "union_values": [
+          "HEDGE",
+          "NET"
+        ],
+        "conflated": false,
+        "values": [
+          "HEDGE",
+          "NET"
+        ],
+        "tables": [
+          "account_policies"
+        ]
+      },
+      "remainder_policy": {
+        "field": "remainder_policy",
+        "per_table": {
+          "conditional_order_groups": [
+            "CANCEL_REMAINDER",
+            "KEEP_REMAINDER"
+          ]
+        },
+        "union_values": [
+          "CANCEL_REMAINDER",
+          "KEEP_REMAINDER"
+        ],
+        "conflated": false,
+        "values": [
+          "CANCEL_REMAINDER",
+          "KEEP_REMAINDER"
+        ],
+        "tables": [
+          "conditional_order_groups"
+        ]
+      },
+      "reservation_type": {
+        "field": "reservation_type",
+        "per_table": {
+          "account_reservations": [
+            "CASH",
+            "MARGIN",
+            "SECURITY"
+          ]
+        },
+        "union_values": [
+          "CASH",
+          "MARGIN",
+          "SECURITY"
+        ],
+        "conflated": false,
+        "values": [
+          "CASH",
+          "MARGIN",
+          "SECURITY"
+        ],
+        "tables": [
+          "account_reservations"
+        ]
+      },
+      "rollout_state": {
+        "field": "rollout_state",
+        "per_table": {
+          "engine_authority_scopes": [
+            "PYTHON_AUTHORITATIVE",
+            "PYTHON_WITH_RUST_SHADOW",
+            "RUST_AUTHORITATIVE_PAPER_SCOPE",
+            "RUST_WITH_PYTHON_SHADOW_PAPER_CANARY",
+            "SANDBOX_PREFLIGHT_CANARY"
+          ]
+        },
+        "union_values": [
+          "PYTHON_AUTHORITATIVE",
+          "PYTHON_WITH_RUST_SHADOW",
+          "RUST_AUTHORITATIVE_PAPER_SCOPE",
+          "RUST_WITH_PYTHON_SHADOW_PAPER_CANARY",
+          "SANDBOX_PREFLIGHT_CANARY"
+        ],
+        "conflated": false,
+        "values": [
+          "PYTHON_AUTHORITATIVE",
+          "PYTHON_WITH_RUST_SHADOW",
+          "RUST_AUTHORITATIVE_PAPER_SCOPE",
+          "RUST_WITH_PYTHON_SHADOW_PAPER_CANARY",
+          "SANDBOX_PREFLIGHT_CANARY"
+        ],
+        "tables": [
+          "engine_authority_scopes"
+        ]
+      },
+      "scope_type": {
+        "field": "scope_type",
+        "per_table": {
+          "operator_operations": [
+            "ACCOUNT",
+            "ALPHA"
+          ],
+          "broker_sync_state_history": [
+            "ACCOUNT",
+            "PHYSICAL_BINDING"
+          ],
+          "performance_projection_current_state": [
+            "ACCOUNT",
+            "PORTFOLIO"
+          ],
+          "broker_sync_valuation_current_state": [
+            "ACCOUNT",
+            "PHYSICAL_BINDING"
+          ],
+          "broker_sync_raw_hot": [
+            "ACCOUNT",
+            "PHYSICAL_BINDING"
+          ]
+        },
+        "union_values": [
+          "ACCOUNT",
+          "ALPHA",
+          "PHYSICAL_BINDING",
+          "PORTFOLIO"
+        ],
+        "conflated": true,
+        "values": [
+          "ACCOUNT",
+          "ALPHA",
+          "PHYSICAL_BINDING",
+          "PORTFOLIO"
+        ],
+        "tables": [
+          "broker_sync_raw_hot",
+          "broker_sync_state_history",
+          "broker_sync_valuation_current_state",
+          "operator_operations",
+          "performance_projection_current_state"
+        ]
+      },
+      "settlement_policy": {
+        "field": "settlement_policy",
+        "per_table": {
+          "account_policies": [
+            "IMMEDIATE",
+            "VN_T_PLUS"
+          ]
+        },
+        "union_values": [
+          "IMMEDIATE",
+          "VN_T_PLUS"
+        ],
+        "conflated": false,
+        "values": [
+          "IMMEDIATE",
+          "VN_T_PLUS"
+        ],
+        "tables": [
+          "account_policies"
+        ]
+      },
+      "settlement_type": {
+        "field": "settlement_type",
+        "per_table": {
+          "settlements": [
+            "CASH",
+            "SECURITY"
+          ]
+        },
+        "union_values": [
+          "CASH",
+          "SECURITY"
+        ],
+        "conflated": false,
+        "values": [
+          "CASH",
+          "SECURITY"
+        ],
+        "tables": [
+          "settlements"
+        ]
+      },
+      "severity": {
+        "field": "severity",
+        "per_table": {
+          "reconciliation_findings": [
+            "CRITICAL",
+            "ERROR",
+            "INFO",
+            "WARNING"
+          ]
+        },
+        "union_values": [
+          "CRITICAL",
+          "ERROR",
+          "INFO",
+          "WARNING"
+        ],
+        "conflated": false,
+        "values": [
+          "CRITICAL",
+          "ERROR",
+          "INFO",
+          "WARNING"
+        ],
+        "tables": [
+          "reconciliation_findings"
+        ]
+      },
+      "side": {
+        "field": "side",
+        "per_table": {
+          "orders": [
+            "BUY",
+            "SELL"
+          ],
+          "fills": [
+            "BUY",
+            "SELL"
+          ],
+          "positions_v2": [
+            "FLAT",
+            "LONG",
+            "SHORT"
+          ],
+          "paper_open_orders": [
+            "BUY",
+            "SELL"
+          ],
+          "order_bracket_legs": [
+            "BUY",
+            "SELL"
+          ]
+        },
+        "union_values": [
+          "BUY",
+          "FLAT",
+          "LONG",
+          "SELL",
+          "SHORT"
+        ],
+        "conflated": true,
+        "values": [
+          "BUY",
+          "FLAT",
+          "LONG",
+          "SELL",
+          "SHORT"
+        ],
+        "tables": [
+          "fills",
+          "order_bracket_legs",
+          "orders",
+          "paper_open_orders",
+          "positions_v2"
+        ]
+      },
+      "state": {
+        "field": "state",
+        "per_table": {
+          "portfolios": [
+            "ACTIVE",
+            "ARCHIVED",
+            "HALTED",
+            "REDUCING"
+          ],
+          "portfolio_allocations": [
+            "ACTIVE",
+            "ARCHIVED",
+            "HALTED",
+            "REDUCING"
+          ],
+          "order_brackets": [
+            "ACTIVE",
+            "CANCELLED",
+            "CLOSED",
+            "CLOSING",
+            "CREATED",
+            "ENTRY_FILLED",
+            "ENTRY_SUBMITTED",
+            "ERROR",
+            "PARTIALLY_CLOSED"
+          ],
+          "conditional_order_groups": [
+            "ACTIVE",
+            "CANCELED",
+            "CANCELING",
+            "CLOSED",
+            "COMPENSATING",
+            "CREATED",
+            "DEGRADED_RECONCILIATION_REQUIRED",
+            "ERROR",
+            "OVERFILLED",
+            "PARTIALLY_EXECUTED",
+            "SUBMITTING",
+            "UPDATING",
+            "VALIDATED"
+          ],
+          "conditional_order_group_legs": [
+            "CANCELED",
+            "EXPIRED",
+            "FILLED",
+            "OPEN",
+            "PARTIALLY_FILLED",
+            "PENDING_CANCEL",
+            "PENDING_SUBMIT",
+            "REJECTED",
+            "WAITING"
+          ],
+          "order_group_event_inbox": [
+            "DEAD",
+            "PENDING",
+            "PROCESSED",
+            "PROCESSING"
+          ],
+          "execution_command_outbox": [
+            "ACKNOWLEDGED",
+            "DEAD",
+            "DISPATCHED",
+            "DISPATCHING",
+            "PENDING"
+          ],
+          "command_journal": [
+            "ACCEPTED",
+            "ACKNOWLEDGED",
+            "BUSINESS_REJECTED",
+            "DEAD",
+            "DISPATCHED",
+            "DISPATCH_PENDING",
+            "SHADOW_OBSERVED",
+            "SUPERSEDED",
+            "UNCERTAIN"
+          ],
+          "command_dispatch_outbox": [
+            "ACKNOWLEDGED",
+            "CANCELLED",
+            "DEAD",
+            "DISPATCHED",
+            "LEASED",
+            "PENDING"
+          ],
+          "command_broker_attempts": [
+            "ACCEPTED",
+            "BUSINESS_REJECTED",
+            "REQUESTING",
+            "TERMINAL",
+            "UNCERTAIN"
+          ],
+          "engine_authority_decisions": [
+            "DECIDED",
+            "EVALUATING",
+            "FAILED"
+          ]
+        },
+        "union_values": [
+          "ACCEPTED",
+          "ACKNOWLEDGED",
+          "ACTIVE",
+          "ARCHIVED",
+          "BUSINESS_REJECTED",
+          "CANCELED",
+          "CANCELING",
+          "CANCELLED",
+          "CLOSED",
+          "CLOSING",
+          "COMPENSATING",
+          "CREATED",
+          "DEAD",
+          "DECIDED",
+          "DEGRADED_RECONCILIATION_REQUIRED",
+          "DISPATCHED",
+          "DISPATCHING",
+          "DISPATCH_PENDING",
+          "ENTRY_FILLED",
+          "ENTRY_SUBMITTED",
+          "ERROR",
+          "EVALUATING",
+          "EXPIRED",
+          "FAILED",
+          "FILLED",
+          "HALTED",
+          "LEASED",
+          "OPEN",
+          "OVERFILLED",
+          "PARTIALLY_CLOSED",
+          "PARTIALLY_EXECUTED",
+          "PARTIALLY_FILLED",
+          "PENDING",
+          "PENDING_CANCEL",
+          "PENDING_SUBMIT",
+          "PROCESSED",
+          "PROCESSING",
+          "REDUCING",
+          "REJECTED",
+          "REQUESTING",
+          "SHADOW_OBSERVED",
+          "SUBMITTING",
+          "SUPERSEDED",
+          "TERMINAL",
+          "UNCERTAIN",
+          "UPDATING",
+          "VALIDATED",
+          "WAITING"
+        ],
+        "conflated": true,
+        "values": [
+          "ACCEPTED",
+          "ACKNOWLEDGED",
+          "ACTIVE",
+          "ARCHIVED",
+          "BUSINESS_REJECTED",
+          "CANCELED",
+          "CANCELING",
+          "CANCELLED",
+          "CLOSED",
+          "CLOSING",
+          "COMPENSATING",
+          "CREATED",
+          "DEAD",
+          "DECIDED",
+          "DEGRADED_RECONCILIATION_REQUIRED",
+          "DISPATCHED",
+          "DISPATCHING",
+          "DISPATCH_PENDING",
+          "ENTRY_FILLED",
+          "ENTRY_SUBMITTED",
+          "ERROR",
+          "EVALUATING",
+          "EXPIRED",
+          "FAILED",
+          "FILLED",
+          "HALTED",
+          "LEASED",
+          "OPEN",
+          "OVERFILLED",
+          "PARTIALLY_CLOSED",
+          "PARTIALLY_EXECUTED",
+          "PARTIALLY_FILLED",
+          "PENDING",
+          "PENDING_CANCEL",
+          "PENDING_SUBMIT",
+          "PROCESSED",
+          "PROCESSING",
+          "REDUCING",
+          "REJECTED",
+          "REQUESTING",
+          "SHADOW_OBSERVED",
+          "SUBMITTING",
+          "SUPERSEDED",
+          "TERMINAL",
+          "UNCERTAIN",
+          "UPDATING",
+          "VALIDATED",
+          "WAITING"
+        ],
+        "tables": [
+          "command_broker_attempts",
+          "command_dispatch_outbox",
+          "command_journal",
+          "conditional_order_group_legs",
+          "conditional_order_groups",
+          "engine_authority_decisions",
+          "execution_command_outbox",
+          "order_brackets",
+          "order_group_event_inbox",
+          "portfolio_allocations",
+          "portfolios"
+        ]
+      },
+      "status": {
+        "field": "status",
+        "per_table": {
+          "settlements": [
+            "CANCELED",
+            "FAILED",
+            "SCHEDULED",
+            "SETTLED"
+          ],
+          "reconciliation_findings": [
+            "ACKED",
+            "OPEN",
+            "RESOLVED"
+          ],
+          "service_heartbeats": [
+            "DEGRADED",
+            "FAILED",
+            "READY",
+            "STARTING",
+            "STOPPING"
+          ],
+          "account_sync_snapshots": [
+            "ERROR",
+            "MISMATCH",
+            "OK",
+            "STALE"
+          ],
+          "account_reservations": [
+            "CONSUMED",
+            "FAILED",
+            "PARTIALLY_CONSUMED",
+            "RELEASED",
+            "RESERVED"
+          ],
+          "copy_event_outbox": [
+            "DEAD_LETTER",
+            "DISABLED",
+            "PENDING",
+            "PUBLISHED",
+            "PUBLISHING"
+          ],
+          "operator_operations": [
+            "FAILED",
+            "INTENTS_QUEUED",
+            "PARTIAL",
+            "PLANNED",
+            "VERIFIED"
+          ],
+          "broker_account_sync_snapshots": [
+            "ERROR",
+            "MISMATCH",
+            "OK",
+            "STALE"
+          ],
+          "execution_replay_jobs": [
+            "COMPLETED",
+            "FAILED",
+            "PENDING",
+            "RUNNING"
+          ],
+          "account_sync_current_state": [
+            "ERROR",
+            "MISMATCH",
+            "OK",
+            "STALE"
+          ],
+          "broker_account_sync_current_state": [
+            "ERROR",
+            "MISMATCH",
+            "OK",
+            "STALE"
+          ],
+          "storage_archive_manifests": [
+            "FAILED",
+            "PURGED",
+            "RESTORE_VERIFIED",
+            "VERIFIED",
+            "WRITTEN"
+          ]
+        },
+        "union_values": [
+          "ACKED",
+          "CANCELED",
+          "COMPLETED",
+          "CONSUMED",
+          "DEAD_LETTER",
+          "DEGRADED",
+          "DISABLED",
+          "ERROR",
+          "FAILED",
+          "INTENTS_QUEUED",
+          "MISMATCH",
+          "OK",
+          "OPEN",
+          "PARTIAL",
+          "PARTIALLY_CONSUMED",
+          "PENDING",
+          "PLANNED",
+          "PUBLISHED",
+          "PUBLISHING",
+          "PURGED",
+          "READY",
+          "RELEASED",
+          "RESERVED",
+          "RESOLVED",
+          "RESTORE_VERIFIED",
+          "RUNNING",
+          "SCHEDULED",
+          "SETTLED",
+          "STALE",
+          "STARTING",
+          "STOPPING",
+          "VERIFIED",
+          "WRITTEN"
+        ],
+        "conflated": true,
+        "values": [
+          "ACKED",
+          "CANCELED",
+          "COMPLETED",
+          "CONSUMED",
+          "DEAD_LETTER",
+          "DEGRADED",
+          "DISABLED",
+          "ERROR",
+          "FAILED",
+          "INTENTS_QUEUED",
+          "MISMATCH",
+          "OK",
+          "OPEN",
+          "PARTIAL",
+          "PARTIALLY_CONSUMED",
+          "PENDING",
+          "PLANNED",
+          "PUBLISHED",
+          "PUBLISHING",
+          "PURGED",
+          "READY",
+          "RELEASED",
+          "RESERVED",
+          "RESOLVED",
+          "RESTORE_VERIFIED",
+          "RUNNING",
+          "SCHEDULED",
+          "SETTLED",
+          "STALE",
+          "STARTING",
+          "STOPPING",
+          "VERIFIED",
+          "WRITTEN"
+        ],
+        "tables": [
+          "account_reservations",
+          "account_sync_current_state",
+          "account_sync_snapshots",
+          "broker_account_sync_current_state",
+          "broker_account_sync_snapshots",
+          "copy_event_outbox",
+          "execution_replay_jobs",
+          "operator_operations",
+          "reconciliation_findings",
+          "service_heartbeats",
+          "settlements",
+          "storage_archive_manifests"
+        ]
+      },
+      "support_state": {
+        "field": "support_state",
+        "per_table": {
+          "compatibility_surface_registry": [
+            "MIGRATE_ON_SUCCESS",
+            "READ_COMPATIBILITY",
+            "RETIRED",
+            "SUPPORTED_COMPATIBILITY",
+            "ZERO_USE_CANDIDATE"
+          ]
+        },
+        "union_values": [
+          "MIGRATE_ON_SUCCESS",
+          "READ_COMPATIBILITY",
+          "RETIRED",
+          "SUPPORTED_COMPATIBILITY",
+          "ZERO_USE_CANDIDATE"
+        ],
+        "conflated": false,
+        "values": [
+          "MIGRATE_ON_SUCCESS",
+          "READ_COMPATIBILITY",
+          "RETIRED",
+          "SUPPORTED_COMPATIBILITY",
+          "ZERO_USE_CANDIDATE"
+        ],
+        "tables": [
+          "compatibility_surface_registry"
+        ]
+      },
+      "token_status": {
+        "field": "token_status",
+        "per_table": {
+          "dnse_trading_tokens": [
+            "ACTIVE",
+            "EXPIRED",
+            "REVOKED"
+          ]
+        },
+        "union_values": [
+          "ACTIVE",
+          "EXPIRED",
+          "REVOKED"
+        ],
+        "conflated": false,
+        "values": [
+          "ACTIVE",
+          "EXPIRED",
+          "REVOKED"
+        ],
+        "tables": [
+          "dnse_trading_tokens"
+        ]
+      },
+      "trading_state": {
+        "field": "trading_state",
+        "per_table": {
+          "risk_profiles": [
+            "ACTIVE",
+            "HALTED",
+            "REDUCING"
+          ]
+        },
+        "union_values": [
+          "ACTIVE",
+          "HALTED",
+          "REDUCING"
+        ],
+        "conflated": false,
+        "values": [
+          "ACTIVE",
+          "HALTED",
+          "REDUCING"
+        ],
+        "tables": [
+          "risk_profiles"
+        ]
+      },
+      "window_kind": {
+        "field": "window_kind",
+        "per_table": {
+          "venue_rate_limits": [
+            "DAY",
+            "HOUR",
+            "MINUTE",
+            "SECOND"
+          ]
+        },
+        "union_values": [
+          "DAY",
+          "HOUR",
+          "MINUTE",
+          "SECOND"
+        ],
+        "conflated": false,
+        "values": [
+          "DAY",
+          "HOUR",
+          "MINUTE",
+          "SECOND"
+        ],
+        "tables": [
+          "venue_rate_limits"
+        ]
+      }
+    }
+  },
+  "enum_vs_db_crosscheck": [
+    {
+      "concept": "mode",
+      "python_enum": "TradingMode",
+      "python_values": [
+        "backtest",
+        "live",
+        "paper",
+        "replay",
+        "sandbox"
+      ],
+      "db_check_values": [
+        "*",
+        "backtest",
+        "live",
+        "paper",
+        "replay",
+        "sandbox"
+      ],
+      "python_only": [],
+      "db_only": [
+        "*"
+      ],
+      "identical": false,
+      "db_tables": [
+        "account_equity_snapshots",
+        "account_policies",
+        "account_reservations",
+        "account_sync_snapshots",
+        "accounts",
+        "broker_account_sync_snapshots",
+        "command_journal",
+        "conditional_order_groups"
+      ]
+    },
+    {
+      "concept": "side",
+      "python_enum": "OrderSide",
+      "python_values": [
+        "BUY",
+        "SELL"
+      ],
+      "db_check_values": [
+        "BUY",
+        "FLAT",
+        "LONG",
+        "SELL",
+        "SHORT"
+      ],
+      "python_only": [],
+      "db_only": [
+        "FLAT",
+        "LONG",
+        "SHORT"
+      ],
+      "identical": false,
+      "db_tables": [
+        "fills",
+        "order_bracket_legs",
+        "orders",
+        "paper_open_orders",
+        "positions_v2"
+      ]
+    },
+    {
+      "concept": "account_type",
+      "python_enum": "AccountType",
+      "python_values": [
+        "BETTING",
+        "CASH",
+        "MARGIN"
+      ],
+      "db_check_values": [
+        "BETTING",
+        "CASH",
+        "MARGIN"
+      ],
+      "python_only": [],
+      "db_only": [],
+      "identical": true,
+      "db_tables": [
+        "account_policies",
+        "accounts"
+      ]
+    },
+    {
+      "concept": "trading_state",
+      "python_enum": "TradingState",
+      "python_values": [
+        "ACTIVE",
+        "HALTED",
+        "REDUCING"
+      ],
+      "db_check_values": [
+        "ACTIVE",
+        "HALTED",
+        "REDUCING"
+      ],
+      "python_only": [],
+      "db_only": [],
+      "identical": true,
+      "db_tables": [
+        "risk_profiles"
+      ]
+    },
+    {
+      "concept": "status",
+      "python_enum": "OrderStatus",
+      "python_values": [
+        "ACCEPTED",
+        "CANCELED",
+        "DENIED",
+        "EXPIRED",
+        "FILLED",
+        "INITIALIZED",
+        "PARTIALLY_FILLED",
+        "PENDING_CANCEL",
+        "PENDING_UPDATE",
+        "REJECTED",
+        "SUBMITTED",
+        "TRIGGERED"
+      ],
+      "db_check_values": [
+        "ACKED",
+        "CANCELED",
+        "COMPLETED",
+        "CONSUMED",
+        "DEAD_LETTER",
+        "DEGRADED",
+        "DISABLED",
+        "ERROR",
+        "FAILED",
+        "INTENTS_QUEUED",
+        "MISMATCH",
+        "OK",
+        "OPEN",
+        "PARTIAL",
+        "PARTIALLY_CONSUMED",
+        "PENDING",
+        "PLANNED",
+        "PUBLISHED",
+        "PUBLISHING",
+        "PURGED",
+        "READY",
+        "RELEASED",
+        "RESERVED",
+        "RESOLVED",
+        "RESTORE_VERIFIED",
+        "RUNNING",
+        "SCHEDULED",
+        "SETTLED",
+        "STALE",
+        "STARTING",
+        "STOPPING",
+        "VERIFIED",
+        "WRITTEN"
+      ],
+      "python_only": [
+        "ACCEPTED",
+        "DENIED",
+        "EXPIRED",
+        "FILLED",
+        "INITIALIZED",
+        "PARTIALLY_FILLED",
+        "PENDING_CANCEL",
+        "PENDING_UPDATE",
+        "REJECTED",
+        "SUBMITTED",
+        "TRIGGERED"
+      ],
+      "db_only": [
+        "ACKED",
+        "COMPLETED",
+        "CONSUMED",
+        "DEAD_LETTER",
+        "DEGRADED",
+        "DISABLED",
+        "ERROR",
+        "FAILED",
+        "INTENTS_QUEUED",
+        "MISMATCH",
+        "OK",
+        "OPEN",
+        "PARTIAL",
+        "PARTIALLY_CONSUMED",
+        "PENDING",
+        "PLANNED",
+        "PUBLISHED",
+        "PUBLISHING",
+        "PURGED",
+        "READY",
+        "RELEASED",
+        "RESERVED",
+        "RESOLVED",
+        "RESTORE_VERIFIED",
+        "RUNNING",
+        "SCHEDULED",
+        "SETTLED",
+        "STALE",
+        "STARTING",
+        "STOPPING",
+        "VERIFIED",
+        "WRITTEN"
+      ],
+      "identical": false,
+      "db_tables": [
+        "account_reservations",
+        "account_sync_current_state",
+        "account_sync_snapshots",
+        "broker_account_sync_current_state",
+        "broker_account_sync_snapshots",
+        "copy_event_outbox",
+        "execution_replay_jobs",
+        "operator_operations"
+      ]
+    },
+    {
+      "concept": "default_settlement_policy",
+      "python_enum": "SettlementPolicy",
+      "python_values": [
+        "IMMEDIATE",
+        "VN_T_PLUS"
+      ],
+      "db_check_values": [
+        "IMMEDIATE",
+        "VN_T_PLUS"
+      ],
+      "python_only": [],
+      "db_only": [],
+      "identical": true,
+      "db_tables": [
+        "paper_matcher_config"
+      ]
+    }
+  ],
+  "venue_product_matrix": [
+    {
+      "venue": "BINANCE",
+      "product": "USD_M",
+      "supported_modes": [
+        "paper",
+        "sandbox",
+        "live"
+      ],
+      "execution_available": true,
+      "market_data_available": true,
+      "private_events_available": true,
+      "account_sync_available": true,
+      "reconciliation_available": true,
+      "position_modes": [
+        "ONE_WAY",
+        "HEDGE"
+      ],
+      "credential_scope": "binance:{mode}:{external_account_ref}",
+      "rate_limit_scope": "binance:{mode}:{credential_ref}",
+      "time_sync_scope": "binance:{mode}",
+      "rollout_state": "ACTIVE",
+      "source": "services/venues/registry.py:7"
+    },
+    {
+      "venue": "BINANCE",
+      "product": "SPOT",
+      "supported_modes": [
+        "paper"
+      ],
+      "execution_available": false,
+      "market_data_available": true,
+      "private_events_available": false,
+      "account_sync_available": false,
+      "reconciliation_available": false,
+      "position_modes": [
+        "NET"
+      ],
+      "credential_scope": "binance:spot:{external_account_ref}",
+      "rate_limit_scope": "binance:spot:{credential_ref}",
+      "time_sync_scope": "binance:spot",
+      "rollout_state": "MARKET_DATA_ONLY",
+      "source": "services/venues/registry.py:12"
+    },
+    {
+      "venue": "DNSE",
+      "product": "VN_EQUITY",
+      "supported_modes": [
+        "paper",
+        "live"
+      ],
+      "execution_available": true,
+      "market_data_available": true,
+      "private_events_available": true,
+      "account_sync_available": true,
+      "reconciliation_available": true,
+      "position_modes": [
+        "NET"
+      ],
+      "credential_scope": "dnse:{external_account_ref}",
+      "rate_limit_scope": "dnse:{credential_ref}",
+      "time_sync_scope": "dnse",
+      "rollout_state": "ACTIVE",
+      "source": "services/venues/registry.py:17"
+    },
+    {
+      "venue": "DNSE",
+      "product": "VN_DERIVATIVE",
+      "supported_modes": [
+        "paper"
+      ],
+      "execution_available": true,
+      "market_data_available": true,
+      "private_events_available": false,
+      "account_sync_available": false,
+      "reconciliation_available": false,
+      "position_modes": [
+        "NET"
+      ],
+      "credential_scope": "dnse:{external_account_ref}",
+      "rate_limit_scope": "dnse:{credential_ref}",
+      "time_sync_scope": "dnse",
+      "rollout_state": "PAPER_ONLY",
+      "source": "services/venues/registry.py:21"
+    },
+    {
+      "venue": "OKX",
+      "product": "SWAP",
+      "supported_modes": [
+        "sandbox",
+        "live"
+      ],
+      "execution_available": false,
+      "market_data_available": true,
+      "private_events_available": true,
+      "account_sync_available": true,
+      "reconciliation_available": true,
+      "position_modes": [
+        "NET",
+        "LONG_SHORT"
+      ],
+      "credential_scope": "okx:{mode}:{external_account_ref}",
+      "rate_limit_scope": "okx:{mode}:{credential_ref}",
+      "time_sync_scope": "okx:{mode}",
+      "rollout_state": "DISABLED_PENDING_ACCEPTANCE",
+      "source": "services/venues/registry.py:26"
+    },
+    {
+      "venue": "OKX",
+      "product": "FUTURES",
+      "supported_modes": [
+        "sandbox",
+        "live"
+      ],
+      "execution_available": false,
+      "market_data_available": true,
+      "private_events_available": true,
+      "account_sync_available": true,
+      "reconciliation_available": true,
+      "position_modes": [
+        "NET",
+        "LONG_SHORT"
+      ],
+      "credential_scope": "okx:{mode}:{external_account_ref}",
+      "rate_limit_scope": "okx:{mode}:{credential_ref}",
+      "time_sync_scope": "okx:{mode}",
+      "rollout_state": "DISABLED_PENDING_ACCEPTANCE",
+      "source": "services/venues/registry.py:31"
+    }
+  ],
+  "http_contract": {
+    "response_headers": [
+      "X-Trading-API-Version",
+      "X-Trading-Contract-Revision",
+      "X-Trading-SDK-Version",
+      "X-Trading-Schema-Version"
+    ],
+    "revision_constants": {
+      "API_VERSION": "v1",
+      "CURRENT_PUBLIC_REVISION": "v1",
+      "CURRENT_PUBLIC_SCHEMA_VERSION": "v1",
+      "SHADOW_ORDER_SCHEMA_REVISION": "order-command.v2@2.0.0",
+      "SUPPORTED_CONTRACT_REVISIONS": "frozenset({CURRENT_PUBLIC_REVISION, SHADOW_ORDER_SCHEMA_REVISION})",
+      "HEADER_API_VERSION": "X-Trading-API-Version",
+      "HEADER_CONTRACT_REVISION": "X-Trading-Contract-Revision",
+      "HEADER_SCHEMA_VERSION": "X-Trading-Schema-Version",
+      "HEADER_SDK_VERSION": "X-Trading-SDK-Version"
+    },
+    "settings_declarations": {},
+    "rate_limit_model": {
+      "algorithm": "per-second bucket counter in Redis, key rl:gateway:{scope}:{epoch_second}",
+      "scope": "derived per (route, alpha_id, mode, venue, account) — engine._gateway_rate_scope",
+      "default_limit_per_second": "300",
+      "reject_code": 429,
+      "reject_reason": "RATE_LIMIT_EXCEEDED (retry_after_seconds in body)",
+      "source": "services/gateway/core/engine.py:check_auth_and_rate"
+    },
+    "sdk_matrix": {
+      "schema_version": "sdk-compatibility-matrix-v1",
+      "api_major": "v1",
+      "releases": [
+        {
+          "sdk_version": "legacy-unversioned",
+          "request_contract_revision": "v1",
+          "supported": true,
+          "headers_required": false
+        },
+        {
+          "sdk_version": "1.1.0",
+          "request_contract_revision": "v1",
+          "shadow_schema_version": "order-command.v2@2.0.0",
+          "supported": true,
+          "headers_required": false
+        }
+      ]
+    },
+    "legacy_surfaces": {
+      "registry_version": "1.0.0",
+      "retirement_policy": "zero observed use for approved support window plus owner sign-off",
+      "surfaces": [
+        {
+          "id": "http.legacy.submit",
+          "kind": "HTTP_ROUTE",
+          "locator": "/submit",
+          "owner": "gateway",
+          "replacement": "/v1/orders",
+          "state": "SUPPORTED_COMPATIBILITY"
+        },
+        {
+          "id": "http.legacy.bulk",
+          "kind": "HTTP_ROUTE",
+          "locator": "/bulk",
+          "owner": "gateway",
+          "replacement": "/v1/orders/bulk",
+          "state": "SUPPORTED_COMPATIBILITY"
+        },
+        {
+          "id": "http.legacy.update",
+          "kind": "HTTP_ROUTE",
+          "locator": "/update",
+          "owner": "gateway",
+          "replacement": "/v1/orders/{client_order_id}",
+          "state": "SUPPORTED_COMPATIBILITY"
+        },
+        {
+          "id": "http.legacy.cancel",
+          "kind": "HTTP_ROUTE",
+          "locator": "/cancel",
+          "owner": "gateway",
+          "replacement": "/v1/orders/{client_order_id}",
+          "state": "SUPPORTED_COMPATIBILITY"
+        },
+        {
+          "id": "redis.auth.plaintext_api_key",
+          "kind": "REDIS_KEY_ENCODING",
+          "locator": "gate:apikeys",
+          "owner": "gateway",
+          "replacement": "sha256$v1 or hmac-sha256$v1",
+          "state": "MIGRATE_ON_SUCCESS"
+        },
+        {
+          "id": "stream.execution.fills",
+          "kind": "REDIS_STREAM",
+          "locator": "execution.fills",
+          "owner": "listener,paper_execution",
+          "replacement": "events.fill",
+          "state": "SUPPORTED_COMPATIBILITY"
+        },
+        {
+          "id": "stream.commands.execution.sandbox",
+          "kind": "REDIS_STREAM",
+          "locator": "commands.execution.sandbox",
+          "owner": "risk_engine",
+          "replacement": "order.requests",
+          "state": "SUPPORTED_COMPATIBILITY"
+        },
+        {
+          "id": "stream.commands.execution.live",
+          "kind": "REDIS_STREAM",
+          "locator": "commands.execution.live",
+          "owner": "risk_engine",
+          "replacement": "order.requests",
+          "state": "SUPPORTED_COMPATIBILITY"
+        },
+        {
+          "id": "stream.deadletter.portfolio",
+          "kind": "REDIS_STREAM",
+          "locator": "deadletter.portfolio",
+          "owner": "portfolio",
+          "replacement": "events.dead_letter plus dead_letters",
+          "state": "SUPPORTED_COMPATIBILITY"
+        },
+        {
+          "id": "db.alpha_positions",
+          "kind": "DATABASE_PROJECTION",
+          "locator": "public.alpha_positions",
+          "owner": "portfolio",
+          "replacement": "positions_v2",
+          "state": "READ_COMPATIBILITY"
+        },
+        {
+          "id": "db.account_sync_snapshots",
+          "kind": "DATABASE_PROJECTION",
+          "locator": "public.account_sync_snapshots",
+          "owner": "portfolio_management",
+          "replacement": "account_sync_current_state plus broker_sync_state_history",
+          "state": "READ_COMPATIBILITY"
+        },
+        {
+          "id": "db.broker_account_sync_snapshots",
+          "kind": "DATABASE_PROJECTION",
+          "locator": "public.broker_account_sync_snapshots",
+          "owner": "portfolio_management",
+          "replacement": "broker_account_sync_current_state plus broker_sync_state_history",
+          "state": "READ_COMPATIBILITY"
+        },
+        {
+          "id": "sdk.v1.aliases",
+          "kind": "SDK_REVISION",
+          "locator": "alpha_sdk V1 aliases",
+          "owner": "alpha_sdk",
+          "replacement": "stable V1 canonical methods",
+          "state": "SUPPORTED_COMPATIBILITY"
+        }
+      ]
+    }
+  }
+}

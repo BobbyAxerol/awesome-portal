@@ -1,0 +1,7 @@
+# Public GET probes 2026-08-21T07:59:13Z
+gw_openapi  http://127.0.0.1:8000/openapi.json  HTTP 200  bytes=38518
+gw_health  http://127.0.0.1:8000/v1/health  HTTP 200  bytes=7432
+gw_capabilities  http://127.0.0.1:8000/v1/health/capabilities  HTTP 200  bytes=3127
+gw_contracts  http://127.0.0.1:8000/v1/contracts  HTTP 200  bytes=825
+dl_openapi  http://127.0.0.1:8100/openapi.json  HTTP 200  bytes=26995
+dl_health  http://127.0.0.1:8100/v1/health  HTTP 200  bytes=96033

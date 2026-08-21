@@ -1,0 +1,30 @@
+{
+ "_provenance": {
+  "kind": "SYNTHETIC_EXAMPLE",
+  "warning": "Hand-written to show shape only. NOT a captured runtime response. IDs and amounts are invented. Field names/types may lag the real contract.",
+  "authoritative_source": "extract/response-shapes.json + extract/serialization-contract.json",
+  "note": "Portal envelope fields here (schema_version, page, ...) are the PORTAL target shape, not what Trading System returns. Trading System returns {status, <collection>, count}."
+ },
+ "schema_version": "v1",
+ "page": {
+  "limit": 100,
+  "has_more": false
+ },
+ "orders": [
+  {
+   "client_order_id": "synth-order-0001",
+   "venue_order_id": "synth-venue-0001",
+   "alpha_id": "alpha-paper-0001",
+   "symbol": "BTCUSDT",
+   "side": "BUY",
+   "order_type": "LIMIT",
+   "quantity": "0.00100000",
+   "price": "50000.00",
+   "status": "FILLED",
+   "mode": "paper",
+   "venue": "BINANCE",
+   "created_at": "2026-08-20T10:00:00Z",
+   "updated_at": "2026-08-20T10:00:05Z"
+  }
+ ]
+}

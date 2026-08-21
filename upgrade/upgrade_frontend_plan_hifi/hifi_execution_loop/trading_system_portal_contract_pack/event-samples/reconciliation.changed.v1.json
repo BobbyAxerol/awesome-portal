@@ -1,0 +1,16 @@
+{
+ "_provenance": {
+  "kind": "SYNTHETIC_EXAMPLE",
+  "warning": "Hand-written. NOT captured from runtime. At runtime only ORDER_STATUS events exist; the fact this file illustrates may have zero instances.",
+  "authoritative_source": "extract/event-catalog.json"
+ },
+ "schema_version": "v1",
+ "event_type": "reconciliation.changed",
+ "event_id": "synth-ev-0004",
+ "finding_id": "synth-finding-0001",
+ "account_id": "sandbox-binance-alpha-paper-0002",
+ "finding_type": "POSITION_DIFF",
+ "severity": "WARNING",
+ "detail": "virtual vs physical diff (synthetic)",
+ "created_at": "2026-08-20T10:00:10Z"
+}

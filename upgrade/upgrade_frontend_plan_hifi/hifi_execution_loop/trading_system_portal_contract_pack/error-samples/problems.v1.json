@@ -1,0 +1,45 @@
+{
+ "schema_version": "problems-v1",
+ "envelope": {
+  "status": "error",
+  "error": {
+   "code": "RATE_LIMIT_EXCEEDED",
+   "message": "sliding-window per-second bucket exceeded",
+   "retry_after_seconds": 1,
+   "limit_per_second": 300
+  }
+ },
+ "examples": [
+  {
+   "code": "UNAUTHORIZED_ALPHA",
+   "http": 403
+  },
+  {
+   "code": "INVALID_API_KEY",
+   "http": 403
+  },
+  {
+   "code": "RATE_LIMIT_EXCEEDED",
+   "http": 429,
+   "retry_after_seconds": 1
+  },
+  {
+   "code": "AUTHORITY_SCOPE_BLOCKED",
+   "http": 409,
+   "reason": "ENGINE_AUTHORITY_SCOPE_BLOCKED"
+  },
+  {
+   "code": "UNSUPPORTED_REVISION",
+   "http": 406
+  },
+  {
+   "code": "BLOCKED_NOT_SAFE_OR_NOT_FOUND",
+   "http": 400
+  },
+  {
+   "code": "ADMIN_AUTH_NOT_CONFIGURED",
+   "http": 503
+  }
+ ],
+ "empty_vs_unavailable": "empty list = []/OK; 5xx = unavailable; unknown enum fail closed"
+}

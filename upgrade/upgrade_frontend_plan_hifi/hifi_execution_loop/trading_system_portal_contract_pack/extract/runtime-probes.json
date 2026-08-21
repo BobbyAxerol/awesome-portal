@@ -1,0 +1,790 @@
+{
+  "provenance": {
+    "generated_by": "scripts/90_runtime_probe.py",
+    "read_only": true,
+    "trading_system_commit": "9081397de9e981c43b4e0f67fabe747e7ed964c7",
+    "sources": [
+      "runtime GET probes on 127.0.0.1:8000 / :8100"
+    ],
+    "note": "Derived from source/runtime read-only inspection. No Trading System file was modified."
+  },
+  "method_guarantee": "GET only. No credential was read, held or transmitted. Public bodies are reduced to type skeletons; scalar values survive only for an allowlist of contract fields.",
+  "summary": {
+    "public_probes": 7,
+    "rejection_probes": 6,
+    "negotiation_probes": 2,
+    "status_codes": {
+      "gw_health": "200",
+      "gw_capabilities": "200",
+      "gw_contracts": "200",
+      "gw_health_legacy": "200",
+      "gw_openapi_info": "200",
+      "dl_health": "200",
+      "dl_openapi_info": "200",
+      "admin_no_token": "403",
+      "admin_events_no_token": "403",
+      "alpha_no_key_unknown_alpha": "403",
+      "alpha_positions_no_alpha_id": "500",
+      "alpha_events_no_alpha": "403",
+      "unknown_path": "404",
+      "unsupported_revision": "406",
+      "supported_revision_v1": "200"
+    }
+  },
+  "probes": {
+    "gw_health": {
+      "class": "PUBLIC",
+      "url": "<gateway>/v1/health",
+      "http_status": "200",
+      "body_bytes": 7431,
+      "contract_headers": {
+        "content-type": "application/json",
+        "x-trading-api-version": "v1",
+        "x-trading-contract-revision": "v1",
+        "x-trading-schema-version": "v1"
+      },
+      "response_skeleton": {
+        "status": "READY",
+        "ts": "float",
+        "checks": {
+          "redis": "bool",
+          "market_redis": "bool",
+          "postgres": "bool",
+          "stale_or_bad_services": []
+        },
+        "capabilities": {
+          "broker:binance_futures": {
+            "mode": "sandbox",
+            "venue": "BINANCE",
+            "errors": [],
+            "market": "USD_M_FUTURES",
+            "status": "READY",
+            "adapter": "binance_futures",
+            "circuit_open": false,
+            "client_count": "int",
+            "failure_count": "int",
+            "client_sources": [
+              "str",
+              "<+3 more>"
+            ],
+            "cooldown_seconds": "float"
+          },
+          "broker:binance_futures_user_stream": {
+            "venue": "BINANCE",
+            "errors": [],
+            "market": "USD_M_FUTURES",
+            "status": "READY",
+            "adapter": "binance_futures_user_stream",
+            "client_count": "int",
+            "socket_count": "int",
+            "retry_seconds": "float"
+          }
+        },
+        "venue_products": [
+          {
+            "venue": "BINANCE",
+            "product": "USD_M",
+            "supported_modes": [
+              "paper",
+              "<+2 more>"
+            ],
+            "execution_available": true,
+            "market_data_available": true,
+            "private_events_available": true,
+            "account_sync_available": true,
+            "reconciliation_available": true,
+            "position_modes": [
+              "ONE_WAY",
+              "<+1 more>"
+            ],
+            "credential_scope": "binance:{mode}:{external_account_ref}",
+            "rate_limit_scope": "binance:{mode}:{credential_ref}",
+            "time_sync_scope": "binance:{mode}",
+            "rollout_state": "ACTIVE"
+          },
+          "<+5 more>"
+        ],
+        "market_cache": {
+          "rollout": "EPHEMERAL_ONLY",
+          "status": "READY",
+          "reader": {},
+          "plane": {},
+          "runtime": {
+            "key_count": "int",
+            "rollout": "EPHEMERAL_ONLY",
+            "service": "market_data",
+            "telemetry": {
+              "write.market.ok": "int",
+              "write.market.payload_bytes": "int",
+              "write.market.publish": "int",
+              "write.market.setex": "int"
+            },
+            "timestamp_ms": "int",
+            "db_key_count": "int",
+            "redis_process_used_memory": "int"
+          }
+        },
+        "market_cache_telemetry": {},
+        "command_journal": {
+          "rollout": "DURABLE_ACCEPT_PAPER",
+          "status": "READY",
+          "pending": "int",
+          "dispatched_unacked": "int",
+          "dead": "int",
+          "dead_operator_quarantined": "int",
+          "dead_actionable": "int",
+          "oldest_pending_seconds": "int",
+          "max_attempts": "int",
+          "uncertain": "int"
+        },
+        "services": [
+          {
+            "service_name": "command_journal",
+            "instance_id": "str",
+            "status": "READY",
+            "details": "str",
+            "last_seen_unix": "float",
+            "age_seconds": "float",
+            "fresh": true,
+            "source": "str"
+          },
+          "<+12 more>"
+        ]
+      }
+    },
+    "gw_capabilities": {
+      "class": "PUBLIC",
+      "url": "<gateway>/v1/health/capabilities",
+      "http_status": "200",
+      "body_bytes": 3127,
+      "contract_headers": {
+        "content-type": "application/json",
+        "x-trading-api-version": "v1",
+        "x-trading-contract-revision": "v1",
+        "x-trading-schema-version": "v1"
+      },
+      "response_skeleton": {
+        "status": "READY",
+        "ts": "float",
+        "capabilities": {
+          "broker:binance_futures": {
+            "mode": "sandbox",
+            "venue": "BINANCE",
+            "errors": [],
+            "market": "USD_M_FUTURES",
+            "status": "READY",
+            "adapter": "binance_futures",
+            "circuit_open": false,
+            "client_count": "int",
+            "failure_count": "int",
+            "client_sources": [
+              "str",
+              "<+3 more>"
+            ],
+            "cooldown_seconds": "float"
+          },
+          "broker:binance_futures_user_stream": {
+            "venue": "BINANCE",
+            "errors": [],
+            "market": "USD_M_FUTURES",
+            "status": "READY",
+            "adapter": "binance_futures_user_stream",
+            "client_count": "int",
+            "socket_count": "int",
+            "retry_seconds": "float"
+          }
+        },
+        "venue_products": [
+          {
+            "venue": "BINANCE",
+            "product": "USD_M",
+            "supported_modes": [
+              "paper",
+              "<+2 more>"
+            ],
+            "execution_available": true,
+            "market_data_available": true,
+            "private_events_available": true,
+            "account_sync_available": true,
+            "reconciliation_available": true,
+            "position_modes": [
+              "ONE_WAY",
+              "<+1 more>"
+            ],
+            "credential_scope": "binance:{mode}:{external_account_ref}",
+            "rate_limit_scope": "binance:{mode}:{credential_ref}",
+            "time_sync_scope": "binance:{mode}",
+            "rollout_state": "ACTIVE"
+          },
+          "<+5 more>"
+        ]
+      }
+    },
+    "gw_contracts": {
+      "class": "PUBLIC",
+      "url": "<gateway>/v1/contracts",
+      "http_status": "200",
+      "body_bytes": 825,
+      "contract_headers": {
+        "content-type": "application/json",
+        "x-trading-api-version": "v1",
+        "x-trading-contract-revision": "v1",
+        "x-trading-schema-version": "v1"
+      },
+      "response_skeleton": {
+        "status": "OK",
+        "api_version": "str",
+        "authoritative_contract_revision": "str",
+        "authoritative_schema_version": "str",
+        "supported_contract_revisions": [
+          "str",
+          "<+1 more>"
+        ],
+        "shadow_contract_revision": "str",
+        "shadow_is_authoritative": "bool",
+        "sdk_compatibility": {
+          "schema_version": "sdk-compatibility-matrix-v1",
+          "api_major": "str",
+          "releases": [
+            {
+              "sdk_version": "str",
+              "request_contract_revision": "str",
+              "supported": "bool",
+              "headers_required": "bool"
+            },
+            "<+1 more>"
+          ]
+        },
+        "shadow": {
+          "enabled": false,
+          "sample_rate": "float",
+          "totals": {
+            "observed": "int",
+            "success": "int",
+            "failure": "int",
+            "mismatch": "int",
+            "skipped": "int"
+          },
+          "latency_ms_mean": "float",
+          "latency_ms_max": "float",
+          "by_revision": {},
+          "by_alpha": {},
+          "last_error": "null"
+        }
+      }
+    },
+    "gw_health_legacy": {
+      "class": "PUBLIC",
+      "url": "<gateway>/health",
+      "http_status": "200",
+      "body_bytes": 31,
+      "contract_headers": {
+        "content-type": "application/json",
+        "x-trading-api-version": "v1",
+        "x-trading-contract-revision": "v1",
+        "x-trading-schema-version": "v1"
+      },
+      "response_skeleton": {
+        "status": "READY",
+        "redis": "bool"
+      }
+    },
+    "gw_openapi_info": {
+      "class": "PUBLIC",
+      "url": "<gateway>/openapi.json",
+      "http_status": "200",
+      "body_bytes": 38518,
+      "contract_headers": {
+        "content-type": "application/json",
+        "x-trading-api-version": "v1",
+        "x-trading-contract-revision": "v1",
+        "x-trading-schema-version": "v1"
+      },
+      "response_skeleton": {
+        "openapi": "3.1.0",
+        "info": {
+          "title": "Alpha Gateway V3",
+          "version": "3.0.0"
+        },
+        "path_count": "int",
+        "operation_count": "int",
+        "component_schemas": [
+          "str",
+          "<+1 more>"
+        ],
+        "security_schemes": "null"
+      }
+    },
+    "dl_health": {
+      "class": "PUBLIC",
+      "url": "<data_layer>/v1/health",
+      "http_status": "200",
+      "body_bytes": 96026,
+      "contract_headers": {
+        "content-type": "application/json"
+      },
+      "response_skeleton": {
+        "status": "degraded",
+        "redis": "bool",
+        "binance_trade_stream": "bool",
+        "binance_kline_stream": "bool",
+        "binance_stream": {
+          "status": "degraded",
+          "started_at": "str",
+          "uptime_seconds": "float",
+          "stale_after_seconds": "float",
+          "startup_grace_seconds": "float",
+          "strict_feed_health": "bool",
+          "health_warnings": [
+            "str",
+            "<+3 more>"
+          ],
+          "queue": {
+            "size": "int",
+            "maxsize": "int",
+            "drop_count": "int",
+            "recent_drop_count": "int",
+            "window_seconds": "float"
+          },
+          "publisher": {
+            "batch_count": "int",
+            "item_count": "int",
+            "last_publisher_at": "str",
+            "redis_error_count": "int",
+            "last_redis_error": "null"
+          },
+          "shards": {
+            "count": "int",
+            "connected_count": "int",
+            "reconnect_count": "int",
+            "items": [
+              {
+                "shard_id": "str",
+                "source": "str",
+                "status": "connected",
+                "reconnect_count": "int",
+                "message_count": "int",
+                "parse_error_count": "int",
+                "queue_drop_count": "int",
+                "last_connected_at": "str",
+                "last_message_at": "str",
+                "last_error": "null",
+                "outage_started_at": "null",
+                "last_disconnected_at": "str",
+                "last_recovered_at": "str",
+                "last_outage_seconds": "float",
+                "max_outage_seconds": "float",
+                "reconnect_success_count": "int",
+                "gap_detected_count": "int",
+                "gap_fill_success_count": "int",
+                "gap_fill_failure_count": "int",
+                "last_gap_fill_at": "null",
+                "url_preview": "str"
+              },
+              "<+9 more>"
+            ]
+          },
+          "feeds": {
+            "expected_count": "int",
+            "observed_count": "int",
+            "missing_count": "int",
+            "broad_missing_count": "int",
+            "health_missing_count": "int",
+            "stale_count": "int",
+            "broad_stale_count": "int",
+            "demanded_count": "int",
+            "demanded_missing_count": "int",
+            "demanded_stale_count": "int",
+            "missing_samples": [
+              {
+                "feed_key": "str",
+                "source": "str",
+                "feed": "str",
+                "symbol": "str",
+                "interval": "str",
+                "expected": "bool",
+                "publish_count": "int",
+                "last_event_at": "null",
+                "last_published_at": "null",
+                "age_seconds": "null",
+                "last_key": "null"
+              },
+              "<+9 more>"
+            ],
+            "health_missing_samples": [
+              {
+                "feed_key": "str",
+                "source": "str",
+                "feed": "str",
+                "symbol": "str",
+                "interval": "str",
+                "expected": "bool",
+                "publish_count": "int",
+                "last_event_at": "null",
+                "last_published_at": "null",
+                "age_seconds": "null",
+                "last_key": "null"
+              },
+              "<+9 more>"
+            ],
+            "demanded_missing_samples": [
+              {
+                "feed_key": "str",
+                "source": "str",
+                "feed": "str",
+                "symbol": "str",
+                "interval": "str",
+                "expected": "bool",
+                "publish_count": "int",
+                "last_event_at": "null",
+                "last_published_at": "null",
+                "age_seconds": "null",
+                "last_key": "null"
+              },
+              "<+9 more>"
+            ],
+            "demanded_stale_samples": [
+              {
+                "feed_key": "str",
+                "source": "str",
+                "feed": "str",
+                "symbol": "str",
+                "interval": "null",
+                "expected": "bool",
+                "publish_count": "int",
+                "last_event_at": "str",
+                "last_published_at": "str",
+                "age_seconds": "float",
+                "last_key": "str"
+              },
+              "<+1 more>"
+            ],
+            "stale_samples": [
+              {
+                "feed_key": "str",
+                "source": "str",
+                "feed": "str",
+                "symbol": "str",
+                "interval": "null",
+                "expected": "bool",
+                "publish_count": "int",
+                "last_event_at": "str",
+                "last_published_at": "str",
+                "age_seconds": "float",
+                "last_key": "str"
+              },
+              "<+9 more>"
+            ]
+          }
+        },
+        "feed_demands": {
+          "lease_count": "int",
+          "demanded_feed_count": "int",
+          "feed_keys": [
+            "str",
+            "<+283 more>"
+          ],
+          "items": [
+            {
+              "feed_key": "str",
+              "source": "str",
+              "feed": "str",
+              "symbol": "str",
+              "interval": "str",
+              "refcount": "int",
+              "owners": [
+                "str"
+              ],
+              "reasons": [
+                "str"
+              ],
+              "expires_at_unix": "float"
+            },
+            "<+283 more>"
+          ]
+        },
+        "preload_topup": {
+          "provider_fetch_count": "int",
+          "waiter_count": "int",
+          "failure_count": "int",
+          "active_local_scopes": "int"
+        },
+        "dnse_stream": {
+          "status": "MARKET_CLOSED",
+          "running": "bool",
+          "market_open": "bool",
+          "client_healthy": "bool",
+          "symbols_count": "int",
+          "queue": {
+            "size": "int",
+            "maxsize": "int",
+            "drop_count": "int"
+          },
+          "metrics": {
+            "ws_msg_count": "int",
+            "redis_write_count": "int",
+            "redis_latency_ms": "float",
+            "stale_age_seconds": "float",
+            "connect_attempts": "int",
+            "connect_failures": "int",
+            "reconnect_count": "int",
+            "last_connected_at": "str",
+            "last_message_at": "str",
+            "last_error": "null"
+          }
+        }
+      }
+    },
+    "dl_openapi_info": {
+      "class": "PUBLIC",
+      "url": "<data_layer>/openapi.json",
+      "http_status": "200",
+      "body_bytes": 26995,
+      "contract_headers": {
+        "content-type": "application/json"
+      },
+      "response_skeleton": {
+        "openapi": "3.1.0",
+        "info": {
+          "title": "data_layer",
+          "description": "str",
+          "version": "0.1.0"
+        },
+        "path_count": "int",
+        "operation_count": "int",
+        "component_schemas": [
+          "str",
+          "<+3 more>"
+        ],
+        "security_schemes": "null"
+      }
+    },
+    "admin_no_token": {
+      "class": "UNAUTHENTICATED_REJECTION_PROBE",
+      "url": "<gateway>/v1/admin/portfolios",
+      "http_status": "403",
+      "contract_headers": {
+        "x-trading-api-version": "v1",
+        "x-trading-contract-revision": "v1",
+        "x-trading-schema-version": "v1"
+      },
+      "response_body": {
+        "detail": "invalid admin credentials"
+      },
+      "note": "probed with NO credential — captures the rejection contract only"
+    },
+    "admin_events_no_token": {
+      "class": "UNAUTHENTICATED_REJECTION_PROBE",
+      "url": "<gateway>/v1/admin/events",
+      "http_status": "403",
+      "contract_headers": {
+        "x-trading-api-version": "v1",
+        "x-trading-contract-revision": "v1",
+        "x-trading-schema-version": "v1"
+      },
+      "response_body": {
+        "detail": "invalid admin credentials"
+      },
+      "note": "probed with NO credential — captures the rejection contract only"
+    },
+    "alpha_no_key_unknown_alpha": {
+      "class": "UNAUTHENTICATED_REJECTION_PROBE",
+      "url": "<gateway>/v1/orders?alpha_id=portal_probe_nonexistent",
+      "http_status": "403",
+      "contract_headers": {
+        "x-trading-api-version": "v1",
+        "x-trading-contract-revision": "v1",
+        "x-trading-schema-version": "v1"
+      },
+      "response_body": {
+        "status": "REJECTED",
+        "reason": "UNAUTHORIZED_ALPHA"
+      },
+      "note": "probed with NO credential — captures the rejection contract only"
+    },
+    "alpha_positions_no_alpha_id": {
+      "class": "UNAUTHENTICATED_REJECTION_PROBE",
+      "url": "<gateway>/v1/positions",
+      "http_status": "500",
+      "contract_headers": {},
+      "response_body": {
+        "__non_json_body__": "Internal Server Error"
+      },
+      "note": "probed with NO credential — captures the rejection contract only"
+    },
+    "alpha_events_no_alpha": {
+      "class": "UNAUTHENTICATED_REJECTION_PROBE",
+      "url": "<gateway>/v1/events?alpha_id=portal_probe_nonexistent",
+      "http_status": "403",
+      "contract_headers": {
+        "x-trading-api-version": "v1",
+        "x-trading-contract-revision": "v1",
+        "x-trading-schema-version": "v1"
+      },
+      "response_body": {
+        "status": "REJECTED",
+        "reason": "UNAUTHORIZED_ALPHA"
+      },
+      "note": "probed with NO credential — captures the rejection contract only"
+    },
+    "unknown_path": {
+      "class": "UNAUTHENTICATED_REJECTION_PROBE",
+      "url": "<gateway>/v1/portal-probe-unknown-path",
+      "http_status": "404",
+      "contract_headers": {
+        "x-trading-api-version": "v1",
+        "x-trading-contract-revision": "v1",
+        "x-trading-schema-version": "v1"
+      },
+      "response_body": {
+        "detail": "Not Found"
+      },
+      "note": "probed with NO credential — captures the rejection contract only"
+    },
+    "unsupported_revision": {
+      "class": "CONTRACT_NEGOTIATION_PROBE",
+      "url": "<gateway>/v1/health",
+      "request_headers": [
+        "-H",
+        "X-Trading-Contract-Revision: portal-probe-v99"
+      ],
+      "http_status": "406",
+      "contract_headers": {
+        "x-trading-api-version": "v1",
+        "x-trading-contract-revision": "portal-probe-v99",
+        "x-trading-schema-version": "v1"
+      },
+      "response_body": {
+        "status": "UNSUPPORTED_CONTRACT_REVISION",
+        "requested_revision": "portal-probe-v99",
+        "supported_revisions": [
+          "order-command.v2@2.0.0",
+          "v1"
+        ],
+        "authoritative_revision": "v1"
+      }
+    },
+    "supported_revision_v1": {
+      "class": "CONTRACT_NEGOTIATION_PROBE",
+      "url": "<gateway>/v1/health",
+      "request_headers": [
+        "-H",
+        "X-Trading-Contract-Revision: v1"
+      ],
+      "http_status": "200",
+      "contract_headers": {
+        "x-trading-api-version": "v1",
+        "x-trading-contract-revision": "v1",
+        "x-trading-schema-version": "v1"
+      },
+      "response_body": {
+        "status": "READY",
+        "ts": "float",
+        "checks": {
+          "redis": "bool",
+          "market_redis": "bool",
+          "postgres": "bool",
+          "stale_or_bad_services": []
+        },
+        "capabilities": {
+          "broker:binance_futures": {
+            "mode": "sandbox",
+            "venue": "BINANCE",
+            "errors": [],
+            "market": "USD_M_FUTURES",
+            "status": "READY",
+            "adapter": "binance_futures",
+            "circuit_open": false,
+            "client_count": "int",
+            "failure_count": "int",
+            "client_sources": [
+              "str",
+              "<+3 more>"
+            ],
+            "cooldown_seconds": "float"
+          },
+          "broker:binance_futures_user_stream": {
+            "venue": "BINANCE",
+            "errors": [],
+            "market": "USD_M_FUTURES",
+            "status": "READY",
+            "adapter": "binance_futures_user_stream",
+            "client_count": "int",
+            "socket_count": "int",
+            "retry_seconds": "float"
+          }
+        },
+        "venue_products": [
+          {
+            "venue": "BINANCE",
+            "product": "USD_M",
+            "supported_modes": [
+              "paper",
+              "<+2 more>"
+            ],
+            "execution_available": true,
+            "market_data_available": true,
+            "private_events_available": true,
+            "account_sync_available": true,
+            "reconciliation_available": true,
+            "position_modes": [
+              "ONE_WAY",
+              "<+1 more>"
+            ],
+            "credential_scope": "binance:{mode}:{external_account_ref}",
+            "rate_limit_scope": "binance:{mode}:{credential_ref}",
+            "time_sync_scope": "binance:{mode}",
+            "rollout_state": "ACTIVE"
+          },
+          "<+5 more>"
+        ],
+        "market_cache": {
+          "rollout": "EPHEMERAL_ONLY",
+          "status": "READY",
+          "reader": {},
+          "plane": {},
+          "runtime": {
+            "key_count": "int",
+            "rollout": "EPHEMERAL_ONLY",
+            "service": "market_data",
+            "telemetry": {
+              "write.market.ok": "int",
+              "write.market.payload_bytes": "int",
+              "write.market.publish": "int",
+              "write.market.setex": "int"
+            },
+            "timestamp_ms": "int",
+            "db_key_count": "int",
+            "redis_process_used_memory": "int"
+          }
+        },
+        "market_cache_telemetry": {},
+        "command_journal": {
+          "rollout": "DURABLE_ACCEPT_PAPER",
+          "status": "READY",
+          "pending": "int",
+          "dispatched_unacked": "int",
+          "dead": "int",
+          "dead_operator_quarantined": "int",
+          "dead_actionable": "int",
+          "oldest_pending_seconds": "int",
+          "max_attempts": "int",
+          "uncertain": "int"
+        },
+        "services": [
+          {
+            "service_name": "command_journal",
+            "instance_id": "str",
+            "status": "READY",
+            "details": "str",
+            "last_seen_unix": "float",
+            "age_seconds": "float",
+            "fresh": true,
+            "source": "str"
+          },
+          "<+12 more>"
+        ]
+      }
+    }
+  }
+}

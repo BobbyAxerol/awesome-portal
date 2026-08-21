@@ -1,0 +1,2058 @@
+{
+  "provenance": {
+    "generated_by": "scripts/60_error_catalog.py",
+    "read_only": true,
+    "trading_system_commit": "9081397de9e981c43b4e0f67fabe747e7ed964c7",
+    "sources": [
+      "services/**/*.py",
+      "core/**/*.py",
+      "domain/**/*.py",
+      "extract/api-surface.json",
+      "extract/vocabularies.json"
+    ],
+    "note": "Derived from source/runtime read-only inspection. No Trading System file was modified."
+  },
+  "summary": {
+    "modules_scanned": 181,
+    "distinct_reason_codes": 124,
+    "http_exception_sites": 8,
+    "deny_reason_enums": 1,
+    "reason_codes_attributed_to_an_endpoint": 40,
+    "endpoints_with_known_reason_codes": 37,
+    "http_status_histogram": {
+      "200": 104,
+      "400": 43,
+      "403": 14,
+      "404": 20,
+      "409": 5,
+      "501": 1,
+      "503": 1
+    }
+  },
+  "envelope_contract": {
+    "problem_json_rfc7807": "MISSING — no application/problem+json anywhere in the gateway; errors are bare JSON objects.",
+    "reject_shape": "{\"status\": \"REJECTED\", \"reason\": \"<REASON_CODE>\", ...} — services/gateway/main.py:_rejected_content",
+    "validation_shape": "FastAPI default {\"detail\": [ValidationError...]} with HTTP 422; the only two component schemas in the whole OpenAPI document (HTTPValidationError, ValidationError).",
+    "admin_auth_shape": "{\"detail\": \"invalid admin credentials\"} HTTP 403; {\"detail\": \"admin auth is not configured\"} HTTP 503",
+    "contract_revision_shape": "{\"status\": \"UNSUPPORTED_CONTRACT_REVISION\", \"requested_revision\", \"supported_revisions\", \"authoritative_revision\"} HTTP 406",
+    "rate_limit_shape": "{\"status\": \"REJECTED\", \"reason\": \"RATE_LIMIT_EXCEEDED\", \"retry_after_seconds\": N} HTTP 429",
+    "portal_mapping_note": "A Portal connector must key on `reason` (not on HTTP status alone) — the same 403 carries UNAUTHORIZED_ALPHA, INVALID_API_KEY and ACCOUNT_ALPHA_MISMATCH."
+  },
+  "reason_codes": {
+    "ACCOUNT_ALPHA_MISMATCH": {
+      "code": "ACCOUNT_ALPHA_MISMATCH",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/main.py:392",
+        "services/gateway/main.py:1346",
+        "services/gateway/main.py:1411"
+      ],
+      "http_codes": []
+    },
+    "ACCOUNT_INACTIVE": {
+      "code": "ACCOUNT_INACTIVE",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/risk_engine/repository/risk_repo.py:107"
+      ],
+      "http_codes": []
+    },
+    "ACCOUNT_POLICY_UPSERTED": {
+      "code": "ACCOUNT_POLICY_UPSERTED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:2446"
+      ],
+      "http_codes": []
+    },
+    "ACCOUNT_SYNCED": {
+      "code": "ACCOUNT_SYNCED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:2465"
+      ],
+      "http_codes": []
+    },
+    "ACTIVATED": {
+      "code": "ACTIVATED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:632"
+      ],
+      "http_codes": []
+    },
+    "ALLOCATION_UPSERTED": {
+      "code": "ALLOCATION_UPSERTED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:2358"
+      ],
+      "http_codes": []
+    },
+    "ALREADY_TERMINAL": {
+      "code": "ALREADY_TERMINAL",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/repository/order_brackets.py:304"
+      ],
+      "http_codes": []
+    },
+    "AMEND_QTY_NOT_ABOVE_FILLED": {
+      "code": "AMEND_QTY_NOT_ABOVE_FILLED",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/paper_execution/repository.py:378"
+      ],
+      "http_codes": []
+    },
+    "APPENDED": {
+      "code": "APPENDED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/repository/event_store.py:219"
+      ],
+      "http_codes": []
+    },
+    "ARB_PACKAGE_SUBMIT_ONLY_SUPPORTS_PAPER_MODE_FOR_NOW": {
+      "code": "ARB_PACKAGE_SUBMIT_ONLY_SUPPORTS_PAPER_MODE_FOR_NOW",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/main.py:558"
+      ],
+      "http_codes": []
+    },
+    "ATOMIC_PACKAGE_PRE_RISK_REJECTED": {
+      "code": "ATOMIC_PACKAGE_PRE_RISK_REJECTED",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/main.py:656"
+      ],
+      "http_codes": []
+    },
+    "BATCH_PRE_RISK_DISABLED": {
+      "code": "BATCH_PRE_RISK_DISABLED",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/main.py:568",
+        "services/gateway/main.py:1753"
+      ],
+      "http_codes": []
+    },
+    "BLOCKED_OPEN_CHILDREN": {
+      "code": "BLOCKED_OPEN_CHILDREN",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/repository/order_brackets.py:322"
+      ],
+      "http_codes": []
+    },
+    "BROKER_SYNC_MISMATCH": {
+      "code": "BROKER_SYNC_MISMATCH",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/risk_engine/repository/risk_repo.py:309"
+      ],
+      "http_codes": []
+    },
+    "BROKER_SYNC_MISSING": {
+      "code": "BROKER_SYNC_MISSING",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/risk_engine/repository/risk_repo.py:252"
+      ],
+      "http_codes": []
+    },
+    "BROKER_SYNC_STALE": {
+      "code": "BROKER_SYNC_STALE",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/risk_engine/repository/risk_repo.py:280"
+      ],
+      "http_codes": []
+    },
+    "BROKER_SYNC_TABLE_MISSING": {
+      "code": "BROKER_SYNC_TABLE_MISSING",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/risk_engine/repository/risk_repo.py:200",
+        "services/risk_engine/repository/risk_repo.py:231"
+      ],
+      "http_codes": []
+    },
+    "CANCEL_ACCEPTED": {
+      "code": "CANCEL_ACCEPTED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:870",
+        "services/gateway/main.py:1102"
+      ],
+      "http_codes": []
+    },
+    "CHILD_RETRY_LIMIT_REACHED": {
+      "code": "CHILD_RETRY_LIMIT_REACHED",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:343"
+      ],
+      "http_codes": []
+    },
+    "CLOSED": {
+      "code": "CLOSED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:649"
+      ],
+      "http_codes": []
+    },
+    "CONFLICT": {
+      "code": "CONFLICT",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:850",
+        "services/gateway/main.py:887"
+      ],
+      "http_codes": []
+    },
+    "COPY_POLICY_UPSERTED": {
+      "code": "COPY_POLICY_UPSERTED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:2005"
+      ],
+      "http_codes": []
+    },
+    "DEPLOYMENT_STATE_SET": {
+      "code": "DEPLOYMENT_STATE_SET",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:2345"
+      ],
+      "http_codes": []
+    },
+    "DISABLED": {
+      "code": "DISABLED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:568",
+        "services/gateway/main.py:742",
+        "services/gateway/main.py:776"
+      ],
+      "http_codes": []
+    },
+    "DUPLICATE": {
+      "code": "DUPLICATE",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/repository/event_store.py:165"
+      ],
+      "http_codes": []
+    },
+    "DUPLICATE_FILL": {
+      "code": "DUPLICATE_FILL",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/portfolio/repository/portfolio_repo.py:59"
+      ],
+      "http_codes": []
+    },
+    "ENTRY_FILL_LOOKUP_FAILED": {
+      "code": "ENTRY_FILL_LOOKUP_FAILED",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:424"
+      ],
+      "http_codes": []
+    },
+    "ENTRY_TERMINAL": {
+      "code": "ENTRY_TERMINAL",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:644"
+      ],
+      "http_codes": []
+    },
+    "ERROR": {
+      "code": "ERROR",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:419",
+        "services/gateway/core/bracket_manager.py:430",
+        "services/gateway/core/bracket_manager.py:436",
+        "services/gateway/core/sizing.py:59",
+        "services/gateway/main.py:349",
+        "services/gateway/main.py:543",
+        "services/gateway/main.py:715"
+      ],
+      "http_codes": []
+    },
+    "INSUFFICIENT_BALANCE": {
+      "code": "INSUFFICIENT_BALANCE",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/portfolio_management/repository.py:3812"
+      ],
+      "http_codes": []
+    },
+    "INSUFFICIENT_POSITION": {
+      "code": "INSUFFICIENT_POSITION",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/portfolio_management/repository.py:3774"
+      ],
+      "http_codes": []
+    },
+    "INSUFFICIENT_SETTLED_POSITION": {
+      "code": "INSUFFICIENT_SETTLED_POSITION",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/portfolio_management/repository.py:3790"
+      ],
+      "http_codes": []
+    },
+    "INTENTS_QUEUED": {
+      "code": "INTENTS_QUEUED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:2055"
+      ],
+      "http_codes": []
+    },
+    "INVALID_API_KEY": {
+      "code": "INVALID_API_KEY",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/gateway/core/engine.py:125"
+      ],
+      "http_codes": [
+        403
+      ]
+    },
+    "INVALID_CAPITAL_MODEL": {
+      "code": "INVALID_CAPITAL_MODEL",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/core/sizing.py:76"
+      ],
+      "http_codes": []
+    },
+    "INVALID_ENTRY_FILL_DISTANCE": {
+      "code": "INVALID_ENTRY_FILL_DISTANCE",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:436",
+        "services/gateway/core/bracket_manager.py:438"
+      ],
+      "http_codes": []
+    },
+    "INVALID_ENTRY_PRICE": {
+      "code": "INVALID_ENTRY_PRICE",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/core/sizing.py:59"
+      ],
+      "http_codes": []
+    },
+    "INVALID_ENTRY_SIDE": {
+      "code": "INVALID_ENTRY_SIDE",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:430"
+      ],
+      "http_codes": []
+    },
+    "INVALID_MARKET_PRICE": {
+      "code": "INVALID_MARKET_PRICE",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/market_data.py:157"
+      ],
+      "http_codes": []
+    },
+    "IN_FLIGHT": {
+      "code": "IN_FLIGHT",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:608"
+      ],
+      "http_codes": []
+    },
+    "LEG_NOT_OPEN": {
+      "code": "LEG_NOT_OPEN",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:385"
+      ],
+      "http_codes": []
+    },
+    "MAKER": {
+      "code": "MAKER",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/paper_execution/matcher.py:116",
+        "services/paper_execution/matcher.py:122",
+        "services/paper_execution/matcher.py:129"
+      ],
+      "http_codes": []
+    },
+    "MARKET_DATA_NON_AUTHORITATIVE": {
+      "code": "MARKET_DATA_NON_AUTHORITATIVE",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/market_data.py:149"
+      ],
+      "http_codes": []
+    },
+    "MARKET_DATA_NOT_LIVE": {
+      "code": "MARKET_DATA_NOT_LIVE",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/market_data.py:151"
+      ],
+      "http_codes": []
+    },
+    "MARKET_DATA_OFFLINE": {
+      "code": "MARKET_DATA_OFFLINE",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/market_data.py:145"
+      ],
+      "http_codes": []
+    },
+    "MARKET_DATA_STALE": {
+      "code": "MARKET_DATA_STALE",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/market_data.py:168"
+      ],
+      "http_codes": []
+    },
+    "MARKET_DATA_TIMESTAMP_MISSING": {
+      "code": "MARKET_DATA_TIMESTAMP_MISSING",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/market_data.py:165"
+      ],
+      "http_codes": []
+    },
+    "MARKET_DATA_WRONG_MARKET": {
+      "code": "MARKET_DATA_WRONG_MARKET",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/market_data.py:153"
+      ],
+      "http_codes": []
+    },
+    "MARKET_DATA_WRONG_PRODUCT": {
+      "code": "MARKET_DATA_WRONG_PRODUCT",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/market_data.py:155"
+      ],
+      "http_codes": []
+    },
+    "MARKET_SEEDED": {
+      "code": "MARKET_SEEDED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:2592"
+      ],
+      "http_codes": []
+    },
+    "MARKET_SESSION_CLOSED": {
+      "code": "MARKET_SESSION_CLOSED",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/market_data.py:147"
+      ],
+      "http_codes": []
+    },
+    "MISSING_ENTRY": {
+      "code": "MISSING_ENTRY",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:419",
+        "services/gateway/core/bracket_manager.py:618"
+      ],
+      "http_codes": []
+    },
+    "MISSING_OR_PROCESSED": {
+      "code": "MISSING_OR_PROCESSED",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/order_groups/repository.py:416"
+      ],
+      "http_codes": []
+    },
+    "NATIVE_AMEND_UNSUPPORTED": {
+      "code": "NATIVE_AMEND_UNSUPPORTED",
+      "kinds": [
+        "response body `code`"
+      ],
+      "sites": [
+        "services/executor/handlers/binance_futs.py:121"
+      ],
+      "http_codes": []
+    },
+    "NON_PAPER_NOT_RESERVED": {
+      "code": "NON_PAPER_NOT_RESERVED",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/portfolio_management/repository.py:3753"
+      ],
+      "http_codes": []
+    },
+    "NON_POSITIVE_EQUITY": {
+      "code": "NON_POSITIVE_EQUITY",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/core/sizing.py:61"
+      ],
+      "http_codes": []
+    },
+    "NON_POSITIVE_RESOLVED_TRIGGER": {
+      "code": "NON_POSITIVE_RESOLVED_TRIGGER",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:445"
+      ],
+      "http_codes": []
+    },
+    "NOOP": {
+      "code": "NOOP",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:694"
+      ],
+      "http_codes": []
+    },
+    "NOT_FOUND": {
+      "code": "NOT_FOUND",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/executor/handlers/binance_futs.py:231",
+        "services/gateway/core/bracket_manager.py:614",
+        "services/gateway/main.py:818",
+        "services/gateway/main.py:835",
+        "services/gateway/main.py:859",
+        "services/gateway/repository/order_brackets.py:302"
+      ],
+      "http_codes": []
+    },
+    "NOT_IMPLEMENTED": {
+      "code": "NOT_IMPLEMENTED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:558"
+      ],
+      "http_codes": []
+    },
+    "NO_EVENTS": {
+      "code": "NO_EVENTS",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/repository/event_store.py:594"
+      ],
+      "http_codes": []
+    },
+    "NO_EXTERNAL_ORACLE": {
+      "code": "NO_EXTERNAL_ORACLE",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/replay/comparator.py:48"
+      ],
+      "http_codes": []
+    },
+    "NO_ORDERS": {
+      "code": "NO_ORDERS",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:1655"
+      ],
+      "http_codes": []
+    },
+    "NO_RESERVATION_REQUIRED": {
+      "code": "NO_RESERVATION_REQUIRED",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/portfolio_management/repository.py:3761"
+      ],
+      "http_codes": []
+    },
+    "OKX_EXECUTION_DISABLED": {
+      "code": "OKX_EXECUTION_DISABLED",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/main.py:784"
+      ],
+      "http_codes": []
+    },
+    "OKX_NATIVE_ORDER_GROUP_SUBMISSION_NOT_ACCEPTED": {
+      "code": "OKX_NATIVE_ORDER_GROUP_SUBMISSION_NOT_ACCEPTED",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/main.py:776"
+      ],
+      "http_codes": []
+    },
+    "OPEN_ORDERS_RECONCILED": {
+      "code": "OPEN_ORDERS_RECONCILED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:2501"
+      ],
+      "http_codes": []
+    },
+    "OPPOSITE_SIDE_ON_SHARED_ONE_WAY_BINDING": {
+      "code": "OPPOSITE_SIDE_ON_SHARED_ONE_WAY_BINDING",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/risk_engine/repository/risk_repo.py:456"
+      ],
+      "http_codes": []
+    },
+    "ORDER_EVENT_MISSING_KEYS": {
+      "code": "ORDER_EVENT_MISSING_KEYS",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/portfolio/repository/portfolio_repo.py:281"
+      ],
+      "http_codes": []
+    },
+    "ORDER_GROUP_COMPENSATION_ATTRIBUTION_UNSAFE": {
+      "code": "ORDER_GROUP_COMPENSATION_ATTRIBUTION_UNSAFE",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/main.py:358"
+      ],
+      "http_codes": []
+    },
+    "ORDER_GROUP_COMPENSATION_POLICY_MISMATCH": {
+      "code": "ORDER_GROUP_COMPENSATION_POLICY_MISMATCH",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/main.py:356"
+      ],
+      "http_codes": []
+    },
+    "ORDER_GROUP_ENGINE_V2_DISABLED": {
+      "code": "ORDER_GROUP_ENGINE_V2_DISABLED",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/main.py:742"
+      ],
+      "http_codes": []
+    },
+    "ORDER_GROUP_NOT_FOUND": {
+      "code": "ORDER_GROUP_NOT_FOUND",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/main.py:345"
+      ],
+      "http_codes": []
+    },
+    "ORDER_GROUP_SCOPE_RECONCILIATION_REQUIRED": {
+      "code": "ORDER_GROUP_SCOPE_RECONCILIATION_REQUIRED",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/main.py:347"
+      ],
+      "http_codes": []
+    },
+    "ORDER_NOT_FOUND": {
+      "code": "ORDER_NOT_FOUND",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/paper_execution/repository.py:372"
+      ],
+      "http_codes": []
+    },
+    "PAPER_NATIVE_AMEND": {
+      "code": "PAPER_NATIVE_AMEND",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/paper_execution/repository.py:438"
+      ],
+      "http_codes": []
+    },
+    "PENDING": {
+      "code": "PENDING",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:314"
+      ],
+      "http_codes": []
+    },
+    "PHYSICAL_OPEN_ORDERS_RECONCILED": {
+      "code": "PHYSICAL_OPEN_ORDERS_RECONCILED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:2432"
+      ],
+      "http_codes": []
+    },
+    "PHYSICAL_POSITIONS_RECONCILED": {
+      "code": "PHYSICAL_POSITIONS_RECONCILED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:2415"
+      ],
+      "http_codes": []
+    },
+    "PLANNED": {
+      "code": "PLANNED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:617",
+        "services/gateway/main.py:1647"
+      ],
+      "http_codes": []
+    },
+    "PORTFOLIO_ALPHA_MISMATCH": {
+      "code": "PORTFOLIO_ALPHA_MISMATCH",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/main.py:2191",
+        "services/gateway/main.py:2214",
+        "services/gateway/main.py:2250"
+      ],
+      "http_codes": []
+    },
+    "PORTFOLIO_STATE_SET": {
+      "code": "PORTFOLIO_STATE_SET",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:2330"
+      ],
+      "http_codes": []
+    },
+    "PORTFOLIO_UPSERTED": {
+      "code": "PORTFOLIO_UPSERTED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:2309"
+      ],
+      "http_codes": []
+    },
+    "POSITIONS_RECONCILED": {
+      "code": "POSITIONS_RECONCILED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:2483"
+      ],
+      "http_codes": []
+    },
+    "PRICE_REQUIRED": {
+      "code": "PRICE_REQUIRED",
+      "kinds": [
+        "response body `code`"
+      ],
+      "sites": [
+        "services/executor/handlers/binance_futs.py:128"
+      ],
+      "http_codes": []
+    },
+    "QUERY_TIMEOUT": {
+      "code": "QUERY_TIMEOUT",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/executor/handlers/binance_futs.py:223"
+      ],
+      "http_codes": []
+    },
+    "READY": {
+      "code": "READY",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:2596"
+      ],
+      "http_codes": []
+    },
+    "RECONCILE_QUEUED": {
+      "code": "RECONCILE_QUEUED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:890"
+      ],
+      "http_codes": []
+    },
+    "REGISTERED": {
+      "code": "REGISTERED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:1952"
+      ],
+      "http_codes": []
+    },
+    "REJECTED": {
+      "code": "REJECTED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:259",
+        "services/gateway/core/bracket_manager.py:274",
+        "services/gateway/core/bracket_manager.py:284",
+        "services/gateway/core/engine.py:47",
+        "services/gateway/core/engine.py:48",
+        "services/gateway/main.py:316",
+        "services/gateway/main.py:317",
+        "services/gateway/main.py:392"
+      ],
+      "http_codes": []
+    },
+    "RELEASED": {
+      "code": "RELEASED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:903"
+      ],
+      "http_codes": []
+    },
+    "RESOLVED": {
+      "code": "RESOLVED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:416",
+        "services/gateway/core/bracket_manager.py:458"
+      ],
+      "http_codes": []
+    },
+    "RETRIED_CHILDREN": {
+      "code": "RETRIED_CHILDREN",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:662"
+      ],
+      "http_codes": []
+    },
+    "RISK_GRANT_EXPIRED": {
+      "code": "RISK_GRANT_EXPIRED",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/repository/risk_grants.py:287"
+      ],
+      "http_codes": []
+    },
+    "RISK_GRANT_EXPIRES_AT_INVALID": {
+      "code": "RISK_GRANT_EXPIRES_AT_INVALID",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/repository/risk_grants.py:289"
+      ],
+      "http_codes": []
+    },
+    "RISK_GRANT_ID_MISSING": {
+      "code": "RISK_GRANT_ID_MISSING",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/repository/risk_grants.py:270"
+      ],
+      "http_codes": []
+    },
+    "RISK_GRANT_NOT_FOUND": {
+      "code": "RISK_GRANT_NOT_FOUND",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/repository/risk_grants.py:278"
+      ],
+      "http_codes": []
+    },
+    "RISK_GRANT_ORDER_NOT_APPROVED": {
+      "code": "RISK_GRANT_ORDER_NOT_APPROVED",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/repository/risk_grants.py:301"
+      ],
+      "http_codes": []
+    },
+    "RISK_GRANT_QUANTITY_EXCEEDED": {
+      "code": "RISK_GRANT_QUANTITY_EXCEEDED",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/repository/risk_grants.py:307"
+      ],
+      "http_codes": []
+    },
+    "RISK_GRANT_SESSION_MISMATCH": {
+      "code": "RISK_GRANT_SESSION_MISMATCH",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/repository/risk_grants.py:291"
+      ],
+      "http_codes": []
+    },
+    "RISK_GRANT_SIDE_MISMATCH": {
+      "code": "RISK_GRANT_SIDE_MISMATCH",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/repository/risk_grants.py:305"
+      ],
+      "http_codes": []
+    },
+    "RISK_GRANT_SYMBOL_MISMATCH": {
+      "code": "RISK_GRANT_SYMBOL_MISMATCH",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/risk_engine/repository/risk_grants.py:303"
+      ],
+      "http_codes": []
+    },
+    "RISK_UPDATED": {
+      "code": "RISK_UPDATED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:1979"
+      ],
+      "http_codes": []
+    },
+    "SEEDED": {
+      "code": "SEEDED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:1928"
+      ],
+      "http_codes": []
+    },
+    "SESSION_ALPHA_MISMATCH": {
+      "code": "SESSION_ALPHA_MISMATCH",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/main.py:1722",
+        "services/gateway/main.py:1747",
+        "services/gateway/main.py:1766"
+      ],
+      "http_codes": []
+    },
+    "SKIPPED": {
+      "code": "SKIPPED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:343",
+        "services/gateway/core/bracket_manager.py:385",
+        "services/gateway/core/sizing.py:61",
+        "services/gateway/core/sizing.py:76"
+      ],
+      "http_codes": []
+    },
+    "STALE_EXECUTION_INTENT": {
+      "code": "STALE_EXECUTION_INTENT",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "domain/command_freshness.py:43"
+      ],
+      "http_codes": []
+    },
+    "STOP_FILLED": {
+      "code": "STOP_FILLED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:673"
+      ],
+      "http_codes": []
+    },
+    "SUBMITTED_PENDING_CHILDREN": {
+      "code": "SUBMITTED_PENDING_CHILDREN",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:687"
+      ],
+      "http_codes": []
+    },
+    "SYMBOLS_SYNCED": {
+      "code": "SYMBOLS_SYNCED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:2543"
+      ],
+      "http_codes": []
+    },
+    "TAKER": {
+      "code": "TAKER",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/paper_execution/matcher.py:114",
+        "services/paper_execution/matcher.py:119",
+        "services/paper_execution/matcher.py:123"
+      ],
+      "http_codes": []
+    },
+    "TERMINALIZED": {
+      "code": "TERMINALIZED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/repository/order_brackets.py:351"
+      ],
+      "http_codes": []
+    },
+    "TP_FILLED": {
+      "code": "TP_FILLED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:676"
+      ],
+      "http_codes": []
+    },
+    "TRADING_STATE_SET": {
+      "code": "TRADING_STATE_SET",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:2020"
+      ],
+      "http_codes": []
+    },
+    "UNAUTHORIZED_ALPHA": {
+      "code": "UNAUTHORIZED_ALPHA",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/gateway/core/engine.py:113"
+      ],
+      "http_codes": [
+        403
+      ]
+    },
+    "UNCERTAIN": {
+      "code": "UNCERTAIN",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/executor/handlers/binance_futs.py:108",
+        "services/executor/handlers/binance_futs.py:149",
+        "services/executor/handlers/binance_futs.py:223"
+      ],
+      "http_codes": []
+    },
+    "UNKNOWN": {
+      "code": "UNKNOWN",
+      "kinds": [
+        "auth/validation tuple"
+      ],
+      "sites": [
+        "services/paper_execution/matcher.py:138"
+      ],
+      "http_codes": []
+    },
+    "UNSUPPORTED_CONTRACT_REVISION": {
+      "code": "UNSUPPORTED_CONTRACT_REVISION",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:112"
+      ],
+      "http_codes": []
+    },
+    "UNSUPPORTED_ORDER_STYLE": {
+      "code": "UNSUPPORTED_ORDER_STYLE",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:259",
+        "services/gateway/core/bracket_manager.py:274",
+        "services/gateway/core/bracket_manager.py:284"
+      ],
+      "http_codes": []
+    },
+    "UPDATED": {
+      "code": "UPDATED",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/main.py:851"
+      ],
+      "http_codes": []
+    },
+    "VERSION_OR_STATE_CONFLICT": {
+      "code": "VERSION_OR_STATE_CONFLICT",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/main.py:850"
+      ],
+      "http_codes": []
+    },
+    "WAITING": {
+      "code": "WAITING",
+      "kinds": [
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:424",
+        "services/gateway/core/bracket_manager.py:426"
+      ],
+      "http_codes": []
+    },
+    "WAITING_FOR_ENTRY_FILL": {
+      "code": "WAITING_FOR_ENTRY_FILL",
+      "kinds": [
+        "response body `reason`",
+        "response body `status`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:426",
+        "services/gateway/core/bracket_manager.py:626",
+        "services/gateway/core/bracket_manager.py:637"
+      ],
+      "http_codes": []
+    },
+    "WAITING_FOR_POSITION_PROJECTION": {
+      "code": "WAITING_FOR_POSITION_PROJECTION",
+      "kinds": [
+        "response body `reason`"
+      ],
+      "sites": [
+        "services/gateway/core/bracket_manager.py:314"
+      ],
+      "http_codes": []
+    }
+  },
+  "deny_reason_enums": {
+    "RiskDenyReason": {
+      "values": [
+        "TRADING_HALTED",
+        "REDUCE_ONLY_REQUIRED",
+        "INSTRUMENT_NOT_FOUND",
+        "SESSION_CLOSED",
+        "PRICE_INVALID",
+        "QUANTITY_INVALID",
+        "NOTIONAL_LIMIT",
+        "EXPOSURE_LIMIT",
+        "INSUFFICIENT_BALANCE",
+        "RATE_LIMIT"
+      ],
+      "source": "domain/risk.py:13"
+    }
+  },
+  "http_exception_sites": [
+    {
+      "http_status": 503,
+      "detail": "replay v2 is disabled",
+      "site": "services/gateway/main.py:141"
+    },
+    {
+      "http_status": 503,
+      "detail": "admin auth is not configured",
+      "site": "services/gateway/main.py:343"
+    },
+    {
+      "http_status": 403,
+      "detail": "invalid admin credentials",
+      "site": "services/gateway/main.py:344"
+    },
+    {
+      "http_status": 400,
+      "detail": null,
+      "site": "services/gateway/main.py:1244"
+    },
+    {
+      "http_status": 404,
+      "detail": "replay job not found",
+      "site": "services/gateway/main.py:1259"
+    },
+    {
+      "http_status": 404,
+      "detail": "replay job not found",
+      "site": "services/gateway/main.py:1269"
+    },
+    {
+      "http_status": 400,
+      "detail": null,
+      "site": "services/gateway/main.py:1289"
+    },
+    {
+      "http_status": 400,
+      "detail": null,
+      "site": "services/gateway/main.py:1307"
+    }
+  ],
+  "status_codes_per_operation": {
+    "POST /admin/paper/accounts/seed": [
+      200,
+      400
+    ],
+    "POST /bulk": [
+      200
+    ],
+    "DELETE /cancel": [
+      200
+    ],
+    "GET /health": [
+      200
+    ],
+    "POST /submit": [
+      200
+    ],
+    "POST /update": [
+      200
+    ],
+    "GET /v1/accounts/{account_id}/balances": [
+      200
+    ],
+    "GET /v1/accounts/{account_id}/preflight": [
+      200,
+      400,
+      403
+    ],
+    "POST /v1/admin/accounts/paper/seed": [
+      200,
+      400
+    ],
+    "PUT /v1/admin/accounts/{account_id}/policy": [
+      200,
+      400
+    ],
+    "POST /v1/admin/accounts/{account_id}/reconcile-open-orders": [
+      200,
+      400
+    ],
+    "POST /v1/admin/accounts/{account_id}/reconcile-positions": [
+      200,
+      400
+    ],
+    "GET /v1/admin/accounts/{account_id}/state": [
+      200,
+      400
+    ],
+    "POST /v1/admin/accounts/{account_id}/sync": [
+      200,
+      400
+    ],
+    "POST /v1/admin/alphas/register": [
+      200,
+      400
+    ],
+    "GET /v1/admin/alphas/{alpha_id}": [
+      200,
+      404
+    ],
+    "PATCH /v1/admin/alphas/{alpha_id}/risk": [
+      200,
+      400
+    ],
+    "GET /v1/admin/broker-bindings": [
+      200,
+      400
+    ],
+    "GET /v1/admin/broker-bindings/{external_account_ref}/exposure": [
+      200,
+      400
+    ],
+    "POST /v1/admin/broker-bindings/{external_account_ref}/reconcile-open-orders": [
+      200,
+      400
+    ],
+    "POST /v1/admin/broker-bindings/{external_account_ref}/reconcile-positions": [
+      200,
+      400
+    ],
+    "GET /v1/admin/broker-bindings/{external_account_ref}/state": [
+      200,
+      400
+    ],
+    "GET /v1/admin/copy/policies": [
+      200
+    ],
+    "PUT /v1/admin/copy/policies/{strategy_id}": [
+      200,
+      400
+    ],
+    "PATCH /v1/admin/deployments/{deployment_id}/state": [
+      200,
+      400
+    ],
+    "GET /v1/admin/events": [
+      200
+    ],
+    "POST /v1/admin/market/seed": [
+      200,
+      400
+    ],
+    "POST /v1/admin/ops/emergency-close": [
+      200,
+      400
+    ],
+    "GET /v1/admin/ops/emergency-close/plan": [
+      200,
+      400
+    ],
+    "GET /v1/admin/ops/emergency-close/{operation_id}": [
+      200,
+      404
+    ],
+    "POST /v1/admin/ops/emergency-close/{operation_id}/verify": [
+      200,
+      400
+    ],
+    "POST /v1/admin/order-brackets/lifecycle-audit": [
+      200,
+      400
+    ],
+    "GET /v1/admin/order-groups": [
+      200
+    ],
+    "GET /v1/admin/order-groups/{group_id}": [
+      200,
+      404
+    ],
+    "POST /v1/admin/order-groups/{group_id}/reconcile": [
+      200,
+      400,
+      404,
+      409
+    ],
+    "POST /v1/admin/order-groups/{group_id}/release": [
+      200,
+      400,
+      404
+    ],
+    "GET /v1/admin/performance/accounts/latest": [
+      200
+    ],
+    "GET /v1/admin/performance/accounts/{account_id}/history": [
+      200
+    ],
+    "GET /v1/admin/performance/dashboard": [
+      200
+    ],
+    "GET /v1/admin/performance/instruments/latest": [
+      200
+    ],
+    "GET /v1/admin/performance/portfolios/{portfolio_id}/history": [
+      200
+    ],
+    "GET /v1/admin/performance/portfolios/{portfolio_id}/latest": [
+      200
+    ],
+    "POST /v1/admin/portfolio-allocations": [
+      200,
+      400
+    ],
+    "GET /v1/admin/portfolio-capital/history": [
+      200,
+      400
+    ],
+    "GET /v1/admin/portfolios": [
+      200
+    ],
+    "POST /v1/admin/portfolios": [
+      200,
+      400
+    ],
+    "PATCH /v1/admin/portfolios/{portfolio_id}/state": [
+      200,
+      400
+    ],
+    "GET /v1/admin/replay/compare": [
+      200
+    ],
+    "POST /v1/admin/replay/export": [
+      200,
+      400
+    ],
+    "GET /v1/admin/replay/jobs": [
+      200
+    ],
+    "POST /v1/admin/replay/jobs": [
+      200,
+      400
+    ],
+    "GET /v1/admin/replay/jobs/{replay_id}": [
+      200,
+      404
+    ],
+    "POST /v1/admin/replay/jobs/{replay_id}/run": [
+      200,
+      404
+    ],
+    "GET /v1/admin/replay/order-lifecycle": [
+      200
+    ],
+    "POST /v1/admin/replay/quantbt-diff": [
+      200,
+      400
+    ],
+    "GET /v1/admin/sizing/decisions": [
+      200
+    ],
+    "GET /v1/admin/sizing/decisions/summary": [
+      200
+    ],
+    "GET /v1/admin/sizing/decisions/{decision_id}": [
+      200,
+      404
+    ],
+    "GET /v1/admin/symbols": [
+      200
+    ],
+    "POST /v1/admin/symbols/sync": [
+      200
+    ],
+    "POST /v1/admin/trading-state": [
+      200,
+      400
+    ],
+    "GET /v1/contracts": [
+      200
+    ],
+    "GET /v1/events": [
+      200
+    ],
+    "POST /v1/execution-sessions": [
+      200,
+      400
+    ],
+    "GET /v1/execution-sessions/{execution_session_id}": [
+      200,
+      403,
+      404
+    ],
+    "PATCH /v1/execution-sessions/{execution_session_id}": [
+      200,
+      400,
+      403,
+      404
+    ],
+    "POST /v1/execution-sessions/{execution_session_id}": [
+      200,
+      400,
+      403,
+      404
+    ],
+    "POST /v1/execution-sessions/{execution_session_id}/pre-risk": [
+      200,
+      400,
+      403,
+      404,
+      409
+    ],
+    "GET /v1/fills": [
+      200
+    ],
+    "GET /v1/health": [
+      200
+    ],
+    "GET /v1/health/capabilities": [
+      200
+    ],
+    "GET /v1/market/info/{venue}/{symbol}": [
+      200,
+      404
+    ],
+    "GET /v1/market/latest/{venue}/{symbol}": [
+      200,
+      404
+    ],
+    "GET /v1/order-brackets": [
+      200
+    ],
+    "POST /v1/order-brackets": [
+      200,
+      400
+    ],
+    "DELETE /v1/order-brackets/{bracket_group_id}": [
+      200,
+      404
+    ],
+    "GET /v1/order-brackets/{bracket_group_id}": [
+      200,
+      404
+    ],
+    "PATCH /v1/order-brackets/{bracket_group_id}": [
+      200,
+      400,
+      404
+    ],
+    "GET /v1/order-groups": [
+      200
+    ],
+    "POST /v1/order-groups": [
+      200,
+      400,
+      409,
+      503
+    ],
+    "DELETE /v1/order-groups/{group_id}": [
+      200,
+      404
+    ],
+    "GET /v1/order-groups/{group_id}": [
+      200,
+      404
+    ],
+    "PATCH /v1/order-groups/{group_id}": [
+      200,
+      400,
+      404,
+      409
+    ],
+    "POST /v1/order-packages/arb": [
+      200,
+      400,
+      409,
+      501
+    ],
+    "GET /v1/orders": [
+      200
+    ],
+    "POST /v1/orders": [
+      200
+    ],
+    "POST /v1/orders/bulk": [
+      200
+    ],
+    "DELETE /v1/orders/{client_order_id}": [
+      200
+    ],
+    "GET /v1/orders/{client_order_id}": [
+      200
+    ],
+    "PATCH /v1/orders/{client_order_id}": [
+      200
+    ],
+    "GET /v1/performance/accounts/latest": [
+      200,
+      403
+    ],
+    "GET /v1/performance/accounts/{account_id}/history": [
+      200,
+      403
+    ],
+    "GET /v1/performance/dashboard": [
+      200,
+      403
+    ],
+    "GET /v1/performance/instruments/latest": [
+      200,
+      403
+    ],
+    "GET /v1/performance/portfolios/{portfolio_id}/history": [
+      200,
+      403
+    ],
+    "GET /v1/performance/portfolios/{portfolio_id}/latest": [
+      200,
+      403
+    ],
+    "POST /v1/portfolio-targets/rebalance": [
+      200,
+      400
+    ],
+    "GET /v1/portfolio/summary": [
+      200
+    ],
+    "GET /v1/positions": [
+      200
+    ],
+    "GET /v1/replay/compare": [
+      200
+    ],
+    "GET /v1/replay/order-lifecycle": [
+      200
+    ],
+    "GET /v1/sizing/decisions": [
+      200,
+      403
+    ],
+    "GET /v1/sizing/decisions/summary": [
+      200,
+      403
+    ],
+    "POST /v1/sizing/estimate": [
+      200,
+      400,
+      403
+    ]
+  },
+  "reason_code_to_endpoints": {
+    "NOT_FOUND": [
+      "DELETE /v1/order-groups/{group_id}",
+      "GET /v1/order-groups/{group_id}",
+      "PATCH /v1/order-groups/{group_id}"
+    ],
+    "ERROR": [
+      "POST /v1/order-packages/arb"
+    ],
+    "ACCOUNT_ALPHA_MISMATCH": [
+      "GET /v1/accounts/{account_id}/preflight",
+      "POST /v1/sizing/estimate"
+    ],
+    "ARB_PACKAGE_SUBMIT_ONLY_SUPPORTS_PAPER_MODE_FOR_NOW": [
+      "POST /v1/order-packages/arb"
+    ],
+    "NOT_IMPLEMENTED": [
+      "POST /v1/order-packages/arb"
+    ],
+    "BATCH_PRE_RISK_DISABLED": [
+      "POST /v1/execution-sessions/{execution_session_id}/pre-risk",
+      "POST /v1/order-packages/arb"
+    ],
+    "DISABLED": [
+      "POST /v1/order-groups",
+      "POST /v1/order-packages/arb"
+    ],
+    "PLANNED": [
+      "POST /v1/order-packages/arb",
+      "POST /v1/portfolio-targets/rebalance"
+    ],
+    "ATOMIC_PACKAGE_PRE_RISK_REJECTED": [
+      "POST /v1/order-packages/arb"
+    ],
+    "ORDER_GROUP_ENGINE_V2_DISABLED": [
+      "POST /v1/order-groups"
+    ],
+    "OKX_NATIVE_ORDER_GROUP_SUBMISSION_NOT_ACCEPTED": [
+      "POST /v1/order-groups"
+    ],
+    "OKX_EXECUTION_DISABLED": [
+      "POST /v1/order-groups"
+    ],
+    "VERSION_OR_STATE_CONFLICT": [
+      "PATCH /v1/order-groups/{group_id}"
+    ],
+    "CONFLICT": [
+      "PATCH /v1/order-groups/{group_id}",
+      "POST /v1/admin/order-groups/{group_id}/reconcile"
+    ],
+    "UPDATED": [
+      "PATCH /v1/order-groups/{group_id}"
+    ],
+    "CANCEL_ACCEPTED": [
+      "DELETE /v1/order-brackets/{bracket_group_id}",
+      "DELETE /v1/order-groups/{group_id}"
+    ],
+    "RECONCILE_QUEUED": [
+      "POST /v1/admin/order-groups/{group_id}/reconcile"
+    ],
+    "RELEASED": [
+      "POST /v1/admin/order-groups/{group_id}/release"
+    ],
+    "NO_ORDERS": [
+      "POST /v1/portfolio-targets/rebalance"
+    ],
+    "SESSION_ALPHA_MISMATCH": [
+      "GET /v1/execution-sessions/{execution_session_id}",
+      "PATCH /v1/execution-sessions/{execution_session_id}",
+      "POST /v1/execution-sessions/{execution_session_id}/pre-risk"
+    ],
+    "SEEDED": [
+      "POST /admin/paper/accounts/seed",
+      "POST /v1/admin/accounts/paper/seed"
+    ],
+    "REGISTERED": [
+      "POST /v1/admin/alphas/register"
+    ],
+    "RISK_UPDATED": [
+      "PATCH /v1/admin/alphas/{alpha_id}/risk"
+    ],
+    "COPY_POLICY_UPSERTED": [
+      "PUT /v1/admin/copy/policies/{strategy_id}"
+    ],
+    "TRADING_STATE_SET": [
+      "POST /v1/admin/trading-state"
+    ],
+    "INTENTS_QUEUED": [
+      "POST /v1/admin/ops/emergency-close"
+    ],
+    "PORTFOLIO_ALPHA_MISMATCH": [
+      "GET /v1/performance/dashboard",
+      "GET /v1/performance/portfolios/{portfolio_id}/history",
+      "GET /v1/performance/portfolios/{portfolio_id}/latest"
+    ],
+    "PORTFOLIO_UPSERTED": [
+      "POST /v1/admin/portfolios"
+    ],
+    "PORTFOLIO_STATE_SET": [
+      "PATCH /v1/admin/portfolios/{portfolio_id}/state"
+    ],
+    "DEPLOYMENT_STATE_SET": [
+      "PATCH /v1/admin/deployments/{deployment_id}/state"
+    ],
+    "ALLOCATION_UPSERTED": [
+      "POST /v1/admin/portfolio-allocations"
+    ],
+    "PHYSICAL_POSITIONS_RECONCILED": [
+      "POST /v1/admin/broker-bindings/{external_account_ref}/reconcile-positions"
+    ],
+    "PHYSICAL_OPEN_ORDERS_RECONCILED": [
+      "POST /v1/admin/broker-bindings/{external_account_ref}/reconcile-open-orders"
+    ],
+    "ACCOUNT_POLICY_UPSERTED": [
+      "PUT /v1/admin/accounts/{account_id}/policy"
+    ],
+    "ACCOUNT_SYNCED": [
+      "POST /v1/admin/accounts/{account_id}/sync"
+    ],
+    "POSITIONS_RECONCILED": [
+      "POST /v1/admin/accounts/{account_id}/reconcile-positions"
+    ],
+    "OPEN_ORDERS_RECONCILED": [
+      "POST /v1/admin/accounts/{account_id}/reconcile-open-orders"
+    ],
+    "SYMBOLS_SYNCED": [
+      "POST /v1/admin/symbols/sync"
+    ],
+    "MARKET_SEEDED": [
+      "POST /v1/admin/market/seed"
+    ],
+    "READY": [
+      "GET /health"
+    ]
+  },
+  "endpoint_to_reason_codes": {
+    "DELETE /v1/order-brackets/{bracket_group_id}": [
+      "CANCEL_ACCEPTED"
+    ],
+    "DELETE /v1/order-groups/{group_id}": [
+      "CANCEL_ACCEPTED",
+      "NOT_FOUND"
+    ],
+    "GET /health": [
+      "READY"
+    ],
+    "GET /v1/accounts/{account_id}/preflight": [
+      "ACCOUNT_ALPHA_MISMATCH"
+    ],
+    "GET /v1/execution-sessions/{execution_session_id}": [
+      "SESSION_ALPHA_MISMATCH"
+    ],
+    "GET /v1/order-groups/{group_id}": [
+      "NOT_FOUND"
+    ],
+    "GET /v1/performance/dashboard": [
+      "PORTFOLIO_ALPHA_MISMATCH"
+    ],
+    "GET /v1/performance/portfolios/{portfolio_id}/history": [
+      "PORTFOLIO_ALPHA_MISMATCH"
+    ],
+    "GET /v1/performance/portfolios/{portfolio_id}/latest": [
+      "PORTFOLIO_ALPHA_MISMATCH"
+    ],
+    "PATCH /v1/admin/alphas/{alpha_id}/risk": [
+      "RISK_UPDATED"
+    ],
+    "PATCH /v1/admin/deployments/{deployment_id}/state": [
+      "DEPLOYMENT_STATE_SET"
+    ],
+    "PATCH /v1/admin/portfolios/{portfolio_id}/state": [
+      "PORTFOLIO_STATE_SET"
+    ],
+    "PATCH /v1/execution-sessions/{execution_session_id}": [
+      "SESSION_ALPHA_MISMATCH"
+    ],
+    "PATCH /v1/order-groups/{group_id}": [
+      "CONFLICT",
+      "NOT_FOUND",
+      "UPDATED",
+      "VERSION_OR_STATE_CONFLICT"
+    ],
+    "POST /admin/paper/accounts/seed": [
+      "SEEDED"
+    ],
+    "POST /v1/admin/accounts/paper/seed": [
+      "SEEDED"
+    ],
+    "POST /v1/admin/accounts/{account_id}/reconcile-open-orders": [
+      "OPEN_ORDERS_RECONCILED"
+    ],
+    "POST /v1/admin/accounts/{account_id}/reconcile-positions": [
+      "POSITIONS_RECONCILED"
+    ],
+    "POST /v1/admin/accounts/{account_id}/sync": [
+      "ACCOUNT_SYNCED"
+    ],
+    "POST /v1/admin/alphas/register": [
+      "REGISTERED"
+    ],
+    "POST /v1/admin/broker-bindings/{external_account_ref}/reconcile-open-orders": [
+      "PHYSICAL_OPEN_ORDERS_RECONCILED"
+    ],
+    "POST /v1/admin/broker-bindings/{external_account_ref}/reconcile-positions": [
+      "PHYSICAL_POSITIONS_RECONCILED"
+    ],
+    "POST /v1/admin/market/seed": [
+      "MARKET_SEEDED"
+    ],
+    "POST /v1/admin/ops/emergency-close": [
+      "INTENTS_QUEUED"
+    ],
+    "POST /v1/admin/order-groups/{group_id}/reconcile": [
+      "CONFLICT",
+      "RECONCILE_QUEUED"
+    ],
+    "POST /v1/admin/order-groups/{group_id}/release": [
+      "RELEASED"
+    ],
+    "POST /v1/admin/portfolio-allocations": [
+      "ALLOCATION_UPSERTED"
+    ],
+    "POST /v1/admin/portfolios": [
+      "PORTFOLIO_UPSERTED"
+    ],
+    "POST /v1/admin/symbols/sync": [
+      "SYMBOLS_SYNCED"
+    ],
+    "POST /v1/admin/trading-state": [
+      "TRADING_STATE_SET"
+    ],
+    "POST /v1/execution-sessions/{execution_session_id}/pre-risk": [
+      "BATCH_PRE_RISK_DISABLED",
+      "SESSION_ALPHA_MISMATCH"
+    ],
+    "POST /v1/order-groups": [
+      "DISABLED",
+      "OKX_EXECUTION_DISABLED",
+      "OKX_NATIVE_ORDER_GROUP_SUBMISSION_NOT_ACCEPTED",
+      "ORDER_GROUP_ENGINE_V2_DISABLED"
+    ],
+    "POST /v1/order-packages/arb": [
+      "ARB_PACKAGE_SUBMIT_ONLY_SUPPORTS_PAPER_MODE_FOR_NOW",
+      "ATOMIC_PACKAGE_PRE_RISK_REJECTED",
+      "BATCH_PRE_RISK_DISABLED",
+      "DISABLED",
+      "ERROR",
+      "NOT_IMPLEMENTED",
+      "PLANNED"
+    ],
+    "POST /v1/portfolio-targets/rebalance": [
+      "NO_ORDERS",
+      "PLANNED"
+    ],
+    "POST /v1/sizing/estimate": [
+      "ACCOUNT_ALPHA_MISMATCH"
+    ],
+    "PUT /v1/admin/accounts/{account_id}/policy": [
+      "ACCOUNT_POLICY_UPSERTED"
+    ],
+    "PUT /v1/admin/copy/policies/{strategy_id}": [
+      "COPY_POLICY_UPSERTED"
+    ]
+  },
+  "attribution_note": "Attribution covers reason codes raised directly inside a gateway handler body. Codes raised deeper (engine, risk, repositories) reach many endpoints and are listed in `reason_codes` with their defining call site instead."
+}

@@ -1,0 +1,395 @@
+{
+  "provenance": {
+    "generated_by": "scripts/99_assemble.py",
+    "read_only": true,
+    "trading_system_commit": "9081397de9e981c43b4e0f67fabe747e7ed964c7",
+    "sources": [
+      "<entire contract pack>"
+    ],
+    "note": "Derived from source/runtime read-only inspection. No Trading System file was modified."
+  },
+  "files": 84,
+  "total_bytes": 2539681,
+  "redaction_audit": "PASS",
+  "handoff_coverage": [
+    {
+      "handoff_section": "7.1 runtime identity",
+      "artifacts_expected": [
+        "evidence/phaseF/runtime_identity.txt"
+      ],
+      "artifacts_present": [
+        "evidence/phaseF/runtime_identity.txt"
+      ],
+      "status": "COVERED"
+    },
+    {
+      "handoff_section": "7.2 machine-readable API",
+      "artifacts_expected": [
+        "openapi.sanitized.json",
+        "extract/api-surface.json"
+      ],
+      "artifacts_present": [
+        "openapi.sanitized.json",
+        "extract/api-surface.json"
+      ],
+      "status": "COVERED"
+    },
+    {
+      "handoff_section": "7.3 capability discovery",
+      "artifacts_expected": [
+        "extract/vocabularies.json",
+        "extract/runtime-probes.json",
+        "capabilities.sanitized.json"
+      ],
+      "artifacts_present": [
+        "extract/vocabularies.json",
+        "extract/runtime-probes.json",
+        "capabilities.sanitized.json"
+      ],
+      "status": "COVERED"
+    },
+    {
+      "handoff_section": "7.4 query/read inventory",
+      "artifacts_expected": [
+        "extract/api-surface.json",
+        "extract/response-shapes.json",
+        "extract/serialization-contract.json"
+      ],
+      "artifacts_present": [
+        "extract/api-surface.json",
+        "extract/response-shapes.json",
+        "extract/serialization-contract.json"
+      ],
+      "status": "COVERED"
+    },
+    {
+      "handoff_section": "7.5 event/outbox inventory",
+      "artifacts_expected": [
+        "extract/event-catalog.json"
+      ],
+      "artifacts_present": [
+        "extract/event-catalog.json"
+      ],
+      "status": "COVERED"
+    },
+    {
+      "handoff_section": "7.6 admin/CLI mapping",
+      "artifacts_expected": [
+        "extract/cli-command-map.json",
+        "extract/api-surface.json",
+        "extract/request-contracts.json",
+        "command-catalog.yaml"
+      ],
+      "artifacts_present": [
+        "extract/cli-command-map.json",
+        "extract/api-surface.json",
+        "extract/request-contracts.json",
+        "command-catalog.yaml"
+      ],
+      "status": "COVERED"
+    },
+    {
+      "handoff_section": "7.7 authentication",
+      "artifacts_expected": [
+        "extract/api-surface.json",
+        "extract/runtime-probes.json",
+        "auth-contract.md"
+      ],
+      "artifacts_present": [
+        "extract/api-surface.json",
+        "extract/runtime-probes.json",
+        "auth-contract.md"
+      ],
+      "status": "COVERED"
+    },
+    {
+      "handoff_section": "7.8 database boundary",
+      "artifacts_expected": [
+        "extract/db-schema.json"
+      ],
+      "artifacts_present": [
+        "extract/db-schema.json"
+      ],
+      "status": "COVERED"
+    },
+    {
+      "handoff_section": "7.9 freshness/venue policy",
+      "artifacts_expected": [
+        "extract/freshness-authority.json",
+        "extract/vocabularies.json",
+        "extract/data-layer-contract.json"
+      ],
+      "artifacts_present": [
+        "extract/freshness-authority.json",
+        "extract/vocabularies.json",
+        "extract/data-layer-contract.json"
+      ],
+      "status": "COVERED"
+    },
+    {
+      "handoff_section": "7.10 workload profile",
+      "artifacts_expected": [
+        "workload-profile.md",
+        "evidence/phaseF/runtime_identity.txt"
+      ],
+      "artifacts_present": [
+        "workload-profile.md",
+        "evidence/phaseF/runtime_identity.txt"
+      ],
+      "status": "COVERED"
+    },
+    {
+      "handoff_section": "7.11 failure/recovery",
+      "artifacts_expected": [
+        "extract/error-catalog.json",
+        "extract/event-catalog.json"
+      ],
+      "artifacts_present": [
+        "extract/error-catalog.json",
+        "extract/event-catalog.json"
+      ],
+      "status": "COVERED"
+    },
+    {
+      "handoff_section": "7.12 safe test environment",
+      "artifacts_expected": [
+        "extract/vocabularies.json",
+        "extract/config-surface.json"
+      ],
+      "artifacts_present": [
+        "extract/vocabularies.json",
+        "extract/config-surface.json"
+      ],
+      "status": "COVERED"
+    },
+    {
+      "handoff_section": "7.13 observability",
+      "artifacts_expected": [
+        "extract/config-surface.json",
+        "extract/freshness-authority.json"
+      ],
+      "artifacts_present": [
+        "extract/config-surface.json",
+        "extract/freshness-authority.json"
+      ],
+      "status": "COVERED"
+    },
+    {
+      "handoff_section": "7.14 contract evolution",
+      "artifacts_expected": [
+        "extract/runtime-probes.json",
+        "extract/vocabularies.json"
+      ],
+      "artifacts_present": [
+        "extract/runtime-probes.json",
+        "extract/vocabularies.json"
+      ],
+      "status": "COVERED"
+    },
+    {
+      "handoff_section": "§9 sanitized artifacts",
+      "artifacts_expected": [
+        "REDACTION-AUDIT.json"
+      ],
+      "artifacts_present": [
+        "REDACTION-AUDIT.json"
+      ],
+      "status": "COVERED"
+    }
+  ],
+  "extract_summaries": {
+    "COVERAGE.json": null,
+    "api-surface.json": {
+      "operations": 104,
+      "by_method": {
+        "DELETE": 4,
+        "GET": 56,
+        "PATCH": 7,
+        "POST": 35,
+        "PUT": 2
+      },
+      "by_auth_kind": {
+        "ADMIN": 54,
+        "ALPHA_KEY": 41,
+        "PUBLIC": 6,
+        "ALPHA_REPLAY": 3
+      },
+      "operations_with_query_params_in_source": 31,
+      "operations_with_query_params_in_spec": 45,
+      "operations_with_body_fields_in_source": 31,
+      "operations_with_request_body_in_spec": 0
+    },
+    "cli-command-map.json": {
+      "cli_command_groups": 19,
+      "cli_actions": 64,
+      "by_access_path": {
+        "HTTP": 47,
+        "HTTP,POSTGRES_DIRECT,REDIS_DIRECT": 10,
+        "POSTGRES_DIRECT": 2,
+        "REDIS_DIRECT": 5
+      },
+      "actions_with_no_http_equivalent": 7,
+      "by_risk_tier_proposed": {
+        "R0_READ": 47,
+        "R1_PAPER_MUTATION": 7,
+        "R2_SANDBOX": 5,
+        "R3_LIVE_PROTECTIVE": 2,
+        "UNCLASSIFIED": 3
+      }
+    },
+    "config-surface.json": {
+      "settings_declared": 159,
+      "secret_shaped_redacted": 17,
+      "by_category": {
+        "datastore": 10,
+        "endpoint": 1,
+        "event/command plane": 20,
+        "feature flag": 30,
+        "gateway/admin": 10,
+        "other": 16,
+        "timing": 49,
+        "venue/broker": 23
+      }
+    },
+    "data-layer-contract.json": {
+      "openapi_version": "3.1.0",
+      "service_version": "0.1.0",
+      "operations": 40,
+      "operations_with_query_params": 17,
+      "operations_with_request_body": 4,
+      "component_schemas": [
+        "FeedDemandItem",
+        "FeedLeaseRequest",
+        "HTTPValidationError",
+        "ValidationError"
+      ],
+      "security_schemes": null,
+      "route_groups": {
+        "binance": 15,
+        "control": 9,
+        "crypto": 3,
+        "fallback": 2,
+        "health": 2,
+        "preload": 6,
+        "vn": 3
+      },
+      "source_routes_found": 40
+    },
+    "db-schema.json": {
+      "migration_files": 41,
+      "tables_defined": 94,
+      "tables_live": 94,
+      "tables_dropped_by_migration": 0,
+      "views": 2,
+      "indexes": 123,
+      "hypertables": 10,
+      "total_columns": 1291,
+      "runtime_verified": true
+    },
+    "error-catalog.json": {
+      "modules_scanned": 181,
+      "distinct_reason_codes": 124,
+      "http_exception_sites": 8,
+      "deny_reason_enums": 1,
+      "reason_codes_attributed_to_an_endpoint": 40,
+      "endpoints_with_known_reason_codes": 37,
+      "http_status_histogram": {
+        "200": 104,
+        "400": 43,
+        "403": 14,
+        "404": 20,
+        "409": 5,
+        "501": 1,
+        "503": 1
+      }
+    },
+    "event-catalog.json": {
+      "committed_json_schemas": 7,
+      "domain_event_classes": 5,
+      "event_type_literals_in_source": 7,
+      "runtime_event_types_observed": 1,
+      "runtime_verified": true
+    },
+    "freshness-authority.json": null,
+    "payload-models.json": {
+      "modules_scanned": 32,
+      "models": 85,
+      "by_kind": {
+        "dataclass": 50,
+        "enum": 20,
+        "pydantic_model": 15
+      },
+      "total_fields": 468
+    },
+    "request-contracts.json": {
+      "mutations": 48,
+      "with_resolved_fields": 46,
+      "coverage_pct": 95.8,
+      "by_resolution": {
+        "CALLEE_PAYLOAD": 11,
+        "HANDLER_DIRECT": 29,
+        "NO_REQUEST_BODY": 2,
+        "PYDANTIC_MODEL_INLINE": 5,
+        "PYDANTIC_MODEL_VIA_CALLEE": 1
+      },
+      "total_fields": 264
+    },
+    "response-shapes.json": {
+      "repository_queries": 54,
+      "star_expanded_queries": 23,
+      "distinct_repository_methods": 42,
+      "endpoints_with_row_shape": 43,
+      "endpoints_with_composed_shape": 23,
+      "endpoints_with_envelope_only": 38,
+      "hand_verified_endpoints": 4,
+      "fields_typed_from_db": 630,
+      "fields_total": 667
+    },
+    "runtime-probes.json": {
+      "public_probes": 7,
+      "rejection_probes": 6,
+      "negotiation_probes": 2,
+      "status_codes": {
+        "gw_health": "200",
+        "gw_capabilities": "200",
+        "gw_contracts": "200",
+        "gw_health_legacy": "200",
+        "gw_openapi_info": "200",
+        "dl_health": "200",
+        "dl_openapi_info": "200",
+        "admin_no_token": "403",
+        "admin_events_no_token": "403",
+        "alpha_no_key_unknown_alpha": "403",
+        "alpha_positions_no_alpha_id": "500",
+        "alpha_events_no_alpha": "403",
+        "unknown_path": "404",
+        "unsupported_revision": "406",
+        "supported_revision_v1": "200"
+      }
+    },
+    "serialization-contract.json": {
+      "serializer_variants": 13,
+      "endpoints_typed": 43,
+      "fields_typed": 577,
+      "json_type_histogram": {
+        "array": 3,
+        "bool": 4,
+        "number": 31,
+        "object|array|scalar": 48,
+        "string": 462,
+        "unknown": 29
+      },
+      "numeric_fields_that_arrive_as_string": 63
+    },
+    "vocabularies.json": {
+      "python_enums": 22,
+      "db_check_constraints": 91,
+      "db_check_distinct_fields": 33,
+      "db_fields_conflated_across_tables": 7,
+      "venue_product_profiles": 6,
+      "crosschecked_concepts": 6,
+      "crosscheck_divergences": 3
+    }
+  },
+  "manifest_note": "per-file hashes live in MANIFEST.sha256; verify with `sha256sum -c MANIFEST.sha256`. MANIFEST.sha256 and this file are excluded from it because they are outputs of this script."
+}

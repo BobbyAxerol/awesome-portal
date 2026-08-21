@@ -1,0 +1,2398 @@
+{
+  "provenance": {
+    "generated_by": "scripts/25_request_contracts.py",
+    "read_only": true,
+    "trading_system_commit": "9081397de9e981c43b4e0f67fabe747e7ed964c7",
+    "sources": [
+      "services/gateway/main.py",
+      "services/**/*.py",
+      "extract/api-surface.json",
+      "extract/payload-models.json"
+    ],
+    "note": "Derived from source/runtime read-only inspection. No Trading System file was modified."
+  },
+  "summary": {
+    "mutations": 48,
+    "with_resolved_fields": 46,
+    "coverage_pct": 95.8,
+    "by_resolution": {
+      "CALLEE_PAYLOAD": 11,
+      "HANDLER_DIRECT": 29,
+      "NO_REQUEST_BODY": 2,
+      "PYDANTIC_MODEL_INLINE": 5,
+      "PYDANTIC_MODEL_VIA_CALLEE": 1
+    },
+    "total_fields": 264
+  },
+  "note": "`required` reflects the access form: `payload[\"x\"]` raises on a missing key (required), `payload.get(\"x\")` does not (optional). Pydantic-resolved rows carry the declared type and default instead.",
+  "operations": [
+    {
+      "method": "POST",
+      "path": "/admin/paper/accounts/seed",
+      "handler": "seed_paper_account",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:1906",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "account_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "account_type",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "alpha_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "currency",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "exchange",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "initial_balance",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "trader_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "venue",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 8
+    },
+    {
+      "method": "POST",
+      "path": "/bulk",
+      "handler": "submit_bulk",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:482",
+      "resolution": "CALLEE_PAYLOAD",
+      "body_vars": [
+        "data"
+      ],
+      "callee": "GatewayEngine.validate_bulk",
+      "callee_source": "services/gateway/core/engine.py:326",
+      "payload_param": [
+        "raw_data"
+      ],
+      "fields": [
+        {
+          "name": "alpha_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "execution_session_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "orders",
+          "access": "get",
+          "required": false,
+          "default": "[]"
+        },
+        {
+          "name": "risk_grant_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 4
+    },
+    {
+      "method": "DELETE",
+      "path": "/cancel",
+      "handler": "cancel_order_legacy",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:504",
+      "resolution": "CALLEE_PAYLOAD",
+      "body_vars": [
+        "data"
+      ],
+      "callee": "GatewayEngine.validate_cancel",
+      "callee_source": "services/gateway/core/engine.py:491",
+      "payload_param": [
+        "raw_data"
+      ],
+      "fields": [
+        {
+          "name": "alpha_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "exchange",
+          "access": "subscript",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "order_type",
+          "access": "subscript",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "venue",
+          "access": "subscript",
+          "required": true,
+          "default": null
+        }
+      ],
+      "field_count": 4
+    },
+    {
+      "method": "POST",
+      "path": "/submit",
+      "handler": "submit_single",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:471",
+      "resolution": "CALLEE_PAYLOAD",
+      "body_vars": [
+        "data"
+      ],
+      "callee": "GatewayEngine.validate_single",
+      "callee_source": "services/gateway/core/engine.py:246",
+      "payload_param": [
+        "raw_data"
+      ],
+      "fields": [
+        {
+          "name": "alpha_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "client_order_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "exchange",
+          "access": "subscript",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "order_type",
+          "access": "subscript",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "venue",
+          "access": "subscript",
+          "required": true,
+          "default": null
+        }
+      ],
+      "field_count": 5
+    },
+    {
+      "method": "POST",
+      "path": "/update",
+      "handler": "update_order",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:493",
+      "resolution": "CALLEE_PAYLOAD",
+      "body_vars": [
+        "data"
+      ],
+      "callee": "GatewayEngine.validate_update",
+      "callee_source": "services/gateway/core/engine.py:413",
+      "payload_param": [
+        "raw_data"
+      ],
+      "fields": [
+        {
+          "name": "alpha_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "client_order_id",
+          "access": "subscript",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "exchange",
+          "access": "subscript",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "intent",
+          "access": "subscript",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "new_client_order_id",
+          "access": "subscript",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "order_type",
+          "access": "subscript",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "orig_client_order_id",
+          "access": "subscript",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "venue",
+          "access": "subscript",
+          "required": true,
+          "default": null
+        }
+      ],
+      "field_count": 8
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/accounts/paper/seed",
+      "handler": "seed_paper_account",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:1906",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "account_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "account_type",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "alpha_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "currency",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "exchange",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "initial_balance",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "trader_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "venue",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 8
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/accounts/{account_id}/policy",
+      "handler": "admin_upsert_account_policy",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:2437",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "account_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/accounts/{account_id}/reconcile-open-orders",
+      "handler": "admin_reconcile_account_open_orders",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:2488",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "apply",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "reason",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "sync_first",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 3
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/accounts/{account_id}/reconcile-positions",
+      "handler": "admin_reconcile_account_positions",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:2470",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "apply",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "reason",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "sync_first",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 3
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/accounts/{account_id}/sync",
+      "handler": "admin_sync_account",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:2460",
+      "resolution": "CALLEE_PAYLOAD",
+      "body_vars": [
+        "data"
+      ],
+      "callee": "PortfolioManagementRepository.sync_account",
+      "callee_source": "services/portfolio_management/repository.py:1999",
+      "payload_param": [
+        "payload"
+      ],
+      "fields": [
+        {
+          "name": "mode",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "product",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "symbol",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "venue",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 4
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/alphas/register",
+      "handler": "admin_register_alpha",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:1940",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "alpha_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "api_key",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 2
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/admin/alphas/{alpha_id}/risk",
+      "handler": "admin_update_alpha_risk",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:1974",
+      "resolution": "CALLEE_PAYLOAD",
+      "body_vars": [
+        "data"
+      ],
+      "callee": "AdminConfigRepository.update_alpha_risk",
+      "callee_source": "services/gateway/repository/admin_config.py:345",
+      "payload_param": [
+        "payload"
+      ],
+      "fields": [
+        {
+          "name": "instrument_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "mode",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "venue",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 3
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/broker-bindings/{external_account_ref}/reconcile-open-orders",
+      "handler": "admin_reconcile_broker_binding_open_orders",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:2420",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "mode",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "reason",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "sync_first",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "venue",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 4
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/broker-bindings/{external_account_ref}/reconcile-positions",
+      "handler": "admin_reconcile_broker_binding_positions",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:2403",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "mode",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "reason",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "sync_first",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "venue",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 4
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/copy/policies/{strategy_id}",
+      "handler": "admin_upsert_copy_policy",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:1999",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "strategy_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 1
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/admin/deployments/{deployment_id}/state",
+      "handler": "admin_set_deployment_state",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:2335",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "reason",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "state",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 2
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/market/seed",
+      "handler": "admin_seed_market",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:2551",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "exchange",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "metadata_version",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "precision_amount",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "price",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "product",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "quantity",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "source",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "step_size",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "symbol",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "tick_size",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "ttl_seconds",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "venue",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "venue_symbol",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 13
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/ops/emergency-close",
+      "handler": "admin_emergency_close",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:2040",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "account_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "alpha_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "confirmation",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "mode",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "reason",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "venue",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 6
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/ops/emergency-close/{operation_id}/verify",
+      "handler": "admin_verify_emergency_close",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:2070",
+      "resolution": "NO_REQUEST_BODY",
+      "body_vars": [],
+      "fields": [],
+      "note": "handler reads no request body — path params only",
+      "field_count": 0
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/order-brackets/lifecycle-audit",
+      "handler": "v1_admin_audit_bracket_lifecycle",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:932",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "safe_terminalize",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/order-groups/{group_id}/reconcile",
+      "handler": "v1_admin_reconcile_order_group",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:874",
+      "resolution": "PYDANTIC_MODEL_INLINE",
+      "body_vars": [],
+      "model": "OrderGroupOperatorAction",
+      "model_source": "services/gateway/schemas/order_group_schema.py:141",
+      "fields": [
+        {
+          "name": "reason",
+          "type": "str",
+          "required": true,
+          "default": null,
+          "alias": null
+        },
+        {
+          "name": "expected_version",
+          "type": "int | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        }
+      ],
+      "field_count": 2
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/order-groups/{group_id}/release",
+      "handler": "v1_admin_release_order_group",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:894",
+      "resolution": "PYDANTIC_MODEL_INLINE",
+      "body_vars": [],
+      "model": "OrderGroupOperatorAction",
+      "model_source": "services/gateway/schemas/order_group_schema.py:141",
+      "fields": [
+        {
+          "name": "reason",
+          "type": "str",
+          "required": true,
+          "default": null,
+          "alias": null
+        },
+        {
+          "name": "expected_version",
+          "type": "int | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        }
+      ],
+      "field_count": 2
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/portfolio-allocations",
+      "handler": "admin_upsert_portfolio_allocation",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:2350",
+      "resolution": "CALLEE_PAYLOAD",
+      "body_vars": [
+        "data"
+      ],
+      "callee": "PortfolioManagementRepository.upsert_allocation",
+      "callee_source": "services/portfolio_management/repository.py:926",
+      "payload_param": [
+        "payload"
+      ],
+      "fields": [
+        {
+          "name": "account_id",
+          "access": "subscript",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "allocated_capital",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "capital_metadata",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "currency",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "deployment_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "max_capital",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "metadata",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "mode",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "movement_type",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "portfolio_id",
+          "access": "subscript",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "reason",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "record_zero_capital_event",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "state",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "strategy_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "venue",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 15
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/portfolios",
+      "handler": "admin_upsert_portfolio",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:2301",
+      "resolution": "CALLEE_PAYLOAD",
+      "body_vars": [
+        "data"
+      ],
+      "callee": "PortfolioManagementRepository.create_portfolio",
+      "callee_source": "services/portfolio_management/repository.py:762",
+      "payload_param": [
+        "payload"
+      ],
+      "fields": [
+        {
+          "name": "base_currency",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "metadata",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "name",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "owner",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "portfolio_id",
+          "access": "subscript",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "reason",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "state",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 7
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/admin/portfolios/{portfolio_id}/state",
+      "handler": "admin_set_portfolio_state",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:2320",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "reason",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "state",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 2
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/replay/export",
+      "handler": "admin_export_replay",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:1273",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "auto_run",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "filters",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "manifest",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "oracle",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "replay_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 5
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/replay/jobs",
+      "handler": "admin_create_replay_job",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:1239",
+      "resolution": "CALLEE_PAYLOAD",
+      "body_vars": [],
+      "callee": "ReplayJobService.create",
+      "callee_source": "services/replay/service.py:64",
+      "payload_param": [
+        "request"
+      ],
+      "fields": [
+        {
+          "name": "auto_run",
+          "access": "get",
+          "required": false,
+          "default": "True"
+        },
+        {
+          "name": "events",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "manifest",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "oracle",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "replay_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 5
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/replay/jobs/{replay_id}/run",
+      "handler": "admin_run_replay_job",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:1264",
+      "resolution": "NO_REQUEST_BODY",
+      "body_vars": [],
+      "fields": [],
+      "note": "handler reads no request body — path params only",
+      "field_count": 0
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/replay/quantbt-diff",
+      "handler": "admin_quantbt_diff",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:1293",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "artifact",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "manifest",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "replay_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 3
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/symbols/sync",
+      "handler": "admin_sync_symbols",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:2512",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "symbols",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/trading-state",
+      "handler": "admin_set_trading_state",
+      "auth": [
+        "ADMIN"
+      ],
+      "source": "services/gateway/main.py:2010",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "exchange",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "mode",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "state",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "venue",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 4
+    },
+    {
+      "method": "POST",
+      "path": "/v1/execution-sessions",
+      "handler": "v1_create_execution_session",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:1679",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "account_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "alpha_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "bar_open",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "cycle_key",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "exchange",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "execution_session_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "metadata",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "mode",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "session_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "state",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "strategy_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "venue",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 12
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/execution-sessions/{execution_session_id}",
+      "handler": "v1_update_execution_session",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:1709",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "alpha_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "metadata",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "state",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "strategy_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 4
+    },
+    {
+      "method": "POST",
+      "path": "/v1/execution-sessions/{execution_session_id}",
+      "handler": "v1_update_execution_session_post",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:1733",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "alpha_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "metadata",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "state",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "strategy_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 4
+    },
+    {
+      "method": "POST",
+      "path": "/v1/execution-sessions/{execution_session_id}/pre-risk",
+      "handler": "v1_execution_session_pre_risk",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:1751",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "account_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "alpha_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "exchange",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "metadata",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "mode",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "orders",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "strategy_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "venue",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 8
+    },
+    {
+      "method": "POST",
+      "path": "/v1/order-brackets",
+      "handler": "v1_submit_bracket",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:718",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "exchange",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "venue",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 2
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/order-brackets/{bracket_group_id}",
+      "handler": "v1_cancel_bracket",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:1066",
+      "resolution": "PYDANTIC_MODEL_VIA_CALLEE",
+      "body_vars": [],
+      "model": "CancelOrderIntent",
+      "model_source": "services/gateway/schemas/order_schema.py:129",
+      "via": "GatewayEngine.validate_cancel",
+      "via_source": "services/gateway/core/engine.py:491",
+      "fields": [
+        {
+          "name": "alpha_id",
+          "type": "str",
+          "required": true,
+          "default": null,
+          "alias": null
+        },
+        {
+          "name": "client_order_id",
+          "type": "str",
+          "required": true,
+          "default": null,
+          "alias": null
+        },
+        {
+          "name": "execution_session_id",
+          "type": "str | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        },
+        {
+          "name": "risk_grant_id",
+          "type": "str | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        },
+        {
+          "name": "order_group_id",
+          "type": "str | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        },
+        {
+          "name": "order_group_leg_id",
+          "type": "str | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        },
+        {
+          "name": "symbol",
+          "type": "str",
+          "required": true,
+          "default": null,
+          "alias": null
+        },
+        {
+          "name": "side",
+          "type": "str",
+          "required": false,
+          "default": "'BUY'",
+          "alias": null
+        },
+        {
+          "name": "position_side",
+          "type": "str",
+          "required": false,
+          "default": "'BOTH'",
+          "alias": null
+        },
+        {
+          "name": "order_type",
+          "type": "str",
+          "required": false,
+          "default": "'LIMIT'",
+          "alias": "'type'"
+        },
+        {
+          "name": "quantity",
+          "type": "float",
+          "required": false,
+          "default": "0",
+          "alias": null
+        },
+        {
+          "name": "exchange",
+          "type": "str",
+          "required": false,
+          "default": "'BINANCE'",
+          "alias": null
+        },
+        {
+          "name": "venue",
+          "type": "str | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        },
+        {
+          "name": "account_id",
+          "type": "str | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        },
+        {
+          "name": "account_index",
+          "type": "int",
+          "required": false,
+          "default": "0",
+          "alias": null
+        },
+        {
+          "name": "mode",
+          "type": "str | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        },
+        {
+          "name": "intent",
+          "type": "str",
+          "required": false,
+          "default": "'CANCEL'",
+          "alias": null
+        },
+        {
+          "name": "alpha_send_ts",
+          "type": "float",
+          "required": false,
+          "default": null,
+          "alias": null
+        },
+        {
+          "name": "gateway_receive_ts",
+          "type": "float",
+          "required": false,
+          "default": null,
+          "alias": null
+        },
+        {
+          "name": "metadata",
+          "type": "dict[str, Any]",
+          "required": false,
+          "default": null,
+          "alias": null
+        },
+        {
+          "name": "product",
+          "type": "str | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        },
+        {
+          "name": "venue_symbol",
+          "type": "str | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        }
+      ],
+      "field_count": 22
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/order-brackets/{bracket_group_id}",
+      "handler": "v1_replace_bracket_stop",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:1038",
+      "resolution": "PYDANTIC_MODEL_INLINE",
+      "body_vars": [],
+      "model": "BracketStopReplaceRequest",
+      "model_source": "services/gateway/schemas/bracket_schema.py:170",
+      "fields": [
+        {
+          "name": "trigger_price",
+          "type": "Decimal",
+          "required": true,
+          "default": null,
+          "alias": null
+        },
+        {
+          "name": "price",
+          "type": "Decimal | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        },
+        {
+          "name": "reason",
+          "type": "str",
+          "required": false,
+          "default": "'STOP_REPLACE'",
+          "alias": null
+        },
+        {
+          "name": "metadata",
+          "type": "dict[str, Any]",
+          "required": false,
+          "default": null,
+          "alias": null
+        }
+      ],
+      "field_count": 4
+    },
+    {
+      "method": "POST",
+      "path": "/v1/order-groups",
+      "handler": "v1_create_order_group",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:740",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "group_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 1
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/order-groups/{group_id}",
+      "handler": "v1_cancel_order_group",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:855",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "reason",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 1
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/order-groups/{group_id}",
+      "handler": "v1_patch_order_group",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:831",
+      "resolution": "PYDANTIC_MODEL_INLINE",
+      "body_vars": [],
+      "model": "OrderGroupPatchRequest",
+      "model_source": "services/gateway/schemas/order_group_schema.py:133",
+      "fields": [
+        {
+          "name": "expected_version",
+          "type": "int | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        },
+        {
+          "name": "late_fill_policy",
+          "type": "LateFillPolicy | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        },
+        {
+          "name": "remainder_policy",
+          "type": "RemainderPolicy | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        },
+        {
+          "name": "max_exposure_quantity",
+          "type": "Decimal | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        },
+        {
+          "name": "metadata",
+          "type": "dict[str, Any]",
+          "required": false,
+          "default": null,
+          "alias": null
+        }
+      ],
+      "field_count": 5
+    },
+    {
+      "method": "POST",
+      "path": "/v1/order-packages/arb",
+      "handler": "v1_submit_arb_package",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:537",
+      "resolution": "PYDANTIC_MODEL_INLINE",
+      "body_vars": [
+        "data"
+      ],
+      "model": "ArbPackageRequest",
+      "model_source": "services/gateway/schemas/arb_package_schema.py:70",
+      "fields": [
+        {
+          "name": "alpha_id",
+          "type": "str",
+          "required": true,
+          "default": null,
+          "alias": null
+        },
+        {
+          "name": "package_id",
+          "type": "str | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        },
+        {
+          "name": "execution_session_id",
+          "type": "str | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        },
+        {
+          "name": "cycle_key",
+          "type": "str | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        },
+        {
+          "name": "account_id",
+          "type": "str | None",
+          "required": false,
+          "default": "None",
+          "alias": null
+        },
+        {
+          "name": "mode",
+          "type": "str",
+          "required": false,
+          "default": "'paper'",
+          "alias": null
+        },
+        {
+          "name": "venue",
+          "type": "str",
+          "required": false,
+          "default": "'BINANCE'",
+          "alias": "'exchange'"
+        },
+        {
+          "name": "package_policy",
+          "type": "str",
+          "required": false,
+          "default": "'ATOMIC_ALL_OR_NONE'",
+          "alias": null
+        },
+        {
+          "name": "order_type",
+          "type": "str",
+          "required": false,
+          "default": "'MARKET'",
+          "alias": null
+        },
+        {
+          "name": "time_in_force",
+          "type": "str",
+          "required": false,
+          "default": "'GTC'",
+          "alias": null
+        },
+        {
+          "name": "max_imbalance_bps",
+          "type": "Decimal",
+          "required": false,
+          "default": "Decimal('500')",
+          "alias": null
+        },
+        {
+          "name": "submit",
+          "type": "bool",
+          "required": false,
+          "default": "True",
+          "alias": null
+        },
+        {
+          "name": "alpha_send_ts",
+          "type": "float",
+          "required": false,
+          "default": null,
+          "alias": null
+        },
+        {
+          "name": "legs",
+          "type": "list[ArbPackageLeg]",
+          "required": true,
+          "default": null,
+          "alias": null
+        },
+        {
+          "name": "metadata",
+          "type": "dict[str, Any]",
+          "required": false,
+          "default": null,
+          "alias": null
+        }
+      ],
+      "field_count": 15
+    },
+    {
+      "method": "POST",
+      "path": "/v1/orders",
+      "handler": "v1_submit_single",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:515",
+      "resolution": "CALLEE_PAYLOAD",
+      "body_vars": [
+        "data"
+      ],
+      "callee": "GatewayEngine.validate_single",
+      "callee_source": "services/gateway/core/engine.py:246",
+      "payload_param": [
+        "raw_data"
+      ],
+      "fields": [
+        {
+          "name": "alpha_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "client_order_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "exchange",
+          "access": "subscript",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "order_type",
+          "access": "subscript",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "venue",
+          "access": "subscript",
+          "required": true,
+          "default": null
+        }
+      ],
+      "field_count": 5
+    },
+    {
+      "method": "POST",
+      "path": "/v1/orders/bulk",
+      "handler": "v1_submit_bulk",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:526",
+      "resolution": "CALLEE_PAYLOAD",
+      "body_vars": [
+        "data"
+      ],
+      "callee": "GatewayEngine.validate_bulk",
+      "callee_source": "services/gateway/core/engine.py:326",
+      "payload_param": [
+        "raw_data"
+      ],
+      "fields": [
+        {
+          "name": "alpha_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "execution_session_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "orders",
+          "access": "get",
+          "required": false,
+          "default": "[]"
+        },
+        {
+          "name": "risk_grant_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 4
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/orders/{client_order_id}",
+      "handler": "v1_cancel_order",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:1117",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "client_order_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 1
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/orders/{client_order_id}",
+      "handler": "v1_update_order",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:1105",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "orig_client_order_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 1
+    },
+    {
+      "method": "POST",
+      "path": "/v1/portfolio-targets/rebalance",
+      "handler": "v1_portfolio_targets_rebalance",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:1563",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "account_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "alpha_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "capital_model",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "currency",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "equity",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "exchange",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "execution_session_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "feature_schema_hash",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "gross_exposure",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "leverage",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "market_info",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "metadata",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "min_delta_notional",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "mode",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "model_version",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "order_type",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "prediction_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "prices",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "rebalance_session_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "strategy_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "submit",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "targets",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "time_in_force",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "venue",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 24
+    },
+    {
+      "method": "POST",
+      "path": "/v1/sizing/estimate",
+      "handler": "v1_sizing_estimate",
+      "auth": [
+        "ALPHA_KEY"
+      ],
+      "source": "services/gateway/main.py:1389",
+      "resolution": "HANDLER_DIRECT",
+      "fields": [
+        {
+          "name": "account_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "alpha_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "bracket_group_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "capital_model",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "currency",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "entry_price",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "exchange",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "market_info",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "metadata",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "min_notional_overshoot_bps",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "min_stop_distance_bps",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "mode",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "product",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "remaining_notional_safety_bps",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "risk_percent",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "sandbox_notional_cap",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "stop_price",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "strategy_id",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "symbol",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "venue",
+          "access": "get",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "venue_symbol",
+          "access": "get",
+          "required": false,
+          "default": null
+        }
+      ],
+      "field_count": 21
+    }
+  ]
+}

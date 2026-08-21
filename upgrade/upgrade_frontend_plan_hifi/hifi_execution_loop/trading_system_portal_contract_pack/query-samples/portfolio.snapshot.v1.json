@@ -1,0 +1,20 @@
+{
+ "_provenance": {
+  "kind": "SYNTHETIC_EXAMPLE",
+  "warning": "Hand-written to show shape only. NOT a captured runtime response. IDs and amounts are invented. Field names/types may lag the real contract.",
+  "authoritative_source": "extract/response-shapes.json + extract/serialization-contract.json",
+  "note": "Portal envelope fields here (schema_version, page, ...) are the PORTAL target shape, not what Trading System returns. Trading System returns {status, <collection>, count}."
+ },
+ "schema_version": "v1",
+ "as_of": "2026-08-20T10:50:00Z",
+ "portfolio_id": "portfolio-types-pool",
+ "base_currency": "USDT",
+ "state": "ACTIVE",
+ "allocations": [
+  {
+   "account_id": "paper-binance-alpha-paper-0001",
+   "weight": "0.100000000000000000",
+   "state": "ACTIVE"
+  }
+ ]
+}

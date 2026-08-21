@@ -1,0 +1,117 @@
+version: v1
+
+# CORRECTED 2026-08-21 (Phase F). Two things in the original were wrong for Portal:
+#   1. copy:events:v1 is NOT a transport Portal should plan around. The copy-event
+#      pipeline was RETIRED BY DESIGN (owner-confirmed 2026-08-21). Empty outbox and
+#      absent stream are the correct end state, not an unfinished feature.
+#   2. The `events:` list below is SOURCE-level. At runtime exactly ONE event type
+#      exists: ORDER_STATUS (1179 rows, last 2026-08-17, producer
+#      postgres.order-state-projector.v1). The other facts have zero runtime instances.
+#
+# Portal read path is NOT this stream. Use:
+#   GET /v1/events        (ORDER BY event_ts ASC, created_at ASC; from/to cursor; max 5000)
+#   plus EventStoreRepository.synthetic_projection_events(), which rebuilds
+#   ORDER_STATUS / ORDER_FILLED / ORDER_BRACKET_STATE / ORDER_BRACKET_LEG_STATE from the
+#   canonical orders/fills/brackets tables when domain_events has no row.
+# Machine-readable: extract/event-catalog.json
+
+streams:
+  copy:events:v1:
+    status: RETIRED_BY_DESIGN
+    owner_confirmed: 2026-08-21
+    runtime: absent (XLEN 0, key never created); copy_event_outbox 0 rows
+    portal_guidance: do not consume; use GET /v1/events + synthetic projection
+    historical_design:
+      delivery: at-least-once
+      dedupe: copy_event_id
+      ordering: sequence_id
+      maxlen: 500000
+      dlq: copy_event_dead_letters (after 10 attempts)
+  order.uncertain:
+    purpose: reconciliation
+    status: CONFIRMED_SOURCE
+events:
+- fact: deployment changed
+  status: CONFIRMED_SOURCE
+  producer: gateway/CLI
+  durable: domain_events
+  transport: DB only
+  ordering: event_id
+  replay: /v1/admin/replay/*
+- fact: execution session changed
+  status: CONFIRMED_SOURCE
+  producer: executor/paper_execution
+  durable: execution_sessions + domain_events
+  transport: DB only
+  ordering: session_id
+  replay: replay
+- fact: order changed
+  status: CONFIRMED_SOURCE
+  producer: gateway/executor/listener
+  durable: orders + domain_events
+  transport: DB only
+  ordering: event sequence
+  replay: /v1/replay/order-lifecycle
+- fact: fill created/corrected
+  status: CONFIRMED_SOURCE
+  producer: listener
+  durable: fills (hypertable) + domain_events
+  transport: DB only
+  ordering: fill id
+  replay: replay
+- fact: position changed
+  status: CONFIRMED_SOURCE
+  producer: portfolio
+  durable: positions + alpha_positions(legacy)
+  transport: DB only
+  ordering: account+instrument
+  replay: current state
+- fact: account/balance changed
+  status: CONFIRMED_SOURCE
+  producer: portfolio/broker_sync
+  durable: accounts + account_balances + ledger
+  transport: DB only
+  ordering: account_id
+  replay: sync history
+- fact: performance/equity changed
+  status: CONFIRMED_RUNTIME
+  producer: performance
+  durable: '*_snapshots hypertables (compress 7d)'
+  transport: DB only
+  ordering: snapshot ts
+  replay: history API
+- fact: risk state changed
+  status: CONFIRMED_SOURCE
+  producer: risk_engine
+  durable: domain_events + risk projections
+  transport: DB only
+  ordering: event_id
+  replay: replay
+- fact: broker sync changed
+  status: CONFIRMED_RUNTIME
+  producer: listener/market_data
+  durable: broker_sync_* (raw_hot, state_history, valuation_history)
+  transport: DB only
+  ordering: observed_at
+  replay: state history
+- fact: reconciliation changed
+  status: CONFIRMED_SOURCE
+  producer: reconciliation
+  durable: domain_events + reconciliation_findings
+  transport: DB only
+  ordering: event_id
+  replay: replay
+- fact: operator operation changed
+  status: CONFIRMED_SOURCE
+  producer: gateway/CLI
+  durable: operator_operations + journal
+  transport: DB only
+  ordering: operation_id
+  replay: ops CLI
+- fact: service/health changed
+  status: CONFIRMED_RUNTIME
+  producer: services
+  durable: service_heartbeats + /v1/health
+  transport: DB only
+  ordering: service name
+  replay: health now

@@ -1,0 +1,19 @@
+{
+ "_provenance": {
+  "kind": "SYNTHETIC_EXAMPLE",
+  "warning": "Hand-written. NOT captured from runtime. At runtime only ORDER_STATUS events exist; the fact this file illustrates may have zero instances.",
+  "authoritative_source": "extract/event-catalog.json"
+ },
+ "schema_version": "v1",
+ "event_type": "position.changed",
+ "event_id": "synth-ev-0003",
+ "alpha_id": "alpha-paper-0001",
+ "account_id": "paper-binance-alpha-paper-0001",
+ "symbol": "BTCUSDT",
+ "side": "LONG",
+ "quantity": "0.00100000",
+ "avg_entry": "50000.00",
+ "mode": "paper",
+ "venue": "BINANCE",
+ "as_of": "2026-08-20T10:00:06Z"
+}

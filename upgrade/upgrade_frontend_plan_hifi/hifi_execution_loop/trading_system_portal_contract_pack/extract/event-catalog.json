@@ -1,0 +1,1295 @@
+{
+  "provenance": {
+    "generated_by": "scripts/40_event_catalog.py",
+    "read_only": true,
+    "trading_system_commit": "9081397de9e981c43b4e0f67fabe747e7ed964c7",
+    "sources": [
+      "contracts/events/*.schema.json",
+      "domain/events.py",
+      "services/**/*.py (event_type literals)",
+      "runtime: domain_events aggregates, outbox counts, redis XLEN/XINFO"
+    ],
+    "note": "Derived from source/runtime read-only inspection. No Trading System file was modified."
+  },
+  "summary": {
+    "committed_json_schemas": 7,
+    "domain_event_classes": 5,
+    "event_type_literals_in_source": 7,
+    "runtime_event_types_observed": 1,
+    "runtime_verified": true
+  },
+  "delivery_contract": {
+    "durable_source": "domain_events (TimescaleDB hypertable) is the append-only event log; copy_event_outbox is the only transactional outbox that publishes to a Redis stream (copy:events:v1).",
+    "portal_read_path": "GET /v1/events (alpha replay scope) and GET /v1/admin/events (admin) — both ORDER BY event_ts ASC, created_at ASC.",
+    "cursor": "(event_ts, created_at) time cursor via from/to params; event_id is the dedupe key but is NOT a filterable cursor.",
+    "ordering": "ascending append order per query; no global monotonic sequence column on domain_events. copy_event_outbox has sequence_id per row.",
+    "delivery_semantics": "at-least-once (outbox retry -> dead letter after max attempts)",
+    "dedupe": "event_id (domain_events) / copy_event_id (outbox) / event_idempotency (scope, idempotency_key, payload_hash)",
+    "synthetic_projection": "EventStoreRepository.synthetic_projection_events() reconstructs ORDER_STATUS / ORDER_FILLED / ORDER_BRACKET_STATE / ORDER_BRACKET_LEG_STATE from the canonical orders/fills/brackets tables when domain_events has no row — replay stays complete even for gaps.",
+    "limits": "limit default 500, maximum 5000 (event_store.py:_limit)"
+  },
+  "committed_schemas": [
+    {
+      "file": "contracts/events/account-event.v2.schema.json",
+      "schema_id": "https://contracts.bobbyaxerol.dev/trading-system/events/account-event.v2.schema.json",
+      "title": "Trading System Account Event V2",
+      "version": null,
+      "required": [
+        "event_type",
+        "account_id",
+        "currency",
+        "occurred_at",
+        "extensions"
+      ],
+      "field_count": 7,
+      "fields": {
+        "event_type": {
+          "type": null,
+          "enum": [
+            "BALANCE_CHANGED",
+            "MARGIN_CHANGED",
+            "CAPITAL_ALLOCATED",
+            "CAPITAL_RETURNED",
+            "ACCOUNT_HALTED",
+            "ACCOUNT_RESUMED"
+          ],
+          "format": null,
+          "description": null
+        },
+        "account_id": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "currency": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "amount": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "equity": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "occurred_at": {
+          "type": "string",
+          "enum": null,
+          "format": "date-time",
+          "description": null
+        },
+        "extensions": {
+          "type": "object",
+          "enum": null,
+          "format": null,
+          "description": null
+        }
+      },
+      "additional_properties": false
+    },
+    {
+      "file": "contracts/events/fill-event.v2.schema.json",
+      "schema_id": "https://contracts.bobbyaxerol.dev/trading-system/events/fill-event.v2.schema.json",
+      "title": "Trading System Fill Event V2",
+      "version": null,
+      "required": [
+        "trade_id",
+        "client_order_id",
+        "strategy_id",
+        "account_id",
+        "quantity",
+        "price",
+        "liquidity_side",
+        "occurred_at",
+        "extensions"
+      ],
+      "field_count": 10,
+      "fields": {
+        "trade_id": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "client_order_id": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "strategy_id": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "account_id": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "quantity": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "price": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "fee": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "liquidity_side": {
+          "type": null,
+          "enum": [
+            "MAKER",
+            "TAKER",
+            "UNKNOWN"
+          ],
+          "format": null,
+          "description": null
+        },
+        "occurred_at": {
+          "type": "string",
+          "enum": null,
+          "format": "date-time",
+          "description": null
+        },
+        "extensions": {
+          "type": "object",
+          "enum": null,
+          "format": null,
+          "description": null
+        }
+      },
+      "additional_properties": false
+    },
+    {
+      "file": "contracts/events/message-envelope.v2.schema.json",
+      "schema_id": "https://contracts.bobbyaxerol.dev/trading-system/events/message-envelope.v2.schema.json",
+      "title": "Trading System Message Envelope V2",
+      "version": null,
+      "required": [
+        "spec_version",
+        "schema_name",
+        "schema_version",
+        "message_id",
+        "idempotency_key",
+        "trace_id",
+        "producer",
+        "message_type",
+        "event_time",
+        "ingest_time",
+        "mode",
+        "venue",
+        "payload"
+      ],
+      "field_count": 15,
+      "fields": {
+        "spec_version": {
+          "type": null,
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "schema_name": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "schema_version": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "message_id": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "idempotency_key": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "trace_id": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "correlation_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "causation_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "producer": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "message_type": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "event_time": {
+          "type": "string",
+          "enum": null,
+          "format": "date-time",
+          "description": null
+        },
+        "ingest_time": {
+          "type": "string",
+          "enum": null,
+          "format": "date-time",
+          "description": null
+        },
+        "mode": {
+          "type": null,
+          "enum": [
+            "paper",
+            "sandbox",
+            "live",
+            "replay",
+            "backtest"
+          ],
+          "format": null,
+          "description": null
+        },
+        "venue": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "payload": {
+          "type": "object",
+          "enum": null,
+          "format": null,
+          "description": null
+        }
+      },
+      "additional_properties": false
+    },
+    {
+      "file": "contracts/events/order-command.v2.schema.json",
+      "schema_id": "https://contracts.bobbyaxerol.dev/trading-system/events/order-command.v2.schema.json",
+      "title": "Trading System Canonical Order Command V2",
+      "version": null,
+      "required": [
+        "command_type",
+        "strategy_id",
+        "account_id",
+        "client_order_id",
+        "instrument",
+        "side",
+        "position_side",
+        "order_type",
+        "quantity",
+        "time_in_force",
+        "intent",
+        "reduce_only",
+        "post_only",
+        "extensions"
+      ],
+      "field_count": 24,
+      "fields": {
+        "command_type": {
+          "type": null,
+          "enum": [
+            "PLACE",
+            "AMEND",
+            "CANCEL"
+          ],
+          "format": null,
+          "description": null
+        },
+        "strategy_id": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "account_id": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "client_order_id": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "original_client_order_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "replacement_client_order_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "execution_session_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "risk_grant_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "instrument": {
+          "type": null,
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "side": {
+          "type": null,
+          "enum": [
+            "BUY",
+            "SELL"
+          ],
+          "format": null,
+          "description": null
+        },
+        "position_side": {
+          "type": null,
+          "enum": [
+            "LONG",
+            "SHORT",
+            "BOTH"
+          ],
+          "format": null,
+          "description": null
+        },
+        "order_type": {
+          "type": null,
+          "enum": [
+            "MARKET",
+            "LIMIT",
+            "STOP",
+            "STOP_LIMIT",
+            "STOP_MARKET",
+            "TAKE_PROFIT",
+            "TAKE_PROFIT_LIMIT",
+            "TAKE_PROFIT_MARKET",
+            "TRAILING_STOP_MARKET"
+          ],
+          "format": null,
+          "description": null
+        },
+        "quantity": {
+          "type": null,
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "price": {
+          "type": null,
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "trigger_price": {
+          "type": null,
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "activation_price": {
+          "type": null,
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "callback_rate": {
+          "type": null,
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "time_in_force": {
+          "type": null,
+          "enum": [
+            "GTC",
+            "IOC",
+            "FOK",
+            "GTD",
+            "GTX"
+          ],
+          "format": null,
+          "description": null
+        },
+        "good_till_date": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "intent": {
+          "type": null,
+          "enum": [
+            "OPEN",
+            "CLOSE",
+            "REDUCE",
+            "UPDATE",
+            "AMEND",
+            "CANCEL"
+          ],
+          "format": null,
+          "description": null
+        },
+        "reduce_only": {
+          "type": "boolean",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "post_only": {
+          "type": "boolean",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "close_position": {
+          "type": "boolean",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "extensions": {
+          "type": "object",
+          "enum": null,
+          "format": null,
+          "description": "Namespaced transport metadata. It is non-authoritative unless promoted by this schema."
+        }
+      },
+      "additional_properties": false
+    },
+    {
+      "file": "contracts/events/order-event.v2.schema.json",
+      "schema_id": "https://contracts.bobbyaxerol.dev/trading-system/events/order-event.v2.schema.json",
+      "title": "Trading System Order Event V2",
+      "version": null,
+      "required": [
+        "event_type",
+        "strategy_id",
+        "account_id",
+        "client_order_id",
+        "status",
+        "occurred_at",
+        "extensions"
+      ],
+      "field_count": 9,
+      "fields": {
+        "event_type": {
+          "type": null,
+          "enum": [
+            "ORDER_ACCEPTED",
+            "ORDER_REJECTED",
+            "ORDER_SUBMITTED",
+            "ORDER_UPDATED",
+            "ORDER_CANCELED",
+            "ORDER_EXPIRED",
+            "ORDER_UNCERTAIN"
+          ],
+          "format": null,
+          "description": null
+        },
+        "strategy_id": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "account_id": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "client_order_id": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "venue_order_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "status": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "occurred_at": {
+          "type": "string",
+          "enum": null,
+          "format": "date-time",
+          "description": null
+        },
+        "reason_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "extensions": {
+          "type": "object",
+          "enum": null,
+          "format": null,
+          "description": null
+        }
+      },
+      "additional_properties": false
+    },
+    {
+      "file": "contracts/events/order-group-event.v2.schema.json",
+      "schema_id": "https://contracts.bobbyaxerol.dev/trading-system/events/order-group-event.v2.schema.json",
+      "title": "Trading System Order Group Event V2",
+      "version": null,
+      "required": [
+        "group_id",
+        "event_type",
+        "state",
+        "revision",
+        "occurred_at",
+        "extensions"
+      ],
+      "field_count": 7,
+      "fields": {
+        "group_id": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "leg_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "event_type": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "state": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "revision": {
+          "type": "integer",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "occurred_at": {
+          "type": "string",
+          "enum": null,
+          "format": "date-time",
+          "description": null
+        },
+        "extensions": {
+          "type": "object",
+          "enum": null,
+          "format": null,
+          "description": null
+        }
+      },
+      "additional_properties": false
+    },
+    {
+      "file": "contracts/events/risk-decision.v2.schema.json",
+      "schema_id": "https://contracts.bobbyaxerol.dev/trading-system/events/risk-decision.v2.schema.json",
+      "title": "Trading System Risk Decision V2",
+      "version": null,
+      "required": [
+        "decision_id",
+        "command_message_id",
+        "strategy_id",
+        "account_id",
+        "decision",
+        "reason_code",
+        "engine_version",
+        "occurred_at",
+        "extensions"
+      ],
+      "field_count": 9,
+      "fields": {
+        "decision_id": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "command_message_id": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "strategy_id": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "account_id": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "decision": {
+          "type": null,
+          "enum": [
+            "ALLOW",
+            "REJECT",
+            "HALT"
+          ],
+          "format": null,
+          "description": null
+        },
+        "reason_code": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "engine_version": {
+          "type": "string",
+          "enum": null,
+          "format": null,
+          "description": null
+        },
+        "occurred_at": {
+          "type": "string",
+          "enum": null,
+          "format": "date-time",
+          "description": null
+        },
+        "extensions": {
+          "type": "object",
+          "enum": null,
+          "format": null,
+          "description": null
+        }
+      },
+      "additional_properties": false
+    }
+  ],
+  "domain_event_classes": [
+    {
+      "class": "DomainEvent",
+      "bases": [],
+      "source": "domain/events.py:15",
+      "fields": [
+        {
+          "name": "ts_event",
+          "type": "TimestampNs",
+          "required": true
+        },
+        {
+          "name": "ts_init",
+          "type": "TimestampNs",
+          "required": true
+        },
+        {
+          "name": "event_id",
+          "type": "str",
+          "required": false
+        },
+        {
+          "name": "raw",
+          "type": "dict[str, Any] | None",
+          "required": false
+        }
+      ]
+    },
+    {
+      "class": "OrderEvent",
+      "bases": [
+        "DomainEvent"
+      ],
+      "source": "domain/events.py:23",
+      "fields": [
+        {
+          "name": "trader_id",
+          "type": "TraderId",
+          "required": true
+        },
+        {
+          "name": "strategy_id",
+          "type": "StrategyId",
+          "required": true
+        },
+        {
+          "name": "instrument_id",
+          "type": "InstrumentId",
+          "required": true
+        },
+        {
+          "name": "client_order_id",
+          "type": "ClientOrderId",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "OrderStatus",
+          "required": true
+        }
+      ]
+    },
+    {
+      "class": "OrderFilled",
+      "bases": [
+        "OrderEvent"
+      ],
+      "source": "domain/events.py:32",
+      "fields": [
+        {
+          "name": "venue_order_id",
+          "type": "VenueOrderId",
+          "required": true
+        },
+        {
+          "name": "account_id",
+          "type": "AccountId",
+          "required": true
+        },
+        {
+          "name": "trade_id",
+          "type": "TradeId",
+          "required": true
+        },
+        {
+          "name": "position_id",
+          "type": "PositionId | None",
+          "required": true
+        },
+        {
+          "name": "order_side",
+          "type": "OrderSide",
+          "required": true
+        },
+        {
+          "name": "order_type",
+          "type": "OrderType",
+          "required": true
+        },
+        {
+          "name": "last_qty",
+          "type": "Quantity",
+          "required": true
+        },
+        {
+          "name": "last_px",
+          "type": "Price",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "Currency",
+          "required": true
+        },
+        {
+          "name": "commission",
+          "type": "Money",
+          "required": true
+        },
+        {
+          "name": "liquidity_side",
+          "type": "LiquiditySide",
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "OrderStatus",
+          "required": false
+        }
+      ]
+    },
+    {
+      "class": "AccountState",
+      "bases": [
+        "DomainEvent"
+      ],
+      "source": "domain/events.py:48",
+      "fields": [
+        {
+          "name": "account_id",
+          "type": "AccountId",
+          "required": true
+        },
+        {
+          "name": "account_type",
+          "type": "AccountType",
+          "required": true
+        },
+        {
+          "name": "base_currency",
+          "type": "Currency | None",
+          "required": true
+        },
+        {
+          "name": "reported",
+          "type": "bool",
+          "required": true
+        },
+        {
+          "name": "balances",
+          "type": "list",
+          "required": true
+        },
+        {
+          "name": "margins",
+          "type": "list",
+          "required": true
+        },
+        {
+          "name": "info",
+          "type": "dict[str, Any]",
+          "required": false
+        }
+      ]
+    },
+    {
+      "class": "PositionEvent",
+      "bases": [
+        "DomainEvent"
+      ],
+      "source": "domain/events.py:59",
+      "fields": [
+        {
+          "name": "trader_id",
+          "type": "TraderId",
+          "required": true
+        },
+        {
+          "name": "strategy_id",
+          "type": "StrategyId",
+          "required": true
+        },
+        {
+          "name": "instrument_id",
+          "type": "InstrumentId",
+          "required": true
+        },
+        {
+          "name": "position_id",
+          "type": "PositionId",
+          "required": true
+        },
+        {
+          "name": "account_id",
+          "type": "AccountId",
+          "required": true
+        },
+        {
+          "name": "side",
+          "type": "PositionSide",
+          "required": true
+        },
+        {
+          "name": "signed_qty",
+          "type": "str",
+          "required": true
+        },
+        {
+          "name": "quantity",
+          "type": "Quantity",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "event_type_literals": {
+    "FILL": [
+      "services/order_groups/bracket_shadow.py",
+      "services/portfolio/repository/portfolio_repo.py"
+    ],
+    "ORDER_BRACKET_LEG_STATE": [
+      "services/gateway/repository/event_store.py"
+    ],
+    "ORDER_BRACKET_STATE": [
+      "services/gateway/repository/event_store.py"
+    ],
+    "ORDER_FILLED": [
+      "services/gateway/repository/event_store.py"
+    ],
+    "ORDER_STATUS": [
+      "services/gateway/repository/event_store.py",
+      "services/portfolio/repository/portfolio_repo.py",
+      "services/risk_engine/main.py"
+    ],
+    "PROJECTION": [
+      "services/shadow/projections.py"
+    ],
+    "RECONCILIATION_FINDING": [
+      "services/order_groups/repository.py"
+    ]
+  },
+  "runtime": {
+    "domain_event_types": [
+      {
+        "event_type": "ORDER_STATUS",
+        "count": 1179,
+        "first_event_ts": "2026-06-30 16:00:05.069085+00",
+        "last_event_ts": "2026-08-17 04:24:19.611392+00",
+        "distinct_producers": 1,
+        "distinct_schema_versions": 1
+      }
+    ],
+    "producers": [
+      {
+        "producer": "postgres.order-state-projector.v1",
+        "schema_version": "2.0",
+        "canonical_contract_version": "2.0.0"
+      }
+    ],
+    "outbox_tables": {
+      "copy_event_outbox": {
+        "row_count": 0,
+        "columns": [
+          "copy_event_id",
+          "sequence_id",
+          "schema_version",
+          "event_type",
+          "stream_name",
+          "alpha_id",
+          "strategy_id",
+          "account_id",
+          "mode",
+          "venue",
+          "instrument_id",
+          "symbol",
+          "client_order_id",
+          "venue_order_id",
+          "source_event_type",
+          "source_status",
+          "payload",
+          "status",
+          "publish_attempts",
+          "redis_message_id",
+          "published_at",
+          "next_attempt_at",
+          "last_error",
+          "created_at",
+          "updated_at"
+        ],
+        "lifecycle_breakdown": {
+          "status": {}
+        }
+      },
+      "command_dispatch_outbox": {
+        "row_count": 430,
+        "columns": [
+          "outbox_id",
+          "command_id",
+          "delivery_stage",
+          "stream_name",
+          "stream_fields",
+          "aggregate_key",
+          "state",
+          "attempts",
+          "next_attempt_at",
+          "lease_owner",
+          "lease_until",
+          "stream_message_id",
+          "dispatched_at",
+          "acknowledged_at",
+          "last_error",
+          "created_at",
+          "updated_at"
+        ],
+        "lifecycle_breakdown": {
+          "state": {
+            "DEAD": 430
+          },
+          "delivery_stage": {
+            "INGRESS": 430
+          }
+        }
+      },
+      "execution_command_outbox": {
+        "row_count": 0,
+        "columns": [
+          "command_id",
+          "idempotency_key",
+          "group_id",
+          "leg_id",
+          "source_event_id",
+          "command_type",
+          "command_payload",
+          "state",
+          "attempts",
+          "next_attempt_at",
+          "locked_at",
+          "dispatched_at",
+          "last_error",
+          "created_at"
+        ],
+        "lifecycle_breakdown": {
+          "state": {}
+        }
+      },
+      "copy_event_dead_letters": {
+        "row_count": 0,
+        "columns": [
+          "id",
+          "copy_event_id",
+          "sequence_id",
+          "stream_name",
+          "reason",
+          "payload",
+          "created_at",
+          "resolved_at"
+        ]
+      },
+      "event_idempotency": {
+        "row_count": 0,
+        "columns": [
+          "scope",
+          "idempotency_key",
+          "payload_hash",
+          "event_id",
+          "created_at",
+          "expires_at"
+        ]
+      },
+      "command_journal": {
+        "row_count": 430,
+        "columns": [
+          "command_id",
+          "command_kind",
+          "idempotency_scope",
+          "idempotency_key",
+          "payload_hash",
+          "contract_revision",
+          "mode",
+          "venue",
+          "alpha_id",
+          "account_id",
+          "client_order_id",
+          "aggregate_key",
+          "command_payload",
+          "state",
+          "outcome_class",
+          "outcome_payload",
+          "accepted_at",
+          "dispatched_at",
+          "acknowledged_at",
+          "terminal_at",
+          "updated_at",
+          "engine_version",
+          "canonical_contract_version",
+          "instrument_metadata_version",
+          "decision_digest"
+        ],
+        "lifecycle_breakdown": {
+          "state": {
+            "DEAD": 430
+          }
+        }
+      },
+      "command_ack_evidence": {
+        "row_count": 430,
+        "columns": [
+          "evidence_id",
+          "command_id",
+          "evidence_type",
+          "source_stream",
+          "source_message_id",
+          "source_entity_id",
+          "outcome_class",
+          "evidence_payload",
+          "created_at"
+        ]
+      },
+      "command_delivery_attempts": {
+        "row_count": 0,
+        "columns": [
+          "attempt_id",
+          "command_id",
+          "outbox_id",
+          "attempt_number",
+          "outcome_class",
+          "transport_message_id",
+          "error_code",
+          "error_detail",
+          "created_at"
+        ]
+      },
+      "command_broker_attempts": {
+        "row_count": 0,
+        "columns": [
+          "command_id",
+          "attempt_count",
+          "state",
+          "outcome_class",
+          "outcome_payload",
+          "last_error",
+          "first_attempt_at",
+          "last_attempt_at",
+          "resolved_at"
+        ],
+        "lifecycle_breakdown": {
+          "state": {}
+        }
+      },
+      "command_stream_trim_audit": {
+        "row_count": 0,
+        "columns": [
+          "audit_id",
+          "stream_name",
+          "trim_min_id",
+          "groups_observed",
+          "entries_before",
+          "entries_after",
+          "authority",
+          "dry_run",
+          "created_at"
+        ]
+      },
+      "operator_operations": {
+        "row_count": 0,
+        "columns": [
+          "operation_id",
+          "operation_type",
+          "scope_type",
+          "scope_id",
+          "mode",
+          "venue",
+          "status",
+          "plan",
+          "result",
+          "actor",
+          "reason",
+          "created_at",
+          "updated_at"
+        ],
+        "lifecycle_breakdown": {
+          "status": {}
+        }
+      },
+      "reconciliation_findings": {
+        "row_count": 3,
+        "columns": [
+          "finding_id",
+          "mode",
+          "venue",
+          "account_id",
+          "strategy_id",
+          "finding_type",
+          "severity",
+          "status",
+          "details",
+          "created_at",
+          "resolved_at",
+          "execution_session_id"
+        ],
+        "lifecycle_breakdown": {
+          "status": {
+            "RESOLVED": 3
+          }
+        }
+      }
+    },
+    "copy_event_stream": {
+      "key": "copy:events:v1",
+      "xlen": "0",
+      "note": "stream absent or empty — no copy-event traffic to observe"
+    },
+    "redis_keyspace": [
+      "# Keyspace",
+      "db0:keys=32,expires=18,avg_ttl=67764"
+    ]
+  }
+}

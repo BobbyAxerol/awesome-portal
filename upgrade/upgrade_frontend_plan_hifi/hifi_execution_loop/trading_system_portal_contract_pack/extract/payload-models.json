@@ -1,0 +1,6709 @@
+{
+  "provenance": {
+    "generated_by": "scripts/20_payload_models.py",
+    "read_only": true,
+    "trading_system_commit": "9081397de9e981c43b4e0f67fabe747e7ed964c7",
+    "sources": [
+      "services/gateway/schemas/arb_package_schema.py",
+      "services/gateway/schemas/bracket_schema.py",
+      "services/gateway/schemas/order_group_schema.py",
+      "services/gateway/schemas/order_schema.py",
+      "domain/__init__.py",
+      "domain/accounts.py",
+      "domain/canonical.py",
+      "domain/clocks.py",
+      "domain/command_freshness.py",
+      "domain/enums.py",
+      "domain/events.py",
+      "domain/exceptions.py",
+      "domain/fees.py",
+      "domain/identifiers.py",
+      "domain/instrument_identity.py",
+      "domain/instruments.py",
+      "domain/market_metadata.py",
+      "domain/objects.py",
+      "domain/order_groups.py",
+      "domain/orders.py",
+      "domain/positions.py",
+      "domain/risk.py",
+      "domain/settlements.py",
+      "services/gateway/contracts/__init__.py",
+      "services/gateway/contracts/revisions.py",
+      "services/gateway/contracts/shadow.py",
+      "services/gateway/contracts/translator.py",
+      "services/venues/__init__.py",
+      "services/venues/contracts.py",
+      "services/venues/okx_contracts.py",
+      "services/venues/registry.py",
+      "services/venues/runtime_scopes.py"
+    ],
+    "note": "Derived from source/runtime read-only inspection. No Trading System file was modified."
+  },
+  "summary": {
+    "modules_scanned": 32,
+    "models": 85,
+    "by_kind": {
+      "dataclass": 50,
+      "enum": 20,
+      "pydantic_model": 15
+    },
+    "total_fields": 468
+  },
+  "models": [
+    {
+      "name": "Account",
+      "module": "domain/accounts.py",
+      "source": "domain/accounts.py:68",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "id",
+          "type": "AccountId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "type",
+          "type": "AccountType",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "base_currency",
+          "type": "Currency | None",
+          "required": false,
+          "nullable": true,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "balances_by_currency",
+          "type": "dict[Currency, AccountBalance]",
+          "required": false,
+          "nullable": false,
+          "default": "field(default_factory=dict)",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "commissions_by_currency",
+          "type": "dict[Currency, Money]",
+          "required": false,
+          "nullable": false,
+          "default": "field(default_factory=dict)",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "AccountBalance",
+      "module": "domain/accounts.py",
+      "source": "domain/accounts.py:17",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "total",
+          "type": "Money",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "locked",
+          "type": "Money",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "free",
+          "type": "Money",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "CashAccount",
+      "module": "domain/accounts.py",
+      "source": "domain/accounts.py:104",
+      "bases": [
+        "Account"
+      ],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "allow_borrowing",
+          "type": "bool",
+          "required": false,
+          "nullable": false,
+          "default": "False",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "balances_locked_by_instrument",
+          "type": "dict[tuple[InstrumentId, Currency], Money]",
+          "required": false,
+          "nullable": false,
+          "default": "field(default_factory=dict)",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "MarginAccount",
+      "module": "domain/accounts.py",
+      "source": "domain/accounts.py:124",
+      "bases": [
+        "Account"
+      ],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "margins_by_instrument",
+          "type": "dict[InstrumentId, MarginBalance]",
+          "required": false,
+          "nullable": false,
+          "default": "field(default_factory=dict)",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "account_margins_by_currency",
+          "type": "dict[Currency, MarginBalance]",
+          "required": false,
+          "nullable": false,
+          "default": "field(default_factory=dict)",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "leverages",
+          "type": "dict[InstrumentId, Decimal]",
+          "required": false,
+          "nullable": false,
+          "default": "field(default_factory=dict)",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "default_leverage",
+          "type": "Decimal",
+          "required": false,
+          "nullable": false,
+          "default": "Decimal('1')",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "MarginBalance",
+      "module": "domain/accounts.py",
+      "source": "domain/accounts.py:54",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "initial",
+          "type": "Money",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "maintenance",
+          "type": "Money",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "currency",
+          "type": "Currency",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "instrument_id",
+          "type": "InstrumentId | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "DecisionEvidence",
+      "module": "domain/canonical.py",
+      "source": "domain/canonical.py:208",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "engine_version",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "contract_version",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "instrument_metadata_version",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "decision_digest",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "FixedClock",
+      "module": "domain/clocks.py",
+      "source": "domain/clocks.py:22",
+      "bases": [
+        "Clock"
+      ],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "value",
+          "type": "TimestampNs",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "AccountType",
+      "module": "domain/enums.py",
+      "source": "domain/enums.py:19",
+      "bases": [
+        "StrEnum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": [
+        {
+          "name": "CASH",
+          "value": "'CASH'"
+        },
+        {
+          "name": "MARGIN",
+          "value": "'MARGIN'"
+        },
+        {
+          "name": "BETTING",
+          "value": "'BETTING'"
+        }
+      ],
+      "validators": null
+    },
+    {
+      "name": "LiquiditySide",
+      "module": "domain/enums.py",
+      "source": "domain/enums.py:76",
+      "bases": [
+        "StrEnum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": [
+        {
+          "name": "MAKER",
+          "value": "'MAKER'"
+        },
+        {
+          "name": "TAKER",
+          "value": "'TAKER'"
+        },
+        {
+          "name": "UNKNOWN",
+          "value": "'UNKNOWN'"
+        }
+      ],
+      "validators": null
+    },
+    {
+      "name": "OrderSide",
+      "module": "domain/enums.py",
+      "source": "domain/enums.py:25",
+      "bases": [
+        "StrEnum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": [
+        {
+          "name": "BUY",
+          "value": "'BUY'"
+        },
+        {
+          "name": "SELL",
+          "value": "'SELL'"
+        }
+      ],
+      "validators": null
+    },
+    {
+      "name": "OrderStatus",
+      "module": "domain/enums.py",
+      "source": "domain/enums.py:61",
+      "bases": [
+        "StrEnum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": [
+        {
+          "name": "INITIALIZED",
+          "value": "'INITIALIZED'"
+        },
+        {
+          "name": "SUBMITTED",
+          "value": "'SUBMITTED'"
+        },
+        {
+          "name": "ACCEPTED",
+          "value": "'ACCEPTED'"
+        },
+        {
+          "name": "REJECTED",
+          "value": "'REJECTED'"
+        },
+        {
+          "name": "DENIED",
+          "value": "'DENIED'"
+        },
+        {
+          "name": "PENDING_UPDATE",
+          "value": "'PENDING_UPDATE'"
+        },
+        {
+          "name": "PENDING_CANCEL",
+          "value": "'PENDING_CANCEL'"
+        },
+        {
+          "name": "PARTIALLY_FILLED",
+          "value": "'PARTIALLY_FILLED'"
+        },
+        {
+          "name": "FILLED",
+          "value": "'FILLED'"
+        },
+        {
+          "name": "CANCELED",
+          "value": "'CANCELED'"
+        },
+        {
+          "name": "EXPIRED",
+          "value": "'EXPIRED'"
+        },
+        {
+          "name": "TRIGGERED",
+          "value": "'TRIGGERED'"
+        }
+      ],
+      "validators": null
+    },
+    {
+      "name": "OrderType",
+      "module": "domain/enums.py",
+      "source": "domain/enums.py:41",
+      "bases": [
+        "StrEnum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": [
+        {
+          "name": "MARKET",
+          "value": "'MARKET'"
+        },
+        {
+          "name": "LIMIT",
+          "value": "'LIMIT'"
+        },
+        {
+          "name": "STOP_MARKET",
+          "value": "'STOP_MARKET'"
+        },
+        {
+          "name": "STOP_LIMIT",
+          "value": "'STOP_LIMIT'"
+        },
+        {
+          "name": "TAKE_PROFIT",
+          "value": "'TAKE_PROFIT'"
+        },
+        {
+          "name": "TAKE_PROFIT_MARKET",
+          "value": "'TAKE_PROFIT_MARKET'"
+        },
+        {
+          "name": "TRAILING_STOP_MARKET",
+          "value": "'TRAILING_STOP_MARKET'"
+        },
+        {
+          "name": "ATO",
+          "value": "'ATO'"
+        },
+        {
+          "name": "ATC",
+          "value": "'ATC'"
+        }
+      ],
+      "validators": null
+    },
+    {
+      "name": "PositionSide",
+      "module": "domain/enums.py",
+      "source": "domain/enums.py:34",
+      "bases": [
+        "StrEnum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": [
+        {
+          "name": "FLAT",
+          "value": "'FLAT'"
+        },
+        {
+          "name": "LONG",
+          "value": "'LONG'"
+        },
+        {
+          "name": "SHORT",
+          "value": "'SHORT'"
+        },
+        {
+          "name": "BOTH",
+          "value": "'BOTH'"
+        }
+      ],
+      "validators": null
+    },
+    {
+      "name": "SettlementPolicy",
+      "module": "domain/enums.py",
+      "source": "domain/enums.py:88",
+      "bases": [
+        "StrEnum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": [
+        {
+          "name": "IMMEDIATE",
+          "value": "'IMMEDIATE'"
+        },
+        {
+          "name": "VN_T_PLUS",
+          "value": "'VN_T_PLUS'"
+        }
+      ],
+      "validators": null
+    },
+    {
+      "name": "SettlementStatus",
+      "module": "domain/enums.py",
+      "source": "domain/enums.py:93",
+      "bases": [
+        "StrEnum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": [
+        {
+          "name": "SCHEDULED",
+          "value": "'SCHEDULED'"
+        },
+        {
+          "name": "SETTLED",
+          "value": "'SETTLED'"
+        },
+        {
+          "name": "FAILED",
+          "value": "'FAILED'"
+        },
+        {
+          "name": "CANCELED",
+          "value": "'CANCELED'"
+        }
+      ],
+      "validators": null
+    },
+    {
+      "name": "StrEnum",
+      "module": "domain/enums.py",
+      "source": "domain/enums.py:6",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "TimeInForce",
+      "module": "domain/enums.py",
+      "source": "domain/enums.py:53",
+      "bases": [
+        "StrEnum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": [
+        {
+          "name": "GTC",
+          "value": "'GTC'"
+        },
+        {
+          "name": "IOC",
+          "value": "'IOC'"
+        },
+        {
+          "name": "FOK",
+          "value": "'FOK'"
+        },
+        {
+          "name": "GTD",
+          "value": "'GTD'"
+        },
+        {
+          "name": "GTX",
+          "value": "'GTX'"
+        }
+      ],
+      "validators": null
+    },
+    {
+      "name": "TradingMode",
+      "module": "domain/enums.py",
+      "source": "domain/enums.py:11",
+      "bases": [
+        "StrEnum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": [
+        {
+          "name": "PAPER",
+          "value": "'paper'"
+        },
+        {
+          "name": "SANDBOX",
+          "value": "'sandbox'"
+        },
+        {
+          "name": "LIVE",
+          "value": "'live'"
+        },
+        {
+          "name": "REPLAY",
+          "value": "'replay'"
+        },
+        {
+          "name": "BACKTEST",
+          "value": "'backtest'"
+        }
+      ],
+      "validators": null
+    },
+    {
+      "name": "TradingState",
+      "module": "domain/enums.py",
+      "source": "domain/enums.py:82",
+      "bases": [
+        "StrEnum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": [
+        {
+          "name": "ACTIVE",
+          "value": "'ACTIVE'"
+        },
+        {
+          "name": "REDUCING",
+          "value": "'REDUCING'"
+        },
+        {
+          "name": "HALTED",
+          "value": "'HALTED'"
+        }
+      ],
+      "validators": null
+    },
+    {
+      "name": "AccountState",
+      "module": "domain/events.py",
+      "source": "domain/events.py:48",
+      "bases": [
+        "DomainEvent"
+      ],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "account_id",
+          "type": "AccountId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "account_type",
+          "type": "AccountType",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "base_currency",
+          "type": "Currency | None",
+          "required": false,
+          "nullable": true,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "reported",
+          "type": "bool",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "balances",
+          "type": "list",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "margins",
+          "type": "list",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "info",
+          "type": "dict[str, Any]",
+          "required": false,
+          "nullable": false,
+          "default": "field(default_factory=dict)",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "DomainEvent",
+      "module": "domain/events.py",
+      "source": "domain/events.py:15",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "ts_event",
+          "type": "TimestampNs",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "ts_init",
+          "type": "TimestampNs",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "event_id",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "field(default_factory=lambda: str(uuid4()))",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "raw",
+          "type": "dict[str, Any] | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "OrderEvent",
+      "module": "domain/events.py",
+      "source": "domain/events.py:23",
+      "bases": [
+        "DomainEvent"
+      ],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "trader_id",
+          "type": "TraderId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "strategy_id",
+          "type": "StrategyId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "instrument_id",
+          "type": "InstrumentId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "client_order_id",
+          "type": "ClientOrderId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "status",
+          "type": "OrderStatus",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "OrderFilled",
+      "module": "domain/events.py",
+      "source": "domain/events.py:32",
+      "bases": [
+        "OrderEvent"
+      ],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "venue_order_id",
+          "type": "VenueOrderId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "account_id",
+          "type": "AccountId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "trade_id",
+          "type": "TradeId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "position_id",
+          "type": "PositionId | None",
+          "required": false,
+          "nullable": true,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "order_side",
+          "type": "OrderSide",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "order_type",
+          "type": "OrderType",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "last_qty",
+          "type": "Quantity",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "last_px",
+          "type": "Price",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "currency",
+          "type": "Currency",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "commission",
+          "type": "Money",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "liquidity_side",
+          "type": "LiquiditySide",
+          "required": false,
+          "nullable": false,
+          "default": "LiquiditySide.UNKNOWN",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "status",
+          "type": "OrderStatus",
+          "required": false,
+          "nullable": false,
+          "default": "OrderStatus.PARTIALLY_FILLED",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "PositionEvent",
+      "module": "domain/events.py",
+      "source": "domain/events.py:59",
+      "bases": [
+        "DomainEvent"
+      ],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "trader_id",
+          "type": "TraderId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "strategy_id",
+          "type": "StrategyId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "instrument_id",
+          "type": "InstrumentId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "position_id",
+          "type": "PositionId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "account_id",
+          "type": "AccountId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "side",
+          "type": "PositionSide",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "signed_qty",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "quantity",
+          "type": "Quantity",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "BasisPointFeeModel",
+      "module": "domain/fees.py",
+      "source": "domain/fees.py:19",
+      "bases": [
+        "FeeModel"
+      ],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "maker_bps",
+          "type": "Decimal",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "taker_bps",
+          "type": "Decimal",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "AccountId",
+      "module": "domain/identifiers.py",
+      "source": "domain/identifiers.py:42",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "value",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "ClientOrderId",
+      "module": "domain/identifiers.py",
+      "source": "domain/identifiers.py:86",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "value",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "InstrumentId",
+      "module": "domain/identifiers.py",
+      "source": "domain/identifiers.py:64",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "symbol",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "venue",
+          "type": "Venue",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "PositionId",
+      "module": "domain/identifiers.py",
+      "source": "domain/identifiers.py:108",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "value",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "StrategyId",
+      "module": "domain/identifiers.py",
+      "source": "domain/identifiers.py:31",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "value",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "TradeId",
+      "module": "domain/identifiers.py",
+      "source": "domain/identifiers.py:119",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "value",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "TraderId",
+      "module": "domain/identifiers.py",
+      "source": "domain/identifiers.py:20",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "value",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "Venue",
+      "module": "domain/identifiers.py",
+      "source": "domain/identifiers.py:53",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "value",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "VenueOrderId",
+      "module": "domain/identifiers.py",
+      "source": "domain/identifiers.py:97",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "value",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "CanonicalInstrumentId",
+      "module": "domain/instrument_identity.py",
+      "source": "domain/instrument_identity.py:84",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "venue",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "product",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "symbol",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "venue_symbol",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "Instrument",
+      "module": "domain/instruments.py",
+      "source": "domain/instruments.py:15",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "id",
+          "type": "InstrumentId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "asset_class",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "base_currency",
+          "type": "Currency | None",
+          "required": false,
+          "nullable": true,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "quote_currency",
+          "type": "Currency | None",
+          "required": false,
+          "nullable": true,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "settlement_currency",
+          "type": "Currency",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "price_precision",
+          "type": "int",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "size_precision",
+          "type": "int",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "tick_size",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "lot_size",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "min_qty",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "max_qty",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "min_notional",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "multiplier",
+          "type": "Decimal",
+          "required": false,
+          "nullable": false,
+          "default": "Decimal('1')",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "margin_init",
+          "type": "Decimal",
+          "required": false,
+          "nullable": false,
+          "default": "Decimal('1')",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "margin_maint",
+          "type": "Decimal",
+          "required": false,
+          "nullable": false,
+          "default": "Decimal('1')",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "trading_sessions",
+          "type": "dict",
+          "required": false,
+          "nullable": false,
+          "default": "field(default_factory=dict)",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "allowed_order_types",
+          "type": "frozenset[OrderType]",
+          "required": false,
+          "nullable": false,
+          "default": "field(default_factory=frozenset)",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "raw_metadata",
+          "type": "dict",
+          "required": false,
+          "nullable": false,
+          "default": "field(default_factory=dict)",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "MarketMetadata",
+      "module": "domain/market_metadata.py",
+      "source": "domain/market_metadata.py:20",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "step_size",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "tick_size",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "precision_amount",
+          "type": "int",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "source",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "venue",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "symbol",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "lot_size",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "min_qty",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "max_qty",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "min_notional",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "multiplier",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'1'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "asset_class",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "Currency",
+      "module": "domain/objects.py",
+      "source": "domain/objects.py:30",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "code",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "precision",
+          "type": "int",
+          "required": false,
+          "nullable": false,
+          "default": "8",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "Money",
+      "module": "domain/objects.py",
+      "source": "domain/objects.py:46",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "raw",
+          "type": "Decimal",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "currency",
+          "type": "Currency",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "Price",
+      "module": "domain/objects.py",
+      "source": "domain/objects.py:84",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "raw",
+          "type": "Decimal",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "precision",
+          "type": "int",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "Quantity",
+      "module": "domain/objects.py",
+      "source": "domain/objects.py:101",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "raw",
+          "type": "Decimal",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "precision",
+          "type": "int",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "TimestampNs",
+      "module": "domain/objects.py",
+      "source": "domain/objects.py:129",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "value",
+          "type": "int",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "ConditionalOrderGroupState",
+      "module": "domain/order_groups.py",
+      "source": "domain/order_groups.py:94",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "group_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "contingency_type",
+          "type": "ContingencyType",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "state",
+          "type": "GroupState",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "legs",
+          "type": "dict[str, OrderGroupLegState]",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "execution_trigger",
+          "type": "ExecutionTrigger",
+          "required": false,
+          "nullable": false,
+          "default": "ExecutionTrigger.ON_FIRST_FILL",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "remainder_policy",
+          "type": "RemainderPolicy",
+          "required": false,
+          "nullable": false,
+          "default": "RemainderPolicy.KEEP_REMAINDER",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "late_fill_policy",
+          "type": "LateFillPolicy",
+          "required": false,
+          "nullable": false,
+          "default": "LateFillPolicy.HALT_AND_RECONCILE",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "target_quantity",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "max_exposure_quantity",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "winner_leg_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "metadata",
+          "type": "dict[str, Any]",
+          "required": false,
+          "nullable": false,
+          "default": "field(default_factory=dict)",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "ContingencyType",
+      "module": "domain/order_groups.py",
+      "source": "domain/order_groups.py:11",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": [
+        {
+          "name": "NONE",
+          "value": "'NONE'"
+        },
+        {
+          "name": "OTO",
+          "value": "'OTO'"
+        },
+        {
+          "name": "OCO",
+          "value": "'OCO'"
+        },
+        {
+          "name": "OUO",
+          "value": "'OUO'"
+        },
+        {
+          "name": "BRACKET",
+          "value": "'BRACKET'"
+        }
+      ],
+      "validators": null
+    },
+    {
+      "name": "EffectType",
+      "module": "domain/order_groups.py",
+      "source": "domain/order_groups.py:65",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": [
+        {
+          "name": "PLACE",
+          "value": "'PLACE'"
+        },
+        {
+          "name": "CANCEL",
+          "value": "'CANCEL'"
+        },
+        {
+          "name": "AMEND",
+          "value": "'AMEND'"
+        },
+        {
+          "name": "COMPENSATE",
+          "value": "'COMPENSATE'"
+        }
+      ],
+      "validators": null
+    },
+    {
+      "name": "ExecutionTrigger",
+      "module": "domain/order_groups.py",
+      "source": "domain/order_groups.py:47",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": [
+        {
+          "name": "ON_FIRST_FILL",
+          "value": "'ON_FIRST_FILL'"
+        },
+        {
+          "name": "ON_FULL_FILL",
+          "value": "'ON_FULL_FILL'"
+        },
+        {
+          "name": "ON_TARGET_QUANTITY",
+          "value": "'ON_TARGET_QUANTITY'"
+        },
+        {
+          "name": "ON_TERMINAL",
+          "value": "'ON_TERMINAL'"
+        }
+      ],
+      "validators": null
+    },
+    {
+      "name": "GroupState",
+      "module": "domain/order_groups.py",
+      "source": "domain/order_groups.py:19",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": [
+        {
+          "name": "CREATED",
+          "value": "'CREATED'"
+        },
+        {
+          "name": "VALIDATED",
+          "value": "'VALIDATED'"
+        },
+        {
+          "name": "SUBMITTING",
+          "value": "'SUBMITTING'"
+        },
+        {
+          "name": "ACTIVE",
+          "value": "'ACTIVE'"
+        },
+        {
+          "name": "PARTIALLY_EXECUTED",
+          "value": "'PARTIALLY_EXECUTED'"
+        },
+        {
+          "name": "CANCELING",
+          "value": "'CANCELING'"
+        },
+        {
+          "name": "UPDATING",
+          "value": "'UPDATING'"
+        },
+        {
+          "name": "OVERFILLED",
+          "value": "'OVERFILLED'"
+        },
+        {
+          "name": "COMPENSATING",
+          "value": "'COMPENSATING'"
+        },
+        {
+          "name": "CLOSED",
+          "value": "'CLOSED'"
+        },
+        {
+          "name": "CANCELED",
+          "value": "'CANCELED'"
+        },
+        {
+          "name": "DEGRADED_RECONCILIATION_REQUIRED",
+          "value": "'DEGRADED_RECONCILIATION_REQUIRED'"
+        },
+        {
+          "name": "ERROR",
+          "value": "'ERROR'"
+        }
+      ],
+      "validators": null
+    },
+    {
+      "name": "LateFillPolicy",
+      "module": "domain/order_groups.py",
+      "source": "domain/order_groups.py:59",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": [
+        {
+          "name": "HALT_AND_RECONCILE",
+          "value": "'HALT_AND_RECONCILE'"
+        },
+        {
+          "name": "AUTO_REDUCE_EXCESS",
+          "value": "'AUTO_REDUCE_EXCESS'"
+        },
+        {
+          "name": "ACCEPT_WITHIN_MAX_EXPOSURE",
+          "value": "'ACCEPT_WITHIN_MAX_EXPOSURE'"
+        }
+      ],
+      "validators": null
+    },
+    {
+      "name": "LegState",
+      "module": "domain/order_groups.py",
+      "source": "domain/order_groups.py:35",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": [
+        {
+          "name": "WAITING",
+          "value": "'WAITING'"
+        },
+        {
+          "name": "PENDING_SUBMIT",
+          "value": "'PENDING_SUBMIT'"
+        },
+        {
+          "name": "OPEN",
+          "value": "'OPEN'"
+        },
+        {
+          "name": "PARTIALLY_FILLED",
+          "value": "'PARTIALLY_FILLED'"
+        },
+        {
+          "name": "FILLED",
+          "value": "'FILLED'"
+        },
+        {
+          "name": "PENDING_CANCEL",
+          "value": "'PENDING_CANCEL'"
+        },
+        {
+          "name": "CANCELED",
+          "value": "'CANCELED'"
+        },
+        {
+          "name": "REJECTED",
+          "value": "'REJECTED'"
+        },
+        {
+          "name": "EXPIRED",
+          "value": "'EXPIRED'"
+        }
+      ],
+      "validators": null
+    },
+    {
+      "name": "OrderGroupEffect",
+      "module": "domain/order_groups.py",
+      "source": "domain/order_groups.py:120",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "effect_type",
+          "type": "EffectType",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "leg_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "payload",
+          "type": "dict[str, Any]",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "reason",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "OrderGroupEvent",
+      "module": "domain/order_groups.py",
+      "source": "domain/order_groups.py:109",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "event_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "event_type",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "leg_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "status",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "fill_quantity",
+          "type": "Decimal",
+          "required": false,
+          "nullable": false,
+          "default": "Decimal('0')",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "cumulative_quantity",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "payload",
+          "type": "dict[str, Any]",
+          "required": false,
+          "nullable": false,
+          "default": "field(default_factory=dict)",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "OrderGroupLegState",
+      "module": "domain/order_groups.py",
+      "source": "domain/order_groups.py:81",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "leg_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "client_order_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "quantity",
+          "type": "Decimal",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "state",
+          "type": "LegState",
+          "required": false,
+          "nullable": false,
+          "default": "LegState.WAITING",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "filled_quantity",
+          "type": "Decimal",
+          "required": false,
+          "nullable": false,
+          "default": "Decimal('0')",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "average_fill_price",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "parent_leg_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "role",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'MEMBER'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "payload",
+          "type": "dict[str, Any]",
+          "required": false,
+          "nullable": false,
+          "default": "field(default_factory=dict)",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "RemainderPolicy",
+      "module": "domain/order_groups.py",
+      "source": "domain/order_groups.py:54",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": [
+        {
+          "name": "KEEP_REMAINDER",
+          "value": "'KEEP_REMAINDER'"
+        },
+        {
+          "name": "CANCEL_REMAINDER",
+          "value": "'CANCEL_REMAINDER'"
+        }
+      ],
+      "validators": null
+    },
+    {
+      "name": "TransitionResult",
+      "module": "domain/order_groups.py",
+      "source": "domain/order_groups.py:128",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "group",
+          "type": "ConditionalOrderGroupState",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "effects",
+          "type": "tuple[OrderGroupEffect, ...]",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "CancelAllOrders",
+      "module": "domain/orders.py",
+      "source": "domain/orders.py:104",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "strategy_id",
+          "type": "StrategyId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "account_id",
+          "type": "AccountId | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "instrument_id",
+          "type": "InstrumentId | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "CancelOrder",
+      "module": "domain/orders.py",
+      "source": "domain/orders.py:97",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "strategy_id",
+          "type": "StrategyId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "account_id",
+          "type": "AccountId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "client_order_id",
+          "type": "ClientOrderId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "ClosePosition",
+      "module": "domain/orders.py",
+      "source": "domain/orders.py:111",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "strategy_id",
+          "type": "StrategyId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "account_id",
+          "type": "AccountId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "position_id",
+          "type": "PositionId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "quantity",
+          "type": "Quantity | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "ModifyOrder",
+      "module": "domain/orders.py",
+      "source": "domain/orders.py:86",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "strategy_id",
+          "type": "StrategyId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "account_id",
+          "type": "AccountId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "client_order_id",
+          "type": "ClientOrderId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "new_client_order_id",
+          "type": "ClientOrderId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "quantity",
+          "type": "Quantity | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "price",
+          "type": "Price | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "trigger_price",
+          "type": "Price | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "Order",
+      "module": "domain/orders.py",
+      "source": "domain/orders.py:119",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "client_order_id",
+          "type": "ClientOrderId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "instrument_id",
+          "type": "InstrumentId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "side",
+          "type": "OrderSide",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "order_type",
+          "type": "OrderType",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "quantity",
+          "type": "Quantity",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "status",
+          "type": "OrderStatus",
+          "required": false,
+          "nullable": false,
+          "default": "OrderStatus.INITIALIZED",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "venue_order_id",
+          "type": "VenueOrderId | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "filled_qty",
+          "type": "Quantity | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "SubmitOrder",
+      "module": "domain/orders.py",
+      "source": "domain/orders.py:48",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "trader_id",
+          "type": "TraderId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "strategy_id",
+          "type": "StrategyId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "account_id",
+          "type": "AccountId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "mode",
+          "type": "TradingMode",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "venue",
+          "type": "Venue",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "instrument_id",
+          "type": "InstrumentId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "client_order_id",
+          "type": "ClientOrderId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "side",
+          "type": "OrderSide",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "order_type",
+          "type": "OrderType",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "quantity",
+          "type": "Quantity",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "position_side",
+          "type": "PositionSide",
+          "required": false,
+          "nullable": false,
+          "default": "PositionSide.BOTH",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "price",
+          "type": "Price | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "trigger_price",
+          "type": "Price | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "time_in_force",
+          "type": "TimeInForce",
+          "required": false,
+          "nullable": false,
+          "default": "TimeInForce.GTC",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "reduce_only",
+          "type": "bool",
+          "required": false,
+          "nullable": false,
+          "default": "False",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "post_only",
+          "type": "bool",
+          "required": false,
+          "nullable": false,
+          "default": "False",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "ts_init",
+          "type": "TimestampNs | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "SubmitOrderList",
+      "module": "domain/orders.py",
+      "source": "domain/orders.py:77",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "orders",
+          "type": "tuple[SubmitOrder, ...]",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "Position",
+      "module": "domain/positions.py",
+      "source": "domain/positions.py:17",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "trader_id",
+          "type": "TraderId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "strategy_id",
+          "type": "StrategyId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "instrument_id",
+          "type": "InstrumentId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "id",
+          "type": "PositionId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "account_id",
+          "type": "AccountId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "price_precision",
+          "type": "int",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "size_precision",
+          "type": "int",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "settlement_currency",
+          "type": "Currency",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "multiplier",
+          "type": "Decimal",
+          "required": false,
+          "nullable": false,
+          "default": "Decimal('1')",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "side",
+          "type": "PositionSide",
+          "required": false,
+          "nullable": false,
+          "default": "PositionSide.FLAT",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "signed_qty",
+          "type": "Decimal",
+          "required": false,
+          "nullable": false,
+          "default": "Decimal('0')",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "quantity",
+          "type": "Quantity | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "peak_qty",
+          "type": "Quantity | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "avg_px_open",
+          "type": "Decimal",
+          "required": false,
+          "nullable": false,
+          "default": "Decimal('0')",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "realized_pnl",
+          "type": "Money | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "trade_ids",
+          "type": "set[TradeId]",
+          "required": false,
+          "nullable": false,
+          "default": "field(default_factory=set)",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "events",
+          "type": "list[OrderFilled]",
+          "required": false,
+          "nullable": false,
+          "default": "field(default_factory=list)",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "RiskDenyReason",
+      "module": "domain/risk.py",
+      "source": "domain/risk.py:13",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "kind": "enum",
+      "docstring": null,
+      "fields": [],
+      "enum_members": [
+        {
+          "name": "TRADING_HALTED",
+          "value": "'TRADING_HALTED'"
+        },
+        {
+          "name": "REDUCE_ONLY_REQUIRED",
+          "value": "'REDUCE_ONLY_REQUIRED'"
+        },
+        {
+          "name": "INSTRUMENT_NOT_FOUND",
+          "value": "'INSTRUMENT_NOT_FOUND'"
+        },
+        {
+          "name": "SESSION_CLOSED",
+          "value": "'SESSION_CLOSED'"
+        },
+        {
+          "name": "PRICE_INVALID",
+          "value": "'PRICE_INVALID'"
+        },
+        {
+          "name": "QUANTITY_INVALID",
+          "value": "'QUANTITY_INVALID'"
+        },
+        {
+          "name": "NOTIONAL_LIMIT",
+          "value": "'NOTIONAL_LIMIT'"
+        },
+        {
+          "name": "EXPOSURE_LIMIT",
+          "value": "'EXPOSURE_LIMIT'"
+        },
+        {
+          "name": "INSUFFICIENT_BALANCE",
+          "value": "'INSUFFICIENT_BALANCE'"
+        },
+        {
+          "name": "RATE_LIMIT",
+          "value": "'RATE_LIMIT'"
+        }
+      ],
+      "validators": null
+    },
+    {
+      "name": "RiskProfile",
+      "module": "domain/risk.py",
+      "source": "domain/risk.py:27",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "strategy_id",
+          "type": "StrategyId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "mode",
+          "type": "TradingMode",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "venue",
+          "type": "Venue",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "instrument_id",
+          "type": "InstrumentId | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "trading_state",
+          "type": "TradingState",
+          "required": false,
+          "nullable": false,
+          "default": "TradingState.ACTIVE",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "max_notional_order",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "max_notional_position",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "max_leverage",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "max_order_per_second",
+          "type": "int | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "max_order_per_minute",
+          "type": "int | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "max_daily_loss",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "max_drawdown",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "allowed_order_types",
+          "type": "frozenset[OrderType]",
+          "required": false,
+          "nullable": false,
+          "default": "field(default_factory=frozenset)",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "FixedBusinessDaySettlementPolicy",
+      "module": "domain/settlements.py",
+      "source": "domain/settlements.py:45",
+      "bases": [
+        "SettlementPolicyModel"
+      ],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "days",
+          "type": "int",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "policy",
+          "type": "SettlementPolicy",
+          "required": false,
+          "nullable": false,
+          "default": "SettlementPolicy.VN_T_PLUS",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "ImmediateSettlementPolicy",
+      "module": "domain/settlements.py",
+      "source": "domain/settlements.py:37",
+      "bases": [
+        "SettlementPolicyModel"
+      ],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "policy",
+          "type": "SettlementPolicy",
+          "required": false,
+          "nullable": false,
+          "default": "SettlementPolicy.IMMEDIATE",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "SettlementInstruction",
+      "module": "domain/settlements.py",
+      "source": "domain/settlements.py:15",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "account_id",
+          "type": "AccountId",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "strategy_id",
+          "type": "StrategyId | None",
+          "required": false,
+          "nullable": true,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "venue",
+          "type": "Venue",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "instrument_id",
+          "type": "InstrumentId | None",
+          "required": false,
+          "nullable": true,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "policy",
+          "type": "SettlementPolicy",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "trade_date",
+          "type": "date",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "settlement_date",
+          "type": "date",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "status",
+          "type": "SettlementStatus",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "currency",
+          "type": "Currency | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "quantity",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "amount",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "ArbPackageLeg",
+      "module": "services/gateway/schemas/arb_package_schema.py",
+      "source": "services/gateway/schemas/arb_package_schema.py:17",
+      "bases": [
+        "BaseModel"
+      ],
+      "kind": "pydantic_model",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "symbol",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "role",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "validation_alias": "AliasChoices('role', 'leg_role')"
+          },
+          "description": null
+        },
+        {
+          "name": "side",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "target_qty",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "quantity",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "abs_qty",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "reference_price",
+          "type": "Decimal",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "gt": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "order_type",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'MARKET'",
+          "alias": "'type'",
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "price",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "time_in_force",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'GTC'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "reduce_only",
+          "type": "bool",
+          "required": false,
+          "nullable": false,
+          "default": "False",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "position_side",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'BOTH'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "intent",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'OPEN'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "market_info",
+          "type": "dict[str, Any]",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "dict"
+          },
+          "description": null
+        },
+        {
+          "name": "metadata",
+          "type": "dict[str, Any]",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "dict"
+          },
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": [
+        {
+          "function": "exact_values",
+          "kind": "field_validator",
+          "applies_to": [
+            "target_qty",
+            "quantity",
+            "abs_qty",
+            "reference_price",
+            "price"
+          ]
+        },
+        {
+          "function": "normalize_symbol",
+          "kind": "field_validator",
+          "applies_to": [
+            "symbol"
+          ]
+        },
+        {
+          "function": "upper_or_none",
+          "kind": "field_validator",
+          "applies_to": [
+            "role",
+            "side",
+            "order_type",
+            "time_in_force",
+            "position_side",
+            "intent"
+          ]
+        },
+        {
+          "function": "infer_side_and_quantity",
+          "kind": "model_validator",
+          "applies_to": [
+            "<model>"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ArbPackageRequest",
+      "module": "services/gateway/schemas/arb_package_schema.py",
+      "source": "services/gateway/schemas/arb_package_schema.py:70",
+      "bases": [
+        "BaseModel"
+      ],
+      "kind": "pydantic_model",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "alpha_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "package_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "execution_session_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "cycle_key",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "account_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "mode",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'paper'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "venue",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'BINANCE'",
+          "alias": "'exchange'",
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "package_policy",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'ATOMIC_ALL_OR_NONE'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "order_type",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'MARKET'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "time_in_force",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'GTC'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "max_imbalance_bps",
+          "type": "Decimal",
+          "required": false,
+          "nullable": false,
+          "default": "Decimal('500')",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "submit",
+          "type": "bool",
+          "required": false,
+          "nullable": false,
+          "default": "True",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "alpha_send_ts",
+          "type": "float",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "time.time"
+          },
+          "description": null
+        },
+        {
+          "name": "legs",
+          "type": "list[ArbPackageLeg]",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "metadata",
+          "type": "dict[str, Any]",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "dict"
+          },
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": [
+        {
+          "function": "exact_values",
+          "kind": "field_validator",
+          "applies_to": [
+            "max_imbalance_bps"
+          ]
+        },
+        {
+          "function": "normalize_mode",
+          "kind": "field_validator",
+          "applies_to": [
+            "mode"
+          ]
+        },
+        {
+          "function": "normalize_package_venue",
+          "kind": "field_validator",
+          "applies_to": [
+            "venue"
+          ]
+        },
+        {
+          "function": "upper_value",
+          "kind": "field_validator",
+          "applies_to": [
+            "package_policy",
+            "order_type",
+            "time_in_force"
+          ]
+        },
+        {
+          "function": "validate_package",
+          "kind": "model_validator",
+          "applies_to": [
+            "<model>"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BracketEntry",
+      "module": "services/gateway/schemas/bracket_schema.py",
+      "source": "services/gateway/schemas/bracket_schema.py:17",
+      "bases": [
+        "BaseModel"
+      ],
+      "kind": "pydantic_model",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "type",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'MARKET'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "side",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "quantity",
+          "type": "Decimal",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "gt": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "price",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "time_in_force",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'GTC'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "client_order_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": [
+        {
+          "function": "exact_values",
+          "kind": "field_validator",
+          "applies_to": [
+            "quantity",
+            "price"
+          ]
+        },
+        {
+          "function": "upper",
+          "kind": "field_validator",
+          "applies_to": [
+            "type",
+            "side",
+            "time_in_force"
+          ]
+        },
+        {
+          "function": "validate_price",
+          "kind": "model_validator",
+          "applies_to": [
+            "<model>"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BracketLifecycleAuditRequest",
+      "module": "services/gateway/schemas/bracket_schema.py",
+      "source": "services/gateway/schemas/bracket_schema.py:182",
+      "bases": [
+        "BaseModel"
+      ],
+      "kind": "pydantic_model",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "alpha_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "account_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "mode",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "venue",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "symbol",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "policy",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'SINGLE_POSITION_PROTECTION'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "apply",
+          "type": "bool",
+          "required": false,
+          "nullable": false,
+          "default": "False",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "actor",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'operator'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "reason",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'BRACKET_LIFECYCLE_REPAIR'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "bracket_group_ids",
+          "type": "list[str]",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "list"
+          },
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": [
+        {
+          "function": "normalized_mode",
+          "kind": "field_validator",
+          "applies_to": [
+            "mode"
+          ]
+        },
+        {
+          "function": "normalized_venue",
+          "kind": "field_validator",
+          "applies_to": [
+            "venue"
+          ]
+        },
+        {
+          "function": "normalized_symbol",
+          "kind": "field_validator",
+          "applies_to": [
+            "symbol"
+          ]
+        },
+        {
+          "function": "supported_policy",
+          "kind": "field_validator",
+          "applies_to": [
+            "policy"
+          ]
+        },
+        {
+          "function": "validate_apply_scope",
+          "kind": "model_validator",
+          "applies_to": [
+            "<model>"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BracketOrderRequest",
+      "module": "services/gateway/schemas/bracket_schema.py",
+      "source": "services/gateway/schemas/bracket_schema.py:113",
+      "bases": [
+        "BaseModel"
+      ],
+      "kind": "pydantic_model",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "alpha_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "bracket_group_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "symbol",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "mode",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "venue",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "exchange",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'BINANCE'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "account_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "position_side",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'BOTH'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "entry",
+          "type": "BracketEntry",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "stop_loss",
+          "type": "BracketStop | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "take_profits",
+          "type": "list[BracketTakeProfit]",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "list"
+          },
+          "description": null
+        },
+        {
+          "name": "activation_policy",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'SUBMIT_CHILDREN_AFTER_ENTRY_FILLED'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "oco_policy",
+          "type": "dict[str, Any]",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "dict"
+          },
+          "description": null
+        },
+        {
+          "name": "execution_session_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "risk_grant_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "metadata",
+          "type": "dict[str, Any]",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "dict"
+          },
+          "description": null
+        },
+        {
+          "name": "alpha_send_ts",
+          "type": "float",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "time.time"
+          },
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": [
+        {
+          "function": "symbol_upper",
+          "kind": "field_validator",
+          "applies_to": [
+            "symbol"
+          ]
+        },
+        {
+          "function": "mode_normalized",
+          "kind": "field_validator",
+          "applies_to": [
+            "mode"
+          ]
+        },
+        {
+          "function": "venue_normalized",
+          "kind": "field_validator",
+          "applies_to": [
+            "exchange"
+          ]
+        },
+        {
+          "function": "upper",
+          "kind": "field_validator",
+          "applies_to": [
+            "position_side",
+            "activation_policy"
+          ]
+        },
+        {
+          "function": "validate_bracket",
+          "kind": "model_validator",
+          "applies_to": [
+            "<model>"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BracketStop",
+      "module": "services/gateway/schemas/bracket_schema.py",
+      "source": "services/gateway/schemas/bracket_schema.py:44",
+      "bases": [
+        "BaseModel"
+      ],
+      "kind": "pydantic_model",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "type",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'STOP_MARKET'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "trigger_price",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": {
+            "gt": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "distance",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": {
+            "gt": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "price",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "quantity",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": {
+            "gt": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "time_in_force",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'GTC'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "client_order_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": [
+        {
+          "function": "exact_values",
+          "kind": "field_validator",
+          "applies_to": [
+            "trigger_price",
+            "distance",
+            "price",
+            "quantity"
+          ]
+        },
+        {
+          "function": "upper",
+          "kind": "field_validator",
+          "applies_to": [
+            "type",
+            "time_in_force"
+          ]
+        },
+        {
+          "function": "validate_type",
+          "kind": "model_validator",
+          "applies_to": [
+            "<model>"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BracketStopReplaceRequest",
+      "module": "services/gateway/schemas/bracket_schema.py",
+      "source": "services/gateway/schemas/bracket_schema.py:170",
+      "bases": [
+        "BaseModel"
+      ],
+      "kind": "pydantic_model",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "trigger_price",
+          "type": "Decimal",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "gt": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "price",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": {
+            "gt": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "reason",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'STOP_REPLACE'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "metadata",
+          "type": "dict[str, Any]",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "dict"
+          },
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": [
+        {
+          "function": "exact_values",
+          "kind": "field_validator",
+          "applies_to": [
+            "trigger_price",
+            "price"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BracketTakeProfit",
+      "module": "services/gateway/schemas/bracket_schema.py",
+      "source": "services/gateway/schemas/bracket_schema.py:76",
+      "bases": [
+        "BaseModel"
+      ],
+      "kind": "pydantic_model",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "type",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'TAKE_PROFIT_MARKET'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "trigger_price",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": {
+            "gt": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "distance",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": {
+            "gt": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "price",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "quantity",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": {
+            "gt": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "quantity_fraction",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": {
+            "gt": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "time_in_force",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'GTC'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "client_order_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": [
+        {
+          "function": "exact_values",
+          "kind": "field_validator",
+          "applies_to": [
+            "trigger_price",
+            "distance",
+            "price",
+            "quantity",
+            "quantity_fraction"
+          ]
+        },
+        {
+          "function": "upper",
+          "kind": "field_validator",
+          "applies_to": [
+            "type",
+            "time_in_force"
+          ]
+        },
+        {
+          "function": "validate_type_and_size",
+          "kind": "model_validator",
+          "applies_to": [
+            "<model>"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ConditionalOrderGroupRequest",
+      "module": "services/gateway/schemas/order_group_schema.py",
+      "source": "services/gateway/schemas/order_group_schema.py:45",
+      "bases": [
+        "BaseModel"
+      ],
+      "kind": "pydantic_model",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "group_id",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "lambda: f'grp-{uuid4().hex}'"
+          },
+          "description": null
+        },
+        {
+          "name": "alpha_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "account_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "execution_session_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "correlation_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "mode",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'paper'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "venue",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'BINANCE'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "symbol",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "instrument_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "position_side",
+          "type": "Literal['BOTH', 'LONG', 'SHORT']",
+          "required": false,
+          "nullable": false,
+          "default": "'BOTH'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "contingency_type",
+          "type": "ContingencyType",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "activation_policy",
+          "type": "Literal['IMMEDIATE', 'ON_PARENT_FIRST_FILL', 'ON_PARENT_FULL_FILL']",
+          "required": false,
+          "nullable": false,
+          "default": "'IMMEDIATE'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "execution_trigger",
+          "type": "ExecutionTrigger",
+          "required": false,
+          "nullable": false,
+          "default": "ExecutionTrigger.ON_FIRST_FILL",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "remainder_policy",
+          "type": "RemainderPolicy",
+          "required": false,
+          "nullable": false,
+          "default": "RemainderPolicy.KEEP_REMAINDER",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "late_fill_policy",
+          "type": "LateFillPolicy",
+          "required": false,
+          "nullable": false,
+          "default": "LateFillPolicy.HALT_AND_RECONCILE",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "emulation_policy",
+          "type": "Literal['AUTO', 'REQUIRE_NATIVE', 'INTERNAL']",
+          "required": false,
+          "nullable": false,
+          "default": "'AUTO'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "target_quantity",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": {
+            "gt": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "max_exposure_quantity",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": {
+            "gt": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "submit",
+          "type": "bool",
+          "required": false,
+          "nullable": false,
+          "default": "True",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "policy_version",
+          "type": "int",
+          "required": false,
+          "nullable": false,
+          "default": "1",
+          "alias": null,
+          "constraints": {
+            "ge": "1"
+          },
+          "description": null
+        },
+        {
+          "name": "legs",
+          "type": "list[OrderGroupLegRequest]",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "min_length": "1"
+          },
+          "description": null
+        },
+        {
+          "name": "metadata",
+          "type": "dict[str, Any]",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "dict"
+          },
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": [
+        {
+          "function": "normalize_mode",
+          "kind": "field_validator",
+          "applies_to": [
+            "mode"
+          ]
+        },
+        {
+          "function": "normalize_exchange",
+          "kind": "field_validator",
+          "applies_to": [
+            "venue"
+          ]
+        },
+        {
+          "function": "normalize_symbol",
+          "kind": "field_validator",
+          "applies_to": [
+            "symbol"
+          ]
+        },
+        {
+          "function": "validate_group_contract",
+          "kind": "model_validator",
+          "applies_to": [
+            "<model>"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "OrderGroupLegRequest",
+      "module": "services/gateway/schemas/order_group_schema.py",
+      "source": "services/gateway/schemas/order_group_schema.py:18",
+      "bases": [
+        "BaseModel"
+      ],
+      "kind": "pydantic_model",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "leg_id",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "lambda: f'leg-{uuid4().hex[:16]}'"
+          },
+          "description": null
+        },
+        {
+          "name": "parent_leg_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "role",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'MEMBER'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "sequence",
+          "type": "int",
+          "required": false,
+          "nullable": false,
+          "default": "0",
+          "alias": null,
+          "constraints": {
+            "ge": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "client_order_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "side",
+          "type": "Literal['BUY', 'SELL']",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "position_side",
+          "type": "Literal['BOTH', 'LONG', 'SHORT']",
+          "required": false,
+          "nullable": false,
+          "default": "'BOTH'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "order_type",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'LIMIT'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "quantity",
+          "type": "Decimal",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "gt": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "price",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": {
+            "gt": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "trigger_price",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": {
+            "gt": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "time_in_force",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'GTC'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "good_till_date",
+          "type": "int | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "trigger_reference",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'MARK_PRICE'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "intent",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'OPEN'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "reduce_only",
+          "type": "bool",
+          "required": false,
+          "nullable": false,
+          "default": "False",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "post_only",
+          "type": "bool",
+          "required": false,
+          "nullable": false,
+          "default": "False",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "activation_policy",
+          "type": "Literal['IMMEDIATE', 'ON_PARENT_FIRST_FILL', 'ON_PARENT_FULL_FILL']",
+          "required": false,
+          "nullable": false,
+          "default": "'IMMEDIATE'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "metadata",
+          "type": "dict[str, Any]",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "dict"
+          },
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": [
+        {
+          "function": "uppercase",
+          "kind": "field_validator",
+          "applies_to": [
+            "order_type",
+            "role",
+            "intent",
+            "time_in_force"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "OrderGroupOperatorAction",
+      "module": "services/gateway/schemas/order_group_schema.py",
+      "source": "services/gateway/schemas/order_group_schema.py:141",
+      "bases": [
+        "BaseModel"
+      ],
+      "kind": "pydantic_model",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "reason",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "min_length": "3"
+          },
+          "description": null
+        },
+        {
+          "name": "expected_version",
+          "type": "int | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": {
+            "ge": "0"
+          },
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "OrderGroupPatchRequest",
+      "module": "services/gateway/schemas/order_group_schema.py",
+      "source": "services/gateway/schemas/order_group_schema.py:133",
+      "bases": [
+        "BaseModel"
+      ],
+      "kind": "pydantic_model",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "expected_version",
+          "type": "int | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": {
+            "ge": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "late_fill_policy",
+          "type": "LateFillPolicy | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "remainder_policy",
+          "type": "RemainderPolicy | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "max_exposure_quantity",
+          "type": "Decimal | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": {
+            "gt": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "metadata",
+          "type": "dict[str, Any]",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "dict"
+          },
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "AlphaOrder",
+      "module": "services/gateway/schemas/order_schema.py",
+      "source": "services/gateway/schemas/order_schema.py:9",
+      "bases": [
+        "BaseModel"
+      ],
+      "kind": "pydantic_model",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "alpha_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "client_order_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "execution_session_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "risk_grant_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "bracket_group_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "bracket_leg_type",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "bracket_leg_index",
+          "type": "int | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "order_group_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "order_group_leg_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "symbol",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "side",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "position_side",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'BOTH'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "order_type",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": "'type'",
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "quantity",
+          "type": "float",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "gt": "0"
+          },
+          "description": null
+        },
+        {
+          "name": "price",
+          "type": "float | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "stop_price",
+          "type": "float | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "trigger_price",
+          "type": "float | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "trigger_type",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'MARK_PRICE'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "callback_rate",
+          "type": "float | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "activation_price",
+          "type": "float | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "close_position",
+          "type": "bool",
+          "required": false,
+          "nullable": false,
+          "default": "False",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "time_in_force",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'GTC'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "good_till_date",
+          "type": "int | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "reduce_only",
+          "type": "bool",
+          "required": false,
+          "nullable": false,
+          "default": "False",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "post_only",
+          "type": "bool",
+          "required": false,
+          "nullable": false,
+          "default": "False",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "intent",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'OPEN'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "orig_client_order_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "new_client_order_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "comment",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "metadata",
+          "type": "dict[str, Any]",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "dict"
+          },
+          "description": null
+        },
+        {
+          "name": "reference_price",
+          "type": "float | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "market_info",
+          "type": "dict[str, Any] | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "product",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "venue_symbol",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "exchange",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'BINANCE'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "venue",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "account_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "account_index",
+          "type": "int",
+          "required": false,
+          "nullable": false,
+          "default": "0",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "mode",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "alpha_send_ts",
+          "type": "float",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "gateway_receive_ts",
+          "type": "float",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "time.time"
+          },
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": [
+        {
+          "function": "format_symbol",
+          "kind": "field_validator",
+          "applies_to": [
+            "symbol"
+          ]
+        },
+        {
+          "function": "to_upper",
+          "kind": "field_validator",
+          "applies_to": [
+            "side",
+            "position_side",
+            "order_type",
+            "time_in_force",
+            "trigger_type",
+            "intent",
+            "bracket_leg_type"
+          ]
+        },
+        {
+          "function": "format_exchange",
+          "kind": "field_validator",
+          "applies_to": [
+            "exchange"
+          ]
+        },
+        {
+          "function": "validate_mode",
+          "kind": "field_validator",
+          "applies_to": [
+            "mode"
+          ]
+        },
+        {
+          "function": "validate_venue_specific_constraints",
+          "kind": "model_validator",
+          "applies_to": [
+            "<model>"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CancelOrderIntent",
+      "module": "services/gateway/schemas/order_schema.py",
+      "source": "services/gateway/schemas/order_schema.py:129",
+      "bases": [
+        "BaseModel"
+      ],
+      "kind": "pydantic_model",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "alpha_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "client_order_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "execution_session_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "risk_grant_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "order_group_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "order_group_leg_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "symbol",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "side",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'BUY'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "position_side",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'BOTH'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "order_type",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'LIMIT'",
+          "alias": "'type'",
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "quantity",
+          "type": "float",
+          "required": false,
+          "nullable": false,
+          "default": "0",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "exchange",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'BINANCE'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "venue",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "account_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "account_index",
+          "type": "int",
+          "required": false,
+          "nullable": false,
+          "default": "0",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "mode",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "intent",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'CANCEL'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "alpha_send_ts",
+          "type": "float",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "time.time"
+          },
+          "description": null
+        },
+        {
+          "name": "gateway_receive_ts",
+          "type": "float",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "time.time"
+          },
+          "description": null
+        },
+        {
+          "name": "metadata",
+          "type": "dict[str, Any]",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "dict"
+          },
+          "description": null
+        },
+        {
+          "name": "product",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "venue_symbol",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": [
+        {
+          "function": "format_symbol",
+          "kind": "field_validator",
+          "applies_to": [
+            "symbol"
+          ]
+        },
+        {
+          "function": "to_upper",
+          "kind": "field_validator",
+          "applies_to": [
+            "side",
+            "position_side",
+            "order_type",
+            "intent"
+          ]
+        },
+        {
+          "function": "format_exchange",
+          "kind": "field_validator",
+          "applies_to": [
+            "exchange"
+          ]
+        },
+        {
+          "function": "validate_mode",
+          "kind": "field_validator",
+          "applies_to": [
+            "mode"
+          ]
+        },
+        {
+          "function": "apply_venue_alias",
+          "kind": "model_validator",
+          "applies_to": [
+            "<model>"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "UpdateOrderIntent",
+      "module": "services/gateway/schemas/order_schema.py",
+      "source": "services/gateway/schemas/order_schema.py:114",
+      "bases": [
+        "BaseModel"
+      ],
+      "kind": "pydantic_model",
+      "docstring": "Schema sửa lệnh: Phải có 'side' để Risk Engine giải phóng Virtual Exposure cũ",
+      "fields": [
+        {
+          "name": "alpha_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "execution_session_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "risk_grant_id",
+          "type": "str | None",
+          "required": false,
+          "nullable": true,
+          "default": "None",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "symbol",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "side",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "orig_client_order_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "new_client_order_id",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "quantity",
+          "type": "float",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "price",
+          "type": "float",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "alpha_send_ts",
+          "type": "float",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "gateway_receive_ts",
+          "type": "float",
+          "required": false,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": {
+            "default_factory": "time.time"
+          },
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "MarketDataAuthorityPolicy",
+      "module": "services/venues/contracts.py",
+      "source": "services/venues/contracts.py:8",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "venue",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "product",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "mode",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "authoritative_sources",
+          "type": "tuple[str, ...]",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "require_live",
+          "type": "bool",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "require_timestamp",
+          "type": "bool",
+          "required": false,
+          "nullable": false,
+          "default": "True",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "allow_reference_fallback",
+          "type": "bool",
+          "required": false,
+          "nullable": false,
+          "default": "False",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "VenueProductProfile",
+      "module": "services/venues/contracts.py",
+      "source": "services/venues/contracts.py:19",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "venue",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "product",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "supported_modes",
+          "type": "tuple[str, ...]",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "execution_available",
+          "type": "bool",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "market_data_available",
+          "type": "bool",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "private_events_available",
+          "type": "bool",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "account_sync_available",
+          "type": "bool",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "reconciliation_available",
+          "type": "bool",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "position_modes",
+          "type": "tuple[str, ...]",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "credential_scope",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "rate_limit_scope",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "time_sync_scope",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "rollout_state",
+          "type": "str",
+          "required": false,
+          "nullable": false,
+          "default": "'ACTIVE'",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    },
+    {
+      "name": "VenueRuntimeScope",
+      "module": "services/venues/runtime_scopes.py",
+      "source": "services/venues/runtime_scopes.py:10",
+      "bases": [],
+      "kind": "dataclass",
+      "docstring": null,
+      "fields": [
+        {
+          "name": "venue",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "product",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "mode",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "credential_ref",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "credential_scope",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "rate_limit_scope",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "time_sync_scope",
+          "type": "str",
+          "required": true,
+          "nullable": false,
+          "default": null,
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "clock_offset_ms",
+          "type": "int",
+          "required": false,
+          "nullable": false,
+          "default": "0",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "last_time_sync_ms",
+          "type": "int",
+          "required": false,
+          "nullable": false,
+          "default": "0",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        },
+        {
+          "name": "last_observed_weight",
+          "type": "int",
+          "required": false,
+          "nullable": false,
+          "default": "0",
+          "alias": null,
+          "constraints": null,
+          "description": null
+        }
+      ],
+      "enum_members": null,
+      "validators": null
+    }
+  ]
+}

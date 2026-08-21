@@ -1,0 +1,4748 @@
+{
+  "provenance": {
+    "generated_by": "scripts/10_api_surface.py",
+    "read_only": true,
+    "trading_system_commit": "9081397de9e981c43b4e0f67fabe747e7ed964c7",
+    "sources": [
+      "services/gateway/main.py",
+      "openapi.sanitized.json"
+    ],
+    "note": "Derived from source/runtime read-only inspection. No Trading System file was modified."
+  },
+  "summary": {
+    "operations": 104,
+    "by_method": {
+      "DELETE": 4,
+      "GET": 56,
+      "PATCH": 7,
+      "POST": 35,
+      "PUT": 2
+    },
+    "by_auth_kind": {
+      "ADMIN": 54,
+      "ALPHA_KEY": 41,
+      "PUBLIC": 6,
+      "ALPHA_REPLAY": 3
+    },
+    "operations_with_query_params_in_source": 31,
+    "operations_with_query_params_in_spec": 45,
+    "operations_with_body_fields_in_source": 31,
+    "operations_with_request_body_in_spec": 0
+  },
+  "spec_crosscheck": {
+    "spec_operation_count": 104,
+    "source_operation_count": 104,
+    "in_spec_not_in_source": [],
+    "in_source_not_in_spec": []
+  },
+  "operations": [
+    {
+      "method": "POST",
+      "path": "/admin/paper/accounts/seed",
+      "handler": "seed_paper_account",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1906",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [
+        "account_id",
+        "account_type",
+        "alpha_id",
+        "currency",
+        "exchange",
+        "initial_balance",
+        "trader_id",
+        "venue"
+      ],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "account_id",
+        "alpha_id",
+        "currency",
+        "initial_balance",
+        "status",
+        "venue"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "seed_paper_account_admin_paper_accounts_seed_post",
+        "summary": "Seed Paper Account",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/bulk",
+      "handler": "submit_bulk",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:482",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [],
+      "literal_response_keys": [],
+      "internal_calls": [
+        "engine.validate_bulk"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "submit_bulk_bulk_post",
+        "summary": "Submit Bulk",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/cancel",
+      "handler": "cancel_order_legacy",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:504",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [],
+      "literal_response_keys": [],
+      "internal_calls": [
+        "engine.validate_cancel"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "cancel_order_legacy_cancel_delete",
+        "summary": "Cancel Order Legacy",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "handler": "health",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2595",
+      "auth": {
+        "kinds": [
+          "PUBLIC"
+        ],
+        "gates": [],
+        "detail": "no auth gate found in handler body"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "redis",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "health_health_get",
+        "summary": "Health",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/submit",
+      "handler": "submit_single",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:471",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [],
+      "literal_response_keys": [],
+      "internal_calls": [
+        "engine.validate_single"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "submit_single_submit_post",
+        "summary": "Submit Single",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/update",
+      "handler": "update_order",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:493",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [],
+      "literal_response_keys": [],
+      "internal_calls": [
+        "engine.validate_update"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "update_order_update_post",
+        "summary": "Update Order",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{account_id}/balances",
+      "handler": "v1_account_balances",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1320",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [
+        "account_id"
+      ],
+      "query_params": [
+        "alpha_id",
+        "exchange",
+        "mode",
+        "strategy_id",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "balances",
+        "count",
+        "status"
+      ],
+      "internal_calls": [
+        "engine.check_auth_and_rate",
+        "repo.list_balances"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_account_balances_v1_accounts__account_id__balances_get",
+        "summary": "V1 Account Balances",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "account_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{account_id}/preflight",
+      "handler": "v1_account_preflight",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1336",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [
+        "account_id"
+      ],
+      "query_params": [
+        "alpha_id",
+        "exchange",
+        "mode",
+        "strategy_id",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [
+        400,
+        403
+      ],
+      "literal_response_keys": [
+        "account_id",
+        "alpha_id",
+        "broker_sync",
+        "latest_sync",
+        "mode",
+        "operational",
+        "ready",
+        "reason",
+        "status",
+        "venue"
+      ],
+      "internal_calls": [
+        "engine.check_auth_and_rate"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_account_preflight_v1_accounts__account_id__preflight_get",
+        "summary": "V1 Account Preflight",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "account_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/accounts/paper/seed",
+      "handler": "seed_paper_account",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1906",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [
+        "account_id",
+        "account_type",
+        "alpha_id",
+        "currency",
+        "exchange",
+        "initial_balance",
+        "trader_id",
+        "venue"
+      ],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "account_id",
+        "alpha_id",
+        "currency",
+        "initial_balance",
+        "status",
+        "venue"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "seed_paper_account_v1_admin_accounts_paper_seed_post",
+        "summary": "Seed Paper Account",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/accounts/{account_id}/policy",
+      "handler": "admin_upsert_account_policy",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2437",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "account_id"
+      ],
+      "query_params": [],
+      "body_fields": [
+        "account_id"
+      ],
+      "request_headers_read": [
+        "X-Admin-User"
+      ],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "policy",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_upsert_account_policy_v1_admin_accounts__account_id__policy_put",
+        "summary": "Admin Upsert Account Policy",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "account_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/accounts/{account_id}/reconcile-open-orders",
+      "handler": "admin_reconcile_account_open_orders",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2488",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "account_id"
+      ],
+      "query_params": [],
+      "body_fields": [
+        "apply",
+        "reason",
+        "sync_first"
+      ],
+      "request_headers_read": [
+        "X-Admin-User"
+      ],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "reconciliation",
+        "status"
+      ],
+      "internal_calls": [
+        "repo.reconcile_open_orders_from_latest_sync",
+        "repo.sync_account"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_reconcile_account_open_orders_v1_admin_accounts__account_id__reconcile_open_orders_post",
+        "summary": "Admin Reconcile Account Open Orders",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "account_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/accounts/{account_id}/reconcile-positions",
+      "handler": "admin_reconcile_account_positions",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2470",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "account_id"
+      ],
+      "query_params": [],
+      "body_fields": [
+        "apply",
+        "reason",
+        "sync_first"
+      ],
+      "request_headers_read": [
+        "X-Admin-User"
+      ],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "reconciliation",
+        "status"
+      ],
+      "internal_calls": [
+        "repo.reconcile_positions_from_latest_sync",
+        "repo.sync_account"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_reconcile_account_positions_v1_admin_accounts__account_id__reconcile_positions_post",
+        "summary": "Admin Reconcile Account Positions",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "account_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/accounts/{account_id}/state",
+      "handler": "admin_get_account_state",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2451",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "account_id"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "account_state",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_get_account_state_v1_admin_accounts__account_id__state_get",
+        "summary": "Admin Get Account State",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "account_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/accounts/{account_id}/sync",
+      "handler": "admin_sync_account",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2460",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "account_id"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "status",
+        "sync"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_sync_account_v1_admin_accounts__account_id__sync_post",
+        "summary": "Admin Sync Account",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "account_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/alphas/register",
+      "handler": "admin_register_alpha",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1940",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [
+        "alpha_id",
+        "api_key"
+      ],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "alpha",
+        "gateway_auth",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_register_alpha_v1_admin_alphas_register_post",
+        "summary": "Admin Register Alpha",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/alphas/{alpha_id}",
+      "handler": "admin_get_alpha",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1966",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "alpha_id"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        404
+      ],
+      "literal_response_keys": [
+        "alpha",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_get_alpha_v1_admin_alphas__alpha_id__get",
+        "summary": "Admin Get Alpha",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "alpha_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/admin/alphas/{alpha_id}/risk",
+      "handler": "admin_update_alpha_risk",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1974",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "alpha_id"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "alpha",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_update_alpha_risk_v1_admin_alphas__alpha_id__risk_patch",
+        "summary": "Admin Update Alpha Risk",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "alpha_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/broker-bindings",
+      "handler": "admin_list_broker_bindings",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2373",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "broker_bindings",
+        "count",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_list_broker_bindings_v1_admin_broker_bindings_get",
+        "summary": "Admin List Broker Bindings",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/broker-bindings/{external_account_ref}/exposure",
+      "handler": "admin_get_broker_binding_exposure",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2393",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "external_account_ref"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "broker_exposure",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_get_broker_binding_exposure_v1_admin_broker_bindings__external_account_ref__exposure_get",
+        "summary": "Admin Get Broker Binding Exposure",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "external_account_ref"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/broker-bindings/{external_account_ref}/reconcile-open-orders",
+      "handler": "admin_reconcile_broker_binding_open_orders",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2420",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "external_account_ref"
+      ],
+      "query_params": [],
+      "body_fields": [
+        "mode",
+        "reason",
+        "sync_first",
+        "venue"
+      ],
+      "request_headers_read": [
+        "X-Admin-User"
+      ],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "reconciliation",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_reconcile_broker_binding_open_orders_v1_admin_broker_bindings__external_account_ref__reconcile_open_orders_post",
+        "summary": "Admin Reconcile Broker Binding Open Orders",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "external_account_ref"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/broker-bindings/{external_account_ref}/reconcile-positions",
+      "handler": "admin_reconcile_broker_binding_positions",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2403",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "external_account_ref"
+      ],
+      "query_params": [],
+      "body_fields": [
+        "mode",
+        "reason",
+        "sync_first",
+        "venue"
+      ],
+      "request_headers_read": [
+        "X-Admin-User"
+      ],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "reconciliation",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_reconcile_broker_binding_positions_v1_admin_broker_bindings__external_account_ref__reconcile_positions_post",
+        "summary": "Admin Reconcile Broker Binding Positions",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "external_account_ref"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/broker-bindings/{external_account_ref}/state",
+      "handler": "admin_get_broker_binding_state",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2383",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "external_account_ref"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "broker_binding",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_get_broker_binding_state_v1_admin_broker_bindings__external_account_ref__state_get",
+        "summary": "Admin Get Broker Binding State",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "external_account_ref"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/copy/policies",
+      "handler": "admin_list_copy_policies",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1984",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [
+        "alpha_id",
+        "enabled",
+        "exchange",
+        "mode",
+        "strategy_id",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "count",
+        "policies",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_list_copy_policies_v1_admin_copy_policies_get",
+        "summary": "Admin List Copy Policies",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/copy/policies/{strategy_id}",
+      "handler": "admin_upsert_copy_policy",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1999",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "strategy_id"
+      ],
+      "query_params": [],
+      "body_fields": [
+        "strategy_id"
+      ],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "policy",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_upsert_copy_policy_v1_admin_copy_policies__strategy_id__put",
+        "summary": "Admin Upsert Copy Policy",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "strategy_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/admin/deployments/{deployment_id}/state",
+      "handler": "admin_set_deployment_state",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2335",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "deployment_id"
+      ],
+      "query_params": [],
+      "body_fields": [
+        "reason",
+        "state"
+      ],
+      "request_headers_read": [
+        "X-Admin-User"
+      ],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "deployment",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_set_deployment_state_v1_admin_deployments__deployment_id__state_patch",
+        "summary": "Admin Set Deployment State",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "deployment_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/events",
+      "handler": "admin_events",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1194",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "count",
+        "events",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_events_v1_admin_events_get",
+        "summary": "Admin Events",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/market/seed",
+      "handler": "admin_seed_market",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2551",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [
+        "exchange",
+        "metadata_version",
+        "precision_amount",
+        "price",
+        "product",
+        "quantity",
+        "source",
+        "step_size",
+        "symbol",
+        "tick_size",
+        "ttl_seconds",
+        "venue",
+        "venue_symbol"
+      ],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "market_info",
+        "price",
+        "status",
+        "symbol",
+        "venue"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_seed_market_v1_admin_market_seed_post",
+        "summary": "Admin Seed Market",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/ops/emergency-close",
+      "handler": "admin_emergency_close",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2040",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [
+        "account_id",
+        "alpha_id",
+        "confirmation",
+        "mode",
+        "reason",
+        "venue"
+      ],
+      "request_headers_read": [
+        "X-Admin-User"
+      ],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "operation",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_emergency_close_v1_admin_ops_emergency_close_post",
+        "summary": "Admin Emergency Close",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/ops/emergency-close/plan",
+      "handler": "admin_emergency_close_plan",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2023",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [
+        "account_id",
+        "alpha_id",
+        "mode",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "plan",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_emergency_close_plan_v1_admin_ops_emergency_close_plan_get",
+        "summary": "Admin Emergency Close Plan",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/ops/emergency-close/{operation_id}",
+      "handler": "admin_get_emergency_close",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2060",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "operation_id"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        404
+      ],
+      "literal_response_keys": [
+        "operation",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_get_emergency_close_v1_admin_ops_emergency_close__operation_id__get",
+        "summary": "Admin Get Emergency Close",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "operation_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/ops/emergency-close/{operation_id}/verify",
+      "handler": "admin_verify_emergency_close",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2070",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "operation_id"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "operation",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_verify_emergency_close_v1_admin_ops_emergency_close__operation_id__verify_post",
+        "summary": "Admin Verify Emergency Close",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "operation_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/order-brackets/lifecycle-audit",
+      "handler": "v1_admin_audit_bracket_lifecycle",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:932",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [
+        "safe_terminalize"
+      ],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "bracket_count",
+        "findings",
+        "open_position_count",
+        "repairs",
+        "scope",
+        "status"
+      ],
+      "internal_calls": [
+        "repo.audit_scope",
+        "repo.terminalize_if_no_open_children"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_admin_audit_bracket_lifecycle_v1_admin_order_brackets_lifecycle_audit_post",
+        "summary": "V1 Admin Audit Bracket Lifecycle",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/order-groups",
+      "handler": "v1_admin_list_order_groups",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:907",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [
+        "account_id",
+        "alpha_id",
+        "exchange",
+        "limit",
+        "mode",
+        "state",
+        "strategy_id",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "count",
+        "groups",
+        "queues",
+        "status"
+      ],
+      "internal_calls": [
+        "repo.list",
+        "repo.queue_depth"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_admin_list_order_groups_v1_admin_order_groups_get",
+        "summary": "V1 Admin List Order Groups",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/order-groups/{group_id}",
+      "handler": "v1_admin_get_order_group",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:923",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "group_id"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        404
+      ],
+      "literal_response_keys": [
+        "group",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_admin_get_order_group_v1_admin_order_groups__group_id__get",
+        "summary": "V1 Admin Get Order Group",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "group_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/order-groups/{group_id}/reconcile",
+      "handler": "v1_admin_reconcile_order_group",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:874",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "group_id"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400,
+        404,
+        409
+      ],
+      "literal_response_keys": [
+        "group",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_admin_reconcile_order_group_v1_admin_order_groups__group_id__reconcile_post",
+        "summary": "V1 Admin Reconcile Order Group",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "group_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/order-groups/{group_id}/release",
+      "handler": "v1_admin_release_order_group",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:894",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "group_id"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400,
+        404
+      ],
+      "literal_response_keys": [
+        "group",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_admin_release_order_group_v1_admin_order_groups__group_id__release_post",
+        "summary": "V1 Admin Release Order Group",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "group_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/performance/accounts/latest",
+      "handler": "admin_latest_account_performance",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2081",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [
+        "account_id",
+        "alpha_id",
+        "mode",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "accounts",
+        "count",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_latest_account_performance_v1_admin_performance_accounts_latest_get",
+        "summary": "Admin Latest Account Performance",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/performance/accounts/{account_id}/history",
+      "handler": "admin_account_performance_history",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2113",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "account_id"
+      ],
+      "query_params": [
+        "limit"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "accounts",
+        "count",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_account_performance_history_v1_admin_performance_accounts__account_id__history_get",
+        "summary": "Admin Account Performance History",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "account_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/performance/dashboard",
+      "handler": "admin_performance_dashboard",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2223",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [
+        "account_id",
+        "alpha_id",
+        "limit",
+        "mode",
+        "portfolio_id",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "dashboard",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_performance_dashboard_v1_admin_performance_dashboard_get",
+        "summary": "Admin Performance Dashboard",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/performance/instruments/latest",
+      "handler": "admin_latest_instrument_performance",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2140",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [
+        "account_id",
+        "alpha_id",
+        "limit",
+        "mode",
+        "symbol",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "count",
+        "instruments",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_latest_instrument_performance_v1_admin_performance_instruments_latest_get",
+        "summary": "Admin Latest Instrument Performance",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/performance/portfolios/{portfolio_id}/history",
+      "handler": "admin_portfolio_performance_history",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2196",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "portfolio_id"
+      ],
+      "query_params": [
+        "limit"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "count",
+        "portfolios",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_portfolio_performance_history_v1_admin_performance_portfolios__portfolio_id__history_get",
+        "summary": "Admin Portfolio Performance History",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "portfolio_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/performance/portfolios/{portfolio_id}/latest",
+      "handler": "admin_latest_portfolio_performance",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2176",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "portfolio_id"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "count",
+        "portfolios",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_latest_portfolio_performance_v1_admin_performance_portfolios__portfolio_id__latest_get",
+        "summary": "Admin Latest Portfolio Performance",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "portfolio_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/portfolio-allocations",
+      "handler": "admin_upsert_portfolio_allocation",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2350",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-Admin-User"
+      ],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "allocation",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_upsert_portfolio_allocation_v1_admin_portfolio_allocations_post",
+        "summary": "Admin Upsert Portfolio Allocation",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/portfolio-capital/history",
+      "handler": "admin_portfolio_capital_history",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2363",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "capital_ledger",
+        "count",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_portfolio_capital_history_v1_admin_portfolio_capital_history_get",
+        "summary": "Admin Portfolio Capital History",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/portfolios",
+      "handler": "admin_list_portfolios",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2314",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "count",
+        "portfolios",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_list_portfolios_v1_admin_portfolios_get",
+        "summary": "Admin List Portfolios",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/portfolios",
+      "handler": "admin_upsert_portfolio",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2301",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-Admin-User"
+      ],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "portfolio",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_upsert_portfolio_v1_admin_portfolios_post",
+        "summary": "Admin Upsert Portfolio",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/admin/portfolios/{portfolio_id}/state",
+      "handler": "admin_set_portfolio_state",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2320",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "portfolio_id"
+      ],
+      "query_params": [],
+      "body_fields": [
+        "reason",
+        "state"
+      ],
+      "request_headers_read": [
+        "X-Admin-User"
+      ],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "portfolio",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_set_portfolio_state_v1_admin_portfolios__portfolio_id__state_patch",
+        "summary": "Admin Set Portfolio State",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "portfolio_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/replay/compare",
+      "handler": "admin_replay_compare",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1230",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_replay_compare_v1_admin_replay_compare_get",
+        "summary": "Admin Replay Compare",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/replay/export",
+      "handler": "admin_export_replay",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1273",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [
+        "auto_run",
+        "filters",
+        "manifest",
+        "oracle",
+        "replay_id"
+      ],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_export_replay_v1_admin_replay_export_post",
+        "summary": "Admin Export Replay",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/replay/jobs",
+      "handler": "admin_list_replay_jobs",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1248",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [
+        "limit"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "count",
+        "jobs",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_list_replay_jobs_v1_admin_replay_jobs_get",
+        "summary": "Admin List Replay Jobs",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/replay/jobs",
+      "handler": "admin_create_replay_job",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1239",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_create_replay_job_v1_admin_replay_jobs_post",
+        "summary": "Admin Create Replay Job",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/replay/jobs/{replay_id}",
+      "handler": "admin_get_replay_job",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1255",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "replay_id"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        404
+      ],
+      "literal_response_keys": [],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_get_replay_job_v1_admin_replay_jobs__replay_id__get",
+        "summary": "Admin Get Replay Job",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "replay_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/replay/jobs/{replay_id}/run",
+      "handler": "admin_run_replay_job",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1264",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "replay_id"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        404
+      ],
+      "literal_response_keys": [],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_run_replay_job_v1_admin_replay_jobs__replay_id__run_post",
+        "summary": "Admin Run Replay Job",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "replay_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/replay/order-lifecycle",
+      "handler": "admin_replay_order_lifecycle",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1211",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_replay_order_lifecycle_v1_admin_replay_order_lifecycle_get",
+        "summary": "Admin Replay Order Lifecycle",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/replay/quantbt-diff",
+      "handler": "admin_quantbt_diff",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1293",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [
+        "artifact",
+        "manifest",
+        "replay_id"
+      ],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_quantbt_diff_v1_admin_replay_quantbt_diff_post",
+        "summary": "Admin Quantbt Diff",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/sizing/decisions",
+      "handler": "admin_sizing_decisions",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2263",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [
+        "account_id",
+        "alpha_id",
+        "exchange",
+        "limit",
+        "mode",
+        "status",
+        "strategy_id",
+        "symbol",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "count",
+        "decisions",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_sizing_decisions_v1_admin_sizing_decisions_get",
+        "summary": "Admin Sizing Decisions",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/sizing/decisions/summary",
+      "handler": "admin_sizing_decisions_summary",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2279",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [
+        "account_id",
+        "alpha_id",
+        "exchange",
+        "mode",
+        "strategy_id",
+        "symbol",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "count",
+        "status",
+        "summary"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_sizing_decisions_summary_v1_admin_sizing_decisions_summary_get",
+        "summary": "Admin Sizing Decisions Summary",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/sizing/decisions/{decision_id}",
+      "handler": "admin_sizing_decision",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2293",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [
+        "decision_id"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        404
+      ],
+      "literal_response_keys": [
+        "decision",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_sizing_decision_v1_admin_sizing_decisions__decision_id__get",
+        "summary": "Admin Sizing Decision",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "decision_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/symbols",
+      "handler": "admin_get_symbols",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2506",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "status",
+        "symbols"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_get_symbols_v1_admin_symbols_get",
+        "summary": "Admin Get Symbols",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/symbols/sync",
+      "handler": "admin_sync_symbols",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2512",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [
+        "symbols"
+      ],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "note",
+        "status",
+        "symbols",
+        "warnings"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_sync_symbols_v1_admin_symbols_sync_post",
+        "summary": "Admin Sync Symbols",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/trading-state",
+      "handler": "admin_set_trading_state",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2010",
+      "auth": {
+        "kinds": [
+          "ADMIN"
+        ],
+        "gates": [
+          "require_admin"
+        ],
+        "detail": "X-Admin-Token (or admin user/pass)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [
+        "exchange",
+        "mode",
+        "state",
+        "venue"
+      ],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "key",
+        "state",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "admin_set_trading_state_v1_admin_trading_state_post",
+        "summary": "Admin Set Trading State",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/contracts",
+      "handler": "v1_contracts",
+      "delegates_to": "_sdk_compatibility_matrix",
+      "source": "services/gateway/main.py:452",
+      "auth": {
+        "kinds": [
+          "PUBLIC"
+        ],
+        "gates": [],
+        "detail": "no auth gate found in handler body"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "api_version",
+        "authoritative_contract_revision",
+        "authoritative_schema_version",
+        "sdk_compatibility",
+        "shadow",
+        "shadow_contract_revision",
+        "shadow_is_authoritative",
+        "status",
+        "supported_contract_revisions"
+      ],
+      "internal_calls": [
+        "engine.contract_shadow.snapshot"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_contracts_v1_contracts_get",
+        "summary": "V1 Contracts",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/events",
+      "handler": "v1_events",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1202",
+      "auth": {
+        "kinds": [
+          "ALPHA_REPLAY"
+        ],
+        "gates": [
+          "_require_alpha_replay_scope"
+        ],
+        "detail": "X-API-Key (alpha replay scope)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "count",
+        "events",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_events_v1_events_get",
+        "summary": "V1 Events",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/execution-sessions",
+      "handler": "v1_create_execution_session",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1679",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [
+        "account_id",
+        "alpha_id",
+        "bar_open",
+        "cycle_key",
+        "exchange",
+        "execution_session_id",
+        "metadata",
+        "mode",
+        "session_id",
+        "state",
+        "strategy_id",
+        "venue"
+      ],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "execution_session",
+        "status"
+      ],
+      "internal_calls": [
+        "engine.check_auth_and_rate"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_create_execution_session_v1_execution_sessions_post",
+        "summary": "V1 Create Execution Session",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/execution-sessions/{execution_session_id}",
+      "handler": "v1_get_execution_session",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1737",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [
+        "execution_session_id"
+      ],
+      "query_params": [
+        "alpha_id",
+        "strategy_id"
+      ],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [
+        403,
+        404
+      ],
+      "literal_response_keys": [
+        "execution_session",
+        "status"
+      ],
+      "internal_calls": [
+        "engine.check_auth_and_rate"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_get_execution_session_v1_execution_sessions__execution_session_id__get",
+        "summary": "V1 Get Execution Session",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "execution_session_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/execution-sessions/{execution_session_id}",
+      "handler": "v1_update_execution_session",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1709",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [
+        "execution_session_id"
+      ],
+      "query_params": [],
+      "body_fields": [
+        "alpha_id",
+        "metadata",
+        "state",
+        "strategy_id"
+      ],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [
+        400,
+        403,
+        404
+      ],
+      "literal_response_keys": [
+        "execution_session",
+        "status"
+      ],
+      "internal_calls": [
+        "engine.check_auth_and_rate",
+        "repo.get_session",
+        "repo.update_state"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_update_execution_session_v1_execution_sessions__execution_session_id__patch",
+        "summary": "V1 Update Execution Session",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "execution_session_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/execution-sessions/{execution_session_id}",
+      "handler": "v1_update_execution_session_post",
+      "delegates_to": "v1_update_execution_session",
+      "source": "services/gateway/main.py:1733",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [
+        "execution_session_id"
+      ],
+      "query_params": [],
+      "body_fields": [
+        "alpha_id",
+        "metadata",
+        "state",
+        "strategy_id"
+      ],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [
+        400,
+        403,
+        404
+      ],
+      "literal_response_keys": [
+        "execution_session",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_update_execution_session_post_v1_execution_sessions__execution_session_id__post",
+        "summary": "V1 Update Execution Session Post",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "execution_session_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/execution-sessions/{execution_session_id}/pre-risk",
+      "handler": "v1_execution_session_pre_risk",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1751",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [
+        "execution_session_id"
+      ],
+      "query_params": [],
+      "body_fields": [
+        "account_id",
+        "alpha_id",
+        "exchange",
+        "metadata",
+        "mode",
+        "orders",
+        "strategy_id",
+        "venue"
+      ],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [
+        400,
+        403,
+        404,
+        409
+      ],
+      "literal_response_keys": [
+        "risk_grant",
+        "status"
+      ],
+      "internal_calls": [
+        "engine.check_auth_and_rate"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_execution_session_pre_risk_v1_execution_sessions__execution_session_id__pre_risk_post",
+        "summary": "V1 Execution Session Pre Risk",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "execution_session_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/fills",
+      "handler": "v1_list_fills",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1176",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [],
+      "query_params": [
+        "alpha_id",
+        "exchange",
+        "limit",
+        "mode",
+        "strategy_id",
+        "symbol",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "count",
+        "fills",
+        "status"
+      ],
+      "internal_calls": [
+        "engine.check_auth_and_rate",
+        "repo.list_fills"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_list_fills_v1_fills_get",
+        "summary": "V1 List Fills",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/health",
+      "handler": "v1_health",
+      "delegates_to": "_dict_or_empty",
+      "source": "services/gateway/main.py:2599",
+      "auth": {
+        "kinds": [
+          "PUBLIC"
+        ],
+        "gates": [],
+        "detail": "no auth gate found in handler body"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [
+        "details",
+        "instance_id",
+        "last_seen_unix",
+        "service_name",
+        "status"
+      ],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "capabilities",
+        "checks",
+        "command_journal",
+        "market_cache",
+        "market_cache_telemetry",
+        "services",
+        "status",
+        "ts",
+        "venue_products"
+      ],
+      "internal_calls": [
+        "db.pool.fetch",
+        "db.pool.fetchval"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_health_v1_health_get",
+        "summary": "V1 Health",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/health/capabilities",
+      "handler": "v1_health_capabilities",
+      "delegates_to": "v1_health",
+      "source": "services/gateway/main.py:2734",
+      "auth": {
+        "kinds": [
+          "PUBLIC"
+        ],
+        "gates": [],
+        "detail": "no auth gate found in handler body"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [
+        "capabilities",
+        "details",
+        "instance_id",
+        "last_seen_unix",
+        "service_name",
+        "status",
+        "ts",
+        "venue_products"
+      ],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "capabilities",
+        "checks",
+        "command_journal",
+        "market_cache",
+        "market_cache_telemetry",
+        "services",
+        "status",
+        "ts",
+        "venue_products"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_health_capabilities_v1_health_capabilities_get",
+        "summary": "V1 Health Capabilities",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/market/info/{venue}/{symbol}",
+      "handler": "v1_market_info",
+      "delegates_to": "_jsonable",
+      "source": "services/gateway/main.py:1862",
+      "auth": {
+        "kinds": [
+          "PUBLIC"
+        ],
+        "gates": [],
+        "detail": "no auth gate found in handler body"
+      },
+      "path_params": [
+        "venue",
+        "symbol"
+      ],
+      "query_params": [
+        "product",
+        "venue_symbol"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        404
+      ],
+      "literal_response_keys": [
+        "canonical_instrument_id",
+        "key",
+        "market_info",
+        "product",
+        "source",
+        "status",
+        "symbol",
+        "venue"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_market_info_v1_market_info__venue___symbol__get",
+        "summary": "V1 Market Info",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "venue",
+          "symbol"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/market/latest/{venue}/{symbol}",
+      "handler": "v1_market_latest",
+      "delegates_to": "_jsonable",
+      "source": "services/gateway/main.py:1830",
+      "auth": {
+        "kinds": [
+          "PUBLIC"
+        ],
+        "gates": [],
+        "detail": "no auth gate found in handler body"
+      },
+      "path_params": [
+        "venue",
+        "symbol"
+      ],
+      "query_params": [
+        "product",
+        "venue_symbol"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        404
+      ],
+      "literal_response_keys": [
+        "canonical_instrument_id",
+        "key",
+        "market",
+        "product",
+        "status",
+        "symbol",
+        "venue"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_market_latest_v1_market_latest__venue___symbol__get",
+        "summary": "V1 Market Latest",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "venue",
+          "symbol"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/order-brackets",
+      "handler": "v1_list_brackets",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:992",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [],
+      "query_params": [
+        "account_id",
+        "alpha_id",
+        "exchange",
+        "limit",
+        "mode",
+        "state",
+        "strategy_id",
+        "symbol",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "brackets",
+        "count",
+        "status"
+      ],
+      "internal_calls": [
+        "engine.check_auth_and_rate"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_list_brackets_v1_order_brackets_get",
+        "summary": "V1 List Brackets",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/order-brackets",
+      "handler": "v1_submit_bracket",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:718",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [
+        "exchange",
+        "venue"
+      ],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [],
+      "internal_calls": [
+        "engine.check_auth_and_rate"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_submit_bracket_v1_order_brackets_post",
+        "summary": "V1 Submit Bracket",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/order-brackets/{bracket_group_id}",
+      "handler": "v1_cancel_bracket",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1066",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [
+        "bracket_group_id"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [
+        404
+      ],
+      "literal_response_keys": [
+        "bracket_group_id",
+        "status"
+      ],
+      "internal_calls": [
+        "engine.check_auth_and_rate",
+        "engine.validate_cancel",
+        "repo.get",
+        "repo.update_bracket_state"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_cancel_bracket_v1_order_brackets__bracket_group_id__delete",
+        "summary": "V1 Cancel Bracket",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "bracket_group_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/order-brackets/{bracket_group_id}",
+      "handler": "v1_get_bracket",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1019",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [
+        "bracket_group_id"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [
+        404
+      ],
+      "literal_response_keys": [
+        "bracket",
+        "status"
+      ],
+      "internal_calls": [
+        "engine.check_auth_and_rate",
+        "repo.get"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_get_bracket_v1_order_brackets__bracket_group_id__get",
+        "summary": "V1 Get Bracket",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "bracket_group_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/order-brackets/{bracket_group_id}",
+      "handler": "v1_replace_bracket_stop",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1038",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [
+        "bracket_group_id"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [
+        400,
+        404
+      ],
+      "literal_response_keys": [],
+      "internal_calls": [
+        "engine.check_auth_and_rate",
+        "repo.get"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_replace_bracket_stop_v1_order_brackets__bracket_group_id__patch",
+        "summary": "V1 Replace Bracket Stop",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "bracket_group_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/order-groups",
+      "handler": "v1_list_order_groups",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:797",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "_require_alpha_read"
+        ],
+        "detail": "X-API-Key (alpha read scope)"
+      },
+      "path_params": [],
+      "query_params": [
+        "account_id",
+        "alpha_id",
+        "exchange",
+        "limit",
+        "mode",
+        "state",
+        "strategy_id",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "count",
+        "groups",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_list_order_groups_v1_order_groups_get",
+        "summary": "V1 List Order Groups",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/order-groups",
+      "handler": "v1_create_order_group",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:740",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [
+        "group_id"
+      ],
+      "request_headers_read": [
+        "Idempotency-Key",
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [
+        400,
+        409,
+        503
+      ],
+      "literal_response_keys": [],
+      "internal_calls": [
+        "engine.check_auth_and_rate"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_create_order_group_v1_order_groups_post",
+        "summary": "V1 Create Order Group",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/order-groups/{group_id}",
+      "handler": "v1_cancel_order_group",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:855",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "_require_alpha_read"
+        ],
+        "detail": "X-API-Key (alpha read scope)"
+      },
+      "path_params": [
+        "group_id"
+      ],
+      "query_params": [],
+      "body_fields": [
+        "reason"
+      ],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        404
+      ],
+      "literal_response_keys": [
+        "group",
+        "status"
+      ],
+      "internal_calls": [
+        "repo.get",
+        "repo.request_cancel"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_cancel_order_group_v1_order_groups__group_id__delete",
+        "summary": "V1 Cancel Order Group",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "group_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/order-groups/{group_id}",
+      "handler": "v1_get_order_group",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:815",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "_require_alpha_read"
+        ],
+        "detail": "X-API-Key (alpha read scope)"
+      },
+      "path_params": [
+        "group_id"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        404
+      ],
+      "literal_response_keys": [
+        "group",
+        "status"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_get_order_group_v1_order_groups__group_id__get",
+        "summary": "V1 Get Order Group",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "group_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/order-groups/{group_id}",
+      "handler": "v1_patch_order_group",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:831",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "_require_alpha_read"
+        ],
+        "detail": "X-API-Key (alpha read scope)"
+      },
+      "path_params": [
+        "group_id"
+      ],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        400,
+        404,
+        409
+      ],
+      "literal_response_keys": [
+        "group",
+        "status"
+      ],
+      "internal_calls": [
+        "repo.get",
+        "repo.patch"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_patch_order_group_v1_order_groups__group_id__patch",
+        "summary": "V1 Patch Order Group",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "group_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/order-packages/arb",
+      "handler": "v1_submit_arb_package",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:537",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [
+        400,
+        409,
+        501
+      ],
+      "literal_response_keys": [
+        "status",
+        "submitted"
+      ],
+      "internal_calls": [
+        "engine.check_auth_and_rate",
+        "engine.validate_bulk"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_submit_arb_package_v1_order_packages_arb_post",
+        "summary": "V1 Submit Arb Package",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/orders",
+      "handler": "v1_list_orders",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1145",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [],
+      "query_params": [
+        "alpha_id",
+        "exchange",
+        "limit",
+        "mode",
+        "strategy_id",
+        "symbol",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [],
+      "literal_response_keys": [],
+      "internal_calls": [
+        "engine.list_orders"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_list_orders_v1_orders_get",
+        "summary": "V1 List Orders",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/orders",
+      "handler": "v1_submit_single",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:515",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [],
+      "literal_response_keys": [],
+      "internal_calls": [
+        "engine.validate_single"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_submit_single_v1_orders_post",
+        "summary": "V1 Submit Single",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/orders/bulk",
+      "handler": "v1_submit_bulk",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:526",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [],
+      "literal_response_keys": [],
+      "internal_calls": [
+        "engine.validate_bulk"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_submit_bulk_v1_orders_bulk_post",
+        "summary": "V1 Submit Bulk",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/orders/{client_order_id}",
+      "handler": "v1_cancel_order",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1117",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [
+        "client_order_id"
+      ],
+      "query_params": [],
+      "body_fields": [
+        "client_order_id"
+      ],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [],
+      "literal_response_keys": [],
+      "internal_calls": [
+        "engine.validate_cancel"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_cancel_order_v1_orders__client_order_id__delete",
+        "summary": "V1 Cancel Order",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "client_order_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/orders/{client_order_id}",
+      "handler": "v1_get_order",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1132",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [
+        "client_order_id"
+      ],
+      "query_params": [
+        "account_id",
+        "alpha_id",
+        "exchange",
+        "mode",
+        "strategy_id",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [],
+      "literal_response_keys": [],
+      "internal_calls": [
+        "engine.query_order"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_get_order_v1_orders__client_order_id__get",
+        "summary": "V1 Get Order",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "client_order_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/orders/{client_order_id}",
+      "handler": "v1_update_order",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1105",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [
+        "client_order_id"
+      ],
+      "query_params": [],
+      "body_fields": [
+        "orig_client_order_id"
+      ],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [],
+      "literal_response_keys": [],
+      "internal_calls": [
+        "engine.validate_update"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_update_order_v1_orders__client_order_id__patch",
+        "summary": "V1 Update Order",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "client_order_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/performance/accounts/latest",
+      "handler": "v1_latest_account_performance",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2094",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "_require_alpha_read"
+        ],
+        "detail": "X-API-Key (alpha read scope)"
+      },
+      "path_params": [],
+      "query_params": [
+        "account_id",
+        "alpha_id",
+        "mode",
+        "strategy_id",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        403
+      ],
+      "literal_response_keys": [
+        "accounts",
+        "count",
+        "status"
+      ],
+      "internal_calls": [
+        "repo.account_belongs_to_alpha",
+        "repo.latest_accounts"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_latest_account_performance_v1_performance_accounts_latest_get",
+        "summary": "V1 Latest Account Performance",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/performance/accounts/{account_id}/history",
+      "handler": "v1_account_performance_history",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2123",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "_require_alpha_read"
+        ],
+        "detail": "X-API-Key (alpha read scope)"
+      },
+      "path_params": [
+        "account_id"
+      ],
+      "query_params": [
+        "alpha_id",
+        "limit",
+        "strategy_id"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        403
+      ],
+      "literal_response_keys": [
+        "accounts",
+        "count",
+        "status"
+      ],
+      "internal_calls": [
+        "repo.account_belongs_to_alpha",
+        "repo.account_history"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_account_performance_history_v1_performance_accounts__account_id__history_get",
+        "summary": "V1 Account Performance History",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "account_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/performance/dashboard",
+      "handler": "v1_performance_dashboard",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2238",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "_require_alpha_read"
+        ],
+        "detail": "X-API-Key (alpha read scope)"
+      },
+      "path_params": [],
+      "query_params": [
+        "account_id",
+        "alpha_id",
+        "limit",
+        "mode",
+        "portfolio_id",
+        "strategy_id",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        403
+      ],
+      "literal_response_keys": [
+        "dashboard",
+        "status"
+      ],
+      "internal_calls": [
+        "repo.account_belongs_to_alpha",
+        "repo.dashboard",
+        "repo.portfolio_belongs_to_alpha"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_performance_dashboard_v1_performance_dashboard_get",
+        "summary": "V1 Performance Dashboard",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/performance/instruments/latest",
+      "handler": "v1_latest_instrument_performance",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2155",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "_require_alpha_read"
+        ],
+        "detail": "X-API-Key (alpha read scope)"
+      },
+      "path_params": [],
+      "query_params": [
+        "account_id",
+        "alpha_id",
+        "limit",
+        "mode",
+        "strategy_id",
+        "symbol",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        403
+      ],
+      "literal_response_keys": [
+        "count",
+        "instruments",
+        "status"
+      ],
+      "internal_calls": [
+        "repo.account_belongs_to_alpha",
+        "repo.latest_instruments"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_latest_instrument_performance_v1_performance_instruments_latest_get",
+        "summary": "V1 Latest Instrument Performance",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/performance/portfolios/{portfolio_id}/history",
+      "handler": "v1_portfolio_performance_history",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2206",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "_require_alpha_read"
+        ],
+        "detail": "X-API-Key (alpha read scope)"
+      },
+      "path_params": [
+        "portfolio_id"
+      ],
+      "query_params": [
+        "alpha_id",
+        "limit",
+        "strategy_id"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        403
+      ],
+      "literal_response_keys": [
+        "count",
+        "portfolios",
+        "status"
+      ],
+      "internal_calls": [
+        "repo.portfolio_belongs_to_alpha",
+        "repo.portfolio_history"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_portfolio_performance_history_v1_performance_portfolios__portfolio_id__history_get",
+        "summary": "V1 Portfolio Performance History",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "portfolio_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/performance/portfolios/{portfolio_id}/latest",
+      "handler": "v1_latest_portfolio_performance",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:2183",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "_require_alpha_read"
+        ],
+        "detail": "X-API-Key (alpha read scope)"
+      },
+      "path_params": [
+        "portfolio_id"
+      ],
+      "query_params": [
+        "alpha_id",
+        "strategy_id"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        403
+      ],
+      "literal_response_keys": [
+        "count",
+        "portfolios",
+        "status"
+      ],
+      "internal_calls": [
+        "repo.latest_portfolio",
+        "repo.portfolio_belongs_to_alpha"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_latest_portfolio_performance_v1_performance_portfolios__portfolio_id__latest_get",
+        "summary": "V1 Latest Portfolio Performance",
+        "declared_response_codes": [
+          "200",
+          "422"
+        ],
+        "declared_parameters": [
+          "portfolio_id"
+        ],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/portfolio-targets/rebalance",
+      "handler": "v1_portfolio_targets_rebalance",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1563",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [
+        "account_id",
+        "alpha_id",
+        "capital_model",
+        "currency",
+        "equity",
+        "exchange",
+        "execution_session_id",
+        "feature_schema_hash",
+        "gross_exposure",
+        "leverage",
+        "market_info",
+        "metadata",
+        "min_delta_notional",
+        "mode",
+        "model_version",
+        "order_type",
+        "prediction_id",
+        "prices",
+        "rebalance_session_id",
+        "strategy_id",
+        "submit",
+        "targets",
+        "time_in_force",
+        "venue"
+      ],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [
+        400
+      ],
+      "literal_response_keys": [
+        "status",
+        "submitted"
+      ],
+      "internal_calls": [
+        "engine.check_auth_and_rate",
+        "engine.validate_bulk",
+        "repo.portfolio_summary"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_portfolio_targets_rebalance_v1_portfolio_targets_rebalance_post",
+        "summary": "V1 Portfolio Targets Rebalance",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/portfolio/summary",
+      "handler": "v1_portfolio_summary",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1373",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [],
+      "query_params": [
+        "account_id",
+        "alpha_id",
+        "exchange",
+        "mode",
+        "strategy_id",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "portfolio",
+        "status"
+      ],
+      "internal_calls": [
+        "engine.check_auth_and_rate",
+        "repo.portfolio_summary"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_portfolio_summary_v1_portfolio_summary_get",
+        "summary": "V1 Portfolio Summary",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/positions",
+      "handler": "v1_list_positions",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1158",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [],
+      "query_params": [
+        "alpha_id",
+        "exchange",
+        "include_flat",
+        "limit",
+        "mode",
+        "strategy_id",
+        "symbol",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [],
+      "literal_response_keys": [
+        "count",
+        "positions",
+        "status"
+      ],
+      "internal_calls": [
+        "engine.check_auth_and_rate",
+        "repo.list_positions"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_list_positions_v1_positions_get",
+        "summary": "V1 List Positions",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/replay/compare",
+      "handler": "v1_replay_compare",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1311",
+      "auth": {
+        "kinds": [
+          "ALPHA_REPLAY"
+        ],
+        "gates": [
+          "_require_alpha_replay_scope"
+        ],
+        "detail": "X-API-Key (alpha replay scope)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_replay_compare_v1_replay_compare_get",
+        "summary": "V1 Replay Compare",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/replay/order-lifecycle",
+      "handler": "v1_replay_order_lifecycle",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1220",
+      "auth": {
+        "kinds": [
+          "ALPHA_REPLAY"
+        ],
+        "gates": [
+          "_require_alpha_replay_scope"
+        ],
+        "detail": "X-API-Key (alpha replay scope)"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [],
+      "literal_response_keys": [],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_replay_order_lifecycle_v1_replay_order_lifecycle_get",
+        "summary": "V1 Replay Order Lifecycle",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/sizing/decisions",
+      "handler": "v1_sizing_decisions",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1511",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "_require_alpha_read"
+        ],
+        "detail": "X-API-Key (alpha read scope)"
+      },
+      "path_params": [],
+      "query_params": [
+        "account_id",
+        "alpha_id",
+        "exchange",
+        "limit",
+        "mode",
+        "status",
+        "strategy_id",
+        "symbol",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        403
+      ],
+      "literal_response_keys": [
+        "count",
+        "decisions",
+        "status"
+      ],
+      "internal_calls": [
+        "repo.recent"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_sizing_decisions_v1_sizing_decisions_get",
+        "summary": "V1 Sizing Decisions",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/sizing/decisions/summary",
+      "handler": "v1_sizing_decisions_summary",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1539",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "_require_alpha_read"
+        ],
+        "detail": "X-API-Key (alpha read scope)"
+      },
+      "path_params": [],
+      "query_params": [
+        "account_id",
+        "alpha_id",
+        "exchange",
+        "mode",
+        "strategy_id",
+        "symbol",
+        "venue"
+      ],
+      "body_fields": [],
+      "request_headers_read": [],
+      "explicit_status_codes": [
+        403
+      ],
+      "literal_response_keys": [
+        "count",
+        "status",
+        "summary"
+      ],
+      "internal_calls": [],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_sizing_decisions_summary_v1_sizing_decisions_summary_get",
+        "summary": "V1 Sizing Decisions Summary",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/sizing/estimate",
+      "handler": "v1_sizing_estimate",
+      "delegates_to": null,
+      "source": "services/gateway/main.py:1389",
+      "auth": {
+        "kinds": [
+          "ALPHA_KEY"
+        ],
+        "gates": [
+          "check_auth_and_rate"
+        ],
+        "detail": "X-API-Key + per-route rate limit"
+      },
+      "path_params": [],
+      "query_params": [],
+      "body_fields": [
+        "account_id",
+        "alpha_id",
+        "bracket_group_id",
+        "capital_model",
+        "currency",
+        "entry_price",
+        "exchange",
+        "market_info",
+        "metadata",
+        "min_notional_overshoot_bps",
+        "min_stop_distance_bps",
+        "mode",
+        "product",
+        "remaining_notional_safety_bps",
+        "risk_percent",
+        "sandbox_notional_cap",
+        "stop_price",
+        "strategy_id",
+        "symbol",
+        "venue",
+        "venue_symbol"
+      ],
+      "request_headers_read": [
+        "X-API-Key"
+      ],
+      "explicit_status_codes": [
+        400,
+        403
+      ],
+      "literal_response_keys": [],
+      "internal_calls": [
+        "engine.check_auth_and_rate"
+      ],
+      "openapi": {
+        "declared": true,
+        "operation_id": "v1_sizing_estimate_v1_sizing_estimate_post",
+        "summary": "V1 Sizing Estimate",
+        "declared_response_codes": [
+          "200"
+        ],
+        "declared_parameters": [],
+        "declared_request_body": false
+      }
+    }
+  ]
+}

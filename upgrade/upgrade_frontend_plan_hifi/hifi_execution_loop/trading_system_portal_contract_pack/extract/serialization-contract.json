@@ -1,0 +1,4713 @@
+{
+  "provenance": {
+    "generated_by": "scripts/35_serialization.py",
+    "read_only": true,
+    "trading_system_commit": "9081397de9e981c43b4e0f67fabe747e7ed964c7",
+    "sources": [
+      "services/gateway/**/_jsonable",
+      "extract/response-shapes.json"
+    ],
+    "note": "Derived from source/runtime read-only inspection. No Trading System file was modified."
+  },
+  "summary": {
+    "serializer_variants": 13,
+    "endpoints_typed": 43,
+    "fields_typed": 577,
+    "json_type_histogram": {
+      "array": 3,
+      "bool": 4,
+      "number": 31,
+      "object|array|scalar": 48,
+      "string": 462,
+      "unknown": 29
+    },
+    "numeric_fields_that_arrive_as_string": 63
+  },
+  "headline": "Every `numeric` column arrives as a JSON STRING, not a number. Generating `f64` from extract/db-schema.json will fail to deserialize. Use a string-backed decimal type.",
+  "serializer_rules": [
+    {
+      "function": "_record",
+      "module": "services/gateway/contracts/shadow.py",
+      "line": 73,
+      "branches": [
+        "result.get('error')",
+        "result.get('mismatches')"
+      ],
+      "handles_decimal": false,
+      "handles_uuid": false,
+      "handles_isoformat": false
+    },
+    {
+      "function": "_jsonable",
+      "module": "services/gateway/main.py",
+      "line": 190,
+      "branches": [
+        "isinstance(value, Decimal)",
+        "hasattr(value, 'isoformat')",
+        "isinstance(value, dict)",
+        "isinstance(value, list)"
+      ],
+      "handles_decimal": true,
+      "handles_uuid": false,
+      "handles_isoformat": true
+    },
+    {
+      "function": "_jsonable",
+      "module": "services/gateway/repository/alpha_state.py",
+      "line": 8,
+      "branches": [
+        "isinstance(value, Decimal)",
+        "hasattr(value, 'isoformat')",
+        "isinstance(value, dict)",
+        "isinstance(value, list)"
+      ],
+      "handles_decimal": true,
+      "handles_uuid": false,
+      "handles_isoformat": true
+    },
+    {
+      "function": "_record",
+      "module": "services/gateway/repository/alpha_state.py",
+      "line": 20,
+      "branches": [
+        "isinstance(item.get(key), str)"
+      ],
+      "handles_decimal": false,
+      "handles_uuid": false,
+      "handles_isoformat": false
+    },
+    {
+      "function": "_jsonable",
+      "module": "services/gateway/repository/arb_packages.py",
+      "line": 7,
+      "branches": [
+        "hasattr(value, 'isoformat')",
+        "isinstance(value, list)",
+        "isinstance(value, dict)"
+      ],
+      "handles_decimal": false,
+      "handles_uuid": false,
+      "handles_isoformat": true
+    },
+    {
+      "function": "_jsonable",
+      "module": "services/gateway/repository/emergency_close.py",
+      "line": 23,
+      "branches": [
+        "isinstance(value, Decimal)",
+        "hasattr(value, 'isoformat')",
+        "isinstance(value, list)",
+        "isinstance(value, dict)"
+      ],
+      "handles_decimal": true,
+      "handles_uuid": false,
+      "handles_isoformat": true
+    },
+    {
+      "function": "_jsonable",
+      "module": "services/gateway/repository/event_store.py",
+      "line": 18,
+      "branches": [
+        "isinstance(value, Decimal)",
+        "isinstance(value, UUID)",
+        "hasattr(value, 'isoformat')",
+        "isinstance(value, dict)",
+        "isinstance(value, list)"
+      ],
+      "handles_decimal": true,
+      "handles_uuid": true,
+      "handles_isoformat": true
+    },
+    {
+      "function": "_row",
+      "module": "services/gateway/repository/event_store.py",
+      "line": 41,
+      "branches": [
+        "key in item"
+      ],
+      "handles_decimal": false,
+      "handles_uuid": false,
+      "handles_isoformat": false
+    },
+    {
+      "function": "_jsonable",
+      "module": "services/gateway/repository/execution_sessions.py",
+      "line": 12,
+      "branches": [
+        "hasattr(value, 'isoformat')",
+        "isinstance(value, list)",
+        "isinstance(value, dict)"
+      ],
+      "handles_decimal": false,
+      "handles_uuid": false,
+      "handles_isoformat": true
+    },
+    {
+      "function": "_jsonable",
+      "module": "services/gateway/repository/order_brackets.py",
+      "line": 26,
+      "branches": [
+        "isinstance(value, Decimal)",
+        "hasattr(value, 'isoformat')",
+        "isinstance(value, dict)",
+        "isinstance(value, list)"
+      ],
+      "handles_decimal": true,
+      "handles_uuid": false,
+      "handles_isoformat": true
+    },
+    {
+      "function": "_row",
+      "module": "services/gateway/repository/order_brackets.py",
+      "line": 38,
+      "branches": [
+        "isinstance(item.get(key), str)"
+      ],
+      "handles_decimal": false,
+      "handles_uuid": false,
+      "handles_isoformat": false
+    },
+    {
+      "function": "_jsonable",
+      "module": "services/gateway/repository/order_query.py",
+      "line": 8,
+      "branches": [
+        "isinstance(value, Decimal)",
+        "hasattr(value, 'isoformat')",
+        "isinstance(value, dict)",
+        "isinstance(value, list)"
+      ],
+      "handles_decimal": true,
+      "handles_uuid": false,
+      "handles_isoformat": true
+    },
+    {
+      "function": "_record_to_dict",
+      "module": "services/gateway/repository/order_query.py",
+      "line": 20,
+      "branches": [
+        "isinstance(value, str)"
+      ],
+      "handles_decimal": false,
+      "handles_uuid": false,
+      "handles_isoformat": false
+    }
+  ],
+  "serializer_inconsistency": {
+    "finding": "the `_jsonable` helper is copy-pasted across repositories and the copies differ: only services/gateway/repository/event_store.py stringifies UUID. Elsewhere a raw UUID reaches the JSON encoder.",
+    "variants_without_uuid_handling": [
+      "services/gateway/main.py:190",
+      "services/gateway/repository/alpha_state.py:8",
+      "services/gateway/repository/arb_packages.py:7",
+      "services/gateway/repository/emergency_close.py:23",
+      "services/gateway/repository/execution_sessions.py:12",
+      "services/gateway/repository/order_brackets.py:26",
+      "services/gateway/repository/order_query.py:8"
+    ],
+    "portal_impact": "treat any uuid-typed column as `String` and tolerate both quoted and unquoted forms until confirmed per endpoint."
+  },
+  "type_map": {
+    "numeric": {
+      "json_type": "string",
+      "rust_type": "rust_decimal::Decimal (serde with str)",
+      "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+    },
+    "double precision": {
+      "json_type": "number",
+      "rust_type": "f64",
+      "note": "float passes through untouched"
+    },
+    "real": {
+      "json_type": "number",
+      "rust_type": "f32",
+      "note": "float passes through untouched"
+    },
+    "integer": {
+      "json_type": "number",
+      "rust_type": "i32",
+      "note": "int passes through"
+    },
+    "bigint": {
+      "json_type": "number",
+      "rust_type": "i64",
+      "note": "int passes through"
+    },
+    "smallint": {
+      "json_type": "number",
+      "rust_type": "i16",
+      "note": "int passes through"
+    },
+    "boolean": {
+      "json_type": "bool",
+      "rust_type": "bool",
+      "note": "passes through"
+    },
+    "text": {
+      "json_type": "string",
+      "rust_type": "String",
+      "note": "passes through"
+    },
+    "character varying": {
+      "json_type": "string",
+      "rust_type": "String",
+      "note": "passes through"
+    },
+    "uuid": {
+      "json_type": "string",
+      "rust_type": "uuid::Uuid or String",
+      "note": "str() in event_store only; other repos leak a UUID object"
+    },
+    "timestamp with time zone": {
+      "json_type": "string",
+      "rust_type": "chrono::DateTime<Utc>",
+      "note": "isoformat() -> RFC3339-ish; offset present"
+    },
+    "timestamp without time zone": {
+      "json_type": "string",
+      "rust_type": "chrono::NaiveDateTime",
+      "note": "isoformat() -> NO offset; do not assume UTC"
+    },
+    "date": {
+      "json_type": "string",
+      "rust_type": "chrono::NaiveDate",
+      "note": "isoformat()"
+    },
+    "time without time zone": {
+      "json_type": "string",
+      "rust_type": "chrono::NaiveTime",
+      "note": "isoformat()"
+    },
+    "interval": {
+      "json_type": "string",
+      "rust_type": "String",
+      "note": "isoformat() not defined; verify"
+    },
+    "jsonb": {
+      "json_type": "object|array|scalar",
+      "rust_type": "serde_json::Value",
+      "note": "already decoded; some repos json.loads() raw* columns again"
+    },
+    "json": {
+      "json_type": "object|array|scalar",
+      "rust_type": "serde_json::Value",
+      "note": "as above"
+    },
+    "ARRAY": {
+      "json_type": "array",
+      "rust_type": "Vec<T>",
+      "note": "recursed element-wise"
+    },
+    "bytea": {
+      "json_type": "string",
+      "rust_type": "String",
+      "note": "not observed in Portal-relevant tables"
+    }
+  },
+  "numeric_fields": [
+    "account_balances.free",
+    "account_balances.locked",
+    "account_balances.total",
+    "account_equity_snapshots.cash_free",
+    "account_equity_snapshots.cash_locked",
+    "account_equity_snapshots.cash_total",
+    "account_equity_snapshots.drawdown",
+    "account_equity_snapshots.equity",
+    "account_equity_snapshots.fee_total",
+    "account_equity_snapshots.funding_pnl",
+    "account_equity_snapshots.gross_pnl",
+    "account_equity_snapshots.margin_initial",
+    "account_equity_snapshots.margin_maintenance",
+    "account_equity_snapshots.net_pnl",
+    "account_equity_snapshots.realized_pnl",
+    "account_equity_snapshots.total_notional",
+    "account_equity_snapshots.unrealized_pnl",
+    "fills.commission",
+    "fills.price",
+    "fills.quantity",
+    "fills.realized_pnl",
+    "orders.price",
+    "orders.quantity",
+    "orders.trigger_price",
+    "portfolio_equity_snapshots.allocated_capital",
+    "portfolio_equity_snapshots.cash_free",
+    "portfolio_equity_snapshots.cash_locked",
+    "portfolio_equity_snapshots.cash_total",
+    "portfolio_equity_snapshots.drawdown",
+    "portfolio_equity_snapshots.equity",
+    "portfolio_equity_snapshots.fee_total",
+    "portfolio_equity_snapshots.funding_pnl",
+    "portfolio_equity_snapshots.gross_pnl",
+    "portfolio_equity_snapshots.margin_initial",
+    "portfolio_equity_snapshots.margin_maintenance",
+    "portfolio_equity_snapshots.net_pnl",
+    "portfolio_equity_snapshots.realized_pnl",
+    "portfolio_equity_snapshots.total_notional",
+    "portfolio_equity_snapshots.unrealized_pnl",
+    "positions_v2.avg_px_close",
+    "positions_v2.avg_px_open",
+    "positions_v2.mark_price",
+    "positions_v2.peak_qty",
+    "positions_v2.quantity",
+    "positions_v2.realized_pnl",
+    "positions_v2.signed_qty",
+    "positions_v2.unrealized_pnl",
+    "sizing_decisions.alloc_per_trade",
+    "sizing_decisions.effective_notional",
+    "sizing_decisions.entry_price",
+    "sizing_decisions.equity",
+    "sizing_decisions.gross_notional",
+    "sizing_decisions.initial_margin",
+    "sizing_decisions.leverage",
+    "sizing_decisions.maintenance_margin",
+    "sizing_decisions.notional",
+    "sizing_decisions.qty_by_notional",
+    "sizing_decisions.qty_by_risk",
+    "sizing_decisions.quantity",
+    "sizing_decisions.requested_quantity",
+    "sizing_decisions.risk_amount",
+    "sizing_decisions.risk_percent",
+    "sizing_decisions.stop_price"
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{account_id}/balances",
+      "from_table": "account_balances",
+      "fields": [
+        {
+          "name": "strategy_id",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        },
+        {
+          "name": "venue",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        },
+        {
+          "name": "currency",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "total",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "locked",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "free",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "updated_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/alphas/{alpha_id}",
+      "from_table": "strategies",
+      "fields": [
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "trader_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "description",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "active",
+          "pg_type": "boolean",
+          "json_type": "bool",
+          "rust_type": "bool",
+          "note": "passes through"
+        },
+        {
+          "name": "allowed_modes",
+          "pg_type": "ARRAY",
+          "json_type": "array",
+          "rust_type": "Vec<T>",
+          "note": "recursed element-wise"
+        },
+        {
+          "name": "allowed_venues",
+          "pg_type": "ARRAY",
+          "json_type": "array",
+          "rust_type": "Vec<T>",
+          "note": "recursed element-wise"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/copy/policies",
+      "from_table": "copy_publish_policies",
+      "fields": [
+        {
+          "name": "policy_id",
+          "pg_type": "uuid",
+          "json_type": "string",
+          "rust_type": "uuid::Uuid or String",
+          "note": "str() in event_store only; other repos leak a UUID object"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "enabled",
+          "pg_type": "boolean",
+          "json_type": "bool",
+          "rust_type": "bool",
+          "note": "passes through"
+        },
+        {
+          "name": "event_types",
+          "pg_type": "ARRAY",
+          "json_type": "array",
+          "rust_type": "Vec<T>",
+          "note": "recursed element-wise"
+        },
+        {
+          "name": "stream_name",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "include_raw",
+          "pg_type": "boolean",
+          "json_type": "bool",
+          "rust_type": "bool",
+          "note": "passes through"
+        },
+        {
+          "name": "metadata",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "updated_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/events",
+      "from_table": "domain_events",
+      "fields": [
+        {
+          "name": "event_id",
+          "pg_type": "uuid",
+          "json_type": "string",
+          "rust_type": "uuid::Uuid or String",
+          "note": "str() in event_store only; other repos leak a UUID object"
+        },
+        {
+          "name": "event_ts",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "event_type",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "schema_version",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "trace_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "causation_id",
+          "pg_type": "uuid",
+          "json_type": "string",
+          "rust_type": "uuid::Uuid or String",
+          "note": "str() in event_store only; other repos leak a UUID object"
+        },
+        {
+          "name": "correlation_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "producer",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "message_type",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "trader_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "instrument_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "client_order_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue_order_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "trade_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "payload",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "raw",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "engine_version",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "canonical_contract_version",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "instrument_metadata_version",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "decision_digest",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/ops/emergency-close/plan",
+      "from_table": "positions_v2",
+      "fields": [
+        {
+          "name": "position_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "instrument_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "symbol",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        },
+        {
+          "name": "product",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        },
+        {
+          "name": "venue_symbol",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        },
+        {
+          "name": "canonical_instrument_id",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        },
+        {
+          "name": "side",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "signed_qty",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "quantity",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "avg_px_open",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "mark_price",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "unrealized_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/ops/emergency-close/{operation_id}",
+      "from_table": "operator_operations",
+      "fields": [
+        {
+          "name": "operation_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "operation_type",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "scope_type",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "scope_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "status",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "plan",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "result",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "actor",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "reason",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "updated_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/order-brackets/lifecycle-audit",
+      "from_table": "order_brackets",
+      "fields": [
+        {
+          "name": "bracket_group_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/order-groups",
+      "from_table": "order_brackets",
+      "fields": [
+        {
+          "name": "bracket_group_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "symbol",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "instrument_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "position_side",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "state",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "entry_client_order_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "execution_session_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "risk_grant_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "activation_policy",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "oco_policy",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "metadata",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "error_message",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "updated_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/performance/accounts/latest",
+      "from_table": "account_equity_snapshots",
+      "fields": [
+        {
+          "name": "DISTINCT ON (deployment_id, currency) *",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/performance/accounts/{account_id}/history",
+      "from_table": "account_equity_snapshots",
+      "fields": [
+        {
+          "name": "id",
+          "pg_type": "bigint",
+          "json_type": "number",
+          "rust_type": "i64",
+          "note": "int passes through"
+        },
+        {
+          "name": "ts",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "deployment_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "currency",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "cash_total",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "cash_free",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "cash_locked",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "margin_initial",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "margin_maintenance",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "realized_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "unrealized_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "fee_total",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "funding_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "gross_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "net_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "equity",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "drawdown",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "total_notional",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "total_fills",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "source",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "snapshot_reason",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "state_digest",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/performance/dashboard",
+      "from_table": "portfolio_allocations",
+      "fields": [
+        {
+          "name": "DISTINCT portfolio_id",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/performance/instruments/latest",
+      "from_table": "performance_snapshots",
+      "fields": [
+        {
+          "name": "* FROM ( SELECT DISTINCT ON ( deployment_id, COALESCE(instrument_id, symbol, ''), position_side, COALESCE(currency, '') ) *",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/performance/portfolios/{portfolio_id}/history",
+      "from_table": "portfolio_equity_snapshots",
+      "fields": [
+        {
+          "name": "id",
+          "pg_type": "bigint",
+          "json_type": "number",
+          "rust_type": "i64",
+          "note": "int passes through"
+        },
+        {
+          "name": "ts",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "portfolio_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "currency",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "allocated_capital",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "account_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "cash_total",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "cash_free",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "cash_locked",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "margin_initial",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "margin_maintenance",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "realized_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "unrealized_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "fee_total",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "funding_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "gross_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "net_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "equity",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "drawdown",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "total_notional",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "total_fills",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "source",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "snapshot_reason",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "state_digest",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/performance/portfolios/{portfolio_id}/latest",
+      "from_table": "portfolio_equity_snapshots",
+      "fields": [
+        {
+          "name": "DISTINCT ON (portfolio_id, currency) *",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/replay/export",
+      "from_table": "domain_events",
+      "fields": [
+        {
+          "name": "event_id",
+          "pg_type": "uuid",
+          "json_type": "string",
+          "rust_type": "uuid::Uuid or String",
+          "note": "str() in event_store only; other repos leak a UUID object"
+        },
+        {
+          "name": "event_ts",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "event_type",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "schema_version",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "trace_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "causation_id",
+          "pg_type": "uuid",
+          "json_type": "string",
+          "rust_type": "uuid::Uuid or String",
+          "note": "str() in event_store only; other repos leak a UUID object"
+        },
+        {
+          "name": "correlation_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "producer",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "message_type",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "trader_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "instrument_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "client_order_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue_order_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "trade_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "payload",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "raw",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "engine_version",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "canonical_contract_version",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "instrument_metadata_version",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "decision_digest",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/replay/jobs",
+      "from_table": "execution_replay_jobs",
+      "fields": [
+        {
+          "name": "replay_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "status",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "schema_version",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "manifest",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "artifact_metadata",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "oracle",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "result",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "digest",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "certification_level",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mismatch_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "error",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "started_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "completed_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "updated_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/replay/jobs/{replay_id}",
+      "from_table": "execution_replay_jobs",
+      "fields": [
+        {
+          "name": "replay_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "status",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "schema_version",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "manifest",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "artifact_metadata",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "oracle",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "result",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "digest",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "certification_level",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mismatch_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "error",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "started_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "completed_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "updated_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/replay/jobs/{replay_id}/run",
+      "from_table": "execution_replay_jobs",
+      "fields": [
+        {
+          "name": "replay_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "status",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "schema_version",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "manifest",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "artifact_metadata",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "oracle",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "result",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "digest",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "certification_level",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mismatch_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "error",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "started_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "completed_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "updated_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/sizing/decisions",
+      "from_table": "sizing_decisions",
+      "fields": [
+        {
+          "name": "decision_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "symbol",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "currency",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "status",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "reason",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "quantity",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "requested_quantity",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "entry_price",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "stop_price",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "equity",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "equity_source",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "alloc_per_trade",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "leverage",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "gross_notional",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "effective_notional",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "notional",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "initial_margin",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "maintenance_margin",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "risk_percent",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "risk_amount",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "qty_by_risk",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "qty_by_notional",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "source",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "capital_model",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "market_info",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "broker_binding",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/sizing/decisions/summary",
+      "from_table": "sizing_decisions",
+      "fields": [
+        {
+          "name": "status",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "reason",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "count",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        },
+        {
+          "name": "first_seen",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        },
+        {
+          "name": "last_seen",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        },
+        {
+          "name": "max_effective_notional",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        },
+        {
+          "name": "max_notional",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/sizing/decisions/{decision_id}",
+      "from_table": "sizing_decisions",
+      "fields": [
+        {
+          "name": "decision_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "symbol",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "currency",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "status",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "reason",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "quantity",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "requested_quantity",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "entry_price",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "stop_price",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "equity",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "equity_source",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "alloc_per_trade",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "leverage",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "gross_notional",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "effective_notional",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "notional",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "initial_margin",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "maintenance_margin",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "risk_percent",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "risk_amount",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "qty_by_risk",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "qty_by_notional",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "source",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "capital_model",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "market_info",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "broker_binding",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "request",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "response",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/events",
+      "from_table": "domain_events",
+      "fields": [
+        {
+          "name": "event_id",
+          "pg_type": "uuid",
+          "json_type": "string",
+          "rust_type": "uuid::Uuid or String",
+          "note": "str() in event_store only; other repos leak a UUID object"
+        },
+        {
+          "name": "event_ts",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "event_type",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "schema_version",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "trace_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "causation_id",
+          "pg_type": "uuid",
+          "json_type": "string",
+          "rust_type": "uuid::Uuid or String",
+          "note": "str() in event_store only; other repos leak a UUID object"
+        },
+        {
+          "name": "correlation_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "producer",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "message_type",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "trader_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "instrument_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "client_order_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue_order_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "trade_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "payload",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "raw",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "engine_version",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "canonical_contract_version",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "instrument_metadata_version",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "decision_digest",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/execution-sessions/{execution_session_id}",
+      "from_table": "execution_sessions",
+      "fields": [
+        {
+          "name": "execution_session_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "cycle_key",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "state",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "submitted_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "risk_approved_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "risk_rejected_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "sent_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "filled_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "partial_fill_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "broker_rejected_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "accounting_recovered_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "reconciliation_deferred_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "reconciliation_actionable_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "metadata",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "started_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "updated_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "completed_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/execution-sessions/{execution_session_id}",
+      "from_table": "execution_sessions",
+      "fields": [
+        {
+          "name": "execution_session_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "cycle_key",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "state",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "submitted_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "risk_approved_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "risk_rejected_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "sent_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "filled_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "partial_fill_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "broker_rejected_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "accounting_recovered_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "reconciliation_deferred_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "reconciliation_actionable_count",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "metadata",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "started_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "updated_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "completed_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/fills",
+      "from_table": "fills",
+      "fields": [
+        {
+          "name": "fill_id",
+          "pg_type": "bigint",
+          "json_type": "number",
+          "rust_type": "i64",
+          "note": "int passes through"
+        },
+        {
+          "name": "trade_time",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "trade_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "client_order_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue_order_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "instrument_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "symbol",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        },
+        {
+          "name": "side",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "price",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "quantity",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "commission",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "commission_currency",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "liquidity_side",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "realized_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "raw",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/order-brackets",
+      "from_table": "order_brackets",
+      "fields": [
+        {
+          "name": "bracket_group_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "symbol",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "instrument_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "position_side",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "state",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "entry_client_order_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "execution_session_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "risk_grant_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "activation_policy",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "oco_policy",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "metadata",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "error_message",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "updated_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/order-brackets/{bracket_group_id}",
+      "from_table": "order_brackets",
+      "fields": [
+        {
+          "name": "bracket_group_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "symbol",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "instrument_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "position_side",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "state",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "entry_client_order_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "execution_session_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "risk_grant_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "activation_policy",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "oco_policy",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "metadata",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "error_message",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "updated_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/order-brackets/{bracket_group_id}",
+      "from_table": "order_brackets",
+      "fields": [
+        {
+          "name": "bracket_group_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "symbol",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "instrument_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "position_side",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "state",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "entry_client_order_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "execution_session_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "risk_grant_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "activation_policy",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "oco_policy",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "metadata",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "error_message",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "updated_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/order-brackets/{bracket_group_id}",
+      "from_table": "order_brackets",
+      "fields": [
+        {
+          "name": "bracket_group_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "symbol",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "instrument_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "position_side",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "state",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "entry_client_order_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "execution_session_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "risk_grant_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "activation_policy",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "oco_policy",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "metadata",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "error_message",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "updated_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/order-groups/{group_id}",
+      "from_table": "order_brackets",
+      "fields": [
+        {
+          "name": "bracket_group_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "symbol",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "instrument_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "position_side",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "state",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "entry_client_order_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "execution_session_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "risk_grant_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "activation_policy",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "oco_policy",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "metadata",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "error_message",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "updated_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/order-groups/{group_id}",
+      "from_table": "order_brackets",
+      "fields": [
+        {
+          "name": "bracket_group_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "symbol",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "instrument_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "position_side",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "state",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "entry_client_order_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "execution_session_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "risk_grant_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "activation_policy",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "oco_policy",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "metadata",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "error_message",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "created_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "updated_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/orders",
+      "from_table": "orders",
+      "fields": [
+        {
+          "name": "client_order_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "symbol",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "side",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "order_type",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "quantity",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "price",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "trigger_price",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "time_in_force",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "status",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "reduce_only",
+          "pg_type": "boolean",
+          "json_type": "bool",
+          "rust_type": "bool",
+          "note": "passes through"
+        },
+        {
+          "name": "intent",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "created_at",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        },
+        {
+          "name": "updated_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "raw_request",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        },
+        {
+          "name": "raw_response",
+          "pg_type": "jsonb",
+          "json_type": "object|array|scalar",
+          "rust_type": "serde_json::Value",
+          "note": "already decoded; some repos json.loads() raw* columns again"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/performance/accounts/latest",
+      "from_table": "accounts",
+      "fields": [
+        {
+          "name": "EXISTS ( SELECT 1",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/performance/accounts/{account_id}/history",
+      "from_table": "accounts",
+      "fields": [
+        {
+          "name": "EXISTS ( SELECT 1",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/performance/dashboard",
+      "from_table": "accounts",
+      "fields": [
+        {
+          "name": "EXISTS ( SELECT 1",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/performance/instruments/latest",
+      "from_table": "accounts",
+      "fields": [
+        {
+          "name": "EXISTS ( SELECT 1",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/performance/portfolios/{portfolio_id}/history",
+      "from_table": "portfolio_allocations",
+      "fields": [
+        {
+          "name": "EXISTS ( SELECT 1",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/performance/portfolios/{portfolio_id}/latest",
+      "from_table": "portfolio_equity_snapshots",
+      "fields": [
+        {
+          "name": "DISTINCT ON (portfolio_id, currency) *",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/v1/portfolio-targets/rebalance",
+      "from_table": "account_equity_snapshots",
+      "fields": [
+        {
+          "name": "DISTINCT ON (strategy_id, mode, venue, account_id, currency) ts",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        },
+        {
+          "name": "deployment_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "currency",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "cash_total",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "cash_free",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "cash_locked",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "realized_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "unrealized_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "fee_total",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "funding_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "gross_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "net_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "equity",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "drawdown",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "total_notional",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "total_fills",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "source",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/portfolio/summary",
+      "from_table": "account_equity_snapshots",
+      "fields": [
+        {
+          "name": "DISTINCT ON (strategy_id, mode, venue, account_id, currency) ts",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        },
+        {
+          "name": "deployment_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "currency",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "cash_total",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "cash_free",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "cash_locked",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "realized_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "unrealized_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "fee_total",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "funding_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "gross_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "net_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "equity",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "drawdown",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "total_notional",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "total_fills",
+          "pg_type": "integer",
+          "json_type": "number",
+          "rust_type": "i32",
+          "note": "int passes through"
+        },
+        {
+          "name": "source",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/positions",
+      "from_table": "positions_v2",
+      "fields": [
+        {
+          "name": "position_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "strategy_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "account_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "mode",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "venue",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "instrument_id",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "symbol",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        },
+        {
+          "name": "side",
+          "pg_type": "text",
+          "json_type": "string",
+          "rust_type": "String",
+          "note": "passes through"
+        },
+        {
+          "name": "signed_qty",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "quantity",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "avg_px_open",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "avg_px_close",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "realized_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "unrealized_pnl",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "peak_qty",
+          "pg_type": "numeric",
+          "json_type": "string",
+          "rust_type": "rust_decimal::Decimal (serde with str)",
+          "note": "Decimal -> str by _jsonable; NEVER f64 (precision + type error)"
+        },
+        {
+          "name": "opened_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "closed_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        },
+        {
+          "name": "updated_at",
+          "pg_type": "timestamp with time zone",
+          "json_type": "string",
+          "rust_type": "chrono::DateTime<Utc>",
+          "note": "isoformat() -> RFC3339-ish; offset present"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/sizing/decisions",
+      "from_table": "accounts",
+      "fields": [
+        {
+          "name": "EXISTS ( SELECT 1",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/v1/sizing/decisions/summary",
+      "from_table": "accounts",
+      "fields": [
+        {
+          "name": "EXISTS ( SELECT 1",
+          "pg_type": null,
+          "json_type": "unknown",
+          "rust_type": "serde_json::Value",
+          "note": "computed expression — no table column to type from"
+        }
+      ]
+    }
+  ]
+}

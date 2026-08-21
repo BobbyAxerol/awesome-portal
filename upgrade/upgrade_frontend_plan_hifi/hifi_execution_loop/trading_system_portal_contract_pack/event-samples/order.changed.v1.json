@@ -1,0 +1,22 @@
+{
+ "_provenance": {
+  "kind": "SYNTHETIC_EXAMPLE",
+  "warning": "Hand-written. NOT captured from runtime. At runtime only ORDER_STATUS events exist; the fact this file illustrates may have zero instances.",
+  "authoritative_source": "extract/event-catalog.json"
+ },
+ "schema_version": "v1",
+ "event_type": "order.changed",
+ "event_id": "synth-ev-0001",
+ "trace_id": "synth-trace-0001",
+ "causation_id": null,
+ "correlation_id": "synth-corr-0001",
+ "client_order_id": "synth-order-0001",
+ "venue_order_id": "synth-venue-0001",
+ "alpha_id": "alpha-paper-0001",
+ "strategy_id": "alpha-paper-0001",
+ "account_id": "paper-binance-alpha-paper-0001",
+ "mode": "paper",
+ "venue": "BINANCE",
+ "status": "FILLED",
+ "created_at": "2026-08-20T10:00:05Z"
+}

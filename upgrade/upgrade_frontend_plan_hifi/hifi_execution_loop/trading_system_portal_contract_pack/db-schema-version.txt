@@ -1,0 +1,1 @@
+PostgreSQL 15.18 + TimescaleDB 2.28.3; schema_migration_ledger=40 rows, max version=41-change-only-sync-storage; tables=94, views=2; init-db 01..41 source of truth

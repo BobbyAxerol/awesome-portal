@@ -1,0 +1,27 @@
+{
+  "provenance": {
+    "generated_by": "scripts/98_redaction_audit.py",
+    "read_only": true,
+    "trading_system_commit": "9081397de9e981c43b4e0f67fabe747e7ed964c7",
+    "sources": [
+      "<entire contract pack>"
+    ],
+    "note": "Derived from source/runtime read-only inspection. No Trading System file was modified."
+  },
+  "result": "PASS",
+  "summary": {
+    "files_scanned": 84,
+    "findings": 0,
+    "by_pattern": {}
+  },
+  "handoff_9_1_checklist": {
+    "no_plaintext_password_apikey_token_cookie_otp": true,
+    "no_private_key_or_certificate": true,
+    "no_broker_credential_or_hashed_key": true,
+    "no_customer_or_user_pii": true,
+    "no_dsn_with_credentials": true,
+    "no_public_ip_addresses": true,
+    "no_cloud_access_keys": true
+  },
+  "findings": []
+}

@@ -1,0 +1,118 @@
+# Runtime identity snapshot (read-only)
+captured_utc: 2026-08-21T07:59:11Z
+host: ip-172-31-16-126
+
+## trading_system git
+HEAD: 9081397de9e981c43b4e0f67fabe747e7ed964c7
+branch: HEAD
+describe: v1.2.0
+status:
+  ## HEAD (no branch)
+   M shared/symbols.json
+  ?? state/
+
+## data_layer git
+HEAD: 5049c296276f922530769e2a9092ebb6c04c5ea6
+branch: dev
+status:
+  ## dev...origin/dev [behind 118]
+   M generated/python/qdl/common/v1/common_pb2.py
+   M generated/python/qdl/marketdata/v2/market_data_pb2.py
+   M generated/rust/qdl/common/v1/qdl.common.v1.rs
+   M generated/rust/qdl/marketdata/v2/qdl.marketdata.v2.rs
+
+## running containers (name / image / status / created)
+  command_journal_service	tradingsystem-image:sha-8c9a96cc8eb	Up About an hour	2026-08-21 06:49:14 +0000 UTC
+  copy_outbox_service	tradingsystem-image:v1.2.0-9081397	Up 3 days	2026-08-16 11:11:42 +0000 UTC
+  data_layer_service	8f2a5a3f1ff9	Up 4 days	2026-08-16 11:07:53 +0000 UTC
+  executor_service	tradingsystem-image:v1.2.0-9081397	Up 3 days	2026-08-16 11:11:42 +0000 UTC
+  gateway_service	tradingsystem-image:sha-8b88daa61e3	Up 29 minutes	2026-08-21 07:29:25 +0000 UTC
+  listener_service	tradingsystem-image:v1.2.0-9081397	Up 3 days	2026-08-16 11:11:42 +0000 UTC
+  live_data_executor	timescale/timescaledb:latest-pg15	Up 4 days (healthy)	2026-08-16 11:11:42 +0000 UTC
+  market_data_service	tradingsystem-image:sha-0d3415a	Up 41 seconds	2026-08-21 07:58:19 +0000 UTC
+  monitor_service	tradingsystem-image:v1.2.0-9081397	Up 3 days	2026-08-16 11:11:42 +0000 UTC
+  order_group_service	tradingsystem-image:v1.2.0-9081397	Up 3 days	2026-08-16 11:11:42 +0000 UTC
+  paper_execution_service	tradingsystem-image:v1.2.0-9081397	Up 3 days	2026-08-16 11:11:42 +0000 UTC
+  performance_service	tradingsystem-image:v1.2.0-9081397	Up 3 days	2026-08-16 11:11:42 +0000 UTC
+  portfolio_service	tradingsystem-image:v1.2.0-9081397	Up 3 days	2026-08-16 11:11:42 +0000 UTC
+  qdl_v2_stable_candidate-binance_bar_edge-1	qdl-v2-python:2.0.0-4a605fbfe278	Up 14 hours	2026-08-20 18:00:01 +0000 UTC
+  qdl_v2_stable_candidate-ingestor_binance_spot-1	ab57e015da2f	Up 14 hours	2026-08-20 17:39:50 +0000 UTC
+  qdl_v2_stable_candidate-ingestor_binance_usdm-1	ab57e015da2f	Up 14 hours	2026-08-20 17:39:50 +0000 UTC
+  qdl_v2_stable_candidate-ingestor_okx_spot-1	daf0fb09a992	Up 34 minutes	2026-08-21 07:24:28 +0000 UTC
+  qdl_v2_stable_candidate-ingestor_okx_swap-1	daf0fb09a992	Up 34 minutes	2026-08-21 07:24:28 +0000 UTC
+  qdl_v2_stable_candidate-kafka1-1	9516fb7634ba	Up 14 hours (healthy)	2026-08-20 17:39:40 +0000 UTC
+  qdl_v2_stable_candidate-kafka2-1	9516fb7634ba	Up 14 hours (healthy)	2026-08-20 17:39:40 +0000 UTC
+  qdl_v2_stable_candidate-kafka3-1	9516fb7634ba	Up 14 hours (healthy)	2026-08-20 17:39:40 +0000 UTC
+  qdl_v2_stable_candidate-projector_v2-1	qdl-v2-python:2.0.0-4a605fbfe278	Up 14 hours	2026-08-20 18:00:02 +0000 UTC
+  qdl_v2_stable_candidate-query_v2_1-1	qdl-v2-python:2.0.0-4a605fbfe278	Up 14 hours (healthy)	2026-08-20 18:00:01 +0000 UTC
+  qdl_v2_stable_candidate-query_v2_2-1	qdl-v2-python:2.0.0-4a605fbfe278	Up 14 hours	2026-08-20 18:00:01 +0000 UTC
+  qdl_v2_stable_candidate-rust_core-1	60832a3a6b7f	Up 13 hours	2026-08-20 18:46:37 +0000 UTC
+  qdl_v2_stable_candidate-rust_core_2-1	60832a3a6b7f	Up 13 hours	2026-08-20 18:47:12 +0000 UTC
+  qdl_v2_stable_candidate-rust_core_3-1	60832a3a6b7f	Up 13 hours	2026-08-20 18:47:50 +0000 UTC
+  qdl_v2_stable_candidate-stable_redis-1	dfa18828cbc0	Up 14 hours (healthy)	2026-08-20 17:39:40 +0000 UTC
+  qdl_v2_stable_candidate-stream_v2_active-1	qdl-v2-python:2.0.0-4a605fbfe278	Up 14 hours	2026-08-20 18:00:01 +0000 UTC
+  qdl_v2_stable_candidate-stream_v2_passive-1	qdl-v2-python:2.0.0-4a605fbfe278	Up 14 hours	2026-08-20 18:00:01 +0000 UTC
+  reconciliation_service	tradingsystem-image:v1.2.0-9081397	Up 3 days	2026-08-16 11:11:42 +0000 UTC
+  redis_marketdata	redis:7.2-alpine	Up 4 days (healthy)	2026-08-16 11:07:53 +0000 UTC
+  redis_service	redis:7.2-alpine	Up 4 days (healthy)	2026-08-16 11:10:11 +0000 UTC
+  risk_engine_service	tradingsystem-image:v1.2.0-9081397	Up 3 days	2026-08-16 11:11:42 +0000 UTC
+
+## image digests
+  data-layer:v0.1.0	sha256:8e45620d69509b046ef799f4a461435e5853aa68add450fd2eaadb68be07a1a5	8e45620d6950	2026-08-19 03:23:58 +0000 UTC
+  redis:7.2-alpine	sha256:05a97a479bc73de66f087dc05b569010772880f778cc8671fa6b8aadee32e5c6	05a97a479bc7	2026-07-24 17:11:46 +0000 UTC
+  redis:<none>	sha256:dfa18828cbc07b3ae6a95ec7343f6c214fdee2d836197b4be8e9904420762cd8	dfa18828cbc0	2026-05-07 17:35:51 +0000 UTC
+  timescale/timescaledb:latest-pg15	sha256:6343bdc87ca132c6b53acb26113a6bad1821d188fa39975a745f32ddd9757634	6343bdc87ca1	2026-07-16 13:13:09 +0000 UTC
+  tradingsystem-image:latest	sha256:ab4e36aab9ef254b498edb75de25a3e4c19f50eb6eb23509c6483b0fed9b5a11	ab4e36aab9ef	2026-08-12 14:09:43 +0000 UTC
+  tradingsystem-image:sha-0d3415a	sha256:54f7b5874dd2f142b86bffb8d3933a1bd54d9fbb2b8cd561feb108dfe3652766	54f7b5874dd2	2026-08-21 07:55:13 +0000 UTC
+  tradingsystem-image:sha-1e9fe9ed661b	sha256:348e05a202adfe226f40e27be4b0289520356506f8fc400f192df8ce06a0cda8	348e05a202ad	2026-08-20 18:18:16 +0000 UTC
+  tradingsystem-image:sha-319a2ddb623d	sha256:6e35c63766a2bba58882c157f667b657bd68e3bc805b0bae49a7d672f58feba6	6e35c63766a2	2026-08-20 19:51:04 +0000 UTC
+  tradingsystem-image:sha-8b88daa61e3	sha256:4f63dc9949f8102714ab0ee9391757dee3a704135be6680cc2a96d89f54a1db9	4f63dc9949f8	2026-08-21 07:28:39 +0000 UTC
+  tradingsystem-image:sha-8c9a96cc8eb	sha256:41e3008e9981f32d31758333746ed2420f5fa64c43620c1138d105dc76158c0d	41e3008e9981	2026-08-21 05:27:29 +0000 UTC
+  tradingsystem-image:sha-90cf4f2bcccc	sha256:d64e4b7e5b5c973a69616429b57b5b46e47ede780fae1ffc24ed62292cccaaba	d64e4b7e5b5c	2026-08-20 18:54:04 +0000 UTC
+  tradingsystem-image:v1.2.0-9081397	sha256:ab4e36aab9ef254b498edb75de25a3e4c19f50eb6eb23509c6483b0fed9b5a11	ab4e36aab9ef	2026-08-12 14:09:43 +0000 UTC
+  tradingsystem-test:command-health-closure	sha256:77040de5efeebecfc1ff672add6d1b9b9bd4fac8c2801b0946d588608f0036fb	77040de5efee	2026-08-21 07:06:38 +0000 UTC
+  tradingsystem-test:grpc-ownership-c10	sha256:848de7cfb5643a41f6f685ac37b5d03729d149e738fb5990f4e421024866a46c	848de7cfb564	2026-08-21 07:53:18 +0000 UTC
+
+## resource usage snapshot
+  command_journal_service	1.15%	32.45MiB / 15.33GiB	0.21%
+  copy_outbox_service	0.34%	35.84MiB / 15.33GiB	0.23%
+  data_layer_service	24.75%	324.6MiB / 15.33GiB	2.07%
+  executor_service	0.00%	69.21MiB / 15.33GiB	0.44%
+  gateway_service	41.08%	399.6MiB / 15.33GiB	2.54%
+  listener_service	0.15%	66.88MiB / 15.33GiB	0.43%
+  live_data_executor	53.68%	652.2MiB / 15.33GiB	4.15%
+  market_data_service	9.05%	56.41MiB / 15.33GiB	0.36%
+  monitor_service	0.00%	38.23MiB / 15.33GiB	0.24%
+  order_group_service	0.94%	37.98MiB / 15.33GiB	0.24%
+  paper_execution_service	0.12%	58.33MiB / 15.33GiB	0.37%
+  performance_service	0.00%	40.46MiB / 15.33GiB	0.26%
+  portfolio_service	0.11%	53.68MiB / 15.33GiB	0.34%
+  qdl_v2_stable_candidate-binance_bar_edge-1	0.01%	40.4MiB / 512MiB	7.89%
+  qdl_v2_stable_candidate-ingestor_binance_spot-1	6.64%	9.473MiB / 256MiB	3.70%
+  qdl_v2_stable_candidate-ingestor_binance_usdm-1	2.99%	9.734MiB / 256MiB	3.80%
+  qdl_v2_stable_candidate-ingestor_okx_spot-1	1.50%	6.402MiB / 256MiB	2.50%
+  qdl_v2_stable_candidate-ingestor_okx_swap-1	1.87%	6.934MiB / 256MiB	2.71%
+  qdl_v2_stable_candidate-kafka1-1	20.31%	460.2MiB / 768MiB	59.92%
+  qdl_v2_stable_candidate-kafka2-1	49.35%	456.3MiB / 768MiB	59.42%
+  qdl_v2_stable_candidate-kafka3-1	32.70%	457.5MiB / 768MiB	59.58%
+  qdl_v2_stable_candidate-projector_v2-1	22.60%	76.7MiB / 512MiB	14.98%
+  qdl_v2_stable_candidate-query_v2_1-1	0.14%	63.55MiB / 512MiB	12.41%
+  qdl_v2_stable_candidate-query_v2_2-1	0.12%	59.99MiB / 512MiB	11.72%
+  qdl_v2_stable_candidate-rust_core-1	2.25%	159.8MiB / 256MiB	62.40%
+  qdl_v2_stable_candidate-rust_core_2-1	3.46%	158.7MiB / 256MiB	62.00%
+  qdl_v2_stable_candidate-rust_core_3-1	3.75%	164.1MiB / 256MiB	64.12%
+  qdl_v2_stable_candidate-stable_redis-1	3.44%	3.734MiB / 160MiB	2.33%
+  qdl_v2_stable_candidate-stream_v2_active-1	1.99%	67.54MiB / 512MiB	13.19%
+  qdl_v2_stable_candidate-stream_v2_passive-1	16.81%	124MiB / 512MiB	24.22%
+  reconciliation_service	0.00%	82.02MiB / 15.33GiB	0.52%
+  redis_marketdata	2.55%	6.543MiB / 15.33GiB	0.04%
+  redis_service	0.17%	3.949MiB / 15.33GiB	0.03%
+  risk_engine_service	0.07%	65.02MiB / 15.33GiB	0.41%
+
+## host resources
+  cpus: 8
+                 total        used        free      shared  buff/cache   available
+  Mem:            15Gi       6.9Gi       434Mi       562Mi       8.9Gi       8.4Gi
+  Swap:             0B          0B          0B
+  Filesystem      Size  Used Avail Use% Mounted on
+  /dev/root       145G   83G   62G  58% /
