@@ -37,6 +37,21 @@ mâu thuẫn. Đây là **carve-out có chủ ý của rule §3.1**: riêng thư
 frontend được ghi (refine + tracking); phần `upgrade/**` còn lại vẫn là docs của
 codex, không sửa.
 
+**Hai tài liệu điều phối trong thư mục đó** (Claude viết, codex cùng đọc và ghi
+cột của mình): `EXECUTION_SCALE_AND_REFINE.md` (envelope quy mô, 7 mechanism
+dùng chung, 15 request `BR-EX-*`, refine từng màn) và `PHASE_TRACKER.md` (board
+19 phase × FE/BE/Needs/Evidence). Không phase nào được đánh `DONE` khi cột
+Evidence trống — gate chưa chạy thì không phải gate.
+
+**Runtime evidence — `trading_system_portal_contract_pack/`**: 88 file read-only
+từ Execution Cell AWS HK, discovery gate 15/15 COVERED, redaction PASS.
+**Khi `contracts.ts` mâu thuẫn với `extract/`, `extract/` thắng** — nó re-derive
+được bằng máy, còn type của ta chép tay từ prose. Trong pack, Phase F +
+`extract/` thắng Phase A–E. Hai sự thật vận hành phải nhớ: gateway đang chạy
+**không** build từ git HEAD (pin theo image digest), và `mode` thật có 5 giá trị
+`backtest/live/paper/replay/sandbox` — ta chỉ render 3, vì `backtest`/`replay`
+thuộc Research và nằm ngoài scope §0.
+
 **UI copy Execution Loop: tiếng Anh**, bám sát chữ trong hi-fi (D4). Đây là
 ngoại lệ có chủ ý của §3.8 — Research/Planning giữ tiếng Việt cho tới khi Bobby
 chốt kế hoạch chuyển đổi riêng.
