@@ -1686,3 +1686,147 @@ Một phase chỉ được `DONE` khi:
 - [ ] Xác nhận alpha package sample và private trading/data repository owner khi
   mở U13/U14/U16.
 - [ ] Chọn license trước U19 nếu muốn public repository là open-source thực sự.
+
+---
+
+# 12. Execution Loop — frontend phase plan và alignment với codex
+
+> **Owner giao 2026-08-21.** Section này do Claude (frontend lead) viết. Nó
+> **chỉ thêm**, không sửa U00–U19 hay bất kỳ mục nào ở trên — `upgrade/**` vẫn
+> là docs của codex và carve-out này là ngoại lệ owner cho phép, ghi lại ở
+> `CLAUDE.md` §0.
+>
+> **Phân vai tài liệu:** section này là **cấu trúc bền** (phase nào giao gì, phụ
+> thuộc gì, đóng bằng gì). **Trạng thái sống** — cái nào đang WIP, evidence nào
+> đã thu — nằm ở `upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/PHASE_TRACKER.md`.
+> Đừng chép trạng thái vào đây; hai bản trạng thái sẽ lệch nhau trong một tuần.
+
+## 12.1 Quan hệ với U00–U19
+
+Execution Loop **không phải đánh số phase mới** thay cho U. Nó là chia nhỏ theo
+màn của phần công việc vốn đã nằm trong:
+
+| Nội dung | Phase U | APX slice (spec v0.7 §25) |
+|---|---|---|
+| Approval Inbox, Gate R1/R2, exit review | U15 | APX-1 |
+| Paper read-only, các 360° | U15 | APX-2 |
+| Admin plan/apply/verify | U15 | APX-3 |
+| Sandbox certification | U15 | APX-4 |
+| Canary/Live governance | U16 | APX-5 |
+| Portfolio intelligence, correlation | U16 | APX-6 |
+
+19 "phase" trong `IMPLEMENTATION_PHASES.md` là **đơn vị giao hàng theo màn**, để
+một màn được đóng trọn vẹn thay vì mười màn cùng dở dang. Khi report tiến độ lên
+plan này, quy về U15/U16 và APX; khi làm việc hằng ngày, dùng số phase.
+
+**Scope lock:** đợt này chỉ Execution Loop. QuantBT Research/Backtest và Planning
+không đụng tới ở cả hai phía (`CLAUDE.md` §0).
+
+## 12.2 Hai lane song song, và vì sao điều đó không phá §5
+
+§5 quy định mọi thay đổi production đi theo thứ tự
+`contract/schema → backend/domain tests → API/read model → UI states → E2E`.
+Frontend đang chạy trước codex, nên phải nói rõ vì sao không mâu thuẫn:
+
+- **Lane A — không phải production change.** Component dùng chung, contract type,
+  fixture, primitive scale. Chúng không render dữ liệu thật, không có route sản
+  phẩm, không đổi maturity của feature nào. Chúng là *nguyên liệu*, và §5 nói về
+  *thay đổi production*.
+- **Lane B — là production change, và tuân thủ §5 đầy đủ.** Mọi màn thật (phase
+  1–17) chỉ bắt đầu sau khi contract của nó tồn tại, và chỉ đổi maturity sau khi
+  có authority thật + runtime evidence (spec §2.3).
+
+Ranh giới kiểm chứng được: bất cứ thứ gì Lane A tạo ra đều nằm ngoài registry và
+ngoài nav. Nếu một màn Lane A xuất hiện trong sidebar, ranh giới đã bị vi phạm.
+
+**Prop của Lane A không phải phỏng đoán.** Chúng chép từ tài liệu đã tồn tại —
+envelope từ guide §5, chart envelope từ spec §16.2, bốn state field từ spec §5.2,
+id từ DB schema guide, và từ 2026-08-21 là `trading_system_portal_contract_pack/extract/`.
+Khi codex công bố tên field khác, chỗ sửa là `apps/portal/frontend/src/execution/contracts.ts`,
+không phải 17 màn.
+
+## 12.3 Bảng alignment 19 phase
+
+`BE prereq` là thứ codex phải giao trước khi Lane B của phase đó bắt đầu.
+`BR-EX-*` xem `EXECUTION_SCALE_AND_REFINE.md` §5.
+
+| # | Màn (WF) | FE deliverable | BE prereq | BR-EX | Exit gate |
+|---|---|---|---|---|---|
+| 0 | Shell & shared components | 13 component × mọi state + fixture page; sidebar/topbar từ registry | **registry rev 3** | — | vitest + build + visual baseline không drift |
+| 1 | Approval Inbox (4a) | bảng pending + recently-decided, 7 filter chip, SoD row dimmed | approvals read model | 01/02/03 | filter round-trip, SoD row không bị filter bỏ |
+| 2 | Gate R1 Review (1a) | decision bar, artifact passport, checklist, conditions composer | approval decision write | — | decision ghi được, inbox phản ánh |
+| 3 | Gate R2 Review (1b) | readiness checklist, R1 reference, capital preview strip | capital preview + R1 ref | — | preview recompute; R1 EXPIRED khoá cả decision bar |
+| 4 | Paper Workbench (1c) | header band, lineage, rail, 5-KPI, equity + gate progress, blotter | deployment/session/PnL reads | 04 | FRESH/STALE + operatorAdmin render từ fixture |
+| 5 | Paper Exit Review (4b) | 4 evidence panel 2×2, decision footer 3 nhánh | observation evidence | — | 3 outcome ghi 3 state khác nhau |
+| 6 | Admin Action Drawer (1i) | catalog 21 lệnh × 6 nhóm, drawer plan→apply→verify | commands plan/apply/verify | — | một allocation chạy thật, có ledger + audit row |
+| 7 | Operations Queue (4e) | bảng operation + Alert Rail 340px | operation state + alert | 01/02/09 | queue ↔ drawer ↔ incident round-trip |
+| 8 | Incident Detail (4d) | state rail forward-only, evidence + operations panel | findings + operations | — | resolve ép đủ 2 precondition, không auto-resume |
+| 9 | Command Center (5a) | triage ranked, fleet health, watchlist, Today strip | ranked triage + fleet | 08/10 | mọi row điều hướng; triage cùng nguồn với rail |
+| 10 | Sandbox Certification (1d) | 7-step strip, triptych Internal/Broker/Diff | cert state machine + sync | — | 7 step render từ data; CRITICAL khoá exit |
+| 11 | Canary Control Room (1e) | guard đôi, envelope compliance, protective vs scale | canary envelope + sync | 04 | STALE chặn scale-up, **không** chặn protective |
+| 12 | Live Full Operations (1f) | guard đặc, internal-vs-broker pair | live reads + sequence | 04/11 | MISMATCH triệt tiêu mọi giá trị broker-derived |
+| 13 | Paper Workbench VNM (4h) | calendar banner INFO, VND chip, LO/ATO/ATC, DNSE strip | venue calendar + precision | 12 | đồng hồ freshness dừng ngoài 09:00–14:45 ICT |
+| 14 | Full Blotter (4c) | keyset table + virtualization, funnel drawer, cross-filter | cursor + filter/sort + funnel | 01/02/03/13 | đến từ màn nào thì pre-apply scope màn đó |
+| 15 | Alpha 360° (2a+2b) | scope bar, deployment map, 9 tab, 12 tile preview-res | per-deployment reads + batch tile | 04/06/15 | một lần đổi scope re-filter đủ 9 tab |
+| 16 | Portfolio 360° (1h→3a) | heatmap clustering + leader lens, ledger, approvals | correlation snapshot | 07/01 | cặp thiếu mẫu render INSUFFICIENT_DATA, không phải ô trắng |
+| 17 | Account/Broker 360° (1g) | triptych, binding panel, linked accounts + headroom | **aggregate exposure** | 14/01/12 | headroom tính từ toàn tập, không từ một trang |
+| 18 | Hardening | ECharts thay SVG, role lens, break-glass, density | analytics + role lens | 05 | caption envelope giữ nguyên văn sau khi thay chart |
+
+## 12.4 Thứ tự slice của frontend
+
+Lane A chạy trước; mỗi slice đóng độc lập và không slice nào chờ codex.
+
+| Slice | Nội dung | Vì sao thứ tự này |
+|---|---|---|
+| **S0** `DONE` | 13 component + fixture page + Carbon surface cô lập | Nguyên liệu của mọi phase sau |
+| **S1** | **Reconcile `contracts.ts` với `extract/`** — 22 enum, 91 DB CHECK, 124 reason code, 85 payload model | Type sai thì 17 màn sai theo. Pass đầu đã bắt `BrokerSync` thiếu `ERROR`. Rẻ nhất khi làm trước, đắt nhất khi làm sau |
+| **S2** | **Primitive M1** — keyset table + virtualization, fixed row height, sticky header, exact count | Phase 1/7/14/15/16/17 đều dùng. Thuần frontend, không cần API |
+| **S3** | **Adapter + fixture layer** từ `query-samples/`, `event-samples/` trong contract pack | Cho phép dựng màn trên shape thật thay vì shape tưởng tượng; khi API lên thì đổi adapter, không đổi màn |
+| **S4** | **Primitive M2/M3** — series theo thang resolution, subscription có gap-resync | Phase 4/11/12/15 dùng. Viết trên port có kiểu, adapter fixture |
+| **S5** | Màn **bounded**: Gate R1, Gate R2, Paper Exit Review | Cardinality cố định theo artifact, không phụ thuộc quy mô; dựng được trọn vẹn trên fixture |
+| **S6** | **Admin Action Drawer catalog** — 21 lệnh × 6 nhóm | Catalog lấy từ CLI guide + `extract/cli-command-map.json` (64 action). Drawer shell đã có từ S0 |
+| **S7** | **Visual baseline cho Carbon surface** | Khoá diện mạo Execution lại trước khi 17 màn dựng lên nó, đúng cách Research đã làm |
+
+Sau S7, frontend hết việc độc lập: mọi thứ còn lại cần registry rev 3 hoặc dữ liệu.
+
+## 12.5 Definition of done — bổ sung cho §9
+
+Ngoài §9 toàn cục, một phase Execution Loop còn phải:
+
+- **Scale refine đủ 6 ô** (`CLAUDE.md` §8): cardinality, break point, degradation,
+  server contract, invariant giữ nguyên, perf budget. Thiếu ô nào thì chưa xong.
+- **Không đóng bằng "giống hi-fi ở 1440px".** Hi-fi là một mẫu viewport, không
+  phải pixel spec (HANDOFF §3b).
+- **Maturity chỉ đổi khi có authority thật.** Theo spec §2.3, dùng
+  `CONTRACT_COMPLETE` / `FOUNDATION_COMPLETE` / `INTEGRATION_PENDING` /
+  `PRODUCTION_INACTIVE` / `OPERATIONAL_EVIDENCE_PENDING` / `PRODUCT_COMPLETE`.
+  Không dùng `COMPLETE` trống nghĩa. Màn chạy trên fixture giữ `PROTOTYPE` hoặc
+  `COMMISSIONED` — **không render PnL/live status giả**.
+- **Không tổng nào tính từ dòng browser đang giữ** (M7). Headroom, fleet count,
+  gate progress, contribution share đều do server tính.
+- **Ba gate xanh**: `vitest` + `npm run build` + visual baseline không drift.
+
+## 12.6 Giao thức phối hợp với codex
+
+- **Board chung:** `PHASE_TRACKER.md`. Codex giữ cột BE và §6; Claude giữ cột FE
+  và §4/§5. Chi tiết riêng của mỗi bên ở tracking doc của bên đó
+  (`FRONTEND_HANDOFF.md` §8 / `BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md` §14.1).
+- **Brief đã gửi:** `hifi_execution_loop/CODEX_BACKEND_PLAN_REQUEST.md`.
+- **Thứ tự ưu tiên đã nêu với codex:** registry rev 3 → BR-EX-14 → BR-EX-02 →
+  BR-EX-11 → phần còn lại.
+- **Codex được quyền từ chối một `BR-EX-*`.** Từ chối là kết quả bình thường và
+  frontend sẽ thiết kế lại màn quanh nó; thứ không xử lý được là im lặng.
+- **Kiến trúc backend là quyền codex.** Frontend chỉ khẳng định màn hình cần gì.
+- **Khi tài liệu lệch nhau hoặc lệch code:** ghi discrepancy kèm evidence, không
+  chọn cách đọc tiện tay. `extract/` thắng mọi claim viết tay, kể cả của frontend.
+
+## 12.7 Rủi ro và quyết định treo
+
+| # | Vấn đề | Ảnh hưởng | Chờ ai |
+|---|---|---|---|
+| E-1 | **Registry rev 3 chưa có** | Nửa nav của phase 0 và routing của cả 17 màn đứng yên | codex |
+| E-2 | **Font IBM Plex chưa cài** | Surface có màu và hình học Carbon nhưng chữ Inter; DS §7 coi type mono-forward là một phần identity | Bobby (đổi lockfile) |
+| E-3 | **Tỉ lệ order/fill** 1.000/ngày trên 150–500 deployment = ~2–7/deployment/ngày | Mọi ngân sách blotter, event và workbench dựng trên số này | Bobby |
+| E-4 | **`BrokerSync` sai** — thật là `ERROR/MISMATCH/OK/STALE`, ta viết `UNKNOWN` | Thêm `ERROR` là chép đúng; `UNKNOWN` có tồn tại phía Portal hay không là quyết định mô hình | codex (S1) |
+| E-5 | **15 `BR-EX-*` chưa có phán quyết** | Phase 14/16/17 không thể đóng đúng ở quy mô thật nếu bị từ chối mà không có phương án thay | codex |
+| E-6 | Gateway đang chạy **không** build từ git HEAD | Deploy phải pin image digest, không pin branch | codex/Bobby khi release |

@@ -37,6 +37,13 @@ mâu thuẫn. Đây là **carve-out có chủ ý của rule §3.1**: riêng thư
 frontend được ghi (refine + tracking); phần `upgrade/**` còn lại vẫn là docs của
 codex, không sửa.
 
+**Ngoại lệ thứ hai, owner giao 2026-08-21:** `upgrade/UNIFIED_IMPLEMENTATION_PLAN.md`
+**§12** là plan frontend của Execution Loop, Claude viết và giữ. Chỉ §12 — §1–§11
+và toàn bộ U00–U19 vẫn là của codex, chỉ thêm không sửa. §12 giữ **cấu trúc bền**
+(phase giao gì, phụ thuộc gì, đóng bằng gì); **trạng thái sống** ở
+`PHASE_TRACKER.md`. Không chép trạng thái vào §12 — hai bản trạng thái sẽ lệch
+nhau trong một tuần.
+
 **Hai tài liệu điều phối trong thư mục đó** (Claude viết, codex cùng đọc và ghi
 cột của mình): `EXECUTION_SCALE_AND_REFINE.md` (envelope quy mô, 7 mechanism
 dùng chung, 15 request `BR-EX-*`, refine từng màn) và `PHASE_TRACKER.md` (board
