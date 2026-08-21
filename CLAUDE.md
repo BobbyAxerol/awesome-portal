@@ -13,6 +13,39 @@ Quy tắc nền: bạn làm **UI/UX và frontend**. Backend authority thuộc co
 nếu cần contract/endpoint/field mới → viết **Backend request** rõ ràng (mục
 cuối file này) thay vì tự sửa backend.
 
+## 0. Scope lock — đợt upgrade Execution Loop (chốt 2026-08-21, Bobby)
+
+**Phạm vi duy nhất của đợt này: Execution Loop** — từ Approval Gate trở về sau:
+Gate R1/R2 → Approval Inbox + stage exit reviews → Paper → Sandbox → Canary →
+Live, cùng Alpha/Portfolio/Account 360°, Full Blotter, Operations Queue,
+Incident Detail, Command Center triage và Admin Action Drawer.
+
+**Không đụng phần phía trước**: QuantBT Backtest/Research (`/research/quantbt/*`
+— Run Library/Progress/Overview/Optimization/Parameters/Execution/Audit, Import
+Wizard, Alpha Pool research) và Planning. Nếu một thay đổi ở component/token
+dùng chung sẽ làm đổi màn Research hoặc Planning → **dừng và hỏi Bobby**, không
+"tiện tay sửa luôn". Visual baseline là gate thật: 46/100 snapshot thuộc theme
+`operations`, nên đụng token dùng chung là đụng cả chúng.
+
+**Authority frontend của đợt này** —
+`upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/**`, đọc đúng thứ tự:
+`HANDOFF_README.md` → `EXECUTION_CLUSTER_GUIDE.md` (D1–D6) →
+`DESIGN_SYSTEM_EXECUTION.md` → `CANONICAL_CAST.md` → `IMPLEMENTATION_PHASES.md`
+→ các file `HiFi *.dc.html`. Spec
+`uploads/ALPHA_POOL_TO_LIVE_PORTFOLIO_PORTAL_DESIGN_SPEC_v0.7_vi.md` thắng khi
+mâu thuẫn. Đây là **carve-out có chủ ý của rule §3.1**: riêng thư mục này
+frontend được ghi (refine + tracking); phần `upgrade/**` còn lại vẫn là docs của
+codex, không sửa.
+
+**UI copy Execution Loop: tiếng Anh**, bám sát chữ trong hi-fi (D4). Đây là
+ngoại lệ có chủ ý của §3.8 — Research/Planning giữ tiếng Việt cho tới khi Bobby
+chốt kế hoạch chuyển đổi riêng.
+
+**Scale refine bắt buộc**: hi-fi dựng với cast nhỏ (9 deployment, ~5 approval,
+~6 operation) ở đúng một viewport 1440px. Mỗi màn phải có pass refine cho quy mô
+thật trước khi được coi là xong — schema ở §8. Không màn nào được đóng chỉ vì
+"trông giống hi-fi ở 1440px".
+
 ## 1. Đọc bắt buộc, đúng thứ tự
 
 1. `CONTRIBUTOR_AGENT_RULES.md` — nếu bạn chạy ở workspace contributor
@@ -106,8 +139,9 @@ cuối file này) thay vì tự sửa backend.
    commit nhỏ đúng nghĩa; không commit secret/data/artifact/cache; hooks
    chặn sai phạm; merge dev/main là quyền Bobby (contributor chỉ push branch
    lên primus-origin và mở PR vào dev, không tự merge).
-8. **Tiếng Việt cho UI copy** (thuật ngữ kỹ thuật giữ tiếng Anh khi cần),
-   số liệu dùng font mono.
+8. **Ngôn ngữ UI theo scope**: Research/Planning giữ **tiếng Việt** (thuật ngữ
+   kỹ thuật giữ tiếng Anh khi cần); **Execution Loop dùng tiếng Anh** theo §0 +
+   D4, copy bám sát hi-fi. Số liệu luôn font mono.
 
 ## 4. Commands (chạy trong từng frontend)
 
@@ -174,3 +208,22 @@ không tự chọn mô tả tiện lợi.
    `packages/contracts/generated/portal-api.d.ts` từ OpenAPI họ publish
    (`cd packages/contracts && npm run generate`) — đây là bước cơ học, không
    phải tự tác giả contract.
+
+## 8. Scale refine — bắt buộc cho mỗi màn Execution Loop
+
+Hi-fi mô tả trạng thái đẹp ở 1440px với dữ liệu mẫu nhỏ. Thực tế: nhiều alpha,
+nhiều venue, blotter cỡ 10⁵–10⁷ dòng, event stream liên tục. Mỗi màn phải trả
+lời đủ 6 ô dưới đây trước khi đóng; thiếu ô nào thì màn đó chưa xong.
+
+| Ô | Nội dung |
+|---|---|
+| **Cardinality** | N mà hi-fi ngầm giả định vs p50/p95/max thực tế — rows, series points, alpha, venue, tab, chip, tần suất event |
+| **Break point** | N nào layout/tương tác bắt đầu vỡ: không đọc được, cuộn ngang, DOM phình, tab đơ |
+| **Degradation** | UI làm gì sau ngưỡng: virtualize · keyset page · aggregate · đổi cách biểu diễn · cap + link "xem tất cả" |
+| **Server contract** | thứ backend phải cấp để degradation đó thành thật: cursor, sort/filter/rank server-side, downsample kèm metadata, approximate count, top-N — viết thành Backend request (§5) |
+| **Invariant giữ nguyên** | degradation **không được biến thành nói dối**: downsample không làm mất extrema và phải hiện trong envelope caption; count xấp xỉ phải mang dấu `~`; list bị cap phải ghi "top 10 / 214"; số trong blotter không bao giờ viết tắt hay ellipsis; `PARTIAL/STALE` không vì gộp mà thành xanh |
+| **Perf budget** | ngân sách render, trần DOM node, cửa sổ gộp update realtime, hành vi khi phát hiện gap `source_sequence` |
+
+Cơ chế dùng chung (virtualization, downsampling, coalescing, gap-resync, nhãn
+trung thực khi cap) viết **một lần** ở phần shared, không để 17 màn mỗi màn tự
+nghĩ một kiểu.
