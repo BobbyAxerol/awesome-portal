@@ -185,6 +185,28 @@ export interface Envelope {
    */
   projectionSequence?: number | null;
   /**
+   * Whether this entity class is genuinely event-sourced or merely polled.
+   *
+   * The field exists because `projectionSequence` cannot say it. At the current
+   * runtime only `ORDER_STATUS` may be `EVENT_SOURCED`; runtime, risk, account,
+   * fill and reconciliation are `POLL_BOUNDED` or `UNKNOWN` until a later
+   * contract pack proves broader coverage (master plan §7.1).
+   *
+   * A `POLL_BOUNDED` panel may only claim states that were observed at a poll.
+   * `UNKNOWN` blocks continuity-sensitive claims outright.
+   */
+  sourceCompleteness?: SourceCompleteness;
+  /** Effective poll interval, present when `sourceCompleteness` is POLL_BOUNDED. */
+  pollIntervalMs?: number | null;
+  /**
+   * Which delivery profile produced this data (master plan §12.3).
+   *
+   * Registry revision 4 is the authority for a screen's profile; this echo lets
+   * one panel of a composed screen be **stricter** than the screen. It may never
+   * be laxer — see `reconcilePanelProfile` in `profile.ts`, which fails closed.
+   */
+  deliveryProfile?: DeliveryProfile;
+  /**
    * Connector-derived, not read from a Trading System field. Sources per the
    * mapping doc: `/v1/health.checks.stale_or_bad_services` (heartbeat age over
    * 180s by default), broker adapter `circuit_open`, and data-layer feed
@@ -193,11 +215,15 @@ export interface Envelope {
    */
   freshness: FreshnessState;
   /**
-   * Age of the DATA in seconds, measured `readAt − asOf` **by the server**.
+   * Age of the DATA in seconds, measured `readAt − asOf` **by the edge**, using
+   * its trusted clock (BR-EX-19, accepted).
    *
    * Server-computed on purpose. Computing it here would need the browser clock,
    * which the same plan forbids for venue sessions; a laptop with a skewed clock
    * would render a fresh panel as an hour stale.
+   *
+   * An `asOf` in the future beyond skew tolerance arrives as freshness `UNKNOWN`
+   * plus a warning rather than a clamped zero, so this is never negative.
    */
   ageSeconds?: number | null;
   /**
@@ -236,6 +262,64 @@ export interface Envelope {
  * false alarm every evening.
  */
 export type VnSessionStatus = "OPEN_HEALTHY" | "OPEN_STALE" | "MARKET_CLOSED" | "BROKEN";
+
+/**
+ * How this entity class reaches the projection (master plan §7.1, BR-EX-16).
+ *
+ * The distinction a contiguous sequence cannot make. `EVENT_SOURCED` is covered
+ * by a proven event contract. `POLL_BOUNDED` reached us by polling, so a value
+ * that changed and changed back between two polls left no trace — the panel may
+ * assert what was observed at a poll and nothing between polls. `UNKNOWN` has no
+ * trustworthy basis and blocks continuity claims entirely.
+ */
+export type SourceCompleteness = "EVENT_SOURCED" | "POLL_BOUNDED" | "UNKNOWN";
+
+/* ---------------------------------------------------------------------------
+ * Keyset list contract (master plan §7.2, BR-EX-01/02/03/17)
+ * ------------------------------------------------------------------------ */
+
+/** One allowlisted sort the server applied, echoed back so the UI shows truth. */
+export interface SortSpec {
+  field: string;
+  direction: "asc" | "desc";
+}
+
+/** One allowlisted filter the server applied, echoed back. */
+export interface FilterEcho {
+  field: string;
+  op: string;
+  value: string;
+}
+
+/**
+ * One page of a keyset list.
+ *
+ * There is no page number and no offset, by construction. `after` and `before`
+ * are mutually exclusive opaque signed cursors; a client can step in either
+ * direction but cannot seek to page *n*, which is why the table primitive
+ * renders no page-number control. Offering one would be a lie about a
+ * capability the contract does not have.
+ *
+ * Both counts come from the server over the full filtered population. The
+ * browser never counts its own rows — that stays correct until the day the list
+ * paginates and then becomes confidently wrong (mechanism M7).
+ */
+export interface KeysetPage<T> {
+  rows: readonly T[];
+  /** Exact, across the whole dataset. Hi-fi footer: "48,213 total". */
+  totalCount: number;
+  /** Exact, across the current filter. Hi-fi footer: "412 in selection". */
+  filteredCount?: number | null;
+  /** Opaque. Absent when this is the newest page. */
+  nextCursor?: string | null;
+  /** Opaque. Absent when this is the oldest page. */
+  prevCursor?: string | null;
+  hasMore?: boolean;
+  hasPrevious?: boolean;
+  /** What the server actually filtered and sorted by, not what was requested. */
+  appliedFilters?: readonly FilterEcho[];
+  appliedSort?: readonly SortSpec[];
+}
 
 /* ---------------------------------------------------------------------------
  * Panel states (DS §6, §4g)

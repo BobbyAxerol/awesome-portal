@@ -732,6 +732,15 @@
   gap: var(--space-3);
 }
 
+/* Full-width cases: a table cannot demonstrate its column behaviour in a
+ * flex cell sized to its content. */
+.exec-fixtures-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
 .exec-fixtures-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -748,5 +757,163 @@
 .exec-fixtures-caption {
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+/* -------------------------------------------------------------------------
+ * Mechanism M1 — keyset table
+ *
+ * Values transcribed from the Full Blotter hi-fi rather than invented: header
+ * 10px mono uppercase at --ink-faint on --paper-raised, 8px/12px padding, hairline
+ * --line under the header and --line-soft between rows, 7px/12px cells at
+ * --ink-soft. The hi-fi settles a contradiction in the design system, which says
+ * table headers are prose face in section 3 and mono in section 7 v2: every
+ * header in every hi-fi is mono, so mono wins (HANDOFF section 3).
+ * ---------------------------------------------------------------------- */
+
+.exec-table {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* DS section 8: the panel scrolls, the page never does. */
+.exec-table-scroll {
+  overflow: auto;
+  max-height: 60vh;
+  min-width: 0;
+}
+
+.exec-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+}
+
+.exec-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--paper-raised);
+  border-bottom: 1px solid var(--line);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.exec-table tbody td {
+  padding: 7px var(--space-3);
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink-soft);
+  height: 32px;
+  box-sizing: border-box;
+}
+
+/* M6: a numeric cell is mono, tabular, right-aligned and never truncated.
+ * There is deliberately no text-overflow here — an ellipsised amount or ID is
+ * the failure this rule exists to prevent, so the column is sized from
+ * instrument precision instead and the panel scrolls if it must. */
+.exec-table th[data-numeric="true"],
+.exec-table td[data-numeric="true"] {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Prose may truncate, and only with a title attribute supplied by the caller. */
+.exec-table td[data-truncate="true"] {
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exec-table tbody tr[data-selected="true"] {
+  background: var(--surface-2);
+}
+
+.exec-table-clickable {
+  cursor: pointer;
+}
+
+.exec-table-clickable:hover {
+  background: var(--surface-3);
+}
+
+/* Spacer rows stand in for the thousands not rendered. They carry no content
+ * and are hidden from assistive technology, which reads aria-rowcount instead. */
+.exec-table-pad td {
+  padding: 0;
+  border: 0;
+}
+
+.exec-table-notice {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line-soft);
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+
+.exec-table-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+}
+
+.exec-table-counts strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.exec-table-meta,
+.exec-table-applied {
+  color: var(--ink-mute);
+}
+
+.exec-table-overbudget {
+  color: var(--warn);
+}
+
+.exec-table-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.exec-table-nav button {
+  padding: 3px var(--space-2);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  cursor: pointer;
+}
+
+.exec-table-nav button:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.exec-table-nav button:disabled {
+  cursor: not-allowed;
+  color: var(--ink-mute);
+}
+
+.exec-table-cursor {
   color: var(--ink-mute);
 }

@@ -16,12 +16,15 @@ import { ExecutionSurface } from "./ExecutionSurface";
 import {
   AuthorityBadge,
   BrokerSyncChip,
+  CapabilityChip,
   EnvironmentBadge,
   FreshnessIndicator,
   OperationStatusChip,
   OrderStatusChip,
+  ProfileBadge,
   RuntimeStateChip,
   StatusChip,
+  VerificationChip,
 } from "./components/badges";
 import { ChartTile } from "./components/chart";
 import { CommandPlanDrawer } from "./components/drawer";
@@ -29,7 +32,11 @@ import { EvidencePanel, SlaCell } from "./components/evidence";
 import { GuardBand, LifecycleRail, ObservationProgress, stageRail } from "./components/lifecycle";
 import { VenueIdentity, VenueScope } from "./components/scope";
 import { CapNotice, CommissionedPanel, PanelState } from "./components/states";
+import { KeysetTable, type Column } from "./components/table";
+import { PROFILE_ORDER, profileNeedsLabel, reconcilePanelProfile } from "./profile";
 import type {
+  CapabilityState,
+  DeliveryProfile,
   Envelope,
   FreshnessState,
   OperationStatus,
@@ -37,6 +44,7 @@ import type {
   PanelStatus,
   PromotionStage,
   VenueCode,
+  VerificationResult,
 } from "./contracts";
 
 /* -------------------------------------------------------------------------
@@ -113,6 +121,82 @@ const OPERATION_STATUSES: OperationStatus[] = [
   "PARTIAL",
   "FAILED",
 ];
+
+const VERIFICATION_RESULTS: VerificationResult[] = [
+  "PENDING",
+  "ACKNOWLEDGED",
+  "SUCCEEDED",
+  "PARTIAL",
+  "UNCERTAIN",
+  "FAILED",
+  "DENIED",
+  "EXPIRED",
+];
+
+const CAPABILITY_STATES: CapabilityState[] = [
+  "SUPPORTED",
+  "READ_ONLY",
+  "SHADOW_ONLY",
+  "DISABLED",
+  "INCOMPATIBLE",
+];
+
+/** The four reconciliation cases, one row each (profile.ts). */
+const PROFILE_CASES: {
+  screen: DeliveryProfile | null;
+  panel: DeliveryProfile | null;
+  caption: string;
+}[] = [
+  { screen: "live_full", panel: "shadow", caption: "panel stricter than screen — legal" },
+  { screen: "live_canary", panel: "live_canary", caption: "panel matches screen — legal" },
+  { screen: "shadow", panel: "live_full", caption: "panel claims MORE than screen — refused" },
+  { screen: "live_canary", panel: null, caption: "panel stated nothing — refused" },
+];
+
+/* Blotter columns, transcribed from the Full Blotter hi-fi thead:
+ * time (UTC) · deployment · venue · symbol · type / side · qty · price · status
+ * · fee · order_id. Numeric columns are the ones a truncation would corrupt. */
+interface FixtureOrder {
+  id: string;
+  ts: string;
+  deployment: string;
+  symbol: string;
+  side: string;
+  qty: string;
+  price: string;
+  status: OrderStatus;
+  fee: string;
+}
+
+const BLOTTER_COLUMNS: readonly Column<FixtureOrder>[] = [
+  { key: "ts", header: "time (UTC)", numeric: true, render: (r) => r.ts },
+  { key: "dep", header: "deployment · venue", truncate: true, title: (r) => r.deployment, render: (r) => r.deployment },
+  { key: "sym", header: "symbol", render: (r) => r.symbol },
+  { key: "side", header: "type / side", render: (r) => r.side },
+  { key: "qty", header: "qty", numeric: true, render: (r) => r.qty },
+  { key: "price", header: "price", numeric: true, render: (r) => r.price },
+  { key: "status", header: "status", render: (r) => <OrderStatusChip status={r.status} /> },
+  { key: "fee", header: "fee", numeric: true, render: (r) => r.fee },
+  { key: "id", header: "order_id", render: (r) => r.id },
+];
+
+/* 600 rows: past the 200-row virtualization threshold, so the fixture page
+ * exercises the windowing rather than only the styling. */
+const FIXTURE_ORDERS: FixtureOrder[] = Array.from({ length: 600 }, (_, i) => {
+  const status: OrderStatus =
+    i % 37 === 0 ? "PARTIALLY_FILLED" : i % 53 === 0 ? "REJECTED" : "FILLED";
+  return {
+    id: `ord_${(88_240 - i).toString(16)}`,
+    ts: `10:${String(41 - (i % 42)).padStart(2, "0")}:58.114`,
+    deployment: `dep_${94 - (i % 9)} · ${VENUES[i % VENUES.length].label}`,
+    symbol: i % 3 === 0 ? "BTC-PERP" : i % 3 === 1 ? "ETH-PERP" : "SOL-PERP",
+    side: i % 2 === 0 ? "LIMIT BUY" : "LIMIT SELL",
+    qty: (0.04 + (i % 11) / 1000).toFixed(4),
+    price: (60_890 + (i % 97) * 1.25).toFixed(2),
+    status,
+    fee: (0.4899 + (i % 13) / 10_000).toFixed(4),
+  };
+});
 
 const PANEL_STATES: Exclude<PanelStatus, "ok">[] = [
   "loading",
@@ -507,6 +591,113 @@ export default function ExecutionFixtures() {
                 plan={null}
                 danger
                 confirmWord="CLOSE"
+              />
+            </Case>
+          </div>
+        </Group>
+
+        <Group
+          title="VerificationChip — what verify observed, a second axis"
+          note="UNCERTAIN is toned bad rather than warn. Nothing has been proven to have failed, but an amber chip beside a grey PENDING invites waiting, and waiting is the wrong response to not knowing whether a halt took effect."
+        >
+          <div className="exec-fixtures-row">
+            {VERIFICATION_RESULTS.map((result) => (
+              <Case caption={result} key={result}>
+                <VerificationChip result={result} />
+              </Case>
+            ))}
+          </div>
+        </Group>
+
+        <Group
+          title="CapabilityChip — per capability, never rolled up"
+          note="Master plan §6.2 forbids a global green flag. Reads stay supported while the matching command path is disabled, and one badge cannot say that."
+        >
+          <div className="exec-fixtures-row">
+            {CAPABILITY_STATES.map((state) => (
+              <Case caption={state} key={state}>
+                <CapabilityChip name="orders" state={state} />
+              </Case>
+            ))}
+          </div>
+        </Group>
+
+        <Group
+          title="ProfileBadge — registry revision 4"
+          note="Renders for fixture and shadow only. The other four profiles are already carried by the environment badge and the guard band; shadow has no other tell at all, because shadow reads are real values from the real system on the real screen."
+        >
+          <div className="exec-fixtures-row">
+            {PROFILE_ORDER.map((profile) => (
+              <Case caption={profileNeedsLabel(profile) ? profile : `${profile} — silent`} key={profile}>
+                <ProfileBadge profile={profile} />
+              </Case>
+            ))}
+          </div>
+        </Group>
+
+        <Group
+          title="Profile reconciliation — fail-closed"
+          note="A panel may claim less authority than its screen was commissioned for. It may never claim more: that is a routing error or a bug, and both are reasons to render nothing."
+        >
+          <div className="exec-fixtures-grid">
+            {PROFILE_CASES.map(({ screen, panel, caption }) => {
+              const r = reconcilePanelProfile(screen, panel);
+              return (
+                <Case caption={caption} key={caption}>
+                  {r.ok ? (
+                    <span className="exec-fixtures-note">
+                      renders as <strong>{r.effective}</strong>
+                      {r.stricterThanScreen ? " (stricter than the screen)" : ""}
+                    </span>
+                  ) : (
+                    <PanelState status={r.panelStatus} reason={r.reason} />
+                  )}
+                </Case>
+              );
+            })}
+          </div>
+        </Group>
+
+        <Group
+          title="KeysetTable — mechanism M1"
+          note="No page numbers, because keyset cannot seek to page n. Counts come from the server over the full population, never from the rows the browser is holding. Numerics are mono, tabular and never ellipsised."
+        >
+          <div className="exec-fixtures-stack">
+            <Case caption="182k rows, virtualized, both directions available">
+              <KeysetTable
+                label="Orders"
+                columns={BLOTTER_COLUMNS}
+                rowKey={(r) => r.id}
+                viewportRows={12}
+                page={{
+                  rows: FIXTURE_ORDERS,
+                  totalCount: 182_431,
+                  filteredCount: 412,
+                  hasMore: true,
+                  hasPrevious: true,
+                  nextCursor: "c_ab34e91f0055deadbeef",
+                  appliedFilters: [{ field: "status", op: "in", value: "FILLED,PARTIALLY_FILLED" }],
+                  appliedSort: [{ field: "event_ts", direction: "desc" }],
+                }}
+              />
+            </Case>
+            <Case caption="empty under a filter — a named state, not a blank table">
+              <KeysetTable
+                label="Orders"
+                columns={BLOTTER_COLUMNS}
+                rowKey={(r) => r.id}
+                page={{ rows: [], totalCount: 182_431, filteredCount: 0 }}
+                reason="No order matched REJECTED in this window."
+              />
+            </Case>
+            <Case caption="denied — the viewer lacks the scope, which is not emptiness">
+              <KeysetTable
+                label="Orders"
+                columns={BLOTTER_COLUMNS}
+                rowKey={(r) => r.id}
+                status="denied"
+                reason="portal.execution.blotter.read"
+                page={{ rows: [], totalCount: 0 }}
               />
             </Case>
           </div>

@@ -216,10 +216,27 @@ Two hard rules follow from §16.4 "no per-card polling every second":
 Defined once here; the seventeen screens reference them by id rather than each
 inventing a variant.
 
-**M1 — Keyset table.** Cursor in, `next_cursor` out, stable composite sort key,
-no `OFFSET`. Virtualize above 200 loaded rows with a fixed row height. Sticky
+**M1 — Keyset table.** *Built 2026-08-21 as `components/table.tsx`; BR-EX-17 was
+accepted, so it is bidirectional.* Mutually exclusive `after`/`before` in,
+`next_cursor`/`prev_cursor` out, stable sort with an immutable-ID tie-break, no
+`OFFSET`. Virtualize above 200 loaded rows at a fixed 32px row height. Sticky
 header. Horizontal overflow scrolls **inside the panel**, never the page
 (DS §8). Exact `total` and `filtered` counts from the server.
+
+Three rules the component enforces rather than documents:
+
+- **No page-number control exists.** Keyset cannot seek to page *n*, so offering
+  one would advertise a capability the contract does not have. The component
+  cannot be configured to render one.
+- **Counts never come from `rows.length`** (M7). A count taken from loaded rows
+  is right until the list paginates and confidently wrong afterwards.
+- **A numeric column ignores a caller's truncate flag** (M6). Per-column opt-out
+  of "never ellipsis a number" would make the rule advisory.
+
+Rows are a fixed height because the funnel opens in a **drawer**, not inline.
+The Full Blotter hi-fi draws an expand caret; the owner chose the drawer, and
+variable-height rows are the reason — they make virtualization at 182k rows
+unworkable, which is the same argument that produced BR-EX-13.
 
 **M2 — Resolution-selected series.** Client sends a range and an intent, **never
 an interval**; the server selects per §3.1 and returns the full §16.2 envelope.

@@ -37,7 +37,7 @@ These qualify what is complete; they do not mean frontend `DONE`.
 
 | # | Screen (WF) | FE | BE | Needs | Evidence |
 |---|---|---|---|---|---|
-| 0 | Shell & shared components | **DONE** (components) · `READY` (nav) | `CONTRACT_COMPLETE` | EX-BE-00R4 profile contract; nav unblocked by `e78a597` | FE: 42 tests · build · visual baseline **drifted, see §9**; BE: `e78a597` · 53 contract/API tests · root verify |
+| 0 | Shell & shared components | **DONE** (components) · `READY` (nav/profile wiring) | `CONTRACT_COMPLETE` | — EX-BE-00R4 delivered | FE: 42 tests · build · visual baseline **drifted, see §9**; BE: registry rev 4 · 17 fixture profiles · fail-closed policy tests · generated OpenAPI/TS contract |
 | 1 | Approval Inbox (4a) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-04a/05a only | backend contract: master plan §§10.1, 12.2; no AWS dependency |
 | 2 | Gate R1 Review (1a) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a integration | existing approval/audit foundation; master plan §§10.2, 12.2 |
 | 3 | Gate R2 Review (1b) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/05a/07 capital preview | master plan §§10.3, 12.2 |
@@ -48,8 +48,8 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 8 | Incident Detail (4d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a/05b/06 integration | source completeness required; master plan §§10.8, 12.2 |
 | 9 | Command Center (5a) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04b/06 | overlap+jitter SSE recovery; master plan §§10.9, 15.1 |
 | 10 | Sandbox Certification (1d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/05a/05b; TS sandbox capability | production commands inactive; master plan §10.10 |
-| 11 | Canary Control Room (1e) | `BLOCKED` | `PRODUCTION_INACTIVE` | EX-BE-00R4/03/04b/05b/06; owner live-canary gate | profile-labelled shadow parity; master plan §10.11 |
-| 12 | Live Full Operations (1f) | `BLOCKED` | `PRODUCTION_INACTIVE` | phase 11 evidence; EX-BE-00R4/08 | source completeness + UNCERTAIN policy; master plan §10.12 |
+| 11 | Canary Control Room (1e) | `BLOCKED` | `PRODUCTION_INACTIVE` | EX-BE-03/04b/05b/06; owner live-canary gate | rev 4 profile contract delivered; shadow parity still required; master plan §10.11 |
+| 12 | Live Full Operations (1f) | `BLOCKED` | `PRODUCTION_INACTIVE` | phase 11 evidence; EX-BE-08 | rev 4 profile contract delivered; source completeness + UNCERTAIN policy remain; master plan §10.12 |
 | 13 | Paper Workbench VNM (4h) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04b; venue/ATO/ATC decision | server age/timezone contract; master plan §10.13 |
 | 14 | Full Blotter (4c) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04b/07 | bidirectional keyset/cold-retention/funnel contract; master plan §10.14 |
 | 15 | Alpha 360° (2a+2b) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04b/07 | adaptive charts + batched previews/portfolio context; master plan §10.15 |
@@ -127,6 +127,11 @@ nav — it is the Phase 0 exit gate, not a product screen).
 | `ChartTile` + `envelopeCaption` | `components/chart.tsx` | the caption is the contract |
 | `PanelState` / `PanelSkeleton` / `CommissionedPanel` / `CapNotice` | `components/states.tsx` | eight distinct claims, never one blank |
 | `CommandPlanDrawer` | `components/drawer.tsx` | plan→apply→verify; 202 is not success |
+| `VerificationChip` | `components/badges.tsx` | UNCERTAIN reads as escalate, not as wait |
+| `CapabilityChip` | `components/badges.tsx` | per capability — no global green flag (§6.2) |
+| `ProfileBadge` | `components/badges.tsx` | fixture and shadow are labelled; the other four are carried elsewhere |
+| `reconcilePanelProfile` | `profile.ts` | a panel may claim less authority than its screen, never more |
+| **`KeysetTable`** | `components/table.tsx` | no page numbers; counts from the server; numerics never ellipsised |
 
 Tests are behavioural, not snapshots: `execution.test.tsx` fails if PARTIAL turns
 green, if canary loses its double border, if the skeleton enters the
@@ -145,7 +150,9 @@ surfaced.
 | P0-1 | DS §4: AuthorityBadge takes "color from `--authority-*`, glyph per authority" | Every hi-fi renders EXECUTION / BROKER / DERIVED in the **same** tones — `#f4f4f4` for the word, `#6f6f6f` for the meta | Hi-fi wins (HANDOFF §3). Authority is carried by the WORD. A hue-coded authority is invisible to a reader who cannot separate hues, and this distinction is load-bearing. Two tokens instead of four. |
 | P0-2 | DS §7 lists 16 Carbon values | The hi-fi also uses `#4c4c4c` (Carbon `border-strong`), 8 occurrences | Added as `--line-strong`. DS §7 is 16/17 complete, not wrong. |
 | P0-3 | DS §7: typography is IBM Plex Sans / Mono | Neither fontsource package is installed, and the repo has no Node toolchain on the host | Font stack declares IBM Plex first with Inter/JetBrains as fallback, so structure is right and only the typeface differs. Adding the two packages is a lockfile change — **owner decision, see §7**. |
-| P0-4 | `.editorconfig` exempts Markdown from trailing-whitespace trimming | The pre-commit hook's `git diff --cached --check` did not | `*.md text -whitespace` in `.gitattributes` (`4729163`). Code paths keep the check. |
+| P0-4 | `.editorconfig` exempts Markdown from trailing-whitespace trimming | The pre-commit hook's `git diff --cached --check` did not | `*.md text -whitespace` in `.gitattributes`. Code paths keep the check. |
+| P0-5 | DS §3: "Column headers: prose face micro-labels — **not mono**". DS §7 v2: "IBM Plex **Mono** carries labels, nav badges, buttons, tabs, IDs, all numerics, lineage strip, **table headers**" | Every `<th>` in the Full Blotter hi-fi is `font-family:'IBM Plex Mono'`, 10px, weight 500, uppercase, `letter-spacing:.08em`, `#8d8d8d` on `#1d1d1d` | The design system contradicts itself in two sections. Hi-fi wins (HANDOFF §3): headers are **mono**. `KeysetTable`'s CSS is transcribed from those values rather than invented, so the two sections can be reconciled by deleting the DS §3 clause. |
+| P0-6 | Full Blotter hi-fi expands a row inline for the signal→fill funnel | Variable-height rows make virtualization at 182k rows unworkable, which is the reason BR-EX-13 asked for the funnel as a separate endpoint | Owner chose the **drawer**. `KeysetTable` therefore has `selectedKey` and no inline expansion, and rows stay a fixed 32px. Recorded here because the hi-fi still draws the caret. |
 
 ---
 
@@ -158,6 +165,13 @@ ADMINISTRATION are canonical groups, all seventeen `EXECUTION_*` screens have
 unique routes, and `/execution` is owned by Execution Command Center. Evidence:
 53 focused contract/API tests plus root `./scripts/portal verify`. Phase 0 is no
 longer blocked on backend registry work; frontend nav wiring remains frontend-owned.
+
+Registry revision 4 (`EX-BE-00R4`) is now delivered. Every commissioned Execution
+screen exposes `delivery_profile=fixture` and policy revision 1 with query,
+projection, SSE and all four command classes disabled. Missing/inconsistent metadata
+fails startup; OpenAPI, canonical public fixture and generated TypeScript contract are
+in sync. Claude may wire `ProfileBadge` and fixture/shadow states without waiting on
+`EX-BE-04a`, AWS or Trading System.
 
 ### 6.2 BR-EX decisions
 
@@ -291,5 +305,25 @@ are ruled in master plan §15.1, and F-1–F-9 are dispositioned in §15.4. The
 architectural disagreement is closed by splitting `EX-BE-04a/04b` and
 `EX-BE-05a/05b`: Approval Inbox and Gate R1 now start on TypeScript/control-plane
 PostgreSQL without waiting on Rust, AWS connectivity, a projection database or a
-Trading System change. Registry revision 4 remains an implementation dependency;
-the decision and contract are complete, but no code delivery is claimed here.
+Trading System change.
+
+**Registry revision 4 consumed** (slice S1c, same day it landed). `screens[]`
+carries `delivery_profile` and a `delivery_policy` of seven independent flags.
+`src/execution/profile.ts` reads both structurally rather than through the
+generated `ScreenContract`, so the two sides did not have to land together.
+Three rules are now enforced in code:
+
+- a panel may claim **less** authority than its screen, never more; more is
+  `unavailable`, fail-closed (`reconcilePanelProfile`);
+- **no published policy is not permission** — `commandEnabled` returns false for
+  every tier when `delivery_policy` is null;
+- R3 protective and R4 risk-increasing read **different flags**, so enabling
+  emergency protection can never enable capital expansion.
+
+A cross-boundary test parses the shipped `registry.json` directly: every
+published profile must resolve to a known value, and every screen must have all
+four command tiers disabled. It fails the day a command is switched on in the
+registry, which is the day somebody should be told.
+
+**Slice S2 landed** — `components/table.tsx`, mechanism M1, bidirectional per
+BR-EX-17. Evidence below.

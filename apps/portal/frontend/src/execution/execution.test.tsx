@@ -7,6 +7,9 @@
  * four state fields never merge, canary and live differ by treatment rather
  * than hue, a withheld panel says why, and 202 is not success.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -18,8 +21,20 @@ import {
   slaOverdue,
   STAGE_ORDER,
   type Envelope,
+  type KeysetPage,
   type OrderStatus,
 } from "./contracts";
+import {
+  commandBlockedReason,
+  commandEnabled,
+  PROFILE_ORDER,
+  PROFILE_RANK,
+  profileNeedsLabel,
+  reconcilePanelProfile,
+  screenDeliveryPolicy,
+  screenDeliveryProfile,
+} from "./profile";
+import { KeysetTable, type Column } from "./components/table";
 import {
   AuthorityBadge,
   BrokerSyncChip,
@@ -565,5 +580,415 @@ describe("envelope carries the projection facts the plan defines", () => {
     // "helpfully" fills sourceSequence from projectionSequence fails here.
     expect(projected.sourceSequence).toBeNull();
     expect(projected.projectionSequence).not.toBeNull();
+  });
+});
+
+/* ===========================================================================
+ * Slice S2 — mechanism M1, the keyset table
+ * ======================================================================== */
+
+interface Row {
+  id: string;
+  symbol: string;
+  qty: string;
+  note: string;
+}
+
+function makeRows(n: number, offset = 0): Row[] {
+  return Array.from({ length: n }, (_, i) => ({
+    id: `ord_${offset + i}`,
+    symbol: "BTC-PERP",
+    qty: "0.0400",
+    note: "a reason long enough that a prose column would want to truncate it",
+  }));
+}
+
+const COLUMNS: readonly Column<Row>[] = [
+  { key: "id", header: "order_id", render: (r) => r.id },
+  { key: "symbol", header: "symbol", render: (r) => r.symbol },
+  { key: "qty", header: "qty", numeric: true, render: (r) => r.qty },
+  { key: "note", header: "reason", truncate: true, title: (r) => r.note, render: (r) => r.note },
+];
+
+function page(rows: Row[], extra: Partial<KeysetPage<Row>> = {}): KeysetPage<Row> {
+  return { rows, totalCount: 48_213, ...extra };
+}
+
+describe("M1 keyset table — counts", () => {
+  it("reports the server's total, not the number of rows it is holding", () => {
+    // Three rows loaded out of 48,213. A browser-side count would say 3, and it
+    // would be wrong in exactly the way mechanism M7 exists to prevent.
+    render(<KeysetTable label="Orders" columns={COLUMNS} page={page(makeRows(3))} rowKey={(r) => r.id} />);
+    expect(screen.getByText("48,213")).toBeTruthy();
+    expect(screen.queryByText("3 total")).toBeNull();
+  });
+
+  it("shows the filtered count beside the total when a filter narrowed it", () => {
+    render(
+      <KeysetTable
+        label="Orders"
+        columns={COLUMNS}
+        page={page(makeRows(3), { filteredCount: 412 })}
+        rowKey={(r) => r.id}
+      />,
+    );
+    expect(screen.getByText("412")).toBeTruthy();
+    expect(screen.getByText(/in selection/)).toBeTruthy();
+  });
+
+  it("does not claim a selection when the filter matched everything", () => {
+    render(
+      <KeysetTable
+        label="Orders"
+        columns={COLUMNS}
+        page={page(makeRows(3), { filteredCount: 48_213 })}
+        rowKey={(r) => r.id}
+      />,
+    );
+    expect(screen.queryByText(/in selection/)).toBeNull();
+  });
+});
+
+describe("M1 keyset table — pagination is keyset, and says so", () => {
+  it("offers no page-number control, because keyset cannot seek to page n", () => {
+    const { container } = render(
+      <KeysetTable
+        label="Orders"
+        columns={COLUMNS}
+        page={page(makeRows(100), { hasMore: true, nextCursor: "c_ab34e91f0055" })}
+        rowKey={(r) => r.id}
+        onLoadOlder={() => {}}
+      />,
+    );
+    const buttons = [...container.querySelectorAll("button")].map((b) => b.textContent ?? "");
+    expect(buttons.some((t) => /load older/.test(t))).toBe(true);
+    // No numeric page buttons anywhere in the footer.
+    expect(buttons.some((t) => /^\s*\d+\s*$/.test(t))).toBe(false);
+    expect(screen.getByText(/never OFFSET/)).toBeTruthy();
+  });
+
+  it("offers both directions once pages have been evicted behind the reader", () => {
+    // BR-EX-17. Without prev_cursor a reader past the residency budget can only
+    // restart at row one.
+    render(
+      <KeysetTable
+        label="Orders"
+        columns={COLUMNS}
+        page={page(makeRows(100), { hasMore: true, hasPrevious: true })}
+        rowKey={(r) => r.id}
+        onLoadOlder={() => {}}
+        onLoadNewer={() => {}}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /load newer/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /load older/ })).toBeTruthy();
+  });
+
+  it("truncates the cursor for display but keeps the whole thing in the title", () => {
+    render(
+      <KeysetTable
+        label="Orders"
+        columns={COLUMNS}
+        page={page(makeRows(2), { nextCursor: "c_ab34e91f0055deadbeef" })}
+        rowKey={(r) => r.id}
+      />,
+    );
+    expect(screen.getByTitle("c_ab34e91f0055deadbeef")).toBeTruthy();
+  });
+});
+
+describe("M1 keyset table — scale behaviour", () => {
+  it("renders every row below the virtualization threshold", () => {
+    const { container } = render(
+      <KeysetTable label="Orders" columns={COLUMNS} page={page(makeRows(200))} rowKey={(r) => r.id} />,
+    );
+    expect(container.querySelector(".exec-table")?.getAttribute("data-virtualized")).toBe("false");
+    expect(container.querySelectorAll("tbody tr").length).toBe(200);
+  });
+
+  it("renders a window, not 5,000 rows, once virtualized", () => {
+    const { container } = render(
+      <KeysetTable
+        label="Orders"
+        columns={COLUMNS}
+        page={page(makeRows(5000))}
+        rowKey={(r) => r.id}
+        viewportRows={20}
+      />,
+    );
+    expect(container.querySelector(".exec-table")?.getAttribute("data-virtualized")).toBe("true");
+    const bodyRows = container.querySelectorAll("tbody tr:not(.exec-table-pad)");
+    expect(bodyRows.length).toBeLessThan(60);
+    // The rows that are not drawn are still accounted for, so the scrollbar is
+    // honest about how much is behind it.
+    const pads = container.querySelectorAll("tbody tr.exec-table-pad");
+    expect(pads.length).toBeGreaterThan(0);
+    expect(pads[pads.length - 1].getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("states the true row count to assistive technology rather than the window", () => {
+    const { container } = render(
+      <KeysetTable
+        label="Orders"
+        columns={COLUMNS}
+        page={page(makeRows(5000))}
+        rowKey={(r) => r.id}
+        viewportRows={20}
+      />,
+    );
+    expect(container.querySelector("table")?.getAttribute("aria-rowcount")).toBe("48213");
+  });
+
+  it("says so when the caller has blown the residency budget", () => {
+    render(
+      <KeysetTable
+        label="Orders"
+        columns={COLUMNS}
+        page={page(makeRows(2001))}
+        rowKey={(r) => r.id}
+        viewportRows={20}
+      />,
+    );
+    expect(screen.getByText(/over the 2,000 budget/)).toBeTruthy();
+  });
+});
+
+describe("M1 keyset table — M6, a number is never ellipsised", () => {
+  it("marks numeric cells numeric and refuses to truncate them", () => {
+    const numeric: readonly Column<Row>[] = [
+      // A caller asking for both. M6 is not negotiable per column, so the
+      // truncate flag loses.
+      { key: "qty", header: "qty", numeric: true, truncate: true, render: (r) => r.qty },
+    ];
+    const { container } = render(
+      <KeysetTable label="Orders" columns={numeric} page={page(makeRows(1))} rowKey={(r) => r.id} />,
+    );
+    const cell = container.querySelector("tbody td");
+    expect(cell?.getAttribute("data-numeric")).toBe("true");
+    expect(cell?.getAttribute("data-truncate")).toBeNull();
+  });
+
+  it("lets prose truncate, but only with a tooltip carrying the full text", () => {
+    const { container } = render(
+      <KeysetTable label="Orders" columns={COLUMNS} page={page(makeRows(1))} rowKey={(r) => r.id} />,
+    );
+    const prose = container.querySelector('tbody td[data-truncate="true"]');
+    expect(prose).not.toBeNull();
+    expect(prose?.getAttribute("title")).toContain("long enough");
+  });
+});
+
+describe("M1 keyset table — the server's filter is the truth on display", () => {
+  it("echoes what the server actually applied, not what was requested", () => {
+    render(
+      <KeysetTable
+        label="Orders"
+        columns={COLUMNS}
+        page={page(makeRows(2), {
+          appliedFilters: [{ field: "status", op: "in", value: "FILLED" }],
+          appliedSort: [{ field: "event_ts", direction: "desc" }],
+        })}
+        rowKey={(r) => r.id}
+      />,
+    );
+    expect(screen.getByText(/server filter: status in FILLED/)).toBeTruthy();
+    expect(screen.getByText(/sort: event_ts desc/)).toBeTruthy();
+  });
+
+  it("renders a named empty state rather than a table with no rows", () => {
+    const { container } = render(
+      <KeysetTable label="Orders" columns={COLUMNS} page={page([])} rowKey={(r) => r.id} />,
+    );
+    expect(container.querySelector("table")).toBeNull();
+    expect(container.querySelector('.exec-state[data-status="empty"]')).not.toBeNull();
+  });
+
+  it("shows a denial as a denial, not as an empty list", () => {
+    const { container } = render(
+      <KeysetTable
+        label="Orders"
+        columns={COLUMNS}
+        page={page([])}
+        rowKey={(r) => r.id}
+        status="denied"
+        reason="portal.execution.blotter.read"
+      />,
+    );
+    expect(container.querySelector('.exec-state[data-status="denied"]')).not.toBeNull();
+  });
+});
+
+/* ===========================================================================
+ * Registry revision 4 — delivery profile reconciliation
+ * ======================================================================== */
+
+describe("delivery profile reconciliation is fail-closed", () => {
+  it("accepts a panel stricter than its screen", () => {
+    // A live screen whose correlation panel still reads shadow data is honest,
+    // not broken.
+    const r = reconcilePanelProfile("live_full", "shadow");
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.effective).toBe("shadow");
+      expect(r.stricterThanScreen).toBe(true);
+      expect(r.label).toBe(true);
+    }
+  });
+
+  it("refuses a panel claiming more authority than its screen was commissioned for", () => {
+    const r = reconcilePanelProfile("shadow", "live_full");
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.panelStatus).toBe("unavailable");
+      expect(r.reason).toContain("never more");
+    }
+  });
+
+  it("refuses a panel that did not state its profile at all", () => {
+    // Silence and a live claim must not look the same.
+    const r = reconcilePanelProfile("live_canary", null);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.panelStatus).toBe("unavailable");
+  });
+
+  it("still renders while the registry is at revision 3 and publishes no profile", () => {
+    // Failing closed here would blank every Execution panel to prevent a
+    // mismatch that cannot occur yet, because there is nothing to mismatch.
+    const r = reconcilePanelProfile(null, "paper");
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.effective).toBe("paper");
+      expect(r.label).toBe(false);
+    }
+  });
+
+  it("labels exactly the two profiles nothing else on the screen distinguishes", () => {
+    expect(PROFILE_ORDER.filter(profileNeedsLabel)).toEqual(["fixture", "shadow"]);
+  });
+
+  it("orders profiles by the authority they claim", () => {
+    const ranks = PROFILE_ORDER.map((p) => PROFILE_RANK[p]);
+    expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
+    expect(PROFILE_RANK.shadow).toBeLessThan(PROFILE_RANK.paper);
+    expect(PROFILE_RANK.live_canary).toBeLessThan(PROFILE_RANK.live_full);
+  });
+});
+
+describe("registry revision 4 consumption", () => {
+  it("reads the profile off a screen contract, where revision 4 publishes it", () => {
+    expect(
+      screenDeliveryProfile({ screen_id: "EXECUTION_BLOTTER_SCREEN", delivery_profile: "shadow" }),
+    ).toBe("shadow");
+  });
+
+  it("treats a screen outside the Execution cluster, whose profile is null, as absent", () => {
+    expect(screenDeliveryProfile({ screen_id: "ALPHA_POOL_SCREEN", delivery_profile: null })).toBeNull();
+    expect(screenDeliveryProfile(null)).toBeNull();
+  });
+
+  it("refuses to guess at a profile this build has never heard of", () => {
+    // Version skew. Coercing an unknown value to the nearest known one is how a
+    // live_full screen ends up rendering as something safer than it is.
+    expect(screenDeliveryProfile({ delivery_profile: "live_shadow_canary" })).toBeNull();
+  });
+});
+
+describe("delivery policy — the seven flags gate the commands", () => {
+  const REV4_FIXTURE_SCREEN = {
+    screen_id: "EXECUTION_BLOTTER_SCREEN",
+    delivery_profile: "fixture",
+    delivery_policy: {
+      policy_revision: 1,
+      query_enabled: false,
+      projection_ingestion_enabled: false,
+      sse_enabled: false,
+      paper_commands_enabled: false,
+      sandbox_commands_enabled: false,
+      live_protective_commands_enabled: false,
+      live_risk_increasing_commands_enabled: false,
+    },
+  };
+
+  it("parses the policy the registry actually publishes today", () => {
+    const p = screenDeliveryPolicy(REV4_FIXTURE_SCREEN);
+    expect(p).not.toBeNull();
+    expect(p?.policyRevision).toBe(1);
+    // Everything is off in revision 4 as delivered, which is correct: nothing
+    // is wired yet.
+    expect(p?.queryEnabled).toBe(false);
+    expect(p?.liveRiskIncreasingCommandsEnabled).toBe(false);
+  });
+
+  it("keeps protective and risk-increasing live commands on separate flags", () => {
+    // The rule this test defends: enabling emergency protection must never
+    // enable capital expansion. One flag for "live commands" would do that.
+    const p = screenDeliveryPolicy({
+      delivery_policy: {
+        policy_revision: 7,
+        live_protective_commands_enabled: true,
+        live_risk_increasing_commands_enabled: false,
+      },
+    });
+    expect(commandEnabled(p, "R3")).toBe(true);
+    expect(commandEnabled(p, "R4")).toBe(false);
+  });
+
+  it("fails closed when a screen publishes no policy at all", () => {
+    for (const tier of ["R0", "R1", "R2", "R3", "R4"] as const) {
+      expect(commandEnabled(null, tier)).toBe(false);
+    }
+    expect(commandBlockedReason(null, "R1")).toContain("no published delivery policy");
+  });
+
+  it("treats a malformed or missing flag as absence of permission", () => {
+    const p = screenDeliveryPolicy({
+      delivery_policy: { policy_revision: 2, paper_commands_enabled: "yes" },
+    });
+    expect(commandEnabled(p, "R1")).toBe(false);
+  });
+
+  it("names the policy revision that blocked the command", () => {
+    const p = screenDeliveryPolicy(REV4_FIXTURE_SCREEN);
+    // A disabled button with no explanation reads the same as a broken one, and
+    // the two need different responses.
+    expect(commandBlockedReason(p, "R1")).toContain("delivery policy revision 1");
+  });
+});
+
+describe("registry revision 4 — parsed against the registry actually shipped", () => {
+  // A contract test across the FE/BE boundary rather than against a fixture of
+  // our own making. It is the thing that notices the day the field moves, is
+  // renamed, or grows a value this build does not know.
+  const registry = JSON.parse(
+    readFileSync(join(process.cwd(), "../registry/registry.json"), "utf8"),
+  ) as { revision: number; screens: unknown[] };
+
+  const withProfile = registry.screens.filter(
+    (s) => (s as Record<string, unknown>).delivery_profile != null,
+  );
+
+  it("parses every published profile — none silently dropped as unknown", () => {
+    for (const screen of withProfile) {
+      const raw = (screen as Record<string, unknown>).delivery_profile;
+      expect(
+        screenDeliveryProfile(screen),
+        `${String((screen as Record<string, unknown>).screen_id)} publishes ${String(raw)}, which this build does not recognise`,
+      ).not.toBeNull();
+    }
+  });
+
+  it("parses every published policy and enables no command at revision 4", () => {
+    // Every screen ships with all seven flags off. If this ever fails, a
+    // command was switched on in the registry and somebody should know.
+    for (const screen of withProfile) {
+      const policy = screenDeliveryPolicy(screen);
+      if (!policy) continue;
+      for (const tier of ["R1", "R2", "R3", "R4"] as const) {
+        expect(
+          commandEnabled(policy, tier),
+          `${String((screen as Record<string, unknown>).screen_id)} has ${tier} commands enabled`,
+        ).toBe(false);
+      }
+    }
   });
 });
