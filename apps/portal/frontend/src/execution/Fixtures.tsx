@@ -36,6 +36,8 @@ import { KeysetTable, type Column } from "./components/table";
 import { ApprovalInbox, type ApprovalRow } from "./screens/ApprovalInbox";
 import { GateR1Review } from "./screens/GateR1Review";
 import { GateR2Review } from "./screens/GateR2Review";
+import { ApprovalInboxContainer, GateR1ReviewContainer } from "./screens/containers";
+import { createFixtureApi } from "./api/fixtureApi";
 import { PaperExitReview } from "./screens/PaperExitReview";
 import {
   PROFILE_ORDER,
@@ -232,6 +234,12 @@ const R1_PASSPORT = [
   { label: "datasets", value: "3 snapshots · universe univ_88", verification: "PASS" },
   { label: "methodology claim", value: "clm_31 — WFO 12 folds + 90d holdout", verification: null },
 ];
+
+/* One instance each, created outside render so a re-render does not restart
+ * every request the containers have in flight. */
+const WIRED_API = createFixtureApi();
+const UNWIRED_API = createFixtureApi({ unavailableEndpoints: ["listApprovals"] });
+const UNCERTAIN_API = createFixtureApi({ uncertain: true });
 
 const R2_READINESS = [
   {
@@ -923,6 +931,26 @@ export default function ExecutionFixtures() {
                 status="unavailable"
                 reason="Governance edge unreachable."
               />
+            </Case>
+          </div>
+        </Group>
+
+        <Group
+          title="Wired flow — list · detail · plan · apply · poll"
+          note="The same components, driven through the ExecutionApi port instead of literal props. The data source is still fixtures and every endpoint the registry has not enabled answers unavailable — but the mapping, the failure handling and the 202 discipline are the real ones. Swapping createFixtureApi for createHttpApi is the only change EX-BE-05a needs."
+        >
+          <div className="exec-fixtures-stack">
+            <Case caption="inbox through the port — rows go through readApprovalRow, counts come from the server">
+              <ApprovalInboxContainer api={WIRED_API} />
+            </Case>
+            <Case caption="gate R1 through the port — Approve runs plan → apply → poll and stops at 202">
+              <GateR1ReviewContainer api={WIRED_API} approvalId="AP-201" />
+            </Case>
+            <Case caption="an endpoint the registry has not enabled — unavailable, with the reason">
+              <ApprovalInboxContainer api={UNWIRED_API} />
+            </Case>
+            <Case caption="an operation that ends UNCERTAIN — the trail stays, because the question does">
+              <GateR1ReviewContainer api={UNCERTAIN_API} approvalId="AP-201" />
             </Case>
           </div>
         </Group>

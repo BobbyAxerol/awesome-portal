@@ -134,7 +134,9 @@ nav — it is the Phase 0 exit gate, not a product screen).
 | **`KeysetTable`** | `components/table.tsx` | no page numbers; counts from the server; numerics never ellipsised |
 | `adapter.ts` | `adapter.ts` | decimals stay strings; unknown enums keep their raw token; a 202 reads as PENDING whatever the body claims |
 | `ApprovalInbox` | `screens/ApprovalInbox.tsx` | an un-actionable row is dimmed, never hidden |
-| `GateR1Review` | `screens/GateR1Review.tsx` | self-approval is derived, not trusted; Deny is never locked |
+| `GateR1Review` | `screens/GateR1Review.tsx` | self-approval is derived, not trusted; **self-denial is allowed**, Deny locks only on EXPIRED/NOT_ELIGIBLE |
+| `api/` + `decision.ts` | `api/ports.ts`, `api/rows.ts`, `api/fixtureApi.ts`, `api/httpApi.ts`, `decision.ts` | a 202 lands in `accepted`, never in `settled`; a refused read never becomes an empty list |
+| `containers.tsx` | `screens/containers.tsx` | list · detail · plan · apply · poll, on the port |
 | `GateR2Review` | `screens/GateR2Review.tsx` | an expired R1 locks the bar; a capital preview without an envelope is refused |
 | `PaperExitReview` | `screens/PaperExitReview.tsx` | `met` is the server's; INSUFFICIENT_DATA is a third outcome that carries forward |
 | `series.ts` (M2) | `series.ts` | finest interval that fits; a series that misdescribes its own resolution is caught |
@@ -366,6 +368,32 @@ registry, which is the day somebody should be told.
 
 **Slice S2 landed** — `components/table.tsx`, mechanism M1, bidirectional per
 BR-EX-17. Evidence below.
+
+**Governance screens wired to a port, not to an endpoint.** `ExecutionApi` has
+two implementations. `createFixtureApi` is what the screens run on today and is a
+real implementation rather than canned objects — rows go through the same
+`readApprovalRow`/`readKeysetPage` path the network will, apply returns a
+202-shaped receipt, and the poll walks three verification steps so a screen that
+closed on the first response could not look correct. `createHttpApi` is complete
+and currently answers `unavailable` for everything, because registry revision 4
+ships every screen with `query_enabled: false`; refusing before the request is
+deny-by-default applied to the network. Swapping the implementation is the only
+change the real endpoint needs.
+
+**Deny rule corrected, and it matches what codex implemented independently.**
+This side previously claimed "Deny is never locked", which was too broad.
+Self-denial is allowed — withdrawing your own artifact is the safe direction, and
+a blocking finding is a reason to deny rather than an obstacle to denying — but
+an `EXPIRED` request has nothing live to refuse and `NOT_ELIGIBLE` means the
+actor cannot decide in either direction. Both gates lock Deny on exactly those
+two; a closed gate removes its controls rather than disabling them.
+
+**A mapping gap for the approval row.** The keyset fixture sorts by `sla_due_at`,
+which is right for ordering and not sufficient for rendering: turning a due time
+into `26h / 24h · OVERDUE` needs a clock, and per BR-EX-19 the only trusted one
+is the server's. A row carrying `due_at` without `age_minutes` renders the SLA
+cell as a stated gap rather than a number computed on a laptop. To be checked
+against the `EX_BE_05A` field map in the next slice.
 
 **Phase 0's navigation half is closed**, and it closed without bespoke work: the
 shell has always computed navigation from the registry, so wiring the Execution

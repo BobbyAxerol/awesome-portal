@@ -1345,3 +1345,45 @@
   font-size: var(--text-xs);
   color: var(--ink-faint);
 }
+
+/* The decision's own state, beside the review rather than replacing it. It
+ * stays on screen for `uncertain` above all: a drawer that tidied itself away
+ * on an unresolved outcome would leave no trace of a command still in flight. */
+.exec-decision-trail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+}
+
+.exec-decision-phase {
+  color: var(--ink);
+  letter-spacing: 0.08em;
+}
+
+.exec-decision-trail[data-phase="uncertain"] {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+.exec-decision-trail[data-phase="settled"] {
+  border-color: var(--good);
+}
+
+.exec-decision-note {
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  letter-spacing: 0;
+}
+
+.exec-decision-error {
+  color: var(--bad);
+  font-family: var(--font-body);
+  letter-spacing: 0;
+}

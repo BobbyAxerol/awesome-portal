@@ -38,6 +38,17 @@ import {
   screenDeliveryProfile,
 } from "./profile";
 import { KeysetTable, type Column } from "./components/table";
+import { readApprovalRow, readGateR1Detail } from "./api/rows";
+import { createFixtureApi } from "./api/fixtureApi";
+import { ApprovalInboxContainer, GateR1ReviewContainer } from "./screens/containers";
+import { createHttpApi } from "./api/httpApi";
+import {
+  decisionReducer,
+  initialDecision,
+  outstanding,
+  shouldPoll,
+  succeeded,
+} from "./decision";
 import {
   INTERVAL_LADDER,
   MAX_POINTS,
@@ -1763,11 +1774,40 @@ describe("Gate R1 Review", () => {
     expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", false);
   });
 
-  it("never locks Deny", () => {
-    // A reviewer who cannot approve can always refuse. Blocking that leaves a
-    // bad request in the queue with nobody able to clear it.
-    render(gate({ actor: "Minh", locks: ["BLOCKING_FINDINGS", "EXPIRED"] }));
+  it("allows self-denial — withdrawing your own artifact is the safe direction", () => {
+    // Separation of duties exists to stop you waving your own work through, not
+    // to stop you withdrawing it. The person who knows the work best is often
+    // the one who should.
+    render(gate({ actor: "Minh" }));
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
     expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", false);
+  });
+
+  it("lets a reviewer deny precisely because of a blocking finding", () => {
+    // A blocking finding is a reason to refuse, not an obstacle to refusing.
+    render(gate({ locks: ["BLOCKING_FINDINGS"] }));
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", false);
+  });
+
+  it("locks Deny once the request has stopped being decidable", () => {
+    // An expired request has nothing live to refuse, and a denial recorded
+    // against it would be a decision on something that already lapsed.
+    render(gate({ locks: ["EXPIRED"] }));
+    expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", true);
+    expect(screen.getByText(/nothing live to refuse/)).toBeTruthy();
+  });
+
+  it("locks Deny for an actor who cannot decide the gate in either direction", () => {
+    render(gate({ locks: ["NOT_ELIGIBLE"] }));
+    expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", true);
+  });
+
+  it("removes Deny entirely on a closed gate rather than disabling it", () => {
+    const { container } = render(
+      gate({ decided: { outcome: "APPROVED", by: "Lan", at: "2026-08-21T09:12Z" } }),
+    );
+    expect(container.querySelector(".exec-gate-decision")).toBeNull();
   });
 
   it("reports every lock, not only the first", () => {
@@ -2390,5 +2430,545 @@ describe("M3 — disconnect keeps the last good data, marked", () => {
     for (const phase of phases) {
       expect(isLive({ ...INITIAL_SUBSCRIPTION, phase }), phase).toBe(false);
     }
+  });
+});
+
+describe("Gate R2 — Deny follows the same rule", () => {
+  it("lets the plan author deny their own plan", () => {
+    render(r2({ actor: "Stan" }));
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", false);
+  });
+
+  it("lets a reviewer deny an R2 whose R1 lapsed", () => {
+    // An invalid R1 is the clearest possible reason to refuse. Blocking the
+    // refusal would leave the request stuck with nobody able to clear it.
+    render(r2({ r1State: "EXPIRED" }));
+    expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", false);
+  });
+
+  it("lets a reviewer deny a plan that breaches a capital ceiling", () => {
+    render(
+      r2({
+        capital: [{ label: "concentration", before: "44.0%", after: "61.0%", breach: true }],
+      }),
+    );
+    expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", false);
+  });
+
+  it("locks Deny on an expired request", () => {
+    render(r2({ locks: ["EXPIRED"] }));
+    expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", true);
+    expect(screen.getByText(/nothing live to refuse/)).toBeTruthy();
+  });
+});
+
+/* ===========================================================================
+ * Governance adapters and the plan → apply → poll flow
+ * ======================================================================== */
+
+describe("approval row mapping", () => {
+  const wire = {
+    approval_id: "AP-352",
+    gate: "R2",
+    subject: "Carry v3.2 → PF-MAIN",
+    target: "paper · BINANCE",
+    blocker_count: 1,
+    blocker_summary: "broker sync stale",
+    sla: { age_minutes: 1560, budget_minutes: 1440 },
+    quorum_met: 0,
+    quorum_required: 2,
+    inert: "SELF",
+    needs_you: false,
+  };
+
+  it("maps the shape the endpoint will send", () => {
+    const { row, gaps } = readApprovalRow(wire);
+    expect(row?.id).toBe("AP-352");
+    expect(row?.gate).toBe("R2");
+    expect(row?.inert).toBe("SELF");
+    expect(row?.sla).toEqual({ ageMinutes: 1560, budgetMinutes: 1440 });
+    expect(gaps).toEqual([]);
+  });
+
+  it("refuses to compute SLA age from a due time and the browser clock", () => {
+    // Sorting by due_at is right; rendering "26h / 24h · OVERDUE" from it needs
+    // a clock, and the only one this build may use belongs to the server.
+    const { gaps } = readApprovalRow({ ...wire, sla: { due_at: "2026-08-21T09:00:00Z" } });
+    expect(gaps.join(" ")).toContain("only due_at sent");
+    // Codex closed this in EX-BE-05a §5 by adding both fields to the row; the
+    // guard stays because a future endpoint could drop one again.
+  });
+
+  it("drops a row whose gate this build cannot route", () => {
+    // An un-routable row rendered as an un-openable one is worse than a visible
+    // count mismatch, which at least says something is wrong.
+    const { row, gaps } = readApprovalRow({ ...wire, gate: "R7" });
+    expect(row).toBeNull();
+    expect(gaps.join(" ")).toContain("R7");
+  });
+
+  it("does not turn an absent blocker count into a cleared gate", () => {
+    // Zero blockers is a claim. Absence is not the same claim.
+    const { row } = readApprovalRow({ ...wire, blocker_count: undefined });
+    expect(row?.blockerCount).toBe(-1);
+  });
+});
+
+describe("gate R1 detail mapping", () => {
+  it("keeps an unverified passport claim unverified rather than blank", () => {
+    const d = readGateR1Detail({
+      approval_id: "AP-201",
+      passport: [{ label: "entrypoint", value: "rsi_pkg:RsiAlpha" }],
+      checklist: [],
+    });
+    expect(d?.passport[0].verification).toBeNull();
+  });
+
+  it("treats a lock it cannot name as the most restrictive one", () => {
+    // A lock this build does not recognise is not a reason to ignore it.
+    const d = readGateR1Detail({ approval_id: "AP-201", locks: ["QUORUM_FROZEN"] });
+    expect(d?.locks).toContain("NOT_ELIGIBLE");
+    expect(d?.gaps.join(" ")).toContain("QUORUM_FROZEN");
+  });
+
+  it("downgrades an unreadable checklist outcome to insufficient and keeps the token", () => {
+    const d = readGateR1Detail({
+      approval_id: "AP-201",
+      checklist: [{ label: "capacity", outcome: "MOSTLY_OK" }],
+    });
+    expect(d?.checklist[0].outcome).toBe("insufficient");
+    expect(d?.checklist[0].label).toContain("MOSTLY_OK");
+  });
+
+  it("carries the optimistic-concurrency token through", () => {
+    const d = readGateR1Detail({ approval_id: "AP-201", expected_version: "v7" });
+    expect(d?.expectedVersion).toBe("v7");
+  });
+});
+
+describe("the fixture API exercises the real mapping path", () => {
+  it("returns rows that went through readApprovalRow", async () => {
+    const api = createFixtureApi();
+    const result = await api.listApprovals({ filter: "INBOX" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.page.rows.map((r) => r.id)).toContain("AP-352");
+    // Server counts, not row counts.
+    expect(result.value.page.totalCount).toBe(5);
+    expect(result.value.counts?.pending).toBe(5);
+  });
+
+  it("refuses a page requested in both directions at once", async () => {
+    // BR-EX-17 made them mutually exclusive. A page whose direction the client
+    // did not choose is a page it cannot place.
+    const api = createFixtureApi();
+    const result = await api.listApprovals({ filter: "INBOX", after: "c_1", before: "c_0" });
+    expect(result.ok).toBe(false);
+  });
+
+  it("reports an endpoint that is not wired as unavailable, not as empty", async () => {
+    const api = createFixtureApi({ unavailableEndpoints: ["getGateR1"] });
+    const result = await api.getGateR1("AP-201");
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.status).toBe("unavailable");
+    expect(result.reason).toContain("not wired");
+  });
+});
+
+describe("the HTTP API refuses before it calls, when the registry says no", () => {
+  const off = screenDeliveryPolicy({
+    delivery_policy: { policy_revision: 1, query_enabled: false, paper_commands_enabled: false },
+  });
+
+  it("does not make a request the registry has already refused", async () => {
+    // A 403 arriving thirty seconds later is a worse explanation than the one
+    // the registry can give immediately.
+    let called = false;
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () => {
+      called = true;
+      return new Response("{}", { status: 200 });
+    }) as typeof fetch;
+    try {
+      const api = createHttpApi({ policy: off });
+      const result = await api.listApprovals({ filter: "INBOX" });
+      expect(called).toBe(false);
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.reason).toContain("Query are disabled");
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  it("refuses every command path under a policy with no grants", async () => {
+    const api = createHttpApi({ policy: null });
+    const plan = await api.planDecision({
+      approvalId: "AP-201",
+      decision: "APPROVE",
+      reason: "looks good",
+      expectedVersion: "v7",
+      requestKey: "rk_1",
+    });
+    expect(plan.ok).toBe(false);
+  });
+});
+
+describe("plan → apply → poll: 202 is never the end", () => {
+  const start = () => initialDecision("rk_test");
+
+  it("lands a 202 in accepted, never in settled", () => {
+    const s = [
+      { type: "PLAN_REQUESTED" } as const,
+      { type: "PLANNED", planId: "cmd_1" } as const,
+      { type: "APPLY_REQUESTED" } as const,
+      { type: "APPLY_ACCEPTED", operationId: "op_1", receipt: "rcpt_1" } as const,
+    ].reduce(decisionReducer, start());
+    expect(s.phase).toBe("accepted");
+    expect(s.verification).toBe("PENDING");
+    expect(succeeded(s)).toBe(false);
+    expect(outstanding(s)).toBe(true);
+    expect(s.note).toContain("a receipt, not a result");
+  });
+
+  it("keeps polling until a settled value arrives", () => {
+    let s = [
+      { type: "APPLY_ACCEPTED", operationId: "op_1", receipt: null } as const,
+    ].reduce(decisionReducer, start());
+    expect(shouldPoll(s)).toBe(true);
+
+    s = decisionReducer(s, { type: "POLLED", status: null, verification: { known: true, value: "ACKNOWLEDGED" } });
+    expect(s.phase).toBe("verifying");
+    expect(succeeded(s)).toBe(false);
+    expect(shouldPoll(s)).toBe(true);
+
+    s = decisionReducer(s, { type: "POLLED", status: "VERIFIED", verification: { known: true, value: "SUCCEEDED" } });
+    expect(s.phase).toBe("settled");
+    expect(succeeded(s)).toBe(true);
+    expect(shouldPoll(s)).toBe(false);
+  });
+
+  it("never reports success for any verification but SUCCEEDED", () => {
+    for (const value of ["ACKNOWLEDGED", "PARTIAL", "FAILED", "DENIED", "EXPIRED"] as const) {
+      const s = decisionReducer(
+        { ...start(), phase: "verifying", operationId: "op_1" },
+        { type: "POLLED", status: null, verification: { known: true, value } },
+      );
+      expect(succeeded(s), value).toBe(false);
+    }
+  });
+
+  it("stops the retry loop on UNCERTAIN without calling it settled", () => {
+    const s = decisionReducer(
+      { ...start(), phase: "verifying", operationId: "op_1" },
+      { type: "POLLED", status: null, verification: { known: true, value: "UNCERTAIN" } },
+    );
+    expect(s.phase).toBe("uncertain");
+    expect(shouldPoll(s)).toBe(false);
+    // Not settled, and still owed an answer.
+    expect(succeeded(s)).toBe(false);
+    expect(outstanding(s)).toBe(true);
+    expect(s.note).toContain("will not resolve itself");
+  });
+
+  it("keeps polling on a verification token it cannot read", () => {
+    // Naming an outcome we cannot read is worse than continuing to watch.
+    const s = decisionReducer(
+      { ...start(), phase: "verifying", operationId: "op_1" },
+      { type: "POLLED", status: null, verification: { known: false, raw: "MOSTLY_DONE" } },
+    );
+    expect(s.phase).toBe("verifying");
+    expect(shouldPoll(s)).toBe(true);
+    expect(s.note).toContain("MOSTLY_DONE");
+  });
+
+  it("treats a failed apply with an operation id as uncertain, not as failure", () => {
+    // Apply may have reached the server and the response may have been lost.
+    // Calling that "did not happen" is how a duplicate command gets sent.
+    const s = decisionReducer(
+      { ...start(), phase: "applying", operationId: "op_1" },
+      { type: "APPLY_FAILED", error: "network" },
+    );
+    expect(s.phase).toBe("uncertain");
+  });
+
+  it("treats a failed apply with no operation as safe to retry", () => {
+    const s = decisionReducer(
+      { ...start(), phase: "applying" },
+      { type: "APPLY_FAILED", error: "network" },
+    );
+    expect(s.phase).toBe("failed");
+    expect(s.note).toContain("No operation was created");
+  });
+
+  it("does not regress the phase when a poll fails", () => {
+    // Losing sight of an operation is not the same as it having failed.
+    const s = decisionReducer(
+      { ...start(), phase: "verifying", operationId: "op_1" },
+      { type: "POLL_FAILED", error: "timeout" },
+    );
+    expect(s.phase).toBe("verifying");
+    expect(s.note).toContain("has not been cancelled");
+  });
+
+  it("records a 409 as a conflict that needs a new intent", () => {
+    const s = decisionReducer({ ...start(), phase: "planning" }, { type: "PLAN_CONFLICT" });
+    expect(s.conflict).toBe(true);
+    expect(s.note).toContain("Start a new command");
+  });
+
+  it("walks the full fixture flow without ever passing through success early", async () => {
+    const api = createFixtureApi();
+    let s = start();
+    const plan = await api.planDecision({
+      approvalId: "AP-201",
+      decision: "APPROVE",
+      reason: "evidence is sound",
+      expectedVersion: "v7",
+      requestKey: s.requestKey,
+    });
+    expect(plan.ok).toBe(true);
+    if (!plan.ok) return;
+    s = decisionReducer(s, { type: "PLANNED", planId: plan.value.planId });
+
+    const applied = await api.applyPlan(plan.value.planId, s.requestKey);
+    expect(applied.ok).toBe(true);
+    if (!applied.ok) return;
+    s = decisionReducer(s, { type: "APPLY_ACCEPTED", ...applied.value });
+    expect(succeeded(s)).toBe(false);
+
+    // Three polls, and success only on the last one.
+    const seen: boolean[] = [];
+    for (let i = 0; i < 3; i += 1) {
+      const polled = await api.pollOperation(applied.value.operationId);
+      if (!polled.ok) break;
+      s = decisionReducer(s, {
+        type: "POLLED",
+        status: null,
+        verification: polled.value.verificationRaw
+          ? { known: true, value: polled.value.verificationRaw as never }
+          : null,
+      });
+      seen.push(succeeded(s));
+    }
+    expect(seen).toEqual([false, false, true]);
+  });
+
+  it("ends UNCERTAIN when the operation does, and stays outstanding", async () => {
+    const api = createFixtureApi({ uncertain: true });
+    const applied = await api.applyPlan("cmd_x", "rk_test");
+    expect(applied.ok).toBe(true);
+    if (!applied.ok) return;
+    let s = decisionReducer(start(), { type: "APPLY_ACCEPTED", ...applied.value });
+    for (let i = 0; i < 3; i += 1) {
+      const polled = await api.pollOperation(applied.value.operationId);
+      if (!polled.ok) break;
+      s = decisionReducer(s, {
+        type: "POLLED",
+        status: null,
+        verification: { known: true, value: polled.value.verificationRaw as never },
+      });
+    }
+    expect(s.phase).toBe("uncertain");
+    expect(outstanding(s)).toBe(true);
+  });
+});
+
+describe("containers — the port meets the screens", () => {
+  it("loads the inbox through the port and renders real mapped rows", async () => {
+    const { container } = render(<ApprovalInboxContainer api={createFixtureApi()} />);
+    expect(await screen.findByText("AP-352")).toBeTruthy();
+    // Four rows are on screen and five are pending. The header describes the
+    // queue, the rows describe the page, and both are the server's numbers.
+    expect(container.querySelector(".exec-inbox-counts")?.textContent).toContain("5 PENDING");
+    expect(container.querySelectorAll("tbody tr").length).toBe(4);
+  });
+
+  it("renders a loading skeleton before the first answer, not an empty queue", () => {
+    const { container } = render(<ApprovalInboxContainer api={createFixtureApi()} />);
+    expect(container.querySelectorAll(".exec-skeleton-block").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Inbox zero/)).toBeNull();
+  });
+
+  it("shows an unwired endpoint as unavailable with the reason attached", async () => {
+    const api = createFixtureApi({ unavailableEndpoints: ["listApprovals"] });
+    const { container } = render(<ApprovalInboxContainer api={api} />);
+    await screen.findByText(/not wired to a real endpoint/);
+    expect(container.querySelector('.exec-state[data-status="unavailable"]')).not.toBeNull();
+    // Not an empty list. The two look identical and mean opposite things.
+    expect(screen.queryByText(/Inbox zero/)).toBeNull();
+  });
+
+  it("renders a denied read as denied rather than as an error", async () => {
+    const api = createHttpApi({
+      policy: screenDeliveryPolicy({ delivery_policy: { policy_revision: 1, query_enabled: false } }),
+    });
+    const { container } = render(<ApprovalInboxContainer api={api} />);
+    await screen.findByText(/Query are disabled/);
+    expect(container.querySelector(".exec-state")).not.toBeNull();
+  });
+
+  it("loads a gate review through the port", async () => {
+    render(<GateR1ReviewContainer api={createFixtureApi()} approvalId="AP-201" />);
+    expect(await screen.findByText(/Artifact passport/)).toBeTruthy();
+    expect(screen.getByText(/creator \(Minh\) ≠ you \(Lan\)/)).toBeTruthy();
+  });
+
+  it("shows an unwired review as unavailable and keeps the gate identifiable", async () => {
+    const api = createFixtureApi({ unavailableEndpoints: ["getGateR1"] });
+    render(<GateR1ReviewContainer api={api} approvalId="AP-201" />);
+    expect(await screen.findByText(/not wired to a real endpoint/)).toBeTruthy();
+    expect(screen.getByText(/GATE R1/)).toBeTruthy();
+  });
+
+  it("leaves the command unconfirmed after apply returns 202", async () => {
+    // The whole point. The trail stays on screen saying so.
+    render(<GateR1ReviewContainer api={createFixtureApi()} approvalId="AP-201" />);
+    const approve = await screen.findByRole("button", { name: "Approve" });
+    approve.click();
+    expect(await screen.findByText(/This command has not been confirmed/)).toBeTruthy();
+    expect(screen.getByText(/a receipt, not a result/)).toBeTruthy();
+  });
+
+  it("reports a blocked plan instead of pretending the decision landed", async () => {
+    const api = createFixtureApi({ unavailableEndpoints: ["planDecision"] });
+    render(<GateR1ReviewContainer api={api} approvalId="AP-201" />);
+    const approve = await screen.findByRole("button", { name: "Approve" });
+    approve.click();
+    expect(await screen.findByText(/No operation was created/)).toBeTruthy();
+  });
+
+  it("records a request-key conflict as a conflict, not as a generic failure", async () => {
+    const api = createFixtureApi({ conflict: true });
+    const { container } = render(<GateR1ReviewContainer api={api} approvalId="AP-201" />);
+    const approve = await screen.findByRole("button", { name: "Approve" });
+    approve.click();
+    await screen.findByText(/Start a new command/);
+    expect(container.querySelector(".exec-decision-trail")).not.toBeNull();
+  });
+});
+
+describe("EX-BE-05a field map — reconciled against what codex published", () => {
+  const wire = {
+    data: {
+      approval: {
+        approval_id: "AP-201",
+        subject_label: "RSI v1.7",
+        release_candidate: "RC-41",
+        quorum_met: 1,
+        quorum_required: 2,
+        policy_version: "approval.v3",
+        creator: "Minh",
+        expected_version: "v7",
+        sla: { age_minutes: 120, budget_minutes: 1440 },
+      },
+      actor: "Lan",
+      eligibility: { can_approve: true, can_approve_with_condition: true, can_deny: true, locks: [] },
+      evidence_manifest: {
+        entries: [{ label: "artifact digest", value: "sha256:9f3c…", verification: "✓ verified" }],
+      },
+      checklist: [{ label: "replay reproducible", outcome: "pass" }],
+      decisions: [
+        { outcome: "APPROVED", by: "Minh", at: "2026-08-20T09:00:00Z" },
+        { outcome: "DENIED", by: "Lan", at: "2026-08-21T09:12:00Z" },
+      ],
+    },
+  };
+
+  it("reads the detail from data.approval, not from the top level", () => {
+    const d = readGateR1Detail(wire);
+    expect(d?.alphaLabel).toBe("RSI v1.7");
+    expect(d?.releaseCandidate).toBe("RC-41");
+    expect(d?.expectedVersion).toBe("v7");
+    expect(d?.sla).toEqual({ ageMinutes: 120, budgetMinutes: 1440 });
+  });
+
+  it("reads the passport from evidence_manifest.entries", () => {
+    expect(readGateR1Detail(wire)?.passport[0].label).toBe("artifact digest");
+  });
+
+  it("takes the decision in force from the LAST entry of decisions[]", () => {
+    // Earlier entries are the quorum's history. Taking the first would show a
+    // denied request as approved.
+    expect(readGateR1Detail(wire)?.decided?.outcome).toBe("DENIED");
+    expect(readGateR1Detail(wire)?.decided?.by).toBe("Lan");
+  });
+
+  it("reads the three eligibility booleans separately", () => {
+    const d = readGateR1Detail({
+      data: {
+        ...wire.data,
+        eligibility: { can_approve: false, can_approve_with_condition: false, can_deny: true },
+      },
+    });
+    expect(d?.eligibility).toEqual({
+      canApprove: false,
+      canApproveWithCondition: false,
+      canDeny: true,
+    });
+  });
+
+  it("treats absent eligibility as no permission at all", () => {
+    const d = readGateR1Detail({ data: { approval: { approval_id: "AP-201" } } });
+    expect(d?.eligibility).toEqual({
+      canApprove: false,
+      canApproveWithCondition: false,
+      canDeny: false,
+    });
+  });
+});
+
+describe("server eligibility composes with the local floor", () => {
+  it("lets the server withhold a control the screen would have allowed", () => {
+    render(
+      gate({
+        eligibility: { canApprove: false, canApproveWithCondition: true, canDeny: true },
+      }),
+    );
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
+    expect(screen.getByText(/server did not grant it for this actor/)).toBeTruthy();
+  });
+
+  it("does not let the server unlock a control the screen refuses", () => {
+    // Defence in depth. The local check is a floor: it can only make things
+    // stricter, and a client whose safety rules could be overridden from the
+    // wire would have advisory safety rules.
+    render(
+      gate({
+        actor: "Minh",
+        eligibility: { canApprove: true, canApproveWithCondition: true, canDeny: true },
+      }),
+    );
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
+    expect(screen.getByText(/self-approval prohibited/)).toBeTruthy();
+  });
+
+  it("gates approve-with-condition on its own boolean", () => {
+    render(
+      gate({
+        eligibility: { canApprove: true, canApproveWithCondition: false, canDeny: true },
+      }),
+    );
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", false);
+    expect(screen.getByRole("button", { name: "Approve with condition" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+  });
+
+  it("lets the server withhold Deny even where the screen would allow it", () => {
+    render(
+      gate({
+        eligibility: { canApprove: true, canApproveWithCondition: true, canDeny: false },
+      }),
+    );
+    expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", true);
+  });
+
+  it("behaves as before when the server sends no eligibility", () => {
+    render(gate());
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", false);
+    expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", false);
   });
 });

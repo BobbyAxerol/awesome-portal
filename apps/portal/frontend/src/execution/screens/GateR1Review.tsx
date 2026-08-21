@@ -41,7 +41,7 @@ export interface ChecklistItem {
 }
 
 /**
- * Why the decision bar is locked, in the order a reviewer should hear it.
+ * Why a decision control is locked, in the order a reviewer should hear it.
  *
  * `SELF_APPROVAL` first because it is the one no amount of evidence fixes.
  */
@@ -52,6 +52,31 @@ const LOCK_REASON: Record<DecisionLock, string> = {
   BLOCKING_FINDINGS: "Approve blocked — the checklist has blocking findings.",
   EXPIRED: "This request expired. It must be resubmitted rather than decided now.",
   NOT_ELIGIBLE: "You do not hold a role that can decide this gate.",
+};
+
+/**
+ * Which locks stop a **denial**, as opposed to an approval.
+ *
+ * Approve and Deny are not two buttons behind one condition, and the earlier
+ * version of this screen was wrong to treat Deny as never locked.
+ *
+ * Self-denial is allowed. Refusing your own artifact is not the conflict of
+ * interest that separation of duties exists to prevent — it is the safe
+ * direction, and the person who knows the work best is often the one who should
+ * withdraw it. Blocking findings do not stop a denial either; they are a reason
+ * to deny, not a reason to be unable to.
+ *
+ * What does stop a denial is the request no longer being a decidable thing.
+ * `EXPIRED` means there is nothing live to refuse and a denial recorded against
+ * it would be a decision on a request that already lapsed. `NOT_ELIGIBLE` means
+ * this actor cannot decide the gate in either direction. A closed gate is
+ * handled separately: its controls are removed rather than disabled.
+ */
+const DENY_BLOCKING_LOCKS: readonly DecisionLock[] = ["EXPIRED", "NOT_ELIGIBLE"];
+
+const DENY_LOCK_REASON: Record<"EXPIRED" | "NOT_ELIGIBLE", string> = {
+  EXPIRED: "Deny blocked — this request expired. There is nothing live to refuse.",
+  NOT_ELIGIBLE: "Deny blocked — you do not hold a role that can decide this gate.",
 };
 
 function markChip(outcome: EvidenceMark): ReactNode {
@@ -77,6 +102,7 @@ export function GateR1Review({
   reason,
   partialReason,
   decided,
+  eligibility,
   evidence,
   onApprove,
   onDeny,
@@ -98,6 +124,14 @@ export function GateR1Review({
   checklist: readonly ChecklistItem[];
   /** Every reason the decision bar is locked, not only the first. */
   locks?: readonly DecisionLock[];
+  /**
+   * The server's verdict on each control (`EX_BE_05A` §5). Authoritative in one
+   * direction: it can withhold a control this screen would have allowed, but it
+   * cannot grant one the screen's own checks refuse. A client whose derived
+   * floor could be overridden from the wire would be a client whose safety
+   * rules are advisory.
+   */
+  eligibility?: { canApprove: boolean; canApproveWithCondition: boolean; canDeny: boolean };
   status?: PanelStatus;
   reason?: string;
   /** What is missing when `partial`. The review still renders. */
@@ -142,6 +176,19 @@ export function GateR1Review({
   const warnings = checklist.filter((c) => c.outcome === "watch").length;
   const insufficient = checklist.filter((c) => c.outcome === "insufficient").length;
   const locked = effectiveLocks.length > 0;
+
+  // Deny is gated by a strictly smaller set. Self-approval and blocking
+  // findings are reasons to refuse, not reasons to be unable to.
+  const denyLocks = effectiveLocks.filter((lock): lock is "EXPIRED" | "NOT_ELIGIBLE" =>
+    (DENY_BLOCKING_LOCKS as readonly string[]).includes(lock),
+  );
+  // Server first, local floor second. Both must allow it.
+  const serverAllowsApprove = eligibility ? eligibility.canApprove : true;
+  const serverAllowsCondition = eligibility ? eligibility.canApproveWithCondition : true;
+  const serverAllowsDeny = eligibility ? eligibility.canDeny : true;
+  const approveLocked = locked || !serverAllowsApprove;
+  const conditionLocked = locked || !serverAllowsCondition;
+  const denyLocked = denyLocks.length > 0 || !serverAllowsDeny;
 
   return (
     <section className="exec-gate" aria-label={`Gate R1 review ${approvalId}`}>
@@ -238,24 +285,37 @@ export function GateR1Review({
 
       {isDecided ? null : (
         <div className="exec-gate-decision">
-          <button type="button" className="exec-btn-apply" disabled={locked} onClick={onApprove}>
+          <button type="button" className="exec-btn-apply" disabled={approveLocked} onClick={onApprove}>
             Approve
           </button>
-          <button type="button" className="exec-btn-ghost" onClick={onRequestCondition}>
+          <button
+            type="button"
+            className="exec-btn-ghost"
+            disabled={conditionLocked}
+            onClick={onRequestCondition}
+          >
             Approve with condition
           </button>
-          {/* Deny is never locked. A reviewer who cannot approve can always
-              refuse, and blocking that would leave a bad request sitting in the
-              queue with nobody able to clear it. */}
-          <button type="button" className="exec-btn-ghost" onClick={onDeny}>
+          {/* Deny survives the locks that stop Approve — including
+              self-approval, because withdrawing your own artifact is the safe
+              direction. It does not survive the request ceasing to be
+              decidable. */}
+          <button type="button" className="exec-btn-ghost" disabled={denyLocked} onClick={onDeny}>
             Deny
           </button>
         </div>
       )}
 
-      {locked && !isDecided ? (
+      {(locked || !serverAllowsApprove || !serverAllowsDeny) && !isDecided ? (
         <div className="exec-disabled-reason">
           {effectiveLocks.map((lock) => LOCK_REASON[lock]).join(" ")}
+          {denyLocks.length ? ` ${denyLocks.map((lock) => DENY_LOCK_REASON[lock]).join(" ")}` : null}
+          {eligibility && !serverAllowsApprove && !locked
+            ? " Approve blocked — the server did not grant it for this actor."
+            : null}
+          {eligibility && !serverAllowsDeny && !denyLocks.length
+            ? " Deny blocked — the server did not grant it for this actor."
+            : null}
         </div>
       ) : null}
     </section>

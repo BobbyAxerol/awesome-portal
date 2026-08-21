@@ -66,6 +66,19 @@ export interface ReadinessGroup {
 
 export type R2Lock = "SELF_APPROVAL" | "R1_NOT_VALID" | "CAPITAL_BREACH" | "EXPIRED" | "NOT_ELIGIBLE";
 
+/**
+ * Which locks stop a denial. Same rule as Gate R1: the plan author may refuse
+ * their own plan, an invalid R1 is a reason to deny rather than an obstacle to
+ * it, and a capital breach is the clearest reason of all. Only a request that
+ * has stopped being decidable blocks a refusal.
+ */
+const DENY_BLOCKING_LOCKS: readonly R2Lock[] = ["EXPIRED", "NOT_ELIGIBLE"];
+
+const DENY_LOCK_REASON: Record<"EXPIRED" | "NOT_ELIGIBLE", string> = {
+  EXPIRED: "Deny blocked — this request expired. There is nothing live to refuse.",
+  NOT_ELIGIBLE: "Deny blocked — you do not hold a role that can decide this gate.",
+};
+
 const LOCK_REASON: Record<R2Lock, string> = {
   SELF_APPROVAL: "Approve blocked — the plan author cannot be the sole approver.",
   R1_NOT_VALID: "Approve blocked — see the R1 status above.",
@@ -158,6 +171,10 @@ export function GateR2Review({
     ]),
   );
   const locked = effectiveLocks.length > 0;
+  const denyLocks = effectiveLocks.filter((lock): lock is "EXPIRED" | "NOT_ELIGIBLE" =>
+    (DENY_BLOCKING_LOCKS as readonly string[]).includes(lock),
+  );
+  const denyLocked = denyLocks.length > 0;
 
   return (
     <section className="exec-gate" aria-label={`Gate R2 review ${approvalId}`}>
@@ -284,7 +301,7 @@ export function GateR2Review({
         <button type="button" className="exec-btn-ghost" onClick={onRequestCondition}>
           Approve with condition
         </button>
-        <button type="button" className="exec-btn-ghost" onClick={onDeny}>
+        <button type="button" className="exec-btn-ghost" disabled={denyLocked} onClick={onDeny}>
           Deny
         </button>
       </div>
@@ -292,6 +309,7 @@ export function GateR2Review({
       {locked ? (
         <div className="exec-disabled-reason">
           {effectiveLocks.map((lock) => LOCK_REASON[lock]).join(" ")}
+          {denyLocked ? ` ${denyLocks.map((lock) => DENY_LOCK_REASON[lock]).join(" ")}` : null}
         </div>
       ) : null}
     </section>
