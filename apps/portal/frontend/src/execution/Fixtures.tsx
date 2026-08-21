@@ -33,7 +33,12 @@ import { GuardBand, LifecycleRail, ObservationProgress, stageRail } from "./comp
 import { VenueIdentity, VenueScope } from "./components/scope";
 import { CapNotice, CommissionedPanel, PanelState } from "./components/states";
 import { KeysetTable, type Column } from "./components/table";
-import { PROFILE_ORDER, profileNeedsLabel, reconcilePanelProfile } from "./profile";
+import {
+  PROFILE_ORDER,
+  profileNeedsLabel,
+  reconcilePanelProfile,
+  screenDeliveryPolicy,
+} from "./profile";
 import type {
   CapabilityState,
   DeliveryProfile,
@@ -121,6 +126,38 @@ const OPERATION_STATUSES: OperationStatus[] = [
   "PARTIAL",
   "FAILED",
 ];
+
+/** A plan with everything passing, so the only blockers on show are tier ones. */
+const FIXTURE_PLAN = {
+  id: "cmd_9f12",
+  expiresInSeconds: 118,
+  requestPreview: '{ "command": "halt", "target": "dep_94" }',
+  equivalentCli: "portal exec halt --deployment dep_94",
+  checks: [{ label: "Deployment is ACTIVE", outcome: "pass" as const }],
+};
+
+/** A hypothetical screen whose live command flags have been granted. */
+const LIVE_POLICY = screenDeliveryPolicy({
+  delivery_policy: {
+    policy_revision: 9,
+    live_protective_commands_enabled: true,
+    live_risk_increasing_commands_enabled: true,
+  },
+});
+
+/** What registry revision 4 actually ships today: every flag off. */
+const REV4_SHIPPED_POLICY = screenDeliveryPolicy({
+  delivery_policy: {
+    policy_revision: 1,
+    query_enabled: false,
+    projection_ingestion_enabled: false,
+    sse_enabled: false,
+    paper_commands_enabled: false,
+    sandbox_commands_enabled: false,
+    live_protective_commands_enabled: false,
+    live_risk_increasing_commands_enabled: false,
+  },
+});
 
 const VERIFICATION_RESULTS: VerificationResult[] = [
   "PENDING",
@@ -591,6 +628,49 @@ export default function ExecutionFixtures() {
                 plan={null}
                 danger
                 confirmWord="CLOSE"
+              />
+            </Case>
+          </div>
+        </Group>
+
+        <Group
+          title="Risk tier and delivery policy — what Apply demands"
+          note="R3 and R4 are two permissions, not two rungs. R3 protects a position and needs a step-up but no second person, because waiting for one is how a live position keeps bleeding. R4 enlarges a position and needs both. A step-up satisfied for an emergency halt never carries into a capital expansion."
+        >
+          <div className="exec-fixtures-stack">
+            <Case caption="R3 protective — policy allows it; step-up outstanding">
+              <CommandPlanDrawer
+                title="Halt deployment"
+                meta="dep_94 · BINANCE · live"
+                step="apply"
+                plan={FIXTURE_PLAN}
+                riskTier="R3"
+                policy={LIVE_POLICY}
+                freshAuthSatisfied={false}
+              />
+            </Case>
+            <Case caption="R4 risk-increasing — security key and a second person">
+              <CommandPlanDrawer
+                title="Expand capital envelope"
+                meta="pf_alpha_core · +40% notional"
+                step="apply"
+                plan={FIXTURE_PLAN}
+                riskTier="R4"
+                policy={LIVE_POLICY}
+                freshAuthSatisfied={false}
+                secondApproverSatisfied={false}
+                danger
+                confirmWord="EXPAND"
+              />
+            </Case>
+            <Case caption="R1 on a fixture screen — the registry has it switched off">
+              <CommandPlanDrawer
+                title="Flatten paper position"
+                meta="dep_88 · paper"
+                step="apply"
+                plan={FIXTURE_PLAN}
+                riskTier="R1"
+                policy={REV4_SHIPPED_POLICY}
               />
             </Case>
           </div>

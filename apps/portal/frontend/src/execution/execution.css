@@ -917,3 +917,25 @@
 .exec-table-cursor {
   color: var(--ink-mute);
 }
+
+/* Risk tier on a command drawer. R3 and R4 are the two that carry live money,
+ * and they read as two different permissions rather than two rungs: R3 protects
+ * a position, R4 enlarges one. Same treatment as the guard band -- the label
+ * carries the difference, not a second hue. */
+.exec-drawer-tier {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--space-2);
+  padding: 0 var(--space-2);
+  border: 1px solid currentColor;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  vertical-align: middle;
+}
+
+.exec-drawer-tier[data-tier="R2"] { color: var(--warn); }
+.exec-drawer-tier[data-tier="R3"],
+.exec-drawer-tier[data-tier="R4"] { color: var(--guard); }
+.exec-drawer-tier[data-tier="R4"] { border-width: 3px; border-style: double; }

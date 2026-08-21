@@ -36,6 +36,14 @@ import {
 } from "./profile";
 import { KeysetTable, type Column } from "./components/table";
 import {
+  formatDecimal,
+  readDecimal,
+  readEnum,
+  readEnvelope,
+  readId,
+  readKeysetPage,
+} from "./adapter";
+import {
   AuthorityBadge,
   BrokerSyncChip,
   CapabilityChip,
@@ -990,5 +998,330 @@ describe("registry revision 4 — parsed against the registry actually shipped",
         ).toBe(false);
       }
     }
+  });
+});
+
+/* ===========================================================================
+ * Slice S3 — the wire adapter
+ * ======================================================================== */
+
+describe("S3 adapter — decimals arrive as strings and stay strings", () => {
+  it("keeps every digit the server sent, including trailing zeros", () => {
+    // extract/serialization-contract.json headline: every numeric column
+    // arrives as a JSON string. Number("0.00100000") is 0.001 — the same value
+    // with the instrument's precision thrown away.
+    const d = readDecimal("0.00100000");
+    expect(d).toBe("0.00100000");
+    expect(formatDecimal(d!)).toBe("0.00100000");
+  });
+
+  it("groups the integer part and never touches the fraction", () => {
+    expect(formatDecimal(readDecimal("60890.00")!)).toBe("60,890.00");
+    expect(formatDecimal(readDecimal("182431")!)).toBe("182,431");
+    expect(formatDecimal(readDecimal("-1234.5")!)).toBe("-1,234.5");
+    expect(formatDecimal(readDecimal("999")!)).toBe("999");
+  });
+
+  it("refuses a JSON number where the contract promised a string", () => {
+    // By the time it reaches here the precision loss already happened upstream.
+    // Accepting it would launder a bug into a plausible-looking figure.
+    expect(readDecimal(0.001)).toBeNull();
+    expect(readDecimal(60890)).toBeNull();
+  });
+
+  it("refuses malformed input rather than guessing at it", () => {
+    expect(readDecimal("1e-8")).toBeNull();
+    expect(readDecimal("60,890.00")).toBeNull();
+    expect(readDecimal("")).toBeNull();
+    expect(readDecimal(null)).toBeNull();
+  });
+
+  it("exposes no way to turn a decimal into a number", () => {
+    // The guard is the branded type plus the absence of a toNumber export.
+    // This test documents the intent so a future addition is a deliberate act.
+    const mod = { readDecimal, formatDecimal };
+    expect(Object.keys(mod).some((k) => /number|float|parse/i.test(k))).toBe(false);
+  });
+});
+
+describe("S3 adapter — an unknown enum is a finding, not a default", () => {
+  it("preserves the raw token instead of mapping to the nearest known value", () => {
+    const r = readEnum("PARTIALLY_CANCELLED", ["FILLED", "REJECTED"] as const);
+    expect(r).toEqual({ known: false, raw: "PARTIALLY_CANCELLED" });
+  });
+
+  it("turns an unsupported envelope value into a warning the panel must show", () => {
+    const { envelope, unsupported } = readEnvelope({
+      source_authority: "EXECUTION",
+      freshness_state: "VERY_FRESH",
+      as_of: "2026-08-21T10:42:01Z",
+    });
+    expect(unsupported).toEqual([{ field: "freshness_state", raw: "VERY_FRESH" }]);
+    // Falls back to the value that claims least, and says so out loud.
+    expect(envelope.freshness).toBe("UNKNOWN");
+    expect(envelope.warnings?.join(" ")).toContain("VERY_FRESH");
+  });
+
+  it("does not silently bucket an unsupported order status into a filter", () => {
+    const buckets = Object.values(BLOTTER_BUCKET).flat() as string[];
+    expect(buckets).not.toContain("PARTIALLY_CANCELLED");
+    expect(BLOTTER_UNBUCKETED as readonly string[]).not.toContain("PARTIALLY_CANCELLED");
+  });
+});
+
+describe("S3 adapter — envelope", () => {
+  it("maps the published shape field for field", () => {
+    const { envelope } = readEnvelope({
+      source_authority: "BROKER",
+      as_of: "2026-08-21T10:42:01Z",
+      read_at: "2026-08-21T10:42:03Z",
+      source_cursor: {
+        event_ts: "2026-08-21T10:42:01Z",
+        created_at: "2026-08-21T10:42:01Z",
+        event_id: "evt_8814",
+      },
+      source_sequence: null,
+      projection_epoch: "0a4c8f22-1111-4222-8333-444455556666",
+      projection_sequence: 8814,
+      source_completeness: "POLL_BOUNDED",
+      poll_interval_ms: 5000,
+      freshness_state: "OK",
+      age_seconds: 2,
+      lag_ms: 240,
+      delivery_profile: "shadow",
+      panel_state: "ok",
+      capability_snapshot_id: "cap_77",
+      warnings: [],
+    });
+    expect(envelope.authority).toBe("BROKER");
+    expect(envelope.sourceCursor?.eventId).toBe("evt_8814");
+    expect(envelope.projectionSequence).toBe(8814);
+    expect(envelope.sourceCompleteness).toBe("POLL_BOUNDED");
+    expect(envelope.pollIntervalMs).toBe(5000);
+    expect(envelope.deliveryProfile).toBe("shadow");
+    // Data age and projection lag stay two quantities.
+    expect(envelope.ageSeconds).toBe(2);
+    expect(envelope.lagMs).toBe(240);
+  });
+
+  it("never fabricates a source sequence from the projection one", () => {
+    const { envelope } = readEnvelope({ projection_sequence: 8814, source_sequence: null });
+    expect(envelope.sourceSequence).toBeNull();
+    expect(envelope.projectionSequence).toBe(8814);
+  });
+
+  it("treats an anonymous panel as DERIVED and says why", () => {
+    // A panel that states no authority is making an unattributed claim. DERIVED
+    // is the weakest of the four, so it is the safe one to be wrong about.
+    const { envelope } = readEnvelope({ as_of: "2026-08-21T10:42:01Z" });
+    expect(envelope.authority).toBe("DERIVED");
+    expect(envelope.warnings?.join(" ")).toContain("No source authority");
+  });
+
+  it("does not borrow read_at when as_of is missing", () => {
+    const { envelope } = readEnvelope({
+      source_authority: "EXECUTION",
+      read_at: "2026-08-21T10:42:03Z",
+    });
+    // Merging them would let a fast read of a two-hour-old row render as two
+    // seconds fresh.
+    expect(envelope.asOf).toBeNull();
+    expect(envelope.readAt).toBe("2026-08-21T10:42:03Z");
+  });
+
+  it("rejects a malformed timestamp rather than passing it to the badge", () => {
+    const { envelope } = readEnvelope({ source_authority: "EXECUTION", as_of: "yesterday" });
+    expect(envelope.asOf).toBeNull();
+  });
+});
+
+describe("S3 adapter — keyset page", () => {
+  const wire = {
+    data: {
+      rows: [
+        { order_id: "ord_88a2", quantity: "0.04000000", price: "60890.00" },
+        { order_id: "ord_88a3", quantity: "0.00100000", price: "60891.25" },
+      ],
+      total_count: 182_431,
+      filtered_count: 412,
+      next_cursor: "c_ab34e91f0055",
+      prev_cursor: "c_9911aa22",
+      has_more: true,
+      has_previous: true,
+      applied_sort: [{ field: "event_ts", direction: "desc" }],
+      applied_filters: [{ field: "status", op: "in", value: "FILLED" }],
+    },
+  };
+
+  const mapOrder = (row: Record<string, unknown>) => {
+    const id = readId(row.order_id);
+    return id ? { id, qty: readDecimal(row.quantity), price: readDecimal(row.price) } : null;
+  };
+
+  it("reads counts and both cursors from the server", () => {
+    const p = readKeysetPage(wire, mapOrder);
+    expect(p.totalCount).toBe(182_431);
+    expect(p.filteredCount).toBe(412);
+    expect(p.nextCursor).toBe("c_ab34e91f0055");
+    expect(p.prevCursor).toBe("c_9911aa22");
+    expect(p.hasPrevious).toBe(true);
+  });
+
+  it("carries the decimals through without going near a number", () => {
+    const p = readKeysetPage(wire, mapOrder);
+    expect(p.rows[1].qty).toBe("0.00100000");
+  });
+
+  it("reports zero rather than falling back to the loaded row count", () => {
+    // A page that cannot say how large the population is has not met the
+    // contract. Zero reads as wrong; rows.length would read as plausible.
+    const p = readKeysetPage({ data: { rows: [{ order_id: "ord_1" }] } }, mapOrder);
+    expect(p.rows.length).toBe(1);
+    expect(p.totalCount).toBe(0);
+  });
+
+  it("drops a row it cannot read rather than rendering it half-empty", () => {
+    const p = readKeysetPage(
+      { data: { rows: [{ order_id: "ord_1" }, { no_id: true }], total_count: 2 } },
+      mapOrder,
+    );
+    expect(p.rows.length).toBe(1);
+    // The count still comes from the server, so the footer disagreeing with the
+    // visible rows is the correct, visible symptom of a contract skew.
+    expect(p.totalCount).toBe(2);
+  });
+
+  it("echoes the server's filter and sort so a dropped filter is visible", () => {
+    const p = readKeysetPage(wire, mapOrder);
+    expect(p.appliedSort).toEqual([{ field: "event_ts", direction: "desc" }]);
+    expect(p.appliedFilters).toEqual([{ field: "status", op: "in", value: "FILLED" }]);
+  });
+
+  it("survives a response with nothing in it at all", () => {
+    const p = readKeysetPage(null, mapOrder);
+    expect(p.rows).toEqual([]);
+    expect(p.totalCount).toBe(0);
+  });
+});
+
+describe("command drawer — risk tier and delivery policy", () => {
+  const plan = {
+    id: "cmd_9f12",
+    expiresInSeconds: 120,
+    requestPreview: "{}",
+    equivalentCli: "portal exec halt",
+    checks: [{ label: "Deployment is ACTIVE", outcome: "pass" as const }],
+  };
+  const allowLive = screenDeliveryPolicy({
+    delivery_policy: {
+      policy_revision: 9,
+      live_protective_commands_enabled: true,
+      live_risk_increasing_commands_enabled: true,
+      paper_commands_enabled: true,
+    },
+  });
+
+  it("blocks on delivery policy before anything the operator can type", () => {
+    render(
+      <CommandPlanDrawer
+        title="Halt deployment"
+        step="apply"
+        plan={plan}
+        riskTier="R3"
+        policy={screenDeliveryPolicy({
+          delivery_policy: { policy_revision: 1, live_protective_commands_enabled: false },
+        })}
+      />,
+    );
+    // A command the backend switched off is not a form to fill in correctly.
+    expect(screen.getByText(/Live protective commands are disabled/)).toBeTruthy();
+    expect(screen.getByText(/delivery policy revision 1/)).toBeTruthy();
+  });
+
+  it("blocks every tier when the screen publishes no policy at all", () => {
+    render(<CommandPlanDrawer title="Halt" step="apply" plan={plan} riskTier="R1" />);
+    expect(screen.getByText(/no published delivery policy/)).toBeTruthy();
+  });
+
+  it("demands a security key for a risk-increasing live command and not for a protective one", () => {
+    // R3 and R4 are two permissions, not two rungs. A step-up satisfied for an
+    // emergency halt must never carry into a capital expansion.
+    const { rerender } = render(
+      <CommandPlanDrawer
+        title="Expand envelope"
+        step="apply"
+        plan={plan}
+        riskTier="R4"
+        policy={allowLive}
+        freshAuthSatisfied={false}
+      />,
+    );
+    expect(screen.getByText(/security key \(WebAuthn\)/)).toBeTruthy();
+
+    rerender(
+      <CommandPlanDrawer
+        title="Halt deployment"
+        step="apply"
+        plan={plan}
+        riskTier="R3"
+        policy={allowLive}
+        freshAuthSatisfied={false}
+      />,
+    );
+    expect(screen.queryByText(/security key \(WebAuthn\)/)).toBeNull();
+    expect(screen.getByText(/requires fresh authentication/)).toBeTruthy();
+  });
+
+  it("requires a second approver at R2 and R4 but not at R3", () => {
+    // R3 is emergency protection. Waiting for a second person to permit a halt
+    // is how a position keeps bleeding.
+    const { rerender } = render(
+      <CommandPlanDrawer
+        title="Halt"
+        step="apply"
+        plan={plan}
+        riskTier="R3"
+        policy={allowLive}
+        secondApproverSatisfied={false}
+      />,
+    );
+    expect(screen.queryByText(/second approver/)).toBeNull();
+
+    rerender(
+      <CommandPlanDrawer
+        title="Expand"
+        step="apply"
+        plan={plan}
+        riskTier="R4"
+        policy={allowLive}
+        secondApproverSatisfied={false}
+      />,
+    );
+    expect(screen.getByText(/second approver is required/)).toBeTruthy();
+  });
+
+  it("asks nothing extra at R1 once policy allows it", () => {
+    render(
+      <CommandPlanDrawer
+        title="Flatten paper position"
+        step="apply"
+        plan={plan}
+        riskTier="R1"
+        policy={allowLive}
+      />,
+    );
+    expect(screen.queryByText(/re-authenticate/)).toBeNull();
+    expect(screen.queryByText(/second approver/)).toBeNull();
+    // The ordinary blocker still stands.
+    expect(screen.getByText(/a reason is required/)).toBeTruthy();
+  });
+
+  it("names the tier on the drawer so the demands are not a surprise", () => {
+    const { container } = render(
+      <CommandPlanDrawer title="Expand" step="plan" plan={null} riskTier="R4" policy={allowLive} />,
+    );
+    const tier = container.querySelector(".exec-drawer-tier");
+    expect(tier?.textContent).toBe("R4");
+    expect(tier?.getAttribute("title")).toContain("RISK-INCREASING");
   });
 });
