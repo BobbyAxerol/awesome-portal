@@ -3,6 +3,7 @@ members = [
   "crates/execution-contracts",
   "crates/edge-auth",
   "crates/edge-service",
+  "crates/analytics",
   "crates/projection-core",
   "crates/query-api",
   "crates/projection-store-pg",

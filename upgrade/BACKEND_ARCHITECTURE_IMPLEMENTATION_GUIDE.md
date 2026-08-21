@@ -858,6 +858,19 @@ deep-dive → ADR → slice → evidence discipline documented above.
   SOURCE_AND_ACTIVATION_EVIDENCE_PENDING`; both feature flags and every registry
   SSE flag remain false. Deep dive:
   [`EX_BE_06_MULTIPLEXED_SSE_RESUME_BACKPRESSURE.md`](./backend/EX_BE_06_MULTIPLEXED_SSE_RESUME_BACKPRESSURE.md).
+- **EX-BE-07a pure analytics contract foundation (2026-08-21):** the Rust
+  `analytics` crate now owns currency-isolated exact-decimal capital preview,
+  explicit four-stage order funnels, 64-item portfolio-bound insight batches,
+  packed correlation through 150 entities with ranked fallback above the cap,
+  full-binding exposure with population completeness, and reconciled immutable
+  capital-ledger projections. Every result identifies `DERIVED` authority,
+  formula version, oldest/worst input freshness and explicit partiality. The
+  crate has 21 focused tests; the complete locked Rust/PostgreSQL gate passes
+  72 tests, the 182,000-row corpus, rustfmt and strict Clippy. Status is
+  `FOUNDATION_COMPLETE / SOURCE_REPOSITORY_AND_SCREEN_API_PENDING`: no endpoint,
+  runtime flag, direct Trading System store access or execution authority was
+  added. Deep dive and Claude field map:
+  [`EX_BE_07A_ANALYTICS_CONTRACTS_AND_PURE_ENGINE.md`](./backend/EX_BE_07A_ANALYTICS_CONTRACTS_AND_PURE_ENGINE.md).
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**

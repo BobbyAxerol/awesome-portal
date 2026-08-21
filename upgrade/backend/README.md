@@ -220,9 +220,18 @@ authority.
   build and 102/102 tests, canonical Base64URL cursor enforcement, and clean
   base/AWS-edge/SGP-overlay Compose renders. Detail:
   [`EX_BE_06_MULTIPLEXED_SSE_RESUME_BACKPRESSURE.md`](./EX_BE_06_MULTIPLEXED_SSE_RESUME_BACKPRESSURE.md).
-- Backend tiếp theo là `EX-BE-07a`: pure analytics contracts/engines for
-  capital preview, order funnel, capped correlation and full-binding exposure.
-  `EX-BE-05b` vẫn chờ source command capability.
+- `EX-BE-07a` **foundation complete / source repository and screen API
+  pending:** crate Rust `analytics` khóa exact-decimal capital preview có stale
+  blocker, funnel bốn stage không suy diễn, batch insight tối đa 64 item gắn
+  `portfolio_id`, correlation packed tới 150/ranked fallback trên 150, exposure
+  đủ population theo currency và capital-ledger reconcile. Mọi output có
+  `DERIVED`, formula version, freshness floor và partiality. Evidence: 21 test
+  analytics, tổng gate Rust/PostgreSQL 72 tests + 182.000 rows, strict Clippy/
+  rustfmt. Không endpoint/flag/source write nào được thêm. Chi tiết:
+  [`EX_BE_07A_ANALYTICS_CONTRACTS_AND_PURE_ENGINE.md`](./EX_BE_07A_ANALYTICS_CONTRACTS_AND_PURE_ENGINE.md).
+- Backend tiếp theo là `EX-BE-07b`: repository + narrow screen APIs dùng các
+  contract trên khi source projection/capability sẵn sàng. `EX-BE-05b` vẫn chờ
+  source command capability và không bị 07a ngầm mở khóa.
 
 ## BAR-21 — Strategy Import & Quarantine Ingest foundation
 

@@ -99,6 +99,11 @@ pub enum PanelState {
 pub struct DecimalString(Decimal);
 
 impl DecimalString {
+    #[must_use]
+    pub const fn from_decimal(value: Decimal) -> Self {
+        Self(value)
+    }
+
     /// Parses a base-10 decimal without passing through a binary float.
     ///
     /// # Errors

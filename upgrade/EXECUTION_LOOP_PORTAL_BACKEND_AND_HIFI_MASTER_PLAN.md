@@ -839,6 +839,15 @@ the wider EX-BE-08 load/security/soak/DR evidence. Detailed
 evidence and frontend mapping are in
 [`EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md`](backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md).
 
+`EX-BE-07a` now delivers the pure Rust analytics contract half of EX-BE-07:
+exact/currency-isolated capital preview, explicit order funnel, bounded batched
+insights, packed/ranked correlation, reconciled capital ledger and complete-
+population binding exposure. It remains `FOUNDATION_COMPLETE` because no source
+repository or screen API is activated. EX-BE-07b owns that integration. Evidence
+is 21 focused analytics tests and a 72-test locked Rust/PostgreSQL workspace gate;
+the Claude field map is in
+[`EX_BE_07A_ANALYTICS_CONTRACTS_AND_PURE_ENGINE.md`](backend/EX_BE_07A_ANALYTICS_CONTRACTS_AND_PURE_ENGINE.md).
+
 ### 12.2 Per-phase backend slices
 
 Statuses use the architecture vocabulary, never bare `COMPLETE`:

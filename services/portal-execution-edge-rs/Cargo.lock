@@ -29,6 +29,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
+name = "analytics"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "execution-contracts",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "android_system_properties"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1432,20 +1444,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "realtime-sse"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "execution-contracts",
- "projection-core",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "uuid",
-]
-
-[[package]]
 name = "quinn"
 version = "0.11.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1589,6 +1587,20 @@ dependencies = [
  "rustls-pki-types",
  "time",
  "yasna",
+]
+
+[[package]]
+name = "realtime-sse"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "execution-contracts",
+ "projection-core",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]

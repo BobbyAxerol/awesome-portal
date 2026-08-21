@@ -40,7 +40,7 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 0 | Shell & shared components | **DONE** | `CONTRACT_COMPLETE` | — EX-BE-00R4 delivered | FE: 42 tests · build · visual baseline **drifted, see §9**; BE: registry rev 4 · 17 fixture profiles · fail-closed policy tests · generated OpenAPI/TS contract |
 | 1 | Approval Inbox (4a) | `WIP` (screen + adapter complete; awaiting data) | `OPERATIONAL_EVIDENCE_PENDING` | registry activation (`query_enabled`) — **not** the fresh-PG rerun | EX-BE-05a endpoint over EX-BE-04a; FE adapter reconciled against the §5 field map; FE runs on `createFixtureApi` |
 | 2 | Gate R1 Review (1a) | `WIP` (adapter built, on the port) | `OPERATIONAL_EVIDENCE_PENDING` | registry activation (`query_enabled`) — **not** the fresh-PG rerun | immutable evidence + plan/apply/poll + SoD/concurrency/audit implemented; FE obeys `eligibility.can_*` separately |
-| 3 | Gate R2 Review (1b) | `WIP` (screen + adapter, on the port) | `FOUNDATION_COMPLETE` | EX-BE-05a/07 capital preview integration | EX-BE-03 freshness/gap model delivered; master plan §§10.3, 12.2 |
+| 3 | Gate R2 Review (1b) | `WIP` (screen + adapter, on the port) | `FOUNDATION_COMPLETE` | EX-BE-07b source-backed capital preview API + EX-BE-05a decision integration | EX-BE-07a exact per-currency preview, formula/freshness and stale blocker delivered |
 | 4 | Paper Workbench (1c) | `BLOCKED` | `FOUNDATION_COMPLETE` | screen API + source integration; M7 evidence | EX-BE-04b adaptive six-rung/exact series + cold contract delivered; production source remains inactive |
 | 5 | Paper Exit Review (4b) | `WIP` (screen + adapter, on the port) | `FOUNDATION_COMPLETE` | EX-BE-05a evidence integration | EX-BE-03 freshness basis delivered; master plan §§10.5, 12.2 |
 | 6 | Admin Action Drawer (1i) | `READY`¹ | `FOUNDATION_COMPLETE` | EX-BE-05b; production TS command capability | EX-BE-02 authenticated boundary and request-key/UNCERTAIN contract delivered; production disabled |
@@ -51,10 +51,10 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 11 | Canary Control Room (1e) | `BLOCKED` | `PRODUCTION_INACTIVE` | EX-BE-05b; owner live-canary gate | EX-BE-04b query + EX-BE-06 SSE foundations delivered; shadow parity and production source still required |
 | 12 | Live Full Operations (1f) | `BLOCKED` | `PRODUCTION_INACTIVE` | phase 11 evidence; EX-BE-08 | rev 4 profile contract delivered; source completeness + UNCERTAIN policy remain; master plan §10.12 |
 | 13 | Paper Workbench VNM (4h) | `BLOCKED` | `INTEGRATION_PENDING` | source/screen API integration; venue/ATO/ATC decision | EX-BE-04b adaptive query + EX-BE-03 PAUSED semantics delivered; timezone decision remains |
-| 14 | Full Blotter (4c) | `BLOCKED` | `INTEGRATION_PENDING` | screen API/source integration; EX-BE-07 funnel | EX-BE-04b exact bidirectional keyset and cold-retention primitives delivered |
-| 15 | Alpha 360° (2a+2b) | `BLOCKED` | `INTEGRATION_PENDING` | screen API/source integration; EX-BE-07 | EX-BE-04b adaptive charts delivered; batched previews/portfolio context remain |
-| 16 | Portfolio 360° (1h→3a) | `BLOCKED` | `INTEGRATION_PENDING` | screen API/source integration; EX-BE-07 | EX-BE-04b query foundation delivered; 150×150 correlation cap remains |
-| 17 | Account/Broker 360° (1g) | `BLOCKED` | `INTEGRATION_PENDING` | screen API/source integration; EX-BE-07 | EX-BE-04b exact aggregate primitive delivered; full-binding model remains |
+| 14 | Full Blotter (4c) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-07b screen API/source repository | EX-BE-04b keyset/cold primitives + EX-BE-07a explicit four-stage funnel delivered |
+| 15 | Alpha 360° (2a+2b) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-07b screen API/source repository | EX-BE-07a 64-item batch, per-item errors and required/echoed portfolio context delivered |
+| 16 | Portfolio 360° (1h→3a) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-07b screen API/source repository | EX-BE-07a packed 150×150/ranked fallback, currency ledger and exact decimal delivered |
+| 17 | Account/Broker 360° (1g) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-07b screen API/source repository | EX-BE-07a full-population binding exposure, count, timestamps and partiality delivered |
 | 18 | Hardening | `BLOCKED` | `OPERATIONAL_EVIDENCE_PENDING` | EX-BE-08; implemented target subset | master plan §§13–14 |
 
 ¹ Phase 6's drawer shell, state machine and blocking rules are already built and
@@ -246,7 +246,19 @@ never reach the browser. Both feature flags and registry `sse_enabled` remain
 false. Claude's next task is the M3 EventSource adapter and fixtures listed in
 [`EX_BE_06_MULTIPLEXED_SSE_RESUME_BACKPRESSURE.md`](../../backend/EX_BE_06_MULTIPLEXED_SSE_RESUME_BACKPRESSURE.md)
 §6, while preserving fixture delivery. Codex proceeds with `EX-BE-07a` pure
-analytics contracts in parallel.
+analytics contracts in parallel; the resulting state is recorded immediately
+below.
+
+`EX-BE-07a` is `FOUNDATION_COMPLETE`; source repositories and narrow screen APIs
+remain pending. Rust now publishes pure deterministic contracts for R2 capital
+preview, Blotter funnel, Alpha 360 batch preview, Portfolio 360 correlation and
+capital ledger, and Account/Broker 360 binding exposure. All decimal values stay
+strings, currencies are never implicitly combined, missing source stages remain
+missing/partial, and every result carries `DERIVED`, formula version, freshness
+floor and population completeness. Evidence is 21 focused analytics tests and a
+72-test locked Rust/PostgreSQL workspace gate. Claude should execute §6 of
+[`EX_BE_07A_ANALYTICS_CONTRACTS_AND_PURE_ENGINE.md`](../../backend/EX_BE_07A_ANALYTICS_CONTRACTS_AND_PURE_ENGINE.md)
+against fixtures only; registry delivery remains `fixture`.
 
 ### 6.2 BR-EX decisions
 
@@ -289,8 +301,12 @@ target- and command-aware rather than a blanket lock. The immediate backend runw
    realtime foundations; source/activation evidence is still pending;
 5. Claude: implement M3 EventSource integration/fixtures from the EX-BE-06
    handoff, while keeping registry delivery `fixture`;
-6. Codex: `EX-BE-07a` pure analytics contracts/engines for phases 3 and 14–17;
-7. `EX-BE-05b` only after source command/auth capability is proven.
+6. Codex: `EX-BE-07a` pure analytics contracts/engines for phases 3 and 14–17 —
+   delivered; source-backed APIs remain EX-BE-07b;
+7. Claude: implement the EX-BE-07a field map and failure fixtures while keeping
+   delivery `fixture` and all decimal values as strings;
+8. Codex: EX-BE-07b repository/narrow screen API integration when source reads
+   exist; `EX-BE-05b` only after source command/auth capability is proven.
 
 This closes the architectural disagreement: Approval Inbox and Gate R1 do not wait
 for AWS networking, a Rust projection or a Trading System change.
