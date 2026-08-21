@@ -1381,6 +1381,7 @@ dependencies = [
  "execution-contracts",
  "home",
  "projection-core",
+ "query-api",
  "serde_json",
  "sha2",
  "sqlx",
@@ -1407,6 +1408,22 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "query-api"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "chrono",
+ "execution-contracts",
+ "hex",
+ "hmac",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
+ "uuid",
 ]
 
 [[package]]

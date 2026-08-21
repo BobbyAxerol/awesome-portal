@@ -41,20 +41,20 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 1 | Approval Inbox (4a) | `WIP` (screen + adapter complete; awaiting data) | `OPERATIONAL_EVIDENCE_PENDING` | registry activation (`query_enabled`) — **not** the fresh-PG rerun | EX-BE-05a endpoint over EX-BE-04a; FE adapter reconciled against the §5 field map; FE runs on `createFixtureApi` |
 | 2 | Gate R1 Review (1a) | `WIP` (adapter built, on the port) | `OPERATIONAL_EVIDENCE_PENDING` | registry activation (`query_enabled`) — **not** the fresh-PG rerun | immutable evidence + plan/apply/poll + SoD/concurrency/audit implemented; FE obeys `eligibility.can_*` separately |
 | 3 | Gate R2 Review (1b) | `WIP` (screen + adapter, on the port) | `FOUNDATION_COMPLETE` | EX-BE-05a/07 capital preview integration | EX-BE-03 freshness/gap model delivered; master plan §§10.3, 12.2 |
-| 4 | Paper Workbench (1c) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-04b; M7 evidence | EX-BE-03 projection/replay delivered; adaptive six-rung server charts remain; master plan §§10.4, 15.1 |
+| 4 | Paper Workbench (1c) | `BLOCKED` | `FOUNDATION_COMPLETE` | screen API + source integration; M7 evidence | EX-BE-04b adaptive six-rung/exact series + cold contract delivered; production source remains inactive |
 | 5 | Paper Exit Review (4b) | `WIP` (screen + adapter, on the port) | `FOUNDATION_COMPLETE` | EX-BE-05a evidence integration | EX-BE-03 freshness basis delivered; master plan §§10.5, 12.2 |
 | 6 | Admin Action Drawer (1i) | `READY`¹ | `FOUNDATION_COMPLETE` | EX-BE-05b; production TS command capability | EX-BE-02 authenticated boundary and request-key/UNCERTAIN contract delivered; production disabled |
 | 7 | Operations Queue (4e) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-05b operation integration | EX-BE-04a bidirectional keyset delivered; ack≠resolve remains |
 | 8 | Incident Detail (4d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a/05b/06 integration | EX-BE-03 source-completeness model delivered; source integration remains; master plan §§10.8, 12.2 |
-| 9 | Command Center (5a) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-04b/06 | EX-BE-03 epoch overlap+jitter model delivered; SSE transport remains; master plan §§10.9, 15.1 |
+| 9 | Command Center (5a) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-06 + source/screen API integration | EX-BE-04b query foundation delivered; multiplexed SSE remains |
 | 10 | Sandbox Certification (1d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a/05b; TS sandbox capability | EX-BE-03 stale/gap blocker delivered; production commands inactive; master plan §10.10 |
-| 11 | Canary Control Room (1e) | `BLOCKED` | `PRODUCTION_INACTIVE` | EX-BE-04b/05b/06; owner live-canary gate | EX-BE-03 parity/epoch foundation and rev 4 profile contract delivered; shadow parity still required; master plan §10.11 |
+| 11 | Canary Control Room (1e) | `BLOCKED` | `PRODUCTION_INACTIVE` | EX-BE-05b/06; owner live-canary gate | EX-BE-04b query/cold foundation delivered; shadow parity and production source still required |
 | 12 | Live Full Operations (1f) | `BLOCKED` | `PRODUCTION_INACTIVE` | phase 11 evidence; EX-BE-08 | rev 4 profile contract delivered; source completeness + UNCERTAIN policy remain; master plan §10.12 |
-| 13 | Paper Workbench VNM (4h) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-04b; venue/ATO/ATC decision | EX-BE-03 server-age/PAUSED semantics delivered; timezone decision remains; master plan §10.13 |
-| 14 | Full Blotter (4c) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-04b/07 | EX-BE-03 replayable projection delivered; keyset/cold-retention/funnel remain; master plan §10.14 |
-| 15 | Alpha 360° (2a+2b) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-04b/07 | EX-BE-03 replayable projection delivered; adaptive charts + batched previews/portfolio context remain; master plan §10.15 |
-| 16 | Portfolio 360° (1h→3a) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-04b/07 | EX-BE-03 replayable projection delivered; 150×150 cap remains; master plan §10.16 |
-| 17 | Account/Broker 360° (1g) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-04b/07 | EX-BE-03 replayable projection delivered; full-binding aggregate remains; master plan §10.17 |
+| 13 | Paper Workbench VNM (4h) | `BLOCKED` | `INTEGRATION_PENDING` | source/screen API integration; venue/ATO/ATC decision | EX-BE-04b adaptive query + EX-BE-03 PAUSED semantics delivered; timezone decision remains |
+| 14 | Full Blotter (4c) | `BLOCKED` | `INTEGRATION_PENDING` | screen API/source integration; EX-BE-07 funnel | EX-BE-04b exact bidirectional keyset and cold-retention primitives delivered |
+| 15 | Alpha 360° (2a+2b) | `BLOCKED` | `INTEGRATION_PENDING` | screen API/source integration; EX-BE-07 | EX-BE-04b adaptive charts delivered; batched previews/portfolio context remain |
+| 16 | Portfolio 360° (1h→3a) | `BLOCKED` | `INTEGRATION_PENDING` | screen API/source integration; EX-BE-07 | EX-BE-04b query foundation delivered; 150×150 correlation cap remains |
+| 17 | Account/Broker 360° (1g) | `BLOCKED` | `INTEGRATION_PENDING` | screen API/source integration; EX-BE-07 | EX-BE-04b exact aggregate primitive delivered; full-binding model remains |
 | 18 | Hardening | `BLOCKED` | `OPERATIONAL_EVIDENCE_PENDING` | EX-BE-08; implemented target subset | master plan §§13–14 |
 
 ¹ Phase 6's drawer shell, state machine and blocking rules are already built and
@@ -219,9 +219,23 @@ and repositories persist the replayable projection in Portal-owned PostgreSQL;
 they do not read Trading System storage or grant command authority. Evidence is
 42 Rust tests, a real PostgreSQL 16 migration/restart/cutover gate, strict
 Clippy/format checks and a 182,000-observation replay corpus. Claude may build
-gap, epoch-cutover, stale/paused and freshness fixtures now; Query API remains
-`EX-BE-04b` and SSE delivery remains `EX-BE-06`. Detailed handoff:
+gap, epoch-cutover, stale/paused and freshness fixtures now; EX-BE-04b below
+now supplies Query API primitives while SSE delivery remains `EX-BE-06`.
+Detailed handoff:
 [`EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md`](../../backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md).
+
+`EX-BE-04b` is `FOUNDATION_COMPLETE`; screen API and production source
+integration remain pending. Rust `query-api` and the projection PostgreSQL
+repository now provide signed scope/epoch/query-bound forward/backward keyset,
+closed filter/sort allowlists, exact total/filtered counts, currency-separated
+full-population aggregates, string-only decimal precision, adaptive
+1m/5m/15m/1h/4h/1d series capped at 5,000 points and typed immutable cold
+retention. Evidence is 47 Rust tests on PostgreSQL 16 including 182,000 rows,
+concurrent insertion + eviction + reverse navigation and 2,881 exact series
+points. Claude may now build opaque previous/next controls, server-interval zoom
+requery and cold-access fixtures; it must not claim a live endpoint. Next Rust
+slice is `EX-BE-06` SSE. Detailed handoff:
+[`EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md`](../../backend/EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md).
 
 ### 6.2 BR-EX decisions
 
@@ -259,9 +273,9 @@ target- and command-aware rather than a blanket lock. The immediate backend runw
    frontend adapter (2026-08-21). Recorded as codex's statement, not as a gate
    this side ran;
 3. Claude: wire the Phase 1/2 adapters while keeping `fixture`/`unavailable` visible;
-4. `EX-BE-01→02→03` delivered the Rust AWS contracts, authenticated bounded
-   transport and replayable projection foundation; next is `EX-BE-04b→06` for
-   projection queries and realtime delivery;
+4. `EX-BE-01→02→03→04b` delivered the Rust AWS contracts, authenticated bounded
+   transport, replayable projection and scalable query foundation; next is
+   `EX-BE-06` for realtime delivery;
 5. `EX-BE-05b` only after source command/auth capability is proven.
 
 This closes the architectural disagreement: Approval Inbox and Gate R1 do not wait

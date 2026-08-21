@@ -202,9 +202,18 @@ authority.
   rustfmt và corpus 182.000 observations xanh. Runtime feature flag giữ false;
   không có direct Trading System DB/Redis/CLI. Chi tiết:
   [`EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md`](./EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md).
-- Backend tiếp theo là `EX-BE-04b`: Rust projection query primitives, exact
-  full-set count/aggregate, bidirectional keyset, exact decimals, adaptive
-  series và cold-retention contract.
+- `EX-BE-04b` **foundation complete / screen API and source integration
+  pending:** crate Rust `query-api` khóa signed bidirectional keyset gắn
+  scope/epoch/query, filter/sort allowlist, count + aggregate exact trên toàn
+  tập lọc và decimal không qua float. PostgreSQL migration/repository thêm sáu
+  rung series 1m→1d tối đa 5.000 điểm cùng retention typed
+  `HOT/PARTIAL_HOT/COLD_REQUESTABLE/PURGED/UNKNOWN`. Gate PostgreSQL 16 thật có
+  47 Rust tests, 182.000 projection rows, concurrent insert + eviction +
+  backward navigation và 2.881 điểm exact-decimal. Chi tiết:
+  [`EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md`](./EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md).
+- Backend tiếp theo là `EX-BE-06`: multiplexed SSE delivery, resume và
+  backpressure trên epoch/sequence đã khóa. `EX-BE-05b` vẫn chờ source command
+  capability; `EX-BE-07` giữ funnel/correlation/full-binding analytics.
 
 ## BAR-21 — Strategy Import & Quarantine Ingest foundation
 

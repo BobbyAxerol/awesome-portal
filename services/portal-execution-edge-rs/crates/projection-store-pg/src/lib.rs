@@ -13,6 +13,10 @@ use sqlx::{postgres::PgPoolOptions, PgPool, Postgres, Row, Transaction};
 use thiserror::Error;
 use uuid::Uuid;
 
+mod query;
+
+pub use query::{RetentionPolicySnapshot, SeriesPointWrite};
+
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!();
 
 #[derive(Debug, Clone)]
@@ -924,6 +928,8 @@ pub enum StoreError {
     Projection(#[from] ProjectionError),
     #[error(transparent)]
     Contract(#[from] execution_contracts::ContractError),
+    #[error(transparent)]
+    Query(#[from] query_api::QueryError),
     #[error("projection epoch metadata is invalid")]
     InvalidEpochMetadata,
     #[error("projection stream key is invalid")]
@@ -958,7 +964,21 @@ pub enum StoreError {
 
 #[cfg(test)]
 mod tests {
+    use std::{collections::BTreeMap, sync::OnceLock};
+
+    use execution_contracts::DecimalString;
+    use query_api::{
+        CursorCodec, EntityQueryRequest, FilterField, FilterOperator, QueryFilter,
+        RetentionAvailability, RetentionPolicy, SeriesIntent,
+    };
+
     use super::*;
+
+    static POSTGRES_TEST_LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
+
+    fn postgres_test_lock() -> &'static tokio::sync::Mutex<()> {
+        POSTGRES_TEST_LOCK.get_or_init(|| tokio::sync::Mutex::new(()))
+    }
 
     fn at(second: i64) -> DateTime<Utc> {
         DateTime::from_timestamp(1_777_000_000 + second, 0).unwrap()
@@ -1003,7 +1023,8 @@ mod tests {
     async fn reset(store: &PgProjectionStore, database_url: &str) {
         assert!(database_url.contains("/portal_projection_test"));
         sqlx::query(
-            "TRUNCATE portal_projection.freshness_policy_snapshots,
+            "TRUNCATE portal_projection.retention_policy_snapshots,
+                      portal_projection.freshness_policy_snapshots,
                       portal_projection.epochs CASCADE",
         )
         .execute(&store.pool)
@@ -1017,6 +1038,7 @@ mod tests {
         let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
             return;
         };
+        let _guard = postgres_test_lock().lock().await;
         let store = PgProjectionStore::connect(&database_url).await.unwrap();
         store.migrate().await.unwrap();
         reset(&store, &database_url).await;
@@ -1189,5 +1211,294 @@ mod tests {
                 .await,
             Err(StoreError::FreshnessPolicyVersionCollision)
         ));
+    }
+
+    #[tokio::test]
+    #[allow(clippy::too_many_lines)] // one scale corpus proves the cross-cutting query contract
+    async fn postgres_query_is_stable_exact_adaptive_and_cold_aware_at_scale() {
+        let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
+            return;
+        };
+        let _guard = postgres_test_lock().lock().await;
+        let store = PgProjectionStore::connect(&database_url).await.unwrap();
+        store.migrate().await.unwrap();
+        reset(&store, &database_url).await;
+        let scope = scope();
+        let epoch_id = Uuid::now_v7();
+        sqlx::query(
+            "INSERT INTO portal_projection.epochs
+             (epoch_id,workspace_id,environment,status,adapter_version,
+              source_gateway_digest,capability_snapshot_id,created_at,activated_at,
+              next_projection_sequence)
+             VALUES ($1,$2,$3,'ACTIVE','ts-adapter-v1','sha256:scale','cap_scale',$4,$4,182000)",
+        )
+        .bind(epoch_id)
+        .bind(scope.workspace_id.as_str())
+        .bind(&scope.environment)
+        .bind(at(0))
+        .execute(&store.pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO portal_projection.entities
+             (epoch_id,entity_kind,entity_id,projection_sequence,source_authority,
+              as_of,source_read_at,projected_at,source_completeness,adapter_version,
+              capability_snapshot_id,payload_digest,payload)
+             SELECT $1,'ORDER','order_' || lpad(g::text,6,'0'),g,'EXECUTION',
+                    $2 + g * interval '1 second',$2 + g * interval '1 second',
+                    $2 + g * interval '1 second','UNKNOWN','ts-adapter-v1',
+                    'cap_scale','sha256:scale',
+                    jsonb_build_object(
+                      'status', CASE WHEN g % 2 = 0 THEN 'OPEN' ELSE 'FILLED' END,
+                      'currency', CASE WHEN g % 3 = 0 THEN 'USD' ELSE 'VND' END,
+                      'instrument_id', 'BTC-PERP',
+                      'quantity', '0.100000000000000001',
+                      'notional', g::text || '.000000000000000001')
+             FROM generate_series(1,182000) AS g",
+        )
+        .bind(epoch_id)
+        .bind(at(0))
+        .execute(&store.pool)
+        .await
+        .unwrap();
+
+        let codec = CursorCodec::new(
+            "cursor-v1",
+            BTreeMap::from([("cursor-v1".to_owned(), vec![7_u8; 32])]),
+            Duration::from_secs(900),
+        )
+        .unwrap();
+        let now = at(400_000);
+        let first = store
+            .query_entities(
+                &scope,
+                ProjectionEntityKind::Order,
+                &EntityQueryRequest::default(),
+                &codec,
+                now,
+            )
+            .await
+            .unwrap();
+        assert_eq!(first.total_count, 182_000);
+        assert_eq!(first.filtered_count, 182_000);
+        assert_eq!(first.rows.len(), 100);
+        assert!(first.has_more);
+        assert!(!first.has_previous);
+        assert!(first.next.is_some());
+
+        sqlx::query(
+            "INSERT INTO portal_projection.entities
+             (epoch_id,entity_kind,entity_id,projection_sequence,source_authority,
+              as_of,source_read_at,projected_at,source_completeness,adapter_version,
+              capability_snapshot_id,payload_digest,payload)
+             VALUES ($1,'ORDER','order_newer',182001,'EXECUTION',$2,$2,$2,'UNKNOWN',
+                     'ts-adapter-v1','cap_scale','sha256:newer',
+                     '{\"status\":\"OPEN\",\"currency\":\"USD\",\"quantity\":\"0.1\",\"notional\":\"1.1\"}')",
+        )
+        .bind(epoch_id)
+        .bind(at(300_000))
+        .execute(&store.pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "DELETE FROM portal_projection.entities
+             WHERE epoch_id=$1 AND entity_kind='ORDER' AND entity_id=$2",
+        )
+        .bind(epoch_id)
+        .bind(&first.rows[0].entity_id)
+        .execute(&store.pool)
+        .await
+        .unwrap();
+        let second_request = EntityQueryRequest {
+            after: first.next.clone(),
+            ..EntityQueryRequest::default()
+        };
+        let second = store
+            .query_entities(
+                &scope,
+                ProjectionEntityKind::Order,
+                &second_request,
+                &codec,
+                now,
+            )
+            .await
+            .unwrap();
+        assert_eq!(second.total_count, 182_000);
+        assert!(second.has_previous);
+        assert!(second.previous.is_some());
+        assert!(first.rows.iter().all(|left| {
+            second
+                .rows
+                .iter()
+                .all(|right| left.entity_id != right.entity_id)
+        }));
+        assert!(second.rows.iter().all(|row| row.entity_id != "order_newer"));
+
+        let backward = store
+            .query_entities(
+                &scope,
+                ProjectionEntityKind::Order,
+                &EntityQueryRequest {
+                    before: second.previous.clone(),
+                    ..EntityQueryRequest::default()
+                },
+                &codec,
+                now,
+            )
+            .await
+            .unwrap();
+        assert_eq!(backward.rows.last(), first.rows.last());
+        assert!(backward.has_more);
+
+        let filtered = store
+            .query_entities(
+                &scope,
+                ProjectionEntityKind::Order,
+                &EntityQueryRequest {
+                    filters: vec![QueryFilter {
+                        field: FilterField::Status,
+                        operator: FilterOperator::Eq,
+                        values: vec!["OPEN".to_owned()],
+                    }],
+                    ..EntityQueryRequest::default()
+                },
+                &codec,
+                now,
+            )
+            .await
+            .unwrap();
+        assert_eq!(filtered.total_count, 182_000);
+        assert_eq!(filtered.filtered_count, 91_000);
+        assert_eq!(
+            filtered
+                .aggregates_by_currency
+                .iter()
+                .map(|aggregate| aggregate.row_count)
+                .sum::<u64>(),
+            filtered.filtered_count
+        );
+        assert!(filtered
+            .aggregates_by_currency
+            .iter()
+            .all(|aggregate| aggregate.quantity_count == aggregate.row_count
+                && aggregate.notional_count == aggregate.row_count
+                && aggregate.invalid_numeric_count == 0));
+        assert!(filtered
+            .aggregates_by_currency
+            .iter()
+            .any(|aggregate| aggregate.currency.as_deref() == Some("USD")));
+        assert!(filtered
+            .aggregates_by_currency
+            .iter()
+            .any(|aggregate| aggregate.currency.as_deref() == Some("VND")));
+
+        store
+            .record_retention_policy(
+                &scope,
+                &RetentionPolicySnapshot {
+                    retention_policy_id: Uuid::now_v7(),
+                    series_key: "paper-equity".to_owned(),
+                    metric: "equity".to_owned(),
+                    policy: RetentionPolicy {
+                        policy_version: "paper-equity-v1".to_owned(),
+                        hot_from: at(0),
+                        cold_requestable_from: Some(at(-1_000_000)),
+                        purged_before: Some(at(-2_000_000)),
+                        access_request_path: Some("/admin/data-access-requests".to_owned()),
+                    },
+                    created_at: at(-1),
+                },
+            )
+            .await
+            .unwrap();
+        assert!(sqlx::query(
+            "UPDATE portal_projection.retention_policy_snapshots
+             SET hot_from=$1 WHERE workspace_id=$2",
+        )
+        .bind(at(1))
+        .bind(scope.workspace_id.as_str())
+        .execute(&store.pool)
+        .await
+        .is_err());
+        sqlx::query(
+            "INSERT INTO portal_projection.series_points
+             (epoch_id,series_key,metric,interval_seconds,bucket_at,currency,value,
+              minimum,maximum,sample_count,source_authority,as_of,projection_sequence,
+              adapter_version,capability_snapshot_id)
+             SELECT $1,'paper-equity','equity',300,$2 + g * interval '300 seconds','USD',
+                    (g::text || '.123456789012345678')::numeric,
+                    (g::text || '.123456789012345678')::numeric,
+                    (g::text || '.123456789012345678')::numeric,
+                    5,'EXECUTION',$2 + g * interval '300 seconds',g+1,
+                    'ts-adapter-v1','cap_scale'
+             FROM generate_series(0,2880) AS g",
+        )
+        .bind(epoch_id)
+        .bind(at(0))
+        .execute(&store.pool)
+        .await
+        .unwrap();
+        store
+            .write_series_point(
+                &scope,
+                epoch_id,
+                &SeriesPointWrite {
+                    series_key: "paper-equity".to_owned(),
+                    metric: "equity".to_owned(),
+                    interval_seconds: 300,
+                    bucket_at: at(864_300),
+                    currency: Some("USD".to_owned()),
+                    value: DecimalString::parse("2881.123456789012345678").unwrap(),
+                    minimum: DecimalString::parse("2881.123456789012345678").unwrap(),
+                    maximum: DecimalString::parse("2881.123456789012345678").unwrap(),
+                    sample_count: 5,
+                    source_authority: SourceAuthority::Execution,
+                    as_of: at(864_300),
+                    projection_sequence: 182_001,
+                    adapter_version: "ts-adapter-v1".to_owned(),
+                    capability_snapshot_id: "cap_scale".to_owned(),
+                },
+            )
+            .await
+            .unwrap();
+        let series = store
+            .query_series(
+                &scope,
+                "paper-equity",
+                "equity",
+                Some("USD"),
+                at(0),
+                at(864_000),
+                SeriesIntent::Overview,
+            )
+            .await
+            .unwrap();
+        assert_eq!(series.interval_seconds, 300);
+        assert_eq!(series.returned_rows, 2_881);
+        assert_eq!(series.source_rows, 14_405);
+        assert_eq!(series.downsample_method, "canonical_preaggregated");
+        assert_eq!(series.points[1].value.to_string(), "1.123456789012345678");
+        assert_eq!(series.retention.availability, RetentionAvailability::Hot);
+        let cold = store
+            .query_series(
+                &scope,
+                "paper-equity",
+                "equity",
+                Some("USD"),
+                at(-800_000),
+                at(-700_000),
+                SeriesIntent::Inspect,
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            cold.retention.availability,
+            RetentionAvailability::ColdRequestable
+        );
+        assert!(cold.points.is_empty());
+        assert_eq!(
+            cold.retention.access_request_path.as_deref(),
+            Some("/admin/data-access-requests")
+        );
     }
 }

@@ -830,6 +830,20 @@ deep-dive → ADR → slice → evidence discipline documented above.
   real source/cross-cell evidence. Deep dive and ADR:
   [`EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md`](./backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md),
   [`ADR-007`](./backend/adr/ADR-007-PORTAL-PROJECTION-EPOCH-CURSOR-AND-FRESHNESS.md).
+- **EX-BE-04b Rust projection query foundation (2026-08-21):** a pure
+  `query-api` crate now owns HMAC-rotatable bidirectional cursors bound to
+  workspace/environment/active epoch/resource/query/direction, closed
+  filter/sort allowlists, exact full-set count and currency-bucket aggregates,
+  string-only decimals, and the inclusive six-rung/5,000-point adaptive series
+  contract. The PostgreSQL repository runs count/aggregate/page in one
+  read-only repeatable-read snapshot and adds exact pre-aggregated series plus
+  immutable typed retention snapshots. Evidence is 47 Rust tests, strict
+  Clippy/rustfmt, PostgreSQL 16 migration and a 182,000-row insert/eviction/
+  reverse-navigation corpus plus a 2,881-point 18-decimal series. Status is
+  `FOUNDATION_COMPLETE / SCREEN_API_AND_SOURCE_INTEGRATION_PENDING`; generic
+  primitives are intentionally not exposed as a broad public endpoint and no
+  Trading System storage/command authority was touched. Deep dive:
+  [`EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md`](./backend/EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md).
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**

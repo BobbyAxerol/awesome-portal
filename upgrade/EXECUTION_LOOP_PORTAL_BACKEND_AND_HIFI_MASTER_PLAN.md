@@ -796,15 +796,16 @@ so one slice may unlock several screens without inventing a second product roadm
 | EX-BE-01 | P0 / contract complete | Rust workspace, canonical contracts, `ts-contract-v1`, vocabulary reconciliation and golden corpus | all real-source screen contracts |
 | EX-BE-02 | P0 / foundation complete; cross-cell evidence pending | mTLS/delegated-auth boundary, capability negotiation, bounded read-only transport and operator probes; production flags remain false until real SGP↔AWS evidence | safe AWS integration |
 | EX-BE-03 | P0 / foundation complete; source ingestion integration pending | projection schema, reducer, cursor/epoch/replay/snapshot and freshness evaluator; production ingestion flag remains false | phases 4, 9–17 |
-| EX-BE-04b | P1 | Rust projection query primitives: bidirectional keyset, filter/sort/count, adaptive series ladder and exact decimals | phases 4, 9, 11–17 |
+| EX-BE-04b | P1 / foundation complete; screen API/source integration pending | Rust projection query primitives: bidirectional keyset, filter/sort/count, adaptive series ladder, exact decimals and typed cold retention | phases 4, 9, 11–17 |
 | EX-BE-05b | P1 | TypeScript operations/plan/apply/verify plus authenticated Rust relay | phases 6–12 mutation/operation paths |
 | EX-BE-06 | P1 | multiplexed SSE, gap recovery, backpressure and same-origin proxy | phase 9 and live screens |
 | EX-BE-07 | P2 | correlation, exposure, funnel, capital-ledger and batched preview analytics | phases 3, 14–17 |
 | EX-BE-08 | P2 | security/load/soak/DR/rollback evidence and production profiles | phase 18 and production activation |
 
-EX-BE-04a→05a starts immediately and has no AWS, Rust, Trading System or projection dependency.
-It delivers Approval Inbox and Gate R1 from real control-plane data while linked execution panels
-honestly render unavailable. In parallel, the cross-cell runway is EX-BE-01→02→03→04b→06;
+EX-BE-04a→05a has delivered the Portal-owned control-plane foundation without an AWS, Rust,
+Trading System or projection dependency. It supplies Approval Inbox and Gate R1 from real
+control-plane data while linked execution panels honestly render unavailable. In parallel, the
+cross-cell runway has delivered EX-BE-01→02→03→04b and continues with EX-BE-06;
 EX-BE-05b follows canonical command/auth contracts and a proven Trading System capability.
 EX-BE-07 follows the appropriate 04a/04b query primitive. This preserves the frontend phase order
 while removing an unrelated infrastructure approval from the first useful backend screens.

@@ -1,5 +1,5 @@
 [package]
-name = "projection-store-pg"
+name = "query-api"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -7,19 +7,16 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+base64.workspace = true
 chrono.workspace = true
 execution-contracts = { path = "../execution-contracts" }
-home.workspace = true
-projection-core = { path = "../projection-core" }
-query-api = { path = "../query-api" }
+hex.workspace = true
+hmac.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
-sqlx.workspace = true
 thiserror.workspace = true
 uuid.workspace = true
-
-[dev-dependencies]
-tokio.workspace = true
 
 [lints]
 workspace = true
