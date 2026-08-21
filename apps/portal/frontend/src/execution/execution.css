@@ -1393,7 +1393,7 @@
  * the tint from the background — the tint alone would put an SLA breach behind
  * one hue. */
 .exec-table tbody tr[data-emphasis="overdue"] td {
-  background: var(--bad-bg);
+  background: var(--bad-bg-soft);
 }
 
 .exec-table tbody tr[data-emphasis="overdue"] td:first-child {
@@ -1486,4 +1486,125 @@
 .exec-exit-lineage a {
   color: var(--accent);
   text-decoration: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * ConditionList (DS §4) — typed conditions, transcribed from the Gate R2 hi-fi
+ * ------------------------------------------------------------------------ */
+
+.exec-condition-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.exec-condition {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  padding: var(--space-2) 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.exec-condition-kind {
+  color: var(--ink);
+  letter-spacing: 0.06em;
+}
+
+.exec-condition-text {
+  color: var(--ink-soft);
+}
+
+.exec-condition-label {
+  color: var(--ink-faint);
+}
+
+.exec-condition-seg strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* The field most likely to be left empty, and the one that makes a condition
+ * actionable. Stated, not omitted. */
+.exec-condition-missing {
+  color: var(--warn);
+}
+
+.exec-condition-flag {
+  margin-left: auto;
+  color: var(--ink-faint);
+  letter-spacing: 0.06em;
+}
+
+.exec-condition[data-blocking="true"] {
+  border-left: 3px solid var(--bad);
+}
+
+.exec-condition[data-blocking="true"] .exec-condition-flag {
+  color: var(--bad);
+}
+
+.exec-condition-empty {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+/* ---------------------------------------------------------------------------
+ * Two-up grids and the inverted card — governance layout (hi-fi 1a/1b/4b)
+ * ------------------------------------------------------------------------ */
+
+/* The hi-fi uses three proportions across the governance screens. Below 900px
+ * they all collapse to one column, per DS §8's breakpoint ladder. */
+.exec-grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.exec-grid-2[data-ratio="1.15"] { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+.exec-grid-2[data-ratio="1.35"] { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
+.exec-grid-2[data-ratio="1.5"]  { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+
+/* Evidence cards size themselves rather than being placed, so the 2x2 becomes
+ * a 1x4 without a second rule (hi-fi 4b). */
+.exec-grid-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: var(--space-3);
+}
+
+@media (max-width: 900px) {
+  .exec-grid-2,
+  .exec-grid-2[data-ratio="1.15"],
+  .exec-grid-2[data-ratio="1.35"],
+  .exec-grid-2[data-ratio="1.5"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/**
+ * The inverted card — DS §1 calls it "operations vocabulary inside a light
+ * page", and the design system calls it the signature element.
+ *
+ * It needs no colours of its own. An inverted card IS the dark surface applied
+ * to a subtree, so it carries `data-theme="operations-carbon"` and the existing
+ * mechanism does the rest: every token inside it resolves to the dark value,
+ * which means the AuthorityBadge, the mono numerics and the hairlines all read
+ * exactly as they would on a Deployments screen. That is the point — the
+ * capital preview speaks execution vocabulary, and looking like execution is
+ * how a reader knows to read it that way.
+ *
+ * The only rule here is the seam: a dark block on a light page needs its own
+ * outer edge, because the page's hairline would vanish against it.
+ */
+.exec-inverted {
+  border: 1px solid var(--paper);
+  background: var(--paper);
+  color: var(--ink);
 }

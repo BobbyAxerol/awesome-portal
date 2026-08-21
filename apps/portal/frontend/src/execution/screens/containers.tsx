@@ -54,7 +54,12 @@ export function ApprovalInboxContainer({
   const [filter, setFilter] = useState<InboxFilter>("INBOX");
   const [cursor, setCursor] = useState<{ after?: string; before?: string }>({});
   const [state, setState] = useState<
-    LoadState<{ page: KeysetPage<ApprovalRow>; counts: InboxCounts | null; inertCount?: number | null }>
+    LoadState<{
+      page: KeysetPage<ApprovalRow>;
+      counts: InboxCounts | null;
+      inertCount?: number | null;
+      decided?: KeysetPage<ApprovalRow> | null;
+    }>
   >(loading);
 
   useEffect(() => {
@@ -93,6 +98,7 @@ export function ApprovalInboxContainer({
       page={state.value?.page ?? EMPTY_PAGE}
       counts={state.value?.counts ?? null}
       inertCount={state.value?.inertCount ?? null}
+      decided={state.value?.decided ?? null}
       filter={filter}
       onFilterChange={changeFilter}
       status={state.status}

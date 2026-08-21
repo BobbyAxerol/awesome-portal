@@ -23,7 +23,9 @@ import type { ReactNode } from "react";
 
 import type { ApprovalId, Envelope, PanelStatus, Sla } from "../contracts";
 import { AuthorityBadge, StatusChip } from "../components/badges";
+import { ConditionList, type TypedCondition } from "../components/conditions";
 import { SlaCell } from "../components/evidence";
+import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 
 /** State of the R1 this R2 rests on. Only `APPROVED` lets R2 proceed. */
@@ -117,6 +119,7 @@ export function GateR2Review({
   capital,
   capitalEnvelope,
   observationPolicy,
+  conditions,
   grantName,
   status = "ok",
   reason,
@@ -150,6 +153,12 @@ export function GateR2Review({
    */
   capitalEnvelope?: Envelope;
   observationPolicy?: ReactNode;
+  /**
+   * Typed conditions attached to this decision (DS §4). §3's exit criterion is
+   * "R2 approval creates typed conditions", so the list is part of the screen
+   * rather than something the drawer invents afterwards.
+   */
+  conditions?: readonly TypedCondition[];
   /** `paper_activation_authorization` — what approving actually grants. */
   grantName?: string;
   status?: PanelStatus;
@@ -247,6 +256,7 @@ export function GateR2Review({
         </div>
       ) : null}
 
+      <div className="exec-grid-2">
       {readiness.map((group) => (
         <div className="exec-gate-panel" key={group.title}>
           <div className="exec-tile-title">{group.title}</div>
@@ -268,9 +278,13 @@ export function GateR2Review({
           </dl>
         </div>
       ))}
+      </div>
 
+      {/* Grid B. The hi-fi gives the dark preview the wider half (1.35fr): it
+          holds a four-row numeric table and the policy panel holds prose. */}
+      <div className="exec-grid-2" data-ratio="1.35">
       {capital.length > 0 ? (
-        <div className="exec-gate-panel">
+        <ExecutionSurface kind="deployments" className="exec-inverted exec-gate-panel">
           <div className="exec-tile-title">Capital change preview — execution vocabulary</div>
           {capitalEnvelope ? (
             <div className="exec-gate-meta">
@@ -315,10 +329,20 @@ export function GateR2Review({
               </tbody>
             </table>
           ) : null}
-        </div>
+        </ExecutionSurface>
       ) : null}
 
       {observationPolicy ? <div className="exec-gate-panel">{observationPolicy}</div> : null}
+      </div>
+
+      {/* Full width, below both grids — the hi-fi's Decision card. */}
+      <div className="exec-gate-panel">
+        <div className="exec-tile-title">Decision</div>
+        <ConditionList
+          conditions={conditions ?? []}
+          emptyNote="No conditions attached. Approving with a condition adds one here."
+        />
+      </div>
 
       {grantName ? (
         <div className="exec-gate-grant">

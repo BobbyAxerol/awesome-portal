@@ -20,7 +20,8 @@ import type { ReactNode } from "react";
 
 import type { ApprovalId, EvidenceMark, PanelStatus, Sla } from "../contracts";
 import { StatusChip } from "../components/badges";
-import { SlaCell } from "../components/evidence";
+import { ConditionList, type TypedCondition } from "../components/conditions";
+import { EvidencePanel, SlaCell, type EvidenceRow } from "../components/evidence";
 import { PanelState } from "../components/states";
 
 /** One line of the artifact passport. Immutable, hash-addressed where possible. */
@@ -38,6 +39,9 @@ export interface ChecklistItem {
   outcome: EvidenceMark;
   /** Shown under a `watch` item: what a reviewer could do about it. */
   suggestion?: string | null;
+  /** What produced the finding. DS §9 puts EvidencePanel on this screen, and
+   *  its whole rule is that a verdict without a link is an opinion. */
+  evidence?: { label: string; href?: string };
 }
 
 /**
@@ -79,10 +83,21 @@ const DENY_LOCK_REASON: Record<"EXPIRED" | "NOT_ELIGIBLE", string> = {
   NOT_ELIGIBLE: "Deny blocked — you do not hold a role that can decide this gate.",
 };
 
-function markChip(outcome: EvidenceMark): ReactNode {
-  const tone = outcome === "pass" ? "good" : outcome === "fail" ? "bad" : outcome === "watch" ? "warn" : "mute";
-  const label = outcome === "insufficient" ? "INSUFFICIENT" : outcome.toUpperCase();
-  return <StatusChip label={label} tone={tone} />;
+/**
+ * The checklist is an `EvidencePanel`, not a bespoke list.
+ *
+ * DS §9 assigns EvidencePanel to R1, R2, exit reviews and Sandbox Cert. An
+ * earlier build had the component and then wrote a private list here anyway,
+ * which is how one rule — a verdict without a link is an opinion — ends up
+ * enforced on one screen and forgotten on the next three.
+ */
+function asEvidenceRows(checklist: readonly ChecklistItem[]): EvidenceRow[] {
+  return checklist.map((item) => ({
+    label: item.label,
+    mark: item.outcome,
+    detail: item.suggestion ?? undefined,
+    evidence: item.evidence ? { label: item.evidence.label, href: item.evidence.href } : undefined,
+  }));
 }
 
 export function GateR1Review({
@@ -103,6 +118,7 @@ export function GateR1Review({
   partialReason,
   decided,
   eligibility,
+  conditions,
   evidence,
   onApprove,
   onDeny,
@@ -142,6 +158,8 @@ export function GateR1Review({
    * already approved invites a second operation nobody asked for.
    */
   decided?: { outcome: "APPROVED" | "DENIED" | "APPROVED_WITH_CONDITION"; by: string; at: string } | null;
+  /** Typed conditions attached to the decision (DS §4). */
+  conditions?: readonly TypedCondition[];
   /** The equity-across-window-roles panel, or its state when absent. */
   evidence?: ReactNode;
   onApprove?: () => void;
@@ -233,6 +251,7 @@ export function GateR1Review({
         </div>
       ) : null}
 
+      <div className="exec-grid-2" data-ratio="1.15">
       <div className="exec-gate-panel">
         <div className="exec-tile-title">Artifact passport — immutable</div>
         <dl className="exec-gate-passport">
@@ -257,16 +276,7 @@ export function GateR1Review({
 
       <div className="exec-gate-panel">
         <div className="exec-tile-title">Decision checklist — policy {policyVersion}</div>
-        <ul className="exec-gate-checklist">
-          {checklist.map((item) => (
-            <li key={item.label} data-outcome={item.outcome}>
-              {markChip(item.outcome)} <span>{item.label}</span>
-              {item.suggestion ? (
-                <span className="exec-gate-suggestion"> → {item.suggestion}</span>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+        <EvidencePanel rows={asEvidenceRows(checklist)} />
         {/* Counted separately because they mean different things. A warning that
             gets counted as a blocker stops a legitimate approval; a blocker
             counted as a warning waves a real one through. */}
@@ -280,8 +290,17 @@ export function GateR1Review({
           ) : null}
         </div>
       </div>
+      </div>
 
       {evidence ? <div className="exec-gate-panel">{evidence}</div> : null}
+
+      <div className="exec-gate-panel">
+        <div className="exec-tile-title">Conditions</div>
+        <ConditionList
+          conditions={conditions ?? []}
+          emptyNote="No conditions attached. Approving with a condition adds one here."
+        />
+      </div>
 
       {isDecided ? null : (
         <div className="exec-gate-decision">

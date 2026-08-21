@@ -12,7 +12,7 @@
  */
 import { useState } from "react";
 
-import { ExecutionSurface } from "./ExecutionSurface";
+import { ExecutionSurface, type ExecutionSurfaceKind } from "./ExecutionSurface";
 import {
   AuthorityBadge,
   BrokerSyncChip,
@@ -172,12 +172,16 @@ const REV4_SHIPPED_POLICY = screenDeliveryPolicy({
 
 /* Phase 1/2 screen fixtures. Cast from CANONICAL_CAST.md; the numbers are the
  * hi-fi's own, so a reviewer can hold the two side by side. */
+/* The Approval Inbox hi-fi's five pending rows, which are also the canonical
+ * cast's. An earlier fixture invented AP-341 and mis-attributed AP-259, AP-352
+ * and AP-311; CANONICAL_CAST.md wins over a screen, and here the screen was
+ * already right. */
 const INBOX_ROWS: ApprovalRow[] = [
   {
     id: "AP-352",
     gate: "R2",
     subject: "Carry v3.2 → PF-MAIN",
-    target: "paper · BINANCE",
+    target: "sandbox · OKX TESTNET",
     blockerCount: 1,
     blockerSummary: "broker sync stale",
     sla: { ageMinutes: 26 * 60, budgetMinutes: 24 * 60 },
@@ -187,45 +191,57 @@ const INBOX_ROWS: ApprovalRow[] = [
     needsYou: true,
   },
   {
-    id: "AP-341",
-    gate: "R2",
-    subject: "MM v1.1 → OKX sandbox",
-    target: "sandbox · OKX",
+    id: "AP-201",
+    gate: "R1",
+    subject: "RSI v1.7 · RC-41",
+    target: "research",
     blockerCount: 0,
     blockerSummary: "none",
-    sla: { ageMinutes: 6 * 60, budgetMinutes: 24 * 60 },
+    sla: { ageMinutes: 2 * 60, budgetMinutes: 24 * 60 },
     quorumMet: 1,
     quorumRequired: 2,
-    inert: "QUORUM",
-    needsYou: false,
-  },
-  {
-    id: "AP-259",
-    gate: "R1",
-    subject: "Grid v2.2 · RC-49",
-    target: "research · R1",
-    blockerCount: 0,
-    blockerSummary: "none",
-    sla: { ageMinutes: 4 * 60, budgetMinutes: 48 * 60 },
-    quorumMet: 0,
-    quorumRequired: 2,
-    // You wrote it. It stays in the list, dimmed, because a queue that hides
-    // its un-actionable rows lies about its own size.
-    inert: "SELF",
-    needsYou: false,
+    inert: null,
+    needsYou: true,
   },
   {
     id: "EX-771",
     gate: "PAPER_EXIT",
     subject: "Grid v2.1 · dep_94",
-    target: "paper · BINANCE",
+    target: "→ sandbox · DERIBIT",
     blockerCount: 0,
     blockerSummary: "observation gate met",
-    sla: { ageMinutes: 9 * 60, budgetMinutes: 48 * 60 },
+    sla: { ageMinutes: 4 * 60, budgetMinutes: 48 * 60 },
     quorumMet: 0,
-    quorumRequired: 2,
+    quorumRequired: 1,
     inert: null,
     needsYou: true,
+  },
+  {
+    id: "AP-360",
+    gate: "R1",
+    subject: "MeanRev v0.3 · RC-52",
+    target: "research",
+    blockerCount: 2,
+    blockerSummary: "audit replay failed",
+    sla: { ageMinutes: 6 * 60, budgetMinutes: 24 * 60 },
+    quorumMet: 0,
+    quorumRequired: 2,
+    inert: "BLOCKED",
+    needsYou: false,
+  },
+  {
+    id: "AP-311",
+    gate: "LIVE_GATE",
+    subject: "Grid v2.1 → BINANCE",
+    target: "live · dual approval",
+    blockerCount: 0,
+    blockerSummary: "none",
+    sla: { ageMinutes: 24 * 60, budgetMinutes: 72 * 60 },
+    quorumMet: 1,
+    quorumRequired: 2,
+    // The separation-of-duty row: dimmed, counted, never hidden.
+    inert: "SELF",
+    needsYou: false,
   },
 ];
 
@@ -245,6 +261,36 @@ const R1_PASSPORT = [
 const WIRED_API = createFixtureApi();
 const UNWIRED_API = createFixtureApi({ unavailableEndpoints: ["listApprovals"] });
 const UNCERTAIN_API = createFixtureApi({ uncertain: true });
+
+/** Recently decided — where the hi-fi and the cast both put these two. */
+const DECIDED_FIXTURE_ROWS: ApprovalRow[] = [
+  {
+    id: "AP-259",
+    gate: "R2",
+    subject: "MM v1.1 → OKX sandbox",
+    target: "sandbox · OKX",
+    blockerCount: 0,
+    blockerSummary: "approved with conditions",
+    sla: { ageMinutes: 0, budgetMinutes: 24 * 60 },
+    quorumMet: 2,
+    quorumRequired: 2,
+    inert: null,
+    needsYou: false,
+  },
+  {
+    id: "PX-31",
+    gate: "PAPER_EXIT",
+    subject: "MM v1.1",
+    target: "→ sandbox",
+    blockerCount: 0,
+    blockerSummary: "approved",
+    sla: { ageMinutes: 0, budgetMinutes: 48 * 60 },
+    quorumMet: 1,
+    quorumRequired: 1,
+    inert: null,
+    needsYou: false,
+  },
+];
 
 const R2_READINESS = [
   {
@@ -285,39 +331,58 @@ const R2_CAPITAL_ENVELOPE: Envelope = {
   formulaVersion: "capital.v2",
 };
 
+const EXIT_RAIL = [
+  { name: "R1", state: "done" as const, link: { label: "AP-118", href: "/governance/approvals/AP-118/r1" } },
+  { name: "R2", state: "done" as const, link: { label: "AP-152", href: "/governance/approvals/AP-152/r2" } },
+  { name: "PAPER", state: "current" as const, detail: "30/30 gate met — this review" },
+  { name: "SANDBOX", state: "pending" as const },
+  { name: "CANARY", state: "pending" as const },
+  { name: "LIVE", state: "pending" as const },
+];
+
+const EXIT_CONDITIONS = [
+  {
+    text: "capacity cap 50,000.00 until evidence extended",
+    owner: "Lan",
+    expiry: "2026-11-01",
+    blocking: false,
+    carried: true,
+  },
+];
+
 const EXIT_PANELS_FIXTURE = [
   {
     title: "Observation coverage",
     source: "obs_29",
     findings: [
-      { label: "30 / 30 days · 312 / 300 trades · 2 / 2 restart cycles", outcome: "pass" as const },
-      { label: "data freshness violations: 0 · coverage 99.6%", outcome: "pass" as const },
-      { label: "restart recovery evidenced twice (exs_2208, exs_2196)", outcome: "pass" as const },
+      { label: "30 / 30 days · 312 / 300 trades · 2 / 2 restart cycles", outcome: "pass" as const, href: "/deployments/paper/dep_94#sessions", sourceLabel: "sessions" },
+      { label: "data freshness violations: 0 · coverage 99.6%", outcome: "pass" as const, href: "/deployments/paper/dep_94#sessions", sourceLabel: "sessions" },
+      { label: "restart recovery evidenced twice (exs_2208, exs_2196)", outcome: "pass" as const, href: "/deployments/paper/dep_94#sessions", sourceLabel: "sessions" },
     ],
   },
   {
     title: "Drift vs approved evidence",
     source: "run_5498",
     findings: [
-      { label: "hit rate −1.1pt · avg trade net −0.04pt — within band", outcome: "pass" as const },
-      { label: "fee drag +0.006pt · signal→fill +70ms — non-blocking", outcome: "watch" as const },
-      { label: "slippage", outcome: "insufficient" as const, carriesTo: "sandbox certification" },
+      { label: "hit rate −1.1pt · avg trade net −0.04pt — within band", outcome: "pass" as const, href: "/research/quantbt/runs/run_5498", sourceLabel: "run 5498" },
+      { label: "fee drag +0.006pt · signal→fill +70ms — non-blocking", outcome: "watch" as const, href: "/deployments/blotter?deployment=dep_94", sourceLabel: "blotter" },
+      { label: "slippage", outcome: "insufficient" as const, carriesTo: "sandbox certification", href: "/deployments/blotter?deployment=dep_94", sourceLabel: "blotter" },
     ],
   },
   {
     title: "Limits & operational health",
     findings: [
-      { label: "max DD −1.4% / 6% · worst daily loss −0.6% / 3%", outcome: "pass" as const },
-      { label: "rejects 0.2% / 0.5% · dead letters 0", outcome: "pass" as const },
-      { label: "accounting clean · no stale reservations · recon N/A (paper)", outcome: "pass" as const },
+      { label: "max DD −1.4% / 6% · worst daily loss −0.6% / 3%", outcome: "pass" as const, href: "/deployments/paper/dep_94", sourceLabel: "workbench" },
+      { label: "rejects 0.2% / 0.5% · dead letters 0", outcome: "pass" as const, href: "/execution/operations?deployment=dep_94", sourceLabel: "operations" },
+      { label: "accounting clean · no stale reservations · recon N/A (paper)", outcome: "pass" as const, href: "/deployments/paper/dep_94", sourceLabel: "workbench" },
     ],
   },
   {
     title: "Portfolio fit — observed vs expected",
     source: "720 samples · corr.v1",
     findings: [
-      { label: "ρ vs benchmark: expected 0.18 → observed 0.21 — within band", outcome: "pass" as const },
-      { label: "contribution +1,842.00 USDC · concentration unchanged", outcome: "pass" as const },
+      { label: "ρ vs benchmark: expected 0.18 → observed 0.21 — within band", outcome: "pass" as const, href: "/deployments/portfolios/PF-CRYPTO", sourceLabel: "portfolio" },
+      { label: "contribution +1,842.00 USDC · concentration unchanged", outcome: "pass" as const, href: "/deployments/portfolios/PF-CRYPTO", sourceLabel: "portfolio" },
     ],
   },
 ];
@@ -431,12 +496,37 @@ const PANEL_REASON: Partial<Record<PanelStatus, string>> = {
   terminal: "Projection rebuild failed after a sequence gap. Request ID req_8813aa.",
 };
 
-function Group({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
-  return (
-    <section className="exec-fixtures-group">
+/**
+ * A section of the fixture page.
+ *
+ * `surface` exists because the Execution Loop is two surfaces and this page has
+ * to show both: the governance screens on Carbon light, the shared operations
+ * components on Carbon dark. Nesting a surface inside a surface works exactly
+ * as the isolation mechanism intends — the inner element's custom properties
+ * win for its own subtree — so the page ends up demonstrating the boundary
+ * rather than describing it.
+ */
+function Group({
+  title,
+  note,
+  surface,
+  children,
+}: {
+  title: string;
+  note?: string;
+  surface?: ExecutionSurfaceKind;
+  children: React.ReactNode;
+}) {
+  const body = (
+    <>
       <h2 className="exec-fixtures-heading">{title}</h2>
       {note ? <p className="exec-fixtures-note">{note}</p> : null}
       {children}
+    </>
+  );
+  return (
+    <section className="exec-fixtures-group">
+      {surface ? <ExecutionSurface kind={surface}>{body}</ExecutionSurface> : body}
     </section>
   );
 }
@@ -454,7 +544,7 @@ export default function ExecutionFixtures() {
   const [venues, setVenues] = useState<VenueCode[]>([]);
 
   return (
-    <ExecutionSurface>
+    <ExecutionSurface kind="deployments">
       <div className="exec-fixtures">
         <header>
           <h1 className="exec-fixtures-title">Execution Loop — component fixtures</h1>
@@ -811,6 +901,7 @@ export default function ExecutionFixtures() {
 
         <Group
           title="Phase 1 — Approval Inbox (states only)"
+          surface="governance"
           note="Lane A: props and fixtures. Real integration waits on EX-BE-04a and EX-BE-05a, neither of which needs the Rust edge, AWS or the Trading System. AP-259 is dimmed because you wrote it — it stays in the list, because a queue that hides its un-actionable rows lies about its own size."
         >
           <div className="exec-fixtures-stack">
@@ -822,7 +913,8 @@ export default function ExecutionFixtures() {
                 policyVersion="approval.v3"
                 actor="Lan"
                 actorRoles={["Quant Reviewer", "Ops Approver"]}
-                decided={{ rows: INBOX_ROWS.slice(2, 3), totalCount: 2 }}
+                inertCount={2}
+                decided={{ rows: DECIDED_FIXTURE_ROWS, totalCount: 2 }}
               />
             </Case>
             <Case caption="inbox zero — an empty queue is a result, not a failure">
@@ -860,6 +952,7 @@ export default function ExecutionFixtures() {
 
         <Group
           title="Phase 2 — Gate R1 Review (states only)"
+          surface="governance"
           note="The screen exists to make one refusal impossible to work around. Separation of duty is derived from creator vs actor rather than trusted from a prop, and Deny is never locked: a reviewer who cannot approve can always refuse."
         >
           <div className="exec-fixtures-stack">
@@ -944,6 +1037,7 @@ export default function ExecutionFixtures() {
 
         <Group
           title="Wired flow — list · detail · plan · apply · poll"
+          surface="governance"
           note="The same components, driven through the ExecutionApi port instead of literal props. The data source is still fixtures and every endpoint the registry has not enabled answers unavailable — but the mapping, the failure handling and the 202 discipline are the real ones. Swapping createFixtureApi for createHttpApi is the only change EX-BE-05a needs."
         >
           <div className="exec-fixtures-stack">
@@ -970,6 +1064,7 @@ export default function ExecutionFixtures() {
 
         <Group
           title="Phase 3 — Gate R2 Review (states only)"
+          surface="governance"
           note="R2 rests on R1. An expired R1 locks the decision bar no matter how good the operational evidence is, and the capital preview refuses to render without an authority envelope — an unattributed before/after table about money looks exactly like a record of something that happened."
         >
           <div className="exec-fixtures-stack">
@@ -992,6 +1087,15 @@ export default function ExecutionFixtures() {
                 capital={R2_CAPITAL}
                 capitalEnvelope={R2_CAPITAL_ENVELOPE}
                 grantName="paper_activation_authorization"
+                conditions={[
+                  {
+                    text: "capacity cap 50,000.00 USDT until slippage evidence extends past 30 fills",
+                    owner: "Lan",
+                    deadline: "2026-09-15",
+                    expiry: "2026-11-01",
+                    blocking: true,
+                  },
+                ]}
               />
             </Case>
             <Case caption="R1 expired — every operational panel still readable, Approve locked">
@@ -1031,6 +1135,7 @@ export default function ExecutionFixtures() {
 
         <Group
           title="Phase 5 — Paper Exit Review (states only)"
+          surface="governance"
           note="GATE MET comes from the server and is never computed from the coverage numbers beside it — the policy can require more than they show. INSUFFICIENT_DATA is a third outcome: not a pass, not a failure, a question that follows the deployment into sandbox certification."
         >
           <div className="exec-fixtures-stack">
@@ -1048,6 +1153,8 @@ export default function ExecutionFixtures() {
                 approverRole="Ops Approver"
                 sla={{ ageMinutes: 4 * 60, budgetMinutes: 48 * 60 }}
                 panels={EXIT_PANELS_FIXTURE}
+                rail={EXIT_RAIL}
+                conditions={EXIT_CONDITIONS}
                 recommendation="Approve promotion with the carried capacity condition."
               />
             </Case>

@@ -586,3 +586,84 @@ not do.
   inventing a number. Backend request when the phase is next picked up.
 - **Conditions composer** (§3 "R2 approval creates typed conditions"): the
   decision path exists, the typed composer does not.
+
+---
+
+## 14. Design-system audit, and the conversion it produced
+
+An audit of everything built so far against `DESIGN_SYSTEM_EXECUTION.md`, the
+four governance hi-fi files and `CANONICAL_CAST.md`. The semantic rules held —
+authority, freshness, the four fields, `202`, deny-by-default, all carried by
+tests. The visual and structural side did not, and it failed in one systematic
+way: DS §1 was read as a list of rules rather than as a **map of which surface
+each screen belongs to**.
+
+### 14.1 The finding
+
+DS §1 assigns Governance (Approval Inbox, R1, R2) to a **light** theme and the
+Deployments screens to the dark one. The hi-fi files confirm it in their own
+CSS — the four governance mocks set a white page background, Paper Workbench
+sets the Carbon near-black. Everything built so far was wrapped in one dark
+surface, so four of the five screens rendered on a canvas the hi-fi never drew,
+and Gate R2's *signature element* — a dark capital strip inside a light page —
+could not exist, because there was no light page for it to sit in.
+
+### 14.2 What DS §1 says versus what it means
+
+§1's literal value is `research (light)`, the repo's Fund Paper theme: warm
+cream on a teal accent. The governance hi-fi files draw Carbon light: white,
+neutral hairlines, Carbon blue. §1 predates the §7 restyle of 2026-08-19 that
+moved operations to a Carbon identity, so its **intent** holds — governance is
+light — while its named theme is stale. HANDOFF §3 settles it: the hi-fi is the
+visual authority.
+
+Recorded as delta **P0-7**: a third theme, `operations-carbon-light`, the light
+counterpart of `operations-carbon`. Fund Paper is untouched, so the Research
+screens stay exactly where they were, and the isolation mechanism is unchanged —
+still a wrapper, still unable to reach Research.
+
+### 14.3 Two palette bugs the extraction caught
+
+Worth recording because both would have shipped and neither is obvious:
+
+- **`--line-soft` had the sunken-surface value.** The hi-fi runs a *two-tier*
+  hairline — the outer card border and a lighter inner rule for table rows and
+  card-header dividers. The inner tone is the single most frequent colour in the
+  Approval Inbox file. Set to the surface value, every row separator on all four
+  screens would have gone invisible on white, and `.exec-rail`'s 1px gaps with
+  them.
+- **`--surface-3` had a hairline value.** That tone is never a fill anywhere in
+  the four files; the one real fill is the lifecycle stepper strip's.
+
+A third token was added: `--bad-bg-soft`, a step below the banner fill, for the
+overdue **row** tint. Without it the implementer reaches for the banner fill and
+a single overdue row shouts as loudly as a statement about the whole screen.
+
+### 14.4 Components that existed and were not used
+
+| DS says | Was |
+|---|---|
+| `EvidencePanel` — R1, R2, exit reviews, Sandbox Cert | built in Phase 0, then each screen wrote its own list. Three renderings of one rule: *a verdict without a link is an opinion* |
+| `LifecycleRail` — exit reviews among its users | absent from Paper Exit, which the hi-fi draws with one |
+| `ConditionList` — R1/R2, passports, exits | never built, which is why "approve with condition" was a button with nothing behind it |
+
+All three are now used where DS §9 assigns them. `ConditionList` is the last of
+the eleven DS §4 components to exist; `BrokerStateDiff` and `InsightClaim`
+remain, and both belong to phases not yet started.
+
+### 14.5 Cast drift
+
+`CANONICAL_CAST.md` states that it wins over a screen. Here the **screen was
+right and the fixture was wrong**: the hi-fi's Approval Inbox is cast-conformant
+and the fixture had drifted from it — inventing `AP-341`, giving `AP-259` an R1
+gate it does not have, putting `AP-352` on BINANCE paper when the cast has it on
+OKX TESTNET sandbox, and using `AP-259` as the separation-of-duty row where both
+the cast and the hi-fi use `AP-311`. `AP-259` and `PX-31` belong in Recently
+decided. Fixed in both the literal fixtures and the port's.
+
+### 14.6 One conclusion of the audit was itself wrong
+
+§13.1 said §3 asks for the decision bar **pinned top**. It does not. That came
+from `IMPLEMENTATION_PHASES` §2's prose about Gate R1 and was generalised. All
+four governance hi-fi files put the action row **last in normal flow, not sticky
+and not pinned** — which is what was already built. Withdrawn.

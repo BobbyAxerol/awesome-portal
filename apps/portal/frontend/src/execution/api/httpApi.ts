@@ -124,6 +124,8 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
                   dueSoon: typeof counts.due_soon === "number" ? counts.due_soon : 0,
                 }
               : null,
+          // Its own query when the endpoint offers one; absent is not empty.
+          decided: null,
         },
         warnings: gaps,
       };

@@ -24,12 +24,22 @@ import type {
 import { unavailable } from "./ports";
 
 /** Wire-shaped, snake_case, exactly as the endpoint will send it. */
+/* The five pending rows of the Approval Inbox hi-fi, and they are the cast's.
+ *
+ * An earlier fixture drifted: it invented AP-341, gave AP-259 an R1 gate it
+ * does not have, put AP-352 on BINANCE paper when the cast has it on OKX
+ * TESTNET sandbox, and used AP-259 as the separation-of-duty row when the cast
+ * and the hi-fi both use AP-311. CANONICAL_CAST.md is explicit that it wins
+ * over a screen, and here the screen was right and the fixture was wrong.
+ *
+ * AP-259 and AP-341 belong in Recently decided, which is where the hi-fi puts
+ * them. */
 const APPROVAL_ROWS: Record<string, unknown>[] = [
   {
     approval_id: "AP-352",
     gate: "R2",
     subject: "Carry v3.2 → PF-MAIN",
-    target: "paper · BINANCE",
+    target: "sandbox · OKX TESTNET",
     blocker_count: 1,
     blocker_summary: "broker sync stale",
     sla: { age_minutes: 1560, budget_minutes: 1440, due_at: "2026-08-21T09:00:00Z" },
@@ -39,43 +49,90 @@ const APPROVAL_ROWS: Record<string, unknown>[] = [
     needs_you: true,
   },
   {
-    approval_id: "AP-341",
-    gate: "R2",
-    subject: "MM v1.1 → OKX sandbox",
-    target: "sandbox · OKX",
+    approval_id: "AP-201",
+    gate: "R1",
+    subject: "RSI v1.7 · RC-41",
+    target: "research",
     blocker_count: 0,
     blocker_summary: "none",
-    sla: { age_minutes: 360, budget_minutes: 1440 },
+    sla: { age_minutes: 120, budget_minutes: 1440 },
     quorum_met: 1,
     quorum_required: 2,
-    inert: "QUORUM",
-    needs_you: false,
-  },
-  {
-    approval_id: "AP-259",
-    gate: "R1",
-    subject: "Grid v2.2 · RC-49",
-    target: "research · R1",
-    blocker_count: 0,
-    blocker_summary: "none",
-    sla: { age_minutes: 240, budget_minutes: 2880 },
-    quorum_met: 0,
-    quorum_required: 2,
-    inert: "SELF",
-    needs_you: false,
+    inert: null,
+    needs_you: true,
   },
   {
     approval_id: "EX-771",
     gate: "PAPER_EXIT",
     subject: "Grid v2.1 · dep_94",
-    target: "paper · BINANCE",
+    target: "→ sandbox · DERIBIT",
     blocker_count: 0,
     blocker_summary: "observation gate met",
-    sla: { age_minutes: 540, budget_minutes: 2880 },
+    sla: { age_minutes: 240, budget_minutes: 2880 },
     quorum_met: 0,
-    quorum_required: 2,
+    quorum_required: 1,
     inert: null,
     needs_you: true,
+  },
+  {
+    approval_id: "AP-360",
+    gate: "R1",
+    subject: "MeanRev v0.3 · RC-52",
+    target: "research",
+    blocker_count: 2,
+    blocker_summary: "audit replay failed",
+    sla: { age_minutes: 360, budget_minutes: 1440 },
+    quorum_met: 0,
+    quorum_required: 2,
+    // Blocked before review: the request itself is not decidable yet, which is
+    // a different reason to be inert than "not you".
+    inert: "BLOCKED",
+    needs_you: false,
+  },
+  {
+    approval_id: "AP-311",
+    gate: "LIVE_GATE",
+    subject: "Grid v2.1 → BINANCE",
+    target: "live · dual approval",
+    blocker_count: 0,
+    blocker_summary: "none",
+    sla: { age_minutes: 1440, budget_minutes: 4320 },
+    quorum_met: 1,
+    quorum_required: 2,
+    // The separation-of-duty row. Dimmed and still counted, because its
+    // visibility is the proof that separation of duties is working.
+    inert: "SELF",
+    needs_you: false,
+  },
+];
+
+/** Recently decided — where the hi-fi and the cast both put these three. */
+const DECIDED_ROWS: Record<string, unknown>[] = [
+  {
+    approval_id: "AP-259",
+    gate: "R2",
+    subject: "MM v1.1 → OKX sandbox",
+    target: "sandbox · OKX",
+    blocker_count: 0,
+    blocker_summary: "approved with conditions",
+    sla: { age_minutes: 0, budget_minutes: 1440 },
+    quorum_met: 2,
+    quorum_required: 2,
+    inert: null,
+    needs_you: false,
+  },
+  {
+    approval_id: "PX-31",
+    gate: "PAPER_EXIT",
+    subject: "MM v1.1",
+    target: "→ sandbox",
+    blocker_count: 0,
+    blocker_summary: "approved",
+    sla: { age_minutes: 0, budget_minutes: 2880 },
+    quorum_met: 1,
+    quorum_required: 1,
+    inert: null,
+    needs_you: false,
   },
 ];
 
@@ -292,7 +349,7 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       const page = readKeysetPage(
         {
           rows: slice,
-          total_count: APPROVAL_ROWS.length + 1,
+          total_count: APPROVAL_ROWS.length,
           filtered_count: APPROVAL_ROWS.length,
           next_cursor: start + size < APPROVAL_ROWS.length ? encodeCursor(slice[slice.length - 1]) : null,
           prev_cursor: start > 0 ? encodeCursor(slice[0]) : null,
@@ -315,10 +372,14 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
         ok: true,
         value: {
           page,
-          counts: { pending: APPROVAL_ROWS.length + 1, overdue: 1, dueSoon: 1 },
+          counts: { pending: APPROVAL_ROWS.length, overdue: 1, dueSoon: 1 },
           // Counted over the whole filter, not the page: that is what makes a
           // dropped separation-of-duty row visible.
           inertCount: APPROVAL_ROWS.filter((r) => r.inert !== null).length,
+          decided: readKeysetPage(
+            { rows: DECIDED_ROWS, total_count: DECIDED_ROWS.length, filtered_count: DECIDED_ROWS.length },
+            (row) => readApprovalRow(row).row,
+          ),
         },
         warnings: gaps,
       };

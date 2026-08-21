@@ -31,6 +31,11 @@ export interface InboxResult {
   counts: { pending: number; overdue: number; dueSoon: number } | null;
   /** Server-counted over the whole filter. See `ApprovalInbox.inertCount`. */
   inertCount?: number | null;
+  /**
+   * Recently decided, its own page. A decided request in the pending list is an
+   * action item that is not one, so the two never share a query.
+   */
+  decided?: KeysetPage<ApprovalRow> | null;
 }
 
 /** What apply returned. A 202 and nothing more (master plan §7.3). */

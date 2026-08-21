@@ -22,7 +22,10 @@ import type { ReactNode } from "react";
 
 import type { ApprovalId, DeploymentId, EvidenceMark, PanelStatus, Sla } from "../contracts";
 import { StatusChip } from "../components/badges";
-import { SlaCell } from "../components/evidence";
+import { ConditionList, type TypedCondition } from "../components/conditions";
+import { EvidencePanel, SlaCell, type EvidenceRow } from "../components/evidence";
+import { LifecycleRail, type RailStep } from "../components/lifecycle";
+import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 
 export interface ExitFinding {
@@ -76,47 +79,43 @@ export const EXIT_OUTCOME: Record<ExitOutcome, { label: string; writes: string }
   },
 };
 
-const MARK_TONE: Record<EvidenceMark, "good" | "warn" | "bad" | "mute"> = {
-  pass: "good",
-  watch: "warn",
-  fail: "bad",
-  insufficient: "mute",
-};
-
-const MARK_LABEL: Record<EvidenceMark, string> = {
-  pass: "PASS",
-  watch: "WATCH",
-  fail: "FAIL",
-  insufficient: "INSUFFICIENT_DATA",
-};
-
+/**
+ * Findings render through `EvidencePanel`, the component DS §9 assigns to this
+ * screen. The link slot is the reason: an evidence row that states a verdict
+ * without linking what produced it is an opinion, and this screen decides a
+ * promotion.
+ *
+ * The one thing carried alongside is where an `insufficient` finding goes next,
+ * which is a claim about the future rather than about the evidence and so does
+ * not belong inside the row.
+ */
 function Findings({ panel }: { panel: EvidencePanelSpec }) {
   if (panel.status && panel.status !== "ok") {
     return <PanelState status={panel.status} reason={panel.reason} />;
   }
+  const rows: EvidenceRow[] = panel.findings.map((f) => ({
+    label: f.label,
+    mark: f.outcome,
+    evidence: f.href
+      ? { label: f.sourceLabel ?? "check source", href: f.href }
+      : undefined,
+  }));
+  const carried = panel.findings.filter((f) => f.outcome === "insufficient" && f.carriesTo);
+  const unlinked = panel.findings.filter((f) => !f.href).length;
   return (
-    <ul className="exec-exit-findings">
-      {panel.findings.map((f) => (
-        <li key={f.label} data-outcome={f.outcome}>
-          <StatusChip label={MARK_LABEL[f.outcome]} tone={MARK_TONE[f.outcome]} />
-          <span>{f.label}</span>
-          {/* An unanswered question that follows the deployment forward is
-              stated here so it is not lost between two screens. */}
-          {f.outcome === "insufficient" && f.carriesTo ? (
-            <span className="exec-exit-carries">carries into {f.carriesTo}</span>
-          ) : null}
-          {f.href ? (
-            <a className="exec-exit-source" href={f.href}>
-              {f.sourceLabel ?? "check source"} →
-            </a>
-          ) : (
-            // Stated, not omitted. An unlinked number on a promotion screen is
-            // the difference between evidence and an assertion.
-            <span className="exec-exit-unlinked">no source link</span>
-          )}
-        </li>
+    <>
+      <EvidencePanel rows={rows} />
+      {carried.map((f) => (
+        <div className="exec-exit-carries" key={f.label}>
+          {f.label} carries into {f.carriesTo}
+        </div>
       ))}
-    </ul>
+      {unlinked > 0 ? (
+        <div className="exec-exit-unlinked">
+          {unlinked} {unlinked === 1 ? "finding has" : "findings have"} no source link
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -129,13 +128,15 @@ export function PaperExitReview({
   gateSummary,
   policyId,
   lineage,
+  rail,
+  activationPlanDark = true,
+  conditions,
   quorumMet,
   quorumRequired,
   approverRole,
   sla,
   panels,
   activationPlan,
-  conditions,
   recommendation,
   status = "ok",
   reason,
@@ -163,6 +164,17 @@ export function PaperExitReview({
    * is asked to trust four earlier decisions they cannot see.
    */
   lineage?: readonly { label: string; value: string; href?: string | null }[];
+  /**
+   * The promotion rail. DS §4 lists exit reviews among LifecycleRail's users
+   * and the hi-fi draws it: `R1 ✓ AP-118 → R2 ✓ AP-152 → PAPER ● 30/30 →
+   * SANDBOX — → CANARY — → LIVE —`. It is what tells a reviewer where this
+   * promotion sits in a chain rather than as an isolated decision.
+   */
+  rail?: readonly RailStep[];
+  /** The activation plan is the screen's one inverted card (hi-fi 4b). */
+  activationPlanDark?: boolean;
+  /** Typed conditions carried into or attached by this review (DS §4). */
+  conditions?: readonly TypedCondition[];
   quorumMet: number;
   quorumRequired: number;
   approverRole?: string;
@@ -170,7 +182,6 @@ export function PaperExitReview({
   /** The 2×2. Four panels by convention; the grid takes any number. */
   panels: readonly EvidencePanelSpec[];
   activationPlan?: ReactNode;
-  conditions?: ReactNode;
   /** Server's recommended next eligible action, not the client's guess. */
   recommendation?: string;
   status?: PanelStatus;
@@ -246,7 +257,9 @@ export function PaperExitReview({
         </div>
       ) : null}
 
-      <div className="exec-exit-grid">
+      {rail?.length ? <LifecycleRail steps={rail} /> : null}
+
+      <div className="exec-grid-auto">
         {panels.map((panel) => (
           <div className="exec-gate-panel" key={panel.title}>
             <div className="exec-tile-title">
@@ -258,8 +271,30 @@ export function PaperExitReview({
         ))}
       </div>
 
-      {activationPlan ? <div className="exec-gate-panel">{activationPlan}</div> : null}
-      {conditions ? <div className="exec-gate-panel">{conditions}</div> : null}
+      {/* The hi-fi's second grid: the dark activation-plan preview beside the
+          conditions card. Same inversion as Gate R2's capital strip, and for
+          the same reason — the plan is execution vocabulary. */}
+      <div className="exec-grid-2">
+        {activationPlan ? (
+          activationPlanDark ? (
+            <ExecutionSurface kind="deployments" className="exec-inverted exec-gate-panel">
+              {activationPlan}
+            </ExecutionSurface>
+          ) : (
+            <div className="exec-gate-panel">{activationPlan}</div>
+          )
+        ) : null}
+        <div className="exec-gate-panel">
+          <div className="exec-tile-title">Conditions &amp; recommendation</div>
+          <ConditionList
+            conditions={conditions ?? []}
+            emptyNote="No conditions carried into this review."
+          />
+          {recommendation ? (
+            <div className="exec-exit-recommendation">Recommended next action: {recommendation}</div>
+          ) : null}
+        </div>
+      </div>
 
       {carried.length > 0 ? (
         <div className="exec-exit-carry-note">
@@ -298,9 +333,6 @@ export function PaperExitReview({
         </div>
       ) : null}
 
-      {recommendation ? (
-        <div className="exec-exit-recommendation">Recommended next action: {recommendation}</div>
-      ) : null}
     </section>
   );
 }

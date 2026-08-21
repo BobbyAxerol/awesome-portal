@@ -119,15 +119,42 @@ const envelope: Envelope = {
 describe("Carbon surface isolation", () => {
   it("scopes the theme to a wrapper so it cannot reach a Research screen", () => {
     const { container } = render(
-      <ExecutionSurface>
+      <ExecutionSurface kind="deployments">
         <span>inside</span>
       </ExecutionSurface>,
     );
     const surface = container.querySelector(".exec-surface");
     expect(surface?.getAttribute("data-theme")).toBe("operations-carbon");
-    // Density is pinned rather than inherited: DS §1 makes `operational` the
-    // default for every Deployments screen.
     expect(surface?.getAttribute("data-density")).toBe("operational");
+  });
+
+  it("puts governance on the light surface, as DS §1 and the hi-fi both say", () => {
+    // The four governance hi-fi files set a white page background; the
+    // Deployments ones set the Carbon near-black. An earlier build wrapped both
+    // in the dark theme, which is what this test makes hard to reintroduce.
+    const { container } = render(
+      <ExecutionSurface kind="governance">
+        <span>inside</span>
+      </ExecutionSurface>,
+    );
+    const surface = container.querySelector(".exec-surface");
+    expect(surface?.getAttribute("data-theme")).toBe("operations-carbon-light");
+    // Governance is a page you read and decide on, not a console you scan.
+    expect(surface?.getAttribute("data-density")).toBe("comfortable");
+  });
+
+  it("nests, so a light governance panel can sit inside an operations page", () => {
+    const { container } = render(
+      <ExecutionSurface kind="deployments">
+        <ExecutionSurface kind="governance">
+          <span>inner</span>
+        </ExecutionSurface>
+      </ExecutionSurface>,
+    );
+    const surfaces = [...container.querySelectorAll(".exec-surface")].map((s) =>
+      s.getAttribute("data-theme"),
+    );
+    expect(surfaces).toEqual(["operations-carbon", "operations-carbon-light"]);
   });
 });
 
@@ -2182,15 +2209,17 @@ describe("Paper Exit Review", () => {
   });
 
   it("carries an insufficient finding forward instead of resolving it either way", () => {
-    render(exitReview());
-    expect(screen.getByText("INSUFFICIENT_DATA")).toBeTruthy();
+    // Rendered through EvidencePanel now, so the mark is the shared component's
+    // `data-mark` rather than a label this screen invented.
+    const { container } = render(exitReview());
+    expect(container.querySelector('.exec-evidence-row[data-mark="insufficient"]')).not.toBeNull();
     expect(screen.getByText(/carries into sandbox certification/)).toBeTruthy();
     expect(screen.getByText(/Promotion does not resolve them/)).toBeTruthy();
   });
 
   it("does not treat a watch item as blocking", () => {
-    render(exitReview());
-    expect(screen.getByText("WATCH")).toBeTruthy();
+    const { container } = render(exitReview());
+    expect(container.querySelector('.exec-evidence-row[data-mark="watch"]')).not.toBeNull();
     expect(screen.getByRole("button", { name: /Approve promotion/ })).toHaveProperty("disabled", false);
   });
 
@@ -2816,8 +2845,11 @@ describe("containers — the port meets the screens", () => {
     // Four rows are on screen and five are pending. The header describes the
     // queue, the rows describe the page, and both are the server's numbers.
     expect(container.querySelector(".exec-inbox-counts")?.textContent).toContain("5 PENDING");
-    // Two rows on the page, five in the queue. The header describes the queue.
-    expect(container.querySelectorAll("tbody tr").length).toBe(2);
+    // Two pending rows on the page and five in the queue: the header describes
+    // the queue. The recently-decided table is its own query, so its rows are
+    // counted separately.
+    const pending = container.querySelector('table[aria-label="Pending approvals"]');
+    expect(pending?.querySelectorAll("tbody tr").length).toBe(2);
   });
 
   it("renders a loading skeleton before the first answer, not an empty queue", () => {
@@ -3146,7 +3178,7 @@ describe("the fixture API pages, so the container's paging is exercised", () => 
     const first = await api.listApprovals({ filter: "INBOX", limit: 2 });
     expect(first.ok).toBe(true);
     if (!first.ok) return;
-    expect(first.value.page.rows.map((r) => r.id)).toEqual(["AP-352", "AP-341"]);
+    expect(first.value.page.rows.map((r) => r.id)).toEqual(["AP-352", "AP-201"]);
     expect(first.value.page.hasPrevious).toBe(false);
     expect(first.value.page.hasMore).toBe(true);
 
@@ -3157,13 +3189,13 @@ describe("the fixture API pages, so the container's paging is exercised", () => 
     });
     expect(second.ok).toBe(true);
     if (!second.ok) return;
-    expect(second.value.page.rows.map((r) => r.id)).toEqual(["AP-259", "EX-771"]);
+    expect(second.value.page.rows.map((r) => r.id)).toEqual(["EX-771", "AP-360"]);
     expect(second.value.page.hasPrevious).toBe(true);
   });
 
   it("moves back on a prev cursor", async () => {
     const api = createFixtureApi();
-    const second = await api.listApprovals({ filter: "INBOX", limit: 2, after: "c_AP-341" });
+    const second = await api.listApprovals({ filter: "INBOX", limit: 2, after: "c_AP-201" });
     if (!second.ok) return;
     const back = await api.listApprovals({
       filter: "INBOX",
@@ -3172,7 +3204,7 @@ describe("the fixture API pages, so the container's paging is exercised", () => 
     });
     expect(back.ok).toBe(true);
     if (!back.ok) return;
-    expect(back.value.page.rows.map((r) => r.id)).toEqual(["AP-352", "AP-341"]);
+    expect(back.value.page.rows.map((r) => r.id)).toEqual(["AP-352", "AP-201"]);
   });
 
   it("echoes the view it applied and the sort it used", async () => {
@@ -3189,6 +3221,7 @@ describe("the fixture API pages, so the container's paging is exercised", () => 
     const r = await api.listApprovals({ filter: "INBOX", limit: 2 });
     if (!r.ok) return;
     expect(r.value.page.rows.length).toBe(2);
+    // AP-360 blocked before review, AP-311 separation of duty.
     expect(r.value.inertCount).toBe(2);
   });
 });
@@ -3274,7 +3307,7 @@ describe("Paper Exit — evidence links its source", () => {
   it("renders a link for a number that has a source", () => {
     // §5's "Must work": every evidence number links its source. This screen
     // decides a promotion, and a figure with nowhere to check it is an
-    // assertion rather than evidence.
+    // assertion rather than evidence. The link is EvidencePanel's own slot.
     render(exitReview({ panels: linked }));
     expect(screen.getByRole("link", { name: /sessions/ }).getAttribute("href")).toBe(
       "/deployments/paper/dep_94#sessions",
@@ -3282,8 +3315,10 @@ describe("Paper Exit — evidence links its source", () => {
   });
 
   it("states the absence of a source rather than leaving it blank", () => {
+    // Counted per panel now: EvidencePanel keeps the link slot empty, and the
+    // screen says how many slots are empty rather than repeating it per row.
     render(exitReview({ panels: [{ title: "Limits", findings: [{ label: "max DD ok", outcome: "pass" as const }] }] }));
-    expect(screen.getByText("no source link")).toBeTruthy();
+    expect(screen.getByText(/1 finding has no source link/)).toBeTruthy();
   });
 
   it("counts unlinked findings as a mapping gap", () => {
@@ -3343,7 +3378,7 @@ describe("Gate R2 and Paper Exit on the port", () => {
     const { container } = render(<PaperExitReviewContainer api={createFixtureApi()} reviewId="EX-771" />);
     expect(await screen.findByText(/Observation coverage/)).toBeTruthy();
     expect(container.querySelector(".exec-exit-unlinked")).toBeNull();
-    expect(container.querySelectorAll(".exec-exit-source").length).toBeGreaterThan(4);
+    expect(container.querySelectorAll("a.exec-evidence-link").length).toBeGreaterThan(4);
   });
 
   it("blocks an R2 whose review could not be read, rather than rendering a blank gate", async () => {
