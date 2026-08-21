@@ -1,0 +1,299 @@
+/**
+ * Phase 3 — Gate R2 Review (hi-fi 1b), UI states only.
+ *
+ * R2 asks a different question from R1. R1 asked whether the research is sound;
+ * R2 asks whether this deployment is operationally ready — account, risk
+ * profile, matcher config, capital, portfolio fit. So the screen is built around
+ * two things R1 does not have:
+ *
+ *   1. **A dependency on R1.** R2 cannot stand on an R1 that has expired or been
+ *      denied. The hi-fi prints "Blocked — R1 approval expired" and that is the
+ *      whole point: approving operational readiness for research nobody currently
+ *      vouches for produces a live deployment resting on a lapsed claim.
+ *   2. **A capital preview.** A before/after table is the most dangerous panel on
+ *      this surface, because it looks exactly like a record of something that
+ *      happened. It carries DERIVED authority, a `PLAN PREVIEW` marker and the
+ *      words "derived, not applied", and the component will not render it
+ *      without them.
+ *
+ * Approving grants an authorization. It does not execute: the Execution cell
+ * re-validates everything when the authorization is used.
+ */
+import type { ReactNode } from "react";
+
+import type { ApprovalId, Envelope, PanelStatus, Sla } from "../contracts";
+import { AuthorityBadge, StatusChip } from "../components/badges";
+import { SlaCell } from "../components/evidence";
+import { PanelState } from "../components/states";
+
+/** State of the R1 this R2 rests on. Only `APPROVED` lets R2 proceed. */
+export type R1State = "APPROVED" | "APPROVED_WITH_CONDITION" | "EXPIRED" | "DENIED" | "PENDING" | "MISSING";
+
+const R1_BLOCKS: Record<R1State, string | null> = {
+  APPROVED: null,
+  APPROVED_WITH_CONDITION: null,
+  EXPIRED: "Blocked — R1 approval expired. Operational readiness cannot be approved on research nobody currently vouches for.",
+  DENIED: "Blocked — R1 was denied.",
+  PENDING: "Blocked — R1 has not been decided.",
+  MISSING: "Blocked — no R1 approval is linked to this request.",
+};
+
+const R1_TONE: Record<R1State, "good" | "warn" | "bad" | "mute"> = {
+  APPROVED: "good",
+  APPROVED_WITH_CONDITION: "warn",
+  EXPIRED: "bad",
+  DENIED: "bad",
+  PENDING: "mute",
+  MISSING: "bad",
+};
+
+/** One `before → after` row of the capital preview. */
+export interface CapitalDelta {
+  label: string;
+  before: string;
+  after: string;
+  /** `within policy ceiling 55%` — the rule the after value was checked against. */
+  note?: string | null;
+  /** True when `after` breaches a policy ceiling. Blocks approval. */
+  breach?: boolean;
+}
+
+export interface ReadinessGroup {
+  title: string;
+  /** `account policy rev 7` → `MARGIN · CROSS · 2x · settle USDT` */
+  entries: readonly { label: string; value: string; revision?: string | null }[];
+}
+
+export type R2Lock = "SELF_APPROVAL" | "R1_NOT_VALID" | "CAPITAL_BREACH" | "EXPIRED" | "NOT_ELIGIBLE";
+
+const LOCK_REASON: Record<R2Lock, string> = {
+  SELF_APPROVAL: "Approve blocked — the plan author cannot be the sole approver.",
+  R1_NOT_VALID: "Approve blocked — see the R1 status above.",
+  CAPITAL_BREACH: "Approve blocked — the capital preview breaches a policy ceiling.",
+  EXPIRED: "This request expired and must be resubmitted.",
+  NOT_ELIGIBLE: "You do not hold a role that can decide this gate.",
+};
+
+export function GateR2Review({
+  approvalId,
+  subject,
+  r1Id,
+  r1State,
+  deploymentCandidate,
+  releaseCandidate,
+  artifactDigest,
+  policyVersion,
+  planAuthor,
+  actor,
+  quorumMet,
+  quorumRequired,
+  sla,
+  readiness,
+  capital,
+  capitalEnvelope,
+  observationPolicy,
+  grantName,
+  status = "ok",
+  reason,
+  partialReason,
+  locks = [],
+  onApprove,
+  onDeny,
+  onRequestCondition,
+}: {
+  approvalId: ApprovalId;
+  /** `Carry v3.2 → PF-MAIN · Paper · BINANCE` */
+  subject: string;
+  r1Id: ApprovalId | null;
+  r1State: R1State;
+  deploymentCandidate?: string;
+  releaseCandidate?: string;
+  artifactDigest?: string;
+  policyVersion: string;
+  planAuthor: string;
+  actor: string;
+  quorumMet: number;
+  quorumRequired: number;
+  sla?: Sla;
+  readiness: readonly ReadinessGroup[];
+  capital: readonly CapitalDelta[];
+  /**
+   * Required whenever `capital` is non-empty. The preview is a computation, and
+   * a computation without its authority and as_of is an unattributed number.
+   */
+  capitalEnvelope?: Envelope;
+  observationPolicy?: ReactNode;
+  /** `paper_activation_authorization` — what approving actually grants. */
+  grantName?: string;
+  status?: PanelStatus;
+  reason?: string;
+  partialReason?: string;
+  locks?: readonly R2Lock[];
+  onApprove?: () => void;
+  onDeny?: () => void;
+  onRequestCondition?: () => void;
+}) {
+  if (status !== "ok" && status !== "partial" && status !== "stale") {
+    return (
+      <section className="exec-gate" aria-label={`Gate R2 review ${approvalId}`}>
+        <div className="exec-gate-kicker">GATE R2 · Operational Readiness</div>
+        <PanelState status={status} reason={reason ?? "This review cannot be shown."} />
+      </section>
+    );
+  }
+
+  const selfApproval = planAuthor === actor;
+  const r1Block = R1_BLOCKS[r1State];
+  const breach = capital.some((c) => c.breach);
+
+  // Derived, in the same way Gate R1 derives its separation-of-duty lock. The
+  // three conditions that must never depend on a caller remembering to pass a
+  // lock are the three that would let an unsound approval through.
+  const effectiveLocks = Array.from(
+    new Set<R2Lock>([
+      ...(selfApproval ? (["SELF_APPROVAL"] as R2Lock[]) : []),
+      ...(r1Block ? (["R1_NOT_VALID"] as R2Lock[]) : []),
+      ...(breach ? (["CAPITAL_BREACH"] as R2Lock[]) : []),
+      ...locks,
+    ]),
+  );
+  const locked = effectiveLocks.length > 0;
+
+  return (
+    <section className="exec-gate" aria-label={`Gate R2 review ${approvalId}`}>
+      <header className="exec-gate-head">
+        <div className="exec-gate-kicker">GATE R2 · Operational Readiness</div>
+        <div className="exec-tile-title">{subject}</div>
+        <div className="exec-gate-meta">
+          <StatusChip
+            label={r1Id ? `R1 ${r1State} · ${r1Id}` : `R1 ${r1State}`}
+            tone={R1_TONE[r1State]}
+          />
+          <StatusChip
+            label={`PENDING ${quorumMet}/${quorumRequired}`}
+            tone={quorumMet >= quorumRequired ? "good" : "mute"}
+          />
+          <span>{approvalId}</span>
+          {deploymentCandidate ? <span>deployment candidate {deploymentCandidate}</span> : null}
+          {releaseCandidate ? <span>release candidate {releaseCandidate}</span> : null}
+          {artifactDigest ? <span>digest {artifactDigest}</span> : null}
+          <span>policy {policyVersion}</span>
+          {sla ? <SlaCell sla={sla} /> : null}
+        </div>
+
+        <div className="exec-gate-sod" data-violation={selfApproval ? "true" : undefined}>
+          {selfApproval
+            ? `separation-of-duty VIOLATION — plan author (${planAuthor}) cannot be the sole approver, and that is you`
+            : `separation-of-duty: plan author (${planAuthor}) cannot be sole approver — OK, you are ${actor}`}
+        </div>
+
+        {/* The R1 block is a band rather than a footnote. It is the one condition
+            on this screen that no amount of operational evidence can satisfy. */}
+        {r1Block ? <div className="exec-gate-banner exec-gate-blocking">{r1Block}</div> : null}
+      </header>
+
+      {status === "partial" ? (
+        <div className="exec-gate-banner">
+          {partialReason ?? "Part of this review could not be read. Absence of a finding is not a pass."}
+        </div>
+      ) : null}
+      {status === "stale" ? (
+        <div className="exec-gate-banner">
+          {reason ?? "This review is older than its freshness budget. Refresh before deciding."}
+        </div>
+      ) : null}
+
+      {readiness.map((group) => (
+        <div className="exec-gate-panel" key={group.title}>
+          <div className="exec-tile-title">{group.title}</div>
+          <dl className="exec-gate-passport">
+            {group.entries.map((e) => (
+              <div key={e.label}>
+                <dt>{e.label}</dt>
+                <dd>
+                  <span className="exec-gate-value">{e.value}</span>
+                  {/* A config without its revision cannot be audited later. */}
+                  {e.revision ? (
+                    <span className="exec-gate-note"> · {e.revision}</span>
+                  ) : (
+                    <span className="exec-gate-unverified"> · revision not stated</span>
+                  )}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ))}
+
+      {capital.length > 0 ? (
+        <div className="exec-gate-panel">
+          <div className="exec-tile-title">Capital change preview — execution vocabulary</div>
+          {capitalEnvelope ? (
+            <div className="exec-gate-meta">
+              <AuthorityBadge envelope={capitalEnvelope} />
+              <StatusChip label="PLAN PREVIEW" tone="warn" />
+              <span>derived, not applied</span>
+            </div>
+          ) : (
+            // Without an envelope this table is an unattributed claim about
+            // money. It is refused rather than rendered bare.
+            <PanelState
+              status="unavailable"
+              reason="The capital preview arrived without an authority envelope and cannot be shown."
+            />
+          )}
+          {capitalEnvelope ? (
+            <table className="exec-gate-capital">
+              <thead>
+                <tr>
+                  <th scope="col" />
+                  <th scope="col">before</th>
+                  <th scope="col">after approval</th>
+                </tr>
+              </thead>
+              <tbody>
+                {capital.map((row) => (
+                  <tr key={row.label} data-breach={row.breach ? "true" : undefined}>
+                    <th scope="row">{row.label}</th>
+                    <td>{row.before}</td>
+                    <td>
+                      {row.after}
+                      {row.note ? <span className="exec-gate-note"> — {row.note}</span> : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : null}
+        </div>
+      ) : null}
+
+      {observationPolicy ? <div className="exec-gate-panel">{observationPolicy}</div> : null}
+
+      {grantName ? (
+        <div className="exec-gate-grant">
+          Approve grants <strong>{grantName}</strong>. It does not execute — the Execution cell
+          re-validates everything when the authorization is used.
+        </div>
+      ) : null}
+
+      <div className="exec-gate-decision">
+        <button type="button" className="exec-btn-apply" disabled={locked} onClick={onApprove}>
+          Approve
+        </button>
+        <button type="button" className="exec-btn-ghost" onClick={onRequestCondition}>
+          Approve with condition
+        </button>
+        <button type="button" className="exec-btn-ghost" onClick={onDeny}>
+          Deny
+        </button>
+      </div>
+
+      {locked ? (
+        <div className="exec-disabled-reason">
+          {effectiveLocks.map((lock) => LOCK_REASON[lock]).join(" ")}
+        </div>
+      ) : null}
+    </section>
+  );
+}

@@ -39,6 +39,8 @@ import {
 import { KeysetTable, type Column } from "./components/table";
 import { ApprovalInbox, INBOX_FILTERS, type ApprovalRow } from "./screens/ApprovalInbox";
 import { GateR1Review } from "./screens/GateR1Review";
+import { GateR2Review } from "./screens/GateR2Review";
+import { EXIT_OUTCOME, PaperExitReview } from "./screens/PaperExitReview";
 import {
   formatDecimal,
   isSettled,
@@ -1896,5 +1898,240 @@ describe("Gate R1 — the full state set", () => {
       }),
     );
     expect(screen.queryByText(/self-approval prohibited/)).toBeNull();
+  });
+});
+
+/* ===========================================================================
+ * Phase 3 — Gate R2 Review
+ * ======================================================================== */
+
+const READINESS = [
+  {
+    title: "Account & risk plan",
+    entries: [
+      { label: "account (new)", value: "paper-binance-carry-v32", revision: "account policy rev 7" },
+      { label: "risk profile", value: "max order 5,000 · DD 8%", revision: "rev 12" },
+      { label: "matcher config", value: "taker 4.0bp · latency 120ms" },
+    ],
+  },
+];
+
+const CAPITAL = [
+  { label: "allocated capital", before: "0.00 USDT", after: "50,000.00 USDT" },
+  { label: "concentration top-3", before: "44.0%", after: "46.0%", note: "within policy ceiling 55%" },
+];
+
+const CAP_ENVELOPE: Envelope = {
+  authority: "DERIVED",
+  asOf: "2026-08-21T10:41:07Z",
+  freshness: "OK",
+  formulaVersion: "capital.v2",
+};
+
+function r2(over: Record<string, unknown> = {}) {
+  return (
+    <GateR2Review
+      approvalId="AP-207"
+      subject="Carry v3.2 → PF-MAIN · Paper · BINANCE"
+      r1Id="AP-201"
+      r1State="APPROVED"
+      policyVersion="approval.v3"
+      planAuthor="Stan"
+      actor="Lan"
+      quorumMet={0}
+      quorumRequired={2}
+      readiness={READINESS}
+      capital={CAPITAL}
+      capitalEnvelope={CAP_ENVELOPE}
+      grantName="paper_activation_authorization"
+      {...over}
+    />
+  );
+}
+
+describe("Gate R2 Review", () => {
+  it("blocks approval when the R1 it rests on has expired", () => {
+    // Approving operational readiness for research nobody currently vouches for
+    // produces a live deployment resting on a lapsed claim.
+    render(r2({ r1State: "EXPIRED" }));
+    expect(screen.getByText(/R1 approval expired/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
+  });
+
+  it("blocks on every invalid R1 state, not only expiry", () => {
+    for (const state of ["DENIED", "PENDING", "MISSING"] as const) {
+      render(r2({ r1State: state }));
+      expect(screen.getByRole("button", { name: "Approve" }), state).toHaveProperty("disabled", true);
+      cleanup();
+    }
+  });
+
+  it("allows approval on an R1 approved with a condition", () => {
+    // A carried condition is not a lapse. It travels forward.
+    render(r2({ r1State: "APPROVED_WITH_CONDITION" }));
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", false);
+  });
+
+  it("derives the R1 block rather than trusting a caller to pass a lock", () => {
+    render(r2({ r1State: "EXPIRED", locks: [] }));
+    expect(screen.getByText(/see the R1 status above/)).toBeTruthy();
+  });
+
+  it("refuses to render a capital preview that arrived without its authority", () => {
+    // A before/after table about money, unattributed, looks exactly like a
+    // record of something that happened.
+    const { container } = render(r2({ capitalEnvelope: undefined }));
+    expect(container.querySelector(".exec-gate-capital")).toBeNull();
+    expect(screen.getByText(/without an authority envelope/)).toBeTruthy();
+  });
+
+  it("marks the preview as derived and not applied", () => {
+    render(r2());
+    expect(screen.getByText("PLAN PREVIEW")).toBeTruthy();
+    expect(screen.getByText(/derived, not applied/)).toBeTruthy();
+    expect(screen.getByText("DERIVED")).toBeTruthy();
+  });
+
+  it("blocks approval when the preview breaches a policy ceiling", () => {
+    render(
+      r2({
+        capital: [{ label: "concentration top-3", before: "44.0%", after: "61.0%", note: "ceiling 55%", breach: true }],
+      }),
+    );
+    expect(screen.getByText(/breaches a policy ceiling/)).toBeTruthy();
+  });
+
+  it("says a config revision is missing rather than leaving it blank", () => {
+    // A config without its revision cannot be audited after the fact.
+    render(r2());
+    expect(screen.getByText(/revision not stated/)).toBeTruthy();
+  });
+
+  it("says that approving grants an authorization rather than executing", () => {
+    render(r2());
+    expect(screen.getByText(/does not execute/)).toBeTruthy();
+    expect(screen.getByText("paper_activation_authorization")).toBeTruthy();
+  });
+
+  it("blocks the plan author from being the sole approver", () => {
+    render(r2({ actor: "Stan" }));
+    expect(screen.getByText(/separation-of-duty VIOLATION/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
+  });
+});
+
+/* ===========================================================================
+ * Phase 5 — Paper Exit Review
+ * ======================================================================== */
+
+const EXIT_PANELS = [
+  {
+    title: "Observation coverage",
+    source: "obs_29",
+    findings: [
+      { label: "30 / 30 days · 312 / 300 trades · 2 / 2 restart cycles", outcome: "pass" as const },
+      { label: "data freshness violations: 0 · coverage 99.6%", outcome: "pass" as const },
+    ],
+  },
+  {
+    title: "Drift vs approved evidence",
+    source: "run_5498",
+    findings: [
+      { label: "hit rate −1.1pt — within band", outcome: "pass" as const },
+      { label: "fee drag +0.006pt · signal→fill +70ms", outcome: "watch" as const },
+      { label: "slippage", outcome: "insufficient" as const, carriesTo: "sandbox certification" },
+    ],
+  },
+];
+
+function exitReview(over: Record<string, unknown> = {}) {
+  return (
+    <PaperExitReview
+      reviewId="EX-771"
+      deploymentId="dep_94"
+      subject="Grid v2.1 · dep_94 · DERIBIT"
+      promoteTo="SANDBOX_VALIDATION"
+      gateMet
+      gateSummary="30 / 30 days · 312 / 300 trades · 2 / 2 restart cycles"
+      policyId="obs_29"
+      quorumMet={0}
+      quorumRequired={1}
+      panels={EXIT_PANELS}
+      {...over}
+    />
+  );
+}
+
+describe("Paper Exit Review", () => {
+  it("takes gate met from the server and never computes it from coverage", () => {
+    // 30/30 is on screen and the gate is unmet. A client that inferred one from
+    // the other would contradict the policy that produced it.
+    const { container } = render(exitReview({ gateMet: false }));
+    expect(screen.getByText("GATE UNMET")).toBeTruthy();
+    // Full coverage is on screen and the gate is still unmet: the policy that
+    // produced the verdict knows things the coverage numbers do not show.
+    expect(container.querySelector(".exec-exit-summary")?.textContent).toContain("30 / 30 days");
+    expect(screen.getByRole("button", { name: /Approve promotion/ })).toHaveProperty("disabled", true);
+  });
+
+  it("keeps extend and reject available on an unmet gate", () => {
+    // A reviewer facing an unmet gate must be able to act, and both of these
+    // are safe from any state.
+    render(exitReview({ gateMet: false }));
+    expect(screen.getByRole("button", { name: /Extend observation/ })).toHaveProperty("disabled", false);
+    expect(screen.getByRole("button", { name: /Reject/ })).toHaveProperty("disabled", false);
+  });
+
+  it("writes a different state for each of the three branches", () => {
+    const outcomes = Object.keys(EXIT_OUTCOME);
+    expect(outcomes).toHaveLength(3);
+    const writes = Object.values(EXIT_OUTCOME).map((o) => o.writes);
+    expect(new Set(writes).size).toBe(3);
+  });
+
+  it("carries an insufficient finding forward instead of resolving it either way", () => {
+    render(exitReview());
+    expect(screen.getByText("INSUFFICIENT_DATA")).toBeTruthy();
+    expect(screen.getByText(/carries into sandbox certification/)).toBeTruthy();
+    expect(screen.getByText(/Promotion does not resolve them/)).toBeTruthy();
+  });
+
+  it("does not treat a watch item as blocking", () => {
+    render(exitReview());
+    expect(screen.getByText("WATCH")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Approve promotion/ })).toHaveProperty("disabled", false);
+  });
+
+  it("blocks promotion on a blocking finding even when the gate is met", () => {
+    render(
+      exitReview({
+        panels: [
+          { title: "Limits", findings: [{ label: "max DD breached", outcome: "fail" as const }] },
+        ],
+      }),
+    );
+    expect(screen.getByText(/1 blocking finding/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Approve promotion/ })).toHaveProperty("disabled", true);
+  });
+
+  it("lets one evidence panel fail without taking the review down", () => {
+    const { container } = render(
+      exitReview({
+        panels: [
+          EXIT_PANELS[0],
+          { title: "Portfolio fit", findings: [], status: "unavailable" as const, reason: "analytics edge unreachable" },
+        ],
+      }),
+    );
+    expect(screen.getByText("Observation coverage")).toBeTruthy();
+    expect(container.querySelector('.exec-state[data-status="unavailable"]')).not.toBeNull();
+  });
+
+  it("becomes a record once decided", () => {
+    const { container } = render(
+      exitReview({ decided: { outcome: "EXTEND_OBSERVATION", by: "Lan", at: "2026-08-21T11:00Z" } }),
+    );
+    expect(container.querySelector(".exec-gate-decision")).toBeNull();
+    expect(screen.getByText(/observation window extended/)).toBeTruthy();
   });
 });

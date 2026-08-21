@@ -1214,3 +1214,134 @@
   font-size: var(--text-2xs);
   letter-spacing: 0.04em;
 }
+
+/* ---------------------------------------------------------------------------
+ * Phase 3 — Gate R2 additions
+ * ------------------------------------------------------------------------ */
+
+/* The R1 block is the one condition on R2 that no operational evidence can
+ * satisfy, so it reads as a refusal rather than a caution. */
+.exec-gate-banner.exec-gate-blocking {
+  border-left-color: var(--bad);
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+
+.exec-gate-capital {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+}
+
+.exec-gate-capital th,
+.exec-gate-capital td {
+  padding: 4px var(--space-3);
+  border-bottom: 1px solid var(--line-soft);
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.exec-gate-capital thead th {
+  color: var(--ink-faint);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom-color: var(--line);
+}
+
+.exec-gate-capital tbody th {
+  text-align: left;
+  color: var(--ink-faint);
+  font-family: var(--font-body);
+}
+
+.exec-gate-capital tbody td:last-child {
+  color: var(--ink);
+}
+
+.exec-gate-capital tr[data-breach="true"] td:last-child {
+  color: var(--bad);
+}
+
+.exec-gate-grant {
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--line);
+  color: var(--ink-faint);
+  font-size: var(--text-xs);
+}
+
+/* ---------------------------------------------------------------------------
+ * Phase 5 — Paper Exit Review
+ * ------------------------------------------------------------------------ */
+
+.exec-exit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border: 1px solid var(--line);
+  background: var(--paper-raised);
+  padding: var(--space-3);
+  min-width: 0;
+}
+
+.exec-exit-summary {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+/* The hi-fi's 2x2. Collapses to one column below 900px rather than shrinking
+ * four panels of dense evidence into unreadable strips (DS section 9). */
+.exec-exit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+@media (max-width: 900px) {
+  .exec-exit-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.exec-exit-findings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.exec-exit-findings li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+/* An unanswered question that travels to the next stage. Muted rather than
+ * amber: it is not a warning about now, it is a note about later. */
+.exec-exit-carries {
+  color: var(--ink-mute);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+
+.exec-exit-carry-note {
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--line-strong);
+  background: var(--surface-2);
+  color: var(--ink-faint);
+  font-size: var(--text-xs);
+}
+
+.exec-exit-recommendation {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}

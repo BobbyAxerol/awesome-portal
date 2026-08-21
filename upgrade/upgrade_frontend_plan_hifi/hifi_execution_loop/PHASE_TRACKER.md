@@ -40,9 +40,9 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 0 | Shell & shared components | **DONE** (components) · `READY` (nav/profile wiring) | `CONTRACT_COMPLETE` | — EX-BE-00R4 delivered | FE: 42 tests · build · visual baseline **drifted, see §9**; BE: registry rev 4 · 17 fixture profiles · fail-closed policy tests · generated OpenAPI/TS contract |
 | 1 | Approval Inbox (4a) | `WIP` (states built) | `INTEGRATION_PENDING` | EX-BE-05a integration only | EX-BE-04a foundation: 182k keyset/count/RBAC evidence; no AWS dependency |
 | 2 | Gate R1 Review (1a) | `WIP` (states built) | `FOUNDATION_COMPLETE` | EX-BE-05a integration | existing approval/audit foundation; master plan §§10.2, 12.2 |
-| 3 | Gate R2 Review (1b) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/05a/07 capital preview | master plan §§10.3, 12.2 |
+| 3 | Gate R2 Review (1b) | `WIP` (states built) | `FOUNDATION_COMPLETE` | EX-BE-03/05a/07 capital preview | master plan §§10.3, 12.2 |
 | 4 | Paper Workbench (1c) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/04b; M7 evidence | adaptive six-rung server charts; master plan §§10.4, 15.1 |
-| 5 | Paper Exit Review (4b) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/05a evidence integration | master plan §§10.5, 12.2 |
+| 5 | Paper Exit Review (4b) | `WIP` (states built) | `FOUNDATION_COMPLETE` | EX-BE-03/05a evidence integration | master plan §§10.5, 12.2 |
 | 6 | Admin Action Drawer (1i) | `READY`¹ | `FOUNDATION_COMPLETE` | EX-BE-02/05b; TS command capability | request-key/UNCERTAIN contract §7.3; production disabled |
 | 7 | Operations Queue (4e) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-05b operation integration | EX-BE-04a bidirectional keyset delivered; ack≠resolve remains |
 | 8 | Incident Detail (4d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a/05b/06 integration | source completeness required; master plan §§10.8, 12.2 |
@@ -135,6 +135,8 @@ nav — it is the Phase 0 exit gate, not a product screen).
 | `adapter.ts` | `adapter.ts` | decimals stay strings; unknown enums keep their raw token; a 202 reads as PENDING whatever the body claims |
 | `ApprovalInbox` | `screens/ApprovalInbox.tsx` | an un-actionable row is dimmed, never hidden |
 | `GateR1Review` | `screens/GateR1Review.tsx` | self-approval is derived, not trusted; Deny is never locked |
+| `GateR2Review` | `screens/GateR2Review.tsx` | an expired R1 locks the bar; a capital preview without an envelope is refused |
+| `PaperExitReview` | `screens/PaperExitReview.tsx` | `met` is the server's; INSUFFICIENT_DATA is a third outcome that carries forward |
 
 Tests are behavioural, not snapshots: `execution.test.tsx` fails if PARTIAL turns
 green, if canary loses its double border, if the skeleton enters the

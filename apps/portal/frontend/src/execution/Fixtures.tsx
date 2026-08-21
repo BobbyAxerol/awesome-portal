@@ -35,6 +35,8 @@ import { CapNotice, CommissionedPanel, PanelState } from "./components/states";
 import { KeysetTable, type Column } from "./components/table";
 import { ApprovalInbox, type ApprovalRow } from "./screens/ApprovalInbox";
 import { GateR1Review } from "./screens/GateR1Review";
+import { GateR2Review } from "./screens/GateR2Review";
+import { PaperExitReview } from "./screens/PaperExitReview";
 import {
   PROFILE_ORDER,
   profileNeedsLabel,
@@ -229,6 +231,80 @@ const R1_PASSPORT = [
   { label: "engine", value: "quantbt 1.0.8 · image sha256:77bd…a1", verification: "✓ verified" },
   { label: "datasets", value: "3 snapshots · universe univ_88", verification: "PASS" },
   { label: "methodology claim", value: "clm_31 — WFO 12 folds + 90d holdout", verification: null },
+];
+
+const R2_READINESS = [
+  {
+    title: "Account & risk plan",
+    entries: [
+      { label: "account (new)", value: "paper-binance-carry-v32", revision: "account policy rev 7" },
+      { label: "margin", value: "MARGIN · CROSS · 2x · settle USDT", revision: "account policy rev 7" },
+      { label: "risk profile", value: "max order 5,000 · max position 25,000 · DD 8% · daily loss 3%", revision: "rev 12" },
+      { label: "matcher config", value: "taker 4.0bp · slippage model v2 · latency 120ms · partial fills on", revision: "rev 3" },
+      // No revision on purpose: the screen states the gap rather than hiding it.
+      { label: "order types", value: "MARKET · LIMIT · STOP · GTC/IOC" },
+    ],
+  },
+  {
+    title: "Portfolio fit",
+    entries: [
+      { label: "target capital weight", value: "12.0%", revision: "corr.v1 · 90d backtest window" },
+      { label: "corr vs Crypto Core", value: "0.18 (research est.)", revision: "corr.v1" },
+      { label: "symbol overlap", value: "none with live alphas", revision: "corr.v1" },
+    ],
+  },
+];
+
+const R2_CAPITAL = [
+  { label: "allocated capital", before: "0.00 USDT", after: "50,000.00 USDT" },
+  { label: "max capital", before: "0.00 USDT", after: "100,000.00 USDT" },
+  { label: "portfolio weight", before: "0.0%", after: "12.0%" },
+  { label: "concentration top-3", before: "44.0%", after: "46.0%", note: "within policy ceiling 55%" },
+];
+
+const R2_CAPITAL_ENVELOPE: Envelope = {
+  authority: "DERIVED",
+  asOf: "2026-08-21T10:41:07Z",
+  freshness: "OK",
+  ageSeconds: 44,
+  formulaVersion: "capital.v2",
+};
+
+const EXIT_PANELS_FIXTURE = [
+  {
+    title: "Observation coverage",
+    source: "obs_29",
+    findings: [
+      { label: "30 / 30 days · 312 / 300 trades · 2 / 2 restart cycles", outcome: "pass" as const },
+      { label: "data freshness violations: 0 · coverage 99.6%", outcome: "pass" as const },
+      { label: "restart recovery evidenced twice (exs_2208, exs_2196)", outcome: "pass" as const },
+    ],
+  },
+  {
+    title: "Drift vs approved evidence",
+    source: "run_5498",
+    findings: [
+      { label: "hit rate −1.1pt · avg trade net −0.04pt — within band", outcome: "pass" as const },
+      { label: "fee drag +0.006pt · signal→fill +70ms — non-blocking", outcome: "watch" as const },
+      { label: "slippage", outcome: "insufficient" as const, carriesTo: "sandbox certification" },
+    ],
+  },
+  {
+    title: "Limits & operational health",
+    findings: [
+      { label: "max DD −1.4% / 6% · worst daily loss −0.6% / 3%", outcome: "pass" as const },
+      { label: "rejects 0.2% / 0.5% · dead letters 0", outcome: "pass" as const },
+      { label: "accounting clean · no stale reservations · recon N/A (paper)", outcome: "pass" as const },
+    ],
+  },
+  {
+    title: "Portfolio fit — observed vs expected",
+    source: "720 samples · corr.v1",
+    findings: [
+      { label: "ρ vs benchmark: expected 0.18 → observed 0.21 — within band", outcome: "pass" as const },
+      { label: "contribution +1,842.00 USDC · concentration unchanged", outcome: "pass" as const },
+    ],
+  },
 ];
 
 const R1_CHECKLIST = [
@@ -846,6 +922,124 @@ export default function ExecutionFixtures() {
                 checklist={[]}
                 status="unavailable"
                 reason="Governance edge unreachable."
+              />
+            </Case>
+          </div>
+        </Group>
+
+        <Group
+          title="Phase 3 — Gate R2 Review (states only)"
+          note="R2 rests on R1. An expired R1 locks the decision bar no matter how good the operational evidence is, and the capital preview refuses to render without an authority envelope — an unattributed before/after table about money looks exactly like a record of something that happened."
+        >
+          <div className="exec-fixtures-stack">
+            <Case caption="R1 approved — preview marked derived, not applied">
+              <GateR2Review
+                approvalId="AP-207"
+                subject="Carry v3.2 → PF-MAIN · Paper · BINANCE"
+                r1Id="AP-201"
+                r1State="APPROVED"
+                deploymentCandidate="DC-91"
+                releaseCandidate="RC-41"
+                artifactDigest="sha256:9f3c1a…e2"
+                policyVersion="approval.v3"
+                planAuthor="Stan"
+                actor="Lan"
+                quorumMet={0}
+                quorumRequired={2}
+                sla={{ ageMinutes: 16 * 60, budgetMinutes: 24 * 60 }}
+                readiness={R2_READINESS}
+                capital={R2_CAPITAL}
+                capitalEnvelope={R2_CAPITAL_ENVELOPE}
+                grantName="paper_activation_authorization"
+              />
+            </Case>
+            <Case caption="R1 expired — every operational panel still readable, Approve locked">
+              <GateR2Review
+                approvalId="AP-207"
+                subject="Carry v3.2 → PF-MAIN · Paper · BINANCE"
+                r1Id="AP-201"
+                r1State="EXPIRED"
+                policyVersion="approval.v3"
+                planAuthor="Stan"
+                actor="Lan"
+                quorumMet={0}
+                quorumRequired={2}
+                readiness={R2_READINESS}
+                capital={R2_CAPITAL}
+                capitalEnvelope={R2_CAPITAL_ENVELOPE}
+                grantName="paper_activation_authorization"
+              />
+            </Case>
+            <Case caption="preview without an authority envelope — refused rather than rendered bare">
+              <GateR2Review
+                approvalId="AP-207"
+                subject="Carry v3.2 → PF-MAIN"
+                r1Id="AP-201"
+                r1State="APPROVED"
+                policyVersion="approval.v3"
+                planAuthor="Stan"
+                actor="Lan"
+                quorumMet={0}
+                quorumRequired={2}
+                readiness={[]}
+                capital={R2_CAPITAL}
+              />
+            </Case>
+          </div>
+        </Group>
+
+        <Group
+          title="Phase 5 — Paper Exit Review (states only)"
+          note="GATE MET comes from the server and is never computed from the coverage numbers beside it — the policy can require more than they show. INSUFFICIENT_DATA is a third outcome: not a pass, not a failure, a question that follows the deployment into sandbox certification."
+        >
+          <div className="exec-fixtures-stack">
+            <Case caption="gate met — one watch item, one unanswered question carried forward">
+              <PaperExitReview
+                reviewId="EX-771"
+                deploymentId="dep_94"
+                subject="Grid v2.1 · dep_94 · DERIBIT"
+                promoteTo="SANDBOX_VALIDATION"
+                gateMet
+                gateSummary="30 / 30 days · 312 / 300 trades · 2 / 2 restart cycles"
+                policyId="obs_29"
+                quorumMet={0}
+                quorumRequired={1}
+                approverRole="Ops Approver"
+                sla={{ ageMinutes: 4 * 60, budgetMinutes: 48 * 60 }}
+                panels={EXIT_PANELS_FIXTURE}
+                recommendation="Approve promotion with the carried capacity condition."
+              />
+            </Case>
+            <Case caption="gate unmet — promotion locked, extend and reject still available">
+              <PaperExitReview
+                reviewId="EX-772"
+                deploymentId="dep_88"
+                subject="MeanRev v0.3 · dep_88 · BINANCE"
+                promoteTo="SANDBOX_VALIDATION"
+                gateMet={false}
+                gateSummary="22 / 30 days · 241 / 300 trades · 2 / 2 restart cycles"
+                policyId="obs_29"
+                quorumMet={0}
+                quorumRequired={1}
+                panels={EXIT_PANELS_FIXTURE}
+                recommendation="Extend observation by 8 days."
+              />
+            </Case>
+            <Case caption="one evidence panel down — the review survives it">
+              <PaperExitReview
+                reviewId="EX-771"
+                deploymentId="dep_94"
+                subject="Grid v2.1 · dep_94 · DERIBIT"
+                promoteTo="SANDBOX_VALIDATION"
+                gateMet
+                quorumMet={0}
+                quorumRequired={1}
+                status="partial"
+                partialReason="Portfolio analytics could not be read."
+                panels={[
+                  EXIT_PANELS_FIXTURE[0],
+                  { title: "Portfolio fit — observed vs expected", findings: [], status: "unavailable", reason: "Analytics edge unreachable." },
+                ]}
               />
             </Case>
           </div>
