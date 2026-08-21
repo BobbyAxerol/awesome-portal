@@ -955,3 +955,220 @@
   font-family: var(--font-mono);
   color: var(--ink-mute);
 }
+
+/* ---------------------------------------------------------------------------
+ * Phase 1 — Approval Inbox
+ * ------------------------------------------------------------------------ */
+
+.exec-inbox,
+.exec-gate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border: 1px solid var(--line);
+  background: var(--paper-raised);
+  padding: var(--space-3);
+  min-width: 0;
+}
+
+.exec-inbox-head,
+.exec-gate-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.exec-inbox-counts {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.exec-inbox-counts strong {
+  color: var(--ink);
+}
+
+.exec-inbox-policy {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+.exec-inbox-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.exec-inbox-filter {
+  padding: 2px var(--space-2);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  cursor: pointer;
+}
+
+.exec-inbox-filter[data-active="true"] {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.exec-inbox-sort {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+/* A row the actor cannot act on stays visible and legible. Dimmed, not hidden:
+ * hiding it would make the queue lie about its own size. */
+.exec-inbox-inert {
+  color: var(--ink-mute);
+  font-style: italic;
+}
+
+.exec-inbox-decided {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-3);
+}
+
+/* ---------------------------------------------------------------------------
+ * Phase 2 — Gate R1 Review
+ * ------------------------------------------------------------------------ */
+
+.exec-gate-kicker {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+}
+
+.exec-gate-rc {
+  color: var(--ink-faint);
+  font-weight: 400;
+}
+
+.exec-gate-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+}
+
+/* The separation-of-duty line is a band rather than a note. A reviewer who
+ * misses it is a reviewer who is about to be confused by a disabled button. */
+.exec-gate-sod {
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--good);
+  background: var(--good-bg);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+
+.exec-gate-sod[data-violation="true"] {
+  border-left-color: var(--bad);
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+
+.exec-gate-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border: 1px solid var(--line-soft);
+  padding: var(--space-3);
+  min-width: 0;
+}
+
+.exec-gate-passport {
+  display: grid;
+  grid-template-columns: minmax(140px, max-content) 1fr;
+  gap: 2px var(--space-3);
+  margin: 0;
+  font-size: var(--text-xs);
+}
+
+.exec-gate-passport > div {
+  display: contents;
+}
+
+.exec-gate-passport dt {
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.exec-gate-passport dd {
+  margin: 0;
+  color: var(--ink-soft);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.exec-gate-value {
+  font-family: var(--font-mono);
+  color: var(--ink);
+}
+
+.exec-gate-note {
+  color: var(--ink-mute);
+}
+
+.exec-gate-verified {
+  color: var(--good);
+}
+
+/* A claim nobody checked is stated. Blank would read as checked-and-fine. */
+.exec-gate-unverified {
+  color: var(--warn);
+}
+
+.exec-gate-checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.exec-gate-checklist li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.exec-gate-suggestion {
+  color: var(--ink-mute);
+}
+
+.exec-gate-tally {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+}
+
+.exec-gate-tally strong {
+  color: var(--ink);
+}
+
+.exec-gate-decision {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

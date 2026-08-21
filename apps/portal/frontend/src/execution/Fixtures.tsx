@@ -33,6 +33,8 @@ import { GuardBand, LifecycleRail, ObservationProgress, stageRail } from "./comp
 import { VenueIdentity, VenueScope } from "./components/scope";
 import { CapNotice, CommissionedPanel, PanelState } from "./components/states";
 import { KeysetTable, type Column } from "./components/table";
+import { ApprovalInbox, type ApprovalRow } from "./screens/ApprovalInbox";
+import { GateR1Review } from "./screens/GateR1Review";
 import {
   PROFILE_ORDER,
   profileNeedsLabel,
@@ -158,6 +160,89 @@ const REV4_SHIPPED_POLICY = screenDeliveryPolicy({
     live_risk_increasing_commands_enabled: false,
   },
 });
+
+/* Phase 1/2 screen fixtures. Cast from CANONICAL_CAST.md; the numbers are the
+ * hi-fi's own, so a reviewer can hold the two side by side. */
+const INBOX_ROWS: ApprovalRow[] = [
+  {
+    id: "AP-352",
+    gate: "R2",
+    subject: "Carry v3.2 → PF-MAIN",
+    target: "paper · BINANCE",
+    blockerCount: 1,
+    blockerSummary: "broker sync stale",
+    sla: { ageMinutes: 26 * 60, budgetMinutes: 24 * 60 },
+    quorumMet: 0,
+    quorumRequired: 2,
+    inert: null,
+    needsYou: true,
+  },
+  {
+    id: "AP-341",
+    gate: "R2",
+    subject: "MM v1.1 → OKX sandbox",
+    target: "sandbox · OKX",
+    blockerCount: 0,
+    blockerSummary: "none",
+    sla: { ageMinutes: 6 * 60, budgetMinutes: 24 * 60 },
+    quorumMet: 1,
+    quorumRequired: 2,
+    inert: "QUORUM",
+    needsYou: false,
+  },
+  {
+    id: "AP-259",
+    gate: "R1",
+    subject: "Grid v2.2 · RC-49",
+    target: "research · R1",
+    blockerCount: 0,
+    blockerSummary: "none",
+    sla: { ageMinutes: 4 * 60, budgetMinutes: 48 * 60 },
+    quorumMet: 0,
+    quorumRequired: 2,
+    // You wrote it. It stays in the list, dimmed, because a queue that hides
+    // its un-actionable rows lies about its own size.
+    inert: "SELF",
+    needsYou: false,
+  },
+  {
+    id: "EX-771",
+    gate: "PAPER_EXIT",
+    subject: "Grid v2.1 · dep_94",
+    target: "paper · BINANCE",
+    blockerCount: 0,
+    blockerSummary: "observation gate met",
+    sla: { ageMinutes: 9 * 60, budgetMinutes: 48 * 60 },
+    quorumMet: 0,
+    quorumRequired: 2,
+    inert: null,
+    needsYou: true,
+  },
+];
+
+const R1_PASSPORT = [
+  { label: "alpha version", value: "av_2041", note: "· supersedes av_1988", verification: "✓ verified" },
+  { label: "artifact digest", value: "sha256:9f3c1a…e2", verification: "✓ verified" },
+  { label: "entrypoint", value: "rsi_pkg.strategy:RsiAlpha", verification: null },
+  { label: "selected params", value: "param_118", note: "· sha256:aa41…9d", verification: "✓ verified" },
+  { label: "final audit run", value: "run_5512", note: "/ attempt 2 · replay", verification: "✓ reproduced" },
+  { label: "engine", value: "quantbt 1.0.8 · image sha256:77bd…a1", verification: "✓ verified" },
+  { label: "datasets", value: "3 snapshots · universe univ_88", verification: "PASS" },
+  { label: "methodology claim", value: "clm_31 — WFO 12 folds + 90d holdout", verification: null },
+];
+
+const R1_CHECKLIST = [
+  { label: "exact engine / data / version pinned by digest", outcome: "pass" as const },
+  { label: "final audit replay reproducible (checksum match)", outcome: "pass" as const },
+  { label: "outer OOS policy satisfied — holdout untouched by selection", outcome: "pass" as const },
+  { label: "parameter stability ≥ threshold across folds", outcome: "pass" as const },
+  { label: "execution assumptions declared (fee/slippage/latency)", outcome: "pass" as const },
+  {
+    label: "capacity evidence limited — volume data covers top-3 symbols only",
+    outcome: "watch" as const,
+    suggestion: "suggested condition below",
+  },
+];
 
 const VERIFICATION_RESULTS: VerificationResult[] = [
   "PENDING",
@@ -628,6 +713,98 @@ export default function ExecutionFixtures() {
                 plan={null}
                 danger
                 confirmWord="CLOSE"
+              />
+            </Case>
+          </div>
+        </Group>
+
+        <Group
+          title="Phase 1 — Approval Inbox (states only)"
+          note="Lane A: props and fixtures. Real integration waits on EX-BE-04a and EX-BE-05a, neither of which needs the Rust edge, AWS or the Trading System. AP-259 is dimmed because you wrote it — it stays in the list, because a queue that hides its un-actionable rows lies about its own size."
+        >
+          <div className="exec-fixtures-stack">
+            <Case caption="populated — one overdue, one awaiting quorum, one blocked by separation of duty">
+              <ApprovalInbox
+                page={{ rows: INBOX_ROWS, totalCount: 5, filteredCount: 4 }}
+                counts={{ pending: 5, overdue: 1, dueSoon: 1 }}
+                filter="INBOX"
+                policyVersion="approval.v3"
+                actor="Lan"
+                actorRoles={["Quant Reviewer", "Ops Approver"]}
+                decided={{ rows: INBOX_ROWS.slice(2, 3), totalCount: 2 }}
+              />
+            </Case>
+            <Case caption="inbox zero — an empty queue is a result, not a failure">
+              <ApprovalInbox
+                page={{ rows: [], totalCount: 0 }}
+                counts={{ pending: 0, overdue: 0, dueSoon: 0 }}
+                filter="INBOX"
+                policyVersion="approval.v3"
+                actor="Lan"
+              />
+            </Case>
+            <Case caption="denied — the viewer lacks the scope, which is not an empty queue">
+              <ApprovalInbox
+                page={{ rows: [], totalCount: 0 }}
+                counts={{ pending: 0, overdue: 0, dueSoon: 0 }}
+                filter="INBOX"
+                status="denied"
+                reason="portal.governance.approvals.read"
+              />
+            </Case>
+          </div>
+        </Group>
+
+        <Group
+          title="Phase 2 — Gate R1 Review (states only)"
+          note="The screen exists to make one refusal impossible to work around. Separation of duty is derived from creator vs actor rather than trusted from a prop, and Deny is never locked: a reviewer who cannot approve can always refuse."
+        >
+          <div className="exec-fixtures-stack">
+            <Case caption="separation of duty OK — one warning, no blockers, Approve available">
+              <GateR1Review
+                approvalId="AP-201"
+                alphaLabel="RSI v1.7"
+                releaseCandidate="RC-41"
+                quorumMet={1}
+                quorumRequired={2}
+                policyVersion="approval.v3"
+                creator="Minh"
+                actor="Lan"
+                sla={{ ageMinutes: 2 * 60, budgetMinutes: 24 * 60 }}
+                passport={R1_PASSPORT}
+                checklist={R1_CHECKLIST}
+              />
+            </Case>
+            <Case caption="you wrote it — Approve locked, Deny still available">
+              <GateR1Review
+                approvalId="AP-201"
+                alphaLabel="RSI v1.7"
+                releaseCandidate="RC-41"
+                quorumMet={0}
+                quorumRequired={2}
+                policyVersion="approval.v3"
+                creator="Lan"
+                actor="Lan"
+                passport={R1_PASSPORT}
+                checklist={R1_CHECKLIST}
+              />
+            </Case>
+            <Case caption="blocking finding plus an expired request — every lock reported, not just the first">
+              <GateR1Review
+                approvalId="AP-201"
+                alphaLabel="RSI v1.7"
+                quorumMet={0}
+                quorumRequired={2}
+                policyVersion="approval.v3"
+                creator="Minh"
+                actor="Lan"
+                passport={R1_PASSPORT}
+                checklist={[
+                  ...R1_CHECKLIST.slice(0, 5),
+                  { label: "holdout untouched by selection", outcome: "fail" as const },
+                  { label: "capacity evidence", outcome: "insufficient" as const },
+                ]}
+                locks={["BLOCKING_FINDINGS", "EXPIRED"]}
               />
             </Case>
           </div>

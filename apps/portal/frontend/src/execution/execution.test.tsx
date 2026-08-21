@@ -37,6 +37,8 @@ import {
   screenDeliveryProfile,
 } from "./profile";
 import { KeysetTable, type Column } from "./components/table";
+import { ApprovalInbox, INBOX_FILTERS, type ApprovalRow } from "./screens/ApprovalInbox";
+import { GateR1Review } from "./screens/GateR1Review";
 import {
   formatDecimal,
   isSettled,
@@ -1550,5 +1552,227 @@ describe("problems map to the states a human responds to differently", () => {
 
   it("names the failure even when the body is empty", () => {
     expect(readProblem(null, 503).code).toBe("HTTP_503");
+  });
+});
+
+/* ===========================================================================
+ * Phase 1 — Approval Inbox (UI states; integration waits on EX-BE-04a/05a)
+ * ======================================================================== */
+
+const inboxRow = (over: Partial<ApprovalRow> = {}): ApprovalRow => ({
+  id: "AP-352",
+  gate: "R2",
+  subject: "Carry v3.2 → PF-MAIN",
+  target: "paper · BINANCE",
+  blockerCount: 1,
+  blockerSummary: "broker sync stale",
+  sla: { ageMinutes: 26 * 60, budgetMinutes: 24 * 60 },
+  quorumMet: 0,
+  quorumRequired: 2,
+  inert: null,
+  needsYou: true,
+  ...over,
+});
+
+const inboxPage = (rows: ApprovalRow[]): KeysetPage<ApprovalRow> => ({
+  rows,
+  totalCount: 5,
+});
+
+describe("Approval Inbox", () => {
+  it("shows a row the actor cannot approve, dimmed and labelled", () => {
+    // Hiding it would make the queue lie about its own size and leave a request
+    // stuck with nobody seeing it.
+    render(
+      <ApprovalInbox
+        page={inboxPage([inboxRow({ inert: "SELF", needsYou: false })])}
+        counts={{ pending: 5, overdue: 1, dueSoon: 1 }}
+        filter="INBOX"
+      />,
+    );
+    expect(screen.getByText("AP-352")).toBeTruthy();
+    expect(screen.getByText(/not you \(separation-of-duty\)/)).toBeTruthy();
+  });
+
+  it("distinguishes the three reasons a row is inert", () => {
+    const { rerender } = render(
+      <ApprovalInbox
+        page={inboxPage([inboxRow({ inert: "QUORUM" })])}
+        counts={{ pending: 5, overdue: 0, dueSoon: 0 }}
+        filter="INBOX"
+      />,
+    );
+    expect(screen.getByText(/awaiting another approver/)).toBeTruthy();
+    rerender(
+      <ApprovalInbox
+        page={inboxPage([inboxRow({ inert: "BLOCKED" })])}
+        counts={{ pending: 5, overdue: 0, dueSoon: 0 }}
+        filter="INBOX"
+      />,
+    );
+    expect(screen.getByText(/blocked before review/)).toBeTruthy();
+  });
+
+  it("counts the whole queue, not the loaded page", () => {
+    const { container } = render(
+      <ApprovalInbox
+        page={inboxPage([inboxRow()])}
+        counts={{ pending: 5, overdue: 1, dueSoon: 1 }}
+        filter="INBOX"
+      />,
+    );
+    // One row is loaded and five are pending. The header describes the queue.
+    const header = container.querySelector(".exec-inbox-counts");
+    expect(header?.textContent).toContain("5 PENDING");
+    expect(header?.textContent).toContain("1 overdue");
+    expect(header?.textContent).toContain("1 due < 8h");
+  });
+
+  it("says inbox zero rather than showing a blank table", () => {
+    const { container } = render(
+      <ApprovalInbox
+        page={inboxPage([])}
+        counts={{ pending: 0, overdue: 0, dueSoon: 0 }}
+        filter="INBOX"
+      />,
+    );
+    expect(container.querySelector('.exec-state[data-status="empty"]')).not.toBeNull();
+    expect(screen.getByText(/Inbox zero/)).toBeTruthy();
+  });
+
+  it("keeps decided requests out of the pending table", () => {
+    // A decided request in the pending list is an action item that is not one.
+    render(
+      <ApprovalInbox
+        page={inboxPage([inboxRow()])}
+        decided={inboxPage([inboxRow({ id: "AP-201", inert: null, needsYou: false })])}
+        counts={{ pending: 5, overdue: 0, dueSoon: 0 }}
+        filter="INBOX"
+      />,
+    );
+    expect(screen.getByRole("table", { name: "Pending approvals" })).toBeTruthy();
+    expect(screen.getByRole("table", { name: "Recently decided" })).toBeTruthy();
+  });
+
+  it("names the policy and the actor's roles so a blocked Approve is explicable", () => {
+    render(
+      <ApprovalInbox
+        page={inboxPage([inboxRow()])}
+        counts={{ pending: 1, overdue: 0, dueSoon: 0 }}
+        filter="INBOX"
+        policyVersion="approval.v3"
+        actor="Lan"
+        actorRoles={["Quant Reviewer", "Ops Approver"]}
+      />,
+    );
+    expect(screen.getByText(/policy approval\.v3 · you are Lan · Quant Reviewer \+ Ops Approver/)).toBeTruthy();
+  });
+
+  it("offers the hi-fi's filters and marks the active one", () => {
+    render(
+      <ApprovalInbox
+        page={inboxPage([inboxRow()])}
+        counts={{ pending: 1, overdue: 0, dueSoon: 0 }}
+        filter="OVERDUE"
+      />,
+    );
+    expect(INBOX_FILTERS.length).toBe(8);
+    expect(screen.getByRole("button", { name: "Overdue" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Inbox" }).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("states a cleared blocker rather than leaving the cell blank", () => {
+    render(
+      <ApprovalInbox
+        page={inboxPage([inboxRow({ blockerCount: 0, blockerSummary: "observation gate met" })])}
+        counts={{ pending: 1, overdue: 0, dueSoon: 0 }}
+        filter="INBOX"
+      />,
+    );
+    expect(screen.getByText("0 — observation gate met")).toBeTruthy();
+  });
+});
+
+/* ===========================================================================
+ * Phase 2 — Gate R1 Review
+ * ======================================================================== */
+
+const PASSPORT = [
+  { label: "alpha version", value: "av_2041", note: "· supersedes av_1988", verification: "✓ verified" },
+  { label: "artifact digest", value: "sha256:9f3c1a…e2", verification: null },
+];
+
+const CHECKLIST = [
+  { label: "exact engine / data / version pinned by digest", outcome: "pass" as const },
+  { label: "final audit replay reproducible", outcome: "pass" as const },
+  { label: "capacity evidence limited — volume covers top-3 symbols", outcome: "watch" as const, suggestion: "suggested condition below" },
+];
+
+function gate(over: Record<string, unknown> = {}) {
+  return (
+    <GateR1Review
+      approvalId="AP-201"
+      alphaLabel="RSI v1.7"
+      releaseCandidate="RC-41"
+      quorumMet={1}
+      quorumRequired={2}
+      policyVersion="approval.v3"
+      creator="Minh"
+      actor="Lan"
+      passport={PASSPORT}
+      checklist={CHECKLIST}
+      {...over}
+    />
+  );
+}
+
+describe("Gate R1 Review", () => {
+  it("locks Approve when the reviewer created the artifact, without being told to", () => {
+    // Derived from creator vs actor rather than trusted from a prop: a screen
+    // that renders a clean SoD line because a prop said so is one bad prop away
+    // from permitting the thing it exists to refuse.
+    render(gate({ actor: "Minh" }));
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
+    expect(screen.getByText(/self-approval prohibited/)).toBeTruthy();
+    expect(screen.getByText(/separation-of-duty VIOLATION/)).toBeTruthy();
+  });
+
+  it("confirms separation of duties by naming both people", () => {
+    render(gate());
+    expect(screen.getByText(/creator \(Minh\) ≠ you \(Lan\)/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", false);
+  });
+
+  it("never locks Deny", () => {
+    // A reviewer who cannot approve can always refuse. Blocking that leaves a
+    // bad request in the queue with nobody able to clear it.
+    render(gate({ actor: "Minh", locks: ["BLOCKING_FINDINGS", "EXPIRED"] }));
+    expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", false);
+  });
+
+  it("reports every lock, not only the first", () => {
+    render(gate({ actor: "Minh", locks: ["EXPIRED"] }));
+    const reason = screen.getByText(/self-approval prohibited/);
+    expect(reason.textContent).toContain("expired");
+  });
+
+  it("counts blocking findings separately from warnings", () => {
+    // A warning counted as a blocker stops a legitimate approval; a blocker
+    // counted as a warning waves a real one through.
+    render(gate());
+    expect(screen.getByText(/blocking items:/).textContent).toContain("0");
+    expect(screen.getByText(/warnings:/).textContent).toContain("1");
+  });
+
+  it("states a passport claim nobody verified rather than leaving it blank", () => {
+    render(gate());
+    expect(screen.getByText("not verified")).toBeTruthy();
+    expect(screen.getByText("✓ verified")).toBeTruthy();
+  });
+
+  it("renders a review it cannot show as a named state", () => {
+    const { container } = render(gate({ status: "denied", reason: "portal.governance.r1.read" }));
+    expect(container.querySelector('.exec-state[data-status="denied"]')).not.toBeNull();
+    expect(container.querySelector("button")).toBeNull();
   });
 });
