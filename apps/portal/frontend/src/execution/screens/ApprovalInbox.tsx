@@ -219,6 +219,8 @@ export function ApprovalInbox({
   decided,
   decidedWindow = "last 30 days",
   inertCount = null,
+  cursorNotice,
+  onDismissCursorNotice,
   onLoadOlder,
   onLoadNewer,
 }: {
@@ -261,6 +263,16 @@ export function ApprovalInbox({
    * one filtering bug this screen must not be able to hide.
    */
   inertCount?: number | null;
+  /**
+   * Set when a page reference stopped applying and the list reset to the start.
+   *
+   * It is announced rather than absorbed. A cursor voided by a query change is
+   * a normal, contractual event (`EX-BE-04b`), but from the reader's side the
+   * list silently jumps back to page one — and a reader who does not know that
+   * happened will assume the rows they were looking at were deleted.
+   */
+  cursorNotice?: string | null;
+  onDismissCursorNotice?: () => void;
   onLoadOlder?: () => void;
   onLoadNewer?: () => void;
 }) {
@@ -298,6 +310,17 @@ export function ApprovalInbox({
       {status === "stale" ? (
         <div className="exec-inbox-partial">
           {reason ?? "This queue is older than its freshness budget. Decide from it only after refreshing."}
+        </div>
+      ) : null}
+
+      {cursorNotice ? (
+        <div className="exec-inbox-cursor-notice" role="status">
+          <span>{cursorNotice}</span>
+          {onDismissCursorNotice ? (
+            <button type="button" className="exec-btn-ghost" onClick={onDismissCursorNotice}>
+              Dismiss
+            </button>
+          ) : null}
         </div>
       ) : null}
 

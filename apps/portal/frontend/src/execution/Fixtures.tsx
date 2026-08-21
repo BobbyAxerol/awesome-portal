@@ -34,6 +34,8 @@ import { VenueIdentity, VenueScope } from "./components/scope";
 import { CapNotice, CommissionedPanel, PanelState } from "./components/states";
 import { KeysetTable, type Column } from "./components/table";
 import { CompletenessNote, SubscriptionBanner } from "./components/stream";
+import { RangeTooWideNotice, RetentionNotice } from "./components/retention";
+import { ZoomableChart, type ZoomRange } from "./components/zoom";
 import { SubscriptionWalk } from "./components/streamDemo";
 import { INITIAL_SUBSCRIPTION, type SubscriptionState } from "./subscription";
 import { ApprovalInbox, type ApprovalRow } from "./screens/ApprovalInbox";
@@ -296,6 +298,54 @@ const DECIDED_FIXTURE_ROWS: ApprovalRow[] = [
 ];
 
 /* One instance of each unhappy state, so they can be read side by side. */
+/** Ranges spanning three rungs, so the demo shows all three verdicts. */
+const ZOOM_RANGES: ZoomRange[] = [
+  { label: "1d", seconds: 86_400 },
+  { label: "3d", seconds: 3 * 86_400 },
+  { label: "10d", seconds: 10 * 86_400 },
+  { label: "40d", seconds: 40 * 86_400 },
+  { label: "180d", seconds: 180 * 86_400 },
+];
+
+/**
+ * Drives the real `zoomVerdict`, and re-serves the envelope the way the server
+ * would: the interval in the caption is always the one that came back.
+ */
+function ZoomDemo() {
+  const [range, setRange] = useState<ZoomRange>(ZOOM_RANGES[4]);
+  const [served, setServed] = useState({ window: "180d", interval: "1h" });
+
+  return (
+    <ZoomableChart
+      title="Equity"
+      envelope={{
+        window: served.window,
+        interval: served.interval,
+        currency: "USDT",
+        asOf: "2026-08-21T10:42:01Z",
+        authority: "DERIVED",
+        formulaVersion: "equity.v3",
+        downsampleMethod: served.interval === "1m" ? "none" : "canonical_preaggregated",
+      }}
+      ranges={ZOOM_RANGES}
+      activeRange={range}
+      onRangeChange={(next, verdict) => {
+        setRange(next);
+        // Only a `requery` verdict changes what is served. The other two leave
+        // the envelope alone, which is what makes "this zoom changed nothing"
+        // visible rather than merely true.
+        if (verdict.kind === "requery") {
+          setServed({ window: next.label, interval: verdict.to });
+        }
+      }}
+    >
+      <div className="exec-fixtures-note" style={{ padding: "12px" }}>
+        plot area — ECharts arrives at phase 18 and must keep this caption verbatim
+      </div>
+    </ZoomableChart>
+  );
+}
+
 const LIVE_BASE: SubscriptionState = {
   ...INITIAL_SUBSCRIPTION,
   phase: "live",
@@ -952,6 +1002,55 @@ export default function ExecutionFixtures() {
                 danger
                 confirmWord="CLOSE"
               />
+            </Case>
+          </div>
+        </Group>
+
+        <Group
+          title="Cold retention — six answers to “why are there no rows?”"
+          note="EX-BE-04b §3: COLD_REQUESTABLE, PURGED and UNKNOWN “may have no points, but are not semantically an ordinary empty hot series.” Nothing matched, older than we keep, deleted under policy, no policy published, and the question was too big are five different answers, and only the first is an empty result."
+        >
+          <div className="exec-fixtures-stack">
+            <Case caption="PARTIAL_HOT — rows kept, and the shortfall stated above them">
+              <RetentionNotice retention={{ outcome: "PARTIAL_HOT", hotFrom: "2026-02-21T00:00:00Z", policyVersion: "ret.v4" }} />
+            </Case>
+            <Case caption="COLD_REQUESTABLE — a restore is an administrative request, not a wider query">
+              <RetentionNotice
+                retention={{ outcome: "COLD_REQUESTABLE", hotFrom: "2026-02-21T00:00:00Z", policyVersion: "ret.v4" }}
+                onRequestRestore={() => {}}
+              />
+            </Case>
+            <Case caption="PURGED — terminal, so no restore is offered; offering one would be a lie">
+              <RetentionNotice retention={{ outcome: "PURGED", policyVersion: "ret.v4" }} onRequestRestore={() => {}} />
+            </Case>
+            <Case caption="UNKNOWN — no policy published, so nothing can be claimed either way">
+              <RetentionNotice retention={{ outcome: "UNKNOWN" }} />
+            </Case>
+            <Case caption="range too wide — not a retention problem; the data may be entirely present">
+              <RangeTooWideNotice requestedDays={7300} />
+            </Case>
+            <Case caption="in a table: cold reads as unavailable, never as “no rows match”">
+              <KeysetTable
+                label="Orders"
+                columns={BLOTTER_COLUMNS}
+                rowKey={(r) => r.id}
+                page={{
+                  rows: [],
+                  totalCount: 182_431,
+                  retention: { outcome: "COLD_REQUESTABLE", hotFrom: "2026-02-21T00:00:00Z" },
+                }}
+              />
+            </Case>
+          </div>
+        </Group>
+
+        <Group
+          title="Mechanism M2 — zoom re-queries, it does not magnify"
+          note="Zooming into an already-aggregated array renders a shape the data does not have: four hourly buckets stretched across a screen look like four measurements when they are 440 averaged, and the peak that mattered is inside one of them. So a zoom that earns a finer rung asks the server again — and a zoom that does not is told so, because silently doing nothing reads as a broken control."
+        >
+          <div className="exec-fixtures-stack">
+            <Case caption="pick a range — the caption always shows the interval the SERVER served">
+              <ZoomDemo />
             </Case>
           </div>
         </Group>

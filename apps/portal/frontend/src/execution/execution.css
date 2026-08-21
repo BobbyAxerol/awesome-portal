@@ -1953,3 +1953,92 @@
 .exec-retention[data-outcome="UNKNOWN"] .exec-retention-title {
   color: var(--warn);
 }
+
+/* A page reference that stopped applying. Announced rather than absorbed: from
+ * the reader's side the list silently jumps back to the first page, and a
+ * reader who does not know that happened assumes the rows they were looking at
+ * were deleted. `role="status"` so it is spoken, not only seen. */
+.exec-inbox-cursor-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--accent);
+  background: var(--surface-2);
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+/* ---------------------------------------------------------------------------
+ * Zoom that re-queries (mechanism M2, EX-BE-04b §3)
+ * ------------------------------------------------------------------------ */
+
+.exec-zoom {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border: 1px solid var(--line);
+  background: var(--paper-raised);
+  padding: var(--space-3);
+  min-width: 0;
+}
+
+.exec-zoom[data-loading="true"] {
+  opacity: 0.72;
+}
+
+.exec-zoom-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.exec-zoom-ranges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+.exec-zoom-range {
+  min-height: 30px;
+  padding: 2px var(--space-2);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  cursor: pointer;
+}
+
+.exec-zoom-range[data-active="true"] {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.exec-zoom-range:disabled {
+  cursor: not-allowed;
+}
+
+.exec-zoom-plot {
+  min-height: 120px;
+  border: 1px solid var(--line-soft);
+  background: var(--paper-sunken);
+  overflow-x: auto;
+}
+
+/* The served interval, never the requested one (§16.2). */
+.exec-zoom-caption {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+}
+
+/* "This zoom changed nothing" is more useful than silently doing nothing,
+ * which reads as a broken control. */
+.exec-zoom-verdict {
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}

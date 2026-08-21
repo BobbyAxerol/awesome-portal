@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import { newRequestKey } from "../adapter";
-import type { KeysetPage, PanelStatus } from "../contracts";
+import { cursorStillValid, type CursorScope, type KeysetPage, type PanelStatus } from "../contracts";
 import {
   decisionReducer,
   initialDecision,
@@ -32,6 +32,9 @@ import { GateR2Review } from "./GateR2Review";
 import { PaperExitReview, type ExitOutcome } from "./PaperExitReview";
 
 const EMPTY_PAGE: KeysetPage<ApprovalRow> = { rows: [], totalCount: 0 };
+
+/** Scale doc §3.2. Part of the cursor's scope, so changing it voids one. */
+const PAGE_SIZE = 100;
 
 interface LoadState<T> {
   status: PanelStatus;
@@ -52,7 +55,21 @@ export function ApprovalInboxContainer({
   onOpenRequest?: (id: string) => void;
 }) {
   const [filter, setFilter] = useState<InboxFilter>("INBOX");
-  const [cursor, setCursor] = useState<{ after?: string; before?: string }>({});
+  /**
+   * A cursor and the query shape it was issued against, kept together.
+   *
+   * `EX-BE-04b`: "Changing filter, sort, limit, epoch, scope, resource or
+   * cursor direction makes an old cursor fail closed." The server enforces
+   * that. Tracking it here means a stale cursor is dropped *before* the request
+   * rather than bounced after it, and — more importantly — that the reader is
+   * told the page reset rather than watching it silently jump to the start.
+   */
+  const [cursor, setCursor] = useState<{
+    after?: string;
+    before?: string;
+    scope: CursorScope | null;
+  }>({ scope: null });
+  const [cursorReset, setCursorReset] = useState<string | null>(null);
   const [state, setState] = useState<
     LoadState<{
       page: KeysetPage<ApprovalRow>;
@@ -62,10 +79,26 @@ export function ApprovalInboxContainer({
     }>
   >(loading);
 
+  // The query shape this render would issue a cursor against.
+  const scope: CursorScope = {
+    filter,
+    sort: "sla_state:desc,approval_id:asc",
+    limit: PAGE_SIZE,
+    resource: "governance.approvals",
+  };
+
   useEffect(() => {
     let cancelled = false;
     setState(loading);
-    void api.listApprovals({ filter, ...cursor }).then((result) => {
+    // Drop a cursor whose query no longer matches, rather than sending one the
+    // server is contractually required to reject.
+    const usable = cursorStillValid(cursor.scope, scope);
+    const after = usable ? cursor.after : undefined;
+    const before = usable ? cursor.before : undefined;
+    if (!usable && (cursor.after || cursor.before)) {
+      setCursorReset("The list changed, so the page reference no longer applies — showing the first page.");
+    }
+    void api.listApprovals({ filter, after, before, limit: PAGE_SIZE }).then((result) => {
       if (cancelled) return;
       setState(
         result.ok
@@ -83,13 +116,15 @@ export function ApprovalInboxContainer({
     return () => {
       cancelled = true;
     };
-  }, [api, filter, cursor]);
+  }, [api, filter, cursor, scope.limit, scope.sort, scope.resource]);
 
   const changeFilter = useCallback((next: InboxFilter) => {
     // A cursor is only meaningful inside the query that produced it. Carrying
     // one across a filter change would page through a list that no longer
-    // exists.
-    setCursor({});
+    // exists. Reset silently here — the reader asked for the change, so telling
+    // them the page reset would be narrating their own click.
+    setCursor({ scope: null });
+    setCursorReset(null);
     setFilter(next);
   }, []);
 
@@ -109,14 +144,22 @@ export function ApprovalInboxContainer({
           : undefined
       }
       onOpenRequest={onOpenRequest ? (id) => onOpenRequest(id) : undefined}
+      cursorNotice={cursorReset}
+      onDismissCursorNotice={() => setCursorReset(null)}
       onLoadOlder={
         state.value?.page.nextCursor
-          ? () => setCursor({ after: state.value?.page.nextCursor ?? undefined })
+          ? () => {
+              setCursorReset(null);
+              setCursor({ after: state.value?.page.nextCursor ?? undefined, scope });
+            }
           : undefined
       }
       onLoadNewer={
         state.value?.page.prevCursor
-          ? () => setCursor({ before: state.value?.page.prevCursor ?? undefined })
+          ? () => {
+              setCursorReset(null);
+              setCursor({ before: state.value?.page.prevCursor ?? undefined, scope });
+            }
           : undefined
       }
     />

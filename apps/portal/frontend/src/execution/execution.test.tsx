@@ -17,6 +17,7 @@ import { ExecutionSurface } from "./ExecutionSurface";
 import {
   BLOTTER_BUCKET,
   BLOTTER_UNBUCKETED,
+  cursorStillValid,
   guardFor,
   slaOverdue,
   STAGE_ORDER,
@@ -38,6 +39,7 @@ import {
   screenDeliveryProfile,
 } from "./profile";
 import { KeysetTable, type Column } from "./components/table";
+import { ZoomableChart, zoomVerdict } from "./components/zoom";
 import {
   emptyMeansEmpty,
   panelStatusForRetention,
@@ -2866,11 +2868,11 @@ describe("containers — the port meets the screens", () => {
     // Four rows are on screen and five are pending. The header describes the
     // queue, the rows describe the page, and both are the server's numbers.
     expect(container.querySelector(".exec-inbox-counts")?.textContent).toContain("5 PENDING");
-    // Two pending rows on the page and five in the queue: the header describes
-    // the queue. The recently-decided table is its own query, so its rows are
-    // counted separately.
+    // Three rows in the INBOX view and five in the queue: the header describes
+    // the queue, the view describes what is mine. The container asks for a full
+    // page (100), so the view is not truncated here.
     const pending = container.querySelector('table[aria-label="Pending approvals"]');
-    expect(pending?.querySelectorAll("tbody tr").length).toBe(2);
+    expect(pending?.querySelectorAll("tbody tr").length).toBe(3);
   });
 
   it("renders a loading skeleton before the first answer, not an empty queue", () => {
@@ -3950,5 +3952,143 @@ describe("series validation follows the EX-BE-04b vocabulary", () => {
       3 * 86_400,
     );
     expect(w).toEqual([]);
+  });
+});
+
+/* ===========================================================================
+ * Goal: cursor scope, and zoom that re-queries
+ * ======================================================================== */
+
+describe("a cursor is only valid inside the query that issued it", () => {
+  const scope = {
+    filter: "INBOX",
+    sort: "sla_state:desc",
+    limit: 100,
+    resource: "governance.approvals",
+  };
+
+  it("survives an identical query", () => {
+    expect(cursorStillValid(scope, { ...scope })).toBe(true);
+  });
+
+  it("dies on every field EX-BE-04b names", () => {
+    // "Changing filter, sort, limit, epoch, scope, resource or cursor direction
+    // makes an old cursor fail closed."
+    expect(cursorStillValid(scope, { ...scope, filter: "OVERDUE" })).toBe(false);
+    expect(cursorStillValid(scope, { ...scope, sort: "age:asc" })).toBe(false);
+    expect(cursorStillValid(scope, { ...scope, limit: 250 })).toBe(false);
+    expect(cursorStillValid(scope, { ...scope, resource: "execution.operations" })).toBe(false);
+    expect(cursorStillValid({ ...scope, epoch: "ep_1" }, { ...scope, epoch: "ep_2" })).toBe(false);
+  });
+
+  it("treats no prior scope as no valid cursor", () => {
+    // The first page has nothing to resume from, and guessing that it does is
+    // how a cursor gets sent into a query that never issued it.
+    expect(cursorStillValid(null, scope)).toBe(false);
+  });
+
+  it("announces a reset rather than silently jumping to page one", () => {
+    // From the reader's side the list jumps back to the start; a reader who
+    // does not know that happened assumes their rows were deleted.
+    render(
+      <ApprovalInbox
+        page={inboxPage([inboxRow()])}
+        counts={{ pending: 5, overdue: 1, dueSoon: 0 }}
+        filter="INBOX"
+        cursorNotice="The list changed, so the page reference no longer applies — showing the first page."
+      />,
+    );
+    expect(screen.getByRole("status").textContent).toContain("no longer applies");
+  });
+});
+
+describe("M2 zoom asks the server again rather than magnifying", () => {
+  const day = 86_400;
+
+  it("re-queries when a finer rung actually fits", () => {
+    // 40 days at 15m is 3,840 points, comfortably under the cap — so an hourly
+    // series is coarser than the range deserves.
+    const v = zoomVerdict("1h", { label: "40d", seconds: 40 * day });
+    expect(v.kind).toBe("requery");
+    if (v.kind === "requery") {
+      expect(v.to).toBe("15m");
+      expect(v.reason).toContain("rather than magnifying");
+    }
+  });
+
+  it("does not re-query a zoom that stays inside one rung", () => {
+    // 100 days still resolves to 1h, so the server would return this same
+    // series and the round-trip would buy nothing.
+    const v = zoomVerdict("1h", { label: "100d", seconds: 100 * day });
+    expect(v.kind).toBe("same-rung");
+    expect(v.reason).toContain("would return this same series");
+  });
+
+  it("says when the finest rung has been reached", () => {
+    // Zooming past 1m shows the same measurements larger, not more of them.
+    const v = zoomVerdict("1m", { label: "1h", seconds: 3_600 });
+    expect(v.kind).toBe("finest");
+    expect(v.reason).toContain("finest bucket the projection stores");
+  });
+
+  it("names a range and never an interval, because the server chooses", () => {
+    // EX-BE-04b §3: the query selects the rung from the requested range.
+    const v = zoomVerdict("1d", { label: "3d", seconds: 3 * day });
+    expect(v.kind).toBe("requery");
+    if (v.kind === "requery") expect(v.to).toBe("1m");
+  });
+
+  it("captions the interval the server served, not the one requested", () => {
+    // A caption showing a requested interval would say the opposite of the
+    // truth while a request was in flight.
+    const { container } = render(
+      <ZoomableChart
+        title="Equity"
+        envelope={{
+          window: "180d",
+          interval: "1h",
+          asOf: "2026-08-21T10:42:01Z",
+          authority: "DERIVED",
+        }}
+        ranges={[{ label: "180d", seconds: 180 * day }, { label: "40d", seconds: 40 * day }]}
+        activeRange={{ label: "180d", seconds: 180 * day }}
+        onRangeChange={() => {}}
+      />,
+    );
+    expect(container.querySelector(".exec-zoom-caption")?.textContent).toContain("1h");
+    fireEvent.click(screen.getByRole("button", { name: "40d" }));
+    // Still 1h: the envelope has not been replaced, because no fetch happened.
+    expect(container.querySelector(".exec-zoom-caption")?.textContent).toContain("1h");
+  });
+
+  it("tells the reader when a zoom changed nothing", () => {
+    // Silently doing nothing reads as a broken control.
+    render(
+      <ZoomableChart
+        title="Equity"
+        envelope={{ window: "180d", interval: "1h", asOf: "2026-08-21T10:42:01Z", authority: "DERIVED" }}
+        ranges={[{ label: "100d", seconds: 100 * day }]}
+        activeRange={{ label: "180d", seconds: 180 * day }}
+        onRangeChange={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "100d" }));
+    expect(screen.getByText(/would return this same series/)).toBeTruthy();
+  });
+
+  it("reports the verdict to the caller so the screen decides whether to fetch", () => {
+    const seen: string[] = [];
+    render(
+      <ZoomableChart
+        title="Equity"
+        envelope={{ window: "180d", interval: "1h", asOf: "2026-08-21T10:42:01Z", authority: "DERIVED" }}
+        ranges={[{ label: "40d", seconds: 40 * day }, { label: "100d", seconds: 100 * day }]}
+        activeRange={{ label: "180d", seconds: 180 * day }}
+        onRangeChange={(_r, v) => seen.push(v.kind)}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "40d" }));
+    fireEvent.click(screen.getByRole("button", { name: "100d" }));
+    expect(seen).toEqual(["requery", "same-rung"]);
   });
 });
