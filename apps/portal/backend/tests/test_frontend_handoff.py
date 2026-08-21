@@ -109,6 +109,25 @@ def test_registry_fixture_is_the_public_document_with_computed_digest() -> None:
     )
 
 
+def test_registry_fixture_exposes_revision_4_delivery_contract() -> None:
+    document = _fixture("registry.public.json")
+    assert document["revision"] == 4
+    execution_screens = [
+        screen
+        for screen in document["screens"]
+        if screen["screen_id"].startswith("EXECUTION_")
+    ]
+    assert len(execution_screens) == 17
+    for screen in execution_screens:
+        assert screen["contract_revision"] == 2
+        assert screen["delivery_profile"] == "fixture"
+        policy = screen["delivery_policy"]
+        assert policy["policy_revision"] == 1
+        assert not any(
+            value for key, value in policy.items() if key.endswith("_enabled")
+        )
+
+
 def test_summary_fixtures_share_the_registry_fixture_digest() -> None:
     digest = _fixture("registry.public.json")["content_digest"]
     for name in FIXTURE_NAMES:
@@ -258,6 +277,14 @@ def test_committed_openapi_documents_both_handoff_endpoints() -> None:
 
     registry_ok = registry["responses"]["200"]["content"]["application/json"]["schema"]
     assert registry_ok == {"$ref": "#/components/schemas/PortalRegistryDocument"}
+    screen = document["components"]["schemas"]["ScreenContract"]
+    assert {"delivery_profile", "delivery_policy"} <= set(screen["required"])
+    assert (
+        screen["properties"]["delivery_policy"]["anyOf"][0]["$ref"]
+        == "#/components/schemas/DeliveryPolicyDefinition"
+    )
+    policy = document["components"]["schemas"]["DeliveryPolicyDefinition"]
+    assert policy["properties"]["policy_revision"]["minimum"] == 1
 
 
 def test_committed_openapi_matches_regenerated_document() -> None:

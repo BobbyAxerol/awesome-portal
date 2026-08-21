@@ -22,6 +22,18 @@ from portal_api.domain.portal_registry import (
 MAX_REGISTRY_FILE_BYTES = 2 * 1024 * 1024
 SOURCE_SCHEMA_NAME = "portal-registry-source.v1.schema.json"
 PUBLIC_SCHEMA_NAME = "portal-registry.v1.schema.json"
+DELIVERY_COMMAND_FLAGS = (
+    "paper_commands_enabled",
+    "sandbox_commands_enabled",
+    "live_protective_commands_enabled",
+    "live_risk_increasing_commands_enabled",
+)
+DELIVERY_POLICY_FLAGS = (
+    "query_enabled",
+    "projection_ingestion_enabled",
+    "sse_enabled",
+    *DELIVERY_COMMAND_FLAGS,
+)
 
 
 class PortalRegistryLoadError(RuntimeError):
@@ -186,6 +198,68 @@ def registry_invariant_errors(registry: PortalRegistrySource) -> tuple[str, ...]
         ):
             if _unsafe_metadata(value):
                 errors.append(f"screen {screen.screen_id} contains unsafe metadata")
+
+        profile = screen.delivery_profile
+        policy = screen.delivery_policy
+        commissioned = screen.maturity in {"COMMISSIONED", "BLOCKED"}
+        if commissioned and (profile is None or policy is None):
+            errors.append(
+                f"screen {screen.screen_id} requires delivery profile and policy"
+            )
+        if not commissioned and (profile is not None or policy is not None):
+            errors.append(
+                f"screen {screen.screen_id} cannot publish delivery metadata before commissioning"
+            )
+        if profile is not None and registry.revision < 4:
+            errors.append(
+                f"screen {screen.screen_id} delivery metadata requires registry revision 4"
+            )
+        if profile is not None and screen.contract_revision < 2:
+            errors.append(
+                f"screen {screen.screen_id} delivery metadata requires contract revision 2"
+            )
+        if policy is not None:
+            enabled = {
+                flag for flag in DELIVERY_POLICY_FLAGS if getattr(policy, flag)
+            }
+            command_enabled = enabled.intersection(DELIVERY_COMMAND_FLAGS)
+            if policy.sse_enabled and not (
+                policy.query_enabled and policy.projection_ingestion_enabled
+            ):
+                errors.append(
+                    f"screen {screen.screen_id} SSE requires query and projection ingestion"
+                )
+            if command_enabled and not policy.query_enabled:
+                errors.append(
+                    f"screen {screen.screen_id} commands require query capability"
+                )
+            if profile == "fixture" and enabled:
+                errors.append(
+                    f"screen {screen.screen_id} fixture profile must disable runtime capabilities"
+                )
+            if profile == "shadow" and command_enabled:
+                errors.append(
+                    f"screen {screen.screen_id} shadow profile must disable commands"
+                )
+            if profile == "paper" and command_enabled.intersection(
+                {
+                    "sandbox_commands_enabled",
+                    "live_protective_commands_enabled",
+                    "live_risk_increasing_commands_enabled",
+                }
+            ):
+                errors.append(
+                    f"screen {screen.screen_id} paper profile exceeds its command boundary"
+                )
+            if profile == "sandbox" and command_enabled.intersection(
+                {
+                    "live_protective_commands_enabled",
+                    "live_risk_increasing_commands_enabled",
+                }
+            ):
+                errors.append(
+                    f"screen {screen.screen_id} sandbox profile exceeds its command boundary"
+                )
 
     for feature_id, feature in features.items():
         if set(feature.screen_ids) != screens_by_feature[feature_id]:

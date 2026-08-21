@@ -1119,3 +1119,25 @@ unavailable fixtures and the state/ETag semantics document). The next backend
 work is BAR-02 — compatibility boundaries and parity freeze for U04/U05
 (see `upgrade/BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md`), not further
 BAR-01 expansion.
+
+## 19. Execution Loop amendment — EX-BE-00R4
+
+Owner-approved Execution Loop work adds one registry-only amendment without
+reopening BAR-01 summary authority. Registry revision 4 extends every screen
+contract with required nullable `delivery_profile` and `delivery_policy` fields;
+commissioned/blocked screens require both non-null, while screens not yet
+commissioned require both null.
+
+`delivery_policy` is policy revision 1 plus independent flags for query,
+projection ingestion, SSE, Paper commands, Sandbox commands, Live protective
+commands and Live risk-increasing commands. It is public commissioning metadata,
+not authorization. TypeScript RBAC/ABAC and runtime capability probes remain
+mandatory.
+
+Initial state is deliberately fail-closed: all 17 Execution screens publish
+`fixture` and every flag false. Repository invariants reject fixture runtime
+capabilities, shadow commands, SSE without query+projection, lower registry/
+screen revisions and Paper/Sandbox command-boundary escalation. The committed
+public fixture, OpenAPI and generated TypeScript contract are regenerated in
+the same slice so Claude can implement ProfileBadge/fixture/shadow behavior
+without a handwritten registry model.

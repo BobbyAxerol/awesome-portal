@@ -59,3 +59,28 @@ authoritative in `upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/PHASE_T
 The `/execution` path is now owned by the Execution Command Center. It was
 removed from `QUANTBT_RESEARCH.legacy_routes`; QuantBT remains canonical under
 `/research/quantbt`.
+
+## Revision 4 — Execution delivery profile contract
+
+Revision 4 implements `EX-BE-00R4` and `BR-EX-20`. Every commissioned or
+blocked screen publishes two required fields:
+
+- `delivery_profile`: `fixture | shadow | paper | sandbox | live_canary |
+  live_full`;
+- `delivery_policy`: `policy_revision` plus independent booleans for query,
+  projection ingestion, SSE, Paper commands, Sandbox commands, Live protective
+  commands and Live risk-increasing commands.
+
+All 17 Execution Loop screens currently remain `fixture`; every runtime flag is
+false. This is deliberate: revision 4 makes the active profile visible without
+claiming that an Execution Query API, Trading System adapter, projection, stream
+or command authority has been activated. `fixture`/`shadow` must be rendered
+through the frontend `ProfileBadge`; runtime envelopes will echo the selected
+profile when their later `EX-BE-*` slices land.
+
+The API fails closed when delivery metadata is missing or internally unsafe:
+fixture cannot enable runtime capabilities, shadow cannot enable commands, SSE
+requires query plus projection ingestion, and Paper/Sandbox cannot exceed their
+command boundary. These fields describe commissioning state only. They never
+grant a user permission, replace TypeScript RBAC/ABAC, or override a runtime
+capability probe.

@@ -1250,6 +1250,28 @@ export interface components {
             /** Venue */
             venue: string;
         };
+        /**
+         * DeliveryPolicyDefinition
+         * @description Commissioning flags, never a substitute for runtime authorization.
+         */
+        DeliveryPolicyDefinition: {
+            /** Live Protective Commands Enabled */
+            live_protective_commands_enabled: boolean;
+            /** Live Risk Increasing Commands Enabled */
+            live_risk_increasing_commands_enabled: boolean;
+            /** Paper Commands Enabled */
+            paper_commands_enabled: boolean;
+            /** Policy Revision */
+            policy_revision: number;
+            /** Projection Ingestion Enabled */
+            projection_ingestion_enabled: boolean;
+            /** Query Enabled */
+            query_enabled: boolean;
+            /** Sandbox Commands Enabled */
+            sandbox_commands_enabled: boolean;
+            /** Sse Enabled */
+            sse_enabled: boolean;
+        };
         /** DependenciesReport */
         DependenciesReport: {
             artifact_store: components["schemas"]["DependencyState"];
@@ -1738,7 +1760,7 @@ export interface components {
              * Group
              * @enum {string}
              */
-            group: "command" | "research" | "backtests" | "deployments" | "data_ops" | "planning" | "administration";
+            group: "command" | "governance" | "research" | "backtests" | "deployments" | "data_ops" | "planning" | "administration";
             /** Hidden For Roles */
             hidden_for_roles: string[];
             /** Id */
@@ -2106,6 +2128,9 @@ export interface components {
              * @enum {string}
              */
             data_mode: "REAL" | "FIXTURE" | "STATIC_PREVIEW" | "NONE";
+            delivery_policy: components["schemas"]["DeliveryPolicyDefinition"] | null;
+            /** Delivery Profile */
+            delivery_profile: ("fixture" | "shadow" | "paper" | "sandbox" | "live_canary" | "live_full") | null;
             /** Feature Id */
             feature_id: string;
             /** Inputs */

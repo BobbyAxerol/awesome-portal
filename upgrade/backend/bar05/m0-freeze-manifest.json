@@ -19,8 +19,8 @@
     "links_sidecar": "sha256:5fe5ea3ffa4c12bf78dc396bf1371d34bbcf6f47b099e12918d0a9957be0a1a6",
     "nginx_portal_conf": "sha256:f9afec69cd5f1c7ffe4d16c8f97eb80dbb295a8f628b880f86ee3d265466756f",
     "openapi_planning_snapshot": "sha256:5c03e4311582f3ae5beb07d5d3f588b78ea9a1689f78712c062a25182bd5a9cf",
-    "openapi_portal": "sha256:b18b362da82a5c1e205343f0f1222afd770864347531f76f92a37817ab959d45",
-    "openapi_portal_snapshot": "sha256:b18b362da82a5c1e205343f0f1222afd770864347531f76f92a37817ab959d45",
+    "openapi_portal": "sha256:3db643491b32f2aaf0a8490dcb5d457529185b0c35daab420a5e4fe295bcb2ee",
+    "openapi_portal_snapshot": "sha256:3db643491b32f2aaf0a8490dcb5d457529185b0c35daab420a5e4fe295bcb2ee",
     "planning_frontend_lock": "sha256:8d98e59a964741e0842fcd19d18179270d5e6c4934439ca8c2230b364f711f14",
     "planning_frontend_package": "sha256:2e53ca88ebbfeb25c2551ab29a2c45ef67c9b776595058b07e81d6caf5f59253",
     "planning_requirements": "sha256:89a5642e429cc00ba51f79f3854db39ade9e0e69fa098b16fc44cc54a1b1d053",
@@ -30,10 +30,10 @@
     "portal_frontend_package": "sha256:f775f56e473152a75144c294fca8e735a60d6a77dd773254695c1032fb51fc1e",
     "protected_kernel_hash": "sha256:3d7f0520defd55acddcf21bfde2fcca34b7aabbf26e5413eb7cd5c4e90c684d9",
     "protected_kernel_main": "sha256:34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
-    "registry_source": "sha256:90c821d03916e1be929659791b06ad69fc01af9094fa462cbb27a13d778915c2",
+    "registry_source": "sha256:530ae0d6cd9c0cf0dabac52c2a01df031a76b285d4ea7f95528b0ce62550bf6c",
     "run_request_schema": "sha256:582ced995417c641c9247fce422887e7f637359945fd8ef3b3e442d15fde009e"
   },
-  "frozen_at_commit": "d6da1f5a8b0027d1cff37595809065698441c884",
+  "frozen_at_commit": "5202fc777a35aea0a9312c1ce8ea2155a18e5833",
   "golden_tolerances": {
     "exit_price": {
       "atol": 1e-12,
@@ -46,7 +46,7 @@
     "historical_market_data_reader": "primus-historical-market-data==0.1.0rc3",
     "quantbt_engine": "quantbt-engine==1.0.8"
   },
-  "registry_source_digest": "sha256:bf1ebfdcbecb549a578799fca61821a564bdedffeec642d85cdf9316de954ef6",
+  "registry_source_digest": "sha256:a332702af4ab673b3889f20243417a58dda42189932b3f63c0b25a0bb1e9f2d4",
   "rollback": {
     "last_known_good_images": [
       "local/portal-portal-api:dev",

@@ -23,7 +23,7 @@ SCHEMA_PATHS = {
     "summary": SCHEMA_ROOT / "portal-summary.v1.schema.json",
 }
 
-EXECUTION_LOOP_REVISION_3_ROUTES = {
+EXECUTION_LOOP_REVISION_4_ROUTES = {
     "EXECUTION_COMMAND_CENTER_SCREEN": "/execution",
     "EXECUTION_OPERATIONS_QUEUE_SCREEN": "/execution/operations",
     "EXECUTION_INCIDENT_DETAIL_SCREEN": "/execution/operations/incidents/:incidentId",
@@ -41,6 +41,15 @@ EXECUTION_LOOP_REVISION_3_ROUTES = {
     "EXECUTION_PORTFOLIO_360_SCREEN": "/deployments/portfolios/:portfolioId",
     "EXECUTION_ACCOUNT_BROKER_360_SCREEN": "/deployments/accounts/:accountId",
     "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN": "/administration/actions",
+}
+DELIVERY_POLICY_FLAGS = {
+    "query_enabled",
+    "projection_ingestion_enabled",
+    "sse_enabled",
+    "paper_commands_enabled",
+    "sandbox_commands_enabled",
+    "live_protective_commands_enabled",
+    "live_risk_increasing_commands_enabled",
 }
 
 
@@ -327,9 +336,9 @@ def test_canonical_registry_source_and_public_document_validate() -> None:
     _assert_valid("public", public_document)
 
 
-def test_revision_3_commissions_all_execution_loop_routes_without_data() -> None:
+def test_revision_4_commissions_execution_routes_with_fail_closed_fixture_policy() -> None:
     source = _load_json(SOURCE_PATH)
-    assert source["revision"] == 3
+    assert source["revision"] == 4
     assert [group["id"] for group in source["feature_groups"][:4]] == [
         "command",
         "governance",
@@ -340,15 +349,30 @@ def test_revision_3_commissions_all_execution_loop_routes_without_data() -> None
     screens = {screen["screen_id"]: screen for screen in source["screens"]}
     assert {
         screen_id: screens[screen_id]["route"]
-        for screen_id in EXECUTION_LOOP_REVISION_3_ROUTES
-    } == EXECUTION_LOOP_REVISION_3_ROUTES
+        for screen_id in EXECUTION_LOOP_REVISION_4_ROUTES
+    } == EXECUTION_LOOP_REVISION_4_ROUTES
 
-    for screen_id in EXECUTION_LOOP_REVISION_3_ROUTES:
+    for screen_id in EXECUTION_LOOP_REVISION_4_ROUTES:
         screen = screens[screen_id]
+        assert screen["contract_revision"] == 2
         assert screen["maturity"] == "COMMISSIONED"
         assert screen["data_mode"] == "NONE"
+        assert screen["delivery_profile"] == "fixture"
+        assert screen["delivery_policy"]["policy_revision"] == 1
+        assert DELIVERY_POLICY_FLAGS <= screen["delivery_policy"].keys()
+        assert not any(
+            screen["delivery_policy"][flag] for flag in DELIVERY_POLICY_FLAGS
+        )
         assert screen["inputs"] == []
         assert screen["backend_dependency_ids"] == []
+
+    for screen in source["screens"]:
+        if screen["maturity"] in {"COMMISSIONED", "BLOCKED"}:
+            assert screen["delivery_profile"] is not None
+            assert screen["delivery_policy"] is not None
+        else:
+            assert screen["delivery_profile"] is None
+            assert screen["delivery_policy"] is None
 
     features = {feature["id"]: feature for feature in source["features"]}
     assert features["EXECUTION_ADMIN_ACTIONS"]["navigation"]["show_in_sidebar"] is False
@@ -397,6 +421,31 @@ def test_schema_rejects_unknown_source_field_and_authored_digest() -> None:
     with_digest = {**source, "content_digest": _canonical_digest(source)}
     assert _validation_errors("source", with_unknown)
     assert _validation_errors("source", with_digest)
+
+
+def test_schema_rejects_missing_or_partial_delivery_contract() -> None:
+    source = _load_json(SOURCE_PATH)
+    commissioned = next(
+        screen for screen in source["screens"] if screen["maturity"] == "COMMISSIONED"
+    )
+
+    missing = copy.deepcopy(source)
+    target = next(
+        screen
+        for screen in missing["screens"]
+        if screen["screen_id"] == commissioned["screen_id"]
+    )
+    del target["delivery_profile"]
+    assert _validation_errors("source", missing)
+
+    partial = copy.deepcopy(source)
+    target = next(
+        screen
+        for screen in partial["screens"]
+        if screen["screen_id"] == commissioned["screen_id"]
+    )
+    del target["delivery_policy"]["live_risk_increasing_commands_enabled"]
+    assert _validation_errors("source", partial)
 
 
 def test_invariants_detect_dangling_reference_and_route_collision() -> None:

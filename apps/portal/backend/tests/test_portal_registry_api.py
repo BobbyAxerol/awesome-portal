@@ -82,6 +82,23 @@ async def test_registry_endpoint_serves_validated_document_and_cache_headers() -
     payload = response.json()
     assert payload["schema_version"] == "portal.registry.v1"
     assert payload["registry_id"] == "portal-default"
+    assert payload["revision"] == 4
+    execution = next(
+        screen
+        for screen in payload["screens"]
+        if screen["screen_id"] == "EXECUTION_COMMAND_CENTER_SCREEN"
+    )
+    assert execution["delivery_profile"] == "fixture"
+    assert execution["delivery_policy"] == {
+        "policy_revision": 1,
+        "query_enabled": False,
+        "projection_ingestion_enabled": False,
+        "sse_enabled": False,
+        "paper_commands_enabled": False,
+        "sandbox_commands_enabled": False,
+        "live_protective_commands_enabled": False,
+        "live_risk_increasing_commands_enabled": False,
+    }
     assert response.headers["etag"] == f'"{payload["content_digest"]}"'
     assert response.headers["cache-control"] == "no-cache, must-revalidate"
     assert response.headers["vary"] == "Authorization, Cookie"
@@ -186,6 +203,12 @@ def test_invalid_or_missing_registry_fails_app_composition(tmp_path: Path) -> No
         "navigation_collision",
         "unsafe_route",
         "unsafe_metadata",
+        "missing_delivery_profile",
+        "fixture_capability",
+        "shadow_command",
+        "sse_without_projection",
+        "delivery_before_revision",
+        "delivery_before_contract_revision",
     ],
 )
 def test_cross_reference_invariants_fail_closed(tmp_path: Path, failure: str) -> None:
@@ -204,8 +227,32 @@ def test_cross_reference_invariants_fail_closed(tmp_path: Path, failure: str) ->
             features[1]["navigation"]["order"] = features[0]["navigation"]["order"]
         elif failure == "unsafe_route":
             features[0]["canonical_route"] = "//internal.example/portal"
-        else:
+        elif failure == "unsafe_metadata":
             features[0]["description"] = "Read metadata from /srv/private/portal."
+        else:
+            screens = source["screens"]
+            assert isinstance(screens, list)
+            screen = next(
+                item
+                for item in screens
+                if item["screen_id"] == "EXECUTION_COMMAND_CENTER_SCREEN"
+            )
+            if failure == "missing_delivery_profile":
+                del screen["delivery_profile"]
+            elif failure == "fixture_capability":
+                screen["delivery_policy"]["query_enabled"] = True
+            elif failure == "shadow_command":
+                screen["delivery_profile"] = "shadow"
+                screen["delivery_policy"]["query_enabled"] = True
+                screen["delivery_policy"]["paper_commands_enabled"] = True
+            elif failure == "sse_without_projection":
+                screen["delivery_profile"] = "shadow"
+                screen["delivery_policy"]["query_enabled"] = True
+                screen["delivery_policy"]["sse_enabled"] = True
+            elif failure == "delivery_before_revision":
+                source["revision"] = 3
+            else:
+                screen["contract_revision"] = 1
 
     root = _registry_root(tmp_path, mutate)
     with pytest.raises(PortalRegistryLoadError) as error:
@@ -219,6 +266,12 @@ def test_cross_reference_invariants_fail_closed(tmp_path: Path, failure: str) ->
         "navigation_collision": "duplicate visible navigation positions",
         "unsafe_route": "unsafe route",
         "unsafe_metadata": "unsafe metadata",
+        "missing_delivery_profile": "delivery_profile",
+        "fixture_capability": "fixture profile must disable runtime capabilities",
+        "shadow_command": "shadow profile must disable commands",
+        "sse_without_projection": "SSE requires query and projection ingestion",
+        "delivery_before_revision": "delivery metadata requires registry revision 4",
+        "delivery_before_contract_revision": "delivery metadata requires contract revision 2",
     }[failure]
     assert expected in error.value.detail
 

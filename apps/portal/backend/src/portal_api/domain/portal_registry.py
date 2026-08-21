@@ -24,6 +24,14 @@ FeatureMaturity = Literal[
     "DEPRECATED",
 ]
 FeatureDataMode = Literal["REAL", "FIXTURE", "STATIC_PREVIEW", "NONE"]
+DeliveryProfile = Literal[
+    "fixture",
+    "shadow",
+    "paper",
+    "sandbox",
+    "live_canary",
+    "live_full",
+]
 PortalEnvironment = Literal["local", "research", "paper", "sandbox", "live"]
 ConcernCategory = Literal[
     "PRODUCT_DECISION",
@@ -101,12 +109,27 @@ class ScreenInputDefinition(RegistryModel):
     required: bool
 
 
+class DeliveryPolicyDefinition(RegistryModel):
+    """Commissioning flags, never a substitute for runtime authorization."""
+
+    policy_revision: int = Field(ge=1)
+    query_enabled: bool
+    projection_ingestion_enabled: bool
+    sse_enabled: bool
+    paper_commands_enabled: bool
+    sandbox_commands_enabled: bool
+    live_protective_commands_enabled: bool
+    live_risk_increasing_commands_enabled: bool
+
+
 class ScreenContract(RegistryModel):
     screen_id: str
     contract_revision: int
     feature_id: str
     maturity: FeatureMaturity
     data_mode: FeatureDataMode
+    delivery_profile: DeliveryProfile | None
+    delivery_policy: DeliveryPolicyDefinition | None
     route: str
     primary_persona: str
     primary_decision: str
@@ -168,6 +191,7 @@ class PortalRegistryDocument(PortalRegistrySource):
 
 __all__ = [
     "ConcernDefinition",
+    "DeliveryPolicyDefinition",
     "FeatureGroupDefinition",
     "LifecycleStageDefinition",
     "PortalFeatureDefinition",

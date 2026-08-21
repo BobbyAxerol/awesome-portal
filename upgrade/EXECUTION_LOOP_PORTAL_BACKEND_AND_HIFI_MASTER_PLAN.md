@@ -3,7 +3,7 @@
 > Status: architecture and delivery plan, review revision 2  
 > Baseline date: 2026-08-21  
 > Branch: `feat/execution_loop`  
-> Registry baseline: revision 3, commit `e78a597`  
+> Registry baseline: revision 4 (`EX-BE-00R4`); revision 3 route baseline at `e78a597`  
 > Scope: Portal backend contracts, Portal-owned AWS edge, and the backend slices needed by the 17 Execution Loop screens  
 > Non-scope: Trading System, QuantBT engine, broker adapters, matching, risk, fills, accounting, and frontend visual implementation
 
@@ -790,7 +790,7 @@ so one slice may unlock several screens without inventing a second product roadm
 | Slice | Priority | Deliverable | Unlocks |
 |---|---:|---|---|
 | EX-BE-00 | P0 | Registry revision 3 and canonical routes | Phase 0 navigation and routing for 1–17 |
-| EX-BE-00R4 | P0 | Registry revision 4 adds per-screen delivery profile/policy, echoed by composed envelopes | fixture/shadow truth for all screens, especially 11–12 |
+| EX-BE-00R4 | P0 / delivered | Registry revision 4 adds per-screen delivery profile/policy, echoed by composed envelopes | fixture/shadow truth for all screens, especially 11–12 |
 | EX-BE-04a | P0 | TypeScript bidirectional keyset/filter/sort/exact-count primitives over control-plane PostgreSQL | phases 1, 2 and Portal-owned portions of 5/7/8 |
 | EX-BE-05a | P0 | TypeScript governance/evidence/approval workflow and audit, with external panels allowed unavailable | phases 1–2 on real Portal data without AWS |
 | EX-BE-01 | P0 | Rust workspace, canonical contracts, `ts-contract-v1`, vocabulary reconciliation and golden corpus | all real-source screen contracts |
@@ -809,6 +809,12 @@ EX-BE-05b follows canonical command/auth contracts and a proven Trading System c
 EX-BE-07 follows the appropriate 04a/04b query primitive. This preserves the frontend phase order
 while removing an unrelated infrastructure approval from the first useful backend screens.
 
+`EX-BE-00R4` is delivered as a registry-only contract: all 17 Execution screens expose
+`delivery_profile=fixture`, policy revision 1 and seven independently disabled runtime
+flags. Source schema, immutable Pydantic projection, repository invariants, public fixture,
+OpenAPI and generated TypeScript types move together. This unlocks Claude's profile wiring
+without claiming that any real query, projection, SSE or command capability exists.
+
 ### 12.2 Per-phase backend slices
 
 Statuses use the architecture vocabulary, never bare `COMPLETE`:
@@ -822,7 +828,7 @@ Statuses use the architecture vocabulary, never bare `COMPLETE`:
 
 | Phase | Goal | Endpoints / events | Authority + freshness | Status | Depends on | Exit gate |
 |---:|---|---|---|---|---|---|
-| 0 Shell/shared | Registry renders all 17 canonical routes and groups without data coupling | `/api/v1/portal/registry` rev 3 | Portal registry; no execution freshness | `CONTRACT_COMPLETE` | none | 17 unique `EXECUTION_*` screens, schema/API/frontend handoff tests, root verify; delivered `e78a597` |
+| 0 Shell/shared | Registry renders all 17 canonical routes and explicit delivery profiles without data coupling | `/api/v1/portal/registry` rev 4 | Portal registry; no execution freshness | `CONTRACT_COMPLETE` | none | 17 unique `EXECUTION_*` screens; fixture policy fail-closed; schema/API/OpenAPI/generated-type sync and root verify |
 | 1 Approval Inbox | scalable approval queue | `GET /governance/approvals` | Portal record; linked source facts keep their own envelopes | `INTEGRATION_PENDING` | EX-BE-04a/05a only | bidirectional keyset/filter/sort/exact-count contract tests at 182k fixture rows; RBAC tests |
 | 2 Gate R1 | immutable evidence and valid SoD approval | `GET /governance/approvals/{id}/r1`; plan/apply decision | Portal decision; evidence source-attributed | `FOUNDATION_COMPLETE` | BAR approval/audit foundation + EX-BE-05a | concurrent-version, SoD, evidence-hash, deny/approve audit tests; no AWS dependency |
 | 3 Gate R2 | safe capital preview and R2 decision | R2 detail, `/capital-preview`, command plan | Portal decision; EXECUTION/BROKER inputs; DERIVED preview | `FOUNDATION_COMPLETE` | EX-BE-03/05a/07 | multi-currency buckets, stale blocker and dual-approval tests |

@@ -747,6 +747,16 @@ deep-dive → ADR → slice → evidence discipline documented above.
   versus 88 in the guide, and command journal observed OFF/ACK false/DEAD).
   Portal requests versioned HTTP capabilities from Trading System and never
   compensates with direct PostgreSQL, Redis, broker, shell or CLI access.
+- **EX-BE-00R4 delivery-profile contract (2026-08-21):** registry revision 4
+  is implemented across authored schema, immutable domain projection,
+  fail-closed repository invariants, public fixture, OpenAPI and generated
+  TypeScript types. Every commissioned/blocked screen must publish a profile
+  plus policy revision; all 17 Execution screens begin at `fixture` with query,
+  projection ingestion, SSE, Paper, Sandbox, Live-protective and
+  Live-risk-increasing flags false. Fixture cannot enable runtime capability;
+  shadow cannot enable commands; SSE requires query+projection; Paper/Sandbox
+  cannot exceed their command boundary. This unlocks Claude's ProfileBadge and
+  fixture/shadow wiring but does not activate a real Execution authority.
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**

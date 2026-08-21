@@ -204,9 +204,10 @@ def test_registry_legacy_routes_feed_embedding_contracts() -> None:
         "/overview",
         "/optimization",
         "/parameters",
-        "/execution",
         "/audit",
     }
+    execution = features["EXECUTION_COMMAND_CENTER"]
+    assert execution["canonical_route"] == "/execution"
     planning = features["PLANNING"]
     assert planning["canonical_route"] == "/planning"
     assert planning["legacy_routes"] == ["/roadmap-task-board/"]

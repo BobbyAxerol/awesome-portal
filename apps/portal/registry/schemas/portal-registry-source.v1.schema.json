@@ -39,6 +39,57 @@
         "NONE"
       ]
     },
+    "deliveryProfile": {
+      "enum": [
+        "fixture",
+        "shadow",
+        "paper",
+        "sandbox",
+        "live_canary",
+        "live_full"
+      ]
+    },
+    "deliveryPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_revision",
+        "query_enabled",
+        "projection_ingestion_enabled",
+        "sse_enabled",
+        "paper_commands_enabled",
+        "sandbox_commands_enabled",
+        "live_protective_commands_enabled",
+        "live_risk_increasing_commands_enabled"
+      ],
+      "properties": {
+        "policy_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "query_enabled": {
+          "type": "boolean"
+        },
+        "projection_ingestion_enabled": {
+          "type": "boolean"
+        },
+        "sse_enabled": {
+          "type": "boolean"
+        },
+        "paper_commands_enabled": {
+          "type": "boolean"
+        },
+        "sandbox_commands_enabled": {
+          "type": "boolean"
+        },
+        "live_protective_commands_enabled": {
+          "type": "boolean"
+        },
+        "live_risk_increasing_commands_enabled": {
+          "type": "boolean"
+        }
+      }
+    },
     "portalEnvironment": {
       "enum": [
         "local",
@@ -406,6 +457,8 @@
         "feature_id",
         "maturity",
         "data_mode",
+        "delivery_profile",
+        "delivery_policy",
         "route",
         "primary_persona",
         "primary_decision",
@@ -434,6 +487,26 @@
         },
         "data_mode": {
           "$ref": "#/$defs/featureDataMode"
+        },
+        "delivery_profile": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/deliveryProfile"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "delivery_policy": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/deliveryPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "route": {
           "$ref": "#/$defs/route"
@@ -525,6 +598,41 @@
               "activation_gate": {
                 "type": "string",
                 "minLength": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "maturity": {
+                "enum": [
+                  "COMMISSIONED",
+                  "BLOCKED"
+                ]
+              }
+            },
+            "required": [
+              "maturity"
+            ]
+          },
+          "then": {
+            "properties": {
+              "delivery_profile": {
+                "$ref": "#/$defs/deliveryProfile"
+              },
+              "delivery_policy": {
+                "$ref": "#/$defs/deliveryPolicy"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "delivery_profile": {
+                "type": "null"
+              },
+              "delivery_policy": {
+                "type": "null"
               }
             }
           }

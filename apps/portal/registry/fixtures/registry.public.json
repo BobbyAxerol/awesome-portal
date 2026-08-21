@@ -271,7 +271,7 @@
       "task_ids": []
     }
   ],
-  "content_digest": "sha256:ed7e53105c5171d7b859b6c8d4d97b22e5cd8bd3c3ef8a9c56e4cef1e62ad276",
+  "content_digest": "sha256:e016ab89f20dcd905419a15b6b717b8f8203e4e63e5c2db4e4ac5c3d2e35eb1a",
   "feature_groups": [
     {
       "id": "command",
@@ -1363,7 +1363,7 @@
     }
   ],
   "registry_id": "portal-default",
-  "revision": 3,
+  "revision": 4,
   "schema_version": "portal.registry.v1",
   "screens": [
     {
@@ -1377,8 +1377,10 @@
         "CONCERN_PORTAL_AUTHORIZATION",
         "CONCERN_COMMAND_CENTER_PERFORMANCE"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "REAL",
+      "delivery_policy": null,
+      "delivery_profile": null,
       "feature_id": "COMMAND_CENTER",
       "inputs": [
         {
@@ -1421,8 +1423,10 @@
         "CONCERN_REGISTRY_AUTHORITY",
         "CONCERN_PORTAL_AUTHORIZATION"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "STATIC_PREVIEW",
+      "delivery_policy": null,
+      "delivery_profile": null,
       "feature_id": "PORTAL_MAP",
       "inputs": [],
       "maturity": "PROTOTYPE",
@@ -1453,8 +1457,10 @@
         "CONCERN_QUANTBT_PARITY",
         "CONCERN_HISTORICAL_DEPLOYMENT"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "REAL",
+      "delivery_policy": null,
+      "delivery_profile": null,
       "feature_id": "QUANTBT_RESEARCH",
       "inputs": [
         {
@@ -1494,8 +1500,10 @@
         "CONCERN_PORTAL_AUTHORIZATION",
         "CONCERN_QUANTBT_PARITY"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "REAL",
+      "delivery_policy": null,
+      "delivery_profile": null,
       "feature_id": "QUANTBT_RESEARCH",
       "inputs": [
         {
@@ -1529,8 +1537,10 @@
         "CONCERN_PORTAL_AUTHORIZATION",
         "CONCERN_QUANTBT_PARITY"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "REAL",
+      "delivery_policy": null,
+      "delivery_profile": null,
       "feature_id": "QUANTBT_RESEARCH",
       "inputs": [
         {
@@ -1571,8 +1581,10 @@
         "CONCERN_QUANTBT_PARITY",
         "CONCERN_HISTORICAL_DEPLOYMENT"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "REAL",
+      "delivery_policy": null,
+      "delivery_profile": null,
       "feature_id": "QUANTBT_RESEARCH",
       "inputs": [
         {
@@ -1611,8 +1623,10 @@
         "CONCERN_PORTAL_AUTHORIZATION",
         "CONCERN_PLANNING_MODE"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "REAL",
+      "delivery_policy": null,
+      "delivery_profile": null,
       "feature_id": "PLANNING",
       "inputs": [
         {
@@ -1646,8 +1660,10 @@
         "CONCERN_PORTAL_AUTHORIZATION",
         "CONCERN_PLANNING_MODE"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "REAL",
+      "delivery_policy": null,
+      "delivery_profile": null,
       "feature_id": "PLANNING",
       "inputs": [
         {
@@ -1679,8 +1695,19 @@
         "CONCERN_PORTAL_AUTHORIZATION",
         "CONCERN_FUTURE_AUTHORITY"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "STATIC_PREVIEW",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "ALPHA_POOL",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -1706,8 +1733,19 @@
         "CONCERN_PORTAL_AUTHORIZATION",
         "CONCERN_FUTURE_AUTHORITY"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "STATIC_PREVIEW",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "ALPHA_MINING",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -1733,8 +1771,19 @@
         "CONCERN_PORTAL_AUTHORIZATION",
         "CONCERN_FUTURE_AUTHORITY"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "STATIC_PREVIEW",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "STRATEGY_COMPOSER",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -1760,8 +1809,19 @@
         "CONCERN_PORTAL_AUTHORIZATION",
         "CONCERN_FUTURE_AUTHORITY"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "APPROVALS",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -1788,8 +1848,19 @@
         "CONCERN_HISTORICAL_DEPLOYMENT",
         "CONCERN_FUTURE_AUTHORITY"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "DATA_CATALOG",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -1815,8 +1886,19 @@
         "CONCERN_PORTAL_AUTHORIZATION",
         "CONCERN_FUTURE_AUTHORITY"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "PAPER_TRADING",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -1842,8 +1924,19 @@
         "CONCERN_PORTAL_AUTHORIZATION",
         "CONCERN_FUTURE_AUTHORITY"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "SANDBOX_TRADING",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -1869,8 +1962,19 @@
         "CONCERN_PORTAL_AUTHORIZATION",
         "CONCERN_FUTURE_AUTHORITY"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "LIVE_OPERATIONS",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -1895,8 +1999,19 @@
       "concern_ids": [
         "CONCERN_PORTAL_AUTHORIZATION"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "STATIC_PREVIEW",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "PROFILE_ACCESS",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -1921,8 +2036,19 @@
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "EXECUTION_COMMAND_CENTER",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -1945,8 +2071,19 @@
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "EXECUTION_OPERATIONS",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -1969,8 +2106,19 @@
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "EXECUTION_OPERATIONS",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -1993,8 +2141,19 @@
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "EXECUTION_APPROVALS",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -2017,8 +2176,19 @@
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "EXECUTION_APPROVALS",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -2041,8 +2211,19 @@
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "EXECUTION_APPROVALS",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -2065,8 +2246,19 @@
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "EXECUTION_EXIT_REVIEWS",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -2089,8 +2281,19 @@
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "PAPER_TRADING",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -2113,8 +2316,19 @@
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "PAPER_TRADING",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -2137,8 +2351,19 @@
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "SANDBOX_TRADING",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -2161,8 +2386,19 @@
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "LIVE_OPERATIONS",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -2185,8 +2421,19 @@
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "LIVE_OPERATIONS",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -2209,8 +2456,19 @@
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "EXECUTION_BLOTTER",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -2233,8 +2491,19 @@
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "EXECUTION_ALPHA_FLEET",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -2257,8 +2526,19 @@
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "EXECUTION_PORTFOLIOS",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -2281,8 +2561,19 @@
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "EXECUTION_ACCOUNTS_BINDINGS",
       "inputs": [],
       "maturity": "COMMISSIONED",
@@ -2305,8 +2596,19 @@
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
-      "contract_revision": 1,
+      "contract_revision": 2,
       "data_mode": "NONE",
+      "delivery_policy": {
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 1,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
       "feature_id": "EXECUTION_ADMIN_ACTIONS",
       "inputs": [],
       "maturity": "COMMISSIONED",

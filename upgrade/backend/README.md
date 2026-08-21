@@ -150,11 +150,16 @@ authority.
   quyết định tại master plan §15.1 và F-1–F-9 có disposition tại §15.4. Runway
   tách `EX-BE-04a/05a` TypeScript governance khỏi `EX-BE-01→02→03→04b→06`
   Rust cross-cell; Approval Inbox/Gate R1 không còn chờ AWS hay Trading System.
-- Production integration chưa được kích hoạt. Thứ tự gần nhất là `EX-BE-00R4`
-  (delivery profile contract), rồi `EX-BE-04a→05a`; song song khi được giao là
-  `EX-BE-01` Rust workspace + canonical `ts-contract-v1` adapter, sau đó
-  `EX-BE-02` auth/capability negotiation. Runtime evidence luôn thắng schema/
-  rollout prose; Portal chỉ dùng versioned HTTP API, không đọc DB/Redis/CLI nội bộ.
+- `EX-BE-00R4` **complete:** registry revision 4 đưa `delivery_profile` và
+  `delivery_policy` versioned vào mọi commissioned screen; 17 Execution screens
+  đều ở `fixture`, bảy runtime/command flags đều false. Schema/repository fail
+  closed, public fixture/OpenAPI/generated TypeScript contract đồng bộ; không
+  ngụ ý query/projection/SSE/command thật đã active.
+- Production integration chưa được kích hoạt. Thứ tự gần nhất là
+  `EX-BE-04a→05a`; song song khi được giao là `EX-BE-01` Rust workspace +
+  canonical `ts-contract-v1` adapter, sau đó `EX-BE-02` auth/capability
+  negotiation. Runtime evidence luôn thắng schema/rollout prose; Portal chỉ
+  dùng versioned HTTP API, không đọc DB/Redis/CLI nội bộ.
 
 ## BAR-21 — Strategy Import & Quarantine Ingest foundation
 

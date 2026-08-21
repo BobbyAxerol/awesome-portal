@@ -1329,6 +1329,57 @@
         "title": "DatasetDescriptorResponse",
         "type": "object"
       },
+      "DeliveryPolicyDefinition": {
+        "additionalProperties": false,
+        "description": "Commissioning flags, never a substitute for runtime authorization.",
+        "properties": {
+          "live_protective_commands_enabled": {
+            "title": "Live Protective Commands Enabled",
+            "type": "boolean"
+          },
+          "live_risk_increasing_commands_enabled": {
+            "title": "Live Risk Increasing Commands Enabled",
+            "type": "boolean"
+          },
+          "paper_commands_enabled": {
+            "title": "Paper Commands Enabled",
+            "type": "boolean"
+          },
+          "policy_revision": {
+            "minimum": 1.0,
+            "title": "Policy Revision",
+            "type": "integer"
+          },
+          "projection_ingestion_enabled": {
+            "title": "Projection Ingestion Enabled",
+            "type": "boolean"
+          },
+          "query_enabled": {
+            "title": "Query Enabled",
+            "type": "boolean"
+          },
+          "sandbox_commands_enabled": {
+            "title": "Sandbox Commands Enabled",
+            "type": "boolean"
+          },
+          "sse_enabled": {
+            "title": "Sse Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "policy_revision",
+          "query_enabled",
+          "projection_ingestion_enabled",
+          "sse_enabled",
+          "paper_commands_enabled",
+          "sandbox_commands_enabled",
+          "live_protective_commands_enabled",
+          "live_risk_increasing_commands_enabled"
+        ],
+        "title": "DeliveryPolicyDefinition",
+        "type": "object"
+      },
       "DependenciesReport": {
         "additionalProperties": false,
         "properties": {
@@ -3542,6 +3593,35 @@
             "title": "Data Mode",
             "type": "string"
           },
+          "delivery_policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryPolicyDefinition"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "delivery_profile": {
+            "anyOf": [
+              {
+                "enum": [
+                  "fixture",
+                  "shadow",
+                  "paper",
+                  "sandbox",
+                  "live_canary",
+                  "live_full"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Profile"
+          },
           "feature_id": {
             "title": "Feature Id",
             "type": "string"
@@ -3620,6 +3700,8 @@
           "feature_id",
           "maturity",
           "data_mode",
+          "delivery_profile",
+          "delivery_policy",
           "route",
           "primary_persona",
           "primary_decision",
