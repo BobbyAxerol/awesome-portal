@@ -20,6 +20,7 @@ import {
   guardFor,
   slaOverdue,
   STAGE_ORDER,
+  type ChartEnvelope,
   type Envelope,
   type KeysetPage,
   type OrderStatus,
@@ -37,6 +38,23 @@ import {
   screenDeliveryProfile,
 } from "./profile";
 import { KeysetTable, type Column } from "./components/table";
+import {
+  INTERVAL_LADDER,
+  MAX_POINTS,
+  needsRequery,
+  pointsFor,
+  selectInterval,
+  validateSeries,
+} from "./series";
+import {
+  INITIAL_SUBSCRIPTION,
+  isLive,
+  mayResnapshot,
+  parseResumeToken,
+  subscriptionReducer,
+  type SubscriptionEvent,
+  type SubscriptionState,
+} from "./subscription";
 import { ApprovalInbox, INBOX_FILTERS, type ApprovalRow } from "./screens/ApprovalInbox";
 import { GateR1Review } from "./screens/GateR1Review";
 import { GateR2Review } from "./screens/GateR2Review";
@@ -2133,5 +2151,244 @@ describe("Paper Exit Review", () => {
     );
     expect(container.querySelector(".exec-gate-decision")).toBeNull();
     expect(screen.getByText(/observation window extended/)).toBeTruthy();
+  });
+});
+
+/* ===========================================================================
+ * Slice S4 — mechanism M2, resolution-selected series
+ * ======================================================================== */
+
+const DAY = 86_400;
+
+describe("M2 — the ladder is finest-that-fits, not range brackets", () => {
+  it("keeps every rung under the 5,000 point cap", () => {
+    for (const interval of INTERVAL_LADDER) {
+      const widest = interval.seconds * MAX_POINTS;
+      expect(pointsFor(widest, interval), interval.code).toBeLessThanOrEqual(MAX_POINTS);
+    }
+  });
+
+  it("recovers the resolution the bracket form threw away", () => {
+    // Ten days under the bracket form gets 15m and 960 points. Four to
+    // seventeen days is the post-incident window, so the loss lands exactly
+    // where it is felt.
+    expect(selectInterval(10 * DAY).code).toBe("5m");
+    expect(pointsFor(10 * DAY, selectInterval(10 * DAY))).toBe(2880);
+    expect(selectInterval(4 * DAY).code).toBe("5m");
+    expect(selectInterval(14 * DAY).code).toBe("5m");
+  });
+
+  it("picks the finest rung across the whole range of windows", () => {
+    expect(selectInterval(DAY).code).toBe("1m");
+    expect(selectInterval(3 * DAY).code).toBe("1m");
+    expect(selectInterval(30 * DAY).code).toBe("15m");
+    expect(selectInterval(182 * DAY).code).toBe("1h");
+    expect(selectInterval(730 * DAY).code).toBe("4h");
+    expect(selectInterval(3650 * DAY).code).toBe("1d");
+  });
+
+  it("stops at a day rather than inventing a rung the contract lacks", () => {
+    // Beyond this the cap is genuinely exceeded and the server must downsample
+    // and declare how.
+    expect(selectInterval(20_000 * DAY).code).toBe("1d");
+  });
+
+  it("re-queries only when a strictly finer rung would fit", () => {
+    // Zooming within one rung would be a round-trip for identical data.
+    expect(needsRequery("1h", 182 * DAY)).toBe(false);
+    // 100 days still needs 1h — 100d at 15m is 9,600 points, over the cap. The
+    // zoom has not yet earned a round-trip.
+    expect(needsRequery("1h", 100 * DAY)).toBe(false);
+    // 40 days does: 3,840 points at 15m, comfortably under.
+    expect(needsRequery("1h", 40 * DAY)).toBe(true);
+    expect(needsRequery("1m", 60 * 60)).toBe(false);
+    expect(needsRequery("not-a-rung", DAY)).toBe(false);
+  });
+});
+
+describe("M2 — a series that misdescribes itself is caught, not rendered", () => {
+  const base: ChartEnvelope = {
+    window: "30d",
+    interval: "15m",
+    asOf: "2026-08-21T10:42:01Z",
+    authority: "DERIVED",
+    returnedRows: 2880,
+    sourceRows: 2880,
+  };
+
+  it("passes a series that describes itself consistently", () => {
+    expect(validateSeries(base, 30 * DAY)).toEqual([]);
+  });
+
+  it("reports a series over the interactive cap", () => {
+    expect(validateSeries({ ...base, returnedRows: 9000 }, 30 * DAY)[0]).toContain("over the 5,000");
+  });
+
+  it("reports an interval this build does not recognise rather than assuming one", () => {
+    const w = validateSeries({ ...base, interval: "7m" }, 30 * DAY);
+    expect(w.join(" ")).toContain("does not recognise");
+  });
+
+  it("notices when the reader is being shown less detail than the cap allowed", () => {
+    const w = validateSeries({ ...base, interval: "1d", returnedRows: 30 }, 30 * DAY);
+    expect(w.join(" ")).toContain("where 15m would have fit");
+  });
+
+  it("accepts a coarser rung when downsampling was declared", () => {
+    const w = validateSeries(
+      { ...base, interval: "1d", returnedRows: 30, downsampleMethod: "lttb" },
+      30 * DAY,
+    );
+    expect(w.join(" ")).not.toContain("would have fit");
+  });
+
+  it("flags points reduced with no method named", () => {
+    // Bucket aggregation is lossless by construction; decimation is not, so a
+    // reduced series that will not say how is a gap.
+    const w = validateSeries({ ...base, sourceRows: 100_000, returnedRows: 2880 }, 30 * DAY);
+    expect(w.join(" ")).toContain("no downsample method");
+  });
+
+  it("says gaps are real rather than smoothing over them", () => {
+    const w = validateSeries({ ...base, coverage: 0.87 }, 30 * DAY);
+    expect(w.join(" ")).toContain("gaps in this window are real");
+  });
+});
+
+/* ===========================================================================
+ * Slice S4 — mechanism M3, subscription with gap resync
+ * ======================================================================== */
+
+function feed(events: SubscriptionEvent[]): SubscriptionState {
+  return events.reduce(subscriptionReducer, INITIAL_SUBSCRIPTION);
+}
+
+const SNAP: SubscriptionEvent = {
+  type: "SNAPSHOT",
+  epoch: "ep_1",
+  sequence: 100,
+  asOf: "2026-08-21T10:42:01Z",
+};
+
+describe("M3 — ordered delivery", () => {
+  it("goes live on a snapshot and builds the resume token the contract specifies", () => {
+    const s = feed([{ type: "SUBSCRIBE" }, SNAP]);
+    expect(s.phase).toBe("live");
+    expect(s.resumeToken).toBe("ep_1:100");
+    expect(isLive(s)).toBe(true);
+  });
+
+  it("accepts contiguous deltas", () => {
+    const s = feed([
+      { type: "SUBSCRIBE" },
+      SNAP,
+      { type: "DELTA", epoch: "ep_1", sequence: 101, asOf: "2026-08-21T10:42:05Z" },
+      { type: "DELTA", epoch: "ep_1", sequence: 102, asOf: "2026-08-21T10:42:09Z" },
+    ]);
+    expect(s.phase).toBe("live");
+    expect(s.sequence).toBe(102);
+    expect(s.freshness).toBe("OK");
+  });
+
+  it("round-trips a resume token and refuses a malformed one", () => {
+    expect(parseResumeToken("ep_1:100")).toEqual({ epoch: "ep_1", sequence: 100 });
+    expect(parseResumeToken("ep_1")).toBeNull();
+    expect(parseResumeToken("ep_1:abc")).toBeNull();
+  });
+});
+
+describe("M3 — a gap is a state, not a retry", () => {
+  it("marks the surface stale on a sequence discontinuity and names what was lost", () => {
+    const s = feed([
+      { type: "SUBSCRIBE" },
+      SNAP,
+      { type: "DELTA", epoch: "ep_1", sequence: 104, asOf: null },
+    ]);
+    expect(s.phase).toBe("gap");
+    expect(s.freshness).toBe("STALE");
+    expect(s.note).toContain("101–103");
+    // Nothing on screen may be presented as current.
+    expect(isLive(s)).toBe(false);
+  });
+
+  it("voids the resume token on a gap, so a reconnect cannot skip the hole", () => {
+    const s = feed([
+      { type: "SUBSCRIBE" },
+      SNAP,
+      { type: "PROJECTION_GAP", reason: "source cursor discontinuity" },
+    ]);
+    expect(s.resumeToken).toBeNull();
+  });
+});
+
+describe("M3 — an epoch cutover is a rebuild, not a gap", () => {
+  it("treats a delta from another epoch as a rebuild rather than a discontinuity", () => {
+    // Resuming across an epoch boundary would use a cursor with no meaning in
+    // the new epoch, which skips silently.
+    const s = feed([
+      { type: "SUBSCRIBE" },
+      SNAP,
+      { type: "DELTA", epoch: "ep_2", sequence: 1, asOf: null },
+    ]);
+    expect(s.phase).toBe("epoch_changed");
+    expect(s.resumeToken).toBeNull();
+  });
+
+  it("keeps the old snapshot visibly ageing until the server's deadline", () => {
+    // Review F-5: if every client resnapshots at once they hit a projection
+    // whose caches are cold because it has just been rebuilt.
+    const s = feed([
+      { type: "SUBSCRIBE" },
+      SNAP,
+      { type: "EPOCH_CHANGED", epoch: "ep_2", resnapshotNotBefore: "2026-08-21T10:45:00Z" },
+    ]);
+    expect(s.phase).toBe("epoch_changed");
+    expect(s.freshness).toBe("STALE");
+    expect(s.lastGoodAsOf).toBe("2026-08-21T10:42:01Z");
+    expect(mayResnapshot(s, "2026-08-21T10:44:59Z")).toBe(false);
+    expect(mayResnapshot(s, "2026-08-21T10:45:00Z")).toBe(true);
+  });
+
+  it("proceeds immediately when the server assigned no deadline", () => {
+    // The client never invents a delay of its own: uncoordinated client jitter
+    // is the same herd with extra steps.
+    const s = feed([{ type: "SUBSCRIBE" }, SNAP, { type: "EPOCH_CHANGED", epoch: "ep_2" }]);
+    expect(mayResnapshot(s, "2026-08-21T10:42:02Z")).toBe(true);
+  });
+});
+
+describe("M3 — disconnect keeps the last good data, marked", () => {
+  it("holds the last good as_of rather than blanking the screen", () => {
+    const s = feed([{ type: "SUBSCRIBE" }, SNAP, { type: "DISCONNECTED" }]);
+    expect(s.phase).toBe("reconnecting");
+    expect(s.lastGoodAsOf).toBe("2026-08-21T10:42:01Z");
+    expect(s.freshness).toBe("STALE");
+    expect(isLive(s)).toBe(false);
+  });
+
+  it("keeps the resume token, because a reconnect within the epoch may use it", () => {
+    const s = feed([{ type: "SUBSCRIBE" }, SNAP, { type: "DISCONNECTED" }]);
+    expect(s.resumeToken).toBe("ep_1:100");
+  });
+
+  it("clears the resume token when the snapshot itself failed", () => {
+    const s = feed([{ type: "SUBSCRIBE" }, { type: "SNAPSHOT_FAILED", reason: "edge unreachable" }]);
+    expect(s.phase).toBe("failed");
+    expect(s.freshness).toBe("UNKNOWN");
+    expect(s.resumeToken).toBeNull();
+  });
+
+  it("never reports live in any phase but live", () => {
+    const phases: SubscriptionState["phase"][] = [
+      "idle",
+      "snapshotting",
+      "gap",
+      "epoch_changed",
+      "reconnecting",
+      "failed",
+    ];
+    for (const phase of phases) {
+      expect(isLive({ ...INITIAL_SUBSCRIPTION, phase }), phase).toBe(false);
+    }
   });
 });

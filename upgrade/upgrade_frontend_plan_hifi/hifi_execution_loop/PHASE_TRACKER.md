@@ -137,6 +137,8 @@ nav — it is the Phase 0 exit gate, not a product screen).
 | `GateR1Review` | `screens/GateR1Review.tsx` | self-approval is derived, not trusted; Deny is never locked |
 | `GateR2Review` | `screens/GateR2Review.tsx` | an expired R1 locks the bar; a capital preview without an envelope is refused |
 | `PaperExitReview` | `screens/PaperExitReview.tsx` | `met` is the server's; INSUFFICIENT_DATA is a third outcome that carries forward |
+| `series.ts` (M2) | `series.ts` | finest interval that fits; a series that misdescribes its own resolution is caught |
+| `subscription.ts` (M3) | `subscription.ts` | a gap voids the resume token; an epoch cutover waits for the server's deadline |
 
 Tests are behavioural, not snapshots: `execution.test.tsx` fails if PARTIAL turns
 green, if canary loses its double border, if the skeleton enters the

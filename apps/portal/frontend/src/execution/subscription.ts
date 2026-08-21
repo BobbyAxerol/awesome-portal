@@ -1,0 +1,232 @@
+/**
+ * Mechanism M3 — subscription with gap resync.
+ *
+ * A pure reducer rather than a hook, so every transition below is testable
+ * without an `EventSource`. The screen layer owns the connection; this owns the
+ * rules, and the rules are the part that must not be re-derived per screen.
+ *
+ * The contract it implements (master plan §7.4):
+ *
+ *   - SSE `id` is `{projection_epoch}:{projection_sequence}`, and reconnection
+ *     resumes with `Last-Event-ID` **only within a retained epoch**.
+ *   - A sequence discontinuity, a missing history or an epoch mismatch emits
+ *     `projection.gap`, marks affected views stale, and requires a bounded
+ *     snapshot before deltas resume.
+ *   - An epoch cutover retains the preceding epoch read-only for a bounded
+ *     overlap and emits a server-assigned `resnapshot_not_before` deadline.
+ *     Clients keep the old snapshot **visibly aging** until then.
+ *
+ * That last rule is the one worth stating twice, because it inverts the usual
+ * instinct. When the projection is rebuilt, the tempting move is to resnapshot
+ * immediately. If every client does that, a hundred of them hit a projection
+ * whose caches are cold because it has just been rebuilt — the thundering herd
+ * raised as review F-5. So the server assigns the time and the client waits,
+ * showing data it knows is aging rather than data it has not got. A client that
+ * invents its own jitter produces a second herd with extra steps.
+ */
+import type { FreshnessState } from "./contracts";
+
+export type SubscriptionPhase =
+  /** Nothing requested yet. */
+  | "idle"
+  /** A bounded snapshot is in flight. Nothing may be rendered as live. */
+  | "snapshotting"
+  /** Deltas are arriving in order. */
+  | "live"
+  /** A sequence discontinuity inside the current epoch. Stale until resnapshot. */
+  | "gap"
+  /** The projection was rebuilt. The old snapshot ages until the server's deadline. */
+  | "epoch_changed"
+  /** Transport dropped. The last good data stays on screen, marked. */
+  | "reconnecting"
+  /** Unrecoverable without operator action. */
+  | "failed";
+
+export interface SubscriptionState {
+  phase: SubscriptionPhase;
+  epoch: string | null;
+  /** Last sequence accepted in `epoch`. */
+  sequence: number | null;
+  /** `Last-Event-ID` for a resume, or `null` when a resume is not permitted. */
+  resumeToken: string | null;
+  /** ISO-8601. Set by the server on an epoch cutover; the client waits for it. */
+  resnapshotNotBefore: string | null;
+  /** `as_of` of the newest data currently on screen. Survives a disconnect. */
+  lastGoodAsOf: string | null;
+  /** What the panels should render as freshness right now. */
+  freshness: FreshnessState;
+  /** Human-readable reason for the current phase. */
+  note: string | null;
+}
+
+export const INITIAL_SUBSCRIPTION: SubscriptionState = {
+  phase: "idle",
+  epoch: null,
+  sequence: null,
+  resumeToken: null,
+  resnapshotNotBefore: null,
+  lastGoodAsOf: null,
+  freshness: "UNKNOWN",
+  note: null,
+};
+
+export type SubscriptionEvent =
+  | { type: "SUBSCRIBE" }
+  | { type: "SNAPSHOT"; epoch: string; sequence: number; asOf: string | null }
+  | { type: "DELTA"; epoch: string; sequence: number; asOf: string | null }
+  | { type: "PROJECTION_GAP"; resnapshotNotBefore?: string | null; reason?: string }
+  | { type: "EPOCH_CHANGED"; epoch: string; resnapshotNotBefore?: string | null }
+  | { type: "DISCONNECTED"; reason?: string }
+  | { type: "SNAPSHOT_FAILED"; reason: string };
+
+/** `Last-Event-ID`, exactly as §7.4 specifies it. */
+export function resumeToken(epoch: string, sequence: number): string {
+  return `${epoch}:${sequence}`;
+}
+
+/** Parse one back. Returns `null` for anything malformed rather than guessing. */
+export function parseResumeToken(token: string): { epoch: string; sequence: number } | null {
+  const at = token.lastIndexOf(":");
+  if (at <= 0) return null;
+  const epoch = token.slice(0, at);
+  const sequence = Number(token.slice(at + 1));
+  return Number.isInteger(sequence) && sequence >= 0 ? { epoch, sequence } : null;
+}
+
+/**
+ * May the client fetch the new epoch's snapshot yet?
+ *
+ * `now` is passed in rather than read from the clock, so the caller decides
+ * where time comes from and this stays pure. A missing deadline means the server
+ * did not assign one and the client may proceed — it never invents a delay of
+ * its own, because uncoordinated client jitter is the herd it was trying to
+ * avoid.
+ */
+export function mayResnapshot(state: SubscriptionState, now: string): boolean {
+  if (!state.resnapshotNotBefore) return true;
+  return Date.parse(now) >= Date.parse(state.resnapshotNotBefore);
+}
+
+export function subscriptionReducer(
+  state: SubscriptionState,
+  event: SubscriptionEvent,
+): SubscriptionState {
+  switch (event.type) {
+    case "SUBSCRIBE":
+      return {
+        ...state,
+        phase: "snapshotting",
+        // A resume is only valid inside a retained epoch, and a fresh subscribe
+        // has no epoch to resume into.
+        resumeToken: null,
+        freshness: state.lastGoodAsOf ? "AGING" : "UNKNOWN",
+        note: "Fetching a bounded snapshot.",
+      };
+
+    case "SNAPSHOT":
+      return {
+        phase: "live",
+        epoch: event.epoch,
+        sequence: event.sequence,
+        resumeToken: resumeToken(event.epoch, event.sequence),
+        resnapshotNotBefore: null,
+        lastGoodAsOf: event.asOf ?? state.lastGoodAsOf,
+        freshness: "OK",
+        note: null,
+      };
+
+    case "DELTA": {
+      // An event from another epoch is not a gap, it is a rebuild. Treated as
+      // such so the client does not try to resume across a boundary where its
+      // cursor is void.
+      if (state.epoch && event.epoch !== state.epoch) {
+        return {
+          ...state,
+          phase: "epoch_changed",
+          freshness: "STALE",
+          resumeToken: null,
+          note: "The projection was rebuilt. This data is from the previous epoch.",
+        };
+      }
+      // Contiguity is the only thing this check can prove, and it proves it only
+      // between the edge and here. It says nothing about whether the Trading
+      // System lost something on the way in — see `sourceCompleteness`.
+      if (state.sequence !== null && event.sequence !== state.sequence + 1) {
+        return {
+          ...state,
+          phase: "gap",
+          freshness: "STALE",
+          resumeToken: null,
+          note: `Events ${state.sequence + 1}–${event.sequence - 1} were not delivered. Re-snapshotting.`,
+        };
+      }
+      return {
+        ...state,
+        phase: "live",
+        epoch: event.epoch,
+        sequence: event.sequence,
+        resumeToken: resumeToken(event.epoch, event.sequence),
+        lastGoodAsOf: event.asOf ?? state.lastGoodAsOf,
+        freshness: "OK",
+        note: null,
+      };
+    }
+
+    case "PROJECTION_GAP":
+      return {
+        ...state,
+        phase: "gap",
+        freshness: "STALE",
+        resumeToken: null,
+        resnapshotNotBefore: event.resnapshotNotBefore ?? null,
+        note: event.reason ?? "The server reported a gap. Re-snapshotting.",
+      };
+
+    case "EPOCH_CHANGED":
+      return {
+        ...state,
+        phase: "epoch_changed",
+        freshness: "STALE",
+        // Void, not merely unused: a cursor from the previous epoch has no
+        // meaning in the new one and resuming with it would silently skip.
+        resumeToken: null,
+        resnapshotNotBefore: event.resnapshotNotBefore ?? null,
+        note: event.resnapshotNotBefore
+          ? `The projection was rebuilt. Showing the previous epoch, ageing, until ${event.resnapshotNotBefore}.`
+          : "The projection was rebuilt. Re-snapshotting.",
+      };
+
+    case "DISCONNECTED":
+      return {
+        ...state,
+        phase: "reconnecting",
+        // Deliberately kept: within a retained epoch this is exactly what a
+        // reconnect is allowed to resume from.
+        freshness: "STALE",
+        note: event.reason ?? "Disconnected. The values below are the last good ones.",
+      };
+
+    case "SNAPSHOT_FAILED":
+      return {
+        ...state,
+        phase: "failed",
+        freshness: "UNKNOWN",
+        resumeToken: null,
+        note: event.reason,
+      };
+
+    default:
+      return state;
+  }
+}
+
+/**
+ * Is anything on screen safe to present as current?
+ *
+ * `live` only. Every other phase has data that is either absent, aging or
+ * unproven, and a screen that renders those as live is the failure this whole
+ * mechanism exists to prevent.
+ */
+export function isLive(state: SubscriptionState): boolean {
+  return state.phase === "live";
+}
