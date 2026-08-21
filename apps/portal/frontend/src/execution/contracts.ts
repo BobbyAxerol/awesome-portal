@@ -65,8 +65,20 @@ export type PromotionStage =
 /** 3 of 4. Whether it satisfies its gate. `ACTIVE ≠ READY` (guide §6). */
 export type Readiness = "READY" | "NOT_READY" | "BLOCKED" | "UNKNOWN";
 
-/** 4 of 4. Agreement between our books and the broker's. */
-export type BrokerSync = "OK" | "STALE" | "MISMATCH" | "UNKNOWN";
+/**
+ * 4 of 4. Agreement between our books and the broker's.
+ *
+ * `OK / STALE / MISMATCH / ERROR` are the DB CHECK on
+ * `account_sync_snapshots.status`, verbatim. `ERROR` means the sync attempt
+ * itself failed, which is different from `MISMATCH` (it ran and disagreed) and
+ * from `STALE` (it has not run recently enough).
+ *
+ * `UNKNOWN` is Portal-side and has no Trading System counterpart: it is what a
+ * binding shows before any snapshot has been taken. Kept because rendering a
+ * never-synced account as `OK` would be a lie, and as `ERROR` would raise an
+ * alarm for something that has simply not happened yet.
+ */
+export type BrokerSync = "OK" | "STALE" | "MISMATCH" | "ERROR" | "UNKNOWN";
 
 /* ---------------------------------------------------------------------------
  * Authority and freshness (guide §5, §6)
@@ -74,6 +86,13 @@ export type BrokerSync = "OK" | "STALE" | "MISMATCH" | "UNKNOWN";
 
 /**
  * Who owns a number. Rendered on every data panel.
+ *
+ * **This is a Portal classification, not a Trading System field.**
+ * `extract/freshness-authority.json` is explicit: `source_authority` is the
+ * constant `EXECUTION_CELL` on every Trading System answer, and per-venue
+ * authority lives in `/v1/health/capabilities rollout_state`. So the connector
+ * assigns EXECUTION / BROKER / DERIVED from which surface it read, and Portal
+ * owns that mapping. It must be applied in one place, not per screen.
  *
  * The hi-fi differentiates these by the WORD in one shared tone, not by hue —
  * see the note on `--authority-ink` in tokens.css. Do not reintroduce a colour
@@ -94,18 +113,53 @@ export type FreshnessState = "OK" | "AGING" | "STALE" | "PAUSED" | "UNKNOWN";
 /**
  * The envelope every Execution read carries (guide §5).
  *
- * `sourceSequence` is what makes gap detection possible: a discontinuity means
- * the projection is missing events, which is a STALE state and a resnapshot —
- * never a silent continue. See EXECUTION_SCALE_AND_REFINE.md M3.
+ * Reconciled 2026-08-21 against
+ * `trading_system_portal_contract_pack/extract/freshness-authority.json`
+ * (`portal_envelope_mapping`). Three fields the guide describes as if the
+ * Trading System supplies them, it does not:
+ *
+ *   - `as_of` — no server-supplied value on list endpoints. It comes from the
+ *     row's own `updated_at` / `ts` / `trade_time`.
+ *   - `source_sequence` — **not on HTTP responses at all** today.
+ *   - `freshness_state` — no single enum is emitted; the connector derives it.
+ *
+ * The mapping doc's own instruction is the rule this interface encodes: the
+ * connector "MUST stamp its own read time separately and never present it as
+ * Trading System authority". Hence `asOf` and `readAt` are two fields. Merging
+ * them would let a fast read of a two-hour-old row render as two seconds fresh,
+ * which is the exact failure the AuthorityBadge exists to prevent.
  */
 export interface Envelope {
   authority: Authority;
-  /** ISO-8601 UTC. */
-  asOf: string;
-  /** Monotonic per stream; a jump means events were missed. */
+  /**
+   * When the DATA was true — the row's own timestamp. ISO-8601 UTC.
+   *
+   * `null` where the upstream genuinely publishes none; the badge then says so
+   * rather than substituting `readAt`, which would be a different claim.
+   */
+  asOf: string | null;
+  /**
+   * When the CONNECTOR read it. ISO-8601 UTC, always connector-derived.
+   * Never render this as Trading System authority.
+   */
+  readAt?: string | null;
+  /**
+   * Monotonic per stream; a jump means events were missed.
+   *
+   * Not exposed over HTTP today — it exists as `copy_event_outbox.sequence_id`
+   * and via `domain_events` ordering, neither of which the gateway serves. Until
+   * BR-EX-11 lands this is `null` and the M3 gap check cannot run, so a missed
+   * event is currently undetectable. That is a known hole, not a resolved one.
+   */
   sourceSequence?: number | null;
+  /**
+   * Connector-derived, not read from a Trading System field. Sources per the
+   * mapping doc: `/v1/health.checks.stale_or_bad_services` (heartbeat age over
+   * 180s by default), broker adapter `circuit_open`, and data-layer feed
+   * staleness.
+   */
   freshness: FreshnessState;
-  /** Age in seconds at `asOf`, when the source publishes one. */
+  /** Age in seconds against `asOf`. Connector-computed; label it as such. */
   ageSeconds?: number | null;
   /** Non-fatal caveats the panel must surface rather than swallow. */
   warnings?: readonly string[];
@@ -114,6 +168,21 @@ export interface Envelope {
   /** Formula version, required for DERIVED authority (guide §6). */
   formulaVersion?: string | null;
 }
+
+/**
+ * VN market session state, for the Paper Workbench VNM freshness clock.
+ *
+ * Two facts from `extract/freshness-authority.json` that shape phase 13:
+ * the sessions are 09:00–11:30 and 13:00–14:30 ICT (UTC+7) Mon–Fri, and the
+ * calendar lives in the DATA LAYER, not in `trading_system`. A connector
+ * reading only the gateway cannot see VN session state at all — it has to read
+ * the data-layer health surface (`dnse_stream.status`).
+ *
+ * So `MARKET_CLOSED` is what drives `FreshnessState.PAUSED`, and `OPEN_STALE`
+ * is a real stale reading during a session. Collapsing the two would raise a
+ * false alarm every evening.
+ */
+export type VnSessionStatus = "OPEN_HEALTHY" | "OPEN_STALE" | "MARKET_CLOSED" | "BROKEN";
 
 /* ---------------------------------------------------------------------------
  * Panel states (DS §6, §4g)
@@ -171,8 +240,60 @@ export interface ChartEnvelope {
  * Domain vocabularies used by more than one screen
  * ------------------------------------------------------------------------ */
 
-/** Blotter row status. `PARTIAL` is never green (guide §6). */
-export type OrderStatus = "FILLED" | "PARTIAL" | "REJECTED" | "OPEN" | "CANCELLED";
+/**
+ * Blotter row status — the Trading System's `OrderStatus` enum, verbatim.
+ *
+ * Twelve values, from `extract/vocabularies.json`. Note `CANCELED` with one L
+ * and `PARTIALLY_FILLED` rather than `PARTIAL`: these are wire values, and a
+ * frontend that "tidies" the spelling stops matching what the server sends.
+ *
+ * `DENIED` here is an order the risk authority refused. It is unrelated to the
+ * `denied` panel state, which is about what the VIEWER may see.
+ */
+export type OrderStatus =
+  | "INITIALIZED"
+  | "SUBMITTED"
+  | "ACCEPTED"
+  | "REJECTED"
+  | "DENIED"
+  | "PENDING_UPDATE"
+  | "PENDING_CANCEL"
+  | "PARTIALLY_FILLED"
+  | "FILLED"
+  | "CANCELED"
+  | "EXPIRED"
+  | "TRIGGERED";
+
+/**
+ * The Full Blotter's five filter chips (`IMPLEMENTATION_PHASES` phase 14).
+ *
+ * The hi-fi offers five; the system has twelve. So the chips are a BUCKETING,
+ * and the bucket definition below is a UI decision that has to be agreed rather
+ * than assumed — the server applies it (BR-EX-02), so both sides must bucket
+ * identically or the count in the footer will not match the rows in the table.
+ */
+export type BlotterFilter = "ALL" | "FILLED" | "PARTIAL" | "REJECTED" | "OPEN";
+
+/**
+ * Proposed bucket map. `OPEN` means "still working": submitted or accepted by
+ * the venue and not yet terminal. `TRIGGERED` counts as open because a
+ * triggered stop is live in the book.
+ */
+export const BLOTTER_BUCKET: Record<Exclude<BlotterFilter, "ALL">, readonly OrderStatus[]> = {
+  FILLED: ["FILLED"],
+  PARTIAL: ["PARTIALLY_FILLED"],
+  REJECTED: ["REJECTED", "DENIED"],
+  OPEN: ["INITIALIZED", "SUBMITTED", "ACCEPTED", "PENDING_UPDATE", "PENDING_CANCEL", "TRIGGERED"],
+};
+
+/**
+ * Statuses no bucket claims: `CANCELED` and `EXPIRED`.
+ *
+ * Deliberate. They are terminal and uninteresting to the five questions the
+ * chips ask, and they remain reachable through `ALL`. Recorded because a
+ * silently unreachable status would be a hole in the filter.
+ */
+export const BLOTTER_UNBUCKETED: readonly OrderStatus[] = ["CANCELED", "EXPIRED"];
 
 /**
  * Command/operation lifecycle. `202 ≠ success`: `AWAITING_APPLY` and

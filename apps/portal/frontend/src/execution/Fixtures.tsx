@@ -89,7 +89,22 @@ const STAGES: PromotionStage[] = [
 ];
 
 const FRESHNESS_STATES: FreshnessState[] = ["OK", "AGING", "STALE", "PAUSED", "UNKNOWN"];
-const ORDER_STATUSES: OrderStatus[] = ["FILLED", "PARTIAL", "REJECTED", "OPEN", "CANCELLED"];
+// All twelve, not the five the hi-fi filter chips offer: the chips are a
+// bucketing (BLOTTER_BUCKET), and every underlying status still has to render.
+const ORDER_STATUSES: OrderStatus[] = [
+  "INITIALIZED",
+  "SUBMITTED",
+  "ACCEPTED",
+  "REJECTED",
+  "DENIED",
+  "PENDING_UPDATE",
+  "PENDING_CANCEL",
+  "PARTIALLY_FILLED",
+  "FILLED",
+  "CANCELED",
+  "EXPIRED",
+  "TRIGGERED",
+];
 const OPERATION_STATUSES: OperationStatus[] = [
   "PLANNED",
   "AWAITING_APPLY",

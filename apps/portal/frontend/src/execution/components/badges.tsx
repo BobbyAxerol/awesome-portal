@@ -58,19 +58,27 @@ export function AuthorityBadge({ envelope }: { envelope: Envelope }) {
   const age = formatAge(envelope.ageSeconds);
   const derivedWithoutFormula = envelope.authority === "DERIVED" && !envelope.formulaVersion;
 
-  const parts: string[] = [envelope.asOf];
+  // `as_of` is when the data was true; `readAt` is when we fetched it. The
+  // contract pack is explicit that the connector must never present its own
+  // read time as Trading System authority, so a missing as_of says so instead
+  // of quietly borrowing readAt — otherwise a fast read of a two-hour-old row
+  // renders as two seconds fresh.
+  const parts: string[] = [envelope.asOf ?? "as_of not published"];
   if (age) parts.push(`age ${age}`);
   if (envelope.digest) parts.push(envelope.digest.slice(0, 19) + "…");
   if (envelope.formulaVersion) parts.push(envelope.formulaVersion);
 
+  const title = [
+    `Authority: ${envelope.authority}`,
+    envelope.asOf ? `as_of ${envelope.asOf} (when the data was true)` : "as_of not published",
+    envelope.readAt ? `read ${envelope.readAt} (connector read time, not authority)` : null,
+    envelope.digest ? `digest ${envelope.digest}` : null,
+  ]
+    .filter(Boolean)
+    .join(". ");
+
   return (
-    <span
-      className="exec-authority"
-      data-authority={envelope.authority}
-      title={`Authority: ${envelope.authority}. as_of ${envelope.asOf}${
-        envelope.digest ? `. digest ${envelope.digest}` : ""
-      }`}
-    >
+    <span className="exec-authority" data-authority={envelope.authority} title={title}>
       <span className="exec-authority-name">{envelope.authority}</span>
       <span className="exec-authority-meta">· {parts.join(" · ")}</span>
       {derivedWithoutFormula ? (
@@ -137,11 +145,20 @@ export type ChipTone = "good" | "bad" | "warn" | "mute" | "commissioned";
  * means "some of what you asked for happened", which is a warning.
  */
 const ORDER_TONE: Record<OrderStatus, ChipTone> = {
-  FILLED: "good",
-  PARTIAL: "warn",
+  INITIALIZED: "mute",
+  SUBMITTED: "mute",
+  ACCEPTED: "mute",
   REJECTED: "bad",
-  OPEN: "mute",
-  CANCELLED: "mute",
+  // Refused by the risk authority. Same weight as a venue rejection: the order
+  // did not happen and somebody decided that.
+  DENIED: "bad",
+  PENDING_UPDATE: "mute",
+  PENDING_CANCEL: "mute",
+  PARTIALLY_FILLED: "warn",
+  FILLED: "good",
+  CANCELED: "mute",
+  EXPIRED: "mute",
+  TRIGGERED: "mute",
 };
 
 const OPERATION_TONE: Record<OperationStatus, ChipTone> = {
@@ -164,6 +181,9 @@ const SYNC_TONE: Record<BrokerSync, ChipTone> = {
   OK: "good",
   STALE: "warn",
   MISMATCH: "bad",
+  // The sync attempt itself failed. Bad rather than warn: we do not know the
+  // broker's state at all, which is worse than knowing it and disagreeing.
+  ERROR: "bad",
   UNKNOWN: "mute",
 };
 

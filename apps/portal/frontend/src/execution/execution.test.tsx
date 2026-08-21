@@ -11,7 +11,15 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { ExecutionSurface } from "./ExecutionSurface";
-import { guardFor, slaOverdue, STAGE_ORDER, type Envelope } from "./contracts";
+import {
+  BLOTTER_BUCKET,
+  BLOTTER_UNBUCKETED,
+  guardFor,
+  slaOverdue,
+  STAGE_ORDER,
+  type Envelope,
+  type OrderStatus,
+} from "./contracts";
 import {
   AuthorityBadge,
   BrokerSyncChip,
@@ -53,8 +61,8 @@ describe("Carbon surface isolation", () => {
 
 describe("PARTIAL is never green", () => {
   it("tones a partly-filled order as a warning", () => {
-    render(<OrderStatusChip status="PARTIAL" />);
-    expect(screen.getByText("PARTIAL").getAttribute("data-tone")).toBe("warn");
+    render(<OrderStatusChip status="PARTIALLY_FILLED" />);
+    expect(screen.getByText("PARTIALLY_FILLED").getAttribute("data-tone")).toBe("warn");
   });
 
   it("tones a partly-applied operation as a warning", () => {
@@ -364,5 +372,93 @@ describe("command plan drawer", () => {
     // No control anywhere in the drawer offers to run it.
     const buttons = [...container.querySelectorAll("button")].map((b) => b.textContent);
     expect(buttons.some((label) => /run|exec|shell/i.test(label ?? ""))).toBe(false);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * Reconciliation against the Trading System contract pack, 2026-08-21.
+ *
+ * `extract/freshness-authority.json` states that the Trading System supplies
+ * no `as_of` on list endpoints, no `source_sequence` over HTTP, and no single
+ * freshness enum. These tests pin the consequences so a later refactor cannot
+ * quietly reintroduce the assumptions we just removed.
+ * ------------------------------------------------------------------------ */
+
+describe("envelope reconciliation", () => {
+  it("says as_of is unpublished rather than borrowing the connector read time", () => {
+    // The mapping doc's rule: never present the connector's own read time as
+    // Trading System authority. A fast read of a two-hour-old row must not
+    // render as two seconds fresh.
+    render(
+      <AuthorityBadge
+        envelope={{
+          authority: "EXECUTION",
+          asOf: null,
+          readAt: "2026-08-21T10:42:01Z",
+          freshness: "UNKNOWN",
+        }}
+      />,
+    );
+    expect(screen.getByText(/as_of not published/)).toBeTruthy();
+  });
+
+  it("labels readAt as connector time, not as authority", () => {
+    const { container } = render(
+      <AuthorityBadge
+        envelope={{
+          authority: "EXECUTION",
+          asOf: "2026-08-21T10:40:00Z",
+          readAt: "2026-08-21T10:42:01Z",
+          freshness: "OK",
+        }}
+      />,
+    );
+    const title = container.querySelector(".exec-authority")?.getAttribute("title") ?? "";
+    expect(title).toContain("when the data was true");
+    expect(title).toContain("not authority");
+  });
+
+  it("keeps ERROR distinct from MISMATCH on broker sync", () => {
+    // The DB CHECK is OK / STALE / MISMATCH / ERROR. A failed sync attempt and
+    // a sync that ran and disagreed are different operational situations.
+    const { rerender, container } = render(<BrokerSyncChip sync="ERROR" />);
+    expect(screen.getByText("SYNC ERROR").getAttribute("data-tone")).toBe("bad");
+    rerender(<BrokerSyncChip sync="UNKNOWN" />);
+    expect(container.textContent).toContain("SYNC UNKNOWN");
+  });
+});
+
+describe("blotter bucketing", () => {
+  it("maps the five hi-fi chips onto the twelve real statuses without overlap", () => {
+    const buckets = Object.values(BLOTTER_BUCKET).flat();
+    expect(new Set(buckets).size).toBe(buckets.length);
+  });
+
+  it("accounts for every status, with the two exclusions stated", () => {
+    const covered = new Set([...Object.values(BLOTTER_BUCKET).flat(), ...BLOTTER_UNBUCKETED]);
+    const all: OrderStatus[] = [
+      "INITIALIZED",
+      "SUBMITTED",
+      "ACCEPTED",
+      "REJECTED",
+      "DENIED",
+      "PENDING_UPDATE",
+      "PENDING_CANCEL",
+      "PARTIALLY_FILLED",
+      "FILLED",
+      "CANCELED",
+      "EXPIRED",
+      "TRIGGERED",
+    ];
+    // No status may fall through silently: it is either in a chip's bucket or
+    // in the explicit exclusion list, and both are reachable through `All`.
+    for (const status of all) {
+      expect(covered.has(status), `${status} is unreachable from any filter`).toBe(true);
+    }
+  });
+
+  it("treats a risk denial as a rejection, not as an open order", () => {
+    expect(BLOTTER_BUCKET.REJECTED).toContain("DENIED");
+    expect(BLOTTER_BUCKET.OPEN).not.toContain("DENIED");
   });
 });
