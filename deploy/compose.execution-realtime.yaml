@@ -1,0 +1,23 @@
+# Opt-in SGP overlay for EX-BE-06. Do not include this file until the AWS edge
+# projection source and cross-cell acceptance evidence are approved.
+services:
+  control-api:
+    environment:
+      FEATURE_EXECUTION_EDGE: "true"
+      FEATURE_EXECUTION_REALTIME_SSE: "true"
+      EXECUTION_EDGE_ORIGIN: ${EXECUTION_EDGE_ORIGIN:?set the private AWS edge HTTPS origin}
+      EXECUTION_EDGE_ENVIRONMENT: ${EXECUTION_EDGE_ENVIRONMENT:?paper, sandbox, or live}
+      EXECUTION_EDGE_PRIVATE_KEY_FILE: /run/secrets/execution-edge/delegation-private-key.pem
+      EXECUTION_EDGE_KEY_ID: ${EXECUTION_EDGE_KEY_ID:-execution-k1}
+      EXECUTION_EDGE_DELEGATION_ISSUER: ${EXECUTION_EDGE_DELEGATION_ISSUER:-portal-control-api}
+      EXECUTION_EDGE_DELEGATION_AUDIENCE: ${EXECUTION_EDGE_DELEGATION_AUDIENCE:?use an environment-specific audience}
+      EXECUTION_EDGE_DELEGATION_TTL_SECONDS: ${EXECUTION_EDGE_DELEGATION_TTL_SECONDS:-45}
+      EXECUTION_EDGE_CA_FILE: /run/secrets/execution-edge/edge-server-ca.crt
+      EXECUTION_EDGE_CLIENT_CERT_FILE: /run/secrets/execution-edge/sgp-client.crt
+      EXECUTION_EDGE_CLIENT_KEY_FILE: /run/secrets/execution-edge/sgp-client.key
+      EXECUTION_EDGE_CONNECT_TIMEOUT_MS: ${EXECUTION_EDGE_CONNECT_TIMEOUT_MS:-3000}
+    volumes:
+      - type: bind
+        source: ${CONTROL_API_EXECUTION_EDGE_SECRET_DIRECTORY:?set the root-owned SGP edge secret directory}
+        target: /run/secrets/execution-edge
+        read_only: true

@@ -110,6 +110,23 @@ export class SessionsRepository {
     );
   }
 
+  async isActiveLease(
+    sessionId: string,
+    userId: string,
+    sessionVersion: number,
+    now: Date,
+  ): Promise<boolean> {
+    const result = await this.pool.query<{ active: boolean }>(
+      `SELECT EXISTS (
+         SELECT 1 FROM auth_sessions
+          WHERE session_id = $1 AND user_id = $2 AND session_version = $3
+            AND state = 'ACTIVE' AND idle_expires_at > $4 AND absolute_expires_at > $4
+       ) AS active`,
+      [sessionId, userId, sessionVersion, now],
+    );
+    return result.rows[0]?.active === true;
+  }
+
   async expireStale(now: Date): Promise<void> {
     await this.pool.query(
       `UPDATE auth_sessions SET state = 'EXPIRED'

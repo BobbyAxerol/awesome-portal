@@ -1,6 +1,8 @@
 #![forbid(unsafe_code)]
 
 use std::{
+    collections::VecDeque,
+    convert::Infallible,
     env, fs,
     io::BufReader,
     net::SocketAddr,
@@ -11,14 +13,24 @@ use std::{
 
 use axum::{
     extract::State,
-    http::{header::AUTHORIZATION, HeaderMap, StatusCode},
-    response::{IntoResponse, Response},
+    http::{header::AUTHORIZATION, HeaderMap, HeaderValue, StatusCode},
+    response::{sse::Event, IntoResponse, Response, Sse},
     routing::get,
     Json, Router,
 };
 use axum_server::tls_rustls::RustlsConfig;
-use edge_auth::{DelegationVerifier, RequiredRead};
-use execution_contracts::{CapabilitySnapshot, CapabilityState, ExecutionReadCapability};
+use chrono::Utc;
+use edge_auth::{DelegatedClaims, DelegationVerifier, RequiredRead};
+use execution_contracts::{
+    CanonicalId, CapabilitySnapshot, CapabilityState, ExecutionReadCapability,
+};
+use futures_util::stream;
+use projection_core::{resume_decision, ProjectionCursor, ProjectionScope, ResumeDecision};
+use projection_store_pg::{PgProjectionStore, RealtimeJournalRecord, RealtimeScopeAvailability};
+use realtime_sse::{
+    GapEnvelope, GapReason, RealtimeEnvelope, RealtimeHub, RealtimeSubscription,
+    SubscriptionDelivery, COMMAND_CENTER_RESOURCE, REALTIME_SCHEMA_VERSION,
+};
 use rustls::{
     pki_types::{CertificateDer, PrivateKeyDer},
     server::{danger::ClientCertVerifier, WebPkiClientVerifier},
@@ -31,7 +43,7 @@ use tokio::{
     net::TcpStream,
     sync::RwLock,
 };
-use tracing::info;
+use tracing::{info, warn};
 use tracing_subscriber::EnvFilter;
 use ts_transport::{
     BoundedSourceClient, CapabilityNegotiator, SourceTransportConfig, TransportLimits,
@@ -46,6 +58,11 @@ struct AppState {
     snapshot: Arc<RwLock<Option<CapabilitySnapshot>>>,
     projection_required: bool,
     projection_ready: Arc<RwLock<bool>>,
+    projection_store: Option<PgProjectionStore>,
+    realtime_hub: Option<RealtimeHub>,
+    realtime_replay_limit: usize,
+    realtime_heartbeat: Duration,
+    realtime_epoch_jitter: Duration,
 }
 
 #[derive(Debug)]
@@ -70,6 +87,13 @@ struct EdgeConfig {
     transport_limits: TransportLimits,
     projection_ingestion_enabled: bool,
     projection_database_url_file: Option<PathBuf>,
+    realtime_sse_enabled: bool,
+    realtime_queue_capacity: usize,
+    realtime_replay_limit: usize,
+    realtime_poll_interval: Duration,
+    realtime_poll_batch: usize,
+    realtime_heartbeat: Duration,
+    realtime_epoch_jitter: Duration,
 }
 
 impl EdgeConfig {
@@ -91,8 +115,11 @@ impl EdgeConfig {
         let probe_interval_seconds = bounded_usize("EDGE_PROBE_INTERVAL_SECONDS", 30, 5, 300)?;
         let projection_ingestion_enabled =
             strict_boolean("EDGE_PROJECTION_INGESTION_ENABLED", false)?;
+        let realtime_sse_enabled = strict_boolean("EDGE_REALTIME_SSE_ENABLED", false)?;
         let projection_database_url_file = optional_path("EDGE_PROJECTION_DATABASE_URL_FILE");
-        if projection_ingestion_enabled && projection_database_url_file.is_none() {
+        if (projection_ingestion_enabled || realtime_sse_enabled)
+            && projection_database_url_file.is_none()
+        {
             return Err(ConfigError::Missing("EDGE_PROJECTION_DATABASE_URL_FILE"));
         }
         Ok(Self {
@@ -118,45 +145,65 @@ impl EdgeConfig {
             source_gateway_digest: required("EDGE_SOURCE_GATEWAY_DIGEST")?,
             probe_alpha_id: optional("EDGE_PROBE_ALPHA_ID"),
             probe_interval: Duration::from_secs(probe_interval_seconds as u64),
-            transport_limits: TransportLimits {
-                connect_timeout: Duration::from_millis(bounded_usize(
-                    "EDGE_CONNECT_TIMEOUT_MS",
-                    2_000,
-                    100,
-                    5_000,
-                )? as u64),
-                request_timeout: Duration::from_millis(bounded_usize(
-                    "EDGE_REQUEST_TIMEOUT_MS",
-                    5_000,
-                    250,
-                    15_000,
-                )? as u64),
-                queue_timeout: Duration::from_millis(bounded_usize(
-                    "EDGE_QUEUE_TIMEOUT_MS",
-                    250,
-                    10,
-                    2_000,
-                )? as u64),
-                retry_backoff: Duration::from_millis(bounded_usize(
-                    "EDGE_RETRY_BACKOFF_MS",
-                    100,
-                    0,
-                    1_000,
-                )? as u64),
-                maximum_concurrency: bounded_usize("EDGE_MAXIMUM_CONCURRENCY", 32, 1, 128)?,
-                maximum_response_bytes: bounded_usize(
-                    "EDGE_MAXIMUM_RESPONSE_BYTES",
-                    2 * 1024 * 1024,
-                    1_024,
-                    8 * 1024 * 1024,
-                )?,
-                maximum_retries: u8::try_from(bounded_usize("EDGE_MAXIMUM_RETRIES", 1, 0, 2)?)
-                    .map_err(|_| ConfigError::Invalid("EDGE_MAXIMUM_RETRIES"))?,
-            },
+            transport_limits: transport_limits_from_environment()?,
             projection_ingestion_enabled,
             projection_database_url_file,
+            realtime_sse_enabled,
+            realtime_queue_capacity: bounded_usize("EDGE_REALTIME_QUEUE_CAPACITY", 256, 8, 4096)?,
+            realtime_replay_limit: bounded_usize("EDGE_REALTIME_REPLAY_LIMIT", 1024, 1, 2048)?,
+            realtime_poll_interval: Duration::from_millis(bounded_usize(
+                "EDGE_REALTIME_POLL_INTERVAL_MS",
+                100,
+                25,
+                5000,
+            )? as u64),
+            realtime_poll_batch: bounded_usize("EDGE_REALTIME_POLL_BATCH", 512, 1, 2048)?,
+            realtime_heartbeat: Duration::from_secs(bounded_usize(
+                "EDGE_REALTIME_HEARTBEAT_SECONDS",
+                15,
+                5,
+                60,
+            )? as u64),
+            realtime_epoch_jitter: Duration::from_millis(bounded_usize(
+                "EDGE_REALTIME_EPOCH_JITTER_MS",
+                5000,
+                0,
+                30_000,
+            )? as u64),
         })
     }
+}
+
+fn transport_limits_from_environment() -> Result<TransportLimits, ConfigError> {
+    Ok(TransportLimits {
+        connect_timeout: Duration::from_millis(bounded_usize(
+            "EDGE_CONNECT_TIMEOUT_MS",
+            2_000,
+            100,
+            5_000,
+        )? as u64),
+        request_timeout: Duration::from_millis(bounded_usize(
+            "EDGE_REQUEST_TIMEOUT_MS",
+            5_000,
+            250,
+            15_000,
+        )? as u64),
+        queue_timeout: Duration::from_millis(
+            bounded_usize("EDGE_QUEUE_TIMEOUT_MS", 250, 10, 2_000)? as u64,
+        ),
+        retry_backoff: Duration::from_millis(
+            bounded_usize("EDGE_RETRY_BACKOFF_MS", 100, 0, 1_000)? as u64,
+        ),
+        maximum_concurrency: bounded_usize("EDGE_MAXIMUM_CONCURRENCY", 32, 1, 128)?,
+        maximum_response_bytes: bounded_usize(
+            "EDGE_MAXIMUM_RESPONSE_BYTES",
+            2 * 1024 * 1024,
+            1_024,
+            8 * 1024 * 1024,
+        )?,
+        maximum_retries: u8::try_from(bounded_usize("EDGE_MAXIMUM_RETRIES", 1, 0, 2)?)
+            .map_err(|_| ConfigError::Invalid("EDGE_MAXIMUM_RETRIES"))?,
+    })
 }
 
 #[tokio::main]
@@ -193,18 +240,7 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         .as_deref()
         .map(read_text)
         .transpose()?;
-    let projection_store = if config.projection_ingestion_enabled {
-        let database_url_file = config
-            .projection_database_url_file
-            .as_deref()
-            .ok_or(ConfigError::Missing("EDGE_PROJECTION_DATABASE_URL_FILE"))?;
-        let database_url = read_text(database_url_file)?;
-        let store = projection_store_pg::PgProjectionStore::connect(database_url.trim()).await?;
-        store.ping().await?;
-        Some(store)
-    } else {
-        None
-    };
+    let projection_store = connect_projection_store(&config).await?;
 
     let verifier = DelegationVerifier::from_jwks_json(
         &jwks,
@@ -219,42 +255,39 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         client_identity_pem: source_identity.as_deref(),
         source_api_key: source_api_key.as_deref().map(str::trim),
         observed_gateway_digest: &config.source_gateway_digest,
-        limits: config.transport_limits,
+        limits: config.transport_limits.clone(),
     })?;
     let negotiator = CapabilityNegotiator::new(source_client);
     let snapshot = Arc::new(RwLock::new(Some(
         negotiator.probe(config.probe_alpha_id.as_deref()).await,
     )));
     let projection_ready = Arc::new(RwLock::new(projection_store.is_some()));
+    let realtime_hub = if config.realtime_sse_enabled {
+        Some(RealtimeHub::new(config.realtime_queue_capacity)?)
+    } else {
+        None
+    };
     let state = AppState {
-        environment: config.environment,
+        environment: config.environment.clone(),
         verifier,
         snapshot: Arc::clone(&snapshot),
-        projection_required: config.projection_ingestion_enabled,
+        projection_required: config.projection_ingestion_enabled || config.realtime_sse_enabled,
         projection_ready: Arc::clone(&projection_ready),
+        projection_store: projection_store.clone(),
+        realtime_hub: realtime_hub.clone(),
+        realtime_replay_limit: config.realtime_replay_limit,
+        realtime_heartbeat: config.realtime_heartbeat,
+        realtime_epoch_jitter: config.realtime_epoch_jitter,
     };
 
-    let probe_snapshot = Arc::clone(&snapshot);
-    let probe_alpha_id = config.probe_alpha_id;
-    tokio::spawn(async move {
-        let mut interval = tokio::time::interval(config.probe_interval);
-        interval.tick().await;
-        loop {
-            interval.tick().await;
-            let next = negotiator.probe(probe_alpha_id.as_deref()).await;
-            *probe_snapshot.write().await = Some(next);
-        }
-    });
-    if let Some(store) = projection_store {
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(Duration::from_secs(10));
-            interval.tick().await;
-            loop {
-                interval.tick().await;
-                *projection_ready.write().await = store.ping().await.is_ok();
-            }
-        });
-    }
+    spawn_background_tasks(
+        &config,
+        negotiator,
+        snapshot,
+        projection_store,
+        projection_ready,
+        realtime_hub,
+    );
 
     let private_app = private_router(state.clone());
     let health_app = health_router(state);
@@ -279,9 +312,65 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
     }
 }
 
+async fn connect_projection_store(
+    config: &EdgeConfig,
+) -> Result<Option<PgProjectionStore>, ServiceError> {
+    if !config.projection_ingestion_enabled && !config.realtime_sse_enabled {
+        return Ok(None);
+    }
+    let database_url_file = config
+        .projection_database_url_file
+        .as_deref()
+        .ok_or(ConfigError::Missing("EDGE_PROJECTION_DATABASE_URL_FILE"))?;
+    let database_url = read_text(database_url_file)?;
+    let store = PgProjectionStore::connect(database_url.trim()).await?;
+    store.ping().await?;
+    Ok(Some(store))
+}
+
+fn spawn_background_tasks(
+    config: &EdgeConfig,
+    negotiator: CapabilityNegotiator,
+    snapshot: Arc<RwLock<Option<CapabilitySnapshot>>>,
+    projection_store: Option<PgProjectionStore>,
+    projection_ready: Arc<RwLock<bool>>,
+    realtime_hub: Option<RealtimeHub>,
+) {
+    let probe_alpha_id = config.probe_alpha_id.clone();
+    let probe_interval = config.probe_interval;
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(probe_interval);
+        interval.tick().await;
+        loop {
+            interval.tick().await;
+            let next = negotiator.probe(probe_alpha_id.as_deref()).await;
+            *snapshot.write().await = Some(next);
+        }
+    });
+    if let Some(store) = projection_store.clone() {
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(10));
+            interval.tick().await;
+            loop {
+                interval.tick().await;
+                *projection_ready.write().await = store.ping().await.is_ok();
+            }
+        });
+    }
+    if let (Some(store), Some(hub)) = (projection_store, realtime_hub) {
+        tokio::spawn(realtime_journal_poller(
+            store,
+            hub,
+            config.realtime_poll_interval,
+            config.realtime_poll_batch,
+        ));
+    }
+}
+
 fn private_router(state: AppState) -> Router {
     Router::new()
         .route("/internal/v1/compatibility", get(compatibility))
+        .route("/internal/v1/realtime/stream", get(realtime_stream))
         .with_state(state)
 }
 
@@ -312,6 +401,353 @@ async fn compatibility(State(state): State<AppState>, headers: HeaderMap) -> Res
     match state.snapshot.read().await.clone() {
         Some(snapshot) => Json(snapshot).into_response(),
         None => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+    }
+}
+
+async fn realtime_stream(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    let (Some(store), Some(hub)) = (&state.projection_store, &state.realtime_hub) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    let request = match authorize_realtime_request(&state, &headers) {
+        Ok(request) => request,
+        Err(status) => return status.into_response(),
+    };
+    let availability = match store.realtime_scope_availability(&request.scope).await {
+        Ok(availability) => availability,
+        Err(projection_store_pg::StoreError::ActiveEpochNotFound) => {
+            return StatusCode::SERVICE_UNAVAILABLE.into_response();
+        }
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    let mut subscription = hub.subscribe(
+        request.claims.workspace_id.clone(),
+        state.environment.clone(),
+        request.cursor,
+    );
+    let (initial, terminal_after_initial) = match prepare_resume(
+        store,
+        &availability,
+        &request,
+        &mut subscription,
+        state.realtime_replay_limit,
+        state.realtime_epoch_jitter,
+    )
+    .await
+    {
+        Ok(prepared) => prepared,
+        Err(status) => return status.into_response(),
+    };
+    let expires_in = request
+        .claims
+        .expires_at()
+        .map_or(Duration::ZERO, |expires_at| {
+            (expires_at - Utc::now())
+                .to_std()
+                .unwrap_or(Duration::ZERO)
+                .saturating_sub(Duration::from_secs(2))
+        });
+    let heartbeat_at = tokio::time::Instant::now() + state.realtime_heartbeat;
+    let machine = StreamMachine {
+        initial,
+        subscription: Some(subscription),
+        heartbeat: tokio::time::interval_at(heartbeat_at, state.realtime_heartbeat),
+        expires_at: tokio::time::Instant::now() + expires_in,
+        terminal_after_initial,
+    };
+    let stream = stream::unfold(machine, next_sse_event);
+    let mut response = Sse::new(stream).into_response();
+    let response_headers = response.headers_mut();
+    response_headers.insert(
+        "cache-control",
+        HeaderValue::from_static("no-cache, no-store"),
+    );
+    response_headers.insert("x-accel-buffering", HeaderValue::from_static("no"));
+    response_headers.insert(
+        "x-content-type-options",
+        HeaderValue::from_static("nosniff"),
+    );
+    response
+}
+
+struct RealtimeRequest {
+    claims: DelegatedClaims,
+    cursor: ProjectionCursor,
+    scope: ProjectionScope,
+}
+
+fn authorize_realtime_request(
+    state: &AppState,
+    headers: &HeaderMap,
+) -> Result<RealtimeRequest, StatusCode> {
+    let token = bearer(headers).ok_or(StatusCode::UNAUTHORIZED)?;
+    let claims = state
+        .verifier
+        .verify_read(
+            token,
+            &RequiredRead {
+                environment: &state.environment,
+                resource: Some(COMMAND_CENTER_RESOURCE),
+            },
+        )
+        .map_err(|_| StatusCode::FORBIDDEN)?;
+    let cursor = requested_cursor(headers)
+        .map_err(|()| StatusCode::BAD_REQUEST)?
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    let workspace_id =
+        CanonicalId::parse(claims.workspace_id.clone()).map_err(|_| StatusCode::FORBIDDEN)?;
+    let scope = ProjectionScope::new(workspace_id, state.environment.clone())
+        .map_err(|_| StatusCode::FORBIDDEN)?;
+    Ok(RealtimeRequest {
+        claims,
+        cursor,
+        scope,
+    })
+}
+
+async fn prepare_resume(
+    store: &PgProjectionStore,
+    availability: &RealtimeScopeAvailability,
+    request: &RealtimeRequest,
+    subscription: &mut RealtimeSubscription,
+    replay_limit: usize,
+    epoch_jitter: Duration,
+) -> Result<(VecDeque<Event>, bool), StatusCode> {
+    let decision = resume_decision(
+        request.cursor,
+        availability.active.as_core(),
+        availability
+            .retained_previous
+            .as_ref()
+            .map(|previous| previous.as_core()),
+        &request.claims.sid,
+        Utc::now(),
+        epoch_jitter,
+    );
+    match decision {
+        ResumeDecision::Resume => {
+            prepare_replay(
+                store,
+                availability,
+                request.cursor,
+                subscription,
+                replay_limit,
+            )
+            .await
+        }
+        ResumeDecision::Gap {
+            earliest_available_sequence,
+        } => {
+            let mut gap = GapEnvelope::new(GapReason::HistoryEvicted, Some(request.cursor));
+            gap.active_epoch_id = Some(availability.active.epoch.epoch_id);
+            gap.earliest_available_sequence = Some(earliest_available_sequence);
+            Ok((VecDeque::from([gap_event(&gap)]), true))
+        }
+        ResumeDecision::Resnapshot {
+            active_epoch_id,
+            resnapshot_not_before,
+        } => {
+            let mut gap = GapEnvelope::new(GapReason::EpochChanged, Some(request.cursor));
+            gap.active_epoch_id = Some(active_epoch_id);
+            gap.resnapshot_not_before = Some(resnapshot_not_before);
+            Ok((VecDeque::from([gap_event(&gap)]), true))
+        }
+    }
+}
+
+async fn prepare_replay(
+    store: &PgProjectionStore,
+    availability: &RealtimeScopeAvailability,
+    cursor: ProjectionCursor,
+    subscription: &mut RealtimeSubscription,
+    replay_limit: usize,
+) -> Result<(VecDeque<Event>, bool), StatusCode> {
+    let page = store
+        .load_realtime_records(cursor.epoch_id, cursor.sequence, replay_limit)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if page.has_more {
+        let mut gap = GapEnvelope::new(GapReason::ReplayWindowExceeded, Some(cursor));
+        gap.active_epoch_id = Some(availability.active.epoch.epoch_id);
+        return Ok((VecDeque::from([gap_event(&gap)]), true));
+    }
+
+    let mut initial = VecDeque::new();
+    let mut expected = cursor.sequence.saturating_add(1);
+    let mut replay_cursor = cursor;
+    for record in page.records {
+        if record.projection_sequence != expected || record.outcome == "GAP_APPLIED" {
+            return Ok((
+                VecDeque::from([gap_event(&GapEnvelope::new(
+                    GapReason::SourceDiscontinuity,
+                    Some(replay_cursor),
+                ))]),
+                true,
+            ));
+        }
+        replay_cursor = ProjectionCursor {
+            epoch_id: record.epoch_id,
+            sequence: record.projection_sequence,
+        };
+        expected = expected.saturating_add(1);
+        initial.push_back(projection_event(&record_to_envelope(record)));
+    }
+    subscription.advance_after_replay(replay_cursor);
+    Ok((initial, false))
+}
+
+struct StreamMachine {
+    initial: VecDeque<Event>,
+    subscription: Option<RealtimeSubscription>,
+    heartbeat: tokio::time::Interval,
+    expires_at: tokio::time::Instant,
+    terminal_after_initial: bool,
+}
+
+enum NextStreamEvent {
+    Delivery(SubscriptionDelivery),
+    Heartbeat,
+    Expired,
+}
+
+async fn next_sse_event(
+    mut machine: StreamMachine,
+) -> Option<(Result<Event, Infallible>, StreamMachine)> {
+    if let Some(event) = machine.initial.pop_front() {
+        return Some((Ok(event), machine));
+    }
+    if machine.terminal_after_initial {
+        return None;
+    }
+    let subscription = machine.subscription.as_mut()?;
+    let next = tokio::select! {
+        delivery = subscription.next() => NextStreamEvent::Delivery(delivery),
+        _ = machine.heartbeat.tick() => NextStreamEvent::Heartbeat,
+        () = tokio::time::sleep_until(machine.expires_at) => NextStreamEvent::Expired,
+    };
+    let event = match next {
+        NextStreamEvent::Delivery(SubscriptionDelivery::Event(event)) => projection_event(&event),
+        NextStreamEvent::Delivery(SubscriptionDelivery::Gap(gap)) => {
+            machine.terminal_after_initial = true;
+            gap_event(&gap)
+        }
+        NextStreamEvent::Delivery(SubscriptionDelivery::Closed) => return None,
+        NextStreamEvent::Heartbeat => json_event(
+            "projection.heartbeat",
+            &serde_json::json!({
+                "event_type": "projection.heartbeat",
+                "schema_version": REALTIME_SCHEMA_VERSION,
+                "server_time": Utc::now(),
+            }),
+            None,
+        ),
+        NextStreamEvent::Expired => {
+            machine.terminal_after_initial = true;
+            json_event(
+                "auth.expiring",
+                &serde_json::json!({
+                    "event_type": "auth.expiring",
+                    "schema_version": REALTIME_SCHEMA_VERSION,
+                    "reconnect_required": true,
+                }),
+                None,
+            )
+        }
+    };
+    Some((Ok(event), machine))
+}
+
+fn requested_cursor(headers: &HeaderMap) -> Result<Option<ProjectionCursor>, ()> {
+    let last_event = header_text(headers, "last-event-id")?;
+    let snapshot = header_text(headers, "x-projection-cursor")?;
+    if last_event.is_some() && snapshot.is_some() && last_event != snapshot {
+        return Err(());
+    }
+    last_event
+        .or(snapshot)
+        .map(str::parse)
+        .transpose()
+        .map_err(|_| ())
+}
+
+fn header_text<'a>(headers: &'a HeaderMap, name: &str) -> Result<Option<&'a str>, ()> {
+    headers
+        .get(name)
+        .map(|value| value.to_str().map_err(|_| ()))
+        .transpose()
+}
+
+fn projection_event(envelope: &RealtimeEnvelope) -> Event {
+    json_event(
+        &envelope.event_type,
+        envelope,
+        Some(envelope.cursor().to_string()),
+    )
+}
+
+fn gap_event(gap: &GapEnvelope) -> Event {
+    json_event("projection.gap", gap, None).retry(Duration::from_secs(1))
+}
+
+fn json_event<T: Serialize>(event_type: &str, payload: &T, id: Option<String>) -> Event {
+    let data = serde_json::to_string(payload)
+        .unwrap_or_else(|_| "{\"event_type\":\"stream.serialization_error\"}".to_owned());
+    let event = Event::default().event(event_type).data(data);
+    match id {
+        Some(id) => event.id(id),
+        None => event,
+    }
+}
+
+fn record_to_envelope(record: RealtimeJournalRecord) -> RealtimeEnvelope {
+    let mut envelope = RealtimeEnvelope::from_observation(
+        record.workspace_id,
+        record.environment,
+        record.epoch_id,
+        record.projection_sequence,
+        record.observation,
+        record.projected_at,
+    );
+    envelope.source_discontinuity = record.outcome == "GAP_APPLIED";
+    envelope
+}
+
+async fn realtime_journal_poller(
+    store: PgProjectionStore,
+    hub: RealtimeHub,
+    poll_interval: Duration,
+    poll_batch: usize,
+) {
+    let mut ordinal = match store.latest_realtime_journal_ordinal().await {
+        Ok(ordinal) => ordinal,
+        Err(error) => {
+            warn!(error = %error, "realtime journal poller could not capture startup watermark");
+            return;
+        }
+    };
+    let mut interval = tokio::time::interval(poll_interval);
+    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    loop {
+        interval.tick().await;
+        loop {
+            match store
+                .load_realtime_records_after_ordinal(ordinal, poll_batch)
+                .await
+            {
+                Ok(page) => {
+                    for record in page.records {
+                        ordinal = record.journal_ordinal;
+                        hub.publish(record_to_envelope(record));
+                    }
+                    if !page.has_more {
+                        break;
+                    }
+                }
+                Err(error) => {
+                    warn!(error = %error, "realtime journal poll failed without advancing cursor");
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -559,6 +995,8 @@ enum ServiceError {
     Transport(#[from] ts_transport::TransportError),
     #[error(transparent)]
     ProjectionStore(#[from] projection_store_pg::StoreError),
+    #[error(transparent)]
+    Realtime(#[from] realtime_sse::RealtimeError),
     #[error("TLS material is invalid")]
     InvalidTlsMaterial,
     #[error("secret file violates size/type constraints")]

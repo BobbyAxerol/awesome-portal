@@ -51,6 +51,15 @@ services:
       # operational evidence are owner-approved.
       EDGE_PROJECTION_INGESTION_ENABLED: ${EDGE_PROJECTION_INGESTION_ENABLED:-false}
       EDGE_PROJECTION_DATABASE_URL_FILE: ${EDGE_PROJECTION_DATABASE_URL_FILE:-/run/secrets/projection-database-url}
+      # EX-BE-06 is independently activated only after projection source,
+      # SGP↔AWS HTTP/2 and 100-client evidence are accepted.
+      EDGE_REALTIME_SSE_ENABLED: ${EDGE_REALTIME_SSE_ENABLED:-false}
+      EDGE_REALTIME_QUEUE_CAPACITY: ${EDGE_REALTIME_QUEUE_CAPACITY:-256}
+      EDGE_REALTIME_REPLAY_LIMIT: ${EDGE_REALTIME_REPLAY_LIMIT:-1024}
+      EDGE_REALTIME_POLL_INTERVAL_MS: ${EDGE_REALTIME_POLL_INTERVAL_MS:-100}
+      EDGE_REALTIME_POLL_BATCH: ${EDGE_REALTIME_POLL_BATCH:-512}
+      EDGE_REALTIME_HEARTBEAT_SECONDS: ${EDGE_REALTIME_HEARTBEAT_SECONDS:-15}
+      EDGE_REALTIME_EPOCH_JITTER_MS: ${EDGE_REALTIME_EPOCH_JITTER_MS:-5000}
     healthcheck:
       test: ["CMD", "/usr/local/bin/portal-execution-edge", "healthcheck"]
       interval: 15s

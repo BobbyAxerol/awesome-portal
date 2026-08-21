@@ -71,4 +71,23 @@ describe("execution delegated read assertions", () => {
     expect(decoded.scopes).toEqual(["execution.read"]);
     expect(JSON.stringify(decoded)).not.toContain("command");
   });
+
+  it("supports the exact command-center screen resource without wildcards", async () => {
+    const { service, publicKey } = await fixture();
+    const token = await service.issueReadAssertion({
+      principalId: "usr_reader",
+      sessionId: "ses_789",
+      workspaceId: "ws_research",
+      roles: ["USER"],
+      resources: ["execution:command-center"],
+      authenticationTime: new Date(),
+      authenticationMethods: ["portal_session"],
+    });
+    const { payload } = await jwtVerify(token, publicKey, {
+      issuer: "portal-control-api",
+      audience: "portal-execution-edge-paper",
+      algorithms: ["RS256"],
+    });
+    expect(payload.resources).toEqual(["execution:command-center"]);
+  });
 });

@@ -211,9 +211,18 @@ authority.
   47 Rust tests, 182.000 projection rows, concurrent insert + eviction +
   backward navigation và 2.881 điểm exact-decimal. Chi tiết:
   [`EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md`](./EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md).
-- Backend tiếp theo là `EX-BE-06`: multiplexed SSE delivery, resume và
-  backpressure trên epoch/sequence đã khóa. `EX-BE-05b` vẫn chờ source command
-  capability; `EX-BE-07` giữ funnel/correlation/full-binding analytics.
+- `EX-BE-06` **foundation complete / source and activation evidence pending:**
+  Rust bounded journal fan-out, retained replay, Last-Event-ID, typed
+  gap/epoch/source-discontinuity recovery, 100-client fan-out and slow-consumer
+  backpressure are wired through a TypeScript same-origin mTLS HTTP/2 proxy.
+  Delegated JWT stays server-only, session revocation is bounded, and both
+  runtime flags remain false. Evidence: 51 Rust/PostgreSQL tests, Control API
+  build and 102/102 tests, canonical Base64URL cursor enforcement, and clean
+  base/AWS-edge/SGP-overlay Compose renders. Detail:
+  [`EX_BE_06_MULTIPLEXED_SSE_RESUME_BACKPRESSURE.md`](./EX_BE_06_MULTIPLEXED_SSE_RESUME_BACKPRESSURE.md).
+- Backend tiếp theo là `EX-BE-07a`: pure analytics contracts/engines for
+  capital preview, order funnel, capped correlation and full-binding exposure.
+  `EX-BE-05b` vẫn chờ source command capability.
 
 ## BAR-21 — Strategy Import & Quarantine Ingest foundation
 

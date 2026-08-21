@@ -127,10 +127,16 @@ export class KeysetCursorCodec {
       if (!key) return invalidCursor();
       const actual = Buffer.from(rawSignature, "base64url");
       const wanted = this.sign(keyId, encoded);
-      if (actual.length !== wanted.length || !timingSafeEqual(actual, wanted)) {
+      if (
+        actual.toString("base64url") !== rawSignature ||
+        actual.length !== wanted.length ||
+        !timingSafeEqual(actual, wanted)
+      ) {
         return invalidCursor();
       }
-      const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as CursorPayload;
+      const decoded = Buffer.from(encoded, "base64url");
+      if (decoded.toString("base64url") !== encoded) return invalidCursor();
+      const payload = JSON.parse(decoded.toString("utf8")) as CursorPayload;
       const now = this.now();
       if (
         payload.version !== 1 ||

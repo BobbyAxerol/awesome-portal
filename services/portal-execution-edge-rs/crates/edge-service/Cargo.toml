@@ -9,9 +9,13 @@ repository.workspace = true
 [dependencies]
 axum.workspace = true
 axum-server.workspace = true
+chrono.workspace = true
 edge-auth = { path = "../edge-auth" }
 execution-contracts = { path = "../execution-contracts" }
+futures-util.workspace = true
+projection-core = { path = "../projection-core" }
 projection-store-pg = { path = "../projection-store-pg" }
+realtime-sse = { path = "../realtime-sse" }
 reqwest.workspace = true
 rustls.workspace = true
 rustls-pemfile.workspace = true
@@ -23,6 +27,7 @@ tower.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 ts-transport = { path = "../ts-transport" }
+uuid.workspace = true
 
 [dev-dependencies]
 base64.workspace = true

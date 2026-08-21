@@ -71,6 +71,9 @@ const EnvSchema = z.object({
   FEATURE_PROXY_PLANNING: z.enum(["true", "false"]).default("true"),
   FEATURE_NATIVE_WORKSPACES: z.enum(["true", "false"]).default("true"),
   FEATURE_EXECUTION_EDGE: z.enum(["true", "false"]).default("false"),
+  FEATURE_EXECUTION_REALTIME_SSE: z.enum(["true", "false"]).default("false"),
+  EXECUTION_EDGE_ORIGIN: ServiceOriginSchema.default("https://portal-execution-edge:8443"),
+  EXECUTION_EDGE_ENVIRONMENT: z.enum(["paper", "sandbox", "live"]).default("paper"),
   EXECUTION_EDGE_PRIVATE_KEY_FILE: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().min(1).optional(),
@@ -79,6 +82,19 @@ const EnvSchema = z.object({
   EXECUTION_EDGE_DELEGATION_ISSUER: z.string().min(1).default("portal-control-api"),
   EXECUTION_EDGE_DELEGATION_AUDIENCE: z.string().min(1).default("portal-execution-edge"),
   EXECUTION_EDGE_DELEGATION_TTL_SECONDS: z.coerce.number().int().min(1).max(60).default(45),
+  EXECUTION_EDGE_CA_FILE: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(1).optional(),
+  ),
+  EXECUTION_EDGE_CLIENT_CERT_FILE: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(1).optional(),
+  ),
+  EXECUTION_EDGE_CLIENT_KEY_FILE: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(1).optional(),
+  ),
+  EXECUTION_EDGE_CONNECT_TIMEOUT_MS: z.coerce.number().int().min(250).max(10_000).default(3_000),
   OUTBOX_MAX_RESPONSE_BYTES: z.coerce.number().int().positive().default(64 * 1024),
 });
 
@@ -155,6 +171,22 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     throw new Error(
       "FEATURE_EXECUTION_EDGE=true requires EXECUTION_EDGE_PRIVATE_KEY_FILE",
     );
+  }
+  if (config.FEATURE_EXECUTION_REALTIME_SSE === "true") {
+    if (config.FEATURE_EXECUTION_EDGE !== "true") {
+      throw new Error("FEATURE_EXECUTION_REALTIME_SSE=true requires FEATURE_EXECUTION_EDGE=true");
+    }
+    const missing = [
+      "EXECUTION_EDGE_CA_FILE",
+      "EXECUTION_EDGE_CLIENT_CERT_FILE",
+      "EXECUTION_EDGE_CLIENT_KEY_FILE",
+    ].filter((key) => config[key as keyof ControlApiConfig] === undefined);
+    if (missing.length > 0) {
+      throw new Error(`execution realtime mTLS requires: ${missing.join(", ")}`);
+    }
+    if (new URL(config.EXECUTION_EDGE_ORIGIN).protocol !== "https:") {
+      throw new Error("execution realtime edge origin must use HTTPS");
+    }
   }
   return config;
 }

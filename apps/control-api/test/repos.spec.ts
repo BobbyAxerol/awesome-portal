@@ -2,6 +2,7 @@ import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
 import { randomId } from "../src/domain";
 import { randomToken, sha256 } from "../src/auth/argon";
+import { SessionsRepository } from "../src/repos/sessions";
 
 const DATABASE_URL =
   process.env.TEST_DATABASE_URL ??
@@ -84,6 +85,41 @@ describe("identity migrations and repositories", () => {
       [sessionId],
     );
     expect(revoked.rows[0].state).toBe("REVOKED");
+  });
+
+  it("validates a realtime session lease against identity, version, state and expiry", async () => {
+    const userId = randomId("usr");
+    const sessionId = randomId("ses");
+    const now = new Date();
+    await ctx.pool.query(
+      `INSERT INTO portal_users (user_id, username, display_name, role, status)
+       VALUES ($1, $2, 'Realtime User', 'USER', 'ACTIVE')`,
+      [userId, `realtime-${userId}`],
+    );
+    await ctx.pool.query(
+      `INSERT INTO auth_sessions
+         (session_id, session_token_hash, user_id, state, csrf_secret_hash,
+          session_version, idle_expires_at, absolute_expires_at)
+       VALUES ($1, $2, $3, 'ACTIVE', $4, 7, $5, $6)`,
+      [
+        sessionId,
+        sha256(randomToken(32)),
+        userId,
+        sha256("realtime-csrf"),
+        new Date(now.getTime() + 30_000),
+        new Date(now.getTime() + 60_000),
+      ],
+    );
+
+    const sessions = new SessionsRepository(ctx.pool);
+    expect(await sessions.isActiveLease(sessionId, userId, 7, now)).toBe(true);
+    expect(await sessions.isActiveLease(sessionId, userId, 8, now)).toBe(false);
+    expect(
+      await sessions.isActiveLease(sessionId, userId, 7, new Date(now.getTime() + 90_000)),
+    ).toBe(false);
+
+    await sessions.revokeSession(sessionId, "test-revocation");
+    expect(await sessions.isActiveLease(sessionId, userId, 7, now)).toBe(false);
   });
 
   it("enforces activation credential single use and expiry", async () => {

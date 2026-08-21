@@ -481,11 +481,15 @@ dependencies = [
  "axum",
  "axum-server",
  "base64",
+ "chrono",
  "edge-auth",
  "execution-contracts",
+ "futures-util",
  "jsonwebtoken",
+ "projection-core",
  "projection-store-pg",
  "rcgen",
+ "realtime-sse",
  "reqwest",
  "rsa",
  "rustls",
@@ -499,6 +503,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "ts-transport",
+ "uuid",
 ]
 
 [[package]]
@@ -1423,6 +1428,20 @@ dependencies = [
  "serde_json",
  "sha2",
  "thiserror",
+ "uuid",
+]
+
+[[package]]
+name = "realtime-sse"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "execution-contracts",
+ "projection-core",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
  "uuid",
 ]
 

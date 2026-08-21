@@ -58,6 +58,7 @@ fi
   node:22-alpine sh -c '
     set -e
     npm ci --no-audit --no-fund
-    npx vitest run
+    npm run build
+    npm test
   '
 printf 'Control API tests passed against a real PostgreSQL container.\n'

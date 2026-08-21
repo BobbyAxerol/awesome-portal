@@ -45,10 +45,10 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 5 | Paper Exit Review (4b) | `WIP` (screen + adapter, on the port) | `FOUNDATION_COMPLETE` | EX-BE-05a evidence integration | EX-BE-03 freshness basis delivered; master plan §§10.5, 12.2 |
 | 6 | Admin Action Drawer (1i) | `READY`¹ | `FOUNDATION_COMPLETE` | EX-BE-05b; production TS command capability | EX-BE-02 authenticated boundary and request-key/UNCERTAIN contract delivered; production disabled |
 | 7 | Operations Queue (4e) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-05b operation integration | EX-BE-04a bidirectional keyset delivered; ack≠resolve remains |
-| 8 | Incident Detail (4d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a/05b/06 integration | EX-BE-03 source-completeness model delivered; source integration remains; master plan §§10.8, 12.2 |
-| 9 | Command Center (5a) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-06 + source/screen API integration | EX-BE-04b query foundation delivered; multiplexed SSE remains |
+| 8 | Incident Detail (4d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a/05b source integration | EX-BE-03 completeness + EX-BE-06 gap/reconnect transport delivered; source integration remains |
+| 9 | Command Center (5a) | `BLOCKED` | `FOUNDATION_COMPLETE` | source projection + snapshot API + activation evidence | EX-BE-06 bounded multiplexed SSE, resume/gap/backpressure and same-origin proxy delivered; flags remain false |
 | 10 | Sandbox Certification (1d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a/05b; TS sandbox capability | EX-BE-03 stale/gap blocker delivered; production commands inactive; master plan §10.10 |
-| 11 | Canary Control Room (1e) | `BLOCKED` | `PRODUCTION_INACTIVE` | EX-BE-05b/06; owner live-canary gate | EX-BE-04b query/cold foundation delivered; shadow parity and production source still required |
+| 11 | Canary Control Room (1e) | `BLOCKED` | `PRODUCTION_INACTIVE` | EX-BE-05b; owner live-canary gate | EX-BE-04b query + EX-BE-06 SSE foundations delivered; shadow parity and production source still required |
 | 12 | Live Full Operations (1f) | `BLOCKED` | `PRODUCTION_INACTIVE` | phase 11 evidence; EX-BE-08 | rev 4 profile contract delivered; source completeness + UNCERTAIN policy remain; master plan §10.12 |
 | 13 | Paper Workbench VNM (4h) | `BLOCKED` | `INTEGRATION_PENDING` | source/screen API integration; venue/ATO/ATC decision | EX-BE-04b adaptive query + EX-BE-03 PAUSED semantics delivered; timezone decision remains |
 | 14 | Full Blotter (4c) | `BLOCKED` | `INTEGRATION_PENDING` | screen API/source integration; EX-BE-07 funnel | EX-BE-04b exact bidirectional keyset and cold-retention primitives delivered |
@@ -237,6 +237,17 @@ requery and cold-access fixtures; it must not claim a live endpoint. Next Rust
 slice is `EX-BE-06` SSE. Detailed handoff:
 [`EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md`](../../backend/EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md).
 
+`EX-BE-06` is `FOUNDATION_COMPLETE`; source and activation evidence remain
+pending. Rust owns one bounded multiplexed stream per screen, exact projection
+cursor IDs, retained replay, epoch/history/source/slow-consumer gaps and a
+single journal poller rather than per-client database polling. TypeScript owns
+the session-guarded same-origin proxy over a reusable mTLS HTTP/2 session; JWTs
+never reach the browser. Both feature flags and registry `sse_enabled` remain
+false. Claude's next task is the M3 EventSource adapter and fixtures listed in
+[`EX_BE_06_MULTIPLEXED_SSE_RESUME_BACKPRESSURE.md`](../../backend/EX_BE_06_MULTIPLEXED_SSE_RESUME_BACKPRESSURE.md)
+§6, while preserving fixture delivery. Codex proceeds with `EX-BE-07a` pure
+analytics contracts in parallel.
+
 ### 6.2 BR-EX decisions
 
 The binding contract is
@@ -273,10 +284,13 @@ target- and command-aware rather than a blanket lock. The immediate backend runw
    frontend adapter (2026-08-21). Recorded as codex's statement, not as a gate
    this side ran;
 3. Claude: wire the Phase 1/2 adapters while keeping `fixture`/`unavailable` visible;
-4. `EX-BE-01→02→03→04b` delivered the Rust AWS contracts, authenticated bounded
-   transport, replayable projection and scalable query foundation; next is
-   `EX-BE-06` for realtime delivery;
-5. `EX-BE-05b` only after source command/auth capability is proven.
+4. `EX-BE-01→02→03→04b→06` delivered the Rust AWS contracts, authenticated
+   bounded transport, replayable projection, scalable query and multiplexed
+   realtime foundations; source/activation evidence is still pending;
+5. Claude: implement M3 EventSource integration/fixtures from the EX-BE-06
+   handoff, while keeping registry delivery `fixture`;
+6. Codex: `EX-BE-07a` pure analytics contracts/engines for phases 3 and 14–17;
+7. `EX-BE-05b` only after source command/auth capability is proven.
 
 This closes the architectural disagreement: Approval Inbox and Gate R1 do not wait
 for AWS networking, a Rust projection or a Trading System change.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Reproducible EX-BE-01/02/03/04b gate: immutable evidence + Rust + PostgreSQL.
+# Reproducible EX-BE-01/02/03/04b/06 gate: immutable evidence + Rust + PostgreSQL.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

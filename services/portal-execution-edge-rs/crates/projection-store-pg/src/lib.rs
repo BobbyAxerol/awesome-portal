@@ -14,8 +14,13 @@ use thiserror::Error;
 use uuid::Uuid;
 
 mod query;
+mod realtime;
 
 pub use query::{RetentionPolicySnapshot, SeriesPointWrite};
+pub use realtime::{
+    RealtimeEpochAvailability, RealtimeJournalPage, RealtimeJournalRecord,
+    RealtimeScopeAvailability,
+};
 
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!();
 
@@ -960,6 +965,10 @@ pub enum StoreError {
     FreshnessPolicyVersionCollision,
     #[error("projection value could not be serialized")]
     Serialization,
+    #[error("active projection epoch does not exist for this scope")]
+    ActiveEpochNotFound,
+    #[error("realtime replay page limit is outside the bounded range")]
+    InvalidRealtimePageLimit,
 }
 
 #[cfg(test)]
@@ -1210,6 +1219,76 @@ mod tests {
                 .register_freshness_policy(&changed_policy, at(11))
                 .await,
             Err(StoreError::FreshnessPolicyVersionCollision)
+        ));
+    }
+
+    #[tokio::test]
+    async fn realtime_resume_pages_are_exact_bounded_and_scope_aware() {
+        let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
+            return;
+        };
+        let _guard = postgres_test_lock().lock().await;
+        let store = PgProjectionStore::connect(&database_url).await.unwrap();
+        store.migrate().await.unwrap();
+        reset(&store, &database_url).await;
+        let scope = scope();
+        let epoch_id = store
+            .create_building_epoch(&scope, &metadata(), at(0))
+            .await
+            .unwrap();
+        let first = observation("evt_realtime_1", 1, 1, "OPEN");
+        let second = observation("evt_realtime_2", 2, 2, "PARTIAL");
+        store
+            .apply_observation(&scope, epoch_id, "orders:alpha_1", &first, at(2))
+            .await
+            .unwrap();
+        store
+            .apply_observation(&scope, epoch_id, "orders:alpha_1", &second, at(3))
+            .await
+            .unwrap();
+        let digest = semantic_state_digest(&[store
+            .load_entity(epoch_id, &second.entity)
+            .await
+            .unwrap()
+            .unwrap()])
+        .unwrap();
+        store
+            .activate_epoch(&scope, epoch_id, &digest, at(4), Duration::from_secs(30))
+            .await
+            .unwrap();
+
+        let availability = store.realtime_scope_availability(&scope).await.unwrap();
+        assert_eq!(availability.active.epoch.epoch_id, epoch_id);
+        assert_eq!(availability.active.earliest_available_sequence, 1);
+        assert_eq!(availability.active.latest_available_sequence, 2);
+        assert!(availability.retained_previous.is_none());
+
+        let first_page = store.load_realtime_records(epoch_id, 0, 1).await.unwrap();
+        assert!(first_page.has_more);
+        assert_eq!(first_page.records[0].projection_sequence, 1);
+        assert_eq!(
+            first_page.records[0].workspace_id,
+            scope.workspace_id.as_str()
+        );
+        let tail = store.load_realtime_records(epoch_id, 1, 2).await.unwrap();
+        assert!(!tail.has_more);
+        assert_eq!(tail.records[0].projection_sequence, 2);
+
+        let ordinal = store.latest_realtime_journal_ordinal().await.unwrap();
+        let third = observation("evt_realtime_3", 3, 3, "FILLED");
+        store
+            .apply_observation(&scope, epoch_id, "orders:alpha_1", &third, at(5))
+            .await
+            .unwrap();
+        let live = store
+            .load_realtime_records_after_ordinal(ordinal, 8)
+            .await
+            .unwrap();
+        assert_eq!(live.records.len(), 1);
+        assert_eq!(live.records[0].projection_sequence, 3);
+        assert!(matches!(
+            store.load_realtime_records(epoch_id, 0, 0).await,
+            Err(StoreError::InvalidRealtimePageLimit)
         ));
     }
 

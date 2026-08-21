@@ -19,6 +19,8 @@ import { OutboxRepository, ProductAuditRepository } from "./repos/outbox";
 import { GovernanceController } from "./governance/governance.controller";
 import { GovernanceRepository } from "./governance/governance.repository";
 import { GovernanceService } from "./governance/governance.service";
+import { ExecutionRealtimeController } from "./execution/realtime.controller";
+import { ExecutionRealtimeProxy } from "./execution/realtime.proxy";
 
 @Module({})
 export class AppModule {
@@ -32,6 +34,7 @@ export class AppModule {
         FacadeController,
         PlanningFacadeController,
         GovernanceController,
+        ExecutionRealtimeController,
       ],
       providers: [
         { provide: CONTROL_API_CONFIG, useValue: config },
@@ -62,6 +65,11 @@ export class AppModule {
         ProductAuditRepository,
         GovernanceRepository,
         GovernanceService,
+        {
+          provide: ExecutionRealtimeProxy,
+          useFactory: (cfg: ControlApiConfig) => ExecutionRealtimeProxy.create(cfg),
+          inject: [CONTROL_API_CONFIG],
+        },
         {
           provide: PortalProxyService,
           useFactory: (

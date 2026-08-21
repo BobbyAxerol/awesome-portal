@@ -844,6 +844,20 @@ deep-dive → ADR → slice → evidence discipline documented above.
   primitives are intentionally not exposed as a broad public endpoint and no
   Trading System storage/command authority was touched. Deep dive:
   [`EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md`](./backend/EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md).
+- **EX-BE-06 multiplexed SSE foundation (2026-08-21):** Rust now owns a
+  bounded screen-level fan-out, exact `{epoch}:{sequence}` SSE IDs, retained
+  replay and typed `history_evicted`/`epoch_changed`/source-discontinuity/
+  slow-consumer recovery. One PostgreSQL journal poller serves all clients;
+  per-client queues are bounded and lag terminates into resnapshot. TypeScript
+  exposes only a session-guarded same-origin route and multiplexes its private
+  streams over one mTLS HTTP/2 session; delegated JWTs remain server-only and
+  expire within 60 seconds. The PostgreSQL/Rust gate passes 51 tests; the
+  Control API production build and 102/102 tests also pass. Its cursor verifier
+  additionally rejects non-canonical Base64URL encodings before HMAC comparison.
+  Status is `FOUNDATION_COMPLETE /
+  SOURCE_AND_ACTIVATION_EVIDENCE_PENDING`; both feature flags and every registry
+  SSE flag remain false. Deep dive:
+  [`EX_BE_06_MULTIPLEXED_SSE_RESUME_BACKPRESSURE.md`](./backend/EX_BE_06_MULTIPLEXED_SSE_RESUME_BACKPRESSURE.md).
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**
