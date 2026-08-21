@@ -167,6 +167,7 @@ for required in \
   "${ROOT_DIR}/apps/control-api/vitest.config.ts" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000000_init-identity.sql" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000001_control-facade.sql" \
+  "${ROOT_DIR}/apps/control-api/migrations/1723680000002_execution-governance.sql" \
   "${ROOT_DIR}/apps/control-api/src/id.ts" \
   "${ROOT_DIR}/apps/control-api/src/repos/workspaces.ts" \
   "${ROOT_DIR}/apps/control-api/src/repos/runs.ts" \
@@ -181,6 +182,14 @@ for required in \
   "${ROOT_DIR}/apps/control-api/src/query/request.ts" \
   "${ROOT_DIR}/apps/control-api/test/query.spec.ts" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_04A_CONTROL_PLANE_QUERY_PRIMITIVES.md" \
+  "${ROOT_DIR}/apps/control-api/src/governance/apply-token.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/contracts.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/governance.controller.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/governance.repository.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/governance.service.ts" \
+  "${ROOT_DIR}/apps/control-api/test/governance-token.spec.ts" \
+  "${ROOT_DIR}/apps/control-api/test/governance.spec.ts" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md" \
   "${ROOT_DIR}/apps/control-api/test/facade.spec.ts" \
   "${ROOT_DIR}/upgrade/backend/BAR_07_CONTROL_API_FACADE.md" \
   "${ROOT_DIR}/apps/control-api/src/main.ts" \
@@ -376,6 +385,7 @@ for tracked_source in \
   apps/control-api/vitest.config.ts \
   apps/control-api/migrations/1723680000000_init-identity.sql \
   apps/control-api/migrations/1723680000001_control-facade.sql \
+  apps/control-api/migrations/1723680000002_execution-governance.sql \
   apps/control-api/src/id.ts \
   apps/control-api/src/repos/workspaces.ts \
   apps/control-api/src/repos/runs.ts \
@@ -390,6 +400,14 @@ for tracked_source in \
   apps/control-api/src/query/request.ts \
   apps/control-api/test/query.spec.ts \
   upgrade/backend/EX_BE_04A_CONTROL_PLANE_QUERY_PRIMITIVES.md \
+  apps/control-api/src/governance/apply-token.ts \
+  apps/control-api/src/governance/contracts.ts \
+  apps/control-api/src/governance/governance.controller.ts \
+  apps/control-api/src/governance/governance.repository.ts \
+  apps/control-api/src/governance/governance.service.ts \
+  apps/control-api/test/governance-token.spec.ts \
+  apps/control-api/test/governance.spec.ts \
+  upgrade/backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md \
   apps/control-api/test/facade.spec.ts \
   upgrade/backend/BAR_07_CONTROL_API_FACADE.md \
   apps/control-api/src/main.ts \

@@ -119,8 +119,16 @@ Chúng không thay thế phase hoặc exit gate trong
   bidirectional keyset, canonical allowlisted filter/sort, immutable-ID
   tie-break, exact counts and public-column projection in one read-only
   repeatable-read PostgreSQL snapshot. Evidence: 14 focused tests over 182,000
-  rows, Control API 76/76 and contracts 8/8. No Approval endpoint or runtime
-  query authority yet; `EX-BE-05a` is the integration slice.
+  rows, Control API 76/76 and contracts 8/8. It deliberately did not create an
+  Approval endpoint; `EX-BE-05a` below is the integration slice.
+- [EX-BE-05a — Governance, Evidence, Approval Repository and API](./EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md)
+  — Execution Loop phases 1–2. **Operational evidence pending:** TypeScript /
+  PostgreSQL approval inbox, immutable evidence/findings/decisions, R1
+  plan→apply→poll, SoD, idempotency, optimistic concurrency, audit/outbox and
+  independent rotatable HMAC keyrings are implemented. Linked Research and
+  Execution panels remain explicitly unavailable; registry profile remains
+  `fixture`. Strict typecheck and token/keyring tests pass; the final fresh-PG
+  rerun is not claimed because this runner cannot access Docker.
 
 **Runway complete (BAR-00 → BAR-16).** Guide v0.5 bổ sung (không thay thế)
 tại `upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md`
@@ -165,8 +173,14 @@ authority.
 - `EX-BE-04a` **foundation complete:** contract `keyset-page.v1` và TypeScript
   query primitives đã khớp wire adapter của Claude; 182k corpus chứng minh
   exact count, forward/back, concurrent insert, RBAC và cursor security.
+- `EX-BE-05a` **implementation complete / operational evidence pending:**
+  Approval Inbox và Gate R1 đã có PostgreSQL repository + session/RBAC/CSRF API,
+  evidence-bound immutable decision workflow, audit/outbox và plan/apply/poll.
+  Chi tiết contract/handoff/test ở
+  [`EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md`](./EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md).
 - Production integration chưa được kích hoạt. Thứ tự gần nhất là
-  `EX-BE-05a`; song song khi được giao là `EX-BE-01` Rust workspace +
+  final fresh-PostgreSQL gate của `EX-BE-05a`; song song khi được giao là
+  `EX-BE-01` Rust workspace +
   canonical `ts-contract-v1` adapter, sau đó `EX-BE-02` auth/capability
   negotiation. Runtime evidence luôn thắng schema/rollout prose; Portal chỉ
   dùng versioned HTTP API, không đọc DB/Redis/CLI nội bộ.

@@ -43,6 +43,16 @@ const EnvSchema = z.object({
     (value) => (value === "" ? undefined : value),
     z.string().min(16).optional(),
   ),
+  QUERY_CURSOR_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("query-k1"),
+  QUERY_CURSOR_KEYS_JSON: z.string().default(
+    '{"query-k1":"local-only-query-signing-key-32-bytes-minimum"}',
+  ),
+  QUERY_CURSOR_TTL_SECONDS: z.coerce.number().int().min(30).max(3600).default(15 * 60),
+  GOVERNANCE_APPLY_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("governance-k1"),
+  GOVERNANCE_APPLY_KEYS_JSON: z.string().default(
+    '{"governance-k1":"local-only-governance-apply-key-32-bytes-minimum"}',
+  ),
+  GOVERNANCE_PLAN_TTL_SECONDS: z.coerce.number().int().min(30).max(15 * 60).default(5 * 60),
   SESSION_IDLE_SECONDS: z.coerce.number().int().positive().default(30 * 60),
   SESSION_ABSOLUTE_SECONDS: z.coerce.number().int().positive().default(8 * 3600),
   ACTIVATION_TTL_SECONDS: z.coerce.number().int().positive().default(24 * 3600),
@@ -65,8 +75,56 @@ const EnvSchema = z.object({
 
 export type ControlApiConfig = z.infer<typeof EnvSchema>;
 
+function parseSigningKeys(serialized: string, activeKeyId: string, name: string): Record<string, string> {
+  let keys: unknown;
+  try {
+    keys = JSON.parse(serialized);
+  } catch {
+    throw new Error(`${name} must be a JSON object`);
+  }
+  if (
+    !keys ||
+    typeof keys !== "object" ||
+    Array.isArray(keys) ||
+    Object.keys(keys).length === 0 ||
+    Object.entries(keys).some(
+      ([keyId, secret]) =>
+        !/^[A-Za-z0-9_-]{1,32}$/.test(keyId) ||
+        typeof secret !== "string" ||
+        Buffer.byteLength(secret, "utf8") < 32,
+    ) ||
+    !(activeKeyId in keys)
+  ) {
+    throw new Error(`${name} requires 32-byte-or-longer values and the active key`);
+  }
+  return keys as Record<string, string>;
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConfig {
   const config = EnvSchema.parse(env);
+  if (config.PORTAL_ENV !== "local") {
+    const missingSigningKeys = ["QUERY_CURSOR_KEYS_JSON", "GOVERNANCE_APPLY_KEYS_JSON"]
+      .filter((name) => !env[name]);
+    if (missingSigningKeys.length > 0) {
+      throw new Error(
+        `non-local Portal environments require: ${missingSigningKeys.join(", ")}`,
+      );
+    }
+  }
+  const queryKeys = parseSigningKeys(
+    config.QUERY_CURSOR_KEYS_JSON,
+    config.QUERY_CURSOR_ACTIVE_KEY_ID,
+    "QUERY_CURSOR_KEYS_JSON",
+  );
+  const governanceKeys = parseSigningKeys(
+    config.GOVERNANCE_APPLY_KEYS_JSON,
+    config.GOVERNANCE_APPLY_ACTIVE_KEY_ID,
+    "GOVERNANCE_APPLY_KEYS_JSON",
+  );
+  const querySecrets = new Set(Object.values(queryKeys));
+  if (Object.values(governanceKeys).some((secret) => querySecrets.has(secret))) {
+    throw new Error("query cursor and governance apply keyrings must not share secret values");
+  }
   if (config.AUTH_MODE !== "dev") {
     const missing = [
       "CLOUDFLARE_TEAM_DOMAIN",
@@ -85,4 +143,20 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     throw new Error("AUTH_MODE=dev is only allowed with PORTAL_ENV=local");
   }
   return config;
+}
+
+export function querySigningKeys(config: ControlApiConfig): Record<string, string> {
+  return parseSigningKeys(
+    config.QUERY_CURSOR_KEYS_JSON,
+    config.QUERY_CURSOR_ACTIVE_KEY_ID,
+    "QUERY_CURSOR_KEYS_JSON",
+  );
+}
+
+export function governanceApplySigningKeys(config: ControlApiConfig): Record<string, string> {
+  return parseSigningKeys(
+    config.GOVERNANCE_APPLY_KEYS_JSON,
+    config.GOVERNANCE_APPLY_ACTIVE_KEY_ID,
+    "GOVERNANCE_APPLY_KEYS_JSON",
+  );
 }

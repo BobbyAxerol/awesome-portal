@@ -38,8 +38,8 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | # | Screen (WF) | FE | BE | Needs | Evidence |
 |---|---|---|---|---|---|
 | 0 | Shell & shared components | **DONE** (components) · **DONE** (nav) · `BLOCKED` (visual baseline) | `CONTRACT_COMPLETE` | — EX-BE-00R4 delivered | FE: 42 tests · build · visual baseline **drifted, see §9**; BE: registry rev 4 · 17 fixture profiles · fail-closed policy tests · generated OpenAPI/TS contract |
-| 1 | Approval Inbox (4a) | `WIP` (states built) | `INTEGRATION_PENDING` | EX-BE-05a integration only | EX-BE-04a foundation: 182k keyset/count/RBAC evidence; no AWS dependency |
-| 2 | Gate R1 Review (1a) | `WIP` (states built) | `FOUNDATION_COMPLETE` | EX-BE-05a integration | existing approval/audit foundation; master plan §§10.2, 12.2 |
+| 1 | Approval Inbox (4a) | `WIP` (states built) | `OPERATIONAL_EVIDENCE_PENDING` | Claude adapter + final fresh-PG gate | EX-BE-05a endpoint implemented over EX-BE-04a; 182k/integration suite authored; Docker rerun pending |
+| 2 | Gate R1 Review (1a) | `WIP` (states built) | `OPERATIONAL_EVIDENCE_PENDING` | Claude adapter + final fresh-PG gate | immutable evidence + plan/apply/poll + SoD/concurrency/audit implemented; token tests 3/3 |
 | 3 | Gate R2 Review (1b) | `WIP` (states built) | `FOUNDATION_COMPLETE` | EX-BE-03/05a/07 capital preview | master plan §§10.3, 12.2 |
 | 4 | Paper Workbench (1c) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/04b; M7 evidence | adaptive six-rung server charts; master plan §§10.4, 15.1 |
 | 5 | Paper Exit Review (4b) | `WIP` (states built) | `FOUNDATION_COMPLETE` | EX-BE-03/05a evidence integration | master plan §§10.5, 12.2 |
@@ -188,11 +188,22 @@ projection, RBAC/workspace scope and one repeatable-read read-only PostgreSQL
 snapshot. The canonical `keyset-page.v1` fields match `readKeysetPage` exactly.
 Evidence: 14 focused tests on 182,000 PostgreSQL rows (including concurrent
 insert/eviction, reverse navigation, cursor tamper/replay and injection), Control API
-76/76, TypeScript contracts 8/8 and Python canonical contracts 7/7. This does
-not create an Approval endpoint or activate
-query delivery; `EX-BE-05a` remains the only dependency for real Approval
-Inbox/Gate R1 data. Detailed handoff:
+76/76, TypeScript contracts 8/8 and Python canonical contracts 7/7. It does
+not itself create an Approval endpoint; its integration handoff is now consumed
+by `EX-BE-05a` below. Detailed handoff:
 [`EX_BE_04A_CONTROL_PLANE_QUERY_PRIMITIVES.md`](../../backend/EX_BE_04A_CONTROL_PLANE_QUERY_PRIMITIVES.md).
+
+`EX-BE-05a` is implemented and is `OPERATIONAL_EVIDENCE_PENDING`.
+`apps/control-api/src/governance/` plus migration `1723680000002` own the real
+Portal Approval Inbox and R1 workflow: immutable evidence/findings/decisions,
+evidence manifest integrity, SoD/eligibility, idempotent plan→apply→poll,
+optimistic version/quorum, and atomic audit/outbox. External panels remain
+`unavailable` and registry delivery remains `fixture`. Claude can now build the
+response adapter against the field map in
+[`EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md`](../../backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md),
+including the correction that Deny is allowed for self-authored evidence but
+not for an expired/closed request. Strict typecheck and keyring tests pass; the
+fresh PostgreSQL/Docker rerun is still an explicit gate, not a claimed pass.
 
 ### 6.2 BR-EX decisions
 
@@ -225,9 +236,10 @@ BE column and the detailed gate is in master plan §12.2.
 target- and command-aware rather than a blanket lock. The immediate backend runway is:
 
 1. `EX-BE-04a` TypeScript control-plane query primitives — delivered;
-2. `EX-BE-05a` governance/evidence workflow, with external panels honestly unavailable — next;
-3. in parallel, `EX-BE-01→02→03→04b→06` for the Rust AWS read/projection/realtime path;
-4. `EX-BE-05b` only after source command/auth capability is proven.
+2. `EX-BE-05a` governance/evidence workflow — implemented, final fresh-PG gate pending;
+3. Claude: wire the Phase 1/2 adapters while keeping `fixture`/`unavailable` visible;
+4. in parallel when assigned, `EX-BE-01→02→03→04b→06` for the Rust AWS read/projection/realtime path;
+5. `EX-BE-05b` only after source command/auth capability is proven.
 
 This closes the architectural disagreement: Approval Inbox and Gate R1 do not wait
 for AWS networking, a Rust projection or a Trading System change.

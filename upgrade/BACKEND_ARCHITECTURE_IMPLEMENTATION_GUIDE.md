@@ -765,11 +765,23 @@ deep-dive → ADR → slice → evidence discipline documented above.
   resource/workspace/direction/query fails closed; telemetry carries no actor,
   cursor or filter values. Canonical `keyset-page.v1` matches Claude's adapter.
   Evidence: 14 focused tests at 182,000 PostgreSQL rows, Control API 76/76 and
-  contracts 8/8. Status is `FOUNDATION_COMPLETE`; `EX-BE-05a` must still add
-  approval/evidence migrations, repositories, endpoint/OpenAPI, runtime cursor
-  key configuration, SoD/concurrency/audit and final query-plan qualification.
+  contracts 8/8. Status is `FOUNDATION_COMPLETE`; by design this slice stopped
+  before approval/evidence integration, which `EX-BE-05a` below now supplies.
   Deep dive:
   [`EX_BE_04A_CONTROL_PLANE_QUERY_PRIMITIVES.md`](./backend/EX_BE_04A_CONTROL_PLANE_QUERY_PRIMITIVES.md).
+- **EX-BE-05a governance/evidence/approval (2026-08-21):** TypeScript and
+  Portal PostgreSQL now implement Approval Inbox and Gate R1 without AWS, Rust
+  or Trading System access: append-only evidence/findings/decisions, evidence
+  manifest integrity, reviewer eligibility/SoD, request-key idempotent
+  plan→apply→poll, optimistic approval versions, quorum/conditions, CSRF/RBAC,
+  and atomic audit/outbox. Apply authorization uses a dedicated rotatable HMAC
+  keyring independent from query cursors; HTTP 202 remains non-terminal and the
+  operation poll is authoritative. External panels and the registry profile
+  stay honestly `unavailable`/`fixture`. Status is
+  `OPERATIONAL_EVIDENCE_PENDING`: strict typecheck and isolated token tests pass,
+  but the final fresh-PostgreSQL suite is not marked passed while Docker access
+  is unavailable. Deep dive and Claude mapping:
+  [`EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md`](./backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md).
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**

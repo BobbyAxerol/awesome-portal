@@ -16,6 +16,9 @@ import { SessionGuard } from "./facade/session.guard";
 import { WorkspacesRepository } from "./repos/workspaces";
 import { RunsRepository } from "./repos/runs";
 import { OutboxRepository, ProductAuditRepository } from "./repos/outbox";
+import { GovernanceController } from "./governance/governance.controller";
+import { GovernanceRepository } from "./governance/governance.repository";
+import { GovernanceService } from "./governance/governance.service";
 
 @Module({})
 export class AppModule {
@@ -28,6 +31,7 @@ export class AppModule {
         AdminController,
         FacadeController,
         PlanningFacadeController,
+        GovernanceController,
       ],
       providers: [
         { provide: CONTROL_API_CONFIG, useValue: config },
@@ -56,6 +60,8 @@ export class AppModule {
         RunsRepository,
         OutboxRepository,
         ProductAuditRepository,
+        GovernanceRepository,
+        GovernanceService,
         {
           provide: PortalProxyService,
           useFactory: (

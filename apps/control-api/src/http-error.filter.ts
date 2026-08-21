@@ -8,6 +8,8 @@ import {
 import { FastifyReply, FastifyRequest } from "fastify";
 import { AuthError } from "./auth/auth.service";
 import { FacadeError } from "./facade/proxy.service";
+import { GovernanceError } from "./governance/governance.service";
+import { QueryContractError } from "./query";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -20,10 +22,18 @@ export class HttpErrorFilter implements ExceptionFilter {
     const requestId =
       (request.headers["x-request-id"] as string | undefined) ?? "unknown";
 
-    if (exception instanceof AuthError || exception instanceof FacadeError) {
+    if (
+      exception instanceof AuthError ||
+      exception instanceof FacadeError ||
+      exception instanceof GovernanceError ||
+      exception instanceof QueryContractError
+    ) {
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },
         request_id: requestId,
+        ...(exception instanceof GovernanceError && exception.details
+          ? { details: exception.details }
+          : {}),
       });
       return;
     }
