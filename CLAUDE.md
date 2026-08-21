@@ -215,12 +215,22 @@ không tự chọn mô tả tiện lợi.
    đó là markdown tracking **của frontend**. `upgrade/**` là docs của codex,
    **không được sửa**; muốn đổi plan thì viết đề xuất trong §8 rồi để codex/
    Bobby cập nhật.
-4. **Báo cáo cuối mỗi lần làm phải trả lời đủ 4 câu**:
-   - **Đã làm gì** — liệt kê theo commit, kèm bằng chứng (test/gate đã chạy).
-   - **Thuộc phần nào** — map từng việc về mục plan (§ nào, guide nào).
-   - **Còn những phần nào trong plan** — cái gì chưa xong, vì sao chưa
-     (blocked bởi backend request nào, hay chỉ là chưa tới lượt).
-   - **Tiếp theo nên làm gì** — đề xuất slice kế tiếp và lý do ưu tiên.
+4. **Báo cáo cuối MỖI lần làm — template bắt buộc, không được rút gọn**
+   (Bobby chốt 2026-08-21). Kể cả khi chỉ sửa một dòng, vẫn trả lời đủ 7 mục
+   theo đúng thứ tự này:
+
+   | # | Mục | Nội dung |
+   |---|---|---|
+   | 1 | **Đang ở đâu** | Phase mấy, slice nào (S1…S7), bước thứ mấy trong slice đó. Nếu đang giữa chừng thì nói rõ "đang giữa", đừng để Bobby đoán |
+   | 2 | **File đã sửa** | Liệt kê **từng** đường dẫn. Không viết "vài file ở execution/" |
+   | 3 | **Số dòng** | `+thêm/−xoá` cho từng file, và tổng. Lấy số thật từ `git diff --stat`, **không ước lượng** |
+   | 4 | **Align với codex** | Lần sửa này chạm vào contract/registry/endpoint nào của codex; nó tiêu thụ `EX-BE-*`/`BR-EX-*` nào; nó có làm đổi thứ codex đang dựa vào không. Nếu không chạm gì thì ghi thẳng "không chạm" |
+   | 5 | **Evidence** | Gate nào đã chạy và kết quả thật (`vitest`, `tsc`, `build`, visual baseline). Gate chưa chạy thì ghi chưa chạy — **không suy đoán là xanh** |
+   | 6 | **Tiếp theo** | Việc kế tiếp cụ thể và vì sao nó trước những việc khác |
+   | 7 | **Khi nào sang phase mới** | Điều kiện chính xác để đóng phase hiện tại và mở phase sau: gate nào phải xanh, `EX-BE-*` nào phải giao, ô nào của scale refine (§8) còn trống |
+
+   Mục 7 là mục hay bị bỏ nhất và là mục Bobby cần nhất: nó biến "còn dở" thành
+   một điều kiện kiểm được, thay vì một cảm giác.
 5. **Không tự đánh dấu xong**: một mục chỉ được coi là đóng khi có gate xanh
    (`npm test` + `npm run build` ở frontend liên quan, e2e nếu có) và được ghi
    vào §8.1 "Đã đóng"; phần còn treo nằm ở §8.2 kèm lý do thật.
