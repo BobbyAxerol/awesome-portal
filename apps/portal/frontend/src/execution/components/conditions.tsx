@@ -103,3 +103,161 @@ export function ConditionList({
 export function blockingCount(conditions: readonly TypedCondition[]): number {
   return conditions.filter((c) => c.blocking).length;
 }
+
+/* ---------------------------------------------------------------------------
+ * Composer
+ * ------------------------------------------------------------------------ */
+
+/**
+ * The typed-conditions composer.
+ *
+ * `IMPLEMENTATION_PHASES` §2 lists it among Gate R1's blocks and its "Must
+ * work" line is "conditions attach to the decision object" — attach, not
+ * describe. A screen that can display a condition but not compose one leaves
+ * "Approve with condition" as a button with nothing behind it, which is what
+ * this screen had until now.
+ *
+ * The five fields are the five DS §4 names, and they are separate inputs rather
+ * than a free-text box for the reason the type exists: a condition written as a
+ * sentence cannot be queried. Nobody can ask "which blocking conditions expire
+ * this month" of a paragraph, and the month it matters is the month somebody
+ * needs to.
+ */
+export interface ConditionDraft {
+  text: string;
+  owner: string;
+  deadline: string;
+  expiry: string;
+  blocking: boolean;
+}
+
+export const EMPTY_DRAFT: ConditionDraft = {
+  text: "",
+  owner: "",
+  deadline: "",
+  expiry: "",
+  blocking: false,
+};
+
+/**
+ * What stops this draft being attached.
+ *
+ * Text and owner are required; the rest are not. An unowned condition is a
+ * wish, and an unstated condition is nothing at all — but a condition with no
+ * deadline is a legitimate standing constraint, so demanding one would force
+ * reviewers to invent dates.
+ */
+export function draftBlockers(draft: ConditionDraft): readonly string[] {
+  const blockers: string[] = [];
+  if (draft.text.trim().length === 0) blockers.push("a condition needs text");
+  if (draft.owner.trim().length === 0) blockers.push("a condition needs an owner");
+  if (draft.deadline && draft.expiry && draft.expiry < draft.deadline) {
+    // A condition that lapses before it is due can never be met, and nobody
+    // would notice: it would simply expire unmet and unremarked.
+    blockers.push("the expiry falls before the deadline");
+  }
+  return blockers;
+}
+
+export function toCondition(draft: ConditionDraft): TypedCondition {
+  return {
+    text: draft.text.trim(),
+    owner: draft.owner.trim() || null,
+    deadline: draft.deadline || null,
+    expiry: draft.expiry || null,
+    blocking: draft.blocking,
+  };
+}
+
+export function ConditionComposer({
+  draft,
+  onChange,
+  onAttach,
+  disabled = false,
+  disabledReason,
+}: {
+  draft: ConditionDraft;
+  onChange: (next: ConditionDraft) => void;
+  onAttach: (condition: TypedCondition) => void;
+  /** Mirrors the decision controls: a composer for a decision you cannot make
+   *  is a form that wastes the reviewer's time. */
+  disabled?: boolean;
+  disabledReason?: string;
+}) {
+  const blockers = draftBlockers(draft);
+  const blocked = disabled || blockers.length > 0;
+
+  return (
+    <div className="exec-composer">
+      <div className="exec-composer-grid">
+        <label className="exec-composer-field exec-composer-wide">
+          <span>condition</span>
+          <input
+            className="input"
+            value={draft.text}
+            disabled={disabled}
+            placeholder="what must hold, e.g. capacity cap 50,000.00 until evidence extended"
+            onChange={(e) => onChange({ ...draft, text: e.target.value })}
+          />
+        </label>
+        <label className="exec-composer-field">
+          <span>owner</span>
+          <input
+            className="input"
+            value={draft.owner}
+            disabled={disabled}
+            onChange={(e) => onChange({ ...draft, owner: e.target.value })}
+          />
+        </label>
+        <label className="exec-composer-field">
+          <span>deadline</span>
+          <input
+            className="input"
+            type="date"
+            value={draft.deadline}
+            disabled={disabled}
+            onChange={(e) => onChange({ ...draft, deadline: e.target.value })}
+          />
+        </label>
+        <label className="exec-composer-field">
+          <span>expires</span>
+          <input
+            className="input"
+            type="date"
+            value={draft.expiry}
+            disabled={disabled}
+            onChange={(e) => onChange({ ...draft, expiry: e.target.value })}
+          />
+        </label>
+        <label className="exec-composer-field exec-composer-check">
+          <input
+            type="checkbox"
+            checked={draft.blocking}
+            disabled={disabled}
+            onChange={(e) => onChange({ ...draft, blocking: e.target.checked })}
+          />
+          {/* Named for what it does, not for its severity. "Blocking" is a
+              behaviour the reader can check against the decision bar; "high"
+              would be a judgement they cannot. */}
+          <span>blocking — stops the decision until met</span>
+        </label>
+      </div>
+
+      <div className="exec-composer-actions">
+        <button
+          type="button"
+          className="exec-btn-ghost"
+          disabled={blocked}
+          onClick={() => onAttach(toCondition(draft))}
+        >
+          Attach condition
+        </button>
+        {disabled && disabledReason ? (
+          <span className="exec-disabled-reason">{disabledReason}</span>
+        ) : blockers.length > 0 ? (
+          <span className="exec-disabled-reason">Cannot attach: {blockers.join("; ")}.</span>
+        ) : null}
+      </div>
+    </div>
+  );
+}

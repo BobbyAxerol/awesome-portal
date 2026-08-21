@@ -217,3 +217,108 @@ describe("embedded Planning token parity", () => {
     }
   });
 });
+
+/* -------------------------------------------------------------------------
+ * Contrast floors on the two Carbon surfaces
+ *
+ * Added after measuring the light theme on the day it was written and finding
+ * six text pairs below the WCAG AA floor — including one, `--ink-mute`, that
+ * was carrying 31 `color:` rules at 2.4:1 on white and had been failing on the
+ * dark surface since Phase 0 too.
+ *
+ * The gate exists because a measurement taken once is a measurement that drifts.
+ * It covers the pairs the Execution stylesheet actually puts together, not
+ * every combination the tokens allow: a floor nobody can violate by accident is
+ * worth more than an exhaustive one nobody can satisfy.
+ *
+ * Hairlines are deliberately NOT in scope. They come from the hi-fi and are
+ * IBM's own light border tokens; treating a 1px table-row rule as a "user
+ * interface component boundary" under 1.4.11 is arguable, and overriding the
+ * visual authority on an arguable reading is not this test's job.
+ * ---------------------------------------------------------------------- */
+
+describe("Carbon surface contrast", () => {
+  function channel(value: number): number {
+    const c = value / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  }
+
+  function luminance(hex: string): number {
+    const h = hex.replace("#", "");
+    const full = h.length === 3 ? [...h].map((c) => c + c).join("") : h;
+    const [r, g, b] = [0, 2, 4].map((i) => Number.parseInt(full.slice(i, i + 2), 16));
+    return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+  }
+
+  function contrast(a: string, b: string): number {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  }
+
+  function themeTokens(theme: string): Map<string, string> {
+    const css = readFileSync(join(SRC, "styles/tokens.css"), "utf8");
+    const start = css.indexOf(`[data-theme="${theme}"]`);
+    expect(start, `${theme} is not declared`).toBeGreaterThan(-1);
+    const end = css.indexOf("\n}", start);
+    const out = new Map<string, string>();
+    for (const m of css.slice(start, end).matchAll(/(--[a-z0-9-]+)\s*:\s*(#[0-9a-fA-F]{3,8})\s*;/g)) {
+      out.set(m[1], m[2]);
+    }
+    return out;
+  }
+
+  /** Foreground/background pairs `execution.css` actually renders together. */
+  const TEXT_PAIRS: [string, string, string][] = [
+    ["--ink", "--paper", "body"],
+    ["--ink-soft", "--paper", "secondary"],
+    ["--ink-faint", "--paper", "micro-labels and table headers"],
+    ["--ink-mute", "--paper", "faintest ink"],
+    ["--ink-faint", "--surface-2", "chip and field labels"],
+    ["--ink-soft", "--surface-2", "condition rows"],
+    ["--ink-mute", "--surface-2", "faintest ink on a field"],
+    ["--accent", "--paper", "links"],
+    ["--good", "--paper", "pass glyph and success verdicts"],
+    ["--good", "--good-bg", "success chips"],
+    ["--bad", "--paper", "danger ink"],
+    ["--bad", "--bad-bg", "danger chips"],
+    ["--bad", "--bad-bg-soft", "overdue rows"],
+    ["--warn", "--paper", "watch ink"],
+    ["--warn", "--warn-bg", "warn chips"],
+  ];
+
+  for (const theme of ["operations-carbon", "operations-carbon-light"]) {
+    it(`keeps every rendered text pair above 4.5:1 on ${theme}`, () => {
+      const tokens = themeTokens(theme);
+      const failures: string[] = [];
+      for (const [fg, bg, note] of TEXT_PAIRS) {
+        const f = tokens.get(fg);
+        const b = tokens.get(bg);
+        if (!f || !b) {
+          failures.push(`${fg} or ${bg} is not declared`);
+          continue;
+        }
+        const ratio = contrast(f, b);
+        if (ratio < 4.5) {
+          failures.push(`${fg} on ${bg} (${note}) is ${ratio.toFixed(2)}:1`);
+        }
+      }
+      expect(failures, failures.join("; ")).toEqual([]);
+    });
+  }
+
+  it("keeps the grey ramp ordered, so a fainter role is never darker ink", () => {
+    // The light surface only affords three legible greys, so `--ink-mute` sits
+    // one hair from `--ink-faint`. Ordered is still required: a "mute" token
+    // that resolved darker than "faint" would invert every hierarchy built on
+    // it while still passing the contrast floor above.
+    for (const theme of ["operations-carbon", "operations-carbon-light"]) {
+      const t = themeTokens(theme);
+      const paper = t.get("--paper")!;
+      const ramp = ["--ink", "--ink-soft", "--ink-faint", "--ink-mute"].map((name) =>
+        contrast(t.get(name)!, paper),
+      );
+      const descending = [...ramp].sort((a, b) => b - a);
+      expect(ramp, `${theme} grey ramp is out of order`).toEqual(descending);
+    }
+  });
+});

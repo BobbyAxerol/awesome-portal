@@ -19,11 +19,17 @@
  * Approving grants an authorization. It does not execute: the Execution cell
  * re-validates everything when the authorization is used.
  */
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import type { ApprovalId, Envelope, PanelStatus, Sla } from "../contracts";
 import { AuthorityBadge, StatusChip } from "../components/badges";
-import { ConditionList, type TypedCondition } from "../components/conditions";
+import {
+  ConditionComposer,
+  ConditionList,
+  EMPTY_DRAFT,
+  type ConditionDraft,
+  type TypedCondition,
+} from "../components/conditions";
 import { SlaCell } from "../components/evidence";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
@@ -125,6 +131,7 @@ export function GateR2Review({
   reason,
   partialReason,
   locks = [],
+  onAttachCondition,
   onApprove,
   onDeny,
   onRequestCondition,
@@ -165,6 +172,9 @@ export function GateR2Review({
   reason?: string;
   partialReason?: string;
   locks?: readonly R2Lock[];
+  /** Attaching a condition is what makes "approve with condition" mean
+   *  something (§2 "Must work": conditions attach to the decision object). */
+  onAttachCondition?: (condition: TypedCondition) => void;
   onApprove?: () => void;
   onDeny?: () => void;
   onRequestCondition?: () => void;
@@ -177,6 +187,8 @@ export function GateR2Review({
       </section>
     );
   }
+
+  const [draft, setDraft] = useState<ConditionDraft>(EMPTY_DRAFT);
 
   const selfApproval = planAuthor === actor;
   const r1Block = R1_BLOCKS[r1State];
@@ -194,6 +206,7 @@ export function GateR2Review({
     ]),
   );
   const locked = effectiveLocks.length > 0;
+  const conditionLocked = locked;
   const denyLocks = effectiveLocks.filter((lock): lock is "EXPIRED" | "NOT_ELIGIBLE" =>
     (DENY_BLOCKING_LOCKS as readonly string[]).includes(lock),
   );
@@ -340,8 +353,22 @@ export function GateR2Review({
         <div className="exec-tile-title">Decision</div>
         <ConditionList
           conditions={conditions ?? []}
-          emptyNote="No conditions attached. Approving with a condition adds one here."
+          emptyNote="No conditions attached yet."
         />
+        {onAttachCondition ? (
+          <ConditionComposer
+            draft={draft}
+            onChange={setDraft}
+            onAttach={(condition) => {
+              onAttachCondition(condition);
+              setDraft(EMPTY_DRAFT);
+            }}
+            // A composer for a decision this actor cannot make is a form that
+            // wastes their time, so it follows the condition control exactly.
+            disabled={conditionLocked}
+            disabledReason="You cannot attach a condition to this decision."
+          />
+        ) : null}
       </div>
 
       {grantName ? (

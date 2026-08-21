@@ -16,11 +16,17 @@
  * is deliberately not a blocker. Collapsing them into one list of problems would
  * either stop a legitimate approval or wave through a real one.
  */
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import type { ApprovalId, EvidenceMark, PanelStatus, Sla } from "../contracts";
 import { StatusChip } from "../components/badges";
-import { ConditionList, type TypedCondition } from "../components/conditions";
+import {
+  ConditionComposer,
+  ConditionList,
+  EMPTY_DRAFT,
+  type ConditionDraft,
+  type TypedCondition,
+} from "../components/conditions";
 import { EvidencePanel, SlaCell, type EvidenceRow } from "../components/evidence";
 import { PanelState } from "../components/states";
 
@@ -120,6 +126,7 @@ export function GateR1Review({
   eligibility,
   conditions,
   evidence,
+  onAttachCondition,
   onApprove,
   onDeny,
   onRequestCondition,
@@ -162,6 +169,9 @@ export function GateR1Review({
   conditions?: readonly TypedCondition[];
   /** The equity-across-window-roles panel, or its state when absent. */
   evidence?: ReactNode;
+  /** Attaching a condition is what makes "approve with condition" mean
+   *  something (§2 "Must work": conditions attach to the decision object). */
+  onAttachCondition?: (condition: TypedCondition) => void;
   onApprove?: () => void;
   onDeny?: () => void;
   onRequestCondition?: () => void;
@@ -177,6 +187,8 @@ export function GateR1Review({
       </section>
     );
   }
+
+  const [draft, setDraft] = useState<ConditionDraft>(EMPTY_DRAFT);
 
   const selfApproval = creator === actor;
   // Derived rather than trusted from the caller: a screen that renders a clean
@@ -298,8 +310,22 @@ export function GateR1Review({
         <div className="exec-tile-title">Conditions</div>
         <ConditionList
           conditions={conditions ?? []}
-          emptyNote="No conditions attached. Approving with a condition adds one here."
+          emptyNote="No conditions attached yet."
         />
+        {onAttachCondition ? (
+          <ConditionComposer
+            draft={draft}
+            onChange={setDraft}
+            onAttach={(condition) => {
+              onAttachCondition(condition);
+              setDraft(EMPTY_DRAFT);
+            }}
+            // A composer for a decision this actor cannot make is a form that
+            // wastes their time, so it follows the condition control exactly.
+            disabled={conditionLocked}
+            disabledReason="You cannot attach a condition to this decision."
+          />
+        ) : null}
       </div>
 
       {isDecided ? null : (

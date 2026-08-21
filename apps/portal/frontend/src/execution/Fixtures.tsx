@@ -956,8 +956,9 @@ export default function ExecutionFixtures() {
           note="The screen exists to make one refusal impossible to work around. Separation of duty is derived from creator vs actor rather than trusted from a prop, and Deny is never locked: a reviewer who cannot approve can always refuse."
         >
           <div className="exec-fixtures-stack">
-            <Case caption="separation of duty OK — one warning, no blockers, Approve available">
+            <Case caption="separation of duty OK — one warning, no blockers, Approve available, condition composable">
               <GateR1Review
+                onAttachCondition={() => {}}
                 approvalId="AP-201"
                 alphaLabel="RSI v1.7"
                 releaseCandidate="RC-41"

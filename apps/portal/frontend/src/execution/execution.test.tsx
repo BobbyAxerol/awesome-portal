@@ -10,7 +10,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { ExecutionSurface } from "./ExecutionSurface";
@@ -38,6 +38,13 @@ import {
   screenDeliveryProfile,
 } from "./profile";
 import { KeysetTable, type Column } from "./components/table";
+import {
+  blockingCount,
+  ConditionRow,
+  draftBlockers,
+  EMPTY_DRAFT,
+  toCondition,
+} from "./components/conditions";
 import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./api/rows";
 import { createFixtureApi } from "./api/fixtureApi";
 import {
@@ -3393,5 +3400,98 @@ describe("Gate R2 and Paper Exit on the port", () => {
     const promote = await screen.findByRole("button", { name: "Approve promotion" });
     promote.click();
     expect(await screen.findByText(/This command has not been confirmed/)).toBeTruthy();
+  });
+});
+
+describe("typed conditions composer (§2 — conditions attach to the decision)", () => {
+  it("refuses a condition with no text and no owner, and says which", () => {
+    // An unowned condition is a wish; an unstated one is nothing at all.
+    expect(draftBlockers(EMPTY_DRAFT)).toEqual([
+      "a condition needs text",
+      "a condition needs an owner",
+    ]);
+  });
+
+  it("does not demand a deadline", () => {
+    // A standing constraint has no date, and demanding one makes reviewers
+    // invent them.
+    expect(draftBlockers({ ...EMPTY_DRAFT, text: "cap capacity at 50,000", owner: "Lan" })).toEqual([]);
+  });
+
+  it("refuses an expiry that falls before the deadline", () => {
+    // Such a condition can never be met and nobody would notice: it would
+    // simply expire unmet and unremarked.
+    expect(
+      draftBlockers({
+        text: "cap",
+        owner: "Lan",
+        deadline: "2026-10-01",
+        expiry: "2026-09-01",
+        blocking: true,
+      }),
+    ).toContain("the expiry falls before the deadline");
+  });
+
+  it("produces a typed record, not a sentence", () => {
+    expect(
+      toCondition({
+        text: "  capacity cap 50,000  ",
+        owner: " Lan ",
+        deadline: "2026-09-15",
+        expiry: "2026-11-01",
+        blocking: true,
+      }),
+    ).toEqual({
+      text: "capacity cap 50,000",
+      owner: "Lan",
+      deadline: "2026-09-15",
+      expiry: "2026-11-01",
+      blocking: true,
+    });
+  });
+
+  it("attaches a condition from Gate R1 and clears the draft", () => {
+    const attached: unknown[] = [];
+    const { container } = render(gate({ onAttachCondition: (c: unknown) => attached.push(c) }));
+    const text = container.querySelector<HTMLInputElement>(".exec-composer-wide input")!;
+    const owner = container.querySelectorAll<HTMLInputElement>(".exec-composer-field input")[1];
+
+    fireEvent.change(text, { target: { value: "extend slippage evidence past 30 fills" } });
+    fireEvent.change(owner, { target: { value: "Lan" } });
+    fireEvent.click(screen.getByRole("button", { name: "Attach condition" }));
+
+    expect(attached).toHaveLength(1);
+    expect(attached[0]).toMatchObject({ owner: "Lan", blocking: false });
+    // Draft cleared, so the next condition starts empty rather than inheriting.
+    expect(text.value).toBe("");
+  });
+
+  it("blocks Attach until the draft is valid", () => {
+    render(gate({ onAttachCondition: () => {} }));
+    expect(screen.getByRole("button", { name: "Attach condition" })).toHaveProperty("disabled", true);
+    expect(screen.getByText(/a condition needs text/)).toBeTruthy();
+  });
+
+  it("locks the composer for a reviewer who cannot make the decision", () => {
+    // A composer for a decision you cannot make is a form that wastes your
+    // time, so it follows the condition control exactly.
+    render(gate({ actor: "Minh", onAttachCondition: () => {} }));
+    expect(screen.getByRole("button", { name: "Attach condition" })).toHaveProperty("disabled", true);
+    expect(screen.getByText(/cannot attach a condition/)).toBeTruthy();
+  });
+
+  it("counts which attached conditions block", () => {
+    expect(
+      blockingCount([
+        { text: "a", owner: "Lan", blocking: true },
+        { text: "b", owner: "Minh", blocking: false },
+        { text: "c", owner: "Lan", blocking: true },
+      ]),
+    ).toBe(2);
+  });
+
+  it("states an unowned condition rather than rendering it blank", () => {
+    render(<ConditionRow condition={{ text: "cap capacity", owner: null, blocking: false }} />);
+    expect(screen.getByText("unassigned")).toBeTruthy();
   });
 });

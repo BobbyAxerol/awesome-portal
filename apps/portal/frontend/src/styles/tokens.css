@@ -358,7 +358,10 @@
   --ink: #f4f4f4;
   --ink-soft: #c6c6c6;
   --ink-faint: #8d8d8d;
-  --ink-mute: #6f6f6f;
+  /* Measured at 3.60:1 on the canvas and 3.01:1 on the field before this
+   * change, while carrying 31 text rules. The dark surface has the same
+   * three-legible-grey ceiling as the light one, in the other direction. */
+  --ink-mute: #8c8c8c;
   --line: #393939;
   --line-soft: #2a2a2a;
   --line-strong: #4c4c4c;
@@ -519,12 +522,16 @@
 
   --ink: #161616;
   --ink-soft: #525252;
-  --ink-faint: #8c8c8c;
-  /* No governance hi-fi supplies a fourth grey. This one is inherited from the
-   * Carbon ramp and is roughly 2.4:1 on white, so it is for genuinely inert
-   * text only — a pending rail step, an empty-list note — never for anything a
-   * decision rests on. */
-  --ink-mute: #a8a8a8;
+  --ink-faint: #6f6f6f;
+  /* The faintest LEGIBLE ink, not a fainter-than-legible one.
+   *
+   * Measured: nothing lighter than this clears 4.5:1 against both the page and
+   * the field fill, and all 31 uses of this token are `color:` — it is a text
+   * role, not a decorative one. So the four-step grey ramp the dark surface
+   * affords is a three-step ramp here, and the fourth step collapses onto the
+   * third. Further de-emphasis comes from size and weight, never from making
+   * text harder to read. `tokens.test.ts` holds the floor. */
+  --ink-mute: #707070;
 
   --line: #e0e0e0;
   --line-soft: #e8e8e8;
@@ -539,7 +546,12 @@
   /* Status. On light, a fill that reads at all needs a much paler background
    * and a much darker foreground than the dark theme's — the same hue at the
    * same lightness would be invisible one way and unreadable the other. */
-  --good: #24a148;
+  /* Carbon green-60, not the green-50 the hi-fi draws. Green-50 measures
+   * 3.35:1 on white and this token is used as INK — the pass glyph, the "0
+   * blockers" cell, the APPROVED verdict. A verdict nobody can read is not a
+   * verdict. Green-50 remains correct as a fill and is what --good-bg pairs
+   * with. Recorded as delta P0-8. */
+  --good: #198038;
   --good-bg: #defbe6;
   --bad: #da1e28;
   --bad-bg: #fff1f1;
