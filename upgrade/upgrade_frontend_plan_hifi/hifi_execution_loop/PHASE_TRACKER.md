@@ -174,7 +174,34 @@ Highest-value two, if anything is picked up early:
 
 ---
 
-## 7. Open for the owner
+## 7. Contract pack arrived — first reconciliation
+
+`trading_system_portal_contract_pack/` landed 2026-08-21 09:31, while Phase 0
+was being built. The discovery gate is closed: `extract/COVERAGE.json` reports
+**15/15 COVERED**, `REDACTION-AUDIT.json` PASS over 70 files, no mutations.
+Pin the gateway by image digest `sha256:4f63dc9949f8…`, not by git HEAD — the
+running gateway is not built from the checked-out commit.
+
+That makes it possible to check `contracts.ts` against runtime evidence rather
+than against prose. First pass, using `extract/vocabularies.json`:
+
+| Our type | Trading System evidence | Verdict |
+|---|---|---|
+| `RuntimeState` = ACTIVE / REDUCING / HALTED / ARCHIVED | `strategy_deployments.state` and `portfolios.state` CHECK = ACTIVE / ARCHIVED / HALTED / REDUCING | **exact match** |
+| `PromotionStage` = PAPER_OBSERVATION / SANDBOX_VALIDATION / LIVE_CANARY / LIVE_FULL | no `promotion_stage` column anywhere in 94 tables | **confirmed Portal-owned** — matches spec §23.2, which lists promotion stage as an additive gap. Ours to define. |
+| `BrokerSync` = OK / STALE / MISMATCH / UNKNOWN | `account_sync_snapshots.status` CHECK = **ERROR** / MISMATCH / OK / STALE | **mismatch** — the real system has `ERROR`, we have `UNKNOWN`. `ERROR` must be added; whether `UNKNOWN` survives as a Portal-side "not yet observed" is a modelling decision, not a transcription one. |
+| `mode` (paper/sandbox/live) | every mode column = backtest / live / paper / replay / sandbox | we render three of five; `backtest` and `replay` are Research-side and out of Execution scope |
+
+Two things follow. The approach in §3 held up — three of four vocabularies were
+right from the documents alone. And a **full reconciliation pass of
+`contracts.ts` against `extract/` is now a real slice**, not speculation: 22
+enums, 91 DB CHECKs, 124 reason codes and 85 payload models are sitting there to
+check against, and doing it before seventeen screens are built on those types is
+much cheaper than after.
+
+---
+
+## 8. Open for the owner
 
 1. **IBM Plex fonts.** Two `@fontsource` packages, a lockfile change and a CI
    `npm audit` pass. Without them the Execution surface has Carbon's colour and
