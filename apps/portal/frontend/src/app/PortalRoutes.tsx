@@ -40,6 +40,7 @@ const PlanningModule = lazy(() =>
 const UsersAccess = lazy(() =>
   import("../features/admin/UsersAccess").then((m) => ({ default: m.UsersAccess })),
 );
+const ExecutionFixtures = lazy(() => import("../execution/Fixtures"));
 
 /**
  * Registry feature id -> implemented module.
@@ -68,6 +69,22 @@ const MODULES: Record<string, { component: ComponentType; wildcard?: boolean }> 
  * would prefer to have.
  */
 export const ADMIN_USERS_ROUTE = "/administration/users";
+
+/**
+ * Execution Loop component fixtures (`EXECUTION_FIXTURES_ROUTE`).
+ *
+ * The Phase 0 exit gate — every shared Execution component in every state on
+ * the Carbon surface. Like the admin route above it is deliberately not a
+ * registry feature, and for a stronger reason: it is not a product screen at
+ * all. It renders no live data, appears in no navigation, and exists so the
+ * component contracts can be reviewed before any of the seventeen screens are
+ * built on them.
+ *
+ * The seventeen real screens do NOT follow this pattern. They are registry
+ * features and stay blocked on registry revision 3, because nav rendering from
+ * the registry is a hard rule and this route is not nav.
+ */
+export const EXECUTION_FIXTURES_ROUTE = "/execution/_fixtures";
 
 /**
  * `/?new=1` was the standalone QuantBT entry point for a new run. `/` now
@@ -124,6 +141,9 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
           screen itself renders `denied` for a non-ADMIN, so a guessed URL does
           not leak the table. */}
       <Route path={ADMIN_USERS_ROUTE} element={<UsersAccess />} />
+
+      {/* Execution Loop Phase 0 fixtures: components, not a screen. */}
+      <Route path={EXECUTION_FIXTURES_ROUTE} element={<ExecutionFixtures />} />
 
       {/* Legacy compatibility. The set of paths comes from the registry; the
           owning module decides how each one translates. */}

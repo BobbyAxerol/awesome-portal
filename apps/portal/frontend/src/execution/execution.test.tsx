@@ -1,0 +1,368 @@
+/**
+ * Execution Loop component tests — Phase 0.
+ *
+ * These assert the rules the spec states as non-negotiable, not that the
+ * components render. A snapshot would pass while `PARTIAL` turned green; these
+ * fail. The list under test is guide §6 plus DS §6: PARTIAL is never good, the
+ * four state fields never merge, canary and live differ by treatment rather
+ * than hue, a withheld panel says why, and 202 is not success.
+ */
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+
+import { ExecutionSurface } from "./ExecutionSurface";
+import { guardFor, slaOverdue, STAGE_ORDER, type Envelope } from "./contracts";
+import {
+  AuthorityBadge,
+  BrokerSyncChip,
+  EnvironmentBadge,
+  FreshnessIndicator,
+  formatAge,
+  OperationStatusChip,
+  OrderStatusChip,
+} from "./components/badges";
+import { ChartTile, envelopeCaption } from "./components/chart";
+import { CommandPlanDrawer } from "./components/drawer";
+import { EvidencePanel, SlaCell } from "./components/evidence";
+import { GuardBand, ObservationProgress, stageRail } from "./components/lifecycle";
+import { CapNotice, PanelState } from "./components/states";
+
+afterEach(cleanup);
+
+const envelope: Envelope = {
+  authority: "EXECUTION",
+  asOf: "2026-08-21T10:42:01Z",
+  freshness: "OK",
+  ageSeconds: 0.9,
+};
+
+describe("Carbon surface isolation", () => {
+  it("scopes the theme to a wrapper so it cannot reach a Research screen", () => {
+    const { container } = render(
+      <ExecutionSurface>
+        <span>inside</span>
+      </ExecutionSurface>,
+    );
+    const surface = container.querySelector(".exec-surface");
+    expect(surface?.getAttribute("data-theme")).toBe("operations-carbon");
+    // Density is pinned rather than inherited: DS §1 makes `operational` the
+    // default for every Deployments screen.
+    expect(surface?.getAttribute("data-density")).toBe("operational");
+  });
+});
+
+describe("PARTIAL is never green", () => {
+  it("tones a partly-filled order as a warning", () => {
+    render(<OrderStatusChip status="PARTIAL" />);
+    expect(screen.getByText("PARTIAL").getAttribute("data-tone")).toBe("warn");
+  });
+
+  it("tones a partly-applied operation as a warning", () => {
+    render(<OperationStatusChip status="PARTIAL" />);
+    expect(screen.getByText("PARTIAL").getAttribute("data-tone")).toBe("warn");
+  });
+
+  it("keeps FILLED and VERIFIED as the only good outcomes in their vocabularies", () => {
+    const { rerender } = render(<OrderStatusChip status="FILLED" />);
+    expect(screen.getByText("FILLED").getAttribute("data-tone")).toBe("good");
+    rerender(<OperationStatusChip status="VERIFIED" />);
+    expect(screen.getByText("VERIFIED").getAttribute("data-tone")).toBe("good");
+  });
+
+  it("marks an accepted-but-unconfirmed operation as a warning, not a success", () => {
+    render(<OperationStatusChip status="APPLIED_UNVERIFIED" />);
+    const chip = screen.getByText("APPLIED_UNVERIFIED");
+    expect(chip.getAttribute("data-tone")).toBe("warn");
+    expect(chip.getAttribute("title")).toContain("202 is not success");
+  });
+});
+
+describe("the four fields stay four fields", () => {
+  it("renders broker sync as its own chip, separate from runtime state", () => {
+    render(<BrokerSyncChip sync="MISMATCH" />);
+    const chip = screen.getByText("SYNC MISMATCH");
+    expect(chip.getAttribute("data-tone")).toBe("bad");
+    expect(chip.getAttribute("title")).toContain("withheld");
+  });
+
+  it("names the promotion stage verbatim and never abbreviates canary", () => {
+    render(<EnvironmentBadge stage="LIVE_CANARY" />);
+    // Canary is live money. `CANARY` alone would be the one abbreviation on
+    // this surface that could cost capital.
+    expect(screen.getByText("LIVE · CANARY").getAttribute("data-stage")).toBe("LIVE_CANARY");
+  });
+});
+
+describe("guard treatment (decision D2)", () => {
+  it("assigns a guard only to the two live stages", () => {
+    expect(guardFor("PAPER_OBSERVATION")).toBe("none");
+    expect(guardFor("SANDBOX_VALIDATION")).toBe("none");
+    expect(guardFor("LIVE_CANARY")).toBe("canary");
+    expect(guardFor("LIVE_FULL")).toBe("live");
+  });
+
+  it("separates canary from live by treatment and words, not by hue", () => {
+    const canary = render(<GuardBand stage="LIVE_CANARY" />);
+    expect(canary.container.querySelector(".exec-guard")?.getAttribute("data-guard")).toBe("canary");
+    expect(screen.getByText("LIVE · CANARY")).toBeTruthy();
+    cleanup();
+
+    const live = render(<GuardBand stage="LIVE_FULL" />);
+    expect(live.container.querySelector(".exec-guard")?.getAttribute("data-guard")).toBe("live");
+    expect(screen.getByText("LIVE")).toBeTruthy();
+  });
+
+  it("renders no band on a stage that is not live", () => {
+    const { container } = render(<GuardBand stage="PAPER_OBSERVATION" />);
+    expect(container.querySelector(".exec-guard")).toBeNull();
+  });
+});
+
+describe("AuthorityBadge", () => {
+  it("states a missing formula version rather than omitting it", () => {
+    render(<AuthorityBadge envelope={{ ...envelope, authority: "DERIVED", formulaVersion: null }} />);
+    expect(screen.getByText(/formula version not published/)).toBeTruthy();
+  });
+
+  it("says nothing extra when the formula version is present", () => {
+    render(
+      <AuthorityBadge envelope={{ ...envelope, authority: "DERIVED", formulaVersion: "diff.v1" }} />,
+    );
+    expect(screen.queryByText(/formula version not published/)).toBeNull();
+  });
+
+  it("keeps sub-minute ages to one decimal because seconds are argued about", () => {
+    expect(formatAge(0.9)).toBe("0.9s");
+    expect(formatAge(1)).toBe("1s");
+    expect(formatAge(90)).toBe("1m");
+    expect(formatAge(7200)).toBe("2h");
+    expect(formatAge(null)).toBeNull();
+  });
+});
+
+describe("FreshnessIndicator", () => {
+  it("treats PAUSED as a calendar fact, not a stale reading", () => {
+    render(
+      <FreshnessIndicator state="PAUSED" reason="VN MARKET closed, reopens 09:00 ICT" />,
+    );
+    const node = screen.getByText(/paused/);
+    expect(node.textContent).toContain("VN MARKET closed");
+    expect(node.textContent).not.toContain("stale");
+  });
+
+  it("distinguishes aging from stale", () => {
+    const { container, rerender } = render(<FreshnessIndicator state="AGING" ageSeconds={45} />);
+    expect(container.querySelector(".exec-freshness")?.getAttribute("data-state")).toBe("AGING");
+    rerender(<FreshnessIndicator state="STALE" ageSeconds={400} />);
+    expect(container.querySelector(".exec-freshness")?.getAttribute("data-state")).toBe("STALE");
+  });
+});
+
+describe("panel states", () => {
+  it("renders each unavailable-kind as a distinct, named claim", () => {
+    for (const status of ["empty", "denied", "unavailable", "insufficient_data"] as const) {
+      const { container } = render(<PanelState status={status} reason="because" />);
+      expect(container.querySelector(".exec-state")?.getAttribute("data-status")).toBe(status);
+      cleanup();
+    }
+  });
+
+  it("keeps the loading skeleton out of the accessibility tree", () => {
+    const { container } = render(<PanelState status="loading" />);
+    const blocks = container.querySelectorAll(".exec-skeleton-block");
+    expect(blocks.length).toBeGreaterThan(0);
+    for (const block of blocks) {
+      expect(block.getAttribute("aria-hidden")).toBe("true");
+    }
+    // Exactly one spoken announcement, in words.
+    expect(container.querySelectorAll('[role="status"]').length).toBe(1);
+  });
+
+  it("shows a demoted last-good value rather than a blank when stale", () => {
+    render(<PanelState status="stale" reason="4m old" lastGood={<span>18,412.55 USDT</span>} />);
+    expect(screen.getByText("18,412.55 USDT")).toBeTruthy();
+    expect(screen.getByText("4m old")).toBeTruthy();
+  });
+
+  it("hides the cap notice when nothing was truncated", () => {
+    const { container } = render(<CapNotice shown={10} total={10} />);
+    expect(container.textContent).toBe("");
+  });
+
+  it("states the exact denominator when a list is capped", () => {
+    render(<CapNotice shown={10} total={214} noun="open items" />);
+    // Exact, not approximate: at this cardinality a COUNT is a millisecond
+    // query, so a `~` would be a choice rather than a constraint.
+    expect(screen.getByText(/showing top 10 of 214 open items/)).toBeTruthy();
+  });
+});
+
+describe("evidence and SLA", () => {
+  it("labels a watch item as non-blocking and a gap as insufficient", () => {
+    render(
+      <EvidencePanel
+        rows={[
+          { label: "Drift", mark: "watch" },
+          { label: "Slippage", mark: "insufficient" },
+        ]}
+      />,
+    );
+    expect(screen.getByText(/watch item, non-blocking/)).toBeTruthy();
+    expect(screen.getByText(/insufficient data/)).toBeTruthy();
+  });
+
+  it("says OVERDUE in words, not only in colour", () => {
+    render(<SlaCell sla={{ ageMinutes: 1560, budgetMinutes: 1440 }} />);
+    expect(screen.getByText(/OVERDUE/)).toBeTruthy();
+    expect(slaOverdue({ ageMinutes: 1560, budgetMinutes: 1440 })).toBe(true);
+    expect(slaOverdue({ ageMinutes: 60, budgetMinutes: 1440 })).toBe(false);
+  });
+});
+
+describe("lifecycle rail", () => {
+  it("reaches back to the gates that authorised the deployment", () => {
+    const steps = stageRail({ stage: "LIVE_CANARY", r1: { label: "AP-118" }, r2: { label: "AP-152" } });
+    expect(steps.map((step) => step.name).slice(0, 2)).toEqual(["R1", "R2"]);
+    expect(steps).toHaveLength(2 + STAGE_ORDER.length);
+  });
+
+  it("marks exactly one step current and everything after it pending", () => {
+    const steps = stageRail({ stage: "SANDBOX_VALIDATION" });
+    expect(steps.filter((step) => step.state === "current")).toHaveLength(1);
+    const currentIndex = steps.findIndex((step) => step.state === "current");
+    expect(steps.slice(currentIndex + 1).every((step) => step.state === "pending")).toBe(true);
+  });
+});
+
+describe("observation progress", () => {
+  it("takes the gate verdict from the server instead of recomputing it", () => {
+    // Both bars are past target, yet the gate is not met: the rule can require
+    // conditions this component cannot see (spec §10.5). A client that inferred
+    // `met` would eventually disagree with the server about promotion.
+    const { container } = render(
+      <ObservationProgress
+        met={false}
+        items={[
+          { label: "Days", current: 31, target: 30, unit: "days" },
+          { label: "Trades", current: 400, target: 300, unit: "trades" },
+        ]}
+      />,
+    );
+    expect(container.querySelector(".exec-progress")?.getAttribute("data-met")).toBe("false");
+  });
+});
+
+describe("chart envelope", () => {
+  it("prints the aggregation arrow only when the server reduced the series", () => {
+    const complete = envelopeCaption({
+      window: "30d",
+      interval: "15m",
+      asOf: "2026-08-21T10:42:01Z",
+      authority: "EXECUTION",
+      sourceRows: 2880,
+      returnedRows: 2880,
+    });
+    expect(complete).toContain("2880 samples");
+    expect(complete).not.toContain("→");
+
+    const reduced = envelopeCaption({
+      window: "6mo",
+      interval: "1h",
+      asOf: "2026-08-21T10:42:01Z",
+      authority: "EXECUTION",
+      sourceRows: 43_800,
+      returnedRows: 4368,
+    });
+    expect(reduced).toContain("43800 → 4368 samples");
+  });
+
+  it("always renders the interval the server actually served", () => {
+    render(
+      <ChartTile
+        title="Equity"
+        envelope={{
+          window: "6mo",
+          interval: "1h",
+          asOf: "2026-08-21T10:42:01Z",
+          authority: "EXECUTION",
+        }}
+      />,
+    );
+    expect(screen.getByText(/6mo · 1h · as_of/)).toBeTruthy();
+  });
+});
+
+describe("command plan drawer", () => {
+  it("lists every unmet condition rather than only the first", () => {
+    render(<CommandPlanDrawer title="Allocate capital" step="plan" plan={null} confirmWord="CLOSE" />);
+    const reason = screen.getByText(/Apply is blocked/);
+    expect(reason.textContent).toContain("generate a plan first");
+    expect(reason.textContent).toContain("a reason is required");
+    expect(reason.textContent).toContain("type CLOSE to confirm");
+  });
+
+  it("blocks apply on an expired plan", () => {
+    render(
+      <CommandPlanDrawer
+        title="Allocate capital"
+        step="apply"
+        plan={{
+          id: "cmd_9f12",
+          expiresInSeconds: 0,
+          requestPreview: "POST /allocations",
+          equivalentCli: "primus portfolio allocate",
+          checks: [],
+        }}
+      />,
+    );
+    expect(screen.getByText(/Apply is blocked/).textContent).toContain("plan expired");
+  });
+
+  it("blocks apply on a failed policy check but not on a warning", () => {
+    const plan = {
+      id: "cmd_9f12",
+      expiresInSeconds: 60,
+      requestPreview: "POST /allocations",
+      equivalentCli: "primus portfolio allocate",
+      checks: [{ label: "Concentration above 20% of NAV", outcome: "warning" as const }],
+    };
+    render(<CommandPlanDrawer title="Allocate" step="apply" plan={plan} />);
+    const blocked = screen.getByText(/Apply is blocked/).textContent ?? "";
+    expect(blocked).not.toContain("policy check failed");
+    expect(screen.getByText(/warning, not blocking/)).toBeTruthy();
+  });
+
+  it("opens the verify timeline with 202, which is not success", () => {
+    render(
+      <CommandPlanDrawer
+        title="Allocate"
+        step="verify"
+        plan={null}
+        verifyEntries={[{ label: "Allocation row written", status: "VERIFIED" }]}
+      />,
+    );
+    expect(screen.getByText(/202 — accepted, NOT success yet/)).toBeTruthy();
+  });
+
+  it("shows the equivalent CLI as text and never as an executable control", () => {
+    const { container } = render(
+      <CommandPlanDrawer
+        title="Allocate"
+        step="apply"
+        plan={{
+          id: "cmd_9f12",
+          expiresInSeconds: 60,
+          requestPreview: "POST /allocations",
+          equivalentCli: "primus portfolio allocate PF-MAIN dep_77",
+          checks: [],
+        }}
+      />,
+    );
+    const cli = screen.getByText(/primus portfolio allocate PF-MAIN dep_77/);
+    expect(cli.tagName).toBe("PRE");
+    expect(screen.getByText(/browser never runs a shell/)).toBeTruthy();
+    // No control anywhere in the drawer offers to run it.
+    const buttons = [...container.querySelectorAll("button")].map((b) => b.textContent);
+    expect(buttons.some((label) => /run|exec|shell/i.test(label ?? ""))).toBe(false);
+  });
+});

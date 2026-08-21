@@ -331,6 +331,158 @@
 }
 
 /* ---------------------------------------------------------------------------
+ * Operations Carbon — the Execution Loop surface (DS §7, owner direction
+ * 2026-08-19; isolation mechanism approved 2026-08-21).
+ *
+ * This is NOT a restyle of `operations`. Research and Planning keep that theme
+ * and 46 of the 100 committed visual baselines depend on it not moving, so
+ * Carbon is a THIRD theme applied to a wrapper element around Execution routes
+ * (see `src/execution/ExecutionSurface.tsx`). Custom properties set on that
+ * wrapper win for its subtree, which makes "Execution styling cannot reach a
+ * Research screen" a structural fact rather than a discipline.
+ *
+ * Selector is deliberately not `:root`-prefixed so it can sit on that wrapper.
+ *
+ * Values are IBM Carbon's dark grey ramp and status colours, read out of the
+ * hi-fi files — DS §7 makes the rendered hex authoritative, not the prose.
+ * Flat geometry per DS §7: every radius collapses to 0.
+ * ------------------------------------------------------------------------ */
+[data-theme="operations-carbon"] {
+  /* Carbon grey ramp: 100 #161616 · 90 #262626 · 80 #393939 · 70 #525252
+   * 60 #6f6f6f · 50 #8d8d8d · 30 #c6c6c6 · 10 #f4f4f4 */
+  --paper: #161616;
+  --paper-raised: #1d1d1d;
+  --paper-sunken: #101010;
+  --surface-2: #262626;
+  --surface-3: #1d1d1d;
+  --ink: #f4f4f4;
+  --ink-soft: #c6c6c6;
+  --ink-faint: #8d8d8d;
+  --ink-mute: #6f6f6f;
+  --line: #393939;
+  --line-soft: #2a2a2a;
+  --line-strong: #4c4c4c;
+
+  --accent: #78a9ff;
+  --accent-soft: #001d6c;
+  --accent-strong: #0f62fe;
+  --accent-2: #ff832b;
+  --accent-2-soft: #4e2900;
+  --good: #42be65;
+  --good-bg: #071f11;
+  --bad: #fa4d56;
+  --bad-bg: #2d0709;
+  --warn: #f1c21b;
+  --warn-bg: #302608;
+
+  --role-is: #8d8d8d;
+  --role-oos: #78a9ff;
+  --role-holdout: #ff832b;
+  --role-stitched: #78a9ff;
+
+  --state-available: #42be65;
+  --state-available-bg: #071f11;
+  --state-degraded: #f1c21b;
+  --state-degraded-bg: #302608;
+  --state-stale: #f1c21b;
+  --state-stale-bg: #302608;
+  --state-unavailable: #8d8d8d;
+  --state-unavailable-bg: #262626;
+  --state-denied: #fa4d56;
+  --state-denied-bg: #2d0709;
+  --state-commissioned: #8d8d8d;
+  --state-commissioned-bg: #262626;
+
+  --maturity-available: #f4f4f4;
+  --maturity-prototype: #f1c21b;
+  --maturity-commissioned: #8d8d8d;
+  --maturity-blocked: #fa4d56;
+  --maturity-deprecated: #6f6f6f;
+
+  /* Lifecycle carries the guard semantics of D2: live and canary are the same
+   * red, and the LABEL differentiates them. No separate canary hue exists. */
+  --lifecycle-research: #78a9ff;
+  --lifecycle-candidate: #f1c21b;
+  --lifecycle-paper: #be95ff;
+  --lifecycle-sandbox: #f1c21b;
+  --lifecycle-live: #fa4d56;
+  --lifecycle-canary: #fa4d56;
+  --lifecycle-paused: #8d8d8d;
+  --lifecycle-degraded: #ff832b;
+  --lifecycle-blocked: #fa4d56;
+
+  --env-local: #6f6f6f;
+  --env-research: #78a9ff;
+  --env-paper: #be95ff;
+  --env-sandbox: #f1c21b;
+  --env-live: #fa4d56;
+  --env-canary: #fa4d56;
+
+  /* Guard band (DS §2 / D2). Canary draws a double border, live a solid one;
+   * the difference is stroke and text, never hue. */
+  --guard: #fa4d56;
+  --guard-bg: #2d0709;
+
+  /* Authority. The hi-fi differentiates EXECUTION / BROKER / DERIVED by the
+   * WORD, not by hue — every authority badge renders in the same two tones.
+   * That is stricter than DS §4's `--authority-*` colours and matches the rule
+   * that meaning never rides on colour alone, so the word is the carrier. */
+  --authority-ink: #f4f4f4;
+  --authority-meta: #6f6f6f;
+
+  /* Freshness. Thresholds live in the venue registry, never in CSS. */
+  --fresh-ok: #42be65;
+  --fresh-aging: #f1c21b;
+  --fresh-stale: #f1c21b;
+  --fresh-paused: #8d8d8d;
+
+  /* Runtime state — Trading System vocabulary, distinct from availability. */
+  --run-active: #42be65;
+  --run-reducing: #ff832b;
+  --run-halted: #8d8d8d;
+  --run-archived: #6f6f6f;
+  --sync-ok: #42be65;
+  --sync-mismatch: #fa4d56;
+  --sync-mismatch-bg: #2d0709;
+
+  /* Carbon categorical ramp, for any shared chart that renders on this
+   * surface. Fixed order, same contract as --ws-* elsewhere. */
+  --ws-1: #78a9ff;
+  --ws-2: #ee5396;
+  --ws-3: #08bdba;
+  --ws-4: #a56eff;
+  --ws-5: #ff832b;
+  --ws-6: #33b1ff;
+  --ws-7: #42be65;
+  --ws-8: #f1c21b;
+  --ws-other: #8d8d8d;
+
+  --shadow-e1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-e2: 0 4px 12px rgba(0, 0, 0, 0.55);
+  --shadow-e3: 0 10px 28px rgba(0, 0, 0, 0.6);
+  --shadow: var(--shadow-e1), var(--shadow-e2);
+  --shadow-raised: var(--shadow-e2), var(--shadow-e3);
+  --scrim: rgb(0 0 0 / 65%);
+  --halo-good: rgba(66, 190, 101, 0.16);
+
+  /* Flat geometry (DS §7): square corners everywhere, 1px hairlines. */
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-pill: 0;
+
+  /* Mono-forward typography (DS §7). No serif on this surface: --font-display
+   * resolves to the sans face so a shared component that reaches for it does
+   * not reintroduce Newsreader. IBM Plex falls back to the faces already
+   * bundled until the fontsource packages are added. */
+  --font-display: "IBM Plex Sans", "Inter", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Inter", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace;
+
+  color-scheme: dark;
+}
+
+/* ---------------------------------------------------------------------------
  * Print theme — always light, regardless of the active app theme, so exported
  * evidence keeps one deterministic appearance (v0.4 §26.6).
  * ------------------------------------------------------------------------ */

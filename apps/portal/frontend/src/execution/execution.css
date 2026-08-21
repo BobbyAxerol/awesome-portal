@@ -1,0 +1,730 @@
+/* ============================================================================
+ * Execution Loop component styles (Phase 0).
+ *
+ * Every colour here is a `var(--token)` resolved by the
+ * `[data-theme="operations-carbon"]` block in tokens.css. No raw hex and no
+ * inline alpha-colour function: tokens.test.ts fails the build on either, which
+ * is what keeps the Carbon palette from forking into a second source of truth.
+ * (That gate is a text scan, so naming the forbidden function here would trip
+ * it — which is itself a fair demonstration that it works.)
+ *
+ * Geometry follows DS §7: square corners, 1px hairlines, cells separated by a
+ * gap on a hairline background rather than cards floating on a canvas.
+ * ========================================================================== */
+
+.exec-surface {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  min-height: 100%;
+}
+
+/* ---------------------------------------------------------------------------
+ * AuthorityBadge — on every data panel (guide §6).
+ * ------------------------------------------------------------------------ */
+
+.exec-authority {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.exec-authority-name {
+  color: var(--authority-ink);
+  letter-spacing: 0.04em;
+}
+
+.exec-authority-meta {
+  color: var(--authority-meta);
+}
+
+/* A DERIVED number without its formula version is not auditable, so the gap is
+ * called out rather than left blank. */
+.exec-authority-missing {
+  color: var(--state-degraded);
+}
+
+/* ---------------------------------------------------------------------------
+ * FreshnessIndicator — dot + age, threshold from venue policy.
+ * ------------------------------------------------------------------------ */
+
+.exec-freshness {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+}
+
+.exec-freshness-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  background: var(--fresh-ok);
+}
+
+.exec-freshness[data-state="AGING"] .exec-freshness-dot {
+  background: var(--fresh-aging);
+}
+
+.exec-freshness[data-state="STALE"] .exec-freshness-dot {
+  background: var(--fresh-stale);
+}
+
+/* Paused is a calendar fact, not a fault: hollow dot, muted tone, no alarm. */
+.exec-freshness[data-state="PAUSED"] .exec-freshness-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--fresh-paused);
+}
+
+.exec-freshness[data-state="UNKNOWN"] .exec-freshness-dot {
+  background: var(--state-unavailable);
+}
+
+.exec-freshness[data-state="STALE"] {
+  color: var(--fresh-stale);
+}
+
+/* ---------------------------------------------------------------------------
+ * StatusChip — order status, operation status, runtime state, broker sync.
+ * One component, four vocabularies, because they share a shape but must never
+ * share a field (spec §5.2).
+ * ------------------------------------------------------------------------ */
+
+.exec-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 1px var(--space-2);
+  border: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  background: var(--surface-2);
+  white-space: nowrap;
+}
+
+.exec-chip[data-tone="good"] {
+  color: var(--good);
+  border-color: var(--good);
+  background: var(--good-bg);
+}
+
+.exec-chip[data-tone="bad"] {
+  color: var(--bad);
+  border-color: var(--bad);
+  background: var(--bad-bg);
+}
+
+/* PARTIAL, STALE and every watch item land here. Never `good`. */
+.exec-chip[data-tone="warn"] {
+  color: var(--warn);
+  border-color: var(--warn);
+  background: var(--warn-bg);
+}
+
+.exec-chip[data-tone="mute"] {
+  color: var(--ink-faint);
+  border-color: var(--line);
+  background: var(--surface-2);
+}
+
+/* Commissioned / not-in-this-slice: dashed, so "deliberately absent" cannot be
+ * mistaken for "failed". */
+.exec-chip[data-tone="commissioned"] {
+  color: var(--state-commissioned);
+  border-style: dashed;
+  background: transparent;
+}
+
+/* ---------------------------------------------------------------------------
+ * EnvironmentBadge + GuardBand (D2).
+ *
+ * Canary draws a DOUBLE red border, live a SOLID one, and both print their own
+ * name. The hue is identical on purpose: the treatment carries the difference
+ * so it survives a monochrome print and a colour-blind reader.
+ * ------------------------------------------------------------------------ */
+
+.exec-env {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 1px var(--space-2);
+  border: 1px solid currentColor;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.06em;
+  background: transparent;
+}
+
+.exec-env[data-stage="PAPER_OBSERVATION"] { color: var(--env-paper); }
+.exec-env[data-stage="SANDBOX_VALIDATION"] { color: var(--env-sandbox); }
+.exec-env[data-stage="LIVE_CANARY"] { color: var(--env-canary); }
+.exec-env[data-stage="LIVE_FULL"] { color: var(--env-live); }
+
+.exec-guard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--guard-bg);
+  color: var(--guard);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+}
+
+.exec-guard[data-guard="live"] {
+  border: 2px solid var(--guard);
+}
+
+/* Double border is the canary signature — `border-style: double` needs ≥3px to
+ * resolve into two visible strokes. */
+.exec-guard[data-guard="canary"] {
+  border: 4px double var(--guard);
+}
+
+.exec-guard-label {
+  font-weight: 600;
+}
+
+.exec-guard-note {
+  margin-left: auto;
+  color: var(--ink-soft);
+  letter-spacing: 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * LifecycleRail — R1 → R2 → Paper → Sandbox → Canary → Live.
+ * Icons-only below 900px (DS §9).
+ * ------------------------------------------------------------------------ */
+
+.exec-rail {
+  display: flex;
+  align-items: stretch;
+  gap: 1px;
+  background: var(--line-soft);
+  border: 1px solid var(--line);
+  overflow-x: auto;
+}
+
+.exec-rail-step {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--paper-raised);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+  min-width: 0;
+  flex: 1 1 auto;
+  white-space: nowrap;
+}
+
+.exec-rail-step[data-state="done"] {
+  color: var(--ink-soft);
+}
+
+.exec-rail-step[data-state="current"] {
+  color: var(--ink);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.exec-rail-step[data-state="pending"] {
+  color: var(--ink-mute);
+}
+
+.exec-rail-name {
+  letter-spacing: 0.06em;
+}
+
+.exec-rail-detail {
+  color: var(--ink-mute);
+}
+
+.exec-rail-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.exec-rail-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 899px) {
+  .exec-rail-detail {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * ObservationProgress — n/m bars that gate the exit CTA.
+ * ------------------------------------------------------------------------ */
+
+.exec-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.exec-progress-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+}
+
+.exec-progress-value {
+  color: var(--ink);
+}
+
+.exec-progress-track {
+  height: 4px;
+  background: var(--surface-2);
+}
+
+.exec-progress-fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+.exec-progress[data-met="true"] .exec-progress-fill {
+  background: var(--good);
+}
+
+.exec-progress-rule {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+/* ---------------------------------------------------------------------------
+ * EvidencePanel — ✓ / ! / ✗ rows that link their evidence.
+ * ------------------------------------------------------------------------ */
+
+.exec-evidence {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--line-soft);
+  border: 1px solid var(--line);
+}
+
+.exec-evidence-row {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--paper-raised);
+  font-size: var(--text-xs);
+}
+
+.exec-evidence-mark {
+  font-family: var(--font-mono);
+  text-align: center;
+}
+
+.exec-evidence-row[data-mark="pass"] .exec-evidence-mark { color: var(--good); }
+.exec-evidence-row[data-mark="watch"] .exec-evidence-mark { color: var(--warn); }
+.exec-evidence-row[data-mark="fail"] .exec-evidence-mark { color: var(--bad); }
+.exec-evidence-row[data-mark="insufficient"] .exec-evidence-mark { color: var(--ink-mute); }
+
+.exec-evidence-label {
+  color: var(--ink-soft);
+  min-width: 0;
+}
+
+.exec-evidence-detail {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+.exec-evidence-link {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.exec-evidence-link:hover {
+  text-decoration: underline;
+}
+
+/* ---------------------------------------------------------------------------
+ * SLA cell — age against budget, overdue is text as well as tone.
+ * ------------------------------------------------------------------------ */
+
+.exec-sla {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.exec-sla[data-overdue="true"] {
+  color: var(--bad);
+}
+
+.exec-sla-flag {
+  letter-spacing: 0.06em;
+}
+
+/* ---------------------------------------------------------------------------
+ * VenueScope — chip row fed by the venue registry (D5).
+ * Five venues today; the multiselect fallback above eight is documented in the
+ * scale pass and deliberately not built.
+ * ------------------------------------------------------------------------ */
+
+.exec-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.exec-scope-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+  margin-right: var(--space-1);
+}
+
+.exec-scope-chip {
+  padding: 2px var(--space-2);
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  min-height: 22px;
+}
+
+.exec-scope-chip[aria-pressed="true"] {
+  color: var(--ink);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.exec-scope-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ---------------------------------------------------------------------------
+ * ChartTile — the envelope caption is not decoration, it is the contract.
+ * ------------------------------------------------------------------------ */
+
+.exec-tile {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  background: var(--paper-raised);
+  min-width: 0;
+}
+
+.exec-tile-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.exec-tile-title {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+}
+
+.exec-tile-body {
+  padding: var(--space-3);
+  min-height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The caption wraps rather than truncating: an envelope that ellipsises has
+ * dropped exactly the qualifier a reader needed. */
+.exec-tile-caption {
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--line-soft);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  line-height: 1.5;
+  color: var(--ink-mute);
+  overflow-wrap: anywhere;
+}
+
+.exec-tile-warning {
+  color: var(--warn);
+}
+
+/* ---------------------------------------------------------------------------
+ * Panel states (DS §4g) — every panel, every screen.
+ * ------------------------------------------------------------------------ */
+
+.exec-state {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  background: var(--paper-raised);
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.exec-state-title {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.exec-state[data-status="denied"] .exec-state-title { color: var(--state-denied); }
+.exec-state[data-status="unavailable"] .exec-state-title { color: var(--state-unavailable); }
+.exec-state[data-status="stale"] .exec-state-title { color: var(--fresh-stale); }
+.exec-state[data-status="partial"] .exec-state-title { color: var(--warn); }
+.exec-state[data-status="terminal"] .exec-state-title { color: var(--bad); }
+.exec-state[data-status="insufficient_data"] .exec-state-title { color: var(--ink-mute); }
+.exec-state[data-status="empty"] .exec-state-title { color: var(--ink-faint); }
+
+.exec-state-reason {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+  overflow-wrap: anywhere;
+}
+
+/* Last-good values stay readable but visibly demoted, so a reader can use them
+ * while knowing they are not current. */
+.exec-state-lastgood {
+  color: var(--ink-faint);
+}
+
+/* Skeletons are shape, not content: they carry aria-hidden and the panel
+ * announces "loading" once, in words. */
+.exec-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.exec-skeleton-block {
+  height: 10px;
+  background: var(--surface-2);
+}
+
+.exec-skeleton-block[data-w="short"] { width: 30%; }
+.exec-skeleton-block[data-w="medium"] { width: 60%; }
+.exec-skeleton-block[data-w="long"] { width: 90%; }
+
+/* ---------------------------------------------------------------------------
+ * CommandPlanDrawer — plan → apply → verify (spec §14.3).
+ * ------------------------------------------------------------------------ */
+
+.exec-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border: 1px solid var(--line);
+  background: var(--paper-raised);
+  padding: var(--space-3);
+  max-width: 490px;
+}
+
+.exec-drawer-steps {
+  display: flex;
+  gap: 1px;
+  background: var(--line-soft);
+  border: 1px solid var(--line);
+}
+
+.exec-drawer-step {
+  flex: 1 1 0;
+  padding: var(--space-2);
+  background: var(--paper);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.06em;
+  color: var(--ink-mute);
+  text-align: center;
+}
+
+.exec-drawer-step[data-state="current"] {
+  color: var(--ink);
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.exec-drawer-step[data-state="done"] {
+  color: var(--ink-soft);
+}
+
+/* The equivalent CLI is display-only. It is styled as a quotation, not as an
+ * input, because the browser never runs a shell (guide §5). */
+.exec-drawer-cli {
+  padding: var(--space-2);
+  background: var(--paper-sunken);
+  border-left: 2px solid var(--line-strong);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.exec-drawer-note {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+/* `202` is the first line of the verify timeline and it is not success. */
+.exec-drawer-accepted {
+  color: var(--warn);
+}
+
+.exec-drawer-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+/* Exactly one solid button per screen (DS §7). This is it. */
+.exec-btn-apply {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--accent-strong);
+  background: var(--accent-strong);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  min-height: 30px;
+}
+
+.exec-btn-apply[disabled] {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--ink-mute);
+  cursor: not-allowed;
+}
+
+.exec-btn-ghost {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  min-height: 30px;
+}
+
+/* A disabled control must say why in text; a tooltip alone is not a reason. */
+.exec-disabled-reason {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+.exec-btn-danger {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+/* ---------------------------------------------------------------------------
+ * Fixture page — Phase 0 evidence surface, not a product screen.
+ * ------------------------------------------------------------------------ */
+
+.exec-fixtures {
+  padding: var(--space-5) var(--content-gutter);
+  max-width: var(--content-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.exec-fixtures-title {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+
+.exec-fixtures-lede {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  max-width: 70ch;
+}
+
+.exec-fixtures-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.exec-fixtures-heading {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: var(--space-2);
+}
+
+.exec-fixtures-note {
+  font-size: var(--text-2xs);
+  font-family: var(--font-mono);
+  color: var(--ink-mute);
+  max-width: 90ch;
+}
+
+.exec-fixtures-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.exec-fixtures-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-3);
+}
+
+.exec-fixtures-case {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.exec-fixtures-caption {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
