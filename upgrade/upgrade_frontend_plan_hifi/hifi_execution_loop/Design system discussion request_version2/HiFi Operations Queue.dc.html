@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#161616;color-scheme:dark}a{color:#78a9ff;text-decoration:none}a:hover{color:#a6c8ff;text-decoration:underline}::selection{background:#78a9ff;color:#161616}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;background:#161616;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#f4f4f4;font-size:13px;letter-spacing:.16px" data-screen-label="Operations Queue + Alerts (WF 4e)">
+  <div style="position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;min-height:48px;padding:0 16px;border-bottom:1px solid #393939;background:#161616">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.12em;white-space:nowrap">QUANT ECOSYSTEM PORTAL</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8d8d8d;padding:2px 8px;border:1px solid #393939;white-space:nowrap">Default Workspace</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.08em;color:#78a9ff;border:1px solid #78a9ff;padding:1px 7px">OPERATIONS</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:block">Command <span style="color:#6f6f6f">/</span> Operations Queue</span>
+    <span style="margin-left:auto"></span>
+    <span onClick="{{ toggleRail }}" style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:#fa4d56;border:1px solid #fa4d56;background:#1d1d1d;padding:4px 10px;cursor:pointer">⚑ Alerts · 1 critical</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px">Operations Dark ▾</span>
+  </div>
+  <div style="display:flex;flex:1;min-height:0">
+    <div style="flex-shrink:0;width:228px;border-right:1px solid #393939;background:#101010;padding:14px 0;font-size:13px">
+      <div style="display:flex;flex-direction:column">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Command</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Command Center</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 13px;background:#262626;color:#f4f4f4;font-weight:500;border-left:3px solid #78a9ff">Operations Queue <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;background:#f1c21b;color:#161616;padding:0 5px;margin-left:auto">2</span></div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Alerts</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Governance</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Approval Inbox</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Exit Reviews</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Promotion Timeline</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Waivers &amp; Conditions</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Deployments</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Portfolios</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Alpha Fleet</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Paper</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Sandbox</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Live</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Accounts &amp; Bindings</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Reconciliation</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Blotter</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Administration</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Profile &amp; Access</div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0;max-width:1440px;margin:0 auto;padding:20px 20px 64px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-bottom:10px">
+        <h1 style="margin:0;font-family:'IBM Plex Sans',sans-serif;font-weight:300;font-size:22px;line-height:1.25">Operations Queue</h1>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:1px 8px;background:#302608;color:#f1c21b">2 NEED ATTENTION</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#6f6f6f;border:1px dashed #4c4c4c;padding:1px 6px">WF <a href="#">4e</a></span>
+        <span style="flex:1"></span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;border:1px solid #393939;background:#1d1d1d;padding:2px 8px"><b style="color:#f4f4f4">EXECUTION</b> · command journal · <span style="color:#42be65">live</span></span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;font-family:'IBM Plex Mono',monospace;font-size:10px">
+        <span onClick="{{ fAttention }}" style="{{ fsAttention }}">Needs attention (2)</span>
+        <span onClick="{{ fMine }}" style="{{ fsMine }}">Mine</span>
+        <span onClick="{{ fAll }}" style="{{ fsAll }}">All (24h)</span>
+        <span style="align-self:center;color:#6f6f6f;margin-left:8px">sort: PARTIAL · FAILED → RUNNING → done · a PARTIAL older than 15m escalates to an alert automatically</span>
+      </div>
+      <div style="border:1px solid #393939;background:#1d1d1d">
+        <div style="overflow-x:auto"><table style="width:100%;min-width:860px;border-collapse:collapse;font-size:12px">
+          <thead><tr>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">operation</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">command</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">target</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">state</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">age</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">actor</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">next step</th>
+          </tr></thead>
+          <tbody style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums">
+            <tr style="background:#241d0a"><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;border-left:3px solid #f1c21b"><a href="#">op_1251</a></td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a">emergency-close</td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">paper-binance-carry-v32</td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#302608;color:#f1c21b">PARTIAL 1/2</span></td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#f1c21b">6m</td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Stan</td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a"><a href="HiFi Admin Action Drawer.dc.html">plan residue re-apply →</a></td></tr>
+            <tr style="background:#241d0a"><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;border-left:3px solid #f1c21b"><a href="#">op_1253</a></td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a">reconcile-positions</td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">acct-live-grid-v21</td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#302608;color:#f1c21b">AWAITING_APPLY · 1 finding</span></td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#c6c6c6">2m</td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Stan</td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a"><a href="HiFi Incident Detail.dc.html">review in incident inc_44 →</a></td></tr>
+            <sc-if value="{{ showDone }}" hint-placeholder-val="{{ true }}">
+            <tr><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;border-left:3px solid transparent"><a href="#">op_1252</a></td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a">deployment.halt</td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">dep_88</td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">VERIFIED</span></td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#c6c6c6">4m</td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Stan</td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;color:#6f6f6f">audit →</td></tr>
+            <tr><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;border-left:3px solid transparent"><a href="#">op_1250</a></td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a">allocation.set</td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">acct-paper-grid-drb</td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">VERIFIED</span></td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#c6c6c6">1h</td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Stan</td><td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;color:#6f6f6f">audit →</td></tr>
+            <tr><td style="padding:8px 12px;border-left:3px solid transparent"><a href="#">op_1249</a></td><td style="padding:8px 12px">account.sync</td><td style="padding:8px 12px;color:#c6c6c6">acct-sbx-mm-okx</td><td style="padding:8px 12px"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">VERIFIED</span></td><td style="padding:8px 12px;text-align:right;color:#c6c6c6">3h</td><td style="padding:8px 12px;color:#c6c6c6">scheduler</td><td style="padding:8px 12px;color:#6f6f6f">audit →</td></tr>
+            </sc-if>
+          </tbody>
+        </table></div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px 18px;align-items:center;padding:8px 14px;border-top:1px solid #393939;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">
+          <span>one row = one operation_id from plan → apply → verify · nothing ages silently</span>
+          <span style="margin-left:auto">every row links its audit evidence</span>
+        </div>
+      </div>
+    </div>
+    <sc-if value="{{ railOpen }}" hint-placeholder-val="{{ true }}">
+    <div style="width:340px;flex:none;background:#101010;border-left:1px solid #4c4c4c;display:flex;flex-direction:column;max-height:100vh;position:sticky;top:0">
+      <div style="display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid #393939">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.08em;color:#f4f4f4">ALERTS</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">badge counts CRITICAL only</span>
+        <span style="flex:1"></span>
+        <span onClick="{{ toggleRail }}" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8d8d8d;cursor:pointer">✕</span>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+        <a href="HiFi Incident Detail.dc.html" style="display:block;border:1px solid #fa4d56;border-left:4px solid #fa4d56;background:#1d1d1d;padding:9px 11px;color:inherit;text-decoration:none">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:#fa4d56;letter-spacing:.06em">CRITICAL · 2m</div>
+          <div style="font-size:12px;color:#f4f4f4;margin-top:3px">Position MISMATCH — acct-live-grid-v21 · BINANCE</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8d8d8d;margin-top:3px">finding rf_2101 · orders fail-closed · open incident inc_44 →</div>
+        </a>
+        <a href="#" style="display:block;border:1px solid #393939;border-left:4px solid #f1c21b;background:#1d1d1d;padding:9px 11px;color:inherit;text-decoration:none">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:#f1c21b;letter-spacing:.06em">WARN · 4m</div>
+          <div style="font-size:12px;color:#f4f4f4;margin-top:3px">Broker sync STALE — dep_91 · OKX</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8d8d8d;margin-top:3px">age 88s vs policy 60s · sandbox workbench →</div>
+        </a>
+        <a href="#" style="display:block;border:1px solid #393939;border-left:4px solid #f1c21b;background:#1d1d1d;padding:9px 11px;color:inherit;text-decoration:none">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:#f1c21b;letter-spacing:.06em">WARN · 6m</div>
+          <div style="font-size:12px;color:#f4f4f4;margin-top:3px">op_1251 PARTIAL unresolved</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8d8d8d;margin-top:3px">emergency-close residue · this queue ↑</div>
+        </a>
+        <a href="#" style="display:block;border:1px solid #393939;border-left:4px solid #6f6f6f;background:#1d1d1d;padding:9px 11px;color:inherit;text-decoration:none">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:#8d8d8d;letter-spacing:.06em">INFO · 1d</div>
+          <div style="font-size:12px;color:#c6c6c6;margin-top:3px">Condition expiring in 7d — capacity cap (Grid v2.1)</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8d8d8d;margin-top:3px">owner Lan · waivers &amp; conditions →</div>
+        </a>
+      </div>
+      <div style="padding:9px 14px;border-top:1px solid #393939;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f;line-height:1.5">alert = state change of a typed object (finding · sync · operation · condition), never free text · click lands on the owning screen · ack ≠ resolve</div>
+    </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;alertRail&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Demo states&quot;}}">
+class Component extends DCLogic {
+  state = { f: "attention", rail: true };
+  renderVals() {
+    const f = this.state.f;
+    const base = "font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;background:#262626;border:1px solid #393939;padding:4px 10px;cursor:pointer";
+    const active = "font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:#161616;background:#78a9ff;border:1px solid #78a9ff;padding:4px 10px;cursor:pointer";
+    const mk = (n) => (f === n ? active : base);
+    const set = (n) => () => this.setState({ f: n });
+    return {
+      fAttention: set("attention"), fMine: set("mine"), fAll: set("all"),
+      fsAttention: mk("attention"), fsMine: mk("mine"), fsAll: mk("all"),
+      showDone: f !== "attention",
+      railOpen: this.state.rail && (this.props.alertRail ?? true),
+      toggleRail: () => this.setState({ rail: !this.state.rail })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#ffffff}a{color:#0f62fe;text-decoration:none}a:hover{color:#0043ce;text-decoration:underline}::selection{background:#0f62fe;color:#ffffff}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;background:#ffffff;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#161616;font-size:13px;letter-spacing:.16px" data-screen-label="Approval Inbox (WF 4a)">
+  <div style="position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;min-height:48px;padding:0 16px;border-bottom:1px solid #e0e0e0;background:#ffffff">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.12em;white-space:nowrap">QUANT ECOSYSTEM PORTAL</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8c8c8c;padding:2px 8px;border:1px solid #e0e0e0;white-space:nowrap">Default Workspace</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.08em;color:#0f62fe;border:1px solid #0f62fe;padding:1px 7px">GOVERNANCE</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#525252;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:block">Governance <span style="color:#8c8c8c">/</span> Approvals <span style="color:#8c8c8c">/</span> Inbox</span>
+    <span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#525252;border:1px solid #e0e0e0;background:#f4f4f4;padding:4px 12px">Search <kbd style="font-size:10px;color:#8c8c8c;border:1px solid #c6c6c6;padding:0 4px;font-family:inherit">⌘K</kbd></span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#525252;background:#f4f4f4;border:1px solid #e0e0e0;padding:3px 8px">Governance Light ▾</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#525252;background:#f4f4f4;border:1px solid #e0e0e0;padding:3px 8px">Comfortable ▾</span>
+  </div>
+  <div style="display:flex;flex:1;min-height:0">
+    <div style="flex-shrink:0;width:228px;border-right:1px solid #e0e0e0;background:#f4f4f4;padding:14px 0;font-size:13px">
+      <div style="display:flex;flex-direction:column">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#8c8c8c;padding:0 16px 6px">Command</div>
+        <div style="padding:6px 16px;color:#525252;border-left:3px solid transparent">Command Center</div>
+        <div style="padding:6px 16px;color:#525252;border-left:3px solid transparent">Operations Queue</div>
+        <div style="padding:6px 16px;color:#525252;border-left:3px solid transparent">Alerts</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#8c8c8c;padding:0 16px 6px">Governance</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 13px;background:#ffffff;color:#161616;font-weight:500;border-left:3px solid #0f62fe">Approval Inbox <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;background:#0f62fe;color:#fff;padding:0 5px;margin-left:auto">5</span></div>
+        <div style="padding:6px 16px;color:#525252;border-left:3px solid transparent">Exit Reviews</div>
+        <div style="padding:6px 16px;color:#525252;border-left:3px solid transparent">Promotion Timeline</div>
+        <div style="padding:6px 16px;color:#525252;border-left:3px solid transparent">Waivers &amp; Conditions</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#8c8c8c;padding:0 16px 6px">Deployments</div>
+        <div style="padding:6px 16px;color:#525252;border-left:3px solid transparent">Portfolios</div>
+        <div style="padding:6px 16px;color:#525252;border-left:3px solid transparent">Alpha Fleet</div>
+        <div style="padding:6px 16px;color:#525252;border-left:3px solid transparent">Paper</div>
+        <div style="padding:6px 16px;color:#525252;border-left:3px solid transparent">Sandbox</div>
+        <div style="padding:6px 16px;color:#525252;border-left:3px solid transparent">Live</div>
+        <div style="padding:6px 16px;color:#525252;border-left:3px solid transparent">Accounts &amp; Bindings</div>
+        <div style="padding:6px 16px;color:#525252;border-left:3px solid transparent">Reconciliation</div>
+        <div style="padding:6px 16px;color:#525252;border-left:3px solid transparent">Blotter</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#8c8c8c;padding:0 16px 6px">Administration</div>
+        <div style="padding:6px 16px;color:#525252;border-left:3px solid transparent">Profile &amp; Access</div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0;max-width:1200px;margin:0 auto;padding:24px 20px 64px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-bottom:6px">
+        <h1 style="margin:0;font-family:'IBM Plex Sans',sans-serif;font-weight:300;font-size:22px;line-height:1.3">Approval Inbox</h1>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:1px 8px;background:#fcf4d6;color:#8e6a00">5 PENDING</span>
+        <sc-if value="{{ hasOverdue }}" hint-placeholder-val="{{ true }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:1px 8px;background:#fff1f1;color:#da1e28">1 OVERDUE</span></sc-if>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#8c8c8c;border:1px dashed #c6c6c6;padding:1px 6px">WF <a href="#">4a</a></span>
+        <span style="flex:1"></span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8c8c8c">policy approval.v3 · you are Lan · Quant Reviewer + Ops Approver</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px">
+        <span onClick="{{ fMine }}" style="{{ fsMine }}">Mine (3)</span>
+        <span onClick="{{ fAll }}" style="{{ fsAll }}">All</span>
+        <span onClick="{{ fR1 }}" style="{{ fsR1 }}">Research · R1</span>
+        <span onClick="{{ fR2 }}" style="{{ fsR2 }}">Ops · R2</span>
+        <span onClick="{{ fExits }}" style="{{ fsExits }}">Exit reviews</span>
+        <span onClick="{{ fLive }}" style="{{ fsLive }}">Live gates</span>
+        <span onClick="{{ fOverdue }}" style="{{ fsOverdue }}">Overdue</span>
+      </div>
+      <sc-if value="{{ notEmpty }}" hint-placeholder-val="{{ true }}">
+      <div style="border:1px solid #e0e0e0;background:#ffffff;margin-bottom:14px">
+        <div style="overflow-x:auto"><table style="width:100%;min-width:920px;border-collapse:collapse;font-size:12px">
+          <thead><tr>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8c8c8c;text-align:left;border-bottom:1px solid #e0e0e0;padding:9px 12px">request</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8c8c8c;text-align:left;border-bottom:1px solid #e0e0e0;padding:9px 12px">gate</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8c8c8c;text-align:left;border-bottom:1px solid #e0e0e0;padding:9px 12px">subject</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8c8c8c;text-align:left;border-bottom:1px solid #e0e0e0;padding:9px 12px">target</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8c8c8c;text-align:left;border-bottom:1px solid #e0e0e0;padding:9px 12px">blockers</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8c8c8c;text-align:left;border-bottom:1px solid #e0e0e0;padding:9px 12px">age / SLA</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8c8c8c;text-align:left;border-bottom:1px solid #e0e0e0;padding:9px 12px">quorum</th>
+          </tr></thead>
+          <tbody style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums">
+            <sc-if value="{{ sAP352 }}" hint-placeholder-val="{{ true }}">
+            <tr style="background:#fff8f8"><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;border-left:3px solid #da1e28"><a href="HiFi Gate R2 Review.dc.html">AP-352</a></td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8"><span style="font-size:10px;font-weight:600;padding:1px 6px;border:1px solid #0f62fe;color:#0f62fe">R2</span></td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#161616">Carry v3.2 → PF-MAIN</td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#525252">paper · BINANCE</td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#8e6a00">1 — broker sync stale</td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#da1e28;font-weight:600">26h / 24h · OVERDUE</td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#161616">0/2 · <b style="color:#0f62fe">needs you</b></td></tr>
+            </sc-if>
+            <sc-if value="{{ sAP201 }}" hint-placeholder-val="{{ true }}">
+            <tr><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;border-left:3px solid transparent"><a href="HiFi Gate R1 Review.dc.html">AP-201</a></td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8"><span style="font-size:10px;font-weight:600;padding:1px 6px;border:1px solid #0f62fe;color:#0f62fe">R1</span></td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#161616">RSI v1.7 · RC-41</td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#525252">research</td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#24a148">0</td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#525252">2h / 24h</td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#161616">1/2 · <b style="color:#0f62fe">needs you</b></td></tr>
+            </sc-if>
+            <sc-if value="{{ sEX771 }}" hint-placeholder-val="{{ true }}">
+            <tr><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;border-left:3px solid transparent"><a href="HiFi Paper Exit Review.dc.html">EX-771</a></td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8"><span style="font-size:10px;font-weight:600;padding:1px 6px;border:1px solid #8a3ffc;color:#8a3ffc">PAPER_EXIT</span></td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#161616">Grid v2.1 · dep_94</td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#525252">→ sandbox · DERIBIT</td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#24a148">0 — observation gate met</td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#525252">4h / 48h</td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#161616">0/1 · <b style="color:#0f62fe">needs you</b></td></tr>
+            </sc-if>
+            <sc-if value="{{ sAP360 }}" hint-placeholder-val="{{ true }}">
+            <tr><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;border-left:3px solid transparent"><a href="#">AP-360</a></td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8"><span style="font-size:10px;font-weight:600;padding:1px 6px;border:1px solid #0f62fe;color:#0f62fe">R1</span></td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#161616">MeanRev v0.3 · RC-52</td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#525252">research</td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#da1e28;font-weight:600">2 — audit replay failed</td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#525252">6h / 24h</td><td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#8c8c8c">0/2 · blocked before review</td></tr>
+            </sc-if>
+            <sc-if value="{{ sAP311 }}" hint-placeholder-val="{{ true }}">
+            <tr style="color:#8c8c8c"><td style="padding:9px 12px;border-left:3px solid transparent"><a href="#" style="color:#8c8c8c">AP-311</a></td><td style="padding:9px 12px"><span style="font-size:10px;font-weight:700;padding:1px 6px;border:2px solid #da1e28;color:#da1e28">LIVE · CANARY</span></td><td style="padding:9px 12px">Grid v2.1 → BINANCE</td><td style="padding:9px 12px">live · dual approval</td><td style="padding:9px 12px;color:#24a148">0</td><td style="padding:9px 12px">1d / 3d</td><td style="padding:9px 12px">1/2 · awaiting 2nd — <b>not you</b> (separation-of-duty)</td></tr>
+            </sc-if>
+          </tbody>
+        </table></div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px 18px;align-items:center;padding:9px 14px;border-top:1px solid #e0e0e0;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8c8c8c">
+          <span><b style="color:#da1e28">1 overdue</b> · 1 due &lt; 8h</span>
+          <span>sort: overdue → due-soon → age</span>
+          <span>rows you cannot decide stay visible but dimmed — visibility ≠ authority</span>
+          <span style="margin-left:auto">row → gate review screen</span>
+        </div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #e0e0e0;background:#ffffff;padding:48px 20px;text-align:center;margin-bottom:14px">
+          <div style="font-family:'IBM Plex Sans',sans-serif;font-weight:300;font-size:22px;color:#161616">Inbox zero</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8c8c8c;margin-top:8px">Nothing waits on you. Pending requests owned by other approvers stay in "All".</div>
+        </div>
+      </sc-if>
+      <div style="border:1px solid #e0e0e0;background:#ffffff">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #e8e8e8"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8c8c8c">Recently decided</span><span style="flex:1"></span><a href="#" style="font-family:'IBM Plex Mono',monospace;font-size:10px">full history →</a></div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums">
+          <tbody>
+            <tr><td style="padding:8px 12px;border-bottom:1px solid #e8e8e8"><a href="#">AP-259</a></td><td style="padding:8px 12px;border-bottom:1px solid #e8e8e8;color:#525252">R2 · MM v1.1 → OKX sandbox</td><td style="padding:8px 12px;border-bottom:1px solid #e8e8e8"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#defbe6;color:#24a148">APPROVED_WITH_CONDITIONS</span></td><td style="padding:8px 12px;border-bottom:1px solid #e8e8e8;color:#8c8c8c">2026-07-18 · Lan, Minh · 1 condition</td></tr>
+            <tr><td style="padding:8px 12px;border-bottom:1px solid #e8e8e8"><a href="#">PX-31</a></td><td style="padding:8px 12px;border-bottom:1px solid #e8e8e8;color:#525252">PAPER_EXIT · MM v1.1</td><td style="padding:8px 12px;border-bottom:1px solid #e8e8e8"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#defbe6;color:#24a148">APPROVED</span></td><td style="padding:8px 12px;border-bottom:1px solid #e8e8e8;color:#8c8c8c">2026-07-15 · Lan</td></tr>
+            <tr><td style="padding:8px 12px"><a href="#">AP-341</a></td><td style="padding:8px 12px;color:#525252">R1 · Grid v2.2 · RC-49</td><td style="padding:8px 12px"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#fff1f1;color:#da1e28">CHANGES_REQUESTED</span></td><td style="padding:8px 12px;color:#8c8c8c">2026-08-14 · Minh · holdout coverage</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;inboxEmpty&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Demo states&quot;}}">
+class Component extends DCLogic {
+  state = { f: "mine" };
+  ROWS = {
+    AP352: { gate: "r2", mine: true, overdue: true },
+    AP201: { gate: "r1", mine: true, overdue: false },
+    EX771: { gate: "exit", mine: true, overdue: false },
+    AP360: { gate: "r1", mine: false, overdue: false },
+    AP311: { gate: "live", mine: false, overdue: false }
+  };
+  renderVals() {
+    const f = this.state.f;
+    const base = "font-family:'IBM Plex Mono',monospace;font-size:11px;color:#525252;border:1px solid #c6c6c6;background:#ffffff;padding:5px 12px;cursor:pointer";
+    const active = "font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:#ffffff;border:1px solid #0f62fe;background:#0f62fe;padding:5px 12px;cursor:pointer";
+    const mk = (n) => (f === n ? active : base);
+    const set = (n) => () => this.setState({ f: n });
+    const vis = (r) => f === "all" || (f === "mine" && r.mine) || (f === "overdue" && r.overdue) || f === r.gate || (f === "exits" && r.gate === "exit");
+    const empty = this.props.inboxEmpty ?? false;
+    const shown = Object.entries(this.ROWS).filter(([, r]) => vis(r));
+    return {
+      fMine: set("mine"), fAll: set("all"), fR1: set("r1"), fR2: set("r2"), fExits: set("exits"), fLive: set("live"), fOverdue: set("overdue"),
+      fsMine: mk("mine"), fsAll: mk("all"), fsR1: mk("r1"), fsR2: mk("r2"), fsExits: mk("exits"), fsLive: mk("live"), fsOverdue: mk("overdue"),
+      sAP352: !empty && vis(this.ROWS.AP352), sAP201: !empty && vis(this.ROWS.AP201), sEX771: !empty && vis(this.ROWS.EX771),
+      sAP360: !empty && vis(this.ROWS.AP360), sAP311: !empty && vis(this.ROWS.AP311),
+      isEmpty: empty || shown.length === 0, notEmpty: !empty && shown.length > 0,
+      hasOverdue: !empty
+    };
+  }
+}
+</script>
+</body>
+</html>

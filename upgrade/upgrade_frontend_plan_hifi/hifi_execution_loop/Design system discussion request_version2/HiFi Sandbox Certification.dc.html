@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#161616;color-scheme:dark}a{color:#78a9ff;text-decoration:none}a:hover{color:#a6c8ff;text-decoration:underline}::selection{background:#78a9ff;color:#161616}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;background:#161616;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#f4f4f4;font-size:13px;letter-spacing:.16px" data-screen-label="Sandbox Certification (WF 1d)">
+  <div style="position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;min-height:48px;padding:0 16px;border-bottom:1px solid #393939;background:#161616">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.12em;white-space:nowrap">QUANT ECOSYSTEM PORTAL</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8d8d8d;padding:2px 8px;border:1px solid #393939;white-space:nowrap">Default Workspace</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.08em;color:#f1c21b;border:1px solid #f1c21b;padding:1px 7px">SANDBOX</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:block">Deployments <span style="color:#6f6f6f">/</span> Sandbox <span style="color:#6f6f6f">/</span> MM v1.1</span>
+    <span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;border:1px solid #393939;background:#262626;padding:4px 12px">Search <kbd style="font-size:10px;color:#8d8d8d;border:1px solid #4c4c4c;padding:0 4px;font-family:inherit">⌘K</kbd></span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px">Operations Dark ▾</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px">Operational ▾</span>
+  </div>
+  <div style="display:flex;flex:1;min-height:0">
+    <div style="flex-shrink:0;width:228px;border-right:1px solid #393939;background:#101010;padding:14px 0;font-size:13px">
+      <div style="display:flex;flex-direction:column">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Command</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Command Center</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Operations Queue</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Alerts</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Governance</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Approval Inbox</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Exit Reviews</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Promotion Timeline</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Waivers &amp; Conditions</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Deployments</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Portfolios</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Alpha Fleet</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Paper</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 13px;background:#262626;color:#f4f4f4;font-weight:500;border-left:3px solid #78a9ff">Sandbox</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Live</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Accounts &amp; Bindings</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Reconciliation</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Blotter</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Administration</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Profile &amp; Access</div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0;max-width:1440px;margin:0 auto;padding:20px 20px 64px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-bottom:10px">
+        <h1 style="margin:0;font-family:'IBM Plex Sans',sans-serif;font-weight:300;font-size:22px;line-height:1.25">MM v1.1 <span style="color:#8d8d8d">— Sandbox Certification · OKX TESTNET</span></h1>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.08em;color:#f1c21b;border:1px solid #f1c21b;padding:1px 7px">SANDBOX_VALIDATION</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:1px 8px;background:#302608;color:#f1c21b">■ HALTED</span>
+        <sc-if value="{{ noCritical }}" hint-placeholder-val="{{ true }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">✓ READY</span></sc-if>
+        <sc-if value="{{ hasCritical }}" hint-placeholder-val="{{ false }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:1px 8px;background:#2d0709;color:#fa4d56">✕ BLOCKED</span></sc-if>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#6f6f6f;border:1px dashed #4c4c4c;padding:1px 6px">WF <a href="#">1d</a></span>
+        <span style="flex:1"></span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;border:1px solid #393939;background:#1d1d1d;padding:2px 8px"><b style="color:#f4f4f4">BROKER</b> · snapshot 10:41:20Z · <span style="color:#42be65">age 41s · policy 60s → FRESH</span></span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;padding:7px 12px;margin-bottom:14px;border:1px solid #2a2a2a;background:#101010;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6">
+        <span>artifact <a href="#">sha256:7c2e91…b8</a></span><span>R1 <a href="#">AP-101</a></span><span>R2 <a href="#">AP-207</a></span><span>paper exit <a href="#">PX-29</a></span><span>portfolio <a href="#">PF-CRYPTO</a></span><span>deployment <a href="#">dep_91</a></span><span>account <a href="#">acct-sbx-mm-okx</a> ↔ external_account_ref <a href="#">okx_testnet_main</a></span><span>credential OKX-T1 <span style="color:#42be65">VALID</span></span>
+      </div>
+      <sc-if value="{{ hasCritical }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #fa4d56;border-left:4px solid #fa4d56;background:#2d0709;color:#f4f4f4;padding:8px 12px;margin-bottom:14px;font-size:12px;line-height:1.5"><b style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#fa4d56">Critical reconciliation finding open — activation fail-closed</b><br>Position mismatch BTC-USDT-SWAP: local 0.0000 vs broker 0.0300. Smoke activation and Exit Review are blocked until the finding is resolved and a clean dry-run passes.</div>
+      </sc-if>
+      <div style="display:flex;gap:0;border:1px solid #393939;background:#1d1d1d;margin-bottom:14px;overflow-x:auto">
+        <div style="flex:1;min-width:110px;padding:8px 12px;border-right:1px solid #2a2a2a;font-family:'IBM Plex Mono',monospace"><div style="font-size:9px;text-transform:uppercase;color:#6f6f6f">1 · account</div><div style="font-size:11px;color:#42be65">✓ created</div></div>
+        <div style="flex:1;min-width:110px;padding:8px 12px;border-right:1px solid #2a2a2a;font-family:'IBM Plex Mono',monospace"><div style="font-size:9px;text-transform:uppercase;color:#6f6f6f">2 · binding</div><div style="font-size:11px;color:#42be65">✓ verified</div></div>
+        <div style="flex:1;min-width:110px;padding:8px 12px;border-right:1px solid #2a2a2a;font-family:'IBM Plex Mono',monospace"><div style="font-size:9px;text-transform:uppercase;color:#6f6f6f">3 · broker sync</div><div style="font-size:11px;color:#42be65">✓ fresh</div></div>
+        <div style="flex:1;min-width:110px;padding:8px 12px;border-right:1px solid #2a2a2a;font-family:'IBM Plex Mono',monospace"><div style="font-size:9px;text-transform:uppercase;color:#6f6f6f">4 · recon dry-run</div><sc-if value="{{ noCritical }}" hint-placeholder-val="{{ true }}"><div style="font-size:11px;color:#42be65">✓ clean 12:01Z</div></sc-if><sc-if value="{{ hasCritical }}" hint-placeholder-val="{{ false }}"><div style="font-size:11px;color:#fa4d56">✕ 1 critical</div></sc-if></div>
+        <div style="flex:1;min-width:110px;padding:8px 12px;border-right:1px solid #2a2a2a;font-family:'IBM Plex Mono',monospace"><div style="font-size:9px;text-transform:uppercase;color:#6f6f6f">5 · smoke</div><div style="font-size:11px;color:#f1c21b">● plan approved</div></div>
+        <div style="flex:1;min-width:110px;padding:8px 12px;border-right:1px solid #2a2a2a;font-family:'IBM Plex Mono',monospace"><div style="font-size:9px;text-transform:uppercase;color:#6f6f6f">6 · cleanup</div><div style="font-size:11px;color:#f1c21b">● final sync pending</div></div>
+        <div style="flex:1;min-width:110px;padding:8px 12px;font-family:'IBM Plex Mono',monospace"><div style="font-size:9px;text-transform:uppercase;color:#6f6f6f">7 · exit review</div><div style="font-size:11px;color:#6f6f6f">— not requested</div></div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;padding:5px 12px;margin-bottom:14px;border:1px solid #2a2a2a;background:#101010;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f"><span style="color:#42be65">R1 ✓ <a href="#" style="color:#42be65">AP-101</a></span><span style="color:#4c4c4c">→</span><span style="color:#42be65">R2 ✓ <a href="#" style="color:#42be65">AP-207</a></span><span style="color:#4c4c4c">→</span><span style="color:#42be65">PAPER ✓ <a href="#" style="color:#42be65">PX-29</a></span><span style="color:#4c4c4c">→</span><span style="color:#f4f4f4;font-weight:600;border:1px solid #78a9ff;padding:0 6px">SANDBOX ● certification 5/7</span><span style="color:#4c4c4c">→</span><span>CANARY —</span><span style="color:#4c4c4c">→</span><span>LIVE —</span><span style="margin-left:auto">lifecycle · ✓ links its decision · ● current stage</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:14px">
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Internal virtual state</span> <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#6f6f6f">EXECUTION</span></div>
+          <div style="padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:12px;flex:1">
+            <div style="display:grid;grid-template-columns:minmax(90px,44%) minmax(0,1fr);gap:6px 10px;color:#c6c6c6;overflow-wrap:anywhere">
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">positions</span><span style="color:#f4f4f4">0</span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">open orders</span><span style="color:#f4f4f4">0</span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">equity</span><span style="color:#f4f4f4">10,000.00 USDT</span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">reservations</span><span style="color:#f4f4f4">0</span>
+            </div>
+          </div>
+        </div>
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Physical broker state</span> <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#6f6f6f">BROKER · digest 8c1a…</span></div>
+          <div style="padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:12px;flex:1">
+            <div style="display:grid;grid-template-columns:minmax(90px,44%) minmax(0,1fr);gap:6px 10px;color:#c6c6c6;overflow-wrap:anywhere">
+              <sc-if value="{{ noCritical }}" hint-placeholder-val="{{ true }}"><span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">positions</span><span style="color:#f4f4f4">0</span></sc-if>
+              <sc-if value="{{ hasCritical }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">positions</span><span style="color:#fa4d56">1 — BTC-USDT-SWAP 0.0300</span></sc-if>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">open orders</span><span style="color:#f4f4f4">0</span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">balance</span><span style="color:#f4f4f4">10,000.84 USDT</span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">source</span><span style="color:#f4f4f4">REST snapshot · 10:41:20Z</span>
+            </div>
+          </div>
+        </div>
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Difference</span> <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#6f6f6f">DERIVED · diff.v1</span></div>
+          <div style="padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:12px;flex:1">
+            <div style="display:grid;grid-template-columns:minmax(90px,44%) minmax(0,1fr);gap:6px 10px;color:#c6c6c6;overflow-wrap:anywhere">
+              <sc-if value="{{ noCritical }}" hint-placeholder-val="{{ true }}"><span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">positions</span><span style="color:#42be65">MATCH</span></sc-if>
+              <sc-if value="{{ hasCritical }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">positions</span><span style="color:#fa4d56">MISMATCH Δ 0.0300</span></sc-if>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">open orders</span><span style="color:#42be65">MATCH</span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">balance</span><span style="color:#f1c21b">Δ 0.84 — testnet faucet interest, INFO</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Reconciliation findings</span><span style="flex:1"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">last dry-run 12:01Z · history →</span></div>
+        <div style="overflow-x:auto"><table style="width:100%;min-width:760px;border-collapse:collapse;font-size:12px">
+          <thead><tr>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">status</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">severity</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">identity</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">local</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">broker</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">action</th>
+          </tr></thead>
+          <tbody style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums">
+            <sc-if value="{{ hasCritical }}" hint-placeholder-val="{{ false }}">
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#2d0709;color:#fa4d56">OPEN</span></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#fa4d56">CRITICAL</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a">position BTC-USDT-SWAP</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">0.0000</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">0.0300</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">resolve → apply-from-broker plan</a></td></tr>
+            </sc-if>
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#302608;color:#f1c21b">OPEN</span></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#f1c21b">INFO</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a">balance USDT</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">10,000.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">10,000.84</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">accept — testnet faucet interest</td></tr>
+            <tr><td style="padding:7px 12px"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">MATCH</span></td><td style="padding:7px 12px;color:#8d8d8d">—</td><td style="padding:7px 12px;color:#c6c6c6">all other positions / open orders</td><td style="padding:7px 12px;text-align:right;color:#8d8d8d">0</td><td style="padding:7px 12px;text-align:right;color:#8d8d8d">0</td><td style="padding:7px 12px;color:#8d8d8d">none</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-bottom:14px">
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Order-type certification · OKX perp</span></div>
+          <div style="padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:12px;flex:1">
+            <div style="display:grid;grid-template-columns:minmax(110px,40%) minmax(0,1fr);gap:6px 12px;color:#c6c6c6;overflow-wrap:anywhere">
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">MARKET</span><span style="color:#42be65">✓ certified — 4/4 smoke fills</span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">LIMIT</span><span style="color:#42be65">✓ certified — place/amend/cancel</span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">STOP</span><span style="color:#f1c21b">! pending — venue trigger semantics unverified</span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">TAKE-PROFIT</span><span style="color:#6f6f6f">✕ untested</span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">TIF</span><span style="color:#42be65">✓ GTC · IOC</span>
+            </div>
+          </div>
+          <div style="padding:7px 14px;border-top:1px solid #2a2a2a;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">strategy uses MARKET + LIMIT only — STOP/TP certification not blocking for this deployment</div>
+        </div>
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Execution quality — evidence so far</span></div>
+          <div style="padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:12px;flex:1">
+            <div style="display:grid;grid-template-columns:minmax(110px,40%) minmax(0,1fr);gap:6px 12px;color:#c6c6c6;overflow-wrap:anywhere">
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">ACK latency</span><span style="color:#f4f4f4">p50 210ms · p95 480ms <span style="color:#6f6f6f">(9 orders)</span></span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">fill latency</span><span style="color:#f4f4f4">p50 340ms <span style="color:#6f6f6f">(4 fills)</span></span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">slippage</span><span style="color:#f1c21b">INSUFFICIENT_DATA — needs ≥ 30 fills</span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">reject rate</span><span style="color:#f4f4f4">0 / 9</span>
+            </div>
+          </div>
+          <div style="padding:7px 14px;border-top:1px solid #2a2a2a;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">execution_quality.v1 · decision→ACK→fill timestamps from command journal</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-bottom:14px">
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Smoke plan · sp_07 — bounded</span></div>
+          <div style="padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:12px;flex:1">
+            <div style="display:grid;grid-template-columns:minmax(110px,40%) minmax(0,1fr);gap:6px 12px;color:#c6c6c6;overflow-wrap:anywhere">
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">quantity</span><span style="color:#f4f4f4">0.0010 BTC-USDT-SWAP</span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">capital cap</span><span style="color:#f4f4f4">50.00 USDT</span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">timebox</span><span style="color:#f4f4f4">30 min · auto-halt on expiry</span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">operator</span><span style="color:#f4f4f4">Stan · approved by AP-207 scope</span>
+            </div>
+          </div>
+        </div>
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Cleanup checklist — exit precondition</span></div>
+          <div style="padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#c6c6c6;display:flex;flex-direction:column;gap:7px;flex:1">
+            <span><b style="color:#42be65">✓</b> no open order on broker</span>
+            <span><b style="color:#42be65">✓</b> no residual position</span>
+            <span><b style="color:#42be65">✓</b> reservations released</span>
+            <span style="color:#f1c21b"><b>!</b> final sync + clean reconciliation pending</span>
+            <span style="color:#6f6f6f;font-size:10px;margin-top:auto">exit requires: clean exposure → final sync → clean dry-run → return HALTED</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;border:1px solid #393939;background:#1d1d1d;padding:10px 14px">
+        <sc-if value="{{ showAdmin }}" hint-placeholder-val="{{ true }}">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;border:1px solid #393939;background:#262626;padding:6px 14px;cursor:pointer">Sync broker</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;border:1px solid #393939;background:#262626;padding:6px 14px;cursor:pointer">Dry-run reconcile</span>
+          <sc-if value="{{ noCritical }}" hint-placeholder-val="{{ true }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:#ffffff;background:#0f62fe;padding:6px 14px;cursor:pointer">Open smoke window ▾</span></sc-if>
+          <sc-if value="{{ hasCritical }}" hint-placeholder-val="{{ false }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f6f6f;border:1px dashed #4c4c4c;padding:6px 14px;cursor:not-allowed">Open smoke window — blocked: critical finding</span></sc-if>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f6f6f;border:1px dashed #4c4c4c;padding:6px 14px;cursor:not-allowed">Request Sandbox Exit Review — blocked: cleanup pending</span>
+        </sc-if>
+        <span style="flex:1"></span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">fail-closed: ACTIVE impossible while sync STALE / finding CRITICAL / cleanup pending · all actions plan → apply → verify</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;reconFinding&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;NONE&quot;, &quot;CRITICAL&quot;], &quot;default&quot;: &quot;NONE&quot;, &quot;tsType&quot;: &quot;\&quot;NONE\&quot; | \&quot;CRITICAL\&quot;&quot;, &quot;section&quot;: &quot;Demo states&quot;}, &quot;operatorAdmin&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Demo states&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const crit = (this.props.reconFinding ?? "NONE") === "CRITICAL";
+    return { hasCritical: crit, noCritical: !crit, showAdmin: this.props.operatorAdmin ?? true };
+  }
+}
+</script>
+</body>
+</html>

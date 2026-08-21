@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#101010;color-scheme:dark}a{color:#78a9ff;text-decoration:none}a:hover{color:#a6c8ff;text-decoration:underline}::selection{background:#78a9ff;color:#161616}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;background:#101010;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#f4f4f4;font-size:13px;letter-spacing:.16px" data-screen-label="Admin Actions (WF 1i, CLI catalog)">
+  <div style="display:flex;align-items:center;gap:10px;min-height:48px;padding:0 16px;border-bottom:1px solid #393939;background:#161616">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.12em;white-space:nowrap">QUANT ECOSYSTEM PORTAL</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;color:#fa4d56;border:1px solid #fa4d56;padding:1px 7px">ADMIN ACTIONS</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6">Operator Admin scope · UI and CLI share ONE command authority — the browser never runs a shell</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#6f6f6f;border:1px dashed #4c4c4c;padding:1px 6px">WF <a href="#">1i</a> · catalog: PORTFOLIO_MANAGEMENT_CLI_GUIDE</span>
+    <span style="flex:1"></span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8d8d8d">CLI password confirm ⇢ web step-up auth · read-only commands need neither</span>
+  </div>
+  <div style="display:flex;flex:1;min-height:0;align-items:stretch">
+    <div style="flex:1;min-width:0;padding:14px 16px;overflow-y:auto">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f;margin-bottom:10px">every mutation follows PLAN → APPLY (step-up) → VERIFY · pick a command to load it into the drawer →</div>
+      <sc-for list="{{ groups }}" as="g" hint-placeholder-count="6">
+        <div style="margin-bottom:14px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#8d8d8d;padding-bottom:5px;border-bottom:1px solid #393939;margin-bottom:4px">{{ g.name }}</div>
+          <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="4">
+            <div onClick="{{ it.pick }}" style="{{ it.style }}">
+              <div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:#f4f4f4">{{ it.title }}</span><span style="{{ it.tagStyle }}">{{ it.tag }}</span><span style="flex:1"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#6f6f6f">{{ it.scope }}</span></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#78a9ff;opacity:.75;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ it.cliShort }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+    <div style="width:490px;flex:none;background:#161616;border-left:1px solid #4c4c4c;box-shadow:-12px 0 32px rgba(0,0,0,.55);display:flex;flex-direction:column;max-height:100vh;position:sticky;top:0">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:12px 16px;border-bottom:1px solid #393939">
+        <span style="{{ selTagStyle }}">{{ selTag }}</span>
+        <span style="flex:1"></span>
+        <span onClick="{{ reset }}" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8d8d8d;cursor:pointer">↺ reset</span>
+        <h1 style="margin:0;width:100%;font-family:'IBM Plex Sans',sans-serif;font-weight:400;font-size:16px;line-height:1.35">{{ selTitle }}</h1>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8d8d8d;width:100%">{{ selMeta }}</span>
+      </div>
+      <sc-if value="{{ isMutationFlow }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;border-bottom:1px solid #393939">
+        <div style="{{ stepPlanStyle }}">1 · PLAN</div>
+        <div style="{{ stepApplyStyle }}">2 · APPLY</div>
+        <div style="{{ stepVerifyStyle }}">3 · VERIFY</div>
+      </div>
+      </sc-if>
+      <div style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+        <sc-if value="{{ isRead }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid #42be65;background:#0d2416;padding:8px 12px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6"><b style="color:#42be65">READ-ONLY</b> — no admin password (CLI) · no step-up (web) · safe during incidents</div>
+          <div style="border:1px solid #393939;background:#1d1d1d;padding:10px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;margin-bottom:6px">Returns</div><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;white-space:pre-wrap;line-height:1.6">{{ selPlan }}</div></div>
+        </sc-if>
+        <sc-if value="{{ isBlocked }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid #fa4d56;background:#2d0709;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#f4f4f4;line-height:1.6"><b style="color:#fa4d56">NOT EXPOSED IN PORTAL</b><br><span style="color:#c6c6c6">{{ selPlan }}</span></div>
+        </sc-if>
+        <sc-if value="{{ inPlan }}" hint-placeholder-val="{{ true }}">
+          <sc-if value="{{ isAllocation }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="border:1px solid #393939;background:#1d1d1d;padding:10px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;margin-bottom:6px">Before</div><div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#c6c6c6;line-height:1.7">allocated <b style="color:#f4f4f4">50,000.00</b><br>pf weight 8.1%<br>marginal risk 5.2%</div></div>
+            <div style="border:1px solid #78a9ff;background:#1d1d1d;padding:10px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#78a9ff;margin-bottom:6px">After</div><div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#c6c6c6;line-height:1.7">allocated <b style="color:#f4f4f4">75,000.00</b><br>pf weight 11.7%<br>marginal risk <span style="color:#f1c21b">8.9%</span></div></div>
+          </div>
+          <div style="border:1px solid #393939;background:#1d1d1d;padding:10px 12px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;margin-bottom:6px">Policy &amp; evidence checks</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;display:flex;flex-direction:column;gap:5px">
+              <span><b style="color:#42be65">✓</b> R2 <a href="#">AP-207</a> valid · digest match</span>
+              <span><b style="color:#42be65">✓</b> within approved max capital 100,000.00</span>
+              <span><b style="color:#42be65">✓</b> ledger row will be written · movement ALLOCATE</span>
+              <span style="color:#f1c21b"><b>!</b> concentration +4.6% — warning, not blocking</span>
+              <span style="color:#8d8d8d">blast radius: <a href="#">dep_74</a> · account · risk capacity</span>
+            </div>
+          </div>
+          </sc-if>
+          <sc-if value="{{ isEmergency }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid #fa4d56;background:#1d1d1d;padding:10px 12px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#fa4d56;margin-bottom:6px">Read-only flatten plan — paper-binance-carry-v32</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;display:flex;flex-direction:column;gap:5px">
+              <span>deployments → <b style="color:#f1c21b">REDUCING</b> (blocks new opens, keeps reduces)</span>
+              <span>cancel <b style="color:#f4f4f4">2</b> canonical open orders</span>
+              <span>close <b style="color:#f4f4f4">2</b> positions · reduce-only MARKET via normal lifecycle</span>
+              <span style="color:#8d8d8d">async fills + broker max-qty chunking ⇒ verify may return PARTIAL; re-apply residue until VERIFIED</span>
+              <span style="color:#8d8d8d">records are never deleted · final HALTED is a separate explicit action</span>
+            </div>
+          </div>
+          <div style="border:1px solid #393939;background:#1d1d1d;padding:10px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;margin-bottom:4px">Type CLOSE to confirm (mirrors --confirm CLOSE)</div><div style="border:1px solid #393939;border-bottom:1px solid #fa4d56;background:#262626;padding:8px 10px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#f4f4f4">CLOSE</div></div>
+          </sc-if>
+          <sc-if value="{{ isGeneric }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid #393939;background:#1d1d1d;padding:10px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;margin-bottom:6px">Pending admin change — exact request preview (as the CLI prints it)</div><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;white-space:pre-wrap;line-height:1.6">{{ selPlan }}</div></div>
+          <div style="border:1px solid #393939;background:#1d1d1d;padding:10px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;margin-bottom:6px">Authority &amp; gate checks</div><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;white-space:pre-wrap;line-height:1.6">{{ selAppr }}</div></div>
+          </sc-if>
+          <sc-if value="{{ isMutationFlow }}" hint-placeholder-val="{{ true }}">
+          <div style="border:1px dashed #4c4c4c;background:#101010;padding:10px 12px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;margin-bottom:6px">Equivalent CLI — read-only, audit/training</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#78a9ff;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere">{{ selCli }}</div>
+          </div>
+          <div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;margin-bottom:4px">Reason (required — lands in portfolio_audit_log)</div>
+            <div style="border:1px solid #393939;border-bottom:1px solid #f4f4f4;background:#262626;padding:8px 10px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#c6c6c6;min-height:34px">{{ selReason }}</div>
+          </div>
+          <sc-if value="{{ planned }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid #78a9ff;background:#1a2536;padding:8px 12px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6"><b style="color:#78a9ff">PLAN cmd_9f12 generated</b> · server re-checked policy · expected revision pinned · expires in 60s</div>
+          </sc-if>
+          </sc-if>
+        </sc-if>
+        <sc-if value="{{ inVerify }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #393939;background:#1d1d1d;padding:10px 12px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;margin-bottom:8px">Operation timeline · <a href="#">op_1251</a> · command cmd_9f12</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;display:flex;flex-direction:column;gap:6px">
+            <span><span style="color:#8d8d8d">10:44:02.114</span> command accepted <span style="font-size:10px;font-weight:600;padding:1px 6px;background:#262626;color:#c6c6c6">202 — NOT success yet</span></span>
+            <span><span style="color:#8d8d8d">10:44:02.480</span> <b style="color:#42be65">✓</b> execution cell re-validated identity · approvals · expected revision</span>
+            <sc-if value="{{ isEmergency }}" hint-placeholder-val="{{ false }}">
+              <span><span style="color:#8d8d8d">10:44:02.512</span> <b style="color:#42be65">✓</b> deployment → REDUCING</span>
+              <span><span style="color:#8d8d8d">10:44:02.688</span> <b style="color:#42be65">✓</b> 2/2 cancels ACKed by lifecycle</span>
+              <sc-if value="{{ isVerified }}" hint-placeholder-val="{{ true }}"><span><span style="color:#8d8d8d">10:44:09.301</span> <b style="color:#42be65">✓</b> 2/2 reduce-only closes filled · exposure 0</span></sc-if>
+              <sc-if value="{{ isPartial }}" hint-placeholder-val="{{ false }}"><span><span style="color:#8d8d8d">10:44:09.301</span> <b style="color:#f1c21b">!</b> 1/2 closes filled · residue BTCUSDT 0.0100 (broker max-qty chunking)</span></sc-if>
+            </sc-if>
+            <sc-if value="{{ notEmergency }}" hint-placeholder-val="{{ true }}">
+              <span><span style="color:#8d8d8d">10:44:02.512</span> <b style="color:#42be65">✓</b> local risk / policy re-checked (portal cannot bypass)</span>
+              <sc-if value="{{ isVerified }}" hint-placeholder-val="{{ true }}"><span><span style="color:#8d8d8d">10:44:02.688</span> <b style="color:#42be65">✓</b> change applied · audit row written · terminal state</span></sc-if>
+              <sc-if value="{{ isPartial }}" hint-placeholder-val="{{ false }}"><span><span style="color:#8d8d8d">10:44:02.688</span> <b style="color:#f1c21b">!</b> 1 of 2 sub-intents timed out</span></sc-if>
+            </sc-if>
+          </div>
+        </div>
+        <sc-if value="{{ isVerified }}" hint-placeholder-val="{{ true }}">
+          <div style="border:1px solid #42be65;background:#0d2416;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6"><b style="color:#42be65">VERIFIED — terminal state confirmed by authoritative ACK</b><br>audit: <a href="#">op_1251</a> · portfolio_audit_log · command journal</div>
+        </sc-if>
+        <sc-if value="{{ isPartial }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid #f1c21b;background:#302608;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#f4f4f4"><b style="color:#f1c21b">PARTIAL — not success, residue must be resolved</b><br><span style="color:#c6c6c6">review the NEW plan and apply again for the residue (same idempotency key) until VERIFIED · sandbox/live: run broker reconciliation after · <a href="#">open reconciliation →</a></span></div>
+        </sc-if>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f;line-height:1.6">the drawer waits for terminal state instead of timing out into a fake green · every sub-intent listed · PARTIAL never renders green</div>
+        </sc-if>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;padding:12px 16px;border-top:1px solid #393939">
+        <sc-if value="{{ isReadOrBlocked }}" hint-placeholder-val="{{ false }}">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">no mutation footer — nothing to plan or apply</span>
+        </sc-if>
+        <sc-if value="{{ showPlanFooter }}" hint-placeholder-val="{{ true }}">
+          <span onClick="{{ reset }}" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;border:1px solid #393939;background:#262626;padding:6px 14px;cursor:pointer">Cancel</span>
+          <span style="flex:1"></span>
+          <sc-if value="{{ notPlanned }}" hint-placeholder-val="{{ true }}"><span onClick="{{ genPlan }}" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#78a9ff;border:1px solid #78a9ff;padding:6px 14px;cursor:pointer">Generate plan</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f6f6f;border:1px dashed #4c4c4c;padding:6px 14px;cursor:not-allowed">Apply — needs plan</span></sc-if>
+          <sc-if value="{{ planned }}" hint-placeholder-val="{{ false }}"><span onClick="{{ doApply }}" style="{{ applyBtnStyle }}">Apply after step-up ▸</span></sc-if>
+        </sc-if>
+        <sc-if value="{{ inVerify }}" hint-placeholder-val="{{ false }}">
+          <span onClick="{{ reset }}" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;border:1px solid #393939;background:#262626;padding:6px 14px;cursor:pointer">New action</span>
+          <sc-if value="{{ isPartial }}" hint-placeholder-val="{{ false }}"><span onClick="{{ genPlan }}" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#f1c21b;border:1px solid #f1c21b;padding:6px 14px;cursor:pointer">Plan residue re-apply</span></sc-if>
+          <span style="flex:1"></span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">actor Stan · step-up 10:43:58Z · TTL 45s</span>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;applyOutcome&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;VERIFIED&quot;, &quot;PARTIAL&quot;], &quot;default&quot;: &quot;VERIFIED&quot;, &quot;tsType&quot;: &quot;\&quot;VERIFIED\&quot; | \&quot;PARTIAL\&quot;&quot;, &quot;section&quot;: &quot;Demo states&quot;}}">
+class Component extends DCLogic {
+  state = { sel: "alloc", phase: "plan", planned: false };
+  ACTIONS = {
+    health: { g: 0, t: "System health", tag: "READ", scope: "system", cli: "cli health", plan: "status READY · gateway / risk_engine / paper_execution /\nportfolio / performance / reconciliation — freshness table\nno stale services allowed", meta: "read-only · no password · no step-up" },
+    inspect: { g: 0, t: "Alpha / account inspect", tag: "READ", scope: "alpha · account", cli: "cli alpha inspect carry\ncli account state paper-binance-carry-v32", plan: "account · policy · balances · margin balances ·\nopen reservations · latest broker sync snapshot", meta: "read-only · no password · no step-up" },
+    capital: { g: 0, t: "Capital history", tag: "READ", scope: "portfolio · account", cli: "cli capital history --portfolio-id PF-MAIN \\\n  --account-id paper-binance-carry-v32 --limit 50", plan: "portfolio_capital_ledger rows — movement type ·\namount · before/after · operation · actor", meta: "read-only · no password · no step-up" },
+    perf: { g: 0, t: "Performance & NAV", tag: "READ", scope: "alpha · account · portfolio", cli: "cli performance account --account-id …\ncli performance account-history … --limit 30\ncli performance portfolio PF-MAIN · dashboard --alpha-id …", plan: "minute-level equity snapshots = primary NAV/PnL history ·\npositions_v2 = open now · fills = immutable realized ledger", meta: "read-only · no password · no step-up" },
+    sizing: { g: 0, t: "Sizing explanations", tag: "READ", scope: "alpha · symbol", cli: "cli sizing history --alpha-id carry --symbol BTCUSDT --limit 20\ncli sizing summary --alpha-id carry · sizing decision <id>", plan: "explains QTY_BELOW_MARKET_MINIMUM · NON_POSITIVE_EQUITY ·\nINVALID_CAPITAL_MODEL — equity source, allocation, leverage cap,\nlot/min-notional rule, risk capacity → final qty", meta: "read-only · no password · no step-up" },
+    brokerRead: { g: 0, t: "Broker bindings & exposure", tag: "READ", scope: "external_account_ref", cli: "cli broker bindings --mode sandbox --venue BINANCE\ncli broker state binance_main_01 · broker exposure binance_main_01", plan: "physical binding state · aggregate virtual exposure vs\nphysical broker exposure — the headroom check", meta: "read-only · no password · no step-up" },
+    redis: { g: 0, t: "Redis inspection", tag: "READ", scope: "debug only", cli: "cli redis trading-state --mode paper --venue BINANCE\ncli redis scan \"gate:*\" · redis get system:trading_state:…\ncli redis stream events.risk.denied --limit 10", plan: "inspection/debugging only — NEVER a config channel;\nconfig changes go through admin endpoints", meta: "read-only · no password · no step-up" },
+    pfCreate: { g: 1, t: "Create portfolio", tag: "MUTATION", scope: "portfolio", cli: "cli portfolio create alpha_lab_main --name \"Alpha Lab Main\" \\\n  --base-currency USDT --state ACTIVE --reason \"initial setup\"", plan: "METHOD: POST\nPATH: /v1/admin/portfolios\nPAYLOAD: { portfolio_id, name, base_currency, state, reason }", appr: "✓ admin scope · new container, no capital until allocation\n✓ reason required → portfolio_audit_log", reason: "initial setup", meta: "mutation · CLI password ⇢ web step-up" },
+    pfState: { g: 1, t: "Portfolio state (kill switch)", tag: "MUTATION", scope: "portfolio", cli: "cli portfolio state PF-MAIN HALTED --reason \"operator emergency stop\"\ncli portfolio state PF-MAIN REDUCING --reason \"close-only mode\"\ncli portfolio state PF-MAIN ACTIVE --reason \"resume after check\"", plan: "METHOD: POST\nPATH: /v1/admin/portfolios/PF-MAIN/state\nPAYLOAD: { state: HALTED|REDUCING|ACTIVE, reason }", appr: "✓ HALTED blocks new orders portfolio-wide · REDUCING = cancel/close only\n! halting needs no approval — RESUMING checks approvals/readiness\n✓ risk engine reads this state before normal checks", reason: "operator emergency stop", meta: "mutation · CLI password ⇢ web step-up" },
+    alloc: { g: 1, t: "Change allocation", tag: "MUTATION", scope: "portfolio · account", cli: "cli allocation PF-MAIN paper-binance-carry-v32 \\\n  --strategy-id carry --mode paper --venue BINANCE \\\n  --currency USDT --allocated-capital 75000 --max-capital 100000 \\\n  --state ACTIVE --movement-type ALLOCATE --reason \"scale within R2 cap\"", plan: "", appr: "", reason: "Scale within R2 cap after 12 clean observation days.", meta: "mutation · writes portfolio_capital_ledger · movement ALLOCATE|WITHDRAW|REBALANCE" },
+    config: { g: 1, t: "Declarative config plan / apply", tag: "MUTATION", scope: "multi-resource", cli: "cli config plan config/portfolio_setup.yaml\ncli config apply config/portfolio_setup.yaml --reason \"initial setup\"", plan: "one YAML → portfolios · trading state · symbol allowlist ·\nalpha + API key · accounts/balances/policies · allocations ·\nledger rows · risk profiles — full plan printed, ONE confirm", appr: "✓ preferred first source of truth for a new alpha\n✓ api keys from env (api_key_env), never in YAML\n✓ same plan → apply loop, one step-up", reason: "initial rsibound setup", meta: "mutation · batch — plan prints every sub-change" },
+    depState: { g: 2, t: "Deployment state (isolated)", tag: "MUTATION", scope: "alpha:mode:venue:account", cli: "cli deployment state carry:paper:BINANCE:paper-binance-carry-v32 \\\n  HALTED --reason \"observation window complete\"", plan: "METHOD: POST\nPATH: /v1/admin/deployments/{key}/state\nPAYLOAD: { state: HALTED|ACTIVE, reason }", appr: "✓ halts ONE alpha-mode-venue instance, siblings unaffected\n✓ HALTED blocks new orders + excludes from scheduled broker sync\n! resume of sandbox/live requires clean sync + reconciliation", reason: "sandbox observation window complete", meta: "mutation · preferred isolated stop" },
+    riskState: { g: 2, t: "Trading state per mode/venue", tag: "MUTATION", scope: "mode · venue (global)", cli: "cli risk state HALTED --mode sandbox --venue BINANCE\ncli risk state ACTIVE --mode paper --venue DNSE", plan: "METHOD: POST\nPATH: /v1/admin/trading-state\nPAYLOAD: { state, mode, venue } → redis system:trading_state:<mode>:<venue>", appr: "✓ global kill switch ahead of per-alpha risk\n! live stays HALTED until credentials + sync + reconciliation + smoke pass", reason: "hold live until smoke passes", meta: "mutation · global kill switch" },
+    riskProfile: { g: 2, t: "Risk profile (alpha / instrument)", tag: "MUTATION", scope: "alpha · mode · venue [· instrument]", cli: "cli risk profile carry --mode paper --venue BINANCE \\\n  --max-notional-order 1000 --max-notional-position 5000 \\\n  --max-leverage 3 --max-order-per-minute 60 --max-daily-loss 500 \\\n  --max-drawdown 0.10 --allowed-order-types MARKET,LIMIT,STOP_MARKET \\\n  --trading-state ACTIVE", plan: "METHOD: POST\nPATH: /v1/admin/risk-profiles\nPAYLOAD: limits + allowed order types + trading state\n(--instrument-id FPT.DNSE for per-symbol overrides)", appr: "✓ within R2-approved risk envelope, else stage risk approval required\n✓ new revision — old revisions stay for lineage", reason: "tighten order cap for observation", meta: "mutation · R2/stage-approval scoped" },
+    alphaReg: { g: 2, t: "Register alpha", tag: "MUTATION", scope: "alpha", cli: "cli alpha register carry --allowed-modes paper,sandbox \\\n  --allowed-venues BINANCE,DNSE --base-currency USDT \\\n  --account-balances-json '{…}' --account-policies-json '{…}' \\\n  --risk-json '{…}' --api-key $CARRY_API_KEY", plan: "registers alpha + gateway API key + accounts + balances +\npolicies + base risk in one admin change", appr: "✓ allowed modes/venues = hard ceiling later stages cannot exceed\n✓ prefer declarative config apply for new alphas", reason: "register imported alpha", meta: "mutation · prefer config apply" },
+    acctPolicy: { g: 3, t: "Account policy", tag: "MUTATION", scope: "account", cli: "cli account policy sandbox-binance-carry --mode sandbox --venue BINANCE \\\n  --account-type MARGIN --margin-mode CROSS \\\n  --position-accounting-mode HEDGE --require-broker-sync \\\n  --external-account-ref binance_testnet_main --reason \"hedge mode\"", plan: "METHOD: POST\nPATH: /v1/admin/account-policies\nPAYLOAD: CASH|MARGIN · CROSS|ISOLATED|NONE · leverage · fees ·\nsettlement · NET|HEDGE · require_broker_sync · external_account_ref", appr: "✓ NET on shared binding ⇒ risk rejects opposite-side opens\n  (OPPOSITE_SIDE_ON_SHARED_ONE_WAY_BINDING)\n! Binance live NET vs HEDGE = explicit fund-level decision\n! changing position mode may require flatten + re-sync first", reason: "enable hedge mode for shared sandbox binding", meta: "mutation · R2-scoped policy" },
+    seed: { g: 3, t: "Seed / reset paper account", tag: "MUTATION", scope: "paper account only", cli: "cli account seed-paper carry --account-id paper-binance-carry-v32 \\\n  --venue BINANCE --currency USDT --amount 100000 --account-type MARGIN", plan: "METHOD: POST\nPATH: /v1/admin/accounts/seed-paper\nPAYLOAD: { alpha_id, account_id, venue, currency, amount, account_type }", appr: "✓ paper only — virtual balance reset\n! resets observation evidence — Paper Exit clock restarts", reason: "reset for new observation cycle", meta: "mutation · paper only" },
+    sync: { g: 4, t: "Broker account sync", tag: "MUTATION", scope: "account · venue-specific", cli: "cli account sync sandbox-binance-carry --mode sandbox --venue BINANCE\ncli account sync live-dnse-carry --mode live --venue DNSE \\\n  --account-no <DNSE_NO> --market-type STOCK [--symbol FPT --price 100000 \\\n  --loan-package-id <ID>]  # PPSE/buying-power probe", plan: "BINANCE: python-binance futures endpoints (TESTNET/LIVE keys)\nDNSE: get_balances · get_positions · get_orders ·\nget_loan_packages · get_ppse — writes account_sync_snapshots", appr: "✓ paper syncs from internal projections\n! missing creds / dry-run ⇒ ERROR snapshot — intentional, not a pass\n! require_broker_sync=true: stale/ERROR/MISMATCH blocks new orders", reason: "startup sync", meta: "mutation · per-venue credentials" },
+    reconPos: { g: 4, t: "Reconcile positions", tag: "MUTATION", scope: "account", cli: "cli account reconcile-positions sandbox-binance-carry \\\n  --sync-first --mode sandbox --venue BINANCE --reason \"startup check\"\n# review findings, then:\ncli account reconcile-positions sandbox-binance-carry --apply \\\n  --reason \"apply broker authoritative state\"", plan: "dry-run: diff positions_v2 vs broker snapshot → findings,\nsync marked MISMATCH on diff (risk fail-closed)\napply: positions_v2 ← broker · findings RESOLVED ·\naudit APPLY_BROKER_POSITION_RECONCILIATION · sync → OK", appr: "✓ broker is authoritative for sandbox/live\n✓ dry-run before apply, always\n! detection-only mode can leave risk stuck in BROKER_SYNC_MISMATCH", reason: "startup position check", meta: "mutation · dry-run → apply" },
+    reconOrd: { g: 4, t: "Reconcile open orders", tag: "MUTATION", scope: "account", cli: "cli account reconcile-open-orders sandbox-binance-carry \\\n  --sync-first --mode sandbox --venue BINANCE --reason \"startup check\"\ncli account reconcile-open-orders sandbox-binance-carry --apply \\\n  --reason \"apply broker authoritative state\"", plan: "findings: BROKER_OPEN_ORDER_STALE_IN_DB ·\nMISSING_IN_DB · STATE_MISMATCH\napply: stale locals → RECONCILED_MISSING · broker orders\nprojected in · sync → OK only if no other domain mismatched", appr: "✓ part of restart recovery: HALTED → sync → recon-positions →\n  recon-orders → review/apply → account state → ACTIVE", reason: "startup open-order check", meta: "mutation · dry-run → apply" },
+    brokerRecon: { g: 4, t: "Aggregate physical reconcile", tag: "MUTATION", scope: "external_account_ref", cli: "cli broker reconcile-positions binance_testnet_main \\\n  --mode sandbox --venue BINANCE --sync-first --reason \"aggregate check\"\ncli broker reconcile-open-orders binance_testnet_main \\\n  --mode sandbox --venue BINANCE --sync-first --reason \"aggregate check\"", plan: "compares physical broker net state vs Σ of ALL virtual\naccounts sharing the binding — HEDGE compares SYMBOL:LONG\nand SYMBOL:SHORT separately", appr: "✓ the only place aggregate virtual vs physical is decided\n! one broker snapshot ≠ per-account authoritative snapshot", reason: "operator aggregate physical check", meta: "mutation · binding scope" },
+    emergency: { g: 5, t: "Emergency close (flatten)", tag: "DANGER", scope: "account · alpha [· mode · venue]", cli: "cli ops emergency-close --account-id paper-binance-carry-v32\n# review read-only plan, then:\ncli ops emergency-close --account-id paper-binance-carry-v32 \\\n  --apply --confirm CLOSE --reason \"operator-requested flatten\"\ncli ops emergency-close-verify <operation_id>", plan: "", appr: "", reason: "operator-requested flatten", meta: "danger · plan → apply(--confirm CLOSE) → verify loop · PARTIAL re-applies" },
+    testnetReset: { g: 5, t: "Shared testnet hard reset", tag: "DANGER", scope: "binance_testnet_main only", cli: "docker compose run --rm --no-deps executor \\\n  python scripts/binance_testnet_account_cleanup.py \\\n  [--apply --confirm BINANCE_TESTNET_ONLY]", plan: "global disposable-testnet op: stop writers → inspect →\ncancel all + flatten physical → reset selected virtual accounts\n(--preserve-config) → aggregate recon ×2 must return OK/0 findings", appr: "! NEVER against live credentials — confirm word enforces it\n! affects EVERY virtual account sharing the binding\n✓ portal renders the plan; apply stays a deliberate operator act", reason: "isolated test window reset", meta: "danger · sandbox/testnet only" },
+    labReset: { g: 5, t: "Lab reset (alpha-scoped / global)", tag: "BLOCKED", scope: "lab only — never production", cli: "scripts/reset_lab_baseline.sh …", plan: "Destructive test-data reset (reset_lab_baseline.sh). Forbidden in production —\nproduction records are append-only; use Emergency close instead.\nThe portal intentionally does NOT expose this; it stays a host-CLI-only\nprocedure behind ALLOW_DESTRUCTIVE_LAB_RESET + typed confirm words.", meta: "not exposed — host CLI only" }
+  };
+  GROUP_NAMES = ["Read & inspect — no password, no step-up", "Portfolio & capital", "Deployment & risk", "Account", "Broker sync & reconciliation", "Emergency & destructive"];
+  renderVals() {
+    const sel = this.state.sel, a = this.ACTIONS[sel], p = this.state.phase;
+    const rowBase = "padding:7px 10px;border:1px solid #2a2a2a;border-left:3px solid transparent;background:#161616;margin-bottom:3px;cursor:pointer";
+    const rowSel = rowBase.replace("border-left:3px solid transparent", "border-left:3px solid #78a9ff").replace("background:#161616", "background:#1d2634");
+    const tagCss = { READ: "color:#42be65;border:1px solid #42be65", MUTATION: "color:#78a9ff;border:1px solid #78a9ff", DANGER: "color:#fa4d56;border:1px solid #fa4d56", BLOCKED: "color:#8d8d8d;border:1px dashed #6f6f6f" };
+    const tagStyle = (tag) => "font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.06em;padding:0 5px;" + tagCss[tag];
+    const groups = this.GROUP_NAMES.map((name, gi) => ({
+      name,
+      items: Object.entries(this.ACTIONS).filter(([, v]) => v.g === gi).map(([k, v]) => ({
+        title: v.t, tag: v.tag, tagStyle: tagStyle(v.tag), scope: v.scope,
+        cliShort: v.cli.split("\n")[0],
+        style: k === sel ? rowSel : rowBase,
+        pick: () => this.setState({ sel: k, phase: "plan", planned: false })
+      }))
+    }));
+    const stepBase = "flex:1;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em;padding:9px 4px;color:#6f6f6f;border-bottom:2px solid transparent";
+    const stepActive = stepBase.replace("color:#6f6f6f", "color:#f4f4f4").replace("transparent", "#78a9ff");
+    const stepDone = stepBase.replace("color:#6f6f6f", "color:#42be65");
+    const isRead = a.tag === "READ", isBlocked = a.tag === "BLOCKED";
+    const isMut = !isRead && !isBlocked;
+    const outcome = this.props.applyOutcome ?? "VERIFIED";
+    const danger = a.tag === "DANGER";
+    return {
+      groups,
+      selTitle: a.t, selTag: a.tag, selTagStyle: tagStyle(a.tag) + ";font-size:10px;padding:1px 7px",
+      selMeta: a.meta, selCli: a.cli, selPlan: a.plan || "", selAppr: a.appr || "", selReason: a.reason || "—",
+      isRead, isBlocked, isReadOrBlocked: isRead || isBlocked, isMutationFlow: isMut,
+      isAllocation: sel === "alloc", isEmergency: sel === "emergency", notEmergency: sel !== "emergency",
+      isGeneric: isMut && sel !== "alloc" && sel !== "emergency",
+      inPlan: isMut && p === "plan", inVerify: isMut && p === "verify",
+      planned: isMut && this.state.planned && p === "plan",
+      notPlanned: isMut && !this.state.planned && p === "plan",
+      showPlanFooter: isMut && p === "plan",
+      stepPlanStyle: p === "plan" ? stepActive : stepDone,
+      stepApplyStyle: p === "verify" ? stepDone : stepBase,
+      stepVerifyStyle: p === "verify" ? stepActive : stepBase,
+      genPlan: () => this.setState({ planned: true, phase: "plan" }),
+      doApply: () => this.setState({ phase: "verify" }),
+      reset: () => this.setState({ phase: "plan", planned: false }),
+      applyBtnStyle: "font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:#ffffff;padding:7px 16px;cursor:pointer;background:" + (danger ? "#da1e28" : "#0f62fe"),
+      isVerified: outcome === "VERIFIED", isPartial: outcome === "PARTIAL"
+    };
+  }
+}
+</script>
+</body>
+</html>

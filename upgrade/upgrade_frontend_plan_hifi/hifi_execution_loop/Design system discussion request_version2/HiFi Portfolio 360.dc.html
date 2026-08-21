@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#161616;color-scheme:dark}a{color:#78a9ff;text-decoration:none}a:hover{color:#a6c8ff;text-decoration:underline}::selection{background:#78a9ff;color:#161616}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;background:#161616;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#f4f4f4;font-size:13px;letter-spacing:.16px" data-screen-label="Portfolio 360 (WF 3a)">
+  <div style="position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;min-height:48px;padding:0 16px;border-bottom:1px solid #393939;background:#161616">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.12em;white-space:nowrap">QUANT ECOSYSTEM PORTAL</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8d8d8d;padding:2px 8px;border:1px solid #393939;white-space:nowrap">Default Workspace</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.08em;color:#78a9ff;border:1px solid #78a9ff;padding:1px 7px">OPERATIONS</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:block">Operations <span style="color:#6f6f6f">/</span> Portfolios <span style="color:#6f6f6f">/</span> PF-CRYPTO</span>
+    <span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;border:1px solid #393939;background:#262626;padding:4px 12px">Search <kbd style="font-size:10px;color:#8d8d8d;border:1px solid #4c4c4c;padding:0 4px;font-family:inherit">⌘K</kbd></span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px">Operations Dark ▾</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px">Operational ▾</span>
+  </div>
+  <div style="display:flex;flex:1;min-height:0">
+    <div style="flex-shrink:0;width:228px;border-right:1px solid #393939;background:#101010;padding:14px 0;font-size:13px">
+      <div style="display:flex;flex-direction:column">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Command</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Command Center</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Operations Queue</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Alerts</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Governance</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Approval Inbox</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Exit Reviews</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Promotion Timeline</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Waivers &amp; Conditions</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Deployments</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 13px;background:#262626;color:#f4f4f4;font-weight:500;border-left:3px solid #78a9ff">Portfolios</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Alpha Fleet</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Paper</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Sandbox</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Live</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Accounts &amp; Bindings</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Reconciliation</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Blotter</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Administration</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Profile &amp; Access</div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0;max-width:1440px;margin:0 auto;padding:24px 20px 64px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-bottom:10px">
+        <h1 style="margin:0;font-family:'IBM Plex Sans',sans-serif;font-weight:300;font-size:22px;line-height:1.25">PF-CRYPTO <span style="color:#8d8d8d">— Portfolio 360°</span></h1>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">● ACTIVE</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;border:1px solid #393939;padding:1px 7px">4 alphas · 6 accounts · USDT base</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#6f6f6f;border:1px dashed #4c4c4c;padding:1px 6px">WF <a href="#">3a</a></span>
+        <span style="flex:1"></span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;border:1px solid #393939;background:#1d1d1d;padding:2px 8px"><b style="color:#f4f4f4">EXECUTION</b> · as_of 10:42:01Z · <span style="color:#42be65">age 2.4s</span></span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;border:1px solid #393939;background:#262626;padding:5px 12px;cursor:pointer">Report pack</span>
+        <sc-if value="{{ showAdmin }}" hint-placeholder-val="{{ true }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:#ffffff;background:#0f62fe;padding:6px 14px;cursor:pointer">Rebalance plan ▾</span></sc-if>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px;font-family:'IBM Plex Mono',monospace;font-size:10px">
+        <span style="color:#6f6f6f;text-transform:uppercase;letter-spacing:.08em">Scope</span>
+        <span style="color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px;cursor:pointer">Window 30d ▾</span>
+        <span style="color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px;cursor:pointer">Mode All ▾</span>
+        <span style="color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px;cursor:pointer">Venue All ▾</span>
+        <span style="color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px;cursor:pointer">Benchmark Crypto Core v3 ▾ <span style="color:#6f6f6f">bms_204</span></span>
+        <span style="color:#6f6f6f">every panel below obeys this scope</span>
+      </div>
+      <div style="display:flex;gap:2px;border-bottom:1px solid #393939;margin-bottom:14px">
+        <span onClick="{{ tabOverview }}" style="{{ tabStyleOverview }}">Overview</span>
+        <span onClick="{{ tabStructure }}" style="{{ tabStyleStructure }}">Structure &amp; Correlation</span>
+        <span onClick="{{ tabLedger }}" style="{{ tabStyleLedger }}">Capital Ledger</span>
+        <span onClick="{{ tabApprovals }}" style="{{ tabStyleApprovals }}">Approvals</span>
+        <span onClick="{{ tabIncidents }}" style="{{ tabStyleIncidents }}">Incidents</span>
+        <span onClick="{{ tabAudit }}" style="{{ tabStyleAudit }}">Audit</span>
+      </div>
+      <sc-if value="{{ isStructure }}" hint-placeholder-val="{{ true }}">
+      <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:#393939;border:1px solid #393939;margin-bottom:14px">
+        <div style="min-width:0;background:#1d1d1d;padding:8px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Equity · USDT</div><div style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:18px;font-weight:500;line-height:24px">127,842.55</div></div>
+        <div style="min-width:0;background:#1d1d1d;padding:8px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Net PnL (30d)</div><div style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:18px;font-weight:500;line-height:24px;color:#42be65">+3,754.20</div></div>
+        <div style="min-width:0;background:#1d1d1d;padding:8px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Drawdown</div><div style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:18px;font-weight:500;line-height:24px;color:#fa4d56">−2.80%</div></div>
+        <div style="min-width:0;background:#1d1d1d;padding:8px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Gross / Net exposure</div><div style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:18px;font-weight:500;line-height:24px">37,400 <span style="color:#42be65;font-size:14px">+24,600</span></div></div>
+        <div style="min-width:0;background:#1d1d1d;padding:8px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Allocated / Max</div><div style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:18px;font-weight:500;line-height:24px">125,000 <span style="color:#8d8d8d;font-size:14px">/ 200,000</span></div></div>
+      </div>
+      <div style="border:1px solid #393939;background:#1d1d1d;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Holdings structure — portfolio → alpha → deployment → account</span><span style="flex:1"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">one account = one alpha, never shared · row → Alpha 360° · account → Account 360°</span></div>
+        <div style="overflow-x:auto"><table style="width:100%;min-width:860px;border-collapse:collapse;font-size:12px">
+          <thead><tr>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">alpha</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">deployment</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">account_id</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">venue · mode</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">alloc</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">exposure</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">exp %</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">stage · health</th>
+          </tr></thead>
+          <tbody style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums">
+            <tr style="{{ rowGrid }}"><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">Grid v2.1</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">dep_88</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">acct-canary-grid-bin</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">BINANCE · live</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">5,000.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">4,900.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">13.1%</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:10px;font-weight:600;padding:1px 6px;border:1px solid #fa4d56;color:#fa4d56">⛨ LIVE_CANARY</span> <span style="font-size:10px;font-weight:600;padding:1px 6px;background:#071f11;color:#42be65">READY</span></td></tr>
+            <tr style="{{ rowGrid }}"><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">Grid v2.1</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">dep_94</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">acct-paper-grid-drb</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">DERIBIT · paper <span style="border:1px solid #393939;padding:0 4px;color:#f1c21b">USDC</span></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">60,000.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">21,200.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">56.7%</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:10px;font-weight:600;padding:1px 6px;border:1px solid #be95ff;color:#be95ff">PAPER_OBSERVATION</span> <span style="font-size:10px;font-weight:600;padding:1px 6px;background:#071f11;color:#42be65">READY</span></td></tr>
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">Carry v3.2</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">dep_74</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">paper-binance-carry-v32</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">BINANCE · paper</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">50,000.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">11,300.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">30.2%</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:10px;font-weight:600;padding:1px 6px;border:1px solid #be95ff;color:#be95ff">PAPER_OBSERVATION</span> <span style="font-size:10px;font-weight:600;padding:1px 6px;background:#071f11;color:#42be65">READY</span></td></tr>
+            <tr><td style="padding:7px 12px"><a href="#">MM v1.1</a></td><td style="padding:7px 12px;color:#c6c6c6">dep_91</td><td style="padding:7px 12px"><a href="#">acct-sbx-mm-okx</a></td><td style="padding:7px 12px;color:#c6c6c6">OKX · sandbox</td><td style="padding:7px 12px;text-align:right">10,000.00</td><td style="padding:7px 12px;text-align:right">0.00</td><td style="padding:7px 12px;text-align:right">0.0%</td><td style="padding:7px 12px"><span style="font-size:10px;font-weight:600;padding:1px 6px;border:1px solid #f1c21b;color:#f1c21b">SANDBOX_VALIDATION</span> <span style="font-size:10px;font-weight:600;padding:1px 6px;background:#302608;color:#f1c21b">HALTED</span></td></tr>
+          </tbody>
+        </table></div>
+        <div style="padding:7px 14px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f;border-top:1px solid #2a2a2a">DERIBIT exposure held in USDC — converted at FX policy fx_usdc_usdt.v1 for portfolio totals · VN MARKET (VND) would require fx policy before inclusion</div>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px;margin-bottom:14px">
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Cross-alpha correlation · rolling 30d</span><span style="flex:1"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">★ benchmark pinned in-matrix</span></div>
+          <table style="width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums">
+            <thead><tr><th style="padding:8px 12px;border-bottom:1px solid #393939"></th><th style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">Grid</th><th style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">Carry</th><th style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">MM</th><th style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#f1c21b;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">★ BM</th></tr></thead>
+            <tbody>
+              <tr style="{{ rowGrid }}"><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Grid</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;background:#262626;color:#6f6f6f">1.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">0.31</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#6f6f6f">—</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;background:#302608;color:#f1c21b;font-weight:600">0.55</td></tr>
+              <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Carry</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">0.31</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;background:#262626;color:#6f6f6f">1.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#6f6f6f">—</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">0.18</td></tr>
+              <tr><td style="padding:7px 12px;color:#c6c6c6">MM</td><td style="padding:7px 12px;text-align:right;color:#6f6f6f">—</td><td style="padding:7px 12px;text-align:right;color:#6f6f6f">—</td><td style="padding:7px 12px;text-align:right;background:#262626;color:#6f6f6f">1.00</td><td style="padding:7px 12px;text-align:right;color:#6f6f6f">—</td></tr>
+            </tbody>
+          </table>
+          <div style="padding:7px 14px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f;border-top:1px solid #2a2a2a">1h buckets · 720 samples · coverage 99.4% · corr.v1 · <span style="color:#f1c21b">— = INSUFFICIENT_DATA (MM: 9 days observed)</span> · pairwise coverage shown, never silently dropped · cell click → pair drill-down</div>
+        </div>
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Portfolio ↔ market correlation</span><span style="flex:1"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">ρ(NAV, Crypto Core v3)</span></div>
+          <div style="padding:14px 14px 6px;flex:1;display:flex;align-items:center">
+            <svg viewBox="0 0 640 200" style="width:100%;height:auto;display:block">
+              <line x1="0" y1="54" x2="640" y2="54" stroke="#f1c21b" stroke-width="1" stroke-dasharray="4 4"></line>
+              <text x="4" y="49" font-family="IBM Plex Mono,monospace" font-size="9" fill="#f1c21b">0.60 beta-proxy threshold</text>
+              <polyline points="0,125 48,118 96,128 144,112 192,102 240,109 288,93 336,70 384,48 432,45 480,74 528,96 576,90 640,83" fill="none" stroke="#78a9ff" stroke-width="2"></polyline>
+              <rect x="360" y="16" width="90" height="168" fill="#f1c21b" opacity="0.07"></rect>
+              <text x="362" y="180" font-family="IBM Plex Mono,monospace" font-size="9" fill="#f1c21b">crossed Aug 12–14</text>
+              <text x="560" y="74" font-family="IBM Plex Mono,monospace" font-size="9" fill="#78a9ff">now 0.44</text>
+            </svg>
+          </div>
+          <div style="padding:6px 14px 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;display:flex;flex-wrap:wrap;gap:4px 16px"><span>30d high <b style="color:#f1c21b">0.61</b></span><span>tail ρ (worst-decile BM days) <b style="color:#fa4d56">0.71</b> — book converges in stress</span><span style="color:#6f6f6f">tail.v1 · corr.v1 · 720 samples</span></div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-bottom:14px">
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Alpha leadership — who drives the book</span><span style="flex:1"></span><span onClick="{{ toggleLens }}" style="{{ lensBtnStyle }}">Leader lens</span></div>
+          <div style="padding:14px;display:flex;flex-direction:column;gap:12px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#c6c6c6">
+            <div><div style="display:flex;justify-content:space-between"><span>exposure share — <b style="color:#f4f4f4">Grid v2.1</b> <span style="color:#6f6f6f">(2 deployments)</span></span><span style="color:#f4f4f4">69.8%</span></div><div style="height:7px;background:#101010;border:1px solid #393939;overflow:hidden;margin-top:4px"><div style="height:100%;width:70%;background:#78a9ff"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between"><span>risk contribution to portfolio variance</span><span style="color:#f4f4f4">71.0%</span></div><div style="height:7px;background:#101010;border:1px solid #393939;overflow:hidden;margin-top:4px"><div style="height:100%;width:71%;background:#fa4d56"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between"><span>corr influence — avg |ρ| to others 0.31 · to BM</span><span style="color:#f4f4f4">0.55</span></div><div style="height:7px;background:#101010;border:1px solid #393939;overflow:hidden;margin-top:4px"><div style="height:100%;width:55%;background:#f1c21b"></div></div></div>
+            <div style="font-size:10px;color:#6f6f6f;line-height:1.5">three ranked lists, never one merged “leader score” · riskcontrib.v1 · covariance cov_30d_v2 · 720 samples</div>
+            <div style="border:1px solid #393939;background:#262626;padding:8px 10px;font-size:11px;color:#c6c6c6"><b style="color:#f1c21b">INSIGHT · HIGH_LEADER_CONCENTRATION</b> · grade B · 30d · <a href="#">evidence refs →</a><br><span style="color:#8d8d8d">Grid v2.1 supplies 69.8% of exposure and 71% of variance while correlating 0.55 with the benchmark; portfolio edge currently rides one alpha.</span></div>
+          </div>
+        </div>
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Leader impact — what if</span></div>
+          <div style="padding:14px;font-family:'IBM Plex Mono',monospace;font-size:12px">
+            <div style="display:grid;grid-template-columns:minmax(140px,44%) minmax(0,1fr);gap:6px 12px;color:#c6c6c6;overflow-wrap:anywhere">
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">halve Grid alloc</span><span style="color:#f4f4f4">est. portfolio vol <b style="color:#42be65">−18%</b> · net PnL −9%</span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">remove Grid</span><span style="color:#f4f4f4">ρ(port, BM) 0.44 → <b style="color:#42be65">0.21</b> · diversification +0.11</span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">double Carry</span><span style="color:#f4f4f4">top-1 concentration 69.8% → <b style="color:#42be65">57.9%</b></span>
+            </div>
+            <div style="margin-top:10px;font-size:10px;color:#6f6f6f;line-height:1.5">local what-if estimates — marginal.v1 · labeled estimates, not certainties · apply via Rebalance plan → plan/apply/verify</div>
+          </div>
+          <div style="padding:10px 14px;border-top:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Symbol overlap · duplicate exposure</span></div>
+          <table style="width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums">
+            <tbody>
+              <tr><td style="padding:6px 14px;border-top:1px solid #2a2a2a;color:#c6c6c6">BTCUSDT</td><td style="padding:6px 14px;border-top:1px solid #2a2a2a;color:#c6c6c6">Grid + Carry</td><td style="padding:6px 14px;border-top:1px solid #2a2a2a"><span style="color:#f1c21b">same-direction 9,100.00 — duplicate edge risk</span></td></tr>
+              <tr><td style="padding:6px 14px;border-top:1px solid #2a2a2a;color:#c6c6c6">ETHUSDT</td><td style="padding:6px 14px;border-top:1px solid #2a2a2a;color:#c6c6c6">Carry only</td><td style="padding:6px 14px;border-top:1px solid #2a2a2a;color:#42be65">no overlap</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:14px;margin-bottom:14px">
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Influence map</span><span style="flex:1"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">node = exposure · edge = |ρ| &gt; 0.15</span></div>
+          <div style="padding:14px">
+            <svg viewBox="0 0 400 150" style="width:100%;height:auto;display:block">
+              <line x1="170" y1="70" x2="300" y2="58" stroke="#f1c21b" stroke-width="3.5" opacity="0.8"></line>
+              <line x1="170" y1="70" x2="70" y2="46" stroke="#78a9ff" stroke-width="2" opacity="0.7"></line>
+              <line x1="70" y1="46" x2="300" y2="58" stroke="#78a9ff" stroke-width="1" opacity="0.5"></line>
+              <circle cx="170" cy="70" r="27" fill="#20304a" stroke="#78a9ff" stroke-width="2"></circle>
+              <text x="170" y="74" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#f4f4f4">Grid</text>
+              <circle cx="70" cy="46" r="15" fill="#20304a" stroke="#78a9ff" stroke-width="1.5"></circle>
+              <text x="70" y="50" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#f4f4f4">Carry</text>
+              <circle cx="110" cy="120" r="9" fill="none" stroke="#6f6f6f" stroke-width="1.5" stroke-dasharray="3 3"></circle>
+              <text x="110" y="141" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#6f6f6f">MM (insuff.)</text>
+              <rect x="286" y="44" width="28" height="28" fill="#302608" stroke="#f1c21b" stroke-width="1.5"></rect>
+              <text x="300" y="61" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#f1c21b">BM</text>
+              <text x="222" y="52" font-family="IBM Plex Mono,monospace" font-size="9" fill="#f1c21b">0.55</text>
+              <text x="108" y="52" font-family="IBM Plex Mono,monospace" font-size="9" fill="#78a9ff">0.31</text>
+              <text x="180" y="34" font-family="IBM Plex Mono,monospace" font-size="9" fill="#78a9ff">0.18</text>
+            </svg>
+          </div>
+          <div style="padding:0 14px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">reads the matrix at a glance — same data, corr.v1 · dashed = INSUFFICIENT_DATA</div>
+        </div>
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Drawdown overlap — do they sink together?</span><span style="flex:1"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">bar = DD episode · depth in label</span></div>
+          <div style="padding:14px 14px 6px;flex:1;display:flex;align-items:center">
+            <svg viewBox="0 0 640 130" style="width:100%;height:auto;display:block">
+              <rect x="352" y="0" width="76" height="130" fill="#f1c21b" opacity="0.07"></rect>
+              <text x="4" y="24" font-family="IBM Plex Mono,monospace" font-size="10" fill="#c6c6c6">Grid</text>
+              <rect x="120" y="16" width="60" height="10" fill="#2d0709" stroke="#fa4d56"></rect>
+              <rect x="356" y="16" width="66" height="10" fill="#2d0709" stroke="#fa4d56"></rect>
+              <text x="428" y="24" font-family="IBM Plex Mono,monospace" font-size="9" fill="#fa4d56">−2.1%</text>
+              <text x="4" y="64" font-family="IBM Plex Mono,monospace" font-size="10" fill="#c6c6c6">Carry</text>
+              <rect x="368" y="56" width="52" height="10" fill="#2d0709" stroke="#fa4d56"></rect>
+              <text x="426" y="64" font-family="IBM Plex Mono,monospace" font-size="9" fill="#fa4d56">−1.6%</text>
+              <rect x="200" y="56" width="34" height="10" fill="#2d0709" stroke="#fa4d56"></rect>
+              <text x="4" y="104" font-family="IBM Plex Mono,monospace" font-size="10" fill="#6f6f6f">MM</text>
+              <text x="120" y="104" font-family="IBM Plex Mono,monospace" font-size="9" fill="#6f6f6f">INSUFFICIENT_DATA — 9 days observed</text>
+              <text x="352" y="126" font-family="IBM Plex Mono,monospace" font-size="9" fill="#f1c21b">Aug 12–14 · joint drawdown · regime: high-vol panic (regime.v2)</text>
+            </svg>
+          </div>
+          <div style="padding:0 14px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">30d timeline · episode = peak-to-recovery · overlap shading = ≥2 alphas in drawdown</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:11px">
+        <a href="#" style="border:1px solid #393939;background:#262626;padding:5px 12px;color:#c6c6c6">Capital ledger →</a>
+        <a href="#" style="border:1px solid #393939;background:#262626;padding:5px 12px;color:#c6c6c6">Incidents (0 open) →</a>
+        <a href="#" style="border:1px solid #393939;background:#262626;padding:5px 12px;color:#c6c6c6">Reconciliation findings (0) →</a>
+        <a href="#" style="border:1px solid #393939;background:#262626;padding:5px 12px;color:#c6c6c6">Approvals: R2 AP-207 · AP-311 →</a>
+      </div>
+      </sc-if>
+      <sc-if value="{{ isLedger }}" hint-placeholder-val="{{ false }}">
+      <div style="border:1px solid #393939;background:#1d1d1d">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Capital ledger — append-only</span><span style="flex:1"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6">allocated <b style="color:#f4f4f4">125,000.00</b> / max 200,000.00 · free 57,842.55 USDT</span></div>
+        <div style="overflow-x:auto"><table style="width:100%;min-width:940px;border-collapse:collapse;font-size:12px">
+          <thead><tr><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">time (UTC)</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">type</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">account</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">amount</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">allocated →</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">operation</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">actor</th></tr></thead>
+          <tbody style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums">
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">2026-08-13 09:12</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:10px;font-weight:600;padding:1px 6px;border:1px solid #fa4d56;color:#fa4d56">CANARY_ALLOCATE</span></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">acct-canary-grid-bin</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#42be65">+5,000.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">120,000 → 125,000</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">op_1201</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Stan · AP-311</td></tr>
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">2026-08-01 14:02</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:10px;font-weight:600;padding:1px 6px;border:1px solid #78a9ff;color:#78a9ff">ALLOCATE</span></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">acct-paper-grid-drb</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#42be65">+60,000.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">60,000 → 120,000</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">op_1240</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Stan · AP-152</td></tr>
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">2026-07-28 10:11</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:10px;font-weight:600;padding:1px 6px;border:1px solid #78a9ff;color:#78a9ff">REBALANCE</span></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">paper-binance-carry-v32</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#fa4d56">−10,000.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">70,000 → 60,000</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">op_1222</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Stan</td></tr>
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">2026-07-20 08:00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:10px;font-weight:600;padding:1px 6px;border:1px solid #f1c21b;color:#f1c21b">SEED</span></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">acct-sbx-mm-okx</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#42be65">+10,000.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">60,000 → 70,000</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">op_1187</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Stan · AP-259</td></tr>
+            <tr><td style="padding:7px 12px;color:#c6c6c6">2026-07-12 09:30</td><td style="padding:7px 12px"><span style="font-size:10px;font-weight:600;padding:1px 6px;border:1px solid #78a9ff;color:#78a9ff">ALLOCATE</span></td><td style="padding:7px 12px"><a href="#">paper-binance-carry-v32</a></td><td style="padding:7px 12px;text-align:right;color:#42be65">+50,000.00</td><td style="padding:7px 12px;text-align:right">10,000 → 60,000</td><td style="padding:7px 12px"><a href="#">op_1102</a></td><td style="padding:7px 12px;color:#c6c6c6">Stan · AP-207</td></tr>
+          </tbody>
+        </table></div>
+        <div style="padding:7px 14px;border-top:1px solid #2a2a2a;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">every entry ties to an operation_id from plan → apply → verify · before/after totals are the ledger's own invariant · USDT base, FX-normalized entries flagged</div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ isApprovals }}" hint-placeholder-val="{{ false }}">
+      <div style="border:1px solid #393939;background:#1d1d1d">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Approvals touching this portfolio</span><span style="flex:1"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">row → gate review screen · full inbox in Governance</span></div>
+        <div style="overflow-x:auto"><table style="width:100%;min-width:940px;border-collapse:collapse;font-size:12px">
+          <thead><tr><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">id</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">gate</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">subject</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">decision</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">approvers</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">decided</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">conditions</th></tr></thead>
+          <tbody style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums">
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">AP-311</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#fa4d56">LIVE_CANARY</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Grid v2.1 → BINANCE canary</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">APPROVED</span></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Lan + Risk (dual)</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">2026-07-30</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">2 active</td></tr>
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">AP-259</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#78a9ff">R2</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">MM v1.1 → OKX sandbox</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">APPROVED_WITH_CONDITIONS</span></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Lan, Minh</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">2026-07-18</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">1 active · exp 2026-10-01</td></tr>
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">PX-31</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#be95ff">PAPER_EXIT</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">MM v1.1 paper observation</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">APPROVED</span></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Lan</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">2026-07-15</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">0</td></tr>
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">AP-152</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#78a9ff">R2</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Grid v2.1 → DERIBIT paper</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">APPROVED_WITH_CONDITIONS</span></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Lan, Risk</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">2026-06-28</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">1 active</td></tr>
+            <tr><td style="padding:7px 12px"><a href="#">AP-118</a></td><td style="padding:7px 12px;color:#78a9ff">R1</td><td style="padding:7px 12px;color:#c6c6c6">Grid v2.1 · RC-38</td><td style="padding:7px 12px"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">APPROVED</span></td><td style="padding:7px 12px;color:#c6c6c6">Minh, Lan</td><td style="padding:7px 12px;color:#c6c6c6">2026-06-20</td><td style="padding:7px 12px;text-align:right">0</td></tr>
+          </tbody>
+        </table></div>
+        <div style="padding:7px 14px;border-top:1px solid #2a2a2a;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">conditions are typed objects (owner · deadline · expiry · blocking) — expiring conditions surface in Incidents 7 days ahead</div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ isIncidents }}" hint-placeholder-val="{{ false }}">
+      <div style="border:1px solid #393939;background:#1d1d1d">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Incidents</span><span style="flex:1"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">0 OPEN</span></div>
+        <div style="padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8d8d8d;border-bottom:1px solid #2a2a2a">No open incidents across 6 accounts · protective ladder tested: rollback rb_31 (2026-07-28) · history below is append-only</div>
+        <div style="overflow-x:auto"><table style="width:100%;min-width:860px;border-collapse:collapse;font-size:12px">
+          <thead><tr><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">id</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">type</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">scope</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">opened</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">resolved</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">duration</th></tr></thead>
+          <tbody style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums">
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">inc_31</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#f1c21b">BROKER_STALE</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">acct-sbx-mm-okx · OKX</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">2026-07-12 03:20</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#42be65">03:38 · sync restored</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">18m</td></tr>
+            <tr><td style="padding:7px 12px"><a href="#">inc_28</a></td><td style="padding:7px 12px;color:#f1c21b">REJECT_SPIKE</td><td style="padding:7px 12px;color:#c6c6c6">dep_74 · BINANCE paper</td><td style="padding:7px 12px;color:#c6c6c6">2026-07-02 14:05</td><td style="padding:7px 12px;color:#42be65">14:52 · risk cap tuned via AP-207 condition</td><td style="padding:7px 12px;text-align:right">47m</td></tr>
+          </tbody>
+        </table></div>
+        <div style="padding:7px 14px;border-top:1px solid #2a2a2a;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">an incident links its finding, operations taken, and the approval/condition that closed it — nothing closes silently</div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ isAudit }}" hint-placeholder-val="{{ false }}">
+      <div style="border:1px solid #393939;background:#1d1d1d">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Audit — portfolio-scoped trail</span><span style="flex:1"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">portfolio_audit_log + command journal · append-only</span></div>
+        <div style="overflow-x:auto"><table style="width:100%;min-width:900px;border-collapse:collapse;font-size:12px">
+          <thead><tr><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">time (UTC)</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">actor</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">action</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">resource</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">evidence</th><th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">state</th></tr></thead>
+          <tbody style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums">
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">2026-08-13 09:12:04</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Stan (step-up)</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a">allocation.canary_scale</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">PF-CRYPTO · acct-canary-grid-bin</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">op_1201</a> · AP-311</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">VERIFIED</span></td></tr>
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">2026-08-01 14:02:44</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Stan (step-up)</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a">allocation.set</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">PF-CRYPTO · acct-paper-grid-drb</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">op_1240</a> · AP-152</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">VERIFIED</span></td></tr>
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">2026-07-30 08:44:19</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Lan · Risk (dual)</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a">approval.decide APPROVED</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">AP-311 · LIVE_CANARY</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">digest c81f…</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#262626;color:#c6c6c6">RECORDED</span></td></tr>
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">2026-07-28 10:11:52</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">Stan (step-up)</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a">allocation.rebalance</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">PF-CRYPTO · paper-binance-carry-v32</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><a href="#">op_1222</a></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">VERIFIED</span></td></tr>
+            <tr><td style="padding:7px 12px;color:#c6c6c6">2026-07-22 11:20:03</td><td style="padding:7px 12px;color:#c6c6c6">Stan (step-up)</td><td style="padding:7px 12px">deployment.halt</td><td style="padding:7px 12px;color:#c6c6c6">dep_91 · sandbox default</td><td style="padding:7px 12px"><a href="#">op_1187</a></td><td style="padding:7px 12px"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">VERIFIED</span></td></tr>
+          </tbody>
+        </table></div>
+        <div style="padding:7px 14px;border-top:1px solid #2a2a2a;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">every mutation: command_id · idempotency key · expected revision · approvals · PARTIAL stays visible, never green</div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ isPlaceholder }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px dashed #4c4c4c;background:#1d1d1d;padding:40px 20px;text-align:center;font-family:'IBM Plex Mono',monospace">
+          <div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:#f1c21b">OVERVIEW — SHIPS WITH APX-6 ANALYTICS SLICE</div>
+          <div style="font-size:11px;color:#8d8d8d;margin-top:8px">The Overview tab is the NAV/benchmark summary view (EXECUTION_CLUSTER_GUIDE.md §7); Structure &amp; Correlation is this slice's primary tab. No fake data is rendered.</div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;operatorAdmin&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Demo states&quot;}}">
+class Component extends DCLogic {
+  state = { tab: "structure", lens: false };
+  renderVals() {
+    const t = this.state.tab;
+    const base = "font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:10px 12px;cursor:pointer;border-bottom:2px solid transparent;color:#8d8d8d";
+    const active = base.replace("transparent", "#78a9ff").replace("color:#8d8d8d", "color:#f4f4f4");
+    const mk = (n) => (t === n ? active : base);
+    const set = (n) => () => this.setState({ tab: n });
+    const lens = this.state.lens;
+    const lensBase = "font-family:'IBM Plex Mono',monospace;font-size:10px;padding:2px 8px;cursor:pointer;border:1px solid #393939;color:#8d8d8d";
+    return {
+      isStructure: t === "structure", isPlaceholder: t === "overview",
+      isLedger: t === "ledger", isApprovals: t === "approvals", isIncidents: t === "incidents", isAudit: t === "audit",
+      tabOverview: set("overview"), tabStructure: set("structure"), tabLedger: set("ledger"),
+      tabApprovals: set("approvals"), tabIncidents: set("incidents"), tabAudit: set("audit"),
+      tabStyleOverview: mk("overview"), tabStyleStructure: mk("structure"), tabStyleLedger: mk("ledger"),
+      tabStyleApprovals: mk("approvals"), tabStyleIncidents: mk("incidents"), tabStyleAudit: mk("audit"),
+      toggleLens: () => this.setState({ lens: !lens }),
+      lensBtnStyle: lens ? lensBase.replace("#393939", "#78a9ff").replace("color:#8d8d8d", "color:#78a9ff") : lensBase,
+      rowGrid: lens ? "background:#20304a" : "",
+      showAdmin: this.props.operatorAdmin ?? true
+    };
+  }
+}
+</script>
+</body>
+</html>

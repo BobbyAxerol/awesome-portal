@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#161616;color-scheme:dark}a{color:#78a9ff;text-decoration:none}a:hover{color:#a6c8ff;text-decoration:underline}::selection{background:#78a9ff;color:#161616}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;background:#161616;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#f4f4f4;font-size:13px;letter-spacing:.16px" data-screen-label="Full Blotter (WF 4c)">
+  <div style="position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;min-height:48px;padding:0 16px;border-bottom:1px solid #393939;background:#161616">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.12em;white-space:nowrap">QUANT ECOSYSTEM PORTAL</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8d8d8d;padding:2px 8px;border:1px solid #393939;white-space:nowrap">Default Workspace</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.08em;color:#78a9ff;border:1px solid #78a9ff;padding:1px 7px">OPERATIONS</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:block">Deployments <span style="color:#6f6f6f">/</span> Blotter</span>
+    <span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;border:1px solid #393939;background:#262626;padding:4px 12px">Search <kbd style="font-size:10px;color:#8d8d8d;border:1px solid #4c4c4c;padding:0 4px;font-family:inherit">⌘K</kbd></span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px">Operations Dark ▾</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px">Operational ▾</span>
+  </div>
+  <div style="display:flex;flex:1;min-height:0">
+    <div style="flex-shrink:0;width:228px;border-right:1px solid #393939;background:#101010;padding:14px 0;font-size:13px">
+      <div style="display:flex;flex-direction:column">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Command</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Command Center</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Operations Queue</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Alerts</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Governance</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Approval Inbox</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Exit Reviews</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Promotion Timeline</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Waivers &amp; Conditions</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Deployments</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Portfolios</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Alpha Fleet</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Paper</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Sandbox</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Live</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Accounts &amp; Bindings</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Reconciliation</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 13px;background:#262626;color:#f4f4f4;font-weight:500;border-left:3px solid #78a9ff">Blotter</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Administration</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Profile &amp; Access</div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0;max-width:1440px;margin:0 auto;padding:20px 20px 64px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-bottom:10px">
+        <h1 style="margin:0;font-family:'IBM Plex Sans',sans-serif;font-weight:300;font-size:22px;line-height:1.25">Orders &amp; Fills <span style="color:#8d8d8d">— full blotter</span></h1>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#6f6f6f;border:1px dashed #4c4c4c;padding:1px 6px">WF <a href="#">4c</a></span>
+        <span style="flex:1"></span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;border:1px solid #393939;background:#1d1d1d;padding:2px 8px"><b style="color:#f4f4f4">EXECUTION</b> · as_of 10:42:01Z · <span style="color:#42be65">age 1.1s</span></span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px;font-family:'IBM Plex Mono',monospace;font-size:10px">
+        <span style="color:#6f6f6f;text-transform:uppercase;letter-spacing:.08em">Scope</span>
+        <span style="color:#f4f4f4;background:#262626;border:1px solid #78a9ff;padding:3px 8px;cursor:pointer">Alpha Grid v2.1 ▾</span>
+        <span style="color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px;cursor:pointer">Deployment All ▾</span>
+        <span style="color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px;cursor:pointer">Venue All ▾</span>
+        <span style="color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px;cursor:pointer">Last 24h ▾</span>
+        <span style="flex:1"></span>
+        <span onClick="{{ stAll }}" style="{{ ssAll }}">All</span>
+        <span onClick="{{ stFilled }}" style="{{ ssFilled }}">Filled</span>
+        <span onClick="{{ stPartial }}" style="{{ ssPartial }}">Partial</span>
+        <span onClick="{{ stRejected }}" style="{{ ssRejected }}">Rejected</span>
+        <span onClick="{{ stOpen }}" style="{{ ssOpen }}">Open</span>
+        <span style="color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px;cursor:pointer">Columns ▾</span>
+        <span style="color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px;cursor:pointer">Export</span>
+      </div>
+      <sc-if value="{{ hasXf }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6">
+        <span style="color:#6f6f6f;text-transform:uppercase;letter-spacing:.08em">Cross-filter</span>
+        <span style="border:1px solid #78a9ff;background:#1a2536;color:#a6c8ff;padding:3px 8px;display:inline-flex;align-items:center;gap:8px">chart selection · Aug 12 10:00–14:00 <b onClick="{{ clearXf }}" style="cursor:pointer;color:#f4f4f4">✕ reset</b></span>
+        <span style="color:#6f6f6f">set by clicking a series in any chart — the table and its counts follow the selection</span>
+      </div>
+      </sc-if>
+      <div style="border:1px solid #393939;background:#1d1d1d">
+        <div style="overflow-x:auto"><table style="width:100%;min-width:980px;border-collapse:collapse;font-size:12px">
+          <thead><tr>
+            <th style="position:sticky;top:0;background:#1d1d1d;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">time (UTC)</th>
+            <th style="position:sticky;top:0;background:#1d1d1d;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">deployment · venue</th>
+            <th style="position:sticky;top:0;background:#1d1d1d;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">symbol</th>
+            <th style="position:sticky;top:0;background:#1d1d1d;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">type / side</th>
+            <th style="position:sticky;top:0;background:#1d1d1d;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">qty</th>
+            <th style="position:sticky;top:0;background:#1d1d1d;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">price</th>
+            <th style="position:sticky;top:0;background:#1d1d1d;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">status</th>
+            <th style="position:sticky;top:0;background:#1d1d1d;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">fee</th>
+            <th style="position:sticky;top:0;background:#1d1d1d;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">order_id</th>
+          </tr></thead>
+          <tbody style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums">
+            <sc-if value="{{ sFilled }}" hint-placeholder-val="{{ true }}">
+            <tr onClick="{{ toggleExpand }}" style="cursor:pointer;background:{{ expandBg }}"><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">{{ expandCaret }} 10:41:58.114</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">dep_94 · DERIBIT</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a">BTC-PERP</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#42be65">LIMIT BUY</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">0.0400</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">60,890.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">FILLED</span></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#c6c6c6">0.4899</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#78a9ff">ord_88a2</td></tr>
+            </sc-if>
+            <sc-if value="{{ showFunnel }}" hint-placeholder-val="{{ false }}">
+            <tr><td colspan="9" style="padding:0;border-bottom:1px solid #393939;background:#101010">
+              <div style="padding:12px 16px;display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6">
+                <span style="border:1px solid #393939;background:#1d1d1d;padding:5px 10px">signal <b style="color:#f4f4f4">sig_7f21</b><br><span style="color:#6f6f6f">10:41:57.820</span></span><span style="color:#6f6f6f">→</span>
+                <span style="border:1px solid #393939;background:#1d1d1d;padding:5px 10px">intent <b style="color:#f4f4f4">int_9c04</b><br><span style="color:#6f6f6f">.845 · +25ms</span></span><span style="color:#6f6f6f">→</span>
+                <span style="border:1px solid #42be65;background:#1d1d1d;padding:5px 10px">risk grant <b style="color:#42be65">✓ rg_5512</b><br><span style="color:#6f6f6f">.878 · capacity ok</span></span><span style="color:#6f6f6f">→</span>
+                <span style="border:1px solid #393939;background:#1d1d1d;padding:5px 10px">order ACK <b style="color:#f4f4f4">ord_88a2</b><br><span style="color:#6f6f6f">.114 · ack 236ms</span></span><span style="color:#6f6f6f">→</span>
+                <span style="border:1px solid #78a9ff;background:#1d1d1d;padding:5px 10px">fill <b style="color:#78a9ff">0.0400 @ 60,890.00</b><br><span style="color:#6f6f6f">.402 · MAKER · fee 0.4899</span></span>
+                <span style="margin-left:auto;color:#6f6f6f">sizing decision <a href="#">sd_2210</a> · accounting entry <a href="#">le_9921</a> · click row to collapse</span>
+              </div>
+            </td></tr>
+            </sc-if>
+            <sc-if value="{{ sPartial }}" hint-placeholder-val="{{ true }}">
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">10:38:12.007</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">dep_94 · DERIBIT</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a">ETH-PERP</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#fa4d56">LIMIT SELL</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">1.2000</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">2,995.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#302608;color:#f1c21b">PARTIAL 0.9000/1.2000</span></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#c6c6c6">0.3577</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#78a9ff">ord_88a1</td></tr>
+            </sc-if>
+            <sc-if value="{{ sFilled }}" hint-placeholder-val="{{ true }}">
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">10:31:05.660</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">dep_88 · BINANCE</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a">BTCUSDT</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#42be65">MARKET BUY</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">0.0080</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">61,180.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">FILLED</span></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#c6c6c6">0.1958</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#78a9ff">ord_87f4</td></tr>
+            </sc-if>
+            <sc-if value="{{ sRejected }}" hint-placeholder-val="{{ true }}">
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">10:22:47.913</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">dep_94 · DERIBIT</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a">BTC-PERP</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#42be65">LIMIT BUY</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">0.1000</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">60,700.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#2d0709;color:#fa4d56">REJECTED</span> <span style="color:#6f6f6f;font-size:11px">risk: max position notional</span></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#6f6f6f">—</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#78a9ff">ord_87d1</td></tr>
+            </sc-if>
+            <sc-if value="{{ sFilled }}" hint-placeholder-val="{{ true }}">
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">10:14:33.290</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">dep_88 · BINANCE</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a">BTCUSDT</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#fa4d56">LIMIT SELL</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">0.0080</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">61,420.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">FILLED</span></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#c6c6c6">0.1966</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#78a9ff">ord_87b8</td></tr>
+            </sc-if>
+            <sc-if value="{{ sOpen }}" hint-placeholder-val="{{ true }}">
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">09:58:03.001</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">dep_88 · BINANCE</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a">BTCUSDT</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#fa4d56">STOP SELL</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">0.0080</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">60,400.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#262626;color:#c6c6c6">OPEN · working</span></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#6f6f6f">—</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#78a9ff">ord_8791</td></tr>
+            </sc-if>
+            <sc-if value="{{ sFilled }}" hint-placeholder-val="{{ true }}">
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">09:45:12.774</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">dep_94 · DERIBIT</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a">ETH-PERP</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#42be65">LIMIT BUY</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">0.8000</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">2,962.40</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">FILLED</span></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#c6c6c6">0.2370</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#78a9ff">ord_8766</td></tr>
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">09:12:40.518</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">dep_88 · BINANCE</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a">BTCUSDT</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#42be65">LIMIT BUY</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">0.0080</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">61,020.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">FILLED</span></td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#c6c6c6">0.1953</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#78a9ff">ord_8712</td></tr>
+            </sc-if>
+          </tbody>
+        </table></div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px 18px;align-items:center;padding:9px 14px;border-top:1px solid #393939;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">
+          <span style="color:#c6c6c6">{{ countLabel }}</span>
+          <span style="border:1px solid #393939;background:#262626;color:#c6c6c6;padding:3px 10px;cursor:pointer">▼ load older — cursor c_ab34… (keyset, never OFFSET)</span>
+          <span>rows virtualized · sticky header · click a FILLED row for the signal→fill funnel</span>
+          <span style="margin-left:auto">fees in venue currency · exact values, never abbreviated</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1440, &quot;height&quot;: 900}}">
+class Component extends DCLogic {
+  state = { status: "all", xf: true, expanded: false };
+  renderVals() {
+    const f = this.state.status, xf = this.state.xf;
+    const base = "font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px;cursor:pointer";
+    const active = "font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:#161616;background:#78a9ff;border:1px solid #78a9ff;padding:3px 8px;cursor:pointer";
+    const mk = (n) => (f === n ? active : base);
+    const set = (n) => () => this.setState({ status: n });
+    const show = (s) => f === "all" || f === s;
+    const counts = { all: 8, filled: 5, partial: 1, rejected: 1, open: 1 };
+    const total = xf ? "412 in selection · 48,213 total" : "48,213 total";
+    return {
+      stAll: set("all"), stFilled: set("filled"), stPartial: set("partial"), stRejected: set("rejected"), stOpen: set("open"),
+      ssAll: mk("all"), ssFilled: mk("filled"), ssPartial: mk("partial"), ssRejected: mk("rejected"), ssOpen: mk("open"),
+      sFilled: show("filled"), sPartial: show("partial"), sRejected: show("rejected"), sOpen: show("open"),
+      hasXf: xf, clearXf: (e) => { e.stopPropagation(); this.setState({ xf: false }); },
+      toggleExpand: () => this.setState({ expanded: !this.state.expanded }),
+      showFunnel: this.state.expanded && show("filled"),
+      expandBg: this.state.expanded ? "#1a2536" : "transparent",
+      expandCaret: this.state.expanded ? "▾" : "▸",
+      countLabel: "showing 1–" + counts[f] + " of " + total
+    };
+  }
+}
+</script>
+</body>
+</html>

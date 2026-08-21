@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet"><style>
+body{margin:0;background:#f0eee9;font-family:'Patrick Hand',system-ui,sans-serif}
+a{color:#0f4c5c}a:hover{color:#226173}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 6px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 14px/1.2 'Patrick Hand',system-ui,sans-serif;color:#1a1a1a}
+.dv-lead{font:10.5px ui-monospace,monospace;color:#666;margin:0 0 20px}
+.dv-opts{display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:8px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:600 12.5px/1.3 'Patrick Hand',sans-serif;color:#222}
+.ann{font:9.5px ui-monospace,monospace;color:#777;max-width:560px}
+.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-next{margin:22px 0 0;font:12px/1.5 'Patrick Hand',sans-serif;color:rgba(0,0,0,.55)}
+.scr{font:12px/1.35 'Patrick Hand',sans-serif;color:#333}
+.hd{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:2px solid #333;flex-wrap:wrap}
+.hd.dark{background:#1e2734;color:#e8eef7;border-bottom-color:#0d131c}
+.hd.dark .chip{border-color:#8fa0b5;color:#cfdae8}
+.hd.dark .chip.g{border-color:#5fbd8b;color:#5fbd8b}.hd.dark .chip.r{border-color:#e58a8a;color:#e58a8a}.hd.dark .chip.y{border-color:#d4a75e;color:#d4a75e}
+.hd.dark .mono{color:#9fb0c4}
+.t{font-weight:600;font-size:14px}
+.mono{font:9.5px ui-monospace,monospace;color:#666}
+.chip{display:inline-block;padding:1px 7px;border:1.3px solid #888;border-radius:9px;font:9px ui-monospace,monospace;letter-spacing:.5px;white-space:nowrap}
+.chip.g{border-color:#1e7b4f;color:#1e7b4f}.chip.r{border-color:#b43a3a;color:#b43a3a}.chip.y{border-color:#9a6a1f;color:#9a6a1f}.chip.tl{border-color:#0f4c5c;color:#0f4c5c}
+.row{display:flex;gap:6px;padding:6px;align-items:stretch}
+.b{border:1.5px solid #555;border-radius:3px;padding:6px 8px;background:#fff;min-width:0;flex:1}
+.b.dash{border-style:dashed;border-color:#999}
+.bt{font:9px ui-monospace,monospace;letter-spacing:.7px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.ch{background:repeating-linear-gradient(-45deg,#fbfaf7 0 6px,#f0efe8 6px 12px);border:1px dashed #aaa;border-radius:2px;display:flex;align-items:center;justify-content:center;color:#999;font:9.5px ui-monospace,monospace;text-align:center;padding:4px}
+.kpi{flex:1;border:1.5px solid #555;border-radius:3px;padding:5px 8px}
+.kv{font:700 14px ui-monospace,monospace;color:#222}
+.kl{font:8.5px ui-monospace,monospace;letter-spacing:.6px;text-transform:uppercase;color:#888}
+.btn{display:inline-block;border:1.5px solid #333;border-radius:3px;padding:2px 10px;font:10px ui-monospace,monospace;background:#fff;color:#333;white-space:nowrap}
+.btn.pri{background:#333;color:#fff}
+.btn.warn{border-color:#b43a3a;color:#b43a3a}
+.li{font:10px ui-monospace,monospace;color:#555;padding:1.5px 0}
+.trow .wrap{white-space:normal;overflow:visible}
+.trow{display:flex;gap:10px;border-top:1px solid #e2e0d8;padding:3px 6px;font:9px ui-monospace,monospace;color:#666;white-space:nowrap;overflow:hidden}
+.trow.h{border-top:none;color:#999;text-transform:uppercase;letter-spacing:.5px}
+.bar{height:7px;background:#f0efe8;border:1px solid #bbb;border-radius:4px;overflow:hidden;margin:2px 0 4px}
+.bar i{display:block;height:100%;background:#0f4c5c}
+.ok{color:#1e7b4f}.wr{color:#9a6a1f}.er{color:#b43a3a}
+.ft{display:flex;gap:8px;align-items:center;padding:8px 12px;border-top:2px solid #333;flex-wrap:wrap}
+.guard{border:4px double #b43a3a;margin:6px;border-radius:4px;display:flex;align-items:center;gap:10px;padding:7px 12px;flex-wrap:wrap}
+.shield{width:20px;height:22px;border:2px solid #b43a3a;border-radius:3px 3px 9px 9px;display:flex;align-items:center;justify-content:center;font:700 9px ui-monospace;color:#b43a3a}
+</style></helmet>
+<section class="dv-turn" id="t5">
+<div class="dv-thd"><a class="dv-tid" href="#t5">5</a><span class="dv-tname">V3 — the morning screen, break-glass, role lens</span></div>
+<p class="dv-lead">from the ver2 review: <a class="dv-oid" href="#5a">5a</a> Command Center answers "what do I do first" ACROSS the four loops · <a class="dv-oid" href="#5b">5b</a> break-glass = governed override, never a bypass · <a class="dv-oid" href="#5c">5c</a> role lens proves DENIED-per-role on a real screen. LifecycleRail (from 4f) is retrofitted into all 5 workbenches at hi-fi.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="5a"><div class="dv-olabel"><a class="dv-oid" href="#5a">5a</a>Command Center — triage first, fleet second</div><div class="ann">persona: operator at 08:00 · ONE ranked queue merges incidents, overdue approvals, stuck ops · rank = severity, then SLA, then age — never screen order · below it the daily loop (fleet health + pinned)</div>
+<div class="dv-card scr" style="width:880px">
+<div class="hd dark"><span class="chip">COMMAND CENTER</span><span class="t">Good morning, Stan</span><span class="chip r">1 CRITICAL</span><span style="flex:1"></span><span class="mono">as_of 08:00:12Z · everything below links to its owning screen</span></div>
+<div class="row"><div class="b"><div class="bt">Needs you now — ranked, cross-loop</div>
+<div class="trow"><span class="er" style="width:24px">1</span><span class="er" style="width:110px">INCIDENT</span><span style="width:270px">MISMATCH acct-live-grid-v21 · BINANCE</span><span style="width:120px">OPEN · 2m</span><span><a href="#">open inc_44 →</a></span></div>
+<div class="trow"><span class="er" style="width:24px">2</span><span class="wr" style="width:110px">APPROVAL</span><span style="width:270px">AP-352 R2 Carry v3.2 → PF-MAIN</span><span class="er" style="width:120px">26h / 24h OVERDUE</span><span><a href="#">review →</a></span></div>
+<div class="trow"><span class="wr" style="width:24px">3</span><span class="wr" style="width:110px">OPERATION</span><span style="width:270px">op_1251 emergency-close PARTIAL 1/2</span><span style="width:120px">6m unresolved</span><span><a href="#">re-apply →</a></span></div>
+<div class="trow"><span style="width:24px">4</span><span style="width:110px">APPROVAL</span><span style="width:270px">AP-201 R1 RSI v1.7 — quorum needs you</span><span style="width:120px">due in 22h</span><span><a href="#">review →</a></span></div>
+<div class="li mono">empty state = "Nothing needs you" (real, not hidden work) · this list IS the priority contract between loops</div></div></div>
+<div class="row">
+<div class="b"><div class="bt">Fleet health (daily loop)</div><div class="li mono">deployments 8 · live 2 · canary 1 (day 9/14) · sandbox 2 (1 HALTED) · paper 3 · sync 7/8 OK · findings 1 · dead letters 0</div></div>
+<div class="b"><div class="bt">Pinned (watchlist, user-owned)</div><div class="li">⛨ Grid v2.1 canary · +112 · <span class="ok">READY</span></div><div class="li">Carry v3.2 paper · 12/30d · <span class="ok">READY</span></div><div class="li mono">pin from any workbench header · max 5 · order = user's</div></div>
+</div>
+<div class="row"><div class="b dash"><div class="bt">Today</div><div class="li mono">upcoming: canary review day 9/14 (2026-08-25) · condition capacity-cap expires in 7d · recent: op_1250 allocation VERIFIED 1h ago — full journal in Operations Queue</div></div></div>
+</div></div>
+
+<div class="dv-opt" id="5b"><div class="dv-olabel"><a class="dv-oid" href="#5b">5b</a>Break-glass — governed override in the Action Drawer</div><div class="ann">trigger: protective action needed + required approver quorum unreachable · never for scale-up/allocate — ONLY risk-reducing commands (halt, reduce, close) can break glass</div>
+<div class="dv-card scr" style="width:640px">
+<div class="hd dark"><span class="chip r">BREAK-GLASS</span><span class="t">halt dep_88 — quorum unreachable</span></div>
+<div class="row"><div class="b"><div class="bt">Preconditions (all enforced server-side)</div><div class="li ok">✓ command class = RISK-REDUCING (halt/reduce/close/cancel)</div><div class="li ok">✓ required approver unreachable 15m+ (paged 07:44, 07:52)</div><div class="li ok">✓ actor has operator-admin + break-glass grant</div><div class="li er">✗ scale/allocate/resume — NEVER break-glass eligible</div></div></div>
+<div class="row"><div class="b"><div class="bt">Ceremony</div><div class="li mono">typed reason (min 20 chars) + typed confirm BREAK-GLASS + step-up auth → apply runs with flag break_glass=true</div></div>
+<div class="b"><div class="bt">Aftermath — automatic, non-optional</div><div class="li mono">incident auto-opened · review approval auto-created for the skipped approver (SLA 24h) · alert CRITICAL to all approvers · audit row flagged · deployment cannot RESUME until the review approval decides</div></div></div>
+</div></div>
+
+<div class="dv-opt" id="5c"><div class="dv-olabel"><a class="dv-oid" href="#5c">5c</a>Role lens — Portfolio 360° as Quant Researcher</div><div class="ann">same URL, role-cut render · DENIED = visible-but-withheld (spec §26) · proves authority ≠ visibility on a real screen</div>
+<div class="dv-card scr" style="width:640px">
+<div class="hd dark"><span class="chip">PORTFOLIO 360°</span><span class="t">PF-CRYPTO</span><span style="flex:1"></span><span class="mono">viewing as QUANT RESEARCHER</span></div>
+<div class="row">
+<div class="b"><div class="bt">Visible — analytics</div><div class="li ok">structure & correlation ✓ · leader lens ✓ · equity/DD ✓ · approvals (read) ✓ · audit (read) ✓</div></div>
+<div class="b"><div class="bt">Withheld — 🔒 DENIED panels stay in layout</div><div class="li mono">🔒 Capital ledger amounts — requires Portfolio Operator<br>🔒 account_ids masked (acct-••••-grid) — binding scope<br>🔒 Admin actions column absent (not disabled — absent)</div></div>
+</div>
+<div class="row"><div class="b dash"><div class="bt">Rules</div><div class="li mono">panel skeleton + lock + required-role text · counts may show, amounts never · export inherits the lens · role switch (if user holds multiple) is a topbar control, logged</div></div></div>
+</div></div>
+
+</div>
+<p class="dv-next">Try next: "hi-fi <a class="dv-oid" href="#5a">5a</a>" · "wire <a class="dv-oid" href="#5b">5b</a> into the drawer as a demo state" · "add the Quant lens tweak to Portfolio 360°"</p>
+</section>
+<section class="dv-turn" id="t4">
+<div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">V2 — closing the three broken loops (approve · promote · respond) + patterns: nav, states, responsiveness</span></div>
+<p class="dv-lead">from the ver1 review: new screens <a class="dv-oid" href="#4a">4a</a>–<a class="dv-oid" href="#4e">4e</a> close the approve/promote/respond journeys · <a class="dv-oid" href="#4f">4f</a> canonical nav + LifecycleRail + responsive rules (retrofit to ALL 10 hi-fi) · <a class="dv-oid" href="#4g">4g</a> missing states + chart interaction contract · <a class="dv-oid" href="#4h">4h</a> VN MARKET off-hours. Sizing rule everywhere: KPI strips auto-fit minmax(160px,1fr), paired panels collapse to 1 col &lt;1024px, tables scroll internally, drawer goes full-screen &lt;720px.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="4a"><div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a>Approval Inbox — the approve loop's entry</div><div class="ann">persona: any approver · answers "what waits on ME, what breaches SLA" · light governance · row → <a class="dv-oid" href="#1a">1a</a>/<a class="dv-oid" href="#1b">1b</a>/<a class="dv-oid" href="#4b">4b</a></div>
+<div class="dv-card scr" style="width:880px">
+<div class="hd"><span class="chip tl">GOVERNANCE</span><span class="t">Approval Inbox</span><span class="chip y">7 PENDING</span><span class="chip r">1 OVERDUE</span><span style="flex:1"></span><span class="btn pri">Mine (3)</span><span class="btn">All</span><span class="btn">Research</span><span class="btn">Ops</span><span class="btn">Exits</span><span class="btn">Live</span><span class="btn">Overdue</span></div>
+<div class="trow h"><span style="width:70px">request</span><span style="width:90px">gate</span><span style="width:170px">subject</span><span style="width:110px">target</span><span style="width:80px">policy</span><span style="width:90px">blockers</span><span style="width:110px">age / SLA</span><span>quorum</span></div>
+<div class="trow"><span style="width:70px">AP-201</span><span style="width:90px">R1</span><span style="width:170px">RSI v1.7 · RC-41</span><span style="width:110px">research</span><span style="width:80px">quant</span><span class="ok" style="width:90px">0</span><span style="width:110px">2h / 24h</span><span>1/2 — needs you</span></div>
+<div class="trow"><span style="width:70px">AP-352</span><span style="width:90px">R2</span><span style="width:170px">Carry v3.2 → PF-MAIN</span><span style="width:110px">paper BINANCE</span><span style="width:80px">risk</span><span class="wr" style="width:90px">1 sync stale</span><span class="er" style="width:110px">26h / 24h ⚠ OVERDUE</span><span>0/2</span></div>
+<div class="trow"><span style="width:70px">EX-771</span><span style="width:90px">PAPER_EXIT</span><span style="width:170px">Grid v2.1 · dep_94</span><span style="width:110px">→ sandbox</span><span style="width:80px">ops</span><span class="ok" style="width:90px">0 — gate met</span><span style="width:110px">4h / 48h</span><span>0/1</span></div>
+<div class="trow"><span style="width:70px">AP-311</span><span style="width:90px">LIVE_CANARY</span><span style="width:170px">Grid v2.1 → BINANCE</span><span style="width:110px">live</span><span style="width:80px">dual</span><span class="ok" style="width:90px">0</span><span style="width:110px">1d / 3d</span><span class="wr">1/2 — awaiting 2nd, not you (SoD)</span></div>
+<div class="row"><div class="b dash"><div class="bt">Footer strip</div><div class="li mono">SLA summary: 1 overdue · 2 due &lt;8h · policy approval.v3 · separation-of-duty: rows you cannot decide are marked, never hidden — visibility ≠ authority · sort: overdue → due-soon → age · empty state: "inbox zero" with last-decided list</div></div></div>
+</div></div>
+
+<div class="dv-opt" id="4b"><div class="dv-olabel"><a class="dv-oid" href="#4b">4b</a>Stage Exit Review — Paper Exit (template for Sandbox/Canary Exit)</div><div class="ann">persona: Ops approver · decision: promote / extend observation / reject · light + ops evidence panels · entered from <a class="dv-oid" href="#4a">4a</a> or workbench CTA</div>
+<div class="dv-card scr" style="width:880px">
+<div class="hd"><span class="chip tl">PAPER_EXIT</span><span class="t">EX-771 — Grid v2.1 · dep_94 · DERIBIT → promote to SANDBOX_VALIDATION?</span><span class="chip g">GATE MET</span></div>
+<div style="padding:3px 12px" class="mono">lineage: artifact sha256:41bb… · R1 AP-118 · R2 AP-152 · observation policy obs_29 · evidence pack digest ep_...</div>
+<div class="row">
+<div class="b"><div class="bt">Observation coverage</div><div class="li ok">✓ 30/30 days · 312/300 trades · 2/2 restart cycles</div><div class="li ok">✓ data freshness violations: 0</div></div>
+<div class="b"><div class="bt">Drift vs approved evidence</div><div class="li ok">✓ hit rate −1.1pt · avg trade −0.04pt — within band</div><div class="li wr">! fee drag +0.006pt · signal→fill +70ms — WATCH (non-blocking)</div><div class="li wr">! slippage still INSUFFICIENT_DATA — carries into sandbox plan</div></div>
+</div>
+<div class="row">
+<div class="b"><div class="bt">Limits & health</div><div class="li ok">✓ max DD −1.4% / 6% · daily loss worst −0.6% / 3%</div><div class="li ok">✓ rejects 0.2% / 0.5% · dead letters 0 · accounting clean</div></div>
+<div class="b"><div class="bt">Portfolio fit — observed vs expected</div><div class="li">ρ vs BM expected 0.18 → observed 0.21 <span class="ok">within band</span></div><div class="li">contribution +1,842 USDC · concentration unchanged</div></div>
+</div>
+<div class="row"><div class="b dash"><div class="bt">Unresolved conditions · operator recommendation</div><div class="li mono">1 condition active (capacity cap 50k, expires 2026-11-01 — carries forward) · operator Stan recommends PROMOTE with same cap · sandbox plan preview: venue OKX? → NO: same venue family rule, target DERIBIT testnet, account to be created at activation</div></div></div>
+<div class="ft"><span class="btn">Extend observation +14d</span><span class="btn warn">Reject — back to Paper HELD</span><span style="flex:1"></span><span class="mono">variant notes: Sandbox Exit adds cleanup checklist + order-type cert; Canary Exit adds envelope compliance + scale plan</span><span class="btn pri">Approve promotion</span></div>
+</div></div>
+
+<div class="dv-opt" id="4c"><div class="dv-olabel"><a class="dv-oid" href="#4c">4c</a>Full Blotter — orders / fills, virtualized</div><div class="ann">ops dark · every "full blotter →" lands here with scope pre-filtered · proves cursor pagination + virtualization + cross-filter reset</div>
+<div class="dv-card scr" style="width:880px">
+<div class="hd dark"><span class="chip">BLOTTER</span><span class="t">Orders &amp; Fills</span><span style="flex:1"></span><span class="btn">Scope: dep_94 ▾</span><span class="btn">Venue All ▾</span><span class="btn">Status All ▾</span><span class="btn">24h ▾</span><span class="btn">Columns ▾</span><span class="btn">Export</span></div>
+<div style="padding:3px 12px;background:#f6f5f0;border-bottom:1px solid #ddd" class="mono">filtered by: chart selection Aug 12 10:00–14:00 <b>[reset ✕]</b> · 48,213 rows total · showing 1–200 · sticky header · rows virtualized</div>
+<div class="trow h"><span style="width:80px">time</span><span style="width:120px">deployment·venue</span><span style="width:80px">symbol</span><span style="width:90px">type/side</span><span style="width:70px">qty</span><span style="width:80px">price</span><span style="width:130px">status</span><span>fee · order_id</span></div>
+<div class="trow"><span style="width:80px">10:41:58</span><span style="width:120px">dep_94 · DERIBIT</span><span style="width:80px">BTC-PERP</span><span class="ok" style="width:90px">LIMIT BUY</span><span style="width:70px">0.0400</span><span style="width:80px">60,890.00</span><span class="ok" style="width:130px">FILLED</span><span>0.49 · ord_88a2 ▸ expand = signal→intent→risk→ACK→fill timeline</span></div>
+<div class="trow"><span style="width:80px">10:38:12</span><span style="width:120px">dep_94 · DERIBIT</span><span style="width:80px">ETH-PERP</span><span class="er" style="width:90px">LIMIT SELL</span><span style="width:70px">1.2000</span><span style="width:80px">2,995.00</span><span class="wr" style="width:130px">PARTIAL 0.9/1.2</span><span>0.36 · ord_88a1</span></div>
+<div class="trow"><span style="width:80px">…</span><span style="width:120px"></span><span style="width:80px"></span><span style="width:90px"></span><span style="width:70px"></span><span style="width:80px"></span><span style="width:130px"></span><span class="mono">▼ load older · cursor c_ab34… (keyset, never OFFSET)</span></div>
+</div></div>
+
+<div class="dv-opt" id="4d"><div class="dv-olabel"><a class="dv-oid" href="#4d">4d</a>Incident Detail — the respond loop's workspace</div><div class="ann">ops dark · one incident = finding + operations taken + what closed it · nothing closes silently</div>
+<div class="dv-card scr" style="width:880px">
+<div class="hd dark"><span class="chip r">INCIDENT</span><span class="t">inc_44 — position MISMATCH · acct-live-grid-v21 · BINANCE</span><span class="chip r">OPEN</span><span style="flex:1"></span><span class="mono">opened 10:41:52Z · severity CRITICAL · owner Stan</span></div>
+<div class="row"><div class="b"><div class="bt">State rail</div><div class="li mono"><b>OPEN</b> → MITIGATED (exposure frozen) → RESOLVED (clean recon + reason) — forward-only, each step audited</div></div></div>
+<div class="row">
+<div class="b"><div class="bt">Evidence</div><div class="li">finding <a href="#">rf_2101</a>: BTCUSDT local 0.4000 vs broker 0.3800 Δ0.0200</div><div class="li">sync snapshots: 10:41:52 MISMATCH · 10:41:20 OK (digest diff)</div><div class="li">blast radius: dep_88 fail-closed · binding binance_main_01 (2 sibling accounts unaffected)</div></div>
+<div class="b"><div class="bt">Operations taken</div><div class="li ok">10:42:10 op_1252 deployment.halt dep_88 — VERIFIED</div><div class="li wr">10:44:31 op_1253 reconcile-positions --sync-first — findings 1</div><div class="li">next: <span class="btn">reconcile --apply plan ▸</span> (Action Drawer)</div></div>
+</div>
+<div class="row"><div class="b dash"><div class="bt">Resolution contract</div><div class="li mono">RESOLVED requires: clean dry-run reconciliation + reason + (optional) typed condition/waiver · resume of dep_88 is a SEPARATE plan/apply/verify — closing an incident never auto-resumes trading</div></div></div>
+</div></div>
+
+<div class="dv-opt" id="4e"><div class="dv-olabel"><a class="dv-oid" href="#4e">4e</a>Operations Queue + Alert Rail — global entry points</div><div class="ann">two shared surfaces: bell/rail pushes you TO the problem; ops queue shows what's running/stuck · sidebar items under COMMAND</div>
+<div class="dv-card scr" style="width:880px">
+<div class="row">
+<div class="b" style="flex:1.3"><div class="bt">Operations queue (COMMAND › Operations)</div>
+<div class="trow h"><span style="width:70px">op</span><span style="width:140px">command</span><span style="width:130px">target</span><span style="width:100px">state</span><span style="width:60px">age</span><span>action</span></div>
+<div class="trow"><span style="width:70px">op_1253</span><span style="width:140px">reconcile-positions</span><span style="width:130px">acct-live-grid-v21</span><span class="wr" style="width:100px">AWAITING_APPLY</span><span style="width:60px">2m</span><span><a href="#">open plan →</a></span></div>
+<div class="trow"><span style="width:70px">op_1251</span><span style="width:140px">emergency-close</span><span style="width:130px">paper-binance-carry</span><span class="wr" style="width:100px">PARTIAL 1/2</span><span style="width:60px">6m</span><span class="wrap"><a href="#">plan residue re-apply →</a></span></div>
+<div class="trow"><span style="width:70px">op_1250</span><span style="width:140px">allocation.set</span><span style="width:130px">acct-paper-grid-drb</span><span class="ok" style="width:100px">VERIFIED</span><span style="width:60px">1h</span><span class="mono">audit →</span></div>
+<div class="li mono">filters: mine / all · RUNNING · PARTIAL · FAILED first — PARTIAL rows never age silently: &gt;15m escalates to alert</div></div>
+<div class="b"><div class="bt">Alert rail (bell in topbar, rail slides from right)</div>
+<div class="li er">● CRITICAL — MISMATCH acct-live-grid-v21 · 2m · → <a class="dv-oid" href="#4d">4d</a></div>
+<div class="li wr">● WARN — broker sync STALE dep_91 OKX 4m · → workbench</div>
+<div class="li wr">● WARN — op_1251 PARTIAL 6m unresolved · → queue</div>
+<div class="li">● INFO — condition (capacity cap) expires in 7d · → waivers</div>
+<div class="li mono">each alert = state change of a typed object (finding/sync/op/condition), never free text · click lands on the owning screen with context · ack ≠ resolve · badge counts CRITICAL only</div></div>
+</div>
+</div></div>
+
+<div class="dv-opt" id="4f"><div class="dv-olabel"><a class="dv-oid" href="#4f">4f</a>Canonical nav + LifecycleRail + responsive rules — retrofit ALL screens</div><div class="ann">one sidebar truth · one breadcrumb grammar · the pipeline rail every workbench was missing · sizing rules for tự-co-dãn</div>
+<div class="dv-card scr" style="width:640px;padding:10px">
+<div class="b" style="margin-bottom:6px"><div class="bt">Sidebar — single source of truth (all screens identical)</div><div class="li mono">COMMAND: Command Center · Operations Queue · Alerts<br>GOVERNANCE: Approval Inbox · Exit Reviews · Promotion Timeline · Waivers &amp; Conditions<br>DEPLOYMENTS: Portfolios · Alpha Fleet · Paper · Sandbox · Live · Accounts &amp; Bindings · Reconciliation · Blotter<br>ADMINISTRATION: Profile &amp; Access<br>breadcrumb grammar: &lt;Cluster&gt; / &lt;Module&gt; / &lt;Entity&gt; — e.g. Deployments / Paper / Carry v3.2</div></div>
+<div class="b" style="margin-bottom:6px"><div class="bt">LifecycleRail — slot: directly under the lineage strip, every workbench + 360°</div><div class="li mono">R1 ✓ AP-118 → R2 ✓ AP-152 → <b>PAPER ● 30/30 gate met</b> → SBX — → CANARY — → LIVE — · current stage emphasized · ✓ steps link to decisions · next step links to its Exit Review/request · compact 24px strip, hides labels &lt;900px (icons + tooltip)</div></div>
+<div class="b"><div class="bt">Responsive rules (DS §9, applied at hi-fi retrofit)</div><div class="li mono">KPI strip: grid auto-fit minmax(160px,1fr) — no orphan cell row · paired panels: 2fr/1fr grids → 1 column &lt;1024px · tables: overflow-x auto inside panel, page never scrolls horizontally · tab rows: overflow-x auto · drawer: 490px → full-screen overlay &lt;720px · content max 1440 centered · charts: viewBox ratio per column width class (640×240 wide · 320×200 narrow) · font floor 11px for any load-bearing text</div></div>
+</div></div>
+
+<div class="dv-opt" id="4g"><div class="dv-olabel"><a class="dv-oid" href="#4g">4g</a>Missing states + density modes + chart interaction contract</div><div class="ann">completes spec §26 state matrix · Manager/Quant density · chart tooltip/expand/cross-filter proven</div>
+<div class="dv-card scr" style="width:720px;padding:10px">
+<div class="row" style="padding:0 0 6px">
+<div class="b"><div class="bt">LOADING</div><div class="ch" style="height:40px">skeleton bars — no spinner-only panels; header + label skeleton keeps layout stable</div></div>
+<div class="b"><div class="bt">DENIED</div><div class="li mono">lock glyph + "requires Portfolio/Risk Approver role" — panel visible, values withheld; never a blank</div></div>
+<div class="b"><div class="bt">UNAVAILABLE</div><div class="li mono">"query facade unreachable · last good as_of 10:31Z shown dimmed" — stale-but-labeled beats empty</div></div>
+</div>
+<div class="b" style="margin-bottom:6px"><div class="bt">Density modes (view preference, not authority)</div><div class="li mono">Operator (default dark ops): row 32px · 5-KPI · captions on · Manager: row 40px, KPI 3-up larger, blockers/decisions first, tables collapsed to summaries · Quant: adds formula/window columns + sample counts inline · switcher lives in topbar next to theme</div></div>
+<div class="b"><div class="bt">Chart interaction contract (every ECharts implementation)</div><div class="li mono">hover: tooltip = value + envelope (as_of · samples · formula) · drag: zoom with dataZoom, double-click reset · ⤢ expand: tile → full-width panel with data table + export (keeps envelope) · click series/point: cross-filters the sibling blotter/table, filter chip with [reset ✕] appears (see <a class="dv-oid" href="#4c">4c</a>) · no smoothing toggle ever</div></div>
+</div></div>
+
+<div class="dv-opt" id="4h"><div class="dv-olabel"><a class="dv-oid" href="#4h">4h</a>VN MARKET off-hours — Paper workbench variant</div><div class="ann">answers "what does Paper VNM look like at 20:00 ICT" · calendar suspension ≠ error · DNSE credential/OTP surfaced</div>
+<div class="dv-card scr" style="width:720px">
+<div class="hd dark"><span class="chip">PAPER</span><span class="t">VnMomo v0.9 · VN MARKET · paper-dnse-vnmomo</span><span class="chip" style="border-color:#8fa0b5;color:#cfdae8">■ SUSPENDED_BY_CALENDAR</span><span class="chip g">✓ READY</span><span style="flex:1"></span><span class="mono">session 09:00–14:45 ICT · reopens in 12h 40m</span></div>
+<div class="row"><div class="b"><div class="bt">Calendar banner — info tone, NOT warning</div><div class="li mono">Market closed (ATC ended 14:45 ICT). Data as_of last close — freshness aging is PAUSED against calendar, not counted as STALE. Signals generated off-hours queue as GTD-at-open intents; risk re-validates at session open. Runtime state stays ACTIVE · session state ≠ runtime state.</div></div></div>
+<div class="row">
+<div class="b"><div class="bt">KPI differences</div><div class="li mono">Equity · VND (no USDT mix) · Projection age → "as_of 14:45 ICT close" · currency chip VND on every panel</div></div>
+<div class="b"><div class="bt">DNSE credential strip</div><div class="li mono">credential DNSE-01 · <span class="wr">OTP session expires 08:55 ICT</span> — renewal is an Execution admin workflow, portal shows status only · sync policy: EOD + intraday during session</div></div>
+</div>
+<div class="row"><div class="b dash"><div class="bt">Blotter note</div><div class="li mono">order types map to VN market (LO/ATO/ATC shown verbatim, not translated to MARKET/LIMIT) · lot 100 · settlement T+2.5 visible in accounting panel</div></div></div>
+</div></div>
+
+</div>
+<p class="dv-next">Try next: "hi-fi <a class="dv-oid" href="#4a">4a</a>+<a class="dv-oid" href="#4b">4b</a> first" · "riff the alert rail in <a class="dv-oid" href="#4e">4e</a>" · "apply <a class="dv-oid" href="#4f">4f</a> retrofit to the 10 hi-fi screens"</p>
+</section>
+<section class="dv-turn" id="t3">
+<div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">Portfolio deep-dive (accounts · alphas · correlation · leadership) + cross-screen link map + pre-hi-fi fixes</span></div>
+<p class="dv-lead">refines <a class="dv-oid" href="#1h">1h</a> per review · adds the navigation/lineage graph out to the Research loop · consistency fixes queued for hi-fi. Companion doc: EXECUTION_CLUSTER_GUIDE.md (nav graph + backend diagram + spec status, for Claude/Codex).</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="3a"><div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a>Portfolio 360° v2 — structure, correlation intelligence, alpha leadership</div><div class="ann">answers: what does this portfolio CONTAIN (alpha → deployment → account), how do alphas move together, who leads the book, and what happens if the leader changes</div>
+<div class="dv-card scr" style="width:940px">
+<div class="hd"><span class="t">PF-CRYPTO · USDT</span><span class="chip g">ACTIVE</span><span class="chip">4 alphas · 6 accounts</span><span class="mono">as_of 10:42:01Z · fresh</span><span style="flex:1"></span><span class="btn">Window 30d ▾</span><span class="btn">Mode All ▾</span><span class="btn">Venue All ▾</span><span class="btn">Benchmark Crypto Core v3 ▾</span></div>
+<div style="padding:3px 12px;border-bottom:1px solid #ddd" class="mono">tabs: Overview · <b>Structure & Correlation</b> · Capital Ledger · Approvals · Incidents · Audit</div>
+<div class="row"><div class="b"><div class="bt">Holdings structure — portfolio → alpha → deployment → account (the containment truth)</div>
+<div class="trow h"><span style="width:120px">alpha</span><span style="width:90px">deployment</span><span style="width:170px">account_id</span><span style="width:90px">venue · mode</span><span style="width:70px">alloc</span><span style="width:80px">exposure</span><span style="width:65px">exp %</span><span>stage · health</span></div>
+<div class="trow"><span style="width:120px">Grid v2.1</span><span style="width:90px">dep_88</span><span style="width:170px">acct-canary-grid-bin</span><span style="width:90px">BINANCE live</span><span style="width:70px">5,000</span><span style="width:80px">4,900</span><span style="width:65px">12%</span><span class="er">LIVE·CANARY <span class="ok">READY</span></span></div>
+<div class="trow"><span style="width:120px">Grid v2.1</span><span style="width:90px">dep_94</span><span style="width:170px">acct-paper-grid-drb</span><span style="width:90px">DERIBIT paper</span><span style="width:70px">60,000</span><span style="width:80px">21,200</span><span style="width:65px">52%</span><span>PAPER_OBS <span class="ok">READY</span></span></div>
+<div class="trow"><span style="width:120px">Carry v3.2</span><span style="width:90px">dep_74</span><span style="width:170px">acct-paper-carry-bin</span><span style="width:90px">BINANCE paper</span><span style="width:70px">50,000</span><span style="width:80px">11,300</span><span style="width:65px">28%</span><span>PAPER_OBS <span class="ok">READY</span></span></div>
+<div class="trow"><span style="width:120px">MM v1.1</span><span style="width:90px">dep_91</span><span style="width:170px">acct-sbx-mm-okx</span><span style="width:90px">OKX sandbox</span><span style="width:70px">10,000</span><span style="width:80px">0</span><span style="width:65px">0%</span><span class="wr">SBX_VALIDATION · HALTED</span></div>
+<div class="li mono">one account = one alpha, never shared · alpha click → Alpha 360° (<a class="dv-oid" href="#2a">2a</a>) · account click → Account 360° (<a class="dv-oid" href="#1g">1g</a>)</div></div></div>
+<div class="row">
+<div class="b" style="flex:1.15"><div class="bt">Cross-alpha correlation matrix (rolling 30d, 1h buckets)</div>
+<div class="trow h"><span style="width:70px"></span><span style="width:60px">Grid</span><span style="width:60px">Carry</span><span style="width:60px">MM</span><span style="width:60px">BM ★</span></div>
+<div class="trow"><span style="width:70px">Grid</span><span style="width:60px;background:#e8e6de">1.00</span><span style="width:60px">0.31</span><span style="width:60px" class="wr">—</span><span style="width:60px" class="er"><b>0.55</b></span></div>
+<div class="trow"><span style="width:70px">Carry</span><span style="width:60px">0.31</span><span style="width:60px;background:#e8e6de">1.00</span><span style="width:60px" class="wr">—</span><span style="width:60px">0.18</span></div>
+<div class="trow"><span style="width:70px">MM</span><span style="width:60px" class="wr">—</span><span style="width:60px" class="wr">—</span><span style="width:60px;background:#e8e6de">1.00</span><span style="width:60px" class="wr">—</span></div>
+<div class="li mono">★ BM = benchmark column pinned in-matrix · cell = ρ + samples on hover · <span class="wr">— = INSUFFICIENT_DATA (MM: 9 days)</span> · corr.v1 · pairwise coverage shown, never silently dropped</div></div>
+<div class="b"><div class="bt">Portfolio ↔ market correlation</div><div class="ch" style="height:58px">rolling ρ(portfolio NAV, benchmark) with ±band · threshold line 0.6 “beta proxy risk”</div><div class="li">now 0.44 · 30d high 0.61 <span class="wr">! crossed 0.6 on Aug 12–14</span></div><div class="li mono">tail corr (worst-decile BM days): 0.71 — book converges in stress · tail.v1</div></div>
+</div>
+<div class="row">
+<div class="b"><div class="bt">Alpha leadership — who drives the book?</div>
+<div class="li"><b>Grid v2.1 leads</b> · exposure 64% <span class="mono">(both deployments)</span></div><div class="bar"><i style="width:64%"></i></div>
+<div class="li">risk contribution 71% of portfolio variance</div><div class="bar"><i style="width:71%;background:#b43a3a"></i></div>
+<div class="li">corr influence: avg |ρ| to others 0.31 · to BM 0.55</div><div class="bar"><i style="width:55%;background:#9a6a1f"></i></div>
+<div class="li mono">leadership = exposure share + risk contribution + avg |ρ| — three ranked lists, never one merged “leader score” · riskcontrib.v1 (covariance matrix cov_30d_v2)</div></div>
+<div class="b"><div class="bt">Leader impact — what if?</div><div class="li">halve Grid alloc → est. portfolio vol −18% · net PnL −9%</div><div class="li">remove Grid → ρ(port, BM) 0.44 → 0.21 · diversification +0.11</div><div class="li">double Carry → concentration top-1 64% → 58%</div><div class="li mono">local what-if estimates · marginal.v1 · not certainties — labeled as such</div><div class="li wr">insight claim: HIGH_LEADER_CONCENTRATION · grade B · evidence refs → drawer</div></div>
+</div>
+<div class="row">
+<div class="b"><div class="bt">Influence map</div><div class="ch" style="height:56px">nodes = alphas (size = exposure) · edges = |ρ| &gt; 0.4 · BM node pinned — reads the matrix at a glance</div></div>
+<div class="b"><div class="bt">Symbol overlap / duplicate exposure</div><div class="trow h"><span style="width:80px">symbol</span><span style="width:140px">held by</span><span>net overlap</span></div><div class="trow"><span style="width:80px">BTCUSDT</span><span style="width:140px">Grid + Carry</span><span class="wr wrap">same-direction 9,100 — duplicate edge risk</span></div><div class="trow"><span style="width:80px">ETHUSDT</span><span style="width:140px">Carry only</span><span class="ok">no overlap</span></div></div>
+<div class="b"><div class="bt">Drawdown overlap</div><div class="ch" style="height:56px">timeline: alpha DD episodes stacked — do they sink together? regime annotations</div></div>
+</div>
+</div></div>
+
+<div class="dv-opt" id="3b"><div class="dv-olabel"><a class="dv-oid" href="#3b">3b</a>Cross-screen link map — inside the cluster and out to the Research loop</div><div class="ann">every hop carries immutable IDs (artifact digest · approval ids · deployment_id · account_id) — screens join by lineage, never by name/time</div>
+<div class="dv-card scr" style="width:640px;padding:10px">
+<div class="b dash" style="margin-bottom:6px"><div class="bt">Research loop — EXTERNAL, own design system (light)</div><div class="li mono">Alpha Idea → Import/Registry → QuantBT Evidence → <b>Artifact Passport</b></div><div class="li mono">exit points INTO it: every “sha256:… / av_ / run_” chip on ops screens is a link</div></div>
+<div style="text-align:center" class="mono">↓ release_candidate_id + evidence digest</div>
+<div class="b" style="margin:6px 0"><div class="bt">Governance (light)</div><div class="li mono">Approval Inbox → <a class="dv-oid" href="#1a">1a</a> R1 → <a class="dv-oid" href="#1b">1b</a> R2 → stage exit reviews (Paper/Sandbox/Canary)</div><div class="li mono">grants: paper_activation_authorization → consumed by Action Drawer <a class="dv-oid" href="#1i">1i</a></div></div>
+<div style="text-align:center" class="mono">↓ approval ids + deployment_candidate_id</div>
+<div class="b" style="border-width:2px"><div class="bt">Execution cluster (operations dark)</div>
+<div class="li mono"><a class="dv-oid" href="#1h">1h</a>/<a class="dv-oid" href="#3a">3a</a> Portfolio 360° ⇄ <a class="dv-oid" href="#2a">2a</a> Alpha 360° (row click, scope carries)</div>
+<div class="li mono"><a class="dv-oid" href="#2a">2a</a> → stage workbench per deployment: <a class="dv-oid" href="#1c">1c</a> Paper · <a class="dv-oid" href="#1d">1d</a> Sandbox · <a class="dv-oid" href="#1e">1e</a> Canary · <a class="dv-oid" href="#1f">1f</a> Live</div>
+<div class="li mono">any account_id chip → <a class="dv-oid" href="#1g">1g</a> Account/Broker 360° · binding shows sibling accounts</div>
+<div class="li mono">every mutation button → <a class="dv-oid" href="#1i">1i</a> Action Drawer (plan/apply/verify) → Operation Timeline</div>
+<div class="li mono">back-links: lineage strip on every workbench = passport + R1 + R2 + exit reviews</div></div>
+<div class="li mono" style="margin-top:6px">rule: no dead-end screen — every ID rendered is a navigable chip; breadcrumb = Portfolio / Alpha / Deployment / Account</div>
+</div></div>
+
+<div class="dv-opt" id="3c"><div class="dv-olabel"><a class="dv-oid" href="#3c">3c</a>Pre-hi-fi consistency fixes (queued, applied at hi-fi)</div><div class="ann">issues found sweeping <a class="dv-oid" href="#1a">1a</a>–<a class="dv-oid" href="#1i">1i</a> — wireframes stay as-is (history), hi-fi applies these</div>
+<div class="dv-card scr" style="width:560px;padding:10px">
+<div class="b"><div class="li">1 · venue → dynamic everywhere per <a class="dv-oid" href="#2c">2c</a> (<a class="dv-oid" href="#1d">1d</a> "BINANCE TESTNET", <a class="dv-oid" href="#1e">1e</a>/<a class="dv-oid" href="#1f">1f</a>/<a class="dv-oid" href="#1g">1g</a> headers)</div>
+<div class="li">2 · stage naming unified: PAPER_OBSERVATION · SANDBOX_VALIDATION · LIVE_CANARY · LIVE_FULL (<a class="dv-oid" href="#2a">2a</a> abbreviated inconsistently)</div>
+<div class="li">3 · AuthorityBadge standard slot = header right, format AUTHORITY · as_of · age — <a class="dv-oid" href="#1d">1d</a>/<a class="dv-oid" href="#1e">1e</a>/<a class="dv-oid" href="#1f">1f</a> missing it</div>
+<div class="li">4 · <a class="dv-oid" href="#1g">1g</a> live account must carry the LIVE guard band, not a plain dark header</div>
+<div class="li">5 · currency chip per panel where venue≠USDT (DERIBIT USDC, VNM VND) — no bare numbers</div>
+<div class="li">6 · <a class="dv-oid" href="#1f">1f</a> add lineage strip (artifact/approvals) like <a class="dv-oid" href="#1c">1c</a> — drill-down only, but present</div>
+<div class="li">7 · <a class="dv-oid" href="#1h">1h</a> alpha table gains account_id + venue columns (superseded by <a class="dv-oid" href="#3a">3a</a> structure table)</div>
+<div class="li">8 · every workbench footer gets Exit-Review CTA state (enabled only when observation gate met)</div>
+<div class="li">9 · empty/stale/denied/partial states: one StateView pattern across all 9 screens</div></div>
+</div></div>
+
+</div>
+<p class="dv-next">Try next: "hi-fi <a class="dv-oid" href="#3a">3a</a> first" · "riff the influence map in <a class="dv-oid" href="#3a">3a</a>" · "expand <a class="dv-oid" href="#3b">3b</a> into a full backend diagram"</p>
+</section>
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Alpha drill-down + per-alpha insight charts + venue made dynamic</span></div>
+<p class="dv-lead">fixes from review: (1) missing per-alpha screen when clicking an alpha inside a portfolio · (2) chart catalog to max insight per alpha, sliceable by venue/mode/portfolio · (3) NO hardcoded venue — BINANCE / OKX / DERIBIT / VN MARKET are data-driven; one deployment = one venue account, an alpha runs parallel deployments per venue. Header pattern in <a class="dv-oid" href="#2c">2c</a> retrofits <a class="dv-oid" href="#1d">1d</a> <a class="dv-oid" href="#1e">1e</a> <a class="dv-oid" href="#1f">1f</a>.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="2a"><div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>Alpha 360° — drill-down from Portfolio</div><div class="ann">entry: click alpha row in Portfolio 360° (<a class="dv-oid" href="#1h">1h</a>) · one alpha, ALL its deployments across venue × mode × stage · scope bar drives every panel below it</div>
+<div class="dv-card scr" style="width:920px">
+<div class="hd dark"><span class="chip">ALPHA</span><span class="t">Grid v2.1 · av_2041</span><span class="mono">sha256:41bb… · owner Stan · certification RESEARCH_APPROVED</span><span style="flex:1"></span><span class="btn">Artifact passport →</span></div>
+<div class="row" style="background:#f6f5f0;border-bottom:1px solid #ddd"><span class="mono" style="align-self:center">SCOPE</span><span class="btn">Portfolio PF-CRYPTO ▾</span><span class="btn">Mode All ▾</span><span class="btn">Venue All ▾</span><span class="btn">Window 30d ▾</span><span style="flex:1"></span><span class="mono" style="align-self:center">every panel below obeys this scope · as_of 10:42:01Z</span></div>
+<div class="row"><div class="b"><div class="bt">Deployment map — venue × stage (from registry, never hardcoded)</div>
+<div class="trow h"><span style="width:110px">venue</span><span style="width:110px">paper</span><span style="width:110px">sandbox</span><span style="width:110px">canary</span><span style="width:110px">live</span><span>broker sync</span></div>
+<div class="trow"><span style="width:110px">BINANCE</span><span style="width:110px">—</span><span style="width:110px">—</span><span class="er" style="width:110px">LIVE·CANARY</span><span style="width:110px">—</span><span class="ok">OK 0.9s</span></div>
+<div class="trow"><span style="width:110px">OKX</span><span style="width:110px">—</span><span class="wr" style="width:110px">HALTED</span><span style="width:110px">—</span><span style="width:110px">—</span><span class="ok">OK 41s</span></div>
+<div class="trow"><span style="width:110px">DERIBIT</span><span class="ok" style="width:110px">ACTIVE</span><span style="width:110px">—</span><span style="width:110px">—</span><span style="width:110px">—</span><span>N/A (paper)</span></div>
+<div class="trow"><span style="width:110px">VN MARKET</span><span style="width:110px">planned</span><span style="width:110px">—</span><span style="width:110px">—</span><span style="width:110px">—</span><span class="wr">market hours 09:00–14:45 ICT</span></div></div></div>
+<div class="row"><div class="kpi"><div class="kl">Net PnL (scope)</div><div class="kv ok">+1,954</div></div><div class="kpi"><div class="kl">DD</div><div class="kv er">−1.6%</div></div><div class="kpi"><div class="kl">Allocation Σ</div><div class="kv">75,000</div></div><div class="kpi"><div class="kl">Exposure</div><div class="kv">26,100</div></div><div class="kpi"><div class="kl">Deployments</div><div class="kv">3</div></div><div class="kpi"><div class="kl">Findings</div><div class="kv">0</div></div></div>
+<div class="row">
+<div class="b" style="flex:1.5"><div class="bt">Equity by stage overlay</div><div class="ch" style="height:80px">backtest dashed · paper · canary solid — per-deployment series, joined by artifact digest only</div></div>
+<div class="b"><div class="bt">Per-venue contribution</div><div class="ch" style="height:80px">stacked by venue (scope-filtered) · currency per venue, FX-normalized only with FX policy</div></div>
+</div>
+<div class="row"><div class="b"><div class="bt">Deployments in scope</div>
+<div class="trow h"><span style="width:90px">deployment</span><span style="width:90px">venue</span><span style="width:70px">mode</span><span style="width:110px">stage</span><span style="width:140px">account</span><span style="width:70px">alloc</span><span style="width:70px">pnl</span><span style="width:60px">dd</span><span>health</span></div>
+<div class="trow"><span style="width:90px">dep_88</span><span style="width:90px">BINANCE</span><span style="width:70px">live</span><span style="width:110px">LIVE·CANARY</span><span style="width:140px">acct-canary-grid</span><span style="width:70px">5,000</span><span class="ok" style="width:70px">+112</span><span style="width:60px">−0.8%</span><span class="ok">READY</span></div>
+<div class="trow"><span style="width:90px">dep_91</span><span style="width:90px">OKX</span><span style="width:70px">sandbox</span><span style="width:110px">SBX_VALIDATION</span><span style="width:140px">acct-sbx-grid-okx</span><span style="width:70px">10,000</span><span style="width:70px">—</span><span style="width:60px">—</span><span class="wr">HALTED</span></div>
+<div class="trow"><span style="width:90px">dep_94</span><span style="width:90px">DERIBIT</span><span style="width:70px">paper</span><span style="width:110px">PAPER_OBS</span><span style="width:140px">acct-paper-grid-drb</span><span style="width:70px">60,000</span><span class="ok" style="width:70px">+1,842</span><span style="width:60px">−1.4%</span><span class="ok">READY</span></div>
+<div class="li mono">row click → stage workbench (<a class="dv-oid" href="#1c">1c</a>/<a class="dv-oid" href="#1d">1d</a>/<a class="dv-oid" href="#1e">1e</a>) · account click → Account 360° (<a class="dv-oid" href="#1g">1g</a>)</div></div></div>
+<div class="ft mono">tabs: Overview · Insight Charts (<a class="dv-oid" href="#2b">2b</a>) · Positions · Orders & Fills · Risk · Sessions · Accounting · Reconciliation · Audit</div>
+</div></div>
+
+<div class="dv-opt" id="2b"><div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>Alpha Insight Charts — the per-alpha chart catalog</div><div class="ann">tab inside Alpha 360° (<a class="dv-oid" href="#2a">2a</a>) · goal: max insight per alpha with honest envelopes · same scope bar; every tile prints window/samples/formula, INSUFFICIENT_DATA is a real state</div>
+<div class="dv-card scr" style="width:920px">
+<div class="hd dark"><span class="chip">ALPHA · INSIGHT</span><span class="t">Grid v2.1</span><span style="flex:1"></span><span class="btn">Portfolio PF-CRYPTO ▾</span><span class="btn">Mode All ▾</span><span class="btn">Venue All ▾</span><span class="btn">Compare: BINANCE vs DERIBIT ▾</span></div>
+<div class="row">
+<div class="b"><div class="bt">1 · Equity by stage</div><div class="ch" style="height:64px">backtest / paper / canary overlay</div><div class="li mono">30d · buckets 1h · join: artifact digest</div></div>
+<div class="b"><div class="bt">2 · Drawdown & underwater</div><div class="ch" style="height:64px">depth + recovery per episode</div><div class="li mono">30d · per deployment · no smoothing</div></div>
+<div class="b"><div class="bt">3 · Rolling corr vs benchmark</div><div class="ch" style="height:64px">±band · benchmark bm_crypto_core_v3</div><div class="li mono">720 samples · cov 99.4% · corr.v1</div></div>
+</div>
+<div class="row">
+<div class="b"><div class="bt">4 · Venue contribution</div><div class="ch" style="height:64px">stacked PnL by venue</div><div class="li mono">per-venue currency · no FX mix</div></div>
+<div class="b"><div class="bt">5 · Execution quality by venue</div><div class="ch" style="height:64px">slippage bp · ACK/fill latency box</div><div class="li mono">BINANCE 12 fills · DERIBIT <span class="wr">INSUFFICIENT_DATA</span></div></div>
+<div class="b"><div class="bt">6 · Order funnel</div><div class="ch" style="height:64px">signal → intent → risk grant → order → fill</div><div class="li mono">drop reasons per stage · 30d</div></div>
+</div>
+<div class="row">
+<div class="b"><div class="bt">7 · Trade return histogram</div><div class="ch" style="height:64px">win/loss bins ± fees</div><div class="li mono">184 trades · net of fees</div></div>
+<div class="b"><div class="bt">8 · Execution density day×hour</div><div class="ch" style="height:64px">heatmap 7×24 · venue sessions shaded (VNM hours)</div><div class="li mono">timezone UTC · venue calendars</div></div>
+<div class="b"><div class="bt">9 · Regime-shaded equity</div><div class="ch" style="height:64px">bull / panic / chop / bear markArea</div><div class="li mono">regime.v2 · labels versioned</div></div>
+</div>
+<div class="row">
+<div class="b"><div class="bt">10 · Paper vs Live drift</div><div class="ch" style="height:56px">same-signal fill delta · reject delta</div><div class="li mono">only where run/artifact IDs link</div></div>
+<div class="b"><div class="bt">11 · Risk utilization</div><div class="ch" style="height:56px">notional / leverage / daily-loss vs limits</div><div class="li mono">risk profile rev 12</div></div>
+<div class="b"><div class="bt">12 · Cost drag waterfall</div><div class="ch" style="height:56px">gross → fees → funding → slippage → net</div><div class="li mono">slippage term omitted until evidenced</div></div>
+</div>
+<div class="ft mono">layout = 3-col tile grid · each tile expands to full-width with table + export · cross-filter tile ↔ blotter with visible reset</div>
+</div></div>
+
+<div class="dv-opt" id="2c"><div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>Venue-dynamic pattern — retrofits <a class="dv-oid" href="#1d">1d</a> <a class="dv-oid" href="#1e">1e</a> <a class="dv-oid" href="#1f">1f</a> <a class="dv-oid" href="#1g">1g</a></div><div class="ann">venue comes from deployment/account data (venue registry), never from copy · VenueScope = shared component · per-venue sync policy & market calendar</div>
+<div class="dv-card scr" style="width:640px">
+<div class="row" style="padding:10px"><div class="b"><div class="bt">VenueScope selector (shared component — list from venue registry)</div><div style="display:flex;gap:6px;flex-wrap:wrap;padding:2px 0"><span class="btn pri">All</span><span class="btn">BINANCE</span><span class="btn">OKX</span><span class="btn">DERIBIT</span><span class="btn">VN MARKET</span><span class="btn dash" style="border-style:dashed;color:#999">+ future venues render automatically</span></div><div class="li mono">multi-select where a screen aggregates; single where identity is one account</div></div></div>
+<div class="row" style="padding:0 10px"><div class="b"><div class="bt">Stage workbench header — venue is data, one deployment = one venue account</div><div class="li mono">SANDBOX · Carry v3.2 · <b>{venue}</b> {venue_env} · acct {account_id} — was "BINANCE TESTNET" hardcoded in <a class="dv-oid" href="#1d">1d</a></div><div class="li mono">CANARY on 2 venues = 2 deployments, 2 control rooms + an "all canaries" list — never one merged screen</div></div></div>
+<div class="row" style="padding:0 10px 10px"><div class="b"><div class="bt">Per-venue policy differences the UI must carry</div>
+<div class="trow h"><span style="width:90px">venue</span><span style="width:90px">sync policy</span><span style="width:110px">calendar</span><span style="width:70px">currency</span><span>credential alias</span></div>
+<div class="trow"><span style="width:90px">BINANCE</span><span style="width:90px">ws + 5m snap</span><span style="width:110px">24/7</span><span style="width:70px">USDT</span><span>BIN-01 <span class="ok">VALID</span></span></div>
+<div class="trow"><span style="width:90px">OKX</span><span style="width:90px">rest 60s</span><span style="width:110px">24/7</span><span style="width:70px">USDT</span><span>OKX-01 <span class="ok">VALID</span></span></div>
+<div class="trow"><span style="width:90px">DERIBIT</span><span style="width:90px">rest 60s</span><span style="width:110px">24/7</span><span style="width:70px">USDC</span><span>DRB-01 <span class="wr">EXPIRING</span></span></div>
+<div class="trow"><span style="width:90px">VN MARKET</span><span style="width:90px">eod + intraday</span><span style="width:110px">09:00–14:45 ICT</span><span style="width:70px">VND</span><span>DNSE-01 <span class="wr">OTP FLOW</span></span></div>
+<div class="li mono">freshness thresholds are per-venue policy — a 60s OKX snapshot can be FRESH while 60s Binance ws is STALE · VND vs USDT never summed without FX policy</div></div></div>
+</div></div>
+
+</div>
+<p class="dv-next">Try next: "riff <a class="dv-oid" href="#2b">2b</a> as 2-col with a pinned blotter" · "show <a class="dv-oid" href="#2a">2a</a> scoped to Venue=DERIBIT only" · "apply <a class="dv-oid" href="#2c">2c</a> header to a VN MARKET paper workbench"</p>
+</section>
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Execution cluster — 9 screens, structure-first wireframes</span></div>
+<p class="dv-lead">locked: hybrid theme (ops screens default DARK — shown here as dark header band only, wireframe stays low-fi) · canary = live-red + guard, no new hue · R1/R2 light, R2 carries an operational preview strip · English copy · sample data per DB schema guide</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a"><div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Gate R1 — Research Evidence Review</div><div class="ann">persona: Quant Reviewer · decision: is this artifact defensible enough to become a Release Candidate? · theme: research light</div>
+<div class="dv-card scr" style="width:860px">
+<div class="hd"><span class="chip tl">R1</span><span class="t">Research Approval AP-201 — RSI v1.7</span><span class="chip y">PENDING 1/2</span><span style="flex:1"></span><span class="btn">Request changes</span><span class="btn warn">Reject</span><span class="btn pri">Approve</span></div>
+<div style="padding:3px 12px" class="mono">policy approval.v3 · separation-of-duty: creator ≠ sole approver <span class="wr">⚠ you are not the artifact creator — OK</span></div>
+<div class="row">
+<div class="b"><div class="bt">Artifact Passport</div><div class="li">alpha_version  av_2041</div><div class="li">artifact       sha256:9f3c1a…e2</div><div class="li">params         param_118 · sha256:aa41…</div><div class="li">final audit    run_5512 / attempt 2</div><div class="li">engine         quantbt 1.0.8 · img sha256:77bd…</div><div class="li">datasets       3 snapshots · universe univ_88</div><div class="li">methodology    WFO + holdout claim clm_31</div></div>
+<div class="b"><div class="bt">Decision Checklist</div><div class="li ok">✓ exact engine / data / version pinned</div><div class="li ok">✓ final audit replay reproducible</div><div class="li ok">✓ outer OOS policy satisfied</div><div class="li ok">✓ parameter stability threshold</div><div class="li wr">! capacity evidence limited</div><div class="li">→ blocking items: 0</div></div>
+</div>
+<div class="row">
+<div class="b" style="flex:1.4"><div class="bt">Evidence</div><div class="ch" style="height:88px">IS / OOS / Holdout equity — window roles, no smoothing</div><div class="row" style="padding:6px 0 0"><div class="ch" style="height:52px;flex:1">WFO stability</div><div class="ch" style="height:52px;flex:1">drawdown / regime</div></div></div>
+<div class="b"><div class="bt">Selection & Known Limitations</div><div class="li">param lineage: study st_77 → trial 141 → frozen</div><div class="li wr">warning: fee model assumes taker-only</div><div class="li">restrictions: crypto perp · BINANCE · paper first</div><div class="li">waiver: capacity — expires 2026-11-01</div></div>
+</div>
+<div class="row"><div class="b dash"><div class="bt">Decision record (structured, not free text)</div><div class="li">reviewer note [______________________________]</div><div class="li">condition: paper max capital 50,000 USDT · owner Lan · BLOCKING · expires 2026-11-01</div><div class="li">evidence digest sha256:c81f… · decision writes immutable approval record</div></div></div>
+</div></div>
+
+<div class="dv-opt" id="1b"><div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Gate R2 — Portfolio &amp; Operational Readiness</div><div class="ann">persona: Portfolio Manager + Risk/Ops approver · decision: safe to authorize Paper activation? · theme: light + dark operational preview strip</div>
+<div class="dv-card scr" style="width:860px">
+<div class="hd"><span class="chip tl">R2</span><span class="t">Operational Readiness — Carry v3.2 → PF-MAIN · Paper · BINANCE</span><span class="chip g">R1 APPROVED</span><span class="chip">DC-91</span></div>
+<div class="row">
+<div class="b"><div class="bt">Portfolio Fit</div><div class="li">target weight 8.0%</div><div class="bar"><i style="width:32%"></i></div><div class="li">corr vs Crypto Core (30d, research est.) 0.18</div><div class="li">marginal risk +5.2% · diversification +0.07</div><div class="li">overlap: no shared symbols with live alphas</div></div>
+<div class="b"><div class="bt">Account & Risk plan</div><div class="li">account  paper-binance-carry-v32 (new)</div><div class="li">MARGIN · CROSS · 2x · settle USDT</div><div class="li">max order 5,000 · max pos 25,000 · DD 8%</div><div class="li">matcher: taker 4bp · slippage v2 · latency 120ms</div></div>
+</div>
+<div class="row"><div class="b" style="flex:1.4;background:#1e2734;border-color:#0d131c;color:#dfe6f0"><div class="bt" style="color:#8fa0b5">Capital Change Preview — operational vocabulary (mono, before/after)</div><div class="li" style="color:#cfdae8">allocated   0 → 50,000 USDT</div><div class="li" style="color:#cfdae8">pf weight   0% → 8.1% · concentration top-3 41% → 46%</div><div class="li" style="color:#9fb0c4">EXECUTION PLAN PREVIEW · as_of 10:41:07Z · derived, not applied</div></div>
+<div class="b"><div class="bt">Observation Policy</div><div class="li">min 30 days · 300 trades · 2 restart cycles</div><div class="li">max DD 6% · reject ceiling 0.5% · freshness &lt;5s</div><div class="li">weekly report · rollback plan rb_12</div></div>
+</div>
+<div class="ft"><span class="mono">approve = grants paper_activation_authorization only — activation itself is a separate admin plan/apply</span><span style="flex:1"></span><span class="btn">Request changes</span><span class="btn warn">Reject</span><span class="btn pri">Approve with conditions</span></div>
+</div></div>
+
+<div class="dv-opt" id="1c"><div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Paper Operations Workbench</div><div class="ann">persona: Operator (+ Quant drill-down) · decision: is behavior tracking approved evidence? ready for Paper Exit? · theme default: OPERATIONS DARK</div>
+<div class="dv-card scr" style="width:900px">
+<div class="hd dark"><span class="chip">PAPER</span><span class="t">Carry v3.2 · BINANCE · paper-binance-carry-v32</span><span class="chip g">ACTIVE</span><span class="chip g">READY</span><span style="flex:1"></span><span class="btn">View approvals</span><span class="btn">Report</span><span class="btn">Admin actions ▾</span></div>
+<div style="padding:3px 12px;background:#1e2734" class="mono">sha256:9f3c… · R1 AP-201 · R2 AP-207 · PF-MAIN · <b style="color:#cfdae8">AUTHORITY: EXECUTION · as_of 10:42:01Z · age 1.2s</b></div>
+<div class="row"><div class="kpi"><div class="kl">Equity</div><div class="kv">51,842</div></div><div class="kpi"><div class="kl">Net PnL</div><div class="kv ok">+1,842</div></div><div class="kpi"><div class="kl">Max DD</div><div class="kv er">−2.1%</div></div><div class="kpi"><div class="kl">Allocation</div><div class="kv">50,000</div></div><div class="kpi"><div class="kl">Data age</div><div class="kv">1.2s</div></div></div>
+<div class="row">
+<div class="b" style="flex:1.6"><div class="bt">Equity vs approved research evidence</div><div class="ch" style="height:96px">paper solid · backtest dashed · expected band · incident annotations — linked by artifact/run IDs only</div></div>
+<div class="b"><div class="bt">Observation gate → Paper Exit</div><div class="li">days 12 / 30</div><div class="bar"><i style="width:40%"></i></div><div class="li">trades 184 / 300</div><div class="bar"><i style="width:61%"></i></div><div class="li">restart cycles 1 / 2</div><div class="bar"><i style="width:50%"></i></div><div class="li wr">gate blocks Paper Exit until met — no auto-promote</div></div>
+</div>
+<div class="row">
+<div class="b" style="flex:1.6"><div class="bt">Candle + order/fill overlay</div><div class="ch" style="height:80px">signal → intent → risk grant → order → fill funnel per marker</div></div>
+<div class="b"><div class="bt">Runtime health</div><div class="li">sessions 3 · rejects 0.2% · dead letters 0</div><div class="li ok">restart recovery: OK (recovered 2 open orders)</div><div class="li">reservations 2 · pending exposure 1,880</div></div>
+</div>
+<div class="row">
+<div class="b"><div class="bt">Portfolio contribution / correlation</div><div class="ch" style="height:56px">marginal risk · diversification (30d, 720 samples)</div></div>
+<div class="b"><div class="bt">Accounting</div><div class="li">free 48,120 · locked 1,880 · margin used 3,712</div><div class="li">settlement OK · ledger rev 214</div></div>
+</div>
+<div style="border-top:2px solid #333"><div class="trow h"><span style="width:220px">Orders | Fills | Positions | Sessions</span><span>tabs — cursor pagination + virtualization</span></div>
+<div class="trow"><span>10:41:58</span><span>BTCUSDT</span><span>LIMIT BUY 0.02 @ 61,240</span><span class="ok">FILLED</span><span>fee 0.49</span></div>
+<div class="trow"><span>10:38:12</span><span>ETHUSDT</span><span>LIMIT SELL 0.4 @ 2,981</span><span class="wr">PARTIAL 0.3/0.4</span><span>fee 0.36</span></div></div>
+</div></div>
+
+<div class="dv-opt" id="1d"><div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Sandbox Certification Workbench</div><div class="ann">persona: Operator · decision: is exchange integration certified? · theme default: OPERATIONS DARK · always starts HALTED, fail-closed</div>
+<div class="dv-card scr" style="width:900px">
+<div class="hd dark"><span class="chip y">SANDBOX</span><span class="t">Carry v3.2 · BINANCE TESTNET</span><span class="chip y">HALTED</span><span class="chip g">READY</span><span style="flex:1"></span><span class="mono">virtual acct ↔ external_account_ref binance_testnet_main</span></div>
+<div class="row">
+<div class="b"><div class="bt">Internal virtual state</div><div class="li">positions 0 · open orders 0</div><div class="li">equity 10,000 USDT · reservations 0</div></div>
+<div class="b"><div class="bt">Physical broker state</div><div class="li">positions 0 · open orders 0 · balance 10,000</div><div class="li">sync OK · age 41s · digest 8c1a…</div></div>
+</div>
+<div class="row"><div class="b"><div class="bt">Difference / reconciliation findings</div><div class="trow h"><span style="width:70px">status</span><span style="width:70px">severity</span><span style="width:150px">identity</span><span style="width:90px">local</span><span style="width:90px">broker</span><span>action</span></div><div class="trow"><span class="ok" style="width:70px">MATCH</span><span style="width:70px">—</span><span style="width:150px">all positions/orders</span><span style="width:90px">0</span><span style="width:90px">0</span><span>none — dry-run 12:01Z clean</span></div></div></div>
+<div class="row">
+<div class="b"><div class="bt">Order-type certification</div><div class="li ok">✓ MARKET · ✓ LIMIT · ✓ GTC/IOC</div><div class="li wr">! STOP pending · ✗ TP untested</div></div>
+<div class="b"><div class="bt">Execution quality</div><div class="li">ACK p50 210ms · p95 480ms</div><div class="li">slippage: <span class="chip y">INSUFFICIENT_DATA</span> (needs fills)</div></div>
+</div>
+<div class="row">
+<div class="b"><div class="bt">Smoke plan (bounded)</div><div class="li">qty 0.001 BTC · cap 50 USDT · timebox 30m</div><div class="li">operator Stan · plan sp_07 · approved</div></div>
+<div class="b"><div class="bt">Cleanup checklist</div><div class="li ok">✓ no open order · ✓ no residual position</div><div class="li wr">! final sync + reconciliation pending</div></div>
+</div>
+<div class="ft"><span class="btn">Sync</span><span class="btn">Dry-run reconcile</span><span class="btn">Open smoke plan</span><span class="btn pri">Request Sandbox Exit Review</span><span style="flex:1"></span><span class="mono er">ACTIVE blocked while sync STALE / finding CRITICAL — fail closed</span></div>
+</div></div>
+
+<div class="dv-opt" id="1e"><div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>Live Canary Control Room</div><div class="ann">persona: Operator + Live Approver · decision: promote / hold / reduce / rollback · mode=live, stage=LIVE_CANARY — guard treatment, not a new hue</div>
+<div class="dv-card scr" style="width:900px">
+<div class="guard"><span class="shield">⌂</span><b style="color:#b43a3a;font-size:14px;letter-spacing:1px">LIVE · CANARY</b><span class="t">Grid v2.1 · PF-CRYPTO · BINANCE</span><span class="chip g">ACTIVE</span><span class="chip r">GUARDED</span><span style="flex:1"></span><span class="mono">text + shield + double border — never color-only</span></div>
+<div class="row"><div class="kpi"><div class="kl">Capital</div><div class="kv">5,000</div></div><div class="kpi"><div class="kl">Net PnL</div><div class="kv ok">+112</div></div><div class="kpi"><div class="kl">DD</div><div class="kv er">−0.8%</div></div><div class="kpi"><div class="kl">Risk used</div><div class="kv">34%</div></div><div class="kpi"><div class="kl">Broker freshness</div><div class="kv">0.9s</div></div></div>
+<div class="row">
+<div class="b" style="flex:1.5"><div class="bt">Live vs Paper vs Backtest</div><div class="ch" style="height:84px">same artifact digest sha256:41bb… — stages differ by line style + label, not color alone</div></div>
+<div class="b"><div class="bt">Canary envelope (approved)</div><div class="li">capital 5,000 / 5,000</div><div class="bar"><i style="width:100%"></i></div><div class="li">max DD used 0.8% / 2.0%</div><div class="bar"><i style="width:40%"></i></div><div class="li">orders today 12 / 40 · day 6 / 14</div><div class="bar"><i style="width:43%"></i></div></div>
+</div>
+<div class="row">
+<div class="b"><div class="bt">Positions / Orders / Fills</div><div class="trow"><span>BTCUSDT</span><span>LONG 0.008</span><span class="ok">+38</span><span>lat 240ms</span></div><div class="trow"><span>open orders 1</span><span>rejects 0</span><span>fills 12</span></div></div>
+<div class="b"><div class="bt">Incidents / Reconciliation</div><div class="li ok">0 critical · last recon clean 12m ago</div><div class="li">blockers: none · partial ops: none</div></div>
+</div>
+<div class="row">
+<div class="b"><div class="bt">Portfolio marginal contribution</div><div class="ch" style="height:48px">correlation · concentration (versioned analytics)</div></div>
+<div class="b"><div class="bt">Promotion decision</div><div class="li">hold · reduce · rollback · request scale</div><div class="li">evidence pack → Canary Exit Review</div><div class="li wr">no auto-promotion on elapsed time</div></div>
+</div>
+<div class="ft"><span class="btn warn">Protective action</span><span class="btn">Request scale</span><span style="flex:1"></span><span class="mono">admin + dual approval + step-up only</span></div>
+</div></div>
+
+<div class="dv-opt" id="1f"><div class="dv-olabel"><a class="dv-oid" href="#1f">1f</a>Live Full Operations</div><div class="ann">persona: Operator · priority order: portfolio risk → broker truth → exposure → incidents → contribution; research via drill-down only</div>
+<div class="dv-card scr" style="width:860px">
+<div class="guard" style="border-style:solid;border-width:3px"><span class="shield">⌂</span><b style="color:#b43a3a;font-size:14px;letter-spacing:1px">LIVE</b><span class="t">Grid v2.1 · PF-CRYPTO · BINANCE</span><span class="chip g">ACTIVE</span><span class="chip g">READY</span></div>
+<div class="row"><div class="kpi"><div class="kl">Capital</div><div class="kv">60,000</div></div><div class="kpi"><div class="kl">Gross / Net exp</div><div class="kv">41k · +12k</div></div><div class="kpi"><div class="kl">Risk used</div><div class="kv">58%</div></div><div class="kpi"><div class="kl">Daily loss</div><div class="kv">−0.4% / 2%</div></div><div class="kpi"><div class="kl">Broker fresh</div><div class="kv">1.1s</div></div></div>
+<div class="row">
+<div class="b"><div class="bt">Broker & reconciliation truth</div><div class="li ok">sync OK 1.1s · digest 4f2a… · recon clean 09:58Z</div><div class="li er">MISMATCH banner slot — replaces chart if raised</div></div>
+<div class="b"><div class="bt">Open exposure & orders</div><div class="trow"><span>positions 4</span><span>open orders 2</span><span>reservations 3</span></div><div class="trow"><span>BTCUSDT LONG 0.4</span><span class="ok">+2,140</span><span>lev 1.3x</span></div></div>
+</div>
+<div class="row">
+<div class="b"><div class="bt">Incidents / protective actions</div><div class="li ok">none active</div><div class="li"><span class="btn warn">Halt</span> <span class="btn warn">Reduce</span> <span class="mono">admin · step-up · plan/apply/verify</span></div></div>
+<div class="b"><div class="bt">Contribution / edge evidence</div><div class="ch" style="height:44px">30d contribution vs portfolio</div><div class="li">research lineage → drill-down (does not occupy live safety space)</div></div>
+</div>
+</div></div>
+
+<div class="dv-opt" id="1g"><div class="dv-olabel"><a class="dv-oid" href="#1g">1g</a>Account 360° + Broker Binding</div><div class="ann">persona: Operator/Risk · the accounting & risk boundary; aggregate virtual-vs-physical check lives HERE, not per-alpha · theme default: OPERATIONS DARK</div>
+<div class="dv-card scr" style="width:900px">
+<div class="hd dark"><span class="chip">ACCOUNT</span><span class="t">acct-live-grid-v21</span><span class="mono">Grid v2.1 · dep_88 · PF-CRYPTO · live · BINANCE · MARGIN/CROSS · settle USDT · rev 14</span><span class="chip g">SYNC OK 0.9s</span></div>
+<div class="row">
+<div class="b"><div class="bt">Internal virtual state</div><div class="li">positions 2 · open orders 1</div><div class="li">equity 61,204 · free 44,180 · locked 2,020</div></div>
+<div class="b"><div class="bt">Physical broker state</div><div class="li">positions 2 · open orders 1 · balance 61,390</div><div class="li">source REST snapshot · age 0.9s</div></div>
+<div class="b"><div class="bt">Difference</div><div class="li ok">positions MATCH · orders MATCH</div><div class="li wr">balance Δ 186 — funding accrual pending</div></div>
+</div>
+<div class="row"><div class="b"><div class="bt">Broker Binding — external_account_ref binance_main_01</div><div class="li">credential alias BIN-01 · <span class="chip g">VALID</span> · secret never shown · NET position mode</div><div class="trow h"><span style="width:220px">linked virtual accounts (3)</span><span style="width:120px">virtual exposure</span><span>stage</span></div><div class="trow"><span style="width:220px">acct-live-grid-v21</span><span style="width:120px">18,400</span><span>LIVE</span></div><div class="trow"><span style="width:220px">acct-live-carry-v32</span><span style="width:120px">14,900</span><span>LIVE</span></div><div class="trow"><span style="width:220px">acct-canary-mm-v11</span><span style="width:120px">7,700</span><span>LIVE·CANARY</span></div><div class="li"><b>aggregate virtual 41,000 vs physical 43,120</b> — headroom check, this screen's job</div></div></div>
+<div class="row">
+<div class="b"><div class="bt">Sync history</div><div class="trow"><span>10:42:01</span><span class="ok">OK</span><span>digest 4f2a…</span></div><div class="trow"><span>10:37:00</span><span class="ok">OK</span><span>digest 2e9c…</span></div></div>
+<div class="b"><div class="bt">Reconciliation findings</div><div class="li ok">no open findings · last dry-run 12:01Z clean</div><div class="li">history → 3 resolved (30d)</div></div>
+</div>
+</div></div>
+
+<div class="dv-opt" id="1h"><div class="dv-olabel"><a class="dv-oid" href="#1h">1h</a>Portfolio 360°</div><div class="ann">persona: Manager/Quant · answers: contribution? correlation? real edge vs beta/leverage/cost? · every metric carries window/benchmark/sample/formula</div>
+<div class="dv-card scr" style="width:900px">
+<div class="hd"><span class="t">PF-MAIN · USDT</span><span class="chip g">ACTIVE</span><span class="chip">7 alphas</span><span class="mono">as_of 10:42:01Z · fresh</span><span style="flex:1"></span><span class="btn">Window 30d ▾</span><span class="btn">Mode Paper ▾</span><span class="btn">Venue All ▾</span><span class="btn">Benchmark Crypto Core v3 ▾</span></div>
+<div class="row"><div class="kpi"><div class="kl">Equity</div><div class="kv">512,400</div></div><div class="kpi"><div class="kl">Net PnL 30d</div><div class="kv ok">+12,400</div></div><div class="kpi"><div class="kl">DD</div><div class="kv er">−3.2%</div></div><div class="kpi"><div class="kl">Gross / Net</div><div class="kv">380k · +91k</div></div><div class="kpi"><div class="kl">Alloc / Max</div><div class="kv">480k / 600k</div></div></div>
+<div class="row">
+<div class="b" style="flex:1.5"><div class="bt">NAV + benchmark + drawdown</div><div class="ch" style="height:84px">benchmark = secondary line · composition snapshot bms_204 · gaps stay gaps</div></div>
+<div class="b"><div class="bt">Risk & concentration</div><div class="li">top-3 concentration 46%</div><div class="bar"><i style="width:46%"></i></div><div class="li">leverage 1.4x · risk budget used 61%</div><div class="bar"><i style="width:61%"></i></div></div>
+</div>
+<div class="row">
+<div class="b"><div class="bt">Alpha contribution waterfall</div><div class="ch" style="height:64px">per-alpha net PnL contribution (30d)</div></div>
+<div class="b"><div class="bt">Correlation matrix</div><div class="ch" style="height:52px">7×7 rolling corr · numeric tooltip + samples</div><div class="li">30d · 720 samples · coverage 99.4% · <span class="chip y">INSUFFICIENT_DATA</span> for mm-v11 (9 days)</div></div>
+</div>
+<div class="row">
+<div class="b"><div class="bt">Marginal risk / diversification</div><div class="ch" style="height:48px">what-if local estimates — versioned formula</div></div>
+<div class="b"><div class="bt">Edge decomposition — “what generated the result?”</div><div class="li">benchmark-linked +2.1% · residual +1.8%</div><div class="li">fees −0.4% · funding −0.2% · slippage <span class="chip y">N/A</span></div><div class="li"><b>net +3.3%</b> · formula edge_decomp.v1 · grade B</div></div>
+</div>
+<div style="border-top:2px solid #333"><div class="trow h"><span style="width:110px">alpha</span><span style="width:70px">alloc</span><span style="width:70px">pnl</span><span style="width:60px">corr</span><span style="width:55px">beta</span><span style="width:55px">dd</span><span style="width:90px">stage</span><span>health</span></div>
+<div class="trow"><span style="width:110px">Carry v3.2</span><span style="width:70px">50,000</span><span class="ok" style="width:70px">+1,842</span><span style="width:60px">0.18</span><span style="width:55px">0.21</span><span style="width:55px">−2.1%</span><span style="width:90px">PAPER</span><span class="ok">READY</span></div>
+<div class="trow"><span style="width:110px">Grid v2.1</span><span style="width:70px">5,000</span><span class="ok" style="width:70px">+112</span><span style="width:60px">0.42</span><span style="width:55px">0.55</span><span style="width:55px">−0.8%</span><span style="width:90px">LIVE·CANARY</span><span class="ok">READY</span></div>
+<div class="trow"><span style="width:110px">MM v1.1</span><span style="width:70px">20,000</span><span class="er" style="width:70px">−204</span><span style="width:60px">—</span><span style="width:55px">—</span><span style="width:55px">−1.4%</span><span style="width:90px">SANDBOX</span><span class="wr">HALTED</span></div></div>
+<div class="ft mono">capital ledger · incidents · findings · approvals — link strips, not embedded tables</div>
+</div></div>
+
+<div class="dv-opt" id="1i"><div class="dv-olabel"><a class="dv-oid" href="#1i">1i</a>Admin Action Drawer — Plan → Apply → Verify</div><div class="ann">persona: Operator Admin only · same command authority as CLI, no shell · PARTIAL never renders green</div>
+<div class="dv-card scr" style="width:470px">
+<div class="hd"><span class="chip r">ADMIN ACTION</span><span class="t" style="font-size:13px">Change Allocation — PF-MAIN / paper-binance-carry-v32</span></div>
+<div style="padding:3px 12px" class="mono">expected revision 14 · idempotency key auto · one command_id per apply</div>
+<div class="row"><div class="b" style="text-align:center;border-width:2px"><b>PLAN</b></div><div class="b dash" style="text-align:center;color:#999">APPLY</div><div class="b dash" style="text-align:center;color:#999">VERIFY</div></div>
+<div class="row">
+<div class="b"><div class="bt">Before</div><div class="li">allocated 50,000</div><div class="li">weight 8.1% · marg risk 5.2%</div></div>
+<div class="b"><div class="bt">After</div><div class="li">allocated 75,000</div><div class="li">weight 11.7% · marg risk 8.9%</div></div>
+</div>
+<div class="row"><div class="b"><div class="bt">Policy & evidence checks</div><div class="li ok">✓ R2 AP-207 valid · digest match</div><div class="li ok">✓ within max capital 100,000</div><div class="li wr">! concentration +4.6% — warning, not blocking</div><div class="li ok">✓ freshness 1.2s · affected: dep_74, account, risk capacity</div></div></div>
+<div class="row"><div class="b dash"><div class="bt">Equivalent CLI (read-only, audit/training)</div><div class="li">docker compose exec cli allocation set \</div><div class="li">  --portfolio PF-MAIN --account paper-binance-carry-v32 \</div><div class="li">  --amount 75000</div></div></div>
+<div class="row"><div class="b"><div class="bt">Reason (required)</div><div class="li">[__________________________________________]</div></div></div>
+<div class="ft"><span class="btn">Cancel</span><span class="btn">Generate plan</span><span style="flex:1"></span><span class="btn pri">Apply after step-up</span></div>
+</div></div>
+
+</div>
+<p class="dv-next">Try next: "riff 3 layouts on <a class="dv-oid" href="#1c">1c</a> Paper Workbench" · "show <a class="dv-oid" href="#1e">1e</a> in a degraded/mismatch state" · "hi-fi <a class="dv-oid" href="#1b">1b</a> once the Research DS is locked"</p>
+</section>
+</x-dc>
+</body>
+</html>

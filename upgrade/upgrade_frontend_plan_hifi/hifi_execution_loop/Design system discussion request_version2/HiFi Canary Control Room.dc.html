@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#161616;color-scheme:dark}a{color:#78a9ff;text-decoration:none}a:hover{color:#a6c8ff;text-decoration:underline}::selection{background:#78a9ff;color:#161616}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;background:#161616;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#f4f4f4;font-size:13px;letter-spacing:.16px" data-screen-label="Canary Control Room (WF 1e)">
+  <div style="position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;min-height:48px;padding:0 16px;border-bottom:1px solid #393939;background:#161616">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.12em;white-space:nowrap">QUANT ECOSYSTEM PORTAL</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8d8d8d;padding:2px 8px;border:1px solid #393939;white-space:nowrap">Default Workspace</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;color:#fa4d56;border:2px solid #fa4d56;padding:1px 7px">LIVE · CANARY</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:block">Deployments <span style="color:#6f6f6f">/</span> Live Canary <span style="color:#6f6f6f">/</span> Grid v2.1</span>
+    <span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;border:1px solid #393939;background:#262626;padding:4px 12px">Search <kbd style="font-size:10px;color:#8d8d8d;border:1px solid #4c4c4c;padding:0 4px;font-family:inherit">⌘K</kbd></span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px">Operations Dark ▾</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px">Operational ▾</span>
+  </div>
+  <div style="display:flex;flex:1;min-height:0">
+    <div style="flex-shrink:0;width:228px;border-right:1px solid #393939;background:#101010;padding:14px 0;font-size:13px">
+      <div style="display:flex;flex-direction:column">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Command</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Command Center</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Operations Queue</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Alerts</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Governance</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Approval Inbox</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Exit Reviews</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Promotion Timeline</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Waivers &amp; Conditions</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Deployments</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Portfolios</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Alpha Fleet</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Paper</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Sandbox</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 13px;background:#262626;color:#f4f4f4;font-weight:500;border-left:3px solid #78a9ff">Live</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Accounts &amp; Bindings</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Reconciliation</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Blotter</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Administration</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Profile &amp; Access</div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0;max-width:1440px;margin:0 auto;padding:20px 20px 64px">
+      <div style="border:4px double #fa4d56;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:6px 12px;margin-bottom:12px;background:#1d1d1d">
+        <svg viewBox="0 0 16 18" style="width:16px;height:18px;flex:none"><path d="M8 1 L15 4 V9 C15 13.5 12 16.5 8 17.5 C4 16.5 1 13.5 1 9 V4 Z" fill="#2d0709" stroke="#fa4d56" stroke-width="1.5"></path></svg>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.12em;color:#fa4d56">LIVE · CANARY</span>
+        <h1 style="margin:0;font-family:'IBM Plex Sans',sans-serif;font-weight:400;font-size:18px;line-height:1.3">Grid v2.1 <span style="color:#8d8d8d">· PF-CRYPTO · BINANCE</span></h1>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">● ACTIVE</span>
+        <sc-if value="{{ syncOk }}" hint-placeholder-val="{{ true }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:1px 8px;border:1px solid #fa4d56;color:#fa4d56">GUARDED</span></sc-if>
+        <sc-if value="{{ syncStale }}" hint-placeholder-val="{{ false }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:1px 8px;background:#302608;color:#f1c21b">READINESS DEGRADED</span></sc-if>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#6f6f6f;border:1px dashed #4c4c4c;padding:1px 6px">WF <a href="#">1e</a></span>
+        <span style="flex:1"></span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6">envelope day <b style="color:#f4f4f4">6 / 14</b> · real capital at risk</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;padding:7px 12px;margin-bottom:14px;border:1px solid #2a2a2a;background:#101010;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6">
+        <span>artifact <a href="#">sha256:41bb7d…c4</a></span><span>R1 <a href="#">AP-118</a></span><span>R2 <a href="#">AP-152</a></span><span>sandbox exit <a href="#">SX-14</a></span><span>canary dual approval <a href="#">AP-311</a></span><span>portfolio <a href="#">PF-CRYPTO</a></span><span>deployment <a href="#">dep_88</a></span><span>account <a href="#">acct-canary-grid-bin</a></span><span>venue <a href="#">BINANCE</a></span><span style="color:#6f6f6f">rev 3</span>
+      </div>
+      <sc-if value="{{ syncStale }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #f1c21b;border-left:4px solid #f1c21b;background:#302608;color:#f4f4f4;padding:8px 12px;margin-bottom:14px;font-size:12px;line-height:1.5"><b style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#f1c21b">Broker sync stale — readiness DEGRADED</b><br>Last broker snapshot 38s old vs BINANCE live policy 5s. Scale requests are blocked; protective actions remain available. Runtime stays ACTIVE — staleness affects what we can SEE, not what the guardrails enforce locally.</div>
+      </sc-if>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;padding:5px 12px;margin-bottom:14px;border:1px solid #2a2a2a;background:#101010;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f"><span style="color:#42be65">R1 ✓ <a href="#" style="color:#42be65">AP-118</a></span><span style="color:#4c4c4c">→</span><span style="color:#42be65">R2 ✓ <a href="#" style="color:#42be65">AP-152</a></span><span style="color:#4c4c4c">→</span><span style="color:#42be65">PAPER ✓ <a href="#" style="color:#42be65">PX-22</a></span><span style="color:#4c4c4c">→</span><span style="color:#42be65">SANDBOX ✓ <a href="#" style="color:#42be65">SX-14</a></span><span style="color:#4c4c4c">→</span><span style="color:#f4f4f4;font-weight:600;border:1px solid #78a9ff;padding:0 6px">CANARY ● day 9/14</span><span style="color:#4c4c4c">→</span><span>LIVE —</span><span style="margin-left:auto">lifecycle · ✓ links its decision · ● current stage</span></div>
+      <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:#393939;border:1px solid #393939;margin-bottom:14px">
+        <div style="min-width:0;background:#1d1d1d;padding:8px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Canary capital · USDT</div><div style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:18px;font-weight:500;line-height:24px">5,000.00</div></div>
+        <div style="min-width:0;background:#1d1d1d;padding:8px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Net PnL (6d)</div><div style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:18px;font-weight:500;line-height:24px;color:#42be65">+112.40</div></div>
+        <div style="min-width:0;background:#1d1d1d;padding:8px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Drawdown</div><div style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:18px;font-weight:500;line-height:24px;color:#fa4d56">−0.80%</div></div>
+        <div style="min-width:0;background:#1d1d1d;padding:8px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Risk envelope used</div><div style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:18px;font-weight:500;line-height:24px">34%</div></div>
+        <div style="min-width:0;background:#1d1d1d;padding:8px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Broker freshness</div><sc-if value="{{ syncOk }}" hint-placeholder-val="{{ true }}"><div style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:18px;font-weight:500;line-height:24px;color:#42be65">0.9s</div></sc-if><sc-if value="{{ syncStale }}" hint-placeholder-val="{{ false }}"><div style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:18px;font-weight:500;line-height:24px;color:#f1c21b">38s STALE</div></sc-if></div>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:14px;margin-bottom:14px">
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Live vs Paper vs Backtest — same artifact digest</span><span style="flex:1"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">live ── · paper ╌╌ · backtest ····</span></div>
+          <div style="padding:14px 14px 6px;flex:1;display:flex;align-items:center">
+            <svg viewBox="0 0 640 240" style="width:100%;height:auto;display:block">
+              <polyline points="0,196 64,186 128,168 192,156 256,148 320,134 384,114 448,100 512,86 576,62 640,48" fill="none" stroke="#6f6f6f" stroke-width="1.5" stroke-dasharray="2 4"></polyline>
+              <polyline points="0,206 64,198 128,182 192,164 256,158 320,142 384,126 448,118 512,102 576,86 640,74" fill="none" stroke="#be95ff" stroke-width="1.5" stroke-dasharray="6 4"></polyline>
+              <polyline points="380,150 416,140 448,144 480,126 512,118 544,122 576,104 608,96 640,88" fill="none" stroke="#78a9ff" stroke-width="2.5"></polyline>
+              <line x1="380" y1="12" x2="380" y2="228" stroke="#fa4d56" stroke-width="1" stroke-dasharray="3 3"></line>
+              <text x="384" y="28" font-family="IBM Plex Mono,monospace" font-size="9" fill="#fa4d56">canary start · Aug 13</text>
+              <text x="566" y="128" font-family="IBM Plex Mono,monospace" font-size="9" fill="#78a9ff">live (6d)</text>
+            </svg>
+          </div>
+          <div style="padding:6px 14px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">normalized equity · 1h buckets · stages joined by sha256:41bb7d…c4 only · line style differentiates stage, never color alone · equity_projection.v1</div>
+        </div>
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Canary envelope · AP-311</span><span style="flex:1"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">breach ⇒ auto-halt</span></div>
+          <div style="padding:14px;display:flex;flex-direction:column;gap:11px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#c6c6c6">
+            <div><div style="display:flex;justify-content:space-between"><span>capital allocated</span><span style="color:#f1c21b">5,000 / 5,000 — at cap</span></div><div style="height:6px;background:#101010;border:1px solid #393939;overflow:hidden;margin-top:4px"><div style="height:100%;width:100%;background:#f1c21b"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between"><span>max drawdown</span><span style="color:#f4f4f4">0.80% / 2.00%</span></div><div style="height:6px;background:#101010;border:1px solid #393939;overflow:hidden;margin-top:4px"><div style="height:100%;width:40%;background:#78a9ff"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between"><span>orders today</span><span style="color:#f4f4f4">12 / 40</span></div><div style="height:6px;background:#101010;border:1px solid #393939;overflow:hidden;margin-top:4px"><div style="height:100%;width:30%;background:#78a9ff"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between"><span>observation duration</span><span style="color:#f4f4f4">day 6 / 14</span></div><div style="height:6px;background:#101010;border:1px solid #393939;overflow:hidden;margin-top:4px"><div style="height:100%;width:43%;background:#78a9ff"></div></div></div>
+            <div style="font-size:10px;color:#6f6f6f;line-height:1.5">stage-specific limits: max order 500 · max position 2,500 · daily loss 1% · rate 5/min · elapsed time alone never promotes</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:14px;margin-bottom:14px">
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Live positions &amp; open orders</span><span style="flex:1"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;border:1px solid #393939;padding:1px 7px"><b style="color:#f4f4f4">BROKER</b> · as_of 10:42:01Z</span></div>
+          <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr>
+              <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">symbol</th>
+              <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">side</th>
+              <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">qty</th>
+              <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">entry</th>
+              <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">uPnL</th>
+              <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">ack latency</th>
+            </tr></thead>
+            <tbody style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums">
+              <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a">BTCUSDT</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#42be65">LONG</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">0.0080</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">61,120.00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#42be65">+38.20</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#c6c6c6">p50 240ms</td></tr>
+            </tbody>
+          </table></div>
+          <div style="display:flex;gap:14px;align-items:center;padding:7px 12px;border-top:1px solid #2a2a2a;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6"><span>open orders 1 · fills today 12 · rejects 0</span><span style="flex:1"></span><a href="#">full blotter →</a></div>
+        </div>
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Incidents · reconciliation</span></div>
+          <div style="padding:14px;font-family:'IBM Plex Mono',monospace;font-size:12px">
+            <div style="display:grid;grid-template-columns:minmax(110px,42%) minmax(0,1fr);gap:6px 12px;color:#c6c6c6;overflow-wrap:anywhere">
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">critical findings</span><span style="color:#42be65">0 open</span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">last reconciliation</span><span style="color:#42be65">clean · 12m ago · <a href="#">rec_881</a></span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">partial operations</span><span style="color:#f4f4f4">none</span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">scale blockers</span><sc-if value="{{ syncOk }}" hint-placeholder-val="{{ true }}"><span style="color:#42be65">none</span></sc-if><sc-if value="{{ syncStale }}" hint-placeholder-val="{{ false }}"><span style="color:#f1c21b">broker sync STALE — scale blocked</span></sc-if>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-bottom:14px">
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Portfolio marginal contribution</span><span style="flex:1"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">PF-CRYPTO · 30d · marginal.v1</span></div>
+          <div style="padding:14px;font-family:'IBM Plex Mono',monospace;font-size:12px">
+            <div style="display:grid;grid-template-columns:minmax(140px,46%) minmax(0,1fr);gap:6px 12px;color:#c6c6c6;overflow-wrap:anywhere">
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">corr vs portfolio</span><span style="color:#f4f4f4">0.42 · 144 samples <span style="color:#6f6f6f">(6d live only)</span></span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">corr vs benchmark</span><span style="color:#f4f4f4">0.55</span>
+              <span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">concentration if scaled 5×</span><span style="color:#f1c21b">top-1 would reach 74% — see Portfolio 360°</span>
+            </div>
+            <div style="margin-top:10px;font-size:10px;color:#6f6f6f;line-height:1.5">live sample still small — analytics grade C until ≥ 30d · INSUFFICIENT_DATA rules apply</div>
+          </div>
+        </div>
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Promotion decision — Canary Exit Review</span></div>
+          <div style="padding:14px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#c6c6c6">
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+              <span style="border:1px solid #393939;background:#262626;padding:4px 10px;font-size:11px;cursor:pointer">Hold</span>
+              <span style="border:1px solid #393939;background:#262626;padding:4px 10px;font-size:11px;cursor:pointer">Reduce</span>
+              <span style="border:1px solid #fa4d56;color:#fa4d56;background:#1d1d1d;padding:4px 10px;font-size:11px;cursor:pointer">Rollback</span>
+              <span style="border:1px solid #393939;background:#262626;padding:4px 10px;font-size:11px;cursor:pointer">Request scale →</span>
+            </div>
+            <div style="font-size:11px;line-height:1.6;color:#8d8d8d">evidence pack builds continuously: envelope compliance · drift vs paper/backtest · execution quality · reconciliation history · <a href="#">preview pack →</a><br>promotion to LIVE_FULL requires Canary Exit Review + dual approval — <b style="color:#c6c6c6">no automatic promotion on elapsed time</b></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;border:1px solid #393939;background:#1d1d1d;padding:10px 14px">
+        <sc-if value="{{ showAdmin }}" hint-placeholder-val="{{ true }}">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:#ffffff;background:#da1e28;padding:6px 14px;cursor:pointer">Protective action ▾</span>
+          <sc-if value="{{ syncOk }}" hint-placeholder-val="{{ true }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;border:1px solid #393939;background:#262626;padding:6px 14px;cursor:pointer">Request scale</span></sc-if>
+          <sc-if value="{{ syncStale }}" hint-placeholder-val="{{ false }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f6f6f;border:1px dashed #4c4c4c;padding:6px 14px;cursor:not-allowed">Request scale — blocked: broker sync STALE</span></sc-if>
+        </sc-if>
+        <sc-if value="{{ viewerOnly }}" hint-placeholder-val="{{ false }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f6f6f">mutation actions hidden — Operator Admin scope required</span></sc-if>
+        <span style="flex:1"></span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">all actions: step-up auth + dual approval · plan → apply → verify · PARTIAL never renders green</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;brokerSync&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;OK&quot;, &quot;STALE&quot;], &quot;default&quot;: &quot;OK&quot;, &quot;tsType&quot;: &quot;\&quot;OK\&quot; | \&quot;STALE\&quot;&quot;, &quot;section&quot;: &quot;Demo states&quot;}, &quot;operatorAdmin&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Demo states&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const stale = (this.props.brokerSync ?? "OK") === "STALE";
+    const admin = this.props.operatorAdmin ?? true;
+    return { syncOk: !stale, syncStale: stale, showAdmin: admin, viewerOnly: !admin };
+  }
+}
+</script>
+</body>
+</html>

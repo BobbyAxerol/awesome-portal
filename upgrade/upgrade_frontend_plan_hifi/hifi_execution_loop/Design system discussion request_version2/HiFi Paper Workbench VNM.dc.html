@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#161616;color-scheme:dark}a{color:#78a9ff;text-decoration:none}a:hover{color:#a6c8ff;text-decoration:underline}::selection{background:#78a9ff;color:#161616}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;background:#161616;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#f4f4f4;font-size:13px;letter-spacing:.16px" data-screen-label="Paper Workbench VNM (WF 4h)">
+  <div style="position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;min-height:48px;padding:0 16px;border-bottom:1px solid #393939;background:#161616">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.12em;white-space:nowrap">QUANT ECOSYSTEM PORTAL</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8d8d8d;padding:2px 8px;border:1px solid #393939;white-space:nowrap">Default Workspace</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.08em;color:#be95ff;border:1px solid #be95ff;padding:1px 7px">PAPER</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:block">Deployments <span style="color:#6f6f6f">/</span> Paper <span style="color:#6f6f6f">/</span> VnMomo v0.9</span>
+    <span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;border:1px solid #393939;background:#262626;padding:4px 12px">Search <kbd style="font-size:10px;color:#8d8d8d;border:1px solid #4c4c4c;padding:0 4px;font-family:inherit">⌘K</kbd></span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px">Operations Dark ▾</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px">Operational ▾</span>
+  </div>
+  <div style="display:flex;flex:1;min-height:0">
+    <div style="flex-shrink:0;width:228px;border-right:1px solid #393939;background:#101010;padding:14px 0;font-size:13px">
+      <div style="display:flex;flex-direction:column">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Command</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Command Center</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Operations Queue</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Alerts</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Governance</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Approval Inbox</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Exit Reviews</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Promotion Timeline</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Waivers &amp; Conditions</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Deployments</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Portfolios</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Alpha Fleet</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 13px;background:#262626;color:#f4f4f4;font-weight:500;border-left:3px solid #78a9ff">Paper</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Sandbox</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Live</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Accounts &amp; Bindings</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Reconciliation</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Blotter</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Administration</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Profile &amp; Access</div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0;max-width:1440px;margin:0 auto;padding:20px 20px 64px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-bottom:10px">
+        <h1 style="margin:0;font-family:'IBM Plex Sans',sans-serif;font-weight:300;font-size:22px;line-height:1.25">VnMomo v0.9 <span style="color:#8d8d8d">— Paper Operations · VN MARKET</span></h1>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.08em;color:#be95ff;border:1px solid #be95ff;padding:1px 7px">PAPER_OBSERVATION</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">● ACTIVE</span>
+        <sc-if value="{{ closed }}" hint-placeholder-val="{{ true }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:1px 8px;background:#262626;color:#a6c8ff">■ SUSPENDED_BY_CALENDAR</span></sc-if>
+        <sc-if value="{{ open }}" hint-placeholder-val="{{ false }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">SESSION OPEN</span></sc-if>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#6f6f6f;border:1px dashed #4c4c4c;padding:1px 6px">WF <a href="#">4h</a></span>
+        <span style="flex:1"></span>
+        <sc-if value="{{ closed }}" hint-placeholder-val="{{ true }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;border:1px solid #393939;background:#1d1d1d;padding:2px 8px"><b style="color:#f4f4f4">EXECUTION</b> · as_of 14:45:00 ICT close · <span style="color:#a6c8ff">aging paused</span></span></sc-if>
+        <sc-if value="{{ open }}" hint-placeholder-val="{{ false }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;border:1px solid #393939;background:#1d1d1d;padding:2px 8px"><b style="color:#f4f4f4">EXECUTION</b> · as_of 10:42:01 ICT · <span style="color:#42be65">age 2.1s</span></span></sc-if>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;padding:7px 12px;margin-bottom:12px;border:1px solid #2a2a2a;background:#101010;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6">
+        <span>artifact <a href="#">sha256:c44f10…9e</a></span><span>R1 <a href="#">AP-338</a></span><span>R2 <a href="#">AP-349</a></span><span>portfolio <a href="#">PF-VN</a></span><span>deployment <a href="#">dep_102</a></span><span>account <a href="#">paper-dnse-vnmomo</a></span><span>venue <a href="#">VN MARKET · DNSE</a></span><span>credential DNSE-01 <span style="color:#f1c21b">OTP session expires 08:55 ICT</span></span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;padding:8px 12px;margin-bottom:12px;border:1px solid #2a2a2a;background:#101010;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">
+        <span style="color:#42be65">R1 ✓</span><span>→</span><span style="color:#42be65">R2 ✓</span><span>→</span><span style="color:#f4f4f4;font-weight:600;border:1px solid #be95ff;padding:0 6px">PAPER ● 9/30 days</span><span>→</span><span>SANDBOX —</span><span>→</span><span>CANARY —</span><span>→</span><span>LIVE —</span>
+      </div>
+      <sc-if value="{{ closed }}" hint-placeholder-val="{{ true }}">
+        <div style="border:1px solid #4589ff;border-left:4px solid #4589ff;background:#12233f;color:#f4f4f4;padding:8px 12px;margin-bottom:14px;font-size:12px;line-height:1.5"><b style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#a6c8ff">Market closed — reopens 09:00 ICT (in 12h 40m)</b><br>ATC ended 14:45 ICT. Data shown as_of last close; freshness aging is paused against the venue calendar — this is <b>not</b> STALE. Signals generated off-hours queue as at-open intents and are re-validated by risk at session open. Session state ≠ runtime state: the deployment stays ACTIVE.</div>
+      </sc-if>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;padding:5px 12px;margin-bottom:14px;border:1px solid #2a2a2a;background:#101010;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f"><span style="color:#42be65">R1 ✓ <a href="#" style="color:#42be65">AP-322</a></span><span style="color:#4c4c4c">→</span><span style="color:#42be65">R2 ✓ <a href="#" style="color:#42be65">AP-338</a></span><span style="color:#4c4c4c">→</span><span style="color:#f4f4f4;font-weight:600;border:1px solid #78a9ff;padding:0 6px">PAPER ● 6/30 sessions</span><span style="color:#4c4c4c">→</span><span>SANDBOX —</span><span style="color:#4c4c4c">→</span><span>CANARY —</span><span style="color:#4c4c4c">→</span><span>LIVE —</span><span style="margin-left:auto">lifecycle · ✓ links its decision · ● current stage</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:1px;background:#393939;border:1px solid #393939;margin-bottom:14px">
+        <div style="flex:1 1 180px;min-width:0;background:#1d1d1d;padding:8px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Equity · VND</div><div style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:17px;font-weight:500;line-height:24px">1,052,400,000</div></div>
+        <div style="flex:1 1 180px;min-width:0;background:#1d1d1d;padding:8px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Net PnL (9d) · VND</div><div style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:17px;font-weight:500;line-height:24px;color:#42be65">+52,400,000</div></div>
+        <div style="flex:1 1 180px;min-width:0;background:#1d1d1d;padding:8px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Max Drawdown</div><div style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:17px;font-weight:500;line-height:24px;color:#fa4d56">−1.20%</div></div>
+        <div style="flex:1 1 180px;min-width:0;background:#1d1d1d;padding:8px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Allocation · VND</div><div style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:17px;font-weight:500;line-height:24px">1,000,000,000</div></div>
+        <div style="flex:1 1 180px;min-width:0;background:#1d1d1d;padding:8px 12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Data state</div><sc-if value="{{ closed }}" hint-placeholder-val="{{ true }}"><div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;line-height:24px;color:#a6c8ff">at 14:45 close</div></sc-if><sc-if value="{{ open }}" hint-placeholder-val="{{ false }}"><div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;line-height:24px;color:#42be65">live · 2.1s</div></sc-if></div>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:14px;margin-bottom:14px">
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Equity — session-aware timeline</span><span style="flex:1"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">shaded = closed (calendar) · gaps stay gaps</span></div>
+          <div style="padding:14px 14px 6px;flex:1;display:flex;align-items:center">
+            <svg viewBox="0 0 640 220" style="width:100%;height:auto;display:block">
+              <rect x="0" y="10" width="60" height="190" fill="#101010"></rect>
+              <rect x="200" y="10" width="90" height="190" fill="#101010"></rect>
+              <rect x="430" y="10" width="90" height="190" fill="#101010"></rect>
+              <rect x="580" y="10" width="60" height="190" fill="#101010"></rect>
+              <text x="206" y="26" font-family="IBM Plex Mono,monospace" font-size="10" fill="#6f6f6f">closed 14:45→09:00</text>
+              <polyline points="60,170 100,160 140,164 180,150 200,146" fill="none" stroke="#78a9ff" stroke-width="2"></polyline>
+              <polyline points="290,146 330,136 370,142 410,124 430,120" fill="none" stroke="#78a9ff" stroke-width="2"></polyline>
+              <polyline points="520,120 550,108 580,102" fill="none" stroke="#78a9ff" stroke-width="2"></polyline>
+              <circle cx="580" cy="102" r="3.5" fill="#78a9ff"></circle>
+              <text x="500" y="88" font-family="IBM Plex Mono,monospace" font-size="10" fill="#a6c8ff">frozen at close</text>
+            </svg>
+          </div>
+          <div style="padding:6px 14px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">9d · session buckets 09:00–14:45 ICT · VND · EXECUTION · equity_projection.v1 · closed periods are calendar shading, never interpolated</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+            <div style="padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Observation gate → Paper Exit</span></div>
+            <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#c6c6c6">
+              <div><div style="display:flex;justify-content:space-between"><span>trading days</span><span style="color:#f4f4f4">9 / 30</span></div><div style="height:6px;background:#101010;border:1px solid #393939;overflow:hidden;margin-top:4px"><div style="height:100%;width:30%;background:#78a9ff"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between"><span>trades</span><span style="color:#f4f4f4">61 / 200</span></div><div style="height:6px;background:#101010;border:1px solid #393939;overflow:hidden;margin-top:4px"><div style="height:100%;width:30%;background:#78a9ff"></div></div></div>
+              <div style="font-size:10px;color:#6f6f6f;line-height:1.5">gate counts TRADING days — calendar closures don't consume the window</div>
+            </div>
+          </div>
+          <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+            <div style="padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Accounting · VND · CASH</span></div>
+            <div style="padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:12px">
+              <div style="display:grid;grid-template-columns:minmax(96px,40%) minmax(0,1fr);gap:5px 12px;color:#c6c6c6;overflow-wrap:anywhere"><span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">cash free</span><span style="color:#f4f4f4">812,300,000</span><span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">pending settlement</span><span style="color:#f4f4f4">140,100,000 · <b>T+2.5</b> (2 lots)</span><span style="font-size:10px;text-transform:uppercase;color:#8d8d8d">buying power</span><span style="color:#f4f4f4">812,300,000 · loan package none</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="border:1px solid #393939;background:#1d1d1d">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Orders — VN order types verbatim</span><span style="flex:1"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">lot size 100 · LO/ATO/ATC never translated to MARKET/LIMIT · <a href="#">full blotter →</a></span></div>
+        <div style="overflow-x:auto"><table style="width:100%;min-width:760px;border-collapse:collapse;font-size:12px">
+          <thead><tr>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">time (ICT)</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">symbol</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">type / side</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">qty</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:right;border-bottom:1px solid #393939;padding:8px 12px">price · VND</th>
+            <th style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d;text-align:left;border-bottom:1px solid #393939;padding:8px 12px">status</th>
+          </tr></thead>
+          <tbody style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums">
+            <sc-if value="{{ closed }}" hint-placeholder-val="{{ true }}">
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">20:14:02</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a">FPT</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#42be65">ATO BUY</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">500</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#8d8d8d">at open</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#12233f;color:#a6c8ff">QUEUED_FOR_OPEN · risk re-validates 09:00</span></td></tr>
+            </sc-if>
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">14:29:41</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a">FPT</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#42be65">LO BUY</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">1,000</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">98,500</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">FILLED</span></td></tr>
+            <tr><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#c6c6c6">14:45:00</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a">HPG</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;color:#fa4d56">ATC SELL</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">2,000</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a;text-align:right">27,350</td><td style="padding:7px 12px;border-bottom:1px solid #2a2a2a"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#071f11;color:#42be65">FILLED · ATC match</span></td></tr>
+            <tr><td style="padding:7px 12px;color:#c6c6c6">13:52:18</td><td style="padding:7px 12px">VNM</td><td style="padding:7px 12px;color:#42be65">LO BUY</td><td style="padding:7px 12px;text-align:right">700</td><td style="padding:7px 12px;text-align:right">66,200</td><td style="padding:7px 12px"><span style="font-size:11px;font-weight:600;padding:1px 8px;background:#2d0709;color:#fa4d56">REJECTED</span> <span style="color:#6f6f6f;font-size:11px">risk: price above daily band ceiling</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;sessionState&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;CLOSED&quot;, &quot;OPEN&quot;], &quot;default&quot;: &quot;CLOSED&quot;, &quot;tsType&quot;: &quot;\&quot;CLOSED\&quot; | \&quot;OPEN\&quot;&quot;, &quot;section&quot;: &quot;Demo states&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const closed = (this.props.sessionState ?? "CLOSED") === "CLOSED";
+    return { closed, open: !closed };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#161616;color-scheme:dark}a{color:#78a9ff;text-decoration:none}a:hover{color:#a6c8ff;text-decoration:underline}::selection{background:#78a9ff;color:#161616}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;background:#161616;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#f4f4f4;font-size:13px;letter-spacing:.16px" data-screen-label="Command Center (WF 5a)">
+  <div style="position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;min-height:48px;padding:0 16px;border-bottom:1px solid #393939;background:#161616">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.12em;white-space:nowrap">QUANT ECOSYSTEM PORTAL</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8d8d8d;padding:2px 8px;border:1px solid #393939;white-space:nowrap">Default Workspace</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:block">Command <span style="color:#6f6f6f">/</span> Command Center</span>
+    <span style="margin-left:auto"></span>
+    <sc-if value="{{ busy }}" hint-placeholder-val="{{ true }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:#fa4d56;border:1px solid #fa4d56;background:#1d1d1d;padding:4px 10px;cursor:pointer">⚑ Alerts · 1 critical</span></sc-if>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px">Operations Dark ▾</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c6c6c6;background:#262626;border:1px solid #393939;padding:3px 8px">Operational ▾</span>
+  </div>
+  <div style="display:flex;flex:1;min-height:0">
+    <div style="flex-shrink:0;width:228px;border-right:1px solid #393939;background:#101010;padding:14px 0;font-size:13px">
+      <div style="display:flex;flex-direction:column">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Command</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 13px;background:#262626;color:#f4f4f4;font-weight:500;border-left:3px solid #78a9ff">Command Center</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Operations Queue</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Alerts</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Governance</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Approval Inbox</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Exit Reviews</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Promotion Timeline</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Waivers &amp; Conditions</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Deployments</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Portfolios</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Alpha Fleet</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Paper</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Sandbox</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Live</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Accounts &amp; Bindings</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Reconciliation</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Blotter</div>
+      </div>
+      <div style="display:flex;flex-direction:column;margin-top:18px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f6f6f;padding:0 16px 6px">Administration</div>
+        <div style="padding:6px 16px;color:#c6c6c6;border-left:3px solid transparent">Profile &amp; Access</div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0;max-width:1200px;margin:0 auto;padding:24px 20px 64px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-bottom:14px">
+        <h1 style="margin:0;font-family:'IBM Plex Sans',sans-serif;font-weight:300;font-size:22px;line-height:1.25">Good morning, Stan</h1>
+        <sc-if value="{{ busy }}" hint-placeholder-val="{{ true }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:1px 8px;background:#2d0709;color:#fa4d56">1 CRITICAL</span></sc-if>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#6f6f6f;border:1px dashed #4c4c4c;padding:1px 6px">WF <a href="#">5a</a></span>
+        <span style="flex:1"></span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8d8d8d">as_of 08:00:12Z · every row links to its owning screen</span>
+      </div>
+      <div style="border:1px solid #393939;background:#1d1d1d;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Needs you now — ranked across all loops</span><span style="flex:1"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">rank = severity → SLA → age</span></div>
+        <sc-if value="{{ busy }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column">
+          <a href="HiFi Incident Detail.dc.html" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:10px 14px;border-bottom:1px solid #2a2a2a;border-left:3px solid #fa4d56;background:#211012;color:inherit;text-decoration:none">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:#fa4d56;width:14px">1</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.06em;color:#fa4d56;border:1px solid #fa4d56;padding:0 6px">INCIDENT</span>
+            <span style="font-size:13px;color:#f4f4f4">Position MISMATCH — acct-live-grid-v21 · BINANCE · orders fail-closed</span>
+            <span style="flex:1"></span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#fa4d56">OPEN · 2m</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#78a9ff">open inc_44 →</span>
+          </a>
+          <a href="HiFi Gate R2 Review.dc.html" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:10px 14px;border-bottom:1px solid #2a2a2a;border-left:3px solid #f1c21b;color:inherit;text-decoration:none">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:#f1c21b;width:14px">2</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.06em;color:#f1c21b;border:1px solid #f1c21b;padding:0 6px">APPROVAL</span>
+            <span style="font-size:13px;color:#f4f4f4">AP-352 · R2 · Carry v3.2 → PF-MAIN</span>
+            <span style="flex:1"></span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#fa4d56;font-weight:600">26h / 24h OVERDUE</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#78a9ff">review →</span>
+          </a>
+          <a href="HiFi Operations Queue.dc.html" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:10px 14px;border-bottom:1px solid #2a2a2a;border-left:3px solid #f1c21b;color:inherit;text-decoration:none">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:#f1c21b;width:14px">3</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.06em;color:#f1c21b;border:1px solid #f1c21b;padding:0 6px">OPERATION</span>
+            <span style="font-size:13px;color:#f4f4f4">op_1251 emergency-close — PARTIAL 1/2, residue unresolved</span>
+            <span style="flex:1"></span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#f1c21b">6m</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#78a9ff">re-apply →</span>
+          </a>
+          <a href="HiFi Gate R1 Review.dc.html" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:10px 14px;border-left:3px solid transparent;color:inherit;text-decoration:none">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:#8d8d8d;width:14px">4</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.06em;color:#c6c6c6;border:1px solid #4c4c4c;padding:0 6px">APPROVAL</span>
+            <span style="font-size:13px;color:#f4f4f4">AP-201 · R1 · RSI v1.7 — quorum 1/2, needs you</span>
+            <span style="flex:1"></span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6">due in 22h</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#78a9ff">review →</span>
+          </a>
+        </div>
+        </sc-if>
+        <sc-if value="{{ quiet }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:36px 20px;text-align:center">
+            <div style="font-family:'IBM Plex Sans',sans-serif;font-weight:300;font-size:20px;color:#f4f4f4">Nothing needs you</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8d8d8d;margin-top:6px">0 incidents · 0 overdue approvals · 0 stuck operations — pending work owned by others stays in its queues</div>
+          </div>
+        </sc-if>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;margin-bottom:14px">
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Fleet health</span> <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#6f6f6f">EXECUTION · as_of 08:00:12Z</span></div>
+          <div style="display:flex;flex-wrap:wrap;gap:1px;background:#2a2a2a;flex:1">
+            <a href="#" style="flex:1 1 100px;min-width:0;background:#1d1d1d;padding:9px 12px;color:inherit;text-decoration:none"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;color:#8d8d8d">Live</div><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;color:#fa4d56">2</div></a>
+            <a href="#" style="flex:1 1 100px;min-width:0;background:#1d1d1d;padding:9px 12px;color:inherit;text-decoration:none"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;color:#8d8d8d">Canary</div><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;color:#f4f4f4">1 <span style="font-size:10px;color:#8d8d8d">d9/14</span></div></a>
+            <a href="#" style="flex:1 1 100px;min-width:0;background:#1d1d1d;padding:9px 12px;color:inherit;text-decoration:none"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;color:#8d8d8d">Sandbox</div><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;color:#f4f4f4">2 <span style="font-size:10px;color:#f1c21b">1 HALTED</span></div></a>
+            <a href="#" style="flex:1 1 100px;min-width:0;background:#1d1d1d;padding:9px 12px;color:inherit;text-decoration:none"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;color:#8d8d8d">Paper</div><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;color:#f4f4f4">3</div></a>
+            <a href="#" style="flex:1 1 100px;min-width:0;background:#1d1d1d;padding:9px 12px;color:inherit;text-decoration:none"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;color:#8d8d8d">Broker sync</div><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;color:{{ syncColor }}">{{ syncLabel }}</div></a>
+            <a href="#" style="flex:1 1 100px;min-width:0;background:#1d1d1d;padding:9px 12px;color:inherit;text-decoration:none"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;color:#8d8d8d">Findings</div><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;color:{{ findColor }}">{{ findLabel }}</div></a>
+          </div>
+          <div style="padding:7px 14px;border-top:1px solid #2a2a2a;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">cells link to their stage list · dead letters 0 · counts only — amounts live in the 360° screens</div>
+        </div>
+        <div style="border:1px solid #393939;background:#1d1d1d;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Pinned — your watchlist</span><span style="flex:1"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">pin ⌖ from any workbench header · max 5</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;font-family:'IBM Plex Mono',monospace;font-size:12px">
+            <a href="HiFi Canary Control Room.dc.html" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:9px 14px;border-bottom:1px solid #2a2a2a;color:inherit;text-decoration:none"><span style="font-size:10px;font-weight:700;color:#fa4d56;border:2px solid #fa4d56;padding:0 5px">⛨ CANARY</span><span style="color:#f4f4f4">Grid v2.1 · BINANCE · dep_88</span><span style="flex:1"></span><span style="color:#42be65">+112</span><span style="font-size:11px;font-weight:600;padding:1px 6px;background:#071f11;color:#42be65">READY</span></a>
+            <a href="HiFi Paper Workbench.dc.html" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:9px 14px;border-bottom:1px solid #2a2a2a;color:inherit;text-decoration:none"><span style="font-size:10px;font-weight:600;color:#be95ff;border:1px solid #be95ff;padding:0 5px">PAPER</span><span style="color:#f4f4f4">Carry v3.2 · BINANCE · dep_74</span><span style="flex:1"></span><span style="color:#c6c6c6">12/30d</span><span style="font-size:11px;font-weight:600;padding:1px 6px;background:#071f11;color:#42be65">READY</span></a>
+            <a href="HiFi Sandbox Certification.dc.html" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:9px 14px;color:inherit;text-decoration:none"><span style="font-size:10px;font-weight:600;color:#f1c21b;border:1px solid #f1c21b;padding:0 5px">SANDBOX</span><span style="color:#f4f4f4">Carry v3.2 · OKX TESTNET · dep_77</span><span style="flex:1"></span><span style="color:#c6c6c6">cert 5/7</span><span style="font-size:11px;font-weight:600;padding:1px 6px;background:#302608;color:#f1c21b">HALTED</span></a>
+          </div>
+          <div style="padding:7px 14px;border-top:1px solid #2a2a2a;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f6f6f">user-owned order · a pin never mutes alerts</div>
+        </div>
+      </div>
+      <div style="border:1px solid #393939;background:#1d1d1d">
+        <div style="padding:10px 14px;border-bottom:1px solid #2a2a2a"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8d8d8d">Today</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px 24px;padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c6c6c6">
+          <span>◷ canary review day 9/14 — due 2026-08-25 · <a href="#">CX schedule</a></span>
+          <span>◷ condition capacity-cap (Grid v2.1) expires in 7d · <a href="#">waivers</a></span>
+          <span style="color:#8d8d8d">✓ op_1250 allocation.set VERIFIED 1h ago — <a href="HiFi Operations Queue.dc.html">full journal</a></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;morning&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;BUSY&quot;, &quot;QUIET&quot;], &quot;default&quot;: &quot;BUSY&quot;, &quot;tsType&quot;: &quot;\&quot;BUSY\&quot; | \&quot;QUIET\&quot;&quot;, &quot;section&quot;: &quot;Demo states&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const quiet = (this.props.morning ?? "BUSY") === "QUIET";
+    return {
+      busy: !quiet, quiet,
+      syncLabel: quiet ? "8/8 OK" : "7/8", syncColor: quiet ? "#42be65" : "#f1c21b",
+      findLabel: quiet ? "0" : "1", findColor: quiet ? "#42be65" : "#fa4d56"
+    };
+  }
+}
+</script>
+</body>
+</html>
