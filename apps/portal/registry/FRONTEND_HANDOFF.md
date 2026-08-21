@@ -701,8 +701,9 @@ và chốt số quy mô. Ghi ở `CLAUDE.md` §0 + §8; refine chi tiết nằm 
 — thư mục đó là carve-out có chủ ý của rule "không sửa `upgrade/**`", phần
 `upgrade/**` còn lại vẫn nguyên là docs của codex.
 
-**Số Bobby chốt:** 50 alpha deploy · 5 venue · 1.000 order+fill/ngày · giữ
-order/fill 6 tháng · chart mặc định 1h tuỳ biến theo window.
+**Số Bobby chốt (v2, sau khi hỏi lại):** **3–5 portfolio × 50–100 alpha mỗi
+portfolio** → 150–500 deployment toàn hệ · 5 venue · 1.000 order+fill/ngày · view
+mặc định 6 tháng · chart mặc định 1h tuỳ biến theo window.
 
 **Điều số liệu thật làm thay đổi kế hoạch** — ba lo ngại bị loại, không phải
 hoãn: (a) blotter 182k dòng thì `COUNT` chính xác chạy trong mili-giây → **bỏ
@@ -711,11 +712,27 @@ approximate count**, không có nhãn `~` nào; (b) 1.000 event/ngày = 0,7/phú
 "dense tape", đây không phải); (c) 5 venue vừa chip row như hi-fi → **không làm**
 overflow pattern. Ghi lại để sau này không ai mở lại ba việc đó.
 
-**Ba thứ thật sự vỡ và phải làm:** correlation 50×50 = 2.500 ô (matrix có nhãn
-→ heatmap clustering — spec §16.3 vốn đã viết "heatmap", lưới có nhãn trong hi-fi
-chỉ là hệ quả của cast 9 alpha); blotter 182k dòng cần keyset + virtualization,
-mà **funnel bung inline làm chiều cao dòng biến thiên — đúng thứ phá
-virtualization**; và 12 tile Insight Charts = 52k điểm trên một màn.
+**Bốn thứ thật sự vỡ và phải làm:** correlation **100×100 = 10.000 ô** mỗi
+portfolio (matrix có nhãn → heatmap clustering — spec §16.3 vốn đã viết
+"heatmap", lưới có nhãn trong hi-fi chỉ là hệ quả của cast 9 alpha); blotter
+182k dòng cần keyset + virtualization, mà **funnel bung inline làm chiều cao
+dòng biến thiên — đúng thứ phá virtualization** (Bobby chốt: drawer); 12 tile
+Insight Charts = 52k điểm trên một màn; và **Account/Broker 360°** — xem dưới.
+
+**Phát hiện từ identity model (Bobby dặn phải hiểu, và nó ra kết quả).**
+`venue_accounts` cho **nhiều virtual account trỏ chung một `external_account_ref`**;
+`accounts` thì unique theo (strategy, mode, venue) và không dùng chung giữa
+strategy. Với 150–500 virtual account trên ~5 physical ref, **một binding có thể
+gánh ~100 linked account** — hi-fi vẽ 3 và cộng `Σ virtual 41.000 vs physical
+43.120` **ngay trong browser**. Cộng 3 dòng thì đúng; cộng khi bảng phân trang
+thì sai âm thầm, mà đây lại chính là claim an toàn của màn (spec §13.2: đây là
+nơi phát hiện tổng virtual vượt physical). → thêm rule **M7: mọi tổng khẳng định
+về cả tập phải do server tính**, và request `BR-EX-14`.
+
+Một quan hệ nữa đổi cả scope bar: `portfolio_id` nằm **trên deployment**, không
+nằm trên strategy → **cùng một alpha có thể ở hai portfolio qua hai deployment**.
+Alpha 360° vì thế phải portfolio-scoped, nếu không nó trộn capital/PnL của hai
+portfolio vào một màn không thuộc về portfolio nào (`BR-EX-15`).
 
 **Thang resolution** suy từ trần ≤5.000 điểm/series của §16.4: ≤3d→1m ·
 ≤30d→15m · ≤6mo→**1h mặc định** · ≤2y→4h · >2y→1d. Mọi nấc lọt dưới trần nên
@@ -723,14 +740,25 @@ virtualization**; và 12 tile Insight Charts = 52k điểm trên một màn.
 không decimate. Đây là cách sạch nhất thoả §16.3 "không smoothing làm đổi
 extrema", vì stride sampling chính là thứ xoá mất cây nến sụt giá.
 
-**13 Backend request `BR-EX-01..13`** nằm ở §4 tài liệu trên (keyset cursor,
-filter/sort server-side, count chính xác, series envelope, batch tile, correlation
-snapshot kèm clustering order, ranked triage, alert grouping, single subscription,
-sequence-gap semantics, instrument precision, funnel endpoint riêng). **Chưa gửi
-codex** — chờ backend plan để gửi một lượt thay vì nhỏ giọt.
+**15 Backend request `BR-EX-01..15`** nằm ở §5 tài liệu trên (keyset cursor,
+filter/sort server-side, count chính xác, series envelope, re-query khi zoom,
+batch tile, correlation snapshot dạng packed array kèm clustering order, ranked
+triage, alert grouping, single subscription, sequence-gap semantics, instrument
+precision, funnel endpoint riêng, aggregate exposure per binding, portfolio scope
+cho Alpha 360°). **Chưa gửi codex** — chờ backend plan để gửi một lượt thay vì
+nhỏ giọt.
 
-**Quyết định còn treo cho Bobby** (§7 tài liệu trên): vị trí theme Carbon (chặn
-mọi component dùng chung); funnel drawer hay virtualization biến thiên chiều cao
-(đề xuất: drawer); order/fill quá 6 tháng còn truy được không; và 50 alpha là
-**mỗi portfolio hay toàn hệ thống** — cái này đổi hẳn kích thước ma trận
-correlation, chọn sai thì phải dựng lại Phase 16.
+**4 quyết định Bobby đã chốt 2026-08-21** (§8 tài liệu trên): theme **đi theo
+hi-fi** (Carbon DS §7, hex trong hi-fi là authority) nhưng lands như surface
+riêng của Execution — không restyle `data-theme="operations"` dùng chung, vì 46/100
+baseline là operations-theme và Research thì cấm đụng; funnel **drawer**; dữ liệu
+quá 6 tháng **vẫn truy được nhưng hoãn UI**, chỉ cần footer blotter ghi rõ cửa sổ
+6 tháng để khoảng trống không bị đọc nhầm thành "không có giao dịch"; cardinality
+3–5 portfolio × 50–100 alpha.
+
+**Còn treo:** (a) tỉ lệ 1.000 order+fill/ngày trên 150–500 deployment = ~2–7
+mỗi deployment mỗi ngày — cần Bobby xác nhận, vì mọi ngân sách blotter/event/
+workbench đều dựa lên nó; (b) **registry revision 3** — nav group hi-fi
+(COMMAND/GOVERNANCE/DEPLOYMENTS/ADMINISTRATION) và 17 màn chưa có trong rev 2,
+mà nav render từ registry là rule cứng và `registry.json` thuộc backend → nửa nav
+của Phase 0 vẫn chặn ở codex, độc lập với nửa component.
