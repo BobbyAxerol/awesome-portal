@@ -682,3 +682,30 @@ decided. Fixed in both the literal fixtures and the port's.
 from `IMPLEMENTATION_PHASES` §2's prose about Gate R1 and was generalised. All
 four governance hi-fi files put the action row **last in normal flow, not sticky
 and not pinned** — which is what was already built. Withdrawn.
+
+---
+
+## 15. Gate R2 — second read-back, after the light conversion
+
+The first read-back of §3 (recorded in §13) predates the light theme, the two-up
+grid and the conditions composer, so it was re-run against the current screen.
+Five findings; one of them clears the code rather than condemning it.
+
+| # | §3 or the hi-fi says | Current | Verdict |
+|---|---|---|---|
+| R2-1 | The blocked banner reads in full: *"AP-201 expired 2026-08-18. This R2 review cannot be decided against stale research evidence; re-run Gate R1 or extend its waiver. Approve is disabled."* | a one-line reason without the **date**, the **remedy** or the scope | **gap** — the date is what makes "expired" checkable rather than asserted, and "re-run Gate R1 or extend its waiver" is the only place the screen tells a reviewer what to do next |
+| R2-2 | §3: *"right: R1 reference panel (decision, digest, **expiry**)"* | R1 is a chip in the meta strip; no expiry | **gap** — without the expiry a reviewer cannot see how stale the R1 is until it has already lapsed |
+| R2-3 | Hi-fi footnote: *"evidence digest sha256:c81f… · decision is recorded against policy approval.v3 · conditions are typed objects with owner/deadline/expiry, never free text"* | absent | **gap** — the last clause is the screen explaining its own conditions model, and it is the sentence that stops somebody asking for a free-text box |
+| R2-4 | §3: *"Data: **AP-352** Carry v3.2 → PF-MAIN (CAST)"* | fixture uses `AP-207`, and its R1 reference is `AP-201` — RSI's R1, a different alpha | **gap** — and the hi-fi drifts here too, using `AP-201`. `CANONICAL_CAST.md` wins: Carry v3.2's R1 is `AP-101`, and `AP-352` targets dep_77 on OKX TESTNET |
+| R2-5 | §3 prose: *"EXPIRED **disables the whole decision bar**"* | Approve locked, Deny available | **not a gap.** The hi-fi's own banner says "**Approve** is disabled", and EX-BE-05a allows denial of a request whose evidence has lapsed. §3's prose is loose; the hi-fi and the backend agree with the code |
+
+R2-5 is the useful one. Two of the five earlier read-backs produced a finding
+that turned out to clear the implementation, and both times the prose was the
+loose party — §3 here, and §2's "decision bar pinned top" in §14.6. The pattern
+is worth naming: `IMPLEMENTATION_PHASES` summarises, the hi-fi draws, and where
+they differ the drawing is the specification.
+
+**Still needing the backend:** §3's *"capital preview recomputes from requested
+amount"*. That belongs to a server endpoint — a client that recomputes capital
+is a client inventing a number — and becomes a request when EX-BE-07 is picked
+up.
