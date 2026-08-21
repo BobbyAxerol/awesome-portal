@@ -131,6 +131,26 @@ Agent chỉ được implement deep dive khi phase tương ứng đang active v�
 giao scope. Tài liệu của phase sau là thiết kế trước, không phải implementation
 authority.
 
+## Execution Loop backend plan — 2026-08-21
+
+- [Execution Loop Portal Backend and HiFi Master Plan](../EXECUTION_LOOP_PORTAL_BACKEND_AND_HIFI_MASTER_PLAN.md)
+  là authority mới cho backend phục vụ 17 màn Execution HiFi và board 19 phase.
+  Tài liệu khóa dual-cell: TypeScript tại SGP giữ Portal control plane; Rust
+  `portal-execution-edge-rs` tại AWS HK chỉ giữ compatibility adapters,
+  projection/query/aggregation, SSE và command relay; Trading System vẫn là
+  authority tuyệt đối cho Paper/Sandbox/Canary/Live. Python chỉ còn research,
+  QuantBT compute và adapter thực sự bắt buộc bằng Python.
+- Registry revision 3 đã giao ở `e78a597`: 8 groups, 22 features, 34 screens,
+  trong đó đúng 17 `EXECUTION_*` routes. Evidence: 53 focused contract/API tests
+  và root `./scripts/portal verify`; Docker contract suite chưa chạy được vì
+  daemon không khả dụng và không được ghi nhận là pass.
+- Cả 15 `BR-EX-*` đã được quyết định trong master plan §15.1. Backend runway
+  dùng EX-BE-00→08 nhưng status/evidence vẫn ghi theo đúng phase 0→18 trong
+  shared `PHASE_TRACKER.md`; không tạo product roadmap thứ hai.
+- Production integration chưa được kích hoạt. Bước kế tiếp là EX-BE-01: Rust
+  workspace + canonical contracts + generated `ts-contract-v1` adapter + full
+  vocabulary reconciliation, sau đó EX-BE-02 auth/capability negotiation.
+
 ## BAR-21 — Strategy Import & Quarantine Ingest foundation
 
 Quarantine write path for U14 (see `BAR_21_STRATEGY_IMPORT.md`):

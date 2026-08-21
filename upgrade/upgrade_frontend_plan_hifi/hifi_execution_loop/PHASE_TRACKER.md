@@ -26,31 +26,36 @@
 | `BLOCKED` | Waiting on a named dependency |
 | `—` | Not applicable to that side |
 
+The BE column uses the architecture lifecycle vocabulary from spec §2.3:
+`CONTRACT_COMPLETE`, `FOUNDATION_COMPLETE`, `INTEGRATION_PENDING`,
+`PRODUCTION_INACTIVE`, `OPERATIONAL_EVIDENCE_PENDING`, and `PRODUCT_COMPLETE`.
+These qualify what is complete; they do not mean frontend `DONE`.
+
 ---
 
 ## 1. Phase board
 
 | # | Screen (WF) | FE | BE | Needs | Evidence |
 |---|---|---|---|---|---|
-| 0 | Shell & shared components | **DONE** (components) · `BLOCKED` (nav) | `READY` | registry rev 3 | 32 tests · 101 visual baselines · build |
-| 1 | Approval Inbox (4a) | `BLOCKED` | `BLOCKED` | BR-EX-01/02/03 | |
-| 2 | Gate R1 Review (1a) | `BLOCKED` | `BLOCKED` | approvals read model | |
-| 3 | Gate R2 Review (1b) | `BLOCKED` | `BLOCKED` | capital preview | |
-| 4 | Paper Workbench (1c) | `BLOCKED` | `BLOCKED` | BR-EX-04, M7 gate progress | |
-| 5 | Paper Exit Review (4b) | `BLOCKED` | `BLOCKED` | evidence pack | |
-| 6 | Admin Action Drawer (1i) | `READY`¹ | `BLOCKED` | commands plan/apply/verify | drawer shell built in Phase 0 |
-| 7 | Operations Queue (4e) | `BLOCKED` | `BLOCKED` | BR-EX-01/02/09 | |
-| 8 | Incident Detail (4d) | `BLOCKED` | `BLOCKED` | findings + operations | |
-| 9 | Command Center (5a) | `BLOCKED` | `BLOCKED` | BR-EX-08/10 | |
-| 10 | Sandbox Certification (1d) | `BLOCKED` | `BLOCKED` | cert state machine | |
-| 11 | Canary Control Room (1e) | `BLOCKED` | `BLOCKED` | BR-EX-04, envelope | |
-| 12 | Live Full Operations (1f) | `BLOCKED` | `BLOCKED` | BR-EX-04/11 | |
-| 13 | Paper Workbench VNM (4h) | `BLOCKED` | `BLOCKED` | BR-EX-12 + venue calendar | |
-| 14 | Full Blotter (4c) | `BLOCKED` | `BLOCKED` | BR-EX-01/02/03/13 | |
-| 15 | Alpha 360° (2a+2b) | `BLOCKED` | `BLOCKED` | BR-EX-04/06/15 | |
-| 16 | Portfolio 360° (1h→3a) | `BLOCKED` | `BLOCKED` | BR-EX-07 | |
-| 17 | Account/Broker 360° (1g) | `BLOCKED` | `BLOCKED` | **BR-EX-14** | |
-| 18 | Hardening | `BLOCKED` | `BLOCKED` | ECharts + role lens | |
+| 0 | Shell & shared components | **DONE** (components) · `BLOCKED` (nav) | `CONTRACT_COMPLETE` | frontend nav wiring to registry rev 3 | FE: 32 tests · 101 visual baselines · build; BE: `e78a597` · 53 contract/API tests · root verify |
+| 1 | Approval Inbox (4a) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-04/05; BR-EX-01/02/03 accepted | backend contract: master plan §§10.1, 12.2 |
+| 2 | Gate R1 Review (1a) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05 integration | existing approval/audit foundation; master plan §§10.2, 12.2 |
+| 3 | Gate R2 Review (1b) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/05/07 capital preview | master plan §§10.3, 12.2 |
+| 4 | Paper Workbench (1c) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/04; M7 evidence | BR-EX-04 modified; master plan §§10.4, 15.1 |
+| 5 | Paper Exit Review (4b) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/05 evidence integration | master plan §§10.5, 12.2 |
+| 6 | Admin Action Drawer (1i) | `READY`¹ | `FOUNDATION_COMPLETE` | EX-BE-02/05; TS command capability | drawer shell built in Phase 0; backend plan/apply/verify contract §7.3 |
+| 7 | Operations Queue (4e) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-04/05 | BR-EX-01/02/09 accepted; master plan §§10.7, 15.1 |
+| 8 | Incident Detail (4d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05/06 integration | master plan §§10.8, 12.2 |
+| 9 | Command Center (5a) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04/06 | BR-EX-08/10 accepted; master plan §§10.9, 15.1 |
+| 10 | Sandbox Certification (1d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/05; TS sandbox capability | production commands inactive; master plan §10.10 |
+| 11 | Canary Control Room (1e) | `BLOCKED` | `PRODUCTION_INACTIVE` | EX-BE-03–06; owner live-canary gate | BR-EX-04 modified; master plan §10.11 |
+| 12 | Live Full Operations (1f) | `BLOCKED` | `PRODUCTION_INACTIVE` | phase 11 evidence; EX-BE-08 | BR-EX-04/11 modified; master plan §10.12 |
+| 13 | Paper Workbench VNM (4h) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04; venue/ATO/ATC decision | BR-EX-12 accepted; master plan §10.13 |
+| 14 | Full Blotter (4c) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04/07 | BR-EX-01/02/03/13 accepted; master plan §10.14 |
+| 15 | Alpha 360° (2a+2b) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04/07 | BR-EX-04 modified; 06/15 accepted; master plan §10.15 |
+| 16 | Portfolio 360° (1h→3a) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04/07 | BR-EX-07 modified; master plan §10.16 |
+| 17 | Account/Broker 360° (1g) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-03/04/07 | BR-EX-14 accepted; master plan §10.17 |
+| 18 | Hardening | `BLOCKED` | `OPERATIONAL_EVIDENCE_PENDING` | EX-BE-08; implemented target subset | master plan §§13–14 |
 
 ¹ Phase 6's drawer shell, state machine and blocking rules are already built and
 tested (§4). What is blocked is wiring it to a real command endpoint — the
@@ -144,33 +149,52 @@ surfaced.
 
 ---
 
-## 6. Blocked on codex
+## 6. Backend decisions and remaining dependencies
 
-**The one blocker that stops Phase 0 closing:**
+### 6.1 Delivered unblocker
 
-> **Registry revision 3.** The hi-fi's nav groups are COMMAND / GOVERNANCE /
-> DEPLOYMENTS / ADMINISTRATION; registry rev 2 has seven different groups and
-> none named `governance`. The seventeen screens have no registry entries at
-> all. Navigation renders from the registry by hard rule and `registry.json` is
-> backend-owned, so the sidebar/topbar half of Phase 0 cannot be built.
->
-> Frontend does not need the *data* — it needs the feature/screen/group entries
-> and their canonical routes. A registry-only change unblocks phases 1–17's
-> routing, independent of any Query API work.
+Registry revision 3 landed in `e78a597`: COMMAND / GOVERNANCE / DEPLOYMENTS /
+ADMINISTRATION are canonical groups, all seventeen `EXECUTION_*` screens have
+unique routes, and `/execution` is owned by Execution Command Center. Evidence:
+53 focused contract/API tests plus root `./scripts/portal verify`. Phase 0 is no
+longer blocked on backend registry work; frontend nav wiring remains frontend-owned.
 
-**The fifteen contract requests** are specified in `EXECUTION_SCALE_AND_REFINE.md`
-§5 with the UI consequence of each one's absence. Not yet formally sent —
-waiting for the backend plan so they arrive as one set rather than piecemeal.
+### 6.2 BR-EX decisions
 
-Highest-value two, if anything is picked up early:
+The binding contract is
+[`EXECUTION_LOOP_PORTAL_BACKEND_AND_HIFI_MASTER_PLAN.md`](../../EXECUTION_LOOP_PORTAL_BACKEND_AND_HIFI_MASTER_PLAN.md)
+§15.1. All fifteen requests now have a decision:
 
-- **BR-EX-14** (aggregate exposure per broker binding). Account/Broker 360°'s
-  headroom sum is its safety claim, and one physical broker reference can back
-  ~100 virtual accounts. Summed in the browser it is correct today and silently
-  wrong the moment the table paginates.
-- **BR-EX-02** (server-side filter/sort). Phases 1, 7 and 14 all describe
-  filters as filtering rows. That reads as client-side, which is correct at 100
-  rows and structurally wrong at 182,000.
+| Requests | Decision | Consequence |
+|---|---|---|
+| BR-EX-01, 02, 03 | **ACCEPT** | keyset, server filter/sort and exact counts unblock scalable phases 1/7/14 |
+| BR-EX-04 | **MODIFY** | server selects interval ladder and guarantees ≤5,000 points |
+| BR-EX-05 | **MODIFY** | measure edge p50/p95/p99 plus RSS/scan cost at locked scale |
+| BR-EX-06 | **ACCEPT** | capped batched insight previews |
+| BR-EX-07 | **MODIFY** | packed correlation through 150; ranked pairs/clusters above cap |
+| BR-EX-08, 09, 10 | **ACCEPT** | ranked triage, typed grouping with ack≠resolve, one multiplexed SSE |
+| BR-EX-11 | **MODIFY** | nullable true source sequence; Portal epoch/sequence + cursor and gap/resnapshot semantics |
+| BR-EX-12, 13, 14, 15 | **ACCEPT** | server precision, funnel, full binding aggregate, required/echoed portfolio context |
+
+These decisions remove frontend contract uncertainty; they do not imply the real
+Trading System authority is wired. Each screen's production status remains in the
+BE column and the detailed gate is in master plan §12.2.
+
+### 6.3 Remaining external/owner dependencies
+
+- Approve SGP↔AWS private connectivity, mTLS/delegated JWT and Portal-owned AWS
+  projection database.
+- Trading System owner: mandatory/dedicated gateway credentials, version/capability
+  identity, command-journal evidence, monotonic delta/event contract, broader runtime
+  events, trace IDs, source keyset and CLI-gap HTTP contracts.
+- Confirm first real scope as Paper + BINANCE USD_M.
+- Decide VNM calendar authority and ATO/ATC behavior.
+- Approve risk-tier/SoD/WebAuthn policy and separate Live protective from
+  risk-increasing activation.
+
+No Portal agent may resolve these dependencies by modifying Trading System, reading
+its database directly without an approved role, or treating fixture/shadow data as
+production authority.
 
 ---
 

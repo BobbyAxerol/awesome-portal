@@ -721,6 +721,19 @@ deep-dive → ADR → slice → evidence discipline documented above.
   effective POSIX ACL/GID before `up`/`run`; `hmd-doctor` executes the
   installed-reader doctor under the exact Compose identity. Runtime repair
   uses the host reader GID and never weakens storage permissions.
+- **Execution Loop contract and architecture lock (2026-08-21):** registry
+  revision 3 landed at `e78a597` with all 17 canonical Execution routes
+  (53 focused registry/API/handoff tests plus root verify). The authoritative
+  plan is now
+  [`EXECUTION_LOOP_PORTAL_BACKEND_AND_HIFI_MASTER_PLAN.md`](./EXECUTION_LOOP_PORTAL_BACKEND_AND_HIFI_MASTER_PLAN.md):
+  it maps every screen to endpoint/source/authority/freshness, aligns backend
+  gates to the shared 19 frontend phases, and rules on all 15 `BR-EX-*`.
+  Boundary clarification supersedes any broader reading of the older Rust
+  scope note: Portal Rust is an AWS-HK compatibility/projection/query/SSE/
+  command-relay edge only. Trading System remains the exclusive Paper→Live
+  execution/risk/fill/accounting authority and Portal agents must not modify
+  it. TypeScript remains Portal workflow/security authority; Python remains
+  Research/QuantBT compute. No production integration has been activated.
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**
