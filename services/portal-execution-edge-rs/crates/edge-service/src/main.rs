@@ -44,6 +44,8 @@ struct AppState {
     environment: String,
     verifier: DelegationVerifier,
     snapshot: Arc<RwLock<Option<CapabilitySnapshot>>>,
+    projection_required: bool,
+    projection_ready: Arc<RwLock<bool>>,
 }
 
 #[derive(Debug)]
@@ -66,6 +68,8 @@ struct EdgeConfig {
     probe_alpha_id: Option<String>,
     probe_interval: Duration,
     transport_limits: TransportLimits,
+    projection_ingestion_enabled: bool,
+    projection_database_url_file: Option<PathBuf>,
 }
 
 impl EdgeConfig {
@@ -85,6 +89,12 @@ impl EdgeConfig {
             return Err(ConfigError::Invalid("EDGE_HEALTH_BIND_ADDRESS"));
         }
         let probe_interval_seconds = bounded_usize("EDGE_PROBE_INTERVAL_SECONDS", 30, 5, 300)?;
+        let projection_ingestion_enabled =
+            strict_boolean("EDGE_PROJECTION_INGESTION_ENABLED", false)?;
+        let projection_database_url_file = optional_path("EDGE_PROJECTION_DATABASE_URL_FILE");
+        if projection_ingestion_enabled && projection_database_url_file.is_none() {
+            return Err(ConfigError::Missing("EDGE_PROJECTION_DATABASE_URL_FILE"));
+        }
         Ok(Self {
             bind_address,
             health_bind_address,
@@ -143,6 +153,8 @@ impl EdgeConfig {
                 maximum_retries: u8::try_from(bounded_usize("EDGE_MAXIMUM_RETRIES", 1, 0, 2)?)
                     .map_err(|_| ConfigError::Invalid("EDGE_MAXIMUM_RETRIES"))?,
             },
+            projection_ingestion_enabled,
+            projection_database_url_file,
         })
     }
 }
@@ -158,6 +170,8 @@ async fn main() -> Result<(), ServiceError> {
         .init();
     match env::args().nth(1).as_deref() {
         Some("healthcheck") => healthcheck().await,
+        Some("projection-check") => projection_check(false).await,
+        Some("projection-migrate") => projection_check(true).await,
         Some("serve") | None => serve(EdgeConfig::from_environment()?).await,
         Some(_) => Err(ServiceError::UnsupportedCommand),
     }
@@ -179,6 +193,18 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         .as_deref()
         .map(read_text)
         .transpose()?;
+    let projection_store = if config.projection_ingestion_enabled {
+        let database_url_file = config
+            .projection_database_url_file
+            .as_deref()
+            .ok_or(ConfigError::Missing("EDGE_PROJECTION_DATABASE_URL_FILE"))?;
+        let database_url = read_text(database_url_file)?;
+        let store = projection_store_pg::PgProjectionStore::connect(database_url.trim()).await?;
+        store.ping().await?;
+        Some(store)
+    } else {
+        None
+    };
 
     let verifier = DelegationVerifier::from_jwks_json(
         &jwks,
@@ -199,10 +225,13 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
     let snapshot = Arc::new(RwLock::new(Some(
         negotiator.probe(config.probe_alpha_id.as_deref()).await,
     )));
+    let projection_ready = Arc::new(RwLock::new(projection_store.is_some()));
     let state = AppState {
         environment: config.environment,
         verifier,
         snapshot: Arc::clone(&snapshot),
+        projection_required: config.projection_ingestion_enabled,
+        projection_ready: Arc::clone(&projection_ready),
     };
 
     let probe_snapshot = Arc::clone(&snapshot);
@@ -216,6 +245,16 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
             *probe_snapshot.write().await = Some(next);
         }
     });
+    if let Some(store) = projection_store {
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(10));
+            interval.tick().await;
+            loop {
+                interval.tick().await;
+                *projection_ready.write().await = store.ping().await.is_ok();
+            }
+        });
+    }
 
     let private_app = private_router(state.clone());
     let health_app = health_router(state);
@@ -281,12 +320,13 @@ async fn livez() -> impl IntoResponse {
 }
 
 async fn readyz(State(state): State<AppState>) -> Response {
-    let ready = state
-        .snapshot
-        .read()
-        .await
-        .as_ref()
-        .is_some_and(snapshot_ready);
+    let projection_ready = !state.projection_required || *state.projection_ready.read().await;
+    let snapshot = state.snapshot.read().await;
+    let ready = service_ready(
+        snapshot.as_ref(),
+        state.projection_required,
+        projection_ready,
+    );
     let status = if ready {
         StatusCode::OK
     } else {
@@ -299,6 +339,14 @@ async fn readyz(State(state): State<AppState>) -> Response {
         }),
     )
         .into_response()
+}
+
+fn service_ready(
+    snapshot: Option<&CapabilitySnapshot>,
+    projection_required: bool,
+    projection_ready: bool,
+) -> bool {
+    snapshot.is_some_and(snapshot_ready) && (!projection_required || projection_ready)
 }
 
 fn snapshot_ready(snapshot: &CapabilitySnapshot) -> bool {
@@ -461,6 +509,15 @@ fn bounded_i64(
     }
 }
 
+fn strict_boolean(name: &'static str, default: bool) -> Result<bool, ConfigError> {
+    match optional(name).as_deref() {
+        None => Ok(default),
+        Some("true") => Ok(true),
+        Some("false") => Ok(false),
+        Some(_) => Err(ConfigError::Invalid(name)),
+    }
+}
+
 fn read_file(path: &Path) -> Result<Vec<u8>, ServiceError> {
     let metadata = fs::metadata(path)?;
     if !metadata.is_file() || metadata.len() == 0 || metadata.len() > MAX_SECRET_FILE_BYTES {
@@ -471,6 +528,17 @@ fn read_file(path: &Path) -> Result<Vec<u8>, ServiceError> {
 
 fn read_text(path: &Path) -> Result<String, ServiceError> {
     String::from_utf8(read_file(path)?).map_err(|_| ServiceError::UnsafeSecretFile)
+}
+
+async fn projection_check(migrate: bool) -> Result<(), ServiceError> {
+    let path = required_path("EDGE_PROJECTION_DATABASE_URL_FILE")?;
+    let database_url = read_text(&path)?;
+    let store = projection_store_pg::PgProjectionStore::connect(database_url.trim()).await?;
+    if migrate {
+        store.migrate().await?;
+    }
+    store.ping().await?;
+    Ok(())
 }
 
 #[derive(Debug, Error)]
@@ -489,6 +557,8 @@ enum ServiceError {
     Auth(#[from] edge_auth::AuthError),
     #[error(transparent)]
     Transport(#[from] ts_transport::TransportError),
+    #[error(transparent)]
+    ProjectionStore(#[from] projection_store_pg::StoreError),
     #[error("TLS material is invalid")]
     InvalidTlsMaterial,
     #[error("secret file violates size/type constraints")]
@@ -592,6 +662,9 @@ mod tests {
         assert!(snapshot_ready(&snapshot("READ_ONLY")));
         assert!(!snapshot_ready(&snapshot("DISABLED")));
         assert!(!snapshot_ready(&snapshot("INCOMPATIBLE")));
+        assert!(service_ready(Some(&snapshot("READ_ONLY")), false, false));
+        assert!(!service_ready(Some(&snapshot("READ_ONLY")), true, false));
+        assert!(service_ready(Some(&snapshot("READ_ONLY")), true, true));
     }
 
     #[test]

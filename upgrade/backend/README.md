@@ -193,9 +193,18 @@ authority.
   WireGuard endpoint/PKI/credential production nên live SGP↔AWS vẫn
   `INTEGRATION_PENDING`; registry flags giữ false. Chi tiết:
   [`EX_BE_02_MTLS_DELEGATED_AUTH_AND_PROBES.md`](./EX_BE_02_MTLS_DELEGATED_AUTH_AND_PROBES.md).
-- Backend tiếp theo là `EX-BE-03`: projection schema, reducer, cursor/epoch,
-  replay/snapshot và freshness evaluator. Runtime evidence luôn thắng schema/
-  rollout prose; Portal chỉ dùng versioned HTTP API, không đọc DB/Redis/CLI.
+- `EX-BE-03` **foundation complete / source-ingestion integration pending:**
+  pure Rust reducer idempotent, structured source cursor, explicit completeness,
+  snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã
+  được khóa. SQLx migration tạo Portal-owned projection schema với atomic
+  ingestion/current row/journal/checkpoint/gap, immutable evidence và parity-only
+  epoch activation. Gate PostgreSQL 16 thật cùng 42 Rust tests, strict Clippy/
+  rustfmt và corpus 182.000 observations xanh. Runtime feature flag giữ false;
+  không có direct Trading System DB/Redis/CLI. Chi tiết:
+  [`EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md`](./EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md).
+- Backend tiếp theo là `EX-BE-04b`: Rust projection query primitives, exact
+  full-set count/aggregate, bidirectional keyset, exact decimals, adaptive
+  series và cold-retention contract.
 
 ## BAR-21 — Strategy Import & Quarantine Ingest foundation
 

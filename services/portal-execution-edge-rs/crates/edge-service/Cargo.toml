@@ -11,6 +11,7 @@ axum.workspace = true
 axum-server.workspace = true
 edge-auth = { path = "../edge-auth" }
 execution-contracts = { path = "../execution-contracts" }
+projection-store-pg = { path = "../projection-store-pg" }
 reqwest.workspace = true
 rustls.workspace = true
 rustls-pemfile.workspace = true

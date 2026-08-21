@@ -795,7 +795,7 @@ so one slice may unlock several screens without inventing a second product roadm
 | EX-BE-05a | P0 / fresh-PG gate green | TypeScript governance/evidence/approval workflow and audit, with external panels allowed unavailable | phases 1–2 on real Portal data without AWS |
 | EX-BE-01 | P0 / contract complete | Rust workspace, canonical contracts, `ts-contract-v1`, vocabulary reconciliation and golden corpus | all real-source screen contracts |
 | EX-BE-02 | P0 / foundation complete; cross-cell evidence pending | mTLS/delegated-auth boundary, capability negotiation, bounded read-only transport and operator probes; production flags remain false until real SGP↔AWS evidence | safe AWS integration |
-| EX-BE-03 | P0 | projection schema, reducer, cursor/epoch/replay/snapshot and freshness evaluator | phases 4, 9–17 |
+| EX-BE-03 | P0 / foundation complete; source ingestion integration pending | projection schema, reducer, cursor/epoch/replay/snapshot and freshness evaluator; production ingestion flag remains false | phases 4, 9–17 |
 | EX-BE-04b | P1 | Rust projection query primitives: bidirectional keyset, filter/sort/count, adaptive series ladder and exact decimals | phases 4, 9, 11–17 |
 | EX-BE-05b | P1 | TypeScript operations/plan/apply/verify plus authenticated Rust relay | phases 6–12 mutation/operation paths |
 | EX-BE-06 | P1 | multiplexed SSE, gap recovery, backpressure and same-origin proxy | phase 9 and live screens |

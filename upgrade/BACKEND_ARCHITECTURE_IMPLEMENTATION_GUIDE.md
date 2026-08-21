@@ -813,6 +813,23 @@ deep-dive → ADR → slice → evidence discipline documented above.
   SGP↔AWS success is claimed and every production registry flag remains false.
   Deep dive:
   [`EX_BE_02_MTLS_DELEGATED_AUTH_AND_PROBES.md`](./backend/EX_BE_02_MTLS_DELEGATED_AUTH_AND_PROBES.md).
+- **EX-BE-03 projection/replay/freshness foundation (2026-08-21):** Rust now
+  owns a pure idempotent reducer, structured tuple source cursor, explicit
+  `EVENT_SOURCED`/`POLL_BOUNDED`/`UNKNOWN` completeness, deterministic replay,
+  complete-versus-partial snapshot semantics, semantic parity digest and
+  `BUILDING→ACTIVE→RETAINED` epoch cutover with overlap plus server jitter.
+  Freshness is server-computed from immutable versioned policy; `PAUSED` is not
+  `STALE`, future source time is `UNKNOWN`, and age remains distinct from
+  nullable observable projection lag. Embedded SQLx migration and repository
+  atomically persist idempotency/current state/journal/checkpoint/gap, dead
+  letters are redacted, immutable evidence is DB-enforced, and unresolved
+  gaps/dead letters block activation. Evidence is 42 Rust tests against fresh
+  PostgreSQL 16, strict Clippy/rustfmt and a 182,000-observation replay corpus.
+  Status is `FOUNDATION_COMPLETE / SOURCE_INGESTION_INTEGRATION_PENDING`:
+  projection runtime remains off pending approved AWS database placement and
+  real source/cross-cell evidence. Deep dive and ADR:
+  [`EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md`](./backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md),
+  [`ADR-007`](./backend/adr/ADR-007-PORTAL-PROJECTION-EPOCH-CURSOR-AND-FRESHNESS.md).
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**

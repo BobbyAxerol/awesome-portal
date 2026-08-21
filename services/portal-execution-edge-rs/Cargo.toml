@@ -3,6 +3,8 @@ members = [
   "crates/execution-contracts",
   "crates/edge-auth",
   "crates/edge-service",
+  "crates/projection-core",
+  "crates/projection-store-pg",
   "crates/ts-contract-v1",
   "crates/ts-adapter-v1",
   "crates/ts-transport",
@@ -23,6 +25,7 @@ axum-server = { version = "0.7.2", features = ["tls-rustls"] }
 base64 = "0.22.1"
 futures-util = "0.3.31"
 hex = "0.4.3"
+home = "=0.5.11"
 idna = "=1.0.3"
 idna_adapter = "=1.0.0"
 jsonwebtoken = "9.3.1"
@@ -33,6 +36,7 @@ rustls-pemfile = "2.2.0"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 sha2 = "0.10.8"
+sqlx = { version = "=0.8.3", default-features = false, features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json", "migrate", "macros"] }
 thiserror = "2.0.12"
 time = "=0.3.41"
 tokio = { version = "1.44.1", features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }

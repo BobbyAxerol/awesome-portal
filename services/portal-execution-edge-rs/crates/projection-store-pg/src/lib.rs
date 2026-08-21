@@ -1,0 +1,1193 @@
+#![forbid(unsafe_code)]
+
+use std::{str::FromStr as _, time::Duration};
+
+use chrono::{DateTime, TimeDelta, Utc};
+use execution_contracts::{CanonicalId, SourceAuthority, SourceCompleteness, SourceCursor};
+use projection_core::{
+    canonical_digest, semantic_state_digest, ApplyDisposition, FreshnessPolicy, ProjectedEntity,
+    ProjectionEntityKey, ProjectionEntityKind, ProjectionError, ProjectionObservation,
+    ProjectionReducer, ProjectionScope, ReplayRecord, SnapshotCompleteness,
+};
+use sqlx::{postgres::PgPoolOptions, PgPool, Postgres, Row, Transaction};
+use thiserror::Error;
+use uuid::Uuid;
+
+static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!();
+
+#[derive(Debug, Clone)]
+pub struct EpochMetadata {
+    pub adapter_version: String,
+    pub source_gateway_digest: String,
+    pub capability_snapshot_id: String,
+}
+
+impl EpochMetadata {
+    fn validate(&self) -> Result<(), StoreError> {
+        if self.adapter_version.trim().is_empty()
+            || !self.source_gateway_digest.starts_with("sha256:")
+            || self.capability_snapshot_id.trim().is_empty()
+        {
+            return Err(StoreError::InvalidEpochMetadata);
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StoreApplyOutcome {
+    Applied { sequence: u64 },
+    Refreshed { sequence: u64 },
+    GapApplied { sequence: u64 },
+    Duplicate { sequence: Option<u64> },
+    OutOfOrder,
+    DeadLettered { reason_code: &'static str },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActivatedEpoch {
+    pub active_epoch_id: Uuid,
+    pub retained_previous_epoch_id: Option<Uuid>,
+    pub overlap_until: DateTime<Utc>,
+    pub state_digest: String,
+}
+
+#[derive(Clone)]
+pub struct PgProjectionStore {
+    pool: PgPool,
+}
+
+impl PgProjectionStore {
+    /// Connects to the Portal-owned projection `PostgreSQL` database.
+    ///
+    /// # Errors
+    ///
+    /// Returns a database error when the bounded pool cannot connect.
+    pub async fn connect(database_url: &str) -> Result<Self, StoreError> {
+        let pool = PgPoolOptions::new()
+            .max_connections(8)
+            .min_connections(0)
+            .acquire_timeout(Duration::from_secs(3))
+            .idle_timeout(Duration::from_secs(60))
+            .connect(database_url)
+            .await?;
+        Ok(Self { pool })
+    }
+
+    /// Applies embedded expand-compatible projection migrations.
+    ///
+    /// # Errors
+    ///
+    /// Returns the migration error without starting projection ingestion.
+    pub async fn migrate(&self) -> Result<(), StoreError> {
+        MIGRATOR.run(&self.pool).await?;
+        Ok(())
+    }
+
+    /// Probes only the Portal projection database.
+    ///
+    /// # Errors
+    ///
+    /// Returns a database error if the connection cannot execute a bounded
+    /// constant query.
+    pub async fn ping(&self) -> Result<(), StoreError> {
+        sqlx::query("SELECT 1").execute(&self.pool).await?;
+        Ok(())
+    }
+
+    /// Creates a BUILDING epoch. It cannot become query authority until parity
+    /// activation succeeds.
+    ///
+    /// # Errors
+    ///
+    /// Rejects invalid compatibility metadata or database constraint failures.
+    pub async fn create_building_epoch(
+        &self,
+        scope: &ProjectionScope,
+        metadata: &EpochMetadata,
+        created_at: DateTime<Utc>,
+    ) -> Result<Uuid, StoreError> {
+        metadata.validate()?;
+        let epoch_id = Uuid::now_v7();
+        sqlx::query(
+            "INSERT INTO portal_projection.epochs
+             (epoch_id, workspace_id, environment, status, adapter_version,
+              source_gateway_digest, capability_snapshot_id, created_at)
+             VALUES ($1, $2, $3, 'BUILDING', $4, $5, $6, $7)",
+        )
+        .bind(epoch_id)
+        .bind(scope.workspace_id.as_str())
+        .bind(&scope.environment)
+        .bind(&metadata.adapter_version)
+        .bind(&metadata.source_gateway_digest)
+        .bind(&metadata.capability_snapshot_id)
+        .bind(created_at)
+        .execute(&self.pool)
+        .await?;
+        Ok(epoch_id)
+    }
+
+    /// Applies one source observation atomically with its idempotency key,
+    /// current entity, checkpoint, journal and any gap record.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for an unknown epoch, wrong scope or database failure.
+    /// Ambiguous reducer input is committed as a redacted dead letter and
+    /// returned as [`StoreApplyOutcome::DeadLettered`].
+    #[allow(clippy::too_many_lines)] // one database transaction keeps all six writes atomic
+    pub async fn apply_observation(
+        &self,
+        scope: &ProjectionScope,
+        epoch_id: Uuid,
+        stream_key: &str,
+        observation: &ProjectionObservation,
+        projected_at: DateTime<Utc>,
+    ) -> Result<StoreApplyOutcome, StoreError> {
+        if stream_key.trim().is_empty() {
+            return Err(StoreError::InvalidStreamKey);
+        }
+        observation.validate()?;
+        let input_digest = canonical_digest(observation)?;
+        let mut transaction = self.pool.begin().await?;
+
+        if let Some(row) = sqlx::query(
+            "SELECT input_digest, projection_sequence
+             FROM portal_projection.ingestion_keys
+             WHERE epoch_id = $1 AND ingestion_id = $2",
+        )
+        .bind(epoch_id)
+        .bind(observation.ingestion_id.as_str())
+        .fetch_optional(&mut *transaction)
+        .await?
+        {
+            let previous_digest: String = row.try_get("input_digest")?;
+            if previous_digest == input_digest {
+                let sequence = optional_u64(row.try_get::<Option<i64>, _>("projection_sequence")?)?;
+                transaction.commit().await?;
+                return Ok(StoreApplyOutcome::Duplicate { sequence });
+            }
+            let outcome = dead_letter(
+                &mut transaction,
+                epoch_id,
+                observation,
+                &input_digest,
+                "IDEMPOTENCY_COLLISION",
+                projected_at,
+            )
+            .await?;
+            transaction.commit().await?;
+            return Ok(outcome);
+        }
+
+        let epoch = sqlx::query(
+            "SELECT workspace_id, environment, status, next_projection_sequence
+             FROM portal_projection.epochs
+             WHERE epoch_id = $1
+             FOR UPDATE",
+        )
+        .bind(epoch_id)
+        .fetch_optional(&mut *transaction)
+        .await?
+        .ok_or(StoreError::EpochNotFound)?;
+        if epoch.try_get::<String, _>("workspace_id")? != scope.workspace_id.as_str()
+            || epoch.try_get::<String, _>("environment")? != scope.environment.as_str()
+        {
+            return Err(StoreError::ScopeMismatch);
+        }
+        let status: String = epoch.try_get("status")?;
+        if !matches!(status.as_str(), "BUILDING" | "ACTIVE") {
+            return Err(StoreError::EpochNotWritable);
+        }
+        let current_sequence = required_u64(epoch.try_get("next_projection_sequence")?)?;
+        let current = self
+            .load_entity_tx(&mut transaction, epoch_id, &observation.entity, true)
+            .await?;
+        let mut reducer =
+            ProjectionReducer::from_current(scope.clone(), epoch_id, current_sequence, current)?;
+        let disposition = match reducer.apply(observation.clone(), projected_at) {
+            Ok(disposition) => disposition,
+            Err(error) => {
+                let reason = reducer_reason_code(&error);
+                let outcome = dead_letter(
+                    &mut transaction,
+                    epoch_id,
+                    observation,
+                    &input_digest,
+                    reason,
+                    projected_at,
+                )
+                .await?;
+                insert_ingestion(
+                    &mut transaction,
+                    epoch_id,
+                    observation.ingestion_id.as_str(),
+                    &input_digest,
+                    "DEAD_LETTERED",
+                    None,
+                    projected_at,
+                )
+                .await?;
+                transaction.commit().await?;
+                return Ok(outcome);
+            }
+        };
+
+        let (outcome_name, projection_sequence) = match disposition {
+            ApplyDisposition::Applied { sequence } => ("APPLIED", Some(sequence)),
+            ApplyDisposition::Refreshed { sequence } => ("REFRESHED", Some(sequence)),
+            ApplyDisposition::GapApplied { sequence } => ("GAP_APPLIED", Some(sequence)),
+            ApplyDisposition::OutOfOrder => ("OUT_OF_ORDER", None),
+            ApplyDisposition::Duplicate => {
+                return Err(StoreError::ReducerDatabaseInvariant);
+            }
+        };
+        insert_ingestion(
+            &mut transaction,
+            epoch_id,
+            observation.ingestion_id.as_str(),
+            &input_digest,
+            outcome_name,
+            projection_sequence,
+            projected_at,
+        )
+        .await?;
+        insert_journal(
+            &mut transaction,
+            epoch_id,
+            observation,
+            &input_digest,
+            outcome_name,
+            projection_sequence,
+            projected_at,
+        )
+        .await?;
+
+        if let Some(sequence) = projection_sequence {
+            let entity = reducer
+                .entities()
+                .get(&observation.entity)
+                .ok_or(StoreError::ReducerDatabaseInvariant)?;
+            upsert_entity(&mut transaction, entity).await?;
+            sqlx::query(
+                "UPDATE portal_projection.epochs
+                 SET next_projection_sequence = $2
+                 WHERE epoch_id = $1",
+            )
+            .bind(epoch_id)
+            .bind(i64_from_u64(sequence)?)
+            .execute(&mut *transaction)
+            .await?;
+            upsert_checkpoint(
+                &mut transaction,
+                epoch_id,
+                stream_key,
+                observation,
+                sequence,
+                projected_at,
+            )
+            .await?;
+            if let Some(gap) = reducer.gaps().last() {
+                insert_gap(&mut transaction, epoch_id, gap, projected_at).await?;
+            }
+        }
+        transaction.commit().await?;
+        Ok(match disposition {
+            ApplyDisposition::Applied { sequence } => StoreApplyOutcome::Applied { sequence },
+            ApplyDisposition::Refreshed { sequence } => StoreApplyOutcome::Refreshed { sequence },
+            ApplyDisposition::GapApplied { sequence } => StoreApplyOutcome::GapApplied { sequence },
+            ApplyDisposition::OutOfOrder => StoreApplyOutcome::OutOfOrder,
+            ApplyDisposition::Duplicate => unreachable!("database owns duplicate detection"),
+        })
+    }
+
+    /// Loads one current entity from a named epoch.
+    ///
+    /// # Errors
+    ///
+    /// Returns a database or persisted-contract error.
+    pub async fn load_entity(
+        &self,
+        epoch_id: Uuid,
+        entity: &ProjectionEntityKey,
+    ) -> Result<Option<ProjectedEntity>, StoreError> {
+        let mut transaction = self.pool.begin().await?;
+        let entity = self
+            .load_entity_tx(&mut transaction, epoch_id, entity, false)
+            .await?;
+        transaction.commit().await?;
+        Ok(entity)
+    }
+
+    /// Loads immutable journal input in its durable per-database commit order.
+    ///
+    /// The ordinal is independent from projection sequence, so rejected
+    /// out-of-order input remains replayable without inventing a projected
+    /// change. Callers feed the result into the pure projection replay engine.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for an unknown epoch, malformed persisted observation
+    /// or database failure.
+    pub async fn load_replay_records(
+        &self,
+        epoch_id: Uuid,
+    ) -> Result<Vec<ReplayRecord>, StoreError> {
+        let exists: bool = sqlx::query_scalar(
+            "SELECT EXISTS (
+               SELECT 1 FROM portal_projection.epochs WHERE epoch_id = $1
+             )",
+        )
+        .bind(epoch_id)
+        .fetch_one(&self.pool)
+        .await?;
+        if !exists {
+            return Err(StoreError::EpochNotFound);
+        }
+        let rows = sqlx::query(
+            "SELECT journal_ordinal, observation, projected_at
+             FROM portal_projection.event_journal
+             WHERE epoch_id = $1
+             ORDER BY journal_ordinal",
+        )
+        .bind(epoch_id)
+        .fetch_all(&self.pool)
+        .await?;
+        rows.into_iter()
+            .map(|row| {
+                let observation =
+                    serde_json::from_value(row.try_get::<serde_json::Value, _>("observation")?)
+                        .map_err(|_| StoreError::Serialization)?;
+                Ok(ReplayRecord {
+                    journal_ordinal: required_u64(row.try_get("journal_ordinal")?)?,
+                    observation,
+                    projected_at: row.try_get("projected_at")?,
+                })
+            })
+            .collect()
+    }
+
+    async fn load_entity_tx(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        epoch_id: Uuid,
+        entity: &ProjectionEntityKey,
+        lock: bool,
+    ) -> Result<Option<ProjectedEntity>, StoreError> {
+        let query = if lock {
+            "SELECT * FROM portal_projection.entities
+             WHERE epoch_id = $1 AND entity_kind = $2 AND entity_id = $3
+             FOR UPDATE"
+        } else {
+            "SELECT * FROM portal_projection.entities
+             WHERE epoch_id = $1 AND entity_kind = $2 AND entity_id = $3"
+        };
+        sqlx::query(query)
+            .bind(epoch_id)
+            .bind(entity.kind.as_str())
+            .bind(entity.entity_id.as_str())
+            .fetch_optional(&mut **transaction)
+            .await?
+            .map(|row| row_to_entity(&row))
+            .transpose()
+    }
+
+    /// Activates a parity-matched BUILDING epoch and retains the previous epoch
+    /// read-only for a bounded overlap window.
+    ///
+    /// # Errors
+    ///
+    /// Rejects parity drift, unresolved dead letters/gaps, invalid status or a
+    /// database failure. The swap is one transaction.
+    pub async fn activate_epoch(
+        &self,
+        scope: &ProjectionScope,
+        candidate_epoch_id: Uuid,
+        expected_state_digest: &str,
+        activated_at: DateTime<Utc>,
+        overlap: Duration,
+    ) -> Result<ActivatedEpoch, StoreError> {
+        let overlap = TimeDelta::from_std(overlap).map_err(|_| StoreError::InvalidOverlap)?;
+        let mut transaction = self.pool.begin().await?;
+        let candidate = sqlx::query(
+            "SELECT workspace_id, environment, status
+             FROM portal_projection.epochs WHERE epoch_id = $1 FOR UPDATE",
+        )
+        .bind(candidate_epoch_id)
+        .fetch_optional(&mut *transaction)
+        .await?
+        .ok_or(StoreError::EpochNotFound)?;
+        if candidate.try_get::<String, _>("workspace_id")? != scope.workspace_id.as_str()
+            || candidate.try_get::<String, _>("environment")? != scope.environment.as_str()
+        {
+            return Err(StoreError::ScopeMismatch);
+        }
+        if candidate.try_get::<String, _>("status")? != "BUILDING" {
+            return Err(StoreError::EpochNotBuilding);
+        }
+        let blockers: i64 = sqlx::query_scalar(
+            "SELECT
+               (SELECT count(*) FROM portal_projection.dead_letters
+                WHERE epoch_id = $1 AND status IN ('OPEN', 'REPLAYING'))
+               +
+               (SELECT count(*) FROM portal_projection.gaps
+                WHERE epoch_id = $1 AND resolved_at IS NULL)",
+        )
+        .bind(candidate_epoch_id)
+        .fetch_one(&mut *transaction)
+        .await?;
+        if blockers != 0 {
+            return Err(StoreError::EpochHasUnresolvedBlockers);
+        }
+        let rows = sqlx::query(
+            "SELECT * FROM portal_projection.entities
+             WHERE epoch_id = $1 ORDER BY entity_kind, entity_id",
+        )
+        .bind(candidate_epoch_id)
+        .fetch_all(&mut *transaction)
+        .await?;
+        let entities = rows
+            .iter()
+            .map(row_to_entity)
+            .collect::<Result<Vec<_>, _>>()?;
+        let actual_state_digest = semantic_state_digest(&entities)?;
+        if expected_state_digest != actual_state_digest {
+            sqlx::query(
+                "UPDATE portal_projection.epochs
+                 SET expected_state_digest = $2, actual_state_digest = $3
+                 WHERE epoch_id = $1",
+            )
+            .bind(candidate_epoch_id)
+            .bind(expected_state_digest)
+            .bind(&actual_state_digest)
+            .execute(&mut *transaction)
+            .await?;
+            transaction.commit().await?;
+            return Err(StoreError::ParityMismatch);
+        }
+        let previous = sqlx::query_scalar::<_, Uuid>(
+            "SELECT epoch_id FROM portal_projection.epochs
+             WHERE workspace_id = $1 AND environment = $2 AND status = 'ACTIVE'
+             FOR UPDATE",
+        )
+        .bind(scope.workspace_id.as_str())
+        .bind(&scope.environment)
+        .fetch_optional(&mut *transaction)
+        .await?;
+        let overlap_until = activated_at + overlap;
+        if let Some(previous_epoch_id) = previous {
+            sqlx::query(
+                "UPDATE portal_projection.epochs
+                 SET status = 'RETAINED', overlap_until = $2
+                 WHERE epoch_id = $1",
+            )
+            .bind(previous_epoch_id)
+            .bind(overlap_until)
+            .execute(&mut *transaction)
+            .await?;
+        }
+        sqlx::query(
+            "UPDATE portal_projection.epochs
+             SET status = 'ACTIVE', activated_at = $2,
+                 expected_state_digest = $3, actual_state_digest = $3
+             WHERE epoch_id = $1",
+        )
+        .bind(candidate_epoch_id)
+        .bind(activated_at)
+        .bind(&actual_state_digest)
+        .execute(&mut *transaction)
+        .await?;
+        transaction.commit().await?;
+        Ok(ActivatedEpoch {
+            active_epoch_id: candidate_epoch_id,
+            retained_previous_epoch_id: previous,
+            overlap_until,
+            state_digest: actual_state_digest,
+        })
+    }
+
+    /// Stores immutable evidence for an already reconciled snapshot.
+    ///
+    /// # Errors
+    ///
+    /// Rejects duplicate evidence or invalid counts through database constraints.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn record_snapshot_evidence(
+        &self,
+        epoch_id: Uuid,
+        snapshot_id: &CanonicalId,
+        entity_kind: ProjectionEntityKind,
+        completeness: SnapshotCompleteness,
+        expected_count: usize,
+        applied_count: usize,
+        removed_count: usize,
+        source_read_at: DateTime<Utc>,
+        committed_at: DateTime<Utc>,
+        state_digest: &str,
+    ) -> Result<(), StoreError> {
+        sqlx::query(
+            "INSERT INTO portal_projection.snapshots
+             (epoch_id, snapshot_id, entity_kind, completeness, expected_count,
+              applied_count, removed_count, source_read_at, committed_at, state_digest)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+        )
+        .bind(epoch_id)
+        .bind(snapshot_id.as_str())
+        .bind(entity_kind.as_str())
+        .bind(match completeness {
+            SnapshotCompleteness::Complete => "COMPLETE",
+            SnapshotCompleteness::Partial => "PARTIAL",
+        })
+        .bind(i64::try_from(expected_count).map_err(|_| StoreError::NumericOverflow)?)
+        .bind(i64::try_from(applied_count).map_err(|_| StoreError::NumericOverflow)?)
+        .bind(i64::try_from(removed_count).map_err(|_| StoreError::NumericOverflow)?)
+        .bind(source_read_at)
+        .bind(committed_at)
+        .bind(state_digest)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    /// Registers a content-addressed immutable freshness policy snapshot.
+    ///
+    /// # Errors
+    ///
+    /// Rejects invalid policy thresholds or a version reused with different
+    /// content.
+    pub async fn register_freshness_policy(
+        &self,
+        policy: &FreshnessPolicy,
+        registered_at: DateTime<Utc>,
+    ) -> Result<String, StoreError> {
+        policy.validate()?;
+        let digest = canonical_digest(policy)?;
+        let inserted = sqlx::query(
+            "INSERT INTO portal_projection.freshness_policy_snapshots
+             (policy_version, policy_digest, policy, registered_at)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (policy_version) DO NOTHING",
+        )
+        .bind(&policy.policy_version)
+        .bind(&digest)
+        .bind(serde_json::to_value(policy).map_err(|_| StoreError::Serialization)?)
+        .bind(registered_at)
+        .execute(&self.pool)
+        .await?;
+        if inserted.rows_affected() == 0 {
+            let existing: String = sqlx::query_scalar(
+                "SELECT policy_digest
+                 FROM portal_projection.freshness_policy_snapshots
+                 WHERE policy_version = $1",
+            )
+            .bind(&policy.policy_version)
+            .fetch_one(&self.pool)
+            .await?;
+            if existing != digest {
+                return Err(StoreError::FreshnessPolicyVersionCollision);
+            }
+        }
+        Ok(digest)
+    }
+}
+
+async fn insert_ingestion(
+    transaction: &mut Transaction<'_, Postgres>,
+    epoch_id: Uuid,
+    ingestion_id: &str,
+    input_digest: &str,
+    outcome: &str,
+    sequence: Option<u64>,
+    seen_at: DateTime<Utc>,
+) -> Result<(), StoreError> {
+    sqlx::query(
+        "INSERT INTO portal_projection.ingestion_keys
+         (epoch_id, ingestion_id, input_digest, outcome, projection_sequence, first_seen_at)
+         VALUES ($1,$2,$3,$4,$5,$6)",
+    )
+    .bind(epoch_id)
+    .bind(ingestion_id)
+    .bind(input_digest)
+    .bind(outcome)
+    .bind(sequence.map(i64_from_u64).transpose()?)
+    .bind(seen_at)
+    .execute(&mut **transaction)
+    .await?;
+    Ok(())
+}
+
+async fn insert_journal(
+    transaction: &mut Transaction<'_, Postgres>,
+    epoch_id: Uuid,
+    observation: &ProjectionObservation,
+    input_digest: &str,
+    outcome: &str,
+    sequence: Option<u64>,
+    projected_at: DateTime<Utc>,
+) -> Result<(), StoreError> {
+    let (event_ts, created_at, event_id) = cursor_parts(observation.source_cursor.as_ref());
+    sqlx::query(
+        "INSERT INTO portal_projection.event_journal
+         (event_id, projected_at, epoch_id, ingestion_id, projection_sequence,
+          entity_kind, entity_id, outcome, source_event_ts, source_created_at,
+          source_event_id, source_sequence, source_read_at, as_of, input_digest, observation)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)",
+    )
+    .bind(Uuid::now_v7())
+    .bind(projected_at)
+    .bind(epoch_id)
+    .bind(observation.ingestion_id.as_str())
+    .bind(sequence.map(i64_from_u64).transpose()?)
+    .bind(observation.entity.kind.as_str())
+    .bind(observation.entity.entity_id.as_str())
+    .bind(outcome)
+    .bind(event_ts)
+    .bind(created_at)
+    .bind(event_id)
+    .bind(observation.source_sequence)
+    .bind(observation.source_read_at)
+    .bind(observation.as_of)
+    .bind(input_digest)
+    .bind(serde_json::to_value(observation).map_err(|_| StoreError::Serialization)?)
+    .execute(&mut **transaction)
+    .await?;
+    Ok(())
+}
+
+async fn upsert_entity(
+    transaction: &mut Transaction<'_, Postgres>,
+    entity: &ProjectedEntity,
+) -> Result<(), StoreError> {
+    let (event_ts, created_at, event_id) = cursor_parts(entity.source_cursor.as_ref());
+    sqlx::query(
+        "INSERT INTO portal_projection.entities
+         (epoch_id, entity_kind, entity_id, projection_sequence, source_authority,
+          as_of, source_read_at, projected_at, source_event_ts, source_created_at,
+          source_event_id, source_sequence, source_completeness, poll_interval_ms,
+          adapter_version, capability_snapshot_id, payload_digest, payload)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+         ON CONFLICT (epoch_id, entity_kind, entity_id) DO UPDATE SET
+           projection_sequence = EXCLUDED.projection_sequence,
+           source_authority = EXCLUDED.source_authority,
+           as_of = EXCLUDED.as_of,
+           source_read_at = EXCLUDED.source_read_at,
+           projected_at = EXCLUDED.projected_at,
+           source_event_ts = EXCLUDED.source_event_ts,
+           source_created_at = EXCLUDED.source_created_at,
+           source_event_id = EXCLUDED.source_event_id,
+           source_sequence = EXCLUDED.source_sequence,
+           source_completeness = EXCLUDED.source_completeness,
+           poll_interval_ms = EXCLUDED.poll_interval_ms,
+           adapter_version = EXCLUDED.adapter_version,
+           capability_snapshot_id = EXCLUDED.capability_snapshot_id,
+           payload_digest = EXCLUDED.payload_digest,
+           payload = EXCLUDED.payload",
+    )
+    .bind(entity.epoch_id)
+    .bind(entity.entity.kind.as_str())
+    .bind(entity.entity.entity_id.as_str())
+    .bind(i64_from_u64(entity.projection_sequence)?)
+    .bind(authority_str(entity.source_authority))
+    .bind(entity.as_of)
+    .bind(entity.source_read_at)
+    .bind(entity.projected_at)
+    .bind(event_ts)
+    .bind(created_at)
+    .bind(event_id)
+    .bind(entity.source_sequence)
+    .bind(completeness_str(entity.source_completeness))
+    .bind(entity.poll_interval_ms)
+    .bind(&entity.adapter_version)
+    .bind(&entity.capability_snapshot_id)
+    .bind(&entity.payload_digest)
+    .bind(&entity.payload)
+    .execute(&mut **transaction)
+    .await?;
+    Ok(())
+}
+
+async fn upsert_checkpoint(
+    transaction: &mut Transaction<'_, Postgres>,
+    epoch_id: Uuid,
+    stream_key: &str,
+    observation: &ProjectionObservation,
+    sequence: u64,
+    updated_at: DateTime<Utc>,
+) -> Result<(), StoreError> {
+    let (event_ts, created_at, event_id) = cursor_parts(observation.source_cursor.as_ref());
+    sqlx::query(
+        "INSERT INTO portal_projection.checkpoints
+         (epoch_id, stream_key, source_event_ts, source_created_at, source_event_id,
+          source_sequence, last_projection_sequence, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+         ON CONFLICT (epoch_id, stream_key) DO UPDATE SET
+           source_event_ts = EXCLUDED.source_event_ts,
+           source_created_at = EXCLUDED.source_created_at,
+           source_event_id = EXCLUDED.source_event_id,
+           source_sequence = EXCLUDED.source_sequence,
+           last_projection_sequence = EXCLUDED.last_projection_sequence,
+           updated_at = EXCLUDED.updated_at",
+    )
+    .bind(epoch_id)
+    .bind(stream_key)
+    .bind(event_ts)
+    .bind(created_at)
+    .bind(event_id)
+    .bind(observation.source_sequence)
+    .bind(i64_from_u64(sequence)?)
+    .bind(updated_at)
+    .execute(&mut **transaction)
+    .await?;
+    Ok(())
+}
+
+async fn insert_gap(
+    transaction: &mut Transaction<'_, Postgres>,
+    epoch_id: Uuid,
+    gap: &projection_core::ProjectionGap,
+    detected_at: DateTime<Utc>,
+) -> Result<(), StoreError> {
+    sqlx::query(
+        "INSERT INTO portal_projection.gaps
+         (gap_id, epoch_id, entity_kind, entity_id, reason_code,
+          previous_source_sequence, observed_source_sequence,
+          projection_sequence, detected_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+    )
+    .bind(Uuid::now_v7())
+    .bind(epoch_id)
+    .bind(gap.entity.kind.as_str())
+    .bind(gap.entity.entity_id.as_str())
+    .bind(&gap.code)
+    .bind(gap.previous_source_sequence)
+    .bind(gap.observed_source_sequence)
+    .bind(i64_from_u64(gap.detected_at_projection_sequence)?)
+    .bind(detected_at)
+    .execute(&mut **transaction)
+    .await?;
+    Ok(())
+}
+
+async fn dead_letter(
+    transaction: &mut Transaction<'_, Postgres>,
+    epoch_id: Uuid,
+    observation: &ProjectionObservation,
+    input_digest: &str,
+    reason_code: &'static str,
+    seen_at: DateTime<Utc>,
+) -> Result<StoreApplyOutcome, StoreError> {
+    let redacted = serde_json::json!({
+        "ingestion_id": observation.ingestion_id.as_str(),
+        "entity_kind": observation.entity.kind.as_str(),
+        "entity_id": observation.entity.entity_id.as_str(),
+        "as_of": observation.as_of,
+        "source_read_at": observation.source_read_at,
+        "source_cursor": observation.source_cursor.clone(),
+        "source_sequence": observation.source_sequence,
+        "adapter_version": &observation.adapter_version,
+        "capability_snapshot_id": &observation.capability_snapshot_id,
+        "payload_digest": projection_core::canonical_value_digest(&observation.payload),
+    });
+    sqlx::query(
+        "INSERT INTO portal_projection.dead_letters
+         (dead_letter_id, epoch_id, ingestion_id, reason_code, input_digest,
+          redacted_observation, status, first_seen_at)
+         VALUES ($1,$2,$3,$4,$5,$6,'OPEN',$7)
+         ON CONFLICT (epoch_id, ingestion_id, input_digest) DO NOTHING",
+    )
+    .bind(Uuid::now_v7())
+    .bind(epoch_id)
+    .bind(observation.ingestion_id.as_str())
+    .bind(reason_code)
+    .bind(input_digest)
+    .bind(redacted)
+    .bind(seen_at)
+    .execute(&mut **transaction)
+    .await?;
+    Ok(StoreApplyOutcome::DeadLettered { reason_code })
+}
+
+fn row_to_entity(row: &sqlx::postgres::PgRow) -> Result<ProjectedEntity, StoreError> {
+    let event_ts: Option<DateTime<Utc>> = row.try_get("source_event_ts")?;
+    let created_at: Option<DateTime<Utc>> = row.try_get("source_created_at")?;
+    let event_id: Option<String> = row.try_get("source_event_id")?;
+    let source_cursor = match (event_ts, created_at, event_id) {
+        (Some(event_ts), Some(created_at), Some(event_id)) => Some(SourceCursor {
+            event_ts,
+            created_at,
+            event_id: CanonicalId::parse(event_id)?,
+        }),
+        (None, None, None) => None,
+        _ => return Err(StoreError::PersistedCursorInvariant),
+    };
+    Ok(ProjectedEntity {
+        epoch_id: row.try_get("epoch_id")?,
+        projection_sequence: required_u64(row.try_get("projection_sequence")?)?,
+        entity: ProjectionEntityKey {
+            kind: ProjectionEntityKind::from_str(&row.try_get::<String, _>("entity_kind")?)?,
+            entity_id: CanonicalId::parse(row.try_get::<String, _>("entity_id")?)?,
+        },
+        source_authority: parse_authority(&row.try_get::<String, _>("source_authority")?)?,
+        as_of: row.try_get("as_of")?,
+        source_read_at: row.try_get("source_read_at")?,
+        projected_at: row.try_get("projected_at")?,
+        source_cursor,
+        source_sequence: row.try_get("source_sequence")?,
+        source_completeness: parse_completeness(&row.try_get::<String, _>("source_completeness")?)?,
+        poll_interval_ms: row.try_get("poll_interval_ms")?,
+        adapter_version: row.try_get("adapter_version")?,
+        capability_snapshot_id: row.try_get("capability_snapshot_id")?,
+        payload_digest: row.try_get("payload_digest")?,
+        payload: row.try_get("payload")?,
+    })
+}
+
+fn cursor_parts(
+    cursor: Option<&SourceCursor>,
+) -> (Option<DateTime<Utc>>, Option<DateTime<Utc>>, Option<&str>) {
+    cursor.map_or((None, None, None), |cursor| {
+        (
+            Some(cursor.event_ts),
+            Some(cursor.created_at),
+            Some(cursor.event_id.as_str()),
+        )
+    })
+}
+
+const fn authority_str(authority: SourceAuthority) -> &'static str {
+    match authority {
+        SourceAuthority::Research => "RESEARCH",
+        SourceAuthority::Execution => "EXECUTION",
+        SourceAuthority::Broker => "BROKER",
+        SourceAuthority::Derived => "DERIVED",
+    }
+}
+
+fn parse_authority(value: &str) -> Result<SourceAuthority, StoreError> {
+    match value {
+        "RESEARCH" => Ok(SourceAuthority::Research),
+        "EXECUTION" => Ok(SourceAuthority::Execution),
+        "BROKER" => Ok(SourceAuthority::Broker),
+        "DERIVED" => Ok(SourceAuthority::Derived),
+        _ => Err(StoreError::PersistedVocabulary),
+    }
+}
+
+const fn completeness_str(completeness: SourceCompleteness) -> &'static str {
+    match completeness {
+        SourceCompleteness::EventSourced => "EVENT_SOURCED",
+        SourceCompleteness::PollBounded => "POLL_BOUNDED",
+        SourceCompleteness::Unknown => "UNKNOWN",
+    }
+}
+
+fn parse_completeness(value: &str) -> Result<SourceCompleteness, StoreError> {
+    match value {
+        "EVENT_SOURCED" => Ok(SourceCompleteness::EventSourced),
+        "POLL_BOUNDED" => Ok(SourceCompleteness::PollBounded),
+        "UNKNOWN" => Ok(SourceCompleteness::Unknown),
+        _ => Err(StoreError::PersistedVocabulary),
+    }
+}
+
+fn reducer_reason_code(error: &ProjectionError) -> &'static str {
+    match error {
+        ProjectionError::SourceCursorCollision => "SOURCE_CURSOR_COLLISION",
+        ProjectionError::IdempotencyCollision => "IDEMPOTENCY_COLLISION",
+        ProjectionError::PayloadMustBeObject => "INVALID_PAYLOAD",
+        ProjectionError::MissingPollInterval | ProjectionError::UnexpectedPollInterval => {
+            "INVALID_COMPLETENESS"
+        }
+        _ => "INVALID_OBSERVATION",
+    }
+}
+
+fn required_u64(value: i64) -> Result<u64, StoreError> {
+    u64::try_from(value).map_err(|_| StoreError::NumericOverflow)
+}
+
+fn optional_u64(value: Option<i64>) -> Result<Option<u64>, StoreError> {
+    value.map(required_u64).transpose()
+}
+
+fn i64_from_u64(value: u64) -> Result<i64, StoreError> {
+    i64::try_from(value).map_err(|_| StoreError::NumericOverflow)
+}
+
+#[derive(Debug, Error)]
+pub enum StoreError {
+    #[error(transparent)]
+    Database(#[from] sqlx::Error),
+    #[error(transparent)]
+    Migration(#[from] sqlx::migrate::MigrateError),
+    #[error(transparent)]
+    Projection(#[from] ProjectionError),
+    #[error(transparent)]
+    Contract(#[from] execution_contracts::ContractError),
+    #[error("projection epoch metadata is invalid")]
+    InvalidEpochMetadata,
+    #[error("projection stream key is invalid")]
+    InvalidStreamKey,
+    #[error("projection epoch does not exist")]
+    EpochNotFound,
+    #[error("projection scope does not match the epoch")]
+    ScopeMismatch,
+    #[error("projection epoch is not writable")]
+    EpochNotWritable,
+    #[error("projection epoch is not BUILDING")]
+    EpochNotBuilding,
+    #[error("projection epoch has unresolved gaps or dead letters")]
+    EpochHasUnresolvedBlockers,
+    #[error("projection parity digest does not match")]
+    ParityMismatch,
+    #[error("projection epoch overlap is invalid")]
+    InvalidOverlap,
+    #[error("persisted projection cursor is internally inconsistent")]
+    PersistedCursorInvariant,
+    #[error("persisted projection vocabulary is unsupported")]
+    PersistedVocabulary,
+    #[error("projection reducer and database state diverged")]
+    ReducerDatabaseInvariant,
+    #[error("numeric projection value exceeds PostgreSQL BIGINT")]
+    NumericOverflow,
+    #[error("freshness policy version was reused with different content")]
+    FreshnessPolicyVersionCollision,
+    #[error("projection value could not be serialized")]
+    Serialization,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn at(second: i64) -> DateTime<Utc> {
+        DateTime::from_timestamp(1_777_000_000 + second, 0).unwrap()
+    }
+
+    fn scope() -> ProjectionScope {
+        ProjectionScope::new(CanonicalId::parse("workspace_pg_test").unwrap(), "paper").unwrap()
+    }
+
+    fn metadata() -> EpochMetadata {
+        EpochMetadata {
+            adapter_version: "ts-adapter-v1".to_owned(),
+            source_gateway_digest: "sha256:test-gateway".to_owned(),
+            capability_snapshot_id: "cap_pg_test".to_owned(),
+        }
+    }
+
+    fn observation(id: &str, second: i64, sequence: i64, status: &str) -> ProjectionObservation {
+        ProjectionObservation {
+            ingestion_id: CanonicalId::parse(id).unwrap(),
+            entity: ProjectionEntityKey {
+                kind: ProjectionEntityKind::Order,
+                entity_id: CanonicalId::parse("order_pg_1").unwrap(),
+            },
+            source_authority: SourceAuthority::Execution,
+            as_of: Some(at(second)),
+            source_read_at: at(second) + TimeDelta::milliseconds(10),
+            source_cursor: Some(SourceCursor {
+                event_ts: at(second),
+                created_at: at(second) + TimeDelta::milliseconds(1),
+                event_id: CanonicalId::parse(id).unwrap(),
+            }),
+            source_sequence: Some(sequence),
+            source_completeness: SourceCompleteness::EventSourced,
+            poll_interval_ms: None,
+            adapter_version: "ts-adapter-v1".to_owned(),
+            capability_snapshot_id: "cap_pg_test".to_owned(),
+            payload: serde_json::json!({"status": status, "quantity": "1.0000"}),
+        }
+    }
+
+    async fn reset(store: &PgProjectionStore, database_url: &str) {
+        assert!(database_url.contains("/portal_projection_test"));
+        sqlx::query(
+            "TRUNCATE portal_projection.freshness_policy_snapshots,
+                      portal_projection.epochs CASCADE",
+        )
+        .execute(&store.pool)
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    #[allow(clippy::too_many_lines)] // one ordered scenario proves migration through cutover
+    async fn postgres_projection_survives_restart_and_swaps_only_after_parity() {
+        let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
+            return;
+        };
+        let store = PgProjectionStore::connect(&database_url).await.unwrap();
+        store.migrate().await.unwrap();
+        reset(&store, &database_url).await;
+
+        let scope = scope();
+        let first_epoch = store
+            .create_building_epoch(&scope, &metadata(), at(0))
+            .await
+            .unwrap();
+        let first = observation("evt_pg_1", 1, 1, "OPEN");
+        assert_eq!(
+            store
+                .apply_observation(&scope, first_epoch, "orders:alpha_1", &first, at(2))
+                .await
+                .unwrap(),
+            StoreApplyOutcome::Applied { sequence: 1 }
+        );
+        assert_eq!(
+            store
+                .apply_observation(&scope, first_epoch, "orders:alpha_1", &first, at(3))
+                .await
+                .unwrap(),
+            StoreApplyOutcome::Duplicate { sequence: Some(1) }
+        );
+        let second = observation("evt_pg_2", 2, 3, "FILLED");
+        assert_eq!(
+            store
+                .apply_observation(&scope, first_epoch, "orders:alpha_1", &second, at(3))
+                .await
+                .unwrap(),
+            StoreApplyOutcome::GapApplied { sequence: 2 }
+        );
+        assert_eq!(
+            store
+                .apply_observation(
+                    &scope,
+                    first_epoch,
+                    "orders:alpha_1",
+                    &observation("evt_pg_old", 0, 0, "PENDING"),
+                    at(4),
+                )
+                .await
+                .unwrap(),
+            StoreApplyOutcome::OutOfOrder
+        );
+
+        let restarted = PgProjectionStore::connect(&database_url).await.unwrap();
+        let entity = restarted
+            .load_entity(first_epoch, &second.entity)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(entity.payload["status"], "FILLED");
+        assert_eq!(entity.projection_sequence, 2);
+        let replayed = projection_core::replay(
+            scope.clone(),
+            first_epoch,
+            restarted.load_replay_records(first_epoch).await.unwrap(),
+        )
+        .unwrap();
+        assert_eq!(replayed.input_count, 3);
+        assert_eq!(replayed.out_of_order_count, 1);
+        assert_eq!(replayed.reducer.sequence(), 2);
+
+        sqlx::query(
+            "UPDATE portal_projection.gaps
+             SET resolved_at = $2, resolution_evidence_digest = 'sha256:resolved'
+             WHERE epoch_id = $1",
+        )
+        .bind(first_epoch)
+        .bind(at(4))
+        .execute(&restarted.pool)
+        .await
+        .unwrap();
+        let first_digest = semantic_state_digest(&[entity]).unwrap();
+        assert_eq!(replayed.state_digest, first_digest);
+        restarted
+            .record_snapshot_evidence(
+                first_epoch,
+                &CanonicalId::parse("snapshot_pg_1").unwrap(),
+                ProjectionEntityKind::Order,
+                SnapshotCompleteness::Complete,
+                1,
+                1,
+                0,
+                at(4),
+                at(5),
+                &first_digest,
+            )
+            .await
+            .unwrap();
+        assert!(sqlx::query(
+            "UPDATE portal_projection.snapshots
+             SET applied_count = 0
+             WHERE epoch_id = $1 AND snapshot_id = 'snapshot_pg_1'",
+        )
+        .bind(first_epoch)
+        .execute(&restarted.pool)
+        .await
+        .is_err());
+        let activated = restarted
+            .activate_epoch(
+                &scope,
+                first_epoch,
+                &first_digest,
+                at(5),
+                Duration::from_secs(30),
+            )
+            .await
+            .unwrap();
+        assert_eq!(activated.retained_previous_epoch_id, None);
+
+        let candidate = restarted
+            .create_building_epoch(&scope, &metadata(), at(6))
+            .await
+            .unwrap();
+        restarted
+            .apply_observation(
+                &scope,
+                candidate,
+                "orders:alpha_1",
+                &observation("evt_pg_2", 2, 3, "FILLED"),
+                at(7),
+            )
+            .await
+            .unwrap();
+        let candidate_entity = restarted
+            .load_entity(candidate, &second.entity)
+            .await
+            .unwrap()
+            .unwrap();
+        let candidate_digest = semantic_state_digest(&[candidate_entity]).unwrap();
+        assert_eq!(candidate_digest, first_digest);
+        let cutover = restarted
+            .activate_epoch(
+                &scope,
+                candidate,
+                &candidate_digest,
+                at(8),
+                Duration::from_secs(30),
+            )
+            .await
+            .unwrap();
+        assert_eq!(cutover.retained_previous_epoch_id, Some(first_epoch));
+
+        let policy = FreshnessPolicy {
+            policy_version: "paper.orders.v1".to_owned(),
+            warning_after_ms: 10_000,
+            stale_after_ms: 30_000,
+            maximum_future_skew_ms: 2_000,
+        };
+        let digest = restarted
+            .register_freshness_policy(&policy, at(9))
+            .await
+            .unwrap();
+        assert_eq!(
+            restarted
+                .register_freshness_policy(&policy, at(10))
+                .await
+                .unwrap(),
+            digest
+        );
+        let changed_policy = FreshnessPolicy {
+            stale_after_ms: 40_000,
+            ..policy
+        };
+        assert!(matches!(
+            restarted
+                .register_freshness_policy(&changed_policy, at(11))
+                .await,
+            Err(StoreError::FreshnessPolicyVersionCollision)
+        ));
+    }
+}

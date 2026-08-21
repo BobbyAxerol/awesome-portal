@@ -200,6 +200,11 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/edge-auth/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/ts-transport/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/edge-service/src/main.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-core/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-core/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0001_projection_foundation.sql" \
   "${ROOT_DIR}/deploy/images/execution-edge-ci.Dockerfile" \
   "${ROOT_DIR}/deploy/images/execution-edge.Dockerfile" \
   "${ROOT_DIR}/deploy/compose.execution-edge.yaml" \
@@ -207,6 +212,8 @@ for required in \
   "${ROOT_DIR}/scripts/execution-edge-test.sh" \
   "${ROOT_DIR}/scripts/execution-edge-live-probe.sh" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md" \
+  "${ROOT_DIR}/upgrade/backend/adr/ADR-007-PORTAL-PROJECTION-EPOCH-CURSOR-AND-FRESHNESS.md" \
   "${ROOT_DIR}/apps/control-api/src/execution/delegation.ts" \
   "${ROOT_DIR}/apps/control-api/test/execution-delegation.spec.ts" \
   "${ROOT_DIR}/apps/control-api/test/facade.spec.ts" \
@@ -435,9 +442,16 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/execution-contracts/src/lib.rs \
   services/portal-execution-edge-rs/crates/ts-contract-v1/src/lib.rs \
   services/portal-execution-edge-rs/crates/ts-adapter-v1/src/lib.rs \
+  services/portal-execution-edge-rs/crates/projection-core/Cargo.toml \
+  services/portal-execution-edge-rs/crates/projection-core/src/lib.rs \
+  services/portal-execution-edge-rs/crates/projection-store-pg/Cargo.toml \
+  services/portal-execution-edge-rs/crates/projection-store-pg/src/lib.rs \
+  services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0001_projection_foundation.sql \
   deploy/images/execution-edge-ci.Dockerfile \
   scripts/execution-edge-test.sh \
   upgrade/backend/EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md \
+  upgrade/backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md \
+  upgrade/backend/adr/ADR-007-PORTAL-PROJECTION-EPOCH-CURSOR-AND-FRESHNESS.md \
   apps/control-api/test/facade.spec.ts \
   upgrade/backend/BAR_07_CONTROL_API_FACADE.md \
   apps/control-api/src/main.ts \

@@ -7,7 +7,7 @@ use rust_decimal::Decimal;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 #[serde(transparent)]
 pub struct CanonicalId(String);
 
@@ -69,6 +69,14 @@ pub enum FreshnessState {
     Aging,
     Stale,
     Paused,
+    Unknown,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum SourceCompleteness {
+    EventSourced,
+    PollBounded,
     Unknown,
 }
 
@@ -157,13 +165,20 @@ pub struct ExternalVocabularyValue {
     pub supported: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct SourceCursor {
+    pub event_ts: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub event_id: CanonicalId,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SourceFacts {
     pub source_authority: SourceAuthority,
     pub as_of: Option<DateTime<Utc>>,
     pub read_at: DateTime<Utc>,
     pub source_sequence: Option<i64>,
-    pub source_cursor: Option<String>,
+    pub source_cursor: Option<SourceCursor>,
     pub projection_epoch: Option<String>,
     pub projection_sequence: Option<i64>,
 }
@@ -180,7 +195,14 @@ pub struct ReadEnvelope<T> {
     pub delivery_profile: DeliveryProfile,
     pub freshness_state: FreshnessState,
     pub panel_state: PanelState,
+    #[serde(flatten)]
     pub source: SourceFacts,
+    pub source_completeness: SourceCompleteness,
+    pub poll_interval_ms: Option<i64>,
+    pub age_seconds: Option<i64>,
+    pub lag_ms: Option<i64>,
+    pub formula_version: Option<String>,
+    pub capability_snapshot_id: Option<String>,
     pub warnings: Vec<ContractWarning>,
     pub data: T,
 }
@@ -275,5 +297,40 @@ mod tests {
     fn canonical_id_fails_closed_on_ambiguous_whitespace() {
         assert!(CanonicalId::parse(" order-1 ").is_err());
         assert_eq!(CanonicalId::parse("order-1").unwrap().as_str(), "order-1");
+    }
+
+    #[test]
+    fn read_envelope_keeps_source_cursor_flat_and_structured() {
+        let envelope = ReadEnvelope {
+            schema_version: "execution.read.v1".to_owned(),
+            delivery_profile: DeliveryProfile::Shadow,
+            freshness_state: FreshnessState::Ok,
+            panel_state: PanelState::Ok,
+            source: SourceFacts {
+                source_authority: SourceAuthority::Execution,
+                as_of: Some("2026-08-21T00:00:00Z".parse().unwrap()),
+                read_at: "2026-08-21T00:00:01Z".parse().unwrap(),
+                source_sequence: None,
+                source_cursor: Some(SourceCursor {
+                    event_ts: "2026-08-21T00:00:00Z".parse().unwrap(),
+                    created_at: "2026-08-21T00:00:00.100Z".parse().unwrap(),
+                    event_id: CanonicalId::parse("evt_1").unwrap(),
+                }),
+                projection_epoch: Some("018f0000-0000-7000-8000-000000000001".to_owned()),
+                projection_sequence: Some(7),
+            },
+            source_completeness: SourceCompleteness::EventSourced,
+            poll_interval_ms: None,
+            age_seconds: Some(1),
+            lag_ms: Some(5),
+            formula_version: None,
+            capability_snapshot_id: Some("cap_1".to_owned()),
+            warnings: vec![],
+            data: serde_json::json!({"status": "OPEN"}),
+        };
+        let wire = serde_json::to_value(envelope).unwrap();
+        assert_eq!(wire["source_authority"], "EXECUTION");
+        assert_eq!(wire["source_cursor"]["event_id"], "evt_1");
+        assert!(wire.get("source").is_none());
     }
 }

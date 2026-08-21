@@ -47,6 +47,10 @@ services:
       EDGE_MAXIMUM_RESPONSE_BYTES: ${EDGE_MAXIMUM_RESPONSE_BYTES:-2097152}
       EDGE_MAXIMUM_RETRIES: ${EDGE_MAXIMUM_RETRIES:-1}
       EDGE_RETRY_BACKOFF_MS: ${EDGE_RETRY_BACKOFF_MS:-100}
+      # EX-BE-03 remains off until projection PostgreSQL placement and cross-cell
+      # operational evidence are owner-approved.
+      EDGE_PROJECTION_INGESTION_ENABLED: ${EDGE_PROJECTION_INGESTION_ENABLED:-false}
+      EDGE_PROJECTION_DATABASE_URL_FILE: ${EDGE_PROJECTION_DATABASE_URL_FILE:-/run/secrets/projection-database-url}
     healthcheck:
       test: ["CMD", "/usr/local/bin/portal-execution-edge", "healthcheck"]
       interval: 15s
