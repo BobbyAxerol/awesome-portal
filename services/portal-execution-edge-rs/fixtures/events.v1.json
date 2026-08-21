@@ -1,0 +1,18 @@
+{
+  "status": "OK",
+  "count": 1,
+  "events": [
+    {
+      "event_id": "018f3f00-0000-7000-8000-000000000001",
+      "event_type": "ORDER_STATUS",
+      "event_ts": "2026-08-20T10:00:05Z",
+      "created_at": "2026-08-20T10:00:05.100Z",
+      "trace_id": "synth-trace-0001",
+      "strategy_id": "alpha-paper-1",
+      "client_order_id": "synth-order-0001",
+      "payload": {
+        "status": "FILLED"
+      }
+    }
+  ]
+}

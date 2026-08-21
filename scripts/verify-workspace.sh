@@ -190,6 +190,16 @@ for required in \
   "${ROOT_DIR}/apps/control-api/test/governance-token.spec.ts" \
   "${ROOT_DIR}/apps/control-api/test/governance.spec.ts" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/Cargo.lock" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/rust-toolchain.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contract-pack.lock.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/execution-contracts/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/ts-contract-v1/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/ts-adapter-v1/src/lib.rs" \
+  "${ROOT_DIR}/deploy/images/execution-edge-ci.Dockerfile" \
+  "${ROOT_DIR}/scripts/execution-edge-test.sh" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md" \
   "${ROOT_DIR}/apps/control-api/test/facade.spec.ts" \
   "${ROOT_DIR}/upgrade/backend/BAR_07_CONTROL_API_FACADE.md" \
   "${ROOT_DIR}/apps/control-api/src/main.ts" \
@@ -409,6 +419,16 @@ for tracked_source in \
   apps/control-api/test/governance-token.spec.ts \
   apps/control-api/test/governance.spec.ts \
   upgrade/backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md \
+  services/portal-execution-edge-rs/Cargo.toml \
+  services/portal-execution-edge-rs/Cargo.lock \
+  services/portal-execution-edge-rs/rust-toolchain.toml \
+  services/portal-execution-edge-rs/contract-pack.lock.json \
+  services/portal-execution-edge-rs/crates/execution-contracts/src/lib.rs \
+  services/portal-execution-edge-rs/crates/ts-contract-v1/src/lib.rs \
+  services/portal-execution-edge-rs/crates/ts-adapter-v1/src/lib.rs \
+  deploy/images/execution-edge-ci.Dockerfile \
+  scripts/execution-edge-test.sh \
+  upgrade/backend/EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md \
   apps/control-api/test/facade.spec.ts \
   upgrade/backend/BAR_07_CONTROL_API_FACADE.md \
   apps/control-api/src/main.ts \
@@ -472,6 +492,7 @@ for json_contract in \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-links.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/keyset-page.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/keyset-page.valid.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contract-pack.lock.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/planning-api.openapi.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/run-request.schema.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/manifest.json"; do
@@ -496,6 +517,7 @@ bash -n \
   "${ROOT_DIR}/apps/portal/scripts/run_dev.sh" \
   "${ROOT_DIR}/apps/portal/scripts/run_frontend.sh" \
   "${ROOT_DIR}/scripts/verify-m0-golden.sh" \
+  "${ROOT_DIR}/scripts/execution-edge-test.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
   "${ROOT_DIR}/apps/portal/scripts/test_backend.sh" \
   "${ROOT_DIR}/features/roadmap-task-board/tooling/clean-generated.sh"
@@ -504,7 +526,7 @@ bash -n \
 
 while IFS= read -r tracked_path; do
   case "${tracked_path}" in
-    */node_modules/*|*/dist/*|*/build/*|*/coverage/*|*/.pytest_cache/*|*/__pycache__/*|*/tsconfig.tsbuildinfo)
+    */node_modules/*|*/dist/*|*/build/*|*/target/*|*/coverage/*|*/.pytest_cache/*|*/__pycache__/*|*/tsconfig.tsbuildinfo)
       printf 'Generated dependency or build output is tracked by Portal Git: %s\n' "${tracked_path}" >&2
       exit 1
       ;;

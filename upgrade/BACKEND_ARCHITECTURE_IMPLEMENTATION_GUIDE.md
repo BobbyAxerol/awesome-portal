@@ -784,6 +784,19 @@ deep-dive → ADR → slice → evidence discipline documented above.
   database readiness. Status stays `OPERATIONAL_EVIDENCE_PENDING` only for the
   wider EX-BE-08 load/security/soak/DR evidence. Deep dive and Claude mapping:
   [`EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md`](./backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md).
+- **EX-BE-01 Rust contracts and compatibility adapter (2026-08-21):** the
+  Portal-owned Execution edge now has a Rust 1.85.1 library workspace with
+  canonical exact-decimal/source/freshness envelopes, a pinned Trading System
+  v1 wire snapshot and a strictly allowlisted GET-only response adapter. The
+  build embeds and verifies the complete 22-enum/91-CHECK vocabulary evidence;
+  unknown tokens remain raw and unsupported, revision/header mismatches fail
+  closed, and non-JSON 5xx becomes explicit unavailable state. The immutable
+  pack identity, Cargo dependencies and CI base-image digest are pinned. Docker
+  evidence is 14/14 tests plus `rustfmt` and strict Clippy. This is
+  `CONTRACT_COMPLETE`, not a running integration: HTTP transport, mTLS,
+  delegated auth, capability negotiation and read-only live probes remain
+  `EX-BE-02`. Deep dive:
+  [`EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md`](./backend/EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md).
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**

@@ -1,0 +1,6 @@
+{
+  "status": "UNSUPPORTED_CONTRACT_REVISION",
+  "requested_revision": "v2",
+  "supported_revisions": ["order-command.v2@2.0.0", "v1"],
+  "authoritative_revision": "v1"
+}

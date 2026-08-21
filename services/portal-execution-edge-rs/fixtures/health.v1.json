@@ -1,0 +1,17 @@
+{
+  "status": "READY",
+  "ts": 1787299153.6978495,
+  "checks": {
+    "redis": true,
+    "market_redis": true,
+    "postgres": true,
+    "stale_or_bad_services": []
+  },
+  "capabilities": {},
+  "venue_products": [],
+  "command_journal": {
+    "rollout": "DURABLE_ACCEPT_PAPER",
+    "status": "READY",
+    "dead": 430
+  }
+}

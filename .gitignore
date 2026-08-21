@@ -61,6 +61,7 @@
 **/coverage/
 **/playwright-report/
 **/test-results/
+**/target/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

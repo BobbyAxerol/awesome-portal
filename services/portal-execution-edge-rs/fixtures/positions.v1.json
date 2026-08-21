@@ -1,0 +1,26 @@
+{
+  "status": "OK",
+  "count": 1,
+  "positions": [
+    {
+      "position_id": "synth-position-0001",
+      "strategy_id": "alpha-paper-1",
+      "account_id": "paper-account-1",
+      "mode": "paper",
+      "venue": "BINANCE",
+      "instrument_id": "BTCUSDT-PERP",
+      "symbol": "BTCUSDT",
+      "side": "LONG",
+      "signed_qty": "0.00100000",
+      "quantity": "0.00100000",
+      "avg_px_open": "50000.00",
+      "avg_px_close": null,
+      "realized_pnl": "0.00",
+      "unrealized_pnl": "1.25",
+      "peak_qty": "0.00100000",
+      "opened_at": "2026-08-20T10:00:05Z",
+      "closed_at": null,
+      "updated_at": "2026-08-20T10:01:00Z"
+    }
+  ]
+}

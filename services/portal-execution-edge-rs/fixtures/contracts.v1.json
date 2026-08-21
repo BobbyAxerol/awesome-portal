@@ -1,0 +1,20 @@
+{
+  "status": "OK",
+  "api_version": "v1",
+  "authoritative_contract_revision": "v1",
+  "authoritative_schema_version": "v1",
+  "supported_contract_revisions": ["order-command.v2@2.0.0", "v1"],
+  "shadow_contract_revision": "order-command.v2@2.0.0",
+  "shadow_is_authoritative": false,
+  "shadow": {
+    "enabled": false,
+    "sample_rate": 1.0,
+    "totals": {
+      "observed": 0,
+      "success": 0,
+      "failure": 0,
+      "mismatch": 0,
+      "skipped": 0
+    }
+  }
+}

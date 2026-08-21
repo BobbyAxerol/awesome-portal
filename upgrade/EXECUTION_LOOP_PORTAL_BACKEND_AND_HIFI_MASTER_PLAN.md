@@ -793,7 +793,7 @@ so one slice may unlock several screens without inventing a second product roadm
 | EX-BE-00R4 | P0 / delivered | Registry revision 4 adds per-screen delivery profile/policy, echoed by composed envelopes | fixture/shadow truth for all screens, especially 11–12 |
 | EX-BE-04a | P0 / delivered | TypeScript bidirectional keyset/filter/sort/exact-count primitives over control-plane PostgreSQL | phases 1, 2 and Portal-owned portions of 5/7/8 |
 | EX-BE-05a | P0 / fresh-PG gate green | TypeScript governance/evidence/approval workflow and audit, with external panels allowed unavailable | phases 1–2 on real Portal data without AWS |
-| EX-BE-01 | P0 | Rust workspace, canonical contracts, `ts-contract-v1`, vocabulary reconciliation and golden corpus | all real-source screen contracts |
+| EX-BE-01 | P0 / contract complete | Rust workspace, canonical contracts, `ts-contract-v1`, vocabulary reconciliation and golden corpus | all real-source screen contracts |
 | EX-BE-02 | P0 | mTLS/delegated-auth boundary, capability negotiation, read-only probes | safe AWS integration |
 | EX-BE-03 | P0 | projection schema, reducer, cursor/epoch/replay/snapshot and freshness evaluator | phases 4, 9–17 |
 | EX-BE-04b | P1 | Rust projection query primitives: bidirectional keyset, filter/sort/count, adaptive series ladder and exact decimals | phases 4, 9, 11–17 |

@@ -1,0 +1,28 @@
+[workspace]
+members = [
+  "crates/execution-contracts",
+  "crates/ts-contract-v1",
+  "crates/ts-adapter-v1",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "Apache-2.0"
+repository = "https://github.com/BobbyAxerol/awesome-portal"
+
+[workspace.dependencies]
+chrono = { version = "0.4.40", default-features = false, features = ["serde"] }
+rust_decimal = { version = "1.37.1", features = ["serde-with-str"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+thiserror = "2.0.12"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = "deny"
+pedantic = "deny"

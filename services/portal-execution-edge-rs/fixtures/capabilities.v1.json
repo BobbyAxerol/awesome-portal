@@ -1,0 +1,20 @@
+{
+  "status": "READY",
+  "ts": 1787299153.7155247,
+  "capabilities": {},
+  "venue_products": [
+    {
+      "venue": "BINANCE",
+      "product": "USD_M",
+      "supported_modes": ["paper", "sandbox", "live"],
+      "execution_available": true,
+      "market_data_available": true,
+      "private_events_available": true,
+      "account_sync_available": true,
+      "reconciliation_available": true,
+      "position_modes": ["ONE_WAY", "HEDGE"],
+      "rollout_state": "ACTIVE",
+      "credential_scope": "binance:{mode}:{external_account_ref}"
+    }
+  ]
+}

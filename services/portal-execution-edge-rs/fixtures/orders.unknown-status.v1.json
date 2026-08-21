@@ -1,0 +1,21 @@
+{
+  "status": "OK",
+  "count": 1,
+  "orders": [
+    {
+      "client_order_id": "synth-order-unknown-0001",
+      "account_id": "paper-account-1",
+      "symbol": "BTCUSDT",
+      "side": "BUY",
+      "order_type": "LIMIT",
+      "quantity": "0.00100000",
+      "price": "50000.00",
+      "filled_quantity": "0.00000000",
+      "status": "BROKER_PENDING_V2",
+      "mode": "paper",
+      "venue": "BINANCE",
+      "created_at": "2026-08-20T10:00:00Z",
+      "updated_at": "2026-08-20T10:00:01Z"
+    }
+  ]
+}

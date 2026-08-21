@@ -1,0 +1,26 @@
+{
+  "schema_version": "portal-ts-contract-pack-lock.v1",
+  "captured_utc": "2026-08-21",
+  "trading_system_commit": "9081397de9e981c43b4e0f67fabe747e7ed964c7",
+  "runtime_gateway_digest_prefix": "sha256:4f63dc9949f8",
+  "api_version": "v1",
+  "contract_revision": "v1",
+  "schema_revision": "v1",
+  "pack_manifest_sha256": "9e4430fcb27cce87158376a53888dc80515673d32dbfe3b53d08e164de67e85d",
+  "inputs": {
+    "api_surface_sha256": "05463507eb2edf27882c97bb4f6d0ecaea1d22f175eef043d17e92e7df1459de",
+    "response_shapes_sha256": "f7710023ffd0d4fe36475d505b23b66bb4bb0968e97eca125b2341a46eccc51b",
+    "serialization_contract_sha256": "c4a8e4775d32d576013169f62e0eb4a4d90a1caacbc0d9f688770c0b10be35a7",
+    "vocabularies_sha256": "2bff34b773e24c9f477e825f70f7776c03cc1b9038364791b5167f064e487af1",
+    "error_catalog_sha256": "e96d2ff3c9c3c558d36943a6e8e1b0e0654ce0df5161eeb2edd5ebc55fb0b53c"
+  },
+  "vocabulary_gate": {
+    "python_enums": 22,
+    "db_check_constraints": 91,
+    "db_check_distinct_fields": 33,
+    "db_fields_conflated_across_tables": 7,
+    "venue_product_profiles": 6,
+    "crosschecked_concepts": 6,
+    "crosscheck_divergences": 3
+  }
+}

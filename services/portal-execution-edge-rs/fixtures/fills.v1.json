@@ -1,0 +1,21 @@
+{
+  "status": "OK",
+  "count": 1,
+  "fills": [
+    {
+      "fill_id": 1001,
+      "trade_id": "synth-trade-0001",
+      "client_order_id": "synth-order-0001",
+      "strategy_id": "alpha-paper-1",
+      "account_id": "paper-account-1",
+      "symbol": "BTCUSDT",
+      "side": "BUY",
+      "quantity": "0.00100000",
+      "price": "50000.00",
+      "commission": "0.01000000",
+      "trade_time": "2026-08-20T10:00:05Z",
+      "mode": "paper",
+      "venue": "BINANCE"
+    }
+  ]
+}

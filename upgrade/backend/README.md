@@ -178,12 +178,16 @@ authority.
   evidence-bound immutable decision workflow, audit/outbox và plan/apply/poll.
   Chi tiết contract/handoff/test ở
   [`EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md`](./EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md).
-- Production integration chưa được kích hoạt. Thứ tự gần nhất là
-  final fresh-PostgreSQL gate của `EX-BE-05a`; song song khi được giao là
-  `EX-BE-01` Rust workspace +
-  canonical `ts-contract-v1` adapter, sau đó `EX-BE-02` auth/capability
-  negotiation. Runtime evidence luôn thắng schema/rollout prose; Portal chỉ
-  dùng versioned HTTP API, không đọc DB/Redis/CLI nội bộ.
+- `EX-BE-01` **contract complete:** Rust 1.85.1 workspace đã khóa canonical
+  envelopes/exact decimals, `ts-contract-v1`, GET-only compatibility adapter,
+  đủ 22 Python enums + 91 database CHECK vocabularies và golden/error fixtures.
+  Contract pack, dependency lock và CI image đều pin; 14/14 Rust tests,
+  `rustfmt` và strict Clippy pass. Chi tiết:
+  [`EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md`](./EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md).
+- Production integration chưa được kích hoạt. Thứ tự gần nhất là `EX-BE-02`
+  mTLS/delegated-auth, capability negotiation và read-only probes. Runtime
+  evidence luôn thắng schema/rollout prose; Portal chỉ dùng versioned HTTP API,
+  không đọc DB/Redis/CLI nội bộ.
 
 ## BAR-21 — Strategy Import & Quarantine Ingest foundation
 
