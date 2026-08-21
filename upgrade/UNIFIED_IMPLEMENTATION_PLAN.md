@@ -1779,15 +1779,16 @@ Lane A chạy trước; mỗi slice đóng độc lập và không slice nào ch
 | Slice | Nội dung | Vì sao thứ tự này |
 |---|---|---|
 | **S0** `DONE` | 13 component + fixture page + Carbon surface cô lập | Nguyên liệu của mọi phase sau |
-| **S1** | **Reconcile `contracts.ts` với `extract/`** — 22 enum, 91 DB CHECK, 124 reason code, 85 payload model | Type sai thì 17 màn sai theo. Pass đầu đã bắt `BrokerSync` thiếu `ERROR`. Rẻ nhất khi làm trước, đắt nhất khi làm sau |
-| **S2** | **Primitive M1** — keyset table + virtualization, fixed row height, sticky header, exact count | Phase 1/7/14/15/16/17 đều dùng. Thuần frontend, không cần API |
+| **S1** `DONE` | **Reconcile `contracts.ts` với `extract/`** — 22 enum, 91 DB CHECK, 124 reason code, 85 payload model | Type sai thì 17 màn sai theo. Pass đầu đã bắt `BrokerSync` thiếu `ERROR`. Rẻ nhất khi làm trước, đắt nhất khi làm sau |
+| **S1b** `DONE` | **Reconcile với master plan §7.1** — envelope thêm `projectionEpoch/Sequence`, `sourceCursor`, `lagMs`, `panelState`, `capabilitySnapshotId`; thêm `VerificationResult` (8), `CapabilityState` (5), `RiskTier`, `DeliveryProfile`; 3 component mới | Codex công bố envelope khác với guide §5. Chỗ sửa là `contracts.ts`, đúng như §12.2 đã hứa — không màn nào phải sửa |
+| **S2** | **Primitive M1** — keyset table + virtualization, fixed row height, sticky header, exact count. **Không có số trang** | Phase 1/7/14/15/16/17 đều dùng. Keyset không seek được tới trang *n*, nên vẽ nút số trang là nói dối. Infinite scroll có cửa sổ, không phải scrollbar cao 182k dòng |
 | **S3** | **Adapter + fixture layer** từ `query-samples/`, `event-samples/` trong contract pack | Cho phép dựng màn trên shape thật thay vì shape tưởng tượng; khi API lên thì đổi adapter, không đổi màn |
-| **S4** | **Primitive M2/M3** — series theo thang resolution, subscription có gap-resync | Phase 4/11/12/15 dùng. Viết trên port có kiểu, adapter fixture |
+| **S4** | **Primitive M2/M3** — series theo thang resolution, subscription resume theo `{epoch}:{sequence}` | Phase 4/11/12/15 dùng. Viết trên port có kiểu, adapter fixture |
 | **S5** | Màn **bounded**: Gate R1, Gate R2, Paper Exit Review | Cardinality cố định theo artifact, không phụ thuộc quy mô; dựng được trọn vẹn trên fixture |
-| **S6** | **Admin Action Drawer catalog** — 21 lệnh × 6 nhóm | Catalog lấy từ CLI guide + `extract/cli-command-map.json` (64 action). Drawer shell đã có từ S0 |
+| **S6** | **Admin Action Drawer** — renderer trên `GET /commands/catalog`, cộng cổng theo risk tier (fresh-auth R2+, second approver, WebAuthn R4) | Catalog là **dữ liệu server** (master plan §10.6), không phải danh sách 21 lệnh cứng; 21×6 của hi-fi trở thành fixture. R3 protective và R4 risk-increasing là **hai đường tách rời**, không phải một thang có ngưỡng (§9.2) |
 | **S7** | **Visual baseline cho Carbon surface** | Khoá diện mạo Execution lại trước khi 17 màn dựng lên nó, đúng cách Research đã làm |
 
-Sau S7, frontend hết việc độc lập: mọi thứ còn lại cần registry rev 3 hoặc dữ liệu.
+Sau S7, frontend hết việc độc lập: mọi thứ còn lại cần dữ liệu thật.
 
 ## 12.5 Definition of done — bổ sung cho §9
 
@@ -1824,9 +1825,16 @@ Ngoài §9 toàn cục, một phase Execution Loop còn phải:
 
 | # | Vấn đề | Ảnh hưởng | Chờ ai |
 |---|---|---|---|
-| E-1 | **Registry rev 3 chưa có** | Nửa nav của phase 0 và routing của cả 17 màn đứng yên | codex |
+| ~~E-1~~ | ~~Registry rev 3 chưa có~~ | **Đóng 2026-08-21** — `e78a597`, 17 route duy nhất, 4 group canonical | — |
 | E-2 | **Font IBM Plex chưa cài** | Surface có màu và hình học Carbon nhưng chữ Inter; DS §7 coi type mono-forward là một phần identity | Bobby (đổi lockfile) |
 | E-3 | **Tỉ lệ order/fill** 1.000/ngày trên 150–500 deployment = ~2–7/deployment/ngày | Mọi ngân sách blotter, event và workbench dựng trên số này | Bobby |
-| E-4 | **`BrokerSync` sai** — thật là `ERROR/MISMATCH/OK/STALE`, ta viết `UNKNOWN` | Thêm `ERROR` là chép đúng; `UNKNOWN` có tồn tại phía Portal hay không là quyết định mô hình | codex (S1) |
-| E-5 | **15 `BR-EX-*` chưa có phán quyết** | Phase 14/16/17 không thể đóng đúng ở quy mô thật nếu bị từ chối mà không có phương án thay | codex |
+| ~~E-4~~ | ~~`BrokerSync` sai~~ | **Đóng** — master plan §2.2: `ERROR/MISMATCH/OK/STALE` là của Trading System, `UNKNOWN` được phép tồn tại phía Portal như trạng thái "chưa quan sát lần nào". Đúng bằng kết luận độc lập của S1 | — |
+| ~~E-5~~ | ~~15 `BR-EX-*` chưa có phán quyết~~ | **Đóng** — §15.1 phán quyết đủ 15: 11 ACCEPT, 4 MODIFY, 0 từ chối | — |
 | E-6 | Gateway đang chạy **không** build từ git HEAD | Deploy phải pin image digest, không pin branch | codex/Bobby khi release |
+| **E-7** | **Đường tới màn thật đang bị xếp sau đường tích hợp.** Phase 1/2 chỉ đọc-ghi bản ghi Portal (master plan §11), không cần Rust edge; nhưng build order §12.1 đặt chúng sau EX-BE-01→02→03, mà 02/03 lại chờ quyết định owner về mạng riêng SGP↔AWS | Màn có dữ liệu thật đầu tiên phải chờ một phê duyệt không liên quan đến nó | codex — đề nghị tách **EX-BE-04a** (keyset/filter/count trên control-plane Postgres, thuần TypeScript) khỏi 04b. Review F-1 |
+| **E-8** | **`projection_sequence` liền mạch không chứng minh được nguồn không mất dữ liệu.** Hôm nay chỉ `ORDER_STATUS` là event-driven; phần còn lại là polling, nên một giá trị đổi rồi đổi lại giữa hai lần poll không để lại dấu vết nào | Phase 8 dựng timeline từ dữ liệu poll sẽ trình bày "khoảng trống chưa chứng minh" thành "không có khoảng trống". Luật §12.2 "gap chặn R4" không thể kích hoạt cho gap không phát hiện được | codex — BR-EX-16 |
+| **E-9** | **`shadow` profile không có cách nào tới được màn hình.** Số liệu thật, hệ thống thật, màn thật, không phải production — và không có trường nào trong registry hay envelope nói điều đó | Người vận hành nhìn Canary Control Room ở shadow thấy số y hệt live | codex — BR-EX-20 |
+| **E-10** | **`UNCERTAIN` chưa có luật đi kèm** | Nếu operator halt một strategy, nhận `UNCERTAIN`, nút retry bật hay tắt? Bật thì có thể halt hai lần; tắt thì có thể bị khoá khỏi việc bảo vệ một vị thế live. Cả hai đều hợp lý và frontend không được chọn | codex — BR-EX-21 |
+
+**Bản phản biện đầy đủ:** [`hifi_execution_loop/BACKEND_PLAN_REVIEW.md`](upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_PLAN_REVIEW.md)
+— 9 finding, 7 request mới (BR-EX-16…22), và một request bị phán quyết nhầm câu hỏi (BR-EX-05).

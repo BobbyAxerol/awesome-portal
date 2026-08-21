@@ -140,17 +140,28 @@ identity model is taken seriously.
 
 ### 3.1 Chart resolution ladder
 
-Spec §16.4 caps an interactive series at **≤5,000 points**. Applying that to the
-owner's "1h, tunable" gives a deterministic ladder. The server picks `interval`
-from `window` whenever the client omits it.
+Spec §16.4 caps an interactive series at **≤5,000 points**. The server selects
+the interval; the client sends a range and an intent and never an interval
+(BR-EX-04, ruled MODIFY).
 
-| Window | Interval | Points | |
-|---|---|---|---|
-| ≤ 3 days | 1m | ≤ 4,320 | intraday detail |
-| ≤ 30 days | 15m | ≤ 2,880 | |
-| ≤ 6 months | **1h** | ≤ 4,368 | **default** |
-| ≤ 2 years | 4h | ≤ 4,380 | |
-| > 2 years | 1d | 365 / year | |
+**Revised 2026-08-21** after the backend master plan landed. The rule is not a
+table of range brackets — it is *"the finest interval whose point count is
+≤ 5,000"*. Stating it as brackets was a mistake in the first draft and the same
+mistake is in master plan §4.2; see `BACKEND_PLAN_REVIEW.md` F-2.
+
+| Interval | Fits a range up to | At the top of its band |
+|---|---|---:|
+| 1m | 3.47 days | 4,999 |
+| **5m** | 17.4 days | 4,999 |
+| 15m | 52 days | 4,999 |
+| 1h | 208 days | 4,999 |
+| 4h | 2.3 years | 4,999 |
+| 1d | 13.7 years | 4,999 |
+
+The 5m rung is the one the bracket form dropped, and it is the expensive one to
+drop: a 10-day window under brackets gets 15m and 960 points, under this rule
+gets 5m and 2,880. Four to seventeen days is the post-incident and weekly-review
+window, so the loss lands exactly where it is felt.
 
 **Every rung lands under 5,000, so no rung requires lossy downsampling.** This is
 the cleanest possible answer to spec §16.3 "no smoothing that moves extrema":
@@ -193,9 +204,10 @@ Two hard rules follow from §16.4 "no per-card polling every second":
    watchlist row. Fleet counts now span 150–500 deployments; 500 cells behind
    500 streams is the failure §16.4 names, at ten times the scale it names it.
 2. **A sequence gap is a state, not a retry.** On discontinuity in
-   `source_sequence`: mark the surface `STALE`, re-fetch the REST snapshot,
-   resume the stream from the snapshot's sequence. Never interpolate across the
-   gap and never let a stale projection keep rendering as live truth.
+   `projection_sequence` (revised — see M3): mark the surface `STALE`, re-fetch
+   the REST snapshot, resume from the snapshot's `{epoch}:{sequence}`. Never
+   interpolate across the gap and never let a stale projection keep rendering as
+   live truth.
 
 ---
 
@@ -209,16 +221,32 @@ no `OFFSET`. Virtualize above 200 loaded rows with a fixed row height. Sticky
 header. Horizontal overflow scrolls **inside the panel**, never the page
 (DS §8). Exact `total` and `filtered` counts from the server.
 
-**M2 — Resolution-selected series.** Client sends `window`; server returns the
-ladder interval (§3.1) plus the full §16.2 envelope. `dataZoom` past the current
-interval's usefulness **re-queries at the next rung down** — it never zooms into
-an already-aggregated array, which would render a shape the data does not have.
-The caption always states the interval actually served.
+**M2 — Resolution-selected series.** Client sends a range and an intent, **never
+an interval**; the server selects per §3.1 and returns the full §16.2 envelope.
+`dataZoom` past the current interval's usefulness **re-queries at the next rung
+down** — it never zooms into an already-aggregated array, which would render a
+shape the data does not have. The caption always states the interval actually
+served. *(Re-query behaviour is the unruled half of BR-EX-05; see review §5.)*
 
-**M3 — Subscription with gap resync.** REST snapshot first, then SSE resumed
-from that snapshot's `source_sequence`. One subscription per screen. Gap →
-`STALE` + resnapshot (§3.3). Disconnect → visible `reconnecting` state carrying
-the last-good `as_of`, never a silent freeze that looks live.
+**M3 — Subscription with gap resync.** *Revised 2026-08-21: BR-EX-11 was ruled
+MODIFY and the mechanism changes with it.* REST snapshot first, then SSE resumed
+via `Last-Event-ID` = `{projection_epoch}:{projection_sequence}`. One
+subscription per screen.
+
+- **Sequence gap within an epoch** → `STALE` + resnapshot (§3.3).
+- **Epoch change** → the previous cursor is void. Full resnapshot, never a
+  resume, and the client waits for a server-assigned delay if one is supplied
+  rather than inventing its own backoff (review F-5).
+- **Disconnect** → visible `reconnecting` state carrying the last-good `as_of`,
+  never a silent freeze that looks live.
+
+What this mechanism can and cannot claim has to be said plainly, because the
+screens are built on it: a contiguous `projection_sequence` proves nothing was
+lost between the edge and the browser. It does **not** prove nothing was lost
+between the Trading System and the edge — only `ORDER_STATUS` is event-driven
+today and everything else is polled, so a value that changed and changed back
+between two polls leaves a contiguous sequence and no trace. That is what
+BR-EX-16 asks for and until it lands, M3's guarantee stops at the edge.
 
 **M4 — Representation switch by cardinality.** Where a visual encoding stops
 being readable past a threshold, the switch is a declared rule, not a judgement
@@ -284,6 +312,15 @@ actionable, not aspirational.
 Two requests are **removed** relative to the pre-figures draft, and are recorded
 here so they are not re-raised: approximate counts (unnecessary at 182k) and
 event batching (unnecessary at 0.7/min).
+
+**Status, 2026-08-21.** All fifteen are ruled in master plan §15.1 — eleven
+ACCEPT, four MODIFY, none refused. The four MODIFYs strengthen the request rather
+than narrow it, except `BR-EX-05`, whose behavioural half was not addressed.
+Seven further requests, **BR-EX-16 … BR-EX-22**, were raised after reading that
+plan and live in [`BACKEND_PLAN_REVIEW.md`](BACKEND_PLAN_REVIEW.md) §4 rather
+than being appended here — this table is the record of what the *screens* need at
+scale, and those seven come from what the *backend contract* turned out to leave
+open.
 
 ---
 

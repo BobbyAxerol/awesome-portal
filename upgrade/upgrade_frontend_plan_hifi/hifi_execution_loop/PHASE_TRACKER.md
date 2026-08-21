@@ -37,7 +37,7 @@ These qualify what is complete; they do not mean frontend `DONE`.
 
 | # | Screen (WF) | FE | BE | Needs | Evidence |
 |---|---|---|---|---|---|
-| 0 | Shell & shared components | **DONE** (components) · `BLOCKED` (nav) | `CONTRACT_COMPLETE` | frontend nav wiring to registry rev 3 | FE: 32 tests · 101 visual baselines · build; BE: `e78a597` · 53 contract/API tests · root verify |
+| 0 | Shell & shared components | **DONE** (components) · `READY` (nav) | `CONTRACT_COMPLETE` | — nav unblocked by `e78a597` | FE: 42 tests · build · visual baseline **drifted, see §9**; BE: `e78a597` · 53 contract/API tests · root verify |
 | 1 | Approval Inbox (4a) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-04/05; BR-EX-01/02/03 accepted | backend contract: master plan §§10.1, 12.2 |
 | 2 | Gate R1 Review (1a) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05 integration | existing approval/audit foundation; master plan §§10.2, 12.2 |
 | 3 | Gate R2 Review (1b) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/05/07 capital preview | master plan §§10.3, 12.2 |
@@ -234,3 +234,47 @@ much cheaper than after.
 2. **Order/fill ratio** (carried from the scale pass): 1,000 per day across
    150–500 deployments is ~2–7 per deployment per day. Every blotter, event and
    workbench budget rests on it.
+3. **Visual baseline re-record.** 52 of 101 baselines drifted when registry
+   revision 3 grew the shared navigation rail. One diff was inspected: the
+   content area is unchanged, only the rail moved, and the QuantBT label has not
+   regressed. The remaining 51 have not been reviewed. Re-recording the batch
+   without reviewing it spends the one gate that would have caught an unintended
+   Research change. Recommendation is to review all 52, then re-record.
+4. **Display timezone.** Everything on the wire is RFC3339 UTC and that is
+   right. A Singapore team watching HK execution and a VN market still has to
+   read times somewhere. Raised now so it does not surface during phase 13.
+
+---
+
+## 9. Backend master plan — reviewed
+
+Codex delivered `EXECUTION_LOOP_PORTAL_BACKEND_AND_HIFI_MASTER_PLAN.md`
+(`29c9b17`, 907 lines) on 2026-08-21. The frontend review is
+[`BACKEND_PLAN_REVIEW.md`](BACKEND_PLAN_REVIEW.md).
+
+**Settled by the plan:** all fifteen `BR-EX-*` ruled (11 ACCEPT, 4 MODIFY, none
+refused); `BrokerSync` and `UNKNOWN` resolved exactly as slice S1 concluded
+independently; nine panel states and five freshness values match verbatim;
+`PromotionStage` confirmed Portal-owned.
+
+**Changed on this side in response** (slice S1b, before the review was written):
+the envelope in `contracts.ts` now carries `projectionEpoch`,
+`projectionSequence`, `sourceCursor`, `lagMs`, `panelState` and
+`capabilitySnapshotId`; `VerificationResult`, `CapabilityState`, `RiskTier` and
+`DeliveryProfile` are new; `VerificationChip`, `CapabilityChip` and
+`ProfileBadge` are new components. Mechanism M2 no longer sends an interval, M3
+resumes on `{epoch}:{sequence}`, and §3.1's ladder is restated as "finest
+interval that fits" rather than fixed brackets — that last one corrects a mistake
+this side made first.
+
+**Open with codex** — seven new requests, `BR-EX-16 … BR-EX-22`, in review §4.
+The four that gate a frontend slice: **BR-EX-17** bidirectional keyset (blocks
+S2), **BR-EX-19** server-computed age (blocks S3), **BR-EX-20** delivery profile
+in the registry (blocks S3), **BR-EX-16** source completeness class (blocks S4).
+
+**The one architectural disagreement** is review F-1: phases 1 and 2 read and
+write only Portal-owned records and need no Trading System, yet the build order
+places them behind three Rust slices, two of which wait on an owner decision
+about private networking. The ask is to split `EX-BE-04` into a control-plane
+half and a projection half, so Approval Inbox and Gate R1 can reach real data
+while that approval is pending.

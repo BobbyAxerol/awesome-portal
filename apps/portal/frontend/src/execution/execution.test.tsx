@@ -23,11 +23,14 @@ import {
 import {
   AuthorityBadge,
   BrokerSyncChip,
+  CapabilityChip,
   EnvironmentBadge,
   FreshnessIndicator,
   formatAge,
   OperationStatusChip,
   OrderStatusChip,
+  ProfileBadge,
+  VerificationChip,
 } from "./components/badges";
 import { ChartTile, envelopeCaption } from "./components/chart";
 import { CommandPlanDrawer } from "./components/drawer";
@@ -460,5 +463,107 @@ describe("blotter bucketing", () => {
   it("treats a risk denial as a rejection, not as an open order", () => {
     expect(BLOTTER_BUCKET.REJECTED).toContain("DENIED");
     expect(BLOTTER_BUCKET.OPEN).not.toContain("DENIED");
+  });
+});
+
+/* Added when the backend master plan landed. Each of these fails if a contract
+ * the plan rules on is quietly softened back into something more comfortable. */
+
+describe("verification is a second axis, not a nicer word for status", () => {
+  it("renders UNCERTAIN as bad, not as a neutral in-progress state", () => {
+    const { container } = render(<VerificationChip result="UNCERTAIN" />);
+    expect(container.querySelector('[data-tone="bad"]')).not.toBeNull();
+    // The distinction the tone exists to protect: PENDING is waiting,
+    // UNCERTAIN is escalating. They must not read the same.
+    cleanup();
+    const pending = render(<VerificationChip result="PENDING" />).container;
+    expect(pending.querySelector('[data-tone="bad"]')).toBeNull();
+  });
+
+  it("tells the operator to escalate rather than wait", () => {
+    render(<VerificationChip result="UNCERTAIN" />);
+    expect(screen.getByTitle(/escalate; do not wait/i)).toBeTruthy();
+  });
+
+  it("never renders PARTIAL as success, in this vocabulary either", () => {
+    const { container } = render(<VerificationChip result="PARTIAL" />);
+    expect(container.querySelector('[data-tone="good"]')).toBeNull();
+  });
+});
+
+describe("capability state is per capability", () => {
+  it("lets reads be supported while commands are disabled", () => {
+    const { container } = render(
+      <>
+        <CapabilityChip name="orders.read" state="SUPPORTED" />
+        <CapabilityChip name="orders.command" state="DISABLED" />
+      </>,
+    );
+    // Two chips, two different tones. A single rolled-up health badge could not
+    // express this, which is why the backend plan forbids one.
+    const tones = [...container.querySelectorAll("[data-tone]")].map((n) =>
+      n.getAttribute("data-tone"),
+    );
+    expect(tones).toEqual(["good", "mute"]);
+  });
+
+  it("marks an incompatible capability as bad, not as merely off", () => {
+    const { container } = render(<CapabilityChip name="events" state="INCOMPATIBLE" />);
+    expect(container.querySelector('[data-tone="bad"]')).not.toBeNull();
+  });
+});
+
+describe("delivery profile", () => {
+  it("marks shadow data, which otherwise looks exactly like production", () => {
+    render(<ProfileBadge profile="shadow" />);
+    expect(screen.getByText("SHADOW DATA")).toBeTruthy();
+    expect(screen.getByTitle(/not a production feed/i)).toBeTruthy();
+  });
+
+  it("marks fixture data", () => {
+    render(<ProfileBadge profile="fixture" />);
+    expect(screen.getByText("FIXTURE DATA")).toBeTruthy();
+  });
+
+  it("stays silent for profiles the guard band and environment badge already carry", () => {
+    // Rendering it here would be a second badge repeating the first. The rule
+    // is that this component covers exactly the gap nothing else covers.
+    for (const profile of ["paper", "sandbox", "live_canary", "live_full"] as const) {
+      const { container } = render(<ProfileBadge profile={profile} />);
+      expect(container.textContent, `${profile} should be carried elsewhere`).toBe("");
+      cleanup();
+    }
+  });
+});
+
+describe("envelope carries the projection facts the plan defines", () => {
+  it("keeps data age and projection lag as separate quantities", () => {
+    // A panel can be seconds-fresh off a projection that is minutes behind.
+    // One number cannot say both, so the envelope carries two.
+    const behind: Envelope = {
+      authority: "EXECUTION",
+      asOf: "2026-08-21T10:42:01Z",
+      freshness: "OK",
+      ageSeconds: 1.2,
+      lagMs: 240_000,
+    };
+    expect(behind.ageSeconds).toBeLessThan(2);
+    expect(behind.lagMs).toBeGreaterThan(60_000);
+  });
+
+  it("never presents a projection sequence as a source sequence", () => {
+    const projected: Envelope = {
+      authority: "EXECUTION",
+      asOf: "2026-08-21T10:42:01Z",
+      freshness: "OK",
+      projectionEpoch: "0a4c…",
+      projectionSequence: 8814,
+      sourceSequence: null,
+    };
+    // BR-EX-11 was ruled MODIFY: the Trading System publishes no global
+    // sequence and Portal is forbidden to fabricate one. A future refactor that
+    // "helpfully" fills sourceSequence from projectionSequence fails here.
+    expect(projected.sourceSequence).toBeNull();
+    expect(projected.projectionSequence).not.toBeNull();
   });
 });

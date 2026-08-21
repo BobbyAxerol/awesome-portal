@@ -111,25 +111,38 @@ export type Authority = "RESEARCH" | "EXECUTION" | "BROKER" | "DERIVED";
 export type FreshnessState = "OK" | "AGING" | "STALE" | "PAUSED" | "UNKNOWN";
 
 /**
- * The envelope every Execution read carries (guide §5).
+ * Position of a row in the Trading System's own ordering.
  *
- * Reconciled 2026-08-21 against
- * `trading_system_portal_contract_pack/extract/freshness-authority.json`
- * (`portal_envelope_mapping`). Three fields the guide describes as if the
- * Trading System supplies them, it does not:
+ * A tuple, not a number, because the Trading System publishes no global
+ * sequence. It is enough to resume a poll from where the last one stopped and
+ * enough to detect REORDERING — it is **not** enough to detect a missing row.
+ * See the note on `sourceSequence` below.
+ */
+export interface SourceCursor {
+  eventTs: string;
+  createdAt: string;
+  eventId: string;
+}
+
+/**
+ * The envelope every Execution read carries.
  *
- *   - `as_of` — no server-supplied value on list endpoints. It comes from the
- *     row's own `updated_at` / `ts` / `trade_time`.
- *   - `source_sequence` — **not on HTTP responses at all** today.
- *   - `freshness_state` — no single enum is emitted; the connector derives it.
+ * Two reconciliations produced this shape. The first (2026-08-21) checked the
+ * guide against `extract/freshness-authority.json` and found three fields the
+ * guide describes as Trading System-supplied that are not. The second checked it
+ * against the backend master plan §7.1, which is now the binding contract.
  *
- * The mapping doc's own instruction is the rule this interface encodes: the
+ * The rule the whole interface encodes is the mapping doc's own instruction: the
  * connector "MUST stamp its own read time separately and never present it as
  * Trading System authority". Hence `asOf` and `readAt` are two fields. Merging
  * them would let a fast read of a two-hour-old row render as two seconds fresh,
  * which is the exact failure the AuthorityBadge exists to prevent.
+ *
+ * Field names here are camelCase; the wire is snake_case (master plan §7.1).
+ * The adapter layer does that translation in one place.
  */
 export interface Envelope {
+  /** Wire: `source_authority`. */
   authority: Authority;
   /**
    * When the DATA was true — the row's own timestamp. ISO-8601 UTC.
@@ -143,24 +156,64 @@ export interface Envelope {
    * Never render this as Trading System authority.
    */
   readAt?: string | null;
+  /** Where this row sits in the source's own ordering (master plan §7.1). */
+  sourceCursor?: SourceCursor | null;
   /**
    * Monotonic per stream; a jump means events were missed.
    *
-   * Not exposed over HTTP today — it exists as `copy_event_outbox.sequence_id`
-   * and via `domain_events` ordering, neither of which the gateway serves. Until
-   * BR-EX-11 lands this is `null` and the M3 gap check cannot run, so a missed
-   * event is currently undetectable. That is a known hole, not a resolved one.
+   * **Permanently nullable.** BR-EX-11 was ruled MODIFY: the Trading System
+   * publishes no global sequence and Portal is forbidden to fabricate one
+   * (master plan §1.2). Gap detection therefore runs on `projectionSequence`
+   * instead, which is a weaker claim — see `projectionEpoch`.
    */
   sourceSequence?: number | null;
+  /**
+   * Identifies one build of the Portal projection. A change means the
+   * projection was rebuilt and every cursor from the previous epoch is void:
+   * the screen must resnapshot, not resume.
+   */
+  projectionEpoch?: string | null;
+  /**
+   * Monotonic **within** `projectionEpoch`. This is what M3 checks for gaps.
+   *
+   * Read the claim precisely: contiguous `projectionSequence` proves nothing was
+   * lost between the edge and this browser. It does **not** prove nothing was
+   * lost between the Trading System and the edge — today only `ORDER_STATUS`
+   * is event-driven and everything else is polled, so a state that changed and
+   * changed back between two polls leaves no trace at all. Never label this
+   * field, or anything derived from it, as a source sequence.
+   */
+  projectionSequence?: number | null;
   /**
    * Connector-derived, not read from a Trading System field. Sources per the
    * mapping doc: `/v1/health.checks.stale_or_bad_services` (heartbeat age over
    * 180s by default), broker adapter `circuit_open`, and data-layer feed
-   * staleness.
+   * staleness. Thresholds are versioned Portal registry policy per venue and
+   * dataset — never a constant in this client.
    */
   freshness: FreshnessState;
-  /** Age in seconds against `asOf`. Connector-computed; label it as such. */
+  /**
+   * Age of the DATA in seconds, measured `readAt − asOf` **by the server**.
+   *
+   * Server-computed on purpose. Computing it here would need the browser clock,
+   * which the same plan forbids for venue sessions; a laptop with a skewed clock
+   * would render a fresh panel as an hour stale.
+   */
   ageSeconds?: number | null;
+  /**
+   * Projection lag in milliseconds — how far the read model trails its source.
+   * A different quantity from `ageSeconds`: a panel can be seconds-fresh off a
+   * projection that is minutes behind.
+   */
+  lagMs?: number | null;
+  /** Which panel state this response resolves to (master plan §7.1). */
+  panelState?: PanelStatus;
+  /**
+   * Ties a rendered decision back to the exact compatibility observation that
+   * allowed it (master plan §6.1). Carried so an operator asking "why was this
+   * button disabled at 14:02" has an answer.
+   */
+  capabilitySnapshotId?: string | null;
   /** Non-fatal caveats the panel must surface rather than swallow. */
   warnings?: readonly string[];
   /** Broker snapshot digest, for BROKER authority. */
@@ -296,9 +349,10 @@ export const BLOTTER_BUCKET: Record<Exclude<BlotterFilter, "ALL">, readonly Orde
 export const BLOTTER_UNBUCKETED: readonly OrderStatus[] = ["CANCELED", "EXPIRED"];
 
 /**
- * Command/operation lifecycle. `202 ≠ success`: `AWAITING_APPLY` and
- * `APPLIED_UNVERIFIED` both mean the request was accepted and nothing is
- * confirmed yet.
+ * Where an operation sits in the Portal workflow. Portal-owned presentation.
+ *
+ * `202 ≠ success`: `AWAITING_APPLY` and `APPLIED_UNVERIFIED` both mean the
+ * request was accepted and nothing is confirmed yet.
  */
 export type OperationStatus =
   | "PLANNED"
@@ -307,6 +361,73 @@ export type OperationStatus =
   | "VERIFIED"
   | "PARTIAL"
   | "FAILED";
+
+/**
+ * What `verify` actually observed (master plan §7.3). A **different axis** from
+ * `OperationStatus`: that one is where the workflow is, this one is what the
+ * Trading System reported. An operation can be `APPLIED_UNVERIFIED` while its
+ * verification is `PENDING`, and the screen must be able to say both.
+ *
+ * `UNCERTAIN` is the value this whole surface exists for. It means the command
+ * may or may not have taken effect and we cannot tell. It must never render as
+ * a neutral grey chip beside `PENDING` — an operator who reads "we don't know
+ * whether we halted the strategy" as "still working on it" will wait instead of
+ * escalating. Its tone is `bad`, deliberately, even though nothing has been
+ * proven to have failed.
+ */
+export type VerificationResult =
+  | "PENDING"
+  | "ACKNOWLEDGED"
+  | "SUCCEEDED"
+  | "FAILED"
+  | "DENIED"
+  | "PARTIAL"
+  | "UNCERTAIN"
+  | "EXPIRED";
+
+/**
+ * Per-capability negotiation state (master plan §6.2).
+ *
+ * The plan's own rule: "a global green flag is forbidden". Reads may be
+ * `SUPPORTED` while the matching command path is `DISABLED`, so this is stored
+ * and rendered per capability, never rolled into one system-health badge.
+ */
+export type CapabilityState =
+  | "SUPPORTED"
+  | "READ_ONLY"
+  | "SHADOW_ONLY"
+  | "DISABLED"
+  | "INCOMPATIBLE";
+
+/**
+ * Risk tier of a command (master plan §9.2). Decides what the drawer must
+ * demand before Apply: R0 nothing beyond session, R1 a reason, R2 fresh auth
+ * plus a second person, R3 phishing-resistant step-up, R4 WebAuthn and dual
+ * approval.
+ *
+ * R3 and R4 are not a scale of the same thing. R3 is protective (halt, reduce)
+ * and R4 is risk-increasing (enable, expand). An emergency bypass built for R3
+ * must never be reachable from R4 — the drawer models them as separate paths
+ * rather than as one ladder with a threshold.
+ */
+export type RiskTier = "R0" | "R1" | "R2" | "R3" | "R4";
+
+/**
+ * How real a screen's data is right now (master plan §12.3).
+ *
+ * This is not decoration. In `shadow` the numbers are real reads compared
+ * against golden truth, and they look exactly like `live_full` numbers. Without
+ * this rendered somewhere the operator cannot miss it, the surface's central
+ * promise — that you can always tell what you are looking at — is broken by the
+ * one mode designed to look identical to production.
+ */
+export type DeliveryProfile =
+  | "fixture"
+  | "shadow"
+  | "paper"
+  | "sandbox"
+  | "live_canary"
+  | "live_full";
 
 /** Evidence check outcome. `!` is a watch item: visible, non-blocking. */
 export type EvidenceMark = "pass" | "watch" | "fail" | "insufficient";

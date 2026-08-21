@@ -11,12 +11,15 @@
 import type {
   Authority,
   BrokerSync,
+  CapabilityState,
+  DeliveryProfile,
   Envelope,
   FreshnessState,
   OperationStatus,
   OrderStatus,
   PromotionStage,
   RuntimeState,
+  VerificationResult,
 } from "../contracts";
 
 /* -------------------------------------------------------------------------
@@ -177,6 +180,35 @@ const RUNTIME_TONE: Record<RuntimeState, ChipTone> = {
   ARCHIVED: "mute",
 };
 
+/**
+ * Verification outcome tones.
+ *
+ * `UNCERTAIN` is `bad` on purpose. Nothing has been proven to have failed, so
+ * `warn` is the defensible reading — but "we asked the system to halt and we
+ * cannot tell whether it did" is the state an operator must act on fastest, and
+ * an amber chip beside a grey `PENDING` invites waiting. The one place this
+ * surface is allowed to overstate is the place where understating costs money.
+ */
+const VERIFY_TONE: Record<VerificationResult, ChipTone> = {
+  PENDING: "mute",
+  ACKNOWLEDGED: "mute",
+  SUCCEEDED: "good",
+  FAILED: "bad",
+  DENIED: "bad",
+  PARTIAL: "warn",
+  UNCERTAIN: "bad",
+  EXPIRED: "mute",
+};
+
+/** Per-capability, never rolled up: reads can be live while commands are off. */
+const CAPABILITY_TONE: Record<CapabilityState, ChipTone> = {
+  SUPPORTED: "good",
+  READ_ONLY: "warn",
+  SHADOW_ONLY: "warn",
+  DISABLED: "mute",
+  INCOMPATIBLE: "bad",
+};
+
 const SYNC_TONE: Record<BrokerSync, ChipTone> = {
   OK: "good",
   STALE: "warn",
@@ -256,4 +288,65 @@ export function EnvironmentBadge({ stage }: { stage: PromotionStage }) {
 /** Authority word only, for dense table headers that cannot fit the full badge. */
 export function AuthorityWord({ authority }: { authority: Authority }) {
   return <span className="exec-authority-name">{authority}</span>;
+}
+
+/**
+ * What `verify` observed. Separate from the operation's workflow state — a row
+ * shows both, because "applied, not yet verified" and "applied, verification
+ * came back UNCERTAIN" are different situations with the same workflow state.
+ */
+export function VerificationChip({ result }: { result: VerificationResult }) {
+  const title =
+    result === "UNCERTAIN"
+      ? "The command may or may not have taken effect and the Trading System cannot tell us which. Escalate; do not wait."
+      : result === "PENDING"
+        ? "Accepted, no outcome observed yet. 202 is not success."
+        : undefined;
+  return <StatusChip label={result} tone={VERIFY_TONE[result]} title={title} />;
+}
+
+/**
+ * One negotiated capability. Rendered per capability by design: the backend
+ * plan forbids a global green flag, and this component is where that rule is
+ * either kept or quietly broken.
+ */
+export function CapabilityChip({ name, state }: { name: string; state: CapabilityState }) {
+  return <StatusChip label={`${name} ${state}`} tone={CAPABILITY_TONE[state]} />;
+}
+
+const PROFILE_LABEL: Record<DeliveryProfile, string> = {
+  fixture: "FIXTURE DATA",
+  shadow: "SHADOW DATA",
+  paper: "PAPER",
+  sandbox: "SANDBOX",
+  live_canary: "LIVE · CANARY",
+  live_full: "LIVE",
+};
+
+/**
+ * Which delivery profile the screen's data is coming from.
+ *
+ * Only rendered for the three profiles a reader could mistake for production.
+ * `paper`, `sandbox` and the two live profiles are already carried by
+ * `EnvironmentBadge` and by the guard band, so repeating them would add a
+ * second badge saying what the first one said. `fixture` and `shadow` have no
+ * other tell at all: shadow reads are real values from the real system, shown
+ * on the real screen, and nothing else on the page distinguishes them from
+ * live truth.
+ */
+export function ProfileBadge({ profile }: { profile: DeliveryProfile }) {
+  if (profile !== "fixture" && profile !== "shadow") return null;
+  return (
+    <span
+      className="exec-profile"
+      data-profile={profile}
+      title={
+        profile === "shadow"
+          ? "Real reads, compared against captured truth. Not a production feed. No command on this screen is live."
+          : "Fixture data. Nothing on this screen came from the Trading System."
+      }
+    >
+      {PROFILE_LABEL[profile]}
+    </span>
+  );
 }

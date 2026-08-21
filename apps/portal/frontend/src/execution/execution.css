@@ -168,6 +168,28 @@
 .exec-env[data-stage="LIVE_CANARY"] { color: var(--env-canary); }
 .exec-env[data-stage="LIVE_FULL"] { color: var(--env-live); }
 
+/* Delivery profile — only rendered for fixture and shadow, the two profiles a
+ * reader could mistake for production. Hatched rather than merely coloured: a
+ * shadow screen must be identifiable from across a room, and colour alone puts
+ * that safety claim behind the viewer's ability to separate two hues. */
+.exec-profile {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--space-2);
+  border: 1px dashed currentColor;
+  color: var(--warn);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.08em;
+  background: repeating-linear-gradient(
+    135deg,
+    transparent,
+    transparent 4px,
+    var(--warn-bg) 4px,
+    var(--warn-bg) 8px
+  );
+}
+
 .exec-guard {
   display: flex;
   align-items: center;
