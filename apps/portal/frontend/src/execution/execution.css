@@ -1172,3 +1172,45 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+
+/* Partial and stale keep the table and say what is missing above it. Blanking
+ * a screen because one linked fact timed out withholds work that can be done. */
+.exec-inbox-partial {
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--warn);
+  background: var(--warn-bg);
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+}
+
+/* An absent count is stated, never rendered as zero: "0 PENDING" is a specific
+ * claim and it is not the claim we are entitled to make yet. */
+.exec-inbox-counts-absent {
+  color: var(--ink-mute);
+  font-style: italic;
+}
+
+.exec-inbox-filter:disabled {
+  cursor: not-allowed;
+  color: var(--ink-mute);
+  border-color: var(--line-soft);
+}
+
+.exec-gate-banner {
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--warn);
+  background: var(--warn-bg);
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+}
+
+/* A closed gate is a record, not a warning. Muted rather than amber: nothing
+ * here needs attention, it needs reading. */
+.exec-gate-banner.exec-gate-decided {
+  border-left-color: var(--line-strong);
+  background: var(--surface-2);
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.04em;
+}

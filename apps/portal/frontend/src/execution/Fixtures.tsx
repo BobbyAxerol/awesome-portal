@@ -743,10 +743,22 @@ export default function ExecutionFixtures() {
                 actor="Lan"
               />
             </Case>
+            <Case caption="loading — no counts yet, and none invented">
+              <ApprovalInbox page={{ rows: [], totalCount: 0 }} counts={null} filter="INBOX" status="loading" />
+            </Case>
+            <Case caption="partial — rows are real, the queue may be incomplete">
+              <ApprovalInbox
+                page={{ rows: INBOX_ROWS.slice(0, 2), totalCount: 5, filteredCount: 2 }}
+                counts={{ pending: 5, overdue: 1, dueSoon: 1 }}
+                filter="INBOX"
+                status="partial"
+                partialReason="Broker sync could not be read for 2 of 5 requests."
+              />
+            </Case>
             <Case caption="denied — the viewer lacks the scope, which is not an empty queue">
               <ApprovalInbox
                 page={{ rows: [], totalCount: 0 }}
-                counts={{ pending: 0, overdue: 0, dueSoon: 0 }}
+                counts={null}
                 filter="INBOX"
                 status="denied"
                 reason="portal.governance.approvals.read"
@@ -805,6 +817,35 @@ export default function ExecutionFixtures() {
                   { label: "capacity evidence", outcome: "insufficient" as const },
                 ]}
                 locks={["BLOCKING_FINDINGS", "EXPIRED"]}
+              />
+            </Case>
+            <Case caption="already decided — a record, not a form; the controls are gone">
+              <GateR1Review
+                approvalId="AP-201"
+                alphaLabel="RSI v1.7"
+                quorumMet={2}
+                quorumRequired={2}
+                policyVersion="approval.v3"
+                creator="Minh"
+                actor="Lan"
+                passport={R1_PASSPORT}
+                checklist={R1_CHECKLIST}
+                decided={{ outcome: "APPROVED_WITH_CONDITION", by: "Lan", at: "2026-08-21T09:12Z" }}
+              />
+            </Case>
+            <Case caption="unavailable — still says which gate failed to load">
+              <GateR1Review
+                approvalId="AP-201"
+                alphaLabel="RSI v1.7"
+                quorumMet={0}
+                quorumRequired={2}
+                policyVersion="approval.v3"
+                creator="Minh"
+                actor="Lan"
+                passport={[]}
+                checklist={[]}
+                status="unavailable"
+                reason="Governance edge unreachable."
               />
             </Case>
           </div>

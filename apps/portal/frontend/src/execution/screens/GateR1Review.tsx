@@ -75,6 +75,8 @@ export function GateR1Review({
   locks = [],
   status = "ok",
   reason,
+  partialReason,
+  decided,
   evidence,
   onApprove,
   onDeny,
@@ -98,15 +100,27 @@ export function GateR1Review({
   locks?: readonly DecisionLock[];
   status?: PanelStatus;
   reason?: string;
+  /** What is missing when `partial`. The review still renders. */
+  partialReason?: string;
+  /**
+   * Set once the gate has been decided. The screen becomes a record rather than
+   * a form: every decision control goes, because offering Approve on something
+   * already approved invites a second operation nobody asked for.
+   */
+  decided?: { outcome: "APPROVED" | "DENIED" | "APPROVED_WITH_CONDITION"; by: string; at: string } | null;
   /** The equity-across-window-roles panel, or its state when absent. */
   evidence?: ReactNode;
   onApprove?: () => void;
   onDeny?: () => void;
   onRequestCondition?: () => void;
 }) {
-  if (status !== "ok") {
+  // `partial` and `stale` still render the review — a reviewer can read a
+  // passport whose evidence chart timed out. The rest cannot be reasoned about
+  // at all, so they replace the screen.
+  if (status !== "ok" && status !== "partial" && status !== "stale") {
     return (
       <section className="exec-gate" aria-label={`Gate R1 review ${approvalId}`}>
+        <div className="exec-gate-kicker">GATE R1 · Research Evidence Approval</div>
         <PanelState status={status} reason={reason ?? "This review cannot be shown."} />
       </section>
     );
@@ -120,6 +134,10 @@ export function GateR1Review({
     ? Array.from(new Set<DecisionLock>(["SELF_APPROVAL", ...locks]))
     : locks;
 
+  // A decided gate is a record. Every control goes rather than being disabled:
+  // a greyed Approve on an approved request reads as "not yet", which is the
+  // opposite of what happened.
+  const isDecided = Boolean(decided);
   const blocking = checklist.filter((c) => c.outcome === "fail").length;
   const warnings = checklist.filter((c) => c.outcome === "watch").length;
   const insufficient = checklist.filter((c) => c.outcome === "insufficient").length;
@@ -149,6 +167,24 @@ export function GateR1Review({
             : `separation-of-duty OK — creator (${creator}) ≠ you (${actor})`}
         </div>
       </header>
+
+      {status === "partial" ? (
+        <div className="exec-gate-banner">
+          {partialReason ?? "Part of this review could not be read. What is shown below is real; do not treat the absence of a finding as a pass."}
+        </div>
+      ) : null}
+
+      {status === "stale" ? (
+        <div className="exec-gate-banner">
+          {reason ?? "This review is older than its freshness budget. Refresh before deciding."}
+        </div>
+      ) : null}
+
+      {decided ? (
+        <div className="exec-gate-banner exec-gate-decided">
+          {decided.outcome.replace(/_/g, " ")} by {decided.by} at {decided.at}. This gate is closed.
+        </div>
+      ) : null}
 
       <div className="exec-gate-panel">
         <div className="exec-tile-title">Artifact passport — immutable</div>
@@ -200,22 +236,24 @@ export function GateR1Review({
 
       {evidence ? <div className="exec-gate-panel">{evidence}</div> : null}
 
-      <div className="exec-gate-decision">
-        <button type="button" className="exec-btn-apply" disabled={locked} onClick={onApprove}>
-          Approve
-        </button>
-        <button type="button" className="exec-btn-ghost" onClick={onRequestCondition}>
-          Approve with condition
-        </button>
-        {/* Deny is never locked. A reviewer who cannot approve can always
-            refuse, and blocking that would leave a bad request sitting in the
-            queue with nobody able to clear it. */}
-        <button type="button" className="exec-btn-ghost" onClick={onDeny}>
-          Deny
-        </button>
-      </div>
+      {isDecided ? null : (
+        <div className="exec-gate-decision">
+          <button type="button" className="exec-btn-apply" disabled={locked} onClick={onApprove}>
+            Approve
+          </button>
+          <button type="button" className="exec-btn-ghost" onClick={onRequestCondition}>
+            Approve with condition
+          </button>
+          {/* Deny is never locked. A reviewer who cannot approve can always
+              refuse, and blocking that would leave a bad request sitting in the
+              queue with nobody able to clear it. */}
+          <button type="button" className="exec-btn-ghost" onClick={onDeny}>
+            Deny
+          </button>
+        </div>
+      )}
 
-      {locked ? (
+      {locked && !isDecided ? (
         <div className="exec-disabled-reason">
           {effectiveLocks.map((lock) => LOCK_REASON[lock]).join(" ")}
         </div>

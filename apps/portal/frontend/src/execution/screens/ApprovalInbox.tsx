@@ -66,6 +66,35 @@ export interface InboxCounts {
   dueSoon: number;
 }
 
+/**
+ * What the header says while the queue is still loading, or could not be read.
+ *
+ * `null` counts render as a stated gap rather than as zeros. "0 PENDING" is a
+ * specific, checkable claim — inbox zero — and showing it before the server has
+ * answered tells an operator their queue is clear when nobody knows yet. This is
+ * rule §3.3: never render `0` in place of an absent number.
+ */
+function CountLine({ counts, status }: { counts: InboxCounts | null; status: PanelStatus }) {
+  if (counts) {
+    return (
+      <div className="exec-inbox-counts">
+        <strong>{counts.pending}</strong> PENDING
+        {counts.overdue > 0 ? ` · ${counts.overdue} overdue` : null}
+        {counts.dueSoon > 0 ? ` · ${counts.dueSoon} due < 8h` : null}
+      </div>
+    );
+  }
+  return (
+    <div className="exec-inbox-counts exec-inbox-counts-absent">
+      {status === "loading"
+        ? "counting…"
+        : status === "denied"
+          ? "queue size withheld"
+          : "queue size unavailable"}
+    </div>
+  );
+}
+
 /** The hi-fi's filter chips. Applied server-side (BR-EX-02), never in the browser. */
 export const INBOX_FILTERS = [
   "INBOX",
@@ -138,6 +167,7 @@ export function ApprovalInbox({
   onFilterChange,
   status = "ok",
   reason,
+  partialReason,
   policyVersion,
   actor,
   actorRoles,
@@ -147,12 +177,21 @@ export function ApprovalInbox({
   onLoadNewer,
 }: {
   page: KeysetPage<ApprovalRow>;
-  /** Whole-queue counts from the server, not from `page.rows`. */
-  counts: InboxCounts;
+  /**
+   * Whole-queue counts from the server, not from `page.rows`. `null` while
+   * loading or when the queue could not be counted — never substituted with 0.
+   */
+  counts: InboxCounts | null;
   filter: InboxFilter;
   onFilterChange?: (next: InboxFilter) => void;
   status?: PanelStatus;
   reason?: string;
+  /**
+   * Why the queue is partial. `partial` keeps the table — some rows arrived and
+   * they are real — and states what is missing above it. Blanking the screen
+   * because one linked fact timed out would withhold work that can be done.
+   */
+  partialReason?: string;
   /** `approval.v3` — which policy version judged these requests. */
   policyVersion?: string;
   actor?: string;
@@ -167,11 +206,7 @@ export function ApprovalInbox({
     <section className="exec-inbox" aria-label="Approval Inbox">
       <header className="exec-inbox-head">
         <div className="exec-tile-title">Approval Inbox</div>
-        <div className="exec-inbox-counts">
-          <strong>{counts.pending}</strong> PENDING
-          {counts.overdue > 0 ? ` · ${counts.overdue} overdue` : null}
-          {counts.dueSoon > 0 ? ` · ${counts.dueSoon} due < 8h` : null}
-        </div>
+        <CountLine counts={counts} status={status} />
         {/* Who is judging, and by which policy. Without it an operator cannot
             tell whether a blocked Approve is their role or the request. */}
         {policyVersion || actor ? (
@@ -184,6 +219,18 @@ export function ApprovalInbox({
         ) : null}
       </header>
 
+      {status === "partial" ? (
+        <div className="exec-inbox-partial">
+          {partialReason ?? "Some linked facts could not be read. The rows below are real; the queue may be incomplete."}
+        </div>
+      ) : null}
+
+      {status === "stale" ? (
+        <div className="exec-inbox-partial">
+          {reason ?? "This queue is older than its freshness budget. Decide from it only after refreshing."}
+        </div>
+      ) : null}
+
       <div className="exec-inbox-filters" role="group" aria-label="Filters">
         {INBOX_FILTERS.map((f) => (
           <button
@@ -192,6 +239,7 @@ export function ApprovalInbox({
             className="exec-inbox-filter"
             data-active={f === filter ? "true" : undefined}
             aria-pressed={f === filter}
+            disabled={status === "loading" || status === "denied" || status === "unavailable"}
             onClick={() => onFilterChange?.(f)}
           >
             {FILTER_LABEL[f]}

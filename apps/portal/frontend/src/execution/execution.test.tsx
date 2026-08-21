@@ -1776,3 +1776,125 @@ describe("Gate R1 Review", () => {
     expect(container.querySelector("button")).toBeNull();
   });
 });
+
+describe("Approval Inbox — the full state set", () => {
+  const counts = { pending: 5, overdue: 1, dueSoon: 1 };
+
+  it("never renders a count it does not have as zero", () => {
+    // "0 PENDING" is inbox zero — a specific, checkable claim. Showing it before
+    // the server answered tells an operator their queue is clear when nobody
+    // knows yet (rule §3.3).
+    const { container } = render(
+      <ApprovalInbox page={inboxPage([])} counts={null} filter="INBOX" status="loading" />,
+    );
+    expect(container.querySelector(".exec-inbox-counts")?.textContent).toBe("counting…");
+    expect(container.querySelector(".exec-inbox-counts")?.textContent).not.toContain("0");
+  });
+
+  it("distinguishes a withheld count from an unreadable one", () => {
+    const { container, rerender } = render(
+      <ApprovalInbox page={inboxPage([])} counts={null} filter="INBOX" status="denied" />,
+    );
+    expect(container.querySelector(".exec-inbox-counts")?.textContent).toBe("queue size withheld");
+    rerender(<ApprovalInbox page={inboxPage([])} counts={null} filter="INBOX" status="unavailable" />);
+    expect(container.querySelector(".exec-inbox-counts")?.textContent).toBe("queue size unavailable");
+  });
+
+  it("renders a skeleton while loading, not an empty queue", () => {
+    const { container } = render(
+      <ApprovalInbox page={inboxPage([])} counts={null} filter="INBOX" status="loading" />,
+    );
+    // The skeleton is deliberately not an `.exec-state` box — it is aria-hidden
+    // scaffolding with one spoken announcement beside it.
+    expect(container.querySelectorAll(".exec-skeleton-block").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Inbox zero/)).toBeNull();
+  });
+
+  it("keeps the rows on a partial read and says what is missing", () => {
+    // Blanking the screen because one linked fact timed out withholds work that
+    // can be done.
+    render(
+      <ApprovalInbox
+        page={inboxPage([inboxRow()])}
+        counts={counts}
+        filter="INBOX"
+        status="partial"
+        partialReason="Broker sync could not be read for 2 of 5 requests."
+      />,
+    );
+    expect(screen.getByText("AP-352")).toBeTruthy();
+    expect(screen.getByText(/Broker sync could not be read/)).toBeTruthy();
+  });
+
+  it("warns rather than blanks when the queue is stale", () => {
+    render(
+      <ApprovalInbox page={inboxPage([inboxRow()])} counts={counts} filter="INBOX" status="stale" />,
+    );
+    expect(screen.getByText("AP-352")).toBeTruthy();
+    expect(screen.getByText(/older than its freshness budget/)).toBeTruthy();
+  });
+
+  it("makes the filters inert when a query is already known to fail", () => {
+    render(<ApprovalInbox page={inboxPage([])} counts={null} filter="INBOX" status="denied" />);
+    expect(screen.getByRole("button", { name: "Overdue" })).toHaveProperty("disabled", true);
+  });
+
+  it("leaves the filters usable on a partial read", () => {
+    render(
+      <ApprovalInbox page={inboxPage([inboxRow()])} counts={counts} filter="INBOX" status="partial" />,
+    );
+    expect(screen.getByRole("button", { name: "Overdue" })).toHaveProperty("disabled", false);
+  });
+});
+
+describe("Gate R1 — the full state set", () => {
+  it("still renders the review when part of it could not be read", () => {
+    render(gate({ status: "partial", partialReason: "The equity evidence chart timed out." }));
+    expect(screen.getByText(/Artifact passport/)).toBeTruthy();
+    expect(screen.getByText("The equity evidence chart timed out.")).toBeTruthy();
+    // And the decision is still reachable: a reviewer can read a passport whose
+    // evidence chart failed to load.
+    expect(screen.getByRole("button", { name: "Approve" })).toBeTruthy();
+  });
+
+  it("replaces the screen only for states that cannot be reasoned about", () => {
+    for (const status of ["denied", "unavailable", "empty", "insufficient_data"] as const) {
+      const { container } = render(gate({ status, reason: "because" }));
+      expect(container.querySelector(".exec-gate-decision"), status).toBeNull();
+      expect(container.querySelector(".exec-state")?.getAttribute("data-status")).toBe(status);
+      cleanup();
+    }
+    // Loading is the same refusal with a different rendering: a skeleton, not a
+    // state box.
+    const loading = render(gate({ status: "loading" })).container;
+    expect(loading.querySelector(".exec-gate-decision")).toBeNull();
+    expect(loading.querySelectorAll(".exec-skeleton-block").length).toBeGreaterThan(0);
+  });
+
+  it("keeps the gate identifiable even when it cannot be shown", () => {
+    // A bare error box does not tell the reviewer which gate failed to load.
+    render(gate({ status: "unavailable", reason: "edge unreachable" }));
+    expect(screen.getByText(/GATE R1/)).toBeTruthy();
+  });
+
+  it("removes the decision controls once the gate is decided", () => {
+    // A greyed Approve on an approved request reads as "not yet", which is the
+    // opposite of what happened.
+    const { container } = render(
+      gate({ decided: { outcome: "APPROVED_WITH_CONDITION", by: "Minh", at: "2026-08-21T09:12Z" } }),
+    );
+    expect(container.querySelector(".exec-gate-decision")).toBeNull();
+    expect(screen.getByText(/APPROVED WITH CONDITION by Minh/)).toBeTruthy();
+    expect(screen.getByText(/This gate is closed/)).toBeTruthy();
+  });
+
+  it("does not print a lock reason on a gate that is already closed", () => {
+    render(
+      gate({
+        actor: "Minh",
+        decided: { outcome: "DENIED", by: "Lan", at: "2026-08-21T09:12Z" },
+      }),
+    );
+    expect(screen.queryByText(/self-approval prohibited/)).toBeNull();
+  });
+});

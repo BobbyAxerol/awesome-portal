@@ -140,7 +140,12 @@ export function KeysetTable<T>({
   // A panel with nothing to show says which kind of nothing it is. `empty` and
   // `insufficient_data` are different claims and both are different from a
   // table that is merely still loading.
-  if (status !== "ok" && status !== "partial") {
+  //
+  // `partial` and `stale` are not in that set: they describe rows we have. An
+  // operator can act on a list they know is four minutes old, and a list
+  // missing two of five linked facts still holds three that are complete.
+  // Replacing either with a state box withholds work that can be done.
+  if (status !== "ok" && status !== "partial" && status !== "stale") {
     return <PanelState status={status} reason={reason} />;
   }
   if (rows.length === 0) {
