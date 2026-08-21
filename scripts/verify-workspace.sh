@@ -197,9 +197,18 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/execution-contracts/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/ts-contract-v1/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/ts-adapter-v1/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/edge-auth/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/ts-transport/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/edge-service/src/main.rs" \
   "${ROOT_DIR}/deploy/images/execution-edge-ci.Dockerfile" \
+  "${ROOT_DIR}/deploy/images/execution-edge.Dockerfile" \
+  "${ROOT_DIR}/deploy/compose.execution-edge.yaml" \
+  "${ROOT_DIR}/deploy/.env.execution-edge.example" \
   "${ROOT_DIR}/scripts/execution-edge-test.sh" \
+  "${ROOT_DIR}/scripts/execution-edge-live-probe.sh" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md" \
+  "${ROOT_DIR}/apps/control-api/src/execution/delegation.ts" \
+  "${ROOT_DIR}/apps/control-api/test/execution-delegation.spec.ts" \
   "${ROOT_DIR}/apps/control-api/test/facade.spec.ts" \
   "${ROOT_DIR}/upgrade/backend/BAR_07_CONTROL_API_FACADE.md" \
   "${ROOT_DIR}/apps/control-api/src/main.ts" \
@@ -518,6 +527,7 @@ bash -n \
   "${ROOT_DIR}/apps/portal/scripts/run_frontend.sh" \
   "${ROOT_DIR}/scripts/verify-m0-golden.sh" \
   "${ROOT_DIR}/scripts/execution-edge-test.sh" \
+  "${ROOT_DIR}/scripts/execution-edge-live-probe.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
   "${ROOT_DIR}/apps/portal/scripts/test_backend.sh" \
   "${ROOT_DIR}/features/roadmap-task-board/tooling/clean-generated.sh"
@@ -537,4 +547,7 @@ docker compose --project-directory "${ROOT_DIR}" -f "${ROOT_DIR}/compose.yaml" c
 docker compose --project-directory "${ROOT_DIR}" \
   --env-file "${ROOT_DIR}/deploy/.env.production.example" \
   -f "${ROOT_DIR}/deploy/compose.production.yaml" config --quiet
+docker compose --project-directory "${ROOT_DIR}" \
+  --env-file "${ROOT_DIR}/deploy/.env.execution-edge.example" \
+  -f "${ROOT_DIR}/deploy/compose.execution-edge.yaml" config --quiet
 printf 'Portal monorepo verification passed.\n'

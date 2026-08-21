@@ -1,8 +1,11 @@
 [workspace]
 members = [
   "crates/execution-contracts",
+  "crates/edge-auth",
+  "crates/edge-service",
   "crates/ts-contract-v1",
   "crates/ts-adapter-v1",
+  "crates/ts-transport",
 ]
 resolver = "2"
 
@@ -14,11 +17,30 @@ license = "Apache-2.0"
 repository = "https://github.com/BobbyAxerol/awesome-portal"
 
 [workspace.dependencies]
-chrono = { version = "0.4.40", default-features = false, features = ["serde"] }
+chrono = { version = "0.4.40", default-features = false, features = ["clock", "serde"] }
+axum = { version = "0.7.9", features = ["json"] }
+axum-server = { version = "0.7.2", features = ["tls-rustls"] }
+base64 = "0.22.1"
+futures-util = "0.3.31"
+hex = "0.4.3"
+idna = "=1.0.3"
+idna_adapter = "=1.0.0"
+jsonwebtoken = "9.3.1"
+reqwest = { version = "=0.12.15", default-features = false, features = ["http2", "json", "rustls-tls", "stream"] }
 rust_decimal = { version = "1.37.1", features = ["serde-with-str"] }
+rustls = "0.23.25"
+rustls-pemfile = "2.2.0"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
+sha2 = "0.10.8"
 thiserror = "2.0.12"
+time = "=0.3.41"
+tokio = { version = "1.44.1", features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+tower = "0.5.2"
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt", "json"] }
+url = "=2.5.4"
+uuid = { version = "1.16.0", features = ["serde", "v7"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

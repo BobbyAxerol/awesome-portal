@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 
-use std::{fmt, str::FromStr};
+use std::{collections::BTreeMap, fmt, str::FromStr};
 
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
@@ -183,6 +183,54 @@ pub struct ReadEnvelope<T> {
     pub source: SourceFacts,
     pub warnings: Vec<ContractWarning>,
     pub data: T,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ExecutionReadCapability {
+    Contracts,
+    Health,
+    Capabilities,
+    Orders,
+    Fills,
+    Positions,
+    Events,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum CapabilityState {
+    Supported,
+    ReadOnly,
+    ShadowOnly,
+    Disabled,
+    Incompatible,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CapabilityObservation {
+    pub state: CapabilityState,
+    pub reason: String,
+    pub checked_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CompatibilityIdentity {
+    pub adapter_id: String,
+    pub source_gateway_digest: String,
+    pub source_api_version: String,
+    pub source_contract_revision: String,
+    pub source_schema_version: String,
+    pub capability_snapshot_id: String,
+    pub contract_checked_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CapabilitySnapshot {
+    pub identity: CompatibilityIdentity,
+    pub capabilities: BTreeMap<ExecutionReadCapability, CapabilityObservation>,
+    pub observed_venue_products: Vec<String>,
+    pub warnings: Vec<ContractWarning>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

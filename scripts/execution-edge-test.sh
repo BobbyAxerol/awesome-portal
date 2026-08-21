@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Reproducible EX-BE-01 gate: immutable evidence + pinned Rust toolchain.
+# Reproducible EX-BE-01/02 gate: immutable evidence + pinned Rust toolchain.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -47,7 +47,7 @@ fi
   --security-opt no-new-privileges:true \
   --tmpfs /tmp:rw,exec,mode=1777,size=64m \
   --tmpfs /cargo:rw,exec,mode=1777,size=512m \
-  --tmpfs /target:rw,exec,mode=1777,size=1024m \
+  --tmpfs /target:rw,exec,mode=1777,size=3072m \
   -e HOME=/tmp \
   -e CARGO_HOME=/cargo \
   -e CARGO_TARGET_DIR=/target \
@@ -59,4 +59,4 @@ fi
     cargo clippy --locked --all-targets -- -D warnings
   '
 
-printf 'Execution edge Rust contracts and read-only adapter passed.\n'
+printf 'Execution edge contracts, auth, bounded transport and probes passed.\n'

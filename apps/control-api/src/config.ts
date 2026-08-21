@@ -70,6 +70,15 @@ const EnvSchema = z.object({
     .default("true"),
   FEATURE_PROXY_PLANNING: z.enum(["true", "false"]).default("true"),
   FEATURE_NATIVE_WORKSPACES: z.enum(["true", "false"]).default("true"),
+  FEATURE_EXECUTION_EDGE: z.enum(["true", "false"]).default("false"),
+  EXECUTION_EDGE_PRIVATE_KEY_FILE: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(1).optional(),
+  ),
+  EXECUTION_EDGE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("execution-k1"),
+  EXECUTION_EDGE_DELEGATION_ISSUER: z.string().min(1).default("portal-control-api"),
+  EXECUTION_EDGE_DELEGATION_AUDIENCE: z.string().min(1).default("portal-execution-edge"),
+  EXECUTION_EDGE_DELEGATION_TTL_SECONDS: z.coerce.number().int().min(1).max(60).default(45),
   OUTBOX_MAX_RESPONSE_BYTES: z.coerce.number().int().positive().default(64 * 1024),
 });
 
@@ -141,6 +150,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
   }
   if (config.AUTH_MODE === "dev" && !["local"].includes(config.PORTAL_ENV)) {
     throw new Error("AUTH_MODE=dev is only allowed with PORTAL_ENV=local");
+  }
+  if (config.FEATURE_EXECUTION_EDGE === "true" && !config.EXECUTION_EDGE_PRIVATE_KEY_FILE) {
+    throw new Error(
+      "FEATURE_EXECUTION_EDGE=true requires EXECUTION_EDGE_PRIVATE_KEY_FILE",
+    );
   }
   return config;
 }

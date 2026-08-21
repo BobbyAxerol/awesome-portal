@@ -1,0 +1,62 @@
+name: portal-execution-edge
+
+services:
+  execution-edge:
+    image: ${PORTAL_EXECUTION_EDGE_IMAGE:?set PORTAL_EXECUTION_EDGE_IMAGE to an immutable digest}
+    pull_policy: always
+    restart: unless-stopped
+    init: true
+    user: "65532:65532"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
+    ports:
+      - "${EDGE_PRIVATE_BIND_IP:?set the WireGuard address}:8443:8443"
+    volumes:
+      - type: bind
+        source: ${EDGE_SECRET_DIRECTORY:?set the root-only edge secret directory}
+        target: /run/secrets
+        read_only: true
+    environment:
+      RUST_LOG: ${EDGE_RUST_LOG:-info}
+      EDGE_BIND_ADDRESS: 0.0.0.0:8443
+      EDGE_HEALTH_BIND_ADDRESS: 127.0.0.1:9100
+      EDGE_ENVIRONMENT: ${EDGE_ENVIRONMENT:?paper, sandbox, or live}
+      EDGE_TLS_CERTIFICATE_FILE: /run/secrets/edge-server.crt
+      EDGE_TLS_PRIVATE_KEY_FILE: /run/secrets/edge-server.key
+      EDGE_TLS_CLIENT_CA_FILE: /run/secrets/sgp-client-ca.crt
+      EDGE_DELEGATION_JWKS_FILE: /run/secrets/control-api.jwks.json
+      EDGE_DELEGATION_ISSUER: ${EDGE_DELEGATION_ISSUER:-portal-control-api}
+      EDGE_DELEGATION_AUDIENCE: ${EDGE_DELEGATION_AUDIENCE:?use an environment-specific audience}
+      EDGE_DELEGATION_MAXIMUM_TTL_SECONDS: ${EDGE_DELEGATION_MAXIMUM_TTL_SECONDS:-60}
+      EDGE_SOURCE_ORIGIN: ${EDGE_SOURCE_ORIGIN:?set the private Trading System gateway origin}
+      EDGE_SOURCE_CA_FILE: /run/secrets/trading-system-ca.crt
+      EDGE_SOURCE_CLIENT_IDENTITY_FILE: ${EDGE_SOURCE_CLIENT_IDENTITY_FILE:-}
+      EDGE_SOURCE_API_KEY_FILE: ${EDGE_SOURCE_API_KEY_FILE:-}
+      EDGE_SOURCE_GATEWAY_DIGEST: ${EDGE_SOURCE_GATEWAY_DIGEST:?set the observed immutable gateway digest}
+      EDGE_PROBE_ALPHA_ID: ${EDGE_PROBE_ALPHA_ID:-}
+      EDGE_PROBE_INTERVAL_SECONDS: ${EDGE_PROBE_INTERVAL_SECONDS:-30}
+      EDGE_CONNECT_TIMEOUT_MS: ${EDGE_CONNECT_TIMEOUT_MS:-2000}
+      EDGE_REQUEST_TIMEOUT_MS: ${EDGE_REQUEST_TIMEOUT_MS:-5000}
+      EDGE_QUEUE_TIMEOUT_MS: ${EDGE_QUEUE_TIMEOUT_MS:-250}
+      EDGE_MAXIMUM_CONCURRENCY: ${EDGE_MAXIMUM_CONCURRENCY:-32}
+      EDGE_MAXIMUM_RESPONSE_BYTES: ${EDGE_MAXIMUM_RESPONSE_BYTES:-2097152}
+      EDGE_MAXIMUM_RETRIES: ${EDGE_MAXIMUM_RETRIES:-1}
+      EDGE_RETRY_BACKOFF_MS: ${EDGE_RETRY_BACKOFF_MS:-100}
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/portal-execution-edge", "healthcheck"]
+      interval: 15s
+      timeout: 3s
+      retries: 4
+      start_period: 15s
+    stop_grace_period: 15s
+    networks:
+      - execution-private
+
+networks:
+  execution-private:
+    driver: bridge

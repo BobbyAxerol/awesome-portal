@@ -797,6 +797,22 @@ deep-dive → ADR → slice → evidence discipline documented above.
   delegated auth, capability negotiation and read-only live probes remain
   `EX-BE-02`. Deep dive:
   [`EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md`](./backend/EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md).
+- **EX-BE-02 mTLS/delegated auth and read boundary (2026-08-21):** Rust now
+  provides a deployable AWS-HK-only edge with mandatory TLS 1.3 mTLS, local
+  JWKS RS256 verification, exact audience/environment/resource scope and a
+  maximum 60-second delegated-read TTL. Its exact-origin source client has
+  bounded queue/concurrency/timeouts/body/retry policy, never follows redirects
+  or environment proxies, and can call only the seven EX-BE-01 GET blueprints.
+  Digest and v1 contract negotiation fail closed before route probes; public
+  probes carry no API key and alpha reads refuse to run without a dedicated
+  service credential. Capability state is per route, not global. Evidence:
+  27/27 Rust tests, strict Clippy/rustfmt, fresh-PostgreSQL Control API suite,
+  TypeScript production build, 32.1 MB non-root production image and AWS
+  Compose render. Status is `FOUNDATION_COMPLETE / CROSS_CELL_EVIDENCE_PENDING`:
+  no approved WireGuard endpoint/PKI/credentials exist locally, so no live
+  SGP↔AWS success is claimed and every production registry flag remains false.
+  Deep dive:
+  [`EX_BE_02_MTLS_DELEGATED_AUTH_AND_PROBES.md`](./backend/EX_BE_02_MTLS_DELEGATED_AUTH_AND_PROBES.md).
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**

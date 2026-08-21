@@ -38,6 +38,9 @@ jobs:
       - name: Test Control API
         run: ./scripts/control-api-test.sh
 
+      - name: Test Rust execution edge
+        run: ./scripts/execution-edge-test.sh
+
       - name: Portal web visual baseline
         run: ./scripts/portal-web-visual.sh
 

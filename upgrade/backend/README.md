@@ -184,10 +184,18 @@ authority.
   Contract pack, dependency lock và CI image đều pin; 14/14 Rust tests,
   `rustfmt` và strict Clippy pass. Chi tiết:
   [`EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md`](./EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md).
-- Production integration chưa được kích hoạt. Thứ tự gần nhất là `EX-BE-02`
-  mTLS/delegated-auth, capability negotiation và read-only probes. Runtime
-  evidence luôn thắng schema/rollout prose; Portal chỉ dùng versioned HTTP API,
-  không đọc DB/Redis/CLI nội bộ.
+- `EX-BE-02` **foundation complete / cross-cell evidence pending:** AWS-HK-only
+  Rust edge bắt buộc TLS 1.3 mTLS + delegated RS256 read JWT tối đa 60 giây;
+  source transport exact-origin, GET-only, giới hạn queue/concurrency/timeout/
+  body/retry và negotiation digest/contract v1 fail-closed. 27/27 Rust tests,
+  strict Clippy/rustfmt, fresh-PG Control API suite, TypeScript production build,
+  production image non-root 32.1 MB và Compose render đều pass. Chưa có
+  WireGuard endpoint/PKI/credential production nên live SGP↔AWS vẫn
+  `INTEGRATION_PENDING`; registry flags giữ false. Chi tiết:
+  [`EX_BE_02_MTLS_DELEGATED_AUTH_AND_PROBES.md`](./EX_BE_02_MTLS_DELEGATED_AUTH_AND_PROBES.md).
+- Backend tiếp theo là `EX-BE-03`: projection schema, reducer, cursor/epoch,
+  replay/snapshot và freshness evaluator. Runtime evidence luôn thắng schema/
+  rollout prose; Portal chỉ dùng versioned HTTP API, không đọc DB/Redis/CLI.
 
 ## BAR-21 — Strategy Import & Quarantine Ingest foundation
 

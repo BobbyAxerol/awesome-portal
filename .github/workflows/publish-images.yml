@@ -90,6 +90,17 @@ jobs:
             type=ref,event=tag
             type=raw,value=latest,enable={{is_default_branch}}
 
+      - name: Derive execution edge image metadata
+        id: execution-edge-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image-prefix.outputs.value }}-execution-edge
+          tags: |
+            type=raw,value=sha-${{ github.sha }}
+            type=ref,event=branch
+            type=ref,event=tag
+            type=raw,value=latest,enable={{is_default_branch}}
+
       - name: Stage approved Historical Market Data reader wheel
         env:
           HMD_READER_WHEEL_BASE64: ${{ secrets.HMD_READER_WHEEL_BASE64 }}
@@ -151,6 +162,17 @@ jobs:
           labels: ${{ steps.roadmap-task-board-api-meta.outputs.labels }}
           cache-from: type=gha,scope=roadmap-task-board-api
           cache-to: type=gha,mode=max,scope=roadmap-task-board-api
+
+      - name: Build and publish execution edge image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/images/execution-edge.Dockerfile
+          push: true
+          tags: ${{ steps.execution-edge-meta.outputs.tags }}
+          labels: ${{ steps.execution-edge-meta.outputs.labels }}
+          cache-from: type=gha,scope=execution-edge
+          cache-to: type=gha,mode=max,scope=execution-edge
 
       - name: Publish deployment environment artifact
         env:
