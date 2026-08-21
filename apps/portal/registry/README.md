@@ -46,3 +46,16 @@ to runtime features (`AVAILABLE`/`PROTOTYPE`/`DEPRECATED`).
 
 The architecture and validation invariants are defined in
 [`upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md`](../../../upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md).
+
+## Revision 3 — Execution Loop routing
+
+Revision 3 adds the `governance` group and the canonical routing metadata for
+all 17 Execution Loop hi-fi screens. These entries are deliberately
+`COMMISSIONED` with `data_mode: NONE`: the registry makes navigation and deep
+links addressable, but does not imply that a Trading System query, command or
+realtime authority has been integrated. Phase-specific activation gates remain
+authoritative in `upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/PHASE_TRACKER.md`.
+
+The `/execution` path is now owned by the Execution Command Center. It was
+removed from `QUANTBT_RESEARCH.legacy_routes`; QuantBT remains canonical under
+`/research/quantbt`.

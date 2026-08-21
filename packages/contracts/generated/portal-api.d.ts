@@ -1354,7 +1354,7 @@ export interface components {
              * Id
              * @enum {string}
              */
-            id: "command" | "research" | "backtests" | "deployments" | "data_ops" | "planning" | "administration";
+            id: "command" | "governance" | "research" | "backtests" | "deployments" | "data_ops" | "planning" | "administration";
             /** Label */
             label: string;
             /** Order */

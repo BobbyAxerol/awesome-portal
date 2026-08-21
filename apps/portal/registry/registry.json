@@ -1,7 +1,7 @@
 {
   "schema_version": "portal.registry.v1",
   "registry_id": "portal-default",
-  "revision": 2,
+  "revision": 3,
   "feature_groups": [
     {
       "id": "command",
@@ -9,34 +9,39 @@
       "order": 10
     },
     {
-      "id": "research",
-      "label": "Research",
+      "id": "governance",
+      "label": "Governance",
       "order": 20
-    },
-    {
-      "id": "backtests",
-      "label": "Backtests",
-      "order": 30
     },
     {
       "id": "deployments",
       "label": "Deployments",
-      "order": 40
-    },
-    {
-      "id": "data_ops",
-      "label": "Data & Operations",
-      "order": 50
-    },
-    {
-      "id": "planning",
-      "label": "Planning",
-      "order": 60
+      "order": 30
     },
     {
       "id": "administration",
       "label": "Administration",
+      "order": 40
+    },
+    {
+      "id": "research",
+      "label": "Research",
+      "order": 50
+    },
+    {
+      "id": "backtests",
+      "label": "Backtests",
+      "order": 60
+    },
+    {
+      "id": "data_ops",
+      "label": "Data & Operations",
       "order": 70
+    },
+    {
+      "id": "planning",
+      "label": "Planning",
+      "order": 80
     }
   ],
   "lifecycle_stages": [
@@ -240,7 +245,6 @@
         "/overview",
         "/optimization",
         "/parameters",
-        "/execution",
         "/audit"
       ],
       "maturity": "AVAILABLE",
@@ -551,11 +555,14 @@
       "roadmap_epic_id": "U15",
       "default_task_id": "TRD-010",
       "screen_ids": [
-        "PAPER_TRADING_SCREEN"
+        "PAPER_TRADING_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN"
       ],
       "concern_ids": [
         "CONCERN_PORTAL_AUTHORIZATION",
-        "CONCERN_FUTURE_AUTHORITY"
+        "CONCERN_FUTURE_AUTHORITY",
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
       "lifecycle_stage_ids": [
         "PAPER"
@@ -564,7 +571,7 @@
       "hidden_for_roles": [],
       "activation_gate": "U15 paper execution, ledger and reconciliation gates pass.",
       "navigation": {
-        "order": 10,
+        "order": 30,
         "icon_key": "file-clock",
         "show_in_sidebar": true,
         "show_in_command_palette": true
@@ -590,11 +597,13 @@
       "roadmap_epic_id": "U15",
       "default_task_id": "TRD-010",
       "screen_ids": [
-        "SANDBOX_TRADING_SCREEN"
+        "SANDBOX_TRADING_SCREEN",
+        "EXECUTION_SANDBOX_CERTIFICATION_SCREEN"
       ],
       "concern_ids": [
         "CONCERN_PORTAL_AUTHORIZATION",
-        "CONCERN_FUTURE_AUTHORITY"
+        "CONCERN_FUTURE_AUTHORITY",
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
       "lifecycle_stage_ids": [
         "SANDBOX"
@@ -603,7 +612,7 @@
       "hidden_for_roles": [],
       "activation_gate": "U15 sandbox permission, preflight and reconciliation gates pass.",
       "navigation": {
-        "order": 20,
+        "order": 40,
         "icon_key": "boxes",
         "show_in_sidebar": true,
         "show_in_command_palette": true
@@ -629,11 +638,14 @@
       "roadmap_epic_id": "U16",
       "default_task_id": "TRD-001",
       "screen_ids": [
-        "LIVE_OPERATIONS_SCREEN"
+        "LIVE_OPERATIONS_SCREEN",
+        "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+        "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN"
       ],
       "concern_ids": [
         "CONCERN_PORTAL_AUTHORIZATION",
-        "CONCERN_FUTURE_AUTHORITY"
+        "CONCERN_FUTURE_AUTHORITY",
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
       "lifecycle_stage_ids": [
         "LIVE",
@@ -643,7 +655,7 @@
       "hidden_for_roles": [],
       "activation_gate": "U16 private risk, execution and reconciliation authorities pass.",
       "navigation": {
-        "order": 30,
+        "order": 50,
         "icon_key": "radio-tower",
         "show_in_sidebar": true,
         "show_in_command_palette": true
@@ -686,6 +698,369 @@
         "order": 10,
         "icon_key": "user-round-cog",
         "show_in_sidebar": true,
+        "show_in_command_palette": true
+      }
+    },
+    {
+      "id": "EXECUTION_COMMAND_CENTER",
+      "group": "command",
+      "label": "Execution Command Center",
+      "description": "Ranked execution triage, fleet health and pinned deployment watchlist.",
+      "canonical_route": "/execution",
+      "legacy_routes": [],
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "permissions": [
+        "portal.command.read"
+      ],
+      "environments": [
+        "local",
+        "research",
+        "paper",
+        "sandbox",
+        "live"
+      ],
+      "source_module": null,
+      "prototype_frame_id": "WF-5A",
+      "roadmap_epic_id": "EXECUTION-LOOP",
+      "default_task_id": null,
+      "screen_ids": [
+        "EXECUTION_COMMAND_CENTER_SCREEN"
+      ],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "lifecycle_stage_ids": [],
+      "summary_source_ids": [],
+      "hidden_for_roles": [],
+      "activation_gate": "Execution Loop Phase 9 backend authority and integration evidence pass.",
+      "navigation": {
+        "order": 30,
+        "icon_key": "dashboard-reference",
+        "show_in_sidebar": true,
+        "show_in_command_palette": true
+      }
+    },
+    {
+      "id": "EXECUTION_OPERATIONS",
+      "group": "command",
+      "label": "Operations Queue",
+      "description": "Typed operation journal, attention queue and incident drill-down.",
+      "canonical_route": "/execution/operations",
+      "legacy_routes": [],
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "permissions": [
+        "portal.command.read"
+      ],
+      "environments": [
+        "local",
+        "research",
+        "paper",
+        "sandbox",
+        "live"
+      ],
+      "source_module": null,
+      "prototype_frame_id": "WF-4E",
+      "roadmap_epic_id": "EXECUTION-LOOP",
+      "default_task_id": null,
+      "screen_ids": [
+        "EXECUTION_OPERATIONS_QUEUE_SCREEN",
+        "EXECUTION_INCIDENT_DETAIL_SCREEN"
+      ],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "lifecycle_stage_ids": [],
+      "summary_source_ids": [],
+      "hidden_for_roles": [],
+      "activation_gate": "Execution Loop Phases 7 and 8 backend authority and integration evidence pass.",
+      "navigation": {
+        "order": 40,
+        "icon_key": "task-view",
+        "show_in_sidebar": true,
+        "show_in_command_palette": true
+      }
+    },
+    {
+      "id": "EXECUTION_APPROVALS",
+      "group": "governance",
+      "label": "Approval Inbox",
+      "description": "Evidence-bound execution approval queue and R1/R2 review details.",
+      "canonical_route": "/governance/approvals",
+      "legacy_routes": [],
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "permissions": [
+        "approval.read"
+      ],
+      "environments": [
+        "local",
+        "research",
+        "paper",
+        "sandbox",
+        "live"
+      ],
+      "source_module": null,
+      "prototype_frame_id": "WF-4A",
+      "roadmap_epic_id": "EXECUTION-LOOP",
+      "default_task_id": null,
+      "screen_ids": [
+        "EXECUTION_APPROVAL_INBOX_SCREEN",
+        "EXECUTION_GATE_R1_REVIEW_SCREEN",
+        "EXECUTION_GATE_R2_REVIEW_SCREEN"
+      ],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "lifecycle_stage_ids": [],
+      "summary_source_ids": [],
+      "hidden_for_roles": [],
+      "activation_gate": "Execution Loop Phases 1 through 3 approval contracts and policy evidence pass.",
+      "navigation": {
+        "order": 10,
+        "icon_key": "task-approved",
+        "show_in_sidebar": true,
+        "show_in_command_palette": true
+      }
+    },
+    {
+      "id": "EXECUTION_EXIT_REVIEWS",
+      "group": "governance",
+      "label": "Exit Reviews",
+      "description": "Paper, sandbox and canary evidence review entry point.",
+      "canonical_route": "/governance/exit-reviews",
+      "legacy_routes": [],
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "permissions": [
+        "approval.read"
+      ],
+      "environments": [
+        "local",
+        "research",
+        "paper",
+        "sandbox",
+        "live"
+      ],
+      "source_module": null,
+      "prototype_frame_id": "WF-4B",
+      "roadmap_epic_id": "EXECUTION-LOOP",
+      "default_task_id": null,
+      "screen_ids": [
+        "EXECUTION_PAPER_EXIT_REVIEW_SCREEN"
+      ],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "lifecycle_stage_ids": [],
+      "summary_source_ids": [],
+      "hidden_for_roles": [],
+      "activation_gate": "Execution Loop Phase 5 evidence-pack and decision contracts pass.",
+      "navigation": {
+        "order": 20,
+        "icon_key": "document-tasks",
+        "show_in_sidebar": true,
+        "show_in_command_palette": true
+      }
+    },
+    {
+      "id": "EXECUTION_PORTFOLIOS",
+      "group": "deployments",
+      "label": "Portfolios",
+      "description": "Portfolio structure, capital ledger, contribution and correlation evidence.",
+      "canonical_route": "/deployments/portfolios",
+      "legacy_routes": [],
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "permissions": [
+        "live.read"
+      ],
+      "environments": [
+        "local",
+        "research",
+        "paper",
+        "sandbox",
+        "live"
+      ],
+      "source_module": null,
+      "prototype_frame_id": "WF-1H-3A",
+      "roadmap_epic_id": "EXECUTION-LOOP",
+      "default_task_id": null,
+      "screen_ids": [
+        "EXECUTION_PORTFOLIO_360_SCREEN"
+      ],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "lifecycle_stage_ids": [],
+      "summary_source_ids": [],
+      "hidden_for_roles": [],
+      "activation_gate": "Execution Loop Phase 16 scoped analytics contracts and evidence pass.",
+      "navigation": {
+        "order": 10,
+        "icon_key": "portfolio",
+        "show_in_sidebar": true,
+        "show_in_command_palette": true
+      }
+    },
+    {
+      "id": "EXECUTION_ALPHA_FLEET",
+      "group": "deployments",
+      "label": "Alpha Fleet",
+      "description": "Portfolio-scoped alpha deployment, execution and evidence drill-down.",
+      "canonical_route": "/deployments/alphas",
+      "legacy_routes": [],
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "permissions": [
+        "alpha.read"
+      ],
+      "environments": [
+        "local",
+        "research",
+        "paper",
+        "sandbox",
+        "live"
+      ],
+      "source_module": null,
+      "prototype_frame_id": "WF-2A-2B",
+      "roadmap_epic_id": "EXECUTION-LOOP",
+      "default_task_id": null,
+      "screen_ids": [
+        "EXECUTION_ALPHA_360_SCREEN"
+      ],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "lifecycle_stage_ids": [],
+      "summary_source_ids": [],
+      "hidden_for_roles": [],
+      "activation_gate": "Execution Loop Phase 15 scope-consistent query contracts and evidence pass.",
+      "navigation": {
+        "order": 20,
+        "icon_key": "network-3",
+        "show_in_sidebar": true,
+        "show_in_command_palette": true
+      }
+    },
+    {
+      "id": "EXECUTION_ACCOUNTS_BINDINGS",
+      "group": "deployments",
+      "label": "Accounts & Bindings",
+      "description": "Virtual account, physical broker binding and reconciliation boundary.",
+      "canonical_route": "/deployments/accounts",
+      "legacy_routes": [],
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "permissions": [
+        "live.read"
+      ],
+      "environments": [
+        "local",
+        "research",
+        "paper",
+        "sandbox",
+        "live"
+      ],
+      "source_module": null,
+      "prototype_frame_id": "WF-1G",
+      "roadmap_epic_id": "EXECUTION-LOOP",
+      "default_task_id": null,
+      "screen_ids": [
+        "EXECUTION_ACCOUNT_BROKER_360_SCREEN"
+      ],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "lifecycle_stage_ids": [],
+      "summary_source_ids": [],
+      "hidden_for_roles": [],
+      "activation_gate": "Execution Loop Phase 17 broker-binding aggregate and freshness contracts pass.",
+      "navigation": {
+        "order": 60,
+        "icon_key": "account",
+        "show_in_sidebar": true,
+        "show_in_command_palette": true
+      }
+    },
+    {
+      "id": "EXECUTION_BLOTTER",
+      "group": "deployments",
+      "label": "Blotter",
+      "description": "Cursor-paged order and fill lifecycle with server-side scope and filtering.",
+      "canonical_route": "/deployments/blotter",
+      "legacy_routes": [],
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "permissions": [
+        "portal.command.read"
+      ],
+      "environments": [
+        "local",
+        "research",
+        "paper",
+        "sandbox",
+        "live"
+      ],
+      "source_module": null,
+      "prototype_frame_id": "WF-4C",
+      "roadmap_epic_id": "EXECUTION-LOOP",
+      "default_task_id": null,
+      "screen_ids": [
+        "EXECUTION_FULL_BLOTTER_SCREEN"
+      ],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "lifecycle_stage_ids": [],
+      "summary_source_ids": [],
+      "hidden_for_roles": [],
+      "activation_gate": "Execution Loop Phase 14 keyset, exact-count and funnel contracts pass.",
+      "navigation": {
+        "order": 80,
+        "icon_key": "table-split",
+        "show_in_sidebar": true,
+        "show_in_command_palette": true
+      }
+    },
+    {
+      "id": "EXECUTION_ADMIN_ACTIONS",
+      "group": "administration",
+      "label": "Admin Actions",
+      "description": "Allowlisted command catalog with plan, apply and verify lifecycle.",
+      "canonical_route": "/administration/actions",
+      "legacy_routes": [],
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "permissions": [
+        "portal.command.read"
+      ],
+      "environments": [
+        "local",
+        "research",
+        "paper",
+        "sandbox",
+        "live"
+      ],
+      "source_module": null,
+      "prototype_frame_id": "WF-1I",
+      "roadmap_epic_id": "EXECUTION-LOOP",
+      "default_task_id": null,
+      "screen_ids": [
+        "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN"
+      ],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "lifecycle_stage_ids": [],
+      "summary_source_ids": [],
+      "hidden_for_roles": [],
+      "activation_gate": "Execution Loop Phase 6 allowlist, step-up, idempotency and terminal verification pass.",
+      "navigation": {
+        "order": 20,
+        "icon_key": "settings-adjust",
+        "show_in_sidebar": false,
         "show_in_command_palette": true
       }
     }
@@ -1239,6 +1614,414 @@
         "SEC-001"
       ],
       "activation_gate": "U07 verified identity, opaque session and RBAC gates pass."
+    },
+    {
+      "screen_id": "EXECUTION_COMMAND_CENTER_SCREEN",
+      "contract_revision": 1,
+      "feature_id": "EXECUTION_COMMAND_CENTER",
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "route": "/execution",
+      "primary_persona": "manager",
+      "primary_decision": "Which incident, approval or operation needs attention first?",
+      "primary_action": null,
+      "permissions": [
+        "portal.command.read"
+      ],
+      "inputs": [],
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "Execution Loop Phase 9 backend authority and integration evidence pass."
+    },
+    {
+      "screen_id": "EXECUTION_OPERATIONS_QUEUE_SCREEN",
+      "contract_revision": 1,
+      "feature_id": "EXECUTION_OPERATIONS",
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "route": "/execution/operations",
+      "primary_persona": "operator",
+      "primary_decision": "Which partial, uncertain or failed operation needs a safe next step?",
+      "primary_action": null,
+      "permissions": [
+        "portal.command.read"
+      ],
+      "inputs": [],
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "Execution Loop Phase 7 operation-journal and alert contracts pass."
+    },
+    {
+      "screen_id": "EXECUTION_INCIDENT_DETAIL_SCREEN",
+      "contract_revision": 1,
+      "feature_id": "EXECUTION_OPERATIONS",
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "route": "/execution/operations/incidents/:incidentId",
+      "primary_persona": "operator",
+      "primary_decision": "Has authoritative evidence proved mitigation and safe resolution?",
+      "primary_action": null,
+      "permissions": [
+        "portal.command.read"
+      ],
+      "inputs": [],
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "Execution Loop Phase 8 finding, blast-radius and resolution contracts pass."
+    },
+    {
+      "screen_id": "EXECUTION_APPROVAL_INBOX_SCREEN",
+      "contract_revision": 1,
+      "feature_id": "EXECUTION_APPROVALS",
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "route": "/governance/approvals",
+      "primary_persona": "reviewer",
+      "primary_decision": "Which evidence-bound approval is due next?",
+      "primary_action": null,
+      "permissions": [
+        "approval.read"
+      ],
+      "inputs": [],
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "Execution Loop Phase 1 exact-count, keyset and server-filter contracts pass."
+    },
+    {
+      "screen_id": "EXECUTION_GATE_R1_REVIEW_SCREEN",
+      "contract_revision": 1,
+      "feature_id": "EXECUTION_APPROVALS",
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "route": "/governance/approvals/:approvalId/r1",
+      "primary_persona": "quant_reviewer",
+      "primary_decision": "Is this immutable research artifact defensible enough to advance?",
+      "primary_action": null,
+      "permissions": [
+        "approval.read"
+      ],
+      "inputs": [],
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "Execution Loop Phase 2 approval read model and separation-of-duty evidence pass."
+    },
+    {
+      "screen_id": "EXECUTION_GATE_R2_REVIEW_SCREEN",
+      "contract_revision": 1,
+      "feature_id": "EXECUTION_APPROVALS",
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "route": "/governance/approvals/:approvalId/r2",
+      "primary_persona": "portfolio_manager",
+      "primary_decision": "Is portfolio and operational readiness sufficient for Paper activation?",
+      "primary_action": null,
+      "permissions": [
+        "approval.read"
+      ],
+      "inputs": [],
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "Execution Loop Phase 3 capital preview, R1 expiry and readiness contracts pass."
+    },
+    {
+      "screen_id": "EXECUTION_PAPER_EXIT_REVIEW_SCREEN",
+      "contract_revision": 1,
+      "feature_id": "EXECUTION_EXIT_REVIEWS",
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "route": "/governance/exit-reviews/:reviewId",
+      "primary_persona": "reviewer",
+      "primary_decision": "Does the complete Paper evidence pack permit promotion?",
+      "primary_action": null,
+      "permissions": [
+        "approval.read"
+      ],
+      "inputs": [],
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "Execution Loop Phase 5 evidence-pack coverage and distinct decision outcomes pass."
+    },
+    {
+      "screen_id": "EXECUTION_PAPER_WORKBENCH_SCREEN",
+      "contract_revision": 1,
+      "feature_id": "PAPER_TRADING",
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "route": "/deployments/paper/:deploymentId",
+      "primary_persona": "operator",
+      "primary_decision": "Is Paper behavior tracking approved evidence and ready for exit review?",
+      "primary_action": null,
+      "permissions": [
+        "paper.read"
+      ],
+      "inputs": [],
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "Execution Loop Phase 4 bounded series, gate progress and freshness contracts pass."
+    },
+    {
+      "screen_id": "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",
+      "contract_revision": 1,
+      "feature_id": "PAPER_TRADING",
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "route": "/deployments/paper/:deploymentId/vn-market",
+      "primary_persona": "operator",
+      "primary_decision": "Is VN Paper healthy under the venue calendar and settlement policy?",
+      "primary_action": null,
+      "permissions": [
+        "paper.read"
+      ],
+      "inputs": [],
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "Execution Loop Phase 13 VN calendar, precision and freshness-pause contracts pass."
+    },
+    {
+      "screen_id": "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+      "contract_revision": 1,
+      "feature_id": "SANDBOX_TRADING",
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "route": "/deployments/sandbox/:deploymentId",
+      "primary_persona": "operator",
+      "primary_decision": "Is venue sandbox integration certified and reconciled?",
+      "primary_action": null,
+      "permissions": [
+        "sandbox.read"
+      ],
+      "inputs": [],
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "Execution Loop Phase 10 certification and reconciliation contracts pass."
+    },
+    {
+      "screen_id": "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+      "contract_revision": 1,
+      "feature_id": "LIVE_OPERATIONS",
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "route": "/deployments/live/:deploymentId/canary",
+      "primary_persona": "operator",
+      "primary_decision": "Should this live canary hold, protect, scale or roll back?",
+      "primary_action": null,
+      "permissions": [
+        "live.read"
+      ],
+      "inputs": [],
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "Execution Loop Phase 11 canary envelope and asymmetric protective-action gates pass."
+    },
+    {
+      "screen_id": "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+      "contract_revision": 1,
+      "feature_id": "LIVE_OPERATIONS",
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "route": "/deployments/live/:deploymentId",
+      "primary_persona": "operator",
+      "primary_decision": "Which risk-authorized protective action is required for this live deployment?",
+      "primary_action": null,
+      "permissions": [
+        "live.read"
+      ],
+      "inputs": [],
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "Execution Loop Phase 12 broker mismatch suppression and continuity contracts pass."
+    },
+    {
+      "screen_id": "EXECUTION_FULL_BLOTTER_SCREEN",
+      "contract_revision": 1,
+      "feature_id": "EXECUTION_BLOTTER",
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "route": "/deployments/blotter",
+      "primary_persona": "operator",
+      "primary_decision": "What is the authoritative lifecycle and timing funnel for this order or fill?",
+      "primary_action": null,
+      "permissions": [
+        "portal.command.read"
+      ],
+      "inputs": [],
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "Execution Loop Phase 14 keyset, exact-count, server-filter and funnel contracts pass."
+    },
+    {
+      "screen_id": "EXECUTION_ALPHA_360_SCREEN",
+      "contract_revision": 1,
+      "feature_id": "EXECUTION_ALPHA_FLEET",
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "route": "/deployments/alphas/:alphaId",
+      "primary_persona": "quant_researcher",
+      "primary_decision": "How is this alpha behaving in the selected portfolio, mode and venue scope?",
+      "primary_action": null,
+      "permissions": [
+        "alpha.read"
+      ],
+      "inputs": [],
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "Execution Loop Phase 15 portfolio-scoped queries and bounded insight previews pass."
+    },
+    {
+      "screen_id": "EXECUTION_PORTFOLIO_360_SCREEN",
+      "contract_revision": 1,
+      "feature_id": "EXECUTION_PORTFOLIOS",
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "route": "/deployments/portfolios/:portfolioId",
+      "primary_persona": "portfolio_manager",
+      "primary_decision": "Which alpha drives contribution, exposure and correlation under this portfolio?",
+      "primary_action": null,
+      "permissions": [
+        "live.read"
+      ],
+      "inputs": [],
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "Execution Loop Phase 16 packed correlation, sample coverage and capital-ledger contracts pass."
+    },
+    {
+      "screen_id": "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+      "contract_revision": 1,
+      "feature_id": "EXECUTION_ACCOUNTS_BINDINGS",
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "route": "/deployments/accounts/:accountId",
+      "primary_persona": "operator",
+      "primary_decision": "Does aggregate virtual exposure reconcile to the physical broker binding?",
+      "primary_action": null,
+      "permissions": [
+        "live.read"
+      ],
+      "inputs": [],
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "Execution Loop Phase 17 server aggregate and broker-freshness contracts pass."
+    },
+    {
+      "screen_id": "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN",
+      "contract_revision": 1,
+      "feature_id": "EXECUTION_ADMIN_ACTIONS",
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "route": "/administration/actions",
+      "primary_persona": "operator_admin",
+      "primary_decision": "Is this allowlisted command safe to plan, apply and verify?",
+      "primary_action": null,
+      "permissions": [
+        "portal.command.read"
+      ],
+      "inputs": [],
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "Execution Loop Phase 6 command allowlist, step-up and terminal verification pass."
     }
   ],
   "concerns": [
@@ -1464,6 +2247,53 @@
       ],
       "activation_gate": "BAR-01-BE5 deadline, payload-limit and partial-failure tests pass.",
       "reviewed_at": "2026-08-15T00:00:00Z"
+    },
+    {
+      "id": "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT",
+      "category": "BACKEND_CONTRACT",
+      "status": "PARTIAL",
+      "severity": "HIGH",
+      "statement": "Execution Loop revision 3 routes are metadata only; every screen remains commissioned until its authority, freshness, query or command contract and operational evidence pass.",
+      "feature_ids": [
+        "EXECUTION_COMMAND_CENTER",
+        "EXECUTION_OPERATIONS",
+        "EXECUTION_APPROVALS",
+        "EXECUTION_EXIT_REVIEWS",
+        "PAPER_TRADING",
+        "SANDBOX_TRADING",
+        "LIVE_OPERATIONS",
+        "EXECUTION_PORTFOLIOS",
+        "EXECUTION_ALPHA_FLEET",
+        "EXECUTION_ACCOUNTS_BINDINGS",
+        "EXECUTION_BLOTTER",
+        "EXECUTION_ADMIN_ACTIONS"
+      ],
+      "screen_ids": [
+        "EXECUTION_COMMAND_CENTER_SCREEN",
+        "EXECUTION_OPERATIONS_QUEUE_SCREEN",
+        "EXECUTION_INCIDENT_DETAIL_SCREEN",
+        "EXECUTION_APPROVAL_INBOX_SCREEN",
+        "EXECUTION_GATE_R1_REVIEW_SCREEN",
+        "EXECUTION_GATE_R2_REVIEW_SCREEN",
+        "EXECUTION_PAPER_EXIT_REVIEW_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",
+        "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+        "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+        "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+        "EXECUTION_FULL_BLOTTER_SCREEN",
+        "EXECUTION_ALPHA_360_SCREEN",
+        "EXECUTION_PORTFOLIO_360_SCREEN",
+        "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+        "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN"
+      ],
+      "evidence_refs": [
+        "upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_BACKEND_PLAN_REQUEST.md#31-the-unblocker--do-this-first-it-is-small",
+        "upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/PHASE_TRACKER.md#1-phase-board"
+      ],
+      "task_ids": [],
+      "activation_gate": "The matching Execution Loop phase in PHASE_TRACKER.md must reach PRODUCT_COMPLETE with recorded evidence.",
+      "reviewed_at": "2026-08-21T00:00:00Z"
     }
   ]
 }

@@ -1620,6 +1620,7 @@
           "id": {
             "enum": [
               "command",
+              "governance",
               "research",
               "backtests",
               "deployments",
@@ -2497,6 +2498,7 @@
           "group": {
             "enum": [
               "command",
+              "governance",
               "research",
               "backtests",
               "deployments",

@@ -23,6 +23,26 @@ SCHEMA_PATHS = {
     "summary": SCHEMA_ROOT / "portal-summary.v1.schema.json",
 }
 
+EXECUTION_LOOP_REVISION_3_ROUTES = {
+    "EXECUTION_COMMAND_CENTER_SCREEN": "/execution",
+    "EXECUTION_OPERATIONS_QUEUE_SCREEN": "/execution/operations",
+    "EXECUTION_INCIDENT_DETAIL_SCREEN": "/execution/operations/incidents/:incidentId",
+    "EXECUTION_APPROVAL_INBOX_SCREEN": "/governance/approvals",
+    "EXECUTION_GATE_R1_REVIEW_SCREEN": "/governance/approvals/:approvalId/r1",
+    "EXECUTION_GATE_R2_REVIEW_SCREEN": "/governance/approvals/:approvalId/r2",
+    "EXECUTION_PAPER_EXIT_REVIEW_SCREEN": "/governance/exit-reviews/:reviewId",
+    "EXECUTION_PAPER_WORKBENCH_SCREEN": "/deployments/paper/:deploymentId",
+    "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN": "/deployments/paper/:deploymentId/vn-market",
+    "EXECUTION_SANDBOX_CERTIFICATION_SCREEN": "/deployments/sandbox/:deploymentId",
+    "EXECUTION_CANARY_CONTROL_ROOM_SCREEN": "/deployments/live/:deploymentId/canary",
+    "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN": "/deployments/live/:deploymentId",
+    "EXECUTION_FULL_BLOTTER_SCREEN": "/deployments/blotter",
+    "EXECUTION_ALPHA_360_SCREEN": "/deployments/alphas/:alphaId",
+    "EXECUTION_PORTFOLIO_360_SCREEN": "/deployments/portfolios/:portfolioId",
+    "EXECUTION_ACCOUNT_BROKER_360_SCREEN": "/deployments/accounts/:accountId",
+    "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN": "/administration/actions",
+}
+
 
 def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -305,6 +325,34 @@ def test_canonical_registry_source_and_public_document_validate() -> None:
 
     public_document = {**source, "content_digest": digest}
     _assert_valid("public", public_document)
+
+
+def test_revision_3_commissions_all_execution_loop_routes_without_data() -> None:
+    source = _load_json(SOURCE_PATH)
+    assert source["revision"] == 3
+    assert [group["id"] for group in source["feature_groups"][:4]] == [
+        "command",
+        "governance",
+        "deployments",
+        "administration",
+    ]
+
+    screens = {screen["screen_id"]: screen for screen in source["screens"]}
+    assert {
+        screen_id: screens[screen_id]["route"]
+        for screen_id in EXECUTION_LOOP_REVISION_3_ROUTES
+    } == EXECUTION_LOOP_REVISION_3_ROUTES
+
+    for screen_id in EXECUTION_LOOP_REVISION_3_ROUTES:
+        screen = screens[screen_id]
+        assert screen["maturity"] == "COMMISSIONED"
+        assert screen["data_mode"] == "NONE"
+        assert screen["inputs"] == []
+        assert screen["backend_dependency_ids"] == []
+
+    features = {feature["id"]: feature for feature in source["features"]}
+    assert features["EXECUTION_ADMIN_ACTIONS"]["navigation"]["show_in_sidebar"] is False
+    assert "/execution" not in features["QUANTBT_RESEARCH"]["legacy_routes"]
 
 
 def test_registry_references_routes_and_evidence_are_consistent() -> None:

@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 FeatureGroupId = Literal[
     "command",
+    "governance",
     "research",
     "backtests",
     "deployments",

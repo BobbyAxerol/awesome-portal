@@ -12,6 +12,7 @@
     "featureGroupId": {
       "enum": [
         "command",
+        "governance",
         "research",
         "backtests",
         "deployments",
