@@ -939,3 +939,19 @@
 .exec-drawer-tier[data-tier="R3"],
 .exec-drawer-tier[data-tier="R4"] { color: var(--guard); }
 .exec-drawer-tier[data-tier="R4"] { border-width: 3px; border-style: double; }
+
+/* A registry that grants a command on a screen serving fixture or shadow data.
+ * Reported rather than resolved: the client does not invent an authorization
+ * rule out of a display field, in either direction. */
+.exec-drawer-inconsistency {
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--warn);
+  background: var(--warn-bg);
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+}
+
+.exec-drawer-key {
+  font-family: var(--font-mono);
+  color: var(--ink-mute);
+}

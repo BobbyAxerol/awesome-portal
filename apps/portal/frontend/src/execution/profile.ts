@@ -258,3 +258,56 @@ export function commandBlockedReason(
   };
   return `${label[tier]} are disabled for this screen by delivery policy revision ${policy.policyRevision}.`;
 }
+
+/* ---------------------------------------------------------------------------
+ * The line between profile and permission
+ * ------------------------------------------------------------------------ */
+
+/**
+ * Permission comes from `delivery_policy`. It never comes from
+ * `delivery_profile`.
+ *
+ * The two are easy to conflate because they arrive on the same registry object
+ * and both sound like they describe how real a screen is. They do not:
+ *
+ *   - **profile** answers "how real is the DATA I am looking at" — a display
+ *     honesty question, whose failure mode is an operator mistaking shadow
+ *     numbers for production ones;
+ *   - **policy** answers "what am I ALLOWED to do here" — an authorization
+ *     question, whose failure mode is a command firing that should not have.
+ *
+ * Deriving one from the other is wrong in both directions. `live_full` profile
+ * must not grant a command, because the profile says the data is live and says
+ * nothing about whether this actor may act on it. And `fixture` profile must not
+ * block one, because that would be this client inventing an authorization rule
+ * the server never stated — and a client that invents rules will eventually
+ * invent a permissive one.
+ *
+ * So `commandEnabled` takes a policy and a tier and has no profile parameter at
+ * all. The separation is structural rather than a convention, because a
+ * convention is exactly what gets forgotten on screen fourteen.
+ */
+export const PERMISSION_SOURCE = "delivery_policy" as const;
+
+/**
+ * Report — never resolve — a registry that grants a command on a screen whose
+ * data is not production.
+ *
+ * This combination is a registry inconsistency: something enabled a real command
+ * on a screen serving fixture or shadow data. The client's job is to make it
+ * impossible to miss, not to correct it. Correcting it would mean guessing which
+ * half the registry got wrong, and the guess could go the wrong way — a client
+ * that silently disables a genuinely-granted protective command during an
+ * incident has done more harm than one that shows a loud warning.
+ *
+ * Returns `null` when there is nothing to report.
+ */
+export function commandProfileInconsistency(
+  profile: DeliveryProfile | null | undefined,
+  policy: DeliveryPolicy | null,
+  tier: RiskTier,
+): string | null {
+  if (!profile || !commandEnabled(policy, tier)) return null;
+  if (profile !== "fixture" && profile !== "shadow") return null;
+  return `This screen is serving ${profile.toUpperCase()} data, but delivery policy revision ${policy?.policyRevision ?? "?"} enables this ${tier} command. The command is not blocked here — the registry states what is permitted — but one of the two is wrong and it should be resolved before this is used.`;
+}

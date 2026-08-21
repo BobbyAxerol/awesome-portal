@@ -18,9 +18,14 @@
  */
 import { useState } from "react";
 
-import type { OperationStatus, RiskTier } from "../contracts";
-import { commandBlockedReason, type DeliveryPolicy } from "../profile";
-import { OperationStatusChip } from "./badges";
+import type { DeliveryProfile, OperationStatus, RiskTier, VerificationResult } from "../contracts";
+import { isSettled, newRequestKey } from "../adapter";
+import {
+  commandBlockedReason,
+  commandProfileInconsistency,
+  type DeliveryPolicy,
+} from "../profile";
+import { OperationStatusChip, VerificationChip } from "./badges";
 
 export type DrawerStep = "plan" | "apply" | "verify";
 
@@ -75,8 +80,14 @@ export function CommandPlanDrawer({
   confirmWord,
   riskTier,
   policy,
+  dataProfile,
   freshAuthSatisfied = true,
   secondApproverSatisfied = true,
+  verification,
+  outstandingUncertain = false,
+  replannedAfterUncertain = false,
+  requestKey,
+  conflict = false,
   onGeneratePlan,
   onApply,
 }: {
@@ -95,15 +106,34 @@ export function CommandPlanDrawer({
   riskTier?: RiskTier;
   /** Registry revision 4 delivery policy for the screen this drawer sits on. */
   policy?: DeliveryPolicy | null;
+  /**
+   * Profile of the data on the surrounding screen. Used ONLY to report an
+   * inconsistency — never to grant or withhold permission. See profile.ts.
+   */
+  dataProfile?: DeliveryProfile | null;
   /** R2+ requires re-authentication within the policy window. */
   freshAuthSatisfied?: boolean;
   /** R2 and R4 require a second person. Separation of duties, §5.1. */
   secondApproverSatisfied?: boolean;
+  /** What verify observed. A second axis from the operation's workflow status. */
+  verification?: VerificationResult | null;
+  /** An UNCERTAIN operation is outstanding against the same target (§7.3). */
+  outstandingUncertain?: boolean;
+  /** The current plan was regenerated against fresh authority after that. */
+  replannedAfterUncertain?: boolean;
+  /** BR-EX-18. Belongs to the intent, not the click; reused across retries. */
+  requestKey?: string;
+  /** The server returned 409: this key was reused with a different payload. */
+  conflict?: boolean;
   onGeneratePlan?: () => void;
   onApply?: (reason: string) => void;
 }) {
   const [reason, setReason] = useState("");
   const [confirmation, setConfirmation] = useState("");
+  // Generated once for this intent and kept across every retry. Regenerating it
+  // per click is what turns one intent into three operations.
+  const [ownKey] = useState(() => requestKey ?? newRequestKey());
+  const key = requestKey ?? ownKey;
 
   const blockingCheck = plan?.checks.find((check) => check.outcome === "fail");
   const expired = plan ? plan.expiresInSeconds <= 0 : false;
@@ -140,10 +170,39 @@ export function CommandPlanDrawer({
   if (needsSecondApprover && !secondApproverSatisfied) {
     blockers.push("a second approver is required — the requester cannot approve their own command");
   }
+  // BR-EX-21 as ruled. An UNCERTAIN result means the external effect may have
+  // happened and we cannot tell. Re-issuing a risk-increasing command in that
+  // state could double a position, so it blocks outright. A protective command
+  // does not blanket-block — refusing to let an operator halt something because
+  // an earlier halt is unresolved is the failure mode that costs the most — but
+  // it must be replanned against fresh authority first.
+  if (outstandingUncertain) {
+    const protective = riskTier === "R3";
+    if (!protective) {
+      blockers.push(
+        "an UNCERTAIN operation is outstanding against this target — a risk-increasing command is blocked until it is reconciled",
+      );
+    } else if (!replannedAfterUncertain) {
+      blockers.push(
+        "an UNCERTAIN operation is outstanding — regenerate the plan against fresh authority before applying a protective command",
+      );
+    }
+  }
+  if (conflict) {
+    blockers.push(
+      "this request key was already used with a different payload (409) — start a new command rather than editing this one",
+    );
+  }
   if (!reasonGiven) blockers.push("a reason is required");
   if (!confirmed) blockers.push(`type ${confirmWord} to confirm`);
 
   const applyDisabled = blockers.length > 0;
+
+  // Reported, never acted on. Permission comes from delivery_policy alone; this
+  // client does not invent an authorization rule out of a display field.
+  const profileInconsistency = riskTier
+    ? commandProfileInconsistency(dataProfile, policy ?? null, riskTier)
+    : null;
 
   return (
     <section className="exec-drawer" aria-label={title}>
@@ -242,6 +301,25 @@ export function CommandPlanDrawer({
 
       {applyDisabled ? (
         <div className="exec-disabled-reason">Apply is blocked: {blockers.join("; ")}.</div>
+      ) : null}
+
+      {profileInconsistency ? (
+        <div className="exec-drawer-inconsistency">{profileInconsistency}</div>
+      ) : null}
+
+      <div className="exec-drawer-note exec-drawer-key">
+        request key <strong>{key}</strong> — reused for every retry of this intent
+      </div>
+
+      {verification ? (
+        <div className="exec-drawer-note">
+          <VerificationChip result={verification} />{" "}
+          {verification === "UNCERTAIN"
+            ? "Not settled and it will not settle itself. Portal keeps reconciling and an incident is open; this never ages into EXPIRED, because the effect may have happened."
+            : isSettled(verification)
+              ? "Verification has settled."
+              : "Still observing. Nothing has been confirmed."}
+        </div>
       ) : null}
 
       {verifyEntries?.length ? (

@@ -27,6 +27,8 @@ import {
 import {
   commandBlockedReason,
   commandEnabled,
+  commandProfileInconsistency,
+  PERMISSION_SOURCE,
   PROFILE_ORDER,
   PROFILE_RANK,
   profileNeedsLabel,
@@ -37,11 +39,17 @@ import {
 import { KeysetTable, type Column } from "./components/table";
 import {
   formatDecimal,
+  isSettled,
+  isTerminalSuccess,
+  newRequestKey,
+  panelStatusForHttp,
   readDecimal,
   readEnum,
   readEnvelope,
   readId,
   readKeysetPage,
+  readOperation,
+  readProblem,
 } from "./adapter";
 import {
   AuthorityBadge,
@@ -1323,5 +1331,224 @@ describe("command drawer — risk tier and delivery policy", () => {
     const tier = container.querySelector(".exec-drawer-tier");
     expect(tier?.textContent).toBe("R4");
     expect(tier?.getAttribute("title")).toContain("RISK-INCREASING");
+  });
+});
+
+/* ===========================================================================
+ * The three principles, tested as principles
+ * ======================================================================== */
+
+describe("principle 1 — permission is deny-by-default", () => {
+  it("denies every tier under every shape of missing permission", () => {
+    const cases: [string, ReturnType<typeof screenDeliveryPolicy>][] = [
+      ["no policy published", null],
+      ["policy present but empty", screenDeliveryPolicy({ delivery_policy: {} })],
+      ["flags are strings", screenDeliveryPolicy({ delivery_policy: { paper_commands_enabled: "true" } })],
+      ["flags are 1", screenDeliveryPolicy({ delivery_policy: { paper_commands_enabled: 1 } })],
+      ["flags are null", screenDeliveryPolicy({ delivery_policy: { paper_commands_enabled: null } })],
+    ];
+    for (const [label, policy] of cases) {
+      for (const tier of ["R0", "R1", "R2", "R3", "R4"] as const) {
+        expect(commandEnabled(policy, tier), `${label} / ${tier}`).toBe(false);
+      }
+    }
+  });
+
+  it("grants only on an exact boolean true", () => {
+    const p = screenDeliveryPolicy({ delivery_policy: { paper_commands_enabled: true } });
+    expect(commandEnabled(p, "R1")).toBe(true);
+    expect(commandEnabled(p, "R2")).toBe(false);
+  });
+});
+
+describe("principle 2 — 202 is never a final result", () => {
+  it("reads an accepted apply as unverified and pending, whatever the body says", () => {
+    // A server that returns 202 and SUCCEEDED together has contradicted itself.
+    // The safe half of a contradiction is the one that keeps the operator
+    // watching.
+    const op = readOperation({ operation_id: "op_1", status: "VERIFIED", verification_result: "SUCCEEDED" }, 202);
+    expect(op.status).toBe("APPLIED_UNVERIFIED");
+    expect(op.verification).toEqual({ known: true, value: "PENDING" });
+  });
+
+  it("treats SUCCEEDED as the only terminal success", () => {
+    expect(isTerminalSuccess("SUCCEEDED")).toBe(true);
+    for (const r of ["PENDING", "ACKNOWLEDGED", "PARTIAL", "UNCERTAIN", "FAILED", "DENIED", "EXPIRED"] as const) {
+      expect(isTerminalSuccess(r), r).toBe(false);
+    }
+  });
+
+  it("never lets UNCERTAIN count as settled", () => {
+    // Master plan §7.3: terminal for the retry loop, non-terminal for
+    // operational truth, and it never ages into EXPIRED.
+    expect(isSettled("UNCERTAIN")).toBe(false);
+    expect(isSettled("PENDING")).toBe(false);
+    expect(isSettled("ACKNOWLEDGED")).toBe(false);
+    for (const r of ["SUCCEEDED", "FAILED", "DENIED", "PARTIAL", "EXPIRED"] as const) {
+      expect(isSettled(r), r).toBe(true);
+    }
+  });
+
+  it("says out loud that an uncertain result will not settle itself", () => {
+    render(<CommandPlanDrawer title="Halt" step="verify" plan={null} verification="UNCERTAIN" />);
+    expect(screen.getByText(/never ages into EXPIRED/)).toBeTruthy();
+  });
+
+  it("blocks a risk-increasing retry while an uncertain operation is outstanding", () => {
+    const allow = screenDeliveryPolicy({
+      delivery_policy: { policy_revision: 3, live_risk_increasing_commands_enabled: true },
+    });
+    render(
+      <CommandPlanDrawer
+        title="Expand"
+        step="apply"
+        plan={{ id: "c", expiresInSeconds: 60, requestPreview: "", equivalentCli: "", checks: [] }}
+        riskTier="R4"
+        policy={allow}
+        outstandingUncertain
+      />,
+    );
+    expect(screen.getByText(/risk-increasing command is blocked until it is reconciled/)).toBeTruthy();
+  });
+
+  it("lets a protective command through after a fresh replan, and not before", () => {
+    // Refusing to let an operator halt something because an earlier halt is
+    // unresolved is the failure mode that costs the most.
+    const allow = screenDeliveryPolicy({
+      delivery_policy: { policy_revision: 3, live_protective_commands_enabled: true },
+    });
+    const plan = { id: "c", expiresInSeconds: 60, requestPreview: "", equivalentCli: "", checks: [] };
+    const { rerender } = render(
+      <CommandPlanDrawer title="Halt" step="apply" plan={plan} riskTier="R3" policy={allow} outstandingUncertain />,
+    );
+    expect(screen.getByText(/regenerate the plan against fresh authority/)).toBeTruthy();
+
+    rerender(
+      <CommandPlanDrawer
+        title="Halt"
+        step="apply"
+        plan={plan}
+        riskTier="R3"
+        policy={allow}
+        outstandingUncertain
+        replannedAfterUncertain
+      />,
+    );
+    expect(screen.queryByText(/regenerate the plan against fresh authority/)).toBeNull();
+  });
+});
+
+describe("principle 3 — permission is never inferred from profile", () => {
+  it("does not let a live profile grant anything", () => {
+    // The profile says the data is live. It says nothing about whether this
+    // actor may act on it.
+    render(
+      <CommandPlanDrawer
+        title="Halt"
+        step="apply"
+        plan={{ id: "c", expiresInSeconds: 60, requestPreview: "", equivalentCli: "", checks: [] }}
+        riskTier="R3"
+        dataProfile="live_full"
+        policy={null}
+      />,
+    );
+    expect(screen.getByText(/no published delivery policy/)).toBeTruthy();
+  });
+
+  it("does not let a fixture profile block what the registry permitted", () => {
+    // The inverse direction, and the one that is tempting to get wrong. A
+    // client that invents an authorization rule will eventually invent a
+    // permissive one, so it invents neither.
+    const allow = screenDeliveryPolicy({
+      delivery_policy: { policy_revision: 3, live_protective_commands_enabled: true },
+    });
+    render(
+      <CommandPlanDrawer
+        title="Halt"
+        step="apply"
+        plan={{ id: "c", expiresInSeconds: 60, requestPreview: "", equivalentCli: "", checks: [] }}
+        riskTier="R3"
+        dataProfile="fixture"
+        policy={allow}
+      />,
+    );
+    const blocked = screen.queryByText(/Apply is blocked/);
+    expect(blocked?.textContent ?? "").not.toContain("delivery policy");
+    expect(blocked?.textContent ?? "").not.toContain("FIXTURE");
+  });
+
+  it("reports the inconsistency loudly instead of resolving it", () => {
+    const allow = screenDeliveryPolicy({
+      delivery_policy: { policy_revision: 3, live_protective_commands_enabled: true },
+    });
+    expect(commandProfileInconsistency("shadow", allow, "R3")).toContain("SHADOW");
+    expect(commandProfileInconsistency("shadow", allow, "R3")).toContain("not blocked here");
+    // Nothing to report when the profile is a real environment.
+    expect(commandProfileInconsistency("live_canary", allow, "R3")).toBeNull();
+    // Nothing to report when the command was not granted in the first place.
+    expect(commandProfileInconsistency("shadow", null, "R3")).toBeNull();
+  });
+
+  it("takes no profile argument in the permission function at all", () => {
+    // The separation is structural rather than a convention, because a
+    // convention is what gets forgotten on screen fourteen.
+    expect(commandEnabled.length).toBe(2);
+    expect(PERMISSION_SOURCE).toBe("delivery_policy");
+  });
+});
+
+describe("BR-EX-18 — the request key belongs to the intent", () => {
+  it("keeps one key across re-renders so a retry is not a second operation", () => {
+    const { container, rerender } = render(
+      <CommandPlanDrawer title="Halt" step="plan" plan={null} />,
+    );
+    const first = container.querySelector(".exec-drawer-key strong")?.textContent;
+    rerender(<CommandPlanDrawer title="Halt" step="apply" plan={null} />);
+    expect(container.querySelector(".exec-drawer-key strong")?.textContent).toBe(first);
+    expect(first).toMatch(/^rk_/);
+  });
+
+  it("generates distinct keys for distinct intents", () => {
+    expect(newRequestKey()).not.toBe(newRequestKey());
+  });
+
+  it("blocks apply after a 409 rather than silently retrying", () => {
+    render(
+      <CommandPlanDrawer
+        title="Halt"
+        step="apply"
+        plan={{ id: "c", expiresInSeconds: 60, requestPreview: "", equivalentCli: "", checks: [] }}
+        conflict
+      />,
+    );
+    expect(screen.getByText(/already used with a different payload/)).toBeTruthy();
+  });
+});
+
+describe("problems map to the states a human responds to differently", () => {
+  it("follows the sample file's own rule for 5xx and unknown", () => {
+    expect(panelStatusForHttp(503)).toBe("unavailable");
+    expect(panelStatusForHttp(500)).toBe("unavailable");
+    expect(panelStatusForHttp(403)).toBe("denied");
+    expect(panelStatusForHttp(429)).toBe("stale");
+  });
+
+  it("reads the gateway's problem envelope", () => {
+    const p = readProblem(
+      {
+        envelope: {
+          status: "error",
+          error: { code: "RATE_LIMIT_EXCEEDED", message: "bucket exceeded", retry_after_seconds: 1 },
+        },
+      },
+      429,
+    );
+    expect(p.code).toBe("RATE_LIMIT_EXCEEDED");
+    expect(p.retryAfterSeconds).toBe(1);
+    expect(p.panelStatus).toBe("stale");
+  });
+
+  it("names the failure even when the body is empty", () => {
+    expect(readProblem(null, 503).code).toBe("HTTP_503");
   });
 });

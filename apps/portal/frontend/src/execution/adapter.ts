@@ -37,8 +37,10 @@ import {
   type KeysetPage,
   type PanelStatus,
   type SortSpec,
+  type OperationStatus,
   type SourceCompleteness,
   type SourceCursor,
+  type VerificationResult,
 } from "./contracts";
 
 /* ---------------------------------------------------------------------------
@@ -351,4 +353,191 @@ export function readKeysetPage<T>(
     appliedSort: readSort(data.applied_sort),
     appliedFilters: readFilters(data.applied_filters),
   };
+}
+
+/* ---------------------------------------------------------------------------
+ * Operations — 202 is not a result
+ * ------------------------------------------------------------------------ */
+
+export const VERIFICATION_RESULTS: readonly VerificationResult[] = [
+  "PENDING",
+  "ACKNOWLEDGED",
+  "SUCCEEDED",
+  "FAILED",
+  "DENIED",
+  "PARTIAL",
+  "UNCERTAIN",
+  "EXPIRED",
+];
+
+/**
+ * Has verification reached a state that stops the operator watching?
+ *
+ * `UNCERTAIN` is deliberately **not** settled. Master plan §7.3: it "is terminal
+ * for the automatic retry loop but non-terminal for operational truth... It
+ * never ages into EXPIRED: the external effect may have happened." A UI that
+ * treats it as settled closes the incident nobody opened.
+ */
+export function isSettled(result: VerificationResult): boolean {
+  return (
+    result === "SUCCEEDED" ||
+    result === "FAILED" ||
+    result === "DENIED" ||
+    result === "PARTIAL" ||
+    result === "EXPIRED"
+  );
+}
+
+/**
+ * The single value that means the command did what was asked.
+ *
+ * Written as an equality rather than a list of exclusions on purpose. Every
+ * "not failed" formulation eventually admits `ACKNOWLEDGED` or `PARTIAL`, and
+ * both of those mean something happened that is not what was requested.
+ */
+export function isTerminalSuccess(result: VerificationResult): boolean {
+  return result === "SUCCEEDED";
+}
+
+export interface OperationRead {
+  operationId: string | null;
+  /** Where the Portal workflow is. */
+  status: OperationStatus | null;
+  /** What verify observed. A second axis — see contracts.ts. */
+  verification: MaybeKnown<VerificationResult> | null;
+  receipt: string | null;
+  unsupported: readonly { field: string; raw: string }[];
+}
+
+const OPERATION_STATUSES: readonly OperationStatus[] = [
+  "PLANNED",
+  "AWAITING_APPLY",
+  "APPLIED_UNVERIFIED",
+  "VERIFIED",
+  "PARTIAL",
+  "FAILED",
+];
+
+/**
+ * Read an operation, including the response to `apply`.
+ *
+ * `httpStatus` is passed in because the most dangerous reading on this whole
+ * surface is of a bare `202`. Master plan §7.3: "Apply returns 202 plus
+ * operation ID and receipt only." So a 202 becomes `APPLIED_UNVERIFIED` with
+ * verification `PENDING` — never `VERIFIED`, never `SUCCEEDED`, and never a
+ * closed drawer. If the body claims otherwise, the body is not believed: a
+ * server that returns 202 and `SUCCEEDED` together has contradicted itself, and
+ * the safe half of a contradiction is the one that keeps the operator watching.
+ */
+export function readOperation(raw: unknown, httpStatus?: number): OperationRead {
+  const o = obj(raw) ?? {};
+  const unsupported: { field: string; raw: string }[] = [];
+
+  const statusParsed = readEnum(o.status, OPERATION_STATUSES);
+  if (statusParsed && !statusParsed.known) {
+    unsupported.push({ field: "status", raw: statusParsed.raw });
+  }
+
+  const verificationParsed = readEnum(o.verification_result, VERIFICATION_RESULTS);
+  if (verificationParsed && !verificationParsed.known) {
+    unsupported.push({ field: "verification_result", raw: verificationParsed.raw });
+  }
+
+  const accepted = httpStatus === 202;
+
+  return {
+    operationId: readId(o.operation_id),
+    status: accepted
+      ? "APPLIED_UNVERIFIED"
+      : statusParsed?.known
+        ? statusParsed.value
+        : null,
+    verification: accepted
+      ? { known: true, value: "PENDING" }
+      : (verificationParsed ?? null),
+    receipt: readId(o.receipt) ?? readId(o.receipt_id),
+    unsupported,
+  };
+}
+
+/* ---------------------------------------------------------------------------
+ * Problems
+ * ------------------------------------------------------------------------ */
+
+export interface Problem {
+  code: string;
+  message: string;
+  retryAfterSeconds: number | null;
+  /** Which panel state this failure resolves to. */
+  panelStatus: PanelStatus;
+}
+
+/**
+ * Map an HTTP failure onto a panel state.
+ *
+ * The rule is `error-samples/problems.v1.json`, verbatim: "empty list = []/OK;
+ * 5xx = unavailable; unknown enum fail closed". The distinctions matter because
+ * the three failures below need three different responses from a human, and one
+ * generic error box would flatten them into "something went wrong".
+ */
+export function panelStatusForHttp(status: number): PanelStatus {
+  if (status === 401 || status === 403) return "denied";
+  if (status >= 500) return "unavailable";
+  if (status === 406 || status === 409) return "unavailable";
+  if (status === 429) return "stale";
+  return "unavailable";
+}
+
+export function readProblem(raw: unknown, httpStatus: number): Problem {
+  const o = obj(raw) ?? {};
+  const envelope = obj(o.envelope) ?? o;
+  const error = obj(envelope.error) ?? {};
+  return {
+    code: typeof error.code === "string" ? error.code : `HTTP_${httpStatus}`,
+    message: typeof error.message === "string" ? error.message : "The request failed.",
+    retryAfterSeconds: readInt(error.retry_after_seconds),
+    panelStatus: panelStatusForHttp(httpStatus),
+  };
+}
+
+/**
+ * An empty list is not a failure — `error-samples/problems.v1.json` bothers to
+ * say so ("empty list = []/OK"), and `KeysetTable` implements it: zero rows
+ * render as `empty` with a reason, never as `unavailable`. A screen that reports
+ * "nothing matched" as "the system is broken" provokes the opposite response
+ * from a human. There is no helper here because there is no decision to make.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Request key (BR-EX-18)
+ * ------------------------------------------------------------------------ */
+
+/**
+ * A client-generated opaque key for `POST /commands/plans`.
+ *
+ * Master plan §7.3: the key's idempotency scope is actor, workspace,
+ * environment, command type and target. Repeating it with the same payload hash
+ * while the plan is valid returns the existing operation; reusing it with a
+ * different hash returns `409`; a new intent after expiry needs a new key.
+ *
+ * The consequence for the UI is the part worth stating: the key belongs to the
+ * **intent**, not to the click. It is generated once when the operator opens a
+ * command and reused for every retry, which is what makes a double-submit, a
+ * restored tab and a connection that returns after the client gave up all
+ * resolve to one operation instead of three.
+ */
+export function newRequestKey(): string {
+  const c = globalThis.crypto;
+  if (c && typeof c.randomUUID === "function") return `rk_${c.randomUUID()}`;
+  // No secure context. 16 bytes from getRandomValues is still opaque and
+  // collision-free enough for an idempotency scope already narrowed by actor,
+  // environment, command type and target.
+  const bytes = new Uint8Array(16);
+  c.getRandomValues(bytes);
+  return `rk_${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
+}
+
+/** A `409` from reusing a request key with a different payload. */
+export function isRequestKeyConflict(problem: Problem): boolean {
+  return problem.code === "REQUEST_KEY_CONFLICT" || problem.code === "IDEMPOTENCY_CONFLICT";
 }
