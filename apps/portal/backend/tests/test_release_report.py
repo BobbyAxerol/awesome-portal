@@ -60,6 +60,8 @@ def test_hygiene_scan_is_clean_and_detects_planted_secrets(tmp_path: Path) -> No
 
     planted = tmp_path / "leak.py"
     planted.write_text("api_key = \"sk-live-1234567890abcdefghij\"\n", encoding="utf-8")
+    prose = tmp_path / "safe.md"
+    prose.write_text("paper order-risk-order-fill-position-PnL path\n", encoding="utf-8")
     original = module.REPO_ROOT
     module.REPO_ROOT = tmp_path
     try:
@@ -67,6 +69,7 @@ def test_hygiene_scan_is_clean_and_detects_planted_secrets(tmp_path: Path) -> No
     finally:
         module.REPO_ROOT = original
     assert any("leak.py" in finding["path"] for finding in findings)
+    assert not any("safe.md" in finding["path"] for finding in findings)
 
 
 def test_protected_strategy_hash_matches_freeze_manifest() -> None:

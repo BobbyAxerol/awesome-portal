@@ -28,7 +28,7 @@ SECRET_MARKERS = (
     r"-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----",
     r"AKIA[0-9A-Z]{16}",
     r"ghp_[0-9A-Za-z]{36}",
-    r"sk-[0-9A-Za-z-]{20,}",
+    r"(?<![0-9A-Za-z])sk-[0-9A-Za-z-]{20,}",
     r"xox[baprs]-[0-9A-Za-z-]{10,}",
     r"eyJhbGciOi[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}",
     r"password\s*=\s*[\"'][^\"']{8,}[\"']",
