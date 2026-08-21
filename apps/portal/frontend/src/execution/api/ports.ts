@@ -29,6 +29,8 @@ export interface InboxQuery {
 export interface InboxResult {
   page: KeysetPage<ApprovalRow>;
   counts: { pending: number; overdue: number; dueSoon: number } | null;
+  /** Server-counted over the whole filter. See `ApprovalInbox.inertCount`. */
+  inertCount?: number | null;
 }
 
 /** What apply returned. A 202 and nothing more (master plan §7.3). */

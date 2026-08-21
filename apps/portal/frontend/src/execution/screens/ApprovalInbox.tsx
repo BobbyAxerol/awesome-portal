@@ -22,7 +22,7 @@
  */
 import type { ReactNode } from "react";
 
-import type { ApprovalId, KeysetPage, PanelStatus, Sla } from "../contracts";
+import { slaOverdue, type ApprovalId, type KeysetPage, type PanelStatus, type Sla } from "../contracts";
 import { StatusChip } from "../components/badges";
 import { SlaCell } from "../components/evidence";
 import { PanelState } from "../components/states";
@@ -119,6 +119,27 @@ const FILTER_LABEL: Record<InboxFilter, string> = {
   OVERDUE: "Overdue",
 };
 
+/**
+ * Which review screen a row opens.
+ *
+ * Phase 1's spec names the journey precisely: AP-201 to R1, AP-352 to R2,
+ * EX-771 to Paper Exit Review. The gate decides, not the id — deriving it from
+ * the identifier would work for the cast and fail on the first real approval.
+ */
+export function reviewRouteFor(row: { id: string; gate: ApprovalGate }): string {
+  switch (row.gate) {
+    case "R1":
+      return `/governance/approvals/${row.id}/r1`;
+    case "R2":
+      return `/governance/approvals/${row.id}/r2`;
+    case "PAPER_EXIT":
+    case "SANDBOX_EXIT":
+      return `/governance/exit-reviews/${row.id}`;
+    case "LIVE_GATE":
+      return `/governance/approvals/${row.id}/r2`;
+  }
+}
+
 const INERT_LABEL: Record<InertReason, string> = {
   SELF: "not you (separation-of-duty)",
   QUORUM: "awaiting another approver",
@@ -141,6 +162,22 @@ function quorum(row: ApprovalRow): ReactNode {
   );
 }
 
+/**
+ * Row emphasis, copied from the hi-fi rather than invented.
+ *
+ * `IMPLEMENTATION_PHASES` Phase 1 names three treatments and asks for them
+ * exactly: an overdue row is red-tinted with a 3px red left border, a row with
+ * blockers shows them red, and an inert row is dimmed. All three are *row*
+ * treatments because the thing an operator scans is the row, not a cell — and
+ * the overdue one has a border as well as a tint so it survives a reader who
+ * cannot separate the tint from the background.
+ */
+function rowEmphasis(row: ApprovalRow): "overdue" | "inert" | undefined {
+  if (slaOverdue(row.sla)) return "overdue";
+  if (row.inert) return "inert";
+  return undefined;
+}
+
 const COLUMNS: readonly Column<ApprovalRow>[] = [
   { key: "id", header: "request", render: (r) => r.id },
   { key: "gate", header: "gate", render: (r) => r.gate },
@@ -153,8 +190,15 @@ const COLUMNS: readonly Column<ApprovalRow>[] = [
     title: (r) => r.blockerSummary ?? "none",
     // The count is the server's and the summary names the first one. "0 —
     // observation gate met" reads as a cleared gate; a blank cell would read as
-    // an unanswered question.
-    render: (r) => `${r.blockerCount} — ${r.blockerSummary ?? "none"}`,
+    // an unanswered question, and a count the server never sent is neither.
+    render: (r) =>
+      r.blockerCount < 0 ? (
+        <span className="exec-inbox-nocount">blocker count not published</span>
+      ) : (
+        <span data-blocking={r.blockerCount > 0 ? "true" : undefined}>
+          {r.blockerCount} — {r.blockerSummary ?? "none"}
+        </span>
+      ),
   },
   { key: "sla", header: "age / SLA", render: (r) => <SlaCell sla={r.sla} /> },
   { key: "quorum", header: "quorum", render: quorum },
@@ -173,6 +217,8 @@ export function ApprovalInbox({
   actorRoles,
   onOpenRequest,
   decided,
+  decidedWindow = "last 30 days",
+  inertCount = null,
   onLoadOlder,
   onLoadNewer,
 }: {
@@ -199,6 +245,22 @@ export function ApprovalInbox({
   onOpenRequest?: (id: ApprovalId) => void;
   /** Its own section. A decided request in the pending table is a false action item. */
   decided?: KeysetPage<ApprovalRow> | null;
+  /**
+   * The window the decided list covers. Stated because decided history is
+   * unbounded (scale doc §6, Phase 1) and a list with no window silently claims
+   * to be all of it.
+   */
+  decidedWindow?: string;
+  /**
+   * How many rows of the current selection the actor cannot act on, counted by
+   * the server over the whole filter.
+   *
+   * Here so that a server-side filter dropping separation-of-duty rows becomes
+   * visible: the count and the rows would disagree. Their visibility is the
+   * proof that separation of duties is working, so losing them silently is the
+   * one filtering bug this screen must not be able to hide.
+   */
+  inertCount?: number | null;
   onLoadOlder?: () => void;
   onLoadNewer?: () => void;
 }) {
@@ -253,6 +315,11 @@ export function ApprovalInbox({
         columns={COLUMNS}
         page={page}
         rowKey={(r) => r.id}
+        rowEmphasis={rowEmphasis}
+        // A work queue past 200 rows is an operational problem, not a rendering
+        // one (scale doc §6). Paginating it away would hide exactly that.
+        neverVirtualize
+        overflowNotice="This queue is over 200 pending items. That is an operational condition, not a display limit — it is shown in full on purpose."
         status={status}
         reason={reason ?? (status === "ok" && page.rows.length === 0 ? "Inbox zero." : undefined)}
         onRowClick={onOpenRequest ? (r) => onOpenRequest(r.id) : undefined}
@@ -260,9 +327,30 @@ export function ApprovalInbox({
         onLoadNewer={onLoadNewer}
       />
 
+      {/* The hi-fi's footer strip. The third clause is the one that matters:
+          it is the sentence that explains why un-actionable rows are still on
+          screen, and without it the dimming reads as a rendering bug. */}
+      <div className="exec-inbox-strip">
+        {counts ? (
+          <span>
+            {counts.overdue} overdue · {counts.dueSoon} due soon
+          </span>
+        ) : null}
+        <span>sort: overdue → due-soon → age</span>
+        {inertCount !== null ? (
+          <span title="Rows you cannot act on are still counted and still shown.">
+            {inertCount} not yours
+          </span>
+        ) : null}
+        <strong>visibility ≠ authority</strong>
+      </div>
+
       {decided ? (
         <div className="exec-inbox-decided">
-          <div className="exec-tile-title">Recently decided</div>
+          <div className="exec-tile-title">
+            Recently decided
+            {decidedWindow ? <span className="exec-inbox-window"> · {decidedWindow}</span> : null}
+          </div>
           <KeysetTable
             label="Recently decided"
             columns={COLUMNS}

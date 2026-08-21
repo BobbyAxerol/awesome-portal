@@ -59,9 +59,9 @@ từ Execution Cell AWS HK, discovery gate 15/15 COVERED, redaction PASS.
 `backtest/live/paper/replay/sandbox` — ta chỉ render 3, vì `backtest`/`replay`
 thuộc Research và nằm ngoài scope §0.
 
-**UI copy Execution Loop: tiếng Anh**, bám sát chữ trong hi-fi (D4). Đây là
-ngoại lệ có chủ ý của §3.8 — Research/Planning giữ tiếng Việt cho tới khi Bobby
-chốt kế hoạch chuyển đổi riêng.
+**UI copy: tiếng Anh toàn bộ** (Bobby chốt 2026-08-21) — xem §3.8. Execution
+Loop bám sát chữ trong hi-fi (D4). Ngoại lệ duy nhất là nội dung tài liệu
+Roadmap/Task tracking vốn đã viết tiếng Việt: giữ nguyên, vì dịch chúng đắt.
 
 **Scale refine bắt buộc**: hi-fi dựng với cast nhỏ (9 deployment, ~5 approval,
 ~6 operation) ở đúng một viewport 1440px. Mỗi màn phải có pass refine cho quy mô
@@ -161,9 +161,19 @@ thật trước khi được coi là xong — schema ở §8. Không màn nào �
    commit nhỏ đúng nghĩa; không commit secret/data/artifact/cache; hooks
    chặn sai phạm; merge dev/main là quyền Bobby (contributor chỉ push branch
    lên primus-origin và mở PR vào dev, không tự merge).
-8. **Ngôn ngữ UI theo scope**: Research/Planning giữ **tiếng Việt** (thuật ngữ
-   kỹ thuật giữ tiếng Anh khi cần); **Execution Loop dùng tiếng Anh** theo §0 +
-   D4, copy bám sát hi-fi. Số liệu luôn font mono.
+8. **Ngôn ngữ UI: tiếng Anh, toàn bộ** (Bobby chốt 2026-08-21). Execution Loop,
+   Research, Planning, shell — tất cả. Copy của Execution Loop bám sát chữ trong
+   hi-fi (D4). Số liệu luôn font mono.
+
+   **Một ngoại lệ duy nhất:** tài liệu **Roadmap và Task tracking** vốn viết
+   tiếng Việt thì **giữ nguyên** — dịch chúng đắt và không đổi lại được gì. Đây
+   là *nội dung tài liệu*, không phải chrome của UI: nhãn, nút, tab, trạng thái
+   quanh chúng vẫn tiếng Anh.
+
+   Luật này thay luật cũ ("Research/Planning giữ tiếng Việt"). Luật cũ mâu thuẫn
+   với repo: `main` đã chuyển cả hai sang tiếng Anh từ **2026-08-18**
+   (`2c0cf9e`, `b23619f`), ba ngày *trước* khi nó được viết. Visual baseline
+   (`23954b5`) đã chốt tiếng Anh, nên repo, baseline và luật giờ khớp nhau.
 
 ## 4. Commands (chạy trong từng frontend)
 

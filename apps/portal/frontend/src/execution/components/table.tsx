@@ -84,12 +84,25 @@ export interface KeysetTableProps<T> {
   loading?: boolean;
   onRowClick?: (row: T) => void;
   selectedKey?: string | null;
+  /** Per-row emphasis, e.g. an overdue queue item. Rendered as a data attribute. */
+  rowEmphasis?: (row: T) => string | undefined;
   /** DS §8 keeps a minimum width so columns do not collapse; the panel scrolls. */
   minWidth?: number;
   /** Test seam and escape hatch for environments that report no height. */
   viewportRows?: number;
   /** Cross-filter strip, cap notices — anything that qualifies the whole list. */
   notice?: ReactNode;
+  /**
+   * Refuse to virtualize, and say so if the list outgrows the threshold.
+   *
+   * The Approval Inbox's pending queue asks for this. Its scale-refine cell is
+   * explicit: a work queue past 200 rows is an operational problem, not a
+   * rendering one, and paginating it away hides the thing somebody needs to act
+   * on. So the rows all render and the footer states the overflow.
+   */
+  neverVirtualize?: boolean;
+  /** What to say when a `neverVirtualize` list is over the threshold. */
+  overflowNotice?: string;
 }
 
 function grouped(n: number): string {
@@ -113,9 +126,12 @@ export function KeysetTable<T>({
   loading = false,
   onRowClick,
   selectedKey = null,
+  rowEmphasis,
   minWidth = 880,
   viewportRows,
   notice,
+  neverVirtualize = false,
+  overflowNotice,
 }: KeysetTableProps<T>) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -152,7 +168,8 @@ export function KeysetTable<T>({
     return <PanelState status="empty" reason={reason ?? "No rows match this filter."} />;
   }
 
-  const virtualized = rows.length > VIRTUALIZE_ABOVE;
+  const virtualized = !neverVirtualize && rows.length > VIRTUALIZE_ABOVE;
+  const overflowing = neverVirtualize && rows.length > VIRTUALIZE_ABOVE;
   const inView = viewportRows ?? (measuredRows > 0 ? measuredRows : UNMEASURED_ROWS);
   const start = virtualized ? Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN) : 0;
   const end = virtualized ? Math.min(rows.length, start + inView + OVERSCAN * 2) : rows.length;
@@ -200,6 +217,7 @@ export function KeysetTable<T>({
                 <tr
                   key={key}
                   data-selected={key === selectedKey ? "true" : undefined}
+                  data-emphasis={rowEmphasis?.(row)}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   className={onRowClick ? "exec-table-clickable" : undefined}
                 >
@@ -232,6 +250,7 @@ export function KeysetTable<T>({
         page={page}
         resident={rows.length}
         virtualized={virtualized}
+        overflowNotice={overflowing ? overflowNotice : undefined}
         overBudget={overBudget}
         isFiltered={isFiltered}
         filtered={filtered}
@@ -252,6 +271,7 @@ function TableFooter<T>({
   page,
   resident,
   virtualized,
+  overflowNotice,
   overBudget,
   isFiltered,
   filtered,
@@ -262,6 +282,7 @@ function TableFooter<T>({
   page: KeysetPage<T>;
   resident: number;
   virtualized: boolean;
+  overflowNotice?: string;
   overBudget: boolean;
   isFiltered: boolean;
   filtered: number | null;
@@ -300,6 +321,10 @@ function TableFooter<T>({
             ? `sort: ${sort.map((s) => `${s.field} ${s.direction}`).join(", ")}`
             : null}
         </div>
+      ) : null}
+
+      {overflowNotice ? (
+        <div className="exec-table-overbudget">{overflowNotice}</div>
       ) : null}
 
       {overBudget ? (

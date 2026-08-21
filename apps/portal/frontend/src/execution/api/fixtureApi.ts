@@ -136,6 +136,15 @@ const R1_DETAIL: Record<string, unknown> = {
  */
 const VERIFICATION_WALK = ["PENDING", "ACKNOWLEDGED", "SUCCEEDED"] as const;
 
+/** Opaque to the caller, which is the only property that matters here. */
+function encodeCursor(row: Record<string, unknown>): string {
+  return `c_${String(row.approval_id)}`;
+}
+
+function decodeCursor(cursor: string): string {
+  return cursor.replace(/^c_/, "");
+}
+
 export interface FixtureApiOptions {
   /** Endpoints named here answer `unavailable`, to exercise that path. */
   unavailableEndpoints?: readonly (keyof ExecutionApi)[];
@@ -163,18 +172,54 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
         return unavailable("A page cannot be requested in both directions at once.");
       }
 
+      // Cursors are honoured rather than ignored. A fixture that returns the
+      // same page whatever the cursor lets a paging bug through unnoticed,
+      // which is the one thing the container's paging code needs exercised.
+      const size = query.limit ?? 2;
+      const start = query.after
+        ? APPROVAL_ROWS.findIndex((r) => r.approval_id === decodeCursor(query.after as string)) + 1
+        : query.before
+          ? Math.max(
+              0,
+              APPROVAL_ROWS.findIndex((r) => r.approval_id === decodeCursor(query.before as string)) - size,
+            )
+          : 0;
+      const slice = APPROVAL_ROWS.slice(start, start + size);
+
       const gaps: string[] = [];
       // Through the same mapper the HTTP client uses. The point of the fixture
       // is to exercise this, not to bypass it.
-      const page = readKeysetPage({ rows: APPROVAL_ROWS, total_count: 5, filtered_count: 4 }, (row) => {
-        const read = readApprovalRow(row);
-        gaps.push(...read.gaps);
-        return read.row;
-      });
+      const page = readKeysetPage(
+        {
+          rows: slice,
+          total_count: APPROVAL_ROWS.length + 1,
+          filtered_count: APPROVAL_ROWS.length,
+          next_cursor: start + size < APPROVAL_ROWS.length ? encodeCursor(slice[slice.length - 1]) : null,
+          prev_cursor: start > 0 ? encodeCursor(slice[0]) : null,
+          has_more: start + size < APPROVAL_ROWS.length,
+          has_previous: start > 0,
+          applied_filters: [{ field: "view", op: "eq", value: query.filter }],
+          applied_sort: [
+            { field: "sla_state", direction: "desc" },
+            { field: "approval_id", direction: "asc" },
+          ],
+        },
+        (row) => {
+          const read = readApprovalRow(row);
+          gaps.push(...read.gaps);
+          return read.row;
+        },
+      );
 
       return {
         ok: true,
-        value: { page, counts: { pending: 5, overdue: 1, dueSoon: 1 } },
+        value: {
+          page,
+          counts: { pending: APPROVAL_ROWS.length + 1, overdue: 1, dueSoon: 1 },
+          // Counted over the whole filter, not the page: that is what makes a
+          // dropped separation-of-duty row visible.
+          inertCount: APPROVAL_ROWS.filter((r) => r.inert !== null).length,
+        },
         warnings: gaps,
       };
     },

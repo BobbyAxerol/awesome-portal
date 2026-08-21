@@ -1387,3 +1387,56 @@
   font-family: var(--font-body);
   letter-spacing: 0;
 }
+
+/* Row treatments, copied from the Approval Inbox hi-fi. Overdue carries a 3px
+ * left border as well as a tint, so it survives a reader who cannot separate
+ * the tint from the background — the tint alone would put an SLA breach behind
+ * one hue. */
+.exec-table tbody tr[data-emphasis="overdue"] td {
+  background: var(--bad-bg);
+}
+
+.exec-table tbody tr[data-emphasis="overdue"] td:first-child {
+  box-shadow: inset 3px 0 0 var(--bad);
+}
+
+/* Inert rows stay legible. Dimmed, never hidden: their visibility is the proof
+ * that separation of duties is working. */
+.exec-table tbody tr[data-emphasis="inert"] td {
+  color: var(--ink-mute);
+}
+
+.exec-table td [data-blocking="true"] {
+  color: var(--bad);
+}
+
+/* A count the server never sent is neither zero nor a problem — it is absent. */
+.exec-inbox-nocount {
+  color: var(--ink-mute);
+  font-style: italic;
+}
+
+/* The hi-fi's footer strip. "visibility ≠ authority" is the sentence that
+ * explains the dimmed rows; without it the dimming reads as a rendering bug. */
+.exec-inbox-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--line-soft);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+}
+
+.exec-inbox-strip strong {
+  margin-left: auto;
+  color: var(--ink-soft);
+  letter-spacing: 0.06em;
+}
+
+.exec-inbox-window {
+  color: var(--ink-mute);
+  font-weight: 400;
+}

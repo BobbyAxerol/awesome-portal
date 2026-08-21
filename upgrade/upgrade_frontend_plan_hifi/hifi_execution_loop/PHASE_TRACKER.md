@@ -38,7 +38,7 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | # | Screen (WF) | FE | BE | Needs | Evidence |
 |---|---|---|---|---|---|
 | 0 | Shell & shared components | **DONE** | `CONTRACT_COMPLETE` | — EX-BE-00R4 delivered | FE: 42 tests · build · visual baseline **drifted, see §9**; BE: registry rev 4 · 17 fixture profiles · fail-closed policy tests · generated OpenAPI/TS contract |
-| 1 | Approval Inbox (4a) | `WIP` (adapter built, on the port) | `OPERATIONAL_EVIDENCE_PENDING` | registry activation (`query_enabled`) — **not** the fresh-PG rerun | EX-BE-05a endpoint over EX-BE-04a; FE adapter reconciled against the §5 field map; FE runs on `createFixtureApi` |
+| 1 | Approval Inbox (4a) | `WIP` (screen + adapter complete; awaiting data) | `OPERATIONAL_EVIDENCE_PENDING` | registry activation (`query_enabled`) — **not** the fresh-PG rerun | EX-BE-05a endpoint over EX-BE-04a; FE adapter reconciled against the §5 field map; FE runs on `createFixtureApi` |
 | 2 | Gate R1 Review (1a) | `WIP` (adapter built, on the port) | `OPERATIONAL_EVIDENCE_PENDING` | registry activation (`query_enabled`) — **not** the fresh-PG rerun | immutable evidence + plan/apply/poll + SoD/concurrency/audit implemented; FE obeys `eligibility.can_*` separately |
 | 3 | Gate R2 Review (1b) | `WIP` (states built) | `FOUNDATION_COMPLETE` | EX-BE-03/05a/07 capital preview | master plan §§10.3, 12.2 |
 | 4 | Paper Workbench (1c) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/04b; M7 evidence | adaptive six-rung server charts; master plan §§10.4, 15.1 |
@@ -450,7 +450,20 @@ Carbon isolation and the Lane A boundary both holding.
 **Result:** re-recorded, then re-run **without** `--update` to prove the gate
 compares rather than records: **101 passed, 0 failed.**
 
-### 10.1 Discrepancy for Bobby — the language rule
+### 10.1 Discrepancy for Bobby — the language rule · **RESOLVED 2026-08-21**
+
+> **Bobby's ruling:** English everywhere. The one exception is the Roadmap and
+> Task-tracking **documents** already written in Vietnamese — those stay, because
+> translating them is expensive and buys nothing. That is document content, not
+> UI chrome: the labels, buttons, tabs and states around them are English.
+
+`CLAUDE.md` §3.8 and §0 are rewritten accordingly, and the re-recorded baselines
+already match. Repository, baseline and rule now agree. The original finding is
+kept below because it is the reason the question was asked at all.
+
+---
+
+**Original finding:**
 
 `CLAUDE.md` §3.8 and §0 say Research and Planning keep Vietnamese until a
 separate conversion plan is approved. `main` converted both to English on
@@ -485,3 +498,48 @@ asserts against the shipped `registry.json` that every `EXECUTION_*` screen is
 false. **Those tests are written to fail on the day activation happens** — that
 is the point. When they do, the activation and the test update land in the same
 commit, so nothing switches on unnoticed.
+
+
+---
+
+## 12. Phase 1 — what the frontend finished without codex
+
+`IMPLEMENTATION_PHASES` §1 and `EXECUTION_SCALE_AND_REFINE` §6 were read back
+against what had actually been built, and six things were missing. All six are
+Lane A and none needed a backend.
+
+| # | What §1 or §6 asks for | What was there | Now |
+|---|---|---|---|
+| 1 | "AP-352 = red-tinted row + 3px red left border"; "AP-360 = blockers red"; "AP-311 = whole row dimmed" — *copy exactly* | uniform rows | `rowEmphasis` on the table; overdue gets a **border as well as a tint**, so an SLA breach is not behind one hue |
+| 2 | Footer strip: "overdue/due-soon counts · sort rule · **visibility ≠ authority**" | counts and sort only | the third clause is in. It is the sentence that explains the dimmed rows; without it the dimming reads as a rendering bug |
+| 3 | §6: pending list **un-virtualized** — "if it exceeds 200 the problem is operational, not visual — surface that honestly rather than paginating it away" | virtualized above 200 like every other list | `neverVirtualize` on the table, and an overflow notice that says the condition is operational |
+| 4 | §6: "Recently-decided gets M1 with a default 30-day window" | no window stated | window printed. Decided history is unbounded, and a list with no window silently claims to be all of it |
+| 5 | §6 invariant: SoD rows "dimmed, never filtered out; a server-side filter must not drop them" | dimmed, but nothing would notice a drop | `inertCount`, counted by the server over the **whole filter**. If a filter drops separation-of-duty rows the count and the rows disagree, visibly |
+| 6 | "row click navigates (AP-201→R1, AP-352→R2, EX-771→Paper Exit Review)" | one callback, no destination | `reviewRouteFor` routes **by gate, not by identifier** — deriving it from the id would work for the cast and fail on the first real approval |
+
+The fixture API now honours cursors as well, forward and backward. A fixture
+that returns the same page whatever the cursor lets a paging bug through
+unnoticed, and the container's paging code was the one thing that needed
+exercising.
+
+**Evidence:** 649 tests, `tsc` clean, build clean, and the visual baseline still
+**101/101** — Lane A touched no product screen, which is the boundary holding.
+
+### 12.1 What Phase 1 still waits on, and it is not much
+
+The screen is finished. What is left is not frontend work:
+
+1. **Registry activation** — `query_enabled` for `EXECUTION_APPROVALS`. Until
+   then `createHttpApi` refuses before it calls, by design.
+2. **The route.** `/governance/approvals` renders the commissioned brief, and it
+   should: putting the real screen there while it runs on fixtures would break
+   the Lane A boundary — fixture data at a product route is exactly what that
+   boundary forbids. The swap is one line in `MODULES` on the day the data is
+   real.
+3. **One discrepancy for codex.** `IMPLEMENTATION_PHASES` §1 lists seven chips —
+   Mine / All / R1 / **R2** / Exit reviews / Live gates / Overdue. `EX-BE-05a` §3
+   supports eight — `INBOX, ALL, R1, PAPER, SANDBOX, LIVE_GATES, EXIT_REVIEWS,
+   OVERDUE`. The hi-fi has an **R2** chip the backend does not, and the backend
+   has **PAPER**/**SANDBOX** chips the hi-fi does not. The frontend currently
+   follows the backend's eight, since a chip that filters nothing is worse than
+   a missing one — but the two lists should agree before phase 1 closes.

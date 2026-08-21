@@ -66,7 +66,7 @@ import {
   type SubscriptionEvent,
   type SubscriptionState,
 } from "./subscription";
-import { ApprovalInbox, INBOX_FILTERS, type ApprovalRow } from "./screens/ApprovalInbox";
+import { ApprovalInbox, INBOX_FILTERS, reviewRouteFor, type ApprovalRow } from "./screens/ApprovalInbox";
 import { GateR1Review } from "./screens/GateR1Review";
 import { GateR2Review } from "./screens/GateR2Review";
 import { EXIT_OUTCOME, PaperExitReview } from "./screens/PaperExitReview";
@@ -2811,7 +2811,8 @@ describe("containers — the port meets the screens", () => {
     // Four rows are on screen and five are pending. The header describes the
     // queue, the rows describe the page, and both are the server's numbers.
     expect(container.querySelector(".exec-inbox-counts")?.textContent).toContain("5 PENDING");
-    expect(container.querySelectorAll("tbody tr").length).toBe(4);
+    // Two rows on the page, five in the queue. The header describes the queue.
+    expect(container.querySelectorAll("tbody tr").length).toBe(2);
   });
 
   it("renders a loading skeleton before the first answer, not an empty queue", () => {
@@ -2999,5 +3000,190 @@ describe("server eligibility composes with the local floor", () => {
     render(gate());
     expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", false);
     expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", false);
+  });
+});
+
+/* ===========================================================================
+ * Phase 1 — the parts IMPLEMENTATION_PHASES §1 and the scale refine ask for
+ * ======================================================================== */
+
+describe("Approval Inbox — row treatments copied from the hi-fi", () => {
+  const counts = { pending: 5, overdue: 1, dueSoon: 1 };
+
+  it("marks an overdue row with a border as well as a tint", () => {
+    // A tint alone would put an SLA breach behind one hue.
+    const { container } = render(
+      <ApprovalInbox page={inboxPage([inboxRow()])} counts={counts} filter="INBOX" />,
+    );
+    expect(container.querySelector('tbody tr[data-emphasis="overdue"]')).not.toBeNull();
+  });
+
+  it("marks an inert row dimmed and never as overdue", () => {
+    const { container } = render(
+      <ApprovalInbox
+        page={inboxPage([inboxRow({ inert: "SELF", sla: { ageMinutes: 60, budgetMinutes: 1440 } })])}
+        counts={counts}
+        filter="INBOX"
+      />,
+    );
+    expect(container.querySelector('tbody tr[data-emphasis="inert"]')).not.toBeNull();
+  });
+
+  it("renders blockers red only when there are any", () => {
+    const { container, rerender } = render(
+      <ApprovalInbox page={inboxPage([inboxRow({ blockerCount: 2 })])} counts={counts} filter="INBOX" />,
+    );
+    expect(container.querySelector('[data-blocking="true"]')).not.toBeNull();
+    rerender(
+      <ApprovalInbox
+        page={inboxPage([inboxRow({ blockerCount: 0, blockerSummary: "observation gate met" })])}
+        counts={counts}
+        filter="INBOX"
+      />,
+    );
+    expect(container.querySelector('[data-blocking="true"]')).toBeNull();
+  });
+
+  it("states an unpublished blocker count instead of showing zero", () => {
+    render(
+      <ApprovalInbox page={inboxPage([inboxRow({ blockerCount: -1 })])} counts={counts} filter="INBOX" />,
+    );
+    expect(screen.getByText(/blocker count not published/)).toBeTruthy();
+  });
+});
+
+describe("Approval Inbox — the footer strip explains the dimmed rows", () => {
+  it("prints visibility ≠ authority", () => {
+    // Without this sentence the dimming reads as a rendering bug.
+    render(
+      <ApprovalInbox
+        page={inboxPage([inboxRow()])}
+        counts={{ pending: 5, overdue: 1, dueSoon: 1 }}
+        filter="INBOX"
+      />,
+    );
+    expect(screen.getByText("visibility ≠ authority")).toBeTruthy();
+    expect(screen.getByText(/1 overdue · 1 due soon/)).toBeTruthy();
+  });
+
+  it("counts the rows the actor cannot act on, over the whole filter", () => {
+    // The count and the rows would disagree if a server-side filter dropped
+    // separation-of-duty rows, which is the one filtering bug this screen must
+    // not be able to hide.
+    render(
+      <ApprovalInbox
+        page={inboxPage([inboxRow()])}
+        counts={{ pending: 5, overdue: 1, dueSoon: 0 }}
+        inertCount={2}
+        filter="INBOX"
+      />,
+    );
+    expect(screen.getByText("2 not yours")).toBeTruthy();
+  });
+
+  it("states the window the decided list covers", () => {
+    // Decided history is unbounded; a list with no window silently claims to be
+    // all of it.
+    render(
+      <ApprovalInbox
+        page={inboxPage([inboxRow()])}
+        decided={inboxPage([inboxRow({ id: "AP-201" })])}
+        counts={{ pending: 1, overdue: 0, dueSoon: 0 }}
+        filter="INBOX"
+      />,
+    );
+    expect(screen.getByText(/last 30 days/)).toBeTruthy();
+  });
+});
+
+describe("Approval Inbox — the pending queue is never virtualized", () => {
+  const many = Array.from({ length: 260 }, (_, i) => inboxRow({ id: `AP-${900 + i}` }));
+
+  it("renders every pending row, however many there are", () => {
+    // A work queue past 200 rows is an operational problem, not a rendering
+    // one. Paginating it away hides exactly the thing somebody must act on.
+    const { container } = render(
+      <ApprovalInbox page={inboxPage(many)} counts={{ pending: 260, overdue: 5, dueSoon: 3 }} filter="INBOX" />,
+    );
+    expect(container.querySelector(".exec-table")?.getAttribute("data-virtualized")).toBe("false");
+    expect(container.querySelectorAll("tbody tr:not(.exec-table-pad)").length).toBe(260);
+  });
+
+  it("says the queue is over its threshold rather than hiding it", () => {
+    render(
+      <ApprovalInbox page={inboxPage(many)} counts={{ pending: 260, overdue: 5, dueSoon: 3 }} filter="INBOX" />,
+    );
+    expect(screen.getByText(/operational condition, not a display limit/)).toBeTruthy();
+  });
+});
+
+describe("Approval Inbox — a row opens the review its gate owns", () => {
+  it("routes by gate, not by identifier", () => {
+    // Deriving the route from the id would work for the cast and fail on the
+    // first real approval.
+    expect(reviewRouteFor({ id: "AP-201", gate: "R1" })).toBe("/governance/approvals/AP-201/r1");
+    expect(reviewRouteFor({ id: "AP-352", gate: "R2" })).toBe("/governance/approvals/AP-352/r2");
+    expect(reviewRouteFor({ id: "EX-771", gate: "PAPER_EXIT" })).toBe("/governance/exit-reviews/EX-771");
+    expect(reviewRouteFor({ id: "EX-780", gate: "SANDBOX_EXIT" })).toBe("/governance/exit-reviews/EX-780");
+  });
+
+  it("gives every gate in the vocabulary a destination", () => {
+    // A gate with no route is a row that looks clickable and goes nowhere.
+    for (const gate of ["R1", "R2", "PAPER_EXIT", "SANDBOX_EXIT", "LIVE_GATE"] as const) {
+      expect(reviewRouteFor({ id: "X", gate }), gate).toMatch(/^\/governance\//);
+    }
+  });
+});
+
+describe("the fixture API pages, so the container's paging is exercised", () => {
+  it("moves forward on a cursor rather than returning the same page", async () => {
+    const api = createFixtureApi();
+    const first = await api.listApprovals({ filter: "INBOX", limit: 2 });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    expect(first.value.page.rows.map((r) => r.id)).toEqual(["AP-352", "AP-341"]);
+    expect(first.value.page.hasPrevious).toBe(false);
+    expect(first.value.page.hasMore).toBe(true);
+
+    const second = await api.listApprovals({
+      filter: "INBOX",
+      limit: 2,
+      after: first.value.page.nextCursor ?? undefined,
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    expect(second.value.page.rows.map((r) => r.id)).toEqual(["AP-259", "EX-771"]);
+    expect(second.value.page.hasPrevious).toBe(true);
+  });
+
+  it("moves back on a prev cursor", async () => {
+    const api = createFixtureApi();
+    const second = await api.listApprovals({ filter: "INBOX", limit: 2, after: "c_AP-341" });
+    if (!second.ok) return;
+    const back = await api.listApprovals({
+      filter: "INBOX",
+      limit: 2,
+      before: second.value.page.prevCursor ?? undefined,
+    });
+    expect(back.ok).toBe(true);
+    if (!back.ok) return;
+    expect(back.value.page.rows.map((r) => r.id)).toEqual(["AP-352", "AP-341"]);
+  });
+
+  it("echoes the view it applied and the sort it used", async () => {
+    const api = createFixtureApi();
+    const r = await api.listApprovals({ filter: "OVERDUE" });
+    if (!r.ok) return;
+    expect(r.value.page.appliedFilters?.[0]).toEqual({ field: "view", op: "eq", value: "OVERDUE" });
+    // Overdue sort order has to survive paging, so it is echoed on every page.
+    expect(r.value.page.appliedSort?.map((s) => s.field)).toEqual(["sla_state", "approval_id"]);
+  });
+
+  it("counts inert rows over the whole filter, not the page", async () => {
+    const api = createFixtureApi();
+    const r = await api.listApprovals({ filter: "INBOX", limit: 2 });
+    if (!r.ok) return;
+    expect(r.value.page.rows.length).toBe(2);
+    expect(r.value.inertCount).toBe(2);
   });
 });
