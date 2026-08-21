@@ -1752,7 +1752,7 @@ không phải 17 màn.
 
 | # | Màn (WF) | FE deliverable | BE prereq | BR-EX | Exit gate |
 |---|---|---|---|---|---|
-| 0 | Shell & shared components | 13 component × mọi state + fixture page; sidebar/topbar từ registry | **registry rev 3** | — | vitest + build + visual baseline không drift |
+| 0 | Shell & shared components | 13 component × mọi state + fixture page; sidebar/topbar từ registry | registry rev 3/4 | — | **ĐÓNG 2026-08-21**: vitest + build + visual baseline **101/101** |
 | 1 | Approval Inbox (4a) | bảng pending + recently-decided, 7 filter chip, SoD row dimmed | approvals read model | 01/02/03 | filter round-trip, SoD row không bị filter bỏ |
 | 2 | Gate R1 Review (1a) | decision bar, artifact passport, checklist, conditions composer | approval decision write | — | decision ghi được, inbox phản ánh |
 | 3 | Gate R2 Review (1b) | readiness checklist, R1 reference, capital preview strip | capital preview + R1 ref | — | preview recompute; R1 EXPIRED khoá cả decision bar |
@@ -1828,6 +1828,7 @@ Ngoài §9 toàn cục, một phase Execution Loop còn phải:
 | # | Vấn đề | Ảnh hưởng | Chờ ai |
 |---|---|---|---|
 | ~~E-1~~ | ~~Registry rev 3 chưa có~~ | **Đóng 2026-08-21** — `e78a597`, 17 route duy nhất, 4 group canonical | — |
+| **E-11** | **Luật ngôn ngữ mâu thuẫn với repo.** `CLAUDE.md` §3.8/§0 nói Research/Planning giữ tiếng Việt; `main` đã chuyển cả hai sang tiếng Anh từ **2026-08-18** (`2c0cf9e`, `b23619f`), tức ba ngày *trước* khi luật được viết | Baseline vừa re-record đã đóng băng tiếng Anh vào ảnh. Nếu đáp án là quay lại tiếng Việt thì re-record lần nữa — rẻ; để gate đỏ vĩnh viễn mới đắt | **Bobby** |
 | E-2 | **Font IBM Plex chưa cài** | Surface có màu và hình học Carbon nhưng chữ Inter; DS §7 coi type mono-forward là một phần identity | Bobby (đổi lockfile) |
 | E-3 | **Tỉ lệ order/fill** 1.000/ngày trên 150–500 deployment = ~2–7/deployment/ngày | Mọi ngân sách blotter, event và workbench dựng trên số này | Bobby |
 | ~~E-4~~ | ~~`BrokerSync` sai~~ | **Đóng** — master plan §2.2: `ERROR/MISMATCH/OK/STALE` là của Trading System, `UNKNOWN` được phép tồn tại phía Portal như trạng thái "chưa quan sát lần nào". Đúng bằng kết luận độc lập của S1 | — |

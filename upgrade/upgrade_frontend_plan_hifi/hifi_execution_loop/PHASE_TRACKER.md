@@ -37,9 +37,9 @@ These qualify what is complete; they do not mean frontend `DONE`.
 
 | # | Screen (WF) | FE | BE | Needs | Evidence |
 |---|---|---|---|---|---|
-| 0 | Shell & shared components | **DONE** (components) · **DONE** (nav) · `BLOCKED` (visual baseline) | `CONTRACT_COMPLETE` | — EX-BE-00R4 delivered | FE: 42 tests · build · visual baseline **drifted, see §9**; BE: registry rev 4 · 17 fixture profiles · fail-closed policy tests · generated OpenAPI/TS contract |
-| 1 | Approval Inbox (4a) | `WIP` (states built) | `OPERATIONAL_EVIDENCE_PENDING` | Claude adapter + final fresh-PG gate | EX-BE-05a endpoint implemented over EX-BE-04a; 182k/integration suite authored; Docker rerun pending |
-| 2 | Gate R1 Review (1a) | `WIP` (states built) | `OPERATIONAL_EVIDENCE_PENDING` | Claude adapter + final fresh-PG gate | immutable evidence + plan/apply/poll + SoD/concurrency/audit implemented; token tests 3/3 |
+| 0 | Shell & shared components | **DONE** | `CONTRACT_COMPLETE` | — EX-BE-00R4 delivered | FE: 42 tests · build · visual baseline **drifted, see §9**; BE: registry rev 4 · 17 fixture profiles · fail-closed policy tests · generated OpenAPI/TS contract |
+| 1 | Approval Inbox (4a) | `WIP` (adapter built, on the port) | `OPERATIONAL_EVIDENCE_PENDING` | registry activation (`query_enabled`) — **not** the fresh-PG rerun | EX-BE-05a endpoint over EX-BE-04a; FE adapter reconciled against the §5 field map; FE runs on `createFixtureApi` |
+| 2 | Gate R1 Review (1a) | `WIP` (adapter built, on the port) | `OPERATIONAL_EVIDENCE_PENDING` | registry activation (`query_enabled`) — **not** the fresh-PG rerun | immutable evidence + plan/apply/poll + SoD/concurrency/audit implemented; FE obeys `eligibility.can_*` separately |
 | 3 | Gate R2 Review (1b) | `WIP` (states built) | `FOUNDATION_COMPLETE` | EX-BE-03/05a/07 capital preview | master plan §§10.3, 12.2 |
 | 4 | Paper Workbench (1c) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-03/04b; M7 evidence | adaptive six-rung server charts; master plan §§10.4, 15.1 |
 | 5 | Paper Exit Review (4b) | `WIP` (states built) | `FOUNDATION_COMPLETE` | EX-BE-03/05a evidence integration | master plan §§10.5, 12.2 |
@@ -205,7 +205,10 @@ response adapter against the field map in
 [`EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md`](../../backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md),
 including the correction that Deny is allowed for self-authored evidence but
 not for an expired/closed request. Strict typecheck and keyring tests pass; the
-fresh PostgreSQL/Docker rerun is still an explicit gate, not a claimed pass.
+fresh PostgreSQL/Docker rerun is still an explicit backend release gate, not a
+claimed pass. Codex has since confirmed it does **not** gate Claude's adapter
+work, so phases 1 and 2 no longer carry it as a frontend dependency; what they
+carry instead is registry activation.
 
 ### 6.2 BR-EX decisions
 
@@ -238,7 +241,10 @@ BE column and the detailed gate is in master plan §12.2.
 target- and command-aware rather than a blanket lock. The immediate backend runway is:
 
 1. `EX-BE-04a` TypeScript control-plane query primitives — delivered;
-2. `EX-BE-05a` governance/evidence workflow — implemented, final fresh-PG gate pending;
+2. `EX-BE-05a` governance/evidence workflow — implemented; the fresh-PG rerun is
+   a backend release gate and codex has confirmed it no longer gates the
+   frontend adapter (2026-08-21). Recorded as codex's statement, not as a gate
+   this side ran;
 3. Claude: wire the Phase 1/2 adapters while keeping `fixture`/`unavailable` visible;
 4. in parallel when assigned, `EX-BE-01→02→03→04b→06` for the Rust AWS read/projection/realtime path;
 5. `EX-BE-05b` only after source command/auth capability is proven.
@@ -302,7 +308,10 @@ much cheaper than after.
 2. **Order/fill ratio** (carried from the scale pass): 1,000 per day across
    150–500 deployments is ~2–7 per deployment per day. Every blotter, event and
    workbench budget rests on it.
-3. **Visual baseline re-record.** 52 of 101 baselines drifted when the registry
+3. ~~**Visual baseline re-record.**~~ **Closed 2026-08-21 — see §10.**
+
+   Original note kept for the record:
+   **Visual baseline re-record.** 52 of 101 baselines drifted when the registry
    grew the shared navigation rail. One diff was inspected: the content area is
    unchanged, only the rail moved, and the QuantBT label has not regressed. The
    remaining 51 have not been reviewed. Re-recording the batch without reviewing
@@ -403,3 +412,76 @@ evidence rather than a design claim — `navigation.test.ts` asserts that every
 opts in, resolves from its canonical route, has an icon this build can draw
 (22/22 keys mapped), holds a unique route, and that the fixture page has not
 leaked into the registry.
+
+
+---
+
+## 10. Visual baseline — reviewed, re-recorded, green
+
+The 52 drifted baselines were reviewed before re-recording rather than after,
+because re-recording a batch you have not read spends the one gate that would
+have caught an unintended Research change. What the review found is worth
+keeping, because the first hypothesis was wrong.
+
+**Method.** For each of the 52, the expected and actual images were diffed
+pixel-wise, the nav rail (x < 230) masked out, and what remained ranked. A
+horizontal-shift search was run first to test whether the content had simply
+moved; the best shift was 0 on every image, so it had not. **48 of 52 changed
+outside the rail** — the "it is only the nav rail" reading, taken from one image
+earlier, did not survive the other 51. The five distinct families were then
+opened and read.
+
+**Every change traced to one of three causes, and none of them is a regression:**
+
+| Cause | Evidence | Screens |
+|---|---|---|
+| Registry revisions 3 and 4 | nav rail grew; Command Center reads `13 → 22 features in the registry` and `9 → 18 COMMISSIONED`, which is the registry-driven shell working correctly | all 52 (rail), Command Center (counts) |
+| Feature label corrected | `QuantBT Research` → `QuantBT Backtest`; `registry.json` and `UNIFIED_IMPLEMENTATION_PLAN.md` §1 both say Backtest, so the **baseline** was the stale side | Research screens, Command Center |
+| UI copy converted to English | `Tìm kiếm → Search`, `NGUỒN → SOURCE`, `ĐƠN VỊ → UNITS`, `Module dự kiến → Planned modules`, `LIÊN KẾT PORTAL → PORTAL … PLANNING LINKS` | Research and Planning |
+
+**The third cause is not new drift.** It landed in `2c0cf9e` and `b23619f` on
+**2026-08-18**, both already merged to `main` and both already in this branch's
+base. The snapshots were last recorded on **2026-08-17**. The baselines were
+four days older than the code they guarded, so `main` itself would have failed
+this gate — the red was pre-existing debt, not something the Execution Loop
+introduced. Nine slices of Execution Loop work added zero drift, which is the
+Carbon isolation and the Lane A boundary both holding.
+
+**Result:** re-recorded, then re-run **without** `--update` to prove the gate
+compares rather than records: **101 passed, 0 failed.**
+
+### 10.1 Discrepancy for Bobby — the language rule
+
+`CLAUDE.md` §3.8 and §0 say Research and Planning keep Vietnamese until a
+separate conversion plan is approved. `main` converted both to English on
+2026-08-18, three days before that rule was written. Re-recording has now baked
+English into the baselines, because a gate must reflect the code that exists —
+but the rule and the repository disagree and only the owner can settle which is
+right. Recorded here rather than resolved, per rule §6: a mismatch between code
+and documents is written down with evidence, not read whichever way is
+convenient. If the answer is "revert to Vietnamese", the baselines are
+re-recorded again and that is cheap; leaving the gate permanently red was the
+expensive option.
+
+---
+
+## 11. Requests to codex
+
+| # | Request | Status |
+|---|---|---|
+| C-1 | **Do not leave an allowlisted file untracked.** `scripts/verify-workspace.sh` checks an explicit list of files that must be tracked. On 2026-08-21 `apps/control-api/test/health.spec.ts` was on disk and in that list but not committed, so the pre-commit hook rejected **every** commit in the shared tree, including frontend-only ones. Adding a path to the allowlist and committing the file it names should happen in the same commit. | **Resolved** by codex the same day; kept as a coordination rule because the failure mode is silent for whoever added the entry and total for everybody else. |
+| C-2 | `sla.age_minutes` / `budget_minutes` on the approval row, so SLA age is never computed from the browser clock (BR-EX-19). | **Delivered** in `EX_BE_05A` §5, before the request was sent. |
+
+### 11.1 Constraint accepted from codex, 2026-08-21
+
+> Claude may finish the Phase 1/2 adapter and drop the `fresh-PG gate pending`
+> dependency, but `delivery_profile` stays `fixture` and every runtime flag
+> stays false until `EX-BE-02`/`EX-BE-03` have evidence.
+
+Accepted, and pinned as a gate rather than a promise. `execution.test.tsx`
+asserts against the shipped `registry.json` that every `EXECUTION_*` screen is
+`delivery_profile: fixture`, and that `query_enabled`,
+`projection_ingestion_enabled`, `sse_enabled` and all four command tiers are
+false. **Those tests are written to fail on the day activation happens** — that
+is the point. When they do, the activation and the test update land in the same
+commit, so nothing switches on unnoticed.

@@ -1040,6 +1040,35 @@ describe("registry revision 4 — parsed against the registry actually shipped",
       }
     }
   });
+
+  /* Codex's constraint, 2026-08-21: the frontend adapter may be finished, but
+   * `delivery_profile` stays `fixture` and every runtime flag stays false until
+   * `EX-BE-02`/`EX-BE-03` have evidence. A constraint nobody can check is a
+   * hope, so it is checked here. Both assertions are meant to fail the day the
+   * activation happens — that is the point. When they do, the change is
+   * deliberate and this test is updated in the same commit that activates it. */
+  it("keeps every execution screen at delivery_profile=fixture", () => {
+    for (const screen of registry.screens) {
+      const s = screen as Record<string, unknown>;
+      const id = String(s.screen_id ?? "");
+      if (!id.startsWith("EXECUTION_")) continue;
+      expect(screenDeliveryProfile(screen), `${id} is no longer fixture`).toBe("fixture");
+    }
+  });
+
+  it("keeps query, projection ingestion and SSE switched off too", () => {
+    // The four command tiers are covered above. These three are the read and
+    // realtime halves, and leaving them out would let the surface start
+    // consuming real data while the assertion above still passed.
+    for (const screen of withProfile) {
+      const policy = screenDeliveryPolicy(screen);
+      if (!policy) continue;
+      const id = String((screen as Record<string, unknown>).screen_id ?? "");
+      expect(policy.queryEnabled, `${id} query_enabled`).toBe(false);
+      expect(policy.projectionIngestionEnabled, `${id} projection_ingestion_enabled`).toBe(false);
+      expect(policy.sseEnabled, `${id} sse_enabled`).toBe(false);
+    }
+  });
 });
 
 /* ===========================================================================
