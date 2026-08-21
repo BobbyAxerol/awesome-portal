@@ -306,3 +306,66 @@ describe("concerns reachable from a stage", () => {
     }
   });
 });
+
+/**
+ * Phase 0's navigation half, stated as evidence rather than as a design claim.
+ *
+ * The shell has always computed navigation from the registry, so wiring the
+ * Execution Loop into it was never bespoke work — it was registry revisions 3
+ * and 4 landing, plus an icon for each new key. These assertions pin that, so
+ * the day the seventeen screens are being built nobody has to take it on trust.
+ */
+describe("Execution Loop navigation (Phase 0)", () => {
+  const execution = registry.features.filter((f) => f.id.startsWith("EXECUTION_"));
+
+  it("has execution features to render at all", () => {
+    expect(execution.length).toBeGreaterThan(0);
+  });
+
+  it("places every execution feature in a group the registry declares", () => {
+    // A feature pointing at a group that does not exist would vanish from the
+    // sidebar without any error — the failure this catches is silence.
+    for (const feature of execution) {
+      expect(
+        registry.feature_groups.some((g) => g.id === feature.group),
+        `${feature.id} is in group "${feature.group}"`,
+      ).toBe(true);
+    }
+  });
+
+  it("renders every execution feature that opts into the sidebar", () => {
+    const shown = new Set(sidebarGroups(registry).flatMap((g) => g.features.map((f) => f.id)));
+    for (const feature of execution) {
+      if (!feature.navigation.show_in_sidebar) continue;
+      expect(shown.has(feature.id), `${feature.id} missing from the sidebar`).toBe(true);
+    }
+  });
+
+  it("resolves each execution route back to the feature that owns it", () => {
+    for (const feature of execution) {
+      expect(featureForPath(registry, feature.canonical_route)?.id).toBe(feature.id);
+    }
+  });
+
+  it("gives every execution feature an icon this build can draw", () => {
+    // An unmapped key falls back to a neutral mark rather than throwing, so the
+    // symptom of a miss is a row of identical circles — quiet, and easy to ship.
+    for (const feature of execution) {
+      expect(
+        KNOWN_ICON_KEYS.includes(feature.navigation.icon_key),
+        `${feature.id} asks for icon "${feature.navigation.icon_key}"`,
+      ).toBe(true);
+    }
+  });
+
+  it("keeps every execution route unique across the whole registry", () => {
+    const routes = registry.features.map((f) => f.canonical_route);
+    expect(new Set(routes).size).toBe(routes.length);
+  });
+
+  it("keeps the fixture page out of the registry", () => {
+    // It is the Phase 0 exit gate, not a product screen. If it ever appears
+    // here, Lane A has leaked into the product surface.
+    expect(registry.features.some((f) => f.canonical_route.includes("_fixtures"))).toBe(false);
+  });
+});

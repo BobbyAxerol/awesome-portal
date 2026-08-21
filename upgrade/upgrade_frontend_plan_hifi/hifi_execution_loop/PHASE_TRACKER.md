@@ -37,7 +37,7 @@ These qualify what is complete; they do not mean frontend `DONE`.
 
 | # | Screen (WF) | FE | BE | Needs | Evidence |
 |---|---|---|---|---|---|
-| 0 | Shell & shared components | **DONE** (components) · `READY` (nav/profile wiring) | `CONTRACT_COMPLETE` | — EX-BE-00R4 delivered | FE: 42 tests · build · visual baseline **drifted, see §9**; BE: registry rev 4 · 17 fixture profiles · fail-closed policy tests · generated OpenAPI/TS contract |
+| 0 | Shell & shared components | **DONE** (components) · **DONE** (nav) · `BLOCKED` (visual baseline) | `CONTRACT_COMPLETE` | — EX-BE-00R4 delivered | FE: 42 tests · build · visual baseline **drifted, see §9**; BE: registry rev 4 · 17 fixture profiles · fail-closed policy tests · generated OpenAPI/TS contract |
 | 1 | Approval Inbox (4a) | `WIP` (states built) | `INTEGRATION_PENDING` | EX-BE-05a integration only | EX-BE-04a foundation: 182k keyset/count/RBAC evidence; no AWS dependency |
 | 2 | Gate R1 Review (1a) | `WIP` (states built) | `FOUNDATION_COMPLETE` | EX-BE-05a integration | existing approval/audit foundation; master plan §§10.2, 12.2 |
 | 3 | Gate R2 Review (1b) | `WIP` (states built) | `FOUNDATION_COMPLETE` | EX-BE-03/05a/07 capital preview | master plan §§10.3, 12.2 |
@@ -288,12 +288,18 @@ much cheaper than after.
 2. **Order/fill ratio** (carried from the scale pass): 1,000 per day across
    150–500 deployments is ~2–7 per deployment per day. Every blotter, event and
    workbench budget rests on it.
-3. **Visual baseline re-record.** 52 of 101 baselines drifted when registry
-   revision 3 grew the shared navigation rail. One diff was inspected: the
-   content area is unchanged, only the rail moved, and the QuantBT label has not
-   regressed. The remaining 51 have not been reviewed. Re-recording the batch
-   without reviewing it spends the one gate that would have caught an unintended
-   Research change. Recommendation is to review all 52, then re-record.
+3. **Visual baseline re-record.** 52 of 101 baselines drifted when the registry
+   grew the shared navigation rail. One diff was inspected: the content area is
+   unchanged, only the rail moved, and the QuantBT label has not regressed. The
+   remaining 51 have not been reviewed. Re-recording the batch without reviewing
+   it spends the one gate that would have caught an unintended Research change.
+   Recommendation is to review all 52, then re-record.
+
+   **Re-measured 2026-08-21 after slices S1b–S5 and S4: still exactly 52 failed
+   / 49 passed.** Nine commits of Execution Loop work added no drift at all,
+   which is the Carbon isolation and the Lane A boundary both holding — the
+   fixture page is not a registry feature, so it is not screenshotted, and no
+   Execution token reaches a Research screen. The 52 are entirely the nav rail.
 4. **Display timezone.** Everything on the wire is RFC3339 UTC and that is
    right. A Singapore team watching HK execution and a VN market still has to
    read times somewhere. Raised now so it does not surface during phase 13.
@@ -348,3 +354,12 @@ registry, which is the day somebody should be told.
 
 **Slice S2 landed** — `components/table.tsx`, mechanism M1, bidirectional per
 BR-EX-17. Evidence below.
+
+**Phase 0's navigation half is closed**, and it closed without bespoke work: the
+shell has always computed navigation from the registry, so wiring the Execution
+Loop in was revisions 3 and 4 landing plus an icon for each new key. That is now
+evidence rather than a design claim — `navigation.test.ts` asserts that every
+`EXECUTION_*` feature sits in a declared group, appears in the sidebar when it
+opts in, resolves from its canonical route, has an icon this build can draw
+(22/22 keys mapped), holds a unique route, and that the fixture page has not
+leaked into the registry.
