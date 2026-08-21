@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/keyset-page.v1.schema.json",
+  "title": "Portal bidirectional keyset page v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "rows",
+    "total_count",
+    "filtered_count",
+    "next_cursor",
+    "prev_cursor",
+    "has_more",
+    "has_previous",
+    "applied_filters",
+    "applied_sort"
+  ],
+  "properties": {
+    "rows": {
+      "type": "array",
+      "maxItems": 250,
+      "items": {}
+    },
+    "total_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "filtered_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "next_cursor": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "prev_cursor": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "has_more": { "type": "boolean" },
+    "has_previous": { "type": "boolean" },
+    "applied_filters": {
+      "type": "array",
+      "maxItems": 12,
+      "items": { "$ref": "#/$defs/applied_filter" }
+    },
+    "applied_sort": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "items": { "$ref": "#/$defs/applied_sort" }
+    }
+  },
+  "$defs": {
+    "applied_filter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "op", "value"],
+      "properties": {
+        "field": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "op": { "enum": ["eq", "in", "contains", "gte", "lte"] },
+        "value": { "type": "string", "maxLength": 4096 }
+      }
+    },
+    "applied_sort": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "direction"],
+      "properties": {
+        "field": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "direction": { "enum": ["asc", "desc"] }
+      }
+    }
+  }
+}

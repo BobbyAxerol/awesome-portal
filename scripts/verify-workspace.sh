@@ -108,9 +108,11 @@ for required in \
   "${ROOT_DIR}/packages/contracts/schemas/problem.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/command-envelope.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/event-envelope.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/keyset-page.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/problem.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/command.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/event.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/keyset-page.valid.json" \
   "${ROOT_DIR}/packages/contracts/generated/portal-api.d.ts" \
   "${ROOT_DIR}/packages/contracts/vitest.config.ts" \
   "${ROOT_DIR}/packages/contracts/test/fixtures.spec.ts" \
@@ -172,6 +174,13 @@ for required in \
   "${ROOT_DIR}/apps/control-api/src/facade/proxy.service.ts" \
   "${ROOT_DIR}/apps/control-api/src/facade/facade.controller.ts" \
   "${ROOT_DIR}/apps/control-api/src/facade/session.guard.ts" \
+  "${ROOT_DIR}/apps/control-api/src/query/contracts.ts" \
+  "${ROOT_DIR}/apps/control-api/src/query/cursor.ts" \
+  "${ROOT_DIR}/apps/control-api/src/query/index.ts" \
+  "${ROOT_DIR}/apps/control-api/src/query/postgres.ts" \
+  "${ROOT_DIR}/apps/control-api/src/query/request.ts" \
+  "${ROOT_DIR}/apps/control-api/test/query.spec.ts" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_04A_CONTROL_PLANE_QUERY_PRIMITIVES.md" \
   "${ROOT_DIR}/apps/control-api/test/facade.spec.ts" \
   "${ROOT_DIR}/upgrade/backend/BAR_07_CONTROL_API_FACADE.md" \
   "${ROOT_DIR}/apps/control-api/src/main.ts" \
@@ -310,9 +319,11 @@ for tracked_source in \
   packages/contracts/schemas/problem.v1.schema.json \
   packages/contracts/schemas/command-envelope.v1.schema.json \
   packages/contracts/schemas/event-envelope.v1.schema.json \
+  packages/contracts/schemas/keyset-page.v1.schema.json \
   packages/contracts/fixtures/problem.valid.json \
   packages/contracts/fixtures/command.valid.json \
   packages/contracts/fixtures/event.valid.json \
+  packages/contracts/fixtures/keyset-page.valid.json \
   packages/contracts/generated/portal-api.d.ts \
   packages/contracts/vitest.config.ts \
   packages/contracts/test/fixtures.spec.ts \
@@ -372,6 +383,13 @@ for tracked_source in \
   apps/control-api/src/facade/proxy.service.ts \
   apps/control-api/src/facade/facade.controller.ts \
   apps/control-api/src/facade/session.guard.ts \
+  apps/control-api/src/query/contracts.ts \
+  apps/control-api/src/query/cursor.ts \
+  apps/control-api/src/query/index.ts \
+  apps/control-api/src/query/postgres.ts \
+  apps/control-api/src/query/request.ts \
+  apps/control-api/test/query.spec.ts \
+  upgrade/backend/EX_BE_04A_CONTROL_PLANE_QUERY_PRIMITIVES.md \
   apps/control-api/test/facade.spec.ts \
   upgrade/backend/BAR_07_CONTROL_API_FACADE.md \
   apps/control-api/src/main.ts \
@@ -432,6 +450,8 @@ for json_contract in \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-summary.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-links.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/keyset-page.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/keyset-page.valid.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/planning-api.openapi.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/run-request.schema.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/manifest.json"; do

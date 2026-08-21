@@ -33,6 +33,7 @@ def _schema_registry() -> Registry:
             "problem.v1.schema.json",
             "command-envelope.v1.schema.json",
             "event-envelope.v1.schema.json",
+            "keyset-page.v1.schema.json",
         )
     ]
     return Registry().with_resources(
@@ -60,6 +61,9 @@ def test_every_canonical_fixture_is_schema_valid() -> None:
         ),
         "event.valid.json": (
             "https://schemas.primusspark.com/portal/event-envelope.v1.schema.json"
+        ),
+        "keyset-page.valid.json": (
+            "https://schemas.primusspark.com/portal/keyset-page.v1.schema.json"
         ),
     }
     for name, schema_id in mapping.items():
@@ -135,7 +139,12 @@ def test_opaque_ids_accept_both_ulid_and_uuid_hex_shapes() -> None:
 
 
 def test_canonical_models_never_leak_raw_secrets_in_dumps() -> None:
-    for name in ("problem.valid.json", "command.valid.json", "event.valid.json"):
+    for name in (
+        "problem.valid.json",
+        "command.valid.json",
+        "event.valid.json",
+        "keyset-page.valid.json",
+    ):
         payload = _load_json(FIXTURES_ROOT / name)
         encoded = json.dumps(payload)
         for marker in ("token=", "secret=", "/srv/", "/home/"):

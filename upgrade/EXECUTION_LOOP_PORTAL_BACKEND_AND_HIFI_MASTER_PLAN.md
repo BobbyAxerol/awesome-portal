@@ -791,7 +791,7 @@ so one slice may unlock several screens without inventing a second product roadm
 |---|---:|---|---|
 | EX-BE-00 | P0 | Registry revision 3 and canonical routes | Phase 0 navigation and routing for 1–17 |
 | EX-BE-00R4 | P0 / delivered | Registry revision 4 adds per-screen delivery profile/policy, echoed by composed envelopes | fixture/shadow truth for all screens, especially 11–12 |
-| EX-BE-04a | P0 | TypeScript bidirectional keyset/filter/sort/exact-count primitives over control-plane PostgreSQL | phases 1, 2 and Portal-owned portions of 5/7/8 |
+| EX-BE-04a | P0 / delivered | TypeScript bidirectional keyset/filter/sort/exact-count primitives over control-plane PostgreSQL | phases 1, 2 and Portal-owned portions of 5/7/8 |
 | EX-BE-05a | P0 | TypeScript governance/evidence/approval workflow and audit, with external panels allowed unavailable | phases 1–2 on real Portal data without AWS |
 | EX-BE-01 | P0 | Rust workspace, canonical contracts, `ts-contract-v1`, vocabulary reconciliation and golden corpus | all real-source screen contracts |
 | EX-BE-02 | P0 | mTLS/delegated-auth boundary, capability negotiation, read-only probes | safe AWS integration |
@@ -814,6 +814,16 @@ while removing an unrelated infrastructure approval from the first useful backen
 flags. Source schema, immutable Pydantic projection, repository invariants, public fixture,
 OpenAPI and generated TypeScript types move together. This unlocks Claude's profile wiring
 without claiming that any real query, projection, SSE or command capability exists.
+
+`EX-BE-04a` is delivered as a reusable TypeScript foundation in `apps/control-api`.
+It provides HMAC-signed/expiring bidirectional cursors bound to resource, workspace,
+direction and canonical query; allowlisted filters/sorts; immutable-ID tie-break;
+exact counts and `limit + 1` keyset reads inside one `REPEATABLE READ READ ONLY`
+PostgreSQL snapshot; explicit public-column projection; bounded timeout, RBAC/scope
+guard and value-free telemetry. The canonical `keyset-page.v1` contract matches the
+frontend adapter. Evidence is 14 focused tests on a real 182,000-row PostgreSQL 16
+corpus and 76/76 Control API tests. This is `FOUNDATION_COMPLETE`: no approval table,
+endpoint or delivery-profile activation exists until `EX-BE-05a`.
 
 ### 12.2 Per-phase backend slices
 

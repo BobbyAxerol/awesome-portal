@@ -114,6 +114,13 @@ Chúng không thay thế phase hoặc exit gate trong
 - [BAR-16 — Release, DR & hardening](./BAR_16_RELEASE_DR_HARDENING.md)
   — U19. **Complete:** release report credential-free (provenance digests,
   backup commands, DR checklist) + secret-hygiene scan. 4 tests.
+- [EX-BE-04a — TypeScript Control-Plane Query Primitives](./EX_BE_04A_CONTROL_PLANE_QUERY_PRIMITIVES.md)
+  — Execution Loop query foundation. **Foundation complete:** signed/expiring
+  bidirectional keyset, canonical allowlisted filter/sort, immutable-ID
+  tie-break, exact counts and public-column projection in one read-only
+  repeatable-read PostgreSQL snapshot. Evidence: 14 focused tests over 182,000
+  rows, Control API 76/76 and contracts 8/8. No Approval endpoint or runtime
+  query authority yet; `EX-BE-05a` is the integration slice.
 
 **Runway complete (BAR-00 → BAR-16).** Guide v0.5 bổ sung (không thay thế)
 tại `upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md`
@@ -155,8 +162,11 @@ authority.
   đều ở `fixture`, bảy runtime/command flags đều false. Schema/repository fail
   closed, public fixture/OpenAPI/generated TypeScript contract đồng bộ; không
   ngụ ý query/projection/SSE/command thật đã active.
+- `EX-BE-04a` **foundation complete:** contract `keyset-page.v1` và TypeScript
+  query primitives đã khớp wire adapter của Claude; 182k corpus chứng minh
+  exact count, forward/back, concurrent insert, RBAC và cursor security.
 - Production integration chưa được kích hoạt. Thứ tự gần nhất là
-  `EX-BE-04a→05a`; song song khi được giao là `EX-BE-01` Rust workspace +
+  `EX-BE-05a`; song song khi được giao là `EX-BE-01` Rust workspace +
   canonical `ts-contract-v1` adapter, sau đó `EX-BE-02` auth/capability
   negotiation. Runtime evidence luôn thắng schema/rollout prose; Portal chỉ
   dùng versioned HTTP API, không đọc DB/Redis/CLI nội bộ.

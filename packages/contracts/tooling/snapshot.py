@@ -25,9 +25,11 @@ TRACKED = (
     "schemas/problem.v1.schema.json",
     "schemas/command-envelope.v1.schema.json",
     "schemas/event-envelope.v1.schema.json",
+    "schemas/keyset-page.v1.schema.json",
     "fixtures/problem.valid.json",
     "fixtures/command.valid.json",
     "fixtures/event.valid.json",
+    "fixtures/keyset-page.valid.json",
     "generated/portal-api.d.ts",
     "package.json",
 )

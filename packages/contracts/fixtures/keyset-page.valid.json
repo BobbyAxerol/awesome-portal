@@ -1,0 +1,31 @@
+{
+  "rows": [
+    {
+      "approval_id": "apr_01K32QRJ4F5XB5M56TNANW0G9J",
+      "status": "PENDING"
+    }
+  ],
+  "total_count": 182000,
+  "filtered_count": 45500,
+  "next_cursor": "opaque-next-cursor",
+  "prev_cursor": null,
+  "has_more": true,
+  "has_previous": false,
+  "applied_filters": [
+    {
+      "field": "status",
+      "op": "eq",
+      "value": "PENDING"
+    }
+  ],
+  "applied_sort": [
+    {
+      "field": "sla_due_at",
+      "direction": "asc"
+    },
+    {
+      "field": "approval_id",
+      "direction": "asc"
+    }
+  ]
+}

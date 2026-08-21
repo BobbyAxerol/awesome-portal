@@ -757,6 +757,19 @@ deep-dive → ADR → slice → evidence discipline documented above.
   shadow cannot enable commands; SSE requires query+projection; Paper/Sandbox
   cannot exceed their command boundary. This unlocks Claude's ProfileBadge and
   fixture/shadow wiring but does not activate a real Execution authority.
+- **EX-BE-04a control-plane query primitives (2026-08-21):** TypeScript now
+  provides bidirectional HMAC-signed keyset cursors, canonical allowlisted
+  filter/sort parsing, immutable-ID tie-break, exact total/filtered counts and
+  public-column-only reads in one `REPEATABLE READ READ ONLY` PostgreSQL
+  snapshot. Workspace scope/RBAC are not client filters; cursor replay across
+  resource/workspace/direction/query fails closed; telemetry carries no actor,
+  cursor or filter values. Canonical `keyset-page.v1` matches Claude's adapter.
+  Evidence: 14 focused tests at 182,000 PostgreSQL rows, Control API 76/76 and
+  contracts 8/8. Status is `FOUNDATION_COMPLETE`; `EX-BE-05a` must still add
+  approval/evidence migrations, repositories, endpoint/OpenAPI, runtime cursor
+  key configuration, SoD/concurrency/audit and final query-plan qualification.
+  Deep dive:
+  [`EX_BE_04A_CONTROL_PLANE_QUERY_PRIMITIVES.md`](./backend/EX_BE_04A_CONTROL_PLANE_QUERY_PRIMITIVES.md).
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**

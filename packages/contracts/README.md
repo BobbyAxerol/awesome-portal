@@ -20,6 +20,10 @@ Rules:
 - Commands carry `request_id`, `actor_id`, `workspace_id`, `idempotency_key`,
   `expected_aggregate_version` and `payload_schema_version`; events carry the
   canonical §6.7 envelope with `traceparent` and producer provenance.
+- List endpoints use `keyset-page.v1`: exact total/filtered counts, mutually
+  exclusive opaque navigation cursors at request time, server-echoed filters
+  and stable sort, with a hard 250-row response cap. Offset/page-number fields
+  are not part of the contract.
 - Fixtures contain no business fakes: every fixture validates against its
   schema in both Python (jsonschema) and TypeScript (ajv) — cross-language
   fixture compilation is the acceptance gate.
@@ -37,10 +41,12 @@ packages/contracts/
     problem.v1.schema.json
     command-envelope.v1.schema.json
     event-envelope.v1.schema.json
+    keyset-page.v1.schema.json
   fixtures/
     problem.valid.json
     command.valid.json
     event.valid.json
+    keyset-page.valid.json
   generated/
     portal-api.d.ts
   contracts-snapshot.json

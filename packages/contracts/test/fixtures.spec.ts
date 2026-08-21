@@ -32,6 +32,8 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/command-envelope.v1.schema.json",
   "event.valid.json":
     "https://schemas.primusspark.com/portal/event-envelope.v1.schema.json",
+  "keyset-page.valid.json":
+    "https://schemas.primusspark.com/portal/keyset-page.v1.schema.json",
 };
 
 describe("canonical contracts (cross-language fixture compilation)", () => {
@@ -74,6 +76,17 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(
       validate!({ ...event, occurred_at: "2026-08-15T12:00:00" }),
     ).toBe(false);
+  });
+
+  it("rejects incomplete or offset-shaped keyset pages", () => {
+    const page = loadJson(join(fixtureDir, "keyset-page.valid.json")) as Record<string, unknown>;
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/keyset-page.v1.schema.json",
+    );
+    const { total_count: _missing, ...withoutCount } = page;
+    expect(validate!(withoutCount)).toBe(false);
+    expect(validate!({ ...page, offset: 100 })).toBe(false);
+    expect(validate!({ ...page, rows: Array.from({ length: 251 }, () => ({})) })).toBe(false);
   });
 
   it("generated portal types reference both handoff endpoints", () => {
