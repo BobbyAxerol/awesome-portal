@@ -1153,7 +1153,7 @@ export default function ExecutionFixtures() {
               <GateR1ReviewContainer api={UNCERTAIN_API} approvalId="AP-201" />
             </Case>
             <Case caption="gate R2 through the port — every capital row names its currency">
-              <GateR2ReviewContainer api={WIRED_API} approvalId="AP-207" />
+              <GateR2ReviewContainer api={WIRED_API} approvalId="AP-352" />
             </Case>
             <Case caption="paper exit through the port — every evidence number links its source">
               <PaperExitReviewContainer api={WIRED_API} reviewId="EX-771" />
@@ -1169,10 +1169,15 @@ export default function ExecutionFixtures() {
           <div className="exec-fixtures-stack">
             <Case caption="R1 approved — preview marked derived, not applied">
               <GateR2Review
-                approvalId="AP-207"
-                subject="Carry v3.2 → PF-MAIN · Paper · BINANCE"
-                r1Id="AP-201"
+                approvalId="AP-352"
+                subject="Carry v3.2 → PF-MAIN · Sandbox · OKX TESTNET"
+                r1Id="AP-101"
                 r1State="APPROVED"
+                r1Href="/governance/approvals/AP-101/r1"
+                r1Expiry="2026-11-01"
+                r1Digest="sha256:c81f2d4a…7e"
+                r1DecidedBy="Minh"
+                r1DecidedAt="2026-07-30"
                 deploymentCandidate="DC-91"
                 releaseCandidate="RC-41"
                 artifactDigest="sha256:9f3c1a…e2"
@@ -1199,10 +1204,12 @@ export default function ExecutionFixtures() {
             </Case>
             <Case caption="R1 expired — every operational panel still readable, Approve locked">
               <GateR2Review
-                approvalId="AP-207"
-                subject="Carry v3.2 → PF-MAIN · Paper · BINANCE"
-                r1Id="AP-201"
+                approvalId="AP-352"
+                subject="Carry v3.2 → PF-MAIN · Sandbox · OKX TESTNET"
+                r1Id="AP-101"
                 r1State="EXPIRED"
+                r1Expiry="2026-08-18"
+                r1Digest="sha256:c81f2d4a…7e"
                 policyVersion="approval.v3"
                 planAuthor="Stan"
                 actor="Lan"
@@ -1216,9 +1223,9 @@ export default function ExecutionFixtures() {
             </Case>
             <Case caption="preview without an authority envelope — refused rather than rendered bare">
               <GateR2Review
-                approvalId="AP-207"
+                approvalId="AP-352"
                 subject="Carry v3.2 → PF-MAIN"
-                r1Id="AP-201"
+                r1Id="AP-101"
                 r1State="APPROVED"
                 policyVersion="approval.v3"
                 planAuthor="Stan"

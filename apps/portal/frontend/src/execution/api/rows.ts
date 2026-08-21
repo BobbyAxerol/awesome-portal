@@ -380,6 +380,11 @@ export interface GateR2Detail {
   r1State: R1State;
   /** Where the R1 decision can be read. A reference nobody can open is a claim. */
   r1Href: string | null;
+  /** §3's other two R1 reference fields, plus who decided it. */
+  r1Expiry: string | null;
+  r1Digest: string | null;
+  r1DecidedBy: string | null;
+  r1DecidedAt: string | null;
   deploymentCandidate: string | null;
   releaseCandidate: string | null;
   artifactDigest: string | null;
@@ -435,6 +440,10 @@ export function readGateR2Detail(raw: unknown): GateR2Detail | null {
     // cannot understand is not a reference we may proceed on.
     r1State: r1Parsed?.known ? r1Parsed.value : "MISSING",
     r1Href: str(r1.href),
+    r1Expiry: str(r1.expiry),
+    r1Digest: str(r1.digest),
+    r1DecidedBy: str(r1.decided_by),
+    r1DecidedAt: readTimestamp(r1.decided_at) ?? str(r1.decided_at),
     deploymentCandidate: str(approval.deployment_candidate),
     releaseCandidate: str(approval.release_candidate),
     artifactDigest: str(approval.artifact_digest),

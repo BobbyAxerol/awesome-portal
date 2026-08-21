@@ -3288,15 +3288,75 @@ describe("Gate R2 — the capital preview names its currency", () => {
 
 describe("Gate R2 — the R1 reference is openable", () => {
   it("links to the R1 decision when a link was published", () => {
-    render(r2({ r1Href: "/governance/approvals/AP-201/r1" }));
-    const link = screen.getByRole("link");
-    expect(link.getAttribute("href")).toBe("/governance/approvals/AP-201/r1");
+    // Two links now: the meta chip and the R1 reference panel. Both point at
+    // the same decision, which is the point.
+    render(r2({ r1Href: "/governance/approvals/AP-101/r1" }));
+    const links = screen.getAllByRole("link");
+    expect(links.length).toBeGreaterThan(0);
+    for (const link of links) {
+      expect(link.getAttribute("href")).toBe("/governance/approvals/AP-101/r1");
+    }
   });
 
   it("says so when no link was published rather than rendering a dead reference", () => {
     const { container } = render(r2());
     expect(container.querySelector("a")).toBeNull();
     expect(screen.getByTitle(/No link to the R1 decision/)).toBeTruthy();
+  });
+
+  it("renders the R1 reference as a panel with decision, digest and expiry", () => {
+    // §3 names three fields. A chip carries the decision and drops the two a
+    // reviewer needs to judge how much the R1 is still worth.
+    render(r2({ r1Digest: "sha256:c81f…", r1Expiry: "2026-11-01", r1DecidedBy: "Minh" }));
+    expect(screen.getByText("R1 reference")).toBeTruthy();
+    expect(screen.getByText("sha256:c81f…")).toBeTruthy();
+    expect(screen.getByText("2026-11-01")).toBeTruthy();
+  });
+
+  it("states a missing digest or expiry rather than leaving the field blank", () => {
+    // An R1 whose evidence cannot be identified is an R1 nobody can re-check,
+    // which is most of what a reference is for.
+    const { container } = render(r2());
+    const unpublished = [...container.querySelectorAll(".exec-gate-unverified")].map(
+      (n) => n.textContent,
+    );
+    expect(unpublished.filter((t) => t === "not published").length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("Gate R2 — the blocked banner tells a reviewer what to do", () => {
+  it("names the expiry date, so 'expired' is checkable rather than asserted", () => {
+    render(r2({ r1State: "EXPIRED", r1Expiry: "2026-08-18", r1Id: "AP-101" }));
+    expect(screen.getByText(/AP-101 expired 2026-08-18/)).toBeTruthy();
+  });
+
+  it("names the remedy, because a blocker with no way forward becomes a ticket", () => {
+    render(r2({ r1State: "EXPIRED", r1Expiry: "2026-08-18" }));
+    expect(screen.getByText(/re-run Gate R1 or extend its waiver/)).toBeTruthy();
+  });
+
+  it("says Approve is disabled rather than implying the whole bar is", () => {
+    // §3's prose says the whole decision bar; the hi-fi's own banner says
+    // Approve, and the backend allows denying a request whose evidence lapsed.
+    render(r2({ r1State: "EXPIRED", r1Expiry: "2026-08-18" }));
+    expect(screen.getByText(/Approve is disabled/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", false);
+  });
+
+  it("gives every invalid R1 state its own reason and remedy", () => {
+    for (const state of ["DENIED", "PENDING", "MISSING"] as const) {
+      const { container } = render(r2({ r1State: state }));
+      const banner = container.querySelector(".exec-gate-blocking");
+      expect(banner?.textContent, state).toContain("Approve is disabled");
+      expect(banner?.textContent?.length ?? 0, state).toBeGreaterThan(60);
+      cleanup();
+    }
+  });
+
+  it("explains its own conditions model so nobody asks for a free-text box", () => {
+    render(r2({ artifactDigest: "sha256:9f3c…" }));
+    expect(screen.getByText(/typed objects with owner, deadline and expiry, never free text/)).toBeTruthy();
+    expect(screen.getByText(/recorded against policy approval\.v3/)).toBeTruthy();
   });
 
   it("treats an unreadable R1 state as MISSING, which blocks", () => {

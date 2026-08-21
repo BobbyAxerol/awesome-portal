@@ -188,8 +188,12 @@ const R1_DETAIL: Record<string, unknown> = {
  * a strip that implies one number is wrong the moment a portfolio holds two. */
 const R2_DETAIL: Record<string, unknown> = {
   approval: {
-    approval_id: "AP-207",
-    subject_label: "Carry v3.2 → PF-MAIN · Paper · BINANCE",
+    // §3 names the screen's data: AP-352 Carry v3.2 → PF-MAIN. The cast puts
+    // that approval on dep_77, OKX TESTNET, sandbox — not on the BINANCE paper
+    // deployment, whose R2 is AP-207. And Carry v3.2's R1 is AP-101; the
+    // AP-201 an earlier fixture used belongs to RSI, a different alpha.
+    approval_id: "AP-352",
+    subject_label: "Carry v3.2 → PF-MAIN · Sandbox · OKX TESTNET",
     deployment_candidate: "DC-91",
     release_candidate: "RC-41",
     artifact_digest: "sha256:9f3c1a…e2",
@@ -201,14 +205,22 @@ const R2_DETAIL: Record<string, unknown> = {
     sla: { age_minutes: 960, budget_minutes: 1440 },
   },
   actor: "Lan",
-  r1_reference: { approval_id: "AP-201", state: "APPROVED", href: "/governance/approvals/AP-201/r1" },
+  r1_reference: {
+    approval_id: "AP-101",
+    state: "APPROVED",
+    href: "/governance/approvals/AP-101/r1",
+    expiry: "2026-11-01",
+    digest: "sha256:c81f2d4a…7e",
+    decided_by: "Minh",
+    decided_at: "2026-07-30",
+  },
   eligibility: { can_approve: true, can_approve_with_condition: true, can_deny: true, locks: [] },
   grant_name: "paper_activation_authorization",
   readiness: [
     {
       title: "Account & risk plan",
       entries: [
-        { label: "account (new)", value: "paper-binance-carry-v32", revision: "account policy rev 7" },
+        { label: "account (new)", value: "acct-sbx-carry-okx", revision: "account policy rev 7" },
         { label: "margin", value: "MARGIN · CROSS · 2x · settle USDT", revision: "account policy rev 7" },
         { label: "risk profile", value: "max order 5,000 · DD 8% · daily loss 3%", revision: "rev 12" },
         { label: "matcher config", value: "taker 4.0bp · latency 120ms", revision: "rev 3" },

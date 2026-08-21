@@ -375,6 +375,10 @@ export function GateR2ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
         // not a reference we may proceed on.
         r1State={d?.r1State ?? "MISSING"}
         r1Href={d?.r1Href}
+        r1Expiry={d?.r1Expiry}
+        r1Digest={d?.r1Digest}
+        r1DecidedBy={d?.r1DecidedBy}
+        r1DecidedAt={d?.r1DecidedAt}
         deploymentCandidate={d?.deploymentCandidate ?? undefined}
         releaseCandidate={d?.releaseCandidate ?? undefined}
         artifactDigest={d?.artifactDigest ?? undefined}

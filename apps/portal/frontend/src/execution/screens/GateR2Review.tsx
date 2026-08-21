@@ -37,14 +37,34 @@ import { PanelState } from "../components/states";
 /** State of the R1 this R2 rests on. Only `APPROVED` lets R2 proceed. */
 export type R1State = "APPROVED" | "APPROVED_WITH_CONDITION" | "EXPIRED" | "DENIED" | "PENDING" | "MISSING";
 
-const R1_BLOCKS: Record<R1State, string | null> = {
-  APPROVED: null,
-  APPROVED_WITH_CONDITION: null,
-  EXPIRED: "Blocked — R1 approval expired. Operational readiness cannot be approved on research nobody currently vouches for.",
-  DENIED: "Blocked — R1 was denied.",
-  PENDING: "Blocked — R1 has not been decided.",
-  MISSING: "Blocked — no R1 approval is linked to this request.",
-};
+/**
+ * Why an R1 blocks, in the words the hi-fi uses.
+ *
+ * Each takes the reference so the banner can name it, and the expired one takes
+ * the date. "Expired" without a date is an assertion; "expired 2026-08-18" is
+ * something a reviewer can check, and checking is the whole activity this
+ * screen exists for.
+ *
+ * Each also ends with the remedy. The hi-fi's banner is the only place on the
+ * screen that tells a reviewer what to do next, and a blocker with no way
+ * forward turns into a support ticket.
+ */
+function r1Block(state: R1State, id: string | null, expiredAt: string | null): string | null {
+  const ref = id ?? "the linked R1";
+  switch (state) {
+    case "APPROVED":
+    case "APPROVED_WITH_CONDITION":
+      return null;
+    case "EXPIRED":
+      return `${ref}${expiredAt ? ` expired ${expiredAt}` : " has expired"}. This R2 review cannot be decided against stale research evidence; re-run Gate R1 or extend its waiver. Approve is disabled.`;
+    case "DENIED":
+      return `${ref} was denied. Operational readiness cannot be approved on research that was refused; a new R1 is required. Approve is disabled.`;
+    case "PENDING":
+      return `${ref} has not been decided yet. R2 rests on R1, so this review cannot be approved until it is. Approve is disabled.`;
+    case "MISSING":
+      return `No R1 approval is linked to this request. There is nothing for this R2 to rest on; link one or re-run Gate R1. Approve is disabled.`;
+  }
+}
 
 const R1_TONE: Record<R1State, "good" | "warn" | "bad" | "mute"> = {
   APPROVED: "good",
@@ -112,6 +132,10 @@ export function GateR2Review({
   r1Id,
   r1State,
   r1Href,
+  r1Expiry,
+  r1Digest,
+  r1DecidedBy,
+  r1DecidedAt,
   deploymentCandidate,
   releaseCandidate,
   artifactDigest,
@@ -143,6 +167,18 @@ export function GateR2Review({
   r1State: R1State;
   /** Where the R1 decision can be read. A reference nobody can open is a claim. */
   r1Href?: string | null;
+  /**
+   * When the R1 evidence lapses, or lapsed. §3 lists it among the R1 reference
+   * panel's three fields for a reason: without it a reviewer cannot see how
+   * stale the R1 is until it has already gone, and an R2 approved the day
+   * before expiry is a different risk from one approved a month before.
+   */
+  r1Expiry?: string | null;
+  /** Digest of the evidence the R1 was decided against. */
+  r1Digest?: string | null;
+  /** Who decided the R1, and when. */
+  r1DecidedBy?: string | null;
+  r1DecidedAt?: string | null;
   deploymentCandidate?: string;
   releaseCandidate?: string;
   artifactDigest?: string;
@@ -191,7 +227,7 @@ export function GateR2Review({
   const [draft, setDraft] = useState<ConditionDraft>(EMPTY_DRAFT);
 
   const selfApproval = planAuthor === actor;
-  const r1Block = R1_BLOCKS[r1State];
+  const blockedReason = r1Block(r1State, r1Id, r1State === "EXPIRED" ? (r1Expiry ?? null) : null);
   const breach = capital.some((c) => c.breach);
 
   // Derived, in the same way Gate R1 derives its separation-of-duty lock. The
@@ -200,7 +236,7 @@ export function GateR2Review({
   const effectiveLocks = Array.from(
     new Set<R2Lock>([
       ...(selfApproval ? (["SELF_APPROVAL"] as R2Lock[]) : []),
-      ...(r1Block ? (["R1_NOT_VALID"] as R2Lock[]) : []),
+      ...(blockedReason ? (["R1_NOT_VALID"] as R2Lock[]) : []),
       ...(breach ? (["CAPITAL_BREACH"] as R2Lock[]) : []),
       ...locks,
     ]),
@@ -255,7 +291,12 @@ export function GateR2Review({
 
         {/* The R1 block is a band rather than a footnote. It is the one condition
             on this screen that no amount of operational evidence can satisfy. */}
-        {r1Block ? <div className="exec-gate-banner exec-gate-blocking">{r1Block}</div> : null}
+        {blockedReason ? (
+          <div className="exec-gate-banner exec-gate-blocking">
+            <strong className="exec-gate-blocking-lead">Blocked — R1 approval {r1State.toLowerCase().replace(/_/g, " ")}</strong>
+            <span>{blockedReason}</span>
+          </div>
+        ) : null}
       </header>
 
       {status === "partial" ? (
@@ -270,6 +311,63 @@ export function GateR2Review({
       ) : null}
 
       <div className="exec-grid-2">
+      {/* §3: "right: R1 reference panel (decision, digest, expiry)". It was a
+          chip in the meta strip, which carries the decision and nothing else —
+          and the two fields it dropped are the two a reviewer needs to judge
+          how much the R1 is still worth. */}
+      <div className="exec-gate-panel">
+        <div className="exec-tile-title">R1 reference</div>
+        <dl className="exec-gate-passport">
+          <div>
+            <dt>decision</dt>
+            <dd>
+              <span className="exec-gate-value">{r1State.replace(/_/g, " ")}</span>
+              {r1Id ? (
+                r1Href ? (
+                  <>
+                    {" "}
+                    <a href={r1Href}>{r1Id}</a>
+                  </>
+                ) : (
+                  <span className="exec-gate-note"> {r1Id}</span>
+                )
+              ) : null}
+              {r1DecidedBy ? (
+                <span className="exec-gate-note">
+                  {" "}
+                  · {r1DecidedBy}
+                  {r1DecidedAt ? ` ${r1DecidedAt}` : ""}
+                </span>
+              ) : null}
+            </dd>
+          </div>
+          <div>
+            <dt>evidence digest</dt>
+            <dd>
+              {r1Digest ? (
+                <span className="exec-gate-value">{r1Digest}</span>
+              ) : (
+                // An R1 whose evidence cannot be identified is an R1 nobody can
+                // re-check, which is most of what a reference is for.
+                <span className="exec-gate-unverified">not published</span>
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt>expiry</dt>
+            <dd>
+              {r1Expiry ? (
+                <span className={r1State === "EXPIRED" ? "exec-gate-unverified" : "exec-gate-value"}>
+                  {r1Expiry}
+                </span>
+              ) : (
+                <span className="exec-gate-unverified">not published</span>
+              )}
+            </dd>
+          </div>
+        </dl>
+      </div>
+
       {readiness.map((group) => (
         <div className="exec-gate-panel" key={group.title}>
           <div className="exec-tile-title">{group.title}</div>
@@ -355,6 +453,14 @@ export function GateR2Review({
           conditions={conditions ?? []}
           emptyNote="No conditions attached yet."
         />
+        {/* The hi-fi prints this under the decision card, and the last clause is
+            the screen explaining its own model. It is the sentence that stops
+            the next person asking for a free-text box. */}
+        <div className="exec-gate-footnote">
+          {artifactDigest ? <>evidence digest {artifactDigest} · </> : null}
+          decision is recorded against policy {policyVersion} · conditions are typed objects with
+          owner, deadline and expiry, never free text
+        </div>
         {onAttachCondition ? (
           <ConditionComposer
             draft={draft}
