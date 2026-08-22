@@ -203,3 +203,86 @@ describe("Account 360° — the secret, the guard band and the buttons", () => {
     expect(screen.queryByText(/Broker binding/)).toBeNull();
   });
 });
+
+describe("Account 360° — at the volume the backend actually returns", () => {
+  /** A binding backing 214 virtual accounts. The hi-fi drew three. */
+  const manyLinked = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      accountId: `acct-${String(i).padStart(3, "0")}`,
+      alpha: `Alpha ${i}`,
+      virtualExposure: `${1000 + i}.00`,
+      stage: (i === 199 ? "LIVE_CANARY" : "LIVE_FULL") as "LIVE_FULL" | "LIVE_CANARY",
+      current: i === 180,
+    }));
+
+  it("caps a 214-account binding instead of rendering 214 rows in a panel", () => {
+    const { container } = render(
+      <AccountBroker360 {...account360({ linked: manyLinked(214) })} />,
+    );
+    const body = container.querySelector(".exec-360-linked tbody")!;
+    expect(body.querySelectorAll("tr").length).toBeLessThanOrEqual(12);
+    expect(screen.getByText(/showing 12 of 214 linked accounts/)).toBeTruthy();
+  });
+
+  it("keeps the account being viewed, even at row 180 of 214", () => {
+    // A list of siblings that dropped the one you are looking at is worse than
+    // no list.
+    const { container } = render(
+      <AccountBroker360 {...account360({ linked: manyLinked(214) })} />,
+    );
+    const table = container.querySelector(".exec-360-linked") as HTMLElement;
+    expect(within(table).getByText("acct-180")).toBeTruthy();
+    expect(table.querySelector('tr[data-current="true"]')).toBeTruthy();
+  });
+
+  it("keeps a canary buried at row 199, because that is the row being checked", () => {
+    const { container } = render(
+      <AccountBroker360 {...account360({ linked: manyLinked(214) })} />,
+    );
+    const table = container.querySelector(".exec-360-linked") as HTMLElement;
+    expect(within(table).getByText("acct-199")).toBeTruthy();
+    expect(screen.getByText(/outside the most recent 12/)).toBeTruthy();
+  });
+
+  it("renders the hi-fi's three accounts exactly as drawn, with no cap notice", () => {
+    // Adapting to real volume must not change how the drawn case looks.
+    const { container } = render(<AccountBroker360 {...account360()} />);
+    expect(container.querySelectorAll(".exec-360-linked tbody tr")).toHaveLength(3);
+    expect(screen.queryByText(/showing 3 of/)).toBeNull();
+  });
+
+  it("keeps the one stale sync in a day of five-second syncs", () => {
+    // 17,280 rows a day at the stated policy. A head-cap shows seventeen
+    // thousand successes and drops the finding.
+    const history = Array.from({ length: 17_280 }, (_, i) => ({
+      at: `t-${i}`,
+      source: "ws stream",
+      status: (i === 9_000 ? "STALE" : "OK") as "OK" | "STALE",
+      detail: i === 9_000 ? "6.2s" : null,
+      digest: "4f2a91…7c",
+    }));
+    const { container } = render(<AccountBroker360 {...account360({ syncHistory: history })} />);
+    expect(container.querySelectorAll(".exec-360-sync tbody tr").length).toBeLessThanOrEqual(10);
+    expect(screen.getByText("STALE 6.2s")).toBeTruthy();
+    expect(screen.getByText(/showing 10 of 17,280 syncs/)).toBeTruthy();
+  });
+
+  it("says when there are more failing syncs than the panel can hold", () => {
+    const history = Array.from({ length: 500 }, (_, i) => ({
+      at: `t-${i}`,
+      source: "REST snapshot",
+      status: (i % 10 === 0 ? "FAILED" : "OK") as "OK" | "FAILED",
+      digest: null,
+    }));
+    render(<AccountBroker360 {...account360({ syncHistory: history })} />);
+    // Fifty failures and room for ten is a finding about the binding, not a
+    // rendering detail, and a plain "showing 10 of 500" would hide it.
+    expect(screen.getByText(/more non-routine rows exist/)).toBeTruthy();
+  });
+
+  it("describes the population the server reported, not the rows it was handed", () => {
+    // 3 rows arrived; the binding has 24 accounts. The notice must say 24.
+    render(<AccountBroker360 {...account360({ exposure: PARTIAL_EXPOSURE })} />);
+    expect(screen.getByText(/of 24 linked accounts/)).toBeTruthy();
+  });
+});

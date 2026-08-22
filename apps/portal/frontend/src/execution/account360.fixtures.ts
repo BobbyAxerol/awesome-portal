@@ -17,8 +17,40 @@ import type {
   StateColumn,
   SyncRow,
 } from "./screens/AccountBroker360";
-import { EXPOSURE_COMPLETE, EXPOSURE_PARTIAL } from "./analytics.fixtures";
+import { EXPOSURE_PARTIAL } from "./analytics.fixtures";
 import { readBindingExposure } from "./analytics";
+
+/**
+ * Exposure consistent with the three linked accounts the hi-fi draws.
+ *
+ * The first draft reused `EXPOSURE_COMPLETE` from the analytics fixtures, which
+ * reports 24 accounts — and the cap notice correctly announced "showing 3 of
+ * 24". The fixture was wrong, not the notice: a screen listing three of a
+ * binding's twenty-four accounts should say so, and this one was not meant to
+ * be that case. `PARTIAL_EXPOSURE` is where that case is tested.
+ */
+const EXPOSURE_FOR_THREE = {
+  analytics: {
+    data: {
+      binding_id: "bnd-binance_main_01",
+      account_count: 3,
+      expected_account_count: 3,
+      population_completeness: "COMPLETE",
+      buckets: [
+        {
+          currency: "USDT",
+          account_count: 3,
+          used: "41000.00",
+          reserved: "2020.00",
+          available: "2120.00",
+          headroom: "2120.00",
+          oldest_source_as_of: "2026-08-22T10:40:00Z",
+          newest_source_as_of: "2026-08-22T10:42:01Z",
+        },
+      ],
+    },
+  },
+};
 
 const INTERNAL: StateColumn = {
   positions: "2",
@@ -137,7 +169,7 @@ export function account360(over: Partial<AccountBroker360Props> = {}): AccountBr
     positionMode: "NET",
     linked: LINKED,
     aggregate: HEADROOM_OK,
-    exposure: readBindingExposure(EXPOSURE_COMPLETE),
+    exposure: readBindingExposure(EXPOSURE_FOR_THREE),
     syncPolicy: "BINANCE live 5s · ws + 5m snapshot",
     syncHistory: SYNC,
     openFindings: 0,

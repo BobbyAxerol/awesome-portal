@@ -1058,3 +1058,72 @@ baseline **101/101** · contrast gate 14/14.
 ### 18.7 Tiếp theo
 
 Phase 15 (Alpha 360°) rồi 16 (Portfolio 360°), đúng thứ tự phụ thuộc.
+
+---
+
+## 19. M5 làm cho đúng — cap theo dữ liệu thật, không theo cast hi-fi (2026-08-22)
+
+Bobby chỉ ra: màn phải **co giãn theo lượng dữ liệu backend trả thật**, không
+phải theo quy mô hi-fi vẽ. Soát lại hai màn vừa dựng thì đúng — tôi dựng theo
+cast nhỏ. Ba lỗ:
+
+| Chỗ | Hi-fi vẽ | Thực tế | Đã dựng |
+|---|---|---|---|
+| `linked` accounts (17) | 3 dòng | fixture đã ghi `expected 24`; binding thật có thể vài trăm | render **tất cả** |
+| `syncHistory` (17) | 3 dòng | policy `live 5s` → **17,280 dòng/ngày** | render **tất cả** |
+| fills trong funnel (14) | 3 fill | một order lớn có hàng nghìn | render **tất cả** |
+
+`CapNotice` đã có từ Phase 0 mà tôi không dùng. Nhưng chỉ thêm cap thì vẫn sai.
+
+### 19.1 `slice(0, limit)` là cách cắt sai
+
+Trên bề mặt này, những dòng đáng xem **hiếm khi là dòng đầu**:
+
+- Lịch sử sync cắt còn 10 dòng gần nhất **mất đúng dòng `STALE` duy nhất** trong
+  cửa sổ. Lịch sử chỉ toàn thành công không phải lịch sử, là quảng cáo.
+- Danh sách fill cắt từ đầu **mất fill cuối** — cái đóng lệnh.
+- Danh sách linked account cắt theo thứ tự **mất account đang xem**, hoặc mất
+  canary — đúng dòng operator mở màn này để kiểm.
+
+Nên viết `components/cap.ts`: `capPreserving(rows, limit, isException, total)`
+giữ **mọi dòng bất thường** rồi mới tiêu ngân sách còn lại cho phần thường, và
+giữ nguyên thứ tự gốc để lịch sử vẫn đọc theo thời gian. `capNotice` nói rõ ba
+điều: cắt còn bao nhiêu trên tổng bao nhiêu, có bao nhiêu dòng được **cứu từ
+ngoài cửa sổ** (không có câu này thì các dòng hiện ra trông liền mạch mà thật ra
+không), và khi **số dòng bất thường nhiều hơn cả ngân sách** — đó là phát hiện
+về hệ thống, không phải chi tiết render.
+
+Đây là invariant CLAUDE.md §8 đòi: *"degradation không được biến thành nói dối"*.
+
+### 19.2 Ngân sách chọn theo hi-fi, không theo số tròn
+
+`LINKED_BUDGET = 12`, `SYNC_BUDGET = 10`, `FILL_BUDGET = 12` — chọn sao cho
+**trường hợp hi-fi vẽ vẫn render y hệt như vẽ, không kèm caption nào**. Test
+khoá điều đó: 3 account → 3 dòng, không notice. Co giãn theo dữ liệu thật không
+được làm hỏng dáng của trường hợp đã vẽ.
+
+### 19.3 Cơ chế bắt được một lỗi trong chính fixture của tôi
+
+Bản đầu `account360.fixtures.ts` dùng lại `EXPOSURE_COMPLETE` (24 account) cho
+màn vẽ **3** linked account. Cap notice lập tức hiện *"showing 3 of 24 linked
+accounts"* và test đỏ. **Notice đúng, fixture sai** — màn liệt kê 3 trong 24
+account của một binding thì phải nói ra. Đã tách `EXPOSURE_FOR_THREE` cho trường
+hợp hi-fi, giữ `PARTIAL_EXPOSURE` cho trường hợp thiếu population.
+
+Và sửa một lỗi thật đi kèm: `total` từng lấy `expectedAccountCount ?? length`,
+nên 214 dòng gặp `expected 24` sẽ báo "showing 12 of 24". Giờ lấy `max` — cầm
+214 dòng thì population ít nhất là 214, dù trường count nói gì.
+
+### 19.4 Evidence
+
+vitest **884 passed / 1 skipped** (+19) · tsc sạch · build sạch · visual
+baseline **101/101**.
+
+Test chạy ở quy mô thật, không phải cast: 214 linked account, 17,280 dòng sync,
+1,203 fill, và 50 sync FAILED trong ngân sách 10.
+
+### 19.5 Áp cho các màn sau
+
+Phase 15/16 dựng **từ đầu** với `capPreserving`, không dựng xong rồi vá. Ô
+**Degradation** và **Invariant giữ nguyên** trong bảng scale refine §8 giờ có
+một cơ chế dùng chung để trỏ tới, thay vì 17 màn mỗi màn tự nghĩ một kiểu.

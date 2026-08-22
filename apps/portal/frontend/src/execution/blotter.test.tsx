@@ -223,3 +223,56 @@ describe("Full Blotter — keyset, never offset", () => {
     expect(blotterPage().nextCursor).toBe("c_ab34e91f7720");
   });
 });
+
+describe("Full Blotter — a funnel at the volume a real order produces", () => {
+  function manyFills(n: number) {
+    return {
+      analytics: {
+        data: {
+          order_id: "ord_big",
+          stages: [
+            {
+              stage: "FILL",
+              state: "OBSERVED",
+              events: Array.from({ length: n }, (_, i) => ({
+                stage: "FILL",
+                source_authority: "BROKER",
+                source_id: `fill-${i}`,
+                occurred_at: `2026-08-22T09:${String(i % 60).padStart(2, "0")}:00.000Z`,
+                quantity: `${i + 1}`,
+                quality: {
+                  source_authority: "BROKER",
+                  freshness_state: "OK",
+                  completeness: "COMPLETE",
+                  as_of: null,
+                },
+              })),
+            },
+          ],
+        },
+      },
+    };
+  }
+
+  it("caps 1,203 fills instead of turning one row into a page", () => {
+    const { container } = render(
+      <OrderFunnelStrip funnel={readOrderFunnel(manyFills(1203))} status="ok" />,
+    );
+    expect(container.querySelectorAll(".exec-funnel-fills li").length).toBeLessThanOrEqual(12);
+    expect(screen.getByText(/showing 12 of 1,203 fills/)).toBeTruthy();
+  });
+
+  it("keeps the last fill, which is the one that closed the order", () => {
+    // A head-cap is exactly the cap that drops it.
+    const { container } = render(
+      <OrderFunnelStrip funnel={readOrderFunnel(manyFills(1203))} status="ok" />,
+    );
+    const items = [...container.querySelectorAll(".exec-funnel-fills li")];
+    expect(items.at(-1)!.textContent).toContain("1203");
+  });
+
+  it("leaves the hi-fi's three fills uncapped and unqualified", () => {
+    render(<OrderFunnelStrip funnel={readOrderFunnel(FUNNEL_COMPLETE)} status="ok" />);
+    expect(screen.queryByText(/showing 3 of/)).toBeNull();
+  });
+});

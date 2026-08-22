@@ -25,6 +25,22 @@ import type { BindingExposure } from "../analytics";
 import { isFullPopulation } from "../analytics";
 import { AuthorityBadge, EnvironmentBadge, StatusChip } from "../components/badges";
 import { PanelState } from "../components/states";
+import { capNotice, capPreserving } from "../components/cap";
+
+/**
+ * How many rows each panel spends before it starts capping.
+ *
+ * Chosen against the hi-fi's own look rather than a round number: the drawing
+ * shows three linked accounts and three syncs, and a panel that renders a dozen
+ * still reads the way it was drawn. Past that the representation changes rather
+ * than the panel growing, because a side panel scrolling two hundred rows is
+ * not the design at a different size, it is a different design.
+ *
+ * The counts the server reports are what the notice describes — the cap is
+ * about what fits on screen, never about what is true.
+ */
+const LINKED_BUDGET = 12;
+const SYNC_BUDGET = 10;
 import { ExecutionSurface } from "../ExecutionSurface";
 
 /** One side of the three-column comparison. Values are strings, always. */
@@ -317,6 +333,28 @@ export function AccountBroker360({
   }
   const live = stage === "LIVE_FULL" || stage === "LIVE_CANARY";
 
+  // The account being viewed always survives the cap — a list of siblings that
+  // dropped the one you are looking at is worse than no list. So does any
+  // canary, because a canary inside a live binding is the row an operator is
+  // checking for.
+  const shownLinked = capPreserving(
+    linked,
+    LINKED_BUDGET,
+    (row) => row.current === true || row.stage === "LIVE_CANARY",
+    // The population, not the smaller of two readings. If the server says 24
+    // accounts exist and handed us three, the notice says 24; if it handed us
+    // 214, the population is at least 214 whatever the count field claims.
+    Math.max(exposure?.expectedAccountCount ?? 0, linked.length),
+  );
+  const linkedNotice = capNotice(shownLinked, "linked accounts");
+
+  // Every non-OK sync survives. A history capped to its most recent rows drops
+  // the one STALE entry in the window and stops being a history — at a five
+  // second policy that window is 17,280 rows a day, so this is the normal case
+  // rather than the extreme one.
+  const shownSync = capPreserving(syncHistory, SYNC_BUDGET, (row) => row.status !== "OK");
+  const syncNotice = capNotice(shownSync, "syncs");
+
   return (
     <ExecutionSurface kind="deployments" className="exec-360">
       {/* A solid band, not a tinted panel. A live account is the one state
@@ -386,7 +424,7 @@ export function AccountBroker360({
             </tr>
           </thead>
           <tbody>
-            {linked.map((row) => (
+            {shownLinked.shown.map((row) => (
               <tr key={row.accountId} data-current={row.current ? "true" : undefined}>
                 <th scope="row">
                   {row.accountId}
@@ -403,6 +441,7 @@ export function AccountBroker360({
             ))}
           </tbody>
         </table>
+        {linkedNotice ? <p className="exec-360-note">{linkedNotice}</p> : null}
         <p className="exec-360-note">
           the aggregate check is this screen&apos;s job — one physical account backs several
           virtual accounts, never assigned per-alpha
@@ -423,7 +462,7 @@ export function AccountBroker360({
               </tr>
             </thead>
             <tbody>
-              {syncHistory.map((row) => (
+              {shownSync.shown.map((row) => (
                 <tr key={`${row.at}-${row.source}`} data-status={row.status}>
                   <th scope="row">
                     <span className="exec-num">{row.at}</span>
@@ -446,6 +485,7 @@ export function AccountBroker360({
               ))}
             </tbody>
           </table>
+          {syncNotice ? <p className="exec-360-note">{syncNotice}</p> : null}
         </section>
 
         <section className="exec-gate-panel">

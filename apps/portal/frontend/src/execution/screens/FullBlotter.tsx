@@ -34,6 +34,16 @@ import { AuthorityBadge, OrderStatusChip } from "../components/badges";
 import { KeysetTable, type Column } from "../components/table";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
+import { capNotice, capPreserving } from "../components/cap";
+
+/**
+ * Fills shown per funnel stage before capping.
+ *
+ * The hi-fi draws three. A large order on a thin book produces thousands, and
+ * rendering them all turns one expanded row into a page of its own. Twelve is
+ * what still reads as the drawn design; past that the list caps and says so.
+ */
+const FILL_BUDGET = 12;
 
 /**
  * One blotter row.
@@ -131,6 +141,16 @@ function FunnelCard({
 }) {
   const first = stage.events[0] ?? null;
   const delta = hopDelta(previousAt, first?.occurredAt ?? null);
+  // The last fill is the one that closed the order, and a head-cap is exactly
+  // the cap that would drop it. It is kept, along with anything the source
+  // could not fully vouch for.
+  const last = stage.events.at(-1) ?? null;
+  const shownEvents = capPreserving(
+    stage.events,
+    FILL_BUDGET,
+    (event) => event === last || event.completeness !== "COMPLETE",
+  );
+  const eventsNotice = capNotice(shownEvents, "fills");
   return (
     <li className="exec-funnel-card" data-state={stage.state}>
       <div className="exec-funnel-hop">{label}</div>
@@ -150,14 +170,20 @@ function FunnelCard({
             <div className="exec-funnel-partial">partial — the remainder has no terminal event</div>
           ) : null}
           {stage.events.length > 1 ? (
-            <ol className="exec-funnel-fills">
-              {stage.events.map((event) => (
-                <li key={event.sourceId}>
-                  <span className="exec-num">{event.quantity ?? "—"}</span>
-                  <span className="exec-funnel-meta"> {event.occurredAt ?? "time not stated"}</span>
-                </li>
-              ))}
-            </ol>
+            <>
+              <ol className="exec-funnel-fills">
+                {shownEvents.shown.map((event) => (
+                  <li key={event.sourceId}>
+                    <span className="exec-num">{event.quantity ?? "—"}</span>
+                    <span className="exec-funnel-meta">
+                      {" "}
+                      {event.occurredAt ?? "time not stated"}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              {eventsNotice ? <div className="exec-funnel-meta">{eventsNotice}</div> : null}
+            </>
           ) : null}
         </>
       )}
