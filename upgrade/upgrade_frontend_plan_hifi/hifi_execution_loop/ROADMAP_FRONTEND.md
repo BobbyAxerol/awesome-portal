@@ -218,19 +218,38 @@ scale. Một lệnh gọi trước đây thành công (với số bị làm trò
 | BR-EX-27 | `sample_counts` | → A4 |
 | BR-EX-25 | funnel 5 hop vs 4 stage | 🟡 chờ trả lời |
 | BR-EX-29 | `conditions[]` thay cho một chuỗi | 🟡 |
+| **BR-EX-30** | **R2 response thiếu 7 trường màn R2 đang đọc** — lineage R1, grant, vai trò, passport | 🔴 mới 2026-08-22 |
 
 BR-EX-24…29 **không** bị PRE-IAM-04 đóng; chúng chờ contract của chính chúng.
 Codex xác nhận trong §10 bước 3 rằng BR-EX-28 và BR-EX-29 nằm trong EX-BE-05b/F0.
 
 ---
 
-## E2. Việc codex vừa giao — PRE-IAM-04 (2026-08-22)
+## E2. PRE-IAM-04 — **xong cả bảy gói** (2026-08-22)
 
-Sáu gói `C-PI04-01…06` cộng một mục sửa tracking. Đã đo từng gói, **bốn gói có
-lỗ thật**, lớn nhất là Funnel/Ledger đang hiện cửa sổ bị chặn như thể toàn bộ
-lịch sử. Kế hoạch và thứ tự đề xuất: **`PLAN_PRE_IAM_04_FRONTEND.md`**.
+Kế hoạch: `PLAN_PRE_IAM_04_FRONTEND.md`. Thứ tự Bobby duyệt, khác thứ tự trong
+doc của codex ở hai chỗ (bounded lên đầu, realtime xuống thứ năm).
 
-Chưa bắt đầu — chờ bạn duyệt thứ tự ở §8 của tài liệu đó.
+| # | Gói | Commit | Đã sửa gì |
+|---|---|---|---|
+| 1 | §9 tracking | `41d2d82` | H-1…H-12 rút khỏi danh sách treo, kiểm chứng bằng code |
+| 2 | C-PI04-04 bounded | `3eb7003` | 7 trường bounded; cửa sổ bị chặn thôi đọc như toàn bộ lịch sử |
+| 3 | C-PI04-05 typed 422 | `f095b9d` | 6 mã sửa được tách khỏi 1 mã hạ tầng |
+| 4 | C-PI04-03 cursor | `10119d6` | 3 mã, 3 hồi phục; bỏ regex khớp chữ "cursor" trần |
+| 5 | C-PI04-02 realtime | `93557dc` | 2 reason mới + 3 trường; deadline thành ràng buộc |
+| 6 | C-PI04-06 fixture | `85cf5eb` | 6/6 fixture canonical được nạp; đổi tên fixture presentation |
+| 7 | C-PI04-01 audit | `d363b9d` | ghim trường vào contract sinh ra; tìm ra **BR-EX-30** |
+
+**Bốn lỗi tiềm ẩn tìm ra khi làm, không nằm trong yêu cầu:**
+
+1. **BR-EX-30** — reader R2 đọc **7 trường không contract nào publish**. Với
+   endpoint thật, chip lineage R1, tên grant, vai trò người duyệt và passport
+   bằng chứng trên Gate R2 đều **trống** và không gì nói tại sao.
+2. Nạp contract thật phát hiện **4 giả định sai** về tên trường — mỗi cái là một
+   lỗi runtime ngày endpoint bật.
+3. Test `PortalShell` có budget ngoài 20s nhưng `waitFor` trong 5s → flake thật.
+4. Ba test container về cursor **pass rỗng** khi mới viết (fixture một trang nên
+   nút phân trang không render, cộng một `return` sớm).
 
 ---
 
