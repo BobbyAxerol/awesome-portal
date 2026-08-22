@@ -884,6 +884,17 @@ deep-dive → ADR → slice → evidence discipline documented above.
   stay `fixture` and both runtime flags stay false. Deep dive and Claude
   handoff:
   [`EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md`](./backend/EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md).
+- **EX-BE-02-LIVE AWS-HK discovery gate (2026-08-22):** before `EX-BE-08a`,
+  the remote Execution Cell must answer one D0-only, sanitized infrastructure
+  and runtime questionnaire. D0 permits host/container metadata and public
+  loopback GET contract probes only; it forbids secret reads, TS container/
+  source/DB/Redis mutation, authenticated business-data probes and every setup
+  action. The handoff records WireGuard/mTLS feasibility, immutable gateway
+  drift, Portal-owned source-proxy/projection placement, least-privilege DB
+  roles, PKI rotation and reversible D1 commands. `bobby` host authority does
+  not widen the Portal/Trading-System boundary. D1–D4 require separate owner
+  approval; D4 begins source ingestion. Request and response schema:
+  [`EX_BE_02_LIVE_AWS_HK_DISCOVERY_AND_SAFE_BOOTSTRAP_REQUEST.md`](./backend/EX_BE_02_LIVE_AWS_HK_DISCOVERY_AND_SAFE_BOOTSTRAP_REQUEST.md).
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**
