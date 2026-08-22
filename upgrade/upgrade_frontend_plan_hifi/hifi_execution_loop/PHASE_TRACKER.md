@@ -38,10 +38,10 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | # | Screen (WF) | FE | BE | Needs | Evidence |
 |---|---|---|---|---|---|
 | 0 | Shell & shared components | **DONE** | `CONTRACT_COMPLETE` | — EX-BE-00R4 delivered | FE: 42 tests · build · visual baseline **drifted, see §9**; BE: registry rev 4 · 17 fixture profiles · fail-closed policy tests · generated OpenAPI/TS contract |
-| 1 | Approval Inbox (4a) | `WIP` (screen + adapter complete; awaiting data) | `OPERATIONAL_EVIDENCE_PENDING` | **Claude:** use canonical `view` selector (`filter` now 400); registry activation (`query_enabled`) — **not** the fresh-PG rerun | EX-BE-05a endpoint over EX-BE-04a; FE adapter reconciled against the §5 field map; FE runs on `createFixtureApi` |
-| 2 | Gate R1 Review (1a) | `WIP` (adapter built, on the port) | `OPERATIONAL_EVIDENCE_PENDING` | registry activation (`query_enabled`) — **not** the fresh-PG rerun | immutable evidence + plan/apply/poll + SoD/concurrency/audit implemented; FE obeys `eligibility.can_*` separately |
+| 1 | Approval Inbox (4a) | `WIP` (screen + adapter complete; awaiting data) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | **Claude:** canonical `view`, CSRF transport and reviewed registry activation; backend SGP gate is green | 117/117 fresh-PG; 182k Inbox; public-gateway Inbox/R1 smoke; registry remains fixture |
+| 2 | Gate R1 Review (1a) | `WIP` (adapter built, on the port) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | **Claude:** canonical plan/apply/poll routes + CSRF + distinct Portal-governance-write policy | immutable evidence + SoD/concurrency/audit implemented; public-gateway decision:audit:outbox = 1:1:1 |
 | 3 | Gate R2 Review (1b) | `WIP` (screen + adapter, on the port) | `INTEGRATION_COMPLETE` | **Claude:** consume generated R2 `portfolio_id`/`currency`, remove fixture defaults; source activation/evidence + EX-BE-05a decision integration | EX-BE-07b active-epoch capital-preview repository/API delivered; flags/profile remain fixture/off |
-| 4 | Paper Workbench (1c) | `BLOCKED` | `FOUNDATION_COMPLETE` | screen API + source integration; M7 evidence | EX-BE-04b adaptive six-rung/exact series + cold contract delivered; production source remains inactive |
+| 4 | Paper Workbench (1c) | **screen built** (fixtures, scale-refined) | `FOUNDATION_COMPLETE` | screen API + source integration; M7 evidence | EX-BE-04b adaptive six-rung/exact series + cold contract delivered; production source remains inactive |
 | 5 | Paper Exit Review (4b) | `WIP` (screen + adapter, on the port) | `FOUNDATION_COMPLETE` | EX-BE-05a evidence integration | EX-BE-03 freshness basis delivered; master plan §§10.5, 12.2 |
 | 6 | Admin Action Drawer (1i) | `READY`¹ | `FOUNDATION_COMPLETE` | **CẦN BOBBY:** select capability per catalog; Claude keeps unsupported actions unavailable | EX-BE-02 authenticated boundary and request-key/UNCERTAIN contract delivered; production disabled |
 | 7 | Operations Queue (4e) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-05b operation integration | EX-BE-04a bidirectional keyset delivered; ack≠resolve remains |
@@ -50,7 +50,7 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 10 | Sandbox Certification (1d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a/05b; TS sandbox capability | EX-BE-03 stale/gap blocker delivered; production commands inactive; master plan §10.10 |
 | 11 | Canary Control Room (1e) | `BLOCKED` | `PRODUCTION_INACTIVE` | EX-BE-05b; owner live-canary gate | EX-BE-04b query + EX-BE-06 SSE foundations delivered; shadow parity and production source still required |
 | 12 | Live Full Operations (1f) | `BLOCKED` | `PRODUCTION_INACTIVE` | phase 11 evidence; EX-BE-08 | rev 4 profile contract delivered; source completeness + UNCERTAIN policy remain; master plan §10.12 |
-| 13 | Paper Workbench VNM (4h) | `BLOCKED` | `INTEGRATION_PENDING` | source/screen API integration; venue/ATO/ATC decision | EX-BE-04b adaptive query + EX-BE-03 PAUSED semantics delivered; timezone decision remains |
+| 13 | Paper Workbench VNM (4h) | **screen built** (variant of phase 4, fixtures) | `INTEGRATION_PENDING` | source/screen API integration; venue/ATO/ATC decision | EX-BE-04b adaptive query + EX-BE-03 PAUSED semantics delivered; timezone decision remains |
 | 14 | Full Blotter (4c) | **screen built** (fixtures, scale-refined) | `INTEGRATION_COMPLETE` | **CẦN BOBBY:** scope-bound order-list capability; Claude retains fixture and 4-stage funnel limitation | EX-BE-07b typed active-epoch funnel API delivered over mTLS/delegated auth; flag remains off |
 | 15 | Alpha 360° (2a+2b) | **screen built** (9 tabs, fixtures, scale-refined) | `INTEGRATION_COMPLETE` | source activation/parity + remaining detail/series integration | EX-BE-07b capped portfolio-bound insight API delivered; flag/profile remain off/fixture |
 | 16 | Portfolio 360° (1h→3a) | **screen built** (3 representations, fixtures, scale-refined) | `INTEGRATION_COMPLETE` | **CẦN BOBBY:** source semantics for packed `sample_counts`; Claude labels per-cell floor unavailable | EX-BE-07b source-backed correlation + capital-ledger APIs delivered with exact decimals |
@@ -197,7 +197,8 @@ not itself create an Approval endpoint; its integration handoff is now consumed
 by `EX-BE-05a` below. Detailed handoff:
 [`EX_BE_04A_CONTROL_PLANE_QUERY_PRIMITIVES.md`](../../backend/EX_BE_04A_CONTROL_PLANE_QUERY_PRIMITIVES.md).
 
-`EX-BE-05a` is implemented and is `OPERATIONAL_EVIDENCE_PENDING`.
+`EX-BE-05a` is `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` for the SGP
+backend lane.
 `apps/control-api/src/governance/` plus migration `1723680000002` own the real
 Portal Approval Inbox and R1 workflow: immutable evidence/findings/decisions,
 evidence manifest integrity, SoD/eligibility, idempotent plan→apply→poll,
@@ -206,11 +207,11 @@ optimistic version/quorum, and atomic audit/outbox. External panels remain
 response adapter against the field map in
 [`EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md`](../../backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md),
 including the correction that Deny is allowed for self-authored evidence but
-not for an expired/closed request. Strict typecheck and keyring tests pass; the
-fresh PostgreSQL/Docker rerun is still an explicit backend release gate, not a
-claimed pass. Codex has since confirmed it does **not** gate Claude's adapter
-work, so phases 1 and 2 no longer carry it as a frontend dependency; what they
-carry instead is registry activation.
+not for an expired/closed request. Fresh PostgreSQL is green at 117/117 tests;
+the isolated public-gateway path proves CSRF denial, canonical
+plan→apply→poll and exact 1:1:1 decision/audit/outbox atomicity. Phases 1 and 2
+now carry only Claude's canonical route/CSRF integration and a reviewed
+Portal-governance-write registry policy before product activation.
 
 `EX-BE-03` is `FOUNDATION_COMPLETE`; source ingestion integration remains
 pending and production-disabled. The Rust edge now owns a pure deterministic
@@ -1473,3 +1474,168 @@ schema từ OpenAPI mà validate).
 3. **5/6 endpoint analytics không có fixture.** Fixture frontend cho chúng là
    tôi tự viết từ OpenAPI; `readCapitalPreview` đã cho thấy làm theo prose sai
    **9 tên trường**.
+
+---
+
+## 24A. Six-phase pre-IAM SGP queue — shared coordination (2026-08-22)
+
+Master Plan §12.1.1 now owns this queue. It is deliberately independent of the
+AWS IAM/Security Group window; none of these rows enables WireGuard, source
+reads, projection ingestion, SSE or Trading System commands.
+
+| ID | Backend / codex | Frontend / Claude | Shared status |
+|---|---|---|---|
+| PRE-IAM-01 | close Phase 1 Approval Inbox + Phase 2 Gate R1 on SGP with fresh-PG and public-gateway operational evidence | correct Phase 1/2 HTTP integration listed below; do not activate registry policy | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend gate green |
+| PRE-IAM-02 | source-safe Paper Exit repository/API and deterministic evidence evaluation | finish Phase 5 contract mapping, missing/stale/partial states and lineage | `PLANNED` |
+| PRE-IAM-03 | dark Command Center snapshot API | implement/retain snapshot and five honest failure-state fixtures | `PLANNED` |
+| PRE-IAM-04 | offline security/contract/load/replay/restore hardening | consume frozen contracts and keep every degraded state visible | `PLANNED` |
+| PRE-IAM-05 | D2 dark image/config/preflight/rollback preparation | no live/source activation work required | `PLANNED` |
+| PRE-IAM-06 | reconcile backend guides, shared board and request ledger | reconcile FE evidence/status and retire superseded requests | `PLANNED` |
+
+### 24A.1 Claude handoff required before Phase 1/2 product activation
+
+Codex owns the backend closeout and will not edit Claude-owned frontend files.
+The current adapter still has three contract-boundary blockers:
+
+1. Mutating `post()` must send the double-submit `x-portal-csrf` value from the
+   `__Host-portal_csrf` cookie and preserve same-origin credentials. Backend
+   intentionally returns 403 without it.
+2. Canonical routes are `POST /api/v1/execution/commands/plans`, `POST
+   /api/v1/execution/operations/{operation_id}/apply`, and `GET
+   /api/v1/execution/operations/{operation_id}`. The current frontend still
+   inserts `/governance/approvals/.../decision-plans` and
+   `/governance/operations/...`; those compatibility aliases will not be added.
+3. Inbox `view=R2` is now a canonical backend selector. The operator hi-fi set
+   is `INBOX / ALL / R1 / R2 / EXIT_REVIEWS / LIVE_GATES / OVERDUE`; backend
+   additionally accepts `PAPER` and `SANDBOX` for API consumers. Claude decides
+   presentation, not backend capability.
+
+One policy question remains intentionally closed: Gate R1 is a Portal-owned
+governance write, not a Trading System `paper_commands_enabled` permission.
+Claude must keep Apply unavailable until a reviewed registry revision expresses
+that authority separately. This is a product-activation blocker, not a blocker
+to PRE-IAM-01 backend qualification.
+
+Backend closeout evidence (2026-08-22): fresh PostgreSQL 16 passed 13 suites and
+117/117 tests; isolated public-gateway smoke passed password rotation, Inbox/R1,
+403 missing-CSRF, canonical plan→apply→poll and exact 1:1:1 decision/audit/outbox;
+the SGP `portal` runtime is ready in research mode with non-dev auth and two
+independent file-backed keyrings. The separate stable v1.0.1 stack was not
+rebuilt. Full evidence:
+[`EX_BE_05A_SGP_PHASE_1_2_CLOSEOUT.md`](../../backend/EX_BE_05A_SGP_PHASE_1_2_CLOSEOUT.md).
+
+---
+
+## 25. Phase 4 — Paper Workbench dựng xong (2026-08-22)
+
+Màn thứ 9/17. Phụ thuộc duy nhất là Phase 3, đã dựng — nên nó chưa từng bị chặn,
+chỉ chưa ai làm.
+
+### 25.1 Một quyết định bố cục quyết định cả màn
+
+Hi-fi đặt observation gate **cạnh** biểu đồ equity, không phải dưới. Lý do nằm
+trong mục đích của màn: **Paper tồn tại để thoát khỏi Paper**. Người đọc phải
+cuộn mới biết mình đi được bao xa sẽ đọc biểu đồ và đoán thay.
+
+Test khoá điều đó bằng cách khẳng định cả hai nằm trong **cùng một grid**, chứ
+không phải khẳng định thứ tự DOM.
+
+### 25.2 Ba luật của màn
+
+| Luật | Cách giữ |
+|---|---|
+| CTA thoát **gọi tên** điều kiện chưa đạt | *"Blocked"* là một ticket; *"18 more days of observation (12 of 30)"* là một chỉ dẫn. Ba dòng, không phải một con số |
+| Projection stale **nói rõ nó không khẳng định gì** | giữ giá trị cuối, đánh dấu, kèm câu *"orders remain authoritative in the Execution cell"* và *risk fails closed*. Operator hành động được trên con số biết là cũ; không hành động được trên khoảng trắng |
+| `operatorAdmin` false **ẩn hẳn** nút mutation | không disable — nút không bao giờ bấm được là câu hỏi người ta hỏi mãi |
+
+### 25.3 Drift: verdict của server, không phải so sánh của browser
+
+`52.7%` so `54.1%` — "within band" hay không là **policy mà approval được cấp
+theo**, không phải phép so sánh. Năm dòng drift mang đủ bốn verdict, gồm
+`INSUFFICIENT_DATA` cho slippage với 12 fill: hiện một con số ở đó là **bịa ra
+sự tự tin mà cỡ mẫu không đỡ nổi**.
+
+Và câu quy tắc đi kèm: **WATCH không chặn gì, FAIL chặn exit**.
+
+### 25.4 Reuse report
+
+Dùng lại: `LifecycleRail` + `stageRail`, `ObservationProgress`, `ChartTile`,
+`KeysetTable`, `AuthorityBadge`, `EnvironmentBadge`, `StatusChip`, `PanelState`,
+`capPreserving`, `ExecutionSurface`, và các class `exec-alpha-kpis` /
+`exec-alpha-tabs` / `exec-gate-panel` / `exec-360-facts` / `exec-360-sync`.
+Mới: khối `exec-paper-*` (lineage strip, stale banner, exit block).
+
+Lần này **đọc API component trước khi viết** — ở phase 14 tôi đẻ trùng cả footer
+vì bỏ bước đó.
+
+### 25.5 Scale
+
+`orders`/`fills` không có retention → **page, không cap** (1,284,991 dòng trong
+test). `sessions` hữu hạn → cap 20 giữ session `CRASHED` ở dòng **317/400**.
+
+### 25.6 Evidence
+
+vitest **1,011 passed / 1 skipped** (+18) · tsc sạch · build sạch · visual
+baseline **101/101** · contrast 14/14.
+
+### 25.7 Tiếp theo
+
+**Phase 13 (Paper Workbench VNM)** là biến thể của phase 4 — dựng được ngay.
+Sáu màn còn lại vẫn chờ Bobby chốt catalogue phase 6 (§23.2).
+
+---
+
+## 26. Phase 13 — Paper Workbench VNM (2026-08-22)
+
+Màn **thứ 10/17**. `IMPLEMENTATION_PHASES` gọi nó là *"biến thể của phase 4"*,
+nên phép thử thật sự là: **phase 4 dựng ra một màn, hay dựng ra một màn crypto?**
+
+Kết quả: thêm ba prop tuỳ chọn vào `PaperWorkbench` (`calendar`,
+`venueLocalTime`, `credential`) là đủ. **Không fork, không copy.** 18 test của
+phase 4 vẫn xanh nguyên sau khi sửa. Mọi thứ "VN" của màn này là **dữ liệu** —
+VND trên từng con số, LO/ATO/ATC nguyên văn, lot 100, T+2.5.
+
+### 26.1 Điểm đóng phase là một hàm thuần
+
+§13 đóng phase bằng đúng một câu: *"freshness clock **provably** pauses outside
+09:00–14:45 ICT"*. Nên đồng hồ là **hàm thuần** `vnCalendar.ts`, không phải một
+nhánh `if` trong render — thứ phải chứng minh được thì không nên nằm ở chỗ chỉ
+kiểm được bằng cách đếm phần tử DOM.
+
+Sáu test chỉ cho đồng hồ: mở/đóng đúng biên (14:45 là **giờ đóng**, không phải
+phút giao dịch cuối), `PAUSED` chứ không `STALE`, đếm tới phiên mở tiếp qua cuối
+tuần (20:14 thứ Sáu → 09:00 thứ Hai, **không phải 12 tiếng**), nhảy qua ngày
+nghỉ lễ venue công bố, và `tradingDaysBetween` để **closure không tiêu vào cửa
+sổ quan sát**.
+
+Cái cuối là luật quan trọng nhất: một deployment ngồi qua Tết **chưa quan sát**
+những ngày đó. Đếm chúng là thăng hạng một alpha bằng hai tuần thị trường đóng.
+
+### 26.2 Bốn phân biệt màn này giữ
+
+| Phân biệt | Vì sao |
+|---|---|
+| **`PAUSED` ≠ `STALE`** | ngoài phiên, dữ liệu tươi đúng như thị trường cho phép. Gắn STALE là đẩy operator đi tìm lỗi trong một hệ thống đang chạy đúng |
+| **Session state ≠ runtime state** | hai chip cạnh nhau: `SUSPENDED_BY_CALENDAR` + `READY`. Gộp lại là báo một deployment khoẻ mạnh thành đã dừng |
+| **Banner INFO ≠ warning** | thị trường đóng không phải sự cố. Banner amber sẽ khiến người ta đi tìm sự cố. Banner `stale` vẫn giữ warn — cái đó *là* sự cố |
+| **LO/ATO/ATC nguyên văn** | `ATO` không phải `MARKET`, `LO` không phải `LIMIT`. Chúng khớp ở phiên đấu giá theo luật mà loại lệnh phiên liên tục không có, và từ đã dịch là từ venue không nhận ra khi gọi hỗ trợ |
+
+### 26.3 Credential: hiện trạng thái, không đưa nút
+
+DNSE OTP gia hạn ở phía Execution. Một nút ở đây là **lời hứa Portal không giữ
+được**. Test khẳng định strip đó không có `role="button"` nào.
+
+### 26.4 Evidence
+
+vitest **1,026 passed / 1 skipped** (+15) · tsc sạch · build sạch · visual
+baseline **101/101** · contrast 14/14. Phase 4 giữ nguyên 18/18 sau khi sửa.
+
+### 26.5 Tình hình 17 màn
+
+**10 đã dựng** (0, 1, 2, 3, 4, 5, 13, 14, 15, 16, 17 — tính cả shared).
+**7 còn lại** (6, 7, 8, 9, 10, 11, 12) đều đi qua phase 6.
+
+Bobby đã chốt **phương án B** cho catalogue phase 6: 7 action chỉ chạy qua
+Postgres/Redis trực tiếp **sẽ được mở HTTP, ưu tiên ngay**. Nghĩa là phase 6
+không còn chờ quyết định — nó chờ codex mở endpoint. Request ở
+`HOTFIX_REQUEST_2026-08-22.md`.

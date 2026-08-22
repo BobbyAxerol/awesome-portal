@@ -2606,3 +2606,91 @@
 .exec-table-clickable {
   cursor: pointer;
 }
+
+/* ---------------------------------------------------------------------------
+ * Paper Workbench (hi-fi 1c)
+ * ------------------------------------------------------------------------ */
+
+.exec-paper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Every id a chip, wrapping rather than scrolling: the lineage is read once
+   on arrival, and a strip that scrolls hides the half nobody scrolled to. */
+.exec-paper-lineage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.exec-paper-lineageitem {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+/* Marked, not hidden and not alarmed. The values below it are the last good
+   ones and an operator can act on a number they know is old. */
+.exec-paper-stale {
+  border: 1px solid var(--warn);
+  border-left-width: 3px;
+  background: var(--warn-bg);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-2xs);
+  color: var(--ink);
+}
+
+.exec-paper-exit {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line-soft);
+}
+
+.exec-paper-exit ul {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+}
+
+.exec-paper-exit li + li {
+  margin-top: var(--space-1);
+}
+
+/* A drift verdict is carried by its chip; the row tint is a second, weaker
+   cue and never the only one. */
+.exec-360-sync tr[data-verdict="FAIL"] th[scope="row"] {
+  box-shadow: inset 2px 0 0 var(--bad);
+}
+
+.exec-360-sync tr[data-verdict="WATCH"] th[scope="row"] {
+  box-shadow: inset 2px 0 0 var(--warn);
+}
+
+/* Session calendar (hi-fi 4h).
+ *
+ * INFO tone, deliberately not warning: the market being shut is not a fault,
+ * and an amber banner would send an operator looking for one. The stale banner
+ * above keeps warn because that one *is* a fault. */
+.exec-paper-calendar {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  background: var(--surface-2);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-2xs);
+  color: var(--ink);
+}
+
+.exec-paper-credential {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--line-soft);
+  background: var(--surface-3);
+}
