@@ -204,6 +204,16 @@ lại màn.
 
 ---
 
+## E2. Việc codex vừa giao — PRE-IAM-04 (2026-08-22)
+
+Sáu gói `C-PI04-01…06` cộng một mục sửa tracking. Đã đo từng gói, **bốn gói có
+lỗ thật**, lớn nhất là Funnel/Ledger đang hiện cửa sổ bị chặn như thể toàn bộ
+lịch sử. Kế hoạch và thứ tự đề xuất: **`PLAN_PRE_IAM_04_FRONTEND.md`**.
+
+Chưa bắt đầu — chờ bạn duyệt thứ tự ở §8 của tài liệu đó.
+
+---
+
 ## F. Nếu bạn chỉ làm một việc
 
 **Giục codex mở 8 endpoint `ops` (A1a).** Ba màn chưa dựng — Operations Queue,
