@@ -71,7 +71,7 @@ returns the latest 250 rows. It publishes exact per-currency gross totals,
 Order Funnel validates the complete supplied event history, retains the first
 event for every lifecycle stage, and fills the remaining latest window up to
 1,024 rows. It publishes exact total and per-stage counts, returned count,
-truncation and `window=EARLIEST_PER_STAGE_THEN_LATEST`. A bounded response is
+truncation and `window=LIFECYCLE_AND_LATEST`. A bounded response is
 therefore never mislabeled as the full population.
 
 These are functional bounds and correctness properties. The offline test

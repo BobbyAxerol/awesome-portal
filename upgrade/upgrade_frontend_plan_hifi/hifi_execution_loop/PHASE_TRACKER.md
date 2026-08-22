@@ -1596,6 +1596,14 @@ The next backend queue item is PRE-IAM-05: D2 dark image/config/service,
 non-root/read-only, offline preflight and rollback preparation. It does not
 authorize an AWS network change, source read or Trading System mutation.
 
+Claude's full task packet, exact contract read order, acceptance tests and the
+three-step no-IAM continuation are recorded in
+[`CODEX_TO_CLAUDE_PRE_IAM_04_FRONTEND_HANDOFF.md`](CODEX_TO_CLAUDE_PRE_IAM_04_FRONTEND_HANDOFF.md).
+After PRE-IAM-05 the two immediately executable steps are PRE-IAM-06 tracking
+reconciliation, then the contract-only `EX-BE-05b/F0` catalogue/typed-condition/
+relay foundation. The latter keeps all eight unpublished `ops` routes blocked
+and never substitutes direct DB/Redis access.
+
 ---
 
 ## 25. Phase 4 — Paper Workbench dựng xong (2026-08-22)

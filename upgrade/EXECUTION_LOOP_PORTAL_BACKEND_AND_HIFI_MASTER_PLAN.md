@@ -824,6 +824,16 @@ window opens.
 | PRE-IAM-05 | Prepare D2 dark deployment | image/config/service manifests for AWS Portal Edge + Source Proxy with interfaces/routes/source reads still off | no AWS/live UI activation; continue fixture work | offline render, non-root/read-only image checks, preflight and rollback rehearsal | `PLANNED` |
 | PRE-IAM-06 | Tracking cleanup | reconcile Master Plan, backend README/guide, shared tracker and request ledger; classify every blocker by owner | reconcile FE status/evidence and close superseded requests | no contradictory status, no bare `COMPLETE`, exact next dependency/owner per row | `PLANNED` |
 
+After PRE-IAM-05, two more credential-free steps can run without waiting for
+IAM: PRE-IAM-06 reconciliation, then the contract-only foundation of existing
+EX-BE-05b (`EX-BE-05b/F0`). F0 publishes the canonical BR-EX-28 command
+catalogue, BR-EX-29 typed conditions and deny-by-default plan/apply/verify/relay
+contracts and fixtures. It does not activate a relay or fabricate the eight
+missing Trading System `ops` HTTP routes; those remain unreachable until the
+Trading System owner publishes purpose-built authenticated contracts. The
+detailed Codex/Claude split is in
+[`CODEX_TO_CLAUDE_PRE_IAM_04_FRONTEND_HANDOFF.md`](upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_PRE_IAM_04_FRONTEND_HANDOFF.md).
+
 `PRE-IAM-01` has closed only the backend lane of product phases 1–2. It does not
 change registry revision 4, does not enable `query_enabled` or any command flag,
 and does not redefine a Portal governance decision as a Trading System Paper
