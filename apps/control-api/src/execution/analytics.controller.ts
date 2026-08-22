@@ -1,8 +1,17 @@
 import { Body, Controller, Get, Inject, Param, Post, Req, UseGuards } from "@nestjs/common";
 import { FastifyRequest } from "fastify";
+import { z } from "zod";
 import { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
-import { AnalyticsProxyError, ExecutionAnalyticsProxy } from "./analytics.proxy";
+import {
+  CapitalPreviewApprovalScope,
+  GovernanceRepository,
+} from "../governance/governance.repository";
+import {
+  AnalyticsProxyError,
+  analyticsResource,
+  ExecutionAnalyticsProxy,
+} from "./analytics.proxy";
 
 interface AnalyticsRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -13,11 +22,30 @@ interface AnalyticsRequest extends FastifyRequest {
 @UseGuards(SessionGuard)
 @Controller("/api/v1/execution")
 export class ExecutionAnalyticsController {
-  constructor(@Inject(ExecutionAnalyticsProxy) private readonly proxy: ExecutionAnalyticsProxy) {}
+  constructor(
+    @Inject(ExecutionAnalyticsProxy) private readonly proxy: ExecutionAnalyticsProxy,
+    @Inject(GovernanceRepository) private readonly governance: GovernanceRepository,
+  ) {}
 
   @Post("/approvals/:approvalId/capital-preview")
-  capitalPreview(@Req() request: AnalyticsRequest, @Param("approvalId") id: string, @Body() body: unknown) {
-    return this.invoke(() => this.proxy.capitalPreview(principal(request), id, body));
+  async capitalPreview(
+    @Req() request: AnalyticsRequest,
+    @Param("approvalId") id: string,
+    @Body() body: unknown,
+  ) {
+    analyticsResource("gate-r2", id);
+    if (request.portalUser.role !== "ADMIN") {
+      throw new AnalyticsProxyError("ANALYTICS_APPROVAL_REVIEW_FORBIDDEN", 403);
+    }
+    const scope = await this.governance.capitalPreviewScope(
+      request.portalWorkspaceId,
+      id,
+    );
+    if (!scope) {
+      throw new AnalyticsProxyError("ANALYTICS_APPROVAL_SCOPE_NOT_FOUND", 404);
+    }
+    const bound = bindCapitalPreviewRequest(body, scope);
+    return this.invoke(() => this.proxy.capitalPreview(principal(request), id, bound));
   }
 
   @Get("/orders/:orderId/funnel")
@@ -53,6 +81,30 @@ export class ExecutionAnalyticsController {
       throw new AnalyticsProxyError("ANALYTICS_UPSTREAM_UNAVAILABLE", 502);
     }
   }
+}
+
+const CapitalPreviewRequestSchema = z.object({
+  portfolio_id: z.string().regex(/^[A-Za-z0-9._-]{1,128}$/),
+  requested_amount: z.string().regex(/^(?:0|[1-9][0-9]*)(?:\.[0-9]{1,28})?$/).max(96),
+  currency: z.string().regex(/^[A-Z0-9]{2,12}$/),
+}).strict();
+
+/** Prevents a client-controlled body from escaping the approval's immutable R2 scope. */
+export function bindCapitalPreviewRequest(
+  body: unknown,
+  scope: CapitalPreviewApprovalScope,
+): z.infer<typeof CapitalPreviewRequestSchema> {
+  const parsed = CapitalPreviewRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new AnalyticsProxyError("ANALYTICS_CAPITAL_PREVIEW_REQUEST_INVALID", 400);
+  }
+  if (
+    parsed.data.portfolio_id !== scope.portfolioId ||
+    parsed.data.currency !== scope.currency
+  ) {
+    throw new AnalyticsProxyError("ANALYTICS_APPROVAL_SCOPE_MISMATCH", 403);
+  }
+  return parsed.data;
 }
 
 function principal(request: AnalyticsRequest) {

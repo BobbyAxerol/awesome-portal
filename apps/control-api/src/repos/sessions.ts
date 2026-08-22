@@ -32,6 +32,7 @@ function toSession(row: SessionRow): AuthSession & {
     userId: row.user_id,
     state: row.state,
     sessionVersion: row.session_version,
+    authenticationTime: row.created_at,
     idleExpiresAt: row.idle_expires_at,
     absoluteExpiresAt: row.absolute_expires_at,
     accessSubject: row.access_subject,

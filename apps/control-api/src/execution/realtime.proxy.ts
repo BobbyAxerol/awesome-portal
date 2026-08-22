@@ -103,7 +103,7 @@ export class ExecutionRealtimeProxy implements OnApplicationShutdown {
         workspaceId: request.workspaceId,
         roles: [request.user.role],
         resources: [COMMAND_CENTER_RESOURCE],
-        authenticationTime: new Date(),
+        authenticationTime: request.session.authenticationTime,
         authenticationMethods: ["portal_session"],
       });
       const session = await this.getSession();

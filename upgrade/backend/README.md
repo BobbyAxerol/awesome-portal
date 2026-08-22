@@ -248,10 +248,12 @@ authority.
   tạo side effect bên Trading System. Chi tiết:
   [`EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md`](./EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md).
 - [Execution backend hardening checkpoint](./EX_BE_HARDENING_CHECKPOINT.md)
-  — **H1 complete; H2/H3 pending:** downstream/session-owned SSE cleanup,
+  — **H1–H2 complete; H3 pending:** downstream/session-owned SSE cleanup,
   ACTIVE-epoch cursors, poller liveness/readiness and versioned realtime
-  freshness are hardened. Evidence: Rust/PostgreSQL 74/74 + strict Clippy/
-  rustfmt; Control API 107/107. No runtime/profile activation was made.
+  freshness are hardened; delegated JWTs preserve session `auth_time`, and R2
+  Capital Preview is ADMIN-only plus immutable workspace/portfolio/currency
+  bound. Evidence: Rust/PostgreSQL 74/74 + strict Clippy/rustfmt; fresh-PG
+  Control API build + 109/109. No runtime/profile activation was made.
 - Backend tiếp theo là `EX-BE-08a`: source-ingestion parity, qualification và
   observability trước khi xét `fixture -> shadow`. `EX-BE-05b` vẫn chờ source
   command capability và không bị EX-BE-07b ngầm mở khóa.

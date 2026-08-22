@@ -18,13 +18,14 @@ async function fixture(ttlSeconds = 45) {
 describe("execution delegated read assertions", () => {
   it("issues an RS256 assertion with exact audience, environment and resources", async () => {
     const { service, publicKey } = await fixture();
+    const authenticationTime = new Date("2026-08-20T08:15:30.000Z");
     const token = await service.issueReadAssertion({
       principalId: "usr_bobby",
       sessionId: "ses_123",
       workspaceId: "ws_research",
       roles: ["ADMIN"],
       resources: ["alpha:alpha-paper-1"],
-      authenticationTime: new Date(),
+      authenticationTime,
       authenticationMethods: ["cloudflare_access", "portal_session"],
     });
     const { payload, protectedHeader } = await jwtVerify(token, publicKey, {
@@ -36,6 +37,8 @@ describe("execution delegated read assertions", () => {
     expect(payload.scopes).toEqual(["execution.read"]);
     expect(payload.resources).toEqual(["alpha:alpha-paper-1"]);
     expect(payload.environment).toBe("paper");
+    expect(payload.auth_time).toBe(Math.floor(authenticationTime.getTime() / 1000));
+    expect(payload.auth_time).not.toBe(payload.iat);
     expect((payload.exp ?? 0) - (payload.iat ?? 0)).toBe(45);
   });
 

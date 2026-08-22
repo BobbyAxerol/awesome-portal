@@ -276,13 +276,15 @@ gate. Claude may wire the six public routes and failure fixtures per §7 of
 [`EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md`](../../backend/EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md)
 without waiting for source activation.
 
-Backend hardening checkpoint H1 is complete. The same-origin SSE proxy now
+Backend hardening checkpoint H1–H2 is complete. The same-origin SSE proxy now
 releases its private HTTP/2 stream on downstream close or session-lease loss;
 the Rust poller is retrying/readiness-aware and cursor-scoped to ACTIVE epochs;
 realtime freshness is server-evaluated and policy-versioned. Evidence is 74/74
-Rust/PostgreSQL plus strict Clippy/rustfmt and 107/107 Control API tests. This
-does not change Claude's fixture contract or activate any delivery flag. H2/H3
-remain backend-only work before offline `EX-BE-08a`.
+Rust/PostgreSQL plus strict Clippy/rustfmt. Delegated assertions preserve the
+Portal-session `auth_time`, and R2 Capital Preview is ADMIN-only plus immutable
+workspace/portfolio/currency bound; fresh-PG Control API build + 109/109 tests
+pass. This does not change Claude's fixture contract or activate any delivery
+flag. H3 remains backend-only work before offline `EX-BE-08a`.
 
 ### 6.2 BR-EX decisions
 

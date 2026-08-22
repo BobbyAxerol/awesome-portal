@@ -42,9 +42,27 @@ Evidence:
 
 ## H2 — identity and governance binding
 
-**Status: pending.** Preserve original Portal session authentication time in
-delegated tokens and bind capital-preview reads to the immutable R2 approval
-scope with explicit RBAC.
+**Status: complete (2026-08-22).**
+
+- `auth_time` in both realtime and analytics delegated JWTs now comes from the
+  immutable Portal session creation time loaded from PostgreSQL; issuing or
+  refreshing a short-lived edge assertion cannot make the user appear newly
+  authenticated.
+- A new append-only `governance_approval_analytics_scopes` relation binds one
+  R2 approval to exactly one workspace, portfolio and currency. A composite
+  foreign key proves the parent request is the same workspace and gate.
+- Capital Preview is ADMIN-only, hides missing/cross-workspace/closed/expired
+  scopes, validates a strict exact-decimal request, and refuses any client body
+  whose portfolio or currency differs from the immutable approval binding.
+- This only authorizes a read-only preview. It does not approve, allocate,
+  deploy or relay a command, and the analytics feature remains dark.
+
+Evidence:
+
+- `./scripts/control-api-test.sh`: production build, fresh PostgreSQL migration
+  and 109/109 tests passed.
+- Tests cover historical `auth_time`, ADMIN/USER behavior, scope mismatch,
+  disabled-runtime behavior and database rejection of scope rebinding.
 
 ## H3 — analytics integrity and resource isolation
 

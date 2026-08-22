@@ -79,6 +79,8 @@ export interface AuthSession {
   userId: string;
   state: "ACTIVE" | "REVOKED" | "EXPIRED";
   sessionVersion: number;
+  /** Immutable Portal-session creation time; never replaced by delegated-token iat. */
+  authenticationTime: Date;
   idleExpiresAt: Date;
   absoluteExpiresAt: Date;
 }

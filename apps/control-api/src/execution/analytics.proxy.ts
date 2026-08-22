@@ -136,7 +136,7 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
       workspaceId: principal.workspaceId,
       roles: [principal.user.role],
       resources: [resource],
-      authenticationTime: new Date(),
+      authenticationTime: principal.session.authenticationTime,
       authenticationMethods: ["portal_session"],
     });
     const payload = body === undefined ? undefined : Buffer.from(JSON.stringify(body), "utf8");

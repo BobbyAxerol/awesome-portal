@@ -76,6 +76,12 @@ describe("identity migrations and repositories", () => {
     expect(stored.rows[0].session_token_hash).not.toContain(token);
     expect(stored.rows[0].session_token_hash).toHaveLength(64);
 
+    const session = await new SessionsRepository(ctx.pool).findByTokenHash(sha256(token));
+    expect(session).not.toBeNull();
+    expect(session!.authenticationTime.toISOString()).toBe(
+      session!.createdAt.toISOString(),
+    );
+
     await ctx.pool.query(
       `UPDATE auth_sessions SET state = 'REVOKED', revoked_at = now() WHERE session_id = $1`,
       [sessionId],

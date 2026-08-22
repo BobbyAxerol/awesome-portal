@@ -81,7 +81,8 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
 
   beforeEach(async () => {
     await ctx.pool.query(
-      `TRUNCATE governance_approval_decisions, governance_decision_plans,
+      `TRUNCATE governance_approval_analytics_scopes,
+        governance_approval_decisions, governance_decision_plans,
         governance_approval_findings, governance_approval_evidence,
         governance_approval_requests, outbox_messages, product_audit_events CASCADE`,
     );
@@ -258,6 +259,28 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
       ],
     );
     return { manifestHash, evidenceHashes: [HASH_A, HASH_B] };
+  }
+
+  async function seedR2CapitalScope(approvalId: string) {
+    await ctx.pool.query(
+      `INSERT INTO governance_approval_requests
+         (approval_id, workspace_id, gate, subject_type, subject_id, subject_label,
+          environment, target_label, requester_user_id, requester_username,
+          artifact_creator_user_id, artifact_creator_username, status,
+          policy_version, quorum_required, evidence_set_hash, evidence_complete,
+          blocker_count, sla_due_at, expires_at)
+       VALUES ($1, $2, 'R2', 'DEPLOYMENT', 'deployment-paper-1', 'Paper deployment',
+               'PAPER', 'R2 capital review', $3, $4, $3, $4, 'PENDING',
+               'approval.v3', 1, $5, true, 0,
+               now() + interval '6 hours', now() + interval '48 hours')`,
+      [approvalId, workspaceId, stan.userId, stan.username, HASH_A],
+    );
+    await ctx.pool.query(
+      `INSERT INTO governance_approval_analytics_scopes
+         (approval_id, workspace_id, portfolio_id, currency)
+       VALUES ($1, $2, 'PF_R2_1', 'USDT')`,
+      [approvalId, workspaceId],
+    );
   }
 
   function planPayload(approvalId: string, evidenceHashes: string[], overrides: Record<string, unknown> = {}) {
@@ -437,6 +460,37 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     const userPlan = await plan(stan, payload);
     expect(userPlan.statusCode).toBe(403);
     expect(userPlan.json().error.code).toBe("APPROVER_ROLE_REQUIRED");
+  });
+
+  it("binds R2 capital preview to ADMIN and an immutable approval scope", async () => {
+    await seedR2CapitalScope("AP-R2-CAPITAL");
+    const path = "/api/v1/execution/approvals/AP-R2-CAPITAL/capital-preview";
+    const body = {
+      portfolio_id: "PF_R2_1",
+      requested_amount: "125.250000000000000001",
+      currency: "USDT",
+    };
+
+    const userDenied = await mutation(stan, path, body);
+    expect(userDenied.statusCode).toBe(403);
+    expect(userDenied.json().error.code).toBe("ANALYTICS_APPROVAL_REVIEW_FORBIDDEN");
+
+    const scopeDenied = await mutation(bobby, path, {
+      ...body,
+      portfolio_id: "PF_OTHER",
+    });
+    expect(scopeDenied.statusCode).toBe(403);
+    expect(scopeDenied.json().error.code).toBe("ANALYTICS_APPROVAL_SCOPE_MISMATCH");
+
+    const allowedButDark = await mutation(bobby, path, body);
+    expect(allowedButDark.statusCode).toBe(404);
+    expect(allowedButDark.json().error.code).toBe("ANALYTICS_DISABLED");
+
+    await expect(ctx.pool.query(
+      `UPDATE governance_approval_analytics_scopes
+          SET portfolio_id = 'PF_REBOUND'
+        WHERE approval_id = 'AP-R2-CAPITAL'`,
+    )).rejects.toThrow(/append-only/i);
   });
 
   it("makes request-key replay deterministic and rejects payload conflicts", async () => {

@@ -34,6 +34,20 @@ export interface ApprovalRecord {
   decidedByUserId: string | null;
 }
 
+export interface CapitalPreviewApprovalScope {
+  approvalId: string;
+  workspaceId: string;
+  portfolioId: string;
+  currency: string;
+}
+
+interface CapitalPreviewApprovalScopeRow {
+  approval_id: string;
+  workspace_id: string;
+  portfolio_id: string;
+  currency: string;
+}
+
 interface ApprovalRow {
   approval_id: string;
   workspace_id: string;
@@ -345,6 +359,39 @@ export class GovernanceRepository {
     );
     const row = result.rows[0];
     return { pending: Number(row.pending), overdue: Number(row.overdue), dueSoon: Number(row.due_soon) };
+  }
+
+  /**
+   * Resolves the immutable R2 analytics scope without leaking approvals from
+   * another workspace or exposing previews for closed/expired reviews.
+   */
+  async capitalPreviewScope(
+    workspaceId: string,
+    approvalId: string,
+  ): Promise<CapitalPreviewApprovalScope | null> {
+    const result = await this.pool.query<CapitalPreviewApprovalScopeRow>(
+      `SELECT scope.approval_id, scope.workspace_id, scope.portfolio_id, scope.currency
+         FROM governance_approval_analytics_scopes scope
+         JOIN governance_approval_requests request
+           ON request.approval_id = scope.approval_id
+          AND request.workspace_id = scope.workspace_id
+          AND request.gate = scope.gate
+        WHERE scope.workspace_id = $1
+          AND scope.approval_id = $2
+          AND request.gate = 'R2'
+          AND request.status = 'PENDING'
+          AND request.expires_at > now()`,
+      [workspaceId, approvalId],
+    );
+    const row = result.rows[0];
+    return row
+      ? {
+          approvalId: row.approval_id,
+          workspaceId: row.workspace_id,
+          portfolioId: row.portfolio_id,
+          currency: row.currency,
+        }
+      : null;
   }
 
   async detail(workspaceId: string, approvalId: string): Promise<{

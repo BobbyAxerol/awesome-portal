@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config";
 import { AnalyticsProxyError, analyticsResource } from "../src/execution/analytics.proxy";
+import { bindCapitalPreviewRequest } from "../src/execution/analytics.controller";
 
 describe("EX-BE-07b analytics screen boundary", () => {
   const base = {
@@ -36,5 +37,33 @@ describe("EX-BE-07b analytics screen boundary", () => {
       FEATURE_EXECUTION_ANALYTICS_QUERY: "true",
       EXECUTION_EDGE_PRIVATE_KEY_FILE: "/run/secrets/delegation.key",
     })).toThrowError(/mTLS/);
+  });
+
+  it("binds capital preview to the immutable approval portfolio and currency", () => {
+    const scope = {
+      approvalId: "approval-1",
+      workspaceId: "workspace-1",
+      portfolioId: "PF_1",
+      currency: "USDT",
+    };
+    expect(bindCapitalPreviewRequest({
+      portfolio_id: "PF_1",
+      requested_amount: "125.250000000000000001",
+      currency: "USDT",
+    }, scope)).toEqual({
+      portfolio_id: "PF_1",
+      requested_amount: "125.250000000000000001",
+      currency: "USDT",
+    });
+    expect(() => bindCapitalPreviewRequest({
+      portfolio_id: "PF_OTHER",
+      requested_amount: "1",
+      currency: "USDT",
+    }, scope)).toThrowError(AnalyticsProxyError);
+    expect(() => bindCapitalPreviewRequest({
+      portfolio_id: "PF_1",
+      requested_amount: 1,
+      currency: "USDT",
+    }, scope)).toThrowError(AnalyticsProxyError);
   });
 });

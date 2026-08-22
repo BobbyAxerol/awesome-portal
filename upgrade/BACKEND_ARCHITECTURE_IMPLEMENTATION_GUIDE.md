@@ -895,14 +895,17 @@ deep-dive → ADR → slice → evidence discipline documented above.
   not widen the Portal/Trading-System boundary. D1–D4 require separate owner
   approval; D4 begins source ingestion. Request and response schema:
   [`EX_BE_02_LIVE_AWS_HK_DISCOVERY_AND_SAFE_BOOTSTRAP_REQUEST.md`](./backend/EX_BE_02_LIVE_AWS_HK_DISCOVERY_AND_SAFE_BOOTSTRAP_REQUEST.md).
-- **Execution backend hardening H1 (2026-08-22):** SSE ownership now follows
+- **Execution backend hardening H1–H2 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING
   history cannot be skipped or emitted as live traffic. Epoch activation emits
   the existing typed cutover recovery, and realtime freshness is evaluated
   server-side with an explicit policy version and venue state. Evidence is
-  74/74 Rust/PostgreSQL tests plus strict Clippy/rustfmt and 107/107 Control API
-  tests. H2/H3 remain mandatory before offline EX-BE-08a; all runtime flags and
+  Delegated assertions now preserve the immutable Portal-session `auth_time`;
+  Capital Preview is ADMIN-only and bound by an append-only composite-FK R2
+  workspace/portfolio/currency scope. Evidence is 74/74 Rust/PostgreSQL tests
+  plus strict Clippy/rustfmt and a fresh-PG Control API build with 109/109
+  tests. H3 remains mandatory before offline EX-BE-08a; all runtime flags and
   registry profiles remain off/`fixture`. Detail:
   [`EX_BE_HARDENING_CHECKPOINT.md`](./backend/EX_BE_HARDENING_CHECKPOINT.md).
 
