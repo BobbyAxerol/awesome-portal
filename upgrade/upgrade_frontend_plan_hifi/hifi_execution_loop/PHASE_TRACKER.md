@@ -7,6 +7,10 @@
 > Companions: `IMPLEMENTATION_PHASES.md` says what each phase must DO,
 > `EXECUTION_SCALE_AND_REFINE.md` says what it must survive, and this file says
 > where each one actually IS.
+>
+> `ROADMAP_FRONTEND.md` reads this board and answers one question from it:
+> **what Bobby must decide next, and what Claude does meanwhile.** Decisions go
+> there; status stays here.
 
 ## How to use it
 

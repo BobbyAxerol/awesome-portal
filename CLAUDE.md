@@ -251,6 +251,29 @@ không tự chọn mô tả tiện lợi.
    (`cd packages/contracts && npm run generate`) — đây là bước cơ học, không
    phải tự tác giả contract.
 
+7. **Đánh giá nào cũng phải kết thúc bằng markdown, không phải bằng chat**
+   (Bobby chốt 2026-08-22). Chat cuộn mất và không so được hai lần đọc cách
+   nhau ba ngày. Bất cứ khi nào bạn *audit, đánh giá, xếp thứ tự việc, hoặc
+   liệt kê thứ đang chặn*, kết quả phải nằm trong một file `.md` **trước khi**
+   bạn báo cáo — chat chỉ trỏ tới file đó.
+
+   | Loại | File |
+   |---|---|
+   | Còn phải sửa gì mỗi phase, ai đang chặn, Bobby cần quyết gì | `hifi_execution_loop/ROADMAP_FRONTEND.md` |
+   | Trạng thái sống 19 phase (FE/BE/Needs/Evidence) | `hifi_execution_loop/PHASE_TRACKER.md` |
+   | Envelope quy mô, mechanism dùng chung, `BR-EX-*` | `hifi_execution_loop/EXECUTION_SCALE_AND_REFINE.md` |
+   | Lỗi cần backend vá gấp | `hifi_execution_loop/HOTFIX_REQUEST_<ngày>.md` |
+   | Việc ngoài phạm vi plan | `apps/portal/registry/FRONTEND_HANDOFF.md` §8 |
+
+   Lý do có luật này: một báo cáo dài trong chat đọc như kể chuyện — Bobby
+   không rút ra được **việc kế tiếp là gì**. Markdown buộc mỗi việc phải có
+   chủ và có điều kiện đóng. Nếu một phát hiện không đáng ghi vào file nào ở
+   trên thì nó cũng không đáng báo cáo.
+
+   Roadmap phải tách rõ **ba nhóm**: (a) Bobby quyết, (b) Claude làm không cần
+   chờ ai, (c) đang chờ codex. Trộn ba nhóm này lại chính là thứ làm báo cáo
+   thành không quyết được.
+
 ## 8. Scale refine — bắt buộc cho mỗi màn Execution Loop
 
 Hi-fi mô tả trạng thái đẹp ở 1440px với dữ liệu mẫu nhỏ. Thực tế: nhiều alpha,
