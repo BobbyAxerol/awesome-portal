@@ -18,6 +18,9 @@
     "types": ["vitest/globals", "node"],
     "paths": {
       "@portal/contracts": ["../../../packages/contracts/generated/portal-api.d.ts"],
+      "@portal/contracts-analytics": [
+        "../../../packages/contracts/generated/execution-analytics.d.ts"
+      ],
       "@/*": ["../../../features/roadmap-task-board/frontend/src/*"]
     }
   },

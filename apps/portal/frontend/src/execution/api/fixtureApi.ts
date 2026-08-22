@@ -28,6 +28,7 @@ import type {
   Result,
 } from "./ports";
 import { unavailable } from "./ports";
+import type { CapitalPreviewInput } from "./ports";
 
 /** Wire-shaped, snake_case, exactly as the endpoint will send it. */
 /* The five pending rows of the Approval Inbox hi-fi, and they are the cast's.
@@ -500,7 +501,7 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
         : unavailable("The R2 review response could not be read.");
     },
 
-    async getCapitalPreview(_approvalId: string, requestedAmount: string) {
+    async getCapitalPreview(_approvalId: string, request: CapitalPreviewInput) {
       const blocked = gate<never>("getCapitalPreview");
       if (blocked) return blocked as Result<never>;
       // Three engine outcomes, selected by the amount so the states are
@@ -510,7 +511,7 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       // choose which canned row set to return.
       const source = options.stalePreview
         ? CAPITAL_PREVIEW_STALE
-        : requestedAmount === BREACHING_AMOUNT
+        : request.requestedAmount === BREACHING_AMOUNT
           ? CAPITAL_PREVIEW_BREACH
           : CAPITAL_PREVIEW_OK;
       const preview = readCapitalPreview(source);

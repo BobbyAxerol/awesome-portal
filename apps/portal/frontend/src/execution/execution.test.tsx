@@ -3517,13 +3517,18 @@ describe("Gate R2 and Paper Exit on the port", () => {
   it("re-requests the preview when the requested amount changes", async () => {
     const api = createFixtureApi();
     const spy = vi.spyOn(api, "getCapitalPreview");
+    const at = (requestedAmount: string) => ({
+      portfolioId: "PF-1",
+      requestedAmount,
+      currency: "USDT",
+    });
     const { rerender } = render(
-      <GateR2ReviewContainer api={api} approvalId="AP-207" requestedAmount="100" />,
+      <GateR2ReviewContainer api={api} approvalId="AP-207" preview={at("100")} />,
     );
     await screen.findByText(/Capital change preview/);
-    rerender(<GateR2ReviewContainer api={api} approvalId="AP-207" requestedAmount="600" />);
+    rerender(<GateR2ReviewContainer api={api} approvalId="AP-207" preview={at("600")} />);
     await screen.findByText(/exceeds the portfolio ceiling/);
-    expect(spy.mock.calls.map((c) => c[1])).toEqual(["100", "600"]);
+    expect(spy.mock.calls.map((c) => c[1].requestedAmount)).toEqual(["100", "600"]);
   });
 
   it("loads an exit review through the port with every number linked", async () => {

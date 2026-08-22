@@ -24,7 +24,7 @@ import {
   shouldPoll,
   type DecisionState,
 } from "../decision";
-import type { ExecutionApi } from "../api/ports";
+import type { CapitalPreviewInput, ExecutionApi } from "../api/ports";
 import { capitalDeltasFromPreview } from "../api/rows";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "../api/rows";
 import type { AnalyticsEnvelope, CapitalPreview } from "../analytics";
@@ -37,6 +37,18 @@ import type { AnalyticsEnvelope, CapitalPreview } from "../analytics";
  * two-state model would make "still loading" and "the engine refused" the same
  * thing on the panel where they must not be.
  */
+/**
+ * What the fixture engine is asked for when the caller says nothing.
+ *
+ * Module-level so its identity is stable across renders, and matching the
+ * published fixture so the default path exercises the decidable case.
+ */
+const DEFAULT_PREVIEW_INPUT: CapitalPreviewInput = {
+  portfolioId: "PF-1",
+  requestedAmount: "50.000000000000000001",
+  currency: "USDT",
+};
+
 type CapitalPreviewState =
   | null
   | { failed: string }
@@ -403,17 +415,23 @@ export function GateR2ReviewContainer({
   api,
   approvalId,
   /**
-   * The amount the preview is for.
+   * What the preview is computed against.
    *
-   * A prop rather than local state because the reviewer does not set it here —
-   * it arrives with the request — and the preview is re-requested whenever it
-   * changes, which is the behaviour EX-BE-07a §2.2 asks for.
+   * A prop rather than local state because the reviewer does not choose it
+   * here — it arrives with the request — and the preview is re-requested
+   * whenever it changes, which is what EX-BE-07a §2.2 asks for.
+   *
+   * It is a prop rather than a field of the R2 detail because the R2 review row
+   * does not publish `portfolio_id` or `currency` yet, and the preview request
+   * requires both. Recorded as a backend request rather than guessed from the
+   * capital rows: inferring a portfolio from a currency label would be the
+   * screen deciding which portfolio it is looking at.
    */
-  requestedAmount = "50.000000000000000001",
+  preview: previewFor = DEFAULT_PREVIEW_INPUT,
 }: {
   api: ExecutionApi;
   approvalId: string;
-  requestedAmount?: string;
+  preview?: CapitalPreviewInput;
 }) {
   const [state, setState] = useState<LoadState<GateR2Detail>>(loading);
   const [preview, setPreview] = useState<CapitalPreviewState>(null);
@@ -442,14 +460,16 @@ export function GateR2ReviewContainer({
   useEffect(() => {
     let cancelled = false;
     setPreview(null);
-    void api.getCapitalPreview(approvalId, requestedAmount).then((result) => {
+    void api.getCapitalPreview(approvalId, previewFor).then((result) => {
       if (cancelled) return;
       setPreview(result.ok ? result.value : { failed: result.reason });
     });
     return () => {
       cancelled = true;
     };
-  }, [api, approvalId, requestedAmount]);
+    // Keyed on the fields, not the object: a caller passing a fresh literal
+    // each render would otherwise re-request the preview on every render.
+  }, [api, approvalId, previewFor.portfolioId, previewFor.requestedAmount, previewFor.currency]);
 
   const d = state.value;
   const run = (verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION", reason: string) =>

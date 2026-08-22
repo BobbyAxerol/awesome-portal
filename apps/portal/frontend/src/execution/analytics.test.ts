@@ -528,9 +528,20 @@ describe("Gate R2 wiring — the preview reaches the screen without being recomp
 });
 
 describe("Gate R2 container — the preview arrives through the port", () => {
+  /** All three fields are required by `CapitalPreviewRequest`. */
+  const input = (requestedAmount = "50.000000000000000001") => ({
+    portfolioId: "PF-1",
+    requestedAmount,
+    currency: "USDT",
+  });
+
+  it("sends every field the published request schema requires", () => {
+    expect(Object.keys(input()).sort()).toEqual(["currency", "portfolioId", "requestedAmount"]);
+  });
+
   it("serves a decidable preview with the engine's own envelope", async () => {
     const api = createFixtureApi();
-    const result = await api.getCapitalPreview("AP-207", "50.000000000000000001");
+    const result = await api.getCapitalPreview("AP-207", input());
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.preview.decisionEligible).toBe(true);
@@ -541,7 +552,7 @@ describe("Gate R2 container — the preview arrives through the port", () => {
 
   it("serves the breach case for the amount that trips the ceiling", async () => {
     const api = createFixtureApi();
-    const result = await api.getCapitalPreview("AP-207", BREACHING_AMOUNT);
+    const result = await api.getCapitalPreview("AP-207", input(BREACHING_AMOUNT));
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.preview.decisionEligible).toBe(false);
@@ -550,7 +561,7 @@ describe("Gate R2 container — the preview arrives through the port", () => {
 
   it("serves the ineligible preview when the engine's inputs are stale", async () => {
     const api = createFixtureApi({ stalePreview: true });
-    const result = await api.getCapitalPreview("AP-207", "50.000000000000000001");
+    const result = await api.getCapitalPreview("AP-207", input());
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.preview.decisionEligible).toBe(false);
@@ -559,7 +570,7 @@ describe("Gate R2 container — the preview arrives through the port", () => {
 
   it("answers unavailable rather than a blank preview when the endpoint is down", async () => {
     const api = createFixtureApi({ unavailableEndpoints: ["getCapitalPreview"] });
-    const result = await api.getCapitalPreview("AP-207", "1");
+    const result = await api.getCapitalPreview("AP-207", input("1"));
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.status).toBe("unavailable");

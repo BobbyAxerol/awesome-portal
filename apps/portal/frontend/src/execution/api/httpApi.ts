@@ -34,6 +34,10 @@ import type {
   Result,
 } from "./ports";
 import { unavailable } from "./ports";
+import type { CapitalPreviewInput } from "./ports";
+import type { components } from "@portal/contracts-analytics";
+
+type CapitalPreviewRequest = components["schemas"]["CapitalPreviewRequest"];
 
 const BASE = "/api/v1/execution";
 
@@ -143,13 +147,23 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
         : unavailable("The review response could not be read.");
     },
 
-    async getCapitalPreview(approvalId: string, requestedAmount: string) {
+    async getCapitalPreview(approvalId: string, request: CapitalPreviewInput) {
       const blocked = readBlocked();
       if (blocked) return unavailable(blocked);
-      const path =
-        `/approvals/${encodeURIComponent(approvalId)}/capital-preview` +
-        `?requested_amount=${encodeURIComponent(requestedAmount)}`;
-      const response = await get(path, signal);
+      // Typed against the generated schema, so a field rename upstream fails to
+      // compile here rather than 400ing in a browser. This call was a GET with
+      // a query string until the generated types were read; the operation is a
+      // POST and the difference is a 405.
+      const requestBody: CapitalPreviewRequest = {
+        portfolio_id: request.portfolioId,
+        requested_amount: request.requestedAmount,
+        currency: request.currency,
+      };
+      const response = await post(
+        `/approvals/${encodeURIComponent(approvalId)}/capital-preview`,
+        requestBody,
+        signal,
+      );
       if (!response.ok) return problem(response);
       const body = await response.json();
       const preview = readCapitalPreview(body);

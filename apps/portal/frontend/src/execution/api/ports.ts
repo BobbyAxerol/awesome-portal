@@ -19,6 +19,19 @@ export type Result<T> =
   | { ok: true; value: T; warnings?: readonly string[] }
   | { ok: false; status: Exclude<PanelStatus, "ok">; reason: string };
 
+/**
+ * `CapitalPreviewRequest`, in the frontend's casing.
+ *
+ * All three are required by the schema. `portfolioId` and `currency` are not
+ * yet published on the R2 review row — see the backend request in
+ * `FRONTEND_HANDOFF.md` §8.3 — so today they are supplied by the caller.
+ */
+export interface CapitalPreviewInput {
+  portfolioId: string;
+  requestedAmount: string;
+  currency: string;
+}
+
 export interface InboxQuery {
   filter: string;
   /** Mutually exclusive, per BR-EX-17. Passing both is a caller bug. */
@@ -59,17 +72,23 @@ export interface ExecutionApi {
   /** `GET /api/v1/execution/governance/approvals/{id}/r2` */
   getGateR2(approvalId: string): Promise<Result<GateR2Detail>>;
   /**
-   * `GET /api/v1/execution/approvals/{id}/capital-preview`
+   * `POST /api/v1/execution/approvals/{approvalId}/capital-preview`
    *
-   * Its own call, not a field of `getGateR2`. The preview is a computation over
-   * a requested amount and is re-requested when that amount changes, while the
-   * rest of the R2 detail is not; folding them together would either refetch
-   * the whole review on every keystroke or serve a preview for an amount the
-   * reviewer has already changed.
+   * A POST, and not because it mutates anything — it does not. The engine needs
+   * the portfolio, the amount and the currency to compute against, and the
+   * published operation takes them as a body. Writing it as a GET with a query
+   * string, which is what this was until the generated types were consulted,
+   * produces a 405 against the real service.
+   *
+   * Its own call rather than a field of `getGateR2`, because the preview is
+   * recomputed when the amount changes and the rest of the review is not.
+   * Folding them together would either refetch the whole review on every
+   * keystroke or serve a preview for an amount the reviewer has already moved
+   * past — the second being the dangerous one.
    */
   getCapitalPreview(
     approvalId: string,
-    requestedAmount: string,
+    request: CapitalPreviewInput,
   ): Promise<Result<{ preview: CapitalPreview; envelope: AnalyticsEnvelope }>>;
   /** `GET /api/v1/execution/governance/exit-reviews/{id}` */
   getPaperExit(reviewId: string): Promise<Result<PaperExitDetail>>;

@@ -892,3 +892,29 @@ khúc nối trên) · tsc sạch · build sạch · visual baseline **101/101**.
 theo module xanh 100% mà đường dây vẫn đứt. Từ slice sau: mỗi khi thêm một prop
 hoặc một method port, phải có ít nhất một test đi **hết** fixture → port →
 container → màn, chứ không chỉ test hai đầu.
+
+### 16.7 Generated types bắt thêm một lỗi nữa
+
+Codex commit `054efc3` (`EX-BE-07b`) ngay trước commit audit, kèm
+`packages/contracts/generated/execution-analytics.d.ts` — 520 dòng type sinh từ
+OpenAPI. CLAUDE.md §7.6 nói phải regenerate và dùng chúng chứ không chép tay.
+Đọc vào thì lòi ra lỗi thứ tư:
+
+| # | Lỗi | Hậu quả thật |
+|---|---|---|
+| A-4 | `getCapitalPreview` viết là **GET** kèm `?requested_amount=` | operation published là **POST** với body `CapitalPreviewRequest`. Endpoint thật trả **405**, và không test frontend nào phát hiện được vì fixture không quan tâm verb |
+
+Đã sửa: POST đúng verb, body **type theo generated schema**
+(`components["schemas"]["CapitalPreviewRequest"]`) qua alias tsconfig mới
+`@portal/contracts-analytics`. Từ giờ codex đổi tên trường thì `tsc` đỏ ở đây,
+không phải browser đỏ lúc chạy.
+
+Kèm phát hiện: request bắt buộc **ba** trường, mà row R2 chỉ cấp được một →
+**BR-EX-23** (`EXECUTION_SCALE_AND_REFINE.md`). Không đoán portfolio từ chuỗi
+`subject`, vì parse sai thì reviewer duyệt vốn cho nhầm portfolio.
+
+Ghi chú: `apps/portal/registry/FRONTEND_HANDOFF.md` mà CLAUDE.md §7.3 trỏ tới
+**không tồn tại trong repo**. Backend request ghi vào
+`EXECUTION_SCALE_AND_REFINE.md` — file điều phối frontend đang thực sự dùng.
+
+**Evidence sau sửa:** vitest **821 passed / 1 skipped** · tsc sạch.

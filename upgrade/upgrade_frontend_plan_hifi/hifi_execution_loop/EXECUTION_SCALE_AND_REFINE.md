@@ -533,3 +533,37 @@ Phase 16 from a 2,500-cell surface to a 10,000-cell one.
    registry revision 2. Nav is registry-driven by hard rule, and `registry.json`
    is backend-owned, so Phase 0's nav half stays blocked on codex regardless of
    the component half.
+
+---
+
+## BR-EX-23 — R2 review row phải mang `portfolio_id` và `currency`
+
+**Ngày raise:** 2026-08-22, sau khi `EX-BE-07b` giao
+`POST /api/v1/execution/approvals/{approvalId}/capital-preview`.
+
+**Endpoint/field cần:** thêm `portfolio_id` và `currency` vào payload của
+`GET /api/v1/execution/governance/approvals/{id}/r2`.
+
+**Lý do UI:** `CapitalPreviewRequest` bắt buộc ba trường — `portfolio_id`,
+`requested_amount`, `currency`. Gate R2 có `requested_amount` (nằm trong
+request), nhưng **không có hai trường kia**: row R2 hiện chỉ trả `capital[]` đã
+dựng sẵn, không nói deployment này thuộc portfolio nào.
+
+**Ảnh hưởng hiện tại:** `GateR2ReviewContainer` đang nhận chúng qua prop với
+default trỏ vào fixture (`PF-1` / `USDT`). Chạy được với fixture, **không chạy
+được với endpoint thật** — mỗi màn R2 sẽ hỏi preview của cùng một portfolio.
+
+**Vì sao không tự suy ra:** có thể đoán currency từ nhãn trong `capital[]`, và
+đoán portfolio từ `subject` (`"Carry v3.2 → PF-MAIN · Paper · BINANCE"`). Cả hai
+đều là **màn hình tự quyết định nó đang nhìn portfolio nào** để rồi hỏi tiền của
+portfolio đó. Parse sai một chuỗi hiển thị thì reviewer duyệt vốn cho nhầm
+portfolio — nên chỗ này đợi field thật, không đoán.
+
+**Đề xuất schema** (chỉ đề xuất — codex quyết):
+
+```json
+{ "approval": { "portfolio_id": "PF-1", "currency": "USDT" } }
+```
+
+**Trạng thái:** đang treo. Cho tới khi giao, R2 chạy fixture với prop mặc định,
+và `containers.tsx` ghi rõ lý do ngay tại chỗ.
