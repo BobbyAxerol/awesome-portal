@@ -798,7 +798,7 @@ deep-dive → ADR → slice → evidence discipline documented above.
   strings; WATCH is non-blocking and non-blocking insufficient data carries to
   Sandbox Certification. `PROMOTE` creates only a scoped Portal authority grant
   and cannot command Trading System or activate Sandbox. Fresh PostgreSQL is
-  green at 14 suites/128 tests (Paper Exit 11/11), contracts at 20/20, and SGP
+  green at 14 suites/129 tests (Paper Exit 12/12), contracts at 20/20, and SGP
   migration/public-gateway/auth runtime gates pass. Status is
   `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`; registry/source/command flags
   remain dark and Claude's Phase 5 contract mapping remains required. Evidence:

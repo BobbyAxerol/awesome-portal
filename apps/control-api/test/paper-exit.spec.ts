@@ -337,6 +337,7 @@ describe("PRE-IAM-02 Paper Exit Review", () => {
     ["PARTIAL", "partial", "PARTIAL"],
     ["STALE", "stale", "STALE"],
     ["UNAVAILABLE", "unavailable", "UNAVAILABLE"],
+    ["ERROR", "unavailable", "UNAVAILABLE"],
   ] as const)("fails promotion closed for a %s source panel", async (panelState, status, evaluationState) => {
     const reviewId = `EX-${panelState}`;
     await seedExitReview({ reviewId, panelState });

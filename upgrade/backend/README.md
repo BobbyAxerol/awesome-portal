@@ -138,7 +138,7 @@ Chúng không thay thế phase hoặc exit gate trong
   source-attributed evidence panels, deterministic fail-closed evaluation and
   canonical read/plan/apply/poll. `PROMOTE` creates only a scoped Portal grant;
   it never activates Sandbox or calls Trading System. Evidence: fresh
-  PostgreSQL 14 suites/128 tests, Paper Exit 11/11, contracts 20/20, migration
+  PostgreSQL 14 suites/129 tests, Paper Exit 12/12, contracts 20/20, migration
   `0004` and SGP public-gateway/auth runtime gate green. Registry/source/command
   profiles remain off; Claude's HTTP/eligibility mapping and later real-source
   activation remain explicit dependencies.

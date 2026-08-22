@@ -86,8 +86,9 @@ Command: `sudo -n ./scripts/control-api-test.sh`
 
 - a clean PostgreSQL 16 instance applied every migration including `0004`;
 - the production TypeScript build passed;
-- 14 test files and 128/128 tests passed;
-- Paper Exit passed 11/11 focused cases;
+- 14 test files and 129/129 tests passed;
+- Paper Exit passed 12/12 focused cases, including an explicit source `ERROR`
+  fail-closed case;
 - the existing 182,000-row governance/keyset corpus still passed;
 - missing/partial/stale/unavailable/error, exact decimal, WATCH/carry-forward,
   RBAC, SoD, CSRF, version conflict, duplicate request, tamper, append-only and
