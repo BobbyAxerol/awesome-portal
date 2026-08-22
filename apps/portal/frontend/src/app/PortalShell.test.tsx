@@ -93,7 +93,11 @@ describe("bootstrap", () => {
       timeout: 10_000,
     });
     expect(screen.queryByRole("navigation", { name: "Primary navigation" })).toBeNull();
-  });
+    // The test's own budget must exceed the wait it asks for. Vitest's default
+    // is 5s, and two real retries with backoff take ~3s on an idle machine —
+    // under load this test was dying at 5,036ms with a 10s waitFor that could
+    // never be honoured. Sized to the slowest honest run, not to the average.
+  }, 20_000);
 
   it("shows a loading state before the registry resolves", () => {
     mount();
@@ -184,7 +188,9 @@ describe("embedding (U04/U05)", () => {
     );
     // Exactly one shell topbar: the module must not render a second one.
     expect(document.querySelectorAll(".portal-topbar").length).toBe(1);
-  });
+    // Same reason as the registry-failure test: a 5s waitFor inside a 5s test
+    // budget leaves no room for the ECharts chunk to load under CI load.
+  }, 20_000);
 
   it("mounts Planning under /planning with no nested shell", async () => {
     mount({ route: "/planning/board" });

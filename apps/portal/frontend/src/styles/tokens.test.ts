@@ -26,7 +26,35 @@ const TOKEN_FILES = new Set([
   "src/styles/tokens.test.ts",
 ]);
 
-const COLOR_PATTERN = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/g;
+/**
+ * Colour written as a literal instead of a token.
+ *
+ * Widened after an audit found the first version blind to everything except
+ * hex, rgb and hsl: `oklch()`, `color-mix()`, `hwb()`, `lab()`, `lch()` and the
+ * CSS named colours all slipped through. A gate that catches one spelling of a
+ * violation teaches the next author which spelling to use.
+ *
+ * Named colours are matched only where a colour can appear — after `:` or a
+ * space in a declaration — so prose in a comment is not flagged.
+ */
+const NAMED_COLORS =
+  "white|black|red|green|blue|yellow|orange|purple|gray|grey|silver|maroon|olive|lime|aqua|teal|navy|fuchsia|magenta|cyan|pink|brown|gold|coral|salmon|crimson|indigo|violet|khaki|beige|ivory|tan|azure";
+const COLOR_PATTERN = new RegExp(
+  [
+    "#[0-9a-fA-F]{3,8}\\b",
+    "\\brgba?\\(",
+    "\\bhsla?\\(",
+    "\\boklch\\(",
+    "\\boklab\\(",
+    "\\blch\\(",
+    "\\blab\\(",
+    "\\bhwb\\(",
+    "\\bcolor-mix\\(",
+    "\\bcolor\\(",
+    `:\\s*(?:${NAMED_COLORS})\\s*[;!}]`,
+  ].join("|"),
+  "g",
+);
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {

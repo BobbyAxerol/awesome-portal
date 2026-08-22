@@ -6,6 +6,8 @@
  * heartbeat that advances a cursor, a resume that carries two mutually
  * exclusive parameters, a delta applied before its snapshot.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   CURSOR_MAX_BYTES,
@@ -83,23 +85,47 @@ describe("M3 transport — one cursor, named as the server names it", () => {
   });
 });
 
+/**
+ * The event names the edge emits, read out of the Rust at test time.
+ *
+ * The first version of this gate compared `SSE_EVENTS` against a list copied by
+ * hand into this file. That proves the constant equals the copy and nothing
+ * else: rename an event upstream and both halves sit still while the adapter
+ * goes deaf. The commit that introduced it claimed "an upstream rename goes red
+ * here", and that claim was false.
+ *
+ * Two sources, because the edge has two: entity events come from a match on
+ * `ProjectionEntityKind`, and the three control events are emitted directly.
+ */
+function edgeEventNames(): string[] {
+  const repo = join(__dirname, "../../../../..");
+  const rs = (p: string) => readFileSync(join(repo, p), "utf8");
+
+  const projection = rs("services/portal-execution-edge-rs/crates/realtime-sse/src/lib.rs");
+  const entity = [...projection.matchAll(/ProjectionEntityKind::\w+\s*=>\s*"([^"]+)"/g)].map(
+    (m) => m[1],
+  );
+
+  const service = rs("services/portal-execution-edge-rs/crates/edge-service/src/main.rs");
+  const control = [
+    ...service.matchAll(/json_event\(\s*"([^"]+)"/g),
+    ...projection.matchAll(/event_type:\s*"([^"]+)"/g),
+  ].map((m) => m[1]);
+
+  return [...new Set([...entity, ...control])];
+}
+
 describe("M3 transport — the event names come from the edge, not from the plan", () => {
+  it("derives the edge's names from its source, so a rename cannot pass unnoticed", () => {
+    const names = edgeEventNames();
+    // A silent extraction failure would make every assertion below vacuous.
+    expect(names.length).toBeGreaterThanOrEqual(12);
+    expect(names).toContain("order.updated");
+    expect(names).toContain("projection.gap");
+  });
+
   it("subscribes to every name the edge emits and to nothing it does not", () => {
-    // Read out of realtime-sse/src/lib.rs:63-72 and edge-service/src/main.rs.
-    expect([...SSE_EVENTS]).toEqual([
-      "order.updated",
-      "fill.recorded",
-      "position.updated",
-      "runtime.updated",
-      "account.updated",
-      "broker_binding.updated",
-      "reconciliation.updated",
-      "performance.updated",
-      "operation.updated",
-      "projection.gap",
-      "projection.heartbeat",
-      "auth.expiring",
-    ]);
+    expect([...SSE_EVENTS].sort()).toEqual(edgeEventNames().sort());
   });
 
   it("has no snapshot or delta event, because the stream carries neither", () => {
@@ -390,5 +416,68 @@ describe("M3 transport — a voided baseline is only restored by a snapshot", ()
     ]);
     expect(after.phase).toBe("live");
     expect(after.gapReason).toBeNull();
+  });
+});
+
+describe("M3 transport — a voided baseline survives a disconnect", () => {
+  /**
+   * The regression this suite exists for.
+   *
+   * The delta guard added earlier closed `gap → delta`. It did not close
+   * `gap → disconnect → delta`, because DISCONNECTED moved every phase to
+   * `reconnecting` and `reconnecting` may apply deltas. One dropped connection
+   * after a gap cleared the banner and turned the panel green over data with a
+   * hole the server had already reported.
+   */
+  it("does not let a disconnect launder a gap back into live", () => {
+    const after = feed([
+      { type: "SUBSCRIBE" },
+      { type: "SNAPSHOT", epoch: "e1", sequence: 10, asOf: null },
+      { type: "PROJECTION_GAP", reason: "history_evicted" },
+      { type: "DISCONNECTED" },
+      { type: "DELTA", epoch: "e1", sequence: 11, asOf: null },
+    ]);
+    expect(after.phase).toBe("gap");
+    expect(after.gapReason).toBe("history_evicted");
+    expect(after.freshness).toBe("STALE");
+    expect(after.sequence).toBe(10);
+  });
+
+  it("does not let a disconnect launder an epoch cutover back into live", () => {
+    const after = feed([
+      { type: "SUBSCRIBE" },
+      { type: "SNAPSHOT", epoch: "e1", sequence: 10, asOf: null },
+      { type: "EPOCH_CHANGED", epoch: "e2", resnapshotNotBefore: "2099-01-01T00:00:00Z" },
+      { type: "DISCONNECTED" },
+      { type: "DELTA", epoch: "e2", sequence: 1, asOf: null },
+    ]);
+    expect(after.phase).toBe("epoch_changed");
+    expect(after.resnapshotNotBefore).toBe("2099-01-01T00:00:00Z");
+  });
+
+  it("still records the disconnection, so the panel can say why it is waiting", () => {
+    const after = feed([
+      { type: "SUBSCRIBE" },
+      { type: "SNAPSHOT", epoch: "e1", sequence: 10, asOf: null },
+      { type: "PROJECTION_GAP", reason: "slow_consumer" },
+      { type: "DISCONNECTED" },
+    ]);
+    expect(after.note).toMatch(/Disconnected while awaiting a re-snapshot/);
+  });
+
+  it("leaves a snapshot in flight alone, because it travels over its own call", () => {
+    const after = feed([{ type: "SUBSCRIBE" }, { type: "DISCONNECTED" }]);
+    expect(after.phase).toBe("snapshotting");
+  });
+
+  it("still moves a live stream to reconnecting, which is what resume is for", () => {
+    const after = feed([
+      { type: "SUBSCRIBE" },
+      { type: "SNAPSHOT", epoch: "e1", sequence: 10, asOf: null },
+      { type: "DISCONNECTED" },
+      { type: "DELTA", epoch: "e1", sequence: 11, asOf: null },
+    ]);
+    expect(after.phase).toBe("live");
+    expect(after.sequence).toBe(11);
   });
 });

@@ -289,3 +289,85 @@ Ghi lại để lần sau không soát lại:
 **Evidence:** vitest 940 passed / 1 skipped, tsc sạch.
 
 **Mục A vẫn treo — chờ codex.** A-1 là mục cần đọc trước tiên.
+
+---
+
+## F. Đóng mục B — lần hai (2026-08-22, chiều)
+
+Lần soát toàn diện thứ hai (9 lăng kính, verify đối kháng) cho thấy **mục B chưa
+đóng được** như §D tuyên bố. Hai chỗ hỏng, và cả hai đều là bản vá của tôi:
+
+### F-1 · Gate `SSE_EVENTS` tự chiếu chính nó · NẶNG
+
+Test so hằng số `SSE_EVENTS` với một danh sách **chép tay trong cùng file test**.
+Codex đổi tên event ở Rust → cả hai đứng yên → test xanh, adapter điếc.
+
+Commit `09af674` viết: *"an upstream rename goes red here"*. **Câu đó sai.**
+
+**Đã sửa:** gate giờ trích tên **từ chính source Rust** lúc chạy test —
+`ProjectionEntityKind::X => "name"` trong `realtime-sse/src/lib.rs` và
+`json_event("name")` trong `edge-service/src/main.rs`. Thêm một test chống
+trích-xuất-hỏng-âm-thầm (`names.length >= 12`), vì một regex không khớp gì sẽ
+làm mọi khẳng định sau nó rỗng.
+
+**Probe chứng minh cắn:** đổi `fill.recorded` → `fill.observed` trong Rust ⇒
+test đỏ, chỉ đúng tên lệch. Khôi phục ⇒ xanh.
+
+### F-2 · Lỗ gap vẫn mở, qua cửa khác · NẶNG
+
+`subscription.ts` — `DISCONNECTED` đưa **mọi** phase về `reconnecting`, mà
+`reconnecting` là một trong hai phase được phép áp delta:
+
+```
+SNAPSHOT(10) → PROJECTION_GAP(history_evicted) → DISCONNECTED → DELTA(11)
+⇒ phase=live · gapReason=null · freshness=OK
+```
+
+Banner gap biến mất, panel xanh trở lại, dữ liệu vẫn thiếu đúng khoảng server
+đã báo mất. Đây chính là thất bại M3 sinh ra để chặn — §16.1 đã chặn đường
+`gap → delta` và **để hở đường vòng**.
+
+**Đã sửa:** `gap` và `epoch_changed` giữ nguyên phase khi mất kết nối (chỉ ghi
+lý do); `snapshotting`/`failed` không đổi; chỉ `live → reconnecting`. Năm test
+mới đi đủ năm đường.
+
+**Demo walk** `streamDemo.tsx` đổi thứ tự: `disconnect` giờ nối sau một state
+live (dạy "giữ giá trị cuối"), rồi `projection rebuilt`, rồi **`disconnect
+again`** — bước tồn tại đúng vì reducer từng sai ở đó.
+
+### F-3 · Bài học
+
+> Một bản vá cho lỗ hổng phải được kiểm bằng **mọi đường tới lỗ hổng đó**, không
+> chỉ đường đã tìm ra nó.
+
+Và: một gate so kết quả với **bản chép tay của chính nó** thì không phải gate.
+Nó tạo cảm giác an toàn mà không có sự an toàn — tệ hơn không có gate, vì không
+có gate thì người ta còn cảnh giác.
+
+**Evidence sau sửa:** vitest **947 passed / 1 skipped** · tsc sạch · build sạch ·
+visual baseline **101/101** · contrast gate 14/14 (COLOR_PATTERN đã mở rộng cho
+`oklch`/`color-mix`/`hwb`/`lab`/`lch`/named colour, probe xác nhận cắn cả ba).
+
+**Mục B giờ đóng.**
+
+---
+
+## E. Follow-up 2026-08-22 (chiều) — codex đang xử lý mục A
+
+Soi working tree của codex (chưa commit, sau `1dec7e5`):
+
+| Request | Trạng thái trong tree của codex | Ghi chú của Claude |
+|---|---|---|
+| **A-1** | `resolveResumeCursor` giờ chỉ 400 khi **không có** cursor nào; `Last-Event-ID` thắng. Có test *"uses Last-Event-ID when a native EventSource reconnect retains its original URL cursor"* | đúng hướng đề xuất, **có test tái hiện** như đã yêu cầu |
+| **A-2** | Rust `ProjectionQueryPage`: `next`→`next_cursor`, `previous`→`prev_cursor`, `applied_sorts`→`applied_sort`; test đối chiếu ba tên canonical; fixture mới `execution-projection-page.valid.json` | chọn đổi phía Rust, đúng đề xuất |
+| **A-3** | `CurrencyAggregate` thêm vào TS contract; fixture page có `aggregates_by_currency` | Claude cần đọc và hiện trong footer `KeysetTable` |
+| **A-4** | `retention` thêm vào page, shape `{availability, policy_version}` | **⚠ tên trường khác frontend**: `RetentionState` của Claude là `{outcome, hotFrom, policyVersion}`. `adapter.ts` hiện **không đọc** retention từ page → khi codex commit, `emptyMeansEmpty` luôn false và mọi page rỗng báo *"no retention policy published"* dù server đã publish. **Claude sửa `readKeysetPage` ngay khi codex commit** — map `availability`→`outcome`. |
+| **A-6** | `auth.expiring` có `expires_at`; fixture mới | `sse.ts` đã đọc `expires_at` sẵn (chấp nhận null), khớp ngay |
+| **BR-EX-23** | `data.approval.portfolio_id` + `currency` trên R2 row; schema + fixture + OpenAPI governance mới | Claude cần map trong `readGateR2Detail` và bỏ default prop `PF-1/USDT` trong container |
+| A-5, BR-EX-24/25/26/27 | chưa thấy trong tree | còn treo |
+
+**Việc của Claude khi codex commit** (theo thứ tự): (1) regenerate types —
+`cd packages/contracts && npm run generate`; (2) `readKeysetPage` đọc
+`retention.availability` và `aggregates_by_currency`; (3) `readGateR2Detail`
+đọc `portfolio_id`/`currency`, container bỏ default; (4) `KeysetTable` footer
+hiện aggregate theo currency — **đọc, không cộng**; (5) chạy lại toàn bộ gate.

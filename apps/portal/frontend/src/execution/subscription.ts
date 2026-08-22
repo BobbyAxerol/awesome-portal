@@ -359,6 +359,30 @@ export function subscriptionReducer(
       };
 
     case "DISCONNECTED":
+      // A dropped transport must never grant more permission than the phase it
+      // interrupted already had.
+      //
+      // The first version of this moved every phase to `reconnecting`, and
+      // `reconnecting` is one of the two phases allowed to apply a delta. So a
+      // voided baseline could be restored by the back door:
+      //
+      //   SNAPSHOT(10) → PROJECTION_GAP → DISCONNECTED → DELTA(11) → live
+      //
+      // The gap banner cleared, the panel went green, and the data still had
+      // the hole the server had reported. The direct path `gap → delta` was
+      // already closed; this was the same hole reached through a different
+      // door, which is the argument for testing a fix by every route to the
+      // defect rather than only the one that found it.
+      //
+      // `gap` and `epoch_changed` therefore keep their phase: only a snapshot
+      // clears them. `snapshotting` keeps its own, because the snapshot travels
+      // over its own HTTP call and is unaffected by the stream dropping.
+      if (state.phase === "gap" || state.phase === "epoch_changed") {
+        return { ...state, note: event.reason ?? "Disconnected while awaiting a re-snapshot." };
+      }
+      if (state.phase === "snapshotting" || state.phase === "failed") {
+        return state;
+      }
       return {
         ...state,
         phase: "reconnecting",

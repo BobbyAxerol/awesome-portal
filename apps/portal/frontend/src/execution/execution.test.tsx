@@ -3797,6 +3797,17 @@ describe("the subscription walk drives the real reducer", () => {
     expect(container.querySelector('.exec-stream[data-phase="reconnecting"]')).not.toBeNull();
     expect(container.textContent).toContain("values as of");
   });
+
+  it("does not let a disconnect after a rebuild restore a voided baseline", () => {
+    // The walk's last step. A disconnect used to move every phase to
+    // `reconnecting`, which may apply deltas — so one dropped connection after
+    // an epoch cutover cleared the banner and let the next delta go live over a
+    // baseline nobody had re-established.
+    const { container } = render(<SubscriptionWalk />);
+    fireEvent.click(screen.getByRole("button", { name: "disconnect again" }));
+    expect(container.querySelector('.exec-stream[data-phase="epoch_changed"]')).not.toBeNull();
+    expect(container.querySelector('.exec-stream[data-phase="reconnecting"]')).toBeNull();
+  });
 });
 
 /* ===========================================================================

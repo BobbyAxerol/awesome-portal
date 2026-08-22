@@ -58,6 +58,11 @@ const WALK: Step[] = [
     note: "Recovery is a snapshot, never an interpolation across the gap.",
   },
   {
+    label: "disconnect",
+    event: { type: "DISCONNECTED" },
+    note: "The last good values stay on screen, marked. A blank would be worse: an operator can act on a number they know is old.",
+  },
+  {
     label: "projection rebuilt",
     event: {
       type: "EPOCH_CHANGED",
@@ -67,9 +72,14 @@ const WALK: Step[] = [
     note: "A new epoch voids every cursor from the old one. The server assigns when this client may re-snapshot; a hundred clients doing it at once would hit a projection whose caches are cold because it has just been rebuilt.",
   },
   {
-    label: "disconnect",
+    label: "disconnect again",
     event: { type: "DISCONNECTED" },
-    note: "The last good values stay on screen, marked. A blank would be worse: an operator can act on a number they know is old.",
+    // The step that exists because the reducer once got this wrong: a
+    // disconnect used to move every phase to `reconnecting`, and `reconnecting`
+    // may apply deltas. One dropped connection after a rebuild would have
+    // cleared the banner and let the next delta restore a live panel over a
+    // baseline nobody had re-established.
+    note: "Still ep_8a03 waiting for its re-snapshot. A dropped connection does not restore a voided baseline: only a snapshot does, and the phase holds until one arrives.",
   },
 ];
 
