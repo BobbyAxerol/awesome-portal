@@ -254,12 +254,18 @@ describe("Full Blotter — a funnel at the volume a real order produces", () => 
     };
   }
 
-  it("caps 1,203 fills instead of turning one row into a page", () => {
+  it("shows a bounded window of 1,203 fills and says it is one", () => {
+    // Not a cap in the summarising sense: `fills` has no retention policy, so
+    // no number here can claim to be the whole set. The panel shows the most
+    // recent plus the terminal fill and states the population it is drawn
+    // from, which is the honest form of the same restraint.
     const { container } = render(
       <OrderFunnelStrip funnel={readOrderFunnel(manyFills(1203))} status="ok" />,
     );
     expect(container.querySelectorAll(".exec-funnel-fills li").length).toBeLessThanOrEqual(12);
     expect(screen.getByText(/showing 12 of 1,203 fills/)).toBeTruthy();
+    // The count describes the fills the server sent for this order, and the
+    // order is closed — so it is a population, not a page of an open set.
   });
 
   it("keeps the last fill, which is the one that closed the order", () => {

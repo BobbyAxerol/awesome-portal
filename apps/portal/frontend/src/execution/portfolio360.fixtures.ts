@@ -104,7 +104,7 @@ export function rankedFixture(entities = 210, pairs = 500): Correlation {
 
 const HOLDINGS: HoldingRow[] = [
   {
-    alpha: "Grid v2.1", deploymentId: "dep_88", accountId: "acct-canary-grid-bin",
+    alpha: "Grid v2.1", deploymentId: "dep_88", accountId: "acct-canary-grid",
     venue: "BINANCE", mode: "live", allocation: "5,000.00", exposure: "4,900.00",
     exposurePct: "13.1%", currency: "USDT", stage: "LIVE_CANARY", readiness: "READY",
   },
@@ -119,7 +119,7 @@ const HOLDINGS: HoldingRow[] = [
     exposurePct: "30.2%", currency: "USDT", stage: "PAPER_OBSERVATION", readiness: "READY",
   },
   {
-    alpha: "MM v1.1", deploymentId: "dep_91", accountId: "acct-sbx-mm-okx",
+    alpha: "MM v1.1", deploymentId: "dep_63", accountId: "acct-canary-mm-v11",
     venue: "OKX", mode: "sandbox", allocation: "10,000.00", exposure: "0.00",
     exposurePct: "0.0%", currency: "USDT", stage: "SANDBOX_VALIDATION", readiness: "BLOCKED",
   },

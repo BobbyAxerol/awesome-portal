@@ -135,7 +135,9 @@ export function account360(over: Partial<AccountBroker360Props> = {}): AccountBr
   return {
     accountId: "acct-live-grid-v21",
     alpha: "Grid v2.1",
-    deployment: "dep_88",
+    // CANONICAL_CAST: acct-live-grid-v21 is LIVE_FULL, and dep_88 is the
+    // canary. Binding the two put a live account against a canary deployment.
+    deployment: "dep_live",
     portfolio: "PF-CRYPTO",
     stage: "LIVE_FULL",
     venue: "BINANCE",

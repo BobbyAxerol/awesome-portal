@@ -223,7 +223,7 @@ describe("Portfolio 360° — ledger and structure", () => {
 
   it("keeps a halted holding visible and marked", () => {
     const { container } = render(<PortfolioThreeSixty {...portfolio360()} />);
-    const row = screen.getByText("acct-sbx-mm-okx").closest("tr") as HTMLElement;
+    const row = screen.getByText("acct-canary-mm-v11").closest("tr") as HTMLElement;
     expect(within(row).getByText("BLOCKED")).toBeTruthy();
     expect(container.querySelector('tr[data-emphasis="warn"]')).toBeTruthy();
   });

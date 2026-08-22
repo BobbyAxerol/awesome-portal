@@ -1088,9 +1088,19 @@ describe("registry revision 4 — parsed against the registry actually shipped",
   it("parses every published policy and enables no command at revision 4", () => {
     // Every screen ships with all seven flags off. If this ever fails, a
     // command was switched on in the registry and somebody should know.
+    // Not `continue`. A policy this build cannot parse used to skip the check
+    // silently, so the loop passed loudest exactly when it understood least —
+    // a registry that switched a command on in a shape we could not read would
+    // have gone unnoticed by the test written to notice it.
+    let checked = 0;
     for (const screen of withProfile) {
       const policy = screenDeliveryPolicy(screen);
+      expect(
+        policy,
+        `${String((screen as Record<string, unknown>).screen_id)} publishes a delivery policy this build cannot parse`,
+      ).not.toBeNull();
       if (!policy) continue;
+      checked += 1;
       for (const tier of ["R1", "R2", "R3", "R4"] as const) {
         expect(
           commandEnabled(policy, tier),
@@ -1098,6 +1108,8 @@ describe("registry revision 4 — parsed against the registry actually shipped",
         ).toBe(false);
       }
     }
+    // And it actually looked at something.
+    expect(checked).toBeGreaterThan(0);
   });
 
   /* Codex's constraint, 2026-08-21: the frontend adapter may be finished, but

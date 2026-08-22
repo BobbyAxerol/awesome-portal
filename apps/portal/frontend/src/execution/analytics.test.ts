@@ -59,7 +59,7 @@ import {
 
 /** Shared by the sweep and the proof, so they cannot drift apart. */
 const MONEY_ARITHMETIC =
-  /\b(allocated|available|reserved|headroom|requestedAmount|maximumAllocated)\b[\s)\]]*[-+*/]|[-+*/][\s(\[]*(?:Number[\s(]*)?\b(allocated|available|reserved|headroom|requestedAmount|maximumAllocated)\b/;
+  /\b(allocated|allocated_before|allocated_after|available|available_before|available_after|reserved|headroom|allocation_headroom_before|allocation_headroom_after|requestedAmount|requested_amount|maximumAllocated|maximum_allocated|grossIncrease|gross_increase|grossDecrease|gross_decrease|beforeAllocated|before_allocated|afterAllocated|after_allocated|virtualTotal|physicalTotal|equity|balance|notional|amount)\b[\s)\]]*[-+*/]|[-+*/][\s(\[]*(?:Number[\s(]*)?\b(allocated|allocated_before|allocated_after|available|available_before|available_after|reserved|headroom|allocation_headroom_before|allocation_headroom_after|requestedAmount|requested_amount|maximumAllocated|maximum_allocated|grossIncrease|gross_increase|grossDecrease|gross_decrease|beforeAllocated|before_allocated|afterAllocated|after_allocated|virtualTotal|physicalTotal|equity|balance|notional|amount)\b/;
 
 const REPO = join(__dirname, "../../../../..");
 const PUBLISHED = join(
@@ -149,7 +149,11 @@ describe("Gate R2 capital preview — read, never recomputed", () => {
         .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ")
         .replace(/"(?:[^"\\\n]|\\.)*"/g, '""')
         .replace(/'(?:[^'\\\n]|\\.)*'/g, "''")
-        .replace(/`(?:[^`\\]|\\.)*`/g, "``");
+        // Template literals keep their interpolations: `${allocated - used}`
+        // is arithmetic that the old strip erased along with the backticks.
+        .replace(/`((?:[^`\\]|\\.)*)`/g, (_m, inner: string) =>
+          inner.replace(/[^$]/g, " ").length === inner.length ? "``" : `\`${inner}\``,
+        );
     const money = MONEY_ARITHMETIC;
     const offenders: string[] = [];
     const walk = (dir: string) => {
@@ -163,6 +167,17 @@ describe("Gate R2 capital preview — read, never recomputed", () => {
     };
     walk(__dirname);
     expect(offenders).toEqual([]);
+  });
+
+  it("that gate bites through every door it used to leave open", () => {
+    // Three ways past the first version: snake_case field names, a template
+    // literal, and a member expression. Each is the same arithmetic wearing a
+    // different spelling, and a gate that catches one spelling teaches the
+    // next author which of the others to use.
+    expect(MONEY_ARITHMETIC.test("const x = allocated_before + requested_amount;")).toBe(true);
+    expect(MONEY_ARITHMETIC.test("const x = row.gross_increase - row.gross_decrease;")).toBe(true);
+    expect(MONEY_ARITHMETIC.test("const x = preview.available - preview.reserved;")).toBe(true);
+    expect(MONEY_ARITHMETIC.test("const x = Number(after_allocated) - 1;")).toBe(true);
   });
 
   it("that gate bites when a component computes a capital figure", () => {
