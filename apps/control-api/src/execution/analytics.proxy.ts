@@ -26,16 +26,77 @@ export function analyticsResource(screen: Screen, id: string): string {
   return `execution:screen:${screen}:${id}`;
 }
 
+interface BulkheadWaiter {
+  resolve: (release: () => void) => void;
+  reject: (error: AnalyticsProxyError) => void;
+  timer: ReturnType<typeof setTimeout>;
+}
+
+/** FIFO, process-local admission control for the private analytics transport. */
+export class AnalyticsBulkhead {
+  private active = 0;
+  private readonly queue: BulkheadWaiter[] = [];
+
+  constructor(
+    private readonly maximumConcurrency: number,
+    private readonly maximumQueue: number,
+    private readonly queueTimeoutMs: number,
+  ) {}
+
+  acquire(): Promise<() => void> {
+    if (this.active < this.maximumConcurrency) {
+      this.active += 1;
+      return Promise.resolve(this.releasePermit());
+    }
+    if (this.queue.length >= this.maximumQueue) {
+      return Promise.reject(new AnalyticsProxyError("ANALYTICS_QUEUE_FULL", 503));
+    }
+    return new Promise((resolve, reject) => {
+      const waiter: BulkheadWaiter = {
+        resolve,
+        reject,
+        timer: setTimeout(() => {
+          const index = this.queue.indexOf(waiter);
+          if (index >= 0) this.queue.splice(index, 1);
+          reject(new AnalyticsProxyError("ANALYTICS_QUEUE_TIMEOUT", 503));
+        }, this.queueTimeoutMs),
+      };
+      this.queue.push(waiter);
+    });
+  }
+
+  private releasePermit(): () => void {
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.active -= 1;
+      const waiter = this.queue.shift();
+      if (!waiter) return;
+      clearTimeout(waiter.timer);
+      this.active += 1;
+      waiter.resolve(this.releasePermit());
+    };
+  }
+}
+
 /** Session-bound, bounded JSON bridge to the private mTLS Rust screen APIs. */
 export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
   private session: ClientHttp2Session | null = null;
   private connecting: Promise<ClientHttp2Session> | null = null;
+  private readonly bulkhead: AnalyticsBulkhead;
 
   private constructor(
     private readonly config: ControlApiConfig,
     private readonly delegation: ExecutionDelegationService | null,
     private readonly tls: { ca: Buffer; cert: Buffer; key: Buffer } | null,
-  ) {}
+  ) {
+    this.bulkhead = new AnalyticsBulkhead(
+      config.EXECUTION_EDGE_ANALYTICS_MAXIMUM_CONCURRENCY,
+      config.EXECUTION_EDGE_ANALYTICS_MAXIMUM_QUEUE,
+      config.EXECUTION_EDGE_ANALYTICS_QUEUE_TIMEOUT_MS,
+    );
+  }
 
   static async create(config: ControlApiConfig): Promise<ExecutionAnalyticsProxy> {
     if (config.FEATURE_EXECUTION_ANALYTICS_QUERY !== "true") {
@@ -130,20 +191,35 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
     body?: unknown,
   ): Promise<unknown> {
     if (!this.delegation || !this.tls) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
-    const assertion = await this.delegation.issueReadAssertion({
-      principalId: principal.user.userId,
-      sessionId: principal.session.sessionId,
-      workspaceId: principal.workspaceId,
-      roles: [principal.user.role],
-      resources: [resource],
-      authenticationTime: principal.session.authenticationTime,
-      authenticationMethods: ["portal_session"],
-    });
-    const payload = body === undefined ? undefined : Buffer.from(JSON.stringify(body), "utf8");
-    if (payload && payload.byteLength > 64 * 1024) {
-      throw new AnalyticsProxyError("ANALYTICS_REQUEST_TOO_LARGE", 413);
+    const release = await this.bulkhead.acquire();
+    try {
+      const assertion = await this.delegation.issueReadAssertion({
+        principalId: principal.user.userId,
+        sessionId: principal.session.sessionId,
+        workspaceId: principal.workspaceId,
+        roles: [principal.user.role],
+        resources: [resource],
+        authenticationTime: principal.session.authenticationTime,
+        authenticationMethods: ["portal_session"],
+      });
+      const payload = body === undefined ? undefined : Buffer.from(JSON.stringify(body), "utf8");
+      if (payload && payload.byteLength > 64 * 1024) {
+        throw new AnalyticsProxyError("ANALYTICS_REQUEST_TOO_LARGE", 413);
+      }
+      const session = await this.getSession();
+      return await this.sendRequest(session, assertion, method, path, payload);
+    } finally {
+      release();
     }
-    const session = await this.getSession();
+  }
+
+  private sendRequest(
+    session: ClientHttp2Session,
+    assertion: string,
+    method: "GET" | "POST",
+    path: string,
+    payload?: Buffer,
+  ): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const stream = session.request({
         ":method": method,
@@ -157,37 +233,58 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
       const chunks: Buffer[] = [];
       let size = 0;
       let status = 502;
+      let responseIsJson = false;
+      let settled = false;
+      const settle = (error?: AnalyticsProxyError, value?: unknown): void => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        if (error) reject(error);
+        else resolve(value);
+      };
       const timeout = setTimeout(() => {
+        settle(new AnalyticsProxyError("ANALYTICS_UPSTREAM_TIMEOUT", 504));
         stream.close();
-        reject(new AnalyticsProxyError("ANALYTICS_UPSTREAM_TIMEOUT", 504));
-      }, this.config.EXECUTION_EDGE_CONNECT_TIMEOUT_MS);
+      }, this.config.EXECUTION_EDGE_ANALYTICS_REQUEST_TIMEOUT_MS);
       stream.on("response", (headers) => {
         status = Number(headers[":status"] ?? 502);
+        const contentType = headers["content-type"];
+        responseIsJson = typeof contentType === "string" && contentType.startsWith("application/json");
+        const contentLength = Number(headers["content-length"] ?? 0);
+        if (Number.isFinite(contentLength) && contentLength > MAX_RESPONSE_BYTES) {
+          settle(new AnalyticsProxyError("ANALYTICS_RESPONSE_TOO_LARGE", 502));
+          stream.close();
+        }
       });
       stream.on("data", (chunk: Buffer) => {
+        if (settled) return;
         size += chunk.byteLength;
         if (size > MAX_RESPONSE_BYTES) {
-          clearTimeout(timeout);
+          settle(new AnalyticsProxyError("ANALYTICS_RESPONSE_TOO_LARGE", 502));
           stream.close();
-          reject(new AnalyticsProxyError("ANALYTICS_RESPONSE_TOO_LARGE", 502));
           return;
         }
         chunks.push(chunk);
       });
+      stream.once("aborted", () => {
+        settle(new AnalyticsProxyError("ANALYTICS_UPSTREAM_UNAVAILABLE", 502));
+      });
       stream.once("error", () => {
-        clearTimeout(timeout);
-        reject(new AnalyticsProxyError("ANALYTICS_UPSTREAM_UNAVAILABLE", 502));
+        settle(new AnalyticsProxyError("ANALYTICS_UPSTREAM_UNAVAILABLE", 502));
       });
       stream.once("end", () => {
-        clearTimeout(timeout);
         if (status < 200 || status >= 300) {
-          reject(new AnalyticsProxyError("ANALYTICS_UPSTREAM_REJECTED", status));
+          settle(new AnalyticsProxyError("ANALYTICS_UPSTREAM_REJECTED", status));
+          return;
+        }
+        if (!responseIsJson) {
+          settle(new AnalyticsProxyError("ANALYTICS_UPSTREAM_CONTRACT_INVALID", 502));
           return;
         }
         try {
-          resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+          settle(undefined, JSON.parse(Buffer.concat(chunks).toString("utf8")));
         } catch {
-          reject(new AnalyticsProxyError("ANALYTICS_UPSTREAM_CONTRACT_INVALID", 502));
+          settle(new AnalyticsProxyError("ANALYTICS_UPSTREAM_CONTRACT_INVALID", 502));
         }
       });
       stream.end(payload);
@@ -216,11 +313,16 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
         ALPNProtocols: ["h2"],
         servername: origin.hostname,
       });
+      let settled = false;
       const timeout = setTimeout(() => {
+        if (settled) return;
+        settled = true;
         session.destroy();
         reject(new AnalyticsProxyError("ANALYTICS_CONNECT_TIMEOUT", 504));
       }, this.config.EXECUTION_EDGE_CONNECT_TIMEOUT_MS);
       session.once("connect", () => {
+        if (settled) return;
+        settled = true;
         clearTimeout(timeout);
         this.session = session;
         resolve(session);
@@ -228,7 +330,14 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
       session.once("error", () => {
         clearTimeout(timeout);
         if (this.session === session) this.session = null;
-        reject(new AnalyticsProxyError("ANALYTICS_CONNECT_FAILED", 502));
+        if (!settled) {
+          settled = true;
+          reject(new AnalyticsProxyError("ANALYTICS_CONNECT_FAILED", 502));
+        }
+      });
+      session.on("goaway", () => {
+        if (this.session === session) this.session = null;
+        session.close();
       });
       session.once("close", () => {
         if (this.session === session) this.session = null;

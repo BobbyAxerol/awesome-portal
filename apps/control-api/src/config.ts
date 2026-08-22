@@ -96,6 +96,10 @@ const EnvSchema = z.object({
     z.string().min(1).optional(),
   ),
   EXECUTION_EDGE_CONNECT_TIMEOUT_MS: z.coerce.number().int().min(250).max(10_000).default(3_000),
+  EXECUTION_EDGE_ANALYTICS_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(250).max(30_000).default(5_000),
+  EXECUTION_EDGE_ANALYTICS_MAXIMUM_CONCURRENCY: z.coerce.number().int().min(1).max(512).default(64),
+  EXECUTION_EDGE_ANALYTICS_MAXIMUM_QUEUE: z.coerce.number().int().min(0).max(2_048).default(128),
+  EXECUTION_EDGE_ANALYTICS_QUEUE_TIMEOUT_MS: z.coerce.number().int().min(10).max(5_000).default(250),
   OUTBOX_MAX_RESPONSE_BYTES: z.coerce.number().int().positive().default(64 * 1024),
 });
 

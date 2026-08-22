@@ -5,17 +5,19 @@ use analytics::{
     VirtualAccountExposure,
 };
 use chrono::{DateTime, Utc};
-use execution_contracts::{CanonicalId, DeliveryProfile, SourceAuthority};
+use execution_contracts::{CanonicalId, DeliveryProfile, FreshnessState, SourceAuthority};
 use projection_core::{
-    evaluate_freshness, FreshnessInput, FreshnessPolicy, ProjectionScope, VenueSessionState,
+    canonical_value_digest, evaluate_freshness, FreshnessInput, FreshnessPolicy, ProjectionScope,
+    VenueSessionState,
 };
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Serialize};
 use sqlx::{Postgres, Row, Transaction};
 use uuid::Uuid;
 
 use crate::{parse_authority, query::active_epoch, required_u64, PgProjectionStore, StoreError};
 
 const MAX_SOURCE_FACTS: u64 = 20_000;
+const MAX_SOURCE_PAYLOAD_BYTES: u64 = 32 * 1024 * 1024;
 
 #[derive(Debug, Clone)]
 pub struct AnalyticsReadRequirement<'a> {
@@ -34,6 +36,27 @@ pub struct AnalyticsSourceRead<T> {
     pub freshness_policy_version: String,
     pub read_at: DateTime<Utc>,
     pub input: T,
+}
+
+/// Canonical, ordered fact material covered by an analytics snapshot digest.
+#[derive(Debug, Clone, Serialize)]
+pub struct AnalyticsFactDigestInput {
+    pub fact_id: String,
+    pub fact_kind: String,
+    pub ordinal: u64,
+    pub source_authority: SourceAuthority,
+    pub as_of: Option<DateTime<Utc>>,
+    pub payload: serde_json::Value,
+}
+
+/// Computes the content digest used to seal and verify an ordered fact set.
+///
+/// # Errors
+///
+/// Returns [`StoreError::Serialization`] if canonical JSON material cannot be built.
+pub fn analytics_facts_digest(facts: &[AnalyticsFactDigestInput]) -> Result<String, StoreError> {
+    let value = serde_json::to_value(facts).map_err(|_| StoreError::Serialization)?;
+    Ok(canonical_value_digest(&value))
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -71,10 +94,14 @@ struct SnapshotHeader {
     policy: FreshnessPolicy,
     projection_sequence: u64,
     capability_snapshot_id: String,
+    payload_digest: String,
+    venue_session: VenueSessionState,
 }
 
 struct SourceFact {
+    fact_id: String,
     fact_kind: String,
+    ordinal: u64,
     authority: SourceAuthority,
     as_of: Option<DateTime<Utc>>,
     payload: serde_json::Value,
@@ -230,16 +257,12 @@ impl PgProjectionStore {
                 _ => return Err(StoreError::InvalidAnalyticsSourcePayload),
             }
         }
-        let representative = loaded
-            .facts
-            .first()
-            .ok_or(StoreError::AnalyticsPopulationMismatch)?;
         let input = CorrelationInput {
             portfolio_id: portfolio_id.clone(),
             labels,
             pairs,
             clusters,
-            quality: quality(representative, &loaded.header, requirement.read_at)?,
+            quality: combined_quality(&loaded.facts, &loaded.header, requirement.read_at)?,
         };
         Ok(source_read(loaded.header, requirement.read_at, input))
     }
@@ -363,8 +386,24 @@ impl PgProjectionStore {
         if header.expected_fact_count > MAX_SOURCE_FACTS {
             return Err(StoreError::AnalyticsSourceLimitExceeded);
         }
+        let population = sqlx::query(
+            "SELECT COUNT(*)::BIGINT AS fact_count,
+                    COALESCE(SUM(octet_length(payload::text)),0)::BIGINT AS payload_bytes
+             FROM portal_projection.analytics_source_facts WHERE snapshot_id=$1",
+        )
+        .bind(header.snapshot_id)
+        .fetch_one(&mut *transaction)
+        .await?;
+        let fact_count = required_u64(population.try_get("fact_count")?)?;
+        let payload_bytes = required_u64(population.try_get("payload_bytes")?)?;
+        if fact_count != header.expected_fact_count {
+            return Err(StoreError::AnalyticsPopulationMismatch);
+        }
+        if payload_bytes > MAX_SOURCE_PAYLOAD_BYTES {
+            return Err(StoreError::AnalyticsSourcePayloadLimitExceeded);
+        }
         let rows = sqlx::query(
-            "SELECT fact_kind, source_authority, as_of, payload
+            "SELECT fact_id, fact_kind, ordinal, source_authority, as_of, payload
              FROM portal_projection.analytics_source_facts
              WHERE snapshot_id=$1 ORDER BY ordinal ASC LIMIT $2",
         )
@@ -373,22 +412,33 @@ impl PgProjectionStore {
         .fetch_all(&mut *transaction)
         .await?;
         transaction.commit().await?;
-        if u64::try_from(rows.len()).map_err(|_| StoreError::NumericOverflow)?
-            != header.expected_fact_count
-        {
-            return Err(StoreError::AnalyticsPopulationMismatch);
-        }
         let facts = rows
             .into_iter()
             .map(|row| {
                 Ok(SourceFact {
+                    fact_id: row.try_get("fact_id")?,
                     fact_kind: row.try_get("fact_kind")?,
+                    ordinal: required_u64(row.try_get("ordinal")?)?,
                     authority: parse_authority(&row.try_get::<String, _>("source_authority")?)?,
                     as_of: row.try_get("as_of")?,
                     payload: row.try_get("payload")?,
                 })
             })
             .collect::<Result<Vec<_>, StoreError>>()?;
+        let digest_input = facts
+            .iter()
+            .map(|fact| AnalyticsFactDigestInput {
+                fact_id: fact.fact_id.clone(),
+                fact_kind: fact.fact_kind.clone(),
+                ordinal: fact.ordinal,
+                source_authority: fact.authority,
+                as_of: fact.as_of,
+                payload: fact.payload.clone(),
+            })
+            .collect::<Vec<_>>();
+        if analytics_facts_digest(&digest_input)? != header.payload_digest {
+            return Err(StoreError::AnalyticsSourceIntegrityMismatch);
+        }
         Ok(LoadedSource { header, facts })
     }
 }
@@ -408,7 +458,8 @@ async fn load_header(
                 s.freshness_warning_after_ms, s.freshness_stale_after_ms,
                 s.maximum_future_skew_ms, s.projection_sequence,
                 s.capability_snapshot_id, e.capability_snapshot_id AS epoch_capability_snapshot_id,
-                s.adapter_version, e.adapter_version AS epoch_adapter_version
+                s.adapter_version, e.adapter_version AS epoch_adapter_version,
+                s.payload_digest, s.venue_session_state
          FROM portal_projection.analytics_source_snapshots s
          JOIN portal_projection.epochs e ON e.epoch_id=s.epoch_id
          WHERE s.epoch_id=$1 AND s.analytics_kind=$2 AND s.resource_id=$3 AND s.context_key=$4",
@@ -453,6 +504,8 @@ async fn load_header(
         },
         projection_sequence: required_u64(row.try_get("projection_sequence")?)?,
         capability_snapshot_id,
+        payload_digest: row.try_get("payload_digest")?,
+        venue_session: parse_venue_session(&row.try_get::<String, _>("venue_session_state")?)?,
     })
 }
 
@@ -468,7 +521,7 @@ fn quality(
             read_at,
             source_received_at: Some(header.source_read_at),
             projected_at: Some(header.projected_at),
-            venue_session: VenueSessionState::Open,
+            venue_session: header.venue_session,
         },
     )?;
     Ok(FactQuality {
@@ -477,6 +530,67 @@ fn quality(
         completeness: header.population,
         as_of: fact.as_of,
     })
+}
+
+fn combined_quality(
+    facts: &[SourceFact],
+    header: &SnapshotHeader,
+    read_at: DateTime<Utc>,
+) -> Result<FactQuality, StoreError> {
+    let mut qualities = facts
+        .iter()
+        .map(|fact| quality(fact, header, read_at))
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter();
+    let mut combined = qualities
+        .next()
+        .ok_or(StoreError::AnalyticsPopulationMismatch)?;
+    for current in qualities {
+        if combined.source_authority != current.source_authority {
+            combined.source_authority = SourceAuthority::Derived;
+        }
+        combined.freshness_state =
+            worse_freshness(combined.freshness_state, current.freshness_state);
+        combined.completeness = worse_population(combined.completeness, current.completeness);
+        combined.as_of = match (combined.as_of, current.as_of) {
+            (Some(left), Some(right)) => Some(left.min(right)),
+            _ => None,
+        };
+    }
+    Ok(combined)
+}
+
+const fn freshness_rank(value: FreshnessState) -> u8 {
+    match value {
+        FreshnessState::Ok => 0,
+        FreshnessState::Aging => 1,
+        FreshnessState::Paused => 2,
+        FreshnessState::Stale => 3,
+        FreshnessState::Unknown => 4,
+    }
+}
+
+const fn worse_freshness(left: FreshnessState, right: FreshnessState) -> FreshnessState {
+    if freshness_rank(left) >= freshness_rank(right) {
+        left
+    } else {
+        right
+    }
+}
+
+const fn worse_population(
+    left: PopulationCompleteness,
+    right: PopulationCompleteness,
+) -> PopulationCompleteness {
+    match (left, right) {
+        (PopulationCompleteness::Unknown, _) | (_, PopulationCompleteness::Unknown) => {
+            PopulationCompleteness::Unknown
+        }
+        (PopulationCompleteness::Partial, _) | (_, PopulationCompleteness::Partial) => {
+            PopulationCompleteness::Partial
+        }
+        _ => PopulationCompleteness::Complete,
+    }
 }
 
 fn decode<T: DeserializeOwned>(fact: &SourceFact) -> Result<T, StoreError> {
@@ -526,6 +640,15 @@ fn parse_profile(value: &str) -> Result<DeliveryProfile, StoreError> {
         "sandbox" => Ok(DeliveryProfile::Sandbox),
         "live_canary" => Ok(DeliveryProfile::LiveCanary),
         "live_full" => Ok(DeliveryProfile::LiveFull),
+        _ => Err(StoreError::PersistedVocabulary),
+    }
+}
+
+fn parse_venue_session(value: &str) -> Result<VenueSessionState, StoreError> {
+    match value {
+        "OPEN" => Ok(VenueSessionState::Open),
+        "PAUSED" => Ok(VenueSessionState::Paused),
+        "UNKNOWN" => Ok(VenueSessionState::Unknown),
         _ => Err(StoreError::PersistedVocabulary),
     }
 }

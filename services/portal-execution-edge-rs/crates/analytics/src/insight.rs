@@ -83,8 +83,9 @@ pub struct InsightBatch {
 ///
 /// # Errors
 ///
-/// Rejects over-cap batches, duplicate IDs, portfolio mismatch, unexpected observations,
-/// and duplicate metric keys.
+/// Rejects over-cap batches, duplicate IDs, portfolio mismatch, and duplicate metric keys.
+/// A source repository may return a validated portfolio-wide superset; only requested
+/// observations participate in this batch or its quality floor.
 pub fn build_insight_batch(
     request: &InsightBatchRequest,
     observations: &[InsightObservation],
@@ -97,7 +98,7 @@ pub fn build_insight_batch(
     }
     let requested_ids = requested_ids(&request.items)?;
     let by_id = index_observations(request, &requested_ids, observations)?;
-    let quality = QualitySummary::from_iter(observations.iter().map(|item| &item.quality));
+    let quality = QualitySummary::from_iter(by_id.values().map(|item| &item.quality));
     let items: Vec<_> = request
         .items
         .iter()
@@ -170,26 +171,22 @@ fn index_observations<'a>(
     observations: &'a [InsightObservation],
 ) -> Result<BTreeMap<&'a str, &'a InsightObservation>, AnalyticsError> {
     let mut by_id = BTreeMap::new();
+    let mut seen = BTreeSet::new();
     for observation in observations {
         if observation.portfolio_id != request.portfolio_id {
             return Err(AnalyticsError::ScopeMismatch {
                 field: "portfolio_id",
             });
         }
-        if !requested_ids.contains(observation.insight_id.as_str()) {
-            return Err(AnalyticsError::ScopeMismatch {
-                field: "insight_id",
-            });
-        }
-        if by_id
-            .insert(observation.insight_id.as_str(), observation)
-            .is_some()
-        {
+        if !seen.insert(observation.insight_id.as_str()) {
             return Err(AnalyticsError::DuplicateIdentifier(
                 observation.insight_id.as_str().to_owned(),
             ));
         }
         validate_metrics(&observation.metrics)?;
+        if requested_ids.contains(observation.insight_id.as_str()) {
+            by_id.insert(observation.insight_id.as_str(), observation);
+        }
     }
     Ok(by_id)
 }
@@ -316,5 +313,21 @@ mod tests {
                 field: "portfolio_id"
             })
         );
+    }
+
+    #[test]
+    fn accepts_validated_source_superset_without_quality_drift() {
+        let requested = observation(0);
+        let mut unrequested = observation(1);
+        unrequested.quality.freshness_state = FreshnessState::Stale;
+        unrequested.quality.completeness = PopulationCompleteness::Partial;
+
+        let output = build_insight_batch(&request(1), &[requested, unrequested]).unwrap();
+
+        assert_eq!(output.panel_state, PanelState::Ok);
+        assert_eq!(output.input_freshness_floor, FreshnessState::Ok);
+        assert_eq!(output.input_completeness, PopulationCompleteness::Complete);
+        assert_eq!(output.data.items.len(), 1);
+        assert_eq!(output.data.items[0].insight_id.as_str(), "insight-0");
     }
 }

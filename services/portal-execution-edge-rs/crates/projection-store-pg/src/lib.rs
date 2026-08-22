@@ -17,7 +17,9 @@ mod analytics_repository;
 mod query;
 mod realtime;
 
-pub use analytics_repository::{AnalyticsReadRequirement, AnalyticsSourceRead};
+pub use analytics_repository::{
+    analytics_facts_digest, AnalyticsFactDigestInput, AnalyticsReadRequirement, AnalyticsSourceRead,
+};
 pub use query::{RetentionPolicySnapshot, SeriesPointWrite};
 pub use realtime::{
     RealtimeActiveEpochWatermark, RealtimeEpochAvailability, RealtimeJournalPage,
@@ -981,8 +983,12 @@ pub enum StoreError {
     AnalyticsPopulationMismatch,
     #[error("analytics source payload is invalid for its narrow screen contract")]
     InvalidAnalyticsSourcePayload,
+    #[error("analytics source fact digest does not match its immutable snapshot header")]
+    AnalyticsSourceIntegrityMismatch,
     #[error("analytics source query exceeds its bounded repository limit")]
     AnalyticsSourceLimitExceeded,
+    #[error("analytics source payload exceeds the bounded repository byte limit")]
+    AnalyticsSourcePayloadLimitExceeded,
 }
 
 #[cfg(test)]
@@ -1665,6 +1671,7 @@ mod tests {
         expected_population_count: Option<i64>,
     ) -> Uuid {
         let snapshot_id = Uuid::now_v7();
+        let empty_digest = analytics_facts_digest(&[]).unwrap();
         sqlx::query(
             "INSERT INTO portal_projection.analytics_source_snapshots
              (snapshot_id,epoch_id,analytics_kind,resource_id,context_key,source_profile,
@@ -1673,7 +1680,7 @@ mod tests {
               freshness_warning_after_ms,freshness_stale_after_ms,maximum_future_skew_ms,
               projection_sequence,adapter_version,capability_snapshot_id,payload_digest)
              VALUES ($1,$2,$3,$4,$5,'paper','COMPLETE',$6,$7,$8,$9,'paper.analytics.v1',
-                     20000,60000,2000,10,'ts-adapter-v1','cap_analytics','sha256:test')",
+                     20000,60000,2000,10,'ts-adapter-v1','cap_analytics',$10)",
         )
         .bind(snapshot_id)
         .bind(epoch_id)
@@ -1684,6 +1691,7 @@ mod tests {
         .bind(expected_population_count)
         .bind(at(90))
         .bind(at(91))
+        .bind(empty_digest)
         .execute(&store.pool)
         .await
         .unwrap();
@@ -1714,6 +1722,42 @@ mod tests {
         .execute(&store.pool)
         .await
         .unwrap();
+        reseal_analytics_snapshot(store, snapshot_id).await;
+    }
+
+    async fn reseal_analytics_snapshot(store: &PgProjectionStore, snapshot_id: Uuid) {
+        let rows = sqlx::query(
+            "SELECT fact_id,fact_kind,ordinal,source_authority,as_of,payload
+             FROM portal_projection.analytics_source_facts
+             WHERE snapshot_id=$1 ORDER BY ordinal ASC",
+        )
+        .bind(snapshot_id)
+        .fetch_all(&store.pool)
+        .await
+        .unwrap();
+        let facts = rows
+            .into_iter()
+            .map(|row| AnalyticsFactDigestInput {
+                fact_id: row.try_get("fact_id").unwrap(),
+                fact_kind: row.try_get("fact_kind").unwrap(),
+                ordinal: required_u64(row.try_get("ordinal").unwrap()).unwrap(),
+                source_authority: parse_authority(
+                    &row.try_get::<String, _>("source_authority").unwrap(),
+                )
+                .unwrap(),
+                as_of: row.try_get("as_of").unwrap(),
+                payload: row.try_get("payload").unwrap(),
+            })
+            .collect::<Vec<_>>();
+        sqlx::query(
+            "UPDATE portal_projection.analytics_source_snapshots
+             SET payload_digest=$2 WHERE snapshot_id=$1",
+        )
+        .bind(snapshot_id)
+        .bind(analytics_facts_digest(&facts).unwrap())
+        .execute(&store.pool)
+        .await
+        .unwrap();
     }
 
     fn analytics_quality() -> serde_json::Value {
@@ -1733,7 +1777,7 @@ mod tests {
             build_correlation, build_insight_batch, build_order_funnel, CapitalPreviewRequest,
             CurrencyCode, InsightBatchRequest, InsightItemRequest,
         };
-        use execution_contracts::{DecimalString, DeliveryProfile};
+        use execution_contracts::{DecimalString, DeliveryProfile, FreshnessState};
 
         let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
             return;
@@ -1965,18 +2009,16 @@ mod tests {
                 .ready_count,
             1
         );
+        let correlation_read = store
+            .load_correlation_source(&scope, &portfolio, &requirement)
+            .await
+            .unwrap();
         assert_eq!(
-            build_correlation(
-                &store
-                    .load_correlation_source(&scope, &portfolio, &requirement)
-                    .await
-                    .unwrap()
-                    .input,
-            )
-            .unwrap()
-            .data
-            .labels
-            .len(),
+            build_correlation(&correlation_read.input)
+                .unwrap()
+                .data
+                .labels
+                .len(),
             2
         );
         assert_eq!(
@@ -2077,6 +2119,48 @@ mod tests {
                 )
                 .await,
             Err(StoreError::AnalyticsPopulationMismatch)
+        ));
+
+        sqlx::query(
+            "UPDATE portal_projection.analytics_source_snapshots
+             SET venue_session_state='PAUSED' WHERE snapshot_id=$1",
+        )
+        .bind(correlation)
+        .execute(&store.pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "UPDATE portal_projection.analytics_source_facts
+             SET source_authority='BROKER' WHERE snapshot_id=$1 AND fact_id='pair-ab'",
+        )
+        .bind(correlation)
+        .execute(&store.pool)
+        .await
+        .unwrap();
+        reseal_analytics_snapshot(&store, correlation).await;
+        let mixed_quality = store
+            .load_correlation_source(&scope, &portfolio, &requirement)
+            .await
+            .unwrap()
+            .input
+            .quality;
+        assert_eq!(mixed_quality.source_authority, SourceAuthority::Derived);
+        assert_eq!(mixed_quality.freshness_state, FreshnessState::Paused);
+
+        sqlx::query(
+            "UPDATE portal_projection.analytics_source_facts
+             SET payload=jsonb_set(payload, '{display_name}', '\"tampered\"')
+             WHERE snapshot_id=$1 AND fact_id='label-a'",
+        )
+        .bind(correlation)
+        .execute(&store.pool)
+        .await
+        .unwrap();
+        assert!(matches!(
+            store
+                .load_correlation_source(&scope, &portfolio, &requirement)
+                .await,
+            Err(StoreError::AnalyticsSourceIntegrityMismatch)
         ));
     }
 }

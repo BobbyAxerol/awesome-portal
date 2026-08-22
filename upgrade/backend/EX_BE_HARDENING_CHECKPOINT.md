@@ -66,13 +66,34 @@ Evidence:
 
 ## H3 — analytics integrity and resource isolation
 
-**Status: pending.** Close insight subset drift, source digest/quality/session
-integrity, payload bounds, HTTP/2 timeout/GOAWAY behavior and analytics
-concurrency/queue limits.
+**Status: complete.** The source repository now verifies a canonical ordered
+fact digest before decoding, evaluates venue-aware quality across every
+correlation fact, preflights exact fact count and a 32 MiB aggregate payload
+ceiling, and enforces bounded identifiers, fact payloads and canonical SHA-256
+digests in PostgreSQL. Insight batches accept a validated portfolio-wide source
+superset but allow only requested IDs to affect the result or quality floor.
+
+The TypeScript analytics bridge now has independent request and queue deadlines,
+a configurable FIFO concurrency/queue bulkhead, single-settlement response
+handling, response byte and JSON content checks, aborted-stream handling and
+HTTP/2 GOAWAY retirement. These limits apply before assertion issuance and
+connection acquisition, so overload cannot create an unbounded pending-work
+set.
+
+Evidence:
+
+- `./scripts/execution-edge-test.sh`: 75/75 Rust/PostgreSQL tests, the 182,000-row
+  corpus, `rustfmt`, and Clippy with `-D warnings` passed.
+- `./scripts/control-api-test.sh`: production TypeScript build, fresh PostgreSQL
+  migrations and 111/111 tests passed.
+- Tests cover source-superset selection, tamper detection, multi-authority and
+  paused-session quality, queue saturation, queue expiry and permit recovery.
+- Runtime flags remain false and every registry delivery profile remains
+  `fixture`.
 
 ## Gate before offline EX-BE-08a
 
-H1–H3 must all be committed, the Rust and Control API gates must be green on a
-fresh PostgreSQL test database, contracts/workspace verification must pass, and
-no delivery profile or production flag may be activated. Only then may the
-offline EX-BE-08a corpus/replay/qualification harness begin.
+H1–H3 are implemented and their component gates are green. Commit H3, run the
+contracts/workspace verification, and confirm no delivery profile or production
+flag changed. Only then may the offline EX-BE-08a corpus/replay/qualification
+harness begin.

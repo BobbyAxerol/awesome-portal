@@ -895,7 +895,7 @@ deep-dive → ADR → slice → evidence discipline documented above.
   not widen the Portal/Trading-System boundary. D1–D4 require separate owner
   approval; D4 begins source ingestion. Request and response schema:
   [`EX_BE_02_LIVE_AWS_HK_DISCOVERY_AND_SAFE_BOOTSTRAP_REQUEST.md`](./backend/EX_BE_02_LIVE_AWS_HK_DISCOVERY_AND_SAFE_BOOTSTRAP_REQUEST.md).
-- **Execution backend hardening H1–H2 (2026-08-22):** SSE ownership now follows
+- **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING
   history cannot be skipped or emitted as live traffic. Epoch activation emits
@@ -903,10 +903,13 @@ deep-dive → ADR → slice → evidence discipline documented above.
   server-side with an explicit policy version and venue state. Evidence is
   Delegated assertions now preserve the immutable Portal-session `auth_time`;
   Capital Preview is ADMIN-only and bound by an append-only composite-FK R2
-  workspace/portfolio/currency scope. Evidence is 74/74 Rust/PostgreSQL tests
-  plus strict Clippy/rustfmt and a fresh-PG Control API build with 109/109
-  tests. H3 remains mandatory before offline EX-BE-08a; all runtime flags and
-  registry profiles remain off/`fixture`. Detail:
+  workspace/portfolio/currency scope. H3 additionally verifies ordered
+  analytics fact digests, full-fact venue-aware quality and bounded source
+  payloads; the TypeScript analytics transport now has an independent timeout,
+  FIFO concurrency/queue bulkhead and fail-closed HTTP/2 response lifecycle.
+  Evidence is 75/75 Rust/PostgreSQL tests plus strict Clippy/rustfmt and a
+  fresh-PG Control API build with 111/111 tests. The hardening stop-gate is
+  closed; all runtime flags and registry profiles remain off/`fixture`. Detail:
   [`EX_BE_HARDENING_CHECKPOINT.md`](./backend/EX_BE_HARDENING_CHECKPOINT.md).
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
