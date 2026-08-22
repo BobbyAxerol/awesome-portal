@@ -17,6 +17,12 @@ use uuid::Uuid;
 pub const REALTIME_SCHEMA_VERSION: &str = "execution.realtime.v1";
 pub const COMMAND_CENTER_RESOURCE: &str = "execution:command-center";
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RealtimeFreshness {
+    pub state: FreshnessState,
+    pub policy_version: String,
+}
+
 /// One typed projection delta carried on the screen-level multiplexed stream.
 /// The projection cursor is the SSE `id`; source cursor/sequence remain facts,
 /// never substitutes for Portal-edge delivery continuity.
@@ -38,6 +44,7 @@ pub struct RealtimeEnvelope {
     pub source_read_at: DateTime<Utc>,
     pub projected_at: DateTime<Utc>,
     pub freshness: FreshnessState,
+    pub freshness_policy_version: String,
     pub source_discontinuity: bool,
     pub payload: Value,
 }
@@ -51,6 +58,7 @@ impl RealtimeEnvelope {
         projection_sequence: u64,
         observation: ProjectionObservation,
         projected_at: DateTime<Utc>,
+        freshness: RealtimeFreshness,
     ) -> Self {
         let event_type = match observation.entity.kind {
             ProjectionEntityKind::Order => "order.updated",
@@ -79,7 +87,8 @@ impl RealtimeEnvelope {
             as_of: observation.as_of,
             source_read_at: observation.source_read_at,
             projected_at,
-            freshness: FreshnessState::Unknown,
+            freshness: freshness.state,
+            freshness_policy_version: freshness.policy_version,
             source_discontinuity: false,
             payload: observation.payload,
         }
@@ -345,6 +354,10 @@ mod tests {
                 payload: serde_json::json!({"price": "1.2500"}),
             },
             Utc.timestamp_opt(source_sequence, 0).unwrap(),
+            RealtimeFreshness {
+                state: FreshnessState::Ok,
+                policy_version: "paper.realtime.v1".to_owned(),
+            },
         )
     }
 

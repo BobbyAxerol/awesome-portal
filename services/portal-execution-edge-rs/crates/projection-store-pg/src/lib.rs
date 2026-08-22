@@ -20,8 +20,8 @@ mod realtime;
 pub use analytics_repository::{AnalyticsReadRequirement, AnalyticsSourceRead};
 pub use query::{RetentionPolicySnapshot, SeriesPointWrite};
 pub use realtime::{
-    RealtimeEpochAvailability, RealtimeJournalPage, RealtimeJournalRecord,
-    RealtimeScopeAvailability,
+    RealtimeActiveEpochWatermark, RealtimeEpochAvailability, RealtimeJournalPage,
+    RealtimeJournalRecord, RealtimeScopeAvailability,
 };
 
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!();
@@ -1288,10 +1288,22 @@ mod tests {
         assert!(!tail.has_more);
         assert_eq!(tail.records[0].projection_sequence, 2);
 
+        assert_realtime_epoch_cutover(&store, &scope, epoch_id).await;
+        assert!(matches!(
+            store.load_realtime_records(epoch_id, 0, 0).await,
+            Err(StoreError::InvalidRealtimePageLimit)
+        ));
+    }
+
+    async fn assert_realtime_epoch_cutover(
+        store: &PgProjectionStore,
+        scope: &ProjectionScope,
+        epoch_id: Uuid,
+    ) {
         let ordinal = store.latest_realtime_journal_ordinal().await.unwrap();
         let third = observation("evt_realtime_3", 3, 3, "FILLED");
         store
-            .apply_observation(&scope, epoch_id, "orders:alpha_1", &third, at(5))
+            .apply_observation(scope, epoch_id, "orders:alpha_1", &third, at(5))
             .await
             .unwrap();
         let live = store
@@ -1300,10 +1312,58 @@ mod tests {
             .unwrap();
         assert_eq!(live.records.len(), 1);
         assert_eq!(live.records[0].projection_sequence, 3);
-        assert!(matches!(
-            store.load_realtime_records(epoch_id, 0, 0).await,
-            Err(StoreError::InvalidRealtimePageLimit)
-        ));
+        let before_cutover = store.active_realtime_epoch_watermarks().await.unwrap();
+        assert_eq!(before_cutover.len(), 1);
+        assert_eq!(before_cutover[0].epoch_id, epoch_id);
+        assert_eq!(before_cutover[0].latest_sequence, 3);
+
+        let replacement_epoch = store
+            .create_building_epoch(scope, &metadata(), at(6))
+            .await
+            .unwrap();
+        let replacement = observation("evt_realtime_replacement", 1, 1, "OPEN");
+        store
+            .apply_observation(
+                scope,
+                replacement_epoch,
+                "orders:alpha_1",
+                &replacement,
+                at(7),
+            )
+            .await
+            .unwrap();
+        let while_building = store.active_realtime_epoch_watermarks().await.unwrap();
+        assert_eq!(while_building.len(), 1);
+        assert_eq!(while_building[0].epoch_id, epoch_id);
+        let replacement_digest = semantic_state_digest(&[store
+            .load_entity(replacement_epoch, &replacement.entity)
+            .await
+            .unwrap()
+            .unwrap()])
+        .unwrap();
+        store
+            .activate_epoch(
+                scope,
+                replacement_epoch,
+                &replacement_digest,
+                at(8),
+                Duration::from_secs(30),
+            )
+            .await
+            .unwrap();
+        let after_cutover = store.active_realtime_epoch_watermarks().await.unwrap();
+        assert_eq!(after_cutover.len(), 1);
+        assert_eq!(after_cutover[0].epoch_id, replacement_epoch);
+        assert_eq!(after_cutover[0].latest_sequence, 1);
+        assert_eq!(
+            store
+                .load_realtime_records(replacement_epoch, 0, 1)
+                .await
+                .unwrap()
+                .records[0]
+                .projection_sequence,
+            1,
+        );
     }
 
     #[tokio::test]

@@ -247,6 +247,11 @@ authority.
   runtime flag vẫn false, registry vẫn `fixture`, không đọc storage riêng hay
   tạo side effect bên Trading System. Chi tiết:
   [`EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md`](./EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md).
+- [Execution backend hardening checkpoint](./EX_BE_HARDENING_CHECKPOINT.md)
+  — **H1 complete; H2/H3 pending:** downstream/session-owned SSE cleanup,
+  ACTIVE-epoch cursors, poller liveness/readiness and versioned realtime
+  freshness are hardened. Evidence: Rust/PostgreSQL 74/74 + strict Clippy/
+  rustfmt; Control API 107/107. No runtime/profile activation was made.
 - Backend tiếp theo là `EX-BE-08a`: source-ingestion parity, qualification và
   observability trước khi xét `fixture -> shadow`. `EX-BE-05b` vẫn chờ source
   command capability và không bị EX-BE-07b ngầm mở khóa.

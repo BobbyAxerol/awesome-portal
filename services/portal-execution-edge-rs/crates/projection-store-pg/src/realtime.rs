@@ -34,6 +34,17 @@ pub struct RealtimeScopeAvailability {
     pub retained_previous: Option<RealtimeEpochAvailability>,
 }
 
+/// Active epoch high-water for one workspace/environment stream. The edge
+/// keeps a cursor per active epoch so BUILDING journal rows can never advance
+/// or hide the delivery cursor of the currently authoritative epoch.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RealtimeActiveEpochWatermark {
+    pub workspace_id: String,
+    pub environment: String,
+    pub epoch_id: Uuid,
+    pub latest_sequence: u64,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RealtimeJournalRecord {
     pub journal_ordinal: u64,
@@ -53,6 +64,36 @@ pub struct RealtimeJournalPage {
 }
 
 impl PgProjectionStore {
+    /// Lists exactly one ACTIVE epoch per scope with its committed sequence.
+    /// BUILDING and retained epochs are intentionally absent from live fan-out.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError`] when `PostgreSQL` cannot be queried or a stored
+    /// sequence cannot be represented by the public unsigned contract.
+    pub async fn active_realtime_epoch_watermarks(
+        &self,
+    ) -> Result<Vec<RealtimeActiveEpochWatermark>, StoreError> {
+        let rows = sqlx::query(
+            "SELECT workspace_id, environment, epoch_id, next_projection_sequence
+               FROM portal_projection.epochs
+              WHERE status = 'ACTIVE'
+              ORDER BY workspace_id, environment, epoch_id",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        rows.into_iter()
+            .map(|row| {
+                Ok(RealtimeActiveEpochWatermark {
+                    workspace_id: row.try_get("workspace_id")?,
+                    environment: row.try_get("environment")?,
+                    epoch_id: row.try_get("epoch_id")?,
+                    latest_sequence: required_u64(row.try_get("next_projection_sequence")?)?,
+                })
+            })
+            .collect()
+    }
+
     /// Returns the active and most recent retained epoch plus exact journal
     /// bounds used by the pure resume decision. No synthetic continuity is
     /// inferred when retained history has been evicted.

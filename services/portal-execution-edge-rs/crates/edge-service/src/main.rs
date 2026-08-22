@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 
 use std::{
-    collections::VecDeque,
+    collections::{HashMap, HashSet, VecDeque},
     convert::Infallible,
     env, fs,
     io::BufReader,
@@ -30,13 +30,16 @@ use execution_contracts::{
     CanonicalId, CapabilitySnapshot, CapabilityState, DeliveryProfile, ExecutionReadCapability,
 };
 use futures_util::stream;
-use projection_core::{resume_decision, ProjectionCursor, ProjectionScope, ResumeDecision};
+use projection_core::{
+    evaluate_freshness, resume_decision, FreshnessInput, FreshnessPolicy, ProjectionCursor,
+    ProjectionScope, ResumeDecision, VenueSessionState,
+};
 use projection_store_pg::{
     AnalyticsReadRequirement, AnalyticsSourceRead, PgProjectionStore, RealtimeJournalRecord,
     RealtimeScopeAvailability, StoreError,
 };
 use realtime_sse::{
-    GapEnvelope, GapReason, RealtimeEnvelope, RealtimeHub, RealtimeSubscription,
+    GapEnvelope, GapReason, RealtimeEnvelope, RealtimeFreshness, RealtimeHub, RealtimeSubscription,
     SubscriptionDelivery, COMMAND_CENTER_RESOURCE, REALTIME_SCHEMA_VERSION,
 };
 use rustls::{
@@ -67,11 +70,15 @@ struct AppState {
     snapshot: Arc<RwLock<Option<CapabilitySnapshot>>>,
     projection_required: bool,
     projection_ready: Arc<RwLock<bool>>,
+    realtime_required: bool,
+    realtime_poller_ready: Arc<RwLock<bool>>,
     projection_store: Option<PgProjectionStore>,
     realtime_hub: Option<RealtimeHub>,
     realtime_replay_limit: usize,
     realtime_heartbeat: Duration,
     realtime_epoch_jitter: Duration,
+    realtime_freshness_policy: FreshnessPolicy,
+    realtime_venue_session: VenueSessionState,
     analytics_query_enabled: bool,
     analytics_source_profile: DeliveryProfile,
 }
@@ -105,6 +112,8 @@ struct EdgeConfig {
     realtime_poll_batch: usize,
     realtime_heartbeat: Duration,
     realtime_epoch_jitter: Duration,
+    realtime_freshness_policy: FreshnessPolicy,
+    realtime_venue_session: VenueSessionState,
     analytics_query_enabled: bool,
     analytics_source_profile: DeliveryProfile,
 }
@@ -132,6 +141,8 @@ impl EdgeConfig {
         let analytics_query_enabled = strict_boolean("EDGE_ANALYTICS_QUERY_ENABLED", false)?;
         let analytics_source_profile =
             delivery_profile(&value_or("EDGE_ANALYTICS_SOURCE_PROFILE", "fixture"))?;
+        let (realtime_freshness_policy, realtime_venue_session) =
+            realtime_freshness_from_environment()?;
         let projection_database_url_file = optional_path("EDGE_PROJECTION_DATABASE_URL_FILE");
         if (projection_ingestion_enabled || realtime_sse_enabled || analytics_query_enabled)
             && projection_database_url_file.is_none()
@@ -186,10 +197,45 @@ impl EdgeConfig {
                 0,
                 30_000,
             )? as u64),
+            realtime_freshness_policy,
+            realtime_venue_session,
             analytics_query_enabled,
             analytics_source_profile,
         })
     }
+}
+
+fn realtime_freshness_from_environment() -> Result<(FreshnessPolicy, VenueSessionState), ConfigError>
+{
+    let policy = FreshnessPolicy {
+        policy_version: value_or(
+            "EDGE_REALTIME_FRESHNESS_POLICY_VERSION",
+            "paper.realtime.v1",
+        ),
+        warning_after_ms: bounded_i64(
+            "EDGE_REALTIME_FRESHNESS_WARNING_AFTER_MS",
+            2_000,
+            0,
+            86_400_000,
+        )?,
+        stale_after_ms: bounded_i64(
+            "EDGE_REALTIME_FRESHNESS_STALE_AFTER_MS",
+            10_000,
+            1,
+            86_400_000,
+        )?,
+        maximum_future_skew_ms: bounded_i64(
+            "EDGE_REALTIME_MAXIMUM_FUTURE_SKEW_MS",
+            2_000,
+            0,
+            60_000,
+        )?,
+    };
+    policy
+        .validate()
+        .map_err(|_| ConfigError::Invalid("EDGE_REALTIME_FRESHNESS_POLICY"))?;
+    let session = venue_session(&value_or("EDGE_REALTIME_VENUE_SESSION", "UNKNOWN"))?;
+    Ok((policy, session))
 }
 
 fn transport_limits_from_environment() -> Result<TransportLimits, ConfigError> {
@@ -280,6 +326,7 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         negotiator.probe(config.probe_alpha_id.as_deref()).await,
     )));
     let projection_ready = Arc::new(RwLock::new(projection_store.is_some()));
+    let realtime_poller_ready = Arc::new(RwLock::new(!config.realtime_sse_enabled));
     let realtime_hub = if config.realtime_sse_enabled {
         Some(RealtimeHub::new(config.realtime_queue_capacity)?)
     } else {
@@ -293,11 +340,15 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
             || config.realtime_sse_enabled
             || config.analytics_query_enabled,
         projection_ready: Arc::clone(&projection_ready),
+        realtime_required: config.realtime_sse_enabled,
+        realtime_poller_ready: Arc::clone(&realtime_poller_ready),
         projection_store: projection_store.clone(),
         realtime_hub: realtime_hub.clone(),
         realtime_replay_limit: config.realtime_replay_limit,
         realtime_heartbeat: config.realtime_heartbeat,
         realtime_epoch_jitter: config.realtime_epoch_jitter,
+        realtime_freshness_policy: config.realtime_freshness_policy.clone(),
+        realtime_venue_session: config.realtime_venue_session,
         analytics_query_enabled: config.analytics_query_enabled,
         analytics_source_profile: config.analytics_source_profile,
     };
@@ -308,6 +359,7 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         snapshot,
         projection_store,
         projection_ready,
+        realtime_poller_ready,
         realtime_hub,
     );
 
@@ -359,6 +411,7 @@ fn spawn_background_tasks(
     snapshot: Arc<RwLock<Option<CapabilitySnapshot>>>,
     projection_store: Option<PgProjectionStore>,
     projection_ready: Arc<RwLock<bool>>,
+    realtime_poller_ready: Arc<RwLock<bool>>,
     realtime_hub: Option<RealtimeHub>,
 ) {
     let probe_alpha_id = config.probe_alpha_id.clone();
@@ -388,6 +441,9 @@ fn spawn_background_tasks(
             hub,
             config.realtime_poll_interval,
             config.realtime_poll_batch,
+            config.realtime_freshness_policy.clone(),
+            config.realtime_venue_session,
+            realtime_poller_ready,
         ));
     }
 }
@@ -772,8 +828,12 @@ async fn realtime_stream(State(state): State<AppState>, headers: HeaderMap) -> R
         &availability,
         &request,
         &mut subscription,
-        state.realtime_replay_limit,
-        state.realtime_epoch_jitter,
+        RealtimeResumePolicy {
+            replay_limit: state.realtime_replay_limit,
+            epoch_jitter: state.realtime_epoch_jitter,
+            freshness: &state.realtime_freshness_policy,
+            venue_session: state.realtime_venue_session,
+        },
     )
     .await
     {
@@ -818,6 +878,14 @@ struct RealtimeRequest {
     scope: ProjectionScope,
 }
 
+#[derive(Clone, Copy)]
+struct RealtimeResumePolicy<'a> {
+    replay_limit: usize,
+    epoch_jitter: Duration,
+    freshness: &'a FreshnessPolicy,
+    venue_session: VenueSessionState,
+}
+
 fn authorize_realtime_request(
     state: &AppState,
     headers: &HeaderMap,
@@ -852,8 +920,7 @@ async fn prepare_resume(
     availability: &RealtimeScopeAvailability,
     request: &RealtimeRequest,
     subscription: &mut RealtimeSubscription,
-    replay_limit: usize,
-    epoch_jitter: Duration,
+    policy: RealtimeResumePolicy<'_>,
 ) -> Result<(VecDeque<Event>, bool), StatusCode> {
     let decision = resume_decision(
         request.cursor,
@@ -864,7 +931,7 @@ async fn prepare_resume(
             .map(|previous| previous.as_core()),
         &request.claims.sid,
         Utc::now(),
-        epoch_jitter,
+        policy.epoch_jitter,
     );
     match decision {
         ResumeDecision::Resume => {
@@ -873,7 +940,9 @@ async fn prepare_resume(
                 availability,
                 request.cursor,
                 subscription,
-                replay_limit,
+                policy.replay_limit,
+                policy.freshness,
+                policy.venue_session,
             )
             .await
         }
@@ -903,6 +972,8 @@ async fn prepare_replay(
     cursor: ProjectionCursor,
     subscription: &mut RealtimeSubscription,
     replay_limit: usize,
+    freshness_policy: &FreshnessPolicy,
+    venue_session: VenueSessionState,
 ) -> Result<(VecDeque<Event>, bool), StatusCode> {
     let page = store
         .load_realtime_records(cursor.epoch_id, cursor.sequence, replay_limit)
@@ -932,7 +1003,9 @@ async fn prepare_replay(
             sequence: record.projection_sequence,
         };
         expected = expected.saturating_add(1);
-        initial.push_back(projection_event(&record_to_envelope(record)));
+        let envelope = record_to_envelope(record, freshness_policy, venue_session, Utc::now())
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        initial.push_back(projection_event(&envelope));
     }
     subscription.advance_after_replay(replay_cursor);
     Ok((initial, false))
@@ -1041,7 +1114,22 @@ fn json_event<T: Serialize>(event_type: &str, payload: &T, id: Option<String>) -
     }
 }
 
-fn record_to_envelope(record: RealtimeJournalRecord) -> RealtimeEnvelope {
+fn record_to_envelope(
+    record: RealtimeJournalRecord,
+    freshness_policy: &FreshnessPolicy,
+    venue_session: VenueSessionState,
+    read_at: chrono::DateTime<Utc>,
+) -> Result<RealtimeEnvelope, projection_core::ProjectionError> {
+    let freshness = evaluate_freshness(
+        freshness_policy,
+        &FreshnessInput {
+            as_of: record.observation.as_of,
+            read_at,
+            source_received_at: Some(record.observation.source_read_at),
+            projected_at: Some(record.projected_at),
+            venue_session,
+        },
+    )?;
     let mut envelope = RealtimeEnvelope::from_observation(
         record.workspace_id,
         record.environment,
@@ -1049,9 +1137,13 @@ fn record_to_envelope(record: RealtimeJournalRecord) -> RealtimeEnvelope {
         record.projection_sequence,
         record.observation,
         record.projected_at,
+        RealtimeFreshness {
+            state: freshness.state,
+            policy_version: freshness.policy_version,
+        },
     );
     envelope.source_discontinuity = record.outcome == "GAP_APPLIED";
-    envelope
+    Ok(envelope)
 }
 
 async fn realtime_journal_poller(
@@ -1059,39 +1151,112 @@ async fn realtime_journal_poller(
     hub: RealtimeHub,
     poll_interval: Duration,
     poll_batch: usize,
+    freshness_policy: FreshnessPolicy,
+    venue_session: VenueSessionState,
+    poller_ready: Arc<RwLock<bool>>,
 ) {
-    let mut ordinal = match store.latest_realtime_journal_ordinal().await {
-        Ok(ordinal) => ordinal,
-        Err(error) => {
-            warn!(error = %error, "realtime journal poller could not capture startup watermark");
-            return;
-        }
-    };
     let mut interval = tokio::time::interval(poll_interval);
     interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+
+    // Initial database unavailability must not permanently kill the poller.
+    // Existing ACTIVE epochs start at their high-water mark; replay remains an
+    // explicit per-client cursor concern rather than a process-start fan-out.
+    let mut cursors = loop {
+        interval.tick().await;
+        match store.active_realtime_epoch_watermarks().await {
+            Ok(active) => {
+                let cursors = active
+                    .into_iter()
+                    .map(|epoch| (epoch.epoch_id, epoch.latest_sequence))
+                    .collect();
+                *poller_ready.write().await = true;
+                break cursors;
+            }
+            Err(error) => {
+                *poller_ready.write().await = false;
+                warn!(error = %error, "realtime journal poller startup retry");
+            }
+        }
+    };
+
     loop {
         interval.tick().await;
-        loop {
-            match store
-                .load_realtime_records_after_ordinal(ordinal, poll_batch)
-                .await
-            {
-                Ok(page) => {
-                    for record in page.records {
-                        ordinal = record.journal_ordinal;
-                        hub.publish(record_to_envelope(record));
-                    }
-                    if !page.has_more {
-                        break;
-                    }
-                }
-                Err(error) => {
-                    warn!(error = %error, "realtime journal poll failed without advancing cursor");
-                    break;
-                }
+        match poll_active_realtime_epochs(
+            &store,
+            &hub,
+            &mut cursors,
+            poll_batch,
+            &freshness_policy,
+            venue_session,
+        )
+        .await
+        {
+            Ok(()) => *poller_ready.write().await = true,
+            Err(error) => {
+                *poller_ready.write().await = false;
+                warn!(error = %error, "realtime journal poll failed without discarding epoch cursors");
             }
         }
     }
+}
+
+async fn poll_active_realtime_epochs(
+    store: &PgProjectionStore,
+    hub: &RealtimeHub,
+    cursors: &mut HashMap<uuid::Uuid, u64>,
+    poll_batch: usize,
+    freshness_policy: &FreshnessPolicy,
+    venue_session: VenueSessionState,
+) -> Result<(), StoreError> {
+    let active = store.active_realtime_epoch_watermarks().await?;
+    let active_ids: HashSet<_> = active.iter().map(|epoch| epoch.epoch_id).collect();
+    for epoch in active {
+        let Some(mut after) = cursors.get(&epoch.epoch_id).copied() else {
+            // One real event from the newly authoritative epoch is enough to
+            // terminate old subscriptions with an epoch_changed gap. Skip the
+            // rebuild backlog and continue from the activation high-water.
+            if epoch.latest_sequence > 0 {
+                if let Some(record) = store
+                    .load_realtime_records(epoch.epoch_id, 0, 1)
+                    .await?
+                    .records
+                    .into_iter()
+                    .next()
+                {
+                    hub.publish(record_to_envelope(
+                        record,
+                        freshness_policy,
+                        venue_session,
+                        Utc::now(),
+                    )?);
+                }
+            }
+            cursors.insert(epoch.epoch_id, epoch.latest_sequence);
+            continue;
+        };
+
+        loop {
+            let page = store
+                .load_realtime_records(epoch.epoch_id, after, poll_batch)
+                .await?;
+            for record in page.records {
+                let sequence = record.projection_sequence;
+                hub.publish(record_to_envelope(
+                    record,
+                    freshness_policy,
+                    venue_session,
+                    Utc::now(),
+                )?);
+                after = sequence;
+                cursors.insert(epoch.epoch_id, sequence);
+            }
+            if !page.has_more {
+                break;
+            }
+        }
+    }
+    cursors.retain(|epoch_id, _| active_ids.contains(epoch_id));
+    Ok(())
 }
 
 async fn livez() -> impl IntoResponse {
@@ -1099,13 +1264,12 @@ async fn livez() -> impl IntoResponse {
 }
 
 async fn readyz(State(state): State<AppState>) -> Response {
-    let projection_ready = !state.projection_required || *state.projection_ready.read().await;
+    let dependencies = RequiredDependencyReadiness {
+        projection: !state.projection_required || *state.projection_ready.read().await,
+        realtime: !state.realtime_required || *state.realtime_poller_ready.read().await,
+    };
     let snapshot = state.snapshot.read().await;
-    let ready = service_ready(
-        snapshot.as_ref(),
-        state.projection_required,
-        projection_ready,
-    );
+    let ready = service_ready(snapshot.as_ref(), dependencies);
     let status = if ready {
         StatusCode::OK
     } else {
@@ -1120,12 +1284,17 @@ async fn readyz(State(state): State<AppState>) -> Response {
         .into_response()
 }
 
+#[derive(Clone, Copy)]
+struct RequiredDependencyReadiness {
+    projection: bool,
+    realtime: bool,
+}
+
 fn service_ready(
     snapshot: Option<&CapabilitySnapshot>,
-    projection_required: bool,
-    projection_ready: bool,
+    dependencies: RequiredDependencyReadiness,
 ) -> bool {
-    snapshot.is_some_and(snapshot_ready) && (!projection_required || projection_ready)
+    snapshot.is_some_and(snapshot_ready) && dependencies.projection && dependencies.realtime
 }
 
 fn snapshot_ready(snapshot: &CapabilitySnapshot) -> bool {
@@ -1309,6 +1478,15 @@ fn delivery_profile(value: &str) -> Result<DeliveryProfile, ConfigError> {
     }
 }
 
+fn venue_session(value: &str) -> Result<VenueSessionState, ConfigError> {
+    match value {
+        "OPEN" => Ok(VenueSessionState::Open),
+        "PAUSED" => Ok(VenueSessionState::Paused),
+        "UNKNOWN" => Ok(VenueSessionState::Unknown),
+        _ => Err(ConfigError::Invalid("EDGE_REALTIME_VENUE_SESSION")),
+    }
+}
+
 fn read_file(path: &Path) -> Result<Vec<u8>, ServiceError> {
     let metadata = fs::metadata(path)?;
     if !metadata.is_file() || metadata.len() == 0 || metadata.len() > MAX_SECRET_FILE_BYTES {
@@ -1464,9 +1642,34 @@ mod tests {
         assert!(snapshot_ready(&snapshot("READ_ONLY")));
         assert!(!snapshot_ready(&snapshot("DISABLED")));
         assert!(!snapshot_ready(&snapshot("INCOMPATIBLE")));
-        assert!(service_ready(Some(&snapshot("READ_ONLY")), false, false));
-        assert!(!service_ready(Some(&snapshot("READ_ONLY")), true, false));
-        assert!(service_ready(Some(&snapshot("READ_ONLY")), true, true));
+        assert!(service_ready(
+            Some(&snapshot("READ_ONLY")),
+            RequiredDependencyReadiness {
+                projection: true,
+                realtime: true,
+            },
+        ));
+        assert!(!service_ready(
+            Some(&snapshot("READ_ONLY")),
+            RequiredDependencyReadiness {
+                projection: false,
+                realtime: true,
+            },
+        ));
+        assert!(service_ready(
+            Some(&snapshot("READ_ONLY")),
+            RequiredDependencyReadiness {
+                projection: true,
+                realtime: true,
+            },
+        ));
+        assert!(!service_ready(
+            Some(&snapshot("READ_ONLY")),
+            RequiredDependencyReadiness {
+                projection: true,
+                realtime: false,
+            },
+        ));
     }
 
     #[test]

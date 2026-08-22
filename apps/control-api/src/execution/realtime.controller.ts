@@ -9,6 +9,7 @@ import {
 } from "@nestjs/common";
 import { pipeline } from "node:stream/promises";
 import { constants } from "node:http2";
+import { EventEmitter } from "node:events";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { AuthService } from "../auth/auth.service";
 import { AuthSession, PortalUser } from "../domain";
@@ -54,21 +55,16 @@ export class ExecutionRealtimeController {
         "x-accel-buffering": "no",
         "x-content-type-options": "nosniff",
       });
-      request.raw.once("close", () => upstream.stream.close(constants.NGHTTP2_CANCEL));
-      const sessionMonitor = setInterval(() => {
-        void this.auth.sessions
-          .isActiveLease(
-            request.portalSession.sessionId,
-            request.portalSession.userId,
-            request.portalSession.sessionVersion,
-            new Date(),
-          )
-          .then((active) => {
-            if (!active) upstream.stream.close(constants.NGHTTP2_CANCEL);
-          })
-          .catch(() => upstream.stream.close(constants.NGHTTP2_CANCEL));
-      }, 5_000);
-      upstream.stream.once("close", () => clearInterval(sessionMonitor));
+      bindRealtimeLifecycle(
+        reply.raw,
+        upstream.stream,
+        () => this.auth.sessions.isActiveLease(
+          request.portalSession.sessionId,
+          request.portalSession.userId,
+          request.portalSession.sessionVersion,
+          new Date(),
+        ),
+      );
       await pipeline(upstream.stream, reply.raw).catch(() => undefined);
     } catch (error) {
       if (error instanceof RealtimeProxyError) {
@@ -82,6 +78,40 @@ export class ExecutionRealtimeController {
       });
     }
   }
+}
+
+/** Owns the downstream response, upstream stream and lease-monitor lifecycle. */
+export function bindRealtimeLifecycle(
+  response: EventEmitter,
+  upstream: EventEmitter & { close(code?: number): void },
+  activeLease: () => Promise<boolean>,
+  monitorIntervalMs = 5_000,
+): () => void {
+  let stopped = false;
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    clearInterval(sessionMonitor);
+    response.removeListener("close", cancelUpstream);
+    upstream.removeListener("close", stop);
+    upstream.removeListener("aborted", stop);
+  };
+  const cancelUpstream = () => {
+    upstream.close(constants.NGHTTP2_CANCEL);
+    stop();
+  };
+  const sessionMonitor = setInterval(() => {
+    void activeLease()
+      .then((active) => {
+        if (!active) cancelUpstream();
+      })
+      .catch(cancelUpstream);
+  }, monitorIntervalMs);
+  sessionMonitor.unref();
+  response.once("close", cancelUpstream);
+  upstream.once("close", stop);
+  upstream.once("aborted", stop);
+  return stop;
 }
 
 function singleHeader(value: string | string[] | undefined): string | undefined {
