@@ -819,7 +819,7 @@ window opens.
 |---|---|---|---|---|---|
 | PRE-IAM-01 | Close Execution phases 1–2 on SGP | Approval Inbox + R1 detail + plan/apply/poll, non-local keyring delivery, auth/RBAC/Origin/CSRF/SoD and SGP Compose smoke; no AWS call | correct canonical mutation paths and CSRF transport; keep product route/profile inactive until policy review | fresh PG corpus + isolated public-gateway smoke + runtime research-mode readiness + audit/outbox atomicity | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — SGP backend gate green 2026-08-22 |
 | PRE-IAM-02 | Complete Paper Exit Review | Portal-owned exit-review repository, deterministic policy/evidence evaluation and source-unavailable semantics | finish Phase 5 screen states/lineage against the published contract | missing/stale/partial evidence cases; immutable decision/audit tests; no execution command | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — fresh PG, contract and SGP runtime gates green 2026-08-22 |
-| PRE-IAM-03 | Build Command Center snapshot API dark | bounded snapshot composition over existing projection contracts; no SSE/profile activation | build/keep snapshot, empty, partial, stale, unavailable fixtures and component wiring | response budget, per-panel authority/freshness, exact counts and fail-closed source gaps | `PLANNED` |
+| PRE-IAM-03 | Build Command Center snapshot API dark | bounded snapshot composition over existing projection contracts; no SSE/profile activation | consume snapshot, empty, partial, stale, unavailable fixtures and wire the component without client re-ranking | response budget, per-panel authority/freshness, exact counts and fail-closed source gaps | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — fresh PG 139/139 and contracts 26/26 green 2026-08-22 |
 | PRE-IAM-04 | Offline operational hardening | close confirmed H-series contract/security issues, load/replay/restore/rollback evidence that needs no AWS source | consume only published fixtures/contracts; keep failure states visible | focused regression + workspace gates; credential-free evidence report | `PLANNED` |
 | PRE-IAM-05 | Prepare D2 dark deployment | image/config/service manifests for AWS Portal Edge + Source Proxy with interfaces/routes/source reads still off | no AWS/live UI activation; continue fixture work | offline render, non-root/read-only image checks, preflight and rollback rehearsal | `PLANNED` |
 | PRE-IAM-06 | Tracking cleanup | reconcile Master Plan, backend README/guide, shared tracker and request ledger; classify every blocker by owner | reconcile FE status/evidence and close superseded requests | no contradictory status, no bare `COMPLETE`, exact next dependency/owner per row | `PLANNED` |
@@ -839,11 +839,24 @@ activation. Registry/source/command flags remain false. Acceptance evidence and
 the exact Claude handoff are recorded in
 [`PRE_IAM_02_PAPER_EXIT_REVIEW_CLOSEOUT.md`](backend/PRE_IAM_02_PAPER_EXIT_REVIEW_CLOSEOUT.md).
 
-Claude request `BR-EX-28` is now a tracked cross-queue input: Phase 6 needs one
-canonical command catalogue and purpose-built HTTP endpoints, while generic
-Redis `get`/`scan` remain prohibited. The six-phase queue order is unchanged;
-the request must be re-read during `PRE-IAM-03` dependency composition and
-scheduled as the separate Phase 6 unblocker.
+`PRE-IAM-03` closes the dark backend snapshot lane of product phase 9. Real
+Portal governance and user-owned pins are available; uncommissioned Execution
+incident, operation and Fleet sources remain unavailable, so composite totals
+are null and the mode is degraded rather than falsely empty/healthy. Snapshot
+cursor/epoch/sequence remain null, SSE remains unavailable and registry/source/
+command flags remain false. Acceptance evidence and Claude's exact five-state
+handoff are recorded in
+[`PRE_IAM_03_DARK_COMMAND_CENTER_SNAPSHOT_CLOSEOUT.md`](backend/PRE_IAM_03_DARK_COMMAND_CENTER_SNAPSHOT_CLOSEOUT.md).
+
+Claude request `BR-EX-28` is now a tracked cross-queue input. Its 2026-08-22
+contract-pack audit correctly found that eight `ops` actions inherit the same
+emergency-close handler paths even though OpenAPI exposes only the four
+emergency-close paths. The real gap is therefore fifteen actions: seven known
+without HTTP plus eight falsely classified as reachable. Phase 6 still needs
+one canonical catalogue; phases 7–9 need purpose-built read contracts,
+including `streams` and `alpha-activity` for Command Center. Generic Redis
+`get`/`scan` remain prohibited. The six-phase queue order is unchanged and this
+work is not fabricated inside PRE-IAM-03.
 
 EX-BE-04a→05a has delivered the Portal-owned control-plane foundation without an AWS, Rust,
 Trading System or projection dependency. It supplies Approval Inbox and Gate R1 from real
@@ -943,7 +956,7 @@ Statuses use the architecture vocabulary, never bare `COMPLETE`:
 | 6 Admin Action Drawer | generic safe plan→apply→verify | command catalog, plan, apply, operation poll | Portal policy record; EXECUTION terminal outcome | `FOUNDATION_COMPLETE` | EX-BE-02/05b; TS command capability | plan `request_key`, blocker completeness, duplicate/uncertain reconciliation tests; production flag remains off |
 | 7 Operations Queue | scalable, typed operations triage | `GET /operations`; ack/resolve | Portal workflow record plus EXECUTION result | `INTEGRATION_PENDING` | EX-BE-04a/05b | 182k bidirectional keyset tests, ack≠resolve tests, exact count |
 | 8 Incident Detail | correlated evidence and explicit incident workflow | incident detail, assign/ack/annotate/resolve | Portal workflow record; source-attributed findings | `FOUNDATION_COMPLETE` | EX-BE-05a/05b/06 | completeness badges, optimistic concurrency, evidence-required resolution and redaction tests |
-| 9 Command Center | ranked snapshot plus loss-detectable realtime | command-center snapshot and SSE | mixed per row; DERIVED ranking; epoch/sequence freshness | `INTEGRATION_PENDING` | EX-BE-03/04b/06 | snapshot/SSE parity, completeness, overlap+jitter resnapshot, slow-consumer and auth-expiry tests |
+| 9 Command Center | ranked snapshot plus loss-detectable realtime | command-center snapshot and SSE | mixed per row; DERIVED ranking; epoch/sequence freshness | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | PRE-IAM-03 dark snapshot; BR-EX-28 §8.1 typed `streams`/`alpha-activity`; real source activation + EX-BE-06 parity evidence | bounded snapshot, five failure states, 20k exact-observed corpus and response budget pass; source contracts, snapshot/SSE parity, overlap+jitter resnapshot, slow-consumer and auth-expiry remain |
 | 10 Sandbox Certification | auditable certification state machine | certification read/decide/promote plan | Portal record; EXECUTION/BROKER/DERIVED panels | `FOUNDATION_COMPLETE` | EX-BE-03/05a/05b; TS sandbox capabilities | state-transition/property tests, stale evidence denial, command production inactive |
 | 11 Canary Control Room | observe versioned envelope and guarded live canary | canary query/series; later protective operations | EXECUTION/BROKER/DERIVED panels; Portal envelope record | `PRODUCTION_INACTIVE` | EX-BE-00R4/03/04b/05b/06; owner live-canary gate | profile-labelled read shadow parity, envelope/rollback tests, dual approval, explicit activation decision |
 | 12 Live Full Operations | continuous live truth with gap visibility | live query/series/SSE; later R3/R4 operations | EXECUTION/BROKER/DERIVED; gaps become stale | `PRODUCTION_INACTIVE` | phase 11 evidence + EX-BE-00R4/08 | no-gap soak, ambiguous-result drills, capital envelope and rollback rehearsal |
@@ -1176,9 +1189,9 @@ availability guarantees.
 | BR-EX-05 zoom/performance | **ACCEPT + MODIFY** | zoom that admits a finer rung re-queries the server; qualify p95 at edge and record p50/p99/RSS/rows scanned at a named source/scale | 4, 11, 12, 15, hardening |
 | BR-EX-06 batched previews | **ACCEPT** | one capped typed batch with per-item errors/freshness; eliminates N+1 | 15 |
 | BR-EX-07 correlation payload | **MODIFY** | packed triangle + labels/clusters through 150; ranked pairs/clusters above cap, never an unbounded square JSON matrix | 16 |
-| BR-EX-08 ranked triage | **ACCEPT** | server ranks a capped candidate set; formula/version/input freshness returned | 9 |
+| BR-EX-08 ranked triage | **ACCEPT** | PRE-IAM-03 now server-ranks the capped dark snapshot and returns formula/version/input freshness; real Execution sources remain inactive | 9 |
 | BR-EX-09 typed operation grouping | **ACCEPT** | group fields are typed/server-owned; acknowledgement and resolution remain separate transitions | 7, 8 |
-| BR-EX-10 realtime transport | **ACCEPT** | one multiplexed SSE stream per screen with snapshot/resume/gap; no WebSocket in this scope | 9 |
+| BR-EX-10 realtime transport | **ACCEPT** | EX-BE-06 transport exists dark; PRE-IAM-03 advertises `stream_available=false` until snapshot/resume/gap parity is proven; no WebSocket in this scope | 9 |
 | BR-EX-11 source sequence continuity | **MODIFY** | Portal cannot fabricate TS sequence. Return nullable `source_sequence`, exact source cursor, edge `projection_epoch` + `projection_sequence`, and documented gap/resnapshot | 12 |
 | BR-EX-12 server precision | **ACCEPT** | Decimal strings plus instrument/currency precision and rounding policy; browser does not choose | 13, 14 |
 | BR-EX-13 order funnel | **ACCEPT** | server reconstructs ordered lifecycle with source IDs/times and explicit missing/partial stages | 14 |

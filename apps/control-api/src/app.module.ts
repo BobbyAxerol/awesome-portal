@@ -25,6 +25,9 @@ import { ExecutionRealtimeController } from "./execution/realtime.controller";
 import { ExecutionRealtimeProxy } from "./execution/realtime.proxy";
 import { ExecutionAnalyticsController } from "./execution/analytics.controller";
 import { ExecutionAnalyticsProxy } from "./execution/analytics.proxy";
+import { CommandCenterController } from "./command-center/command-center.controller";
+import { CommandCenterRepository } from "./command-center/command-center.repository";
+import { CommandCenterService } from "./command-center/command-center.service";
 
 @Module({})
 export class AppModule {
@@ -40,6 +43,7 @@ export class AppModule {
         GovernanceController,
         ExecutionRealtimeController,
         ExecutionAnalyticsController,
+        CommandCenterController,
       ],
       providers: [
         { provide: CONTROL_API_CONFIG, useValue: config },
@@ -72,6 +76,8 @@ export class AppModule {
         GovernanceService,
         PaperExitRepository,
         PaperExitService,
+        CommandCenterRepository,
+        CommandCenterService,
         {
           provide: ExecutionRealtimeProxy,
           useFactory: (cfg: ControlApiConfig) => ExecutionRealtimeProxy.create(cfg),

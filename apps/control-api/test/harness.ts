@@ -6,6 +6,7 @@ import { createControlApiApp } from "../src/app";
 import { ControlApiConfig } from "../src/config";
 
 export const TEST_TABLES = [
+  "execution_command_center_pins",
   "auth_audit_events",
   "auth_sessions",
   "activation_credentials",

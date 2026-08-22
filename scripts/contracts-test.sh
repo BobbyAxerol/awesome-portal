@@ -35,5 +35,7 @@ docker run --rm --name "${NODE_CONTAINER}" \
     diff -q /tmp/execution-governance.d.ts generated/execution-governance.d.ts
     npx openapi-typescript openapi/execution-realtime.openapi.json -o /tmp/execution-realtime.d.ts
     diff -q /tmp/execution-realtime.d.ts generated/execution-realtime.d.ts
+    npx openapi-typescript openapi/execution-command-center.openapi.json -o /tmp/execution-command-center.d.ts
+    diff -q /tmp/execution-command-center.d.ts generated/execution-command-center.d.ts
   '
 printf 'Contracts workspace tests passed.\n'

@@ -44,6 +44,16 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-governance-r2-review.v1.schema.json",
   "execution-governance.paper-exit-review.valid.json":
     "https://schemas.primusspark.com/portal/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitReviewResponse",
+  "execution-command-center.busy.valid.json":
+    "https://schemas.primusspark.com/portal/execution-command-center-snapshot.v1.schema.json",
+  "execution-command-center.empty.valid.json":
+    "https://schemas.primusspark.com/portal/execution-command-center-snapshot.v1.schema.json",
+  "execution-command-center.partial.valid.json":
+    "https://schemas.primusspark.com/portal/execution-command-center-snapshot.v1.schema.json",
+  "execution-command-center.stale.valid.json":
+    "https://schemas.primusspark.com/portal/execution-command-center-snapshot.v1.schema.json",
+  "execution-command-center.unavailable.valid.json":
+    "https://schemas.primusspark.com/portal/execution-command-center-snapshot.v1.schema.json",
 };
 
 describe("canonical contracts (cross-language fixture compilation)", () => {
@@ -223,5 +233,26 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(realtime).toContain('"/api/v1/execution/command-center/stream"');
     expect(realtime).toContain("AuthExpiringEvent");
     expect(realtime).toContain("expires_at");
+  });
+
+  it("keeps the Command Center bounded, dark and exact-or-null", () => {
+    const busy = loadJson(join(ROOT, "fixtures", "execution-command-center.busy.valid.json")) as {
+      snapshot: { stream_available: boolean; cursor: unknown };
+      panels: { needs_you: { total_count: number; items: unknown[] } };
+    };
+    const partial = loadJson(join(ROOT, "fixtures", "execution-command-center.partial.valid.json")) as {
+      panels: { needs_you: { exact_total: boolean; total_count: unknown; truncated: unknown } };
+    };
+    expect(busy.snapshot).toMatchObject({ stream_available: false, cursor: null });
+    expect(busy.panels.needs_you.total_count).toBeGreaterThan(busy.panels.needs_you.items.length);
+    expect(partial.panels.needs_you).toMatchObject({
+      exact_total: false,
+      total_count: null,
+      truncated: null,
+    });
+    const generated = readFileSync(join(ROOT, "generated", "execution-command-center.d.ts"), "utf8");
+    expect(generated).toContain('"/api/v1/execution/command-center"');
+    expect(generated).toContain("CommandCenterSnapshot");
+    expect(generated).toContain("command-center.triage-rank.v1");
   });
 });

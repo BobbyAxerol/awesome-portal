@@ -142,6 +142,16 @@ Chúng không thay thế phase hoặc exit gate trong
   `0004` and SGP public-gateway/auth runtime gate green. Registry/source/command
   profiles remain off; Claude's HTTP/eligibility mapping and later real-source
   activation remain explicit dependencies.
+- [PRE-IAM-03 — Dark Command Center Snapshot Backend Closeout](./PRE_IAM_03_DARK_COMMAND_CENTER_SNAPSHOT_CLOSEOUT.md)
+  — Execution Loop Phase 9 backend snapshot **integration complete / production
+  inactive:** the TypeScript Control API composes bounded server-ranked
+  governance, Fleet, user-pin and Today panels with per-source authority,
+  freshness and exact-count semantics. Missing Execution incident/operation/
+  Fleet sources remain unavailable rather than fake-empty; SSE/cursor identity
+  and every delivery/source/command flag remain dark. Evidence: fresh
+  PostgreSQL 15 suites/139 tests, Command Center 10/10, contracts 26/26 and a
+  20,000-row response-budget gate. Claude's five-state mapping and later real
+  source/SSE parity remain explicit dependencies.
 
 **Runway complete (BAR-00 → BAR-16).** Guide v0.5 bổ sung (không thay thế)
 tại `upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md`

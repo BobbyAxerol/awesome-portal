@@ -21,6 +21,15 @@ read/plan/apply/poll boundary, and
 for the same-origin SSE boundary. The analytics projection-page component is a
 typed future screen shape, not authorization to expose a generic query route.
 
+PRE-IAM-03 publishes the dark Command Center snapshot separately at
+`openapi/execution-command-center.openapi.json`. Its five canonical fixtures
+cover busy, empty, partial, stale and unavailable states. The contract is
+bounded to top-10 triage, six fleet cells, five user pins and twelve Today
+items; ranking is server-owned (`command-center.triage-rank.v1`). Composite
+totals are exact only when every contributing source is available, otherwise
+they are null rather than a fabricated zero. SSE identity and every live
+delivery profile remain disabled in v1.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields
@@ -61,6 +70,7 @@ packages/contracts/
     execution-governance-r2-review.v1.schema.json
     execution-governance-paper-exit.v1.schema.json
     execution-realtime-event.v1.schema.json
+    execution-command-center-snapshot.v1.schema.json
   fixtures/
     problem.valid.json
     command.valid.json
@@ -72,15 +82,18 @@ packages/contracts/
     execution-governance.paper-exit-review.valid.json
     execution-realtime.auth-expiring.valid.json
     execution-realtime.projection-gap.valid.json
+    execution-command-center.{busy,empty,partial,stale,unavailable}.valid.json
   openapi/
     execution-analytics.openapi.json
     execution-governance.openapi.json
     execution-realtime.openapi.json
+    execution-command-center.openapi.json
   generated/
     portal-api.d.ts
     execution-analytics.d.ts
     execution-governance.d.ts
     execution-realtime.d.ts
+    execution-command-center.d.ts
   contracts-snapshot.json
   package.json
   tsconfig.json

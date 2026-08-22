@@ -17,6 +17,8 @@ x-control-api-environment: &control-api-environment
   FEATURE_EXECUTION_REALTIME_SSE: "false"
   # EX-BE-07b remains dark until source parity/cross-cell qualification passes.
   FEATURE_EXECUTION_ANALYTICS_QUERY: "false"
+  # PRE-IAM-03 remains dark in production until registry/source activation.
+  FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT: "false"
   INTERNAL_PRINCIPAL_SECRET: ${CONTROL_API_INTERNAL_PRINCIPAL_SECRET:?Set CONTROL_API_INTERNAL_PRINCIPAL_SECRET}
   QUERY_CURSOR_ACTIVE_KEY_ID: ${CONTROL_API_QUERY_CURSOR_ACTIVE_KEY_ID:-query-k1}
   QUERY_CURSOR_KEYS_JSON: '${CONTROL_API_QUERY_CURSOR_KEYS_JSON:?Set CONTROL_API_QUERY_CURSOR_KEYS_JSON}'

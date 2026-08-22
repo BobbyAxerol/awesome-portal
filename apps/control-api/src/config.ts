@@ -84,6 +84,8 @@ const EnvSchema = z.object({
   FEATURE_EXECUTION_EDGE: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_REALTIME_SSE: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_ANALYTICS_QUERY: z.enum(["true", "false"]).default("false"),
+  FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT: z.enum(["true", "false"]).default("false"),
+  COMMAND_CENTER_MAX_RESPONSE_BYTES: z.coerce.number().int().min(16 * 1024).max(512 * 1024).default(128 * 1024),
   EXECUTION_EDGE_ORIGIN: ServiceOriginSchema.default("https://portal-execution-edge:8443"),
   EXECUTION_EDGE_ENVIRONMENT: z.enum(["paper", "sandbox", "live"]).default("paper"),
   EXECUTION_EDGE_PRIVATE_KEY_FILE: z.preprocess(

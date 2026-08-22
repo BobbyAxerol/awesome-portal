@@ -1,0 +1,52 @@
+{
+  "schema_version": "execution.command-center-snapshot.v1",
+  "record_authority": "PORTAL",
+  "delivery_profile": "fixture",
+  "workspace_id": "ws_fixture",
+  "read_at": "2026-08-22T12:00:00.000Z",
+  "actor": { "user_id": "user_bobby", "username": "bobby", "roles": ["ADMIN"] },
+  "mode": "DEGRADED",
+  "snapshot": { "projection_epoch": null, "projection_sequence": null, "cursor": null, "stream_available": false, "resnapshot_not_before": null },
+  "panels": {
+    "needs_you": {
+      "panel_state": "partial", "authority": "DERIVED", "as_of": "2026-08-22T11:59:59.000Z", "freshness_state": "UNKNOWN", "formula_version": "command-center.triage-rank.v1", "exact_total": false, "total_count": null, "observed_total_count": 1, "returned_count": 1, "limit": 10, "truncated": null,
+      "sources": [
+        { "source": "PORTAL_GOVERNANCE", "authority": "PORTAL", "availability": "AVAILABLE", "reason": null, "as_of": "2026-08-22T11:59:59.000Z", "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "EVENT_SOURCED", "poll_interval_ms": null, "freshness_state": "OK", "age_seconds": 1, "lag_ms": 0, "capability_snapshot_id": null, "delivery_profile": "fixture" },
+        { "source": "EXECUTION_INCIDENTS", "authority": "EXECUTION", "availability": "UNAVAILABLE", "reason": "INCIDENT_SOURCE_NOT_COMMISSIONED", "as_of": null, "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "capability_snapshot_id": null, "delivery_profile": "fixture" },
+        { "source": "EXECUTION_OPERATIONS", "authority": "EXECUTION", "availability": "ERROR", "reason": "OPERATION_SOURCE_READ_FAILED", "as_of": null, "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "capability_snapshot_id": null, "delivery_profile": "fixture" }
+      ],
+      "items": [
+        { "id": "AP-352", "kind": "APPROVAL", "title": "Carry v3.2", "summary": "R2 · capital review", "severity": "HIGH", "sla_state": "OVERDUE", "sla_due_at": "2026-08-22T11:30:00.000Z", "created_at": "2026-08-21T12:00:00.000Z", "updated_at": "2026-08-22T11:59:59.000Z", "authority": "PORTAL", "as_of": "2026-08-22T11:59:59.000Z", "href": "/governance/approvals/AP-352/r2", "action_label": "Review", "rank": 1, "age_seconds": 86400 }
+      ]
+    },
+    "fleet_health": {
+      "panel_state": "unavailable", "authority": "EXECUTION", "as_of": null, "freshness_state": "UNKNOWN", "exact_total": false, "total_deployments": null,
+      "source": { "source": "EXECUTION_FLEET", "authority": "EXECUTION", "availability": "UNAVAILABLE", "reason": "FLEET_SOURCE_NOT_COMMISSIONED", "as_of": null, "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "capability_snapshot_id": null, "delivery_profile": "fixture" },
+      "cells": [
+        { "code": "LIVE_FULL", "label": "Live", "value": null, "href": "/deployments/live" },
+        { "code": "LIVE_CANARY", "label": "Canary", "value": null, "href": "/deployments/live?stage=canary" },
+        { "code": "SANDBOX", "label": "Sandbox", "value": null, "href": "/deployments/sandbox" },
+        { "code": "PAPER", "label": "Paper", "value": null, "href": "/deployments/paper" },
+        { "code": "BROKER_SYNC_ISSUES", "label": "Broker sync", "value": null, "href": "/execution/operations?filter=broker_sync" },
+        { "code": "OPEN_FINDINGS", "label": "Findings", "value": null, "href": "/execution/operations?filter=findings" }
+      ]
+    },
+    "pinned_watchlist": {
+      "panel_state": "partial", "authority": "PORTAL", "as_of": "2026-08-22T10:00:00.000Z", "freshness_state": "UNKNOWN", "exact_total": true, "total_count": 1, "limit": 5,
+      "items": [
+        { "slot": 1, "entity_type": "DEPLOYMENT", "entity_id": "dep_88", "label": "Carry v3.2", "href": "/deployments/paper/dep_88", "pinned_at": "2026-08-22T10:00:00.000Z", "target_label": null, "target_state": "unavailable", "target_authority": "EXECUTION", "target_as_of": null, "target_freshness_state": "UNKNOWN" }
+      ]
+    },
+    "today": {
+      "panel_state": "partial", "authority": "DERIVED", "as_of": "2026-08-22T11:59:59.000Z", "freshness_state": "UNKNOWN", "exact_total": false, "total_count": null, "observed_total_count": 1, "returned_count": 1, "limit": 12, "truncated": null,
+      "sources": [
+        { "source": "PORTAL_GOVERNANCE", "authority": "PORTAL", "availability": "AVAILABLE", "reason": null, "as_of": "2026-08-22T11:59:59.000Z", "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "EVENT_SOURCED", "poll_interval_ms": null, "freshness_state": "OK", "age_seconds": 1, "lag_ms": 0, "capability_snapshot_id": null, "delivery_profile": "fixture" },
+        { "source": "EXECUTION_OPERATIONS", "authority": "EXECUTION", "availability": "UNAVAILABLE", "reason": "OPERATION_SOURCE_NOT_COMMISSIONED", "as_of": null, "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "capability_snapshot_id": null, "delivery_profile": "fixture" }
+      ],
+      "items": [
+        { "id": "review:AP-352", "kind": "REVIEW_DUE", "label": "R2 review · Carry v3.2", "scheduled_at": "2026-08-22T12:30:00.000Z", "authority": "PORTAL", "as_of": "2026-08-22T11:59:59.000Z", "href": "/governance/approvals/AP-352/r2" }
+      ]
+    }
+  },
+  "warnings": [{ "code": "COMMAND_CENTER_SOURCE_GAP", "message": "One or more Command Center sources are unavailable; missing totals are not reported as zero." }]
+}

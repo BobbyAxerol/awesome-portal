@@ -1,0 +1,235 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal Execution Command Center Snapshot API",
+    "version": "1.0.0",
+    "description": "Same-origin, session-guarded and workspace-bound dark snapshot. It composes Portal governance with explicitly unavailable Execution sources; it never activates SSE, source reads or Trading System commands."
+  },
+  "paths": {
+    "/api/v1/execution/command-center": {
+      "get": {
+        "operationId": "executionCommandCenterSnapshot",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": { "$ref": "#/components/schemas/Identifier" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bounded dark Command Center snapshot",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommandCenterSnapshot" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "Problem": {
+        "description": "Safe Portal error",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+      }
+    },
+    "schemas": {
+      "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{1,128}$" },
+      "DateTime": { "type": "string", "format": "date-time" },
+      "NullableDateTime": { "oneOf": [{ "$ref": "#/components/schemas/DateTime" }, { "type": "null" }] },
+      "Authority": { "type": "string", "enum": ["PORTAL", "EXECUTION", "BROKER", "DERIVED"] },
+      "Freshness": { "type": "string", "enum": ["OK", "AGING", "STALE", "PAUSED", "UNKNOWN"] },
+      "PanelState": { "type": "string", "enum": ["ready", "empty", "partial", "stale", "unavailable"] },
+      "Problem": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["error", "request_id"],
+        "properties": {
+          "error": { "type": "object", "required": ["code", "message"], "properties": { "code": { "type": "string" }, "message": { "type": "string" } } },
+          "request_id": { "type": "string" }
+        }
+      },
+      "SourceStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source", "authority", "availability", "reason", "as_of", "source_cursor", "source_sequence", "projection_epoch", "projection_sequence", "source_completeness", "poll_interval_ms", "freshness_state", "age_seconds", "lag_ms", "capability_snapshot_id", "delivery_profile"],
+        "properties": {
+          "source": { "type": "string", "enum": ["PORTAL_GOVERNANCE", "EXECUTION_INCIDENTS", "EXECUTION_OPERATIONS", "EXECUTION_FLEET"] },
+          "authority": { "$ref": "#/components/schemas/Authority" },
+          "availability": { "type": "string", "enum": ["AVAILABLE", "UNAVAILABLE", "ERROR"] },
+          "reason": { "type": ["string", "null"] },
+          "as_of": { "$ref": "#/components/schemas/NullableDateTime" },
+          "source_cursor": { "type": ["string", "null"] },
+          "source_sequence": { "type": ["integer", "null"], "format": "int64" },
+          "projection_epoch": { "type": ["string", "null"] },
+          "projection_sequence": { "type": ["integer", "null"], "format": "int64" },
+          "source_completeness": { "type": "string", "enum": ["EVENT_SOURCED", "POLL_BOUNDED", "UNKNOWN"] },
+          "poll_interval_ms": { "type": ["integer", "null"] },
+          "freshness_state": { "$ref": "#/components/schemas/Freshness" },
+          "age_seconds": { "type": ["integer", "null"] },
+          "lag_ms": { "type": ["integer", "null"], "format": "int64" },
+          "capability_snapshot_id": { "type": ["string", "null"] },
+          "delivery_profile": { "type": "string", "const": "fixture" }
+        }
+      },
+      "TriageItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "title", "summary", "severity", "sla_state", "sla_due_at", "created_at", "updated_at", "authority", "as_of", "href", "action_label", "rank", "age_seconds"],
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Identifier" },
+          "kind": { "type": "string", "enum": ["INCIDENT", "APPROVAL", "OPERATION"] },
+          "title": { "type": "string" },
+          "summary": { "type": "string" },
+          "severity": { "type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"] },
+          "sla_state": { "type": "string", "enum": ["OVERDUE", "DUE_SOON", "ON_TRACK", "NONE"] },
+          "sla_due_at": { "$ref": "#/components/schemas/NullableDateTime" },
+          "created_at": { "$ref": "#/components/schemas/DateTime" },
+          "updated_at": { "$ref": "#/components/schemas/DateTime" },
+          "authority": { "$ref": "#/components/schemas/Authority" },
+          "as_of": { "$ref": "#/components/schemas/DateTime" },
+          "href": { "type": "string" },
+          "action_label": { "type": "string" },
+          "rank": { "type": "integer", "minimum": 1, "maximum": 10 },
+          "age_seconds": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "NeedsYouPanel": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["panel_state", "authority", "as_of", "freshness_state", "formula_version", "exact_total", "total_count", "observed_total_count", "returned_count", "limit", "truncated", "sources", "items"],
+        "properties": {
+          "panel_state": { "$ref": "#/components/schemas/PanelState" },
+          "authority": { "type": "string", "const": "DERIVED" },
+          "as_of": { "$ref": "#/components/schemas/NullableDateTime" },
+          "freshness_state": { "$ref": "#/components/schemas/Freshness" },
+          "formula_version": { "type": "string", "const": "command-center.triage-rank.v1" },
+          "exact_total": { "type": "boolean" },
+          "total_count": { "type": ["integer", "null"], "format": "int64" },
+          "observed_total_count": { "type": "integer", "format": "int64" },
+          "returned_count": { "type": "integer" },
+          "limit": { "type": "integer", "const": 10 },
+          "truncated": { "type": ["boolean", "null"] },
+          "sources": { "type": "array", "items": { "$ref": "#/components/schemas/SourceStatus" } },
+          "items": { "type": "array", "maxItems": 10, "items": { "$ref": "#/components/schemas/TriageItem" } }
+        }
+      },
+      "FleetCell": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "label", "value", "href"],
+        "properties": {
+          "code": { "type": "string", "enum": ["LIVE_FULL", "LIVE_CANARY", "SANDBOX", "PAPER", "BROKER_SYNC_ISSUES", "OPEN_FINDINGS"] },
+          "label": { "type": "string" },
+          "value": { "type": ["integer", "null"], "format": "int64" },
+          "href": { "type": "string" }
+        }
+      },
+      "FleetPanel": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["panel_state", "authority", "as_of", "freshness_state", "exact_total", "total_deployments", "source", "cells"],
+        "properties": {
+          "panel_state": { "$ref": "#/components/schemas/PanelState" },
+          "authority": { "type": "string", "const": "EXECUTION" },
+          "as_of": { "$ref": "#/components/schemas/NullableDateTime" },
+          "freshness_state": { "$ref": "#/components/schemas/Freshness" },
+          "exact_total": { "type": "boolean" },
+          "total_deployments": { "type": ["integer", "null"], "format": "int64" },
+          "source": { "$ref": "#/components/schemas/SourceStatus" },
+          "cells": { "type": "array", "minItems": 6, "maxItems": 6, "items": { "$ref": "#/components/schemas/FleetCell" } }
+        }
+      },
+      "Pin": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["slot", "entity_type", "entity_id", "label", "href", "pinned_at", "target_label", "target_state", "target_authority", "target_as_of", "target_freshness_state"],
+        "properties": {
+          "slot": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "entity_type": { "type": "string", "const": "DEPLOYMENT" },
+          "entity_id": { "$ref": "#/components/schemas/Identifier" },
+          "label": { "type": "string" },
+          "href": { "type": "string" },
+          "pinned_at": { "$ref": "#/components/schemas/DateTime" },
+          "target_label": { "type": ["string", "null"] },
+          "target_state": { "type": "string", "enum": ["available", "unavailable"] },
+          "target_authority": { "type": "string", "const": "EXECUTION" },
+          "target_as_of": { "$ref": "#/components/schemas/NullableDateTime" },
+          "target_freshness_state": { "$ref": "#/components/schemas/Freshness" }
+        }
+      },
+      "PinnedPanel": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["panel_state", "authority", "as_of", "freshness_state", "exact_total", "total_count", "limit", "items"],
+        "properties": {
+          "panel_state": { "$ref": "#/components/schemas/PanelState" },
+          "authority": { "type": "string", "const": "PORTAL" },
+          "as_of": { "$ref": "#/components/schemas/NullableDateTime" },
+          "freshness_state": { "$ref": "#/components/schemas/Freshness" },
+          "exact_total": { "type": "boolean", "const": true },
+          "total_count": { "type": "integer", "maximum": 5 },
+          "limit": { "type": "integer", "const": 5 },
+          "items": { "type": "array", "maxItems": 5, "items": { "$ref": "#/components/schemas/Pin" } }
+        }
+      },
+      "TodayItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "label", "scheduled_at", "authority", "as_of", "href"],
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Identifier" },
+          "kind": { "type": "string", "enum": ["REVIEW_DUE", "CONDITION_EXPIRY", "VERIFIED_OPERATION"] },
+          "label": { "type": "string" },
+          "scheduled_at": { "$ref": "#/components/schemas/DateTime" },
+          "authority": { "$ref": "#/components/schemas/Authority" },
+          "as_of": { "$ref": "#/components/schemas/DateTime" },
+          "href": { "type": "string" }
+        }
+      },
+      "TodayPanel": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["panel_state", "authority", "as_of", "freshness_state", "exact_total", "total_count", "observed_total_count", "returned_count", "limit", "truncated", "sources", "items"],
+        "properties": {
+          "panel_state": { "$ref": "#/components/schemas/PanelState" },
+          "authority": { "type": "string", "const": "DERIVED" },
+          "as_of": { "$ref": "#/components/schemas/NullableDateTime" },
+          "freshness_state": { "$ref": "#/components/schemas/Freshness" },
+          "exact_total": { "type": "boolean" },
+          "total_count": { "type": ["integer", "null"], "format": "int64" },
+          "observed_total_count": { "type": "integer", "format": "int64" },
+          "returned_count": { "type": "integer" },
+          "limit": { "type": "integer", "const": 12 },
+          "truncated": { "type": ["boolean", "null"] },
+          "sources": { "type": "array", "items": { "$ref": "#/components/schemas/SourceStatus" } },
+          "items": { "type": "array", "maxItems": 12, "items": { "$ref": "#/components/schemas/TodayItem" } }
+        }
+      },
+      "CommandCenterSnapshot": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["schema_version", "record_authority", "delivery_profile", "workspace_id", "read_at", "actor", "mode", "snapshot", "panels", "warnings"],
+        "properties": {
+          "schema_version": { "type": "string", "const": "execution.command-center-snapshot.v1" },
+          "record_authority": { "type": "string", "const": "PORTAL" },
+          "delivery_profile": { "type": "string", "const": "fixture" },
+          "workspace_id": { "$ref": "#/components/schemas/Identifier" },
+          "read_at": { "$ref": "#/components/schemas/DateTime" },
+          "actor": { "type": "object", "additionalProperties": false, "required": ["user_id", "username", "roles"], "properties": { "user_id": { "$ref": "#/components/schemas/Identifier" }, "username": { "type": "string" }, "roles": { "type": "array", "items": { "type": "string", "enum": ["ADMIN", "USER"] } } } },
+          "mode": { "type": "string", "enum": ["BUSY", "QUIET", "DEGRADED"] },
+          "snapshot": { "type": "object", "additionalProperties": false, "required": ["projection_epoch", "projection_sequence", "cursor", "stream_available", "resnapshot_not_before"], "properties": { "projection_epoch": { "type": "null" }, "projection_sequence": { "type": "null" }, "cursor": { "type": "null" }, "stream_available": { "type": "boolean", "const": false }, "resnapshot_not_before": { "type": "null" } } },
+          "panels": { "type": "object", "additionalProperties": false, "required": ["needs_you", "fleet_health", "pinned_watchlist", "today"], "properties": { "needs_you": { "$ref": "#/components/schemas/NeedsYouPanel" }, "fleet_health": { "$ref": "#/components/schemas/FleetPanel" }, "pinned_watchlist": { "$ref": "#/components/schemas/PinnedPanel" }, "today": { "$ref": "#/components/schemas/TodayPanel" } } },
+          "warnings": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": { "code": { "type": "string" }, "message": { "type": "string" } } } }
+        }
+      }
+    }
+  }
+}

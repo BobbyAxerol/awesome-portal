@@ -1,0 +1,43 @@
+{
+  "schema_version": "execution.command-center-snapshot.v1",
+  "record_authority": "PORTAL",
+  "delivery_profile": "fixture",
+  "workspace_id": "ws_fixture",
+  "read_at": "2026-08-22T12:00:00.000Z",
+  "actor": { "user_id": "user_bobby", "username": "bobby", "roles": ["ADMIN"] },
+  "mode": "DEGRADED",
+  "snapshot": { "projection_epoch": null, "projection_sequence": null, "cursor": null, "stream_available": false, "resnapshot_not_before": null },
+  "panels": {
+    "needs_you": {
+      "panel_state": "unavailable", "authority": "DERIVED", "as_of": null, "freshness_state": "UNKNOWN", "formula_version": "command-center.triage-rank.v1", "exact_total": false, "total_count": null, "observed_total_count": 0, "returned_count": 0, "limit": 10, "truncated": null,
+      "sources": [
+        { "source": "PORTAL_GOVERNANCE", "authority": "PORTAL", "availability": "ERROR", "reason": "GOVERNANCE_READ_FAILED", "as_of": null, "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "capability_snapshot_id": null, "delivery_profile": "fixture" },
+        { "source": "EXECUTION_INCIDENTS", "authority": "EXECUTION", "availability": "UNAVAILABLE", "reason": "INCIDENT_SOURCE_NOT_COMMISSIONED", "as_of": null, "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "capability_snapshot_id": null, "delivery_profile": "fixture" },
+        { "source": "EXECUTION_OPERATIONS", "authority": "EXECUTION", "availability": "UNAVAILABLE", "reason": "OPERATION_SOURCE_NOT_COMMISSIONED", "as_of": null, "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "capability_snapshot_id": null, "delivery_profile": "fixture" }
+      ],
+      "items": []
+    },
+    "fleet_health": {
+      "panel_state": "unavailable", "authority": "EXECUTION", "as_of": null, "freshness_state": "UNKNOWN", "exact_total": false, "total_deployments": null,
+      "source": { "source": "EXECUTION_FLEET", "authority": "EXECUTION", "availability": "UNAVAILABLE", "reason": "FLEET_SOURCE_NOT_COMMISSIONED", "as_of": null, "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "capability_snapshot_id": null, "delivery_profile": "fixture" },
+      "cells": [
+        { "code": "LIVE_FULL", "label": "Live", "value": null, "href": "/deployments/live" },
+        { "code": "LIVE_CANARY", "label": "Canary", "value": null, "href": "/deployments/live?stage=canary" },
+        { "code": "SANDBOX", "label": "Sandbox", "value": null, "href": "/deployments/sandbox" },
+        { "code": "PAPER", "label": "Paper", "value": null, "href": "/deployments/paper" },
+        { "code": "BROKER_SYNC_ISSUES", "label": "Broker sync", "value": null, "href": "/execution/operations?filter=broker_sync" },
+        { "code": "OPEN_FINDINGS", "label": "Findings", "value": null, "href": "/execution/operations?filter=findings" }
+      ]
+    },
+    "pinned_watchlist": { "panel_state": "empty", "authority": "PORTAL", "as_of": null, "freshness_state": "UNKNOWN", "exact_total": true, "total_count": 0, "limit": 5, "items": [] },
+    "today": {
+      "panel_state": "unavailable", "authority": "DERIVED", "as_of": null, "freshness_state": "UNKNOWN", "exact_total": false, "total_count": null, "observed_total_count": 0, "returned_count": 0, "limit": 12, "truncated": null,
+      "sources": [
+        { "source": "PORTAL_GOVERNANCE", "authority": "PORTAL", "availability": "ERROR", "reason": "GOVERNANCE_READ_FAILED", "as_of": null, "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "capability_snapshot_id": null, "delivery_profile": "fixture" },
+        { "source": "EXECUTION_OPERATIONS", "authority": "EXECUTION", "availability": "UNAVAILABLE", "reason": "OPERATION_SOURCE_NOT_COMMISSIONED", "as_of": null, "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "capability_snapshot_id": null, "delivery_profile": "fixture" }
+      ],
+      "items": []
+    }
+  },
+  "warnings": [{ "code": "COMMAND_CENTER_SOURCE_GAP", "message": "One or more Command Center sources are unavailable; missing totals are not reported as zero." }]
+}
