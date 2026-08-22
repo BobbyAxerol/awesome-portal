@@ -61,6 +61,34 @@ export interface InboxResult {
  * applied anyway. `applyToken` is null exactly when the server declined to
  * issue one, which is the same condition.
  */
+/**
+ * The three outcomes Paper Exit speaks (`Decision.outcome` in
+ * `execution-governance-paper-exit.v1`). Kept as a predicate rather than a
+ * second port method because the Control API mounts one plan route and
+ * discriminates on the body — so the branch belongs to the payload, not the
+ * call site.
+ */
+export type PaperExitDecision = "PROMOTE" | "EXTEND_OBSERVATION" | "REJECT";
+
+const PAPER_EXIT_DECISIONS: readonly string[] = ["PROMOTE", "EXTEND_OBSERVATION", "REJECT"];
+
+export function isPaperExitDecision(decision: string): decision is PaperExitDecision {
+  return PAPER_EXIT_DECISIONS.includes(decision);
+}
+
+/**
+ * What each outcome leaves behind (`Decision.resulting_state`). Rendered so a
+ * reviewer reads the consequence, not just the verb.
+ */
+export const PAPER_EXIT_RESULTING_STATE: Record<PaperExitDecision, string> = {
+  PROMOTE: "PROMOTION_AUTHORIZED",
+  EXTEND_OBSERVATION: "EXTENDED",
+  REJECT: "REJECTED_TO_PAPER_HELD",
+};
+
+/** The schema pins the extension to one term; it is not a free number. */
+export const PAPER_EXIT_EXTENSION_DAYS = 14;
+
 export interface DecisionPlan {
   operationId: string;
   applyToken: string | null;

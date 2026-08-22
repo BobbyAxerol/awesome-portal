@@ -192,10 +192,29 @@ export function readChecklistItem(raw: unknown): ChecklistItem | null {
  * and a floor can only make things stricter. It must never permit something the
  * server refused. That asymmetry is the whole of rule §3.5 applied here.
  */
+/**
+ * The server's verdict on which controls this actor may use.
+ *
+ * Five capabilities, not three, because Paper Exit does not speak
+ * approve/deny: its outcomes are PROMOTE, EXTEND_OBSERVATION and REJECT
+ * (`execution-governance-paper-exit.v1`, `Decision.outcome`). Extending an
+ * observation window and rejecting to PAPER_HELD are separate authorities from
+ * approving a promotion, and a reviewer can hold one without the others.
+ *
+ * `separationOfDuties` is reported separately from the five booleans because it
+ * explains *why* they are false. A button disabled with no reason and a button
+ * disabled because you are the person who requested it are different messages.
+ */
 export interface Eligibility {
   canApprove: boolean;
   canApproveWithCondition: boolean;
   canDeny: boolean;
+  /** Paper Exit only. Extend the observation window by the policy's fixed term. */
+  canExtendObservation: boolean;
+  /** Paper Exit only. Send the deployment back to PAPER_HELD. */
+  canReject: boolean;
+  /** `VIOLATION` when this actor may not decide their own request. */
+  separationOfDuties: "OK" | "VIOLATION" | null;
 }
 
 /** Absent eligibility is not permission. Deny-by-default, as everywhere else. */
@@ -203,15 +222,24 @@ export const NO_ELIGIBILITY: Eligibility = {
   canApprove: false,
   canApproveWithCondition: false,
   canDeny: false,
+  canExtendObservation: false,
+  canReject: false,
+  separationOfDuties: null,
 };
 
 export function readEligibility(raw: unknown): Eligibility {
   const o = obj(raw);
   if (!o) return NO_ELIGIBILITY;
+  // `=== true` throughout: a missing flag, a string "true", or a 1 are all
+  // absence of permission, not permission.
+  const sod = o.separation_of_duties;
   return {
     canApprove: o.can_approve === true,
     canApproveWithCondition: o.can_approve_with_condition === true,
     canDeny: o.can_deny === true,
+    canExtendObservation: o.can_extend_observation === true,
+    canReject: o.can_reject === true,
+    separationOfDuties: sod === "OK" || sod === "VIOLATION" ? sod : null,
   };
 }
 

@@ -1867,7 +1867,14 @@ const CHECKLIST = [
  * somebody with no permission, which is correct but is not what these
  * particular tests are about — they exercise the *local* locks.
  */
-const ALLOWED = { canApprove: true, canApproveWithCondition: true, canDeny: true };
+const ALLOWED = {
+  canApprove: true,
+  canApproveWithCondition: true,
+  canDeny: true,
+  canExtendObservation: true,
+  canReject: true,
+  separationOfDuties: "OK" as const,
+};
 
 function gate(over: Record<string, unknown> = {}) {
   const creator = (over.creator as string) ?? "Minh";
@@ -3095,7 +3102,7 @@ describe("EX-BE-05a field map — reconciled against what codex published", () =
     expect(readGateR1Detail(wire)?.decided?.by).toBe("Lan");
   });
 
-  it("reads the three eligibility booleans separately", () => {
+  it("reads every eligibility capability separately, and denies the ones absent", () => {
     const d = readGateR1Detail({
       data: {
         ...wire.data,
@@ -3106,6 +3113,11 @@ describe("EX-BE-05a field map — reconciled against what codex published", () =
       canApprove: false,
       canApproveWithCondition: false,
       canDeny: true,
+      // R1 publishes no Paper Exit capability, and an unpublished capability is
+      // withheld rather than assumed.
+      canExtendObservation: false,
+      canReject: false,
+      separationOfDuties: null,
     });
   });
 
@@ -3115,6 +3127,9 @@ describe("EX-BE-05a field map — reconciled against what codex published", () =
       canApprove: false,
       canApproveWithCondition: false,
       canDeny: false,
+      canExtendObservation: false,
+      canReject: false,
+      separationOfDuties: null,
     });
   });
 });
@@ -4423,6 +4438,9 @@ describe("permission is never inferred — deny by default", () => {
       canApprove: false,
       canApproveWithCondition: false,
       canDeny: true,
+      canExtendObservation: false,
+      canReject: false,
+      separationOfDuties: null,
     });
     const exit = readPaperExitDetail({
       data: {

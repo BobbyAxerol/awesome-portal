@@ -267,7 +267,18 @@ const EXIT_DETAIL: Record<string, unknown> = {
   gate_met: true,
   gate_summary: "30 / 30 days · 312 / 300 trades · 2 / 2 restart cycles",
   policy_id: "obs_29",
-  eligibility: { can_approve: true, can_approve_with_condition: true, can_deny: true },
+  // The Paper Exit vocabulary, in full. `can_approve_with_condition` is carried
+  // because the payload publishes it, not because this screen offers it — the
+  // three outcomes here are PROMOTE, EXTEND_OBSERVATION and REJECT.
+  eligibility: {
+    can_approve: true,
+    can_approve_with_condition: true,
+    can_deny: true,
+    can_extend_observation: true,
+    can_reject: true,
+    separation_of_duties: "OK",
+    locks: [],
+  },
   recommendation: "Approve promotion with the carried capacity condition.",
   lineage: [
     { label: "artifact", value: "sha256:41bb7d…c4" },

@@ -32,7 +32,7 @@ import type {
   OperationSnapshot,
   Result,
 } from "./ports";
-import { unavailable } from "./ports";
+import { isPaperExitDecision, unavailable } from "./ports";
 import type { CapitalPreviewInput } from "./ports";
 import type { components } from "@portal/contracts-analytics";
 
@@ -49,12 +49,47 @@ async function get(path: string, signal?: AbortSignal): Promise<Response> {
   });
 }
 
+/**
+ * Double-submit CSRF (`GovernanceController.assertMutationSecurity`).
+ *
+ * The server requires three things of every mutation, and all three fail
+ * closed with a 403: an allowed `Origin`, an `x-portal-csrf` header, and a
+ * `__Host-portal_csrf` cookie whose value equals that header. The browser
+ * sends the Origin and the cookie on its own; the header is the half only
+ * script can add, which is exactly what makes the pair proof that a script on
+ * this origin issued the request.
+ *
+ * The cookie is deliberately NOT `HttpOnly` — it is a token to be echoed, not
+ * a secret. The secret is its hash, held in the session server-side.
+ */
+export const CSRF_COOKIE = "__Host-portal_csrf";
+export const CSRF_HEADER = "x-portal-csrf";
+
+export function csrfToken(cookieSource: string = typeof document === "undefined" ? "" : document.cookie): string | null {
+  for (const part of cookieSource.split(";")) {
+    const eq = part.indexOf("=");
+    if (eq < 0) continue;
+    if (part.slice(0, eq).trim() !== CSRF_COOKIE) continue;
+    const value = part.slice(eq + 1).trim();
+    return value.length > 0 ? value : null;
+  }
+  return null;
+}
+
 async function post(path: string, body: unknown, signal?: AbortSignal): Promise<Response> {
+  const token = csrfToken();
   return fetch(`${BASE}${path}`, {
     method: "POST",
     signal,
     credentials: "same-origin",
-    headers: { accept: "application/json", "content-type": "application/json" },
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+      // Omitted rather than sent empty when there is no cookie: an empty header
+      // is a token that fails comparison, and the 403 that follows would read
+      // as "your token is wrong" instead of "you have no session".
+      ...(token ? { [CSRF_HEADER]: token } : {}),
+    },
     body: JSON.stringify(body),
   });
 }
@@ -224,6 +259,16 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       // The schema refuses APPROVE_WITH_CONDITION without a condition, and
       // refuses a condition with anything else. Caught here so the reviewer
       // sees a sentence rather than a 422.
+      // The schema's own floor is eight characters. Enforced here so the
+      // reviewer reads a sentence instead of a 422 they cannot act on.
+      if (input.reason.trim().length < 8) {
+        return unavailable("A decision needs a reason of at least eight characters.");
+      }
+      // A condition belongs to the R1/R2 vocabulary only. Paper Exit has three
+      // outcomes and no condition field at all.
+      if (isPaperExitDecision(input.decision) && (input.condition?.trim().length ?? 0) > 0) {
+        return unavailable("A Paper Exit decision takes no condition.");
+      }
       const wantsCondition = input.decision === "APPROVE_WITH_CONDITION";
       const condition = input.condition?.trim() ?? "";
       if (wantsCondition && condition.length < 8) {
@@ -233,25 +278,50 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
         return unavailable("A condition may only accompany approve-with-condition.");
       }
 
-      const response = await post(
-        `/governance/approvals/${encodeURIComponent(input.approvalId)}/decision-plans`,
-        {
-          schema_version: "governance.r1-decision-plan-request.v1",
-          workspace_id: input.workspaceId,
-          request_key: input.requestKey,
-          command_type: "GOVERNANCE_R1_DECISION",
-          command_version: 1,
-          target: { approval_id: input.approvalId },
-          expected_approval_version: input.expectedApprovalVersion,
-          payload: {
-            decision: input.decision,
-            reason: input.reason,
-            ...(wantsCondition ? { condition } : {}),
-            evidence_hashes: [...(input.evidenceHashes ?? [])],
-          },
-        },
-        signal,
-      );
+      // ONE route, discriminated by body shape.
+      //
+      // `GovernanceController.plan` is mounted at `POST /commands/plans` and
+      // tries `PaperExitDecisionPlanRequestSchema` first, falling back to
+      // `DecisionPlanRequestSchema`. There is no
+      // `/governance/approvals/{id}/decision-plans` — this adapter invented it,
+      // and every R1 and R2 decision would have 404ed. Corrected against
+      // `apps/control-api/src/governance/governance.controller.ts`.
+      const paperExit = isPaperExitDecision(input.decision);
+      const planBody = paperExit
+        ? {
+            schema_version: "governance.paper-exit-decision-plan-request.v1",
+            workspace_id: input.workspaceId,
+            request_key: input.requestKey,
+            command_type: "GOVERNANCE_PAPER_EXIT_DECISION",
+            command_version: 1,
+            target: { review_id: input.approvalId },
+            expected_review_version: input.expectedApprovalVersion,
+            payload: {
+              decision: input.decision,
+              reason: input.reason,
+              // The schema pins this: exactly 14 for an extension, exactly null
+              // for anything else. Sending 0, or omitting it, is a 422.
+              extension_days: input.decision === "EXTEND_OBSERVATION" ? 14 : null,
+              evidence_hashes: [...(input.evidenceHashes ?? [])],
+            },
+          }
+        : {
+            schema_version: "governance.r1-decision-plan-request.v1",
+            workspace_id: input.workspaceId,
+            request_key: input.requestKey,
+            command_type: "GOVERNANCE_R1_DECISION",
+            command_version: 1,
+            target: { approval_id: input.approvalId },
+            expected_approval_version: input.expectedApprovalVersion,
+            payload: {
+              decision: input.decision,
+              reason: input.reason,
+              ...(wantsCondition ? { condition } : {}),
+              evidence_hashes: [...(input.evidenceHashes ?? [])],
+            },
+          };
+
+      const response = await post("/commands/plans", planBody, signal);
       if (response.status === 409) {
         // Two different 409s reach this route and they need different words. A
         // request-key conflict means this key was used with another payload —

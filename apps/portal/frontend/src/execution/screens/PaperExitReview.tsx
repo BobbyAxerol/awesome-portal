@@ -20,6 +20,7 @@
  */
 import type { ReactNode } from "react";
 
+import type { Eligibility } from "../api/rows";
 import type { ApprovalId, DeploymentId, EvidenceMark, PanelStatus, Sla } from "../contracts";
 import { StatusChip } from "../components/badges";
 import { ConditionList, type TypedCondition } from "../components/conditions";
@@ -190,7 +191,7 @@ export function PaperExitReview({
   partialReason?: string;
   decided?: { outcome: ExitOutcome; by: string; at: string } | null;
   /** What the server says this actor may do. Absent is not permission. */
-  eligibility?: { canApprove: boolean; canApproveWithCondition: boolean; canDeny: boolean };
+  eligibility?: Eligibility | null;
   onDecide?: (outcome: ExitOutcome) => void;
 }) {
   if (status !== "ok" && status !== "partial" && status !== "stale") {
@@ -203,18 +204,51 @@ export function PaperExitReview({
   }
 
   const blocking = panels.flatMap((p) => p.findings).filter((f) => f.outcome === "fail").length;
+
+  // A panel that could not be read contributes NO findings, and zero blocking
+  // findings reads as "nothing blocks". That is the quiet failure this screen
+  // is most exposed to: an unavailable risk panel and a clean risk panel look
+  // identical to the promote button.
+  //
+  // `ok` and `empty` are answers — "here is the evidence" and "we looked and
+  // there is none". Every other state means the question was not answered, and
+  // an unanswered question cannot support a promotion.
+  const unread = panels.filter((p) => p.status != null && p.status !== "ok" && p.status !== "empty");
   const carried = panels
     .flatMap((p) => p.findings)
     .filter((f) => f.outcome === "insufficient" && f.carriesTo);
 
-  // Promotion needs the server's gate AND no blocking finding. Extend and
-  // reject are always available: a reviewer looking at an unmet gate must be
-  // able to act on it, and both of those actions are safe.
-  // Server eligibility ANDed with the local gate. Absent is not permission —
-  // the screen previously enabled promotion on gate evidence alone, so an
-  // actor the server would refuse still saw a live button.
+  // Two different reasons a button can be dead, and they are not
+  // interchangeable.
+  //
+  //   * The GATE is evidence: the observation window is short, a finding
+  //     blocks. It stops promotion and nothing else — a reviewer looking at an
+  //     unmet gate must still be able to extend or reject, because those are
+  //     the two responses an unmet gate calls for.
+  //   * AUTHORITY is the server's verdict on this actor. It can stop any of the
+  //     three, including extend and reject. This screen used to treat those two
+  //     as unconditionally safe, which is true of their effect and false of
+  //     their permission: the requester deciding their own review is a
+  //     separation-of-duties violation whichever branch they pick.
+  //
+  // So the gate gates promotion, and eligibility gates all three.
+  //
+  // Evidence that is partial or stale at the review level blocks promotion for
+  // the same reason: the screen already says "absence of a finding is not a
+  // pass", and leaving the button live contradicts its own banner.
+  const evidenceIncomplete = status === "partial" || status === "stale" || unread.length > 0;
   const serverAllowsPromote = eligibility?.canApprove === true;
-  const promoteBlocked = !gateMet || blocking > 0 || !serverAllowsPromote;
+  const promoteBlocked = !gateMet || blocking > 0 || !serverAllowsPromote || evidenceIncomplete;
+  const extendBlocked = eligibility?.canExtendObservation !== true;
+  const rejectBlocked = eligibility?.canReject !== true;
+
+  // Absent eligibility and a refusal look the same to a reader, so say which.
+  const sodViolation = eligibility?.separationOfDuties === "VIOLATION";
+  const authorityNote = !eligibility
+    ? "No eligibility was published for this review, so no decision is offered. This is a missing answer, not a refusal."
+    : sodViolation
+      ? "Separation of duties — you may not decide a review you requested."
+      : null;
 
   return (
     <section className="exec-exit" aria-label={`Paper exit review ${reviewId}`}>
@@ -320,23 +354,56 @@ export function PaperExitReview({
           >
             {EXIT_OUTCOME.PROMOTE.label}
           </button>
-          {/* Never blocked. A reviewer facing an unmet gate must be able to act,
-              and extending or rejecting are both safe from any state. */}
-          <button type="button" className="exec-btn-ghost" onClick={() => onDecide?.("EXTEND_OBSERVATION")}>
+          {/* Not blocked by the gate — blocked only by authority. */}
+          <button
+            type="button"
+            className="exec-btn-ghost"
+            disabled={extendBlocked}
+            onClick={() => onDecide?.("EXTEND_OBSERVATION")}
+          >
             {EXIT_OUTCOME.EXTEND_OBSERVATION.label}
           </button>
-          <button type="button" className="exec-btn-ghost" onClick={() => onDecide?.("REJECT")}>
+          <button
+            type="button"
+            className="exec-btn-ghost"
+            disabled={rejectBlocked}
+            onClick={() => onDecide?.("REJECT")}
+          >
             {EXIT_OUTCOME.REJECT.label}
           </button>
         </div>
       )}
 
-      {promoteBlocked && !decided ? (
+      {!decided && (promoteBlocked || extendBlocked || rejectBlocked) ? (
         <div className="exec-disabled-reason">
-          {!gateMet ? "Promotion blocked — the observation gate is not met. " : null}
-          {blocking > 0
-            ? `Promotion blocked — ${blocking} blocking ${blocking === 1 ? "finding" : "findings"}.`
-            : null}
+          {authorityNote ? <div>{authorityNote}</div> : null}
+          {!gateMet ? <div>Promotion blocked — the observation gate is not met.</div> : null}
+          {blocking > 0 ? (
+            <div>
+              Promotion blocked — {blocking} blocking {blocking === 1 ? "finding" : "findings"}.
+            </div>
+          ) : null}
+          {unread.length > 0 ? (
+            <div>
+              Promotion blocked — {unread.length === 1 ? "this panel" : "these panels"} could not be
+              read: {unread.map((p) => p.title).join(", ")}. Extending or rejecting stays available.
+            </div>
+          ) : null}
+          {status === "partial" && unread.length === 0 ? (
+            <div>Promotion blocked — part of this evidence could not be read.</div>
+          ) : null}
+          {status === "stale" ? (
+            <div>Promotion blocked — this evidence is stale. Reload before deciding a promotion.</div>
+          ) : null}
+          {gateMet && blocking === 0 && !evidenceIncomplete && !serverAllowsPromote && !authorityNote ? (
+            <div>Promotion blocked — you do not hold authority to approve this promotion.</div>
+          ) : null}
+          {extendBlocked && !authorityNote ? (
+            <div>Extending the observation window is not available to you.</div>
+          ) : null}
+          {rejectBlocked && !authorityNote ? (
+            <div>Rejecting to PAPER_HELD is not available to you.</div>
+          ) : null}
         </div>
       ) : null}
 
