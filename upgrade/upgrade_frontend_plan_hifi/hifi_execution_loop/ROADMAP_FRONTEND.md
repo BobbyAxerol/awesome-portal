@@ -114,9 +114,27 @@ Codex giao lane này ngày 2026-08-22 (PHASE_TRACKER §24A.2).
 | B7 | Canonical `view` param + registry activation review | 1 | ⏳ |
 | B8 | Canonical plan/apply/poll route + policy Portal-governance-write riêng | 2 | ⏳ |
 | B9 | Dùng `portfolio_id`/`currency` sinh ra, bỏ default fixture | 3 | ✅ xong `8d8779a` |
-| B10 | Tiêu thụ SSE expiry/gap semantics đã publish | 9 | ⏳ chờ phase 9 |
+| B10 | Tiêu thụ SSE expiry/gap semantics đã publish | 9 | ⏳ chờ SSE parity |
 
-**Thứ tự tôi làm:** B3 → B4 → B5 (đóng phase 5) → B6 (chạm 3 phase) → B7, B8.
+**Lane Command Center — codex giao 2026-08-22 (PRE-IAM-03, tracker §24A.3).**
+Backend đã giao `GET /api/v1/execution/command-center` + schema
+`execution.command-center-snapshot.v1` + 5 fixture. Phase 9 chuyển từ *chờ
+backend* sang **việc của tôi**.
+
+| # | Việc | Trạng thái |
+|---|---|---|
+| B11 | Dựng màn Command Center (5a) trên Lane A | ⏳ tiếp theo sau phase 5 |
+| B12 | Map đủ 5 state: busy / empty / partial / stale / unavailable | ⏳ |
+| B13 | Giữ authority + freshness **theo từng panel**, không gộp | ⏳ |
+| B14 | `observed_total_count` là tập con đã thấy khi `exact_total=false` | ⏳ |
+| B15 | **Không xếp hạng lại** — rank do server sở hữu | ⏳ |
+| B16 | Pin trỏ tới thứ không có Fleet phải hiện `unavailable`, không ẩn | ⏳ |
+| B17 | Ẩn control EventSource/profile khi `stream_available=false` | ⏳ |
+
+Codex nói rõ: **không** gộp catalogue BR-EX-28 vào Command Center, và **không**
+thêm generic Redis read.
+
+**Thứ tự tôi làm:** B3 → B4 → B5 (đóng phase 5) → B11–B17 (dựng phase 9) → B6 (chạm 3 phase) → B7, B8.
 
 ---
 
@@ -133,7 +151,7 @@ Codex giao lane này ngày 2026-08-22 (PHASE_TRACKER §24A.2).
 | 6 | Admin Drawer | ✅ | A1b — catalogue để activate |
 | 7 | Operations Queue | ⛔ | **A1a** — `command-journal`, `findings` |
 | 8 | Incident Detail | ⛔ | **A1a** — `alerts`, `dead-letters`, `trace-order` |
-| 9 | Command Center | ⛔ | **A1a** — `streams`, `alpha-activity` |
+| 9 | Command Center | ⛔ | **Claude** B11–B17 (backend đã giao); nguồn thật cần A1a |
 | 10 | Sandbox Certification | ⛔ | phase 4–6 + TS sandbox capability |
 | 11 | Canary Control Room | ⛔ | phase 10 + cổng owner |
 | 12 | Live Full Operations | ⛔ | phase 11 + EX-BE-08 |
