@@ -478,12 +478,21 @@ export class GovernanceService {
   async operation(user: PortalUser, workspaceId: string, operationId: string) {
     const plan = await this.repository.findPlan(workspaceId, user.userId, operationId);
     if (!plan) throw new GovernanceError("OPERATION_NOT_FOUND", "Operation not found.", 404);
+    const status = plan.status === "APPLIED"
+      ? "SUCCEEDED"
+      : plan.expiresAt <= new Date()
+        ? "EXPIRED"
+        : "PENDING";
     return {
       schema_version: "governance.r1-decision-operation.v1",
       operation_id: plan.operationId,
       approval_id: plan.approvalId,
       command_type: "GOVERNANCE_R1_DECISION",
-      status: plan.status === "APPLIED" ? "SUCCEEDED" : plan.expiresAt <= new Date() ? "EXPIRED" : "PENDING",
+      status,
+      // Workflow settlement and observed verification are separate fields by
+      // contract. For this Portal-owned transaction they advance together;
+      // future external effects may legitimately diverge.
+      verification_result: status,
       blockers: plan.blockerCodes.map((code) => ({ code })),
       warnings: plan.warningCodes.map((code) => ({ code })),
       expected_approval_version: plan.expectedApprovalVersion,

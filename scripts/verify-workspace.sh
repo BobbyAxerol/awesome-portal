@@ -261,6 +261,7 @@ for required in \
   "${ROOT_DIR}/apps/control-api/src/app.ts" \
   "${ROOT_DIR}/apps/control-api/src/app.module.ts" \
   "${ROOT_DIR}/apps/control-api/src/config.ts" \
+  "${ROOT_DIR}/apps/control-api/test/config.spec.ts" \
   "${ROOT_DIR}/apps/control-api/src/domain.ts" \
   "${ROOT_DIR}/apps/control-api/src/tokens.ts" \
   "${ROOT_DIR}/apps/control-api/src/http-error.filter.ts" \
@@ -292,6 +293,7 @@ for required in \
   "${ROOT_DIR}/apps/control-api/test/matrix.spec.ts" \
   "${ROOT_DIR}/deploy/images/control-api.Dockerfile" \
   "${ROOT_DIR}/scripts/control-api-test.sh" \
+  "${ROOT_DIR}/scripts/control-api-provision-keyrings.sh" \
   "${ROOT_DIR}/upgrade/backend/BAR_04_THIN_IDENTITY_BFF.md" \
   "${ROOT_DIR}/upgrade/backend/adr/ADR-003-POSTGRES_MIGRATION_AND_QUERY_APPROACH.md" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/portal-api.openapi.json" \
@@ -539,6 +541,7 @@ for tracked_source in \
   apps/control-api/src/app.ts \
   apps/control-api/src/app.module.ts \
   apps/control-api/src/config.ts \
+  apps/control-api/test/config.spec.ts \
   apps/control-api/src/domain.ts \
   apps/control-api/src/tokens.ts \
   apps/control-api/src/http-error.filter.ts \
@@ -570,6 +573,7 @@ for tracked_source in \
   apps/control-api/test/matrix.spec.ts \
   deploy/images/control-api.Dockerfile \
   scripts/control-api-test.sh \
+  scripts/control-api-provision-keyrings.sh \
   upgrade/backend/BAR_04_THIN_IDENTITY_BFF.md \
   upgrade/backend/adr/ADR-003-POSTGRES_MIGRATION_AND_QUERY_APPROACH.md \
   upgrade/backend/bar02/snapshots/portal-api.openapi.json \
@@ -621,6 +625,7 @@ bash -n \
   "${ROOT_DIR}/scripts/portal" \
   "${ROOT_DIR}/scripts/verify-workspace.sh" \
   "${ROOT_DIR}/scripts/smoke-stack.sh" \
+  "${ROOT_DIR}/scripts/control-api-provision-keyrings.sh" \
   "${ROOT_DIR}/scripts/stage-hmd-reader-wheel.sh" \
   "${ROOT_DIR}/scripts/install-git-hooks.sh" \
   "${ROOT_DIR}/scripts/provision-contributor-workspace.sh" \

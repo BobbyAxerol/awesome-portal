@@ -22,6 +22,13 @@ export PORTAL_STACK_NAME="${PORTAL_STACK_NAME:-portal-smoke}"
 export PORTAL_HTTP_PORT="${PORTAL_HTTP_PORT:-18080}"
 export PORTAL_IMAGE_PREFIX="${PORTAL_IMAGE_PREFIX:-local/portal-smoke}"
 export PORTAL_IMAGE_TAG="${PORTAL_IMAGE_TAG:-smoke}"
+export PORTAL_ENV="local"
+export CONTROL_API_AUTH_MODE="dev"
+export PORTAL_PUBLIC_ORIGIN="http://127.0.0.1:${PORTAL_HTTP_PORT}"
+export CONTROL_API_QUERY_CURSOR_KEYS_JSON=""
+export CONTROL_API_QUERY_CURSOR_KEYS_FILE=""
+export CONTROL_API_GOVERNANCE_APPLY_KEYS_JSON=""
+export CONTROL_API_GOVERNANCE_APPLY_KEYS_FILE=""
 export PORTAL_HISTORICAL_DATA_MODE="${PORTAL_HISTORICAL_DATA_MODE:-disabled}"
 export PORTAL_HISTORICAL_DATA_DIR="${PORTAL_HISTORICAL_DATA_DIR:-${ROOT_DIR}/runtime/historical-market-data}"
 # Smoke the audited route deliberately; normal local `up` remains local-first
@@ -32,6 +39,7 @@ export ROADMAP_TASK_BOARD_API_BASE="${ROADMAP_TASK_BOARD_API_BASE:-/roadmap-task
 export ROADMAP_TASK_BOARD_PUBLIC_URL="${ROADMAP_TASK_BOARD_PUBLIC_URL:-http://127.0.0.1:${PORTAL_HTTP_PORT}/roadmap-task-board}"
 
 mkdir -p "${PORTAL_HISTORICAL_DATA_DIR}"
+mkdir -p "${ROOT_DIR}/runtime/control-api-secrets"
 COMPOSE=(docker compose --project-directory "${ROOT_DIR}" -f "${ROOT_DIR}/compose.yaml")
 health_file="$(mktemp /tmp/portal-smoke-health.XXXXXX)"
 cookie_file="$(mktemp /tmp/portal-smoke-cookie.XXXXXX)"
@@ -119,7 +127,7 @@ if [[ -z "${csrf_token}" ]]; then
   printf 'Smoke login did not issue a CSRF cookie.\n' >&2
   exit 1
 fi
-printf 'Smoke: rotate bootstrap credential\n'
+printf 'Smoke: rotate bootstrap credential before protected façade access\n'
 curl --fail-with-body --silent --show-error --cookie "${cookie_file}" \
   --request POST "http://127.0.0.1:${PORTAL_HTTP_PORT}/api/auth/change-password" \
   --header 'Content-Type: application/json' \
@@ -136,7 +144,109 @@ curl --fail-with-body --silent --show-error --cookie-jar "${cookie_file}" \
   --data "{\"username\":\"bobby\",\"credential\":\"${smoke_credential}\"}" >/dev/null
 unset smoke_credential
 csrf_token="$(awk '$6 == "__Host-portal_csrf" { print $7; exit }' "${cookie_file}")"
+if [[ -z "${csrf_token}" ]]; then
+  printf 'Smoke re-login did not issue a CSRF cookie.\n' >&2
+  exit 1
+fi
 
+# Phase 1/2 operational path: seed one isolated Portal-owned R1 request through
+# PostgreSQL (the trusted intake endpoint is intentionally not browser-facing),
+# then exercise read → plan → apply → poll through the public gateway.
+workspace_id="ws_smoke_phase12"
+"${COMPOSE[@]}" exec -T portal-postgres psql -U portal -d portal_control \
+  -v ON_ERROR_STOP=1 -v workspace_id="${workspace_id}" >/dev/null <<'SQL'
+INSERT INTO workspaces (workspace_id, name, owner_user_id)
+SELECT :'workspace_id', 'Smoke Phase 1-2', user_id
+FROM portal_users
+WHERE username = 'bobby'
+ON CONFLICT (workspace_id) DO NOTHING;
+
+INSERT INTO workspace_members (workspace_id, user_id, role)
+SELECT :'workspace_id', user_id,
+       CASE WHEN username = 'bobby' THEN 'OWNER' ELSE 'MEMBER' END
+FROM portal_users
+WHERE username IN ('bobby', 'stan')
+ON CONFLICT (workspace_id, user_id) DO NOTHING;
+SQL
+
+"${COMPOSE[@]}" exec -T portal-postgres psql -U portal -d portal_control \
+  -v ON_ERROR_STOP=1 -v workspace_id="${workspace_id}" >/dev/null <<'SQL'
+INSERT INTO governance_approval_requests
+  (approval_id, workspace_id, gate, subject_type, subject_id, subject_label,
+   release_candidate, environment, target_label, requester_user_id,
+   requester_username, artifact_creator_user_id, artifact_creator_username,
+   status, policy_version, quorum_required, evidence_set_hash,
+   evidence_complete, blocker_count, blocker_summary, sla_due_at, expires_at,
+   created_at, updated_at)
+SELECT
+  'SMOKE-R1', :'workspace_id', 'R1', 'ALPHA_VERSION', 'smoke-alpha-v1',
+  'Smoke alpha v1', 'SMOKE-RC-1', 'RESEARCH', 'R1', user_id, username,
+  user_id, username, 'PENDING', 'approval.v3', 1,
+  'sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
+  true, 0, NULL, now() + interval '6 hours', now() + interval '48 hours',
+  now(), now()
+FROM portal_users
+WHERE username = 'stan';
+SQL
+
+printf 'Smoke: read Phase 1 Approval Inbox and R1 evidence envelope\n'
+approval_inbox="$(curl --fail-with-body --silent --show-error --cookie "${cookie_file}" \
+  "http://127.0.0.1:${PORTAL_HTTP_PORT}/api/v1/execution/governance/approvals?workspace_id=${workspace_id}&view=R1")"
+[[ "${approval_inbox}" == *'"id":"SMOKE-R1"'* && "${approval_inbox}" == *'"record_authority":"PORTAL"'* ]] || {
+  printf 'Approval Inbox smoke response was unexpected: %s\n' "${approval_inbox}" >&2
+  exit 1
+}
+r1_detail="$(curl --fail-with-body --silent --show-error --cookie "${cookie_file}" \
+  "http://127.0.0.1:${PORTAL_HTTP_PORT}/api/v1/execution/governance/approvals/SMOKE-R1/r1?workspace_id=${workspace_id}")"
+[[ "${r1_detail}" == *'"can_approve":true'* && "${r1_detail}" == *'"panel_state":"unavailable"'* ]] || {
+  printf 'R1 detail smoke response was unexpected: %s\n' "${r1_detail}" >&2
+  exit 1
+}
+
+plan_payload="{\"schema_version\":\"governance.r1-decision-plan-request.v1\",\"workspace_id\":\"${workspace_id}\",\"request_key\":\"smoke:r1:approve\",\"command_type\":\"GOVERNANCE_R1_DECISION\",\"command_version\":1,\"target\":{\"approval_id\":\"SMOKE-R1\"},\"expected_approval_version\":1,\"payload\":{\"decision\":\"APPROVE\",\"reason\":\"Independent SGP operational smoke review.\",\"evidence_hashes\":[]}}"
+csrf_status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
+  --request POST "http://127.0.0.1:${PORTAL_HTTP_PORT}/api/v1/execution/commands/plans" \
+  --cookie "${cookie_file}" --header 'Content-Type: application/json' \
+  --header "Origin: ${PORTAL_PUBLIC_ORIGIN}" --data "${plan_payload}")"
+[[ "${csrf_status}" == "403" ]] || {
+  printf 'Governance mutation without CSRF returned %s instead of 403.\n' "${csrf_status}" >&2
+  exit 1
+}
+
+printf 'Smoke: execute Phase 2 plan/apply/poll with CSRF and immutable evidence binding\n'
+planned="$(curl --fail-with-body --silent --show-error \
+  --request POST "http://127.0.0.1:${PORTAL_HTTP_PORT}/api/v1/execution/commands/plans" \
+  --cookie "${cookie_file}" --header 'Content-Type: application/json' \
+  --header "Origin: ${PORTAL_PUBLIC_ORIGIN}" --header "x-portal-csrf: ${csrf_token}" \
+  --data "${plan_payload}")"
+operation_id="$(printf '%s' "${planned}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["operation_id"])')"
+apply_token="$(printf '%s' "${planned}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["apply_token"])')"
+[[ -n "${operation_id}" && -n "${apply_token}" ]] || {
+  printf 'Governance plan did not return operation/apply binding.\n' >&2
+  exit 1
+}
+applied="$(curl --fail-with-body --silent --show-error \
+  --request POST "http://127.0.0.1:${PORTAL_HTTP_PORT}/api/v1/execution/operations/${operation_id}/apply" \
+  --cookie "${cookie_file}" --header 'Content-Type: application/json' \
+  --header "Origin: ${PORTAL_PUBLIC_ORIGIN}" --header "x-portal-csrf: ${csrf_token}" \
+  --data "{\"schema_version\":\"governance.r1-decision-apply-request.v1\",\"workspace_id\":\"${workspace_id}\",\"apply_token\":\"${apply_token}\"}")"
+[[ "${applied}" == *'"status":"PENDING"'* ]] || {
+  printf 'Governance apply response was unexpected: %s\n' "${applied}" >&2
+  exit 1
+}
+terminal="$(curl --fail-with-body --silent --show-error --cookie "${cookie_file}" \
+  "http://127.0.0.1:${PORTAL_HTTP_PORT}/api/v1/execution/operations/${operation_id}?workspace_id=${workspace_id}")"
+[[ "${terminal}" == *'"status":"SUCCEEDED"'* && "${terminal}" == *'"verification_result":"SUCCEEDED"'* ]] || {
+  printf 'Governance operation poll response was unexpected: %s\n' "${terminal}" >&2
+  exit 1
+}
+governance_evidence="$("${COMPOSE[@]}" exec -T portal-postgres \
+  psql -U portal -d portal_control -Atqc \
+  "SELECT (SELECT count(*) FROM governance_approval_decisions WHERE approval_id='SMOKE-R1') || ':' || (SELECT count(*) FROM product_audit_events WHERE aggregate_id='SMOKE-R1' AND event_type='governance.r1_decision.applied') || ':' || (SELECT count(*) FROM outbox_messages WHERE aggregate_id='SMOKE-R1' AND event_type='governance.r1_decision.applied')")"
+[[ "${governance_evidence}" == "1:1:1" ]] || {
+  printf 'Governance decision/audit/outbox atomicity smoke was unexpected: %s\n' "${governance_evidence}" >&2
+  exit 1
+}
 roadmap_task_board_api_ready=false
 for _ in $(seq 1 15); do
   if curl --fail --silent --cookie "${cookie_file}" \

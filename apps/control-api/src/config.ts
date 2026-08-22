@@ -1,3 +1,4 @@
+import { readFileSync } from "fs";
 import { z } from "zod";
 import { AUTH_MODES } from "./domain";
 
@@ -44,13 +45,23 @@ const EnvSchema = z.object({
     z.string().min(16).optional(),
   ),
   QUERY_CURSOR_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("query-k1"),
-  QUERY_CURSOR_KEYS_JSON: z.string().default(
-    '{"query-k1":"local-only-query-signing-key-32-bytes-minimum"}',
+  QUERY_CURSOR_KEYS_JSON: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().default('{"query-k1":"local-only-query-signing-key-32-bytes-minimum"}'),
+  ),
+  QUERY_CURSOR_KEYS_FILE: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(1).optional(),
   ),
   QUERY_CURSOR_TTL_SECONDS: z.coerce.number().int().min(30).max(3600).default(15 * 60),
   GOVERNANCE_APPLY_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("governance-k1"),
-  GOVERNANCE_APPLY_KEYS_JSON: z.string().default(
-    '{"governance-k1":"local-only-governance-apply-key-32-bytes-minimum"}',
+  GOVERNANCE_APPLY_KEYS_JSON: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().default('{"governance-k1":"local-only-governance-apply-key-32-bytes-minimum"}'),
+  ),
+  GOVERNANCE_APPLY_KEYS_FILE: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(1).optional(),
   ),
   GOVERNANCE_PLAN_TTL_SECONDS: z.coerce.number().int().min(30).max(15 * 60).default(5 * 60),
   SESSION_IDLE_SECONDS: z.coerce.number().int().positive().default(30 * 60),
@@ -105,6 +116,28 @@ const EnvSchema = z.object({
 
 export type ControlApiConfig = z.infer<typeof EnvSchema>;
 
+function signingKeysFromFile(
+  env: NodeJS.ProcessEnv,
+  jsonName: "QUERY_CURSOR_KEYS_JSON" | "GOVERNANCE_APPLY_KEYS_JSON",
+  fileName: "QUERY_CURSOR_KEYS_FILE" | "GOVERNANCE_APPLY_KEYS_FILE",
+): NodeJS.ProcessEnv {
+  const path = env[fileName];
+  if (!path) return env;
+  if (env[jsonName]) {
+    throw new Error(`${jsonName} and ${fileName} are mutually exclusive`);
+  }
+  let serialized: string;
+  try {
+    serialized = readFileSync(path, { encoding: "utf8" });
+  } catch {
+    throw new Error(`${fileName} could not be read`);
+  }
+  if (Buffer.byteLength(serialized, "utf8") > 16 * 1024) {
+    throw new Error(`${fileName} exceeds 16384 bytes`);
+  }
+  return { ...env, [jsonName]: serialized.trim() };
+}
+
 function parseSigningKeys(serialized: string, activeKeyId: string, name: string): Record<string, string> {
   let keys: unknown;
   try {
@@ -131,10 +164,19 @@ function parseSigningKeys(serialized: string, activeKeyId: string, name: string)
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConfig {
-  const config = EnvSchema.parse(env);
+  const resolved = signingKeysFromFile(
+    signingKeysFromFile(
+      { ...env },
+      "QUERY_CURSOR_KEYS_JSON",
+      "QUERY_CURSOR_KEYS_FILE",
+    ),
+    "GOVERNANCE_APPLY_KEYS_JSON",
+    "GOVERNANCE_APPLY_KEYS_FILE",
+  );
+  const config = EnvSchema.parse(resolved);
   if (config.PORTAL_ENV !== "local") {
     const missingSigningKeys = ["QUERY_CURSOR_KEYS_JSON", "GOVERNANCE_APPLY_KEYS_JSON"]
-      .filter((name) => !env[name]);
+      .filter((name) => !resolved[name]);
     if (missingSigningKeys.length > 0) {
       throw new Error(
         `non-local Portal environments require: ${missingSigningKeys.join(", ")}`,

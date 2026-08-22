@@ -122,13 +122,16 @@ Chúng không thay thế phase hoặc exit gate trong
   rows, Control API 76/76 and contracts 8/8. It deliberately did not create an
   Approval endpoint; `EX-BE-05a` below is the integration slice.
 - [EX-BE-05a — Governance, Evidence, Approval Repository and API](./EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md)
-  — Execution Loop phases 1–2. **Operational evidence pending:** TypeScript /
+  — Execution Loop phases 1–2. **Integration complete / production inactive:** TypeScript /
   PostgreSQL approval inbox, immutable evidence/findings/decisions, R1
   plan→apply→poll, SoD, idempotency, optimistic concurrency, audit/outbox and
   independent rotatable HMAC keyrings are implemented. Linked Research and
   Execution panels remain explicitly unavailable; registry profile remains
-  `fixture`. Strict typecheck and token/keyring tests pass; the final fresh-PG
-  rerun is not claimed because this runner cannot access Docker.
+  `fixture`. Fresh PostgreSQL is green at 117/117 tests and the isolated
+  public-gateway smoke proves password rotation, Inbox/R1, CSRF denial,
+  canonical plan→apply→poll and exact 1:1:1 decision/audit/outbox atomicity.
+  SGP runs in research mode with independent file-backed keyrings; closeout:
+  [PRE-IAM-01 SGP Phase 1–2](./EX_BE_05A_SGP_PHASE_1_2_CLOSEOUT.md).
 
 **Runway complete (BAR-00 → BAR-16).** Guide v0.5 bổ sung (không thay thế)
 tại `upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md`
@@ -173,9 +176,13 @@ authority.
 - `EX-BE-04a` **foundation complete:** contract `keyset-page.v1` và TypeScript
   query primitives đã khớp wire adapter của Claude; 182k corpus chứng minh
   exact count, forward/back, concurrent insert, RBAC và cursor security.
-- `EX-BE-05a` **implementation complete / operational evidence pending:**
+- `EX-BE-05a` **integration complete / production inactive:**
   Approval Inbox và Gate R1 đã có PostgreSQL repository + session/RBAC/CSRF API,
   evidence-bound immutable decision workflow, audit/outbox và plan/apply/poll.
+  Fresh-PG 13 suites/117 tests và isolated public-gateway smoke đều xanh;
+  runtime SGP research dùng file-backed keyrings, không inline secret. Registry
+  vẫn `fixture`, toàn bộ execution flags vẫn false; Claude còn phải sửa canonical
+  route/CSRF và chốt policy riêng cho Portal governance write trước activation.
   Chi tiết contract/handoff/test ở
   [`EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md`](./EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md).
 - `EX-BE-01` **contract complete:** Rust 1.85.1 workspace đã khóa canonical

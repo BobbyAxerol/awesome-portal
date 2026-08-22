@@ -24,6 +24,14 @@ x-control-api-environment: &control-api-environment
   CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:-}
   CLOUDFLARE_ACCESS_JWKS_URI: ${CLOUDFLARE_ACCESS_JWKS_URI:-}
   CLOUDFLARE_ALLOWED_EMAIL_DOMAIN: ${CLOUDFLARE_ALLOWED_EMAIL_DOMAIN:-azdag.com}
+  QUERY_CURSOR_ACTIVE_KEY_ID: ${CONTROL_API_QUERY_CURSOR_ACTIVE_KEY_ID:-query-k1}
+  QUERY_CURSOR_KEYS_JSON: ${CONTROL_API_QUERY_CURSOR_KEYS_JSON:-}
+  QUERY_CURSOR_KEYS_FILE: ${CONTROL_API_QUERY_CURSOR_KEYS_FILE:-}
+  QUERY_CURSOR_TTL_SECONDS: ${CONTROL_API_QUERY_CURSOR_TTL_SECONDS:-900}
+  GOVERNANCE_APPLY_ACTIVE_KEY_ID: ${CONTROL_API_GOVERNANCE_APPLY_ACTIVE_KEY_ID:-governance-k1}
+  GOVERNANCE_APPLY_KEYS_JSON: ${CONTROL_API_GOVERNANCE_APPLY_KEYS_JSON:-}
+  GOVERNANCE_APPLY_KEYS_FILE: ${CONTROL_API_GOVERNANCE_APPLY_KEYS_FILE:-}
+  GOVERNANCE_PLAN_TTL_SECONDS: ${CONTROL_API_GOVERNANCE_PLAN_TTL_SECONDS:-300}
 
 x-control-api-hardening: &control-api-hardening
   init: true
@@ -34,6 +42,8 @@ x-control-api-hardening: &control-api-hardening
     - ALL
   security_opt:
     - no-new-privileges:true
+  volumes:
+    - ${CONTROL_API_SECRETS_DIR:-./runtime/control-api-secrets}:/run/secrets/control-api:ro
 
 # This is the Portal monorepo entry point. `./scripts/portal up` builds every
 # tracked module into one coherent stack with one public gateway.

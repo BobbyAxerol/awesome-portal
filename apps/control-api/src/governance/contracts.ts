@@ -312,6 +312,10 @@ export function approvalListQuery(raw: Record<string, unknown>): RawKeysetQuery 
       { field: "status", op: "eq", value: "PENDING" },
       { field: "gate", op: "eq", value: "R1" },
     ],
+    R2: [
+      { field: "status", op: "eq", value: "PENDING" },
+      { field: "gate", op: "eq", value: "R2" },
+    ],
     PAPER: [
       { field: "status", op: "eq", value: "PENDING" },
       { field: "environment", op: "eq", value: "PAPER" },

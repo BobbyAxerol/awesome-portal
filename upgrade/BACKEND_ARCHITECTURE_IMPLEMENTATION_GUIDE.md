@@ -780,10 +780,16 @@ deep-dive → ADR → slice → evidence discipline documented above.
   keyring independent from query cursors; HTTP 202 remains non-terminal and the
   operation poll is authoritative. External panels and the registry profile
   stay honestly `unavailable`/`fixture`. The fresh PostgreSQL 16 gate is green:
-  9 suites/95 tests, including governance 14/14 at 182,000 rows and fail-closed
-  database readiness. Status stays `OPERATIONAL_EVIDENCE_PENDING` only for the
-  wider EX-BE-08 load/security/soak/DR evidence. Deep dive and Claude mapping:
+  13 suites/117 tests, including governance repository/API 18/18 at 182,000
+  rows, keyring configuration fail-closed tests and database readiness. The
+  isolated public-gateway gate also proves CSRF denial, canonical
+  plan→apply→poll and exact 1:1:1 decision/audit/outbox atomicity. SGP runtime
+  uses non-dev auth and independent file-backed keyrings. Phase 1/2 backend is
+  `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`; wider EX-BE-08 cross-cell/load/
+  soak/DR evidence remains separate. Deep dive and Claude mapping:
   [`EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md`](./backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md).
+  Operational closeout:
+  [`EX_BE_05A_SGP_PHASE_1_2_CLOSEOUT.md`](./backend/EX_BE_05A_SGP_PHASE_1_2_CLOSEOUT.md).
 - **EX-BE-01 Rust contracts and compatibility adapter (2026-08-21):** the
   Portal-owned Execution edge now has a Rust 1.85.1 library workspace with
   canonical exact-decimal/source/freshness envelopes, a pinned Trading System

@@ -804,6 +804,32 @@ so one slice may unlock several screens without inventing a second product roadm
 | EX-BE-07b | P2 / integration complete; source activation evidence pending | active-epoch source repositories and six narrow authenticated screen APIs | phases 3, 14–17 integration |
 | EX-BE-08 | P2 / offline qualification foundation complete; live evidence pending | security/load/soak/DR/rollback evidence and production profiles | phase 18 and production activation |
 
+### 12.1.1 Six-phase pre-IAM SGP runway
+
+AWS IAM and the owner Security Group change remain prerequisites for D1 live
+cross-cell activation, but they do not block Portal-owned work on SGP. The
+following six bounded phases are the canonical pre-IAM queue. Their order keeps
+authority dark while producing evidence that will still be useful after the AWS
+window opens.
+
+| ID | Goal | Backend scope | Claude parallel lane | Exit gate | Status |
+|---|---|---|---|---|---|
+| PRE-IAM-01 | Close Execution phases 1–2 on SGP | Approval Inbox + R1 detail + plan/apply/poll, non-local keyring delivery, auth/RBAC/Origin/CSRF/SoD and SGP Compose smoke; no AWS call | correct canonical mutation paths and CSRF transport; keep product route/profile inactive until policy review | fresh PG corpus + isolated public-gateway smoke + runtime research-mode readiness + audit/outbox atomicity | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — SGP backend gate green 2026-08-22 |
+| PRE-IAM-02 | Complete Paper Exit Review | Portal-owned exit-review repository, deterministic policy/evidence evaluation and source-unavailable semantics | finish Phase 5 screen states/lineage against the published contract | missing/stale/partial evidence cases; immutable decision/audit tests; no execution command | `PLANNED` |
+| PRE-IAM-03 | Build Command Center snapshot API dark | bounded snapshot composition over existing projection contracts; no SSE/profile activation | build/keep snapshot, empty, partial, stale, unavailable fixtures and component wiring | response budget, per-panel authority/freshness, exact counts and fail-closed source gaps | `PLANNED` |
+| PRE-IAM-04 | Offline operational hardening | close confirmed H-series contract/security issues, load/replay/restore/rollback evidence that needs no AWS source | consume only published fixtures/contracts; keep failure states visible | focused regression + workspace gates; credential-free evidence report | `PLANNED` |
+| PRE-IAM-05 | Prepare D2 dark deployment | image/config/service manifests for AWS Portal Edge + Source Proxy with interfaces/routes/source reads still off | no AWS/live UI activation; continue fixture work | offline render, non-root/read-only image checks, preflight and rollback rehearsal | `PLANNED` |
+| PRE-IAM-06 | Tracking cleanup | reconcile Master Plan, backend README/guide, shared tracker and request ledger; classify every blocker by owner | reconcile FE status/evidence and close superseded requests | no contradictory status, no bare `COMPLETE`, exact next dependency/owner per row | `PLANNED` |
+
+`PRE-IAM-01` has closed only the backend lane of product phases 1–2. It does not
+change registry revision 4, does not enable `query_enabled` or any command flag,
+and does not redefine a Portal governance decision as a Trading System Paper
+command. Public product activation requires a reviewed registry policy that can
+express Portal-owned governance writes independently, plus Claude's canonical
+route/CSRF integration. Qualification evidence and the exact residual boundary
+are recorded in
+[`EX_BE_05A_SGP_PHASE_1_2_CLOSEOUT.md`](backend/EX_BE_05A_SGP_PHASE_1_2_CLOSEOUT.md).
+
 EX-BE-04a→05a has delivered the Portal-owned control-plane foundation without an AWS, Rust,
 Trading System or projection dependency. It supplies Approval Inbox and Gate R1 from real
 control-plane data while linked execution panels honestly render unavailable. In parallel, the
@@ -834,10 +860,14 @@ decision plans, apply/poll, quorum/conditions, optimistic concurrency and atomic
 audit/outbox. Query and apply tokens use separate rotatable keyrings. External
 Research/Execution panels remain complete `unavailable` envelopes and registry
 delivery remains `fixture`; there is no AWS/Rust/Trading-System dependency or
-authority claim. The fresh PostgreSQL 16 gate is green at 95/95 tests, including
-14/14 governance tests on 182,000 rows, and the isolated migrate→bootstrap→API
-Compose lifecycle passes. Status remains `OPERATIONAL_EVIDENCE_PENDING` only for
-the wider EX-BE-08 load/security/soak/DR evidence. Detailed
+authority claim. The fresh PostgreSQL 16 gate is green at 117/117 tests across
+13 suites, including 18 governance repository/API tests on 182,000 rows, and the
+isolated public-gateway Compose path passes login/password rotation, Inbox/R1,
+CSRF denial, plan→apply→poll and exact 1:1:1 decision/audit/outbox atomicity.
+The SGP research runtime is healthy in non-dev auth mode with two independent
+file-backed keyrings and no inline key material. Phase 1/2 backend status is
+`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`; wider EX-BE-08 cross-cell/load/
+soak/DR evidence remains pending. Detailed
 evidence and frontend mapping are in
 [`EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md`](backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md).
 
@@ -890,8 +920,8 @@ Statuses use the architecture vocabulary, never bare `COMPLETE`:
 | Phase | Goal | Endpoints / events | Authority + freshness | Status | Depends on | Exit gate |
 |---:|---|---|---|---|---|---|
 | 0 Shell/shared | Registry renders all 17 canonical routes and explicit delivery profiles without data coupling | `/api/v1/portal/registry` rev 4 | Portal registry; no execution freshness | `CONTRACT_COMPLETE` | none | 17 unique `EXECUTION_*` screens; fixture policy fail-closed; schema/API/OpenAPI/generated-type sync and root verify |
-| 1 Approval Inbox | scalable approval queue | `GET /governance/approvals` | Portal record; linked source facts keep their own envelopes | `OPERATIONAL_EVIDENCE_PENDING` | EX-BE-04a/05a; EX-BE-08 qualification | fresh-PG bidirectional keyset/filter/sort/exact-count tests at 182k rows; RBAC tests |
-| 2 Gate R1 | immutable evidence and valid SoD approval | `GET /governance/approvals/{id}/r1`; plan/apply/poll decision | Portal decision; evidence source-attributed | `OPERATIONAL_EVIDENCE_PENDING` | EX-BE-05a; EX-BE-08 qualification | fresh-PG concurrent-version, SoD, evidence-hash, expiry, quorum, deny/approve/condition audit tests; no AWS dependency |
+| 1 Approval Inbox | scalable approval queue | `GET /governance/approvals` | Portal record; linked source facts keep their own envelopes | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-04a/05a; Claude route/policy integration for activation | 182k exact-count/keyset corpus, RBAC and public-gateway SGP smoke green; registry remains fixture |
+| 2 Gate R1 | immutable evidence and valid SoD approval | `GET /governance/approvals/{id}/r1`; plan/apply/poll decision | Portal decision; evidence source-attributed | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-05a; Claude CSRF/canonical-route + reviewed governance-write policy for activation | SoD/evidence/version/expiry/quorum/audit tests and public-gateway 1:1:1 atomicity smoke green; no AWS dependency |
 | 3 Gate R2 | safe capital preview and R2 decision | R2 detail, `/capital-preview`, command plan | Portal decision; EXECUTION/BROKER inputs; DERIVED preview | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-03/05a/07b; EX-BE-08 activation evidence | source-backed exact-decimal preview, profile/capability/count mismatch refusal; dual-approval and activation tests remain |
 | 4 Paper Workbench | real Paper observation without client aggregation | deployment summary/series; operation status | EXECUTION/BROKER/DERIVED; per-panel policy | `FOUNDATION_COMPLETE` | EX-BE-03/04b; M7 gate evidence | 500-deployment corpus, adaptive ≤5k chart points, Paper action disabled unless verified |
 | 5 Paper Exit Review | server evaluates observation exit evidence | exit-review read/decision | Portal record; DERIVED with source-attributed inputs | `FOUNDATION_COMPLETE` | EX-BE-03/05a | deterministic policy replay, missing/stale evidence states, audit proof |

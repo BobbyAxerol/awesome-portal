@@ -1,6 +1,6 @@
 # EX-BE-05a — Governance, Evidence, Approval Repository and API
 
-Status: `OPERATIONAL_EVIDENCE_PENDING`  
+Status: `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`  
 Branch: `feat/execution_loop`  
 Authority: TypeScript Control API + Portal PostgreSQL  
 External dependency: none for Approval Inbox and Gate R1
@@ -63,8 +63,11 @@ routes additionally require exact allowed Origin, double-submit CSRF and an
 | `POST /api/v1/execution/operations/{operation_id}/apply` | operation/payload/key-bound apply token; returns HTTP 202 with `status=PENDING` |
 | `GET /api/v1/execution/operations/{operation_id}` | authoritative operation poll; only `SUCCEEDED` here is terminal success |
 
-Supported Inbox views are `INBOX`, `ALL`, `R1`, `PAPER`, `SANDBOX`,
-`LIVE_GATES`, `EXIT_REVIEWS` and `OVERDUE`. Direct filters cover status, gate,
+Supported Inbox views are `INBOX`, `ALL`, `R1`, `R2`, `PAPER`, `SANDBOX`,
+`LIVE_GATES`, `EXIT_REVIEWS` and `OVERDUE`. The commissioned hi-fi may expose
+the smaller operator set `INBOX / ALL / R1 / R2 / EXIT_REVIEWS / LIVE_GATES /
+OVERDUE`; `PAPER` and `SANDBOX` remain valid API views, not mandatory chips.
+Direct filters cover status, gate,
 environment, SLA state, requester, subject and evidence completeness. SQL
 identifiers and values are never accepted directly from the client.
 
@@ -140,14 +143,21 @@ Current local evidence:
 
 - TypeScript strict typecheck: pass;
 - isolated keyring/token tests: 3/3 pass;
-- authoritative fresh-PostgreSQL 16 run: 9 suites and 95/95 tests pass;
-- governance coverage: 14/14 tests pass against the real 182,000-row corpus;
+- authoritative fresh-PostgreSQL 16 run: 13 suites and 117/117 tests pass;
+- governance repository/API coverage: 18/18 tests pass, including the real
+  182,000-row corpus; independent governance token coverage is 3/3;
+- non-local file-backed keyring configuration: 3/3 tests pass, including
+  ambiguity rejection and unreadable-file fail-closed behavior;
 - liveness/readiness coverage: 2/2 tests pass, including fail-closed database
   readiness;
-- isolated Compose lifecycle: migration and bootstrap jobs exit 0, the API
-  becomes healthy, `/readyz` returns 200, and the service runs as `node` with a
-  read-only root filesystem, all Linux capabilities dropped and
-  `no-new-privileges` enabled.
+- isolated public-gateway Compose lifecycle: migration/bootstrap exit 0;
+  activation forces password rotation before protected access; Approval Inbox
+  and R1 detail load; missing CSRF is denied 403; canonical plan→apply→poll
+  succeeds; decision/audit/outbox cardinality is exactly 1:1:1;
+- SGP research runtime: `/api/control/readyz` returns ready with PostgreSQL
+  ready, non-dev `cloudflare_access_local_password` auth, independent readable
+  file-backed cursor/apply keyrings, and no inline key material. The stable
+  v1.0.1 Compose project remains separate and healthy.
 
 Run the authoritative gate when Docker access is available:
 
@@ -155,18 +165,28 @@ Run the authoritative gate when Docker access is available:
 ./scripts/control-api-test.sh
 ```
 
-The fresh-database implementation gate is green. Status remains
-`OPERATIONAL_EVIDENCE_PENDING` only because the wider EX-BE-08 load, security,
-soak, restore and rollback evidence has not been completed.
+The SGP backend integration gate for product phases 1–2 is green. Status is
+`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`: registry revision 4 and every
+execution capability flag remain unchanged and dark. Wider EX-BE-08 cross-cell,
+load, soak, restore and rollback evidence is tracked separately and is not
+misrepresented as a blocker to this SGP-only closeout. See
+[`EX_BE_05A_SGP_PHASE_1_2_CLOSEOUT.md`](./EX_BE_05A_SGP_PHASE_1_2_CLOSEOUT.md).
 
 ## 7. Deployment and rollback
 
-Production configuration requires independent secrets:
+Non-local configuration requires two independent keyrings. File delivery is the
+recommended Compose path:
 
-- `CONTROL_API_QUERY_CURSOR_ACTIVE_KEY_ID` / `CONTROL_API_QUERY_CURSOR_KEYS_JSON`;
+- `CONTROL_API_QUERY_CURSOR_ACTIVE_KEY_ID` /
+  `CONTROL_API_QUERY_CURSOR_KEYS_FILE`;
 - `CONTROL_API_GOVERNANCE_APPLY_ACTIVE_KEY_ID` /
-  `CONTROL_API_GOVERNANCE_APPLY_KEYS_JSON`;
+  `CONTROL_API_GOVERNANCE_APPLY_KEYS_FILE`;
 - `CONTROL_API_GOVERNANCE_PLAN_TTL_SECONDS` (default 300 seconds).
+
+`./scripts/control-api-provision-keyrings.sh` creates root-directory-local,
+0600, atomically replaced files without printing values. Inline
+`*_KEYS_JSON` remains available for an external secret manager, but defining
+inline and file-backed input for the same keyring is rejected as ambiguous.
 
 The migration is additive. Rollback disables screen query/command delivery in
 registry policy first, then returns to the prior Control API image. Database
@@ -180,7 +200,8 @@ false positive from process liveness alone.
 
 ## 8. Next backend slice
 
-The next independent backend runway is `EX-BE-01`: Rust canonical contracts and
-the read-only Trading System compatibility adapter. `EX-BE-05b` remains later,
-after source command/auth capabilities are proven. Neither next slice authorizes
-Portal code to modify the Trading System.
+The next pre-IAM backend slice is `PRE-IAM-02`: Paper Exit Review repository/API
+and deterministic evidence evaluation using Portal-owned state plus explicit
+missing/stale/partial source semantics. It must not emit an execution command.
+The already-delivered Rust contract/adapter runway remains dark; no next slice
+authorizes Portal code to modify the Trading System.

@@ -433,6 +433,20 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     expect(response.json().error.code).toBe("FILTER_NOT_ALLOWED");
   });
 
+  it("supports the canonical R2 inbox view without conflating it with PAPER", async () => {
+    await seedApproval({ approvalId: "AP-R1-VIEW" });
+    await seedR2CapitalScope("AP-R2-VIEW");
+    const response = await inject(
+      bobby,
+      `/api/v1/execution/governance/approvals?workspace_id=${workspaceId}&view=R2`,
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().page.rows.map((row: { id: string }) => row.id)).toEqual([
+      "AP-R2-VIEW",
+    ]);
+  });
+
   it("fails closed when the stored evidence-set digest does not match immutable entries", async () => {
     await seedApproval({ approvalId: "AP-TAMPER" });
     await ctx.pool.query(
@@ -595,7 +609,11 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
       `/api/v1/execution/operations/${planned.json().operation_id}?workspace_id=${workspaceId}`,
     );
     expect(terminal.statusCode).toBe(200);
-    expect(terminal.json()).toMatchObject({ status: "SUCCEEDED", approval_id: "AP-APPROVE" });
+    expect(terminal.json()).toMatchObject({
+      status: "SUCCEEDED",
+      verification_result: "SUCCEEDED",
+      approval_id: "AP-APPROVE",
+    });
     const replay = await apply(bobby, planned.json().operation_id, planned.json().apply_token);
     expect(replay.statusCode).toBe(202);
     expect(replay.json().replayed).toBe(true);
