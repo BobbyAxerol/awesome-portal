@@ -1328,3 +1328,80 @@ trong DOM), **150** (trần transport → lens), và ranked 210 entity / 500 pai
 Sau phase 16, **mọi phase còn lại đều chờ người khác**: phase 6 chờ Bobby chốt
 catalogue; 4, 7, 8, 9, 10, 13 chờ codex mở source; 11, 12 chờ owner mở cổng
 production; 18 chờ có target subset.
+
+---
+
+## 22. Soát toàn diện lần hai — kết quả và sửa (2026-08-22)
+
+Workflow 9 lăng kính × 3 refuter đối kháng, 358 agent. **116 phát hiện**: 64 qua
+được vòng bác bỏ, 15 bị bác thật, **37 không kịp verify** (agent lỗi vì session
+limit — không được tính là đã bác; tôi tự kiểm từng cái).
+
+### 22.1 Năm critical, đều ở khe nối FE ↔ Control API
+
+| Lỗi | Hậu quả |
+|---|---|
+| Gửi `filter=`, BFF đọc `view=` | **mọi chip lọc im lặng rơi về INBOX** |
+| `readKeysetPage` không nhìn `page` | bảng rỗng + `0 total` trên một trang đầy |
+| Plan body sai toàn bộ schema | thiếu `schema_version`, `workspace_id`; version là **số** |
+| Apply gửi `request_key`, cần `apply_token` | apply không tới được plan của nó |
+| R2 *"Approve with condition"* không khoá | R1 hết hạn vẫn cấp được authorization |
+
+Không test frontend nào bắt được — **fixture mã hoá đúng những phỏng đoán mà
+client mắc**.
+
+### 22.2 Ba lỗi an toàn nặng hơn cả critical
+
+1. **Quyền mặc định TRUE.** `eligibility ? … : true` ở R1; R2/Paper Exit không
+   có prop; và cả hai reader **chưa bao giờ điền** trường mà type đã khai.
+2. **Mọi approval bị khoá self-approval.** `creator` là object, `actor` không
+   có trên wire → cả hai thành `"unknown"` → `"unknown" === "unknown"`.
+3. **Lỗ gap mở qua cửa khác.** `DISCONNECTED` đưa mọi phase về `reconnecting`,
+   mà `reconnecting` được phép nhận delta.
+
+### 22.3 Bảy chỗ "im lặng" đã đóng
+
+`total_count` vắng → `0 total` · quorum vắng → `0/2` · overdue vắng → `0` ·
+SLA suy ra từ số phút, bỏ qua `sla.state` server phát · `PAUSED` gộp vào
+`UNKNOWN` · filter echo bịa `eq ""` · poll cạn budget mà panel vẫn nói *"Still
+observing"*.
+
+Cộng cụm em dash: `—` từng mang **ba nghĩa** (không phí / phí không publish /
+hop không có quantity). Mỗi cái giờ có chữ riêng.
+
+### 22.4 Bốn gate hoá ra là giả
+
+| Gate | Lách bằng |
+|---|---|
+| `SSE_EVENTS` | so hằng số với **bản chép tay trong cùng file** |
+| money arithmetic | snake_case, template literal, member access |
+| token literal | `oklch`/`color-mix`/`hwb`/named colour |
+| registry policy | `if (!policy) continue` — im lặng bỏ qua |
+
+Cả bốn giờ đọc từ nguồn thật, và mỗi cái có một test **chứng minh nó cắn**.
+
+### 22.5 Contrast: token đúng, cặp sai
+
+`--authority-meta` 3.60:1 và 3.01:1 — gate không thấy vì **badge đặt màu, trang
+đặt nền, không chỗ nào viết hai thứ cạnh nhau**. Nâng token.
+
+Stream banner 4.44:1/4.49:1 — ở đây **token đúng, cặp sai**: thang xám hiệu
+chỉnh theo `--paper`, mà banner không phải surface. Nâng token sẽ **đảo thang**,
+và chính gate ramp của nó bắt được. Sửa cặp.
+
+### 22.6 Evidence
+
+vitest **993 passed / 1 skipped** (từ 940, **+53**) · tsc sạch · build sạch ·
+visual baseline **101/101** · contrast gate 14/14.
+
+Commit: `dfbfb59` `2e3a42a` `8d8779a` `b090943` `ea32633` `883e09c` `4f20de3`.
+
+### 22.7 Còn lại
+
+Backend: 9 mục trong `HOTFIX_REQUEST_2026-08-22.md` (nặng nhất vẫn là
+`DecimalString::parse` làm tròn âm thầm), cộng A-5 và BR-EX-24…27.
+
+Frontend còn nợ thiết kế, không phải lỗi: R1/R2 chưa có outcome *"Request
+changes"*, container chưa truyền typed conditions, Paper Exit wired mất
+lifecycle rail, Alpha 360 thiếu equity-by-stage chart, Portfolio 360 leader lens
+chưa highlight chéo. Tất cả cần contract hoặc quyết định sản phẩm trước.
