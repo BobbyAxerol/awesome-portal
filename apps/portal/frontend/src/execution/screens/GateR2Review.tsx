@@ -49,8 +49,20 @@ export type R1State = "APPROVED" | "APPROVED_WITH_CONDITION" | "EXPIRED" | "DENI
  * screen that tells a reviewer what to do next, and a blocker with no way
  * forward turns into a support ticket.
  */
-function r1Block(state: R1State, id: string | null, expiredAt: string | null): string | null {
+function r1Block(
+  state: R1State,
+  id: string | null,
+  expiredAt: string | null,
+  lineagePublished = true,
+): string | null {
   const ref = id ?? "the linked R1";
+  // A response that never carried the field is not a response that said "none".
+  // Approve stays blocked either way — an R2 decided without visible R1
+  // authority is decided blind — but the reviewer is told which of the two it
+  // is, so they do not go looking for an approval that may well exist.
+  if (!lineagePublished) {
+    return "This response does not carry the R1 lineage, so the authority this R2 rests on cannot be shown. Approve is disabled until the source publishes it.";
+  }
   switch (state) {
     case "APPROVED":
     case "APPROVED_WITH_CONDITION":
@@ -140,6 +152,7 @@ export function GateR2Review({
   subject,
   r1Id,
   r1State,
+  r1LineagePublished = true,
   r1Href,
   r1Expiry,
   r1Digest,
@@ -178,6 +191,8 @@ export function GateR2Review({
   subject: string;
   r1Id: ApprovalId | null;
   r1State: R1State;
+  /** `false` when the response carried no R1 lineage field at all (BR-EX-30). */
+  r1LineagePublished?: boolean;
   /** Where the R1 decision can be read. A reference nobody can open is a claim. */
   r1Href?: string | null;
   /**
@@ -276,7 +291,12 @@ export function GateR2Review({
   const [draft, setDraft] = useState<ConditionDraft>(EMPTY_DRAFT);
 
   const selfApproval = planAuthor === actor;
-  const blockedReason = r1Block(r1State, r1Id, r1State === "EXPIRED" ? (r1Expiry ?? null) : null);
+  const blockedReason = r1Block(
+    r1State,
+    r1Id,
+    r1State === "EXPIRED" ? (r1Expiry ?? null) : null,
+    r1LineagePublished,
+  );
   const breach = capital.some((c) => c.breach);
   // §2.2: an ineligible preview blocks approval and nothing else. It is not
   // hidden — the numbers are how an operator works out what went stale — and it

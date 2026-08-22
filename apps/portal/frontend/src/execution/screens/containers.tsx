@@ -686,6 +686,9 @@ export function GateR2ReviewContainer({
         // Absent means MISSING, which blocks. A reference we could not read is
         // not a reference we may proceed on.
         r1State={d?.r1State ?? "MISSING"}
+        // Before the detail arrives there is nothing to claim either way, so
+        // the optimistic default stands and the loading state governs.
+        r1LineagePublished={d?.r1LineagePublished ?? true}
         r1Href={d?.r1Href}
         r1Expiry={d?.r1Expiry}
         r1Digest={d?.r1Digest}

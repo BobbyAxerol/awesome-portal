@@ -21,6 +21,15 @@
       "@portal/contracts-analytics": [
         "../../../packages/contracts/generated/execution-analytics.d.ts"
       ],
+      "@portal/contracts-realtime": [
+        "../../../packages/contracts/generated/execution-realtime.d.ts"
+      ],
+      "@portal/contracts-governance": [
+        "../../../packages/contracts/generated/execution-governance.d.ts"
+      ],
+      "@portal/contracts-command-center": [
+        "../../../packages/contracts/generated/execution-command-center.d.ts"
+      ],
       "@/*": ["../../../features/roadmap-task-board/frontend/src/*"]
     }
   },

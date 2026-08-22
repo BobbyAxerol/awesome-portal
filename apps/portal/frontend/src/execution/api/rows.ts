@@ -449,6 +449,8 @@ export interface GateR2Detail {
   subject: string;
   r1Id: ApprovalId | null;
   r1State: R1State;
+  /** `false` when the response carried no R1 lineage field at all (BR-EX-30). */
+  r1LineagePublished: boolean;
   /** Where the R1 decision can be read. A reference nobody can open is a claim. */
   r1Href: string | null;
   /** §3's other two R1 reference fields, plus who decided it. */
@@ -497,6 +499,13 @@ export function readGateR2Detail(raw: unknown): GateR2Detail | null {
   const gaps: string[] = [];
   const r1 = obj(data.r1_reference) ?? {};
   const r1Parsed = readEnum(r1.state ?? data.r1_state, R1_STATES);
+  // Whether the response carried R1 lineage AT ALL, as opposed to saying there
+  // is none. Both end in a blocked Approve — correctly — but they are different
+  // sentences: one asks the reviewer to link an R1, and the other tells them
+  // the response does not carry the field. Telling them the first when the
+  // truth is the second sends them looking for a missing approval that exists.
+  // BR-EX-30: the published R2 document carries neither key today.
+  const r1LineagePublished = "r1_reference" in data || "r1_state" in data;
   if (r1Parsed && !r1Parsed.known) gaps.push(`r1.state="${r1Parsed.raw}"`);
 
   const capitalRaw = Array.isArray(data.capital) ? data.capital : [];
@@ -525,6 +534,7 @@ export function readGateR2Detail(raw: unknown): GateR2Detail | null {
     // An unreadable R1 state is MISSING, the value that blocks. A reference we
     // cannot understand is not a reference we may proceed on.
     r1State: r1Parsed?.known ? r1Parsed.value : "MISSING",
+    r1LineagePublished,
     r1Href: str(r1.href),
     r1Expiry: str(r1.expiry),
     r1Digest: str(r1.digest),

@@ -33,9 +33,12 @@ import type {
   OperationSnapshot,
   Result,
 } from "./ports";
-import { isPaperExitDecision, unavailable } from "./ports";
+import { isPaperExitDecision, PAPER_EXIT_EXTENSION_DAYS, unavailable } from "./ports";
 import type { CapitalPreviewInput } from "./ports";
 import type { components } from "@portal/contracts-analytics";
+import type { components as GovernanceComponents } from "@portal/contracts-governance";
+
+type PaperExitPlanRequest = GovernanceComponents["schemas"]["PaperExitDecisionPlanRequest"];
 
 type CapitalPreviewRequest = components["schemas"]["CapitalPreviewRequest"];
 
@@ -277,7 +280,12 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       // `expected_approval_version` is a required positive integer. Without one
       // there is nothing to be optimistic about, and inventing a version would
       // decide against a request that may have moved.
-      if (!Number.isInteger(input.expectedApprovalVersion) || (input.expectedApprovalVersion ?? 0) <= 0) {
+      // Bound to a local so the narrowing survives into the request bodies.
+      // The original guard was correct at runtime and invisible to the type
+      // system, which meant the generated contract could not be used to type
+      // the payload at all — the check has to narrow, not merely reject.
+      const expectedVersion = input.expectedApprovalVersion;
+      if (expectedVersion === null || !Number.isInteger(expectedVersion) || expectedVersion <= 0) {
         return unavailable(
           "This request published no version to decide against, so a plan cannot be made safely.",
         );
@@ -312,25 +320,30 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       // `/governance/approvals/{id}/decision-plans` — this adapter invented it,
       // and every R1 and R2 decision would have 404ed. Corrected against
       // `apps/control-api/src/governance/governance.controller.ts`.
-      const paperExit = isPaperExitDecision(input.decision);
-      const planBody = paperExit
-        ? {
+      const decision = input.decision;
+      // Typed against the generated declaration, so a field rename upstream
+      // fails to compile here rather than 422ing in a browser. The R1 branch
+      // has no generated counterpart to bind to — its schema lives in the
+      // Control API as zod and is not published as OpenAPI — which is worth
+      // knowing and is why only one of these two carries a type.
+      const planBody: PaperExitPlanRequest | Record<string, unknown> = isPaperExitDecision(decision)
+        ? ({
             schema_version: "governance.paper-exit-decision-plan-request.v1",
             workspace_id: input.workspaceId,
             request_key: input.requestKey,
             command_type: "GOVERNANCE_PAPER_EXIT_DECISION",
             command_version: 1,
             target: { review_id: input.approvalId },
-            expected_review_version: input.expectedApprovalVersion,
+            expected_review_version: expectedVersion,
             payload: {
-              decision: input.decision,
+              decision,
               reason: input.reason,
               // The schema pins this: exactly 14 for an extension, exactly null
               // for anything else. Sending 0, or omitting it, is a 422.
-              extension_days: input.decision === "EXTEND_OBSERVATION" ? 14 : null,
+              extension_days: decision === "EXTEND_OBSERVATION" ? PAPER_EXIT_EXTENSION_DAYS : null,
               evidence_hashes: [...(input.evidenceHashes ?? [])],
             },
-          }
+          } satisfies PaperExitPlanRequest)
         : {
             schema_version: "governance.r1-decision-plan-request.v1",
             workspace_id: input.workspaceId,
@@ -338,7 +351,7 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
             command_type: "GOVERNANCE_R1_DECISION",
             command_version: 1,
             target: { approval_id: input.approvalId },
-            expected_approval_version: input.expectedApprovalVersion,
+            expected_approval_version: expectedVersion,
             payload: {
               decision: input.decision,
               reason: input.reason,

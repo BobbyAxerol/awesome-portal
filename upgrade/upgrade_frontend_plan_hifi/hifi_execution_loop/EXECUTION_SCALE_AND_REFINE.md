@@ -797,3 +797,58 @@ deprecated alias nếu cần chuyển dần.
 **Ảnh hưởng hiện tại:** frontend gửi điều kiện mới nhất, bẹp thành chuỗi, và
 `describeCondition` trong `containers.tsx` ghi rõ tại chỗ vì sao. Khi
 `conditions[]` có, xoá hàm đó và gửi mảng.
+
+---
+
+## BR-EX-30 — R2 response thiếu bảy trường màn R2 đang đọc
+
+**Phát hiện:** 2026-08-22, trong lúc làm C-PI04-01 (audit contract consumption).
+**Cách tìm:** đối chiếu bằng máy mọi tên snake_case reader frontend đọc với
+`packages/contracts/generated/*.d.ts`, rồi tra ngược từng cái không khớp.
+
+### Vấn đề
+
+`execution-governance-r2-review.v1.schema.json` publish `data.actor` và
+`data.approval` (25 khoá). `readGateR2Detail` đọc **bảy** tên không có ở đó:
+
+| Trường frontend đọc | Có trong R2 schema | Có trong contract pack | Có trong Control API |
+|---|---|---|---|
+| `r1_reference` | ❌ | ❌ | ❌ |
+| `r1_state` | ❌ | ❌ | ❌ |
+| `r1_id` | ❌ | ❌ | ❌ |
+| `grant_name` | ❌ | ❌ | ❌ |
+| `approver_role` | ❌ | ❌ | ❌ |
+| `plan_author` | ❌ | ❌ | ❌ |
+| `evidence_manifest` | ❌ | ❌ | 1 lần |
+
+Chúng được viết từ hi-fi **trước khi** schema tồn tại. Với endpoint thật, cả
+bảy trả `null` — chip lineage R1, tên grant, vai trò người duyệt và passport
+bằng chứng trên Gate R2 sẽ **trống**, và không gì nói tại sao.
+
+### Vì sao đây là việc của backend
+
+Hi-fi 1b bắt Gate R2 phải cho người duyệt thấy **R2 này dựa trên R1 nào**. Đó
+là yêu cầu an toàn, không phải trang trí: duyệt cấp vốn mà không thấy chuỗi
+thẩm quyền phía trước là duyệt mù. Frontend không bịa được thứ contract không
+gửi.
+
+### Xin codex
+
+Publish trong `R2ReviewResponse` (tên là đề xuất, codex quyết):
+
+```
+data.approval.r1_reference: { approval_id, state, decided_at } | null
+data.approval.grant_name: string | null
+data.approval.approver_role: string | null
+data.approval.plan_author: string | null
+data.evidence_manifest: { entries[] } | null
+```
+
+Nếu một trong số đó **cố ý không publish**, xin nói rõ — frontend sẽ hiện
+`unavailable` kèm lý do thay vì để trống.
+
+### Frontend đã làm gì
+
+`contractFixtures.test.ts` có một gate khẳng định bảy tên này **vẫn vắng**.
+Ngày codex publish bất kỳ cái nào, test đỏ và reader thôi đoán. Đây là bản ghi
+sống của khoảng trống, không phải chấp nhận lỗi.
