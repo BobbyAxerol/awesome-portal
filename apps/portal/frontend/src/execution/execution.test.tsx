@@ -4488,7 +4488,9 @@ describe("a cursor the server rejects does not strand the list", () => {
     render(<ApprovalInboxContainer api={api} />);
     const older = await screen.findByRole("button", { name: /load older/i });
     fireEvent.click(older);
-    expect(await screen.findByText(/page reference expired/)).toBeTruthy();
+    // The message is the INVALID_CURSOR one now, not the single generic
+    // sentence every rejection used to share (C-PI04-03).
+    expect(await screen.findByText(/saved position is not valid/)).toBeTruthy();
     // And it recovered: rows are on screen again, not a permanent error panel.
     expect(calls).toBeGreaterThan(1);
     expect(await screen.findByText("AP-201")).toBeTruthy();

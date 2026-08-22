@@ -22,6 +22,7 @@ import {
   newRequestKey,
   readEnum,
 } from "../adapter";
+import { readCursorFailure } from "../cursorFailure";
 import { cursorStillValid, type CursorScope, type KeysetPage, type PanelStatus } from "../contracts";
 import {
   decisionReducer,
@@ -71,13 +72,6 @@ function loading<T>(): LoadState<T> {
 }
 
 /**
- * Codes and phrases that mean "this cursor is no longer usable".
- *
- * Matched on the reason text because the BFF collapses Rust's `CursorExpired`
- * and `CursorContextMismatch` into one `INVALID_CURSOR` (audit A-8) and the
- * problem body is the only place the distinction survives at all.
- */
-/**
  * The sort the inbox asks for, and the only one the server will honour.
  *
  * Exported so a test can hold it against the server's allowlist rather than
@@ -121,8 +115,6 @@ function describeCondition(condition: {
 }
 
 export const INBOX_SCOPE_SORT = "sla_due_at:asc,approval_id:asc";
-
-const CURSOR_REJECTED = /INVALID_CURSOR|CURSOR_EXPIRED|CURSOR_CONTEXT|cursor/i;
 
 export function ApprovalInboxContainer({
   api,
@@ -200,11 +192,17 @@ export function ApprovalInboxContainer({
       // keeping the rejected cursor in state re-sent it on every render — a
       // list stuck on an error it could have recovered from by asking for the
       // first page.
-      if (!result.ok && CURSOR_REJECTED.test(result.reason) && (after || before)) {
-        setCursorReset(
-          "The page reference expired or no longer applies — showing the first page.",
-        );
-        setCursor({ scope: null });
+      // Three codes, three recoveries. The distinction that matters is
+      // `preserveQuery`: a context mismatch means the workspace, filter or sort
+      // changed, so the cursor addresses a population that is no longer on
+      // screen and must never be replayed here. The other two are the same
+      // query with an unusable bookmark.
+      if (!result.ok && (after || before)) {
+        const failure = readCursorFailure(result.reason);
+        if (failure) {
+          setCursorReset(failure.notice);
+          setCursor({ scope: null });
+        }
       }
     });
     return () => {
