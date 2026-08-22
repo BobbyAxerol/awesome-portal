@@ -39,6 +39,25 @@ function obj(raw: unknown): Record<string, unknown> | null {
     : null;
 }
 
+/**
+ * A person, published as `{user_id, username}` or as a bare string.
+ *
+ * Two readers rather than one because the two answer different questions: the
+ * name is for the sentence a reviewer reads, and the id is the only thing an
+ * equality check may ever be based on.
+ */
+function actorName(raw: unknown): string | null {
+  if (typeof raw === "string" && raw.length > 0) return raw;
+  const o = obj(raw);
+  return o ? (str(o.username) ?? str(o.user_id)) : null;
+}
+
+function actorId(raw: unknown): string | null {
+  if (typeof raw === "string" && raw.length > 0) return raw;
+  const o = obj(raw);
+  return o ? str(o.user_id) : null;
+}
+
 function int(raw: unknown): number | null {
   return typeof raw === "number" && Number.isInteger(raw) ? raw : null;
 }
@@ -196,7 +215,9 @@ export interface GateR1Detail {
   quorumRequired: number;
   policyVersion: string;
   creator: string;
+  creatorId: string | null;
   actor: string;
+  actorId: string | null;
   sla: Sla | null;
   passport: readonly PassportEntry[];
   checklist: readonly ChecklistItem[];
@@ -286,8 +307,13 @@ export function readGateR1Detail(raw: unknown): GateR1Detail | null {
     quorumMet: int(approval.quorum_met ?? data.quorum_met) ?? 0,
     quorumRequired: int(approval.quorum_required ?? data.quorum_required) ?? 0,
     policyVersion: str(approval.policy_version ?? data.policy_version) ?? "unversioned",
-    creator: str(approval.creator ?? data.creator) ?? "unknown",
-    actor: str(data.actor) ?? "unknown",
+    // `creator` is `{user_id, username}` on the wire; `str()` on it returned
+    // null, both sides fell back to "unknown", and the screen's equality check
+    // then locked every approval as a self-approval.
+    creator: actorName(approval.creator ?? data.creator) ?? "unknown",
+    creatorId: actorId(approval.creator ?? data.creator),
+    actor: actorName(data.actor) ?? "unknown",
+    actorId: actorId(data.actor),
     sla: readSla(approval.sla ?? data.sla),
     eligibility,
     passport,

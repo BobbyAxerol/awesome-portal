@@ -1854,6 +1854,8 @@ const CHECKLIST = [
 const ALLOWED = { canApprove: true, canApproveWithCondition: true, canDeny: true };
 
 function gate(over: Record<string, unknown> = {}) {
+  const creator = (over.creator as string) ?? "Minh";
+  const actor = (over.actor as string) ?? "Lan";
   return (
     <GateR1Review
       approvalId="AP-201"
@@ -1862,8 +1864,13 @@ function gate(over: Record<string, unknown> = {}) {
       quorumMet={1}
       quorumRequired={2}
       policyVersion="approval.v3"
-      creator="Minh"
-      actor="Lan"
+      creator={creator}
+      actor={actor}
+      // These tests express "the same person" by giving both sides the same
+      // display name, so the harness derives an identity from it. Production
+      // reads a real `user_id`, which is the only thing the lock compares.
+      creatorId={creator}
+      actorId={actor}
       passport={PASSPORT}
       checklist={CHECKLIST}
       eligibility={ALLOWED}
@@ -4554,5 +4561,38 @@ describe("the operation poll reads what the endpoint publishes", () => {
     } finally {
       globalThis.fetch = original;
     }
+  });
+});
+
+describe("separation of duty compares people, not the absence of them", () => {
+  it("does not lock every approval when neither identity is published", () => {
+    // The wire publishes `creator` as {user_id, username} and no `actor` at
+    // all. Read with str(), both fell back to "unknown", and "unknown" ===
+    // "unknown" locked SELF_APPROVAL on every approval on the surface.
+    render(gate({ creator: "unknown", actor: "unknown", creatorId: null, actorId: null }));
+    expect(screen.queryByText(/self-approval prohibited/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", false);
+  });
+
+  it("still locks when the same person really is on both sides", () => {
+    render(gate({ creatorId: "usr_stan", actorId: "usr_stan" }));
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
+    expect(screen.getByText(/self-approval prohibited/)).toBeTruthy();
+  });
+
+  it("does not lock two people who happen to share a display name", () => {
+    render(gate({ creator: "Minh", actor: "Minh", creatorId: "usr_a", actorId: "usr_b" }));
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", false);
+  });
+
+  it("reads the identity out of the object the wire actually sends", () => {
+    const d = readGateR1Detail({
+      approval_id: "AP-201",
+      creator: { user_id: "usr_stan", username: "stan" },
+    });
+    expect(d?.creatorId).toBe("usr_stan");
+    expect(d?.creator).toBe("stan");
+    // No actor on the wire: unknown, and unknown must not match anything.
+    expect(d?.actorId).toBeNull();
   });
 });

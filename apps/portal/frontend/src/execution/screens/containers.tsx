@@ -343,6 +343,8 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
         checklist={detail?.checklist ?? []}
         locks={detail?.locks ?? []}
         eligibility={detail?.eligibility}
+        creatorId={detail?.creatorId}
+        actorId={detail?.actorId}
         decided={detail?.decided ?? null}
         status={state.status}
         reason={state.reason}

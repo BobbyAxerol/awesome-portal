@@ -115,6 +115,8 @@ export function GateR1Review({
   policyVersion,
   creator,
   actor,
+  creatorId = null,
+  actorId = null,
   sla,
   passport,
   checklist,
@@ -139,9 +141,17 @@ export function GateR1Review({
   quorumMet: number;
   quorumRequired: number;
   policyVersion: string;
-  /** Who produced the artifact. Compared against `actor` for the SoD line. */
+  /** Display names for the separation-of-duty line. */
   creator: string;
   actor: string;
+  /**
+   * Stable identities, when the payload publishes them.
+   *
+   * The SoD lock is derived from these and never from the display names: two
+   * people can share a display name, and two absent names look identical.
+   */
+  creatorId?: string | null;
+  actorId?: string | null;
   sla?: Sla;
   passport: readonly PassportEntry[];
   checklist: readonly ChecklistItem[];
@@ -190,7 +200,15 @@ export function GateR1Review({
 
   const [draft, setDraft] = useState<ConditionDraft>(EMPTY_DRAFT);
 
-  const selfApproval = creator === actor;
+  // Two people, compared by identity — and only when both identities are
+  // actually known. The previous `creator === actor` compared display strings
+  // that both fell back to "unknown" against the real payload, where `creator`
+  // is an object and `actor` is not published at all: every approval on the
+  // surface was locked as a self-approval. Two unknowns are not the same
+  // person, and they are not different people either — they are unknown, and an
+  // unknown must not fire a lock derived from equality. The server's
+  // `eligibility` is the authority; this stays as a second, narrower check.
+  const selfApproval = Boolean(creatorId && actorId && creatorId === actorId);
   // Derived rather than trusted from the caller: a screen that renders a clean
   // SoD line because a prop said so would be one bad prop away from permitting
   // the thing this screen exists to refuse.

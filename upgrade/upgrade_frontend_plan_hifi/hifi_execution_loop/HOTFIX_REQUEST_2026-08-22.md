@@ -77,3 +77,142 @@ cap cứng 250/1024 trên ledger/funnel.
 
 Các request cũ **A-5, BR-EX-24, BR-EX-25, BR-EX-26, BR-EX-27** vẫn chưa thấy
 trong working tree của bạn — xem `FE_BE_CONTRACT_AUDIT_2026-08-22.md` mục E.
+
+---
+
+# Bổ sung sau khi vòng verify chạy xong
+
+Audit 9 lăng kính: **116 phát hiện**, 64 qua được vòng bác bỏ đối kháng (≥2/3
+refuter độc lập không bác được), 15 bị bác thật, **37 không kịp verify** (agent
+lỗi vì session limit — *không* coi là đã bác).
+
+Frontend đã sửa xong toàn bộ 17 high, commit `2e3a42a`, `8d8779a`. Dưới đây là
+phần thuộc backend.
+
+---
+
+## H-3 · Live-path `epoch_changed` không mang deadline · NẶNG
+
+`crates/realtime-sse/src/lib.rs:260-266`
+
+```rust
+if cursor.epoch_id != self.last_good_cursor.epoch_id {
+    self.terminal = true;
+    return SubscriptionDelivery::Gap(
+        GapEnvelope::new(GapReason::EpochChanged, Some(self.last_good_cursor)));
+}
+```
+
+`GapEnvelope::new` để `resnapshot_not_before: None` và `active_epoch_id: None`.
+Chỉ **đường resume** (`main.rs:961-963`) gán jitter deadline.
+
+**Hệ quả:** epoch cutover trong lúc 100 màn đang kết nối → cả 100 nhận
+`epoch_changed` **không deadline** → `mayResnapshot()` phía client trả `true`
+ngay → cả 100 resnapshot cùng lúc vào một projection vừa rebuild xong nên cache
+lạnh. Đúng thundering herd mà cơ chế jitter sinh ra để chặn. Chỉ client nào
+tình cờ đang mất kết nối mới được jitter.
+
+**Đề xuất:** nhánh live gọi `server_jitter_deadline(new_epoch, client_sid, now,
+jitter)` giống đường resume — cần truyền `sid`/`jitter` vào
+`RealtimeSubscription`.
+
+---
+
+## H-4 · `source_discontinuity` bị dùng cho hai nguyên nhân khác nhau · vừa
+
+`crates/realtime-sse/src/lib.rs:274` — một `projection_sequence` không liền
+mạch **trong cùng epoch** (lỗi journal/fan-out của Portal edge) được phát ra là
+`GapReason::SourceDiscontinuity` — đúng reason dành cho
+`envelope.source_discontinuity`, tức **Trading System tự nhảy số**.
+
+Frontend hiện hiện câu *"The Trading System reported a break in its own
+sequence"*. Nếu thật ra lỗi ở edge của ta thì màn hình vừa đổ lỗi cho Trading
+System. Operator sẽ đi kiểm nhầm hệ thống.
+
+**Đề xuất:** thêm reason riêng (`projection_discontinuity` hoặc `delivery_gap`)
+cho lỗi contiguity phía edge; giữ `source_discontinuity` cho đúng cờ envelope.
+Frontend đã có `GapReason` narrow nên chỉ cần thêm một giá trị.
+
+---
+
+## H-5 · Cursor vượt journal báo thành `epoch_changed` · nhẹ
+
+`crates/query-api/src/lib.rs:786` — khi `cursor.sequence >
+latest_available_sequence` trong **cùng** epoch, `resume_decision` rơi xuống
+`Resnapshot` và edge phát `epoch_changed` với `active_epoch_id` bằng chính epoch
+của cursor. Epoch không đổi; client được bảo là đã đổi.
+
+**Đề xuất:** reason riêng (`cursor_ahead`, hoặc `history_evicted` kèm
+earliest/latest) cho cursor ngoài dải trong cùng epoch.
+
+---
+
+## H-6 · Mọi lỗi validation của engine thành 503 · vừa
+
+`crates/edge-service/src/main.rs:777` — `analytics_response` gộp **mọi**
+`AnalyticsError` thành `SERVICE_UNAVAILABLE`: `BatchLimit` (>64 insight, >1024
+funnel event, >250 ledger entry), `DuplicateIdentifier`, `ScopeMismatch`,
+`NegativeAmount`.
+
+Bốn cái đầu là **lỗi của client**. Trả 503 cho chúng nghĩa là: client thấy
+"service unavailable", thử lại, thất bại lại — vĩnh viễn; còn on-call thì đi tìm
+một sự cố hạ tầng không tồn tại.
+
+**Đề xuất:** phân biệt 400/422 (client) với 503 (data fault) và trả Problem JSON
+có `type` để frontend phân nhánh được.
+
+---
+
+## H-7 · Cap cứng 250/1024 trên tập vô hạn · vừa
+
+`crates/analytics/src/ledger.rs:110` và funnel. Ledger nạp **mọi** fact của
+portfolio rồi **báo lỗi** khi quá 250; funnel làm tương tự trên 1.024 event —
+mà `fills` **không có retention policy**, nên nó lớn mãi.
+
+Nghĩa là: một portfolio đủ lâu năm thì tab Capital Ledger **ngừng hoạt động
+hoàn toàn**, không phải hiện ít đi. Cùng vậy với một order nhiều fill.
+
+Frontend đã xử lý phần của mình: cả hai panel giờ nói rõ chúng là **cửa sổ**
+chứ không phải toàn bộ, và đọc `entry_count` nếu server cấp. Nhưng phía server
+vẫn cần keyset page (`after`/`before`, `limit`, cursor gắn epoch) hoặc trả trang
+mới nhất kèm gross totals server tính.
+
+---
+
+## H-8 · BFF gộp `CursorExpired` và `CursorContextMismatch` · nhẹ
+
+`apps/control-api/src/query/cursor.ts:37` ném một `INVALID_CURSOR` duy nhất cho
+malformed, tampered, expired và scope-mismatched — trong khi Rust `query-api`
+phân biệt ba variant.
+
+Frontend giờ đã recover được (bỏ cursor, xin trang đầu), nhưng nó phải nhận
+diện bằng **regex trên chuỗi lý do**, không phải bằng mã. Xin
+`CURSOR_EXPIRED` và `CURSOR_CONTEXT_MISMATCH` riêng, ghi vào error catalog.
+
+---
+
+## H-9 · Contract: operation response nên có **hai** trường
+
+`governance.service.ts:478-495` publish `status` ∈ {PENDING, SUCCEEDED,
+EXPIRED} và **không có** `verification_result`.
+
+Frontend từng đọc `verification_result` nên token luôn vắng, walk không bao giờ
+rời "unknown", và **một quyết định đã thành công thật chưa bao giờ được báo là
+thành công**. Đã sửa để đọc `status`, vẫn ưu tiên `verification_result` cho ngày
+nó xuất hiện.
+
+**Đề xuất:** publish cả hai như hai trường riêng — `status` (workflow) và
+`verification_result` (observed) — với một danh sách enum duy nhất trong
+`packages/contracts`. Một workflow đã kết thúc và một hiệu ứng chỉ landing một
+phần là **hai sự thật khác nhau**, và `PARTIAL` không diễn đạt được bằng
+`status` hiện tại.
+
+---
+
+## Nhắc lại: H-1 và H-2 ở đầu file vẫn treo
+
+**H-1** `DecimalString::parse` làm tròn âm thầm — vẫn là mục nặng nhất cả lần
+soát. **H-2** `view=` đã sửa phía frontend; vẫn xin xác nhận tên canonical và
+cân nhắc fail-closed thay vì mặc định `INBOX`.
+
+Và **A-5, BR-EX-24, 25, 26, 27** từ audit trước vẫn chưa thấy trong tree.
