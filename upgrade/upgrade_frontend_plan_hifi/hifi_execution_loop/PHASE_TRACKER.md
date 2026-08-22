@@ -317,6 +317,14 @@ fixture, unavailable, stale, reconnect and recovery UX without assuming AWS
 availability. Detail:
 [`EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md`](../../backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md).
 
+The live D1 checkpoint is `D1_HOSTS_STAGED / AWS_OWNER_SG_RULE_PENDING`:
+reviewed packages and root-only WireGuard configs exist on both hosts, but both
+interfaces remain down and no delivery flag changed. Bobby must create the one
+exact UDP 51820-from-SGP-`/32` AWS rule and record its `sgr-...` rollback ID
+before activation testing. This still unlocks no live FE profile; Claude should
+continue fixture/failure-state work only. Evidence:
+[`EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md`](../../backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md).
+
 ### 6.2 BR-EX decisions
 
 The binding contract is

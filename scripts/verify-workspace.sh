@@ -232,6 +232,8 @@ for required in \
   "${ROOT_DIR}/scripts/execution-edge-test.sh" \
   "${ROOT_DIR}/scripts/execution-edge-live-probe.sh" \
   "${ROOT_DIR}/scripts/execution-d1-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d1-open-window.sh" \
+  "${ROOT_DIR}/scripts/execution-d1-render-wireguard.sh" \
   "${ROOT_DIR}/scripts/execution-d1-test.sh" \
   "${ROOT_DIR}/deploy/execution-d1/README.md" \
   "${ROOT_DIR}/deploy/execution-d1/owner-input.env.example" \
@@ -245,6 +247,7 @@ for required in \
   "${ROOT_DIR}/deploy/execution-d1/source-proxy/trading-system-read-header.conf.example" \
   "${ROOT_DIR}/deploy/runbooks/execution-d1-bootstrap-and-rollback.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md" \
@@ -509,6 +512,8 @@ for tracked_source in \
   deploy/images/execution-edge-ci.Dockerfile \
   scripts/execution-edge-test.sh \
   scripts/execution-d1-preflight.sh \
+  scripts/execution-d1-open-window.sh \
+  scripts/execution-d1-render-wireguard.sh \
   scripts/execution-d1-test.sh \
   deploy/execution-d1/README.md \
   deploy/execution-d1/owner-input.env.example \
@@ -522,6 +527,7 @@ for tracked_source in \
   deploy/execution-d1/source-proxy/trading-system-read-header.conf.example \
   deploy/runbooks/execution-d1-bootstrap-and-rollback.md \
   upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md \
+  upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md \
   upgrade/backend/EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md \
   upgrade/backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md \
   upgrade/backend/EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md \
@@ -632,6 +638,8 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-edge-test.sh" \
   "${ROOT_DIR}/scripts/execution-edge-live-probe.sh" \
   "${ROOT_DIR}/scripts/execution-d1-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d1-open-window.sh" \
+  "${ROOT_DIR}/scripts/execution-d1-render-wireguard.sh" \
   "${ROOT_DIR}/scripts/execution-d1-test.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
   "${ROOT_DIR}/apps/portal/scripts/test_backend.sh" \

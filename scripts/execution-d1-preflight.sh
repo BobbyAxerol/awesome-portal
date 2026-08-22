@@ -8,10 +8,11 @@ DEFAULT_INPUT="${ROOT_DIR}/deploy/execution-d1/owner-input.env.example"
 
 usage() {
   cat <<'EOF'
-Usage: execution-d1-preflight.sh [--input FILE] [--mode template|readiness|production] [--cell none|sgp|aws]
+Usage: execution-d1-preflight.sh [--input FILE] [--mode template|readiness|activation|production] [--cell none|sgp|aws]
 
 template    Validate tracked defaults and safety locks; D1_AUTHORIZED must be false.
 readiness   Require owner authorization/change window and D1 network decisions.
+activation  Add proof of the exact AWS WireGuard Security Group rule.
 production  Add the deferred AWS control-plane IDs and D2/operations decisions.
 
 --cell runs additional read-only local route/port/tool checks. It never installs,
@@ -51,7 +52,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-case "${mode}" in template|readiness|production) ;; *) printf 'Invalid mode.\n' >&2; exit 2 ;; esac
+case "${mode}" in template|readiness|activation|production) ;; *) printf 'Invalid mode.\n' >&2; exit 2 ;; esac
 case "${cell}" in none|sgp|aws) ;; *) printf 'Invalid cell.\n' >&2; exit 2 ;; esac
 [[ -f "${input_file}" && -r "${input_file}" ]] || {
   printf 'Owner input is not a readable regular file.\n' >&2
@@ -75,7 +76,7 @@ keys=(
   SGP_PUBLIC_IP_CONFIRMED_STATIC SGP_CLOUD_FIREWALL
   AWS_SSH_HOST AWS_SSH_PORT AWS_SSH_USER AWS_SSH_ED25519_FINGERPRINT
   AWS_REGION AWS_INSTANCE_ID AWS_PUBLIC_IPV4 AWS_ELASTIC_IP
-  AWS_EIP_ALLOCATION_ID AWS_SECURITY_GROUP_ID AWS_VPC_ID AWS_SUBNET_ID
+  AWS_EIP_ALLOCATION_ID AWS_SECURITY_GROUP_ID AWS_WG_SG_RULE_ID AWS_VPC_ID AWS_SUBNET_ID
   AWS_ROUTE_TABLE_ID AWS_SG_CHANGE_MODE
   WG_CIDR WG_AWS_IP WG_SGP_IP WG_UDP_PORT WG_VALUES_APPROVED
   EDGE_PRIVATE_PORT EDGE_PRIVATE_DNS EDGE_TLS_IDENTITY PORTAL_BRIDGE_CIDR
@@ -327,6 +328,13 @@ PY
   fi
 fi
 
+if [[ "${mode}" == "activation" || "${mode}" == "production" ]]; then
+  require_set AWS_WG_SG_RULE_ID
+  [[ "${values[AWS_WG_SG_RULE_ID]}" =~ ^sgr-[0-9a-f]{8,17}$ ]] ||
+    error "AWS_WG_SG_RULE_ID is malformed"
+  pass "exact AWS WireGuard Security Group rule is recorded"
+fi
+
 if [[ "${mode}" == "production" ]]; then
   for key in AWS_EIP_ALLOCATION_ID AWS_ROUTE_TABLE_ID AWS_OOM_IO_REVIEW_OWNER \
     OBSERVABILITY_DESTINATION OBSERVABILITY_OWNER BACKUP_OWNER \
@@ -374,8 +382,19 @@ PY
 port_is_free() {
   local protocol="$1" port="$2" label="$3"
   command -v ss >/dev/null 2>&1 || { warn "ss unavailable; ${label} not checked"; return; }
-  local flags="-H-ln${protocol}"
-  if ss "${flags}" 2>/dev/null | awk '{print $5}' | grep -Eq "(^|[.:])${port}$"; then
+  local sockets
+  if [[ "${protocol}" == "u" ]]; then
+    sockets="$(ss -H -l -n -u 2>/dev/null)" || {
+      error "${label} inventory could not be read"
+      return
+    }
+  else
+    sockets="$(ss -H -l -n -t 2>/dev/null)" || {
+      error "${label} inventory could not be read"
+      return
+    }
+  fi
+  if awk '{print $5}' <<<"${sockets}" | grep -Eq "(^|[.:])${port}$"; then
     error "${label} is already listening"
   else
     pass "${label} is not listening"

@@ -5,10 +5,16 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PREFLIGHT="${ROOT_DIR}/scripts/execution-d1-preflight.sh"
+OPEN_WINDOW="${ROOT_DIR}/scripts/execution-d1-open-window.sh"
+WG_RENDERER="${ROOT_DIR}/scripts/execution-d1-render-wireguard.sh"
 EXAMPLE="${ROOT_DIR}/deploy/execution-d1/owner-input.env.example"
 EDGE_ENV="${ROOT_DIR}/deploy/execution-d1/edge-source-proxy.env.example"
 
-bash -n "${PREFLIGHT}" "$0"
+bash -n "${PREFLIGHT}" "${OPEN_WINDOW}" "${WG_RENDERER}" "$0"
+if grep -En 'ss "\$\{flags\}"|ss -H-l' "${PREFLIGHT}" >/dev/null; then
+  printf 'Preflight contains a non-portable combined ss flag.\n' >&2
+  exit 1
+fi
 "${PREFLIGHT}" --input "${EXAMPLE}" --mode template --cell none
 
 tmp_dir="$(mktemp -d)"
@@ -44,6 +50,28 @@ sed -i \
   "${tmp_dir}/readiness.env"
 chmod 600 "${tmp_dir}/readiness.env"
 
+# The atomic v0→v1 migration preserves metadata, normalizes peer IPs and opens
+# only the D1 gates. The resulting file must pass the same readiness validator.
+cp "${tmp_dir}/readiness.env" "${tmp_dir}/migration.env"
+sed -i \
+  -e 's/^INPUT_VERSION=portal.execution-d1.owner-input.v1$/INPUT_VERSION=portal.execution-d1.owner-input.v0/' \
+  -e 's/^D1_AUTHORIZED=true$/D1_AUTHORIZED=false/' \
+  -e 's/^WG_AWS_IP=10.70.0.2$/WG_AWS_IP=10.70.0.2\/30/' \
+  -e 's/^WG_SGP_IP=10.70.0.1$/WG_SGP_IP=10.70.0.1\/30/' \
+  -e 's/^WG_VALUES_APPROVED=true$/WG_VALUES_APPROVED=false/' \
+  -e 's/^PORTAL_NETWORK_VALUES_APPROVED=true$/PORTAL_NETWORK_VALUES_APPROVED=false/' \
+  -e 's/^IDENTITY_DECISIONS_APPROVED=true$/IDENTITY_DECISIONS_APPROVED=false/' \
+  "${tmp_dir}/migration.env"
+chmod 600 "${tmp_dir}/migration.env"
+"${OPEN_WINDOW}" --input "${tmp_dir}/migration.env" --owner test-owner \
+  --duration-minutes 30 >/dev/null
+"${PREFLIGHT}" --input "${tmp_dir}/migration.env" --mode readiness \
+  --cell none >/dev/null
+compgen -G "${tmp_dir}/migration.env.pre-v1.*" >/dev/null || {
+  printf 'Owner-input migration did not retain a private backup.\n' >&2
+  exit 1
+}
+
 # Deferred EIP allocation and route-table IDs are warnings, not D1 blockers.
 readiness_output="$("${PREFLIGHT}" --input "${tmp_dir}/readiness.env" --mode readiness --cell none)"
 grep -Fq 'AWS_EIP_ALLOCATION_ID deferred' <<<"${readiness_output}"
@@ -54,6 +82,17 @@ if "${PREFLIGHT}" --input "${tmp_dir}/readiness.env" --mode production --cell no
   printf 'Production preflight unexpectedly accepted deferred metadata.\n' >&2
   exit 1
 fi
+
+# Network activation additionally requires the exact revocable SG rule ID.
+if "${PREFLIGHT}" --input "${tmp_dir}/readiness.env" --mode activation \
+    --cell none >/dev/null 2>&1; then
+  printf 'Activation preflight unexpectedly accepted a missing SG rule ID.\n' >&2
+  exit 1
+fi
+sed -i 's/^AWS_WG_SG_RULE_ID=$/AWS_WG_SG_RULE_ID=sgr-0123456789abcdef0/' \
+  "${tmp_dir}/readiness.env"
+"${PREFLIGHT}" --input "${tmp_dir}/readiness.env" --mode activation \
+  --cell none >/dev/null
 
 # The parser must reject shell syntax rather than sourcing it.
 cp "${EXAMPLE}" "${tmp_dir}/malicious.env"

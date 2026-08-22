@@ -45,5 +45,24 @@ host-to-host tunnel does not change a VPC route table. They become mandatory in
 `--mode production`, which is the explicit reminder/stop-gate before production
 certification.
 
+After the AWS owner creates the exact UDP 51820 rule from the approved SGP
+`/32`, record its `sgr-...` identifier as `AWS_WG_SG_RULE_ID` and require
+`--mode activation` to pass on both cells before starting `portal0`. This makes
+rollback target one rule instead of an entire Security Group.
+
+Open a bounded change window without sourcing or printing the private input:
+
+```bash
+./scripts/execution-d1-open-window.sh \
+  --input /home/bobby/secure/portal-execution-d1-owner-input.env \
+  --owner bobby --duration-minutes 120
+```
+
+This atomically migrates older input to v1, keeps a mode-0600 backup, enables
+only D1 decision gates and preserves all five permanent safety locks as false.
+`scripts/execution-d1-render-wireguard.sh` is the reviewed root-only renderer;
+it reads identity files internally, validates the resulting config with
+`wg-quick strip` and never places a key in argv or stdout.
+
 The operator procedure and rollback are in
 [`deploy/runbooks/execution-d1-bootstrap-and-rollback.md`](../runbooks/execution-d1-bootstrap-and-rollback.md).

@@ -47,6 +47,10 @@ Before changing either host:
 7. The WireGuard package version/repository provenance is recorded before
    installation.
 
+The reviewed way to migrate the private input and open the owner window is
+`scripts/execution-d1-open-window.sh`; it retains the prior mode-0600 revision
+and cannot widen Trading System, command, Live or profile authority.
+
 `AWS_EIP_ALLOCATION_ID` and `AWS_ROUTE_TABLE_ID` may remain empty for D1. They
 must be filled and `--mode production` must pass before production
 certification. D1 adds no VPC route-table entry; the `/30` is a host-local
