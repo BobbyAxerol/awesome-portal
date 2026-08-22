@@ -621,3 +621,44 @@ vào `OrderFunnelData.stages` (và nới `maxItems` 4 → 6). Nếu không, hi-f
 order ACK → fill`") mô tả thứ backend không có.
 
 **Trạng thái:** đang treo, cần codex trả lời trước khi đóng phase 14.
+
+---
+
+## BR-EX-26 — Aggregate headroom phải do server phán, không phải browser cộng
+
+**Ngày raise:** 2026-08-22, khi dựng phase 17.
+
+**Endpoint/field cần:** thêm vào `BindingExposureData` (hoặc endpoint riêng):
+
+```json
+{ "aggregate": {
+    "virtual_total": "41000.00", "physical_total": "43120.00",
+    "headroom": "+2120.00", "currency": "USDT",
+    "verdict": "OK" } }
+```
+
+`verdict` ∈ `OK | EXCEEDED | UNKNOWN`.
+
+**Lý do UI:** hi-fi 1g ghi *"the aggregate check is THIS screen's job"* và
+`IMPLEMENTATION_PHASES` §17 ghi *"headroom computes from the linked-accounts
+table, not a hardcoded value"*. Đọc kỹ thì hai câu đó nói **hai việc khác nhau**,
+và chỉ một việc thuộc về frontend:
+
+- *Hiển thị* aggregate ở màn này — **đúng**, đây là chỗ duy nhất kết luận được,
+  vì một physical account đỡ nhiều virtual account.
+- *Tính* aggregate ở browser — **không**. Đây là control **fail-closed**: nếu
+  browser cộng ra `+2,120` trong khi execution cell giữ `46,800` và chặn mọi
+  lệnh, màn hình vừa nói với operator điều **ngược lại** với thứ sắp xảy ra. Một
+  phán quyết an toàn phải đến từ thứ thi hành nó.
+
+Và browser **không thể** cộng đúng kể cả khi muốn: nó chỉ thấy `linked[]` mà
+endpoint trả về. `BindingExposureData` có sẵn `account_count` vs
+`expected_account_count` chính vì population có thể thiếu — cộng 21 dòng rồi gọi
+là tổng của 24 account là đúng thứ `isFullPopulation` sinh ra để chặn.
+
+**Ảnh hưởng hiện tại:** `AccountBroker360` đọc prop `aggregate`; `null` render
+thành panel `unavailable` kèm lý do, **không** render thành OK. Fixture cấp cả
+ba verdict. Không có phép cộng nào trong màn — test chứng minh bằng cách đổi
+verdict mà giữ nguyên các dòng: banner đi theo verdict, không theo số học.
+
+**Trạng thái:** đang treo.

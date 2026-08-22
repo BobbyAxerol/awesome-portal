@@ -980,3 +980,81 @@ baseline **101/101** · contrast gate 14/14.
 - Scope toolbar (Alpha/Deployment/Venue/Time) mới là slot `scope`, chưa dựng
   select — chờ biết filter nào server nhận, dựng trước là đoán tên tham số.
 - Chưa nối container; chưa có route. Cả hai chờ BR-EX-24.
+
+---
+
+## 18. Phase 17 — Account/Broker 360° dựng xong (2026-08-22)
+
+### 18.1 Vì sao chọn 17 chứ không phải 6
+
+Phase 6 (Admin Action Drawer) trông là đòn bẩy lớn nhất — "unlocks all later
+mutation links", FE đã `READY`, shell + state machine + blocking rules đã dựng
+từ §4. Nhưng catalogue của nó **mâu thuẫn với runtime evidence ba chiều**:
+
+| Nguồn | Catalogue |
+|---|---|
+| Hi-fi 1i | **21 lệnh / 6 nhóm**, "all mutations: Generate plan gates Apply" |
+| `command-catalog.yaml` | **13 action family**, chỉ **1** lệnh có `plan: true` |
+| `extract/cli-command-map.json` | **19 command noun / 64 action** — 47 R0 read, 14 mutation, **7 action không có HTTP equivalent** |
+
+`extract/` thắng (CLAUDE.md §0). Catalogue hi-fi **không phải tập con cũng không
+phải tập cha** của hệ thống thật, và "plan gates apply cho mọi mutation" sai với
+`plan: false` ở 11/12 lệnh. Đây là quyết định của Bobby, không phải chỗ để đoán —
+nên phase 6 dừng, chuyển sang 17.
+
+Phase 17 phụ thuộc 12 và 6, nhưng **chỉ ở hai nút mutation** (Sync now /
+Dry-run), vốn nằm sau `operatorAdmin` và bị **ẩn hoàn toàn** khi không có quyền.
+Phần lõi độc lập.
+
+### 18.2 Quyết định lớn nhất của màn: headroom
+
+Hi-fi bảo màn tự tính. Tôi **không** tính — xem BR-EX-26. Tóm tắt: đây là
+control fail-closed, browser cộng sai thì màn nói ngược với thứ sắp xảy ra; và
+browser không thể cộng đúng vì nó chỉ thấy `linked[]` mà endpoint trả, trong khi
+`account_count` vs `expected_account_count` tồn tại chính vì population có thể
+thiếu.
+
+`aggregate === null` → panel `unavailable` **kèm lý do**, không phải im lặng.
+Banner vắng mặt sẽ đọc thành "không có vấn đề" — đúng cách đọc mà control này
+không chịu nổi.
+
+Test chứng minh không có phép cộng: đổi verdict sang `EXCEEDED` mà giữ nguyên ba
+dòng linked (vẫn cộng ra 41,000), banner hiện 46,800 — đi theo verdict, không
+theo số học.
+
+### 18.3 Những chỗ khác giữ sự thật
+
+| Chỗ | Cách giữ |
+|---|---|
+| Ba cột | ba authority riêng — EXECUTION / BROKER / DERIVED. Gộp lại là một con số không quy được về nguồn, trên đúng màn có nhiệm vụ quy nguồn |
+| `MATCH` vs `not compared` | `MATCH` là một khẳng định, chỉ server đưa ra. Không đọc được cả hai bên thì không phải delta bằng 0 |
+| Số không báo cáo | `not reported`, không phải `0`. Trên màn đối soát, một lỗ trống **là** phát hiện |
+| Secret | chỉ hiện alias + `secret never displayed` — người đọc cần biết đó là cố ý, không phải lỗi render |
+| Guard band | dải đặc cho `LIVE_FULL` **và** `LIVE_CANARY`; canary cũng là vốn thật |
+| Nút mutation | **ẩn hẳn**, không disable. Nút không bao giờ bấm được là câu hỏi người ta hỏi mãi |
+| Sync history | giữ dòng `STALE 6.2s`. Lịch sử chỉ toàn thành công không phải lịch sử, là quảng cáo |
+| Account đang xem | giữ trong bảng và đánh dấu `(this)` — lọc ra sẽ để lại một tổng mà các phần không cộng lại được trên màn |
+
+### 18.4 Reuse report
+
+Dùng lại: `AuthorityBadge`, `EnvironmentBadge`, `StatusChip`, `PanelState`,
+`ExecutionSurface`, `isFullPopulation` + `readBindingExposure` (từ §16), class
+`exec-inbox-head` / `exec-gate-panel` / `exec-grid-2` / `exec-gate-unverified` /
+`exec-btn-ghost` / `exec-num` (mới ở §17, giờ dùng lại đúng như dự định).
+Mới: khối `exec-360-*`.
+
+### 18.5 Evidence
+
+vitest **865 passed / 1 skipped** (+21) · tsc sạch · build sạch · visual
+baseline **101/101** · contrast gate 14/14.
+
+### 18.6 Còn thiếu để đóng phase 17
+
+- BR-EX-26 (aggregate verdict). Đến khi có, màn render `unavailable` cho ô đó.
+- Ba cột, linked accounts, sync history, findings đều chưa có contract — chỉ
+  exposure buckets có. Cùng loại với BR-EX-24.
+- Chưa nối container/route.
+
+### 18.7 Tiếp theo
+
+Phase 15 (Alpha 360°) rồi 16 (Portfolio 360°), đúng thứ tự phụ thuộc.

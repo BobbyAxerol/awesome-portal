@@ -2211,3 +2211,156 @@
   font-size: var(--text-2xs);
   color: var(--ink-mute);
 }
+
+/* ---------------------------------------------------------------------------
+ * Account / Broker 360° (hi-fi 1g)
+ * ------------------------------------------------------------------------ */
+
+.exec-360 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* A solid band, not a tint. On the one screen where a command moves real
+   capital, the reader must not have to find the badge to know that. */
+.exec-360-guard {
+  background: var(--bad);
+  color: var(--on-danger);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.exec-360-identity,
+.exec-360-colmeta,
+.exec-360-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Three columns, each with its own authority. They collapse to one below the
+   laptop breakpoint rather than shrinking — a three-way numeric comparison at
+   half width is three columns nobody can compare. */
+.exec-360-grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+@media (max-width: 1100px) {
+  .exec-360-grid3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.exec-360-col {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  padding: var(--space-3);
+}
+
+.exec-360-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-1) var(--space-3);
+  margin: var(--space-2) 0 0;
+}
+
+.exec-360-facts dt {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+.exec-360-facts dd {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.exec-360-note {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+/* The aggregate verdict. Bordered on the leading edge rather than filled: this
+   is a claim about a control, and a full red wash reads as an incident that
+   has already happened. */
+.exec-360-headroom {
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  background: var(--surface-2);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.exec-360-headroom[data-tone="good"] {
+  border-left-color: var(--good);
+}
+
+.exec-360-headroom[data-tone="warn"] {
+  border-left-color: var(--warn);
+}
+
+.exec-360-headroom[data-tone="bad"] {
+  border-left-color: var(--bad);
+}
+
+.exec-360-headline {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.exec-360-headroomline {
+  margin: 0;
+}
+
+.exec-360-linked,
+.exec-360-sync {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--space-2);
+}
+
+.exec-360-linked caption,
+.exec-360-sync caption {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+  padding-bottom: var(--space-1);
+}
+
+.exec-360-linked th,
+.exec-360-linked td,
+.exec-360-sync th,
+.exec-360-sync td {
+  text-align: left;
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--line-soft);
+  font-weight: 400;
+}
+
+.exec-360-linked thead th,
+.exec-360-sync thead th {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+/* The account being viewed stays in the list and is marked. Filtering it out
+   would leave a sum whose parts do not add up on screen. */
+.exec-360-linked tr[data-current="true"] {
+  background: var(--surface-3);
+}
