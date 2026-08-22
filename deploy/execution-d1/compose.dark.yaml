@@ -22,6 +22,7 @@ services:
         limits:
           cpus: "1.0"
           memory: 512M
+          pids: 128
         reservations:
           cpus: "0.25"
           memory: 128M
@@ -32,7 +33,13 @@ services:
     restart: unless-stopped
     init: true
     user: "101:101"
+    group_add:
+      - "${PORTAL_RUNTIME_GID:?set the numeric portal-runtime group ID}"
     read_only: true
+    pids_limit: 64
+    cpus: "0.25"
+    mem_limit: 128m
+    mem_reservation: 32m
     cap_drop:
       - ALL
     security_opt:
@@ -49,6 +56,11 @@ services:
         read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=8m,mode=1777
+      - /var/cache/nginx:rw,noexec,nosuid,nodev,size=8m,mode=0750,uid=101,gid=101
+    ulimits:
+      nofile:
+        soft: 512
+        hard: 1024
     healthcheck:
       test: ["CMD", "nginx", "-t", "-q"]
       interval: 15s
@@ -56,11 +68,17 @@ services:
       retries: 4
       start_period: 10s
     stop_grace_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
     deploy:
       resources:
         limits:
           cpus: "0.25"
           memory: 128M
+          pids: 64
         reservations:
           cpus: "0.05"
           memory: 32M

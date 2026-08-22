@@ -239,6 +239,7 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0003_analytics_source_projection.sql" \
   "${ROOT_DIR}/deploy/images/execution-edge-ci.Dockerfile" \
   "${ROOT_DIR}/deploy/images/execution-edge.Dockerfile" \
+  "${ROOT_DIR}/deploy/images/source-proxy.Dockerfile" \
   "${ROOT_DIR}/deploy/compose.execution-edge.yaml" \
   "${ROOT_DIR}/deploy/.env.execution-edge.example" \
   "${ROOT_DIR}/scripts/execution-edge-test.sh" \
@@ -248,6 +249,9 @@ for required in \
   "${ROOT_DIR}/scripts/execution-d1-open-window.sh" \
   "${ROOT_DIR}/scripts/execution-d1-render-wireguard.sh" \
   "${ROOT_DIR}/scripts/execution-d1-test.sh" \
+  "${ROOT_DIR}/scripts/execution-d2-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d2-render-source-proxy.sh" \
+  "${ROOT_DIR}/scripts/execution-d2-test.sh" \
   "${ROOT_DIR}/deploy/execution-d1/README.md" \
   "${ROOT_DIR}/deploy/execution-d1/owner-input.env.example" \
   "${ROOT_DIR}/deploy/execution-d1/edge-source-proxy.env.example" \
@@ -259,6 +263,8 @@ for required in \
   "${ROOT_DIR}/deploy/execution-d1/source-proxy/nginx.conf.template" \
   "${ROOT_DIR}/deploy/execution-d1/source-proxy/trading-system-read-header.conf.example" \
   "${ROOT_DIR}/deploy/runbooks/execution-d1-bootstrap-and-rollback.md" \
+  "${ROOT_DIR}/deploy/execution-d2/README.md" \
+  "${ROOT_DIR}/deploy/runbooks/execution-d2-dark-deploy-and-rollback.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md" \
@@ -537,12 +543,16 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0002_projection_query_foundation.sql \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0003_analytics_source_projection.sql \
   deploy/images/execution-edge-ci.Dockerfile \
+  deploy/images/source-proxy.Dockerfile \
   scripts/execution-edge-test.sh \
   scripts/execution-offline-hardening-test.sh \
   scripts/execution-d1-preflight.sh \
   scripts/execution-d1-open-window.sh \
   scripts/execution-d1-render-wireguard.sh \
   scripts/execution-d1-test.sh \
+  scripts/execution-d2-preflight.sh \
+  scripts/execution-d2-render-source-proxy.sh \
+  scripts/execution-d2-test.sh \
   deploy/execution-d1/README.md \
   deploy/execution-d1/owner-input.env.example \
   deploy/execution-d1/edge-source-proxy.env.example \
@@ -554,6 +564,8 @@ for tracked_source in \
   deploy/execution-d1/source-proxy/nginx.conf.template \
   deploy/execution-d1/source-proxy/trading-system-read-header.conf.example \
   deploy/runbooks/execution-d1-bootstrap-and-rollback.md \
+  deploy/execution-d2/README.md \
+  deploy/runbooks/execution-d2-dark-deploy-and-rollback.md \
   upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md \
   upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md \
   upgrade/backend/EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md \
@@ -680,6 +692,9 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-d1-open-window.sh" \
   "${ROOT_DIR}/scripts/execution-d1-render-wireguard.sh" \
   "${ROOT_DIR}/scripts/execution-d1-test.sh" \
+  "${ROOT_DIR}/scripts/execution-d2-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d2-render-source-proxy.sh" \
+  "${ROOT_DIR}/scripts/execution-d2-test.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
   "${ROOT_DIR}/apps/portal/scripts/test_backend.sh" \
   "${ROOT_DIR}/features/roadmap-task-board/tooling/clean-generated.sh"
@@ -703,4 +718,5 @@ docker compose --project-directory "${ROOT_DIR}" \
   --env-file "${ROOT_DIR}/deploy/.env.execution-edge.example" \
   -f "${ROOT_DIR}/deploy/compose.execution-edge.yaml" config --quiet
 "${ROOT_DIR}/scripts/execution-d1-test.sh"
+"${ROOT_DIR}/scripts/execution-d2-test.sh"
 printf 'Portal monorepo verification passed.\n'

@@ -1493,7 +1493,7 @@ reads, projection ingestion, SSE or Trading System commands.
 | PRE-IAM-02 | source-safe Paper Exit repository/API and deterministic evidence evaluation | finish Phase 5 contract mapping, missing/stale/partial/error states and lineage | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend accepted; FE mapping remains |
 | PRE-IAM-03 | dark Command Center snapshot API | consume the generated snapshot contract; retain busy/empty/partial/stale/unavailable and do not re-rank client-side | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend accepted; FE mapping remains |
 | PRE-IAM-04 | offline security/contract/load/replay/restore hardening | consume frozen contracts and keep every degraded state visible | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend accepted; FE contract mapping remains |
-| PRE-IAM-05 | D2 dark image/config/preflight/rollback preparation | no live/source activation work required | `PLANNED` |
+| PRE-IAM-05 | D2 dark image/config/preflight/rollback preparation | no live/source activation work required; continue PRE-IAM-04 Lane A packet | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — images, preflight, identity/resource and rollback gates accepted; D2 unauthorized |
 | PRE-IAM-06 | reconcile backend guides, shared board and request ledger | reconcile FE evidence/status and retire superseded requests | `PLANNED` |
 
 ### 24A.1 Claude handoff required before Phase 1/2 product activation
@@ -1603,6 +1603,21 @@ After PRE-IAM-05 the two immediately executable steps are PRE-IAM-06 tracking
 reconciliation, then the contract-only `EX-BE-05b/F0` catalogue/typed-condition/
 relay foundation. The latter keeps all eight unpublished `ops` routes blocked
 and never substitutes direct DB/Redis access.
+
+### 24A.5 PRE-IAM-05 D2 dark preparation closeout
+
+Codex accepted only the offline D2 preparation lane on 2026-08-22. Edge and
+Source Proxy images build and inspect as separate non-root/read-only units;
+Compose fixes PID/CPU/memory/nofile/log bounds and supplemental-group secret
+access; preflight validates immutable digests, dark flags, PKI/JWKS/source
+identity and exact private addressing; candidate/rollback manifests are
+equivalent after image-digest normalization. No AWS/network/source/service/
+registry/runtime state changed. Full evidence:
+[`PRE_IAM_05_D2_DARK_PREPARATION_CLOSEOUT.md`](../../backend/PRE_IAM_05_D2_DARK_PREPARATION_CLOSEOUT.md).
+
+Claude has no D2 deployment task and continues the linked PRE-IAM-04 Lane A
+packet. The next shared phase is PRE-IAM-06 reconciliation; D2 remains owner-
+and change-window-gated.
 
 ---
 

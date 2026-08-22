@@ -101,6 +101,17 @@ jobs:
             type=ref,event=tag
             type=raw,value=latest,enable={{is_default_branch}}
 
+      - name: Derive source proxy image metadata
+        id: source-proxy-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image-prefix.outputs.value }}-source-proxy
+          tags: |
+            type=raw,value=sha-${{ github.sha }}
+            type=ref,event=branch
+            type=ref,event=tag
+            type=raw,value=latest,enable={{is_default_branch}}
+
       - name: Stage approved Historical Market Data reader wheel
         env:
           HMD_READER_WHEEL_BASE64: ${{ secrets.HMD_READER_WHEEL_BASE64 }}
@@ -171,8 +182,23 @@ jobs:
           push: true
           tags: ${{ steps.execution-edge-meta.outputs.tags }}
           labels: ${{ steps.execution-edge-meta.outputs.labels }}
+          provenance: mode=max
+          sbom: true
           cache-from: type=gha,scope=execution-edge
           cache-to: type=gha,mode=max,scope=execution-edge
+
+      - name: Build and publish source proxy image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/images/source-proxy.Dockerfile
+          push: true
+          tags: ${{ steps.source-proxy-meta.outputs.tags }}
+          labels: ${{ steps.source-proxy-meta.outputs.labels }}
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=source-proxy
+          cache-to: type=gha,mode=max,scope=source-proxy
 
       - name: Publish deployment environment artifact
         env:

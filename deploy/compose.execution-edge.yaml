@@ -7,13 +7,23 @@ services:
     restart: unless-stopped
     init: true
     user: "65532:65532"
+    group_add:
+      - "${PORTAL_RUNTIME_GID:?set the numeric portal-runtime group ID}"
     read_only: true
+    pids_limit: 128
+    cpus: "1.0"
+    mem_limit: 512m
+    mem_reservation: 128m
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
+    ulimits:
+      nofile:
+        soft: 1024
+        hard: 4096
     ports:
       - "${EDGE_PRIVATE_BIND_IP:?set the WireGuard address}:8443:8443"
     volumes:
@@ -76,6 +86,11 @@ services:
       retries: 4
       start_period: 15s
     stop_grace_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - execution-private
 
