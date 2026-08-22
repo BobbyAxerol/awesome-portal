@@ -172,6 +172,16 @@ export function toSubscriptionEvent(
         // is an inference from two sequence numbers.
         missedEvents: typeof body.missed_events === "number" ? body.missed_events : null,
         lastGoodCursor: str(body.last_good_cursor),
+        // Added by PRE-IAM-04 and previously dropped on the floor here. Without
+        // them `cursor_ahead` has no facts to show and a resnapshot has no
+        // epoch to target, so both would have degraded into a generic gap.
+        latestAvailableSequence:
+          typeof body.latest_available_sequence === "number" ? body.latest_available_sequence : null,
+        earliestAvailableSequence:
+          typeof body.earliest_available_sequence === "number"
+            ? body.earliest_available_sequence
+            : null,
+        activeEpochId: str(body.active_epoch_id),
       };
     case "auth.expiring":
       // The payload is `{reconnect_required: true}` — no expiry time is sent

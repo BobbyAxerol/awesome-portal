@@ -49,6 +49,24 @@ export type GapReason =
   | "epoch_changed"
   /** The Trading System itself skipped, upstream of the edge. */
   | "source_discontinuity"
+  /**
+   * The edge's own projection sequence was non-contiguous.
+   *
+   * Distinct from `source_discontinuity`, and PRE-IAM-04 separated them for a
+   * reason (H-4): this one says OUR projection skipped, that one says the
+   * Trading System did. Relabelling either as the other points an operator at
+   * the wrong system during an incident.
+   */
+  | "projection_sequence_gap"
+  /**
+   * Our resume cursor is ahead of what the server can serve.
+   *
+   * Means the projection was rebuilt to an earlier point, so the cursor
+   * addresses a sequence that no longer exists. It is NOT an epoch change and
+   * must not be reported as one (H-5) — the epoch may be unchanged and the
+   * cursor still unusable.
+   */
+  | "cursor_ahead"
   /** The server reported a gap without a reason we recognise. */
   | "unknown";
 
@@ -63,6 +81,8 @@ const GAP_REASONS: readonly GapReason[] = [
   "replay_window_exceeded",
   "epoch_changed",
   "source_discontinuity",
+  "projection_sequence_gap",
+  "cursor_ahead",
   "unknown",
 ];
 
@@ -79,6 +99,10 @@ export const GAP_REASON_TEXT: Record<GapReason, string> = {
   replay_window_exceeded: "The resume point is older than the replay window. Re-snapshotting.",
   epoch_changed: "The projection was rebuilt. Re-snapshotting.",
   source_discontinuity: "The Trading System reported a break in its own sequence.",
+  projection_sequence_gap:
+    "The projection skipped a sequence. Continuity is lost — what is on screen is the last good data, not the current state.",
+  cursor_ahead:
+    "The resume point is ahead of what the server can serve. The saved position has been discarded.",
   unknown: "The server reported a gap. Re-snapshotting.",
 };
 
@@ -125,6 +149,33 @@ export interface SubscriptionState {
   lastHeartbeatAt: string | null;
   /** How many events the server says were lost. `null` when it did not say. */
   missedEvents: number | null;
+  /**
+   * The newest sequence the server can serve, when it says so.
+   *
+   * Only meaningful for `cursor_ahead`, where it is the fact that explains the
+   * rejection: our position is past this. Shown, not used to compute a resume —
+   * resuming at the latest available would silently skip everything between.
+   */
+  latestAvailableSequence: number | null;
+  /** The oldest sequence still retained. Bounds what a replay could reach. */
+  earliestAvailableSequence: number | null;
+  /**
+   * The epoch a resnapshot must target.
+   *
+   * Carried separately from `epoch` because during a gap the two differ: the
+   * client still holds the old epoch's data while the server names the one to
+   * snapshot into.
+   */
+  activeEpochId: string | null;
+  /**
+   * Continuity is broken and cannot be repaired by resuming.
+   *
+   * Set by every gap reason, and the reason it is a field rather than a
+   * `phase === "gap"` check: `DISCONNECTED` may move the phase while continuity
+   * stays lost, and a screen that re-derived this from the phase would present
+   * data with a hole in it as merely reconnecting.
+   */
+  continuityLost: boolean;
   /** Human-readable reason for the current phase. */
   note: string | null;
 }
@@ -141,6 +192,10 @@ export const INITIAL_SUBSCRIPTION: SubscriptionState = {
   authExpiresAt: null,
   lastHeartbeatAt: null,
   missedEvents: null,
+  latestAvailableSequence: null,
+  earliestAvailableSequence: null,
+  activeEpochId: null,
+  continuityLost: false,
   note: null,
 };
 
@@ -181,6 +236,12 @@ export type SubscriptionEvent =
       missedEvents?: number | null;
       /** Where a resnapshot should resume from. */
       lastGoodCursor?: string | null;
+      /** Newest sequence the server can serve. Meaningful for `cursor_ahead`. */
+      latestAvailableSequence?: number | null;
+      /** Oldest sequence still retained. */
+      earliestAvailableSequence?: number | null;
+      /** The epoch a resnapshot must target. */
+      activeEpochId?: string | null;
     }
   | { type: "EPOCH_CHANGED"; epoch: string; resnapshotNotBefore?: string | null }
   | { type: "DISCONNECTED"; reason?: string }
@@ -241,6 +302,12 @@ export function subscriptionReducer(
         freshness: "OK",
         gapReason: null,
         missedEvents: null,
+        // A completed snapshot is the ONLY thing that repairs continuity. Every
+        // other transition may narrow the damage; none of them closes the hole.
+        continuityLost: false,
+        latestAvailableSequence: null,
+        earliestAvailableSequence: null,
+        activeEpochId: null,
         authExpiresAt: state.authExpiresAt,
         lastHeartbeatAt: state.lastHeartbeatAt,
         note: null,
@@ -328,20 +395,49 @@ export function subscriptionReducer(
       // changes is that we now know why it will end, and can say so.
       return { ...state, authExpiresAt: event.expiresAt };
 
-    case "PROJECTION_GAP":
+    case "PROJECTION_GAP": {
+      // Every reason voids the resume token and loses continuity — those two
+      // are common ground. What differs is what the client may do next, and
+      // conflating them is what H-4 and H-5 were raised about.
+      //
+      //   * `cursor_ahead` — the saved position is past what the server can
+      //     serve. The cursor is discarded and `latest_available_sequence` is
+      //     the fact that explains why. Resuming AT that sequence would skip
+      //     everything between it and where we were, so only a full snapshot
+      //     is valid.
+      //   * `projection_sequence_gap` — our projection skipped. Visible data
+      //     stays on screen, marked stale, because it was true when it arrived;
+      //     it is simply no longer the current state.
+      //   * `source_discontinuity` — the Trading System skipped, upstream of
+      //     us. Kept under its own reason so an operator is pointed at the
+      //     right system.
+      //
+      // `resnapshot_not_before` is a deadline to obey, not a label. A null one
+      // means the server named no floor — which is permission to snapshot now,
+      // and is deliberately different from a deadline in the past.
+      const detail =
+        event.reason === "cursor_ahead" && typeof event.latestAvailableSequence === "number"
+          ? ` The server can serve up to sequence ${event.latestAvailableSequence.toLocaleString("en-US")}.`
+          : "";
+      const missed =
+        typeof event.missedEvents === "number"
+          ? `${event.missedEvents.toLocaleString("en-US")} events were not delivered. `
+          : "";
       return {
         ...state,
         phase: "gap",
         freshness: "STALE",
         resumeToken: null,
+        continuityLost: true,
         gapReason: event.reason,
         resnapshotNotBefore: event.resnapshotNotBefore ?? null,
         missedEvents: event.missedEvents ?? null,
-        note:
-          typeof event.missedEvents === "number"
-            ? `${event.missedEvents.toLocaleString("en-US")} events were not delivered. ${GAP_REASON_TEXT[event.reason]}`
-            : GAP_REASON_TEXT[event.reason],
+        latestAvailableSequence: event.latestAvailableSequence ?? null,
+        earliestAvailableSequence: event.earliestAvailableSequence ?? null,
+        activeEpochId: event.activeEpochId ?? null,
+        note: `${missed}${GAP_REASON_TEXT[event.reason]}${detail}`,
       };
+    }
 
     case "EPOCH_CHANGED":
       return {
@@ -351,7 +447,11 @@ export function subscriptionReducer(
         // Void, not merely unused: a cursor from the previous epoch has no
         // meaning in the new one and resuming with it would silently skip.
         resumeToken: null,
+        continuityLost: true,
         gapReason: "epoch_changed",
+        // The epoch to snapshot INTO, held apart from `epoch`, which still
+        // names the one whose data is on screen.
+        activeEpochId: event.epoch,
         resnapshotNotBefore: event.resnapshotNotBefore ?? null,
         note: event.resnapshotNotBefore
           ? `The projection was rebuilt. Showing the previous epoch, ageing, until ${event.resnapshotNotBefore}.`
@@ -415,4 +515,85 @@ export function subscriptionReducer(
  */
 export function isLive(state: SubscriptionState): boolean {
   return state.phase === "live";
+}
+
+/* ---------------------------------------------------------------------------
+ * When a resnapshot is allowed
+ * ------------------------------------------------------------------------ */
+
+/**
+ * Whether a full snapshot may be requested yet, and if not, how long to wait.
+ *
+ * Pure, and separated from the reducer because it is a decision about time and
+ * the reducer must stay a function of its inputs. The caller supplies `now`.
+ *
+ * Three cases, and the middle one is the whole point:
+ *
+ *   * continuity intact → nothing to do;
+ *   * `resnapshotNotBefore` in the future → WAIT. The server sets this deadline
+ *     to spread reconnects; ignoring it is how every client returns at once
+ *     and knocks over the thing they were waiting for;
+ *   * no deadline, or one already passed → snapshot now.
+ *
+ * A null deadline is deliberately NOT treated as "wait a default interval". The
+ * server declining to name a floor is permission, and inventing a delay would
+ * leave every screen stale for a reason no server asked for.
+ */
+export interface ResnapshotDecision {
+  allowed: boolean;
+  /** Milliseconds to wait before asking again. `0` when allowed. */
+  waitMs: number;
+  reason: string;
+}
+
+export function resnapshotDecision(
+  state: SubscriptionState,
+  now: Date,
+  /**
+   * Per-client jitter in milliseconds, added to the server's deadline.
+   *
+   * The deadline alone still releases every client on the same millisecond.
+   * The caller supplies this — derived from something stable per client, never
+   * from `Math.random()` on each call, or a re-render would reshuffle the wait
+   * and defeat it.
+   */
+  jitterMs = 0,
+): ResnapshotDecision {
+  if (!state.continuityLost) {
+    return { allowed: false, waitMs: 0, reason: "Continuity is intact; no snapshot is needed." };
+  }
+  if (!state.resnapshotNotBefore) {
+    return { allowed: true, waitMs: 0, reason: "The server named no earliest retry time." };
+  }
+  const deadline = Date.parse(state.resnapshotNotBefore);
+  if (Number.isNaN(deadline)) {
+    // An unparseable deadline is not permission. Fail closed and say so, rather
+    // than treat a malformed timestamp as "no deadline".
+    return {
+      allowed: false,
+      waitMs: 0,
+      reason: "The server's earliest retry time could not be read.",
+    };
+  }
+  const waitMs = deadline + jitterMs - now.getTime();
+  return waitMs > 0
+    ? {
+        allowed: false,
+        waitMs,
+        reason: `The server asked clients not to re-snapshot before ${state.resnapshotNotBefore}.`,
+      }
+    : { allowed: true, waitMs: 0, reason: "The server's earliest retry time has passed." };
+}
+
+/**
+ * What a resnapshot must target.
+ *
+ * `activeEpochId` when the server named one, otherwise the epoch on screen.
+ * Never a resume token: continuity is lost, and every gap reason above voids it.
+ */
+export function resnapshotTarget(state: SubscriptionState): {
+  epoch: string | null;
+  resumeToken: null;
+} {
+  return { epoch: state.activeEpochId ?? state.epoch, resumeToken: null };
 }

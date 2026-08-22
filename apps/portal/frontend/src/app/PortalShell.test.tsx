@@ -182,14 +182,17 @@ describe("embedding (U04/U05)", () => {
     mount({ route: "/research/quantbt/runs" });
     // QuantBT is a split chunk now (it owns ECharts), so the module arrives a
     // dynamic import later than the shell around it.
+    // 15s, matching the sibling tests. The test budget below was raised to 20s
+    // for exactly this reason and this inner budget was left at 5s, so the
+    // waitFor expired long before the test did and the suite went red under
+    // load while passing in isolation — a flake that says nothing about the
+    // code under test.
     await waitFor(
       () => expect(screen.getByRole("heading", { level: 1, name: "QuantBT Backtest" })).toBeTruthy(),
-      { timeout: 5000 },
+      { timeout: 15_000 },
     );
     // Exactly one shell topbar: the module must not render a second one.
     expect(document.querySelectorAll(".portal-topbar").length).toBe(1);
-    // Same reason as the registry-failure test: a 5s waitFor inside a 5s test
-    // budget leaves no room for the ECharts chunk to load under CI load.
   }, 20_000);
 
   it("mounts Planning under /planning with no nested shell", async () => {
