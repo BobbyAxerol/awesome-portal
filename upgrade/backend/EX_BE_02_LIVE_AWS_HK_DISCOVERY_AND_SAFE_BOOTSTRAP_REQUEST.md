@@ -514,3 +514,218 @@ D0 is acceptable only when:
 After review, Codex will reconcile the response into the hardening findings and
 produce the smallest owner-approved D1 change set. No infrastructure or runtime
 activation is implied by this document.
+
+---
+
+# AWS-HK EX-BE-02-LIVE Discovery Response
+
+Observed at UTC: 2026-08-22T07:05:45Z
+SSH account: bobby
+Host: ip-172-31-16-126
+Agent statement: D0 read-only only; no mutation performed: **YES**
+
+## A. Executive result
+
+Overall: **PARTIAL**
+
+Blocking facts:
+
+- Four canonical EX-BE documents named in section 3 were absent under
+  /home/bobby; the three Trading System Portal contract-pack documents exist
+  and their manifest verified 84/84 hashes.
+- Three qdl_v2_stable_candidate-rust_core containers are exited 137 with
+  OOMKilled=true. Portal resource admission is blocked until resolved.
+- Host I/O pressure was elevated despite acceptable CPU/current memory.
+- Stable AWS/SGP endpoints, AWS SG rules, private DNS, Portal DB, PKI,
+  secret delivery, observability and backup ownership remain unresolved.
+- WireGuard kernel support exists, but wg and wg-quick are missing.
+- Concurrent-agent component ownership/change windows are unknown.
+
+## B. Known-fact drift matrix
+
+| Known fact | Result | Safe evidence |
+|---|---|---|
+| gateway loopback 127.0.0.1:8000 | MATCH | Filtered Docker publication and permitted loopback GETs |
+| gateway immutable image digest | DRIFT | Pack: sha256:4f63dc...; runtime: sha256:8a81f121f068..., tag sha-b39349d, revision b39349dce09... |
+| OpenAPI digest/route surface | MATCH | 38,518 bytes, 91 paths, committed-pack match |
+| contracts/capabilities revision | MATCH | API/authority/schema v1; order-command v2@2.0.0 and v1 supported, v2 shadow |
+| no TS SSE/WebSocket | MATCH | No such routes in OpenAPI |
+| no successful Portal live probe yet | MATCH | No SGP or authenticated business probe attempted |
+
+## C. Host and access
+
+| Question | Answer | Confidence/evidence |
+|---|---|---|
+| OS/kernel/architecture | Ubuntu 24.04, Linux 6.17 AWS, x86_64 | High |
+| SSH user/groups | bobby; sudo and docker groups | High |
+| sudo mode | Passwordless unrestricted; unused for mutation | High |
+| Docker permission/version | Direct access; Engine 29.7.2, Compose 5.4.0 | High |
+| CPU/memory/disk headroom | 8 logical Xeon Platinum 8488C; 16.46 GB RAM, about 9.63 GB available; no swap; ext4/NVMe 154.9 GB total, 71.6 GB free | Measurements high; admission blocked by QDL OOM |
+| NTP synchronized | YES; Chrony, sub-microsecond observed offset | High |
+| shared-host/change constraints | Shared TS/Data Layer host; formal window and concurrent-agent scope unknown | Medium |
+
+Full I/O pressure was about 7.4 percent avg10. Recheck before D2.
+
+## D. Network and WireGuard
+
+| Question | Answer | Confidence/evidence |
+|---|---|---|
+| stable AWS endpoint | UNKNOWN | Control-plane lookup outside D0 |
+| stable SGP allowlist source | UNKNOWN | Owner must provide privately |
+| proposed /30 conflict-free | 10.70.0.0/30 has no host/Docker conflict; AWS routes NOT_VERIFIED | Medium |
+| UDP port available | UDP 51820 appeared unused locally | Medium |
+| WireGuard available | Kernel module yes; tools no | High |
+| firewall authority | AWS SG unknown; nftables exists; UFW inactive | Medium |
+| 8443 can bind WG-only | Port free; interface restriction unproven | Medium |
+| registry egress | Anonymous GHCR YES; private pull NOT_TESTED | High/limited |
+
+Observed VPC subnet is 172.31.16.0/20. Docker pools span 172.17.0.0/16 to
+172.22.0.0/16. Candidate Portal bridge 172.23.0.0/24 is not approved.
+
+Proposed route/firewall matrix:
+
+| From | To | Transport | Purpose | Public? |
+|---|---|---|---|---|
+| SGP stable IP | AWS stable IP | WG UDP 51820 candidate | tunnel | SG allowlist only |
+| SGP WG IP | AWS WG IP:8443 | HTTP/2 TLS 1.3 mTLS | query/SSE | no |
+| ingestor bridge | host proxy 172.23.0.1:8444 candidate | TLS 1.3 mTLS | GET-only source | no |
+| source proxy | 127.0.0.1:8000 | loopback HTTP | TS gateway | no |
+| edge | Portal DB | PostgreSQL TLS/private | SELECT | no |
+| ingestor | Portal DB | PostgreSQL TLS/private | write | no |
+
+No network/firewall state changed.
+
+## E. Runtime contract
+
+| Endpoint | Status | Bytes | Elapsed ms | SHA-256/comparison |
+|---|---:|---:|---:|---|
+| /v1/health | 200 | 7,441 | 11.635 | bf52a6e0... |
+| /v1/health/capabilities | 200 | 3,127 | 11.365 | a4afdf0... |
+| /v1/contracts | 200 | 825 | 4.772 | 8f5fca84...; compatible |
+| /openapi.json | 200 | 38,518 | 20.092 | c4f653098...; pack match, 91 paths |
+
+Gateway identity: sha256:8a81f121f068..., tradingsystem-image:sha-b39349d,
+revision b39349dce09.... Image drift exists; published contract remains stable.
+
+Contract compatibility: **COMPATIBLE**
+
+Authenticated alpha probe attempted: **NO**
+
+Because X-API-Key remains optional on some alpha-facing paths, Portal must
+enforce identity and an exact route allowlist. No active alpha/account or
+business payload was read.
+
+## F. Connector feasibility
+
+| Question | Answer | Confidence/evidence |
+|---|---|---|
+| host-local proxy reaches gateway | YES | Four public loopback GETs succeeded |
+| private listener candidate | 172.23.0.1; not allocated | Medium |
+| candidate port | TCP 8444 appeared unused | Medium |
+| ingestor-only firewall | Feasible; SG/nftables ownership unresolved | Medium |
+| non-root/read-only | Docker capabilities support it; untested deployment | High/limited |
+| direct TS DB/Redis unnecessary | YES; prohibited | Contract evidence |
+
+Recommended placement: a Portal-owned, non-root, read-only minimal source proxy
+reaches 127.0.0.1:8000 and exposes only exact GET routes via mTLS on the
+Portal-only bridge to the ingestor. No suitable existing reverse proxy was
+found. It must not be reachable publicly, VPC-wide, from SGP, or by browsers.
+
+## G. Portal projection and observability
+
+| Question | Answer | Confidence/evidence |
+|---|---|---|
+| RDS/local option | RDS UNKNOWN; local PG16 feasible only for approved bounded Paper pilot | Medium |
+| PG major | PostgreSQL 16 image available; not deployed | High |
+| isolated storage | No approved Portal path exists | High |
+| migrator/writer/reader split | Feasible/required; not provisioned | Design |
+| backup/restore | OWNER_DECISION_REQUIRED | Unverified |
+| log/metric destination | OWNER_DECISION_REQUIRED | Unverified |
+
+Reserve an estimated 10-20 GB for pilot DB/WAL/log/restore evidence. RDS is
+preferred beyond a bounded pilot to separate failure domains.
+
+## H. PKI and secrets readiness
+
+| Question | Answer | Confidence/evidence |
+|---|---|---|
+| PKI option/owner | OpenSSL present; step-ca/AWS CLI absent; owner undecided | High |
+| secret delivery | OWNER_DECISION_REQUIRED: Secrets Manager/SSM or exact-group root files | Design |
+| non-root permissions | Feasible; not configured | High |
+| rotation overlap | Feasible by design; untested | Design |
+| expiry alerts | OWNER_DECISION_REQUIRED | Unknown |
+| SSH separated from runtime auth | REQUIRED; SSH keys were not read/reused | High |
+
+Separate edge, SGP client, ingestor/proxy and RS256/JWKS identities are required.
+
+## I. Owner decisions required
+
+1. WG CIDR/port after AWS route verification.
+2. Stable AWS/SGP endpoints and SG allowlist.
+3. Private DNS or Paper IP-SAN.
+4. RDS versus bounded local PG16.
+5. CA/certificate/JWT signing ownership.
+6. Secret delivery mechanism.
+7. Observability, retention and expiry alerts.
+8. Resource budget after QDL OOM/I/O review.
+9. Change window and agent coordination.
+10. D1 package/network/firewall authorization.
+11. Separate TS Portal read identity/API key authorization.
+12. Backup/PITR and restore-test policy.
+
+## J. Proposed D1 commands
+
+**DO NOT EXECUTE.** Owner approval and private parameters are required.
+
+1. Install tools:
+
+       sudo apt-get update
+       sudo apt-get install --no-install-recommends wireguard-tools
+
+   Rollback: sudo apt-get remove wireguard-tools
+
+2. Create boundaries:
+
+       sudo groupadd --system portal-runtime
+       sudo install -d -o root -g portal-runtime -m 0750 /etc/portal /srv/portal /var/lib/portal
+
+   Rollback while empty: remove those empty directories, then
+   sudo groupdel portal-runtime.
+
+3. Create approved bridge:
+
+       docker network create --driver bridge --subnet 172.23.0.0/24 --gateway 172.23.0.1 portal_private
+
+   Rollback: docker network rm portal_private
+
+4. Install/start owner-provided WG config:
+
+       sudo install -o root -g root -m 0600 <OWNER_PORTAL0_CONF> /etc/wireguard/portal0.conf
+       sudo wg-quick up portal0
+       sudo wg show portal0
+
+   Rollback: sudo wg-quick down portal0, then remove portal0.conf.
+
+5. Persist only after acceptance:
+
+       sudo systemctl enable wg-quick@portal0
+
+   Rollback: sudo systemctl disable --now wg-quick@portal0
+
+Firewall/SG commands are withheld until authority/endpoints are approved. No
+Portal image, proxy, DB, certificate or TS request is included without its gate.
+
+## K. Safety attestation
+
+- Trading System files changed: **NO**
+- Trading System containers changed/restarted: **NO**
+- Trading System DB/Redis accessed: **NO**
+- Secret/plaintext credential read or emitted: **NO**
+- Authenticated business-data probe performed: **NO**
+- Firewall/network/package state changed: **NO**
+- Portal service deployed: **NO**
+
+No checkout, pull, build, Git mutation or deployment occurred. No active
+alpha/account/broker/order/fill/position identifier, DB row or Redis value was
+read. Only anonymous GHCR reachability was checked externally. D1-D4 remain
+unexecuted.
