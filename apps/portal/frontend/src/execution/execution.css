@@ -2364,3 +2364,129 @@
 .exec-360-linked tr[data-current="true"] {
   background: var(--surface-3);
 }
+
+/* ---------------------------------------------------------------------------
+ * Alpha 360° (hi-fi 2a + 2b)
+ * ------------------------------------------------------------------------ */
+
+.exec-alpha {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.exec-alpha-identity,
+.exec-alpha-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.exec-alpha-scope {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  padding: var(--space-2) var(--space-3);
+}
+
+.exec-alpha-select {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+.exec-alpha-select select {
+  background: var(--surface-3);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  font: inherit;
+  padding: 2px var(--space-1);
+}
+
+/* The tab row scrolls; the page never does. Nine tabs at a narrow width would
+   otherwise push the whole screen sideways, which moves the content a reader
+   is trying to hold still. */
+.exec-alpha-tabs {
+  display: flex;
+  gap: var(--space-1);
+  overflow-x: auto;
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.exec-alpha-tabs button {
+  white-space: nowrap;
+}
+
+.exec-alpha-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Auto-fit rather than a fixed six: the KPI row must not leave a ragged last
+   cell when a deployment has fewer figures to show. */
+.exec-alpha-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-2);
+}
+
+.exec-alpha-kpi {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  padding: var(--space-2);
+}
+
+.exec-alpha-contrib {
+  display: contents;
+}
+
+.exec-alpha-contrib[data-canary="true"] dt {
+  color: var(--warn);
+}
+
+.exec-alpha-map,
+.exec-alpha-deployments {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--space-2);
+}
+
+.exec-alpha-map th,
+.exec-alpha-map td,
+.exec-alpha-deployments th,
+.exec-alpha-deployments td {
+  text-align: left;
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--line-soft);
+  font-weight: 400;
+}
+
+.exec-alpha-map thead th,
+.exec-alpha-deployments thead th {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+/* A venue with no deployment at a stage. Muted rather than blank, so the cell
+   reads as "none" instead of as a rendering hole. */
+.exec-alpha-empty {
+  color: var(--ink-mute);
+}
+
+.exec-alpha-deployments tr[data-emphasis="warn"] th[scope="row"] {
+  box-shadow: inset 2px 0 0 var(--warn);
+}
+
+/* Twelve tiles. Two up on a laptop, one on anything narrower — a chart at a
+   third of a 1280 viewport is a chart nobody can read a value off. */
+.exec-alpha-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+  gap: var(--space-3);
+}

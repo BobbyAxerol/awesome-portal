@@ -51,10 +51,10 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 11 | Canary Control Room (1e) | `BLOCKED` | `PRODUCTION_INACTIVE` | EX-BE-05b; owner live-canary gate | EX-BE-04b query + EX-BE-06 SSE foundations delivered; shadow parity and production source still required |
 | 12 | Live Full Operations (1f) | `BLOCKED` | `PRODUCTION_INACTIVE` | phase 11 evidence; EX-BE-08 | rev 4 profile contract delivered; source completeness + UNCERTAIN policy remain; master plan §10.12 |
 | 13 | Paper Workbench VNM (4h) | `BLOCKED` | `INTEGRATION_PENDING` | source/screen API integration; venue/ATO/ATC decision | EX-BE-04b adaptive query + EX-BE-03 PAUSED semantics delivered; timezone decision remains |
-| 14 | Full Blotter (4c) | `BLOCKED` | `INTEGRATION_COMPLETE` | source activation/parity + remaining blotter detail integration | EX-BE-07b typed active-epoch funnel API delivered over mTLS/delegated auth; flag remains off |
-| 15 | Alpha 360° (2a+2b) | `BLOCKED` | `INTEGRATION_COMPLETE` | source activation/parity + remaining detail/series integration | EX-BE-07b capped portfolio-bound insight API delivered; flag/profile remain off/fixture |
+| 14 | Full Blotter (4c) | **screen built** (fixtures, scale-refined) | `INTEGRATION_COMPLETE` | source activation/parity + remaining blotter detail integration | EX-BE-07b typed active-epoch funnel API delivered over mTLS/delegated auth; flag remains off |
+| 15 | Alpha 360° (2a+2b) | **screen built** (9 tabs, fixtures, scale-refined) | `INTEGRATION_COMPLETE` | source activation/parity + remaining detail/series integration | EX-BE-07b capped portfolio-bound insight API delivered; flag/profile remain off/fixture |
 | 16 | Portfolio 360° (1h→3a) | `BLOCKED` | `INTEGRATION_COMPLETE` | source activation/load evidence + remaining detail/series integration | EX-BE-07b source-backed correlation + capital-ledger APIs delivered with exact decimals |
-| 17 | Account/Broker 360° (1g) | `BLOCKED` | `INTEGRATION_COMPLETE` | source activation/population parity + remaining detail integration | EX-BE-07b source-backed full-population exposure API delivered; count mismatches fail closed |
+| 17 | Account/Broker 360° (1g) | **screen built** (fixtures, scale-refined) | `INTEGRATION_COMPLETE` | source activation/population parity + remaining detail integration | EX-BE-07b source-backed full-population exposure API delivered; count mismatches fail closed |
 | 18 | Hardening | `BLOCKED` | `OPERATIONAL_EVIDENCE_PENDING` | EX-BE-08; implemented target subset | master plan §§13–14 |
 
 ¹ Phase 6's drawer shell, state machine and blocking rules are already built and
@@ -1127,3 +1127,74 @@ Test chạy ở quy mô thật, không phải cast: 214 linked account, 17,280 d
 Phase 15/16 dựng **từ đầu** với `capPreserving`, không dựng xong rồi vá. Ô
 **Degradation** và **Invariant giữ nguyên** trong bảng scale refine §8 giờ có
 một cơ chế dùng chung để trỏ tới, thay vì 17 màn mỗi màn tự nghĩ một kiểu.
+
+---
+
+## 20. Phase 15 — Alpha 360° dựng xong, sizing theo runtime (2026-08-22)
+
+Bobby: *"giả định dữ liệu nhiều một chút để khi nhận dữ liệu từ trading system
+không bị vỡ"*. Nên lần này **không đoán số** — lấy từ
+`trading_system_portal_contract_pack/workload-profile.md`.
+
+### 20.1 Số thật, và nó đổi thiết kế thế nào
+
+| Số runtime | Hệ quả UI |
+|---|---|
+| 47 alpha · 2 portfolio · **85 account** · 80 copy policy | Accounting = 85 × currency ≈ **255 dòng**, không phải 2 như hi-fi vẽ |
+| 16 shard Binance · 82 symbol DNSE | venue map **22+ dòng**, positions **hàng nghìn** |
+| **`orders`, `fills`, `domain_events` KHÔNG có retention policy** | Orders & Fills, Positions, Audit là **vô hạn** → keyset, **không cap** |
+| 975 items/s data layer · queue drop 1.3M | không phải hệ thống nhàn rỗi |
+| **734/1468 feed missing · 21 stale** | `INSUFFICIENT_DATA` là trạng thái **mở màn**, không phải ca demo |
+
+Dòng cuối đổi cả cách bố trí: fixture cho **3/12 tile không vẽ được** (một
+`unavailable` vì kline shard publish_count=0, hai `insufficient_data`). Màn mở ra
+với 12 chart khoẻ mạnh là màn chưa ai chạy thật.
+
+### 20.2 Cap ở đâu, page ở đâu — hai thứ khác nhau
+
+Đây là phân biệt quan trọng nhất của phase này:
+
+- **Có trần thì cap** (venue, deployment, accounting, sessions): tập hữu hạn,
+  biết được tổng, nên `capPreserving` + caption trung thực.
+- **Không trần thì page** (positions, orders & fills, audit): `fills` và
+  `domain_events` không có retention policy — chúng lớn mãi. Cap ở đây là **nói
+  dối**, vì cap ngụ ý "có một tập bạn đáng lẽ xem hết được". 1,284,991 dòng
+  command journal và còn tăng thì không phải tập đó.
+
+Test khoá cả hai chiều: tab paged **không được** có caption `showing … of …`.
+
+### 20.3 Ngoại lệ được giữ, ở đúng chỗ head-cap sẽ mất
+
+| Panel | Ngân sách | Dòng được cứu | Vị trí thật |
+|---|---|---|---|
+| venue map | 16 | shard ngừng publish 14m | 19/22 |
+| deployments | 24 | deployment `BLOCKED` | 51/60 |
+| accounting | 40 | account không báo cáo | 200/255 |
+| sessions | 20 | recovery chưa hoàn tất | 350/400 |
+
+Cả bốn đều nằm **ngoài** cửa sổ head-cap. Đó là điểm của §19.
+
+### 20.4 Ba lần test đỏ, cả ba là test tôi viết lỏng
+
+`+112.40` trùng giữa contribution và bảng deployments (đúng — một cái là đóng
+góp của venue, một cái là pnl của deployment, chúng trùng nhau); `USDT` trùng
+trong chính panel contribution (BINANCE và OKX cùng USDT). Sửa thành khẳng định
+**đúng thuộc tính cần chứng minh**: đếm nhãn currency theo từng dòng và khẳng
+định **không có dòng tổng** — `expect(dd).toHaveLength(3)` +
+`not.toMatch(/Total|Σ/)`. Assertion đó bắt được lỗi thật (ai đó thêm dòng tổng),
+còn `getByText("+112.40")` thì không.
+
+### 20.5 Evidence
+
+vitest **907 passed / 1 skipped** (+23) · tsc sạch · build sạch · visual
+baseline **101/101** · contrast gate 14/14.
+
+Chạy ở quy mô runtime: 22 venue, 60 deployment, 1,200 position trong 48,213,
+255 dòng accounting, 400 session, 500 dòng audit trong 1,284,991.
+
+### 20.6 Còn thiếu để đóng phase 15
+
+- Chưa có endpoint cho positions / orders / audit / accounting / sessions của
+  một alpha (cùng loại BR-EX-24).
+- Chart body vẫn là khung + caption; ECharts thuộc phase 18 theo `chart.tsx`.
+- Chưa nối container/route.
