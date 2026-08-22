@@ -801,7 +801,7 @@ so one slice may unlock several screens without inventing a second product roadm
 | EX-BE-06 | P1 | multiplexed SSE, gap recovery, backpressure and same-origin proxy | phase 9 and live screens |
 | EX-BE-07a | P2 / foundation complete | pure correlation, exposure, funnel, capital-ledger and batched preview analytics | phases 3, 14–17 contracts |
 | EX-BE-07b | P2 / integration complete; source activation evidence pending | active-epoch source repositories and six narrow authenticated screen APIs | phases 3, 14–17 integration |
-| EX-BE-08 | P2 | security/load/soak/DR/rollback evidence and production profiles | phase 18 and production activation |
+| EX-BE-08 | P2 / offline qualification foundation complete; live evidence pending | security/load/soak/DR/rollback evidence and production profiles | phase 18 and production activation |
 
 EX-BE-04a→05a has delivered the Portal-owned control-plane foundation without an AWS, Rust,
 Trading System or projection dependency. It supplies Approval Inbox and Gate R1 from real
@@ -860,6 +860,18 @@ SOURCE_ACTIVATION_AND_OPERATIONAL_EVIDENCE_PENDING`: registry profiles remain
 `fixture`, runtime flags remain false and no Trading System private storage or
 command surface is touched. Detail:
 [`EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md`](backend/EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md).
+
+The offline portion of `EX-BE-08a` now seals captured canonical observations to
+contract/gateway/adapter/capability identity, runs live-order reduction plus
+independent journal replay, compares a frozen semantic digest, and emits only a
+bounded redacted report with explicit gap blockers. Its locked Rust/PostgreSQL
+gate passes 81 tests, including a 5,000-observation bounded qualification unit
+and the existing 182,000-observation/row corpora. This is
+`OFFLINE_FOUNDATION_COMPLETE / LIVE_SOURCE_AND_CROSS_CELL_EVIDENCE_PENDING`,
+not source activation or a latency claim. D0–D4, real source mapping/parity,
+cross-cell load/fault/soak/restore evidence and an explicit owner decision still
+precede `fixture -> shadow`. Detail:
+[`EX_BE_08A_OFFLINE_SOURCE_QUALIFICATION.md`](backend/EX_BE_08A_OFFLINE_SOURCE_QUALIFICATION.md).
 
 ### 12.2 Per-phase backend slices
 

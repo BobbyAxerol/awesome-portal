@@ -256,9 +256,18 @@ authority.
   payload bounds and a bounded TypeScript HTTP/2 analytics bulkhead close H3.
   Evidence: Rust/PostgreSQL 75/75 + strict Clippy/rustfmt; fresh-PG Control API
   build + 111/111. No runtime/profile activation was made.
-- Backend tiếp theo là `EX-BE-08a`: source-ingestion parity, qualification và
-  observability trước khi xét `fixture -> shadow`. `EX-BE-05b` vẫn chờ source
-  command capability và không bị EX-BE-07b ngầm mở khóa.
+- [EX-BE-08a offline source qualification](./EX_BE_08A_OFFLINE_SOURCE_QUALIFICATION.md)
+  — **offline foundation complete / live evidence pending:** sealed
+  contract/gateway/adapter/capability-bound corpora, frozen semantic digest,
+  reducer↔replay parity, explicit gap blockers, resource bounds and redacted
+  metrics/report. Rust/PostgreSQL gate 81/81 + strict Clippy/rustfmt. No AWS
+  endpoint, source credential, production mapper, runtime flag or registry
+  profile was changed.
+- Backend tiếp theo của `EX-BE-08a` chỉ bắt đầu sau D0/D1–D4 approval: real
+  source mapper/parity, BUILDING epoch shadow, cross-cell load/fault/soak/
+  restore/rollback evidence, rồi owner quyết định `fixture -> shadow`.
+  `EX-BE-05b` vẫn chờ source command capability và không bị read qualification
+  ngầm mở khóa.
 
 ## BAR-21 — Strategy Import & Quarantine Ingest foundation
 

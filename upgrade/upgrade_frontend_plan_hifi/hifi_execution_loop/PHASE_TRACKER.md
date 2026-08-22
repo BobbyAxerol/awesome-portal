@@ -55,7 +55,7 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 15 | Alpha 360° (2a+2b) | **screen built** (9 tabs, fixtures, scale-refined) | `INTEGRATION_COMPLETE` | source activation/parity + remaining detail/series integration | EX-BE-07b capped portfolio-bound insight API delivered; flag/profile remain off/fixture |
 | 16 | Portfolio 360° (1h→3a) | **screen built** (3 representations, fixtures, scale-refined) | `INTEGRATION_COMPLETE` | source activation/load evidence + remaining detail/series integration | EX-BE-07b source-backed correlation + capital-ledger APIs delivered with exact decimals |
 | 17 | Account/Broker 360° (1g) | **screen built** (fixtures, scale-refined) | `INTEGRATION_COMPLETE` | source activation/population parity + remaining detail integration | EX-BE-07b source-backed full-population exposure API delivered; count mismatches fail closed |
-| 18 | Hardening | `BLOCKED` | `OPERATIONAL_EVIDENCE_PENDING` | EX-BE-08; implemented target subset | master plan §§13–14 |
+| 18 | Hardening | `BLOCKED` | `OPERATIONAL_EVIDENCE_PENDING` | live EX-BE-08 cross-cell/load/soak/DR; offline foundation delivered | BE: 81-test sealed-corpus/replay qualification gate; production SLO/restore/rollback evidence remains; master plan §§13–14 |
 
 ¹ Phase 6's drawer shell, state machine and blocking rules are already built and
 tested (§4). What is blocked is wiring it to a real command endpoint — the
@@ -286,8 +286,17 @@ workspace/portfolio/currency bound. Analytics snapshots now verify ordered fact
 digests, full-fact venue-aware quality and bounded payloads; the TypeScript
 bridge has a FIFO concurrency/queue bulkhead and hardened HTTP/2 lifecycle.
 Fresh-PG Control API build + 111/111 tests pass. This does not change Claude's
-fixture contract or activate any delivery flag. Offline `EX-BE-08a` is now the
-next backend slice.
+fixture contract or activate any delivery flag.
+
+Offline `EX-BE-08a` is `OFFLINE_FOUNDATION_COMPLETE /
+LIVE_SOURCE_AND_CROSS_CELL_EVIDENCE_PENDING`. Rust now seals compatibility-bound
+corpora, checks reducer/replay/frozen-digest parity, blocks source gaps and emits
+only redacted bounded evidence. The full Rust/PostgreSQL gate passes 81 tests
+plus strict Clippy/rustfmt. D0–D4, a published production source mapper, live
+parity, cross-cell load/fault/soak/restore evidence and explicit owner activation
+still precede `fixture -> shadow`. Claude may keep implementing failure-state
+fixtures but must not bind live topics or change delivery profiles. Detail:
+[`EX_BE_08A_OFFLINE_SOURCE_QUALIFICATION.md`](../../backend/EX_BE_08A_OFFLINE_SOURCE_QUALIFICATION.md).
 
 ### 6.2 BR-EX decisions
 
@@ -337,8 +346,10 @@ target- and command-aware rather than a blanket lock. The immediate backend runw
 8. Claude: wire the generated EX-BE-07b same-origin contract and complete/
    partial/missing/forbidden/unavailable fixtures while keeping delivery
    `fixture` and all decimal values as strings;
-9. Codex: `EX-BE-08a` source-ingestion parity, qualification and observability;
-   `EX-BE-05b` only after source command/auth capability is proven.
+9. Codex: offline `EX-BE-08a` qualification foundation is delivered: sealed
+   corpora, reducer/replay/frozen-digest parity, gap blockers and redacted
+   bounded evidence; live source/cross-cell evidence remains owner-gated.
+   `EX-BE-05b` still starts only after source command/auth capability is proven.
 
 This closes the architectural disagreement: Approval Inbox and Gate R1 do not wait
 for AWS networking, a Rust projection or a Trading System change.

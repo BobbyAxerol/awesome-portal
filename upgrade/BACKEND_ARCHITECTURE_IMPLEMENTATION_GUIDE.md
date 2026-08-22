@@ -911,6 +911,17 @@ deep-dive → ADR → slice → evidence discipline documented above.
   fresh-PG Control API build with 111/111 tests. The hardening stop-gate is
   closed; all runtime flags and registry profiles remain off/`fixture`. Detail:
   [`EX_BE_HARDENING_CHECKPOINT.md`](./backend/EX_BE_HARDENING_CHECKPOINT.md).
+- **EX-BE-08a offline source qualification (2026-08-22):** a pure Rust gate now
+  seals captured observations to corpus schema, source gateway, contract,
+  adapter and capability identity; enforces count/byte/identifier/time bounds;
+  compares live-order reduction with immutable-journal replay and a frozen
+  semantic digest; and emits only a bounded redacted report. Gaps remain
+  blockers and even a passing report carries `activation_authorized=false`.
+  The full locked Rust/PostgreSQL gate passes 81 tests plus strict Clippy and
+  rustfmt. Status is `OFFLINE_FOUNDATION_COMPLETE /
+  LIVE_SOURCE_AND_CROSS_CELL_EVIDENCE_PENDING`: no AWS endpoint, credential,
+  production mapper, runtime flag or registry profile changed. Detail:
+  [`EX_BE_08A_OFFLINE_SOURCE_QUALIFICATION.md`](./backend/EX_BE_08A_OFFLINE_SOURCE_QUALIFICATION.md).
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**

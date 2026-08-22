@@ -2023,6 +2023,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "source-qualification"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "execution-contracts",
+ "projection-core",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "ts-adapter-v1",
+ "ts-contract-v1",
+ "uuid",
+]
+
+[[package]]
 name = "socket2"
 version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"

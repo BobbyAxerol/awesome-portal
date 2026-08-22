@@ -66,7 +66,7 @@ Evidence:
 
 ## H3 — analytics integrity and resource isolation
 
-**Status: complete.** The source repository now verifies a canonical ordered
+**Status: complete (2026-08-22).** The source repository now verifies a canonical ordered
 fact digest before decoding, evaluates venue-aware quality across every
 correlation fact, preflights exact fact count and a 32 MiB aggregate payload
 ceiling, and enforces bounded identifiers, fact payloads and canonical SHA-256
@@ -93,7 +93,8 @@ Evidence:
 
 ## Gate before offline EX-BE-08a
 
-H1–H3 are implemented and their component gates are green. Commit H3, run the
-contracts/workspace verification, and confirm no delivery profile or production
-flag changed. Only then may the offline EX-BE-08a corpus/replay/qualification
-harness begin.
+H1–H3 are implemented in commits `9249819`, `469485d` and `c3fd2ba`; component
+gates and root workspace verification are green, and no delivery profile or
+production flag changed. The stop-gate is closed. The independently documented
+offline EX-BE-08a corpus/replay/qualification harness may proceed; live-source
+or cross-cell work still requires its own owner-gated evidence.
