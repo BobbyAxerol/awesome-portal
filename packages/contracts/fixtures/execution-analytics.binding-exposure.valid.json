@@ -1,0 +1,27 @@
+{
+  "schema_version": "execution.analytics.screen.v1",
+  "epoch_id": "018f0d5e-7b61-7a00-8000-000000000001",
+  "source_snapshot_id": "018f0d5e-7b61-7a00-8000-000000000007",
+  "capability_snapshot_id": "cap_fixture_v1",
+  "source_profile": "fixture",
+  "projection_sequence": 47,
+  "freshness_policy_version": "paper.analytics.v1",
+  "read_at": "2026-08-22T10:00:00Z",
+  "analytics": {
+    "schema_version": "execution.analytics.v1",
+    "formula_version": "broker-binding-exposure.v1",
+    "source_authority": "DERIVED",
+    "input_freshness_floor": "OK",
+    "panel_state": "ok",
+    "input_completeness": "COMPLETE",
+    "input_as_of": "2026-08-22T09:59:59Z",
+    "warnings": [],
+    "data": {
+      "binding_id": "binding-1",
+      "account_count": 1,
+      "expected_account_count": 1,
+      "population_completeness": "COMPLETE",
+      "buckets": [{ "currency": "USDT", "account_count": 1, "used": "10", "reserved": "2", "available": "88", "headroom": "90", "oldest_source_as_of": "2026-08-22T09:59:59Z", "newest_source_as_of": "2026-08-22T09:59:59Z" }]
+    }
+  }
+}

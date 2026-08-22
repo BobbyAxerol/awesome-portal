@@ -375,7 +375,10 @@ describe("EX-BE-04a control-plane query primitives", () => {
       ),
     ];
     for (const attempt of attempts) {
-      await expect(attempt()).rejects.toMatchObject({ code: "INVALID_CURSOR", status: 400 });
+      await expect(attempt()).rejects.toMatchObject({
+        code: "CURSOR_CONTEXT_MISMATCH",
+        status: 400,
+      });
     }
   });
 
@@ -490,5 +493,8 @@ describe("EX-BE-04a control-plane query primitives", () => {
     expect(rotatedCodec.decode(token, expectation)).toEqual([1]);
     now = 1_030;
     expect(() => rotatedCodec.decode(token, expectation)).toThrowError(QueryContractError);
+    expect(() => rotatedCodec.decode(token, expectation)).toThrowError(
+      expect.objectContaining({ code: "CURSOR_EXPIRED", status: 400 }),
+    );
   });
 });

@@ -47,7 +47,7 @@ use rustls::{
     server::{danger::ClientCertVerifier, WebPkiClientVerifier},
     RootCertStore, ServerConfig,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::{
     io::{AsyncReadExt as _, AsyncWriteExt as _},
@@ -741,9 +741,9 @@ async fn analytics_context(
     })
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 struct AnalyticsScreenEnvelope<T> {
-    schema_version: &'static str,
+    schema_version: String,
     epoch_id: uuid::Uuid,
     source_snapshot_id: uuid::Uuid,
     capability_snapshot_id: String,
@@ -763,7 +763,7 @@ where
 {
     match analytics {
         Ok(analytics) => Json(AnalyticsScreenEnvelope {
-            schema_version: ANALYTICS_SCREEN_SCHEMA_VERSION,
+            schema_version: ANALYTICS_SCREEN_SCHEMA_VERSION.to_owned(),
             epoch_id: read.epoch_id,
             source_snapshot_id: read.source_snapshot_id,
             capability_snapshot_id: read.capability_snapshot_id,
@@ -774,7 +774,76 @@ where
             analytics,
         })
         .into_response(),
-        Err(_) => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+        Err(error) => analytics_error_response(&error),
+    }
+}
+
+#[derive(Serialize)]
+struct AnalyticsProblemBody {
+    error: AnalyticsProblem,
+}
+
+#[derive(Serialize)]
+struct AnalyticsProblem {
+    code: &'static str,
+    message: &'static str,
+}
+
+fn analytics_error_response(error: &AnalyticsError) -> Response {
+    let (status, code, message) = analytics_error_contract(error);
+    (
+        status,
+        Json(AnalyticsProblemBody {
+            error: AnalyticsProblem { code, message },
+        }),
+    )
+        .into_response()
+}
+
+fn analytics_error_contract(error: &AnalyticsError) -> (StatusCode, &'static str, &'static str) {
+    match error {
+        AnalyticsError::DecimalOverflow => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "ANALYTICS_ARITHMETIC_UNAVAILABLE",
+            "Analytics could not be computed with exact decimal arithmetic.",
+        ),
+        AnalyticsError::BatchLimit { .. }
+        | AnalyticsError::CorrelationEntityLimit { .. }
+        | AnalyticsError::RankedPairLimit { .. } => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_INPUT_LIMIT_EXCEEDED",
+            "Analytics input exceeds the published bounded contract.",
+        ),
+        AnalyticsError::InvalidCurrency(_) => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_INVALID_CURRENCY",
+            "Analytics input contains an invalid currency code.",
+        ),
+        AnalyticsError::NegativeAmount { .. }
+        | AnalyticsError::InconsistentAmount { .. }
+        | AnalyticsError::LedgerMismatch(_) => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_ACCOUNTING_MISMATCH",
+            "Analytics input violates an exact accounting boundary.",
+        ),
+        AnalyticsError::ScopeMismatch { .. } => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_SCOPE_MISMATCH",
+            "Analytics input does not belong to the requested scope.",
+        ),
+        AnalyticsError::DuplicateIdentifier(_) => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_DUPLICATE_IDENTIFIER",
+            "Analytics input contains a duplicate identifier.",
+        ),
+        AnalyticsError::CorrelationPairCount { .. }
+        | AnalyticsError::UnknownCorrelationEntity(_)
+        | AnalyticsError::InvalidCorrelationCoefficient
+        | AnalyticsError::SuppliedSelfCorrelation => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_CORRELATION_INVALID",
+            "Correlation input violates the published analytics contract.",
+        ),
     }
 }
 
@@ -822,6 +891,8 @@ async fn realtime_stream(State(state): State<AppState>, headers: HeaderMap) -> R
         request.claims.workspace_id.clone(),
         state.environment.clone(),
         request.cursor,
+        request.claims.sid.clone(),
+        state.realtime_epoch_jitter,
     );
     let (initial, terminal_after_initial) = match prepare_resume(
         store,
@@ -965,6 +1036,17 @@ async fn prepare_resume(
         } => {
             let mut gap = GapEnvelope::new(GapReason::EpochChanged, Some(request.cursor));
             gap.active_epoch_id = Some(active_epoch_id);
+            gap.resnapshot_not_before = Some(resnapshot_not_before);
+            Ok((VecDeque::from([gap_event(&gap)]), true))
+        }
+        ResumeDecision::CursorAhead {
+            active_epoch_id,
+            latest_available_sequence,
+            resnapshot_not_before,
+        } => {
+            let mut gap = GapEnvelope::new(GapReason::CursorAhead, Some(request.cursor));
+            gap.active_epoch_id = Some(active_epoch_id);
+            gap.latest_available_sequence = Some(latest_available_sequence);
             gap.resnapshot_not_before = Some(resnapshot_not_before);
             Ok((VecDeque::from([gap_event(&gap)]), true))
         }
@@ -1565,8 +1647,13 @@ enum ServiceError {
 
 #[cfg(test)]
 mod tests {
+    use analytics::{
+        BindingExposureResult, CapitalLedgerResult, CapitalPreview, CorrelationResult,
+        InsightBatch, OrderFunnel,
+    };
     use rcgen::{BasicConstraints, CertificateParams, ExtendedKeyUsagePurpose, IsCa, KeyPair};
     use rustls::pki_types::{CertificateDer, UnixTime};
+    use serde::de::DeserializeOwned;
 
     use super::*;
 
@@ -1658,6 +1745,60 @@ mod tests {
         assert!(screen_identifier("../other".to_owned()).is_err());
         assert!(screen_identifier("id:other".to_owned()).is_err());
         assert!(screen_identifier("x".repeat(129)).is_err());
+    }
+
+    #[test]
+    fn analytics_errors_are_typed_without_leaking_source_identifiers() {
+        assert_eq!(
+            analytics_error_contract(&AnalyticsError::ScopeMismatch {
+                field: "portfolio_id",
+            }),
+            (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "ANALYTICS_SCOPE_MISMATCH",
+                "Analytics input does not belong to the requested scope.",
+            )
+        );
+        assert_eq!(
+            analytics_error_contract(&AnalyticsError::DuplicateIdentifier(
+                "sensitive-source-id".to_owned(),
+            )),
+            (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "ANALYTICS_DUPLICATE_IDENTIFIER",
+                "Analytics input contains a duplicate identifier.",
+            )
+        );
+        assert_eq!(
+            analytics_error_contract(&AnalyticsError::DecimalOverflow).0,
+            StatusCode::SERVICE_UNAVAILABLE
+        );
+    }
+
+    #[test]
+    fn all_six_analytics_openapi_fixtures_deserialize_through_rust_serde() {
+        fn parse<T: DeserializeOwned>(raw: &str) {
+            serde_json::from_str::<AnalyticsScreenEnvelope<T>>(raw).unwrap();
+        }
+
+        parse::<CapitalPreview>(include_str!(
+            "../../../../../packages/contracts/fixtures/execution-analytics.capital-preview.valid.json"
+        ));
+        parse::<OrderFunnel>(include_str!(
+            "../../../../../packages/contracts/fixtures/execution-analytics.order-funnel.valid.json"
+        ));
+        parse::<InsightBatch>(include_str!(
+            "../../../../../packages/contracts/fixtures/execution-analytics.insight-batch.valid.json"
+        ));
+        parse::<CorrelationResult>(include_str!(
+            "../../../../../packages/contracts/fixtures/execution-analytics.correlation.valid.json"
+        ));
+        parse::<CapitalLedgerResult>(include_str!(
+            "../../../../../packages/contracts/fixtures/execution-analytics.capital-ledger.valid.json"
+        ));
+        parse::<BindingExposureResult>(include_str!(
+            "../../../../../packages/contracts/fixtures/execution-analytics.binding-exposure.valid.json"
+        ));
     }
 
     #[test]

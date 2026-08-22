@@ -1,0 +1,26 @@
+{
+  "schema_version": "execution.analytics.screen.v1",
+  "epoch_id": "018f0d5e-7b61-7a00-8000-000000000001",
+  "source_snapshot_id": "018f0d5e-7b61-7a00-8000-000000000005",
+  "capability_snapshot_id": "cap_fixture_v1",
+  "source_profile": "fixture",
+  "projection_sequence": 45,
+  "freshness_policy_version": "paper.analytics.v1",
+  "read_at": "2026-08-22T10:00:00Z",
+  "analytics": {
+    "schema_version": "execution.analytics.v1",
+    "formula_version": "portfolio-correlation.v1",
+    "source_authority": "DERIVED",
+    "input_freshness_floor": "OK",
+    "panel_state": "ok",
+    "input_completeness": "COMPLETE",
+    "input_as_of": "2026-08-22T09:59:59Z",
+    "warnings": [],
+    "data": {
+      "portfolio_id": "PF-1",
+      "labels": [{ "entity_id": "alpha-1", "display_name": "Alpha 1" }, { "entity_id": "alpha-2", "display_name": "Alpha 2" }],
+      "clusters": [{ "cluster_id": "cluster-1", "label": "Core", "members": ["alpha-1", "alpha-2"] }],
+      "representation": { "kind": "PACKED_MATRIX", "matrix": { "dimension": 2, "packing": "LOWER_INCLUDING_DIAGONAL_ROW_MAJOR", "values": ["1", "0.25", "1"] } }
+    }
+  }
+}

@@ -203,10 +203,18 @@ export interface components {
             stage: "SUBMIT" | "SOURCE_ACK" | "BROKER_ACK" | "FILL";
             /** @enum {string} */
             state: "OBSERVED" | "MISSING" | "PARTIAL";
+            event_count: number;
+            returned_event_count: number;
+            truncated: boolean;
             events: components["schemas"]["FunnelEvent"][];
         };
         OrderFunnelData: {
             order_id: components["schemas"]["Identifier"];
+            event_count: number;
+            returned_event_count: number;
+            has_more: boolean;
+            /** @constant */
+            window: "LIFECYCLE_AND_LATEST";
             stages: components["schemas"]["FunnelStage"][];
         };
         OrderFunnelAnalytics: components["schemas"]["DerivedMetadata"] & {
@@ -315,6 +323,11 @@ export interface components {
         };
         CapitalLedgerData: {
             portfolio_id: components["schemas"]["Identifier"];
+            entry_count: number;
+            returned_entry_count: number;
+            has_more: boolean;
+            /** @constant */
+            window: "LATEST";
             buckets: components["schemas"]["CapitalLedgerBucket"][];
         };
         CapitalLedgerAnalytics: components["schemas"]["DerivedMetadata"] & {

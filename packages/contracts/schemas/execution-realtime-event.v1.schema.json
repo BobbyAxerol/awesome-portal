@@ -17,16 +17,17 @@
     {
       "type": "object",
       "additionalProperties": false,
-      "required": ["event_type", "schema_version", "reason", "last_good_cursor", "earliest_available_sequence", "missed_events", "active_epoch_id", "resnapshot_not_before"],
+      "required": ["event_type", "schema_version", "reason", "last_good_cursor", "earliest_available_sequence", "latest_available_sequence", "missed_events", "active_epoch_id", "resnapshot_not_before"],
       "properties": {
         "event_type": { "const": "projection.gap" },
         "schema_version": { "const": "execution.realtime.v1" },
-        "reason": { "enum": ["history_evicted", "replay_window_exceeded", "slow_consumer", "epoch_changed", "source_discontinuity"] },
+        "reason": { "enum": ["history_evicted", "replay_window_exceeded", "slow_consumer", "epoch_changed", "source_discontinuity", "projection_sequence_gap", "cursor_ahead"] },
         "last_good_cursor": {
           "type": ["string", "null"],
           "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}:[0-9]+$"
         },
         "earliest_available_sequence": { "type": ["integer", "null"], "minimum": 0 },
+        "latest_available_sequence": { "type": ["integer", "null"], "minimum": 0 },
         "missed_events": { "type": ["integer", "null"], "minimum": 1 },
         "active_epoch_id": { "type": ["string", "null"], "format": "uuid" },
         "resnapshot_not_before": { "type": ["string", "null"], "format": "date-time" }

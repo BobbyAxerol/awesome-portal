@@ -751,6 +751,11 @@ pub enum ResumeDecision {
         active_epoch_id: Uuid,
         resnapshot_not_before: DateTime<Utc>,
     },
+    CursorAhead {
+        active_epoch_id: Uuid,
+        latest_available_sequence: u64,
+        resnapshot_not_before: DateTime<Utc>,
+    },
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -770,6 +775,20 @@ pub fn resume_decision(
     now: DateTime<Utc>,
     maximum_jitter: Duration,
 ) -> ResumeDecision {
+    if cursor.epoch_id == active.epoch.epoch_id
+        && cursor.sequence > active.latest_available_sequence
+    {
+        return ResumeDecision::CursorAhead {
+            active_epoch_id: active.epoch.epoch_id,
+            latest_available_sequence: active.latest_available_sequence,
+            resnapshot_not_before: server_jitter_deadline(
+                active.epoch.epoch_id,
+                client_stable_id,
+                now,
+                maximum_jitter,
+            ),
+        };
+    }
     let availability = if cursor.epoch_id == active.epoch.epoch_id {
         Some(active)
     } else {
@@ -1383,6 +1402,33 @@ mod tests {
                 Duration::from_secs(10),
             ),
             ResumeDecision::Resume
+        );
+        assert_eq!(
+            resume_decision(
+                ProjectionCursor {
+                    epoch_id: active.epoch_id,
+                    sequence: 51,
+                },
+                EpochAvailability {
+                    epoch: &active,
+                    earliest_available_sequence: 43,
+                    latest_available_sequence: 50,
+                },
+                None,
+                "client-1",
+                now,
+                Duration::from_secs(10),
+            ),
+            ResumeDecision::CursorAhead {
+                active_epoch_id: active.epoch_id,
+                latest_available_sequence: 50,
+                resnapshot_not_before: server_jitter_deadline(
+                    active.epoch_id,
+                    "client-1",
+                    now,
+                    Duration::from_secs(10),
+                ),
+            }
         );
     }
 

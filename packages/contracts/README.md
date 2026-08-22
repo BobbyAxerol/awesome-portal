@@ -77,6 +77,11 @@ packages/contracts/
     event.valid.json
     keyset-page.valid.json
     execution-analytics.capital-preview.valid.json
+    execution-analytics.order-funnel.valid.json
+    execution-analytics.insight-batch.valid.json
+    execution-analytics.correlation.valid.json
+    execution-analytics.capital-ledger.valid.json
+    execution-analytics.binding-exposure.valid.json
     execution-projection-page.valid.json
     execution-governance.r2-review.valid.json
     execution-governance.paper-exit-review.valid.json

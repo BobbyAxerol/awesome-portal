@@ -1492,7 +1492,7 @@ reads, projection ingestion, SSE or Trading System commands.
 | PRE-IAM-01 | close Phase 1 Approval Inbox + Phase 2 Gate R1 on SGP with fresh-PG and public-gateway operational evidence | correct Phase 1/2 HTTP integration listed below; do not activate registry policy | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend gate green |
 | PRE-IAM-02 | source-safe Paper Exit repository/API and deterministic evidence evaluation | finish Phase 5 contract mapping, missing/stale/partial/error states and lineage | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend accepted; FE mapping remains |
 | PRE-IAM-03 | dark Command Center snapshot API | consume the generated snapshot contract; retain busy/empty/partial/stale/unavailable and do not re-rank client-side | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend accepted; FE mapping remains |
-| PRE-IAM-04 | offline security/contract/load/replay/restore hardening | consume frozen contracts and keep every degraded state visible | `PLANNED` |
+| PRE-IAM-04 | offline security/contract/load/replay/restore hardening | consume frozen contracts and keep every degraded state visible | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend accepted; FE contract mapping remains |
 | PRE-IAM-05 | D2 dark image/config/preflight/rollback preparation | no live/source activation work required | `PLANNED` |
 | PRE-IAM-06 | reconcile backend guides, shared board and request ledger | reconcile FE evidence/status and retire superseded requests | `PLANNED` |
 
@@ -1573,6 +1573,28 @@ confirmed: OpenAPI has only four emergency-close `ops` paths, not routes for the
 other eight extracted actions. Command Center later needs purpose-built
 `streams` and `alpha-activity`; do not guess those routes or add generic Redis
 reads.
+
+### 24A.4 PRE-IAM-04 offline hardening handoff
+
+Codex accepted the credential-free hardening lane on 2026-08-22. Canonical
+backend changes distinguish projection sequence gap, cursor ahead, epoch
+change, expired cursor and context mismatch; return safe typed analytics
+problems; and expose bounded ledger/funnel windows without losing exact global
+counts, totals or per-stage aggregates. All six analytics screen fixtures now
+pass exact OpenAPI component validation and Rust serde parity.
+
+Claude lane before activation: consume the generated declarations and five new
+analytics fixtures; map `projection_sequence_gap`, `cursor_ahead`,
+`latest_available_sequence` and `resnapshot_not_before`; keep malformed,
+expired and context-mismatched cursors distinct; label bounded windows
+honestly; retain every partial/stale/unavailable/gap state; and do not infer a
+production SLO from offline test budgets. Source/realtime/command flags remain
+dark. Full backend evidence:
+[`PRE_IAM_04_OFFLINE_HARDENING_CLOSEOUT.md`](../../backend/PRE_IAM_04_OFFLINE_HARDENING_CLOSEOUT.md).
+
+The next backend queue item is PRE-IAM-05: D2 dark image/config/service,
+non-root/read-only, offline preflight and rollback preparation. It does not
+authorize an AWS network change, source read or Trading System mutation.
 
 ---
 

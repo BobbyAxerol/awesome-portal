@@ -239,6 +239,48 @@ fn tamper_and_compatibility_drift_fail_before_reduction() {
 }
 
 #[test]
+fn failed_adapter_candidate_does_not_poison_pinned_rollback_qualification() {
+    let epoch_id = Uuid::now_v7();
+    let observations = vec![observation(
+        "ingest-rollback",
+        "order-rollback",
+        ProjectionEntityKind::Order,
+        1,
+        at(10),
+        json!({"status":"OPEN"}),
+    )];
+    let expected = state_digest(&observations, epoch_id);
+    let pinned = QualificationCorpus::new(
+        identity(at(20)),
+        scope(),
+        expected.clone(),
+        observations.clone(),
+    )
+    .unwrap();
+    let before = qualify_offline(&pinned, epoch_id, at(30)).unwrap();
+
+    let mut candidate_identity = identity(at(20));
+    candidate_identity.adapter_version = "ts-adapter-v2-unapproved".to_owned();
+    let mut candidate_observations = observations;
+    candidate_observations[0].adapter_version = candidate_identity.adapter_version.clone();
+    assert_eq!(
+        QualificationCorpus::new(
+            candidate_identity,
+            scope(),
+            expected,
+            candidate_observations,
+        )
+        .unwrap_err()
+        .reason_code(),
+        "SOURCE_ADAPTER_UNSUPPORTED"
+    );
+
+    let after = qualify_offline(&pinned, epoch_id, at(30)).unwrap();
+    assert_eq!(after, before);
+    assert!(!after.activation_authorized);
+}
+
+#[test]
 fn unknown_source_vocabulary_is_preserved_without_becoming_authoritative() {
     let mapped = order_from_fixture(UNKNOWN_ORDER, "ingest-unknown-order");
     assert_eq!(mapped.payload["status"]["raw"], "BROKER_PENDING_V2");

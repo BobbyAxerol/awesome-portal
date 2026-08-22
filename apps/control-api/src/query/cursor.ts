@@ -34,7 +34,18 @@ const TOKEN_PREFIX = "kc1";
 const DOMAIN = "portal-control-query-cursor-v1\0";
 
 function invalidCursor(): never {
-  throw new QueryContractError("INVALID_CURSOR", "Invalid or expired query cursor.");
+  throw new QueryContractError("INVALID_CURSOR", "Invalid query cursor.");
+}
+
+function expiredCursor(): never {
+  throw new QueryContractError("CURSOR_EXPIRED", "Query cursor has expired.");
+}
+
+function cursorContextMismatch(): never {
+  throw new QueryContractError(
+    "CURSOR_CONTEXT_MISMATCH",
+    "Query cursor does not match this resource, workspace, direction, or query.",
+  );
 }
 
 function canonical(value: unknown): string {
@@ -141,14 +152,9 @@ export class KeysetCursorCodec {
       if (
         payload.version !== 1 ||
         payload.key_id !== keyId ||
-        payload.resource_id !== expected.resourceId ||
-        payload.workspace_id !== expected.workspaceId ||
-        payload.direction !== expected.direction ||
-        payload.query_fingerprint !== expected.queryFingerprint ||
         !Number.isSafeInteger(payload.issued_at) ||
         !Number.isSafeInteger(payload.expires_at) ||
         payload.issued_at > now + 30 ||
-        payload.expires_at <= now ||
         !Array.isArray(payload.boundary) ||
         payload.boundary.length !== expected.boundarySize ||
         payload.boundary.some(
@@ -158,6 +164,15 @@ export class KeysetCursorCodec {
         )
       ) {
         return invalidCursor();
+      }
+      if (payload.expires_at <= now) return expiredCursor();
+      if (
+        payload.resource_id !== expected.resourceId ||
+        payload.workspace_id !== expected.workspaceId ||
+        payload.direction !== expected.direction ||
+        payload.query_fingerprint !== expected.queryFingerprint
+      ) {
+        return cursorContextMismatch();
       }
       return payload.boundary;
     } catch (error) {

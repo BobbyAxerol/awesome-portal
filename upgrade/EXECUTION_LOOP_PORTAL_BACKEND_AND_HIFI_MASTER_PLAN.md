@@ -820,7 +820,7 @@ window opens.
 | PRE-IAM-01 | Close Execution phases 1–2 on SGP | Approval Inbox + R1 detail + plan/apply/poll, non-local keyring delivery, auth/RBAC/Origin/CSRF/SoD and SGP Compose smoke; no AWS call | correct canonical mutation paths and CSRF transport; keep product route/profile inactive until policy review | fresh PG corpus + isolated public-gateway smoke + runtime research-mode readiness + audit/outbox atomicity | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — SGP backend gate green 2026-08-22 |
 | PRE-IAM-02 | Complete Paper Exit Review | Portal-owned exit-review repository, deterministic policy/evidence evaluation and source-unavailable semantics | finish Phase 5 screen states/lineage against the published contract | missing/stale/partial evidence cases; immutable decision/audit tests; no execution command | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — fresh PG, contract and SGP runtime gates green 2026-08-22 |
 | PRE-IAM-03 | Build Command Center snapshot API dark | bounded snapshot composition over existing projection contracts; no SSE/profile activation | consume snapshot, empty, partial, stale, unavailable fixtures and wire the component without client re-ranking | response budget, per-panel authority/freshness, exact counts and fail-closed source gaps | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — fresh PG 139/139 and contracts 26/26 green 2026-08-22 |
-| PRE-IAM-04 | Offline operational hardening | close confirmed H-series contract/security issues, load/replay/restore/rollback evidence that needs no AWS source | consume only published fixtures/contracts; keep failure states visible | focused regression + workspace gates; credential-free evidence report | `PLANNED` |
+| PRE-IAM-04 | Offline operational hardening | close confirmed H-series contract/security issues, load/replay/restore/rollback evidence that needs no AWS source | consume only published fixtures/contracts; keep failure states visible | focused regression + workspace gates; credential-free evidence report | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — H-series, 32/32 contracts, 139/139 Control API, 89 Rust/PG and restore/rollback gates green 2026-08-22 |
 | PRE-IAM-05 | Prepare D2 dark deployment | image/config/service manifests for AWS Portal Edge + Source Proxy with interfaces/routes/source reads still off | no AWS/live UI activation; continue fixture work | offline render, non-root/read-only image checks, preflight and rollback rehearsal | `PLANNED` |
 | PRE-IAM-06 | Tracking cleanup | reconcile Master Plan, backend README/guide, shared tracker and request ledger; classify every blocker by owner | reconcile FE status/evidence and close superseded requests | no contradictory status, no bare `COMPLETE`, exact next dependency/owner per row | `PLANNED` |
 
@@ -847,6 +847,14 @@ cursor/epoch/sequence remain null, SSE remains unavailable and registry/source/
 command flags remain false. Acceptance evidence and Claude's exact five-state
 handoff are recorded in
 [`PRE_IAM_03_DARK_COMMAND_CENTER_SNAPSHOT_CLOSEOUT.md`](backend/PRE_IAM_03_DARK_COMMAND_CENTER_SNAPSHOT_CLOSEOUT.md).
+
+`PRE-IAM-04` closes only the credential-free operational hardening lane. It
+adds loss-detectable gap/cursor contracts, typed analytics problems, bounded
+ledger/funnel windows with exact global facts, six-screen fixture/schema/serde
+parity, pinned-adapter rollback protection and executable PostgreSQL restore
+drills. It does not activate AWS, source, realtime or command authority. Exact
+evidence and Claude's parallel contract handoff are recorded in
+[`PRE_IAM_04_OFFLINE_HARDENING_CLOSEOUT.md`](backend/PRE_IAM_04_OFFLINE_HARDENING_CLOSEOUT.md).
 
 Claude request `BR-EX-28` is now a tracked cross-queue input. Its 2026-08-22
 contract-pack audit correctly found that eight `ops` actions inherit the same

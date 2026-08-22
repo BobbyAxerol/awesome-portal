@@ -118,6 +118,11 @@ for required in \
   "${ROOT_DIR}/packages/contracts/fixtures/event.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/keyset-page.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.capital-preview.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.order-funnel.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-batch.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.correlation.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.capital-ledger.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.binding-exposure.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-projection-page.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-governance.r2-review.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-governance.paper-exit-review.valid.json" \
@@ -237,6 +242,7 @@ for required in \
   "${ROOT_DIR}/deploy/compose.execution-edge.yaml" \
   "${ROOT_DIR}/deploy/.env.execution-edge.example" \
   "${ROOT_DIR}/scripts/execution-edge-test.sh" \
+  "${ROOT_DIR}/scripts/execution-offline-hardening-test.sh" \
   "${ROOT_DIR}/scripts/execution-edge-live-probe.sh" \
   "${ROOT_DIR}/scripts/execution-d1-preflight.sh" \
   "${ROOT_DIR}/scripts/execution-d1-open-window.sh" \
@@ -416,6 +422,11 @@ for tracked_source in \
   packages/contracts/fixtures/event.valid.json \
   packages/contracts/fixtures/keyset-page.valid.json \
   packages/contracts/fixtures/execution-analytics.capital-preview.valid.json \
+  packages/contracts/fixtures/execution-analytics.order-funnel.valid.json \
+  packages/contracts/fixtures/execution-analytics.insight-batch.valid.json \
+  packages/contracts/fixtures/execution-analytics.correlation.valid.json \
+  packages/contracts/fixtures/execution-analytics.capital-ledger.valid.json \
+  packages/contracts/fixtures/execution-analytics.binding-exposure.valid.json \
   packages/contracts/fixtures/execution-projection-page.valid.json \
   packages/contracts/fixtures/execution-governance.r2-review.valid.json \
   packages/contracts/fixtures/execution-governance.paper-exit-review.valid.json \
@@ -527,6 +538,7 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0003_analytics_source_projection.sql \
   deploy/images/execution-edge-ci.Dockerfile \
   scripts/execution-edge-test.sh \
+  scripts/execution-offline-hardening-test.sh \
   scripts/execution-d1-preflight.sh \
   scripts/execution-d1-open-window.sh \
   scripts/execution-d1-render-wireguard.sh \
@@ -618,6 +630,11 @@ for json_contract in \
   "${ROOT_DIR}/packages/contracts/schemas/keyset-page.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/keyset-page.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.capital-preview.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.order-funnel.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-batch.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.correlation.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.capital-ledger.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.binding-exposure.valid.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-projection-page.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-projection-page.valid.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-governance-r2-review.v1.schema.json" \
@@ -657,6 +674,7 @@ bash -n \
   "${ROOT_DIR}/apps/portal/scripts/run_frontend.sh" \
   "${ROOT_DIR}/scripts/verify-m0-golden.sh" \
   "${ROOT_DIR}/scripts/execution-edge-test.sh" \
+  "${ROOT_DIR}/scripts/execution-offline-hardening-test.sh" \
   "${ROOT_DIR}/scripts/execution-edge-live-probe.sh" \
   "${ROOT_DIR}/scripts/execution-d1-preflight.sh" \
   "${ROOT_DIR}/scripts/execution-d1-open-window.sh" \

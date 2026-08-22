@@ -61,4 +61,19 @@ fi
     npm run build
     npm test
   '
-printf 'Control API tests passed against a real PostgreSQL container.\n'
+
+CONTROL_SIGNATURE_SQL="SELECT concat((SELECT count(*) FROM pgmigrations), ':', (SELECT count(*) FROM portal_users), ':', (SELECT count(*) FROM governance_approval_requests), ':', (SELECT count(*) FROM governance_paper_exit_reviews));"
+source_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_control_test -Atc "${CONTROL_SIGNATURE_SQL}")"
+"${DOCKER[@]}" exec "${PG_CONTAINER}" pg_dump -U portal -d portal_control_test \
+  --format=custom --file=/tmp/portal_control_test.dump
+"${DOCKER[@]}" exec "${PG_CONTAINER}" createdb -U portal portal_control_restore
+"${DOCKER[@]}" exec "${PG_CONTAINER}" pg_restore -U portal -d portal_control_restore \
+  --exit-on-error /tmp/portal_control_test.dump
+restore_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_control_restore -Atc "${CONTROL_SIGNATURE_SQL}")"
+[[ "${source_signature}" == "${restore_signature}" ]] || {
+  printf 'Control API restore signature mismatch: source=%s restore=%s\n' \
+    "${source_signature}" "${restore_signature}" >&2
+  exit 1
+}
+
+printf 'Control API security/query/governance tests and PostgreSQL restore drill passed.\n'

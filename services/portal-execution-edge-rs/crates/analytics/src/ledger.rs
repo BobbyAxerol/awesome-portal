@@ -73,16 +73,25 @@ pub struct CapitalLedgerBucket {
     pub entries: Vec<CapitalLedgerEntry>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum CapitalLedgerWindow {
+    Latest,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CapitalLedgerResult {
     pub portfolio_id: CanonicalId,
+    pub entry_count: usize,
+    pub returned_entry_count: usize,
+    pub has_more: bool,
+    pub window: CapitalLedgerWindow,
     pub buckets: Vec<CapitalLedgerBucket>,
 }
 
 struct LedgerBucketAccumulator {
     increase: Decimal,
     decrease: Decimal,
-    entries: Vec<CapitalLedgerEntry>,
 }
 
 impl Default for LedgerBucketAccumulator {
@@ -90,7 +99,6 @@ impl Default for LedgerBucketAccumulator {
         Self {
             increase: Decimal::ZERO,
             decrease: Decimal::ZERO,
-            entries: Vec::new(),
         }
     }
 }
@@ -107,14 +115,9 @@ impl Default for LedgerBucketAccumulator {
 pub fn build_capital_ledger(
     input: &CapitalLedgerInput,
 ) -> Result<DerivedAnalytics<CapitalLedgerResult>, AnalyticsError> {
-    if input.entries.len() > MAX_CAPITAL_LEDGER_ENTRIES {
-        return Err(AnalyticsError::BatchLimit {
-            actual: input.entries.len(),
-            maximum: MAX_CAPITAL_LEDGER_ENTRIES,
-        });
-    }
     let mut ids = BTreeSet::new();
     let mut buckets: BTreeMap<CurrencyCode, LedgerBucketAccumulator> = BTreeMap::new();
+    let mut ranked_entries = Vec::with_capacity(input.entries.len());
     for fact in &input.entries {
         if fact.portfolio_id != input.portfolio_id {
             return Err(AnalyticsError::ScopeMismatch {
@@ -136,36 +139,44 @@ pub fn build_capital_ledger(
             LedgerDirection::Decrease => bucket.decrease = checked_add(bucket.decrease, amount)?,
             LedgerDirection::Unchanged => {}
         }
-        bucket.entries.push(CapitalLedgerEntry {
-            ledger_id: fact.ledger_id.clone(),
-            allocation_id: fact.allocation_id.clone(),
-            account_id: fact.account_id.clone(),
-            movement_type: fact.movement_type,
-            direction,
-            amount: fact.amount,
-            before_allocated: fact.before_allocated,
-            after_allocated: fact.after_allocated,
-            occurred_at: fact.occurred_at,
-        });
+        ranked_entries.push((
+            fact.currency.clone(),
+            CapitalLedgerEntry {
+                ledger_id: fact.ledger_id.clone(),
+                allocation_id: fact.allocation_id.clone(),
+                account_id: fact.account_id.clone(),
+                movement_type: fact.movement_type,
+                direction,
+                amount: fact.amount,
+                before_allocated: fact.before_allocated,
+                after_allocated: fact.after_allocated,
+                occurred_at: fact.occurred_at,
+            },
+        ));
+    }
+
+    ranked_entries.sort_by(|(_, left), (_, right)| {
+        right
+            .occurred_at
+            .cmp(&left.occurred_at)
+            .then_with(|| right.ledger_id.as_str().cmp(left.ledger_id.as_str()))
+    });
+    ranked_entries.truncate(MAX_CAPITAL_LEDGER_ENTRIES);
+    let returned_entry_count = ranked_entries.len();
+    let mut visible_by_currency: BTreeMap<CurrencyCode, Vec<CapitalLedgerEntry>> = BTreeMap::new();
+    for (currency, entry) in ranked_entries {
+        visible_by_currency.entry(currency).or_default().push(entry);
     }
 
     let quality = QualitySummary::from_iter(input.entries.iter().map(|entry| &entry.quality))
         .with_completeness(input.source_population);
     let mut buckets: Vec<_> = buckets
         .into_iter()
-        .map(|(currency, mut bucket)| {
-            bucket.entries.sort_by(|left, right| {
-                right
-                    .occurred_at
-                    .cmp(&left.occurred_at)
-                    .then_with(|| right.ledger_id.as_str().cmp(left.ledger_id.as_str()))
-            });
-            CapitalLedgerBucket {
-                currency,
-                gross_increase: DecimalString::from_decimal(bucket.increase),
-                gross_decrease: DecimalString::from_decimal(bucket.decrease),
-                entries: bucket.entries,
-            }
+        .map(|(currency, bucket)| CapitalLedgerBucket {
+            entries: visible_by_currency.remove(&currency).unwrap_or_default(),
+            currency,
+            gross_increase: DecimalString::from_decimal(bucket.increase),
+            gross_decrease: DecimalString::from_decimal(bucket.decrease),
         })
         .collect();
     buckets.sort_by(|left, right| left.currency.cmp(&right.currency));
@@ -174,6 +185,13 @@ pub fn build_capital_ledger(
         warnings.push(warning(
             "CAPITAL_LEDGER_INCOMPLETE",
             "Capital ledger population is not proven complete",
+        ));
+    }
+    let has_more = input.entries.len() > returned_entry_count;
+    if has_more {
+        warnings.push(warning(
+            "CAPITAL_LEDGER_WINDOWED",
+            "Entries are the latest bounded window; gross totals cover the full validated population",
         ));
     }
     let panel_state = if input.entries.is_empty() {
@@ -190,6 +208,10 @@ pub fn build_capital_ledger(
         warnings,
         CapitalLedgerResult {
             portfolio_id: input.portfolio_id.clone(),
+            entry_count: input.entries.len(),
+            returned_entry_count,
+            has_more,
+            window: CapitalLedgerWindow::Latest,
             buckets,
         },
     ))
@@ -326,16 +348,35 @@ mod tests {
     }
 
     #[test]
-    fn rejects_unbounded_ledger_page() {
-        let entry = fact("l-1", "USDT", MovementType::Allocate, "1", "1", "2");
+    fn windows_large_ledger_without_losing_exact_gross_totals() {
+        let entries = (0..=MAX_CAPITAL_LEDGER_ENTRIES)
+            .map(|index| {
+                fact(
+                    &format!("l-{index:04}"),
+                    "USDT",
+                    MovementType::Allocate,
+                    "1",
+                    "1",
+                    "2",
+                )
+            })
+            .collect();
         let input = CapitalLedgerInput {
             portfolio_id: CanonicalId::parse("PF-1").unwrap(),
             source_population: PopulationCompleteness::Complete,
-            entries: vec![entry; MAX_CAPITAL_LEDGER_ENTRIES + 1],
+            entries,
         };
-        assert!(matches!(
-            build_capital_ledger(&input),
-            Err(AnalyticsError::BatchLimit { .. })
-        ));
+        let output = build_capital_ledger(&input).unwrap();
+        assert_eq!(output.data.entry_count, MAX_CAPITAL_LEDGER_ENTRIES + 1);
+        assert_eq!(output.data.returned_entry_count, MAX_CAPITAL_LEDGER_ENTRIES);
+        assert!(output.data.has_more);
+        assert_eq!(
+            output.data.buckets[0].gross_increase.to_string(),
+            (MAX_CAPITAL_LEDGER_ENTRIES + 1).to_string()
+        );
+        assert_eq!(
+            output.data.buckets[0].entries.len(),
+            MAX_CAPITAL_LEDGER_ENTRIES
+        );
     }
 }

@@ -1,0 +1,28 @@
+{
+  "schema_version": "execution.analytics.screen.v1",
+  "epoch_id": "018f0d5e-7b61-7a00-8000-000000000001",
+  "source_snapshot_id": "018f0d5e-7b61-7a00-8000-000000000006",
+  "capability_snapshot_id": "cap_fixture_v1",
+  "source_profile": "fixture",
+  "projection_sequence": 46,
+  "freshness_policy_version": "paper.analytics.v1",
+  "read_at": "2026-08-22T10:00:00Z",
+  "analytics": {
+    "schema_version": "execution.analytics.v1",
+    "formula_version": "portfolio-capital-ledger.v1",
+    "source_authority": "DERIVED",
+    "input_freshness_floor": "OK",
+    "panel_state": "ok",
+    "input_completeness": "COMPLETE",
+    "input_as_of": "2026-08-22T09:59:59Z",
+    "warnings": [],
+    "data": {
+      "portfolio_id": "PF-1",
+      "entry_count": 1,
+      "returned_entry_count": 1,
+      "has_more": false,
+      "window": "LATEST",
+      "buckets": [{ "currency": "USDT", "gross_increase": "100", "gross_decrease": "0", "entries": [{ "ledger_id": "ledger-1", "allocation_id": "allocation-1", "account_id": "account-1", "movement_type": "ALLOCATE", "direction": "INCREASE", "amount": "100", "before_allocated": "0", "after_allocated": "100", "occurred_at": "2026-08-22T09:59:59Z" }] }]
+    }
+  }
+}

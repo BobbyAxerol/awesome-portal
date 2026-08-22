@@ -1,0 +1,33 @@
+{
+  "schema_version": "execution.analytics.screen.v1",
+  "epoch_id": "018f0d5e-7b61-7a00-8000-000000000001",
+  "source_snapshot_id": "018f0d5e-7b61-7a00-8000-000000000003",
+  "capability_snapshot_id": "cap_fixture_v1",
+  "source_profile": "fixture",
+  "projection_sequence": 43,
+  "freshness_policy_version": "paper.analytics.v1",
+  "read_at": "2026-08-22T10:00:00Z",
+  "analytics": {
+    "schema_version": "execution.analytics.v1",
+    "formula_version": "order-funnel.v1",
+    "source_authority": "DERIVED",
+    "input_freshness_floor": "OK",
+    "panel_state": "ok",
+    "input_completeness": "COMPLETE",
+    "input_as_of": "2026-08-22T09:59:59Z",
+    "warnings": [],
+    "data": {
+      "order_id": "order-1",
+      "event_count": 4,
+      "returned_event_count": 4,
+      "has_more": false,
+      "window": "LIFECYCLE_AND_LATEST",
+      "stages": [
+        { "stage": "SUBMIT", "state": "OBSERVED", "event_count": 1, "returned_event_count": 1, "truncated": false, "events": [{ "stage": "SUBMIT", "source_authority": "EXECUTION", "source_id": "submit-1", "occurred_at": "2026-08-22T09:59:56Z", "quantity": null, "quality": { "source_authority": "EXECUTION", "freshness_state": "OK", "completeness": "COMPLETE", "as_of": "2026-08-22T09:59:56Z" } }] },
+        { "stage": "SOURCE_ACK", "state": "OBSERVED", "event_count": 1, "returned_event_count": 1, "truncated": false, "events": [{ "stage": "SOURCE_ACK", "source_authority": "EXECUTION", "source_id": "source-ack-1", "occurred_at": "2026-08-22T09:59:57Z", "quantity": null, "quality": { "source_authority": "EXECUTION", "freshness_state": "OK", "completeness": "COMPLETE", "as_of": "2026-08-22T09:59:57Z" } }] },
+        { "stage": "BROKER_ACK", "state": "OBSERVED", "event_count": 1, "returned_event_count": 1, "truncated": false, "events": [{ "stage": "BROKER_ACK", "source_authority": "BROKER", "source_id": "broker-ack-1", "occurred_at": "2026-08-22T09:59:58Z", "quantity": null, "quality": { "source_authority": "BROKER", "freshness_state": "OK", "completeness": "COMPLETE", "as_of": "2026-08-22T09:59:58Z" } }] },
+        { "stage": "FILL", "state": "OBSERVED", "event_count": 1, "returned_event_count": 1, "truncated": false, "events": [{ "stage": "FILL", "source_authority": "EXECUTION", "source_id": "fill-1", "occurred_at": "2026-08-22T09:59:59Z", "quantity": "1.25", "quality": { "source_authority": "EXECUTION", "freshness_state": "OK", "completeness": "COMPLETE", "as_of": "2026-08-22T09:59:59Z" } }] }
+      ]
+    }
+  }
+}

@@ -50,9 +50,10 @@ export interface components {
             /** @constant */
             schema_version: "execution.realtime.v1";
             /** @enum {string} */
-            reason: "history_evicted" | "replay_window_exceeded" | "slow_consumer" | "epoch_changed" | "source_discontinuity";
+            reason: "history_evicted" | "replay_window_exceeded" | "slow_consumer" | "epoch_changed" | "source_discontinuity" | "projection_sequence_gap" | "cursor_ahead";
             last_good_cursor: components["schemas"]["ProjectionCursor"] | null;
             earliest_available_sequence: number | null;
+            latest_available_sequence: number | null;
             missed_events: number | null;
             /** Format: uuid */
             active_epoch_id: string | null;

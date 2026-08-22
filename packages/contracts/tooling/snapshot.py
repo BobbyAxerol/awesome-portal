@@ -55,6 +55,11 @@ TRACKED = (
     "openapi/execution-realtime.openapi.json",
     "openapi/execution-command-center.openapi.json",
     "fixtures/execution-analytics.capital-preview.valid.json",
+    "fixtures/execution-analytics.order-funnel.valid.json",
+    "fixtures/execution-analytics.insight-batch.valid.json",
+    "fixtures/execution-analytics.correlation.valid.json",
+    "fixtures/execution-analytics.capital-ledger.valid.json",
+    "fixtures/execution-analytics.binding-exposure.valid.json",
     "package.json",
 )
 

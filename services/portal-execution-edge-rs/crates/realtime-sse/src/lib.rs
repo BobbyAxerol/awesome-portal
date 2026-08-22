@@ -4,10 +4,13 @@ use std::sync::{
     atomic::{AtomicU64, AtomicUsize, Ordering},
     Arc,
 };
+use std::time::Duration;
 
 use chrono::{DateTime, Utc};
 use execution_contracts::{FreshnessState, SourceAuthority, SourceCompleteness, SourceCursor};
-use projection_core::{ProjectionCursor, ProjectionEntityKind, ProjectionObservation};
+use projection_core::{
+    server_jitter_deadline, ProjectionCursor, ProjectionEntityKind, ProjectionObservation,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use thiserror::Error;
@@ -111,6 +114,8 @@ pub enum GapReason {
     SlowConsumer,
     EpochChanged,
     SourceDiscontinuity,
+    ProjectionSequenceGap,
+    CursorAhead,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -121,6 +126,7 @@ pub struct GapEnvelope {
     pub last_good_cursor: Option<String>,
     pub active_epoch_id: Option<Uuid>,
     pub earliest_available_sequence: Option<u64>,
+    pub latest_available_sequence: Option<u64>,
     pub missed_events: Option<u64>,
     pub resnapshot_not_before: Option<DateTime<Utc>>,
 }
@@ -135,6 +141,7 @@ impl GapEnvelope {
             last_good_cursor: last_good_cursor.map(|cursor| cursor.to_string()),
             active_epoch_id: None,
             earliest_available_sequence: None,
+            latest_available_sequence: None,
             missed_events: None,
             resnapshot_not_before: None,
         }
@@ -191,6 +198,8 @@ impl RealtimeHub {
         workspace_id: impl Into<String>,
         environment: impl Into<String>,
         cursor: ProjectionCursor,
+        client_stable_id: impl Into<String>,
+        maximum_epoch_jitter: Duration,
     ) -> RealtimeSubscription {
         self.metrics
             .active_subscribers
@@ -200,6 +209,8 @@ impl RealtimeHub {
             workspace_id: workspace_id.into(),
             environment: environment.into(),
             last_good_cursor: cursor,
+            client_stable_id: client_stable_id.into(),
+            maximum_epoch_jitter,
             metrics: Arc::clone(&self.metrics),
             terminal: false,
         }
@@ -228,6 +239,8 @@ pub struct RealtimeSubscription {
     workspace_id: String,
     environment: String,
     last_good_cursor: ProjectionCursor,
+    client_stable_id: String,
+    maximum_epoch_jitter: Duration,
     metrics: Arc<Metrics>,
     terminal: bool,
 }
@@ -259,10 +272,16 @@ impl RealtimeSubscription {
                     }
                     if cursor.epoch_id != self.last_good_cursor.epoch_id {
                         self.terminal = true;
-                        return SubscriptionDelivery::Gap(GapEnvelope::new(
-                            GapReason::EpochChanged,
-                            Some(self.last_good_cursor),
+                        let mut gap =
+                            GapEnvelope::new(GapReason::EpochChanged, Some(self.last_good_cursor));
+                        gap.active_epoch_id = Some(cursor.epoch_id);
+                        gap.resnapshot_not_before = Some(server_jitter_deadline(
+                            cursor.epoch_id,
+                            &self.client_stable_id,
+                            Utc::now(),
+                            self.maximum_epoch_jitter,
                         ));
+                        return SubscriptionDelivery::Gap(gap);
                     }
                     if event.source_discontinuity {
                         self.terminal = true;
@@ -274,7 +293,7 @@ impl RealtimeSubscription {
                     if cursor.sequence != self.last_good_cursor.sequence.saturating_add(1) {
                         self.terminal = true;
                         return SubscriptionDelivery::Gap(GapEnvelope::new(
-                            GapReason::SourceDiscontinuity,
+                            GapReason::ProjectionSequenceGap,
                             Some(self.last_good_cursor),
                         ));
                     }
@@ -374,6 +393,8 @@ mod tests {
                         epoch_id: epoch,
                         sequence: 0,
                     },
+                    "session-1",
+                    Duration::ZERO,
                 )
             })
             .collect::<Vec<_>>();
@@ -398,6 +419,8 @@ mod tests {
                 epoch_id: epoch,
                 sequence: 0,
             },
+            "session-1",
+            Duration::ZERO,
         );
         for sequence in 1..=32 {
             hub.publish(event(epoch, sequence));
@@ -422,6 +445,8 @@ mod tests {
                 epoch_id: epoch,
                 sequence: 3,
             },
+            "session-1",
+            Duration::ZERO,
         );
         hub.publish(event(epoch, 4));
         hub.publish(event(epoch, 5));
@@ -438,6 +463,34 @@ mod tests {
         let SubscriptionDelivery::Gap(gap) = subscriber.next().await else {
             panic!("expected a discontinuity gap");
         };
-        assert_eq!(gap.reason, GapReason::SourceDiscontinuity);
+        assert_eq!(gap.reason, GapReason::ProjectionSequenceGap);
+    }
+
+    #[tokio::test]
+    async fn live_epoch_change_carries_active_epoch_and_stable_resnapshot_deadline() {
+        let hub = RealtimeHub::new(8).unwrap();
+        let previous_epoch = Uuid::now_v7();
+        let active_epoch = Uuid::now_v7();
+        let mut subscriber = hub.subscribe(
+            "ws-one",
+            "paper",
+            ProjectionCursor {
+                epoch_id: previous_epoch,
+                sequence: 3,
+            },
+            "session-stable",
+            Duration::from_secs(10),
+        );
+        hub.publish(event(active_epoch, 1));
+        let before = Utc::now();
+        let SubscriptionDelivery::Gap(gap) = subscriber.next().await else {
+            panic!("expected an epoch-change gap");
+        };
+        let after = Utc::now() + chrono::TimeDelta::seconds(10);
+        assert_eq!(gap.reason, GapReason::EpochChanged);
+        assert_eq!(gap.active_epoch_id, Some(active_epoch));
+        assert!(gap
+            .resnapshot_not_before
+            .is_some_and(|value| value >= before && value <= after));
     }
 }

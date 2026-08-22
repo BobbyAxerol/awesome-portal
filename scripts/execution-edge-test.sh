@@ -90,4 +90,20 @@ fi
     cargo clippy --locked --all-targets -- -D warnings
   '
 
-printf 'Execution edge contracts, auth, transport, projection replay/query, source-backed analytics, offline source qualification and PostgreSQL gates passed.\n'
+# Credential-free restore drill: prove the migrated projection schema and all
+# rows left by the replay/query suite survive a custom-format backup/restore.
+PROJECTION_SIGNATURE_SQL="SELECT concat((SELECT count(*) FROM _sqlx_migrations), ':', (SELECT count(*) FROM portal_projection.epochs), ':', (SELECT count(*) FROM portal_projection.event_journal), ':', (SELECT count(*) FROM portal_projection.analytics_source_snapshots), ':', (SELECT count(*) FROM portal_projection.analytics_source_facts));"
+source_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_projection_test -Atc "${PROJECTION_SIGNATURE_SQL}")"
+"${DOCKER[@]}" exec "${PG_CONTAINER}" pg_dump -U portal -d portal_projection_test \
+  --format=custom --file=/tmp/portal_projection_test.dump
+"${DOCKER[@]}" exec "${PG_CONTAINER}" createdb -U portal portal_projection_restore
+"${DOCKER[@]}" exec "${PG_CONTAINER}" pg_restore -U portal -d portal_projection_restore \
+  --exit-on-error /tmp/portal_projection_test.dump
+restore_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_projection_restore -Atc "${PROJECTION_SIGNATURE_SQL}")"
+[[ "${source_signature}" == "${restore_signature}" ]] || {
+  printf 'Projection restore signature mismatch: source=%s restore=%s\n' \
+    "${source_signature}" "${restore_signature}" >&2
+  exit 1
+}
+
+printf 'Execution edge contracts, auth, transport, bounded load, projection replay/query, source-backed analytics, adapter rollback and PostgreSQL restore gates passed.\n'

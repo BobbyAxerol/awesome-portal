@@ -22,7 +22,7 @@ pub use exposure::{
 };
 pub use funnel::{
     build_order_funnel, FunnelEvent, FunnelInput, FunnelStage, FunnelStageResult, FunnelStageState,
-    OrderFunnel,
+    FunnelWindow, OrderFunnel,
 };
 pub use insight::{
     build_insight_batch, InsightBatch, InsightBatchRequest, InsightItemRequest, InsightItemResult,
@@ -30,7 +30,7 @@ pub use insight::{
 };
 pub use ledger::{
     build_capital_ledger, CapitalLedgerBucket, CapitalLedgerEntry, CapitalLedgerFact,
-    CapitalLedgerInput, CapitalLedgerResult, LedgerDirection, MovementType,
+    CapitalLedgerInput, CapitalLedgerResult, CapitalLedgerWindow, LedgerDirection, MovementType,
 };
 pub use types::{
     AnalyticsError, CurrencyCode, DerivedAnalytics, FactQuality, PopulationCompleteness,

@@ -25,6 +25,43 @@ const ajv = buildValidator(
   readdirSync(schemaDir).map((name) => join(schemaDir, name)),
 );
 
+const ANALYTICS_OPENAPI_SCHEMA_ID =
+  "https://schemas.primusspark.com/portal/execution-analytics.openapi.json";
+
+function rewriteOpenApiRefs(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(rewriteOpenApiRefs);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+        key,
+        key === "$ref" && typeof item === "string"
+          ? item.replace("#/components/schemas/", "#/$defs/")
+          : rewriteOpenApiRefs(item),
+      ]),
+    );
+  }
+  return value;
+}
+
+const analyticsOpenApi = loadJson(
+  join(ROOT, "openapi", "execution-analytics.openapi.json"),
+) as { components: { schemas: Record<string, unknown> } };
+const analyticsAjv = new Ajv2020({ allErrors: true, strict: true, allowUnionTypes: true });
+addFormats(analyticsAjv);
+analyticsAjv.addSchema({
+  $id: ANALYTICS_OPENAPI_SCHEMA_ID,
+  $defs: rewriteOpenApiRefs(analyticsOpenApi.components.schemas),
+});
+
+const analyticsFixtureSchemas: Record<string, string> = {
+  "execution-analytics.capital-preview.valid.json": "CapitalPreviewResponse",
+  "execution-analytics.order-funnel.valid.json": "OrderFunnelResponse",
+  "execution-analytics.insight-batch.valid.json": "InsightBatchResponse",
+  "execution-analytics.correlation.valid.json": "CorrelationResponse",
+  "execution-analytics.capital-ledger.valid.json": "CapitalLedgerResponse",
+  "execution-analytics.binding-exposure.valid.json": "BindingExposureResponse",
+};
+
 const schemaIds: Record<string, string> = {
   "problem.valid.json":
     "https://schemas.primusspark.com/portal/problem.v1.schema.json",
@@ -66,6 +103,17 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
       if (!valid) {
         throw new Error(JSON.stringify(validate!.errors, null, 2));
       }
+    });
+  }
+
+  for (const [fixture, component] of Object.entries(analyticsFixtureSchemas)) {
+    it(`validates ${fixture} against analytics OpenAPI ${component}`, () => {
+      const validate = analyticsAjv.getSchema(
+        `${ANALYTICS_OPENAPI_SCHEMA_ID}#/$defs/${component}`,
+      );
+      expect(validate).toBeDefined();
+      const valid = validate!(loadJson(join(fixtureDir, fixture)));
+      if (!valid) throw new Error(JSON.stringify(validate!.errors, null, 2));
     });
   }
 

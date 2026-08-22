@@ -7,14 +7,22 @@ CONTRACTS_DIR="${ROOT_DIR}/packages/contracts"
 NODE_CONTAINER="contracts-test-node"
 
 command -v docker >/dev/null 2>&1 || { printf 'Docker CLI is required.\n' >&2; exit 1; }
-docker info >/dev/null 2>&1 || { printf 'Cannot access the Docker daemon.\n' >&2; exit 1; }
+DOCKER=(docker)
+if ! "${DOCKER[@]}" info >/dev/null 2>&1; then
+  if command -v sudo >/dev/null 2>&1 && sudo -n docker info >/dev/null 2>&1; then
+    DOCKER=(sudo -n docker)
+  else
+    printf 'Cannot access the Docker daemon directly or through passwordless sudo.\n' >&2
+    exit 1
+  fi
+fi
 
 cleanup() {
-  docker rm -f "${NODE_CONTAINER}" >/dev/null 2>&1 || true
+  "${DOCKER[@]}" rm -f "${NODE_CONTAINER}" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
-docker run --rm --name "${NODE_CONTAINER}" \
+"${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" \
   -u "${HOST_UID:-$(id -u)}:${HOST_GID:-$(id -g)}" \
   -v "${ROOT_DIR}:/repo:ro" \
   -v "${CONTRACTS_DIR}:/work" \
