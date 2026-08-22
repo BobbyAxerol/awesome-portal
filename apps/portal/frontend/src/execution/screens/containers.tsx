@@ -15,7 +15,13 @@
  */
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
-import { intentKey, newRequestKey } from "../adapter";
+import {
+  OPERATION_STATUSES,
+  VERIFICATION_RESULTS,
+  intentKey,
+  newRequestKey,
+  readEnum,
+} from "../adapter";
 import { cursorStillValid, type CursorScope, type KeysetPage, type PanelStatus } from "../contracts";
 import {
   decisionReducer,
@@ -37,18 +43,6 @@ import type { AnalyticsEnvelope, CapitalPreview } from "../analytics";
  * two-state model would make "still loading" and "the engine refused" the same
  * thing on the panel where they must not be.
  */
-/**
- * What the fixture engine is asked for when the caller says nothing.
- *
- * Module-level so its identity is stable across renders, and matching the
- * published fixture so the default path exercises the decidable case.
- */
-const DEFAULT_PREVIEW_INPUT: CapitalPreviewInput = {
-  portfolioId: "PF-1",
-  requestedAmount: "50.000000000000000001",
-  currency: "USDT",
-};
-
 type CapitalPreviewState =
   | null
   | { failed: string }
@@ -73,6 +67,15 @@ interface LoadState<T> {
 function loading<T>(): LoadState<T> {
   return { status: "loading", value: null, warnings: [] };
 }
+
+/**
+ * Codes and phrases that mean "this cursor is no longer usable".
+ *
+ * Matched on the reason text because the BFF collapses Rust's `CursorExpired`
+ * and `CursorContextMismatch` into one `INVALID_CURSOR` (audit A-8) and the
+ * problem body is the only place the distinction survives at all.
+ */
+const CURSOR_REJECTED = /INVALID_CURSOR|CURSOR_EXPIRED|CURSOR_CONTEXT|cursor/i;
 
 export function ApprovalInboxContainer({
   api,
@@ -139,6 +142,18 @@ export function ApprovalInboxContainer({
             }
           : { status: result.status, reason: result.reason, value: null, warnings: [] },
       );
+      // A cursor the *server* rejected. The client-side check above only
+      // catches scope changes it can see; an expired cursor, a rotated signing
+      // key or an epoch cutover are refusals only the server knows about, and
+      // keeping the rejected cursor in state re-sent it on every render — a
+      // list stuck on an error it could have recovered from by asking for the
+      // first page.
+      if (!result.ok && CURSOR_REJECTED.test(result.reason) && (after || before)) {
+        setCursorReset(
+          "The page reference expired or no longer applies — showing the first page.",
+        );
+        setCursor({ scope: null });
+      }
     });
     return () => {
       cancelled = true;
@@ -239,10 +254,17 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
         }
         dispatch({
           type: "POLLED",
-          status: null,
-          verification: result.value.verificationRaw
-            ? { known: true, value: result.value.verificationRaw as never }
-            : null,
+          status: (() => {
+            const parsed = readEnum(result.value.status, OPERATION_STATUSES);
+            // A status this build does not recognise is not a status. It is
+            // dropped rather than coerced, and the verification token below is
+            // what the reducer actually walks on.
+            return parsed?.known ? parsed.value : null;
+          })(),
+          // Narrowed, not asserted. `known: true` with an `as never` told the
+          // reducer every token was recognised — including one this build has
+          // never seen — which is exactly the guard `readEnum` exists to be.
+          verification: readEnum(result.value.verificationRaw, VERIFICATION_RESULTS),
         });
       });
     }, POLL_MS);
@@ -288,7 +310,11 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
       }
       dispatch({ type: "APPLY_REQUESTED" });
 
-      const applied = await api.applyPlan(planned.value.applyToken, "default");
+      const applied = await api.applyPlan(
+        planned.value.operationId,
+        planned.value.applyToken,
+        "default",
+      );
       if (!applied.ok) {
         dispatch({ type: "APPLY_FAILED", error: applied.reason });
         return;
@@ -381,10 +407,17 @@ function useDecision(api: ExecutionApi) {
         }
         dispatch({
           type: "POLLED",
-          status: null,
-          verification: result.value.verificationRaw
-            ? { known: true, value: result.value.verificationRaw as never }
-            : null,
+          status: (() => {
+            const parsed = readEnum(result.value.status, OPERATION_STATUSES);
+            // A status this build does not recognise is not a status. It is
+            // dropped rather than coerced, and the verification token below is
+            // what the reducer actually walks on.
+            return parsed?.known ? parsed.value : null;
+          })(),
+          // Narrowed, not asserted. `known: true` with an `as never` told the
+          // reducer every token was recognised — including one this build has
+          // never seen — which is exactly the guard `readEnum` exists to be.
+          verification: readEnum(result.value.verificationRaw, VERIFICATION_RESULTS),
         });
       });
     }, POLL_MS);
@@ -439,6 +472,7 @@ function useDecision(api: ExecutionApi) {
 
       dispatch({ type: "APPLY_REQUESTED" });
       const applied = await api.applyPlan(
+        planned.value.operationId,
         planned.value.applyToken,
         extra?.workspaceId ?? workspaceId,
       );
@@ -470,10 +504,20 @@ export function GateR2ReviewContainer({
    * capital rows: inferring a portfolio from a currency label would be the
    * screen deciding which portfolio it is looking at.
    */
-  preview: previewFor = DEFAULT_PREVIEW_INPUT,
+  preview: previewFor,
 }: {
   api: ExecutionApi;
   approvalId: string;
+  /**
+   * Overrides the scope taken from the review row. Tests use it; screens do not.
+   *
+   * The default used to be the published fixture's literal — PF-1 / USDT /
+   * 50.000000000000000001 — which the H2-hardened endpoint now rejects,
+   * because the preview is bound to the approval's own immutable portfolio and
+   * currency. Worse than the rejection: against a permissive server it would
+   * have shown a reviewer capital figures for a portfolio and an amount nobody
+   * had asked about.
+   */
   preview?: CapitalPreviewInput;
 }) {
   const [state, setState] = useState<LoadState<GateR2Detail>>(loading);
@@ -500,10 +544,30 @@ export function GateR2ReviewContainer({
   // would refetch the whole review whenever the amount moved, and leaving it
   // out of the dependency list would show a preview for an amount the reviewer
   // has already changed — the second being the dangerous one.
+  // Taken from the review row, which BR-EX-23 added `portfolio_id` and
+  // `currency` to for exactly this. Absent means the request cannot be made —
+  // not that a plausible default may be substituted.
+  const previewScope: CapitalPreviewInput | null =
+    previewFor ??
+    (state.value?.portfolioId && state.value?.currency && state.value?.requestedAmount
+      ? {
+          portfolioId: state.value.portfolioId,
+          currency: state.value.currency,
+          requestedAmount: state.value.requestedAmount,
+        }
+      : null);
+
   useEffect(() => {
     let cancelled = false;
     setPreview(null);
-    void api.getCapitalPreview(approvalId, previewFor).then((result) => {
+    if (!previewScope) {
+      setPreview({
+        failed:
+          "This review does not publish the portfolio, currency and amount the preview is computed against, so none can be requested.",
+      });
+      return;
+    }
+    void api.getCapitalPreview(approvalId, previewScope).then((result) => {
       if (cancelled) return;
       setPreview(result.ok ? result.value : { failed: result.reason });
     });
@@ -512,7 +576,7 @@ export function GateR2ReviewContainer({
     };
     // Keyed on the fields, not the object: a caller passing a fresh literal
     // each render would otherwise re-request the preview on every render.
-  }, [api, approvalId, previewFor.portfolioId, previewFor.requestedAmount, previewFor.currency]);
+  }, [api, approvalId, previewScope?.portfolioId, previewScope?.requestedAmount, previewScope?.currency]);
 
   const d = state.value;
   const run = (verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION", reason: string) =>
@@ -558,6 +622,8 @@ export function GateR2ReviewContainer({
               }
             : undefined
         }
+        eligibility={d?.eligibility}
+        capitalReason={preview && "failed" in preview ? preview.failed : undefined}
         capitalDecidable={served ? served.preview.decisionEligible : undefined}
         capitalBlockers={served ? served.preview.blockers : undefined}
         grantName={d?.grantName ?? undefined}
@@ -599,6 +665,7 @@ export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi;
   return (
     <>
       <PaperExitReview
+        eligibility={d?.eligibility}
         reviewId={d?.reviewId ?? reviewId}
         deploymentId={d?.deploymentId ?? "unknown"}
         subject={d?.subject ?? reviewId}

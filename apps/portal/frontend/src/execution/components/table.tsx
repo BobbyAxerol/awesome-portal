@@ -207,7 +207,11 @@ export function KeysetTable<T>({
         ref={scrollRef}
         onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
       >
-        <table style={{ minWidth }} aria-label={label} aria-rowcount={page.totalCount}>
+        <table
+          style={{ minWidth }}
+          aria-label={label}
+          aria-rowcount={page.totalCount ?? -1}
+        >
           <thead>
             <tr>
               {columns.map((c) => (
@@ -319,7 +323,15 @@ function TableFooter<T>({
             <strong>{grouped(filtered)}</strong> in selection ·{" "}
           </>
         ) : null}
-        <strong>{grouped(page.totalCount)}</strong> total
+        {page.totalCount !== null ? (
+          <>
+            <strong>{grouped(page.totalCount)}</strong> total
+          </>
+        ) : (
+          // Stated, not zeroed. "0 total" beside a full page is the reading
+          // this rule exists to prevent.
+          <span className="exec-gate-unverified">count unavailable</span>
+        )}
         <span className="exec-table-meta">
           {" · "}
           {grouped(resident)} resident

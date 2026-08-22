@@ -481,3 +481,52 @@ describe("M3 transport — a voided baseline survives a disconnect", () => {
     expect(after.sequence).toBe(11);
   });
 });
+
+describe("M3 transport — a terminal gap closes the socket", () => {
+  it("closes rather than leaving EventSource to reconnect every second", async () => {
+    // The edge ends the stream after every gap and stamps retry: 1000 with no
+    // id. Left alone, the browser reconnects a second later with the same
+    // cursor, receives the identical gap, and loops — one re-snapshot request
+    // per client per second, which is the herd the server's jitter exists to
+    // prevent.
+    const fake = fakeSource();
+    const resnapshot = vi.fn();
+    const handle = openStream({
+      path: "/s",
+      fetchSnapshot: () => Promise.resolve({ cursor: "snap-1", epoch: "e1", sequence: 100 }),
+      factory: () => fake.source,
+      onState: () => {},
+      onResnapshotRequired: resnapshot,
+    });
+    await Promise.resolve();
+    expect(fake.isClosed()).toBe(false);
+
+    fake.emit("projection.gap", { reason: "history_evicted" });
+    expect(fake.isClosed()).toBe(true);
+    expect(resnapshot).toHaveBeenCalledOnce();
+
+    // And a second gap on the dead socket does not ask again.
+    fake.emit("projection.gap", { reason: "history_evicted" });
+    expect(resnapshot).toHaveBeenCalledOnce();
+    handle.close();
+  });
+
+  it("closes on an epoch cutover too, and waits for the server's deadline", () => {
+    const fake = fakeSource();
+    const handle = openStream({
+      path: "/s",
+      fetchSnapshot: () => Promise.resolve({ cursor: "snap-1", epoch: "e1", sequence: 100 }),
+      factory: () => fake.source,
+      onState: () => {},
+    });
+    return Promise.resolve().then(() => {
+      fake.emit("projection.gap", {
+        reason: "epoch_changed",
+        resnapshot_not_before: "2099-01-01T00:00:00Z",
+      });
+      expect(fake.isClosed()).toBe(true);
+      expect(handle.state().resnapshotNotBefore).toBe("2099-01-01T00:00:00Z");
+      handle.close();
+    });
+  });
+});

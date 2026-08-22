@@ -62,6 +62,7 @@ import {
   toCondition,
 } from "./components/conditions";
 import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./api/rows";
+import type { ExecutionApi } from "./api/ports";
 import { createFixtureApi } from "./api/fixtureApi";
 import {
   ApprovalInboxContainer,
@@ -1298,12 +1299,15 @@ describe("S3 adapter — keyset page", () => {
     expect(p.rows[1].qty).toBe("0.00100000");
   });
 
-  it("reports zero rather than falling back to the loaded row count", () => {
-    // A page that cannot say how large the population is has not met the
-    // contract. Zero reads as wrong; rows.length would read as plausible.
+  it("reports an absent count as absent, not as zero and not as the row count", () => {
+    // Three readings and only one is honest. `rows.length` is plausible and
+    // wrong; `0` is the null-renders-as-zero failure banned everywhere else on
+    // this surface — a footer saying "0 total" over a page of rows. The
+    // previous version of this test asserted the zero, which is how the
+    // behaviour survived: a defect with a test defending it.
     const p = readKeysetPage({ data: { rows: [{ order_id: "ord_1" }] } }, mapOrder);
     expect(p.rows.length).toBe(1);
-    expect(p.totalCount).toBe(0);
+    expect(p.totalCount).toBeNull();
   });
 
   it("drops a row it cannot read rather than rendering it half-empty", () => {
@@ -1326,7 +1330,22 @@ describe("S3 adapter — keyset page", () => {
   it("survives a response with nothing in it at all", () => {
     const p = readKeysetPage(null, mapOrder);
     expect(p.rows).toEqual([]);
-    expect(p.totalCount).toBe(0);
+    // Not zero: an empty response said nothing about the population either.
+    expect(p.totalCount).toBeNull();
+  });
+
+  it("renders an absent count as a stated gap in the footer", () => {
+    const page = readKeysetPage({ data: { rows: [{ order_id: "ord_1" }] } }, mapOrder);
+    const { container } = render(
+      <KeysetTable
+        label="Orders"
+        columns={[{ key: "id", header: "id", render: (r: { id: string }) => r.id }]}
+        page={page as never}
+        rowKey={(r: { id: string }) => r.id}
+      />,
+    );
+    expect(container.textContent).toContain("count unavailable");
+    expect(container.textContent).not.toContain("0 total");
   });
 });
 
@@ -1824,6 +1843,16 @@ const CHECKLIST = [
   { label: "capacity evidence limited — volume covers top-3 symbols", outcome: "watch" as const, suggestion: "suggested condition below" },
 ];
 
+/**
+ * A permissive server eligibility.
+ *
+ * Passed explicitly by the harnesses below because the screens now deny by
+ * default: a test that says nothing about permission is a test running as
+ * somebody with no permission, which is correct but is not what these
+ * particular tests are about — they exercise the *local* locks.
+ */
+const ALLOWED = { canApprove: true, canApproveWithCondition: true, canDeny: true };
+
 function gate(over: Record<string, unknown> = {}) {
   return (
     <GateR1Review
@@ -1837,6 +1866,7 @@ function gate(over: Record<string, unknown> = {}) {
       actor="Lan"
       passport={PASSPORT}
       checklist={CHECKLIST}
+      eligibility={ALLOWED}
       {...over}
     />
   );
@@ -2087,6 +2117,7 @@ function r2(over: Record<string, unknown> = {}) {
       capital={CAPITAL}
       capitalEnvelope={CAP_ENVELOPE}
       grantName="paper_activation_authorization"
+      eligibility={ALLOWED}
       {...over}
     />
   );
@@ -2240,6 +2271,7 @@ function exitReview(over: Record<string, unknown> = {}) {
       quorumMet={0}
       quorumRequired={1}
       panels={EXIT_PANELS}
+      eligibility={ALLOWED}
       {...over}
     />
   );
@@ -2873,7 +2905,7 @@ describe("plan → apply → poll: 202 is never the end", () => {
     // must not be able to reach a plan it was never issued for.
     expect(plan.value.applyToken).not.toBeNull();
 
-    const applied = await api.applyPlan(plan.value.applyToken!, "default");
+    const applied = await api.applyPlan(plan.value.operationId, plan.value.applyToken!, "default");
     expect(applied.ok).toBe(true);
     if (!applied.ok) return;
     s = decisionReducer(s, { type: "APPLY_ACCEPTED", ...applied.value });
@@ -2898,7 +2930,7 @@ describe("plan → apply → poll: 202 is never the end", () => {
 
   it("ends UNCERTAIN when the operation does, and stays outstanding", async () => {
     const api = createFixtureApi({ uncertain: true });
-    const applied = await api.applyPlan("cmd_x", "rk_test");
+    const applied = await api.applyPlan("cmd_x", "gat1.fixture.cmd_x.token", "default");
     expect(applied.ok).toBe(true);
     if (!applied.ok) return;
     let s = decisionReducer(start(), { type: "APPLY_ACCEPTED", ...applied.value });
@@ -4299,5 +4331,228 @@ describe("plan → apply, shaped to DecisionPlanRequestSchema", () => {
     expect(intentKey(session, "AP-201", "APPROVE", "evidence is sound")).toBe(approve);
     // Inside the server's key grammar.
     expect(approve).toMatch(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/);
+  });
+});
+
+describe("permission is never inferred — deny by default", () => {
+  it("locks every Gate R1 verdict when the server said nothing about eligibility", () => {
+    // The screen used to read `eligibility ? … : true`, so a detail that failed
+    // to parse — or a caller that simply omitted the prop — granted approve,
+    // approve-with-condition and deny at once.
+    render(gate({ eligibility: undefined }));
+    for (const name of ["Approve", "Approve with condition", "Deny"]) {
+      expect(screen.getByRole("button", { name }), name).toHaveProperty("disabled", true);
+    }
+  });
+
+  it("locks every Gate R2 verdict the same way", () => {
+    render(r2({ eligibility: undefined }));
+    for (const name of ["Approve", "Approve with condition", "Deny"]) {
+      expect(screen.getByRole("button", { name }), name).toHaveProperty("disabled", true);
+    }
+  });
+
+  it("blocks promotion on Paper Exit when eligibility is absent, gate met or not", () => {
+    render(exitReview({ eligibility: undefined, gateMet: true }));
+    expect(screen.getByRole("button", { name: /Approve promotion/ })).toHaveProperty(
+      "disabled",
+      true,
+    );
+  });
+
+  it("grants exactly what the server granted, and nothing beside it", () => {
+    // Deny only. Approve and approve-with-condition stay locked even with every
+    // local lock clear.
+    render(gate({ eligibility: { canApprove: false, canApproveWithCondition: false, canDeny: true } }));
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "Approve with condition" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", false);
+  });
+
+  it("says why, rather than leaving a dead button unexplained", () => {
+    // A locked control with no sentence beside it is a support ticket.
+    render(gate({ eligibility: undefined }));
+    expect(screen.getByText(/the server did not grant it for this actor/)).toBeTruthy();
+  });
+
+  it("says why on Gate R2 too", () => {
+    render(r2({ eligibility: undefined }));
+    expect(screen.getByText(/the server did not grant it for this actor/)).toBeTruthy();
+  });
+
+  it("reads eligibility out of the R2 and exit-review payloads, which it never used to", () => {
+    // Both detail types declared the field and neither reader populated it, so
+    // the screens received undefined and defaulted to permit.
+    const r2Detail = readGateR2Detail({
+      data: {
+        approval: { approval_id: "AP-352", approval_version: 3 },
+        eligibility: { can_approve: false, can_approve_with_condition: false, can_deny: true },
+      },
+    });
+    expect(r2Detail?.eligibility).toEqual({
+      canApprove: false,
+      canApproveWithCondition: false,
+      canDeny: true,
+    });
+    const exit = readPaperExitDetail({
+      data: {
+        review: { review_id: "EX-771", deployment_id: "dep_94" },
+        eligibility: { can_approve: true, can_approve_with_condition: false, can_deny: true },
+      },
+    });
+    expect(exit?.eligibility.canApprove).toBe(true);
+  });
+});
+
+describe("a cursor the server rejects does not strand the list", () => {
+  it("drops the rejected cursor and asks for the first page again", async () => {
+    // The client-side scope check only catches changes it can see. An expired
+    // cursor, a rotated signing key or an epoch cutover are refusals only the
+    // server knows about — and keeping the rejected cursor in state re-sent it
+    // on every render, leaving the list stuck on an error it could have
+    // recovered from by asking for page one.
+    let calls = 0;
+    const base = createFixtureApi();
+    const api: ExecutionApi = {
+      ...base,
+      async listApprovals(query) {
+        calls += 1;
+        if (query.after) {
+          return {
+            ok: false,
+            status: "unavailable",
+            reason: "INVALID_CURSOR: this page reference is no longer valid.",
+          };
+        }
+        const first = await base.listApprovals(query);
+        if (!first.ok) return first;
+        // Force a next page so the pager is reachable regardless of how many
+        // rows the fixture happens to hold.
+        return {
+          ...first,
+          value: {
+            ...first.value,
+            page: { ...first.value.page, hasMore: true, nextCursor: "c_stale" },
+          },
+        };
+      },
+    };
+    render(<ApprovalInboxContainer api={api} />);
+    const older = await screen.findByRole("button", { name: /load older/i });
+    fireEvent.click(older);
+    expect(await screen.findByText(/page reference expired/)).toBeTruthy();
+    // And it recovered: rows are on screen again, not a permanent error panel.
+    expect(calls).toBeGreaterThan(1);
+    expect(await screen.findByText("AP-201")).toBeTruthy();
+  });
+});
+
+describe("the capital preview is computed against the approval, not a literal", () => {
+  it("takes portfolio, currency and amount from the review row", async () => {
+    const api = createFixtureApi();
+    const spy = vi.spyOn(api, "getCapitalPreview");
+    render(<GateR2ReviewContainer api={api} approvalId="AP-352" />);
+    await screen.findByText(/Capital change preview/);
+    // Not PF-1 / USDT / 50.000000000000000001 — that was the published
+    // fixture's literal, and the H2-hardened endpoint binds the preview to the
+    // approval's own immutable portfolio and currency. Against a permissive
+    // server the old default would have shown capital for a portfolio and an
+    // amount nobody had asked about.
+    const sent = spy.mock.calls.at(-1)?.[1];
+    expect(sent?.portfolioId).toBe("PF-MAIN");
+    expect(sent?.currency).toBe("USDT");
+  });
+
+  it("refuses to request a preview the review does not scope", async () => {
+    const base = createFixtureApi();
+    const called = vi.fn();
+    const api: ExecutionApi = {
+      ...base,
+      async getGateR2(id) {
+        const r = await base.getGateR2(id);
+        if (!r.ok) return r;
+        return { ...r, value: { ...r.value, portfolioId: null, currency: null } };
+      },
+      async getCapitalPreview(...args) {
+        called();
+        return base.getCapitalPreview(...args);
+      },
+    };
+    render(<GateR2ReviewContainer api={api} approvalId="AP-352" />);
+    expect(await screen.findByText(/does not publish the portfolio, currency and amount/)).toBeTruthy();
+    // And it did not guess one to ask with.
+    expect(called).not.toHaveBeenCalled();
+  });
+});
+
+describe("the operation poll reads what the endpoint publishes", () => {
+  const FULL_POLICY = screenDeliveryPolicy({
+    screen_id: "EXECUTION_GOVERNANCE_SCREEN",
+    delivery_profile: "fixture",
+    delivery_policy: {
+      policy_revision: 9,
+      query_enabled: true,
+      projection_ingestion_enabled: true,
+      sse_enabled: true,
+      paper_commands_enabled: true,
+      sandbox_commands_enabled: true,
+      live_protective_commands_enabled: true,
+      live_risk_increasing_commands_enabled: true,
+    },
+  });
+
+  it("recognises SUCCEEDED from `status`, which is the only field there is", async () => {
+    // The reader took `verification_result`, which the operation endpoint does
+    // not publish at all — so the token was always absent, the walk never left
+    // "unknown", and a decision that had genuinely succeeded was never once
+    // reported as succeeded.
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(
+        JSON.stringify({
+          schema_version: "governance.r1-decision-operation.v1",
+          operation_id: "cmd_1",
+          status: "SUCCEEDED",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      )) as typeof fetch;
+    try {
+      const api = createHttpApi({ policy: FULL_POLICY });
+      const polled = await api.pollOperation("cmd_1");
+      expect(polled.ok).toBe(true);
+      if (!polled.ok) return;
+      expect(polled.value.verificationRaw).toBe("SUCCEEDED");
+      const walked = decisionReducer(
+        { ...initialDecision("rk_1"), phase: "verifying", operationId: "cmd_1" },
+        {
+          type: "POLLED",
+          status: null,
+          verification: { known: true, value: "SUCCEEDED" },
+        },
+      );
+      expect(succeeded(walked)).toBe(true);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  it("still prefers verification_result the day the richer field is published", async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(
+        JSON.stringify({ status: "SUCCEEDED", verification_result: "PARTIAL" }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      )) as typeof fetch;
+    try {
+      const api = createHttpApi({ policy: FULL_POLICY });
+      const polled = await api.pollOperation("cmd_1");
+      expect(polled.ok).toBe(true);
+      if (!polled.ok) return;
+      // The observed outcome wins over the workflow status: a workflow that
+      // finished and an effect that only partly landed are different facts.
+      expect(polled.value.verificationRaw).toBe("PARTIAL");
+    } finally {
+      globalThis.fetch = original;
+    }
   });
 });

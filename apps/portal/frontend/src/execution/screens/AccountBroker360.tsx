@@ -129,6 +129,17 @@ export interface AccountBroker360Props {
   exposure?: BindingExposure | null;
   syncPolicy: string;
   syncHistory: readonly SyncRow[];
+  /**
+   * How many sync records exist, server-counted.
+   *
+   * `broker_sync_state_history` is a hypertable — at the five-second policy
+   * this screen prints, that is 17,280 rows a day and growing. A cap over an
+   * unbounded set implies a population you could have seen all of, so the
+   * notice must describe what the server holds, not the array in memory, and
+   * the panel must say it is showing a window. BR-EX-28 asks for the keyset
+   * page that would make this pageable instead.
+   */
+  syncTotal?: number | null;
   openFindings: number | null;
   lastDryRun?: { verdict: string; at: string; id: string } | null;
   resolvedFindings?: number | null;
@@ -315,6 +326,7 @@ export function AccountBroker360({
   exposure = null,
   syncPolicy,
   syncHistory,
+  syncTotal = null,
   openFindings,
   lastDryRun = null,
   resolvedFindings = null,
@@ -352,7 +364,14 @@ export function AccountBroker360({
   // the one STALE entry in the window and stops being a history — at a five
   // second policy that window is 17,280 rows a day, so this is the normal case
   // rather than the extreme one.
-  const shownSync = capPreserving(syncHistory, SYNC_BUDGET, (row) => row.status !== "OK");
+  const shownSync = capPreserving(
+    syncHistory,
+    SYNC_BUDGET,
+    (row) => row.status !== "OK",
+    // The population, when the server states it. Falling back to the array
+    // length made the notice describe the page and call it the total.
+    syncTotal ?? syncHistory.length,
+  );
   const syncNotice = capNotice(shownSync, "syncs");
 
   return (
@@ -486,6 +505,14 @@ export function AccountBroker360({
             </tbody>
           </table>
           {syncNotice ? <p className="exec-360-note">{syncNotice}</p> : null}
+          {syncTotal === null ? (
+            // Said, not implied. Without this the ten rows read as the history.
+            <p className="exec-360-note">
+              A window over an unbounded history — this endpoint publishes no
+              total, so the rows below are the most recent plus anything that
+              did not succeed, not the whole record.
+            </p>
+          ) : null}
         </section>
 
         <section className="exec-gate-panel">

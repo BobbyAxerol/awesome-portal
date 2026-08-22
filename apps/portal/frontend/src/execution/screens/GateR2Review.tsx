@@ -157,6 +157,8 @@ export function GateR2Review({
   readiness,
   capital,
   capitalEnvelope,
+  eligibility,
+  capitalReason,
   capitalDecidable,
   capitalBlockers = [],
   observationPolicy,
@@ -214,6 +216,24 @@ export function GateR2Review({
    * boolean defaulting to `true` would turn "we never asked" into "the engine
    * said yes", which is the one reading that must never happen by omission.
    */
+  /**
+   * What the server says this actor may do.
+   *
+   * Absent is not permission. R2 previously had no such prop at all and derived
+   * its separation-of-duty lock from `planAuthor === actor` — a comparison of
+   * two display names, which two people can share and which the server's own
+   * eligibility already answers correctly.
+   */
+  eligibility?: { canApprove: boolean; canApproveWithCondition: boolean; canDeny: boolean };
+  /**
+   * Why no preview is shown, when none is.
+   *
+   * The panel's default sentence covers a missing envelope. It does not cover
+   * a preview that was never requested because the review did not scope one,
+   * and a reviewer told "arrived without an authority envelope" for that would
+   * go looking in the wrong place.
+   */
+  capitalReason?: string | null;
   capitalDecidable?: boolean;
   /**
    * Why the engine will not stand behind the preview, in its words.
@@ -276,12 +296,16 @@ export function GateR2Review({
       ...locks,
     ]),
   );
-  const locked = effectiveLocks.length > 0;
-  const conditionLocked = locked;
+  const serverAllowsApprove = eligibility?.canApprove === true;
+  const serverAllowsCondition = eligibility?.canApproveWithCondition === true;
+  const serverAllowsDeny = eligibility?.canDeny === true;
+  // Local locks AND server eligibility. Either one refusing is a refusal.
+  const locked = effectiveLocks.length > 0 || !serverAllowsApprove;
+  const conditionLocked = effectiveLocks.length > 0 || !serverAllowsCondition;
   const denyLocks = effectiveLocks.filter((lock): lock is "EXPIRED" | "NOT_ELIGIBLE" =>
     (DENY_BLOCKING_LOCKS as readonly string[]).includes(lock),
   );
-  const denyLocked = denyLocks.length > 0;
+  const denyLocked = denyLocks.length > 0 || !serverAllowsDeny;
 
   return (
     <section className="exec-gate" aria-label={`Gate R2 review ${approvalId}`}>
@@ -443,7 +467,10 @@ export function GateR2Review({
             // money. It is refused rather than rendered bare.
             <PanelState
               status="unavailable"
-              reason="The capital preview arrived without an authority envelope and cannot be shown."
+              reason={
+                capitalReason ??
+                "The capital preview arrived without an authority envelope and cannot be shown."
+              }
             />
           )}
           {capitalEnvelope ? (
@@ -544,7 +571,7 @@ export function GateR2Review({
         <button
           type="button"
           className="exec-btn-ghost"
-          disabled={locked}
+          disabled={conditionLocked}
           onClick={onRequestCondition}
         >
           Approve with condition
@@ -554,10 +581,19 @@ export function GateR2Review({
         </button>
       </div>
 
-      {locked ? (
+      {locked || denyLocked ? (
         <div className="exec-disabled-reason">
           {effectiveLocks.map((lock) => LOCK_REASON[lock]).join(" ")}
-          {denyLocked ? ` ${denyLocks.map((lock) => DENY_LOCK_REASON[lock]).join(" ")}` : null}
+          {denyLocks.length ? ` ${denyLocks.map((lock) => DENY_LOCK_REASON[lock]).join(" ")}` : null}
+          {/* Eligibility is not a lock code — it is the server's answer — so it
+              needs its own sentence. Without it a reviewer sees three dead
+              buttons and no reason, which is a support ticket. */}
+          {!serverAllowsApprove && effectiveLocks.length === 0
+            ? " Approve blocked — the server did not grant it for this actor."
+            : null}
+          {!serverAllowsDeny && denyLocks.length === 0
+            ? " Deny blocked — the server did not grant it for this actor."
+            : null}
         </div>
       ) : null}
     </section>

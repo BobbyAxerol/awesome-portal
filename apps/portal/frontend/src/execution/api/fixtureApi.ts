@@ -200,6 +200,11 @@ const R2_DETAIL: Record<string, unknown> = {
     // deployment, whose R2 is AP-207. And Carry v3.2's R1 is AP-101; the
     // AP-201 an earlier fixture used belongs to RSI, a different alpha.
     approval_id: "AP-352",
+    // BR-EX-23, delivered: the review row names what the capital preview is
+    // computed against, so the screen no longer substitutes a fixture literal.
+    portfolio_id: "PF-MAIN",
+    currency: "USDT",
+    requested_amount: "50.000000000000000001",
     subject_label: "Carry v3.2 → PF-MAIN · Sandbox · OKX TESTNET",
     deployment_candidate: "DC-91",
     release_candidate: "RC-41",
@@ -560,11 +565,14 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       };
     },
 
-    async applyPlan(applyToken: string): Promise<Result<ApplyReceipt>> {
+    async applyPlan(operationId: string, applyToken: string): Promise<Result<ApplyReceipt>> {
       const blocked = gate<ApplyReceipt>("applyPlan");
       if (blocked) return blocked;
+      // Both, because both bind: the id says which operation and the token says
+      // this caller was the one issued a plan for it.
+      if (!applyToken) return unavailable("Apply was called without the plan's token.");
       polls = 0;
-      const id = applyToken.split(".")[2] ?? "op";
+      const id = operationId.replace(/^cmd_/, "") || "op";
       // A receipt. Not a result.
       return { ok: true, value: { operationId: `op_${id}`, receipt: `rcpt_${id}` } };
     },

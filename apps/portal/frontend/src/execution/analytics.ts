@@ -647,6 +647,8 @@ export interface LedgerEntry {
 
 export interface LedgerBucket {
   currency: string;
+  /** Server-counted entries in this bucket. `null` when unpublished. */
+  entryCount: number | null;
   /** Server-summed, per currency. Nothing is added across currencies. */
   grossIncrease: Decimal;
   grossDecrease: Decimal;
@@ -679,6 +681,7 @@ export function readCapitalLedger(raw: unknown): CapitalLedger | null {
       return [
         {
           currency,
+          entryCount: int(bucket!.entry_count),
           grossIncrease,
           grossDecrease,
           entries: arr(bucket!.entries).flatMap((e) => {

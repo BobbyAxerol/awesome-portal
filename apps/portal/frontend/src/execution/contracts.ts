@@ -343,8 +343,14 @@ export interface FilterEcho {
  */
 export interface KeysetPage<T> {
   rows: readonly T[];
-  /** Exact, across the whole dataset. Hi-fi footer: "48,213 total". */
-  totalCount: number;
+  /**
+   * Exact, across the whole dataset. Hi-fi footer: "48,213 total".
+   *
+   * `null` when the server did not publish one. It was coerced to `0` before,
+   * and a footer reading "0 total" over a full page of rows is the null-renders
+   * -as-zero failure this surface bans everywhere else.
+   */
+  totalCount: number | null;
   /** Exact, across the current filter. Hi-fi footer: "412 in selection". */
   filteredCount?: number | null;
   /** Opaque. Absent when this is the newest page. */

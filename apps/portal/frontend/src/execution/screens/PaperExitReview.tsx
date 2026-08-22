@@ -120,6 +120,7 @@ function Findings({ panel }: { panel: EvidencePanelSpec }) {
 }
 
 export function PaperExitReview({
+  eligibility,
   reviewId,
   deploymentId,
   subject,
@@ -188,6 +189,8 @@ export function PaperExitReview({
   reason?: string;
   partialReason?: string;
   decided?: { outcome: ExitOutcome; by: string; at: string } | null;
+  /** What the server says this actor may do. Absent is not permission. */
+  eligibility?: { canApprove: boolean; canApproveWithCondition: boolean; canDeny: boolean };
   onDecide?: (outcome: ExitOutcome) => void;
 }) {
   if (status !== "ok" && status !== "partial" && status !== "stale") {
@@ -207,7 +210,11 @@ export function PaperExitReview({
   // Promotion needs the server's gate AND no blocking finding. Extend and
   // reject are always available: a reviewer looking at an unmet gate must be
   // able to act on it, and both of those actions are safe.
-  const promoteBlocked = !gateMet || blocking > 0;
+  // Server eligibility ANDed with the local gate. Absent is not permission —
+  // the screen previously enabled promotion on gate evidence alone, so an
+  // actor the server would refuse still saw a live button.
+  const serverAllowsPromote = eligibility?.canApprove === true;
+  const promoteBlocked = !gateMet || blocking > 0 || !serverAllowsPromote;
 
   return (
     <section className="exec-exit" aria-label={`Paper exit review ${reviewId}`}>

@@ -286,3 +286,26 @@ describe("Account 360° — at the volume the backend actually returns", () => {
     expect(screen.getByText(/of 24 linked accounts/)).toBeTruthy();
   });
 });
+
+describe("Account 360° — an unbounded history is a window, and says so", () => {
+  it("says the sync list is a window when the server publishes no total", () => {
+    // broker_sync_state_history is a hypertable: 17,280 rows a day at the
+    // five-second policy this screen itself prints. Ten rows with no caveat
+    // read as the history.
+    render(<AccountBroker360 {...account360()} />);
+    expect(screen.getByText(/window over an unbounded history/)).toBeTruthy();
+  });
+
+  it("describes the server's population, not the array it was handed", () => {
+    const history = Array.from({ length: 40 }, (_, i) => ({
+      at: `t-${i}`,
+      source: "ws stream",
+      status: "OK" as const,
+      digest: null,
+    }));
+    render(<AccountBroker360 {...account360({ syncHistory: history, syncTotal: 1_204_991 })} />);
+    expect(screen.getByText(/showing 10 of 1,204,991 syncs/)).toBeTruthy();
+    // And with a real total the caveat is unnecessary.
+    expect(screen.queryByText(/window over an unbounded history/)).toBeNull();
+  });
+});

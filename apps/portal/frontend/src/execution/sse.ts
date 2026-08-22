@@ -243,6 +243,20 @@ export function openStream(options: StreamOptions): StreamHandle {
     // differs — an epoch cutover waits for the server's deadline — and that
     // rule lives in `mayResnapshot`, not here.
     if (state.phase === "gap" || state.phase === "epoch_changed") {
+      // Close the socket before handing back.
+      //
+      // The edge ends the stream after every `projection.gap` and stamps it
+      // `retry: 1000` with no `id`. A client that only listened for `error`
+      // left native EventSource to reconnect a second later with the same
+      // `?cursor=`, receive the identical gap, and do it again — a one-second
+      // loop per client, each iteration asking for a re-snapshot. The server's
+      // `resnapshot_not_before` jitter exists to prevent exactly that herd, and
+      // a client that never closed defeated it.
+      //
+      // Recovery is the caller's: fetch a snapshot, respect the deadline, and
+      // open a new stream. Nothing here reconnects on its own.
+      source?.close();
+      source = null;
       options.onResnapshotRequired?.(state);
     }
   };

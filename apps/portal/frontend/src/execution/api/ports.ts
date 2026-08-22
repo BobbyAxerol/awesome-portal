@@ -151,11 +151,17 @@ export interface ExecutionApi {
   /**
    * `POST /api/v1/execution/operations/{id}/apply` — returns 202 only.
    *
-   * Takes the plan's `apply_token`, not a plan id and a request key. The token
-   * is what binds this apply to that plan; re-deriving the pair client-side
-   * would let an apply reach a plan it was never issued for.
+   * The operation id travels in the path and the token in the body, which is
+   * what the route actually is — my first rewrite of this put both in a body
+   * at `/governance/operations/apply`, a path that does not exist. The token is
+   * what binds this apply to that plan; re-deriving the pair client-side would
+   * let an apply reach a plan it was never issued for.
    */
-  applyPlan(applyToken: string, workspaceId: string): Promise<Result<ApplyReceipt>>;
+  applyPlan(
+    operationId: string,
+    applyToken: string,
+    workspaceId: string,
+  ): Promise<Result<ApplyReceipt>>;
   /** `GET /api/v1/execution/operations/{id}` */
   pollOperation(operationId: string): Promise<Result<OperationSnapshot>>;
 }

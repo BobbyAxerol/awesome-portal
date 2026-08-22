@@ -228,9 +228,28 @@ describe("Portfolio 360° — ledger and structure", () => {
     expect(container.querySelector('tr[data-emphasis="warn"]')).toBeTruthy();
   });
 
-  it("keeps the empty incidents tab honest rather than filling it", () => {
+  it("says incidents are unpublished rather than claiming none are open", () => {
+    // The tab used to render "No open incidents" unconditionally — a claim
+    // about safety from a component that had never been given incident data.
     render(<PortfolioThreeSixty {...portfolio360({ tab: "Incidents" })} />);
-    expect(screen.getByText("No open incidents for this portfolio.")).toBeTruthy();
+    expect(screen.getByText(/have not been published/)).toBeTruthy();
+  });
+
+  it("reports zero open only when the server said zero", () => {
+    render(
+      <PortfolioThreeSixty
+        {...portfolio360({
+          tab: "Incidents",
+          incidents: {
+            open: [],
+            resolved: [{ id: "inc_31", at: "2026-08-14", closedBy: "AP-311" }],
+          },
+        })}
+      />,
+    );
+    expect(screen.getByText(/Incidents — 0 open/)).toBeTruthy();
+    // And what closed it: "resolved" without a cause is an assertion.
+    expect(screen.getByText("AP-311")).toBeTruthy();
   });
 
   it("says the correlation is unavailable rather than drawing an empty grid", () => {

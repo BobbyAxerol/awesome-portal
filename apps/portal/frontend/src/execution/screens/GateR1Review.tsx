@@ -224,9 +224,14 @@ export function GateR1Review({
     (DENY_BLOCKING_LOCKS as readonly string[]).includes(lock),
   );
   // Server first, local floor second. Both must allow it.
-  const serverAllowsApprove = eligibility ? eligibility.canApprove : true;
-  const serverAllowsCondition = eligibility ? eligibility.canApproveWithCondition : true;
-  const serverAllowsDeny = eligibility ? eligibility.canDeny : true;
+  // Deny-by-default, as `NO_ELIGIBILITY` in the row reader already says: an
+  // absent eligibility has told us nothing, and nothing is not permission. The
+  // first version read `eligibility ? … : true`, so a detail that failed to
+  // parse — or any caller that simply did not pass the prop — granted approve,
+  // approve-with-condition and deny at once.
+  const serverAllowsApprove = eligibility?.canApprove === true;
+  const serverAllowsCondition = eligibility?.canApproveWithCondition === true;
+  const serverAllowsDeny = eligibility?.canDeny === true;
   const approveLocked = locked || !serverAllowsApprove;
   const conditionLocked = locked || !serverAllowsCondition;
   const denyLocked = denyLocks.length > 0 || !serverAllowsDeny;
@@ -366,10 +371,10 @@ export function GateR1Review({
         <div className="exec-disabled-reason">
           {effectiveLocks.map((lock) => LOCK_REASON[lock]).join(" ")}
           {denyLocks.length ? ` ${denyLocks.map((lock) => DENY_LOCK_REASON[lock]).join(" ")}` : null}
-          {eligibility && !serverAllowsApprove && !locked
+          {!serverAllowsApprove && !locked
             ? " Approve blocked — the server did not grant it for this actor."
             : null}
-          {eligibility && !serverAllowsDeny && !denyLocks.length
+          {!serverAllowsDeny && !denyLocks.length
             ? " Deny blocked — the server did not grant it for this actor."
             : null}
         </div>

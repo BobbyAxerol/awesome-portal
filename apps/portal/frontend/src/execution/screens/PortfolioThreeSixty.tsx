@@ -166,6 +166,16 @@ export interface PortfolioThreeSixtyProps {
   ledger: CapitalLedger | null;
   ledgerTotals?: { allocated: string; max: string; free: string; currency: string } | null;
   approvals: readonly ApprovalRow[];
+  /**
+   * Open and resolved incidents.
+   *
+   * `undefined` renders as unavailable, never as "none open": a component that
+   * was given no incident data cannot say a portfolio is clear.
+   */
+  incidents?: {
+    open: readonly { id: string; at: string | null; severity: string; summary: string }[];
+    resolved: readonly { id: string; at: string | null; closedBy: string | null }[];
+  } | null;
   status?: PanelStatus;
   reason?: string;
 }
@@ -517,10 +527,14 @@ function Ledger({
       {ledger.buckets.map((bucket) => {
         // Bucketed, never merged. Two currencies in one running total is a
         // number with no unit, and the ledger's own invariant is per-currency.
+        // The ledger is append-only and unbounded. A cap over it is a window,
+        // not a summary, and the caption below says so — BR-EX-28 asks for the
+        // per-bucket keyset page that would let this page properly.
         const shown = capPreserving(
           bucket.entries,
           50,
           (entry) => entry.direction !== "INCREASE",
+          bucket.entryCount ?? bucket.entries.length,
         );
         const notice = capNotice(shown, `${bucket.currency} entries`);
         return (
@@ -576,6 +590,13 @@ function Ledger({
               </tbody>
             </table>
             {notice ? <p className="exec-blotter-note">{notice}</p> : null}
+            {bucket.entryCount === null || bucket.entryCount === undefined ? (
+              <p className="exec-blotter-note">
+                A window over an append-only ledger — this endpoint publishes no
+                entry count, so these are the most recent movements plus every
+                decrease, not the whole ledger.
+              </p>
+            ) : null}
           </div>
         );
       })}
@@ -609,6 +630,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
     ledger,
     ledgerTotals,
     approvals,
+    incidents,
     status = "ok",
     reason,
   } = props;
@@ -796,9 +818,75 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
         ) : null}
 
         {tab === "Incidents" ? (
-          // The wireframe keeps this honest rather than filling it: zero open
-          // incidents with a resolved history is a real and useful state.
-          <PanelState status="empty" reason="No open incidents for this portfolio." />
+          // Read, never asserted. The previous version rendered "No open
+          // incidents" unconditionally — a claim about safety made by a
+          // component that had never been given any incident data, and one
+          // that would keep reading clean while a portfolio burned.
+          incidents ? (
+            <section className="exec-gate-panel">
+              <div className="exec-tile-title">
+                Incidents — {incidents.open.length} open
+              </div>
+              {incidents.open.length === 0 ? (
+                <p className="exec-blotter-note">
+                  No incidents are open against this portfolio in this window.
+                </p>
+              ) : (
+                <table className="exec-360-sync">
+                  <thead>
+                    <tr>
+                      <th scope="col">id</th>
+                      <th scope="col">opened</th>
+                      <th scope="col">severity</th>
+                      <th scope="col">summary</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {incidents.open.map((row) => (
+                      <tr key={row.id}>
+                        <th scope="row">{row.id}</th>
+                        <td><Num value={row.at} absent="time not stated" /></td>
+                        <td>{row.severity}</td>
+                        <td>{row.summary}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {incidents.resolved.length > 0 ? (
+                <table className="exec-360-sync">
+                  <caption>resolved — and what closed them</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">id</th>
+                      <th scope="col">resolved</th>
+                      <th scope="col">closed by</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {incidents.resolved.map((row) => (
+                      <tr key={row.id}>
+                        <th scope="row">{row.id}</th>
+                        <td><Num value={row.at} absent="time not stated" /></td>
+                        {/* The drawing asks for what closed each one, because
+                            "resolved" without a cause is an assertion. */}
+                        <td>
+                          {row.closedBy ?? (
+                            <span className="exec-gate-unverified">not recorded</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : null}
+            </section>
+          ) : (
+            <PanelState
+              status="unavailable"
+              reason="Incidents for this portfolio have not been published, so none can be claimed either way."
+            />
+          )
         ) : null}
 
         {tab === "Audit" ? (

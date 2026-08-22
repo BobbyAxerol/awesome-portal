@@ -415,6 +415,10 @@ export interface GateR2Detail {
    * neither, so every plan was made with no version at all.
    */
   expectedVersion: number | null;
+  /** BR-EX-23: what the capital preview must be computed against. */
+  portfolioId: string | null;
+  currency: string | null;
+  requestedAmount: string | null;
   gaps: readonly string[];
 }
 
@@ -448,6 +452,9 @@ export function readGateR2Detail(raw: unknown): GateR2Detail | null {
   }
 
   return {
+    portfolioId: readId(approval.portfolio_id ?? data.portfolio_id),
+    currency: str(approval.currency ?? data.currency),
+    requestedAmount: readDecimal(approval.requested_amount ?? data.requested_amount),
     approvalId,
     subject: str(approval.subject_label) ?? approvalId,
     r1Id: (readId(r1.approval_id ?? data.r1_id) as ApprovalId | null) ?? null,
@@ -581,6 +588,7 @@ export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
 
   return {
     reviewId,
+    eligibility: readEligibility(data.eligibility),
     deploymentId: readId(review.deployment_id) ?? "unknown",
     subject: str(review.subject_label) ?? reviewId,
     promoteTo: str(review.promote_to) ?? "the next stage",
@@ -595,7 +603,6 @@ export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
     panels,
     recommendation: str(data.recommendation),
     expectedVersion: int(review.approval_version ?? review.expected_version),
-    eligibility: readEligibility(data.eligibility),
     gaps,
   };
 }

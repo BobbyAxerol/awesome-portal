@@ -16,7 +16,6 @@
  */
 import {
   panelStatusForHttp,
-  readEnum,
   readKeysetPage,
   readOperation,
   readProblem,
@@ -290,11 +289,15 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       };
     },
 
-    async applyPlan(applyToken: string, workspaceId: string): Promise<Result<ApplyReceipt>> {
+    async applyPlan(
+      operationId: string,
+      applyToken: string,
+      workspaceId: string,
+    ): Promise<Result<ApplyReceipt>> {
       const blocked = commandBlocked("R1");
       if (blocked) return unavailable(blocked);
       const response = await post(
-        "/governance/operations/apply",
+        `/governance/operations/${encodeURIComponent(operationId)}/apply`,
         {
           schema_version: "governance.r1-decision-apply-request.v1",
           workspace_id: workspaceId,
@@ -315,27 +318,30 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     async pollOperation(operationId: string): Promise<Result<OperationSnapshot>> {
       const blocked = readBlocked();
       if (blocked) return unavailable(blocked);
-      const response = await get(`/operations/${encodeURIComponent(operationId)}`, signal);
+      const response = await get(
+        `/governance/operations/${encodeURIComponent(operationId)}`,
+        signal,
+      );
       if (!response.ok) return problem(response);
       const body = (await response.json()) as Record<string, unknown>;
       const data = (body.data as Record<string, unknown>) ?? body;
-      const verification = readEnum(data.verification_result, [
-        "PENDING",
-        "ACKNOWLEDGED",
-        "SUCCEEDED",
-        "FAILED",
-        "DENIED",
-        "PARTIAL",
-        "UNCERTAIN",
-        "EXPIRED",
-      ] as const);
+      // The endpoint publishes `status` ∈ {PENDING, SUCCEEDED, EXPIRED} and no
+      // `verification_result` at all. Reading the latter meant the token was
+      // always absent, the walk never left "unknown", and a decision that had
+      // actually succeeded was never reported as succeeded. `verification_result`
+      // is read first only so this keeps working the day the richer field is
+      // published (audit H8 asks for both).
+      const raw =
+        typeof data.verification_result === "string"
+          ? data.verification_result
+          : typeof data.status === "string"
+            ? data.status
+            : null;
       return {
         ok: true,
         value: {
           status: typeof data.status === "string" ? data.status : null,
-          // The raw token travels on even when unrecognised. `decision.ts`
-          // keeps polling rather than naming an outcome it cannot read.
-          verificationRaw: verification ? (verification.known ? verification.value : verification.raw) : null,
+          verificationRaw: raw,
         },
       };
     },

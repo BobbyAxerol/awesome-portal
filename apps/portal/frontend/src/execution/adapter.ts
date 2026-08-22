@@ -350,7 +350,8 @@ export function readKeysetPage<T>(
 
   return {
     rows,
-    totalCount: readInt(data.total_count) ?? readInt(o.total_count) ?? 0,
+    // No `?? 0`. A count nobody published is not a count of nothing.
+    totalCount: readInt(data.total_count) ?? readInt(o.total_count),
     filteredCount: readInt(data.filtered_count) ?? readInt(o.filtered_count),
     nextCursor: typeof data.next_cursor === "string" ? data.next_cursor : null,
     prevCursor: typeof data.prev_cursor === "string" ? data.prev_cursor : null,
@@ -415,7 +416,7 @@ export interface OperationRead {
   unsupported: readonly { field: string; raw: string }[];
 }
 
-const OPERATION_STATUSES: readonly OperationStatus[] = [
+export const OPERATION_STATUSES: readonly OperationStatus[] = [
   "PLANNED",
   "AWAITING_APPLY",
   "APPLIED_UNVERIFIED",
