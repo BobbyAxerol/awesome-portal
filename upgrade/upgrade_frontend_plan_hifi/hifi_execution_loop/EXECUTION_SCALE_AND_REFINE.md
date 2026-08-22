@@ -567,3 +567,57 @@ portfolio — nên chỗ này đợi field thật, không đoán.
 
 **Trạng thái:** đang treo. Cho tới khi giao, R2 chạy fixture với prop mặc định,
 và `containers.tsx` ghi rõ lý do ngay tại chỗ.
+
+---
+
+## BR-EX-24 — Full Blotter cần endpoint list order (keyset)
+
+**Ngày raise:** 2026-08-22, khi dựng phase 14.
+
+**Endpoint/field cần:** một endpoint list order theo keyset, ví dụ
+`GET /api/v1/execution/orders` với `filter` (bucket 5 chip), `after`/`before`,
+`limit`, `scope` (alpha/deployment/venue/time), trả `keyset-page.v1` với
+`total_count` **và** `filtered_count`.
+
+**Lý do UI:** `EX-BE-07b` đã giao `/orders/{orderId}/funnel` — nhưng đó là chi
+tiết một order. Không có gì trả **danh sách** order. Màn blotter là màn duy nhất
+có p95 10⁵–10⁷ dòng, nên nó không thể lấy dữ liệu từ chỗ khác rồi lọc.
+
+**Ảnh hưởng hiện tại:** `FullBlotter` chạy bằng typed props +
+`blotter.fixtures.ts`, đúng cách Gate R1/R2 chạy trước khi `EX-BE-05a` giao.
+Khi endpoint có, chỉ thêm một mapper — màn không đổi.
+
+**Hai thứ server phải giữ, không phải client:**
+
+1. **Bucket 5 chip phải server-side.** `BLOTTER_BUCKET` trong `contracts.ts` là
+   *đề xuất* map 12 `OrderStatus` → 5 chip. Hai bên phải bucket **giống hệt**,
+   nếu không count ở footer sẽ không khớp số dòng trong bảng. Chip lọc ở browser
+   là nói dối ở quy mô này: 9 dòng `FILLED` cạnh footer "48,213 total" là hai
+   con số mô tả hai population, trình bày như một.
+2. **Hai count riêng.** `total_count` và `filtered_count` là hai trường, không
+   phải một số client trừ đi.
+
+**Trạng thái:** đang treo.
+
+---
+
+## BR-EX-25 — Funnel: hi-fi vẽ 5 hop, contract publish 4 stage
+
+**Ngày raise:** 2026-08-22.
+
+**Chênh lệch:** `HiFi Full Blotter.dc.html` vẽ `signal → intent → risk grant →
+order ACK → fill`. `EX-BE-07a` publish `SUBMIT → SOURCE_ACK → BROKER_ACK →
+FILL`. Không phải đổi tên: `signal` (`sig_7f21`) và `intent` (`int_9c04`) là hai
+bước **upstream của order**, endpoint funnel không mang.
+
+**Đã xử lý thế nào:** render đúng 4 stage server publish, và **nói thẳng trên
+màn** rằng hai hop kia không nằm trong endpoint này. Không bịa card `signal` từ
+stage `SUBMIT` — đó là vẽ một hop không nguồn nào bảo đảm, trên đúng màn có
+nhiệm vụ nói ta nắm được sự thật nào.
+
+**Hỏi codex:** hai hop upstream có tồn tại trong source không? Nếu có, xin thêm
+vào `OrderFunnelData.stages` (và nới `maxItems` 4 → 6). Nếu không, hi-fi cần sửa
+— và đây là chỗ `IMPLEMENTATION_PHASES` §14 ("`signal → intent → risk grant ✓ →
+order ACK → fill`") mô tả thứ backend không có.
+
+**Trạng thái:** đang treo, cần codex trả lời trước khi đóng phase 14.

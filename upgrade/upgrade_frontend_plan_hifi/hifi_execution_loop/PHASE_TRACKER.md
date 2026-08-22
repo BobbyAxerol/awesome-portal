@@ -918,3 +918,65 @@ Ghi chú: `apps/portal/registry/FRONTEND_HANDOFF.md` mà CLAUDE.md §7.3 trỏ t
 `EXECUTION_SCALE_AND_REFINE.md` — file điều phối frontend đang thực sự dùng.
 
 **Evidence sau sửa:** vitest **821 passed / 1 skipped** · tsc sạch.
+
+---
+
+## 17. Phase 14 — Full Blotter dựng xong (2026-08-22)
+
+Codex đang xử lý authenticate cho hai server, nên chọn việc song song không đụng
+gì: màn 14. Backend của nó `INTEGRATION_COMPLETE` từ `EX-BE-07b`, reader funnel
+và fixture đã có từ §16, hi-fi và `IMPLEMENTATION_PHASES` §14 đều đầy đủ.
+
+**Trước khi dựng, soát lại §15 (R2-1…R2-4): cả bốn đã đóng từ trước** — banner
+có date + remedy, R1 panel có digest/expiry/decidedBy, footnote có, cast đã là
+`AP-352` / `AP-101` / Carry v3.2. §15 là ghi chép cũ chưa cập nhật, không phải
+việc còn treo.
+
+### 17.1 Ba quyết định của màn
+
+| Quyết định | Vì sao |
+|---|---|
+| **Chip không lọc ở browser** — chỉ report, caller re-query | 9 dòng `FILLED` cạnh footer "48,213 total" là hai con số mô tả hai population, trình bày như một |
+| **Count lấy từ `page`**, màn không giữ bản sao | `KeysetPage` đã có `totalCount` + `filteredCount`, và `KeysetTable` đã render chúng — bản thứ hai là cách footer và bảng lệch nhau |
+| **Số không bao giờ viết tắt** | `0.0400` là một size, `60,890.00` là một giá. Blotter làm tròn thì không đối chiếu được với sao kê venue — mà đó là việc duy nhất nó có |
+
+### 17.2 Bắt được một lỗi khi tự soát
+
+Bản đầu tôi khai `totalCount` / `selectionCount` làm props riêng của màn, và
+viết `<footer>` render count + cursor + virtualization note. Cả ba **đã có trong
+`KeysetTable`**. Test đỏ ngay (`page.totalCount` undefined) và đó là may — lỗi
+thật không phải crash mà là *hai nguồn cho một con số*. Đã bỏ props và footer
+trùng; màn giờ chỉ thêm một dòng đặc thù (fee theo currency của venue).
+
+Đúng loại lỗi §11.3 Reuse report sinh ra để chặn, và tôi vẫn mắc — vì viết màn
+mới trước khi đọc lại API của component dùng chung.
+
+### 17.3 Hai backend request mới
+
+- **BR-EX-24** — chưa có endpoint list order. `EX-BE-07b` giao funnel *của một
+  order*, không có gì trả danh sách. Màn chạy typed props + fixture, đúng cách
+  Gate R1/R2 chạy trước `EX-BE-05a`.
+- **BR-EX-25** — hi-fi vẽ **5 hop**, contract publish **4 stage**. `signal` và
+  `intent` là bước upstream của order, endpoint không mang. Render 4 stage thật
+  và **nói thẳng trên màn** hai hop kia không thuộc endpoint này; không bịa card
+  `signal` từ `SUBMIT`.
+
+### 17.4 Reuse report
+
+Dùng lại: `KeysetTable` (M1, cả footer/cursor/virtualization), `AuthorityBadge`,
+`OrderStatusChip`, `PanelState`, `ExecutionSurface`, class
+`exec-inbox-head` / `exec-inbox-filter` / `exec-inbox-filters` / `exec-tile-title`.
+Mới: `exec-num` (tabular-nums, dùng chung được cho mọi màn có số), khối
+`exec-funnel-*`, vài class `exec-blotter-*`.
+
+### 17.5 Evidence
+
+vitest **844 passed / 1 skipped** (+23) · tsc sạch · build sạch · visual
+baseline **101/101** · contrast gate 14/14.
+
+### 17.6 Còn thiếu để đóng phase 14
+
+- BR-EX-24 (list endpoint) và BR-EX-25 (câu trả lời về 5 hop).
+- Scope toolbar (Alpha/Deployment/Venue/Time) mới là slot `scope`, chưa dựng
+  select — chờ biết filter nào server nhận, dựng trước là đoán tên tham số.
+- Chưa nối container; chưa có route. Cả hai chờ BR-EX-24.

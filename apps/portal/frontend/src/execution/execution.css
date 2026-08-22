@@ -2062,3 +2062,152 @@
   font-size: var(--text-xs);
   color: var(--ink-soft);
 }
+
+/* ---------------------------------------------------------------------------
+ * Full Blotter (hi-fi 4c)
+ *
+ * The one screen whose p95 is 10⁵–10⁷ rows, so every rule here is about
+ * keeping a number readable rather than making it pretty.
+ * ------------------------------------------------------------------------ */
+
+.exec-blotter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Every figure on this screen is a quantity, a price, a fee or a count, and
+   all four must line up column-to-column and never be abbreviated. Tabular
+   figures are not decoration here: proportional digits make 0.0400 and 0.0080
+   different widths, and a column of mismatched sizes is unscannable. */
+.exec-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.exec-blotter-scope,
+.exec-blotter-cross {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.exec-blotter-note {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+/* The venue's currency, next to the fee it belongs to. Fees are never
+   converted, so the code travels with the number rather than sitting in a
+   column header that a scrolled table has taken off screen. */
+.exec-blotter-ccy {
+  color: var(--ink-mute);
+}
+
+/* A rejection reason reads on the row, not in a tooltip. "risk: max position
+   notional" is the whole finding, and hiding it behind a hover puts the answer
+   one interaction away from the question. */
+.exec-blotter-reason {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--bad);
+}
+
+.exec-chip-reset {
+  margin-left: var(--space-2);
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.exec-blotter-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line-soft);
+}
+
+.exec-blotter-funnel {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  padding: var(--space-3);
+}
+
+/* Horizontal rail, scrolling rather than wrapping. A funnel that wrapped to a
+   second line would break the left-to-right reading that is the only thing
+   saying these hops happened in order. */
+.exec-funnel-rail {
+  display: flex;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0 0 var(--space-2);
+  list-style: none;
+  overflow-x: auto;
+}
+
+.exec-funnel-card {
+  flex: 1 0 11rem;
+  border: 1px solid var(--line);
+  background: var(--surface-3);
+  padding: var(--space-2);
+}
+
+/* A hop nobody observed is bordered, not filled. A solid red card reads as
+   "this went wrong"; the truth is weaker and more specific — we have no record
+   of it either way. */
+.exec-funnel-card[data-state="MISSING"] {
+  border-style: dashed;
+  border-color: var(--warn);
+}
+
+.exec-funnel-card[data-state="PARTIAL"] {
+  border-color: var(--warn);
+}
+
+.exec-funnel-hop {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+.exec-funnel-id {
+  font-family: var(--font-mono);
+  color: var(--ink);
+}
+
+.exec-funnel-meta,
+.exec-funnel-delta {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+.exec-funnel-missing,
+.exec-funnel-partial {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--warn);
+}
+
+.exec-funnel-fills {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-3);
+}
+
+.exec-funnel-note {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
