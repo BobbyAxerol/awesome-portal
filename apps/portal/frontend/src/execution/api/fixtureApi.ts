@@ -28,7 +28,7 @@ import type {
   Result,
 } from "./ports";
 import { unavailable } from "./ports";
-import type { CapitalPreviewInput } from "./ports";
+import type { CapitalPreviewInput, DecisionPlan } from "./ports";
 
 /** Wire-shaped, snake_case, exactly as the endpoint will send it. */
 /* The five pending rows of the Approval Inbox hi-fi, and they are the cast's.
@@ -379,6 +379,8 @@ export interface FixtureApiOptions {
   conflict?: boolean;
   /** Serve the engine's ineligible preview, so the R2 lock is reachable. */
   stalePreview?: boolean;
+  /** Blocker codes the plan comes back with. A blocked plan issues no token. */
+  planBlockers?: readonly string[];
 }
 
 /**
@@ -533,21 +535,38 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
         : unavailable("The exit review response could not be read.");
     },
 
-    async planDecision(input) {
-      const blocked = gate<{ planId: string }>("planDecision");
+    async planDecision(input): Promise<Result<DecisionPlan>> {
+      const blocked = gate<DecisionPlan>("planDecision");
       if (blocked) return blocked;
       if (options.conflict) {
         return unavailable("REQUEST_KEY_CONFLICT: this key was used with a different payload.");
       }
-      return { ok: true, value: { planId: `cmd_${input.requestKey.slice(3, 11)}` } };
+      const id = `cmd_${input.requestKey.slice(-8)}`;
+      // A plan that comes back with blockers is well-formed and un-appliable.
+      // The fixture serves it so the screen path that must stop is reachable
+      // without a server; `applyToken` is null under exactly that condition,
+      // as it is on the real endpoint.
+      const blockers = options.planBlockers ?? [];
+      return {
+        ok: true,
+        value: {
+          operationId: id,
+          applyToken: blockers.length > 0 ? null : `gat1.fixture.${id}.${"a".repeat(43)}`,
+          blockers: blockers.map((code) => ({ code })),
+          warnings: [],
+          expectedApprovalVersion: input.expectedApprovalVersion,
+          riskTier: "R1",
+        },
+      };
     },
 
-    async applyPlan(planId: string): Promise<Result<ApplyReceipt>> {
+    async applyPlan(applyToken: string): Promise<Result<ApplyReceipt>> {
       const blocked = gate<ApplyReceipt>("applyPlan");
       if (blocked) return blocked;
       polls = 0;
+      const id = applyToken.split(".")[2] ?? "op";
       // A receipt. Not a result.
-      return { ok: true, value: { operationId: `op_${planId.slice(4)}`, receipt: `rcpt_${planId.slice(4)}` } };
+      return { ok: true, value: { operationId: `op_${id}`, receipt: `rcpt_${id}` } };
     },
 
     async pollOperation(): Promise<Result<OperationSnapshot>> {

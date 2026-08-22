@@ -102,6 +102,7 @@ import {
   formatDecimal,
   isSettled,
   isTerminalSuccess,
+  intentKey,
   newRequestKey,
   panelStatusForHttp,
   readDecimal,
@@ -2108,6 +2109,21 @@ describe("Gate R2 Review", () => {
     }
   });
 
+  it("locks approve-with-condition by the same rule as approve", () => {
+    // Both grant the same authorization. Gate R1 has always disabled its
+    // equivalent; R2 left the second door open, so an expired R1 disabled
+    // Approve and a reviewer could still grant through the other button.
+    render(r2({ r1State: "EXPIRED" }));
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "Approve with condition" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+    // Deny stays available: refusing a request whose evidence has lapsed is
+    // the decision this state should make easy.
+    expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", false);
+  });
+
   it("blocks approval on a preview the engine will not stand behind, but still shows it", () => {
     // EX-BE-07a §2.2 asks for both halves. The numbers stay because they are
     // how an operator works out what went stale; the button locks because
@@ -2652,9 +2668,18 @@ describe("gate R1 detail mapping", () => {
     expect(d?.checklist[0].label).toContain("MOSTLY_OK");
   });
 
-  it("carries the optimistic-concurrency token through", () => {
-    const d = readGateR1Detail({ approval_id: "AP-201", expected_version: "v7" });
-    expect(d?.expectedVersion).toBe("v7");
+  it("carries the optimistic-concurrency version through as an integer", () => {
+    // `approval_version`, a number — the name and the type the published
+    // governance fixture actually uses. The reader looked for a string called
+    // `expected_version` and found neither, so every plan went out with no
+    // version at all and nothing was optimistic about anything.
+    const d = readGateR1Detail({ approval_id: "AP-201", approval_version: 7 });
+    expect(d?.expectedVersion).toBe(7);
+  });
+
+  it("refuses a version it cannot use rather than passing a string through", () => {
+    const d = readGateR1Detail({ approval_id: "AP-201", approval_version: "v7" });
+    expect(d?.expectedVersion).toBeNull();
   });
 });
 
@@ -2717,9 +2742,10 @@ describe("the HTTP API refuses before it calls, when the registry says no", () =
     const api = createHttpApi({ policy: null });
     const plan = await api.planDecision({
       approvalId: "AP-201",
+      workspaceId: "default",
       decision: "APPROVE",
-      reason: "looks good",
-      expectedVersion: "v7",
+      reason: "looks good enough",
+      expectedApprovalVersion: 7,
       requestKey: "rk_1",
     });
     expect(plan.ok).toBe(false);
@@ -2834,16 +2860,20 @@ describe("plan → apply → poll: 202 is never the end", () => {
     let s = start();
     const plan = await api.planDecision({
       approvalId: "AP-201",
+      workspaceId: "default",
       decision: "APPROVE",
       reason: "evidence is sound",
-      expectedVersion: "v7",
+      expectedApprovalVersion: 7,
       requestKey: s.requestKey,
     });
     expect(plan.ok).toBe(true);
     if (!plan.ok) return;
-    s = decisionReducer(s, { type: "PLANNED", planId: plan.value.planId });
+    s = decisionReducer(s, { type: "PLANNED", planId: plan.value.operationId });
+    // The token the server issued, not a pair the client re-derived: an apply
+    // must not be able to reach a plan it was never issued for.
+    expect(plan.value.applyToken).not.toBeNull();
 
-    const applied = await api.applyPlan(plan.value.planId, s.requestKey);
+    const applied = await api.applyPlan(plan.value.applyToken!, "default");
     expect(applied.ok).toBe(true);
     if (!applied.ok) return;
     s = decisionReducer(s, { type: "APPLY_ACCEPTED", ...applied.value });
@@ -2975,7 +3005,7 @@ describe("EX-BE-05a field map — reconciled against what codex published", () =
         quorum_required: 2,
         policy_version: "approval.v3",
         creator: "Minh",
-        expected_version: "v7",
+        approval_version: 7,
         sla: { age_minutes: 120, budget_minutes: 1440 },
       },
       actor: "Lan",
@@ -2995,7 +3025,7 @@ describe("EX-BE-05a field map — reconciled against what codex published", () =
     const d = readGateR1Detail(wire);
     expect(d?.alphaLabel).toBe("RSI v1.7");
     expect(d?.releaseCandidate).toBe("RC-41");
-    expect(d?.expectedVersion).toBe("v7");
+    expect(d?.expectedVersion).toBe(7);
     expect(d?.sla).toEqual({ ageMinutes: 120, budgetMinutes: 1440 });
   });
 
@@ -4166,5 +4196,108 @@ describe("M2 zoom asks the server again rather than magnifying", () => {
     fireEvent.click(screen.getByRole("button", { name: "40d" }));
     fireEvent.click(screen.getByRole("button", { name: "100d" }));
     expect(seen).toEqual(["requery", "same-rung"]);
+  });
+});
+
+/* ===========================================================================
+ * Audit 2026-08-22: the decision path against the real Control API schema
+ * ======================================================================== */
+
+describe("plan → apply, shaped to DecisionPlanRequestSchema", () => {
+  /** Every command grant on, so the refusal under test is the schema's. */
+  const FULL_POLICY = screenDeliveryPolicy({
+    screen_id: "EXECUTION_GOVERNANCE_SCREEN",
+    delivery_profile: "fixture",
+    delivery_policy: {
+      policy_revision: 9,
+      query_enabled: true,
+      projection_ingestion_enabled: true,
+      sse_enabled: true,
+      paper_commands_enabled: true,
+      sandbox_commands_enabled: true,
+      live_protective_commands_enabled: true,
+      live_risk_increasing_commands_enabled: true,
+    },
+  });
+
+  it("refuses to plan without a version to be optimistic about", async () => {
+    // `expected_approval_version` is a required positive integer. Inventing one
+    // would decide against a request that may already have moved.
+    const api = createHttpApi({ policy: FULL_POLICY });
+    const plan = await api.planDecision({
+      approvalId: "AP-201",
+      workspaceId: "default",
+      decision: "APPROVE",
+      reason: "evidence is sound",
+      expectedApprovalVersion: null,
+      requestKey: "rk_1",
+    });
+    expect(plan.ok).toBe(false);
+    if (plan.ok) return;
+    expect(plan.reason).toMatch(/no version to decide against/);
+  });
+
+  it("refuses approve-with-condition that carries no condition", async () => {
+    // The schema rejects it, and a reviewer deserves the sentence rather than
+    // a 422 from three layers away.
+    const api = createHttpApi({ policy: FULL_POLICY });
+    const plan = await api.planDecision({
+      approvalId: "AP-201",
+      workspaceId: "default",
+      decision: "APPROVE_WITH_CONDITION",
+      reason: "sound with a caveat",
+      expectedApprovalVersion: 7,
+      requestKey: "rk_1",
+    });
+    expect(plan.ok).toBe(false);
+    if (plan.ok) return;
+    expect(plan.reason).toMatch(/requires the condition itself/);
+  });
+
+  it("refuses a condition attached to a decision that may not carry one", async () => {
+    const api = createHttpApi({ policy: FULL_POLICY });
+    const plan = await api.planDecision({
+      approvalId: "AP-201",
+      workspaceId: "default",
+      decision: "DENY",
+      reason: "insufficient evidence",
+      condition: "add a rollback plan",
+      expectedApprovalVersion: 7,
+      requestKey: "rk_1",
+    });
+    expect(plan.ok).toBe(false);
+  });
+
+  it("does not apply a plan the server returned blockers for", async () => {
+    // The previous behaviour applied regardless, so the reviewer watched
+    // "applying" for a command the server had already declined to authorise.
+    const api = createFixtureApi({ planBlockers: ["QUORUM_NOT_MET"] });
+    const plan = await api.planDecision({
+      approvalId: "AP-201",
+      workspaceId: "default",
+      decision: "APPROVE",
+      reason: "evidence is sound",
+      expectedApprovalVersion: 7,
+      requestKey: "rk_1",
+    });
+    expect(plan.ok).toBe(true);
+    if (!plan.ok) return;
+    expect(plan.value.blockers.map((b) => b.code)).toEqual(["QUORUM_NOT_MET"]);
+    // No token either — the two go together on the real endpoint.
+    expect(plan.value.applyToken).toBeNull();
+  });
+
+  it("keys a request by its intent, so a denial is not a replay of an approval", () => {
+    // One key held per container made the second call idempotent against the
+    // first: the server returns the original operation and the reviewer is
+    // told their refusal succeeded when an approval is what was recorded.
+    const session = "rk_session";
+    const approve = intentKey(session, "AP-201", "APPROVE", "evidence is sound");
+    const deny = intentKey(session, "AP-201", "DENY", "evidence is sound");
+    expect(approve).not.toBe(deny);
+    // And the same intent retries under the same key.
+    expect(intentKey(session, "AP-201", "APPROVE", "evidence is sound")).toBe(approve);
+    // Inside the server's key grammar.
+    expect(approve).toMatch(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/);
   });
 });

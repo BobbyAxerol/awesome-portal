@@ -205,7 +205,14 @@ export interface GateR1Detail {
   eligibility: Eligibility;
   decided: { outcome: "APPROVED" | "DENIED" | "APPROVED_WITH_CONDITION"; by: string; at: string } | null;
   /** Optimistic-concurrency token. Apply must echo it (master plan §10.2). */
-  expectedVersion: string | null;
+  /**
+   * Optimistic-concurrency version, as the published row carries it.
+   *
+   * A **number**, not a string, and named `approval_version` — the first
+   * version of this reader looked for `expected_version` as a string and found
+   * neither, so every plan was made with no version at all.
+   */
+  expectedVersion: number | null;
   gaps: readonly string[];
 }
 
@@ -294,7 +301,7 @@ export function readGateR1Detail(raw: unknown): GateR1Detail | null {
             at: readTimestamp(decidedRaw.at) ?? "unknown time",
           }
         : null,
-    expectedVersion: str(approval.expected_version ?? data.expected_version),
+    expectedVersion: int(approval.approval_version ?? data.approval_version),
     gaps,
   };
 }
@@ -400,7 +407,14 @@ export interface GateR2Detail {
   grantName: string | null;
   locks: readonly R2Lock[];
   eligibility: Eligibility;
-  expectedVersion: string | null;
+  /**
+   * Optimistic-concurrency version, as the published row carries it.
+   *
+   * A **number**, not a string, and named `approval_version` — the first
+   * version of this reader looked for `expected_version` as a string and found
+   * neither, so every plan was made with no version at all.
+   */
+  expectedVersion: number | null;
   gaps: readonly string[];
 }
 
@@ -461,7 +475,7 @@ export function readGateR2Detail(raw: unknown): GateR2Detail | null {
     grantName: str(data.grant_name),
     locks,
     eligibility: readEligibility(data.eligibility),
-    expectedVersion: str(approval.expected_version),
+    expectedVersion: int(approval.approval_version ?? data.approval_version),
     gaps,
   };
 }
@@ -525,7 +539,14 @@ export interface PaperExitDetail {
   lineage: readonly LineageRef[];
   panels: readonly EvidencePanelSpec[];
   recommendation: string | null;
-  expectedVersion: string | null;
+  /**
+   * Optimistic-concurrency version, as the published row carries it.
+   *
+   * A **number**, not a string, and named `approval_version` — the first
+   * version of this reader looked for `expected_version` as a string and found
+   * neither, so every plan was made with no version at all.
+   */
+  expectedVersion: number | null;
   eligibility: Eligibility;
   gaps: readonly string[];
 }
@@ -573,7 +594,7 @@ export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
     lineage,
     panels,
     recommendation: str(data.recommendation),
-    expectedVersion: str(review.expected_version),
+    expectedVersion: int(review.approval_version ?? review.expected_version),
     eligibility: readEligibility(data.eligibility),
     gaps,
   };

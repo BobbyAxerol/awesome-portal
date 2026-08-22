@@ -53,6 +53,23 @@ export interface InboxResult {
 }
 
 /** What apply returned. A 202 and nothing more (master plan §7.3). */
+/**
+ * What planning returned.
+ *
+ * `blockers` is the field that matters: a plan may come back well-formed and
+ * still be un-appliable, and the first version of this port dropped it and
+ * applied anyway. `applyToken` is null exactly when the server declined to
+ * issue one, which is the same condition.
+ */
+export interface DecisionPlan {
+  operationId: string;
+  applyToken: string | null;
+  blockers: readonly { code: string }[];
+  warnings: readonly { code: string }[];
+  expectedApprovalVersion: number | null;
+  riskTier: string | null;
+}
+
 export interface ApplyReceipt {
   operationId: string;
   receipt: string | null;
@@ -92,10 +109,22 @@ export interface ExecutionApi {
   ): Promise<Result<{ preview: CapitalPreview; envelope: AnalyticsEnvelope }>>;
   /** `GET /api/v1/execution/governance/exit-reviews/{id}` */
   getPaperExit(reviewId: string): Promise<Result<PaperExitDetail>>;
-  /** `POST /api/v1/execution/commands/plans` */
+  /** `POST /api/v1/execution/governance/approvals/{id}/decision-plans` */
+  /**
+   * Plan a governance decision.
+   *
+   * Shaped to `DecisionPlanRequestSchema` in the Control API rather than to the
+   * generic command envelope the first draft imagined. Four things that schema
+   * requires and the first version did not send: a literal `schema_version`, a
+   * `workspace_id`, `expected_approval_version` as a **positive integer**, and
+   * a `condition` whenever the decision is `APPROVE_WITH_CONDITION` — the
+   * schema rejects that decision without one, and rejects a condition with any
+   * other decision.
+   */
   planDecision(input: {
     /** Approval or exit-review identifier. One command type, two subjects. */
     approvalId: string;
+    workspaceId: string;
     decision:
       | "APPROVE"
       | "DENY"
@@ -103,14 +132,30 @@ export interface ExecutionApi {
       | "PROMOTE"
       | "EXTEND_OBSERVATION"
       | "REJECT";
+    /** The schema floor is eight characters; a one-word reason is refused. */
     reason: string;
-    /** Optimistic concurrency. Rejected server-side if the approval moved. */
-    expectedVersion: string | null;
-    /** BR-EX-18. Belongs to the intent, reused across retries. */
+    /** Required for `APPROVE_WITH_CONDITION`, refused for anything else. */
+    condition?: string | null;
+    /**
+     * Optimistic concurrency, as an integer.
+     *
+     * `null` means the row did not publish one; the caller must not invent a
+     * version, because a plan that claims the wrong one either fails loudly or
+     * decides against a request that has moved.
+     */
+    expectedApprovalVersion: number | null;
+    evidenceHashes?: readonly string[];
+    /** BR-EX-18. Belongs to the intent, reused across retries of that intent. */
     requestKey: string;
-  }): Promise<Result<{ planId: string }>>;
-  /** `POST /api/v1/execution/operations/{id}/apply` — returns 202 only. */
-  applyPlan(planId: string, requestKey: string): Promise<Result<ApplyReceipt>>;
+  }): Promise<Result<DecisionPlan>>;
+  /**
+   * `POST /api/v1/execution/operations/{id}/apply` — returns 202 only.
+   *
+   * Takes the plan's `apply_token`, not a plan id and a request key. The token
+   * is what binds this apply to that plan; re-deriving the pair client-side
+   * would let an apply reach a plan it was never issued for.
+   */
+  applyPlan(applyToken: string, workspaceId: string): Promise<Result<ApplyReceipt>>;
   /** `GET /api/v1/execution/operations/{id}` */
   pollOperation(operationId: string): Promise<Result<OperationSnapshot>>;
 }

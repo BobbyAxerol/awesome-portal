@@ -98,7 +98,12 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
         return unavailable("A page cannot be requested in both directions at once.");
       }
 
-      const params = new URLSearchParams({ filter: query.filter });
+      // `view`, not `filter`. The BFF reads `raw.view` and falls back to
+      // "INBOX" for anything it does not recognise
+      // (`governance/contracts.ts` approvalListQuery), so sending the wrong
+      // name silently served the inbox for every chip — an operator pressing
+      // "Overdue" got a list that looked right and was not.
+      const params = new URLSearchParams({ view: query.filter });
       if (query.after) params.set("after", query.after);
       if (query.before) params.set("before", query.before);
       if (query.limit) params.set("limit", String(query.limit));
@@ -205,32 +210,96 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       // wastes their time.
       const blocked = commandBlocked("R1");
       if (blocked) return unavailable(blocked);
+
+      // `expected_approval_version` is a required positive integer. Without one
+      // there is nothing to be optimistic about, and inventing a version would
+      // decide against a request that may have moved.
+      if (!Number.isInteger(input.expectedApprovalVersion) || (input.expectedApprovalVersion ?? 0) <= 0) {
+        return unavailable(
+          "This request published no version to decide against, so a plan cannot be made safely.",
+        );
+      }
+      // The schema refuses APPROVE_WITH_CONDITION without a condition, and
+      // refuses a condition with anything else. Caught here so the reviewer
+      // sees a sentence rather than a 422.
+      const wantsCondition = input.decision === "APPROVE_WITH_CONDITION";
+      const condition = input.condition?.trim() ?? "";
+      if (wantsCondition && condition.length < 8) {
+        return unavailable("Approving with a condition requires the condition itself.");
+      }
+      if (!wantsCondition && condition.length > 0) {
+        return unavailable("A condition may only accompany approve-with-condition.");
+      }
+
       const response = await post(
-        "/commands/plans",
+        `/governance/approvals/${encodeURIComponent(input.approvalId)}/decision-plans`,
         {
-          command_type: "governance.approval.decide",
+          schema_version: "governance.r1-decision-plan-request.v1",
+          workspace_id: input.workspaceId,
           request_key: input.requestKey,
+          command_type: "GOVERNANCE_R1_DECISION",
+          command_version: 1,
           target: { approval_id: input.approvalId },
-          expected_version: input.expectedVersion,
-          payload: { decision: input.decision, reason: input.reason },
+          expected_approval_version: input.expectedApprovalVersion,
+          payload: {
+            decision: input.decision,
+            reason: input.reason,
+            ...(wantsCondition ? { condition } : {}),
+            evidence_hashes: [...(input.evidenceHashes ?? [])],
+          },
         },
         signal,
       );
       if (response.status === 409) {
-        return { ok: false, status: "unavailable", reason: "REQUEST_KEY_CONFLICT: this key was used with a different payload." };
+        // Distinguished from every other 409 by the published problem type,
+        // not by assuming what a 409 on this route must mean.
+        const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+        const code = typeof body.type === "string" ? body.type : "";
+        return {
+          ok: false,
+          status: "unavailable",
+          reason: code.includes("request-key")
+            ? "REQUEST_KEY_CONFLICT: this key was used with a different payload."
+            : `The approval moved while this plan was being made. ${code || "Reload and decide again."}`,
+        };
       }
       if (!response.ok) return problem(response);
       const body = (await response.json()) as Record<string, unknown>;
-      const planId = typeof body.plan_id === "string" ? body.plan_id : null;
-      return planId ? { ok: true, value: { planId } } : unavailable("The plan response carried no plan id.");
+      const operationId = typeof body.operation_id === "string" ? body.operation_id : null;
+      if (!operationId) return unavailable("The plan response carried no operation id.");
+      const list = (raw: unknown) =>
+        Array.isArray(raw)
+          ? raw.flatMap((entry) => {
+              const code = (entry as Record<string, unknown> | null)?.code;
+              return typeof code === "string" ? [{ code }] : [];
+            })
+          : [];
+      return {
+        ok: true,
+        value: {
+          operationId,
+          applyToken: typeof body.apply_token === "string" ? body.apply_token : null,
+          blockers: list(body.blockers),
+          warnings: list(body.warnings),
+          expectedApprovalVersion:
+            typeof body.expected_approval_version === "number"
+              ? body.expected_approval_version
+              : null,
+          riskTier: typeof body.risk_tier === "string" ? body.risk_tier : null,
+        },
+      };
     },
 
-    async applyPlan(planId: string, requestKey: string): Promise<Result<ApplyReceipt>> {
+    async applyPlan(applyToken: string, workspaceId: string): Promise<Result<ApplyReceipt>> {
       const blocked = commandBlocked("R1");
       if (blocked) return unavailable(blocked);
       const response = await post(
-        `/operations/${encodeURIComponent(planId)}/apply`,
-        { request_key: requestKey },
+        "/governance/operations/apply",
+        {
+          schema_version: "governance.r1-decision-apply-request.v1",
+          workspace_id: workspaceId,
+          apply_token: applyToken,
+        },
         signal,
       );
       if (!response.ok && response.status !== 202) return problem(response);

@@ -328,7 +328,13 @@ export function readKeysetPage<T>(
   mapRow: (row: Record<string, unknown>) => T | null,
 ): KeysetPage<T> {
   const o = obj(raw) ?? {};
-  const data = obj(o.data) ?? o;
+  // Three envelopes reach this reader and all three are real. The governance
+  // BFF wraps its page under `page` beside a sibling `counts`
+  // (`governance.service.ts` list response); other endpoints wrap under `data`;
+  // fixtures pass the page bare. Reading only the last two returned an empty
+  // list and a zero count against the live BFF — a table that says "no results"
+  // when the server sent a full page.
+  const data = obj(o.page) ?? obj(o.data) ?? o;
   const rowsRaw = Array.isArray(data.rows) ? data.rows : Array.isArray(o.rows) ? o.rows : [];
 
   const rows: T[] = [];
@@ -535,6 +541,30 @@ export function newRequestKey(): string {
   const bytes = new Uint8Array(16);
   c.getRandomValues(bytes);
   return `rk_${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
+}
+
+/**
+ * A request key for one intent, derived from a session key and the intent.
+ *
+ * BR-EX-18 scopes idempotency to the intent, and the intent includes the
+ * verdict. A single key held by a container and reused across APPROVE and DENY
+ * makes the second call an idempotent replay of the first: the server returns
+ * the original operation and the reviewer is told their refusal succeeded when
+ * an approval is what was recorded.
+ *
+ * The suffix stays inside the server's `^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$`.
+ */
+export function intentKey(
+  sessionKey: string,
+  subjectId: string,
+  verdict: string,
+  reason: string,
+): string {
+  let hash = 5381;
+  for (const ch of `${subjectId}|${verdict}|${reason}`) {
+    hash = ((hash << 5) + hash + ch.charCodeAt(0)) >>> 0;
+  }
+  return `${sessionKey}.${verdict}.${hash.toString(36)}`;
 }
 
 /** A `409` from reusing a request key with a different payload. */

@@ -15,7 +15,7 @@
  */
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
-import { newRequestKey } from "../adapter";
+import { intentKey, newRequestKey } from "../adapter";
 import { cursorStillValid, type CursorScope, type KeysetPage, type PanelStatus } from "../contracts";
 import {
   decisionReducer,
@@ -256,11 +256,13 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
       dispatch({ type: "PLAN_REQUESTED" });
       const planned = await api.planDecision({
         approvalId,
+        workspaceId: "default",
         decision: verdict,
         reason,
-        expectedVersion: detail.expectedVersion,
-        // The same key for every retry of this intent (BR-EX-18).
-        requestKey: decisionRef.current.requestKey,
+        expectedApprovalVersion: detail.expectedVersion,
+        // Keyed by the intent, so a DENY after an APPROVE is a new command and
+        // not an idempotent replay of the one before it (BR-EX-18).
+        requestKey: intentKey(decisionRef.current.requestKey, approvalId, verdict, reason),
       });
       if (!planned.ok) {
         dispatch(
@@ -270,10 +272,23 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
         );
         return;
       }
-      dispatch({ type: "PLANNED", planId: planned.value.planId });
+      dispatch({ type: "PLANNED", planId: planned.value.operationId });
+
+      // A well-formed plan can still be un-appliable. Applying regardless was
+      // the previous behaviour and it showed the reviewer "applying" for a
+      // command the server had already refused to authorise.
+      if (planned.value.blockers.length > 0 || !planned.value.applyToken) {
+        dispatch({
+          type: "PLAN_FAILED",
+          error: planned.value.blockers.length
+            ? `This plan cannot be applied: ${planned.value.blockers.map((b) => b.code).join(", ")}.`
+            : "The server issued no apply token for this plan, so it cannot be applied.",
+        });
+        return;
+      }
       dispatch({ type: "APPLY_REQUESTED" });
 
-      const applied = await api.applyPlan(planned.value.planId, decisionRef.current.requestKey);
+      const applied = await api.applyPlan(planned.value.applyToken, "default");
       if (!applied.ok) {
         dispatch({ type: "APPLY_FAILED", error: applied.reason });
         return;
@@ -352,6 +367,9 @@ function useDecision(api: ExecutionApi) {
   );
   const ref = useRef<DecisionState>(decision);
   ref.current = decision;
+  // Until a workspace reaches the client from the registry, one name that the
+  // BFF will reject loudly rather than a guess it might accept quietly.
+  const workspaceId = "default";
 
   useEffect(() => {
     if (!shouldPoll(decision) || !decision.operationId || decision.polls >= MAX_POLLS) return;
@@ -378,15 +396,22 @@ function useDecision(api: ExecutionApi) {
       subjectId: string,
       verdict: Parameters<ExecutionApi["planDecision"]>[0]["decision"],
       reason: string,
-      expectedVersion: string | null,
+      expectedApprovalVersion: number | null,
+      extra?: { condition?: string | null; workspaceId?: string },
     ) => {
       dispatch({ type: "PLAN_REQUESTED" });
       const planned = await api.planDecision({
         approvalId: subjectId,
+        workspaceId: extra?.workspaceId ?? workspaceId,
         decision: verdict,
         reason,
-        expectedVersion,
-        requestKey: ref.current.requestKey,
+        condition: extra?.condition ?? null,
+        expectedApprovalVersion,
+        // Per intent, not per container. One key reused across APPROVE and
+        // DENY makes the second call an idempotent replay of the first: the
+        // server answers with the original operation and the reviewer is told
+        // their refusal succeeded when what was recorded was an approval.
+        requestKey: intentKey(ref.current.requestKey, subjectId, verdict, reason),
       });
       if (!planned.ok) {
         dispatch(
@@ -396,9 +421,27 @@ function useDecision(api: ExecutionApi) {
         );
         return;
       }
-      dispatch({ type: "PLANNED", planId: planned.value.planId });
+      dispatch({ type: "PLANNED", planId: planned.value.operationId });
+
+      // A plan may come back well-formed and un-appliable. Applying anyway was
+      // the previous behaviour, and it turned a server's refusal into a request
+      // the server then had to refuse a second time — after the reviewer had
+      // been shown "applying".
+      if (planned.value.blockers.length > 0 || !planned.value.applyToken) {
+        dispatch({
+          type: "PLAN_FAILED",
+          error: planned.value.blockers.length
+            ? `This plan cannot be applied: ${planned.value.blockers.map((b) => b.code).join(", ")}.`
+            : "The server issued no apply token for this plan, so it cannot be applied.",
+        });
+        return;
+      }
+
       dispatch({ type: "APPLY_REQUESTED" });
-      const applied = await api.applyPlan(planned.value.planId, ref.current.requestKey);
+      const applied = await api.applyPlan(
+        planned.value.applyToken,
+        extra?.workspaceId ?? workspaceId,
+      );
       if (!applied.ok) {
         dispatch({ type: "APPLY_FAILED", error: applied.reason });
         return;

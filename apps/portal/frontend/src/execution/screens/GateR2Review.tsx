@@ -537,7 +537,16 @@ export function GateR2Review({
         <button type="button" className="exec-btn-apply" disabled={locked} onClick={onApprove}>
           Approve
         </button>
-        <button type="button" className="exec-btn-ghost" onClick={onRequestCondition}>
+        {/* Locked by the same rule as Approve, because it grants the same
+            authorization. Gate R1 has always disabled its equivalent; R2 did
+            not, so an expired R1 disabled Approve and left a second door open
+            that produced an identical grant. */}
+        <button
+          type="button"
+          className="exec-btn-ghost"
+          disabled={locked}
+          onClick={onRequestCondition}
+        >
           Approve with condition
         </button>
         <button type="button" className="exec-btn-ghost" disabled={denyLocked} onClick={onDeny}>
