@@ -232,7 +232,25 @@ export function CommandPlanDrawer({
                   : "pending"
             }
           >
+            {/* A mark, not only a tone. The strip carried its state in colour
+                alone, which fails 1.4.1 and fails anyone reading a screenshot
+                — and this strip is the only thing saying whether a command has
+                been applied yet. */}
+            <span aria-hidden="true">
+              {STEPS.indexOf(candidate) < STEPS.indexOf(step)
+                ? "\u2713 "
+                : candidate === step
+                  ? "\u2192 "
+                  : "\u00b7 "}
+            </span>
             {STEP_LABEL[candidate]}
+            <span className="exec-sr-only">
+              {STEPS.indexOf(candidate) < STEPS.indexOf(step)
+                ? " (done)"
+                : candidate === step
+                  ? " (current)"
+                  : " (not reached)"}
+            </span>
           </div>
         ))}
       </div>

@@ -1517,7 +1517,11 @@ export default function ExecutionFixtures() {
                 page={{
                   rows: FIXTURE_ORDERS,
                   totalCount: 182_431,
-                  filteredCount: 412,
+                  // At least as many as are resident. A page holding more rows
+                  // than its own filtered count says the selection is smaller
+                  // than what it is showing, which is not a state the server
+                  // can produce and not one a reader can make sense of.
+                  filteredCount: Math.max(412, FIXTURE_ORDERS.length),
                   hasMore: true,
                   hasPrevious: true,
                   nextCursor: "c_ab34e91f0055deadbeef",

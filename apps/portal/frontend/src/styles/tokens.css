@@ -225,7 +225,15 @@
  * Density — spacing rhythm only. Form/chart spacing stays consistent so a
  * denser table never hides labels (v0.4 §17.6).
  * ------------------------------------------------------------------------ */
-:root[data-density="compact"] {
+/* `:root` **and** any element carrying the attribute.
+ *
+ * `ExecutionSurface` stamps `data-density` on the wrapper it renders, and
+ * matching only `:root` made that pin inert: the Deployments surface asked for
+ * `operational` and rendered at the page's density, silently. Chart and form
+ * spacing stay out of the ramp on purpose (v0.4 §17.6) so a denser table never
+ * hides a label. */
+:root[data-density="compact"],
+[data-density="compact"] {
   --topbar-h: 52px;
   --sidebar-w: 228px;
   --sidebar-collapsed-w: 64px;
@@ -234,7 +242,8 @@
   --row-h: 36px;
 }
 
-:root[data-density="operational"] {
+:root[data-density="operational"],
+[data-density="operational"] {
   --topbar-h: 52px;
   --sidebar-w: 228px;
   --sidebar-collapsed-w: 64px;
