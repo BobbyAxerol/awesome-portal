@@ -49,6 +49,19 @@ import {
 } from "./screens/containers";
 import { createFixtureApi } from "./api/fixtureApi";
 import { PaperExitReview } from "./screens/PaperExitReview";
+import { FullBlotter, OrderFunnelStrip } from "./screens/FullBlotter";
+import { AlphaThreeSixty } from "./screens/AlphaThreeSixty";
+import { PortfolioThreeSixty } from "./screens/PortfolioThreeSixty";
+import { AccountBroker360 } from "./screens/AccountBroker360";
+import { PaperWorkbench } from "./screens/PaperWorkbench";
+import { BLOTTER_CROSS_FILTER, blotterPage } from "./blotter.fixtures";
+import { FUNNEL_MISSING_BROKER_ACK } from "./analytics.fixtures";
+import { readOrderFunnel } from "./analytics";
+import { alpha360, alpha360AtScale } from "./alpha360.fixtures";
+import { CORRELATION_CEILING, portfolio360 } from "./portfolio360.fixtures";
+import { HEADROOM_EXCEEDED, PARTIAL_EXPOSURE, account360 } from "./account360.fixtures";
+import { GATE_MET, STALE, paperWorkbench } from "./paper.fixtures";
+import { VNM_OPEN, vnmWorkbench } from "./vnm.fixtures";
 import {
   PROFILE_ORDER,
   profileNeedsLabel,
@@ -1550,6 +1563,106 @@ export default function ExecutionFixtures() {
               />
             </Case>
           </div>
+        </Group>
+
+        {/*
+          The five screens built after Phase 0 and never added here.
+
+          They existed only inside test files, which meant nobody could look at
+          one: not at a product route — correctly, since fixture data at a
+          product route is what the Lane A boundary forbids — and not here
+          either. A screen nobody can see is a screen nobody has reviewed, and
+          the Phase 0 exit gate is "every shared Execution component in every
+          state" precisely so that cannot happen.
+        */}
+        <Group
+          title="Full Blotter (4c)"
+          note="Ten to the seventh rows. The chips re-query rather than filtering what is loaded, and both counts come from the server."
+          surface="deployments"
+        >
+          <Case caption="a page, with a chart cross-filter narrowing it">
+            <FullBlotter
+              envelope={{ authority: "EXECUTION", asOf: "2026-08-22T10:42:01Z", freshness: "OK" }}
+              page={blotterPage("FILLED")}
+              filter="FILLED"
+              crossFilter={BLOTTER_CROSS_FILTER}
+            />
+          </Case>
+          <Case caption="the funnel with a broker acknowledgement nobody observed — MISSING, never inferred from the fills that followed">
+            <OrderFunnelStrip funnel={readOrderFunnel(FUNNEL_MISSING_BROKER_ACK)} status="ok" />
+          </Case>
+        </Group>
+
+        <Group
+          title="Paper Workbench (1c) and its VN variant (4h)"
+          note="One component. The VN screen is the same code with a calendar attached."
+          surface="deployments"
+        >
+          <Case caption="gate unmet — the CTA names each missing criterion rather than counting them">
+            <PaperWorkbench {...paperWorkbench()} />
+          </Case>
+          <Case caption="gate met — the exit is reachable">
+            <PaperWorkbench {...paperWorkbench(GATE_MET)} />
+          </Case>
+          <Case caption="stale projection — last good values kept and marked, orders still authoritative in the Execution cell">
+            <PaperWorkbench {...paperWorkbench(STALE)} />
+          </Case>
+          <Case caption="VN market closed — PAUSED, not STALE, and the banner is INFO because a shut market is not a fault">
+            <PaperWorkbench {...vnmWorkbench()} />
+          </Case>
+          <Case caption="VN market open — the same screen with the calendar banner gone">
+            <PaperWorkbench {...vnmWorkbench(VNM_OPEN)} />
+          </Case>
+        </Group>
+
+        <Group
+          title="Alpha 360° (2a+2b)"
+          note="Nine tabs under one scope. Bounded panels cap; unbounded ones page."
+          surface="deployments"
+        >
+          <Case caption="the wireframe's cast — four venues, three deployments, three of twelve tiles unable to draw">
+            <AlphaThreeSixty {...alpha360({ tab: "Insight Charts" })} />
+          </Case>
+          <Case caption="the runtime's cast — 22 venues, 60 deployments, and the shard that stopped publishing survives the cap">
+            <AlphaThreeSixty {...alpha360AtScale()} />
+          </Case>
+        </Group>
+
+        <Group
+          title="Portfolio 360° (1h→3a)"
+          note="150 is a transport limit, not a rendering one: past the cell budget the leader lens becomes the primary view."
+          surface="deployments"
+        >
+          <Case caption="the drawn cast — a full matrix, with MM's whole row dashed because nine days is not enough history">
+            <PortfolioThreeSixty {...portfolio360({ tab: "Structure & Correlation" })} />
+          </Case>
+          <Case caption="150 entities — 22,500 cells nobody can lay out, so one alpha's row at a time">
+            <PortfolioThreeSixty
+              {...portfolio360({ tab: "Structure & Correlation", correlation: CORRELATION_CEILING })}
+            />
+          </Case>
+          <Case caption="the capital ledger, bucketed by currency with the server's own direction on every entry">
+            <PortfolioThreeSixty {...portfolio360({ tab: "Capital Ledger" })} />
+          </Case>
+        </Group>
+
+        <Group
+          title="Account / Broker 360° (1g)"
+          note="Three authorities side by side, and an aggregate the screen shows but never computes."
+          surface="deployments"
+        >
+          <Case caption="within headroom, full population">
+            <AccountBroker360 {...account360()} />
+          </Case>
+          <Case caption="breached — every linked account fails closed until it clears">
+            <AccountBroker360 {...account360({ aggregate: HEADROOM_EXCEEDED })} />
+          </Case>
+          <Case caption="21 of 24 accounts reported — a sum, and the screen refuses to call it the total">
+            <AccountBroker360 {...account360({ exposure: PARTIAL_EXPOSURE })} />
+          </Case>
+          <Case caption="no aggregate published — unavailable with the reason, never a silent green">
+            <AccountBroker360 {...account360({ aggregate: null })} />
+          </Case>
         </Group>
       </div>
     </ExecutionSurface>
