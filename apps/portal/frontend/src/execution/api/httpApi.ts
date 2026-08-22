@@ -24,6 +24,7 @@ import {
 import type { RiskTier } from "../contracts";
 import { commandBlockedReason, type DeliveryPolicy } from "../profile";
 import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./rows";
+import { readAnalyticsEnvelope, readCapitalPreview } from "../analytics";
 import type {
   ApplyReceipt,
   ExecutionApi,
@@ -140,6 +141,25 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       return detail
         ? { ok: true as const, value: detail, warnings: detail.gaps }
         : unavailable("The review response could not be read.");
+    },
+
+    async getCapitalPreview(approvalId: string, requestedAmount: string) {
+      const blocked = readBlocked();
+      if (blocked) return unavailable(blocked);
+      const path =
+        `/approvals/${encodeURIComponent(approvalId)}/capital-preview` +
+        `?requested_amount=${encodeURIComponent(requestedAmount)}`;
+      const response = await get(path, signal);
+      if (!response.ok) return problem(response);
+      const body = await response.json();
+      const preview = readCapitalPreview(body);
+      const envelope = readAnalyticsEnvelope(body);
+      // Both or neither. A preview without its envelope is an unattributed
+      // claim about money, and Gate R2 refuses to render one either way — so
+      // it is refused here, where the reason can still be stated.
+      return preview && envelope
+        ? { ok: true as const, value: { preview, envelope } }
+        : unavailable("The capital preview response could not be read.");
     },
 
     async getGateR2(approvalId: string) {

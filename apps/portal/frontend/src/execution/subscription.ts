@@ -221,6 +221,22 @@ export function subscriptionReducer(
       };
 
     case "DELTA": {
+      // Snapshot-first, enforced here rather than trusted to the transport.
+      //
+      // Once a gap or an epoch cutover has voided the baseline, only a snapshot
+      // restores it. A delta arriving meanwhile is contiguous with the last
+      // sequence we saw — 10 then 11 — and that contiguity proves nothing: the
+      // server already told us events were lost, and the *next* id lining up
+      // does not fill the hole. Without this guard the panel would return to
+      // `live`, drop its gap banner and present data with a known hole in it as
+      // current, which is the exact failure M3 exists to prevent.
+      //
+      // `reconnecting` is deliberately allowed. A resume inside a retained
+      // epoch is a legitimate way for deltas to continue without a new
+      // snapshot; the sequence check below is what proves it landed correctly.
+      if (state.phase !== "live" && state.phase !== "reconnecting") {
+        return state;
+      }
       // An event from another epoch is not a gap, it is a rebuild. Treated as
       // such so the client does not try to resume across a boundary where its
       // cursor is void.
@@ -254,6 +270,9 @@ export function subscriptionReducer(
         resumeToken: resumeToken(event.epoch, event.sequence),
         lastGoodAsOf: event.asOf ?? state.lastGoodAsOf,
         freshness: "OK",
+        // Cleared with the phase it belongs to. A reason left behind would have
+        // a live panel still naming a gap it has recovered from.
+        gapReason: null,
         note: null,
       };
     }

@@ -25,7 +25,22 @@ import {
   type DecisionState,
 } from "../decision";
 import type { ExecutionApi } from "../api/ports";
+import { capitalDeltasFromPreview } from "../api/rows";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "../api/rows";
+import type { AnalyticsEnvelope, CapitalPreview } from "../analytics";
+
+/**
+ * The preview is a third state, not a boolean.
+ *
+ * `null` is in flight, `{ failed }` is an engine that answered but not with a
+ * preview, and the served shape is the only one that may drive a decision. A
+ * two-state model would make "still loading" and "the engine refused" the same
+ * thing on the panel where they must not be.
+ */
+type CapitalPreviewState =
+  | null
+  | { failed: string }
+  | { preview: CapitalPreview; envelope: AnalyticsEnvelope };
 import { ApprovalInbox, type ApprovalRow, type InboxCounts, type InboxFilter } from "./ApprovalInbox";
 import { GateR1Review } from "./GateR1Review";
 import { GateR2Review } from "./GateR2Review";
@@ -384,8 +399,24 @@ function useDecision(api: ExecutionApi) {
   return { decision, decide };
 }
 
-export function GateR2ReviewContainer({ api, approvalId }: { api: ExecutionApi; approvalId: string }) {
+export function GateR2ReviewContainer({
+  api,
+  approvalId,
+  /**
+   * The amount the preview is for.
+   *
+   * A prop rather than local state because the reviewer does not set it here —
+   * it arrives with the request — and the preview is re-requested whenever it
+   * changes, which is the behaviour EX-BE-07a §2.2 asks for.
+   */
+  requestedAmount = "50.000000000000000001",
+}: {
+  api: ExecutionApi;
+  approvalId: string;
+  requestedAmount?: string;
+}) {
   const [state, setState] = useState<LoadState<GateR2Detail>>(loading);
+  const [preview, setPreview] = useState<CapitalPreviewState>(null);
   const { decision, decide } = useDecision(api);
 
   useEffect(() => {
@@ -404,9 +435,26 @@ export function GateR2ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
     };
   }, [api, approvalId]);
 
+  // Its own request, keyed on the amount. Folding it into the effect above
+  // would refetch the whole review whenever the amount moved, and leaving it
+  // out of the dependency list would show a preview for an amount the reviewer
+  // has already changed — the second being the dangerous one.
+  useEffect(() => {
+    let cancelled = false;
+    setPreview(null);
+    void api.getCapitalPreview(approvalId, requestedAmount).then((result) => {
+      if (cancelled) return;
+      setPreview(result.ok ? result.value : { failed: result.reason });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, approvalId, requestedAmount]);
+
   const d = state.value;
   const run = (verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION", reason: string) =>
     void decide(approvalId, verdict, reason, d?.expectedVersion ?? null);
+  const served = preview && !("failed" in preview) ? preview : null;
 
   return (
     <>
@@ -432,12 +480,23 @@ export function GateR2ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
         quorumRequired={d?.quorumRequired ?? 0}
         sla={d?.sla ?? undefined}
         readiness={d?.readiness ?? []}
-        capital={d?.capital ?? []}
+        capital={served ? capitalDeltasFromPreview(served.preview) : (d?.capital ?? [])}
+        // The engine's own envelope, not one assembled here. The previous
+        // placeholder asserted DERIVED authority and an unknown freshness for a
+        // computation whose real metadata the response carries — an invented
+        // attribution on the one panel that must never carry one.
         capitalEnvelope={
-          d
-            ? { authority: "DERIVED", asOf: null, freshness: "UNKNOWN", formulaVersion: "capital.v2" }
+          served
+            ? {
+                authority: served.envelope.authority,
+                asOf: served.envelope.inputAsOf,
+                freshness: served.envelope.inputFreshnessFloor,
+                formulaVersion: served.envelope.formulaVersion,
+              }
             : undefined
         }
+        capitalDecidable={served ? served.preview.decisionEligible : undefined}
+        capitalBlockers={served ? served.preview.blockers : undefined}
         grantName={d?.grantName ?? undefined}
         locks={d?.locks ?? []}
         status={state.status}

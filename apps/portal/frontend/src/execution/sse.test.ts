@@ -247,3 +247,78 @@ describe("M3 transport — snapshot first", () => {
     expect(handle.state().sequence).toBe(1);
   });
 });
+
+describe("M3 transport — a voided baseline is only restored by a snapshot", () => {
+  it("ignores a delta that arrives after a gap, however contiguous it looks", () => {
+    // 10 then 11 is contiguous, and it proves nothing: the server already said
+    // events were lost. Returning to live here would drop the gap banner and
+    // present data with a known hole as current.
+    const after = feed([
+      { type: "SUBSCRIBE" },
+      { type: "SNAPSHOT", epoch: "e1", sequence: 10, asOf: null },
+      { type: "PROJECTION_GAP", reason: "slow_consumer" },
+      { type: "DELTA", epoch: "e1", sequence: 11, asOf: null },
+    ]);
+    expect(after.phase).toBe("gap");
+    expect(after.freshness).toBe("STALE");
+    expect(after.resumeToken).toBeNull();
+    expect(after.sequence).toBe(10);
+  });
+
+  it("ignores a delta during an epoch cutover, including one in the new epoch", () => {
+    const after = feed([
+      { type: "SUBSCRIBE" },
+      { type: "SNAPSHOT", epoch: "e1", sequence: 10, asOf: null },
+      { type: "EPOCH_CHANGED", epoch: "e2", resnapshotNotBefore: "2099-01-01T00:00:00Z" },
+      { type: "DELTA", epoch: "e2", sequence: 1, asOf: null },
+    ]);
+    expect(after.phase).toBe("epoch_changed");
+    expect(after.resnapshotNotBefore).toBe("2099-01-01T00:00:00Z");
+  });
+
+  it("ignores a delta before the first snapshot has landed", () => {
+    const after = feed([
+      { type: "SUBSCRIBE" },
+      { type: "DELTA", epoch: "e1", sequence: 1, asOf: null },
+    ]);
+    expect(after.phase).toBe("snapshotting");
+  });
+
+  it("lets a snapshot restore live and clear the gap it recovered from", () => {
+    const after = feed([
+      { type: "SUBSCRIBE" },
+      { type: "SNAPSHOT", epoch: "e1", sequence: 10, asOf: null },
+      { type: "PROJECTION_GAP", reason: "history_evicted", resnapshotNotBefore: "2099-01-01T00:00:00Z" },
+      { type: "SNAPSHOT", epoch: "e1", sequence: 40, asOf: "2026-08-22T10:00:00Z" },
+    ]);
+    expect(after.phase).toBe("live");
+    expect(after.gapReason).toBeNull();
+    expect(after.resnapshotNotBefore).toBeNull();
+    expect(after.resumeToken).toBe("e1:40");
+  });
+
+  it("still resumes deltas after a plain disconnect, which is what resume is for", () => {
+    // A reconnect inside a retained epoch legitimately continues without a new
+    // snapshot; the contiguity check is what proves the resume landed.
+    const after = feed([
+      { type: "SUBSCRIBE" },
+      { type: "SNAPSHOT", epoch: "e1", sequence: 10, asOf: null },
+      { type: "DISCONNECTED" },
+      { type: "DELTA", epoch: "e1", sequence: 11, asOf: null },
+    ]);
+    expect(after.phase).toBe("live");
+    expect(after.sequence).toBe(11);
+  });
+
+  it("does not let a gap reason leak into a recovered live panel", () => {
+    const after = feed([
+      { type: "SUBSCRIBE" },
+      { type: "SNAPSHOT", epoch: "e1", sequence: 1, asOf: null },
+      { type: "PROJECTION_GAP", reason: "slow_consumer" },
+      { type: "SNAPSHOT", epoch: "e1", sequence: 9, asOf: null },
+      { type: "DELTA", epoch: "e1", sequence: 10, asOf: null },
+    ]);
+    expect(after.phase).toBe("live");
+    expect(after.gapReason).toBeNull();
+  });
+});

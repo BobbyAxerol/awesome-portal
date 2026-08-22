@@ -158,6 +158,7 @@ export function GateR2Review({
   capital,
   capitalEnvelope,
   capitalDecidable,
+  capitalBlockers = [],
   observationPolicy,
   conditions,
   grantName,
@@ -214,6 +215,15 @@ export function GateR2Review({
    * said yes", which is the one reading that must never happen by omission.
    */
   capitalDecidable?: boolean;
+  /**
+   * Why the engine will not stand behind the preview, in its words.
+   *
+   * The lock's own sentence says a decision is blocked; these say what is wrong
+   * with the numbers. Without them the panel shows figures and a refusal with
+   * nothing connecting the two, and the reviewer has no way to tell a stale
+   * feed from a breached ceiling.
+   */
+  capitalBlockers?: readonly string[];
   observationPolicy?: ReactNode;
   /**
    * Typed conditions attached to this decision (DS §4). §3's exit criterion is
@@ -464,6 +474,20 @@ export function GateR2Review({
                 ))}
               </tbody>
             </table>
+          ) : null}
+          {capitalEnvelope && capitalBlockers.length > 0 ? (
+            // Directly under the figures, not up with the lock banner. The lock
+            // says a decision is blocked; these say what is wrong with these
+            // numbers, and a reviewer reading the table needs the second
+            // sentence where the table is.
+            <div className="exec-gate-blockers">
+              <div className="exec-tile-title">Why this preview cannot be decided against</div>
+              <ul>
+                {capitalBlockers.map((blocker) => (
+                  <li key={blocker}>{blocker}</li>
+                ))}
+              </ul>
+            </div>
           ) : null}
         </ExecutionSurface>
       ) : null}

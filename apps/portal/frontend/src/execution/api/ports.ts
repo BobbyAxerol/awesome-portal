@@ -13,6 +13,7 @@
 import type { KeysetPage, PanelStatus } from "../contracts";
 import type { ApprovalRow } from "../screens/ApprovalInbox";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "./rows";
+import type { AnalyticsEnvelope, CapitalPreview } from "../analytics";
 
 export type Result<T> =
   | { ok: true; value: T; warnings?: readonly string[] }
@@ -57,6 +58,19 @@ export interface ExecutionApi {
   getGateR1(approvalId: string): Promise<Result<GateR1Detail>>;
   /** `GET /api/v1/execution/governance/approvals/{id}/r2` */
   getGateR2(approvalId: string): Promise<Result<GateR2Detail>>;
+  /**
+   * `GET /api/v1/execution/approvals/{id}/capital-preview`
+   *
+   * Its own call, not a field of `getGateR2`. The preview is a computation over
+   * a requested amount and is re-requested when that amount changes, while the
+   * rest of the R2 detail is not; folding them together would either refetch
+   * the whole review on every keystroke or serve a preview for an amount the
+   * reviewer has already changed.
+   */
+  getCapitalPreview(
+    approvalId: string,
+    requestedAmount: string,
+  ): Promise<Result<{ preview: CapitalPreview; envelope: AnalyticsEnvelope }>>;
   /** `GET /api/v1/execution/governance/exit-reviews/{id}` */
   getPaperExit(reviewId: string): Promise<Result<PaperExitDetail>>;
   /** `POST /api/v1/execution/commands/plans` */

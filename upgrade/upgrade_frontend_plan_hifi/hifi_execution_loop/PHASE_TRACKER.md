@@ -855,3 +855,40 @@ dấu của amount sẽ gọi nó là không có gì.
 - `sse.ts` chưa gắn vào màn nào: topic/source binding thuộc `EX-BE-08a`; không
   đoán topic trước khi contract ingestion được chốt.
 - R2-1…R2-4 (§15) vẫn chưa sửa — Lane A, không chờ backend.
+
+### 16.6 Soát ngược sau slice (2026-08-22, cùng ngày)
+
+Bobby yêu cầu kiểm lại cả đoạn dài vừa sửa. Dò bằng probe reducer + grep khả
+năng với tới, không dựa vào suy luận. **Ba lỗi thật**, cả ba đều bị test hiện có
+bỏ lọt vì test chỉ đi đường thẳng:
+
+| # | Lỗi | Vì sao test cũ không bắt |
+|---|---|---|
+| A-1 | **`DELTA` sau `gap` đưa panel về `live` mà không cần snapshot** — và `gapReason` còn dính lại trong lúc `live` | test cũ chỉ kiểm `resumeToken` bị void sau gap, không ai gửi tiếp một delta. Mà delta *sẽ* đến: server vẫn đang stream |
+| A-2 | **`capitalDecidable` không được nối vào container** | test màn truyền prop trực tiếp, test container không đụng prop đó. Mỗi nửa xanh, khúc nối ở giữa không ai đi |
+| A-3 | **Container tự bịa `capitalEnvelope`** `{DERIVED, asOf: null, UNKNOWN, capital.v2}` | placeholder từ trước khi có `analytics.ts`; không test nào hỏi envelope đến từ đâu |
+
+A-1 là lỗi nặng nhất trong ba. Sau gap, delta kế tiếp *liền mạch* về sequence
+(10 → 11), nên check contiguity đi qua và panel trở lại `live` — bỏ banner gap,
+hiện dữ liệu **có lỗ đã biết** như là dữ liệu hiện tại. Đúng thứ M3 sinh ra để
+chặn. Đã sửa: delta chỉ áp dụng khi phase là `live` hoặc `reconnecting`
+(`reconnecting` giữ lại có chủ ý — resume trong epoch còn giữ là hợp lệ, và
+check contiguity là thứ chứng minh nó hạ cánh đúng).
+
+A-3 đáng nói riêng: đó là frontend **tự gán authority cho một con số tiền**,
+đúng loại việc mà cả slice này dựng hàng rào để chặn — mà hàng rào chỉ quét phép
+toán, không quét envelope bịa. Giờ envelope đọc từ response.
+
+Kèm theo: `getCapitalPreview` thành method riêng của port (không gộp vào
+`getGateR2` — preview phải re-request khi amount đổi, review thì không),
+`httpApi` bị interface bắt thiếu method và đã bổ sung theo deny-by-default,
+blockers render ngay dưới bảng số, và `MONEY_ARITHMETIC` chuyển lên trước chỗ
+dùng (đang ở trong TDZ, chạy được nhưng gãy nếu ai đó đổi vị trí describe).
+
+**Evidence sau sửa:** vitest **820 passed / 1 skipped** (+13 test mới đi đúng ba
+khúc nối trên) · tsc sạch · build sạch · visual baseline **101/101**.
+
+**Bài học ghi lại:** ba lỗi đều nằm ở *chỗ nối*, không ở trong module nào. Test
+theo module xanh 100% mà đường dây vẫn đứt. Từ slice sau: mỗi khi thêm một prop
+hoặc một method port, phải có ít nhất một test đi **hết** fixture → port →
+container → màn, chứ không chỉ test hai đầu.

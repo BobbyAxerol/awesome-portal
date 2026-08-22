@@ -35,6 +35,7 @@ import {
   type RankedCorrelation,
 } from "./analytics";
 import { capitalDeltasFromPreview } from "./api/rows";
+import { BREACHING_AMOUNT, createFixtureApi } from "./api/fixtureApi";
 import {
   CAPITAL_LEDGER,
   CAPITAL_PREVIEW_BREACH,
@@ -54,6 +55,10 @@ import {
   PACKED_LENGTH_AT_LIMIT,
   packedCorrelationFixture,
 } from "./analytics.fixtures";
+
+/** Shared by the sweep and the proof, so they cannot drift apart. */
+const MONEY_ARITHMETIC =
+  /\b(allocated|available|reserved|headroom|requestedAmount|maximumAllocated)\b[\s)\]]*[-+*/]|[-+*/][\s(\[]*(?:Number[\s(]*)?\b(allocated|available|reserved|headroom|requestedAmount|maximumAllocated)\b/;
 
 const REPO = join(__dirname, "../../../../..");
 const PUBLISHED = join(
@@ -202,10 +207,6 @@ describe("Gate R2 capital preview — read, never recomputed", () => {
     expect(preview.lines.map((l) => l.label)).toEqual(["Used"]);
   });
 });
-
-/** Shared by the sweep and the proof, so they cannot drift apart. */
-const MONEY_ARITHMETIC =
-  /\b(allocated|available|reserved|headroom|requestedAmount|maximumAllocated)\b[\s)\]]*[-+*/]|[-+*/][\s(\[]*(?:Number[\s(]*)?\b(allocated|available|reserved|headroom|requestedAmount|maximumAllocated)\b/;
 
 describe("Full Blotter funnel — four stages, nothing inferred", () => {
   it("renders all four stages even when the server sent one", () => {
@@ -523,5 +524,44 @@ describe("Gate R2 wiring — the preview reaches the screen without being recomp
     expect(rows.find((r) => r.label === "Allocation headroom")!.note).toBe(
       "Against a ceiling of 1000 USDT.",
     );
+  });
+});
+
+describe("Gate R2 container — the preview arrives through the port", () => {
+  it("serves a decidable preview with the engine's own envelope", async () => {
+    const api = createFixtureApi();
+    const result = await api.getCapitalPreview("AP-207", "50.000000000000000001");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.preview.decisionEligible).toBe(true);
+    // The envelope is read from the response, not assembled by the caller.
+    expect(result.value.envelope.formulaVersion).toBe("capital-preview.v1");
+    expect(result.value.envelope.sourceProfile).toBe("fixture");
+  });
+
+  it("serves the breach case for the amount that trips the ceiling", async () => {
+    const api = createFixtureApi();
+    const result = await api.getCapitalPreview("AP-207", BREACHING_AMOUNT);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.preview.decisionEligible).toBe(false);
+    expect(result.value.preview.blockers[0]).toMatch(/exceeds the portfolio ceiling/);
+  });
+
+  it("serves the ineligible preview when the engine's inputs are stale", async () => {
+    const api = createFixtureApi({ stalePreview: true });
+    const result = await api.getCapitalPreview("AP-207", "50.000000000000000001");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.preview.decisionEligible).toBe(false);
+    expect(result.value.envelope.inputFreshnessFloor).toBe("STALE");
+  });
+
+  it("answers unavailable rather than a blank preview when the endpoint is down", async () => {
+    const api = createFixtureApi({ unavailableEndpoints: ["getCapitalPreview"] });
+    const result = await api.getCapitalPreview("AP-207", "1");
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.status).toBe("unavailable");
   });
 });

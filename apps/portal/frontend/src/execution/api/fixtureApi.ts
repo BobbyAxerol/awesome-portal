@@ -13,6 +13,12 @@
  */
 import { readKeysetPage } from "../adapter";
 import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./rows";
+import { readAnalyticsEnvelope, readCapitalPreview } from "../analytics";
+import {
+  CAPITAL_PREVIEW_BREACH,
+  CAPITAL_PREVIEW_OK,
+  CAPITAL_PREVIEW_STALE,
+} from "../analytics.fixtures";
 import type {
   ApplyReceipt,
   ExecutionApi,
@@ -370,7 +376,17 @@ export interface FixtureApiOptions {
   uncertain?: boolean;
   /** Forces a 409 on plan. */
   conflict?: boolean;
+  /** Serve the engine's ineligible preview, so the R2 lock is reachable. */
+  stalePreview?: boolean;
 }
+
+/**
+ * The amount the fixture engine answers with a ceiling breach.
+ *
+ * A constant rather than a magic string so the screen, the fixture and the
+ * tests agree on which request trips it.
+ */
+export const BREACHING_AMOUNT = "600";
 
 export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi {
   const down = new Set(options.unavailableEndpoints ?? []);
@@ -482,6 +498,26 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       return detail
         ? { ok: true as const, value: detail, warnings: detail.gaps }
         : unavailable("The R2 review response could not be read.");
+    },
+
+    async getCapitalPreview(_approvalId: string, requestedAmount: string) {
+      const blocked = gate<never>("getCapitalPreview");
+      if (blocked) return blocked as Result<never>;
+      // Three engine outcomes, selected by the amount so the states are
+      // reachable from the screen rather than only from a test. The client is
+      // not deciding anything about the money here — it is choosing which
+      // canned engine response to stand in for, exactly as the other fixtures
+      // choose which canned row set to return.
+      const source = options.stalePreview
+        ? CAPITAL_PREVIEW_STALE
+        : requestedAmount === BREACHING_AMOUNT
+          ? CAPITAL_PREVIEW_BREACH
+          : CAPITAL_PREVIEW_OK;
+      const preview = readCapitalPreview(source);
+      const envelope = readAnalyticsEnvelope(source);
+      return preview && envelope
+        ? { ok: true as const, value: { preview, envelope } }
+        : unavailable("The capital preview response could not be read.");
     },
 
     async getPaperExit(reviewId: string) {

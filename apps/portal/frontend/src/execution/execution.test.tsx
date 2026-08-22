@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ExecutionSurface } from "./ExecutionSurface";
 import {
@@ -3489,6 +3489,41 @@ describe("Gate R2 and Paper Exit on the port", () => {
     const cells = [...container.querySelectorAll(".exec-gate-capital tbody td")].map((c) => c.textContent);
     expect(cells).toContain("USDT");
     expect(cells).not.toContain("not stated");
+  });
+
+  it("drives the capital table from the engine preview, not from the review row", async () => {
+    // The figures on screen must be the ones the preview endpoint returned.
+    // This decimal is the tell: it survives only if nothing turned it into a
+    // number on the way through.
+    render(<GateR2ReviewContainer api={createFixtureApi()} approvalId="AP-207" />);
+    expect(await screen.findByText("550.000000000000000001")).toBeTruthy();
+    expect(screen.getByText(/capital-preview\.v1/)).toBeTruthy();
+  });
+
+  it("locks approval through the container when the engine will not stand behind the preview", async () => {
+    // The whole path: fixture engine → port → container → screen lock. Each
+    // half of this was tested alone before, and the wiring between them was
+    // the part that was missing.
+    render(
+      <GateR2ReviewContainer api={createFixtureApi({ stalePreview: true })} approvalId="AP-207" />,
+    );
+    expect(await screen.findByText(/not current enough to decide against/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
+    // Visible, diagnosable, and refusable.
+    expect(screen.getByText(/source balance snapshot is 3h 28m old/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", false);
+  });
+
+  it("re-requests the preview when the requested amount changes", async () => {
+    const api = createFixtureApi();
+    const spy = vi.spyOn(api, "getCapitalPreview");
+    const { rerender } = render(
+      <GateR2ReviewContainer api={api} approvalId="AP-207" requestedAmount="100" />,
+    );
+    await screen.findByText(/Capital change preview/);
+    rerender(<GateR2ReviewContainer api={api} approvalId="AP-207" requestedAmount="600" />);
+    await screen.findByText(/exceeds the portfolio ceiling/);
+    expect(spy.mock.calls.map((c) => c[1])).toEqual(["100", "600"]);
   });
 
   it("loads an exit review through the port with every number linked", async () => {
