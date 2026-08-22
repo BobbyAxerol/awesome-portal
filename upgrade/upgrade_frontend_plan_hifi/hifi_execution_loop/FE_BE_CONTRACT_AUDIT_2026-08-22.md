@@ -50,6 +50,13 @@ thực tế là không có cách.
 **Test đề nghị:** một test dựng đúng chuỗi 1→4 ở trên. Hiện chưa có test nào
 cover, vì test hiện tại truyền hai giá trị **bằng nhau** hoặc chỉ một.
 
+**ĐÃ LÀM — `d7cab88`.** `apps/control-api/src/execution/realtime.proxy.ts:36-51`
+ưu tiên `Last-Event-ID` khi cả hai cursor có mặt, chỉ 400 khi cả hai vắng;
+validation cursor vẫn giữ nguyên. Test
+`execution-realtime.spec.ts:10` tái hiện URL snapshot cũ + header event mới
+hơn và chứng minh resume dùng header. Đã cập nhật
+`EX_BE_06_MULTIPLEXED_SSE_RESUME_BACKPRESSURE.md` §2–3.
+
 ---
 
 ### A-2 · Hai hình dạng keyset page cùng tồn tại · nặng, còn tiềm ẩn
@@ -71,6 +78,13 @@ Không có `#[serde(rename)]` trên struct đó (`lib.rs:478`), đã kiểm.
 **Đề xuất:** một tên duy nhất. Fixture đã publish và TS đã dùng
 `next_cursor`/`prev_cursor`/`applied_sort`, nên đổi phía Rust rẻ hơn.
 
+**ĐÃ LÀM — `d7cab88`.**
+`query-api/src/lib.rs:479-502` và `projection-store-pg/src/query.rs:188-208`
+dùng đúng `next_cursor` / `prev_cursor` / `applied_sort`. Test Rust
+`projection_query_page_serializes_canonical_keyset_field_names`
+(`query-api/src/lib.rs:863`) đọc `packages/contracts/fixtures/keyset-page.valid.json`,
+đối chiếu ba tên canonical và khẳng định ba tên legacy không serialize.
+
 ---
 
 ### A-3 · `aggregates_by_currency` bị rơi ở tầng TS · vừa
@@ -82,6 +96,12 @@ Không có `#[serde(rename)]` trên struct đó (`lib.rs:478`), đã kiểm.
 
 Hệ quả: footer chỉ có `total_count`. Muốn hiện tổng theo currency thì frontend
 phải tự cộng — đúng thứ BR-EX-26 vừa cấm.
+
+**ĐÃ LÀM — `d7cab88`.** `apps/control-api/src/query/contracts.ts:46-83` và
+`query-api/src/lib.rs:479-492` thêm exact-decimal `aggregates_by_currency`;
+JSON Schema, OpenAPI, fixture và generated type được test bởi
+`packages/contracts/test/fixtures.spec.ts`. Đây là contract foundation; không
+có generic HTTP query route nào được mở trước quyết định source cho BR-EX-24.
 
 ---
 
@@ -98,6 +118,14 @@ không có đường nào.
 **Đề xuất:** thêm `retention` vào page response, cùng typed enum
 `HOT/PARTIAL_HOT/COLD_REQUESTABLE/PURGED/UNKNOWN` đã có.
 
+**ĐÃ LÀM — `d7cab88`.** `query-api/src/lib.rs:492-502` và
+`projection-store-pg/src/query.rs:201-207` bắt buộc
+`retention { availability, policy_version }`; contract fixture test chứng minh
+field không được vắng. Entity query hiện trả `UNKNOWN` / `UNCONFIGURED`
+fail-closed vì chưa có source retention policy và time range để phân loại thật;
+không giả vờ một page rỗng là HOT. Phân loại HOT/PARTIAL_HOT/
+COLD_REQUESTABLE/PURGED thật vẫn cần Bobby mở source policy.
+
 ---
 
 ### A-5 · `projection.gap` mang bốn trường không ai dùng được · nhẹ
@@ -110,6 +138,14 @@ sự kiện không được giao" thay vì suy ra từ sequence). Tôi sẽ đ�
 Chỉ cần xác nhận: **chúng có được populate không**, hay luôn `None`?
 `GapEnvelope::new` (`lib.rs:129-140`) khởi tạo cả bốn là `None`.
 
+**KHÔNG LÀM —** chúng không luôn `None`: constructor
+`realtime-sse/src/lib.rs:128-140` chỉ là baseline. Slow consumer đã set
+`missed_events` ở `realtime-sse/src/lib.rs:284-292` (test :402-411);
+history/resume set `earliest_available_sequence` và/hoặc `active_epoch_id` ở
+`edge-service/src/main.rs:957-989`. Các field không áp dụng phải giữ `null`,
+frontend cần coi `null` là *không có fact*, không phải `0`. Contract fixture
+slow-consumer nay chứng minh `missed_events: 1204`.
+
 ---
 
 ### A-6 · `auth.expiring` không nói khi nào hết hạn · nhẹ
@@ -120,6 +156,15 @@ Chỉ cần xác nhận: **chúng có được populate không**, hay luôn `Non
 Không có `expires_at`. Nên UI chỉ nói được "sắp hết hạn", không nói được "còn 4
 phút" — mà cái sau mới giúp operator quyết định có bắt đầu một thao tác dài hay
 không.
+
+**ĐÃ LÀM — `d7cab88`.** `edge-service/src/main.rs:843-855,888-920,1065-1091`
+giữ verified delegated assertion expiry, từ chối expiry không dùng được, và phát
+`auth.expiring.expires_at` RFC3339 UTC. Tests
+`auth_expiring_payload_carries_the_verified_utc_expiry` (:1615) và
+`unusable_assertion_expiry_is_rejected_before_stream_setup` (:1632), OpenAPI,
+fixture và generated type đã khóa shape. Giá trị này là deadline reconnect của
+assertion ngắn (event phát sớm 2 giây), **không** là hạn Portal session; UI
+không nên diễn giải nó thành “còn 4 phút đăng nhập”.
 
 ---
 

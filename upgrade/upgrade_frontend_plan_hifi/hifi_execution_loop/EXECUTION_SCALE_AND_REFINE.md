@@ -568,6 +568,16 @@ portfolio — nên chỗ này đợi field thật, không đoán.
 **Trạng thái:** đang treo. Cho tới khi giao, R2 chạy fixture với prop mặc định,
 và `containers.tsx` ghi rõ lý do ngay tại chỗ.
 
+**ĐÃ LÀM — `d7cab88`.**
+`governance.controller.ts:63-71`, `governance.service.ts:277-302` và
+`governance.repository.ts:407-452` tạo `GET /api/v1/execution/governance/approvals/{id}/r2`:
+read-only, workspace-bound R2 review trả immutable `portfolio_id` / `currency`.
+Repository dùng một `REPEATABLE READ READ ONLY` snapshot, không lộ scope
+cross-workspace, closed hoặc expired. Test
+`governance.spec.ts:475-525` chứng minh ADMIN/USER/cross-workspace/expired;
+OpenAPI, fixture và generated type đã có. Claude cần map hai field từ
+`readGateR2Detail` và bỏ default `PF-1` / `USDT` khi dùng endpoint.
+
 ---
 
 ## BR-EX-24 — Full Blotter cần endpoint list order (keyset)
@@ -599,6 +609,13 @@ Khi endpoint có, chỉ thêm một mapper — màn không đổi.
 
 **Trạng thái:** đang treo.
 
+**CẦN BOBBY —** source runtime hiện chỉ có `GET /v1/orders` với `ALPHA_KEY`;
+không có delegated Portal capability, keyset, bucket semantics hay hai count.
+Rust generic query foundation không được expose thành raw evaluator. Cần source
+publish read capability versioned/scope-bound, snapshot-completeness, cursor,
+`total_count` + `filtered_count`, và mapping server-side cho 5 bucket; trước đó
+Full Blotter tiếp tục fixture. Không có commit/backend route cho request này.
+
 ---
 
 ## BR-EX-25 — Funnel: hi-fi vẽ 5 hop, contract publish 4 stage
@@ -621,6 +638,14 @@ vào `OrderFunnelData.stages` (và nới `maxItems` 4 → 6). Nếu không, hi-f
 order ACK → fill`") mô tả thứ backend không có.
 
 **Trạng thái:** đang treo, cần codex trả lời trước khi đóng phase 14.
+
+**KHÔNG LÀM —** source-backed funnel chỉ có bốn stage
+`SUBMIT → SOURCE_ACK → BROKER_ACK → FILL`
+(`analytics/src/funnel.rs:14-25,59-67`). Không có lifecycle fact signal/intent
+đủ identity, timestamp, order binding và completeness; `intent` trong command
+hay `risk_grant_id` không đủ để bịa hai hop. Hi-fi giữ 4 stage và limitation rõ
+ràng; muốn 5/6 hop cần source publish fact mới. Không có commit cho request
+này.
 
 ---
 
@@ -663,6 +688,13 @@ verdict mà giữ nguyên các dòng: banner đi theo verdict, không theo số 
 
 **Trạng thái:** đang treo.
 
+**CẦN BOBBY —** Portal chỉ có virtual exposure input, không có physical broker
+exposure authoritative, reconciliation epoch/as-of/freshness hay verdict để
+phán (`analytics/src/exposure.rs:26-53,66-74`). Browser không được cộng thay.
+Cần source capability trả full virtual population + physical amount theo
+currency, `as_of`/freshness/reconciliation và `OK|EXCEEDED|UNKNOWN`; thiếu hoặc
+stale phải là `UNKNOWN`. Không có commit cho request này.
+
 ---
 
 ## BR-EX-27 — Packed correlation matrix cần `sample_counts`
@@ -698,3 +730,26 @@ chạy. Và **không** đánh dấu ô là insufficient chỉ vì thiếu count 
 được" khác "kiểm rồi và không đạt".
 
 **Trạng thái:** đang treo.
+
+**CẦN BOBBY —** off-diagonal pairs có `sample_count`, nhưng diagonal `1` đang
+được synthesize và self-pair bị source từ chối
+(`analytics/src/correlation.rs:20-25,50-61,173-218`), nên không có số count
+trung thực cho mọi packed cell. Cần chọn semantics source: publish self-pair
+counts (khuyến nghị) hoặc contract cho phép diagonal nullable; sau đó mới
+publish `sample_counts` cùng packing/độ dài với `values`. Không thêm số giả và
+không có commit cho request này.
+
+---
+
+## CẦN BOBBY — Phase 6 Admin Action Drawer: đối chiếu capability (2026-08-22)
+
+| Nguồn | Fact đã publish | Hệ quả / quyết định cần owner |
+|---|---|---|
+| Hi-fi `HiFi Admin Action Drawer.dc.html` | Thực tế có **24** entry, không phải 21: `7 + 4 + 4 + 2 + 4 + 3` trong 6 group. Phần mutation chung vẽ flow `Generate plan → Apply → Verify`. | Đây là UX mục tiêu, không phải source authority; con số 21 trong §Phase 6 cần được sửa sau khi Bobby chốt scope. |
+| `command-catalog.yaml` | 13 action family; chỉ **emergency close/protective action** có `plan: true`, `apply: true`, `verify: true`. 12 family còn lại `plan: false`; destructive lab reset bị block. | Hi-fi hiện khái quát flow plan/apply/verify vượt capability publish cho đa số action. |
+| `extract/cli-command-map.json` | 19 noun / 64 action: 47 HTTP, 10 HTTP+Postgres+Redis, 2 Postgres direct, 5 Redis direct; 7 action không có HTTP equivalent. | “Portal reachable” không phải authorization. 10 mixed, 7 direct-only, host-only lab reset và shared-testnet reset không được Portal gọi. |
+
+**Câu hỏi chốt cho Bobby:** với từng mutation muốn giữ trong drawer, chọn một
+trong hai: (1) source xuất capability `plan/apply/verify` versioned,
+scope-bound, audited và delegated; hoặc (2) hi-fi hiển thị capability hiện có
+(`plan: false` / unavailable). Không suy luận quyền từ CLI hay bật runtime flag.
