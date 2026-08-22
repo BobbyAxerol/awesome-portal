@@ -1,0 +1,74 @@
+# D2 preparation overlay only. D1 may render this file but must never pull or
+# start it. The Source Proxy uses host networking solely to reach the published
+# Trading System loopback origin and binds only the Portal bridge gateway.
+services:
+  execution-edge:
+    depends_on:
+      source-proxy:
+        condition: service_healthy
+    environment:
+      EDGE_SOURCE_ORIGIN: ${EDGE_SOURCE_ORIGIN:?set the private Source Proxy HTTPS origin}
+      EDGE_SOURCE_CA_FILE: /run/secrets/source-proxy-ca.crt
+      EDGE_SOURCE_CLIENT_IDENTITY_FILE: ${EDGE_SOURCE_CLIENT_IDENTITY_FILE:?set the separate Source Proxy client identity file}
+      # This is a non-TS admission sentinel. The Source Proxy discards it and
+      # injects the real TS read identity, which never enters this container.
+      EDGE_SOURCE_API_KEY_FILE: ${EDGE_SOURCE_API_KEY_FILE:?set the Source Proxy admission-token file}
+      EDGE_PROJECTION_INGESTION_ENABLED: "false"
+      EDGE_REALTIME_SSE_ENABLED: "false"
+      EDGE_ANALYTICS_QUERY_ENABLED: "false"
+      EDGE_ANALYTICS_SOURCE_PROFILE: fixture
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+  source-proxy:
+    image: ${PORTAL_SOURCE_PROXY_IMAGE:?set PORTAL_SOURCE_PROXY_IMAGE to an immutable digest}
+    pull_policy: always
+    restart: unless-stopped
+    init: true
+    user: "101:101"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    network_mode: host
+    volumes:
+      - type: bind
+        source: ${SOURCE_PROXY_CONFIG_FILE:?set the rendered root-owned Source Proxy config}
+        target: /etc/nginx/nginx.conf
+        read_only: true
+      - type: bind
+        source: ${SOURCE_PROXY_SECRET_DIRECTORY:?set the root-owned Source Proxy secret directory}
+        target: /run/secrets
+        read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=8m,mode=1777
+    healthcheck:
+      test: ["CMD", "nginx", "-t", "-q"]
+      interval: 15s
+      timeout: 3s
+      retries: 4
+      start_period: 10s
+    stop_grace_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+
+networks:
+  execution-private:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${PORTAL_BRIDGE_CIDR:?set the approved Portal-only bridge CIDR}
+          gateway: ${PORTAL_BRIDGE_GATEWAY_IP:?set the approved Portal bridge gateway IP}

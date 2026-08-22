@@ -231,6 +231,20 @@ for required in \
   "${ROOT_DIR}/deploy/.env.execution-edge.example" \
   "${ROOT_DIR}/scripts/execution-edge-test.sh" \
   "${ROOT_DIR}/scripts/execution-edge-live-probe.sh" \
+  "${ROOT_DIR}/scripts/execution-d1-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d1-test.sh" \
+  "${ROOT_DIR}/deploy/execution-d1/README.md" \
+  "${ROOT_DIR}/deploy/execution-d1/owner-input.env.example" \
+  "${ROOT_DIR}/deploy/execution-d1/edge-source-proxy.env.example" \
+  "${ROOT_DIR}/deploy/execution-d1/compose.dark.yaml" \
+  "${ROOT_DIR}/deploy/execution-d1/wireguard/portal0.sgp.conf.template" \
+  "${ROOT_DIR}/deploy/execution-d1/wireguard/portal0.aws.conf.template" \
+  "${ROOT_DIR}/deploy/execution-d1/pki/openssl-workload-profiles.cnf.template" \
+  "${ROOT_DIR}/deploy/execution-d1/pki/identity-inventory.md" \
+  "${ROOT_DIR}/deploy/execution-d1/source-proxy/nginx.conf.template" \
+  "${ROOT_DIR}/deploy/execution-d1/source-proxy/trading-system-read-header.conf.example" \
+  "${ROOT_DIR}/deploy/runbooks/execution-d1-bootstrap-and-rollback.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md" \
@@ -494,6 +508,20 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0003_analytics_source_projection.sql \
   deploy/images/execution-edge-ci.Dockerfile \
   scripts/execution-edge-test.sh \
+  scripts/execution-d1-preflight.sh \
+  scripts/execution-d1-test.sh \
+  deploy/execution-d1/README.md \
+  deploy/execution-d1/owner-input.env.example \
+  deploy/execution-d1/edge-source-proxy.env.example \
+  deploy/execution-d1/compose.dark.yaml \
+  deploy/execution-d1/wireguard/portal0.sgp.conf.template \
+  deploy/execution-d1/wireguard/portal0.aws.conf.template \
+  deploy/execution-d1/pki/openssl-workload-profiles.cnf.template \
+  deploy/execution-d1/pki/identity-inventory.md \
+  deploy/execution-d1/source-proxy/nginx.conf.template \
+  deploy/execution-d1/source-proxy/trading-system-read-header.conf.example \
+  deploy/runbooks/execution-d1-bootstrap-and-rollback.md \
+  upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md \
   upgrade/backend/EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md \
   upgrade/backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md \
   upgrade/backend/EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md \
@@ -603,6 +631,8 @@ bash -n \
   "${ROOT_DIR}/scripts/verify-m0-golden.sh" \
   "${ROOT_DIR}/scripts/execution-edge-test.sh" \
   "${ROOT_DIR}/scripts/execution-edge-live-probe.sh" \
+  "${ROOT_DIR}/scripts/execution-d1-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d1-test.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
   "${ROOT_DIR}/apps/portal/scripts/test_backend.sh" \
   "${ROOT_DIR}/features/roadmap-task-board/tooling/clean-generated.sh"
@@ -625,4 +655,5 @@ docker compose --project-directory "${ROOT_DIR}" \
 docker compose --project-directory "${ROOT_DIR}" \
   --env-file "${ROOT_DIR}/deploy/.env.execution-edge.example" \
   -f "${ROOT_DIR}/deploy/compose.execution-edge.yaml" config --quiet
+"${ROOT_DIR}/scripts/execution-d1-test.sh"
 printf 'Portal monorepo verification passed.\n'

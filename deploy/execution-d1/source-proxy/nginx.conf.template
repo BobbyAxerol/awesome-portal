@@ -1,0 +1,126 @@
+# Portal-owned AWS-HK Source Proxy. It runs with host networking only so its
+# upstream can remain the Trading System's published loopback gateway. The
+# listener is the Portal bridge gateway, never 0.0.0.0 or a public/VPC address.
+worker_processes 1;
+pid /tmp/nginx.pid;
+error_log /dev/stderr warn;
+
+events {
+    worker_connections 256;
+}
+
+http {
+    log_format source_proxy_safe escape=json
+        '{"method":"$request_method","path":"$uri","status":$status,'
+        '"request_time":$request_time,"upstream_time":"$upstream_response_time"}';
+    access_log /dev/stdout source_proxy_safe;
+
+    proxy_http_version 1.1;
+    proxy_connect_timeout 1s;
+    proxy_read_timeout 5s;
+    proxy_send_timeout 2s;
+    proxy_buffering off;
+    proxy_request_buffering off;
+    proxy_intercept_errors off;
+    client_body_timeout 1s;
+    client_max_body_size 1k;
+
+    server {
+        listen __PORTAL_BRIDGE_GATEWAY_IP__:__SOURCE_PROXY_PRIVATE_PORT__ ssl;
+        server_name _;
+
+        # Nginx otherwise treats HEAD as allowed by a GET limit block. The
+        # Source Proxy contract is deliberately stricter: exact GET only.
+        if ($request_method != GET) {
+            return 405;
+        }
+
+        ssl_protocols TLSv1.3;
+        ssl_certificate /run/secrets/source-proxy-server.crt;
+        ssl_certificate_key /run/secrets/source-proxy-server.key;
+        ssl_client_certificate /run/secrets/projection-ingestor-ca.crt;
+        ssl_verify_client on;
+        ssl_verify_depth 2;
+        ssl_session_tickets off;
+
+        # Local container liveness only. It is not published by Docker.
+        location = /internal/healthz {
+            access_log off;
+            return 200 'ok\n';
+        }
+
+        # Public-at-source compatibility probes deliberately carry no API key.
+        location = /v1/contracts {
+            limit_except GET { deny all; }
+            proxy_pass_request_headers off;
+            proxy_set_header Host 127.0.0.1:8000;
+            proxy_set_header Accept application/json;
+            proxy_set_header X-Trading-Contract-Revision $http_x_trading_contract_revision;
+            proxy_pass http://127.0.0.1:8000/v1/contracts$is_args$args;
+        }
+
+        location = /v1/health {
+            limit_except GET { deny all; }
+            proxy_pass_request_headers off;
+            proxy_set_header Host 127.0.0.1:8000;
+            proxy_set_header Accept application/json;
+            proxy_set_header X-Trading-Contract-Revision $http_x_trading_contract_revision;
+            proxy_pass http://127.0.0.1:8000/v1/health$is_args$args;
+        }
+
+        location = /v1/health/capabilities {
+            limit_except GET { deny all; }
+            proxy_pass_request_headers off;
+            proxy_set_header Host 127.0.0.1:8000;
+            proxy_set_header Accept application/json;
+            proxy_set_header X-Trading-Contract-Revision $http_x_trading_contract_revision;
+            proxy_pass http://127.0.0.1:8000/v1/health/capabilities$is_args$args;
+        }
+
+        # Alpha-scoped reads: discard any caller key, then inject the dedicated
+        # source credential from the root/group-readable runtime include.
+        location = /v1/orders {
+            limit_except GET { deny all; }
+            proxy_pass_request_headers off;
+            proxy_set_header Host 127.0.0.1:8000;
+            proxy_set_header Accept application/json;
+            proxy_set_header X-Trading-Contract-Revision $http_x_trading_contract_revision;
+            include /run/secrets/trading-system-read-header.conf;
+            proxy_pass http://127.0.0.1:8000/v1/orders$is_args$args;
+        }
+
+        location = /v1/fills {
+            limit_except GET { deny all; }
+            proxy_pass_request_headers off;
+            proxy_set_header Host 127.0.0.1:8000;
+            proxy_set_header Accept application/json;
+            proxy_set_header X-Trading-Contract-Revision $http_x_trading_contract_revision;
+            include /run/secrets/trading-system-read-header.conf;
+            proxy_pass http://127.0.0.1:8000/v1/fills$is_args$args;
+        }
+
+        location = /v1/positions {
+            limit_except GET { deny all; }
+            proxy_pass_request_headers off;
+            proxy_set_header Host 127.0.0.1:8000;
+            proxy_set_header Accept application/json;
+            proxy_set_header X-Trading-Contract-Revision $http_x_trading_contract_revision;
+            include /run/secrets/trading-system-read-header.conf;
+            proxy_pass http://127.0.0.1:8000/v1/positions$is_args$args;
+        }
+
+        location = /v1/events {
+            limit_except GET { deny all; }
+            proxy_pass_request_headers off;
+            proxy_set_header Host 127.0.0.1:8000;
+            proxy_set_header Accept application/json;
+            proxy_set_header X-Trading-Contract-Revision $http_x_trading_contract_revision;
+            include /run/secrets/trading-system-read-header.conf;
+            proxy_pass http://127.0.0.1:8000/v1/events$is_args$args;
+        }
+
+        location / {
+            return 404;
+        }
+    }
+}

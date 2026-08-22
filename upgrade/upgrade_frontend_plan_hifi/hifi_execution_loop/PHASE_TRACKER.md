@@ -308,6 +308,15 @@ BUILDING-epoch evidence remain separately gated. Claude should continue fixture
 and failure/recovery UI only; no live topic or profile flip is unlocked. Detail:
 [`EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md`](../../backend/EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md).
 
+D1 offline preparation is now `OFFLINE_PREPARATION_COMPLETE /
+D1_OWNER_EXECUTION_PENDING`: versioned WireGuard/mTLS/JWT/Source Proxy
+templates, a value-redacting fail-closed preflight, dark Compose render and
+rollback runbook are CI-gated, but no network, service, source read or runtime
+flag was activated. This unlocks no new live FE profile. Claude should continue
+fixture, unavailable, stale, reconnect and recovery UX without assuming AWS
+availability. Detail:
+[`EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md`](../../backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md).
+
 ### 6.2 BR-EX decisions
 
 The binding contract is

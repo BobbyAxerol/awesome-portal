@@ -1,0 +1,14 @@
+# Render outside Git to /etc/wireguard/portal0.conf with owner root:root, mode
+# 0600. Do not place real keys or endpoint values in this repository.
+[Interface]
+Address = __WG_SGP_IP__/30
+PrivateKey = __SGP_WG_PRIVATE_KEY__
+Table = off
+SaveConfig = false
+
+[Peer]
+PublicKey = __AWS_WG_PUBLIC_KEY__
+PresharedKey = __WG_PRESHARED_KEY__
+Endpoint = __AWS_ELASTIC_IP__:__WG_UDP_PORT__
+AllowedIPs = __WG_AWS_IP__/32
+PersistentKeepalive = 25

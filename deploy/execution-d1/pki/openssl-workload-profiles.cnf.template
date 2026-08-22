@@ -1,0 +1,46 @@
+# Extension profiles only. The offline CA owner supplies CA database, serial,
+# policy, key paths and real SAN values outside Git. Never use one workload
+# certificate at two boundaries.
+
+[ edge_server ]
+basicConstraints = critical,CA:false
+keyUsage = critical,digitalSignature,keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @edge_server_sans
+
+[ edge_server_sans ]
+IP.1 = __WG_AWS_IP__
+URI.1 = spiffe://primusspark/portal/execution-edge/paper
+# Add a DNS SAN at render time only when an approved private name exists. The
+# canonical D1 origin is the WireGuard IP, so an empty DNS placeholder must
+# never invalidate issuance.
+
+[ sgp_control_api_client ]
+basicConstraints = critical,CA:false
+keyUsage = critical,digitalSignature
+extendedKeyUsage = clientAuth
+subjectAltName = URI:spiffe://primusspark/portal/control-api/paper
+
+[ source_proxy_server ]
+basicConstraints = critical,CA:false
+keyUsage = critical,digitalSignature,keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @source_proxy_sans
+
+[ source_proxy_sans ]
+IP.1 = __PORTAL_BRIDGE_GATEWAY_IP__
+URI.1 = spiffe://primusspark/portal/source-proxy/paper
+
+[ projection_ingestor_client ]
+basicConstraints = critical,CA:false
+keyUsage = critical,digitalSignature
+extendedKeyUsage = clientAuth
+subjectAltName = URI:spiffe://primusspark/portal/projection-ingestor/paper
+
+[ delegated_read_signer ]
+# This section documents the key usage of the SGP-only RS256 signer. It is not
+# an X.509 workload certificate. Export only its public RSA JWK to AWS.
+algorithm = RS256
+issuer = __JWT_ISSUER__
+audience = __JWT_AUDIENCE__
+maximum_ttl_seconds = 60

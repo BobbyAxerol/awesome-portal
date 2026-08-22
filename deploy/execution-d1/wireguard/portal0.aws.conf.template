@@ -1,0 +1,13 @@
+# Render outside Git to /etc/wireguard/portal0.conf with owner root:root, mode
+# 0600. This interface is host-to-host only; forwarding is not required.
+[Interface]
+Address = __WG_AWS_IP__/30
+ListenPort = __WG_UDP_PORT__
+PrivateKey = __AWS_WG_PRIVATE_KEY__
+Table = off
+SaveConfig = false
+
+[Peer]
+PublicKey = __SGP_WG_PUBLIC_KEY__
+PresharedKey = __WG_PRESHARED_KEY__
+AllowedIPs = __WG_SGP_IP__/32

@@ -204,6 +204,14 @@ authority.
   D3 proves public/auth transport; D4 begins Paper read BUILDING-epoch evidence.
   No flag/profile changed. Evidence and decision sheet:
   [`EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md`](./EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md).
+- `EX-BE-02-LIVE` **D1 offline preparation complete / owner execution
+  pending:** candidate WireGuard, workload mTLS, delegated JWT, AWS-local
+  Source Proxy, dark Edge/Proxy Compose, redacting preflight and rollback assets
+  are versioned and tested. This is preparation only: no live network/service,
+  source read, flag/profile or Trading System state changed. Deferred EIP
+  allocation and route-table IDs warn at D1 and hard-fail the production gate.
+  Detail:
+  [`EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md`](./EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md).
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

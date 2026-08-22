@@ -1,0 +1,3 @@
+# Secret-bearing runtime file format. Copy outside Git, remove this comment,
+# replace the placeholder, set 0640 root:portal-runtime and never run nginx -T.
+proxy_set_header X-API-Key "REPLACE_WITH_DEDICATED_PAPER_READ_KEY";

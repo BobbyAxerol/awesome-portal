@@ -897,6 +897,17 @@ deep-dive → ADR → slice → evidence discipline documented above.
   BUILDING-epoch evidence each need a separate gate; no delivery profile is
   activated. Evidence and decision sheet:
   [`EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md`](./backend/EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md).
+- **EX-BE-02-LIVE D1 offline preparation (2026-08-22):** versioned owner
+  input, fail-closed preflight, host-to-host `/30` WireGuard templates,
+  separate mTLS/JWT workload identities, an AWS-local exact-GET Source Proxy,
+  dark Edge/Proxy Compose overlay and an exact rollback procedure are now
+  committed and CI-gated. The real Trading System read identity is confined to
+  Source Proxy; no browser, SGP or Edge process receives it. Status is
+  `OFFLINE_PREPARATION_COMPLETE / D1_OWNER_EXECUTION_PENDING`: no package,
+  route, SG/firewall rule, key, container, source read, runtime flag or Trading
+  System state changed. `AWS_EIP_ALLOCATION_ID` and `AWS_ROUTE_TABLE_ID` remain
+  D1 warnings but are mandatory production stop-gates. Deep dive:
+  [`EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md`](./backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

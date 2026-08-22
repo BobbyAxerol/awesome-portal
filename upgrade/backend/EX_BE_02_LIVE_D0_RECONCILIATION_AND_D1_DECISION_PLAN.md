@@ -10,12 +10,19 @@ defines the smallest reversible D1 network bootstrap. It does **not** authorize
 D1, deploy a Portal service, read Trading System business data, or change the
 Trading System.
 
+The reviewable offline assets for that bootstrap are now complete and remain
+unexecuted. See
+[EX-BE-02-LIVE D1 offline preparation](./EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md)
+and the linked preflight/rollback runbook. This does not change this document's
+`D1_OWNER_DECISION_PENDING` runtime status.
+
 Authoritative inputs:
 
 - [AWS-HK D0 request and response](./EX_BE_02_LIVE_AWS_HK_DISCOVERY_AND_SAFE_BOOTSTRAP_REQUEST.md)
 - [EX-BE-02 mTLS/delegated-auth contract](./EX_BE_02_MTLS_DELEGATED_AUTH_AND_PROBES.md)
 - [Execution Loop backend master plan](../EXECUTION_LOOP_PORTAL_BACKEND_AND_HIFI_MASTER_PLAN.md)
 - [EX-BE-08a offline qualification](./EX_BE_08A_OFFLINE_SOURCE_QUALIFICATION.md)
+- [D1 offline preparation package](./EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md)
 
 ## 1. D0 result
 
