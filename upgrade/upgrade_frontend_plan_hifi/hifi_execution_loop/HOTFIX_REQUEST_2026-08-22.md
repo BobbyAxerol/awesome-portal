@@ -287,3 +287,24 @@ trường sai**.
 
 **Đề xuất:** mỗi endpoint một fixture, **sinh từ serde output của engine** chứ
 không viết tay, rồi đưa cả sáu vào H-10 và H-11.
+
+---
+
+# Bobby đã chốt catalogue phase 6 — xem BR-EX-28
+
+**Phương án B**: bảy action hiện chỉ chạy qua Postgres/Redis trực tiếp **sẽ
+được mở, ưu tiên ngay**. Chi tiết đầy đủ ở
+[`BR_EX_28_PHASE6_CATALOGUE_AND_UNBLOCK.md`](./BR_EX_28_PHASE6_CATALOGUE_AND_UNBLOCK.md).
+
+Ba điều quan trọng nhất trong đó:
+
+1. **"Mở" nghĩa là codex build HTTP endpoint**, không phải Portal nối thẳng
+   Redis. Ranh giới handoff §2.3 giữ nguyên.
+2. **Năm trong bảy** mở được dạng endpoint có kiểu. **Hai cái còn lại
+   (`redis get`, `redis scan`) là truy cập key tuỳ ý** — mở dạng nguyên bản là
+   cấp cho Portal một vòi dữ liệu đa dụng vào runtime Trading System, và nó
+   không kiểm toán được. Đề nghị hỏi *"màn nào cần gì sau hai lệnh đó"* rồi mở
+   đúng thứ ấy. **Cần Bobby chốt lại riêng mục này.**
+3. **Đường ngắn nhất tới sáu màn** không phải bảy capability, mà là **một
+   catalogue canonical trong `packages/contracts`**. Nó một mình mở phase 6, và
+   phase 6 một mình mở 7, 8, 9, 10, 11, 12.
