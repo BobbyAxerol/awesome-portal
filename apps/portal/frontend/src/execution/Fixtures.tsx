@@ -100,7 +100,7 @@ import { PortfolioThreeSixty } from "./screens/PortfolioThreeSixty";
 import { AccountBroker360 } from "./screens/AccountBroker360";
 import { PaperWorkbench } from "./screens/PaperWorkbench";
 import { BLOTTER_CROSS_FILTER, blotterPage } from "./blotter.fixtures";
-import { FUNNEL_MISSING_BROKER_ACK } from "./analytics.fixtures";
+import { FUNNEL_BOUNDED, FUNNEL_MISSING_BROKER_ACK } from "./analytics.fixtures";
 import { readOrderFunnel } from "./analytics";
 import { alpha360, alpha360AtScale } from "./alpha360.fixtures";
 import { CORRELATION_CEILING, portfolio360 } from "./portfolio360.fixtures";
@@ -1734,6 +1734,9 @@ export default function ExecutionFixtures() {
           </Case>
           <Case caption="the funnel with a broker acknowledgement nobody observed — MISSING, never inferred from the fills that followed">
             <OrderFunnelStrip funnel={readOrderFunnel(FUNNEL_MISSING_BROKER_ACK)} status="ok" />
+          </Case>
+          <Case caption="a bounded window — 4 of 4,180 events, and the screen says so instead of reading as a complete history">
+            <OrderFunnelStrip funnel={readOrderFunnel(FUNNEL_BOUNDED)} status="ok" />
           </Case>
         </Group>
 

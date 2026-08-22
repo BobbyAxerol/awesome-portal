@@ -249,11 +249,64 @@ export interface FunnelEvent {
   asOf: string | null;
 }
 
+/**
+ * How much of a population a response actually carried.
+ *
+ * The three numbers are not interchangeable and the screen must never derive
+ * one from another. `total` is the server's exact count of the validated
+ * population; `returned` is how many rows came back; `hasMore` says the
+ * response is a window rather than the whole thing. A screen that inferred
+ * `hasMore` from `returned < total` would be right today and wrong the moment
+ * the server bounds a response whose total it could not compute.
+ */
+export interface Bounded {
+  /** Exact count of the complete validated population. `null` if unpublished. */
+  total: number | null;
+  /** Rows actually returned. */
+  returned: number | null;
+  /** The server says this is a bounded window. Absent is not "complete". */
+  hasMore: boolean;
+}
+
+/**
+ * Which window the server chose.
+ *
+ * `LIFECYCLE_AND_LATEST` is lifecycle coverage plus the latest retained events
+ * — NOT a full chronological export, and saying "all events" beside it would
+ * be false. `LATEST` is the newest slice only. Both are shown to the operator
+ * verbatim rather than translated into a friendlier word that loses the
+ * distinction.
+ */
+export type AnalyticsWindow = "LIFECYCLE_AND_LATEST" | "LATEST";
+
+const WINDOWS: readonly AnalyticsWindow[] = ["LIFECYCLE_AND_LATEST", "LATEST"];
+
+function readWindow(raw: unknown): AnalyticsWindow | null {
+  return typeof raw === "string" && (WINDOWS as readonly string[]).includes(raw)
+    ? (raw as AnalyticsWindow)
+    : null;
+}
+
+function readBounded(o: Record<string, unknown> | null, totalKey: string, returnedKey: string): Bounded {
+  return {
+    total: int(o?.[totalKey]),
+    returned: int(o?.[returnedKey]),
+    // Deny-by-default in the honest direction: an absent flag does not get to
+    // claim the response is complete.
+    hasMore: o?.has_more === true,
+  };
+}
+
 export interface FunnelStage {
   name: FunnelStageName;
   state: FunnelStageState;
   /** Multiple fills stay in the server's order. */
   events: readonly FunnelEvent[];
+  /** This stage's own exact count. Never the length of `events`. */
+  eventCount: number | null;
+  returnedEventCount: number | null;
+  /** The server truncated this stage's events. */
+  truncated: boolean;
 }
 
 export interface OrderFunnel {
@@ -261,6 +314,9 @@ export interface OrderFunnel {
   stages: readonly FunnelStage[];
   /** True when any stage is MISSING or PARTIAL. */
   incomplete: boolean;
+  /** Population vs window across the whole funnel. */
+  bounded: Bounded;
+  window: AnalyticsWindow | null;
 }
 
 function readFunnelEvent(raw: unknown): FunnelEvent | null {
@@ -320,10 +376,22 @@ export function readOrderFunnel(raw: unknown): OrderFunnel | null {
         const event = readFunnelEvent(e);
         return event ? [event] : [];
       }),
+      // Read, not counted. `events.length` is what came back; `event_count` is
+      // how many exist. A stage with 200 fills and a 10-event window must be
+      // able to say both, and only the server knows the first.
+      eventCount: int(s?.event_count),
+      returnedEventCount: int(s?.returned_event_count),
+      truncated: s?.truncated === true,
     };
   });
 
-  return { orderId, stages, incomplete: stages.some((s) => s.state !== "OBSERVED") };
+  return {
+    orderId,
+    stages,
+    incomplete: stages.some((s) => s.state !== "OBSERVED"),
+    bounded: readBounded(data, "event_count", "returned_event_count"),
+    window: readWindow(data.window),
+  };
 }
 
 /* ---------------------------------------------------------------------------
@@ -701,6 +769,9 @@ export interface LedgerBucket {
 export interface CapitalLedger {
   portfolioId: string;
   buckets: readonly LedgerBucket[];
+  /** Population vs returned rows. The gross totals describe the population. */
+  bounded: Bounded;
+  window: AnalyticsWindow | null;
 }
 
 const MOVEMENTS: readonly LedgerMovement[] = [
@@ -763,6 +834,12 @@ export function readCapitalLedger(raw: unknown): CapitalLedger | null {
         },
       ];
     }),
+    // The gross totals inside each bucket describe the whole validated
+    // population, not the rows in this window. Keeping the two counts here
+    // means a screen can say "showing 12 of 4,180" beside a total that is
+    // correct for all 4,180 — which is the only honest way to show both.
+    bounded: readBounded(data, "entry_count", "returned_entry_count"),
+    window: readWindow(data.window),
   };
 }
 

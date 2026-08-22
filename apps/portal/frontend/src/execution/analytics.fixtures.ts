@@ -175,6 +175,61 @@ const SOURCE_ACK_STAGE = {
 };
 
 /** Every hop observed, and three fills that must stay in the server's order. */
+/**
+ * A bounded funnel: the source returned four events out of 4,180 and said so.
+ *
+ * Presentation/scale fixture, not a backend example — the canonical document is
+ * `packages/contracts/fixtures/execution-analytics.order-funnel.valid.json`,
+ * which `bounded.test.tsx` loads directly. This one exists so the fixtures page
+ * can show what a bounded window looks like at a scale the canonical example
+ * does not reach.
+ */
+export const FUNNEL_BOUNDED = screen("order-funnel.v1", {
+  order_id: "ord-88213",
+  window: "LIFECYCLE_AND_LATEST",
+  event_count: 4180,
+  returned_event_count: 4,
+  has_more: true,
+  stages: [
+    { ...SUBMIT_STAGE, event_count: 1, returned_event_count: 1, truncated: false },
+    { ...SOURCE_ACK_STAGE, event_count: 1, returned_event_count: 1, truncated: false },
+    {
+      stage: "BROKER_ACK",
+      state: "OBSERVED",
+      event_count: 1,
+      returned_event_count: 1,
+      truncated: false,
+      events: [
+        {
+          stage: "BROKER_ACK",
+          source_authority: "BROKER",
+          source_id: "brk-1180",
+          occurred_at: "2026-08-22T10:41:59.902Z",
+          quality: { completeness: "COMPLETE", freshness_state: "OK" },
+        },
+      ],
+    },
+    {
+      stage: "FILL",
+      state: "OBSERVED",
+      // 4,177 fills exist and one came back. The two numbers must stay apart.
+      event_count: 4177,
+      returned_event_count: 1,
+      truncated: true,
+      events: [
+        {
+          stage: "FILL",
+          source_authority: "BROKER",
+          source_id: "fil-9902",
+          occurred_at: "2026-08-22T10:42:01.118Z",
+          quantity: "0.0400",
+          quality: { completeness: "COMPLETE", freshness_state: "OK" },
+        },
+      ],
+    },
+  ],
+});
+
 export const FUNNEL_COMPLETE = screen("order-funnel.v1", {
   order_id: "ord-88213",
   stages: [

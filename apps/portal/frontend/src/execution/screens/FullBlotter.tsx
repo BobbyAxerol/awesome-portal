@@ -145,10 +145,23 @@ function FunnelCard({
   // the cap that would drop it. It is kept, along with anything the source
   // could not fully vouch for.
   const last = stage.events.at(-1) ?? null;
+  // Two different truncations reach this card and they are not the same claim.
+  //
+  //   * The SERVER bounded the window: `returnedEventCount` of `eventCount`
+  //     events came back, and `truncated` says so per stage.
+  //   * The CLIENT then capped what it received to `FILL_BUDGET`.
+  //
+  // `total` is the population, not what arrived, so the notice reads "showing 6
+  // of 4,180" rather than "6 of 12" — the second would describe the window as
+  // if it were the population, which is exactly the lie this stage exists to
+  // avoid. The server's own truncation is stated separately below, because a
+  // reader needs to know the missing rows are not merely un-rendered: they were
+  // never sent, and no amount of scrolling reaches them.
   const shownEvents = capPreserving(
     stage.events,
     FILL_BUDGET,
     (event) => event === last || event.completeness !== "COMPLETE",
+    stage.eventCount ?? stage.events.length,
   );
   const eventsNotice = capNotice(shownEvents, "fills");
   return (
@@ -192,6 +205,17 @@ function FunnelCard({
               </ol>
               {eventsNotice ? <div className="exec-funnel-meta">{eventsNotice}</div> : null}
             </>
+          ) : null}
+          {/* Outside the `events.length > 1` list, deliberately: a stage that
+              returned ONE of nine hundred is the case most in need of this
+              sentence, and it has no list to hang it under. */}
+          {stage.truncated ? (
+            <div className="exec-funnel-bounded">
+              the source returned{" "}
+              {(stage.returnedEventCount ?? stage.events.length).toLocaleString("en-US")} of{" "}
+              {stage.eventCount?.toLocaleString("en-US") ?? "an unpublished number of"} events for
+              this stage — the rest were not sent
+            </div>
           ) : null}
         </>
       )}
@@ -242,6 +266,18 @@ export function OrderFunnelStrip({
         <p className="exec-funnel-note">
           One or more hops were not observed. A later stage does not imply an earlier one —
           a fill proves the order reached the venue, not that the acknowledgement was seen.
+        </p>
+      ) : null}
+      {funnel.bounded.hasMore ? (
+        <p className="exec-funnel-bounded">
+          Bounded window — showing{" "}
+          {(funnel.bounded.returned ?? 0).toLocaleString("en-US")} of{" "}
+          {funnel.bounded.total?.toLocaleString("en-US") ?? "an unpublished number of"} events.
+          {funnel.window === "LIFECYCLE_AND_LATEST"
+            ? " The source sent lifecycle coverage plus the latest retained events — this is not a full chronological export."
+            : funnel.window === "LATEST"
+              ? " The source sent the latest retained events only."
+              : null}
         </p>
       ) : null}
       <p className="exec-funnel-note">

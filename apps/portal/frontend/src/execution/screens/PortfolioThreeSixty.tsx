@@ -526,6 +526,25 @@ function Ledger({
           <span className="exec-num">{totals.free}</span> {totals.currency}
         </p>
       ) : null}
+      {ledger.bounded.hasMore ? (
+        // Response-level, above the per-bucket caps, because it explains
+        // something those cannot: rows are missing from the DOCUMENT, not just
+        // from the render. The gross totals below are still exact for the whole
+        // population — that is the pairing this sentence has to protect, since
+        // a reader who sees "showing 12" beside a large total will otherwise
+        // assume one of the two numbers is wrong.
+        <p className="exec-ledger-bounded">
+          Bounded window — {(ledger.bounded.returned ?? 0).toLocaleString("en-US")} of{" "}
+          {ledger.bounded.total?.toLocaleString("en-US") ?? "an unpublished number of"} entries were
+          returned.
+          {ledger.window === "LATEST" ? " The source sent the latest entries only." : null}
+          {ledger.window === "LIFECYCLE_AND_LATEST"
+            ? " The source sent lifecycle coverage plus the latest entries — not a full export."
+            : null}{" "}
+          The gross increase and decrease below are exact for the complete population, not for the
+          rows shown.
+        </p>
+      ) : null}
       {ledger.buckets.map((bucket) => {
         // Bucketed, never merged. Two currencies in one running total is a
         // number with no unit, and the ledger's own invariant is per-currency.

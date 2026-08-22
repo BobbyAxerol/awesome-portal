@@ -3120,3 +3120,16 @@
   font-size: var(--text-2xs);
   color: var(--ink-mute);
 }
+
+/* A bounded window is not a styling nicety: it is the sentence that stops a
+   capped response reading as a complete history. Warn-toned, because an
+   operator reconciling against a venue statement needs to notice it. */
+.exec-funnel-bounded,
+.exec-ledger-bounded {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--warn);
+  border-left: 2px solid var(--warn);
+  padding-left: var(--space-2);
+  margin: var(--space-1) 0 0;
+}
