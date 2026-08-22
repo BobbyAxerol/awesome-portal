@@ -459,6 +459,16 @@ export interface PackedCorrelation {
   dimension: number;
   /** Lower triangle including the diagonal, row-major. Length n(n+1)/2. */
   values: readonly Decimal[];
+  /**
+   * Sample count per pair, packed identically. `null` when not published.
+   *
+   * `RANKED_PAIRS` carries `sample_count` on every pair; the packed matrix
+   * carries none, so the rule *"render INSUFFICIENT_DATA when samples are below
+   * the threshold instead of numbers"* cannot be applied per cell today. Read
+   * here so it works the day the field lands, and `null` is surfaced by the
+   * screen as a stated limitation rather than as sufficiency. See BR-EX-27.
+   */
+  sampleCounts: readonly number[] | null;
 }
 
 export interface RankedCorrelation {
@@ -518,6 +528,24 @@ function readLabels(raw: unknown): CorrelationLabel[] {
   });
 }
 
+/**
+ * Sample count behind one coefficient, or `null` when unknowable.
+ *
+ * Two different `null`s reach the same answer here and the screen must not
+ * conflate them with a low count: out of range, and not published at all. Both
+ * mean "cannot judge sufficiency", never "insufficient".
+ */
+export function samplesAt(
+  matrix: PackedCorrelation,
+  row: number,
+  column: number,
+): number | null {
+  if (!matrix.sampleCounts) return null;
+  const n = matrix.dimension;
+  if (row < 0 || column < 0 || row >= n || column >= n) return null;
+  return matrix.sampleCounts[packedIndex(row, column)] ?? null;
+}
+
 export function readCorrelation(raw: unknown): Correlation | null {
   const data = payload(raw);
   if (!data) return null;
@@ -575,7 +603,25 @@ export function readCorrelation(raw: unknown): Correlation | null {
   if (str(matrix.packing) !== "LOWER_INCLUDING_DIAGONAL_ROW_MAJOR") return null;
   if (dimension === null || dimension < 0 || dimension > CORRELATION_PACK_LIMIT) return null;
   if (values.length !== packedLength(dimension)) return null;
-  return { kind: "PACKED_MATRIX", portfolioId, labels, clusters, dimension, values };
+
+  // Optional and forward-compatible. A partial array is refused rather than
+  // padded: an index that silently returned the wrong pair's sample count
+  // would make the insufficiency rule fire on the wrong cells, which is worse
+  // than not applying it at all.
+  const rawCounts = arr(matrix.sample_counts);
+  const sampleCounts =
+    rawCounts.length === values.length
+      ? rawCounts.map((c) => int(c)).filter((c): c is number => c !== null)
+      : [];
+  return {
+    kind: "PACKED_MATRIX",
+    portfolioId,
+    labels,
+    clusters,
+    dimension,
+    values,
+    sampleCounts: sampleCounts.length === values.length ? sampleCounts : null,
+  };
 }
 
 /* ---------------------------------------------------------------------------

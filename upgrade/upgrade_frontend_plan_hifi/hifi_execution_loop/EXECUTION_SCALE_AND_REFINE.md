@@ -662,3 +662,39 @@ ba verdict. Không có phép cộng nào trong màn — test chứng minh bằng
 verdict mà giữ nguyên các dòng: banner đi theo verdict, không theo số học.
 
 **Trạng thái:** đang treo.
+
+---
+
+## BR-EX-27 — Packed correlation matrix cần `sample_counts`
+
+**Ngày raise:** 2026-08-22, khi dựng phase 16.
+
+**Endpoint/field cần:** thêm mảng song song vào `PackedMatrixRepresentation.matrix`:
+
+```json
+{ "dimension": 47,
+  "packing": "LOWER_INCLUDING_DIAGONAL_ROW_MAJOR",
+  "values": ["1", "0.31", ...],
+  "sample_counts": [720, 720, 96, ...] }
+```
+
+Cùng cách index `row×(row+1)/2 + column`, cùng độ dài `n(n+1)/2`.
+
+**Lý do UI:** `IMPLEMENTATION_PHASES` §16 đóng phase bằng đúng câu *"correlation
+panels render INSUFFICIENT_DATA when samples < threshold instead of numbers"*.
+Hiện **không làm được per-cell**: `CorrelationPair` (RANKED_PAIRS) có
+`sample_count`, còn `PackedMatrixRepresentation` **không có gì**. Hai
+representation của cùng một phép đo mà một cái kiểm được đủ dữ liệu, một cái
+không.
+
+**Ảnh hưởng hiện tại:** `readCorrelation` đọc `sample_counts` nếu có (forward
+compatible, mảng thiếu độ dài thì **từ chối** chứ không pad — index sai sẽ làm
+luật insufficiency bắn nhầm ô, tệ hơn là không bắn). Khi vắng, màn **nói thẳng**
+trên caption: *"per-pair sample counts are not published for a packed matrix, so
+the 200-sample floor could not be applied to individual cells"*.
+
+Im lặng ở đây là tệ nhất: các con số sẽ đọc như đã qua một bước kiểm chưa từng
+chạy. Và **không** đánh dấu ô là insufficient chỉ vì thiếu count — "không kiểm
+được" khác "kiểm rồi và không đạt".
+
+**Trạng thái:** đang treo.

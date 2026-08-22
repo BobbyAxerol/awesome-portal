@@ -2490,3 +2490,92 @@
   grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
   gap: var(--space-3);
 }
+
+/* ---------------------------------------------------------------------------
+ * Portfolio 360° (hi-fi 1h→3a)
+ * ------------------------------------------------------------------------ */
+
+.exec-pf {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* The matrix scrolls inside its own box. The page must not move sideways: a
+   reader comparing a row against a header needs both to stay put. */
+.exec-pf-matrixwrap {
+  overflow-x: auto;
+  margin-top: var(--space-2);
+}
+
+.exec-pf-matrix {
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+
+.exec-pf-matrix th,
+.exec-pf-matrix td {
+  border: 1px solid var(--line-soft);
+  padding: 2px var(--space-2);
+  text-align: right;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.exec-pf-matrix thead th,
+.exec-pf-matrix tbody th[scope="row"] {
+  text-align: left;
+  color: var(--ink-mute);
+  position: sticky;
+  left: 0;
+  background: var(--surface-2);
+}
+
+.exec-pf-matrix thead th {
+  top: 0;
+  z-index: 1;
+}
+
+/* The lens is a highlight, not a filter — the rest of the matrix stays legible
+   so a reader can see what the focused row is being compared against. */
+.exec-pf-matrix [data-lens="true"] {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+
+/* An em dash where a coefficient would be. Muted rather than red: a pair with
+   too few samples is not an error, it is a measurement we have not earned. */
+.exec-pf-matrix td[data-insufficient="true"],
+.exec-360-sync tr[data-insufficient="true"] td {
+  color: var(--ink-mute);
+}
+
+.exec-pf-lensbtn {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+
+.exec-pf-leaders {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: var(--space-3);
+}
+
+.exec-pf-clusters {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-4);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+/* A ledger row that reduced capital reads differently from one that added it,
+   without colour being the only carrier — the direction chip says it too. */
+.exec-360-sync tr[data-direction="DECREASE"] th[scope="row"] {
+  box-shadow: inset 2px 0 0 var(--warn);
+}

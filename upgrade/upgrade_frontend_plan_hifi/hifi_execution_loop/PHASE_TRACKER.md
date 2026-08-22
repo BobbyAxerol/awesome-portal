@@ -53,7 +53,7 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 13 | Paper Workbench VNM (4h) | `BLOCKED` | `INTEGRATION_PENDING` | source/screen API integration; venue/ATO/ATC decision | EX-BE-04b adaptive query + EX-BE-03 PAUSED semantics delivered; timezone decision remains |
 | 14 | Full Blotter (4c) | **screen built** (fixtures, scale-refined) | `INTEGRATION_COMPLETE` | source activation/parity + remaining blotter detail integration | EX-BE-07b typed active-epoch funnel API delivered over mTLS/delegated auth; flag remains off |
 | 15 | Alpha 360° (2a+2b) | **screen built** (9 tabs, fixtures, scale-refined) | `INTEGRATION_COMPLETE` | source activation/parity + remaining detail/series integration | EX-BE-07b capped portfolio-bound insight API delivered; flag/profile remain off/fixture |
-| 16 | Portfolio 360° (1h→3a) | `BLOCKED` | `INTEGRATION_COMPLETE` | source activation/load evidence + remaining detail/series integration | EX-BE-07b source-backed correlation + capital-ledger APIs delivered with exact decimals |
+| 16 | Portfolio 360° (1h→3a) | **screen built** (3 representations, fixtures, scale-refined) | `INTEGRATION_COMPLETE` | source activation/load evidence + remaining detail/series integration | EX-BE-07b source-backed correlation + capital-ledger APIs delivered with exact decimals |
 | 17 | Account/Broker 360° (1g) | **screen built** (fixtures, scale-refined) | `INTEGRATION_COMPLETE` | source activation/population parity + remaining detail integration | EX-BE-07b source-backed full-population exposure API delivered; count mismatches fail closed |
 | 18 | Hardening | `BLOCKED` | `OPERATIONAL_EVIDENCE_PENDING` | EX-BE-08; implemented target subset | master plan §§13–14 |
 
@@ -1208,3 +1208,82 @@ Chạy ở quy mô runtime: 22 venue, 60 deployment, 1,200 position trong 48,213
   một alpha (cùng loại BR-EX-24).
 - Chart body vẫn là khung + caption; ECharts thuộc phase 18 theo `chart.tsx`.
 - Chưa nối container/route.
+
+---
+
+## 21. Phase 16 — Portfolio 360° dựng xong (2026-08-22)
+
+### 21.1 Phát hiện chính: 150 là trần **transport**, không phải trần **render**
+
+`EX-BE-07a` pack tam giác dưới tới `dimension: 150` rồi mới chuyển ranked pairs.
+Trần đó nói về **byte trên dây**. Còn 150 × 150 là **22,500 ô DOM** — browser
+không dựng nổi, và kể cả dựng được thì không ai đọc được một giá trị ra khỏi nó.
+
+Nên màn tự mang một ngưỡng hiển thị **thấp hơn nhiều**, và vượt ngưỡng thì
+**leader lens thành view chính** — một dòng của một alpha là `n` ô, không phải
+`n²`. Đây không phải fallback bịa ra vì scale: hi-fi **đã vẽ sẵn leader lens**,
+nên đường degradation là một affordance có sẵn trong thiết kế.
+
+Ba representation, một hàm thuần chọn giữa chúng, và lựa chọn **luôn được nói ra
+trên màn**.
+
+### 21.2 Ngân sách 4,096 ô — và lần đầu tôi đặt sai
+
+Bản đầu để `MATRIX_CELL_BUDGET = 1_600` (40×40). Test đỏ ngay: fleet hôm nay 47
+alpha = **2,209 ô** → rơi xuống lens, nghĩa là **matrix không bao giờ được thấy
+trong production**. View chính của hi-fi mà không với tới được thì nó là bản vẽ,
+không phải thiết kế.
+
+Sửa thành **4,096** (64×64): 47 alpha vẫn là matrix, 150 vẫn là lens, và vẫn
+thấp hơn trần transport năm lần. 64 entity là khoảng ranh giới một lưới có nhãn
+còn dùng được.
+
+Test bắt được vì luật là **hàm thuần** `correlationView()`, không phải một nhánh
+`if` chôn trong render path. Kèm một test khoá hai thứ phải khớp nhau: hàm nói
+"matrix" thì DOM phải thật sự có 47×47 ô — một hàm nói đúng mà panel vẽ khác sẽ
+qua được mọi test còn lại.
+
+### 21.3 Ba nghĩa của "không có số", giữ riêng
+
+| Trạng thái | Hiển thị | Vì sao khác nhau |
+|---|---|---|
+| Đủ mẫu, có giá trị | `0.31` | — |
+| **Kiểm rồi, dưới sàn 200 mẫu** | `—` INSUFFICIENT_DATA | đo rồi nhưng chưa đủ để đứng sau |
+| **Không có sample count để kiểm** | số vẫn hiện + caption nói thẳng luật không áp được | "không kiểm được" ≠ "kiểm rồi không đạt" |
+
+Ô **không** bị đánh dấu insufficient chỉ vì thiếu count. Và caption nói thẳng
+thay vì im lặng — im lặng khiến các con số đọc như đã qua một bước kiểm chưa
+từng chạy. Đó là **BR-EX-27**.
+
+Fixture mô hình insufficiency theo **entity** chứ không rải ô ngẫu nhiên: `MM`
+có 9 ngày lịch sử nên **cả dòng và cả cột** của nó là gạch — đúng như hi-fi vẽ,
+và đúng nguyên nhân thật.
+
+### 21.4 Ba danh sách leader, không gộp
+
+Hi-fi ghi thẳng *"three ranked lists, never one merged 'leader score'"*. Lý do:
+một alpha chiếm 70% exposure nhưng 20% variance là **vấn đề khác** với một alpha
+20% exposure và 70% variance — một con số gộp trả lời cả hai giống nhau. Test
+khẳng định có đúng 3 section và không có chữ "leader score" nào.
+
+### 21.5 Evidence
+
+vitest **934 passed / 1 skipped** (+27) · tsc sạch · build sạch · visual
+baseline **101/101** · contrast gate 14/14.
+
+Chạy ở ba quy mô: 4 entity (hi-fi), **47** (fleet hôm nay, matrix thật 47×47
+trong DOM), **150** (trần transport → lens), và ranked 210 entity / 500 pair.
+
+### 21.6 Còn thiếu để đóng phase 16
+
+- **BR-EX-27** (`sample_counts` trên packed matrix) — đây là điều kiện đóng
+  phase theo `IMPLEMENTATION_PHASES` §16.
+- Chưa có endpoint cho holdings / approvals / incidents / audit của portfolio.
+- Tab Audit render `unavailable` — chưa có command journal cấp portfolio.
+- Chưa nối container/route.
+
+### 21.7 Frontend hết việc Lane A
+
+Sau phase 16, **mọi phase còn lại đều chờ người khác**: phase 6 chờ Bobby chốt
+catalogue; 4, 7, 8, 9, 10, 13 chờ codex mở source; 11, 12 chờ owner mở cổng
+production; 18 chờ có target subset.
