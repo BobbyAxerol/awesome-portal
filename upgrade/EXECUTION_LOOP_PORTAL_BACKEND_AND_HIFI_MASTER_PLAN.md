@@ -642,8 +642,11 @@ envelope in §7.1 and all money/quantity fields are decimal strings.
 ### 10.5 Paper Exit Review — `/governance/exit-reviews/:reviewId`
 
 - Query: observation-window progress, server-evaluated gate criteria, breaches,
-  evidence hashes, missing evidence, and recommended next eligible action.
-- Command: record review decision; promotion only via a distinct scoped operation.
+  evidence hashes, missing evidence, canonical `PAPER_OBSERVATION` lifecycle
+  stage and recommended next eligible action.
+- Command: record review decision through canonical plan/apply/poll. `PROMOTE`
+  creates only a Portal-owned scoped authority grant; a distinct later
+  operation must consume it and no Paper Exit decision commands Trading System.
 - Ownership: criteria/decision are Portal workflow records; inputs are attributed
   per source and evaluation result is `DERIVED` with policy/formula version.
 
@@ -815,7 +818,7 @@ window opens.
 | ID | Goal | Backend scope | Claude parallel lane | Exit gate | Status |
 |---|---|---|---|---|---|
 | PRE-IAM-01 | Close Execution phases 1–2 on SGP | Approval Inbox + R1 detail + plan/apply/poll, non-local keyring delivery, auth/RBAC/Origin/CSRF/SoD and SGP Compose smoke; no AWS call | correct canonical mutation paths and CSRF transport; keep product route/profile inactive until policy review | fresh PG corpus + isolated public-gateway smoke + runtime research-mode readiness + audit/outbox atomicity | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — SGP backend gate green 2026-08-22 |
-| PRE-IAM-02 | Complete Paper Exit Review | Portal-owned exit-review repository, deterministic policy/evidence evaluation and source-unavailable semantics | finish Phase 5 screen states/lineage against the published contract | missing/stale/partial evidence cases; immutable decision/audit tests; no execution command | `PLANNED` |
+| PRE-IAM-02 | Complete Paper Exit Review | Portal-owned exit-review repository, deterministic policy/evidence evaluation and source-unavailable semantics | finish Phase 5 screen states/lineage against the published contract | missing/stale/partial evidence cases; immutable decision/audit tests; no execution command | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — fresh PG, contract and SGP runtime gates green 2026-08-22 |
 | PRE-IAM-03 | Build Command Center snapshot API dark | bounded snapshot composition over existing projection contracts; no SSE/profile activation | build/keep snapshot, empty, partial, stale, unavailable fixtures and component wiring | response budget, per-panel authority/freshness, exact counts and fail-closed source gaps | `PLANNED` |
 | PRE-IAM-04 | Offline operational hardening | close confirmed H-series contract/security issues, load/replay/restore/rollback evidence that needs no AWS source | consume only published fixtures/contracts; keep failure states visible | focused regression + workspace gates; credential-free evidence report | `PLANNED` |
 | PRE-IAM-05 | Prepare D2 dark deployment | image/config/service manifests for AWS Portal Edge + Source Proxy with interfaces/routes/source reads still off | no AWS/live UI activation; continue fixture work | offline render, non-root/read-only image checks, preflight and rollback rehearsal | `PLANNED` |
@@ -829,6 +832,18 @@ express Portal-owned governance writes independently, plus Claude's canonical
 route/CSRF integration. Qualification evidence and the exact residual boundary
 are recorded in
 [`EX_BE_05A_SGP_PHASE_1_2_CLOSEOUT.md`](backend/EX_BE_05A_SGP_PHASE_1_2_CLOSEOUT.md).
+
+`PRE-IAM-02` has closed only the backend lane of product phase 5. Its
+`PROMOTE` outcome produces a Portal `promotion_authority_grant`, not a Sandbox
+activation. Registry/source/command flags remain false. Acceptance evidence and
+the exact Claude handoff are recorded in
+[`PRE_IAM_02_PAPER_EXIT_REVIEW_CLOSEOUT.md`](backend/PRE_IAM_02_PAPER_EXIT_REVIEW_CLOSEOUT.md).
+
+Claude request `BR-EX-28` is now a tracked cross-queue input: Phase 6 needs one
+canonical command catalogue and purpose-built HTTP endpoints, while generic
+Redis `get`/`scan` remain prohibited. The six-phase queue order is unchanged;
+the request must be re-read during `PRE-IAM-03` dependency composition and
+scheduled as the separate Phase 6 unblocker.
 
 EX-BE-04a→05a has delivered the Portal-owned control-plane foundation without an AWS, Rust,
 Trading System or projection dependency. It supplies Approval Inbox and Gate R1 from real
@@ -924,7 +939,7 @@ Statuses use the architecture vocabulary, never bare `COMPLETE`:
 | 2 Gate R1 | immutable evidence and valid SoD approval | `GET /governance/approvals/{id}/r1`; plan/apply/poll decision | Portal decision; evidence source-attributed | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-05a; Claude CSRF/canonical-route + reviewed governance-write policy for activation | SoD/evidence/version/expiry/quorum/audit tests and public-gateway 1:1:1 atomicity smoke green; no AWS dependency |
 | 3 Gate R2 | safe capital preview and R2 decision | R2 detail, `/capital-preview`, command plan | Portal decision; EXECUTION/BROKER inputs; DERIVED preview | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-03/05a/07b; EX-BE-08 activation evidence | source-backed exact-decimal preview, profile/capability/count mismatch refusal; dual-approval and activation tests remain |
 | 4 Paper Workbench | real Paper observation without client aggregation | deployment summary/series; operation status | EXECUTION/BROKER/DERIVED; per-panel policy | `FOUNDATION_COMPLETE` | EX-BE-03/04b; M7 gate evidence | 500-deployment corpus, adaptive ≤5k chart points, Paper action disabled unless verified |
-| 5 Paper Exit Review | server evaluates observation exit evidence | exit-review read/decision | Portal record; DERIVED with source-attributed inputs | `FOUNDATION_COMPLETE` | EX-BE-03/05a | deterministic policy replay, missing/stale evidence states, audit proof |
+| 5 Paper Exit Review | server evaluates observation exit evidence | exit-review read + canonical plan/apply/poll decision | Portal record; DERIVED with source-attributed inputs; grant-only promotion | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | PRE-IAM-02; Claude HTTP/eligibility mapping; later source activation | fresh PG 128/128, contract 20/20, deterministic missing/partial/stale/unavailable/error, immutable audit/outbox/grant and no execution command |
 | 6 Admin Action Drawer | generic safe plan→apply→verify | command catalog, plan, apply, operation poll | Portal policy record; EXECUTION terminal outcome | `FOUNDATION_COMPLETE` | EX-BE-02/05b; TS command capability | plan `request_key`, blocker completeness, duplicate/uncertain reconciliation tests; production flag remains off |
 | 7 Operations Queue | scalable, typed operations triage | `GET /operations`; ack/resolve | Portal workflow record plus EXECUTION result | `INTEGRATION_PENDING` | EX-BE-04a/05b | 182k bidirectional keyset tests, ack≠resolve tests, exact count |
 | 8 Incident Detail | correlated evidence and explicit incident workflow | incident detail, assign/ack/annotate/resolve | Portal workflow record; source-attributed findings | `FOUNDATION_COMPLETE` | EX-BE-05a/05b/06 | completeness badges, optimistic concurrency, evidence-required resolution and redaction tests |

@@ -42,7 +42,7 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 2 | Gate R1 Review (1a) | `WIP` (adapter built, on the port) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | **Claude:** canonical plan/apply/poll routes + CSRF + distinct Portal-governance-write policy | immutable evidence + SoD/concurrency/audit implemented; public-gateway decision:audit:outbox = 1:1:1 |
 | 3 | Gate R2 Review (1b) | `WIP` (screen + adapter, on the port) | `INTEGRATION_COMPLETE` | **Claude:** consume generated R2 `portfolio_id`/`currency`, remove fixture defaults; source activation/evidence + EX-BE-05a decision integration | EX-BE-07b active-epoch capital-preview repository/API delivered; flags/profile remain fixture/off |
 | 4 | Paper Workbench (1c) | **screen built** (fixtures, scale-refined) | `FOUNDATION_COMPLETE` | screen API + source integration; M7 evidence | EX-BE-04b adaptive six-rung/exact series + cold contract delivered; production source remains inactive |
-| 5 | Paper Exit Review (4b) | `WIP` (screen + adapter, on the port) | `FOUNDATION_COMPLETE` | EX-BE-05a evidence integration | EX-BE-03 freshness basis delivered; master plan §§10.5, 12.2 |
+| 5 | Paper Exit Review (4b) | `WIP` (canonical HTTP/eligibility mapping remains) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Claude maps PRE-IAM-02 contract; later real Paper source activation | PRE-IAM-02 fresh PG 128/128 + contract 20/20 + SGP runtime green; closeout linked below |
 | 6 | Admin Action Drawer (1i) | `READY`¹ | `FOUNDATION_COMPLETE` | **CẦN BOBBY:** select capability per catalog; Claude keeps unsupported actions unavailable | EX-BE-02 authenticated boundary and request-key/UNCERTAIN contract delivered; production disabled |
 | 7 | Operations Queue (4e) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-05b operation integration | EX-BE-04a bidirectional keyset delivered; ack≠resolve remains |
 | 8 | Incident Detail (4d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a/05b source integration | EX-BE-03 completeness + EX-BE-06 gap/reconnect transport delivered; source integration remains |
@@ -1486,7 +1486,7 @@ reads, projection ingestion, SSE or Trading System commands.
 | ID | Backend / codex | Frontend / Claude | Shared status |
 |---|---|---|---|
 | PRE-IAM-01 | close Phase 1 Approval Inbox + Phase 2 Gate R1 on SGP with fresh-PG and public-gateway operational evidence | correct Phase 1/2 HTTP integration listed below; do not activate registry policy | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend gate green |
-| PRE-IAM-02 | source-safe Paper Exit repository/API and deterministic evidence evaluation | finish Phase 5 contract mapping, missing/stale/partial states and lineage | `PLANNED` |
+| PRE-IAM-02 | source-safe Paper Exit repository/API and deterministic evidence evaluation | finish Phase 5 contract mapping, missing/stale/partial/error states and lineage | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend accepted; FE mapping remains |
 | PRE-IAM-03 | dark Command Center snapshot API | implement/retain snapshot and five honest failure-state fixtures | `PLANNED` |
 | PRE-IAM-04 | offline security/contract/load/replay/restore hardening | consume frozen contracts and keep every degraded state visible | `PLANNED` |
 | PRE-IAM-05 | D2 dark image/config/preflight/rollback preparation | no live/source activation work required | `PLANNED` |
@@ -1523,6 +1523,30 @@ the SGP `portal` runtime is ready in research mode with non-dev auth and two
 independent file-backed keyrings. The separate stable v1.0.1 stack was not
 rebuilt. Full evidence:
 [`EX_BE_05A_SGP_PHASE_1_2_CLOSEOUT.md`](../../backend/EX_BE_05A_SGP_PHASE_1_2_CLOSEOUT.md).
+
+### 24A.2 PRE-IAM-02 Paper Exit handoff
+
+Codex accepted the Phase 5 backend lane on 2026-08-22. Canonical contract:
+
+- detail publishes `review.stage=PAPER_OBSERVATION` and `review.review_version`;
+- source panels distinguish partial/stale/unavailable/error and every required
+  finding remains source-linked and evidence-hashed;
+- decisions use canonical `/commands/plans` → `/operations/{id}/apply` → poll;
+- `PROMOTE` creates a Portal grant only; it does not activate Sandbox or call
+  Trading System;
+- extend/reject are server-eligible safe decisions even when evidence is not
+  usable, while promotion fails closed.
+
+Claude lane before activation: keep the new stage-driven LifecycleRail; read
+`review_version`; map every panel failure state; bind extend/reject to
+`can_extend_observation`/`can_reject`; select the Paper Exit plan schema and
+decision vocabulary; and send same-origin double-submit CSRF on mutations.
+Full backend evidence:
+[`PRE_IAM_02_PAPER_EXIT_REVIEW_CLOSEOUT.md`](../../backend/PRE_IAM_02_PAPER_EXIT_REVIEW_CLOSEOUT.md).
+
+Latest request `BR-EX-28` is acknowledged as a separate Phase 6 unblocker. It
+requires a canonical command catalogue plus purpose-built typed HTTP endpoints;
+it does not authorize Portal-to-Redis access or generic Redis `get`/`scan`.
 
 ---
 

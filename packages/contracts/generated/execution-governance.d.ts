@@ -21,6 +21,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/execution/governance/exit-reviews/{review_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Returns a Portal-owned Paper Exit Review with deterministic evidence evaluation. Missing, partial, stale and unavailable evidence are explicit fail-closed states. */
+        get: operations["executionGovernancePaperExitReview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/commands/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Plans a Portal Paper Exit decision. This shared route also supports separately-versioned governance command families; this operation documents the Paper Exit discriminator. */
+        post: operations["planPaperExitDecision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/operations/{operation_id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Records the planned Portal decision. HTTP 202 is an acknowledgement, not terminal success. No Trading System effect is requested. */
+        post: operations["applyPaperExitDecision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/operations/{operation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Returns workflow status and verification_result separately for a Paper Exit decision operation. */
+        get: operations["getPaperExitDecisionOperation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -90,6 +158,313 @@ export interface components {
             };
             request_id: string;
         };
+        NullableDateTime: components["schemas"]["DateTime"] | null;
+        Review: {
+            review_id: components["schemas"]["Identifier"];
+            deployment_id: components["schemas"]["Identifier"];
+            portfolio_id: components["schemas"]["Identifier"];
+            venue: string;
+            /** @constant */
+            stage: "PAPER_OBSERVATION";
+            subject_label: string;
+            /** @constant */
+            promote_to: "SANDBOX_VALIDATION";
+            /** @enum {unknown} */
+            review_state: "PENDING" | "EXTENDED" | "REJECTED_TO_PAPER_HELD" | "PROMOTION_AUTHORIZED";
+            review_version: number;
+            quorum_met: number;
+            quorum_required: number;
+            sla: {
+                age_minutes: number;
+                budget_minutes: number;
+            };
+            expires_at: components["schemas"]["DateTime"];
+            /** @enum {integer|null} */
+            extension_days: 14 | null;
+            extended_until: components["schemas"]["NullableDateTime"];
+        };
+        Actor: {
+            user_id: components["schemas"]["Identifier"];
+            username: string;
+            roles: ("ADMIN" | "USER")[];
+        };
+        NullableString: string | null;
+        Eligibility: {
+            can_approve: boolean;
+            can_approve_with_condition: boolean;
+            can_deny: boolean;
+            can_extend_observation: boolean;
+            can_reject: boolean;
+            locks: string[];
+            /** @enum {unknown} */
+            separation_of_duties: "OK" | "VIOLATION";
+        };
+        Lineage: {
+            /** @enum {unknown} */
+            kind: "ARTIFACT" | "R1_APPROVAL" | "R2_APPROVAL" | "OBSERVATION_POLICY" | "EVIDENCE_PACK";
+            label: string;
+            value: string;
+            href: components["schemas"]["NullableString"];
+            digest: components["schemas"]["Hash"] | null;
+            /** @enum {unknown} */
+            source_authority: "RESEARCH" | "EXECUTION" | "BROKER" | "DERIVED" | "PORTAL";
+            required: boolean;
+        };
+        Finding: {
+            finding_id: components["schemas"]["Identifier"];
+            metric_key: string;
+            label: string;
+            /** @enum {unknown} */
+            outcome: "pass" | "watch" | "fail" | "insufficient";
+            blocking: boolean;
+            required: boolean;
+            carries_to: components["schemas"]["NullableString"];
+            exact_value: components["schemas"]["NullableString"];
+            unit: components["schemas"]["NullableString"];
+            currency: components["schemas"]["NullableString"];
+            threshold_value: components["schemas"]["NullableString"];
+            source_label: components["schemas"]["NullableString"];
+            href: components["schemas"]["NullableString"];
+            evidence_hash: components["schemas"]["Hash"] | null;
+            formula_version: components["schemas"]["NullableString"];
+            as_of: components["schemas"]["NullableDateTime"];
+        };
+        Panel: {
+            panel_id: components["schemas"]["Identifier"];
+            /** @enum {unknown} */
+            panel_kind: "OBSERVATION_COVERAGE" | "DRIFT" | "LIMITS_HEALTH" | "PORTFOLIO_FIT";
+            title: string;
+            source: components["schemas"]["NullableString"];
+            /** @enum {unknown} */
+            source_authority: "RESEARCH" | "EXECUTION" | "BROKER" | "DERIVED";
+            source_href: components["schemas"]["NullableString"];
+            /** @enum {unknown} */
+            status: "ok" | "partial" | "stale" | "unavailable" | "error";
+            reason: components["schemas"]["NullableString"];
+            as_of: components["schemas"]["NullableDateTime"];
+            /** @enum {unknown} */
+            freshness_state: "OK" | "STALE" | "UNKNOWN";
+            /** @enum {unknown} */
+            source_completeness: "EVENT_SOURCED" | "POLL_BOUNDED" | "UNKNOWN";
+            poll_interval_ms: number | null;
+            formula_version: components["schemas"]["NullableString"];
+            findings: components["schemas"]["Finding"][];
+        };
+        Code: {
+            code: string;
+        };
+        Evaluation: {
+            /** @enum {unknown} */
+            state: "MET" | "UNMET" | "PARTIAL" | "STALE" | "UNAVAILABLE";
+            policy_version: string;
+            formula_version: string;
+            missing_panel_kinds: string[];
+            missing_lineage_kinds: string[];
+            missing_evidence_finding_ids: components["schemas"]["Identifier"][];
+            stale_panel_ids: components["schemas"]["Identifier"][];
+            unavailable_panel_ids: components["schemas"]["Identifier"][];
+            partial_panel_ids: components["schemas"]["Identifier"][];
+            blocking_finding_ids: components["schemas"]["Identifier"][];
+            carried_finding_ids: components["schemas"]["Identifier"][];
+            warnings: components["schemas"]["Code"][];
+        };
+        DecisionActor: {
+            user_id: components["schemas"]["Identifier"];
+            username: string;
+        };
+        Decision: {
+            decision_id: components["schemas"]["Identifier"];
+            operation_id: components["schemas"]["Identifier"];
+            actor: components["schemas"]["DecisionActor"];
+            /** @enum {unknown} */
+            outcome: "PROMOTE" | "EXTEND_OBSERVATION" | "REJECT";
+            reason: string;
+            /** @enum {integer|null} */
+            extension_days: 14 | null;
+            /** @enum {unknown} */
+            resulting_state: "EXTENDED" | "REJECTED_TO_PAPER_HELD" | "PROMOTION_AUTHORIZED";
+            evidence_set_hash: components["schemas"]["Hash"];
+            source_snapshot_hash: components["schemas"]["Hash"];
+            review_version_before: number;
+            review_version_after: number;
+            decided_at: components["schemas"]["DateTime"];
+        };
+        PromotionGrant: {
+            grant_id: components["schemas"]["Identifier"];
+            deployment_id: components["schemas"]["Identifier"];
+            /** @constant */
+            target_stage: "SANDBOX_VALIDATION";
+            /** @constant */
+            grant_state: "AVAILABLE";
+            evidence_set_hash: components["schemas"]["Hash"];
+            source_snapshot_hash: components["schemas"]["Hash"];
+            policy_version: string;
+            created_at: components["schemas"]["DateTime"];
+        };
+        PaperExitReviewResponse: {
+            /** @constant */
+            schema_version: "governance.paper-exit-review.v1";
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @enum {unknown} */
+            delivery_profile: "fixture" | "shadow" | "paper";
+            read_at: components["schemas"]["DateTime"];
+            data: {
+                review: components["schemas"]["Review"];
+                actor: components["schemas"]["Actor"];
+                /** @enum {unknown} */
+                status: "ok" | "partial" | "stale" | "unavailable";
+                reason: components["schemas"]["NullableString"];
+                gate_met: boolean;
+                /** @enum {unknown} */
+                evaluation_state: "MET" | "UNMET" | "PARTIAL" | "STALE" | "UNAVAILABLE";
+                gate_summary: string;
+                policy_id: components["schemas"]["Identifier"];
+                policy_version: string;
+                formula_version: string;
+                evidence_set_hash: components["schemas"]["Hash"];
+                source_snapshot_hash: components["schemas"]["Hash"];
+                eligibility: components["schemas"]["Eligibility"];
+                lineage: components["schemas"]["Lineage"][];
+                panels: components["schemas"]["Panel"][];
+                evaluation: components["schemas"]["Evaluation"];
+                recommendation: string;
+                /** @enum {unknown} */
+                recommended_next_eligible_action: "APPROVE_PROMOTION" | "EXTEND_OR_REJECT" | "RESTORE_EVIDENCE_OR_EXTEND";
+                activation_plan: {
+                    /** @constant */
+                    mode: "PREVIEW_ONLY";
+                    /** @constant */
+                    target_stage: "SANDBOX_VALIDATION";
+                    /** @constant */
+                    authority_semantics: "APPROVAL_CREATES_PROMOTION_GRANT_ONLY";
+                    /** @constant */
+                    external_side_effect_requested: false;
+                };
+                decisions: components["schemas"]["Decision"][];
+                promotion_grant: components["schemas"]["PromotionGrant"] | null;
+            };
+        };
+        PaperExitDecisionPlanRequest: {
+            /** @constant */
+            schema_version: "governance.paper-exit-decision-plan-request.v1";
+            workspace_id: components["schemas"]["WorkspaceId"];
+            request_key: string;
+            /** @constant */
+            command_type: "GOVERNANCE_PAPER_EXIT_DECISION";
+            /** @constant */
+            command_version: 1;
+            target: {
+                review_id: components["schemas"]["Identifier"];
+            };
+            expected_review_version: number;
+            payload: {
+                /** @enum {unknown} */
+                decision: "PROMOTE" | "EXTEND_OBSERVATION" | "REJECT";
+                reason: string;
+                /** @enum {integer|null} */
+                extension_days?: 14 | null;
+                evidence_hashes: components["schemas"]["Hash"][];
+            } & unknown;
+        };
+        PaperExitDecisionPlan: {
+            /** @constant */
+            schema_version: "governance.paper-exit-decision-plan.v1";
+            operation_id: components["schemas"]["Identifier"];
+            /** @constant */
+            command_type: "GOVERNANCE_PAPER_EXIT_DECISION";
+            /** @constant */
+            command_version: 1;
+            review_id: components["schemas"]["Identifier"];
+            expected_review_version: number;
+            payload_hash: components["schemas"]["Hash"];
+            evidence_set_hash: components["schemas"]["Hash"];
+            source_snapshot_hash: components["schemas"]["Hash"];
+            /** @enum {unknown} */
+            evaluation_state: "MET" | "UNMET" | "PARTIAL" | "STALE" | "UNAVAILABLE";
+            /** @constant */
+            risk_tier: "R1";
+            blockers: components["schemas"]["Code"][];
+            warnings: components["schemas"]["Code"][];
+            required_approvers: {
+                /** @constant */
+                role: "ADMIN";
+                /** @constant */
+                count: 1;
+            }[];
+            /** @constant */
+            fresh_auth_required: false;
+            expires_at: components["schemas"]["DateTime"];
+            apply_token: string | null;
+            /** @enum {unknown} */
+            status: "PLANNED" | "APPLIED" | "EXPIRED";
+            /** @constant */
+            external_side_effect_requested: false;
+            replayed: boolean;
+        };
+        PaperExitApplyRequest: {
+            /** @constant */
+            schema_version: "governance.paper-exit-decision-apply-request.v1";
+            workspace_id: components["schemas"]["WorkspaceId"];
+            apply_token: string;
+        };
+        PaperExitApplyResponse: {
+            /** @constant */
+            schema_version: "governance.paper-exit-decision-apply.v1";
+            operation_id: components["schemas"]["Identifier"];
+            receipt_id: components["schemas"]["Identifier"] | null;
+            /** @constant */
+            status: "PENDING";
+            replayed: boolean;
+            /** @constant */
+            external_side_effect_requested: false;
+        };
+        DecisionReceipt: {
+            operation_id: components["schemas"]["Identifier"];
+            receipt_id: components["schemas"]["Identifier"];
+            /** @constant */
+            status: "SUCCEEDED";
+            review_id: components["schemas"]["Identifier"];
+            /** @enum {unknown} */
+            review_state: "EXTENDED" | "REJECTED_TO_PAPER_HELD" | "PROMOTION_AUTHORIZED";
+            review_version: number;
+            /** @enum {unknown} */
+            decision: "PROMOTE" | "EXTEND_OBSERVATION" | "REJECT";
+            /** @enum {integer|null} */
+            extension_days: 14 | null;
+            extended_until: components["schemas"]["NullableDateTime"];
+            promotion_grant_id: components["schemas"]["Identifier"] | null;
+            /** @enum {unknown} */
+            next_eligible_action: "PLAN_SANDBOX_PROMOTION" | "RETURN_TO_PAPER_HELD" | "CONTINUE_PAPER_OBSERVATION";
+            /** @constant */
+            external_side_effect_requested: false;
+            decided_at: components["schemas"]["DateTime"];
+        };
+        PaperExitDecisionOperation: {
+            /** @constant */
+            schema_version: "governance.paper-exit-decision-operation.v1";
+            operation_id: components["schemas"]["Identifier"];
+            review_id: components["schemas"]["Identifier"];
+            /** @constant */
+            command_type: "GOVERNANCE_PAPER_EXIT_DECISION";
+            /** @enum {unknown} */
+            status: "PENDING" | "SUCCEEDED" | "EXPIRED";
+            /** @enum {unknown} */
+            verification_result: "PENDING" | "SUCCEEDED" | "EXPIRED";
+            blockers: components["schemas"]["Code"][];
+            warnings: components["schemas"]["Code"][];
+            expected_review_version: number;
+            evidence_set_hash: components["schemas"]["Hash"];
+            source_snapshot_hash: components["schemas"]["Hash"];
+            /** @enum {unknown} */
+            evaluation_state: "MET" | "UNMET" | "PARTIAL" | "STALE" | "UNAVAILABLE";
+            planned_at: components["schemas"]["DateTime"];
+            expires_at: components["schemas"]["DateTime"];
+            applied_at: components["schemas"]["NullableDateTime"];
+            receipt: components["schemas"]["DecisionReceipt"] | null;
+            /** @constant */
+            external_side_effect_requested: false;
+        };
     };
     responses: {
         /** @description Typed fail-closed error */
@@ -104,6 +479,8 @@ export interface components {
     };
     parameters: {
         ApprovalId: components["schemas"]["Identifier"];
+        ReviewId: components["schemas"]["Identifier"];
+        OperationId: components["schemas"]["Identifier"];
         WorkspaceId: components["schemas"]["WorkspaceId"];
     };
     requestBodies: never;
@@ -132,6 +509,108 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["R2ReviewResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    executionGovernancePaperExitReview: {
+        parameters: {
+            query?: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+            };
+            header?: never;
+            path: {
+                review_id: components["parameters"]["ReviewId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Portal-owned Paper Exit Review */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaperExitReviewResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    planPaperExitDecision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaperExitDecisionPlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Immutable decision plan */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaperExitDecisionPlan"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    applyPaperExitDecision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operation_id: components["parameters"]["OperationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaperExitApplyRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted for Portal-local settlement */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaperExitApplyResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getPaperExitDecisionOperation: {
+        parameters: {
+            query?: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+            };
+            header?: never;
+            path: {
+                operation_id: components["parameters"]["OperationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Decision operation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaperExitDecisionOperation"];
                 };
             };
             default: components["responses"]["Problem"];

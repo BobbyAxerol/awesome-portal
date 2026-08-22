@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Portal Execution Governance Review API",
-    "version": "1.0.0",
-    "description": "Same-origin, session-guarded Portal read model for an active R2 approval and its immutable capital-preview scope. It does not authorize an R2 decision or execution action."
+    "version": "1.1.0",
+    "description": "Same-origin, session-guarded Portal governance boundaries for R2 scope and Paper Exit Review. Paper Exit approval creates Portal promotion authority only; activation remains a separate operation and no endpoint in this slice commands the Trading System."
   },
   "servers": [{ "url": "/" }],
   "security": [{ "portalSession": [] }],
@@ -28,6 +28,99 @@
           "default": { "$ref": "#/components/responses/Problem" }
         }
       }
+    },
+    "/api/v1/execution/governance/exit-reviews/{review_id}": {
+      "get": {
+        "operationId": "executionGovernancePaperExitReview",
+        "description": "Returns a Portal-owned Paper Exit Review with deterministic evidence evaluation. Missing, partial, stale and unavailable evidence are explicit fail-closed states.",
+        "parameters": [
+          { "$ref": "#/components/parameters/ReviewId" },
+          { "$ref": "#/components/parameters/WorkspaceId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Portal-owned Paper Exit Review",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitReviewResponse" }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/execution/commands/plans": {
+      "post": {
+        "operationId": "planPaperExitDecision",
+        "description": "Plans a Portal Paper Exit decision. This shared route also supports separately-versioned governance command families; this operation documents the Paper Exit discriminator.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionPlanRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Immutable decision plan",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionPlan" }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/execution/operations/{operation_id}/apply": {
+      "post": {
+        "operationId": "applyPaperExitDecision",
+        "description": "Records the planned Portal decision. HTTP 202 is an acknowledgement, not terminal success. No Trading System effect is requested.",
+        "parameters": [{ "$ref": "#/components/parameters/OperationId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitApplyRequest" }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted for Portal-local settlement",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitApplyResponse" }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/execution/operations/{operation_id}": {
+      "get": {
+        "operationId": "getPaperExitDecisionOperation",
+        "description": "Returns workflow status and verification_result separately for a Paper Exit decision operation.",
+        "parameters": [
+          { "$ref": "#/components/parameters/OperationId" },
+          { "$ref": "#/components/parameters/WorkspaceId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decision operation",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionOperation" }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
     }
   },
   "components": {
@@ -37,6 +130,18 @@
     "parameters": {
       "ApprovalId": {
         "name": "approval_id",
+        "in": "path",
+        "required": true,
+        "schema": { "$ref": "#/components/schemas/Identifier" }
+      },
+      "ReviewId": {
+        "name": "review_id",
+        "in": "path",
+        "required": true,
+        "schema": { "$ref": "#/components/schemas/Identifier" }
+      },
+      "OperationId": {
+        "name": "operation_id",
         "in": "path",
         "required": true,
         "schema": { "$ref": "#/components/schemas/Identifier" }

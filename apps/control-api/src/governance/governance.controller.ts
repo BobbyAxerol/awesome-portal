@@ -23,8 +23,11 @@ import {
   ApplyOperationRequestSchema,
   approvalListQuery,
   DecisionPlanRequestSchema,
+  PaperExitApplyOperationRequestSchema,
+  PaperExitDecisionPlanRequestSchema,
 } from "./contracts";
 import { GovernanceError, GovernanceService } from "./governance.service";
+import { PaperExitService } from "./paper-exit.service";
 
 interface GovernanceRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -37,6 +40,7 @@ interface GovernanceRequest extends FastifyRequest {
 export class GovernanceController {
   constructor(
     @Inject(GovernanceService) private readonly governance: GovernanceService,
+    @Inject(PaperExitService) private readonly paperExit: PaperExitService,
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
@@ -70,10 +74,39 @@ export class GovernanceController {
     return this.governance.r2Detail(request.portalUser, workspaceId, approvalId);
   }
 
+  @Get("/governance/exit-reviews/:review_id")
+  async exitReview(
+    @Req() request: GovernanceRequest,
+    @Param("review_id") reviewId: string,
+    @Query("workspace_id") rawWorkspaceId?: unknown,
+  ) {
+    const workspaceId = await this.workspace(request, rawWorkspaceId);
+    return this.paperExit.detail(request.portalUser, workspaceId, reviewId);
+  }
+
   @Post("/commands/plans")
   @HttpCode(201)
   async plan(@Req() request: GovernanceRequest, @Body() body: unknown) {
     this.assertMutationSecurity(request);
+    const paperExit = PaperExitDecisionPlanRequestSchema.safeParse(body);
+    if (paperExit.success) {
+      const workspaceId = await this.workspace(request, paperExit.data.workspace_id);
+      const result = await this.paperExit.plan(
+        request.portalUser,
+        {
+          workspaceId,
+          requestKey: paperExit.data.request_key,
+          reviewId: paperExit.data.target.review_id,
+          expectedReviewVersion: paperExit.data.expected_review_version,
+          decision: paperExit.data.payload.decision,
+          reason: paperExit.data.payload.reason,
+          extensionDays: paperExit.data.payload.extension_days ?? null,
+          evidenceHashes: paperExit.data.payload.evidence_hashes,
+        },
+        this.requestId(request),
+      );
+      return { ...result.response, replayed: result.replayed };
+    }
     const parsed = DecisionPlanRequestSchema.safeParse(body);
     if (!parsed.success) {
       throw new GovernanceError("INVALID_DECISION_PLAN", "Invalid decision plan request.", 400);
@@ -104,6 +137,17 @@ export class GovernanceController {
     @Body() body: unknown,
   ) {
     this.assertMutationSecurity(request);
+    const paperExit = PaperExitApplyOperationRequestSchema.safeParse(body);
+    if (paperExit.success) {
+      const workspaceId = await this.workspace(request, paperExit.data.workspace_id);
+      return this.paperExit.apply(
+        request.portalUser,
+        workspaceId,
+        operationId,
+        paperExit.data.apply_token,
+        this.requestId(request),
+      );
+    }
     const parsed = ApplyOperationRequestSchema.safeParse(body);
     if (!parsed.success) {
       throw new GovernanceError("INVALID_APPLY_REQUEST", "Invalid apply request.", 400);
@@ -125,6 +169,12 @@ export class GovernanceController {
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
+    const paperExit = await this.paperExit.operationOrNull(
+      request.portalUser,
+      workspaceId,
+      operationId,
+    );
+    if (paperExit) return paperExit;
     return this.governance.operation(request.portalUser, workspaceId, operationId);
   }
 

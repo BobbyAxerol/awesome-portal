@@ -14,12 +14,14 @@ export const APPROVAL_STATUSES = [
 export const APPROVAL_ENVIRONMENTS = ["RESEARCH", "PAPER", "SANDBOX", "LIVE"] as const;
 export const SLA_STATES = ["ON_TRACK", "DUE_SOON", "OVERDUE", "EXPIRED"] as const;
 export const R1_DECISIONS = ["APPROVE", "APPROVE_WITH_CONDITION", "DENY"] as const;
+export const PAPER_EXIT_DECISIONS = ["PROMOTE", "EXTEND_OBSERVATION", "REJECT"] as const;
 
 export type ApprovalGate = (typeof APPROVAL_GATES)[number];
 export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number];
 export type ApprovalEnvironment = (typeof APPROVAL_ENVIRONMENTS)[number];
 export type SlaState = (typeof SLA_STATES)[number];
 export type R1Decision = (typeof R1_DECISIONS)[number];
+export type PaperExitDecision = (typeof PAPER_EXIT_DECISIONS)[number];
 
 export interface GovernanceRequestState {
   portalUser: PortalUser;
@@ -281,6 +283,50 @@ export const DecisionPlanRequestSchema = z
 export const ApplyOperationRequestSchema = z
   .object({
     schema_version: z.literal("governance.r1-decision-apply-request.v1"),
+    workspace_id: z.string().min(3).max(96),
+    apply_token: z.string().regex(/^gat1\.[A-Za-z0-9_-]{1,32}\.[A-Za-z0-9_-]{3,96}\.[A-Za-z0-9_-]{43}$/),
+  })
+  .strict();
+
+export const PaperExitDecisionPlanRequestSchema = z
+  .object({
+    schema_version: z.literal("governance.paper-exit-decision-plan-request.v1"),
+    workspace_id: z.string().min(3).max(96),
+    request_key: RequestKey,
+    command_type: z.literal("GOVERNANCE_PAPER_EXIT_DECISION"),
+    command_version: z.literal(1),
+    target: z.object({ review_id: z.string().min(3).max(96) }).strict(),
+    expected_review_version: z.number().int().positive(),
+    payload: z
+      .object({
+        decision: z.enum(PAPER_EXIT_DECISIONS),
+        reason: z.string().trim().min(8).max(2000),
+        extension_days: z.literal(14).nullable().optional(),
+        evidence_hashes: z.array(EvidenceHash).max(128),
+      })
+      .strict(),
+  })
+  .strict()
+  .superRefine((input, context) => {
+    if (input.payload.decision === "EXTEND_OBSERVATION" && input.payload.extension_days !== 14) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["payload", "extension_days"],
+        message: "extend-observation requires exactly 14 days",
+      });
+    }
+    if (input.payload.decision !== "EXTEND_OBSERVATION" && input.payload.extension_days != null) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["payload", "extension_days"],
+        message: "extension_days is only valid for extend-observation",
+      });
+    }
+  });
+
+export const PaperExitApplyOperationRequestSchema = z
+  .object({
+    schema_version: z.literal("governance.paper-exit-decision-apply-request.v1"),
     workspace_id: z.string().min(3).max(96),
     apply_token: z.string().regex(/^gat1\.[A-Za-z0-9_-]{1,32}\.[A-Za-z0-9_-]{3,96}\.[A-Za-z0-9_-]{43}$/),
   })

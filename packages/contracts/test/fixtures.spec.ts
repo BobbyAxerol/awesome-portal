@@ -42,6 +42,8 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-realtime-event.v1.schema.json",
   "execution-governance.r2-review.valid.json":
     "https://schemas.primusspark.com/portal/execution-governance-r2-review.v1.schema.json",
+  "execution-governance.paper-exit-review.valid.json":
+    "https://schemas.primusspark.com/portal/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitReviewResponse",
 };
 
 describe("canonical contracts (cross-language fixture compilation)", () => {
@@ -154,6 +156,32 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     })).toBe(false);
   });
 
+  it("keeps Paper Exit server-evaluated and activation-free", () => {
+    const review = loadJson(join(fixtureDir, "execution-governance.paper-exit-review.valid.json")) as {
+      data: Record<string, unknown> & { activation_plan: Record<string, unknown> };
+    };
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitReviewResponse",
+    );
+    expect(validate).toBeDefined();
+    const { gate_met: _gateMet, ...withoutGateVerdict } = review.data;
+    expect(validate!({ ...review, data: withoutGateVerdict })).toBe(false);
+    const typedReview = review.data.review as Record<string, unknown>;
+    const { stage: _stage, ...withoutStage } = typedReview;
+    expect(validate!({
+      ...review,
+      data: { ...review.data, review: withoutStage },
+    })).toBe(false);
+    expect(validate!({
+      ...review,
+      data: {
+        ...review.data,
+        activation_plan: { ...review.data.activation_plan, external_side_effect_requested: true },
+      },
+    })).toBe(false);
+    expect(validate!({ ...review, data: { ...review.data, injected: true } })).toBe(false);
+  });
+
   it("generated portal types reference both handoff endpoints", () => {
     const generated = readFileSync(join(ROOT, "generated", "portal-api.d.ts"), "utf8");
     expect(generated).toContain('"/api/v1/portal/registry"');
@@ -185,6 +213,11 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(governance).toContain("R2ReviewResponse");
     expect(governance).toContain("portfolio_id");
     expect(governance).toContain("currency");
+    expect(governance).toContain('"/api/v1/execution/governance/exit-reviews/{review_id}"');
+    expect(governance).toContain('"/api/v1/execution/commands/plans"');
+    expect(governance).toContain("PaperExitReviewResponse");
+    expect(governance).toContain("GOVERNANCE_PAPER_EXIT_DECISION");
+    expect(governance).toContain("external_side_effect_requested");
 
     const realtime = readFileSync(join(ROOT, "generated", "execution-realtime.d.ts"), "utf8");
     expect(realtime).toContain('"/api/v1/execution/command-center/stream"');

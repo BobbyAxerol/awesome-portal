@@ -132,6 +132,16 @@ Chúng không thay thế phase hoặc exit gate trong
   canonical plan→apply→poll and exact 1:1:1 decision/audit/outbox atomicity.
   SGP runs in research mode with independent file-backed keyrings; closeout:
   [PRE-IAM-01 SGP Phase 1–2](./EX_BE_05A_SGP_PHASE_1_2_CLOSEOUT.md).
+- [PRE-IAM-02 — Paper Exit Review Backend Closeout](./PRE_IAM_02_PAPER_EXIT_REVIEW_CLOSEOUT.md)
+  — Execution Loop Phase 5 backend **integration complete / production
+  inactive:** TypeScript/PostgreSQL owns immutable Paper Exit lineage, four
+  source-attributed evidence panels, deterministic fail-closed evaluation and
+  canonical read/plan/apply/poll. `PROMOTE` creates only a scoped Portal grant;
+  it never activates Sandbox or calls Trading System. Evidence: fresh
+  PostgreSQL 14 suites/128 tests, Paper Exit 11/11, contracts 20/20, migration
+  `0004` and SGP public-gateway/auth runtime gate green. Registry/source/command
+  profiles remain off; Claude's HTTP/eligibility mapping and later real-source
+  activation remain explicit dependencies.
 
 **Runway complete (BAR-00 → BAR-16).** Guide v0.5 bổ sung (không thay thế)
 tại `upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md`

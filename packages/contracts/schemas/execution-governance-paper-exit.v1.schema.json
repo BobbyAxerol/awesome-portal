@@ -1,0 +1,429 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-governance-paper-exit.v1.schema.json",
+  "title": "Portal Paper Exit Governance Contracts v1",
+  "$defs": {
+    "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$" },
+    "WorkspaceId": { "type": "string", "minLength": 3, "maxLength": 96 },
+    "DateTime": { "type": "string", "format": "date-time" },
+    "Hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "NullableDateTime": { "oneOf": [{ "$ref": "#/$defs/DateTime" }, { "type": "null" }] },
+    "NullableString": { "type": ["string", "null"] },
+    "Actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["user_id", "username", "roles"],
+      "properties": {
+        "user_id": { "$ref": "#/$defs/Identifier" },
+        "username": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "roles": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "enum": ["ADMIN", "USER"] } }
+      }
+    },
+    "DecisionActor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["user_id", "username"],
+      "properties": {
+        "user_id": { "$ref": "#/$defs/Identifier" },
+        "username": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "Code": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code"],
+      "properties": { "code": { "type": "string", "minLength": 1, "maxLength": 128 } }
+    },
+    "Review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "review_id", "deployment_id", "portfolio_id", "venue", "stage", "subject_label",
+        "promote_to", "review_state", "review_version", "quorum_met", "quorum_required",
+        "sla", "expires_at", "extension_days", "extended_until"
+      ],
+      "properties": {
+        "review_id": { "$ref": "#/$defs/Identifier" },
+        "deployment_id": { "$ref": "#/$defs/Identifier" },
+        "portfolio_id": { "$ref": "#/$defs/Identifier" },
+        "venue": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "stage": { "const": "PAPER_OBSERVATION" },
+        "subject_label": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "promote_to": { "const": "SANDBOX_VALIDATION" },
+        "review_state": { "enum": ["PENDING", "EXTENDED", "REJECTED_TO_PAPER_HELD", "PROMOTION_AUTHORIZED"] },
+        "review_version": { "type": "integer", "minimum": 1 },
+        "quorum_met": { "type": "integer", "minimum": 0 },
+        "quorum_required": { "type": "integer", "minimum": 1 },
+        "sla": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["age_minutes", "budget_minutes"],
+          "properties": {
+            "age_minutes": { "type": "integer", "minimum": 0 },
+            "budget_minutes": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "expires_at": { "$ref": "#/$defs/DateTime" },
+        "extension_days": { "type": ["integer", "null"], "enum": [14, null] },
+        "extended_until": { "$ref": "#/$defs/NullableDateTime" }
+      }
+    },
+    "Eligibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "can_approve", "can_approve_with_condition", "can_deny",
+        "can_extend_observation", "can_reject", "locks", "separation_of_duties"
+      ],
+      "properties": {
+        "can_approve": { "type": "boolean" },
+        "can_approve_with_condition": { "type": "boolean" },
+        "can_deny": { "type": "boolean" },
+        "can_extend_observation": { "type": "boolean" },
+        "can_reject": { "type": "boolean" },
+        "locks": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 128 } },
+        "separation_of_duties": { "enum": ["OK", "VIOLATION"] }
+      }
+    },
+    "Lineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "label", "value", "href", "digest", "source_authority", "required"],
+      "properties": {
+        "kind": { "enum": ["ARTIFACT", "R1_APPROVAL", "R2_APPROVAL", "OBSERVATION_POLICY", "EVIDENCE_PACK"] },
+        "label": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "value": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "href": { "$ref": "#/$defs/NullableString" },
+        "digest": { "oneOf": [{ "$ref": "#/$defs/Hash" }, { "type": "null" }] },
+        "source_authority": { "enum": ["RESEARCH", "EXECUTION", "BROKER", "DERIVED", "PORTAL"] },
+        "required": { "type": "boolean" }
+      }
+    },
+    "Finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "finding_id", "metric_key", "label", "outcome", "blocking", "required",
+        "carries_to", "exact_value", "unit", "currency", "threshold_value",
+        "source_label", "href", "evidence_hash", "formula_version", "as_of"
+      ],
+      "properties": {
+        "finding_id": { "$ref": "#/$defs/Identifier" },
+        "metric_key": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "label": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "outcome": { "enum": ["pass", "watch", "fail", "insufficient"] },
+        "blocking": { "type": "boolean" },
+        "required": { "type": "boolean" },
+        "carries_to": { "$ref": "#/$defs/NullableString" },
+        "exact_value": { "$ref": "#/$defs/NullableString" },
+        "unit": { "$ref": "#/$defs/NullableString" },
+        "currency": { "$ref": "#/$defs/NullableString" },
+        "threshold_value": { "$ref": "#/$defs/NullableString" },
+        "source_label": { "$ref": "#/$defs/NullableString" },
+        "href": { "$ref": "#/$defs/NullableString" },
+        "evidence_hash": { "oneOf": [{ "$ref": "#/$defs/Hash" }, { "type": "null" }] },
+        "formula_version": { "$ref": "#/$defs/NullableString" },
+        "as_of": { "$ref": "#/$defs/NullableDateTime" }
+      }
+    },
+    "Panel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "panel_id", "panel_kind", "title", "source", "source_authority", "source_href",
+        "status", "reason", "as_of", "freshness_state", "source_completeness",
+        "poll_interval_ms", "formula_version", "findings"
+      ],
+      "properties": {
+        "panel_id": { "$ref": "#/$defs/Identifier" },
+        "panel_kind": { "enum": ["OBSERVATION_COVERAGE", "DRIFT", "LIMITS_HEALTH", "PORTFOLIO_FIT"] },
+        "title": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "source": { "$ref": "#/$defs/NullableString" },
+        "source_authority": { "enum": ["RESEARCH", "EXECUTION", "BROKER", "DERIVED"] },
+        "source_href": { "$ref": "#/$defs/NullableString" },
+        "status": { "enum": ["ok", "partial", "stale", "unavailable", "error"] },
+        "reason": { "$ref": "#/$defs/NullableString" },
+        "as_of": { "$ref": "#/$defs/NullableDateTime" },
+        "freshness_state": { "enum": ["OK", "STALE", "UNKNOWN"] },
+        "source_completeness": { "enum": ["EVENT_SOURCED", "POLL_BOUNDED", "UNKNOWN"] },
+        "poll_interval_ms": { "type": ["integer", "null"], "minimum": 100 },
+        "formula_version": { "$ref": "#/$defs/NullableString" },
+        "findings": { "type": "array", "items": { "$ref": "#/$defs/Finding" } }
+      }
+    },
+    "Evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state", "policy_version", "formula_version", "missing_panel_kinds",
+        "missing_lineage_kinds", "missing_evidence_finding_ids", "stale_panel_ids",
+        "unavailable_panel_ids", "partial_panel_ids", "blocking_finding_ids",
+        "carried_finding_ids", "warnings"
+      ],
+      "properties": {
+        "state": { "enum": ["MET", "UNMET", "PARTIAL", "STALE", "UNAVAILABLE"] },
+        "policy_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "formula_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "missing_panel_kinds": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "missing_lineage_kinds": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "missing_evidence_finding_ids": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/Identifier" } },
+        "stale_panel_ids": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/Identifier" } },
+        "unavailable_panel_ids": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/Identifier" } },
+        "partial_panel_ids": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/Identifier" } },
+        "blocking_finding_ids": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/Identifier" } },
+        "carried_finding_ids": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/Identifier" } },
+        "warnings": { "type": "array", "items": { "$ref": "#/$defs/Code" } }
+      }
+    },
+    "Decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision_id", "operation_id", "actor", "outcome", "reason", "extension_days",
+        "resulting_state", "evidence_set_hash", "source_snapshot_hash",
+        "review_version_before", "review_version_after", "decided_at"
+      ],
+      "properties": {
+        "decision_id": { "$ref": "#/$defs/Identifier" },
+        "operation_id": { "$ref": "#/$defs/Identifier" },
+        "actor": { "$ref": "#/$defs/DecisionActor" },
+        "outcome": { "enum": ["PROMOTE", "EXTEND_OBSERVATION", "REJECT"] },
+        "reason": { "type": "string", "minLength": 8, "maxLength": 2000 },
+        "extension_days": { "type": ["integer", "null"], "enum": [14, null] },
+        "resulting_state": { "enum": ["EXTENDED", "REJECTED_TO_PAPER_HELD", "PROMOTION_AUTHORIZED"] },
+        "evidence_set_hash": { "$ref": "#/$defs/Hash" },
+        "source_snapshot_hash": { "$ref": "#/$defs/Hash" },
+        "review_version_before": { "type": "integer", "minimum": 1 },
+        "review_version_after": { "type": "integer", "minimum": 2 },
+        "decided_at": { "$ref": "#/$defs/DateTime" }
+      }
+    },
+    "PromotionGrant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "grant_id", "deployment_id", "target_stage", "grant_state", "evidence_set_hash",
+        "source_snapshot_hash", "policy_version", "created_at"
+      ],
+      "properties": {
+        "grant_id": { "$ref": "#/$defs/Identifier" },
+        "deployment_id": { "$ref": "#/$defs/Identifier" },
+        "target_stage": { "const": "SANDBOX_VALIDATION" },
+        "grant_state": { "const": "AVAILABLE" },
+        "evidence_set_hash": { "$ref": "#/$defs/Hash" },
+        "source_snapshot_hash": { "$ref": "#/$defs/Hash" },
+        "policy_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "created_at": { "$ref": "#/$defs/DateTime" }
+      }
+    },
+    "PaperExitReviewResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "record_authority", "delivery_profile", "read_at", "data"],
+      "properties": {
+        "schema_version": { "const": "governance.paper-exit-review.v1" },
+        "record_authority": { "const": "PORTAL" },
+        "delivery_profile": { "enum": ["fixture", "shadow", "paper"] },
+        "read_at": { "$ref": "#/$defs/DateTime" },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "review", "actor", "status", "reason", "gate_met", "evaluation_state",
+            "gate_summary", "policy_id", "policy_version", "formula_version",
+            "evidence_set_hash", "source_snapshot_hash", "eligibility", "lineage",
+            "panels", "evaluation", "recommendation", "recommended_next_eligible_action",
+            "activation_plan", "decisions", "promotion_grant"
+          ],
+          "properties": {
+            "review": { "$ref": "#/$defs/Review" },
+            "actor": { "$ref": "#/$defs/Actor" },
+            "status": { "enum": ["ok", "partial", "stale", "unavailable"] },
+            "reason": { "$ref": "#/$defs/NullableString" },
+            "gate_met": { "type": "boolean" },
+            "evaluation_state": { "enum": ["MET", "UNMET", "PARTIAL", "STALE", "UNAVAILABLE"] },
+            "gate_summary": { "type": "string", "minLength": 1, "maxLength": 1000 },
+            "policy_id": { "$ref": "#/$defs/Identifier" },
+            "policy_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+            "formula_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+            "evidence_set_hash": { "$ref": "#/$defs/Hash" },
+            "source_snapshot_hash": { "$ref": "#/$defs/Hash" },
+            "eligibility": { "$ref": "#/$defs/Eligibility" },
+            "lineage": { "type": "array", "minItems": 0, "maxItems": 16, "items": { "$ref": "#/$defs/Lineage" } },
+            "panels": { "type": "array", "minItems": 0, "maxItems": 4, "items": { "$ref": "#/$defs/Panel" } },
+            "evaluation": { "$ref": "#/$defs/Evaluation" },
+            "recommendation": { "type": "string", "minLength": 1, "maxLength": 2000 },
+            "recommended_next_eligible_action": { "enum": ["APPROVE_PROMOTION", "EXTEND_OR_REJECT", "RESTORE_EVIDENCE_OR_EXTEND"] },
+            "activation_plan": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["mode", "target_stage", "authority_semantics", "external_side_effect_requested"],
+              "properties": {
+                "mode": { "const": "PREVIEW_ONLY" },
+                "target_stage": { "const": "SANDBOX_VALIDATION" },
+                "authority_semantics": { "const": "APPROVAL_CREATES_PROMOTION_GRANT_ONLY" },
+                "external_side_effect_requested": { "const": false }
+              }
+            },
+            "decisions": { "type": "array", "maxItems": 1, "items": { "$ref": "#/$defs/Decision" } },
+            "promotion_grant": { "oneOf": [{ "$ref": "#/$defs/PromotionGrant" }, { "type": "null" }] }
+          }
+        }
+      }
+    },
+    "PaperExitDecisionPlanRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "workspace_id", "request_key", "command_type", "command_version",
+        "target", "expected_review_version", "payload"
+      ],
+      "properties": {
+        "schema_version": { "const": "governance.paper-exit-decision-plan-request.v1" },
+        "workspace_id": { "$ref": "#/$defs/WorkspaceId" },
+        "request_key": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$" },
+        "command_type": { "const": "GOVERNANCE_PAPER_EXIT_DECISION" },
+        "command_version": { "const": 1 },
+        "target": {
+          "type": "object", "additionalProperties": false, "required": ["review_id"],
+          "properties": { "review_id": { "$ref": "#/$defs/Identifier" } }
+        },
+        "expected_review_version": { "type": "integer", "minimum": 1 },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["decision", "reason", "evidence_hashes"],
+          "properties": {
+            "decision": { "enum": ["PROMOTE", "EXTEND_OBSERVATION", "REJECT"] },
+            "reason": { "type": "string", "minLength": 8, "maxLength": 2000 },
+            "extension_days": { "type": ["integer", "null"], "enum": [14, null] },
+            "evidence_hashes": { "type": "array", "maxItems": 128, "uniqueItems": true, "items": { "$ref": "#/$defs/Hash" } }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "decision": { "const": "EXTEND_OBSERVATION" } }, "required": ["decision"] },
+              "then": { "required": ["extension_days"], "properties": { "extension_days": { "const": 14 } } },
+              "else": { "properties": { "extension_days": { "type": "null" } } }
+            }
+          ]
+        }
+      }
+    },
+    "PaperExitDecisionPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "operation_id", "command_type", "command_version", "review_id",
+        "expected_review_version", "payload_hash", "evidence_set_hash", "source_snapshot_hash",
+        "evaluation_state", "risk_tier", "blockers", "warnings", "required_approvers",
+        "fresh_auth_required", "expires_at", "apply_token", "status",
+        "external_side_effect_requested", "replayed"
+      ],
+      "properties": {
+        "schema_version": { "const": "governance.paper-exit-decision-plan.v1" },
+        "operation_id": { "$ref": "#/$defs/Identifier" },
+        "command_type": { "const": "GOVERNANCE_PAPER_EXIT_DECISION" },
+        "command_version": { "const": 1 },
+        "review_id": { "$ref": "#/$defs/Identifier" },
+        "expected_review_version": { "type": "integer", "minimum": 1 },
+        "payload_hash": { "$ref": "#/$defs/Hash" },
+        "evidence_set_hash": { "$ref": "#/$defs/Hash" },
+        "source_snapshot_hash": { "$ref": "#/$defs/Hash" },
+        "evaluation_state": { "enum": ["MET", "UNMET", "PARTIAL", "STALE", "UNAVAILABLE"] },
+        "risk_tier": { "const": "R1" },
+        "blockers": { "type": "array", "items": { "$ref": "#/$defs/Code" } },
+        "warnings": { "type": "array", "items": { "$ref": "#/$defs/Code" } },
+        "required_approvers": {
+          "type": "array", "minItems": 1, "maxItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["role", "count"],
+            "properties": { "role": { "const": "ADMIN" }, "count": { "const": 1 } }
+          }
+        },
+        "fresh_auth_required": { "const": false },
+        "expires_at": { "$ref": "#/$defs/DateTime" },
+        "apply_token": { "type": ["string", "null"] },
+        "status": { "enum": ["PLANNED", "APPLIED", "EXPIRED"] },
+        "external_side_effect_requested": { "const": false },
+        "replayed": { "type": "boolean" }
+      }
+    },
+    "PaperExitApplyRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "workspace_id", "apply_token"],
+      "properties": {
+        "schema_version": { "const": "governance.paper-exit-decision-apply-request.v1" },
+        "workspace_id": { "$ref": "#/$defs/WorkspaceId" },
+        "apply_token": { "type": "string", "pattern": "^gat1\\.[A-Za-z0-9_-]{1,32}\\.[A-Za-z0-9_-]{3,96}\\.[A-Za-z0-9_-]{43}$" }
+      }
+    },
+    "PaperExitApplyResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "operation_id", "receipt_id", "status", "replayed", "external_side_effect_requested"],
+      "properties": {
+        "schema_version": { "const": "governance.paper-exit-decision-apply.v1" },
+        "operation_id": { "$ref": "#/$defs/Identifier" },
+        "receipt_id": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] },
+        "status": { "const": "PENDING" },
+        "replayed": { "type": "boolean" },
+        "external_side_effect_requested": { "const": false }
+      }
+    },
+    "DecisionReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation_id", "receipt_id", "status", "review_id", "review_state",
+        "review_version", "decision", "extension_days", "extended_until",
+        "promotion_grant_id", "next_eligible_action", "external_side_effect_requested",
+        "decided_at"
+      ],
+      "properties": {
+        "operation_id": { "$ref": "#/$defs/Identifier" },
+        "receipt_id": { "$ref": "#/$defs/Identifier" },
+        "status": { "const": "SUCCEEDED" },
+        "review_id": { "$ref": "#/$defs/Identifier" },
+        "review_state": { "enum": ["EXTENDED", "REJECTED_TO_PAPER_HELD", "PROMOTION_AUTHORIZED"] },
+        "review_version": { "type": "integer", "minimum": 2 },
+        "decision": { "enum": ["PROMOTE", "EXTEND_OBSERVATION", "REJECT"] },
+        "extension_days": { "type": ["integer", "null"], "enum": [14, null] },
+        "extended_until": { "$ref": "#/$defs/NullableDateTime" },
+        "promotion_grant_id": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] },
+        "next_eligible_action": { "enum": ["PLAN_SANDBOX_PROMOTION", "RETURN_TO_PAPER_HELD", "CONTINUE_PAPER_OBSERVATION"] },
+        "external_side_effect_requested": { "const": false },
+        "decided_at": { "$ref": "#/$defs/DateTime" }
+      }
+    },
+    "PaperExitDecisionOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "operation_id", "review_id", "command_type", "status",
+        "verification_result", "blockers", "warnings", "expected_review_version",
+        "evidence_set_hash", "source_snapshot_hash", "evaluation_state", "planned_at",
+        "expires_at", "applied_at", "receipt", "external_side_effect_requested"
+      ],
+      "properties": {
+        "schema_version": { "const": "governance.paper-exit-decision-operation.v1" },
+        "operation_id": { "$ref": "#/$defs/Identifier" },
+        "review_id": { "$ref": "#/$defs/Identifier" },
+        "command_type": { "const": "GOVERNANCE_PAPER_EXIT_DECISION" },
+        "status": { "enum": ["PENDING", "SUCCEEDED", "EXPIRED"] },
+        "verification_result": { "enum": ["PENDING", "SUCCEEDED", "EXPIRED"] },
+        "blockers": { "type": "array", "items": { "$ref": "#/$defs/Code" } },
+        "warnings": { "type": "array", "items": { "$ref": "#/$defs/Code" } },
+        "expected_review_version": { "type": "integer", "minimum": 1 },
+        "evidence_set_hash": { "$ref": "#/$defs/Hash" },
+        "source_snapshot_hash": { "$ref": "#/$defs/Hash" },
+        "evaluation_state": { "enum": ["MET", "UNMET", "PARTIAL", "STALE", "UNAVAILABLE"] },
+        "planned_at": { "$ref": "#/$defs/DateTime" },
+        "expires_at": { "$ref": "#/$defs/DateTime" },
+        "applied_at": { "$ref": "#/$defs/NullableDateTime" },
+        "receipt": { "oneOf": [{ "$ref": "#/$defs/DecisionReceipt" }, { "type": "null" }] },
+        "external_side_effect_requested": { "const": false }
+      }
+    }
+  }
+}

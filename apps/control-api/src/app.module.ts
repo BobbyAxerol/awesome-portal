@@ -19,6 +19,8 @@ import { OutboxRepository, ProductAuditRepository } from "./repos/outbox";
 import { GovernanceController } from "./governance/governance.controller";
 import { GovernanceRepository } from "./governance/governance.repository";
 import { GovernanceService } from "./governance/governance.service";
+import { PaperExitRepository } from "./governance/paper-exit.repository";
+import { PaperExitService } from "./governance/paper-exit.service";
 import { ExecutionRealtimeController } from "./execution/realtime.controller";
 import { ExecutionRealtimeProxy } from "./execution/realtime.proxy";
 import { ExecutionAnalyticsController } from "./execution/analytics.controller";
@@ -68,6 +70,8 @@ export class AppModule {
         ProductAuditRepository,
         GovernanceRepository,
         GovernanceService,
+        PaperExitRepository,
+        PaperExitService,
         {
           provide: ExecutionRealtimeProxy,
           useFactory: (cfg: ControlApiConfig) => ExecutionRealtimeProxy.create(cfg),

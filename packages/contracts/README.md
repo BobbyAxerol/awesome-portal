@@ -15,7 +15,8 @@ sequence, freshness policy and string decimals explicit.
 
 Execution governance and realtime use separate narrow contracts:
 `openapi/execution-governance.openapi.json` / `generated/execution-governance.d.ts`
-for the Portal-owned active R2 review binding, and
+for the Portal-owned active R2 binding plus the source-safe Paper Exit
+read/plan/apply/poll boundary, and
 `openapi/execution-realtime.openapi.json` / `generated/execution-realtime.d.ts`
 for the same-origin SSE boundary. The analytics projection-page component is a
 typed future screen shape, not authorization to expose a generic query route.
@@ -58,6 +59,7 @@ packages/contracts/
     keyset-page.v1.schema.json
     execution-projection-page.v1.schema.json
     execution-governance-r2-review.v1.schema.json
+    execution-governance-paper-exit.v1.schema.json
     execution-realtime-event.v1.schema.json
   fixtures/
     problem.valid.json
@@ -67,6 +69,7 @@ packages/contracts/
     execution-analytics.capital-preview.valid.json
     execution-projection-page.valid.json
     execution-governance.r2-review.valid.json
+    execution-governance.paper-exit-review.valid.json
     execution-realtime.auth-expiring.valid.json
     execution-realtime.projection-gap.valid.json
   openapi/

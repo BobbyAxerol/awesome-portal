@@ -111,6 +111,7 @@ for required in \
   "${ROOT_DIR}/packages/contracts/schemas/keyset-page.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-projection-page.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-governance-r2-review.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-governance-paper-exit.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-realtime-event.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/problem.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/command.valid.json" \
@@ -119,6 +120,7 @@ for required in \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.capital-preview.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-projection-page.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-governance.r2-review.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-governance.paper-exit-review.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.auth-expiring.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.projection-gap.valid.json" \
   "${ROOT_DIR}/packages/contracts/generated/portal-api.d.ts" \
@@ -182,6 +184,8 @@ for required in \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000000_init-identity.sql" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000001_control-facade.sql" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000002_execution-governance.sql" \
+  "${ROOT_DIR}/apps/control-api/migrations/1723680000003_execution-approval-analytics-scope.sql" \
+  "${ROOT_DIR}/apps/control-api/migrations/1723680000004_governance-paper-exit.sql" \
   "${ROOT_DIR}/apps/control-api/src/id.ts" \
   "${ROOT_DIR}/apps/control-api/src/repos/workspaces.ts" \
   "${ROOT_DIR}/apps/control-api/src/repos/runs.ts" \
@@ -201,8 +205,11 @@ for required in \
   "${ROOT_DIR}/apps/control-api/src/governance/governance.controller.ts" \
   "${ROOT_DIR}/apps/control-api/src/governance/governance.repository.ts" \
   "${ROOT_DIR}/apps/control-api/src/governance/governance.service.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/paper-exit.repository.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/paper-exit.service.ts" \
   "${ROOT_DIR}/apps/control-api/test/governance-token.spec.ts" \
   "${ROOT_DIR}/apps/control-api/test/governance.spec.ts" \
+  "${ROOT_DIR}/apps/control-api/test/paper-exit.spec.ts" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/Cargo.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/Cargo.lock" \
@@ -402,6 +409,7 @@ for tracked_source in \
   packages/contracts/schemas/keyset-page.v1.schema.json \
   packages/contracts/schemas/execution-projection-page.v1.schema.json \
   packages/contracts/schemas/execution-governance-r2-review.v1.schema.json \
+  packages/contracts/schemas/execution-governance-paper-exit.v1.schema.json \
   packages/contracts/schemas/execution-realtime-event.v1.schema.json \
   packages/contracts/fixtures/problem.valid.json \
   packages/contracts/fixtures/command.valid.json \
@@ -410,6 +418,7 @@ for tracked_source in \
   packages/contracts/fixtures/execution-analytics.capital-preview.valid.json \
   packages/contracts/fixtures/execution-projection-page.valid.json \
   packages/contracts/fixtures/execution-governance.r2-review.valid.json \
+  packages/contracts/fixtures/execution-governance.paper-exit-review.valid.json \
   packages/contracts/fixtures/execution-realtime.auth-expiring.valid.json \
   packages/contracts/fixtures/execution-realtime.projection-gap.valid.json \
   packages/contracts/generated/portal-api.d.ts \
@@ -471,6 +480,8 @@ for tracked_source in \
   apps/control-api/migrations/1723680000000_init-identity.sql \
   apps/control-api/migrations/1723680000001_control-facade.sql \
   apps/control-api/migrations/1723680000002_execution-governance.sql \
+  apps/control-api/migrations/1723680000003_execution-approval-analytics-scope.sql \
+  apps/control-api/migrations/1723680000004_governance-paper-exit.sql \
   apps/control-api/src/id.ts \
   apps/control-api/src/repos/workspaces.ts \
   apps/control-api/src/repos/runs.ts \
@@ -490,8 +501,11 @@ for tracked_source in \
   apps/control-api/src/governance/governance.controller.ts \
   apps/control-api/src/governance/governance.repository.ts \
   apps/control-api/src/governance/governance.service.ts \
+  apps/control-api/src/governance/paper-exit.repository.ts \
+  apps/control-api/src/governance/paper-exit.service.ts \
   apps/control-api/test/governance-token.spec.ts \
   apps/control-api/test/governance.spec.ts \
+  apps/control-api/test/paper-exit.spec.ts \
   upgrade/backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md \
   services/portal-execution-edge-rs/Cargo.toml \
   services/portal-execution-edge-rs/Cargo.lock \
@@ -607,7 +621,9 @@ for json_contract in \
   "${ROOT_DIR}/packages/contracts/schemas/execution-projection-page.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-projection-page.valid.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-governance-r2-review.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-governance-paper-exit.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-governance.r2-review.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-governance.paper-exit-review.valid.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-realtime-event.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.auth-expiring.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.projection-gap.valid.json" \

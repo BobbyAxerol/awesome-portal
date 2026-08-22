@@ -1,0 +1,117 @@
+{
+  "schema_version": "governance.paper-exit-review.v1",
+  "record_authority": "PORTAL",
+  "delivery_profile": "fixture",
+  "read_at": "2026-08-22T12:00:00.000Z",
+  "data": {
+    "review": {
+      "review_id": "EX-771",
+      "deployment_id": "dep_94",
+      "portfolio_id": "PF_MAIN",
+      "venue": "DERIBIT",
+      "stage": "PAPER_OBSERVATION",
+      "subject_label": "Grid v2.1 · dep_94 · DERIBIT",
+      "promote_to": "SANDBOX_VALIDATION",
+      "review_state": "PENDING",
+      "review_version": 1,
+      "quorum_met": 0,
+      "quorum_required": 1,
+      "sla": { "age_minutes": 240, "budget_minutes": 2880 },
+      "expires_at": "2026-08-25T12:00:00.000Z",
+      "extension_days": null,
+      "extended_until": null
+    },
+    "actor": { "user_id": "usr_reviewer", "username": "lan", "roles": ["ADMIN"] },
+    "status": "ok",
+    "reason": null,
+    "gate_met": true,
+    "evaluation_state": "MET",
+    "gate_summary": "30 / 30 days · 312 / 300 trades · 2 / 2 restart cycles",
+    "policy_id": "obs_29",
+    "policy_version": "observation.v3",
+    "formula_version": "paper-exit-eval.v1",
+    "evidence_set_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "source_snapshot_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "eligibility": {
+      "can_approve": true,
+      "can_approve_with_condition": true,
+      "can_deny": true,
+      "can_extend_observation": true,
+      "can_reject": true,
+      "locks": [],
+      "separation_of_duties": "OK"
+    },
+    "lineage": [
+      {
+        "kind": "ARTIFACT",
+        "label": "artifact",
+        "value": "sha256:artifact",
+        "href": "/research/artifacts/artifact_2041",
+        "digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "source_authority": "RESEARCH",
+        "required": true
+      }
+    ],
+    "panels": [
+      {
+        "panel_id": "panel_observation",
+        "panel_kind": "OBSERVATION_COVERAGE",
+        "title": "Observation coverage",
+        "source": "obs_29",
+        "source_authority": "EXECUTION",
+        "source_href": "/deployments/paper/dep_94#sessions",
+        "status": "ok",
+        "reason": null,
+        "as_of": "2026-08-22T11:59:59.000Z",
+        "freshness_state": "OK",
+        "source_completeness": "EVENT_SOURCED",
+        "poll_interval_ms": null,
+        "formula_version": "paper-exit-eval.v1",
+        "findings": [
+          {
+            "finding_id": "finding_observation",
+            "metric_key": "observation.coverage",
+            "label": "30 / 30 days · 312 / 300 trades",
+            "outcome": "pass",
+            "blocking": false,
+            "required": true,
+            "carries_to": null,
+            "exact_value": "312",
+            "unit": "TRADES",
+            "currency": null,
+            "threshold_value": "300",
+            "source_label": "sessions",
+            "href": "/deployments/paper/dep_94#sessions",
+            "evidence_hash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "formula_version": "paper-exit-eval.v1",
+            "as_of": "2026-08-22T11:59:59.000Z"
+          }
+        ]
+      }
+    ],
+    "evaluation": {
+      "state": "MET",
+      "policy_version": "paper-exit.v1",
+      "formula_version": "paper-exit-eval.v1",
+      "missing_panel_kinds": [],
+      "missing_lineage_kinds": [],
+      "missing_evidence_finding_ids": [],
+      "stale_panel_ids": [],
+      "unavailable_panel_ids": [],
+      "partial_panel_ids": [],
+      "blocking_finding_ids": [],
+      "carried_finding_ids": [],
+      "warnings": []
+    },
+    "recommendation": "Approve promotion; activation remains a separate operation.",
+    "recommended_next_eligible_action": "APPROVE_PROMOTION",
+    "activation_plan": {
+      "mode": "PREVIEW_ONLY",
+      "target_stage": "SANDBOX_VALIDATION",
+      "authority_semantics": "APPROVAL_CREATES_PROMOTION_GRANT_ONLY",
+      "external_side_effect_requested": false
+    },
+    "decisions": [],
+    "promotion_grant": null
+  }
+}

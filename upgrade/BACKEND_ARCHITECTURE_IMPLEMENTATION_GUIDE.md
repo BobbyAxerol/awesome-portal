@@ -790,6 +790,19 @@ deep-dive → ADR → slice → evidence discipline documented above.
   [`EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md`](./backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md).
   Operational closeout:
   [`EX_BE_05A_SGP_PHASE_1_2_CLOSEOUT.md`](./backend/EX_BE_05A_SGP_PHASE_1_2_CLOSEOUT.md).
+- **PRE-IAM-02 Paper Exit Review (2026-08-22):** TypeScript and Portal
+  PostgreSQL now own the source-safe Phase 5 review aggregate, immutable
+  artifact/R1/R2/policy/evidence lineage, four source-attributed panels,
+  deterministic fail-closed evaluation and canonical read/plan/apply/poll.
+  Missing/partial/stale/unavailable/error remain distinct; exact decimals stay
+  strings; WATCH is non-blocking and non-blocking insufficient data carries to
+  Sandbox Certification. `PROMOTE` creates only a scoped Portal authority grant
+  and cannot command Trading System or activate Sandbox. Fresh PostgreSQL is
+  green at 14 suites/128 tests (Paper Exit 11/11), contracts at 20/20, and SGP
+  migration/public-gateway/auth runtime gates pass. Status is
+  `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`; registry/source/command flags
+  remain dark and Claude's Phase 5 contract mapping remains required. Evidence:
+  [`PRE_IAM_02_PAPER_EXIT_REVIEW_CLOSEOUT.md`](./backend/PRE_IAM_02_PAPER_EXIT_REVIEW_CLOSEOUT.md).
 - **EX-BE-01 Rust contracts and compatibility adapter (2026-08-21):** the
   Portal-owned Execution edge now has a Rust 1.85.1 library workspace with
   canonical exact-decimal/source/freshness envelopes, a pinned Trading System

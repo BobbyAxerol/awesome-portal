@@ -17,6 +17,9 @@ export async function createControlApiApp(
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule.register(config, pool),
     new FastifyAdapter({ trustProxy: true }),
+    // Route-discovery logs drown the actual Vitest result in CI. Production
+    // keeps Nest logging; only the isolated test application is silent.
+    config.NODE_ENV === "test" ? { logger: false } : {},
   );
   app.useGlobalFilters(new HttpErrorFilter());
 
