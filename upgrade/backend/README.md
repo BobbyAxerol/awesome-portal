@@ -193,15 +193,17 @@ authority.
   WireGuard endpoint/PKI/credential production nên live SGP↔AWS vẫn
   `INTEGRATION_PENDING`; registry flags giữ false. Chi tiết:
   [`EX_BE_02_MTLS_DELEGATED_AUTH_AND_PROBES.md`](./EX_BE_02_MTLS_DELEGATED_AUTH_AND_PROBES.md).
-- `EX-BE-02-LIVE` **discovery requested / no mutation authorized:** the AWS-HK
-  handoff now has a D0-only, secret-safe inventory and answer template covering
-  host capacity, WireGuard/firewall feasibility, immutable Trading System
-  runtime drift, host-local GET-only connector placement, Portal projection
-  isolation, PKI/rotation and rollback. Broad `bobby` host privilege does not
-  authorize Trading System mutation; the remote agent must stop before D1.
-  D1–D4 remain separately owner-gated, with D4 marking the start of
-  `EX-BE-08a`. Request:
-  [`EX_BE_02_LIVE_AWS_HK_DISCOVERY_AND_SAFE_BOOTSTRAP_REQUEST.md`](./EX_BE_02_LIVE_AWS_HK_DISCOVERY_AND_SAFE_BOOTSTRAP_REQUEST.md).
+- `EX-BE-02-LIVE` **D0 evidence complete / D1 owner decision pending:** the
+  AWS-HK response and SGP host inventory have been reconciled without mutation.
+  Contract compatibility is proven, but AWS OOM/I/O admission, stable endpoints,
+  route/SG authority, PKI, dedicated TS read identity, private PostgreSQL,
+  observability and backup ownership remain blockers. The locked route is SGP
+  TypeScript → WireGuard/H2 mTLS/delegated JWT → AWS Portal Edge; an AWS-local
+  Portal Source Proxy alone calls the loopback TS gateway through exact GETs.
+  SSH is operator-only. D1 is network-only; D2 dark-deploys Portal services;
+  D3 proves public/auth transport; D4 begins Paper read BUILDING-epoch evidence.
+  No flag/profile changed. Evidence and decision sheet:
+  [`EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md`](./EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md).
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã
@@ -263,7 +265,7 @@ authority.
   metrics/report. Rust/PostgreSQL gate 81/81 + strict Clippy/rustfmt. No AWS
   endpoint, source credential, production mapper, runtime flag or registry
   profile was changed.
-- Backend tiếp theo của `EX-BE-08a` chỉ bắt đầu sau D0/D1–D4 approval: real
+- Backend tiếp theo của `EX-BE-08a` chỉ bắt đầu sau owner-approved D1–D4: real
   source mapper/parity, BUILDING epoch shadow, cross-cell load/fault/soak/
   restore/rollback evidence, rồi owner quyết định `fixture -> shadow`.
   `EX-BE-05b` vẫn chờ source command capability và không bị read qualification

@@ -884,17 +884,19 @@ deep-dive → ADR → slice → evidence discipline documented above.
   stay `fixture` and both runtime flags stay false. Deep dive and Claude
   handoff:
   [`EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md`](./backend/EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md).
-- **EX-BE-02-LIVE AWS-HK discovery gate (2026-08-22):** before `EX-BE-08a`,
-  the remote Execution Cell must answer one D0-only, sanitized infrastructure
-  and runtime questionnaire. D0 permits host/container metadata and public
-  loopback GET contract probes only; it forbids secret reads, TS container/
-  source/DB/Redis mutation, authenticated business-data probes and every setup
-  action. The handoff records WireGuard/mTLS feasibility, immutable gateway
-  drift, Portal-owned source-proxy/projection placement, least-privilege DB
-  roles, PKI rotation and reversible D1 commands. `bobby` host authority does
-  not widen the Portal/Trading-System boundary. D1–D4 require separate owner
-  approval; D4 begins source ingestion. Request and response schema:
-  [`EX_BE_02_LIVE_AWS_HK_DISCOVERY_AND_SAFE_BOOTSTRAP_REQUEST.md`](./backend/EX_BE_02_LIVE_AWS_HK_DISCOVERY_AND_SAFE_BOOTSTRAP_REQUEST.md).
+- **EX-BE-02-LIVE dual-cell D0 (2026-08-22):** sanitized AWS-HK and SGP
+  inventories are `D0_EVIDENCE_COMPLETE / D1_OWNER_DECISION_PENDING`; no
+  package, network, key, firewall, container, database, source or runtime flag
+  changed. Contract compatibility is proven, with explicit runtime-image drift.
+  The topology is locked to SGP TypeScript → WireGuard/H2 TLS 1.3 mTLS +
+  delegated RS256 JWT → AWS Portal Edge, while an AWS-local Portal Source Proxy
+  alone calls exact GET routes on the TS loopback gateway. SSH remains operator
+  access only. AWS OOM/I/O admission, stable endpoints, SG/routes, PKI, dedicated
+  TS read identity, private PostgreSQL, observability and backup ownership block
+  D1/D2. D1 network, D2 dark services, D3 public/auth probes and D4 Paper
+  BUILDING-epoch evidence each need a separate gate; no delivery profile is
+  activated. Evidence and decision sheet:
+  [`EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md`](./backend/EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

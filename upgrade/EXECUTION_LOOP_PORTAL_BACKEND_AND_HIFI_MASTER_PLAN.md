@@ -26,6 +26,7 @@ Read these sources before implementing a slice:
 9. [Trading System unified implementation plan](upgrade_frontend_plan_hifi/hifi_execution_loop/Design%20system%20discussion%20request_version2/uploads/TRADING_SYSTEM_UNIFIED_IMPLEMENTATION_PLAN.md) — target boundaries, V1 compatibility, journal/recovery and latest rollout evidence. Its planned or locally implemented state is not assumed deployed.
 10. [Frontend review](upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_PLAN_REVIEW.md) — F-1–F-9 and BR-EX-16–22; dispositions are recorded in §15.4.
 11. [Backend architecture guide](BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md) and [backend index](backend/README.md) — existing Portal control-plane foundation and status vocabulary.
+12. [Dual-cell D0 reconciliation and D1 decision plan](backend/EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md) — sanitized two-cell evidence, locked topology, separate identities and the smallest reversible owner-gated bootstrap.
 
 The wireframes remain the visual authority. This plan is authoritative for data
 ownership, endpoint shape, compatibility, security, freshness, sequencing, and
@@ -794,7 +795,7 @@ so one slice may unlock several screens without inventing a second product roadm
 | EX-BE-04a | P0 / delivered | TypeScript bidirectional keyset/filter/sort/exact-count primitives over control-plane PostgreSQL | phases 1, 2 and Portal-owned portions of 5/7/8 |
 | EX-BE-05a | P0 / fresh-PG gate green | TypeScript governance/evidence/approval workflow and audit, with external panels allowed unavailable | phases 1–2 on real Portal data without AWS |
 | EX-BE-01 | P0 / contract complete | Rust workspace, canonical contracts, `ts-contract-v1`, vocabulary reconciliation and golden corpus | all real-source screen contracts |
-| EX-BE-02 | P0 / foundation complete; cross-cell evidence pending | mTLS/delegated-auth boundary, capability negotiation, bounded read-only transport and operator probes; production flags remain false until real SGP↔AWS evidence | safe AWS integration |
+| EX-BE-02 | P0 / foundation complete; D0 evidence complete, D1 owner decision pending | mTLS/delegated-auth boundary, capability negotiation, bounded read-only transport and operator probes; production flags remain false until real SGP↔AWS evidence | safe AWS integration |
 | EX-BE-03 | P0 / foundation complete; source ingestion integration pending | projection schema, reducer, cursor/epoch/replay/snapshot and freshness evaluator; production ingestion flag remains false | phases 4, 9–17 |
 | EX-BE-04b | P1 / foundation complete; screen API/source integration pending | Rust projection query primitives: bidirectional keyset, filter/sort/count, adaptive series ladder, exact decimals and typed cold retention | phases 4, 9, 11–17 |
 | EX-BE-05b | P1 | TypeScript operations/plan/apply/verify plus authenticated Rust relay | phases 6–12 mutation/operation paths |
@@ -868,7 +869,7 @@ bounded redacted report with explicit gap blockers. Its locked Rust/PostgreSQL
 gate passes 81 tests, including a 5,000-observation bounded qualification unit
 and the existing 182,000-observation/row corpora. This is
 `OFFLINE_FOUNDATION_COMPLETE / LIVE_SOURCE_AND_CROSS_CELL_EVIDENCE_PENDING`,
-not source activation or a latency claim. D0–D4, real source mapping/parity,
+not source activation or a latency claim. D1–D4, real source mapping/parity,
 cross-cell load/fault/soak/restore evidence and an explicit owner decision still
 precede `fixture -> shadow`. Detail:
 [`EX_BE_08A_OFFLINE_SOURCE_QUALIFICATION.md`](backend/EX_BE_08A_OFFLINE_SOURCE_QUALIFICATION.md).
@@ -1017,6 +1018,53 @@ Separate security groups deny browser ingress to the Rust edge and deny all Port
 access to broker networks except the explicit Trading System API path. Environments
 have separate identities, databases, keys, flags, and audit streams.
 
+#### 14.1.1 D0-locked private topology and live-delivery gates
+
+The 2026-08-22 read-only D0 is `EVIDENCE_COMPLETE / READINESS_PARTIAL`, not a
+deployment or source-availability claim. The locked topology is:
+
+```text
+Browser -> SGP TypeScript Control API
+  -> WireGuard + HTTP/2 TLS 1.3 mTLS + <=60 s delegated RS256 JWT
+  -> AWS-HK Portal Execution Edge :8443
+  -> Portal-owned projection PostgreSQL
+
+AWS-HK Portal Ingestor
+  -> mTLS Portal-only Source Proxy :8444
+  -> exact GET allowlist + dedicated read identity
+  -> Trading System gateway 127.0.0.1:8000
+```
+
+The browser never reaches AWS-HK directly. SGP never reaches Trading System DB,
+Redis, CLI or broker endpoints. Only the Portal-owned Source Proxy may call the
+published Trading System GET API; the Trading System remains unchanged. SSH is
+operator/deploy access only and is never reused for WireGuard, mTLS, JWT, source
+API or database authentication.
+
+D0 found contract compatibility but not operational readiness: AWS-HK has recent
+OOM-killed Trading System candidate containers and elevated I/O evidence; SGP is
+a shared host with no swap and concurrent unlimited containers. Both kernels
+support WireGuard, while its CLI/configuration is absent. Candidate tunnel/bridge
+CIDRs and ports were locally free, but stable endpoints, AWS route/SG authority,
+PKI, dedicated source identity, Portal DB, observability and backup ownership are
+unresolved.
+
+Delivery therefore advances through separate stop gates:
+
+1. **D1 network-only:** owner-approved stable endpoints, `/30`, WireGuard,
+   minimum firewall/SG rules and rollback; no business traffic.
+2. **D2 dark services:** resource-admitted Portal DB, Source Proxy, ingestor and
+   edge with signed images, least-privilege roles and mTLS; no source activation.
+3. **D3 public contract/auth:** cross-cell H2/mTLS/JWT rejection, capability and
+   fault/latency evidence; no business ingestion.
+4. **D4 Paper read shadow:** dedicated read identity, production mapper,
+   BUILDING epoch, parity/restart/gap/load/restore evidence.
+5. **Activation:** separate owner decision for ACTIVE cutover and
+   `fixture -> shadow`; command and Live authority remain separate.
+
+The detailed evidence, recommended defaults, decision sheet and rollback are in
+[`EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md`](backend/EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md).
+
 Browser→Cloudflare/origin production qualification must prove HTTP/2 or HTTP/3 for
 the same-origin SSE route and ordinary fetches. An HTTP/1.1 downgrade is a failed
 realtime gate because per-origin connection limits can let long-lived streams starve
@@ -1128,18 +1176,26 @@ change Portal behavior.
 
 ### 15.3 Owner decisions still required before production integration
 
-1. Approve private SGP↔AWS connectivity and identity/key-management design.
-2. Approve Portal projection PostgreSQL placement, retention, RPO/RTO, and cost.
-3. Confirm Paper/BINANCE USD_M as the first real integration scope.
-4. Confirm risk-tier/SoD/WebAuthn policy, especially emergency protection versus
+D0 evidence is complete. Before D1, the owner must resolve the exact values and
+named owners in the [D1 decision sheet](backend/EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md#6-owner-decisions-required-before-d1); endpoint and credential values are delivered privately and never committed.
+
+1. Approve stable SGP/AWS endpoints, candidate WireGuard `/30` and UDP port,
+   AWS SG/UFW ownership, private DNS/SAN and the D1 change/rollback window.
+2. Approve separate WireGuard, workload mTLS, delegated RS256/JWKS, dedicated
+   Trading System read and PostgreSQL identities plus their delivery/rotation owners.
+3. Approve private PostgreSQL 16 RDS placement, retention, PITR/restore test,
+   RPO/RTO and cost. Local AWS PostgreSQL is only an explicit bounded-Paper exception.
+4. Resolve AWS-HK OOM/I/O admission and assign CPU/memory/disk limits before D2.
+5. Confirm Paper/BINANCE USD_M as the first real integration scope.
+6. Confirm risk-tier/SoD/WebAuthn policy, especially emergency protection versus
    risk-increasing live actions.
-5. Decide VNM authoritative calendar source and ATO/ATC scope.
-6. Approve command-journal readiness evidence from the Trading System owner.
-7. Approve SLOs and activation profiles after measured shadow/load baselines.
-8. Choose the default display timezone. Wire/storage remains RFC3339 UTC; user
+7. Decide VNM authoritative calendar source and ATO/ATC scope.
+8. Approve command-journal readiness evidence from the Trading System owner.
+9. Approve SLOs and activation profiles after measured shadow/load baselines.
+10. Choose the default display timezone. Wire/storage remains RFC3339 UTC; user
    preferences use an IANA timezone, and venue-session labels additionally show the
    venue timezone. Freshness is always server-computed, never derived from browser time.
-9. Approve HTTP/2/HTTP/3 production evidence for the public same-origin SSE path.
+11. Approve HTTP/2/HTTP/3 production evidence for the public same-origin SSE path.
 
 Until these decisions and their phase gates pass, the correct backend posture is
 contracts, fixtures, adapters, shadow reads, and explicit `PRODUCTION_INACTIVE` —

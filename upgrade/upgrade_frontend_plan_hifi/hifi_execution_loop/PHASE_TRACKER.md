@@ -292,11 +292,21 @@ Offline `EX-BE-08a` is `OFFLINE_FOUNDATION_COMPLETE /
 LIVE_SOURCE_AND_CROSS_CELL_EVIDENCE_PENDING`. Rust now seals compatibility-bound
 corpora, checks reducer/replay/frozen-digest parity, blocks source gaps and emits
 only redacted bounded evidence. The full Rust/PostgreSQL gate passes 81 tests
-plus strict Clippy/rustfmt. D0–D4, a published production source mapper, live
+plus strict Clippy/rustfmt. D1–D4, a published production source mapper, live
 parity, cross-cell load/fault/soak/restore evidence and explicit owner activation
 still precede `fixture -> shadow`. Claude may keep implementing failure-state
 fixtures but must not bind live topics or change delivery profiles. Detail:
 [`EX_BE_08A_OFFLINE_SOURCE_QUALIFICATION.md`](../../backend/EX_BE_08A_OFFLINE_SOURCE_QUALIFICATION.md).
+
+Dual-cell D0 is now `D0_EVIDENCE_COMPLETE / D1_OWNER_DECISION_PENDING`.
+AWS-HK and SGP were inventoried read-only; no package, network, key, firewall,
+container, database, Trading System source or delivery flag changed. The locked
+path is SGP TypeScript → WireGuard/H2 mTLS/delegated JWT → AWS Portal Edge, with
+an AWS-local Portal Source Proxy as the only exact-GET caller of the TS loopback
+gateway. D1 network, D2 dark services, D3 public/auth probes and D4 Paper
+BUILDING-epoch evidence remain separately gated. Claude should continue fixture
+and failure/recovery UI only; no live topic or profile flip is unlocked. Detail:
+[`EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md`](../../backend/EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md).
 
 ### 6.2 BR-EX decisions
 
