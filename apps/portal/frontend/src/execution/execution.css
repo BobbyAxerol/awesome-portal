@@ -2936,3 +2936,187 @@
   .exec-admin-panes { flex-direction: column; }
   .exec-admin-drawer { width: auto; position: static; }
 }
+
+/* ---------------------------------------------------------------------------
+ * Phase 9 — Command Center (hi-fi 5a, ops dark)
+ *
+ * Four panels, each carrying its own authority and freshness in its header.
+ * There is deliberately no page-level health strip to style.
+ * ------------------------------------------------------------------------ */
+.exec-cc-head h1 {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: 400;
+}
+
+.exec-cc-critical {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.06em;
+  color: var(--bad);
+  border: 1px solid var(--bad);
+  padding: 0 var(--space-1);
+}
+
+.exec-cc-sub,
+.exec-cc-note,
+.exec-cc-quiet,
+.exec-cc-meta {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+  margin: var(--space-1) 0 0;
+}
+
+.exec-cc-warnings {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2);
+  list-style: none;
+  border: 1px solid var(--warn);
+  background: var(--warn-bg);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-soft);
+}
+
+.exec-cc-panel {
+  margin-top: var(--space-3);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  padding: var(--space-2);
+}
+
+.exec-cc-panelhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.exec-cc-panelhead h2 {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 400;
+}
+
+.exec-cc-panelhead .exec-cc-meta { margin: 0 0 0 auto; }
+
+.exec-cc-twoup {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+@media (max-width: 900px) {
+  .exec-cc-twoup { grid-template-columns: 1fr; }
+}
+
+.exec-cc-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+/* A triage row is a button: it is the primary action on the landing page and
+   must be reachable without a mouse. */
+.exec-cc-row {
+  display: grid;
+  grid-template-columns: 2.5rem 6rem 1fr 6rem 8rem;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2);
+  border: 1px solid transparent;
+  border-left: 2px solid transparent;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.exec-cc-row:hover { background: var(--surface-3); }
+
+.exec-cc-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.exec-cc-row[data-severity="CRITICAL"] { border-left-color: var(--bad); }
+.exec-cc-row[data-severity="HIGH"] { border-left-color: var(--warn); }
+.exec-cc-row[data-sla="OVERDUE"] .exec-cc-sla { color: var(--bad); }
+
+.exec-cc-rank,
+.exec-cc-kind,
+.exec-cc-sla,
+.exec-cc-action,
+.exec-cc-summary,
+.exec-cc-todaykind {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+.exec-cc-title {
+  font-size: var(--text-xs);
+  color: var(--ink);
+  min-width: 0;
+}
+
+.exec-cc-summary { display: block; }
+
+.exec-cc-cells {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.exec-cc-cell {
+  padding: var(--space-2);
+  border: 1px solid var(--line-soft);
+  background: var(--surface-3);
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.exec-cc-cellvalue {
+  display: block;
+  font-size: var(--text-lg);
+}
+
+.exec-cc-celllabel {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+.exec-cc-pins,
+.exec-cc-today {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.exec-cc-pin,
+.exec-cc-today li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: var(--text-xs);
+}
+
+/* Dimmed, dashed, and still there. */
+.exec-cc-pin[data-target-state="unavailable"] { border-left: 2px dashed var(--ink-faint); padding-left: var(--space-1); }
+
+.exec-cc-pinunavailable {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}

@@ -51,12 +51,25 @@ import { createFixtureApi } from "./api/fixtureApi";
 import { PaperExitReview } from "./screens/PaperExitReview";
 import { FullBlotter, OrderFunnelStrip } from "./screens/FullBlotter";
 import { AdminActionDrawerScreen } from "./screens/AdminActionDrawer";
+import { CommandCenterScreen } from "./screens/CommandCenter";
+import { CC_FIXTURES } from "./commandCenter.fixtures";
+import { readCommandCenter } from "./commandCenter";
 import { findCommand } from "./adminCatalog";
 
 /**
  * Phase 6 fixture plan. The checks are the hi-fi's: a concentration warning
  * that does NOT block, beside a ledger check that would.
  */
+/** Every Paper Exit capability granted. Absence is refusal, so cases say so. */
+const EXIT_ELIGIBLE = {
+  canApprove: true,
+  canApproveWithCondition: true,
+  canDeny: true,
+  canExtendObservation: true,
+  canReject: true,
+  separationOfDuties: "OK" as const,
+};
+
 const ADMIN_PLAN = {
   id: "cmd_9f12",
   expiresInSeconds: 60,
@@ -1405,6 +1418,7 @@ export default function ExecutionFixtures() {
                 panels={EXIT_PANELS_FIXTURE}
                 rail={EXIT_RAIL}
                 conditions={EXIT_CONDITIONS}
+                eligibility={EXIT_ELIGIBLE}
                 recommendation="Approve promotion with the carried capacity condition."
               />
             </Case>
@@ -1420,10 +1434,11 @@ export default function ExecutionFixtures() {
                 quorumMet={0}
                 quorumRequired={1}
                 panels={EXIT_PANELS_FIXTURE}
+                eligibility={EXIT_ELIGIBLE}
                 recommendation="Extend observation by 8 days."
               />
             </Case>
-            <Case caption="one evidence panel down — the review survives it">
+            <Case caption="one evidence panel down — promotion stops, because an unread panel produces no findings and no findings reads as nothing blocking">
               <PaperExitReview
                 reviewId="EX-771"
                 deploymentId="dep_94"
@@ -1438,6 +1453,39 @@ export default function ExecutionFixtures() {
                   EXIT_PANELS_FIXTURE[0],
                   { title: "Portfolio fit — observed vs expected", findings: [], status: "unavailable", reason: "Analytics edge unreachable." },
                 ]}
+              />
+            </Case>
+            <Case caption="separation of duties — the requester may not decide their own review, and all three branches say so once">
+              <PaperExitReview
+                reviewId="EX-773"
+                deploymentId="dep_94"
+                subject="Grid v2.1 · dep_94 · DERIBIT"
+                promoteTo="SANDBOX_VALIDATION"
+                gateMet
+                quorumMet={0}
+                quorumRequired={1}
+                panels={EXIT_PANELS_FIXTURE}
+                eligibility={{
+                  canApprove: false,
+                  canApproveWithCondition: false,
+                  canDeny: false,
+                  canExtendObservation: false,
+                  canReject: false,
+                  separationOfDuties: "VIOLATION",
+                }}
+              />
+            </Case>
+            <Case caption="authority withheld for one branch only — extending is refused, rejecting is not">
+              <PaperExitReview
+                reviewId="EX-774"
+                deploymentId="dep_88"
+                subject="MeanRev v0.3 · dep_88 · BINANCE"
+                promoteTo="SANDBOX_VALIDATION"
+                gateMet
+                quorumMet={0}
+                quorumRequired={1}
+                panels={EXIT_PANELS_FIXTURE}
+                eligibility={{ ...EXIT_ELIGIBLE, canExtendObservation: false }}
               />
             </Case>
           </div>
@@ -1607,6 +1655,21 @@ export default function ExecutionFixtures() {
           the Phase 0 exit gate is "every shared Execution component in every
           state" precisely so that cannot happen.
         */}
+        <Group
+          title="Command Center (5a)"
+          note="Backend dark: the snapshot is real, the incident/operation/fleet sources behind it are not claimed. Four panels carry four verdicts — there is no page-level health badge to be wrong."
+          surface="deployments"
+        >
+          {(["busy", "empty", "partial", "stale", "unavailable"] as const).map((name) => {
+            const parsed = readCommandCenter(CC_FIXTURES[name]);
+            return parsed ? (
+              <Case key={name} caption={`${name} — panel states read from the contract, never merged`}>
+                <CommandCenterScreen snapshot={parsed} />
+              </Case>
+            ) : null;
+          })}
+        </Group>
+
         <Group
           title="Admin Action Drawer (1i)"
           note="Twenty-one commands in six groups. A read grows no footer, and a command the Portal cannot reach is shown with the reason rather than hidden."

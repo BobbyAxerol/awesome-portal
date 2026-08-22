@@ -99,7 +99,17 @@ export type BrokerSync = "OK" | "STALE" | "MISMATCH" | "ERROR" | "UNKNOWN";
  * per authority: an operator who cannot separate two hues would lose the
  * distinction entirely, and the distinction is load-bearing.
  */
-export type Authority = "RESEARCH" | "EXECUTION" | "BROKER" | "DERIVED";
+/**
+ * Who owns the record.
+ *
+ * `PORTAL` was added when the Command Center snapshot arrived
+ * (`execution.command-center-snapshot.v1`): approvals and pins are rows the
+ * Portal itself is authoritative for, which is a different claim from
+ * `DERIVED` — derived means computed from someone else's truth, PORTAL means
+ * this *is* the truth. Conflating them would let a Portal-owned figure inherit
+ * the caveats a derived one carries, and vice versa.
+ */
+export type Authority = "RESEARCH" | "PORTAL" | "EXECUTION" | "BROKER" | "DERIVED";
 
 /**
  * Freshness judged against per-venue policy, never a constant in the client.

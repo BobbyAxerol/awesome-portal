@@ -107,10 +107,10 @@ Codex giao lane này ngày 2026-08-22 (PHASE_TRACKER §24A.2).
 |---|---|---|---|
 | B1 | Đọc `review_version` từ schema Paper Exit | 5 | ✅ xong `f063ca9` |
 | B2 | LifecycleRail dựng theo stage | 5 | ✅ xong `f063ca9` |
-| B3 | Map mọi panel failure state (partial/stale/unavailable/error) | 5 | ⏳ tiếp theo |
-| B4 | Bind extend/reject vào `can_extend_observation` / `can_reject` | 5 | ⏳ |
-| B5 | Chọn plan schema + decision vocabulary cho Paper Exit | 5 | ⏳ |
-| B6 | CSRF double-submit same-origin trên mọi mutation | 1, 2, 5 | ⏳ |
+| B3 | Map mọi panel failure state | 5 | ✅ panel không đọc được **chặn promote** |
+| B4 | Bind extend/reject vào `can_extend_observation` / `can_reject` | 5 | ✅ |
+| B5 | Chọn plan schema + decision vocabulary cho Paper Exit | 5 | ✅ + **sửa route sai** |
+| B6 | CSRF double-submit same-origin trên mọi mutation | 1, 2, 5 | ✅ |
 | B7 | Canonical `view` param + registry activation review | 1 | ⏳ |
 | B8 | Canonical plan/apply/poll route + policy Portal-governance-write riêng | 2 | ⏳ |
 | B9 | Dùng `portfolio_id`/`currency` sinh ra, bỏ default fixture | 3 | ✅ xong `8d8779a` |
@@ -123,18 +123,18 @@ backend* sang **việc của tôi**.
 
 | # | Việc | Trạng thái |
 |---|---|---|
-| B11 | Dựng màn Command Center (5a) trên Lane A | ⏳ tiếp theo sau phase 5 |
-| B12 | Map đủ 5 state: busy / empty / partial / stale / unavailable | ⏳ |
-| B13 | Giữ authority + freshness **theo từng panel**, không gộp | ⏳ |
-| B14 | `observed_total_count` là tập con đã thấy khi `exact_total=false` | ⏳ |
-| B15 | **Không xếp hạng lại** — rank do server sở hữu | ⏳ |
-| B16 | Pin trỏ tới thứ không có Fleet phải hiện `unavailable`, không ẩn | ⏳ |
-| B17 | Ẩn control EventSource/profile khi `stream_available=false` | ⏳ |
+| B11 | Dựng màn Command Center (5a) trên Lane A | ✅ |
+| B12 | Map đủ 5 state: busy / empty / partial / stale / unavailable | ✅ |
+| B13 | Giữ authority + freshness **theo từng panel**, không gộp | ✅ |
+| B14 | `observed_total_count` là tập con đã thấy khi `exact_total=false` | ✅ |
+| B15 | **Không xếp hạng lại** — rank do server sở hữu | ✅ |
+| B16 | Pin trỏ tới thứ không có Fleet phải hiện `unavailable`, không ẩn | ✅ |
+| B17 | Ẩn control EventSource/profile khi `stream_available=false` | ✅ |
 
 Codex nói rõ: **không** gộp catalogue BR-EX-28 vào Command Center, và **không**
 thêm generic Redis read.
 
-**Thứ tự tôi làm:** B3 → B4 → B5 (đóng phase 5) → B11–B17 (dựng phase 9) → B6 (chạm 3 phase) → B7, B8.
+**Đã xong:** B3–B6 (phase 5) · B11–B17 (phase 9). **Tiếp theo:** B7 (canonical `view` + registry, phase 1) → B8 (policy Portal-governance-write riêng, phase 2).
 
 ---
 
@@ -147,11 +147,11 @@ thêm generic Redis read.
 | 2 | Gate R1 | ✅ | **Claude** B6, B8 |
 | 3 | Gate R2 | ✅ | source activation (codex) |
 | 4 | Paper Workbench | ✅ | screen API (codex) |
-| 5 | Paper Exit | ✅ | **Claude** B3–B5 |
+| 5 | Paper Exit | ✅ | Lane A đóng; chờ Paper source thật |
 | 6 | Admin Drawer | ✅ | A1b — catalogue để activate |
 | 7 | Operations Queue | ⛔ | **A1a** — `command-journal`, `findings` |
 | 8 | Incident Detail | ⛔ | **A1a** — `alerts`, `dead-letters`, `trace-order` |
-| 9 | Command Center | ⛔ | **Claude** B11–B17 (backend đã giao); nguồn thật cần A1a |
+| 9 | Command Center | ✅ | Lane A đóng; nguồn thật cần **A1a** |
 | 10 | Sandbox Certification | ⛔ | phase 4–6 + TS sandbox capability |
 | 11 | Canary Control Room | ⛔ | phase 10 + cổng owner |
 | 12 | Live Full Operations | ⛔ | phase 11 + EX-BE-08 |
@@ -162,7 +162,7 @@ thêm generic Redis read.
 | 17 | Account/Broker 360° | ✅ | **A3 — Bobby** |
 | 18 | Hardening | ⛔ | EX-BE-08 |
 
-**11 màn có UI. 6 màn chưa — ba trong sáu nằm sau A1a.**
+**12 màn có UI. 5 màn chưa — ba trong năm nằm sau A1a.**
 
 ---
 
