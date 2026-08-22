@@ -801,7 +801,7 @@ so one slice may unlock several screens without inventing a second product roadm
 | EX-BE-02 | P0 / foundation complete; D1 hosts staged, exact AWS owner SG rule pending | mTLS/delegated-auth boundary, capability negotiation, bounded read-only transport, exact-GET Source Proxy, preflight and rollback; `portal0` stays down and production flags stay false until SG identity plus real SGP↔AWS evidence | safe AWS integration |
 | EX-BE-03 | P0 / foundation complete; source ingestion integration pending | projection schema, reducer, cursor/epoch/replay/snapshot and freshness evaluator; production ingestion flag remains false | phases 4, 9–17 |
 | EX-BE-04b | P1 / foundation complete; screen API/source integration pending | Rust projection query primitives: bidirectional keyset, filter/sort/count, adaptive series ladder, exact decimals and typed cold retention | phases 4, 9, 11–17 |
-| EX-BE-05b | P1 | TypeScript operations/plan/apply/verify plus authenticated Rust relay | phases 6–12 mutation/operation paths |
+| EX-BE-05b | P1 / F0 foundation complete; live relay inactive | Canonical catalogue + typed conditions + blocked TypeScript plan/apply/verify and deny-by-default Rust relay journal; authenticated live relay remains owner/source gated | phases 6–12 mutation/operation paths |
 | EX-BE-06 | P1 | multiplexed SSE, gap recovery, backpressure and same-origin proxy | phase 9 and live screens |
 | EX-BE-07a | P2 / foundation complete | pure correlation, exposure, funnel, capital-ledger and batched preview analytics | phases 3, 14–17 contracts |
 | EX-BE-07b | P2 / integration complete; source activation evidence pending | active-epoch source repositories and six narrow authenticated screen APIs | phases 3, 14–17 integration |
@@ -881,6 +881,18 @@ drift gate keeps Master Plan, shared tracker, frontend roadmap and backend
 README aligned. It changes no runtime authority. Evidence:
 [`PRE_IAM_06_TRACKING_RECONCILIATION_CLOSEOUT.md`](backend/PRE_IAM_06_TRACKING_RECONCILIATION_CLOSEOUT.md).
 
+`EX-BE-05b/F0` now closes the credential-free operations contract foundation.
+The 64-entry canonical `noun/verb` catalogue is generated from the immutable
+Trading System contract pack with source digests; all entries remain
+`portal_reachable=false`. The eight unpublished `ops` actions and generic
+Redis access remain blocked. TypeScript creates only immutable blocked plans,
+apply is denied before relay/source construction, and Rust models
+replay/conflict/`UNCERTAIN` without a network client or retry authority.
+Governance writes now preserve canonical typed `conditions[]` while retaining
+the singular field as a deprecated transition alias. All command flags remain
+false. Evidence:
+[`EX_BE_05B_F0_OFFLINE_OPERATIONS_FOUNDATION.md`](backend/EX_BE_05B_F0_OFFLINE_OPERATIONS_FOUNDATION.md).
+
 Claude request `BR-EX-28` is now a tracked cross-queue input. Its 2026-08-22
 contract-pack audit correctly found that eight `ops` actions inherit the same
 emergency-close handler paths even though OpenAPI exposes only the four
@@ -895,7 +907,9 @@ EX-BE-04a→05a has delivered the Portal-owned control-plane foundation without 
 Trading System or projection dependency. It supplies Approval Inbox and Gate R1 from real
 control-plane data while linked execution panels honestly render unavailable. In parallel, the
 cross-cell runway has delivered EX-BE-01→02→03→04b and continues with EX-BE-06;
-EX-BE-05b follows canonical command/auth contracts and a proven Trading System capability.
+EX-BE-05b/F0 has delivered the dark contract/journal boundary; live EX-BE-05b
+still follows only after canonical command/auth contracts and a proven Trading
+System capability.
 EX-BE-07 follows the appropriate 04a/04b query primitive. This preserves the frontend phase order
 while removing an unrelated infrastructure approval from the first useful backend screens.
 
@@ -986,7 +1000,7 @@ Statuses use the architecture vocabulary, never bare `COMPLETE`:
 | 3 Gate R2 | safe capital preview and R2 decision | R2 detail, `/capital-preview`, command plan | Portal decision; EXECUTION/BROKER inputs; DERIVED preview | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-03/05a/07b; EX-BE-08 activation evidence | source-backed exact-decimal preview, profile/capability/count mismatch refusal; dual-approval and activation tests remain |
 | 4 Paper Workbench | real Paper observation without client aggregation | deployment summary/series; operation status | EXECUTION/BROKER/DERIVED; per-panel policy | `FOUNDATION_COMPLETE` | EX-BE-03/04b; M7 gate evidence | 500-deployment corpus, adaptive ≤5k chart points, Paper action disabled unless verified |
 | 5 Paper Exit Review | server evaluates observation exit evidence | exit-review read + canonical plan/apply/poll decision | Portal record; DERIVED with source-attributed inputs; grant-only promotion | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | PRE-IAM-02; Claude HTTP/eligibility mapping; later source activation | fresh PG 129/129, contract 20/20, deterministic missing/partial/stale/unavailable/error, immutable audit/outbox/grant and no execution command |
-| 6 Admin Action Drawer | generic safe plan→apply→verify | command catalog, plan, apply, operation poll | Portal policy record; EXECUTION terminal outcome | `FOUNDATION_COMPLETE` | EX-BE-02/05b; TS command capability | plan `request_key`, blocker completeness, duplicate/uncertain reconciliation tests; production flag remains off |
+| 6 Admin Action Drawer | generic safe plan→apply→verify | command catalog, blocked plan, denied apply, operation poll | Portal F0 policy record; no EXECUTION outcome authority | `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-05b/F0 delivered; Claude consumer; live relay still needs TS command capability | 64-entry catalogue, typed conditions, immutable blocked plan/no outbox, duplicate/conflict/uncertain reconciliation tests; every command flag remains off |
 | 7 Operations Queue | scalable, typed operations triage | `GET /operations`; ack/resolve | Portal workflow record plus EXECUTION result | `INTEGRATION_PENDING` | EX-BE-04a/05b | 182k bidirectional keyset tests, ack≠resolve tests, exact count |
 | 8 Incident Detail | correlated evidence and explicit incident workflow | incident detail, assign/ack/annotate/resolve | Portal workflow record; source-attributed findings | `FOUNDATION_COMPLETE` | EX-BE-05a/05b/06 | completeness badges, optimistic concurrency, evidence-required resolution and redaction tests |
 | 9 Command Center | ranked snapshot plus loss-detectable realtime | command-center snapshot and SSE | mixed per row; DERIVED ranking; epoch/sequence freshness | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | PRE-IAM-03 dark snapshot; BR-EX-28 §8.1 typed `streams`/`alpha-activity`; real source activation + EX-BE-06 parity evidence | bounded snapshot, five failure states, 20k exact-observed corpus and response budget pass; source contracts, snapshot/SSE parity, overlap+jitter resnapshot, slow-consumer and auth-expiry remain |

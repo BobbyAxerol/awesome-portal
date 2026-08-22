@@ -139,6 +139,9 @@ impl EdgeConfig {
             strict_boolean("EDGE_PROJECTION_INGESTION_ENABLED", false)?;
         let realtime_sse_enabled = strict_boolean("EDGE_REALTIME_SSE_ENABLED", false)?;
         let analytics_query_enabled = strict_boolean("EDGE_ANALYTICS_QUERY_ENABLED", false)?;
+        if strict_boolean("EDGE_COMMAND_RELAY_ENABLED", false)? {
+            return Err(ConfigError::Invalid("EDGE_COMMAND_RELAY_ENABLED"));
+        }
         let analytics_source_profile =
             delivery_profile(&value_or("EDGE_ANALYTICS_SOURCE_PROFILE", "fixture"))?;
         let (realtime_freshness_policy, realtime_venue_session) =

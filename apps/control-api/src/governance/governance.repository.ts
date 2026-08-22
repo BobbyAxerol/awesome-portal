@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
 import { CONTROL_API_POOL } from "../tokens";
+import { TypedCondition } from "../operations/contracts";
 
 export interface ApprovalRecord {
   approvalId: string;
@@ -166,6 +167,7 @@ export interface DecisionRecord {
   decision: string;
   reason: string;
   condition: string | null;
+  conditions: TypedCondition[];
   evidenceSetHash: string;
   approvalVersionBefore: number;
   approvalVersionAfter: number;
@@ -180,6 +182,7 @@ interface DecisionRow {
   decision: string;
   reason: string;
   condition: string | null;
+  conditions: TypedCondition[];
   evidence_set_hash: string;
   approval_version_before: number;
   approval_version_after: number;
@@ -196,6 +199,7 @@ export interface DecisionPlanRecord {
   decision: string;
   reason: string;
   condition: string | null;
+  conditions: TypedCondition[];
   expectedApprovalVersion: number;
   quorumRequired: number;
   evidenceSetHash: string;
@@ -221,6 +225,7 @@ interface PlanRow {
   decision: string;
   reason: string;
   condition: string | null;
+  conditions: TypedCondition[];
   expected_approval_version: number;
   quorum_required: number;
   evidence_set_hash: string;
@@ -317,6 +322,7 @@ function decision(row: DecisionRow): DecisionRecord {
     decision: row.decision,
     reason: row.reason,
     condition: row.condition,
+    conditions: row.conditions,
     evidenceSetHash: row.evidence_set_hash,
     approvalVersionBefore: row.approval_version_before,
     approvalVersionAfter: row.approval_version_after,
@@ -335,6 +341,7 @@ function plan(row: PlanRow): DecisionPlanRecord {
     decision: row.decision,
     reason: row.reason,
     condition: row.condition,
+    conditions: row.conditions,
     expectedApprovalVersion: row.expected_approval_version,
     quorumRequired: row.quorum_required,
     evidenceSetHash: row.evidence_set_hash,
@@ -522,7 +529,7 @@ export class GovernanceRepository {
     payloadHash: string;
     decision: string;
     reason: string;
-    condition: string | null;
+    conditions: TypedCondition[];
     expectedApprovalVersion: number;
     quorumRequired: number;
     evidenceSetHash: string;
@@ -542,17 +549,18 @@ export class GovernanceRepository {
       const inserted = await client.query<PlanRow>(
         `INSERT INTO governance_decision_plans
            (operation_id, workspace_id, approval_id, actor_user_id, request_key,
-            command_type, command_version, payload_hash, decision, reason, condition,
+            command_type, command_version, payload_hash, decision, reason, condition, conditions,
             expected_approval_version, quorum_required, evidence_set_hash, evidence_hashes,
             blocker_codes, warning_codes, apply_key_id, apply_token_hash,
             status, expires_at)
          VALUES ($1, $2, $3, $4, $5, 'GOVERNANCE_R1_DECISION', 1, $6, $7,
-                 $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'PLANNED', $18)
+                 $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'PLANNED', $19)
          RETURNING *`,
         [
           input.operationId, input.workspaceId, input.approvalId, input.actorUserId,
           input.requestKey, input.payloadHash, input.decision, input.reason,
-          input.condition, input.expectedApprovalVersion, input.quorumRequired, input.evidenceSetHash,
+          input.conditions[0]?.text ?? null, JSON.stringify(input.conditions),
+          input.expectedApprovalVersion, input.quorumRequired, input.evidenceSetHash,
           input.evidenceHashes, input.blockerCodes, input.warningCodes,
           input.applyKeyId, input.applyTokenHash, input.expiresAt,
         ],
@@ -696,13 +704,13 @@ export class GovernanceRepository {
       await client.query(
         `INSERT INTO governance_approval_decisions
            (decision_id, operation_id, workspace_id, approval_id, actor_user_id,
-            actor_username, decision, reason, condition, evidence_set_hash,
+            actor_username, decision, reason, condition, conditions, evidence_set_hash,
             approval_version_before, approval_version_after, decided_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
         [
           input.decisionId, input.operationId, input.workspaceId, request.approval_id,
           input.actorUserId, input.actorUsername, planRow.decision, planRow.reason,
-          planRow.condition, request.evidence_set_hash, request.approval_version,
+          planRow.condition, JSON.stringify(planRow.conditions), request.evidence_set_hash, request.approval_version,
           versionAfter, decidedAt,
         ],
       );

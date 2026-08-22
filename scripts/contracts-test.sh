@@ -35,6 +35,7 @@ trap cleanup EXIT
       npm ci --no-audit --no-fund
     fi
     npx vitest run
+    node /repo/packages/contracts/tooling/generate-execution-command-catalog.mjs --check
     npx openapi-typescript /repo/apps/portal/registry/openapi/portal-api.openapi.json -o /tmp/portal-api.d.ts
     diff -q /tmp/portal-api.d.ts generated/portal-api.d.ts
     npx openapi-typescript openapi/execution-analytics.openapi.json -o /tmp/execution-analytics.d.ts
@@ -45,5 +46,7 @@ trap cleanup EXIT
     diff -q /tmp/execution-realtime.d.ts generated/execution-realtime.d.ts
     npx openapi-typescript openapi/execution-command-center.openapi.json -o /tmp/execution-command-center.d.ts
     diff -q /tmp/execution-command-center.d.ts generated/execution-command-center.d.ts
+    npx openapi-typescript openapi/execution-operations.openapi.json -o /tmp/execution-operations.d.ts
+    diff -q /tmp/execution-operations.d.ts generated/execution-operations.d.ts
   '
 printf 'Contracts workspace tests passed.\n'

@@ -154,6 +154,7 @@ for rendered in "${tmp_dir}/candidate.yaml" "${tmp_dir}/rollback.yaml"; do
   grep -Fq 'EDGE_PROJECTION_INGESTION_ENABLED: "false"' "${rendered}"
   grep -Fq 'EDGE_REALTIME_SSE_ENABLED: "false"' "${rendered}"
   grep -Fq 'EDGE_ANALYTICS_QUERY_ENABLED: "false"' "${rendered}"
+  grep -Fq 'EDGE_COMMAND_RELAY_ENABLED: "false"' "${rendered}"
   grep -Fq 'EDGE_ANALYTICS_SOURCE_PROFILE: fixture' "${rendered}"
   grep -Fq 'read_only: true' "${rendered}"
   grep -Fq 'no-new-privileges:true' "${rendered}"
@@ -173,6 +174,12 @@ cp "${tmp_dir}/candidate.env" "${tmp_dir}/unsafe.env"
 sed -i 's/^EDGE_ANALYTICS_QUERY_ENABLED=false$/EDGE_ANALYTICS_QUERY_ENABLED=true/' "${tmp_dir}/unsafe.env"
 if "${preflight}" --env-file "${tmp_dir}/unsafe.env" --mode offline >/dev/null 2>&1; then
   printf 'D2 preflight unexpectedly accepted an enabled analytics flag.\n' >&2
+  exit 1
+fi
+cp "${tmp_dir}/candidate.env" "${tmp_dir}/unsafe-command.env"
+sed -i 's/^EDGE_COMMAND_RELAY_ENABLED=false$/EDGE_COMMAND_RELAY_ENABLED=true/' "${tmp_dir}/unsafe-command.env"
+if "${preflight}" --env-file "${tmp_dir}/unsafe-command.env" --mode offline >/dev/null 2>&1; then
+  printf 'D2 preflight unexpectedly accepted command relay.\n' >&2
   exit 1
 fi
 cp "${tmp_dir}/candidate.env" "${tmp_dir}/malicious.env"

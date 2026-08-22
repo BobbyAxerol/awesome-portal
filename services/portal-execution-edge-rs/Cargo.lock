@@ -350,6 +350,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "command-relay"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "cmake"
 version = "0.1.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"

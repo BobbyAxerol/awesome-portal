@@ -91,6 +91,14 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-command-center-snapshot.v1.schema.json",
   "execution-command-center.unavailable.valid.json":
     "https://schemas.primusspark.com/portal/execution-command-center-snapshot.v1.schema.json",
+  "execution-command-catalog.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/CommandCatalogue",
+  "execution-command-plan.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/ExecutionCommandPlan",
+  "execution-command-operation.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/ExecutionCommandOperation",
+  "execution-command-relay-denied.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/RelayDenied",
 };
 
 describe("canonical contracts (cross-language fixture compilation)", () => {
@@ -240,6 +248,32 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(validate!({ ...review, data: { ...review.data, injected: true } })).toBe(false);
   });
 
+  it("keeps the F0 command catalogue complete and entirely unreachable", () => {
+    const catalogue = loadJson(join(fixtureDir, "execution-command-catalog.valid.json")) as {
+      entries: Array<Record<string, unknown>>;
+      capability: { state: string };
+    };
+    expect(catalogue.entries).toHaveLength(64);
+    expect(new Set(catalogue.entries.map((entry) => entry.key)).size).toBe(64);
+    expect(catalogue.capability.state).toBe("DISABLED");
+    expect(catalogue.entries.every((entry) => entry.portal_reachable === false)).toBe(true);
+    for (const key of [
+      "ops/trace-order", "ops/dead-letters", "ops/findings", "ops/streams",
+      "ops/command-journal", "ops/redis-retention", "ops/alerts", "ops/alpha-activity",
+    ]) {
+      const entry = catalogue.entries.find((candidate) => candidate.key === key);
+      expect(entry?.source_route_state).toBe("UNPUBLISHED");
+      expect(entry?.blocked_reason).toBe("TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED");
+    }
+    for (const key of ["redis/get", "redis/scan"]) {
+      const entry = catalogue.entries.find((candidate) => candidate.key === key);
+      expect(entry?.source_route_state).toBe("DIRECT_ACCESS_PROHIBITED");
+      expect(entry?.blocked_reason).toBe("GENERIC_REDIS_ACCESS_PROHIBITED");
+    }
+    expect(catalogue.entries.find((entry) => entry.key === "allocation/<root>")?.risk_tier)
+      .toBe("R1_PAPER_MUTATION");
+  });
+
   it("generated portal types reference both handoff endpoints", () => {
     const generated = readFileSync(join(ROOT, "generated", "portal-api.d.ts"), "utf8");
     expect(generated).toContain('"/api/v1/portal/registry"');
@@ -263,6 +297,14 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(generated).toContain("CapitalPreviewData");
     expect(generated).toContain("ProjectionKeysetPage");
     expect(generated).toContain("ProjectionCurrencyAggregate");
+  });
+
+  it("generated execution operation types expose only the F0 plan/read surface", () => {
+    const generated = readFileSync(join(ROOT, "generated", "execution-operations.d.ts"), "utf8");
+    expect(generated).toContain('"/api/v1/execution/commands/catalog"');
+    expect(generated).toContain('"/api/v1/execution/commands/plans"');
+    expect(generated).toContain('"/api/v1/execution/operations/{operation_id}/apply"');
+    expect(generated).toContain("COMMAND_RELAY_DISABLED");
   });
 
   it("generated governance and realtime types cover their narrow boundaries", () => {

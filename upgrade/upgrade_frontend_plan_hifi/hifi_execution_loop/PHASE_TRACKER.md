@@ -47,7 +47,7 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 3 | Gate R2 Review (1b) | `WIP` (screen + adapter, on the port) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | source activation/evidence + EX-BE-05a decision integration; generated `portfolio_id`/`currency` already consumed | EX-BE-07b active-epoch capital-preview repository/API delivered; flags/profile remain fixture/off |
 | 4 | Paper Workbench (1c) | **screen built** (fixtures, scale-refined) | `FOUNDATION_COMPLETE` | screen API + source integration; M7 evidence | EX-BE-04b adaptive six-rung/exact series + cold contract delivered; production source remains inactive |
 | 5 | Paper Exit Review (4b) | **screen closed on Lane A** (5 capability, 3 outcome, CSRF) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | PRE-IAM-02 đã map xong (`5b39e34`); còn real Paper source activation | PRE-IAM-02 fresh PG 129/129 + contract 20/20 + SGP runtime green; closeout linked below |
-| 6 | Admin Action Drawer (1i) | **screen built** (21 lệnh / 6 nhóm, fixtures) | `FOUNDATION_COMPLETE` | canonical catalogue (BR-EX-28) để đổi nguồn; **8 endpoint `ops` còn thiếu chặn phase 7/8/9 — xem BR-EX-28 §8.1** | EX-BE-02 authenticated boundary and request-key/UNCERTAIN contract delivered; production disabled |
+| 6 | Admin Action Drawer (1i) | **screen built** (21 lệnh / 6 nhóm, fixtures) | `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | Claude đổi sang canonical 64-action catalogue + typed conditions; live relay vẫn chờ TS command capability; **8 endpoint `ops` còn thiếu chặn phase 7/8/9** | EX-BE-05b/F0: generated catalogue, immutable blocked plan/no outbox, denied apply, Rust replay/conflict/UNCERTAIN and 146 TS + 94 Rust tests; all command flags false |
 | 7 | Operations Queue (4e) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-05b operation integration | EX-BE-04a bidirectional keyset delivered; ack≠resolve remains |
 | 8 | Incident Detail (4d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a/05b source integration | EX-BE-03 completeness + EX-BE-06 gap/reconnect transport delivered; source integration remains |
 | 9 | Command Center (5a) | **screen built** (4 panel, 5 state, fixtures) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | dark snapshot + 5 state đã tiêu thụ (`ee3576c`); còn BR-EX-28 §8.1 `streams`/`alpha-activity`, real source + SSE parity | PRE-IAM-03 bounded snapshot: fresh PG 139/139, contracts 26/26, 20k exact-observed corpus; EX-BE-06 SSE remains dark |
@@ -1629,9 +1629,32 @@ Trading System `ops` actions remain externally owned and unreachable; generic
 DB/Redis/CLI access remains prohibited. `scripts/execution-tracking-test.sh`
 enforces those facts in the root workspace gate.
 
-Next backend phase: EX-BE-05b/F0 contract foundation. Claude continues the
-PRE-IAM-04 consumer packet and may prepare catalogue/typed-condition mapping on
-Lane A, but no product route or runtime flag is enabled.
+PRE-IAM-06 handed off to EX-BE-05b/F0, which is closed below. Claude continues
+the PRE-IAM-04 consumer packet and the F0 catalogue/typed-condition mapping on
+Lane A; no product route or runtime flag is enabled.
+
+### 24A.7 EX-BE-05b/F0 offline operations foundation
+
+Codex accepted F0 at `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` on 2026-08-22.
+The canonical generated catalogue contains 64 unique `noun/verb` actions and
+keeps every entry unreachable. Eight unpublished `ops` actions and generic
+Redis capabilities remain blocked. The TypeScript Control API exposes the
+session-bound catalogue, immutable blocked plan and operation readback; apply
+is denied before source/relay construction and no outbox command is emitted.
+The Rust relay crate has no network client and locks same-key replay,
+payload-conflict and `UNCERTAIN` no-retry behavior. Governance now stores typed
+`conditions[]`; singular `condition` is a deprecated compatibility alias.
+
+Claude's exact Lane A consumer contract and test list are in
+[`CODEX_TO_CLAUDE_EX_BE_05B_F0_HANDOFF.md`](CODEX_TO_CLAUDE_EX_BE_05B_F0_HANDOFF.md).
+No route/profile/command activation is authorized. Full backend evidence:
+[`EX_BE_05B_F0_OFFLINE_OPERATIONS_FOUNDATION.md`](../../backend/EX_BE_05B_F0_OFFLINE_OPERATIONS_FOUNDATION.md).
+
+Next safe backend lane without IAM: Portal-owned Operations Queue/Incident
+workflow contracts and repositories over fixture/Portal records only. The
+source-backed `command-journal`, findings, alerts, dead letters, trace-order,
+streams and alpha-activity adapters remain blocked on Trading System owner
+publication; Portal does not substitute DB/Redis/CLI access.
 
 ---
 

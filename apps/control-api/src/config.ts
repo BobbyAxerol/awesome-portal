@@ -85,6 +85,7 @@ const EnvSchema = z.object({
   FEATURE_EXECUTION_REALTIME_SSE: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_ANALYTICS_QUERY: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT: z.enum(["true", "false"]).default("false"),
+  FEATURE_EXECUTION_COMMAND_RELAY: z.enum(["true", "false"]).default("false"),
   COMMAND_CENTER_MAX_RESPONSE_BYTES: z.coerce.number().int().min(16 * 1024).max(512 * 1024).default(128 * 1024),
   EXECUTION_EDGE_ORIGIN: ServiceOriginSchema.default("https://portal-execution-edge:8443"),
   EXECUTION_EDGE_ENVIRONMENT: z.enum(["paper", "sandbox", "live"]).default("paper"),
@@ -220,6 +221,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     throw new Error(
       "FEATURE_EXECUTION_EDGE=true requires EXECUTION_EDGE_PRIVATE_KEY_FILE",
     );
+  }
+  if (config.FEATURE_EXECUTION_COMMAND_RELAY === "true") {
+    throw new Error("FEATURE_EXECUTION_COMMAND_RELAY is not commissioned in EX-BE-05b/F0");
   }
   if (
     config.FEATURE_EXECUTION_REALTIME_SSE === "true" ||

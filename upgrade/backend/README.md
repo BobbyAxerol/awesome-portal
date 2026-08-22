@@ -168,6 +168,12 @@ Chúng không thay thế phase hoặc exit gate trong
   guide, shared tracker, frontend roadmap and canonical request ledger agree on
   owner/blocker/status. `execution-tracking-test.sh` prevents drift and keeps
   all eight unpublished `ops` routes externally owned and unreachable.
+- [EX-BE-05b/F0 — Offline Operations Contract Foundation](./EX_BE_05B_F0_OFFLINE_OPERATIONS_FOUNDATION.md)
+  — **foundation complete / production inactive:** generated 64-action
+  catalogue, BR-EX-29 typed conditions, immutable blocked TypeScript plans,
+  denied apply/no outbox, and a networkless Rust relay journal with replay,
+  conflict and `UNCERTAIN` no-retry rules. All actions remain unreachable; the
+  eight unpublished `ops` routes and generic Redis access stay blocked.
 
 **Runway complete (BAR-00 → BAR-16).** Guide v0.5 bổ sung (không thay thế)
 tại `upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md`
@@ -339,11 +345,13 @@ authority.
   source mapper/parity, BUILDING epoch shadow, cross-cell load/fault/soak/
   restore/rollback evidence, rồi owner quyết định `fixture -> shadow`.
   Live `EX-BE-05b` vẫn chờ source command capability và không bị read
-  qualification ngầm mở khóa. Phần contract-only `EX-BE-05b/F0` chạy được
-  offline ngay: canonical BR-EX-28 catalogue, BR-EX-29 typed conditions và
+  qualification ngầm mở khóa. Phần contract-only `EX-BE-05b/F0` đã hoàn tất
+  offline: canonical BR-EX-28 catalogue, BR-EX-29 typed conditions và
   deny-by-default plan/apply/verify/Rust relay foundation. Tám `ops` route chưa
   được Trading System công bố giữ `portal_reachable=false`; không thay bằng
-  DB/Redis/CLI trực tiếp.
+  DB/Redis/CLI trực tiếp. Bước không-IAM tiếp theo có thể thiết kế workflow
+  Operations Queue/Incident trên dữ liệu Portal/fixture, nhưng source adapters
+  vẫn chờ owner publish typed HTTP contracts.
 
 ## BAR-21 — Strategy Import & Quarantine Ingest foundation
 

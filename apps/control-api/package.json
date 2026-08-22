@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --maxWorkers=1 --no-file-parallelism",
     "migrate:up": "node-pg-migrate -m migrations --envPath ./.env-control-api up",
     "start": "node dist/main.js",
     "bootstrap": "node dist/cli/bootstrap.js"

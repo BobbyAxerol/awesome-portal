@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json",
+  "title": "Portal execution operations contracts v1",
+  "$defs": {
+    "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{1,191}$" },
+    "Hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "Date": { "type": "string", "format": "date" },
+    "DateTime": { "type": "string", "format": "date-time" },
+    "RiskTier": {
+      "enum": [
+        "R0_READ", "R1_PAPER_MUTATION", "R2_SANDBOX", "R3_LIVE_PROTECTIVE",
+        "R4_LIVE_RISK_INCREASING", "UNCLASSIFIED", "BLOCKED"
+      ]
+    },
+    "TypedCondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "owner", "deadline", "expires_at", "blocking"],
+      "properties": {
+        "text": { "type": "string", "minLength": 8, "maxLength": 2000 },
+        "owner": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "deadline": { "oneOf": [{ "$ref": "#/$defs/Date" }, { "type": "null" }] },
+        "expires_at": { "oneOf": [{ "$ref": "#/$defs/Date" }, { "type": "null" }] },
+        "blocking": { "type": "boolean" }
+      }
+    },
+    "CommandCatalogueEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key", "command", "action", "group", "risk_tier", "source_risk_tier",
+        "plan_required", "apply_required", "verify_required", "portal_reachable",
+        "source_route_state", "http_method", "http_path", "blocked_reason",
+        "source_reference"
+      ],
+      "properties": {
+        "key": { "type": "string", "pattern": "^[a-z0-9-]+/(?:[a-z0-9-]+|<root>)$" },
+        "command": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "action": { "type": "string", "pattern": "^(?:[a-z0-9-]+|<root>)$" },
+        "group": {
+          "enum": [
+            "ACCOUNT_CAPITAL", "ALPHA_DEPLOYMENT", "ORDER_CONTROL",
+            "OPERATIONS_INCIDENTS", "MARKET_REFERENCE", "PLATFORM_DIAGNOSTICS"
+          ]
+        },
+        "risk_tier": { "$ref": "#/$defs/RiskTier" },
+        "source_risk_tier": { "$ref": "#/$defs/RiskTier" },
+        "plan_required": { "type": "boolean" },
+        "apply_required": { "type": "boolean" },
+        "verify_required": { "type": "boolean" },
+        "portal_reachable": { "const": false },
+        "source_route_state": {
+          "enum": ["OBSERVED", "AMBIGUOUS", "UNPUBLISHED", "DIRECT_ACCESS_PROHIBITED"]
+        },
+        "http_method": { "type": ["string", "null"], "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", null] },
+        "http_path": { "type": ["string", "null"], "maxLength": 512 },
+        "blocked_reason": {
+          "enum": [
+            "COMMAND_RELAY_DISABLED", "SOURCE_ROUTE_MAPPING_AMBIGUOUS",
+            "TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED",
+            "TRADING_SYSTEM_TYPED_HTTP_ROUTE_UNPUBLISHED",
+            "GENERIC_REDIS_ACCESS_PROHIBITED",
+            "DESTRUCTIVE_OR_LAB_ONLY_COMMAND_PROHIBITED"
+          ]
+        },
+        "source_reference": { "type": "string", "minLength": 1, "maxLength": 256 }
+      }
+    },
+    "CommandCatalogue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "catalogue_revision", "delivery_profile", "capability", "source", "entries"],
+      "properties": {
+        "schema_version": { "const": "execution.command-catalog.v1" },
+        "catalogue_revision": { "const": 1 },
+        "delivery_profile": { "const": "fixture" },
+        "capability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "reason"],
+          "properties": {
+            "state": { "const": "DISABLED" },
+            "reason": { "const": "EX_BE_05B_F0_CONTRACT_ONLY" }
+          }
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["trading_system_commit", "cli_map_sha256", "openapi_sha256", "generated_from_read_only_extract"],
+          "properties": {
+            "trading_system_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+            "cli_map_sha256": { "$ref": "#/$defs/Hash" },
+            "openapi_sha256": { "$ref": "#/$defs/Hash" },
+            "generated_from_read_only_extract": { "const": true }
+          }
+        },
+        "entries": {
+          "type": "array",
+          "minItems": 64,
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/CommandCatalogueEntry" }
+        }
+      }
+    },
+    "ExecutionCommandPlanRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "workspace_id", "request_key", "command_type",
+        "command_version", "command_key", "environment", "target",
+        "expected_target_version", "payload", "conditions"
+      ],
+      "properties": {
+        "schema_version": { "const": "execution.command-plan-request.v1" },
+        "workspace_id": { "type": "string", "minLength": 3, "maxLength": 96 },
+        "request_key": { "$ref": "#/$defs/Identifier" },
+        "command_type": { "const": "EXECUTION_COMMAND" },
+        "command_version": { "const": 1 },
+        "command_key": { "type": "string", "pattern": "^[a-z0-9-]+/(?:[a-z0-9-]+|<root>)$" },
+        "environment": { "enum": ["PAPER", "SANDBOX", "LIVE"] },
+        "target": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["ACCOUNT", "BROKER_BINDING", "DEPLOYMENT", "ORDER", "PORTFOLIO", "SYSTEM"] },
+            "id": { "$ref": "#/$defs/Identifier" }
+          }
+        },
+        "expected_target_version": { "type": "integer", "minimum": 1 },
+        "payload": { "type": "object", "maxProperties": 64 },
+        "conditions": { "type": "array", "maxItems": 16, "uniqueItems": true, "items": { "$ref": "#/$defs/TypedCondition" } }
+      }
+    },
+    "ExecutionCommandPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "operation_id", "command_type", "command_version",
+        "command_key", "risk_tier", "payload_hash", "plan_digest", "status",
+        "blockers", "warnings", "apply_token", "expires_at",
+        "relay_capability", "source_side_effect_requested", "replayed"
+      ],
+      "properties": {
+        "schema_version": { "const": "execution.command-plan.v1" },
+        "operation_id": { "$ref": "#/$defs/Identifier" },
+        "command_type": { "const": "EXECUTION_COMMAND" },
+        "command_version": { "const": 1 },
+        "command_key": { "type": "string", "minLength": 3, "maxLength": 128 },
+        "risk_tier": { "$ref": "#/$defs/RiskTier" },
+        "payload_hash": { "$ref": "#/$defs/Hash" },
+        "plan_digest": { "$ref": "#/$defs/Hash" },
+        "status": { "const": "BLOCKED" },
+        "blockers": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 128 } },
+        "warnings": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 128 } },
+        "apply_token": { "type": "null" },
+        "expires_at": { "$ref": "#/$defs/DateTime" },
+        "relay_capability": { "const": "DISABLED" },
+        "source_side_effect_requested": { "const": false },
+        "replayed": { "type": "boolean" }
+      }
+    },
+    "ExecutionCommandApplyRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "workspace_id", "command_type"],
+      "properties": {
+        "schema_version": { "const": "execution.command-apply-request.v1" },
+        "workspace_id": { "type": "string", "minLength": 3, "maxLength": 96 },
+        "command_type": { "const": "EXECUTION_COMMAND" }
+      }
+    },
+    "ExecutionCommandOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "operation_id", "command_type", "command_key",
+        "status", "verification_result", "blockers", "warnings",
+        "relay_receipt", "source_side_effect_requested", "created_at", "updated_at"
+      ],
+      "properties": {
+        "schema_version": { "const": "execution.command-operation.v1" },
+        "operation_id": { "$ref": "#/$defs/Identifier" },
+        "command_type": { "const": "EXECUTION_COMMAND" },
+        "command_key": { "type": "string", "minLength": 3, "maxLength": 128 },
+        "status": { "const": "BLOCKED" },
+        "verification_result": { "const": "NOT_STARTED" },
+        "blockers": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 128 } },
+        "warnings": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 128 } },
+        "relay_receipt": { "type": "null" },
+        "source_side_effect_requested": { "const": false },
+        "created_at": { "$ref": "#/$defs/DateTime" },
+        "updated_at": { "$ref": "#/$defs/DateTime" }
+      }
+    },
+    "RelayDenied": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "operation_id", "decision", "reason", "retry_allowed", "source_request_sent"],
+      "properties": {
+        "schema_version": { "const": "execution.command-relay-decision.v1" },
+        "operation_id": { "$ref": "#/$defs/Identifier" },
+        "decision": { "const": "DENIED" },
+        "reason": { "const": "COMMAND_RELAY_DISABLED" },
+        "retry_allowed": { "const": false },
+        "source_request_sent": { "const": false }
+      }
+    }
+  }
+}

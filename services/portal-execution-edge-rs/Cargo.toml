@@ -12,6 +12,7 @@ members = [
   "crates/ts-contract-v1",
   "crates/ts-adapter-v1",
   "crates/ts-transport",
+  "crates/command-relay",
 ]
 resolver = "2"
 

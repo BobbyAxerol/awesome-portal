@@ -17,6 +17,7 @@ services:
       EDGE_REALTIME_SSE_ENABLED: "false"
       EDGE_ANALYTICS_QUERY_ENABLED: "false"
       EDGE_ANALYTICS_SOURCE_PROFILE: fixture
+      EDGE_COMMAND_RELAY_ENABLED: "false"
     deploy:
       resources:
         limits:

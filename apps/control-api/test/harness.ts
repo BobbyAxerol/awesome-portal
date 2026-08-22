@@ -1,4 +1,5 @@
 import { runner as migrate } from "node-pg-migrate";
+import { join } from "node:path";
 import { Pool } from "pg";
 import { loadConfig } from "../src/config";
 import { buildPool } from "../src/db/pool";
@@ -16,15 +17,33 @@ export const TEST_TABLES = [
 ];
 
 export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
+  const migrationsDir = join(__dirname, "..", "migrations");
   await migrate({
     databaseUrl,
-    dir: "migrations",
+    dir: migrationsDir,
     direction: "up",
     migrationsTable: "pgmigrations",
     count: Infinity,
     noLock: true,
     log: () => {},
   });
+  const gate = new Pool({ connectionString: databaseUrl });
+  try {
+    const result = await gate.query<{ migration_count: number; has_f0: boolean }>(
+      `SELECT
+         (SELECT count(*)::integer FROM pgmigrations) AS migration_count,
+         to_regclass('public.execution_command_plans_f0') IS NOT NULL AS has_f0`,
+    );
+    if (result.rows[0].migration_count < 7 || !result.rows[0].has_f0) {
+      throw new Error(
+        `Control API test migration gate did not reach EX-BE-05b/F0 ` +
+        `(count=${result.rows[0].migration_count}, has_f0=${result.rows[0].has_f0}, ` +
+        `dir=${migrationsDir})`,
+      );
+    }
+  } finally {
+    await gate.end();
+  }
 }
 
 export async function truncateAll(pool: Pool): Promise<void> {

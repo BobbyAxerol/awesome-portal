@@ -2,6 +2,7 @@ import { QueryResultRow } from "pg";
 import { z } from "zod";
 import { PortalUser } from "../domain";
 import { PostgresListResource, RawFilterInput, RawKeysetQuery } from "../query";
+import { TypedConditionSchema } from "../operations/contracts";
 
 export const APPROVAL_GATES = ["R1", "R2", "PAPER_EXIT", "SANDBOX_EXIT", "LIVE_GATE"] as const;
 export const APPROVAL_STATUSES = [
@@ -257,6 +258,8 @@ export const DecisionPlanRequestSchema = z
       .object({
         decision: z.enum(R1_DECISIONS),
         reason: z.string().trim().min(8).max(2000),
+        conditions: z.array(TypedConditionSchema).max(16).optional(),
+        /** @deprecated Transition-only alias; canonical writes use conditions[]. */
         condition: z.string().trim().min(8).max(2000).nullable().optional(),
         evidence_hashes: z.array(EvidenceHash).max(128),
       })
@@ -264,18 +267,40 @@ export const DecisionPlanRequestSchema = z
   })
   .strict()
   .superRefine((input, context) => {
-    if (input.payload.decision === "APPROVE_WITH_CONDITION" && !input.payload.condition) {
+    const conditions = input.payload.conditions ?? [];
+    const legacy = input.payload.condition ?? null;
+    if (conditions.length > 0 && legacy !== null) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["payload", "condition"],
-        message: "approve-with-condition requires a condition",
+        path: ["payload", "conditions"],
+        message: "conditions and deprecated condition are mutually exclusive",
       });
     }
-    if (input.payload.decision !== "APPROVE_WITH_CONDITION" && input.payload.condition) {
+    if (
+      input.payload.decision === "APPROVE_WITH_CONDITION" &&
+      conditions.length === 0 &&
+      legacy === null
+    ) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["payload", "condition"],
-        message: "condition is only valid for approve-with-condition",
+        path: ["payload", "conditions"],
+        message: "approve-with-condition requires typed conditions",
+      });
+    }
+    if (input.payload.decision !== "APPROVE_WITH_CONDITION" && (conditions.length > 0 || legacy !== null)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["payload", "conditions"],
+        message: "conditions are only valid for approve-with-condition",
+      });
+    }
+    if (
+      new Set(conditions.map((condition) => JSON.stringify(condition))).size !== conditions.length
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["payload", "conditions"],
+        message: "conditions must be unique",
       });
     }
   });

@@ -727,8 +727,8 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     );
     expect(planned.json().blockers).toEqual([]);
     expect((await apply(bobby, planned.json().operation_id, planned.json().apply_token)).statusCode).toBe(202);
-    const state = await ctx.pool.query<{ status: string; decision: string; condition: string }>(
-      `SELECT request.status, decision.decision, decision.condition
+    const state = await ctx.pool.query<{ status: string; decision: string; condition: string; conditions: unknown[] }>(
+      `SELECT request.status, decision.decision, decision.condition, decision.conditions
        FROM governance_approval_requests request
        JOIN governance_approval_decisions decision USING (approval_id)
        WHERE request.approval_id = 'AP-CONDITION'`,
@@ -737,7 +737,106 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
       status: "APPROVED_WITH_CONDITION",
       decision: "APPROVE_WITH_CONDITION",
       condition: "Keep notional below the reviewed capacity ceiling until a new R1 review.",
+      conditions: [{
+        text: "Keep notional below the reviewed capacity ceiling until a new R1 review.",
+        owner: bobby.userId,
+        deadline: null,
+        expires_at: null,
+        blocking: true,
+      }],
     });
+  });
+
+  it("persists multiple typed conditions as the canonical immutable decision evidence", async () => {
+    const seeded = await seedApproval({ approvalId: "AP-TYPED-CONDITIONS" });
+    const conditions = [
+      {
+        text: "Keep gross notional below the reviewed paper capacity.",
+        owner: "risk-team",
+        deadline: "2026-09-01",
+        expires_at: "2026-09-30",
+        blocking: true,
+      },
+      {
+        text: "Publish the observation report before the next review.",
+        owner: "research-team",
+        deadline: null,
+        expires_at: null,
+        blocking: false,
+      },
+    ];
+    const planned = await plan(
+      bobby,
+      planPayload("AP-TYPED-CONDITIONS", seeded.evidenceHashes, {
+        request_key: "r1:AP-TYPED-CONDITIONS:conditional",
+        payload: {
+          decision: "APPROVE_WITH_CONDITION",
+          reason: "The evidence is sufficient under two explicit operational conditions.",
+          conditions,
+          evidence_hashes: seeded.evidenceHashes,
+        },
+      }),
+    );
+    expect(planned.statusCode).toBe(201);
+    expect((await apply(bobby, planned.json().operation_id, planned.json().apply_token)).statusCode).toBe(202);
+    const persisted = await ctx.pool.query<{ conditions: unknown[] }>(
+      "SELECT conditions FROM governance_approval_decisions WHERE approval_id = 'AP-TYPED-CONDITIONS'",
+    );
+    expect(persisted.rows[0].conditions).toEqual(conditions);
+    await expect(ctx.pool.query(
+      `UPDATE governance_approval_decisions SET conditions = '[]'::jsonb
+       WHERE approval_id = 'AP-TYPED-CONDITIONS'`,
+    )).rejects.toThrow(/append-only/);
+  });
+
+  it("rejects ambiguous aliases and typed-condition expiry before deadline", async () => {
+    const seeded = await seedApproval({ approvalId: "AP-CONDITION-INVALID" });
+    const base = {
+      decision: "APPROVE_WITH_CONDITION" as const,
+      reason: "The evidence is sufficient only when explicit conditions remain enforceable.",
+      evidence_hashes: seeded.evidenceHashes,
+    };
+    const mixed = await plan(
+      bobby,
+      planPayload("AP-CONDITION-INVALID", seeded.evidenceHashes, {
+        request_key: "r1:AP-CONDITION-INVALID:mixed",
+        payload: {
+          ...base,
+          condition: "Legacy aliases cannot coexist with canonical typed conditions.",
+          conditions: [{
+            text: "Keep gross notional below the reviewed paper capacity.",
+            owner: "risk-team",
+            deadline: null,
+            expires_at: null,
+            blocking: true,
+          }],
+        },
+      }),
+    );
+    expect(mixed.statusCode).toBe(400);
+    expect(mixed.json().error.code).toBe("INVALID_DECISION_PLAN");
+
+    const invalidExpiry = await plan(
+      bobby,
+      planPayload("AP-CONDITION-INVALID", seeded.evidenceHashes, {
+        request_key: "r1:AP-CONDITION-INVALID:expiry",
+        payload: {
+          ...base,
+          conditions: [{
+            text: "Keep gross notional below the reviewed paper capacity.",
+            owner: "risk-team",
+            deadline: "2026-09-30",
+            expires_at: "2026-09-01",
+            blocking: true,
+          }],
+        },
+      }),
+    );
+    expect(invalidExpiry.statusCode).toBe(400);
+    expect(invalidExpiry.json().error.code).toBe("INVALID_DECISION_PLAN");
+    expect((await ctx.pool.query(
+      "SELECT 1 FROM governance_decision_plans WHERE approval_id = 'AP-CONDITION-INVALID'",
+    )).rowCount).toBe(0);
   });
 
   it("expires a stale plan durably and audits the rejected apply", async () => {

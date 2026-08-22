@@ -20,6 +20,11 @@ import { newUlid } from "../id";
 import { WorkspacesRepository } from "../repos/workspaces";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
+  ExecutionCommandApplyRequestSchema,
+  ExecutionCommandPlanRequestSchema,
+} from "../operations/contracts";
+import { ExecutionOperationsService } from "../operations/operations.service";
+import {
   ApplyOperationRequestSchema,
   approvalListQuery,
   DecisionPlanRequestSchema,
@@ -41,9 +46,15 @@ export class GovernanceController {
   constructor(
     @Inject(GovernanceService) private readonly governance: GovernanceService,
     @Inject(PaperExitService) private readonly paperExit: PaperExitService,
+    @Inject(ExecutionOperationsService) private readonly operations: ExecutionOperationsService,
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
+
+  @Get("/commands/catalog")
+  catalogue() {
+    return this.operations.catalogue();
+  }
 
   @Get("/governance/approvals")
   async approvals(
@@ -107,6 +118,15 @@ export class GovernanceController {
       );
       return { ...result.response, replayed: result.replayed };
     }
+    const execution = ExecutionCommandPlanRequestSchema.safeParse(body);
+    if (execution.success) {
+      const workspaceId = await this.workspace(request, execution.data.workspace_id);
+      return this.operations.plan(
+        request.portalUser,
+        { ...execution.data, workspace_id: workspaceId },
+        this.requestId(request),
+      );
+    }
     const parsed = DecisionPlanRequestSchema.safeParse(body);
     if (!parsed.success) {
       throw new GovernanceError("INVALID_DECISION_PLAN", "Invalid decision plan request.", 400);
@@ -121,7 +141,17 @@ export class GovernanceController {
         expectedApprovalVersion: parsed.data.expected_approval_version,
         decision: parsed.data.payload.decision,
         reason: parsed.data.payload.reason,
-        condition: parsed.data.payload.condition ?? null,
+        conditions: parsed.data.payload.conditions ?? (
+          parsed.data.payload.condition
+            ? [{
+                text: parsed.data.payload.condition,
+                owner: request.portalUser.userId,
+                deadline: null,
+                expires_at: null,
+                blocking: true,
+              }]
+            : []
+        ),
         evidenceHashes: parsed.data.payload.evidence_hashes,
       },
       this.requestId(request),
@@ -148,6 +178,16 @@ export class GovernanceController {
         this.requestId(request),
       );
     }
+    const execution = ExecutionCommandApplyRequestSchema.safeParse(body);
+    if (execution.success) {
+      const workspaceId = await this.workspace(request, execution.data.workspace_id);
+      return this.operations.apply(
+        request.portalUser,
+        workspaceId,
+        operationId,
+        this.requestId(request),
+      );
+    }
     const parsed = ApplyOperationRequestSchema.safeParse(body);
     if (!parsed.success) {
       throw new GovernanceError("INVALID_APPLY_REQUEST", "Invalid apply request.", 400);
@@ -169,6 +209,12 @@ export class GovernanceController {
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
+    const execution = await this.operations.operationOrNull(
+      request.portalUser,
+      workspaceId,
+      operationId,
+    );
+    if (execution) return execution;
     const paperExit = await this.paperExit.operationOrNull(
       request.portalUser,
       workspaceId,

@@ -1,0 +1,71 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal Execution Operations API",
+    "version": "0.1.0-f0",
+    "description": "EX-BE-05b/F0 contract-only catalogue and deny-by-default operation foundation. No relay or Trading System side effect is active."
+  },
+  "servers": [{ "url": "/" }],
+  "security": [{ "portalSession": [] }],
+  "paths": {
+    "/api/v1/execution/commands/catalog": {
+      "get": {
+        "operationId": "executionCommandCatalog",
+        "responses": {
+          "200": {
+            "description": "Canonical 64-action catalogue; F0 entries are all unreachable",
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/CommandCatalogue" } } }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/commands/plans": {
+      "post": {
+        "operationId": "planExecutionCommandF0",
+        "description": "Creates an immutable blocked plan. F0 never issues an apply token.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/ExecutionCommandPlanRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Blocked immutable plan",
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/ExecutionCommandPlan" } } }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/operations/{operation_id}": {
+      "get": {
+        "operationId": "getExecutionCommandOperationF0",
+        "parameters": [
+          { "name": "operation_id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "workspace_id", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Blocked operation with no relay receipt",
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/ExecutionCommandOperation" } } }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/operations/{operation_id}/apply": {
+      "post": {
+        "operationId": "applyExecutionCommandF0",
+        "description": "Always denied in F0 before any relay/source call.",
+        "parameters": [{ "name": "operation_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/ExecutionCommandApplyRequest" } } }
+        },
+        "responses": { "409": { "description": "COMMAND_RELAY_DISABLED" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" }
+    }
+  }
+}

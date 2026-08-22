@@ -113,6 +113,7 @@ for required in \
   "${ROOT_DIR}/packages/contracts/schemas/execution-governance-r2-review.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-governance-paper-exit.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-realtime-event.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-operations.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/problem.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/command.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/event.valid.json" \
@@ -128,13 +129,20 @@ for required in \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-governance.paper-exit-review.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.auth-expiring.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.projection-gap.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-command-catalog.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-command-plan.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-command-operation.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-command-relay-denied.valid.json" \
   "${ROOT_DIR}/packages/contracts/generated/portal-api.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-analytics.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-governance.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-realtime.d.ts" \
+  "${ROOT_DIR}/packages/contracts/generated/execution-operations.d.ts" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-analytics.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-governance.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-realtime.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-operations.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/tooling/generate-execution-command-catalog.mjs" \
   "${ROOT_DIR}/packages/contracts/vitest.config.ts" \
   "${ROOT_DIR}/packages/contracts/test/fixtures.spec.ts" \
   "${ROOT_DIR}/scripts/contracts-test.sh" \
@@ -191,6 +199,8 @@ for required in \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000002_execution-governance.sql" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000003_execution-approval-analytics-scope.sql" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000004_governance-paper-exit.sql" \
+  "${ROOT_DIR}/apps/control-api/migrations/1723680000005_command-center-pins.sql" \
+  "${ROOT_DIR}/apps/control-api/migrations/1723680000006_execution-operations-f0.sql" \
   "${ROOT_DIR}/apps/control-api/src/id.ts" \
   "${ROOT_DIR}/apps/control-api/src/repos/workspaces.ts" \
   "${ROOT_DIR}/apps/control-api/src/repos/runs.ts" \
@@ -215,6 +225,13 @@ for required in \
   "${ROOT_DIR}/apps/control-api/test/governance-token.spec.ts" \
   "${ROOT_DIR}/apps/control-api/test/governance.spec.ts" \
   "${ROOT_DIR}/apps/control-api/test/paper-exit.spec.ts" \
+  "${ROOT_DIR}/apps/control-api/src/operations/contracts.ts" \
+  "${ROOT_DIR}/apps/control-api/src/operations/catalog.generated.ts" \
+  "${ROOT_DIR}/apps/control-api/src/operations/operations.repository.ts" \
+  "${ROOT_DIR}/apps/control-api/src/operations/operations.service.ts" \
+  "${ROOT_DIR}/apps/control-api/test/execution-operations.spec.ts" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_05B_F0_OFFLINE_OPERATIONS_FOUNDATION.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F0_HANDOFF.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/Cargo.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/Cargo.lock" \
@@ -225,6 +242,8 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/ts-adapter-v1/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/edge-auth/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/ts-transport/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/command-relay/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/command-relay/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/edge-service/src/main.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-core/Cargo.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-core/src/lib.rs" \
@@ -424,6 +443,7 @@ for tracked_source in \
   packages/contracts/schemas/execution-governance-r2-review.v1.schema.json \
   packages/contracts/schemas/execution-governance-paper-exit.v1.schema.json \
   packages/contracts/schemas/execution-realtime-event.v1.schema.json \
+  packages/contracts/schemas/execution-operations.v1.schema.json \
   packages/contracts/fixtures/problem.valid.json \
   packages/contracts/fixtures/command.valid.json \
   packages/contracts/fixtures/event.valid.json \
@@ -439,13 +459,20 @@ for tracked_source in \
   packages/contracts/fixtures/execution-governance.paper-exit-review.valid.json \
   packages/contracts/fixtures/execution-realtime.auth-expiring.valid.json \
   packages/contracts/fixtures/execution-realtime.projection-gap.valid.json \
+  packages/contracts/fixtures/execution-command-catalog.valid.json \
+  packages/contracts/fixtures/execution-command-plan.valid.json \
+  packages/contracts/fixtures/execution-command-operation.valid.json \
+  packages/contracts/fixtures/execution-command-relay-denied.valid.json \
   packages/contracts/generated/portal-api.d.ts \
   packages/contracts/generated/execution-analytics.d.ts \
   packages/contracts/generated/execution-governance.d.ts \
   packages/contracts/generated/execution-realtime.d.ts \
+  packages/contracts/generated/execution-operations.d.ts \
   packages/contracts/openapi/execution-analytics.openapi.json \
   packages/contracts/openapi/execution-governance.openapi.json \
   packages/contracts/openapi/execution-realtime.openapi.json \
+  packages/contracts/openapi/execution-operations.openapi.json \
+  packages/contracts/tooling/generate-execution-command-catalog.mjs \
   packages/contracts/vitest.config.ts \
   packages/contracts/test/fixtures.spec.ts \
   scripts/contracts-test.sh \
@@ -500,6 +527,8 @@ for tracked_source in \
   apps/control-api/migrations/1723680000002_execution-governance.sql \
   apps/control-api/migrations/1723680000003_execution-approval-analytics-scope.sql \
   apps/control-api/migrations/1723680000004_governance-paper-exit.sql \
+  apps/control-api/migrations/1723680000005_command-center-pins.sql \
+  apps/control-api/migrations/1723680000006_execution-operations-f0.sql \
   apps/control-api/src/id.ts \
   apps/control-api/src/repos/workspaces.ts \
   apps/control-api/src/repos/runs.ts \
@@ -524,6 +553,13 @@ for tracked_source in \
   apps/control-api/test/governance-token.spec.ts \
   apps/control-api/test/governance.spec.ts \
   apps/control-api/test/paper-exit.spec.ts \
+  apps/control-api/src/operations/contracts.ts \
+  apps/control-api/src/operations/catalog.generated.ts \
+  apps/control-api/src/operations/operations.repository.ts \
+  apps/control-api/src/operations/operations.service.ts \
+  apps/control-api/test/execution-operations.spec.ts \
+  upgrade/backend/EX_BE_05B_F0_OFFLINE_OPERATIONS_FOUNDATION.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F0_HANDOFF.md \
   upgrade/backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md \
   services/portal-execution-edge-rs/Cargo.toml \
   services/portal-execution-edge-rs/Cargo.lock \
@@ -532,6 +568,8 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/execution-contracts/src/lib.rs \
   services/portal-execution-edge-rs/crates/ts-contract-v1/src/lib.rs \
   services/portal-execution-edge-rs/crates/ts-adapter-v1/src/lib.rs \
+  services/portal-execution-edge-rs/crates/command-relay/Cargo.toml \
+  services/portal-execution-edge-rs/crates/command-relay/src/lib.rs \
   services/portal-execution-edge-rs/crates/projection-core/Cargo.toml \
   services/portal-execution-edge-rs/crates/projection-core/src/lib.rs \
   services/portal-execution-edge-rs/crates/query-api/Cargo.toml \
@@ -660,9 +698,15 @@ for json_contract in \
   "${ROOT_DIR}/packages/contracts/schemas/execution-realtime-event.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.auth-expiring.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.projection-gap.valid.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-operations.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-command-catalog.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-command-plan.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-command-operation.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-command-relay-denied.valid.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-analytics.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-governance.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-realtime.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-operations.openapi.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contract-pack.lock.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/planning-api.openapi.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/run-request.schema.json" \

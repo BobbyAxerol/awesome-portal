@@ -151,6 +151,7 @@ rendered="$(docker compose --project-directory "${ROOT_DIR}" \
 grep -Fq 'EDGE_PROJECTION_INGESTION_ENABLED: "false"' <<<"${rendered}"
 grep -Fq 'EDGE_REALTIME_SSE_ENABLED: "false"' <<<"${rendered}"
 grep -Fq 'EDGE_ANALYTICS_QUERY_ENABLED: "false"' <<<"${rendered}"
+grep -Fq 'EDGE_COMMAND_RELAY_ENABLED: "false"' <<<"${rendered}"
 grep -Fq 'network_mode: host' <<<"${rendered}"
 grep -Fq 'if ($request_method != GET)' \
   "${ROOT_DIR}/deploy/execution-d1/source-proxy/nginx.conf.template"

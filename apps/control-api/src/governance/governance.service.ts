@@ -10,6 +10,7 @@ import { PortalUser } from "../domain";
 import { newUlid } from "../id";
 import { ControlPlaneQueryService, KeysetCursorCodec, RawKeysetQuery } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
+import { TypedCondition } from "../operations/contracts";
 import { GovernanceApplyTokenSigner } from "./apply-token";
 import {
   approvalInboxResource,
@@ -41,7 +42,7 @@ interface PlanInput {
   expectedApprovalVersion: number;
   decision: R1Decision;
   reason: string;
-  condition: string | null;
+  conditions: TypedCondition[];
   evidenceHashes: string[];
 }
 
@@ -260,7 +261,8 @@ export class GovernanceService {
           actor: { user_id: item.actorUserId, username: item.actorUsername },
           outcome: item.decision === "APPROVE" ? "APPROVED" : item.decision === "DENY" ? "DENIED" : "APPROVED_WITH_CONDITION",
           reason: item.reason,
-          condition: item.condition,
+          conditions: item.conditions,
+          condition: item.conditions[0]?.text ?? null,
           evidence_set_hash: item.evidenceSetHash,
           approval_version_before: item.approvalVersionBefore,
           approval_version_after: item.approvalVersionAfter,
@@ -331,7 +333,7 @@ export class GovernanceService {
       expected_approval_version: input.expectedApprovalVersion,
       decision: input.decision,
       reason: input.reason,
-      condition: input.condition,
+      conditions: input.conditions,
       evidence_hashes: hashes,
     });
     const existing = await this.repository.findPlanByKey(input.workspaceId, user.userId, input.requestKey);
@@ -379,7 +381,7 @@ export class GovernanceService {
         payloadHash,
         decision: input.decision,
         reason: input.reason,
-        condition: input.condition,
+        conditions: input.conditions,
         expectedApprovalVersion: input.expectedApprovalVersion,
         quorumRequired: approval.quorumRequired,
         evidenceSetHash: approval.evidenceSetHash,

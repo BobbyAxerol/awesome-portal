@@ -30,6 +30,18 @@ totals are exact only when every contributing source is available, otherwise
 they are null rather than a fabricated zero. SSE identity and every live
 delivery profile remain disabled in v1.
 
+EX-BE-05b/F0 publishes the offline execution-operations boundary at
+`openapi/execution-operations.openapi.json`, generated as
+`generated/execution-operations.d.ts`. Its catalogue is deterministically
+generated from the immutable Trading System CLI/OpenAPI extract and contains
+exactly 64 canonical `noun/verb` entries. Every F0 entry has
+`portal_reachable=false`; the eight unpublished `ops` actions and generic
+Redis access stay explicitly blocked. Plan records are immutable and blocked,
+apply is denied before relay construction, verification remains `NOT_STARTED`,
+and no source request or outbox command is created. `TypedCondition` is the
+canonical multi-condition shape; a singular governance condition is accepted
+only as a deprecated transition alias.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields
@@ -71,6 +83,7 @@ packages/contracts/
     execution-governance-paper-exit.v1.schema.json
     execution-realtime-event.v1.schema.json
     execution-command-center-snapshot.v1.schema.json
+    execution-operations.v1.schema.json
   fixtures/
     problem.valid.json
     command.valid.json
@@ -88,17 +101,20 @@ packages/contracts/
     execution-realtime.auth-expiring.valid.json
     execution-realtime.projection-gap.valid.json
     execution-command-center.{busy,empty,partial,stale,unavailable}.valid.json
+    execution-command-{catalog,plan,operation,relay-denied}.valid.json
   openapi/
     execution-analytics.openapi.json
     execution-governance.openapi.json
     execution-realtime.openapi.json
     execution-command-center.openapi.json
+    execution-operations.openapi.json
   generated/
     portal-api.d.ts
     execution-analytics.d.ts
     execution-governance.d.ts
     execution-realtime.d.ts
     execution-command-center.d.ts
+    execution-operations.d.ts
   contracts-snapshot.json
   package.json
   tsconfig.json

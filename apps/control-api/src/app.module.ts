@@ -28,6 +28,8 @@ import { ExecutionAnalyticsProxy } from "./execution/analytics.proxy";
 import { CommandCenterController } from "./command-center/command-center.controller";
 import { CommandCenterRepository } from "./command-center/command-center.repository";
 import { CommandCenterService } from "./command-center/command-center.service";
+import { ExecutionOperationsRepository } from "./operations/operations.repository";
+import { ExecutionOperationsService } from "./operations/operations.service";
 
 @Module({})
 export class AppModule {
@@ -78,6 +80,8 @@ export class AppModule {
         PaperExitService,
         CommandCenterRepository,
         CommandCenterService,
+        ExecutionOperationsRepository,
+        ExecutionOperationsService,
         {
           provide: ExecutionRealtimeProxy,
           useFactory: (cfg: ControlApiConfig) => ExecutionRealtimeProxy.create(cfg),
