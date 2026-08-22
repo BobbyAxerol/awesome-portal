@@ -1405,3 +1405,71 @@ Frontend còn nợ thiết kế, không phải lỗi: R1/R2 chưa có outcome *"
 changes"*, container chưa truyền typed conditions, Paper Exit wired mất
 lifecycle rail, Alpha 360 thiếu equity-by-stage chart, Portfolio 360 leader lens
 chưa highlight chéo. Tất cả cần contract hoặc quyết định sản phẩm trước.
+
+---
+
+## 23. Chín màn chưa dựng — và tôi đã nói sai một câu (2026-08-22)
+
+Ở §21.7 tôi viết *"sau phase 16, frontend hết việc Lane A"*. **Sai.** 8/17 màn
+đã dựng; **9 màn chưa có một dòng UI nào**, và phần lớn dựng được ngay trên
+fixture đúng cách 14–17 đã dựng. "BLOCKED" trong bảng phase nghĩa là *tích hợp
+backend* bị chặn, không phải UI bị chặn — chính tôi đã chứng minh điều đó bốn
+lần rồi lại quên.
+
+### 23.1 Chuỗi phụ thuộc thật (`IMPLEMENTATION_PHASES` §4–13)
+
+| Phase | Màn | Phụ thuộc | Dựng được chưa |
+|---|---|---|---|
+| 4 | Paper Workbench (1c) | Phase 3 — **đã dựng** | ✅ **ngay bây giờ** |
+| 13 | Paper Workbench VNM (4h) | Phase 4 (biến thể) | ✅ ngay sau 4 |
+| 6 | Admin Action Drawer (1i) | Phase 0 — đã dựng | ⚠️ **chờ Bobby chốt catalogue** |
+| 7 | Operations Queue (4e) | Phase 6 | ⛔ sau 6 |
+| 8 | Incident Detail (4d) | Phase 7 | ⛔ sau 6 |
+| 9 | Command Center (5a) | Phase 1, 7, 8 | ⛔ sau 6 |
+| 10 | Sandbox Certification (1d) | Phase 4–6 | ⛔ sau 6 |
+| 11 | Canary Control Room (1e) | Phase 10 | ⛔ sau 6 |
+| 12 | Live Full Operations (1f) | Phase 11 | ⛔ sau 6 |
+
+### 23.2 Một quyết định mở sáu màn
+
+**Phase 6 chặn 7, 8, 9, 10, 11, 12** — sáu trong chín màn còn lại. Và phase 6
+không chờ backend: shell, state machine, blocking rule đã dựng từ §4; nó chờ
+**Bobby chốt catalogue** giữa ba nguồn mâu thuẫn:
+
+| Nguồn | Catalogue |
+|---|---|
+| Hi-fi 1i | 21 lệnh / 6 nhóm, "all mutations: Generate plan gates Apply" |
+| `command-catalog.yaml` | 13 action family, **1** lệnh có `plan: true` |
+| `extract/cli-command-map.json` | 19 noun / 64 action — 47 read, 14 mutation, **7 action Portal bị cấm chạm** |
+
+Đây là đòn bẩy lớn nhất còn lại trên toàn bộ frontend.
+
+### 23.3 Làm được ngay mà không cần ai
+
+**Phase 4 — Paper Workbench.** Phụ thuộc duy nhất là Phase 3, đã dựng. Sau nó
+là **Phase 13 (VNM)**, mô tả trong `IMPLEMENTATION_PHASES` là "biến thể của 4",
+nên hai màn đi liền một mạch.
+
+## 24. Soát chéo hàng rào contract (2026-08-22)
+
+Không soát code mà soát **cái gì giữ cái gì**.
+
+**Sạch — đã kiểm, khỏi soát lại:** `contracts-snapshot.json` phủ 26/26 file,
+digest khớp hết, không file nào publish mà nằm ngoài; `npm run generate` chạy
+lại (exit 0, bốn file) rồi diff → generated types **khớp hoàn toàn** OpenAPI;
+fixture capital-preview **hợp lệ** với `CapitalPreviewResponse` (tự compile
+schema từ OpenAPI mà validate).
+
+**Ba lỗ** → `HOTFIX_REQUEST_2026-08-22.md` H-10, H-11, H-12:
+
+1. Analytics là contract **duy nhất không có schema gate**. Có digest, nhưng
+   digest bắt "file đổi mà snapshot không cập nhật" — **không** bắt "fixture
+   không còn khớp schema". Sửa cả hai cùng lúc thì đi lọt. Và đây là contract
+   mang mọi con số tiền.
+2. **Không test nào chứng minh Rust analytics khớp OpenAPI.** `query-api` có
+   (codex thêm sau khi tôi báo A-2). `analytics` grep không ra một dòng chạm
+   `packages/contracts`. Với sáu màn, thứ duy nhất nối tên trường Rust với
+   OpenAPI là *một người đã viết cả hai* — đúng điều kiện đã sinh ra A-2.
+3. **5/6 endpoint analytics không có fixture.** Fixture frontend cho chúng là
+   tôi tự viết từ OpenAPI; `readCapitalPreview` đã cho thấy làm theo prose sai
+   **9 tên trường**.

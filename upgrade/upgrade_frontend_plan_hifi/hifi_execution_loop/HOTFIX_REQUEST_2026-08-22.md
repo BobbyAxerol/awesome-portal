@@ -216,3 +216,74 @@ soát. **H-2** `view=` đã sửa phía frontend; vẫn xin xác nhận tên can
 cân nhắc fail-closed thay vì mặc định `INBOX`.
 
 Và **A-5, BR-EX-24, 25, 26, 27** từ audit trước vẫn chưa thấy trong tree.
+
+---
+
+# Đợt ba — soát chéo contract đã publish (2026-08-22, chiều muộn)
+
+Không soát code lần này mà soát **hàng rào**: cái gì đã publish, cái gì được
+gate giữ, và chỗ nào một thay đổi đi lọt.
+
+**Ba thứ đã kiểm và SẠCH** — ghi lại để khỏi soát lại:
+
+- `contracts-snapshot.json` phủ **26/26** file, digest khớp hết, không file nào
+  publish mà nằm ngoài snapshot.
+- `npm run generate` chạy lại (exit 0, bốn file) rồi diff: **generated types
+  khớp hoàn toàn** với OpenAPI. Không stale.
+- `execution-analytics.capital-preview.valid.json` **hợp lệ** với
+  `CapitalPreviewResponse` — tôi tự compile schema từ OpenAPI và validate.
+
+Ba mục dưới đây là lỗ thật.
+
+---
+
+## H-10 · Analytics là contract duy nhất **không có schema gate** · NẶNG
+
+`packages/contracts/test/fixtures.spec.ts:29-45` map 8 fixture sang 8 schema.
+`execution-analytics.capital-preview.valid.json` **không nằm trong bảng đó**.
+
+Nó có digest trong snapshot, nhưng digest và validation là hai bảo đảm khác
+nhau: digest bắt *"file đổi mà snapshot không cập nhật"*; nó **không** bắt
+*"fixture không còn khớp schema của chính nó"*. Sửa cả hai cùng lúc thì đi lọt.
+
+Và đây là contract mang **mọi con số tiền** trên bề mặt này.
+
+**Đề xuất:** thêm `execution-analytics-*.v1.schema.json` (hoặc validate thẳng
+theo OpenAPI như tôi vừa làm — đoạn Ajv chỉ mất 10 dòng) và đưa vào bảng
+`fixtures.spec.ts`.
+
+---
+
+## H-11 · Không test nào chứng minh Rust analytics khớp OpenAPI · NẶNG
+
+`crates/query-api/src/lib.rs:863`
+`projection_query_page_serializes_canonical_keyset_field_names` — serialize
+struct Rust rồi so với `keyset-page.valid.json`. Đúng thứ cần, và bạn thêm nó
+**sau khi** tôi báo A-2.
+
+`crates/analytics/src/*.rs` **không có gì tương đương**. Grep toàn crate không
+ra một dòng nào chạm `packages/contracts`, `openapi` hay `valid.json`.
+
+Nghĩa là với **sáu màn analytics**, thứ duy nhất nối tên trường trong struct
+Rust với OpenAPI mà frontend type theo là: **một người đã viết cả hai**.
+
+A-2 chính là lỗi đó xảy ra thật ở keyset page — `next`/`previous` bên Rust,
+`next_cursor`/`prev_cursor` bên contract, hai bên cùng tồn tại và không ai biết
+cho tới khi tôi đọc chéo. Sáu màn analytics hiện đang ở đúng trạng thái đó.
+
+**Đề xuất:** một test serde-vs-fixture cho mỗi màn, giống hệt cái ở `query-api`.
+
+---
+
+## H-12 · Năm trong sáu endpoint analytics không có fixture nào · vừa
+
+Đã publish: `capital-preview`. Chưa có: **funnel, insight batch, correlation,
+capital ledger, exposure**.
+
+Hệ quả: fixture frontend cho năm màn đó là **tôi tự viết từ OpenAPI**. Tốt hơn
+đoán, nhưng chưa từng được đối chiếu với serde output thật của engine — và
+`readCapitalPreview` đã cho thấy điều gì xảy ra khi làm theo prose: **9 tên
+trường sai**.
+
+**Đề xuất:** mỗi endpoint một fixture, **sinh từ serde output của engine** chứ
+không viết tay, rồi đưa cả sáu vào H-10 và H-11.
