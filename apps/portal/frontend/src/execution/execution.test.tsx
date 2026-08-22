@@ -63,6 +63,7 @@ import {
 } from "./components/conditions";
 import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./api/rows";
 import type { ExecutionApi } from "./api/ports";
+import { readAnalyticsEnvelope, readOrderFunnel } from "./analytics";
 import { createFixtureApi } from "./api/fixtureApi";
 import {
   ApprovalInboxContainer,
@@ -2653,7 +2654,7 @@ describe("approval row mapping", () => {
     expect(row?.id).toBe("AP-352");
     expect(row?.gate).toBe("R2");
     expect(row?.inert).toBe("SELF");
-    expect(row?.sla).toEqual({ ageMinutes: 1560, budgetMinutes: 1440 });
+    expect(row?.sla).toEqual({ ageMinutes: 1560, budgetMinutes: 1440, state: null });
     expect(gaps).toEqual([]);
   });
 
@@ -3065,7 +3066,7 @@ describe("EX-BE-05a field map — reconciled against what codex published", () =
     expect(d?.alphaLabel).toBe("RSI v1.7");
     expect(d?.releaseCandidate).toBe("RC-41");
     expect(d?.expectedVersion).toBe(7);
-    expect(d?.sla).toEqual({ ageMinutes: 120, budgetMinutes: 1440 });
+    expect(d?.sla).toEqual({ ageMinutes: 120, budgetMinutes: 1440, state: null });
   });
 
   it("reads the passport from evidence_manifest.entries", () => {
@@ -4594,5 +4595,140 @@ describe("separation of duty compares people, not the absence of them", () => {
     expect(d?.creator).toBe("stan");
     // No actor on the wire: unknown, and unknown must not match anything.
     expect(d?.actorId).toBeNull();
+  });
+});
+
+describe("figures nobody published are stated, not substituted", () => {
+  it("keeps PAUSED rather than collapsing it into UNKNOWN", () => {
+    // "We cannot tell how fresh this is" and "this is deliberately not moving"
+    // send an operator to different places. The analytics reader knew four of
+    // the five freshness states and folded the fifth into the wrong one.
+    const env = readAnalyticsEnvelope({
+      analytics: { input_freshness_floor: "PAUSED", panel_state: "ok", data: {} },
+    });
+    expect(env?.inputFreshnessFloor).toBe("PAUSED");
+  });
+
+  it("states an unpublished quorum rather than rendering 0/2", () => {
+    // "0/2" is a claim about a decision: two approvals needed, none arrived.
+    // The truth was that the server published neither number.
+    render(
+      <ApprovalInbox
+        page={
+          {
+            rows: [
+              {
+                approvalId: "AP-201",
+                gate: "R1",
+                subject: "RSI v1.7",
+                target: "PF-MAIN · Paper",
+                requester: "Stan",
+                quorumMet: null,
+                quorumRequired: null,
+                sla: { ageMinutes: 10, budgetMinutes: 1440 },
+                inert: null,
+                needsYou: false,
+                blockerCount: 0,
+                blockerSummary: null,
+                evidence: [],
+              },
+            ],
+            totalCount: 1,
+            filteredCount: 1,
+          } as never
+        }
+        filter="INBOX"
+        counts={null}
+      />,
+    );
+    expect(screen.getByText(/quorum not published/)).toBeTruthy();
+    expect(screen.queryByText("0/2")).toBeNull();
+  });
+
+  it("takes the SLA verdict from the server, not from two minute counts", () => {
+    // The server knows about paused clocks, market-hours policies and granted
+    // extensions. Age-versus-budget gets all three wrong.
+    render(<SlaCell sla={{ ageMinutes: 2000, budgetMinutes: 1440, state: "ON_TRACK" }} />);
+    expect(screen.queryByText(/OVERDUE/)).toBeNull();
+  });
+
+  it("still falls back to arithmetic for a row that predates the field", () => {
+    render(<SlaCell sla={{ ageMinutes: 2000, budgetMinutes: 1440 }} />);
+    expect(screen.getByText(/OVERDUE/)).toBeTruthy();
+  });
+
+  it("credits a funnel hop to the source that reported it", () => {
+    // The event's own authority, not its quality block's: a broker fill
+    // observed through a derived reconciliation is BROKER data with DERIVED
+    // quality, and reading the second as the first credits the wrong system.
+    const funnel = readOrderFunnel({
+      analytics: {
+        data: {
+          order_id: "o1",
+          stages: [
+            {
+              stage: "FILL",
+              state: "OBSERVED",
+              events: [
+                {
+                  source_id: "f1",
+                  source_authority: "BROKER",
+                  quality: { source_authority: "DERIVED", freshness_state: "OK" },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(funnel?.stages.find((s) => s.name === "FILL")?.events[0].authority).toBe("BROKER");
+  });
+});
+
+describe("every control is reachable without a mouse", () => {
+  it("opens a row from the keyboard, not only from a click", () => {
+    // Every approval on the governance surface sat behind a gesture a keyboard
+    // cannot make. That is not a degraded path; it is no path.
+    const onRowClick = vi.fn();
+    const { container } = render(
+      <KeysetTable
+        label="Approvals"
+        columns={[{ key: "id", header: "id", render: (r: { id: string }) => r.id }]}
+        page={{ rows: [{ id: "AP-201" }], totalCount: 1, filteredCount: 1 } as never}
+        rowKey={(r: { id: string }) => r.id}
+        onRowClick={onRowClick}
+      />,
+    );
+    const row = container.querySelector("tbody tr") as HTMLElement;
+    expect(row.getAttribute("role")).toBe("button");
+    expect(row.tabIndex).toBe(0);
+    fireEvent.keyDown(row, { key: "Enter" });
+    fireEvent.keyDown(row, { key: " " });
+    expect(onRowClick).toHaveBeenCalledTimes(2);
+  });
+
+  it("leaves a non-interactive row out of the tab order", () => {
+    const { container } = render(
+      <KeysetTable
+        label="Approvals"
+        columns={[{ key: "id", header: "id", render: (r: { id: string }) => r.id }]}
+        page={{ rows: [{ id: "AP-201" }], totalCount: 1, filteredCount: 1 } as never}
+        rowKey={(r: { id: string }) => r.id}
+      />,
+    );
+    const row = container.querySelector("tbody tr") as HTMLElement;
+    expect(row.getAttribute("role")).toBeNull();
+    expect(row.getAttribute("tabindex")).toBeNull();
+  });
+
+  it("names a capital breach in words, not only in red", () => {
+    render(
+      r2({
+        capital: [
+          { label: "Allocated", before: "1", after: "2", currency: "USDT", breach: true },
+        ],
+      }),
+    );
+    expect(screen.getByText("BREACH")).toBeTruthy();
   });
 });

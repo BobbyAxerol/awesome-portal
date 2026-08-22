@@ -472,6 +472,7 @@ export function AccountBroker360({
           <div className="exec-tile-title">Sync history</div>
           <div className="exec-360-note">policy {syncPolicy}</div>
           <table className="exec-360-sync">
+            <caption className="exec-blotter-note">Broker sync history</caption>
             <thead>
               <tr>
                 <th scope="col">time (UTC)</th>

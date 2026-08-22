@@ -174,7 +174,15 @@ function FunnelCard({
               <ol className="exec-funnel-fills">
                 {shownEvents.shown.map((event) => (
                   <li key={event.sourceId}>
-                    <span className="exec-num">{event.quantity ?? "—"}</span>
+                    {event.quantity !== null ? (
+                      <span className="exec-num">{event.quantity}</span>
+                    ) : (
+                      // An acknowledgement carries no quantity by design; a
+                      // fill that lost one is a defect. The reader cannot tell
+                      // them apart, so neither may be printed as a dash that
+                      // reads like a number.
+                      <span className="exec-gate-unverified">no quantity</span>
+                    )}
                     <span className="exec-funnel-meta">
                       {" "}
                       {event.occurredAt ?? "time not stated"}
@@ -361,10 +369,11 @@ export function FullBlotter({
             {row.feeCurrency ? <span className="exec-blotter-ccy"> {row.feeCurrency}</span> : null}
           </span>
         ) : (
-          // A dash, because the hi-fi uses one and a rejected order genuinely
-          // incurred no fee. Distinct from a fee we failed to read, which would
-          // be a stated gap.
-          <span className="exec-num">—</span>
+          // The hi-fi's dash means "this order incurred no fee", which a
+          // rejected order genuinely did not. It cannot also mean "the fee was
+          // not published" — that is a gap, and a gap on a fee column is a
+          // reconciliation problem rather than a zero-cost trade.
+          <span className="exec-gate-unverified">not published</span>
         ),
     },
     { key: "orderId", header: "order_id", width: "9rem", render: (row) => row.orderId },

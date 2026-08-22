@@ -23,6 +23,7 @@
 import { useState } from "react";
 
 import {
+  compareAbsDecimal,
   correlationAt,
   samplesAt,
   type Correlation,
@@ -294,7 +295,8 @@ function CorrelationLens({
     .filter((entry) => entry.index !== lensIndex);
   const ranked = [...others].sort((a, b) => {
     if (a.insufficient !== b.insufficient) return a.insufficient ? 1 : -1;
-    return Math.abs(Number(b.text)) - Math.abs(Number(a.text));
+    // Ordering without a float. See `compareAbsDecimal`.
+    return compareAbsDecimal(b.text, a.text);
   });
   const shown = capPreserving(ranked, 40, (entry) => entry.insufficient);
   const notice = capNotice(shown, "pairs");
@@ -584,7 +586,11 @@ function Ledger({
                         {entry.beforeAllocated} → {entry.afterAllocated}
                       </span>
                     </td>
-                    <td>{entry.allocationId ?? "—"}</td>
+                    <td>
+                      {entry.allocationId ?? (
+                        <span className="exec-gate-unverified">no allocation id</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -670,6 +676,8 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
             key={option}
             type="button"
             role="tab"
+            id={`pf-tab-${option.replace(/\W+/g, "-")}`}
+            aria-controls="pf-tabpanel"
             className="exec-inbox-filter"
             data-active={tab === option ? "true" : undefined}
             aria-selected={tab === option}
@@ -680,7 +688,15 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
         ))}
       </div>
 
-      <div className="exec-alpha-body" role="tabpanel" aria-label={tab}>
+      <div
+        className="exec-alpha-body"
+        role="tabpanel"
+        id="pf-tabpanel"
+        // Named by its tab rather than by a duplicate label: a screen reader
+        // reading "Positions, tab panel, Positions" twice is the label doing
+        // the tab's job.
+        aria-labelledby={`pf-tab-${tab.replace(/\W+/g, "-")}`}
+      >
         {tab === "Overview" ? (
           <>
             <div className="exec-alpha-kpis">
@@ -704,6 +720,9 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                 one account = one alpha, never shared
               </div>
               <table className="exec-alpha-deployments">
+                <caption className="exec-blotter-note">
+                  Holdings — one row per deployment
+                </caption>
                 <thead>
                   <tr>
                     <th scope="col">alpha</th>
@@ -729,14 +748,14 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                         {row.venue} · {row.mode}
                       </td>
                       <td>
-                        <Num value={row.allocation} absent="—" />
+                        <Num value={row.allocation} absent="not published" />
                         <span className="exec-blotter-note"> {row.currency}</span>
                       </td>
                       <td>
-                        <Num value={row.exposure} absent="—" />
+                        <Num value={row.exposure} absent="not published" />
                       </td>
                       <td>
-                        <Num value={row.exposurePct} absent="—" />
+                        <Num value={row.exposurePct} absent="not published" />
                       </td>
                       <td>
                         <EnvironmentBadge stage={row.stage} />
@@ -787,6 +806,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
           <section className="exec-gate-panel">
             <div className="exec-tile-title">Approvals touching this portfolio</div>
             <table className="exec-360-sync">
+              <caption className="exec-blotter-note">Approvals touching this portfolio</caption>
               <thead>
                 <tr>
                   <th scope="col">id</th>

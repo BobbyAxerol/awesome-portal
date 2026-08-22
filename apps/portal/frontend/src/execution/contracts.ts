@@ -617,12 +617,32 @@ export interface Progress {
 }
 
 /** Service-level budget for a queued decision (Approval Inbox, Command Center). */
+/** The server's own SLA verdict. Four states, published on the approval row. */
+export type SlaState = "ON_TRACK" | "DUE_SOON" | "OVERDUE" | "EXPIRED";
+
 export interface Sla {
   ageMinutes: number;
   budgetMinutes: number;
+  /**
+   * The server's verdict, when it publishes one.
+   *
+   * It exists because the server knows things two minute counts do not: a
+   * paused clock, a policy that stops counting outside market hours, an
+   * extension granted on the request. A client comparing age against budget
+   * gets those cases wrong in the direction that matters — calling a request
+   * overdue when the clock was stopped, or on-track when the deadline moved.
+   */
+  state?: SlaState | null;
 }
 
+/**
+ * Is this request past its deadline?
+ *
+ * The server's verdict wins whenever there is one. The arithmetic is a
+ * fallback for rows that predate the field, and it is the weaker answer.
+ */
 export function slaOverdue(sla: Sla): boolean {
+  if (sla.state) return sla.state === "OVERDUE" || sla.state === "EXPIRED";
   return sla.ageMinutes > sla.budgetMinutes;
 }
 

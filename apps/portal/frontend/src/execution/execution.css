@@ -1762,9 +1762,13 @@
   color: var(--ink-soft);
 }
 
+/* The grey ramp is calibrated against `--paper`. This line lands on the warn
+ * banner instead, where `--ink-mute` measures 4.44:1 dark and 4.49:1 light —
+ * both a hair under the floor. The token is not wrong; the pairing was, and a
+ * banner is not a surface. */
 .exec-stream-cursor {
   margin-left: auto;
-  color: var(--ink-mute);
+  color: var(--ink-soft);
 }
 
 /* Completeness is not freshness. Freshness answers how old; this answers
@@ -2578,4 +2582,27 @@
    without colour being the only carrier — the direction chip says it too. */
 .exec-360-sync tr[data-direction="DECREASE"] th[scope="row"] {
   box-shadow: inset 2px 0 0 var(--warn);
+}
+
+/* A visible focus ring on every custom control.
+ *
+ * Filter chips, tab buttons, pager buttons, the lens and reset buttons and now
+ * clickable rows are all reachable by keyboard; without a ring, reachable and
+ * usable are different things. `:focus-visible` so a mouse click does not leave
+ * one behind. */
+.exec-table-clickable:focus-visible,
+.exec-inbox-filter:focus-visible,
+.exec-table-nav button:focus-visible,
+.exec-chip-reset:focus-visible,
+.exec-pf-lensbtn:focus-visible,
+.exec-alpha-select select:focus-visible,
+.exec-btn-apply:focus-visible,
+.exec-btn-ghost:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The row is a button; it should say so under the pointer too. */
+.exec-table-clickable {
+  cursor: pointer;
 }

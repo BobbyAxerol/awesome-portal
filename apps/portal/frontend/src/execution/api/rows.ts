@@ -29,6 +29,7 @@ import type { ApprovalGate, ApprovalRow, InertReason } from "../screens/Approval
 import type { ChecklistItem, DecisionLock, PassportEntry } from "../screens/GateR1Review";
 import type { CapitalPreview } from "../analytics";
 
+const SLA_STATES = ["ON_TRACK", "DUE_SOON", "OVERDUE", "EXPIRED"] as const;
 const GATES: readonly ApprovalGate[] = ["R1", "R2", "PAPER_EXIT", "SANDBOX_EXIT", "LIVE_GATE"];
 const INERT: readonly InertReason[] = ["SELF", "QUORUM", "BLOCKED"];
 const MARKS: readonly EvidenceMark[] = ["pass", "watch", "fail", "insufficient"];
@@ -82,7 +83,8 @@ export function readSla(raw: unknown): Sla | null {
   const ageMinutes = int(o.age_minutes);
   const budgetMinutes = int(o.budget_minutes);
   if (ageMinutes === null || budgetMinutes === null) return null;
-  return { ageMinutes, budgetMinutes };
+  const state = readEnum(o.state ?? o.sla_state, SLA_STATES);
+  return { ageMinutes, budgetMinutes, state: state?.known ? state.value : null };
 }
 
 /** True when the row carries a due time but no server-computed age. */
@@ -129,8 +131,8 @@ export function readApprovalRow(raw: Record<string, unknown>): ApprovalRowRead {
       blockerCount: int(raw.blocker_count) ?? -1,
       blockerSummary: str(raw.blocker_summary),
       sla: sla ?? { ageMinutes: -1, budgetMinutes: -1 },
-      quorumMet: int(raw.quorum_met) ?? 0,
-      quorumRequired: int(raw.quorum_required) ?? 0,
+      quorumMet: int(raw.quorum_met),
+      quorumRequired: int(raw.quorum_required),
       inert: inertParsed?.known ? inertParsed.value : null,
       needsYou: raw.needs_you === true,
     },
@@ -211,8 +213,9 @@ export interface GateR1Detail {
   approvalId: ApprovalId;
   alphaLabel: string;
   releaseCandidate: string | null;
-  quorumMet: number;
-  quorumRequired: number;
+  /** `null` when unpublished. Never 0: "nobody has approved" is a real claim. */
+  quorumMet: number | null;
+  quorumRequired: number | null;
   policyVersion: string;
   creator: string;
   creatorId: string | null;
@@ -304,8 +307,8 @@ export function readGateR1Detail(raw: unknown): GateR1Detail | null {
     approvalId,
     alphaLabel: str(approval.subject_label) ?? str(approval.alpha_label) ?? approvalId,
     releaseCandidate: str(approval.release_candidate),
-    quorumMet: int(approval.quorum_met ?? data.quorum_met) ?? 0,
-    quorumRequired: int(approval.quorum_required ?? data.quorum_required) ?? 0,
+    quorumMet: int(approval.quorum_met ?? data.quorum_met),
+    quorumRequired: int(approval.quorum_required ?? data.quorum_required),
     policyVersion: str(approval.policy_version ?? data.policy_version) ?? "unversioned",
     // `creator` is `{user_id, username}` on the wire; `str()` on it returned
     // null, both sides fell back to "unknown", and the screen's equality check
@@ -425,8 +428,9 @@ export interface GateR2Detail {
   policyVersion: string;
   planAuthor: string;
   actor: string;
-  quorumMet: number;
-  quorumRequired: number;
+  /** `null` when unpublished. Never 0: "nobody has approved" is a real claim. */
+  quorumMet: number | null;
+  quorumRequired: number | null;
   sla: Sla | null;
   readiness: readonly ReadinessGroup[];
   capital: readonly CapitalDelta[];
@@ -499,7 +503,7 @@ export function readGateR2Detail(raw: unknown): GateR2Detail | null {
     planAuthor: str(approval.plan_author ?? data.plan_author) ?? "unknown",
     actor: str(data.actor) ?? "unknown",
     quorumMet: int(approval.quorum_met) ?? 0,
-    quorumRequired: int(approval.quorum_required) ?? 0,
+    quorumRequired: int(approval.quorum_required),
     sla: readSla(approval.sla),
     readiness: (Array.isArray(data.readiness) ? data.readiness : [])
       .map(readReadinessGroup)
@@ -564,8 +568,9 @@ export interface PaperExitDetail {
   gateMet: boolean;
   gateSummary: string | null;
   policyId: string | null;
-  quorumMet: number;
-  quorumRequired: number;
+  /** `null` when unpublished. Never 0: "nobody has approved" is a real claim. */
+  quorumMet: number | null;
+  quorumRequired: number | null;
   approverRole: string | null;
   sla: Sla | null;
   /** artifact · R1 · R2 · observation policy · evidence pack digest (§5). */
@@ -622,7 +627,7 @@ export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
     gateSummary: str(data.gate_summary),
     policyId: str(data.policy_id),
     quorumMet: int(review.quorum_met) ?? 0,
-    quorumRequired: int(review.quorum_required) ?? 0,
+    quorumRequired: int(review.quorum_required),
     approverRole: str(data.approver_role),
     sla: readSla(review.sla),
     lineage,

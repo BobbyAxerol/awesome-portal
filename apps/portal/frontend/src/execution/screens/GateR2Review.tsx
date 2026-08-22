@@ -486,7 +486,12 @@ export function GateR2Review({
               <tbody>
                 {capital.map((row) => (
                   <tr key={row.label} data-breach={row.breach ? "true" : undefined}>
-                    <th scope="row">{row.label}</th>
+                    <th scope="row">
+                      {row.label}
+                      {/* A word, not only a red row. Colour alone fails 1.4.1
+                          and fails anyone reading a printout or a screenshot. */}
+                      {row.breach ? <StatusChip label="BREACH" tone="bad" /> : null}
+                    </th>
                     <td>
                       {row.currency ?? (
                         <span className="exec-gate-unverified">not stated</span>

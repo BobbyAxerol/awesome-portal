@@ -329,6 +329,7 @@ function DeploymentMap({ venues }: { venues: readonly VenueRow[] }) {
         one deployment = one venue account · multi-venue = parallel deployments
       </div>
       <table className="exec-alpha-map">
+        <caption className="exec-blotter-note">Venue by stage</caption>
         <thead>
           <tr>
             <th scope="col">venue</th>
@@ -433,6 +434,8 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
             key={option}
             type="button"
             role="tab"
+            id={`alpha-tab-${option.replace(/\W+/g, "-")}`}
+            aria-controls="alpha-tabpanel"
             className="exec-inbox-filter"
             data-active={tab === option ? "true" : undefined}
             aria-selected={tab === option}
@@ -443,7 +446,15 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
         ))}
       </div>
 
-      <div className="exec-alpha-body" role="tabpanel" aria-label={tab}>
+      <div
+        className="exec-alpha-body"
+        role="tabpanel"
+        id="alpha-tabpanel"
+        // Named by its tab rather than by a duplicate label: a screen reader
+        // reading "Positions, tab panel, Positions" twice is the label doing
+        // the tab's job.
+        aria-labelledby={`alpha-tab-${tab.replace(/\W+/g, "-")}`}
+      >
         {tab === "Overview" ? (
           <>
             <DeploymentMap venues={venues} />
@@ -521,6 +532,7 @@ function Deployments({ rows, scope }: { rows: readonly DeploymentRow[]; scope: A
     <section className="exec-gate-panel">
       <div className="exec-tile-title">Deployments in scope — {scope.venue}</div>
       <table className="exec-alpha-deployments">
+        <caption className="exec-blotter-note">Deployments in scope</caption>
         <thead>
           <tr>
             <th scope="col">deployment</th>
@@ -545,16 +557,16 @@ function Deployments({ rows, scope }: { rows: readonly DeploymentRow[]; scope: A
               </td>
               <td>{row.accountId}</td>
               <td>
-                <Num value={row.allocation} absent="—" />
+                <Num value={row.allocation} absent="not published" />
                 {row.allocation && row.currency ? (
                   <span className="exec-blotter-note"> {row.currency}</span>
                 ) : null}
               </td>
               <td>
-                <Num value={row.pnl} absent="—" />
+                <Num value={row.pnl} absent="not published" />
               </td>
               <td>
-                <Num value={row.drawdown} absent="—" />
+                <Num value={row.drawdown} absent="not published" />
               </td>
               <td>
                 <StatusChip
@@ -600,9 +612,9 @@ function Positions({ positions, onLoadOlder }: AlphaThreeSixtyProps) {
     { key: "symbol", header: "symbol", width: "9rem", render: (r) => r.symbol },
     { key: "side", header: "side", width: "6rem", render: (r) => r.side },
     { key: "qty", header: "qty", width: "8rem", render: (r) => <span className="exec-num">{r.quantity}</span> },
-    { key: "entry", header: "entry", width: "9rem", render: (r) => <Num value={r.entry} absent="—" /> },
+    { key: "entry", header: "entry", width: "9rem", render: (r) => <Num value={r.entry} absent="not published" /> },
     { key: "mark", header: "mark", width: "9rem", render: (r) => <Num value={r.mark} absent="not marked" /> },
-    { key: "upnl", header: "uPnL", width: "9rem", render: (r) => <Num value={r.unrealised} absent="—" /> },
+    { key: "upnl", header: "uPnL", width: "9rem", render: (r) => <Num value={r.unrealised} absent="not published" /> },
     { key: "ccy", header: "ccy", width: "6rem", render: (r) => r.currency },
   ];
   return positions ? (
@@ -698,6 +710,7 @@ function Sessions({ rows }: { rows: readonly SessionRow[] }) {
     <section className="exec-gate-panel">
       <div className="exec-tile-title">Sessions — restart and recovery evidence</div>
       <table className="exec-360-sync">
+        <caption className="exec-blotter-note">Session and recovery events</caption>
         <thead>
           <tr>
             <th scope="col">time (UTC)</th>
@@ -737,6 +750,7 @@ function Accounting({ rows }: { rows: readonly AccountingRow[] }) {
     <section className="exec-gate-panel">
       <div className="exec-tile-title">Accounting — per account and currency</div>
       <table className="exec-360-sync">
+        <caption className="exec-blotter-note">Accounting by account and currency</caption>
         <thead>
           <tr>
             <th scope="col">account</th>
@@ -774,6 +788,7 @@ function Reconciliation({ rows }: { rows: readonly ReconciliationRow[] }) {
     <section className="exec-gate-panel">
       <div className="exec-tile-title">Reconciliation — per venue policy freshness</div>
       <table className="exec-360-sync">
+        <caption className="exec-blotter-note">Reconciliation policy freshness</caption>
         <thead>
           <tr>
             <th scope="col">venue</th>
@@ -788,7 +803,9 @@ function Reconciliation({ rows }: { rows: readonly ReconciliationRow[] }) {
             <tr key={row.venue}>
               <th scope="row">{row.venue}</th>
               <td>{row.policy}</td>
-              <td><Num value={row.lastRun} absent="never" /></td>
+              <td>{/* "never" is a claim that reconciliation has not run. An absent
+                  timestamp is not that claim. */}
+              <Num value={row.lastRun} absent="not published" /></td>
               <td>{row.freshness}</td>
               <td>
                 {/* Zero findings is a real result; an unknown count is not. */}

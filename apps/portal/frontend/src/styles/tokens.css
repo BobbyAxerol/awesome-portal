@@ -442,7 +442,11 @@
    * That is stricter than DS §4's `--authority-*` colours and matches the rule
    * that meaning never rides on colour alone, so the word is the carrier. */
   --authority-ink: #f4f4f4;
-  --authority-meta: #6f6f6f;
+  --authority-meta: #8d8d8d;  /* 5.45:1 on --surface-1, 4.56:1 on --surface-2.
+     * Was #6f6f6f — 3.60:1 and 3.01:1, both under the 4.5:1 text floor. The
+     * contrast gate derives its pairs from execution.css and this one was
+     * never among them: the badge sets the colour, the surface comes from the
+     * page, and nothing wrote the two together. */
 
   /* Freshness. Thresholds live in the venue registry, never in CSS. */
   --fresh-ok: #42be65;
@@ -521,6 +525,11 @@
  * ========================================================================= */
 
 [data-theme="operations-carbon-light"] {
+  /* Declared, so form controls, scrollbars and the caret render light too.
+   * Without it a light panel nested in a dark page inherits `dark` from the
+   * root and paints a dark select on a white surface. */
+  color-scheme: light;
+
   /* Surfaces. Panels are white on white and separated by a hairline, not by a
    * fill — the hi-fi has no floating cards, same as the dark surface. */
   --paper: #ffffff;

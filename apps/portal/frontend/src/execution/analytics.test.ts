@@ -19,6 +19,7 @@ import {
   FUNNEL_STAGES,
   INSIGHT_BATCH_LIMIT,
   chunkInsightRequests,
+  compareAbsDecimal,
   correlationAt,
   insightBatchRequest,
   isFullPopulation,
@@ -574,5 +575,27 @@ describe("Gate R2 container — the preview arrives through the port", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.status).toBe("unavailable");
+  });
+});
+
+describe("decimal ordering never routes through a float", () => {
+  it("orders by magnitude, ignoring sign", () => {
+    expect(compareAbsDecimal("0.3100", "0.5500")).toBeLessThan(0);
+    expect(compareAbsDecimal("-0.9000", "0.5500")).toBeGreaterThan(0);
+    expect(compareAbsDecimal("1", "1.0000")).toBe(0);
+  });
+
+  it("separates values a double would collapse", () => {
+    // 20 significant digits apart at the last place. Number() makes these
+    // equal; the comparator does not.
+    const a = "1.00000000000000000001";
+    const b = "1.00000000000000000002";
+    expect(Number(a) === Number(b)).toBe(true);
+    expect(compareAbsDecimal(a, b)).toBeLessThan(0);
+  });
+
+  it("compares by magnitude before digits, so 10 beats 9", () => {
+    expect(compareAbsDecimal("9.99", "10.0")).toBeLessThan(0);
+    expect(compareAbsDecimal("0010", "9")).toBeGreaterThan(0);
   });
 });

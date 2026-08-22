@@ -66,6 +66,9 @@ export function EvidencePanel({ rows }: { rows: readonly EvidenceRow[] }) {
  * for what is late must be able to see it without relying on the red.
  */
 export function SlaCell({ sla }: { sla: Sla }) {
+  // `slaOverdue` prefers the server's own verdict. It knows about paused
+  // clocks, market-hours policies and granted extensions; two minute counts
+  // do not, and they get those cases wrong in the direction that matters.
   const overdue = slaOverdue(sla);
   const format = (minutes: number) =>
     minutes >= 60 ? `${Math.round(minutes / 60)}h` : `${Math.round(minutes)}m`;
@@ -73,7 +76,11 @@ export function SlaCell({ sla }: { sla: Sla }) {
   return (
     <span className="exec-sla" data-overdue={overdue}>
       {format(sla.ageMinutes)} / {format(sla.budgetMinutes)}
-      {overdue ? <span className="exec-sla-flag"> · OVERDUE</span> : null}
+      {overdue ? (
+        <span className="exec-sla-flag"> · {sla.state ?? "OVERDUE"}</span>
+      ) : sla.state === "DUE_SOON" ? (
+        <span className="exec-sla-flag" data-tone="warn"> · DUE SOON</span>
+      ) : null}
     </span>
   );
 }

@@ -52,8 +52,9 @@ export interface ApprovalRow {
   blockerCount: number;
   blockerSummary: string | null;
   sla: Sla;
-  quorumMet: number;
-  quorumRequired: number;
+  /** `null` when unpublished — never 0, which claims nobody has approved. */
+  quorumMet: number | null;
+  quorumRequired: number | null;
   /** Absent when the actor can act on this row. */
   inert: InertReason | null;
   needsYou: boolean;
@@ -147,7 +148,13 @@ const INERT_LABEL: Record<InertReason, string> = {
 };
 
 function quorum(row: ApprovalRow): ReactNode {
-  const text = `${row.quorumMet}/${row.quorumRequired}`;
+  // A missing count is stated, not zeroed. "0/2" says two approvals are needed
+  // and none have arrived — a claim about the state of a decision — while the
+  // truth was that the server did not publish the numbers at all.
+  const text =
+    row.quorumMet !== null && row.quorumRequired !== null
+      ? `${row.quorumMet}/${row.quorumRequired}`
+      : "quorum not published";
   if (row.inert) {
     return (
       <span className="exec-inbox-inert" title={INERT_LABEL[row.inert]}>

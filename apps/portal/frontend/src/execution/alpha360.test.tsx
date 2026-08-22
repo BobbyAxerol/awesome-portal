@@ -99,7 +99,9 @@ describe("Alpha 360° — figures that are not known say so", () => {
   it("shows a deployment with no pnl as absent rather than flat", () => {
     render(<AlphaThreeSixty {...alpha360()} />);
     const row = screen.getByText("dep_91").closest("tr") as HTMLElement;
-    expect(within(row).getAllByText("—").length).toBeGreaterThanOrEqual(2);
+    // Worded, not dashed: a dash on a numeric column reads like a value, and
+    // "—" was carrying three different meanings across these screens.
+    expect(within(row).getAllByText("not published").length).toBeGreaterThanOrEqual(2);
     expect(within(row).getByText("BLOCKED")).toBeTruthy();
   });
 
@@ -127,7 +129,9 @@ describe("Alpha 360° — figures that are not known say so", () => {
     render(<AlphaThreeSixty {...alpha360({ tab: "Reconciliation" })} />);
     expect(screen.getByText("N/A (paper)")).toBeTruthy();
     expect(screen.getByText("not counted")).toBeTruthy();
-    expect(screen.getByText("never")).toBeTruthy();
+    // Not "never": that claims reconciliation has not run, and an absent
+    // timestamp is not that claim.
+    expect(screen.getAllByText("not published").length).toBeGreaterThan(0);
   });
 });
 

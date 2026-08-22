@@ -241,6 +241,27 @@ export function KeysetTable<T>({
                   data-selected={key === selectedKey ? "true" : undefined}
                   data-emphasis={rowEmphasis?.(row)}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  // A row that opens a review was reachable by mouse only.
+                  // Every approval on the governance surface sat behind a
+                  // gesture a keyboard cannot make, which is not a degraded
+                  // experience — it is no path at all. `button` rather than
+                  // `link` because nothing here changes location; the row
+                  // opens a panel beside it.
+                  role={onRowClick ? "button" : undefined}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  onKeyDown={
+                    onRowClick
+                      ? (event) => {
+                          // Enter and Space, the two a button answers to.
+                          // Space is prevented so the page does not scroll out
+                          // from under the row that was just opened.
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            onRowClick(row);
+                          }
+                        }
+                      : undefined
+                  }
                   className={onRowClick ? "exec-table-clickable" : undefined}
                 >
                   {columns.map((c) => (

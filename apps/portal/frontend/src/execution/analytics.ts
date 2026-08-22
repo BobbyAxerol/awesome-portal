@@ -78,7 +78,15 @@ const PANEL_STATES: readonly PanelStatus[] = [
   "loading", "ok", "empty", "partial", "stale",
   "denied", "unavailable", "insufficient_data", "terminal",
 ];
-const FRESHNESS: readonly FreshnessState[] = ["OK", "AGING", "STALE", "UNKNOWN"];
+/**
+ * All five, not four.
+ *
+ * `PAUSED` was missing, so a paused deployment's analytics read as `UNKNOWN` —
+ * "we cannot tell how fresh this is" in place of "this is deliberately not
+ * moving". The first sends an operator looking for a fault; the second is the
+ * system working as intended.
+ */
+const FRESHNESS: readonly FreshnessState[] = ["OK", "AGING", "STALE", "PAUSED", "UNKNOWN"];
 
 export function readAnalyticsEnvelope(raw: unknown): AnalyticsEnvelope | null {
   const o = obj(raw);
@@ -265,7 +273,15 @@ function readFunnelEvent(raw: unknown): FunnelEvent | null {
     sourceId,
     occurredAt: readTimestamp(e!.occurred_at),
     quantity: readDecimal(e!.quantity),
-    authority: (str(quality.source_authority) as Authority) ?? "DERIVED",
+    // The event's own authority. `quality.source_authority` describes the
+    // *measurement* of that hop, and the two are separate required fields in
+    // the schema precisely because they can differ — a broker fill observed
+    // through a derived reconciliation is BROKER data with DERIVED quality,
+    // and reading the second as the first credits the wrong system.
+    authority:
+      (str(e!.source_authority) as Authority) ??
+      (str(quality.source_authority) as Authority) ??
+      "DERIVED",
     freshness: FRESHNESS.includes(freshness as FreshnessState)
       ? (freshness as FreshnessState)
       : "UNKNOWN",
@@ -485,6 +501,33 @@ export interface RankedCorrelation {
 }
 
 export type Correlation = PackedCorrelation | RankedCorrelation;
+
+/**
+ * Order two decimal strings by magnitude, without a float.
+ *
+ * Sorting needs a comparison and a comparison is not a computation, but
+ * `Number(a) - Number(b)` still routes a decimal through a double — and the one
+ * habit this codebase cannot afford is the one that looks harmless in the range
+ * you happened to test. Correlations live in [-1, 1] where a double is exact
+ * enough; capital does not, and a comparator copied from here to a money column
+ * would be wrong in a way nothing catches.
+ *
+ * Returns a negative number when `a` is smaller in magnitude than `b`.
+ */
+export function compareAbsDecimal(a: string, b: string): number {
+  const parts = (raw: string) => {
+    const [int = "0", frac = ""] = raw.replace(/^[-+\u2212]/, "").split(".");
+    return [int.replace(/^0+(?=\d)/, ""), frac] as const;
+  };
+  const [ai, af] = parts(a);
+  const [bi, bf] = parts(b);
+  if (ai.length !== bi.length) return ai.length - bi.length;
+  if (ai !== bi) return ai < bi ? -1 : 1;
+  const width = Math.max(af.length, bf.length);
+  const ap = af.padEnd(width, "0");
+  const bp = bf.padEnd(width, "0");
+  return ap === bp ? 0 : ap < bp ? -1 : 1;
+}
 
 /**
  * The packed index for `LOWER_INCLUDING_DIAGONAL_ROW_MAJOR`.
