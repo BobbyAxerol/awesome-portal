@@ -50,6 +50,38 @@ import {
 import { createFixtureApi } from "./api/fixtureApi";
 import { PaperExitReview } from "./screens/PaperExitReview";
 import { FullBlotter, OrderFunnelStrip } from "./screens/FullBlotter";
+import { AdminActionDrawerScreen } from "./screens/AdminActionDrawer";
+import { findCommand } from "./adminCatalog";
+
+/**
+ * Phase 6 fixture plan. The checks are the hi-fi's: a concentration warning
+ * that does NOT block, beside a ledger check that would.
+ */
+const ADMIN_PLAN = {
+  id: "cmd_9f12",
+  expiresInSeconds: 60,
+  requestPreview:
+    "METHOD: POST\nPATH:   /v1/admin/allocations\nPAYLOAD:\n  deployment_id: dep_74\n  amount: 25000.00",
+  equivalentCli:
+    "docker compose --profile cli run --rm --no-deps cli allocation alpha dep_74 --amount 25000.00",
+  checks: [
+    { label: "R2 AP-207 valid · digest match", outcome: "pass" as const },
+    { label: "within approved max capital 100,000.00", outcome: "pass" as const },
+    { label: "ledger row will be written · movement ALLOCATE", outcome: "pass" as const },
+    { label: "concentration +4.6% — warning, not blocking", outcome: "warning" as const },
+  ],
+};
+
+const ADMIN_POLICY = {
+  policyRevision: 4,
+  queryEnabled: true,
+  projectionIngestionEnabled: true,
+  sseEnabled: true,
+  paperCommandsEnabled: true,
+  sandboxCommandsEnabled: true,
+  liveProtectiveCommandsEnabled: true,
+  liveRiskIncreasingCommandsEnabled: false,
+};
 import { AlphaThreeSixty } from "./screens/AlphaThreeSixty";
 import { PortfolioThreeSixty } from "./screens/PortfolioThreeSixty";
 import { AccountBroker360 } from "./screens/AccountBroker360";
@@ -1575,6 +1607,55 @@ export default function ExecutionFixtures() {
           the Phase 0 exit gate is "every shared Execution component in every
           state" precisely so that cannot happen.
         */}
+        <Group
+          title="Admin Action Drawer (1i)"
+          note="Twenty-one commands in six groups. A read grows no footer, and a command the Portal cannot reach is shown with the reason rather than hidden."
+          surface="deployments"
+        >
+          <Case caption="nothing selected — the catalogue, with its provenance stated">
+            <AdminActionDrawerScreen selected={null} onSelect={() => {}} />
+          </Case>
+          <Case caption="a read — green banner, what it returns, and deliberately no plan or apply">
+            <AdminActionDrawerScreen
+              selected={findCommand("deployment/state")}
+              onSelect={() => {}}
+            />
+          </Case>
+          <Case caption="blocked — reachable only through direct Redis, which handoff §2.3 forbids the Portal">
+            <AdminActionDrawerScreen
+              selected={findCommand("redis/trading-state")}
+              onSelect={() => {}}
+            />
+          </Case>
+          <Case caption="a mutation — plan gates apply, and the plan expires">
+            <AdminActionDrawerScreen
+              selected={findCommand("allocation/<root>")}
+              onSelect={() => {}}
+              policy={ADMIN_POLICY}
+              flow={{ step: "plan", plan: ADMIN_PLAN }}
+            />
+          </Case>
+          <Case caption="the destructive one — R3, typed CLOSE confirm, and PARTIAL never renders green">
+            <AdminActionDrawerScreen
+              selected={findCommand("ops/emergency-close")}
+              onSelect={() => {}}
+              policy={ADMIN_POLICY}
+              flow={{
+                step: "verify",
+                plan: ADMIN_PLAN,
+                outcome: "PARTIAL",
+                verification: "PARTIAL",
+                verifyEntries: [
+                  { label: "command accepted — 202, NOT success yet", status: "APPLIED_UNVERIFIED" },
+                  { label: "deployment → REDUCING", status: "VERIFIED" },
+                  { label: "2/2 cancels ACKed by lifecycle", status: "VERIFIED" },
+                  { label: "1/2 closes filled · residue BTCUSDT 0.0100", status: "PARTIAL" },
+                ],
+              }}
+            />
+          </Case>
+        </Group>
+
         <Group
           title="Full Blotter (4c)"
           note="Ten to the seventh rows. The chips re-query rather than filtering what is loaded, and both counts come from the server."

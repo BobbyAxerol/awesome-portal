@@ -12,27 +12,34 @@
 
 Không việc nào cần bạn viết code. Mỗi việc là một câu trả lời.
 
-### A1 · Catalogue Admin Drawer → **mở 6 màn** 🔴 lớn nhất
+### A1 · Endpoint `ops` và catalogue canonical → **mở 6 màn** 🔴 lớn nhất
 
-**Câu hỏi:** Drawer liệt kê lệnh theo nguồn nào?
+**Đã đổi nội dung ngày 2026-08-22.** Màn phase 6 **đã dựng xong** trên Lane A —
+21 lệnh / 6 nhóm, xem tại `/execution/_fixtures`. Nên A1 không còn là "chờ để
+dựng màn" nữa; nó là hai thứ khác:
 
-| Nguồn | Nội dung |
+**A1a — 8 endpoint `ops` còn thiếu.** Khi dựng catalogue tôi đối chiếu từng dòng
+`extract/` với OpenAPI và thấy `extract` gán path của *handler* cho mọi action
+trong handler. Hệ quả: 8 action `ops` trông như tới được, thực ra **không có
+route nào**.
+
+| Thiếu | Chặn màn |
 |---|---|
-| Hi-fi 1i | 21 lệnh / 6 nhóm |
-| `command-catalog.yaml` | 13 family, 1 có `plan` |
-| `extract/cli-command-map.json` | 19 noun / 64 action, 7 không có HTTP |
+| `command-journal`, `findings` | phase 7 Operations Queue |
+| `alerts`, `dead-letters`, `trace-order` | phase 8 Incident Detail |
+| `streams`, `alpha-activity` | phase 9 Command Center |
 
-**Bạn đã trả lời một nửa:** phương án B — mở HTTP cho 7 action, ưu tiên ngay.
-Codex đã xác nhận *"không cho phép Portal-to-Redis hay generic `get`/`scan`"*.
+Nghĩa là khoảng trống thật là **15 action**, không phải 7. Và mở catalogue thôi
+**không đủ** để ba màn kia có dữ liệu.
 
-**Còn thiếu:** codex publish **catalogue canonical** trong `packages/contracts`
-(mỗi action kèm `portal_reachable`, `http_path`, `blocked_reason`). Đây mới là
-thứ mở phase 6 — không phải 7 capability kia.
+**A1b — catalogue canonical trong `packages/contracts`.** Vẫn cần, nhưng giờ chỉ
+để **đổi nguồn**: màn đang chạy catalogue fixture và tự nói ra điều đó trên
+giao diện. Không có nó thì phase 6 không activate được, nhưng đã dựng xong.
 
-**Bạn cần làm:** giục codex ưu tiên catalogue **trước** 7 endpoint. Chi tiết:
-`BR_EX_28_PHASE6_CATALOGUE_AND_UNBLOCK.md`.
+**Bạn cần làm:** giục codex theo thứ tự **A1a trước A1b**. A1a chặn ba màn chưa
+dựng; A1b chỉ chặn việc activate một màn đã dựng.
 
-**Mở ra:** phase 6 → 7, 8, 9, 10, 11, 12.
+Chi tiết: `BR_EX_28_PHASE6_CATALOGUE_AND_UNBLOCK.md` §8.
 
 ---
 
@@ -123,12 +130,12 @@ Codex giao lane này ngày 2026-08-22 (PHASE_TRACKER §24A.2).
 | 3 | Gate R2 | ✅ | source activation (codex) |
 | 4 | Paper Workbench | ✅ | screen API (codex) |
 | 5 | Paper Exit | ✅ | **Claude** B3–B5 |
-| 6 | Admin Drawer | ⛔ | **A1 — Bobby** |
-| 7 | Operations Queue | ⛔ | phase 6 |
-| 8 | Incident Detail | ⛔ | phase 6 |
-| 9 | Command Center | ⛔ | phase 6 |
-| 10 | Sandbox Certification | ⛔ | phase 6 |
-| 11 | Canary Control Room | ⛔ | phase 6 + cổng owner |
+| 6 | Admin Drawer | ✅ | A1b — catalogue để activate |
+| 7 | Operations Queue | ⛔ | **A1a** — `command-journal`, `findings` |
+| 8 | Incident Detail | ⛔ | **A1a** — `alerts`, `dead-letters`, `trace-order` |
+| 9 | Command Center | ⛔ | **A1a** — `streams`, `alpha-activity` |
+| 10 | Sandbox Certification | ⛔ | phase 4–6 + TS sandbox capability |
+| 11 | Canary Control Room | ⛔ | phase 10 + cổng owner |
 | 12 | Live Full Operations | ⛔ | phase 11 + EX-BE-08 |
 | 13 | Paper Workbench VNM | ✅ | screen API (codex) |
 | 14 | Full Blotter | ✅ | **A2 — Bobby** |
@@ -137,7 +144,7 @@ Codex giao lane này ngày 2026-08-22 (PHASE_TRACKER §24A.2).
 | 17 | Account/Broker 360° | ✅ | **A3 — Bobby** |
 | 18 | Hardening | ⛔ | EX-BE-08 |
 
-**10 màn có UI. 7 màn chưa — sáu trong bảy nằm sau A1.**
+**11 màn có UI. 6 màn chưa — ba trong sáu nằm sau A1a.**
 
 ---
 
@@ -172,12 +179,15 @@ lại màn.
 | BR-EX-25 | funnel 5 hop vs 4 stage | 🟡 chờ trả lời |
 | BR-EX-26 | aggregate headroom verdict | → A3 |
 | BR-EX-27 | `sample_counts` | → A4 |
-| BR-EX-28 | catalogue canonical | → A1 |
+| BR-EX-28 §8.1 | **8 endpoint `ops` chưa tồn tại** | → A1a 🔴 |
+| BR-EX-28 §4 | catalogue canonical | → A1b |
+| BR-EX-28 §8.2 | `allocation` còn UNCLASSIFIED | 🟠 |
 | BR-EX-29 | `conditions[]` thay cho một chuỗi | 🟡 |
 
 ---
 
 ## F. Nếu bạn chỉ làm một việc
 
-**Giục codex publish catalogue canonical (A1).** Nó mở sáu màn — nhiều hơn bốn
-quyết định còn lại cộng lại.
+**Giục codex mở 8 endpoint `ops` (A1a).** Ba màn chưa dựng — Operations Queue,
+Incident Detail, Command Center — đều chờ đúng tám endpoint đó, và không có
+đường vòng nào cho chúng.

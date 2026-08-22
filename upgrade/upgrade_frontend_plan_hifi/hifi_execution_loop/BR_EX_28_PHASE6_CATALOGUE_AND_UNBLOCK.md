@@ -104,3 +104,78 @@ plan/apply/poll, `202 ≠ success`), `profile.ts` (delivery policy, deny-by-
 default), `RiskTier`, `VerificationResult` 8 giá trị — dựng từ phase 0, có test.
 
 Ngày catalogue tới, Drawer là công việc dựng **màn**, không phải dựng cơ chế.
+
+---
+
+## 8. Bổ sung 2026-08-22 — con số "7" là **thấp hơn thực tế**
+
+Khi dựng catalogue phase 6 tôi đối chiếu từng dòng `extract/cli-command-map.json`
+với `openapi.sanitized.json`. Có ba việc cần codex xử lý, và việc đầu quan trọng
+hơn cả bảy capability đã duyệt.
+
+### 8.1 Tám action `ops` **trông như** tới được, thực ra không
+
+`extract` xếp cả 10 action của `ops` là `PARTIAL — mixed access`, và gán cho mỗi
+action **cùng ba path**:
+
+```
+/v1/admin/ops/emergency-close
+/v1/admin/ops/emergency-close/plan
+/v1/admin/ops/emergency-close/{operation_id}/verify
+```
+
+Đó là path của **handler**, không phải của action. Kiểm tra ngược trong OpenAPI:
+toàn bộ bề mặt `/ops` chỉ có **4 path**, tất cả đều là emergency-close.
+
+| action | path riêng trong OpenAPI |
+|---|---|
+| `ops trace-order` | **không có** |
+| `ops dead-letters` | **không có** |
+| `ops findings` | **không có** |
+| `ops streams` | **không có** |
+| `ops command-journal` | **không có** |
+| `ops redis-retention` | **không có** |
+| `ops alerts` | **không có** |
+| `ops alpha-activity` | **không có** |
+
+Vậy khoảng trống thật là **15 action**, không phải 7: bảy cái `NO — no HTTP
+equivalent` cộng tám cái này.
+
+**Vì sao gấp:** tám cái này chính là dữ liệu của ba màn kế tiếp.
+
+| Phase | Màn | Cần action nào |
+|---|---|---|
+| 7 | Operations Queue | `command-journal`, `findings` |
+| 8 | Incident Detail | `alerts`, `dead-letters`, `trace-order` |
+| 9 | Command Center | `streams`, `alpha-activity` |
+
+Nói cách khác: mở catalogue thôi **không đủ** để dựng phase 7/8/9 với dữ liệu
+thật. Xin codex xác nhận tám endpoint này nằm ở đâu trong kế hoạch.
+
+Frontend đã cắm một gate đứng canh: `adminCatalog.test.ts` khẳng định tám
+action này **chưa** có route. Ngày codex publish, test đó đỏ — đó là tín hiệu
+đúng, không phải hỏng.
+
+### 8.2 `allocation` bị trích thành `<root>` và `UNCLASSIFIED`
+
+Guide ghi `cli allocation alpha <deployment_id> --amount`, nhưng `extract` chỉ
+thấy `allocation/<root>` và không phân loại được risk tier. Đây là lệnh **di
+chuyển tiền**; để nó `UNCLASSIFIED` nghĩa là chưa ai chốt nó cần step-up nào.
+
+Frontend tạm xếp **R1** và có gate cấm hạ nó xuống R0. Xin codex chốt tier
+thật và đặt tên action cho đúng.
+
+### 8.3 Catalogue nên khoá theo `noun/verb`
+
+Đề nghị khoá join là chuỗi `noun/verb` (`portfolio/list`, `ops/emergency-close`)
+vì đó là khoá `extract` đang dùng — frontend đã dựng theo khoá này, đổi sau sẽ
+tốn cả hai bên.
+
+### 8.4 Trạng thái frontend sau bổ sung này
+
+Phase 6 **đã dựng xong trên Lane A** (`screens/AdminActionDrawer.tsx`,
+`adminCatalog.ts`), 21 lệnh / 6 nhóm, xem tại `/execution/_fixtures`.
+
+Catalogue hiện là **fixture**, và màn tự nói ra điều đó bằng `CATALOG_SOURCE`.
+Ngày `packages/contracts` có catalogue canonical, việc còn lại là đổi nguồn —
+không phải dựng lại màn.

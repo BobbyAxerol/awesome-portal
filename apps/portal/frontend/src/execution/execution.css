@@ -2694,3 +2694,245 @@
   border: 1px solid var(--line-soft);
   background: var(--surface-3);
 }
+
+/* ---------------------------------------------------------------------------
+ * Phase 6 — Admin Action Drawer (hi-fi 1i, ops dark)
+ *
+ * Two panes: a scrolling catalogue and a 490px drawer that stays put. The
+ * drawer is sticky rather than fixed so it participates in the page's own
+ * scroll container — a fixed drawer detaches from the surface and starts
+ * overlapping the shell on short viewports.
+ * ------------------------------------------------------------------------ */
+.exec-admin-head h1 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 400;
+}
+
+.exec-admin-sub {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+.exec-admin-panes {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-3);
+  min-height: 0;
+  margin-top: var(--space-3);
+}
+
+.exec-admin-catalog {
+  flex: 1;
+  min-width: 0;
+}
+
+.exec-admin-lead,
+.exec-admin-source {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+  margin: 0 0 var(--space-2);
+}
+
+.exec-admin-source {
+  margin: var(--space-3) 0 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line-soft);
+}
+
+.exec-admin-group {
+  margin-bottom: var(--space-3);
+}
+
+.exec-admin-groupname {
+  margin: 0 0 var(--space-1);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-mute);
+}
+
+/* The row is a button, so every inherited button style has to be undone before
+   it can look like a table row. */
+.exec-admin-row {
+  display: block;
+  width: 100%;
+  padding: var(--space-2);
+  border: 1px solid transparent;
+  border-left: 2px solid transparent;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.exec-admin-row:hover {
+  background: var(--surface-2);
+}
+
+.exec-admin-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.exec-admin-row[data-selected="true"] {
+  background: var(--surface-2);
+  border-color: var(--line);
+  border-left-color: var(--accent);
+}
+
+.exec-admin-rowhead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.exec-admin-rowtitle {
+  font-size: var(--text-xs);
+  color: var(--ink);
+}
+
+.exec-admin-scope {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+}
+
+.exec-admin-cli {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.exec-admin-tag {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.06em;
+  padding: 0 var(--space-1);
+  border: 1px solid currentColor;
+}
+
+.exec-admin-tag[data-tag="READ"] { color: var(--good); }
+.exec-admin-tag[data-tag="MUTATION"] { color: var(--accent); }
+.exec-admin-tag[data-tag="DANGER"] { color: var(--bad); }
+
+/* A blocked command is dashed and muted, but never invisible and never so faint
+   it drops under the 3:1 boundary contrast a UI element owes. */
+.exec-admin-tag[data-tag="BLOCKED"] {
+  color: var(--ink-mute);
+  border-style: dashed;
+}
+
+.exec-admin-drawer {
+  width: 490px;
+  flex: none;
+  align-self: flex-start;
+  position: sticky;
+  top: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.exec-admin-seltitle {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 400;
+}
+
+.exec-admin-selmeta,
+.exec-admin-empty,
+.exec-admin-nofooter {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+.exec-admin-read {
+  padding: var(--space-2);
+  border: 1px solid var(--good);
+  background: var(--good-bg);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-soft);
+}
+
+.exec-admin-read b { color: var(--good); }
+
+.exec-admin-returns {
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  background: var(--surface-3);
+}
+
+.exec-admin-returns h3 {
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-mute);
+}
+
+.exec-admin-returns p {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.exec-admin-blocked {
+  padding: var(--space-2);
+  border: 1px solid var(--bad);
+  background: var(--bad-bg);
+}
+
+.exec-admin-blocked b {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.08em;
+  color: var(--bad);
+}
+
+.exec-admin-blocked p {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.exec-admin-blockedcli {
+  color: var(--ink-mute);
+}
+
+.exec-admin-blocked code {
+  display: block;
+  margin-top: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+  overflow-x: auto;
+}
+
+/* Below the drawer's own width the two-pane layout stops being two panes. */
+@media (max-width: 900px) {
+  .exec-admin-panes { flex-direction: column; }
+  .exec-admin-drawer { width: auto; position: static; }
+}
