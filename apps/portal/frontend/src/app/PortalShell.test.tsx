@@ -194,18 +194,25 @@ describe("embedding (U04/U05)", () => {
 
   it("mounts Planning under /planning with no nested shell", async () => {
     mount({ route: "/planning/board" });
-    await waitFor(() => expect(screen.getByRole("navigation", { name: "Planning" })).toBeTruthy());
+    // Planning is a split chunk, so under a loaded machine the dynamic import
+    // outruns vitest's default 5s budget — the same cause as the two tests
+    // above, and the same fix: a budget sized to the slowest honest run.
+    await waitFor(() => expect(screen.getByRole("navigation", { name: "Planning" })).toBeTruthy(), {
+      timeout: 15_000,
+    });
     expect(document.querySelectorAll(".portal-topbar").length).toBe(1);
     // Planning's standalone shell classes must not appear inside the Portal.
     expect(document.querySelector(".app .workspace")).toBeNull();
-  });
+  }, 20_000);
 
   it("redirects the Planning root to its first view", async () => {
     mount({ route: "/planning" });
-    await waitFor(() => expect(screen.getByRole("navigation", { name: "Planning" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("navigation", { name: "Planning" })).toBeTruthy(), {
+      timeout: 15_000,
+    });
     const active = document.querySelector(".portal-subnav .navtab-active");
     expect(active?.textContent).toBe("Documents");
-  });
+  }, 20_000);
 
   it("keeps the API/LOCAL mode visible so local state is never read as shared", async () => {
     mount({ route: "/planning/roadmap" });

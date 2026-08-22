@@ -47,6 +47,8 @@ type CapitalPreviewState =
   | null
   | { failed: string }
   | { preview: CapitalPreview; envelope: AnalyticsEnvelope };
+import { stageRail } from "../components/lifecycle";
+import type { TypedCondition } from "../components/conditions";
 import { ApprovalInbox, type ApprovalRow, type InboxCounts, type InboxFilter } from "./ApprovalInbox";
 import { GateR1Review } from "./GateR1Review";
 import { GateR2Review } from "./GateR2Review";
@@ -81,6 +83,43 @@ function loading<T>(): LoadState<T> {
  * Exported so a test can hold it against the server's allowlist rather than
  * against a copy of itself.
  */
+/**
+ * Pull one lineage entry out as a rail chip.
+ *
+ * The lineage is a labelled list because it is rendered as one; the rail wants
+ * two specific members of it, and matching on the label is how the payload
+ * names them.
+ */
+function lineageChip(
+  lineage: readonly { label: string; value: string; href: string | null }[] | undefined,
+  label: string,
+): { label: string; href?: string } | undefined {
+  const found = lineage?.find((entry) => entry.label.toUpperCase() === label);
+  return found ? { label: found.value, ...(found.href ? { href: found.href } : {}) } : undefined;
+}
+
+/**
+ * One typed condition, rendered as the sentence the plan payload carries.
+ *
+ * The schema takes a single string today, and a typed condition is an owner, a
+ * deadline and an expiry as well as its text. Flattening loses structure the
+ * server cannot then enforce, so it is written out in full rather than reduced
+ * to the text — and BR-EX-29 asks for `data.conditions[]` so the structure
+ * survives the wire.
+ */
+function describeCondition(condition: {
+  text: string;
+  owner?: string | null;
+  deadline?: string | null;
+  expiresAt?: string | null;
+}): string {
+  const parts = [condition.text];
+  if (condition.owner) parts.push(`owner ${condition.owner}`);
+  if (condition.deadline) parts.push(`deadline ${condition.deadline}`);
+  if (condition.expiresAt) parts.push(`expires ${condition.expiresAt}`);
+  return parts.join(" · ");
+}
+
 export const INBOX_SCOPE_SORT = "sla_due_at:asc,approval_id:asc";
 
 const CURSOR_REJECTED = /INVALID_CURSOR|CURSOR_EXPIRED|CURSOR_CONTEXT|cursor/i;
@@ -227,6 +266,10 @@ const MAX_POLLS = 40;
 
 export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; approvalId: string }) {
   const [state, setState] = useState<LoadState<GateR1Detail>>(loading);
+  // Composed on the screen, held here, and sent with the plan. Approving with
+  // a condition that never reaches the server is the decision failing to mean
+  // the one thing it exists to mean.
+  const [conditions, setConditions] = useState<readonly TypedCondition[]>([]);
   const [decision, dispatch] = useReducer(decisionReducer, undefined, () =>
     initialDecision(newRequestKey()),
   );
@@ -292,7 +335,11 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
   }, [api, decision]);
 
   const decide = useCallback(
-    async (verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION", reason: string) => {
+    async (
+      verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION",
+      reason: string,
+      extra?: { condition?: string | null },
+    ) => {
       const detail = state.value;
       if (!detail) return;
       dispatch({ type: "PLAN_REQUESTED" });
@@ -301,6 +348,9 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
         workspaceId: "default",
         decision: verdict,
         reason,
+        // The schema refuses this decision without a condition, and refuses a
+        // condition with any other — so it travels only where it belongs.
+        condition: verdict === "APPROVE_WITH_CONDITION" ? (extra?.condition ?? null) : null,
         expectedApprovalVersion: detail.expectedVersion,
         // Keyed by the intent, so a DENY after an APPROVE is a new command and
         // not an idempotent replay of the one before it (BR-EX-18).
@@ -371,7 +421,20 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
         partialReason={state.warnings.length ? state.warnings.join("; ") : undefined}
         onApprove={() => void decide("APPROVE", "Evidence reviewed and accepted.")}
         onDeny={() => void decide("DENY", "Evidence rejected.")}
-        onRequestCondition={() => void decide("APPROVE_WITH_CONDITION", "Approved with a condition.")}
+        conditions={conditions}
+        onAttachCondition={(condition) => setConditions((prior) => [...prior, condition])}
+        onRequestCondition={() => {
+          // The schema refuses APPROVE_WITH_CONDITION without a condition, and
+          // the previous version sent none — so the one decision whose whole
+          // meaning is the condition attached went out with nothing attached.
+          const latest = conditions.at(-1);
+          if (!latest) return;
+          void decide(
+            "APPROVE_WITH_CONDITION",
+            "Approved with a condition.",
+            { condition: describeCondition(latest) },
+          );
+        }}
       />
       {decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : null}
     </>
@@ -550,6 +613,7 @@ export function GateR2ReviewContainer({
   preview?: CapitalPreviewInput;
 }) {
   const [state, setState] = useState<LoadState<GateR2Detail>>(loading);
+  const [conditions, setConditions] = useState<readonly TypedCondition[]>([]);
   const [preview, setPreview] = useState<CapitalPreviewState>(null);
   const { decision, decide } = useDecision(api);
 
@@ -608,8 +672,11 @@ export function GateR2ReviewContainer({
   }, [api, approvalId, previewScope?.portfolioId, previewScope?.requestedAmount, previewScope?.currency]);
 
   const d = state.value;
-  const run = (verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION", reason: string) =>
-    void decide(approvalId, verdict, reason, d?.expectedVersion ?? null);
+  const run = (
+    verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION",
+    reason: string,
+    condition?: string,
+  ) => void decide(approvalId, verdict, reason, d?.expectedVersion ?? null, { condition });
   const served = preview && !("failed" in preview) ? preview : null;
 
   return (
@@ -662,7 +729,13 @@ export function GateR2ReviewContainer({
         partialReason={state.warnings.length ? state.warnings.join("; ") : undefined}
         onApprove={() => run("APPROVE", "Operational readiness accepted.")}
         onDeny={() => run("DENY", "Operational readiness rejected.")}
-        onRequestCondition={() => run("APPROVE_WITH_CONDITION", "Approved with a condition.")}
+        conditions={conditions}
+        onAttachCondition={(condition) => setConditions((prior) => [...prior, condition])}
+        onRequestCondition={() => {
+          const latest = conditions.at(-1);
+          if (!latest) return;
+          run("APPROVE_WITH_CONDITION", "Approved with a condition.", describeCondition(latest));
+        }}
       />
       {decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : null}
     </>
@@ -705,6 +778,21 @@ export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi;
         gateSummary={d?.gateSummary ?? undefined}
         policyId={d?.policyId ?? undefined}
         lineage={d?.lineage}
+        // The rail was built in phase 0 and DS §4 lists exit reviews among its
+        // users, but the wired container never passed one — so a reviewer saw
+        // the evidence for a promotion with no sight of what the deployment
+        // had already cleared to get here. Built from the detail's own stage
+        // and the R1/R2 the lineage names; omitted when the stage is
+        // unpublished rather than assumed to be paper.
+        rail={
+          d?.stage
+            ? stageRail({
+                stage: d.stage,
+                r1: lineageChip(d.lineage, "R1"),
+                r2: lineageChip(d.lineage, "R2"),
+              })
+            : undefined
+        }
         quorumMet={d?.quorumMet ?? 0}
         quorumRequired={d?.quorumRequired ?? 0}
         approverRole={d?.approverRole ?? undefined}

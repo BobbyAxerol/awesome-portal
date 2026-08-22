@@ -753,3 +753,47 @@ không có commit cho request này.
 trong hai: (1) source xuất capability `plan/apply/verify` versioned,
 scope-bound, audited và delegated; hoặc (2) hi-fi hiển thị capability hiện có
 (`plan: false` / unavailable). Không suy luận quyền từ CLI hay bật runtime flag.
+
+---
+
+## BR-EX-29 — Plan payload cần `conditions[]`, không phải một chuỗi
+
+**Ngày raise:** 2026-08-22.
+
+**Hiện trạng:** `DecisionPlanRequestSchema` nhận
+`payload.condition: string | null`. Frontend giờ đã gửi nó — trước đó
+`APPROVE_WITH_CONDITION` đi ra **không kèm condition nào**, tức quyết định mà
+toàn bộ ý nghĩa nằm ở điều kiện đính kèm lại không đính kèm gì.
+
+**Vấn đề còn lại:** một `TypedCondition` trên UI có **owner, deadline, expiry**
+— hi-fi footnote R2 ghi rõ *"conditions are typed objects with owner/deadline/
+expiry, never free text"*. Contract chỉ nhận một chuỗi, nên frontend đang phải
+**bẹp cấu trúc thành câu**:
+
+```
+"reduce max position notional · owner Lan · deadline 2026-09-15 · expires 2026-10-01"
+```
+
+Server nhận được một chuỗi. Nghĩa là **server không cưỡng chế được gì**: không
+biết deadline nào đã qua, không nhắc được owner nào, không hết hạn được điều
+kiện nào. Một điều kiện không cưỡng chế được là một ghi chú.
+
+Và Approval Inbox có cột `conditions` đếm *"2 active · exp 2026-10-01"* — con số
+đó chỉ đúng nếu server hiểu cấu trúc.
+
+**Đề xuất:**
+
+```json
+{ "payload": { "decision": "APPROVE_WITH_CONDITION",
+    "conditions": [
+      { "text": "...", "owner": "usr_lan",
+        "deadline": "2026-09-15", "expires_at": "2026-10-01" }
+    ] } }
+```
+
+Nhiều điều kiện vì hi-fi cho phép đính nhiều. Giữ `condition` chuỗi làm
+deprecated alias nếu cần chuyển dần.
+
+**Ảnh hưởng hiện tại:** frontend gửi điều kiện mới nhất, bẹp thành chuỗi, và
+`describeCondition` trong `containers.tsx` ghi rõ tại chỗ vì sao. Khi
+`conditions[]` có, xoá hàm đó và gửi mảng.

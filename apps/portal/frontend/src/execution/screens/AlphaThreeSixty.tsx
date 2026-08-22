@@ -150,6 +150,14 @@ export interface AlphaThreeSixtyProps {
   venues: readonly VenueRow[];
   kpis: readonly Kpi[];
   contributions: readonly VenueContribution[];
+  /**
+   * Equity by stage, joined across deployments by artifact digest.
+   *
+   * The join is the whole point: two stages of one alpha are comparable
+   * because they run the same artifact, and two alphas are not comparable at
+   * all. `null` renders as unavailable rather than an empty frame.
+   */
+  equity?: { envelope: ChartEnvelope; body?: ReactNode } | null;
   deployments: readonly DeploymentRow[];
   tiles: readonly InsightTile[];
   /** Unbounded. Paged by cursor, never capped. */
@@ -389,6 +397,7 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
     venues,
     kpis,
     contributions,
+    equity = null,
     deployments,
     tiles,
     status = "ok",
@@ -471,7 +480,25 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
                 </div>
               ))}
             </div>
-            <Contribution rows={contributions} />
+            {/* The drawn overlay, and the reason it belongs on Overview: an
+                alpha in three stages at once is the premise of this screen,
+                and a reader comparing paper against canary should not have to
+                open a tab to do it. Series are joined by artifact digest, so
+                two stages of the same alpha are comparable and two alphas are
+                not. */}
+            <div className="exec-grid-2" data-ratio="1.35">
+              {equity ? (
+                <ChartTile title="Equity by stage" envelope={equity.envelope}>
+                  {equity.body}
+                </ChartTile>
+              ) : (
+                <PanelState
+                  status="unavailable"
+                  reason="No equity series was published for this alpha and window."
+                />
+              )}
+              <Contribution rows={contributions} />
+            </div>
             <Deployments rows={deployments} scope={scope} />
           </>
         ) : null}

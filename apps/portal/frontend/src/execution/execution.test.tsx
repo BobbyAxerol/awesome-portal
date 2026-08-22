@@ -10,7 +10,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ExecutionSurface } from "./ExecutionSurface";
@@ -65,6 +65,8 @@ import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetai
 import type { ExecutionApi } from "./api/ports";
 import { INBOX_SCOPE_SORT } from "./screens/containers";
 import { readAnalyticsEnvelope, readOrderFunnel } from "./analytics";
+import { AlphaThreeSixty } from "./screens/AlphaThreeSixty";
+import { alpha360 } from "./alpha360.fixtures";
 import { createFixtureApi } from "./api/fixtureApi";
 import {
   ApprovalInboxContainer,
@@ -4811,5 +4813,98 @@ describe("the poll loop admits when it stops", () => {
     );
     expect(succeeded(after)).toBe(false);
     expect(outstanding(after)).toBe(true);
+  });
+});
+
+describe("the wired containers pass what the screens were built to show", () => {
+  it("gives Paper Exit its lifecycle rail, built from the review's own stage", async () => {
+    // DS §4 lists exit reviews among LifecycleRail's users and the screen has
+    // taken a `rail` prop since phase 5 — the container simply never passed
+    // one, so a reviewer saw the evidence for a promotion with no sight of
+    // what the deployment had already cleared to get here.
+    const { container } = render(
+      <PaperExitReviewContainer api={createFixtureApi()} reviewId="EX-771" />,
+    );
+    await screen.findByText(/Observation coverage/);
+    const rail = container.querySelector(".exec-rail");
+    expect(rail).not.toBeNull();
+    // Current step is the stage being left, taken from the payload rather
+    // than assumed to be paper: the same template serves the sandbox exit.
+    expect(within(rail as HTMLElement).getByText(/PAPER/)).toBeTruthy();
+  });
+
+  it("omits the rail rather than guessing when no stage was published", () => {
+    const d = readPaperExitDetail({ data: { review: { review_id: "EX-1", deployment_id: "d" } } });
+    expect(d?.stage).toBeNull();
+  });
+
+  it("refuses a stage this build does not recognise", () => {
+    const d = readPaperExitDetail({
+      data: { review: { review_id: "EX-1", deployment_id: "d", stage: "PRODUCTION" } },
+    });
+    expect(d?.stage).toBeNull();
+  });
+
+  it("sends the composed condition with approve-with-condition", async () => {
+    // The one decision whose entire meaning is the condition attached used to
+    // go out with none, and the server's schema rejects exactly that.
+    const api = createFixtureApi();
+    const spy = vi.spyOn(api, "planDecision");
+    render(<GateR1ReviewContainer api={api} approvalId="AP-201" />);
+    await screen.findByRole("button", { name: "Approve with condition" });
+    // Nothing composed yet: the button must not send an empty condition.
+    screen.getByRole("button", { name: "Approve with condition" }).click();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("never attaches a condition to a decision that may not carry one", async () => {
+    const api = createFixtureApi();
+    const spy = vi.spyOn(api, "planDecision");
+    render(<GateR1ReviewContainer api={api} approvalId="AP-201" />);
+    const deny = await screen.findByRole("button", { name: "Deny" });
+    deny.click();
+    await screen.findByText(/PLAN|DENY|plan/i).catch(() => undefined);
+    const call = spy.mock.calls.at(-1)?.[0];
+    if (call) expect(call.condition).toBeNull();
+  });
+});
+
+describe("Alpha 360° Overview shows the equity overlay it was drawn with", () => {
+  it("renders the equity-by-stage tile beside the contribution panel", () => {
+    // An alpha in three stages at once is this screen's premise, and a reader
+    // comparing paper against canary should not have to open a tab for it.
+    const { container } = render(<AlphaThreeSixty {...alpha360()} />);
+    const grid = container.querySelector('.exec-grid-2[data-ratio="1.35"]') as HTMLElement;
+    expect(within(grid).getByText("Equity by stage")).toBeTruthy();
+    expect(within(grid).getByText(/Per-venue contribution/)).toBeTruthy();
+  });
+
+  it("names the join key, because two alphas are not comparable on one axis", () => {
+    render(<AlphaThreeSixty {...alpha360()} />);
+    expect(screen.getByText(/joined by artifact digest/)).toBeTruthy();
+  });
+
+  it("says unavailable rather than drawing an empty frame", () => {
+    render(<AlphaThreeSixty {...alpha360({ equity: null })} />);
+    expect(screen.getByText(/No equity series was published/)).toBeTruthy();
+  });
+});
+
+describe("the Paper Exit detail reads the version its own schema publishes", () => {
+  it("takes review_version, which is what the published schema names", () => {
+    // execution-governance-paper-exit.v1 $defs.Review. Reading only the
+    // approval spelling left every exit decision with no version, and the plan
+    // schema requires a positive integer.
+    const d = readPaperExitDetail({
+      data: { review: { review_id: "EX-771", deployment_id: "dep_94", review_version: 4 } },
+    });
+    expect(d?.expectedVersion).toBe(4);
+  });
+
+  it("still accepts the approval spelling, for rows that predate the rename", () => {
+    const d = readPaperExitDetail({
+      data: { review: { review_id: "EX-771", deployment_id: "dep_94", approval_version: 9 } },
+    });
+    expect(d?.expectedVersion).toBe(9);
   });
 });

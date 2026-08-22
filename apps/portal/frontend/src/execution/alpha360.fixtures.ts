@@ -162,6 +162,15 @@ export function alpha360(over: Partial<AlphaThreeSixtyProps> = {}): AlphaThreeSi
       { venue: "DERIBIT", value: "+1,842.00", currency: "USDC" },
       { venue: "OKX", value: "0.00", currency: "USDT", note: "(halted)" },
     ],
+    equity: {
+      envelope: {
+        ...CHART,
+        formulaVersion: "equity_projection.v1",
+        // The caption that makes the overlay honest: a downsampled series
+        // must say so, and the join key says which series may share an axis.
+        downsampleMethod: "lttb · joined by artifact digest",
+      },
+    },
     deployments: DEPLOYMENTS,
     tiles: TILES,
     positions: page(POSITIONS, 3, null),

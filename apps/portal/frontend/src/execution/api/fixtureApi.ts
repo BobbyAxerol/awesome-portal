@@ -250,6 +250,10 @@ const R2_DETAIL: Record<string, unknown> = {
 const EXIT_DETAIL: Record<string, unknown> = {
   review: {
     review_id: "EX-771",
+    // The stage being left, so the rail draws the right current step. The same
+    // template serves the Sandbox and Canary exits, and a rail that assumed
+    // paper would be wrong on two of the three screens it exists for.
+    stage: "PAPER_OBSERVATION",
     deployment_id: "dep_94",
     subject_label: "Grid v2.1 · dep_94 · DERIBIT",
     promote_to: "SANDBOX_VALIDATION",

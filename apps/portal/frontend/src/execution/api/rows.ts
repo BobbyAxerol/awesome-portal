@@ -24,11 +24,17 @@
  * one.
  */
 import { readDecimal, readEnum, readId, readTimestamp, type MaybeKnown } from "../adapter";
-import type { ApprovalId, EvidenceMark, Sla } from "../contracts";
+import type { ApprovalId, EvidenceMark, PromotionStage, Sla } from "../contracts";
 import type { ApprovalGate, ApprovalRow, InertReason } from "../screens/ApprovalInbox";
 import type { ChecklistItem, DecisionLock, PassportEntry } from "../screens/GateR1Review";
 import type { CapitalPreview } from "../analytics";
 
+const STAGES = [
+  "PAPER_OBSERVATION",
+  "SANDBOX_VALIDATION",
+  "LIVE_CANARY",
+  "LIVE_FULL",
+] as const;
 const SLA_STATES = ["ON_TRACK", "DUE_SOON", "OVERDUE", "EXPIRED"] as const;
 const GATES: readonly ApprovalGate[] = ["R1", "R2", "PAPER_EXIT", "SANDBOX_EXIT", "LIVE_GATE"];
 const INERT: readonly InertReason[] = ["SELF", "QUORUM", "BLOCKED"];
@@ -562,6 +568,15 @@ export interface LineageRef {
 export interface PaperExitDetail {
   reviewId: ApprovalId;
   deploymentId: string;
+  /**
+   * The stage this deployment is leaving.
+   *
+   * Not assumed to be `PAPER_OBSERVATION`: the same template serves the
+   * Sandbox and Canary exits, and a rail that hardcoded paper would draw the
+   * wrong current step on two of the three screens it is meant to serve.
+   * `null` when unpublished, and the rail is then omitted rather than guessed.
+   */
+  stage: PromotionStage | null;
   subject: string;
   promoteTo: string;
   /** Server-evaluated. Never derived from the coverage numbers beside it. */
@@ -619,6 +634,12 @@ export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
 
   return {
     reviewId,
+    stage: (() => {
+      const parsed = readEnum(review.stage ?? data.stage, STAGES);
+      // A stage this build does not recognise is not a stage; the rail is
+      // omitted rather than drawn at a guessed step.
+      return parsed?.known ? parsed.value : null;
+    })(),
     eligibility: readEligibility(data.eligibility),
     deploymentId: readId(review.deployment_id) ?? "unknown",
     subject: str(review.subject_label) ?? reviewId,
@@ -633,7 +654,13 @@ export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
     lineage,
     panels,
     recommendation: str(data.recommendation),
-    expectedVersion: int(review.approval_version ?? review.expected_version),
+    // `review_version` — the name the published Paper Exit schema uses
+    // (`execution-governance-paper-exit.v1`, $defs.Review). The approval
+    // spelling is kept as a fallback and would otherwise have read null,
+    // leaving every exit decision with no version to be optimistic about.
+    expectedVersion: int(
+      review.review_version ?? review.approval_version ?? review.expected_version,
+    ),
     gaps,
   };
 }
