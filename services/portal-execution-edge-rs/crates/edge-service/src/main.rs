@@ -24,7 +24,7 @@ use axum::{
     Json, Router,
 };
 use axum_server::tls_rustls::RustlsConfig;
-use chrono::Utc;
+use chrono::{DateTime, SecondsFormat, Utc};
 use edge_auth::{DelegatedClaims, DelegationVerifier, RequiredRead};
 use execution_contracts::{
     CanonicalId, CapabilitySnapshot, CapabilityState, DeliveryProfile, ExecutionReadCapability,
@@ -841,20 +841,18 @@ async fn realtime_stream(State(state): State<AppState>, headers: HeaderMap) -> R
         Err(status) => return status.into_response(),
     };
     let expires_in = request
-        .claims
-        .expires_at()
-        .map_or(Duration::ZERO, |expires_at| {
-            (expires_at - Utc::now())
-                .to_std()
-                .unwrap_or(Duration::ZERO)
-                .saturating_sub(Duration::from_secs(2))
-        });
+        .assertion_expires_at
+        .signed_duration_since(Utc::now())
+        .to_std()
+        .unwrap_or(Duration::ZERO)
+        .saturating_sub(Duration::from_secs(2));
     let heartbeat_at = tokio::time::Instant::now() + state.realtime_heartbeat;
     let machine = StreamMachine {
         initial,
         subscription: Some(subscription),
         heartbeat: tokio::time::interval_at(heartbeat_at, state.realtime_heartbeat),
         expires_at: tokio::time::Instant::now() + expires_in,
+        assertion_expires_at: request.assertion_expires_at,
         terminal_after_initial,
     };
     let stream = stream::unfold(machine, next_sse_event);
@@ -874,6 +872,7 @@ async fn realtime_stream(State(state): State<AppState>, headers: HeaderMap) -> R
 
 struct RealtimeRequest {
     claims: DelegatedClaims,
+    assertion_expires_at: DateTime<Utc>,
     cursor: ProjectionCursor,
     scope: ProjectionScope,
 }
@@ -901,6 +900,7 @@ fn authorize_realtime_request(
             },
         )
         .map_err(|_| StatusCode::FORBIDDEN)?;
+    let assertion_expires_at = assertion_expires_at(&claims)?;
     let cursor = requested_cursor(headers)
         .map_err(|()| StatusCode::BAD_REQUEST)?
         .ok_or(StatusCode::BAD_REQUEST)?;
@@ -910,9 +910,14 @@ fn authorize_realtime_request(
         .map_err(|_| StatusCode::FORBIDDEN)?;
     Ok(RealtimeRequest {
         claims,
+        assertion_expires_at,
         cursor,
         scope,
     })
+}
+
+fn assertion_expires_at(claims: &DelegatedClaims) -> Result<DateTime<Utc>, StatusCode> {
+    claims.expires_at().ok_or(StatusCode::FORBIDDEN)
 }
 
 async fn prepare_resume(
@@ -1016,6 +1021,7 @@ struct StreamMachine {
     subscription: Option<RealtimeSubscription>,
     heartbeat: tokio::time::Interval,
     expires_at: tokio::time::Instant,
+    assertion_expires_at: DateTime<Utc>,
     terminal_after_initial: bool,
 }
 
@@ -1058,18 +1064,31 @@ async fn next_sse_event(
         ),
         NextStreamEvent::Expired => {
             machine.terminal_after_initial = true;
-            json_event(
-                "auth.expiring",
-                &serde_json::json!({
-                    "event_type": "auth.expiring",
-                    "schema_version": REALTIME_SCHEMA_VERSION,
-                    "reconnect_required": true,
-                }),
-                None,
-            )
+            auth_expiring_event(&machine.assertion_expires_at)
         }
     };
     Some((Ok(event), machine))
+}
+
+#[derive(Serialize)]
+struct AuthExpiringEnvelope {
+    event_type: &'static str,
+    schema_version: &'static str,
+    reconnect_required: bool,
+    expires_at: String,
+}
+
+fn auth_expiring_event(expires_at: &DateTime<Utc>) -> Event {
+    json_event("auth.expiring", &auth_expiring_payload(expires_at), None)
+}
+
+fn auth_expiring_payload(expires_at: &DateTime<Utc>) -> AuthExpiringEnvelope {
+    AuthExpiringEnvelope {
+        event_type: "auth.expiring",
+        schema_version: REALTIME_SCHEMA_VERSION,
+        reconnect_required: true,
+        expires_at: expires_at.to_rfc3339_opts(SecondsFormat::Secs, true),
+    }
 }
 
 fn requested_cursor(headers: &HeaderMap) -> Result<Option<ProjectionCursor>, ()> {
@@ -1590,6 +1609,46 @@ mod tests {
         assert_eq!(bearer(&headers), None);
         headers.insert(AUTHORIZATION, "Bearer assertion".parse().unwrap());
         assert_eq!(bearer(&headers), Some("assertion"));
+    }
+
+    #[test]
+    fn auth_expiring_payload_carries_the_verified_utc_expiry() {
+        let expires_at = DateTime::parse_from_rfc3339("2026-08-22T10:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+
+        assert_eq!(
+            serde_json::to_value(auth_expiring_payload(&expires_at)).unwrap(),
+            serde_json::json!({
+                "event_type": "auth.expiring",
+                "schema_version": REALTIME_SCHEMA_VERSION,
+                "reconnect_required": true,
+                "expires_at": "2026-08-22T10:00:00Z",
+            })
+        );
+    }
+
+    #[test]
+    fn unusable_assertion_expiry_is_rejected_before_stream_setup() {
+        let claims = DelegatedClaims {
+            iss: "issuer".to_owned(),
+            aud: "audience".to_owned(),
+            sub: "subject".to_owned(),
+            sid: "session".to_owned(),
+            workspace_id: "workspace".to_owned(),
+            roles: vec!["USER".to_owned()],
+            scopes: vec!["execution.read".to_owned()],
+            resources: vec![COMMAND_CENTER_RESOURCE.to_owned()],
+            environment: "paper".to_owned(),
+            jti: "assertion".to_owned(),
+            iat: 0,
+            nbf: 0,
+            exp: i64::MAX,
+            auth_time: 0,
+            amr: vec!["portal_session".to_owned()],
+        };
+
+        assert_eq!(assertion_expires_at(&claims), Err(StatusCode::FORBIDDEN));
     }
 
     #[test]

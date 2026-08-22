@@ -30,15 +30,18 @@ export interface RealtimeUpstream {
   contentType: string;
 }
 
-/** Selects exactly one resume cursor without accepting ambiguous reconnect state. */
+/**
+ * Selects the resume cursor for a same-origin EventSource stream.
+ *
+ * Native EventSource reconnects reuse the original URL and add the latest
+ * delivered event ID as `Last-Event-ID`. The header therefore takes precedence
+ * over a stale snapshot cursor retained in that URL.
+ */
 export function resolveResumeCursor(
   lastEventId: string | undefined,
   snapshotCursor: string | undefined,
 ): string {
-  if (
-    (lastEventId && snapshotCursor && lastEventId !== snapshotCursor) ||
-    (!lastEventId && !snapshotCursor)
-  ) {
+  if (!lastEventId && !snapshotCursor) {
     throw new RealtimeProxyError("REALTIME_CURSOR_AMBIGUOUS", 400);
   }
   const cursor = lastEventId ?? snapshotCursor!;

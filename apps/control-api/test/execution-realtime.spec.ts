@@ -7,12 +7,18 @@ import { resolveResumeCursor } from "../src/execution/realtime.proxy";
 const CURSOR = "018f0df0-9568-7cc2-babc-76a14ab55d2a:1842";
 
 describe("EX-BE-06 same-origin realtime boundary", () => {
-  it("requires one exact snapshot or Last-Event-ID cursor", () => {
+  it("uses Last-Event-ID when a native EventSource reconnect retains its original URL cursor", () => {
     expect(resolveResumeCursor(undefined, CURSOR)).toBe(CURSOR);
     expect(resolveResumeCursor(CURSOR, undefined)).toBe(CURSOR);
     expect(resolveResumeCursor(CURSOR, CURSOR)).toBe(CURSOR);
+
+    // Native EventSource reuses the original URL (and therefore its snapshot
+    // cursor) while adding the ID of the last event it delivered as a header.
+    // The header is the only cursor that can continue the stream safely.
+    const deliveredEventId = "018f0df0-9568-7cc2-babc-76a14ab55d2a:1843";
+    expect(resolveResumeCursor(deliveredEventId, CURSOR)).toBe(deliveredEventId);
+
     expect(() => resolveResumeCursor(undefined, undefined)).toThrow("REALTIME_CURSOR_AMBIGUOUS");
-    expect(() => resolveResumeCursor(CURSOR, `${CURSOR}0`)).toThrow("REALTIME_CURSOR_AMBIGUOUS");
     expect(() => resolveResumeCursor("not-a-cursor", undefined)).toThrow("REALTIME_CURSOR_INVALID");
   });
 

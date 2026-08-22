@@ -109,14 +109,25 @@ for required in \
   "${ROOT_DIR}/packages/contracts/schemas/command-envelope.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/event-envelope.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/keyset-page.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-projection-page.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-governance-r2-review.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-realtime-event.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/problem.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/command.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/event.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/keyset-page.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.capital-preview.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-projection-page.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-governance.r2-review.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.auth-expiring.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.projection-gap.valid.json" \
   "${ROOT_DIR}/packages/contracts/generated/portal-api.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-analytics.d.ts" \
+  "${ROOT_DIR}/packages/contracts/generated/execution-governance.d.ts" \
+  "${ROOT_DIR}/packages/contracts/generated/execution-realtime.d.ts" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-analytics.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-governance.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-realtime.openapi.json" \
   "${ROOT_DIR}/packages/contracts/vitest.config.ts" \
   "${ROOT_DIR}/packages/contracts/test/fixtures.spec.ts" \
   "${ROOT_DIR}/scripts/contracts-test.sh" \
@@ -370,14 +381,25 @@ for tracked_source in \
   packages/contracts/schemas/command-envelope.v1.schema.json \
   packages/contracts/schemas/event-envelope.v1.schema.json \
   packages/contracts/schemas/keyset-page.v1.schema.json \
+  packages/contracts/schemas/execution-projection-page.v1.schema.json \
+  packages/contracts/schemas/execution-governance-r2-review.v1.schema.json \
+  packages/contracts/schemas/execution-realtime-event.v1.schema.json \
   packages/contracts/fixtures/problem.valid.json \
   packages/contracts/fixtures/command.valid.json \
   packages/contracts/fixtures/event.valid.json \
   packages/contracts/fixtures/keyset-page.valid.json \
   packages/contracts/fixtures/execution-analytics.capital-preview.valid.json \
+  packages/contracts/fixtures/execution-projection-page.valid.json \
+  packages/contracts/fixtures/execution-governance.r2-review.valid.json \
+  packages/contracts/fixtures/execution-realtime.auth-expiring.valid.json \
+  packages/contracts/fixtures/execution-realtime.projection-gap.valid.json \
   packages/contracts/generated/portal-api.d.ts \
   packages/contracts/generated/execution-analytics.d.ts \
+  packages/contracts/generated/execution-governance.d.ts \
+  packages/contracts/generated/execution-realtime.d.ts \
   packages/contracts/openapi/execution-analytics.openapi.json \
+  packages/contracts/openapi/execution-governance.openapi.json \
+  packages/contracts/openapi/execution-realtime.openapi.json \
   packages/contracts/vitest.config.ts \
   packages/contracts/test/fixtures.spec.ts \
   scripts/contracts-test.sh \
@@ -544,7 +566,16 @@ for json_contract in \
   "${ROOT_DIR}/packages/contracts/schemas/keyset-page.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/keyset-page.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.capital-preview.valid.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-projection-page.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-projection-page.valid.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-governance-r2-review.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-governance.r2-review.valid.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-realtime-event.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.auth-expiring.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.projection-gap.valid.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-analytics.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-governance.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-realtime.openapi.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contract-pack.lock.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/planning-api.openapi.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/run-request.schema.json" \

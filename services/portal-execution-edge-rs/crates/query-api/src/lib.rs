@@ -482,13 +482,23 @@ pub struct ProjectionQueryPage {
     pub total_count: u64,
     pub filtered_count: u64,
     pub rows: Vec<ProjectionQueryRow>,
-    pub next: Option<String>,
-    pub previous: Option<String>,
+    pub next_cursor: Option<String>,
+    pub prev_cursor: Option<String>,
     pub has_more: bool,
     pub has_previous: bool,
     pub applied_filters: Vec<QueryFilter>,
-    pub applied_sorts: Vec<QuerySort>,
+    pub applied_sort: Vec<QuerySort>,
     pub aggregates_by_currency: Vec<CurrencyAggregate>,
+    pub retention: ProjectionPageRetention,
+}
+
+/// Page-level retention metadata. Entity pages do not carry a requested time
+/// range, so callers can distinguish an unclassified empty page from a known
+/// hot/cold/purged classification without manufacturing range boundaries.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProjectionPageRetention {
+    pub availability: RetentionAvailability,
+    pub policy_version: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -847,5 +857,64 @@ mod tests {
             policy.evaluate(at(0), at(10)).unwrap().availability,
             RetentionAvailability::Purged
         );
+    }
+
+    #[test]
+    fn projection_query_page_serializes_canonical_keyset_field_names() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../../../packages/contracts/fixtures/keyset-page.valid.json"
+        )))
+        .unwrap();
+        let next_cursor = fixture["next_cursor"].as_str().unwrap().to_owned();
+
+        let page = ProjectionQueryPage {
+            schema_version: QUERY_SCHEMA_VERSION.to_owned(),
+            epoch_id: Uuid::nil(),
+            total_count: 182_000,
+            filtered_count: 45_500,
+            rows: Vec::new(),
+            next_cursor: Some(next_cursor.clone()),
+            prev_cursor: None,
+            has_more: true,
+            has_previous: false,
+            applied_filters: Vec::new(),
+            applied_sort: vec![QuerySort {
+                field: SortField::AsOf,
+                direction: SortDirection::Desc,
+            }],
+            aggregates_by_currency: Vec::new(),
+            retention: ProjectionPageRetention {
+                availability: RetentionAvailability::Unknown,
+                policy_version: "UNCONFIGURED".to_owned(),
+            },
+        };
+        let serialized = serde_json::to_value(page).unwrap();
+
+        for canonical_name in ["next_cursor", "prev_cursor", "applied_sort"] {
+            assert!(fixture.get(canonical_name).is_some());
+            assert!(serialized.get(canonical_name).is_some());
+        }
+        assert_eq!(serialized["next_cursor"], fixture["next_cursor"]);
+        assert_eq!(serialized["prev_cursor"], fixture["prev_cursor"]);
+        assert!(serialized["applied_sort"].is_array());
+        assert!(fixture["applied_sort"].is_array());
+        assert_eq!(
+            serialized["applied_sort"][0]
+                .as_object()
+                .unwrap()
+                .keys()
+                .collect::<Vec<_>>(),
+            fixture["applied_sort"][0]
+                .as_object()
+                .unwrap()
+                .keys()
+                .collect::<Vec<_>>(),
+        );
+        for legacy_name in ["next", "previous", "applied_sorts"] {
+            assert!(serialized.get(legacy_name).is_none());
+        }
+        assert_eq!(serialized["retention"]["availability"], "UNKNOWN");
+        assert_eq!(serialized["retention"]["policy_version"], "UNCONFIGURED");
     }
 }

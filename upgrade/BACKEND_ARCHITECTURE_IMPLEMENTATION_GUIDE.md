@@ -913,6 +913,20 @@ deep-dive → ADR → slice → evidence discipline documented above.
   fresh-PG Control API build with 111/111 tests. The hardening stop-gate is
   closed; all runtime flags and registry profiles remain off/`fixture`. Detail:
   [`EX_BE_HARDENING_CHECKPOINT.md`](./backend/EX_BE_HARDENING_CHECKPOINT.md).
+- **Execution frontend contract reconciliation (2026-08-22):** the same-origin
+  SSE proxy now treats a newer `Last-Event-ID` as authoritative over the stale
+  URL cursor that native EventSource retains. `auth.expiring` publishes the
+  verified short delegated-assertion expiry (not a Portal session expiry), and
+  gap fields remain nullable unless their reason supplies the fact. The Rust
+  page contract aligns to the published keyset field names and carries exact
+  currency aggregates plus `UNKNOWN` retention when no source policy/time range
+  can classify a page. A read-only, workspace-bound R2 review route supplies
+  immutable `portfolio_id` and `currency`. No generic order evaluator, browser
+  aggregate substitute, source capability, activation, or Trading System access
+  was added; BR-EX-24/26/27 therefore remain owner decisions. In the same audit
+  pass `DecimalString` switched to exact parsing so over-precision fails rather
+  than rounds, and the canonical Inbox chip selector is explicitly `view`
+  (`filter` returns a fail-closed query error).
 - **EX-BE-08a offline source qualification (2026-08-22):** a pure Rust gate now
   seals captured observations to corpus schema, source gateway, contract,
   adapter and capability identity; enforces count/byte/identifier/time bounds;

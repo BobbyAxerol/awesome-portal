@@ -34,6 +34,14 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/event-envelope.v1.schema.json",
   "keyset-page.valid.json":
     "https://schemas.primusspark.com/portal/keyset-page.v1.schema.json",
+  "execution-projection-page.valid.json":
+    "https://schemas.primusspark.com/portal/execution-projection-page.v1.schema.json",
+  "execution-realtime.auth-expiring.valid.json":
+    "https://schemas.primusspark.com/portal/execution-realtime-event.v1.schema.json",
+  "execution-realtime.projection-gap.valid.json":
+    "https://schemas.primusspark.com/portal/execution-realtime-event.v1.schema.json",
+  "execution-governance.r2-review.valid.json":
+    "https://schemas.primusspark.com/portal/execution-governance-r2-review.v1.schema.json",
 };
 
 describe("canonical contracts (cross-language fixture compilation)", () => {
@@ -89,6 +97,63 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(validate!({ ...page, rows: Array.from({ length: 251 }, () => ({})) })).toBe(false);
   });
 
+  it("requires exact server aggregates and explicit retention on projection pages", () => {
+    const page = loadJson(join(fixtureDir, "execution-projection-page.valid.json")) as Record<string, unknown>;
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-projection-page.v1.schema.json",
+    );
+    expect(validate).toBeDefined();
+    const { aggregates_by_currency: _aggregates, ...withoutAggregates } = page;
+    expect(validate!(withoutAggregates)).toBe(false);
+    const { retention: _retention, ...withoutRetention } = page;
+    expect(validate!(withoutRetention)).toBe(false);
+    expect(validate!({
+      ...page,
+      retention: { availability: "NOT_A_REAL_STATE", policy_version: "UNCONFIGURED" },
+    })).toBe(false);
+  });
+
+  it("requires an RFC 3339 expiry on auth.expiring", () => {
+    const event = loadJson(join(fixtureDir, "execution-realtime.auth-expiring.valid.json")) as Record<string, unknown>;
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-realtime-event.v1.schema.json",
+    );
+    expect(validate).toBeDefined();
+    const { expires_at: _expiresAt, ...withoutExpiry } = event;
+    expect(validate!(withoutExpiry)).toBe(false);
+    expect(validate!({ ...event, expires_at: "not-a-timestamp" })).toBe(false);
+  });
+
+  it("keeps reason-specific projection.gap facts nullable while preserving a slow-consumer loss count", () => {
+    const gap = loadJson(join(fixtureDir, "execution-realtime.projection-gap.valid.json")) as Record<string, unknown>;
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-realtime-event.v1.schema.json",
+    );
+    expect(validate).toBeDefined();
+    expect(validate!(gap)).toBe(true);
+    expect(validate!({ ...gap, missed_events: 0 })).toBe(false);
+  });
+
+  it("requires the immutable R2 portfolio and currency binding", () => {
+    const review = loadJson(join(fixtureDir, "execution-governance.r2-review.valid.json")) as {
+      data: { approval: Record<string, unknown> };
+    };
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-governance-r2-review.v1.schema.json",
+    );
+    expect(validate).toBeDefined();
+    const { portfolio_id: _portfolioId, ...withoutPortfolio } = review.data.approval;
+    expect(validate!({
+      ...review,
+      data: { ...review.data, approval: withoutPortfolio },
+    })).toBe(false);
+    const { currency: _currency, ...withoutCurrency } = review.data.approval;
+    expect(validate!({
+      ...review,
+      data: { ...review.data, approval: withoutCurrency },
+    })).toBe(false);
+  });
+
   it("generated portal types reference both handoff endpoints", () => {
     const generated = readFileSync(join(ROOT, "generated", "portal-api.d.ts"), "utf8");
     expect(generated).toContain('"/api/v1/portal/registry"');
@@ -110,5 +175,20 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     ]) expect(generated).toContain(`"${route}"`);
     expect(generated).toContain("AnalyticsScreenMetadata");
     expect(generated).toContain("CapitalPreviewData");
+    expect(generated).toContain("ProjectionKeysetPage");
+    expect(generated).toContain("ProjectionCurrencyAggregate");
+  });
+
+  it("generated governance and realtime types cover their narrow boundaries", () => {
+    const governance = readFileSync(join(ROOT, "generated", "execution-governance.d.ts"), "utf8");
+    expect(governance).toContain('"/api/v1/execution/governance/approvals/{approval_id}/r2"');
+    expect(governance).toContain("R2ReviewResponse");
+    expect(governance).toContain("portfolio_id");
+    expect(governance).toContain("currency");
+
+    const realtime = readFileSync(join(ROOT, "generated", "execution-realtime.d.ts"), "utf8");
+    expect(realtime).toContain('"/api/v1/execution/command-center/stream"');
+    expect(realtime).toContain("AuthExpiringEvent");
+    expect(realtime).toContain("expires_at");
   });
 });

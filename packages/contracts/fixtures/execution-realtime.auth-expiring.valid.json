@@ -1,0 +1,6 @@
+{
+  "event_type": "auth.expiring",
+  "schema_version": "execution.realtime.v1",
+  "reconnect_required": true,
+  "expires_at": "2026-08-22T10:04:00Z"
+}

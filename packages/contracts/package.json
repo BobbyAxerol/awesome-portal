@@ -5,7 +5,7 @@
   "description": "Portal canonical contract workspace (U09): schemas, fixtures, generated types",
   "scripts": {
     "test": "vitest run",
-    "generate": "openapi-typescript ../../apps/portal/registry/openapi/portal-api.openapi.json -o generated/portal-api.d.ts && openapi-typescript openapi/execution-analytics.openapi.json -o generated/execution-analytics.d.ts"
+    "generate": "openapi-typescript ../../apps/portal/registry/openapi/portal-api.openapi.json -o generated/portal-api.d.ts && openapi-typescript openapi/execution-analytics.openapi.json -o generated/execution-analytics.d.ts && openapi-typescript openapi/execution-governance.openapi.json -o generated/execution-governance.d.ts && openapi-typescript openapi/execution-realtime.openapi.json -o generated/execution-realtime.d.ts"
   },
   "dependencies": {
     "ajv": "^8.17.1",

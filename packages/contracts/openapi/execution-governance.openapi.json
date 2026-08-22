@@ -1,0 +1,206 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal Execution Governance Review API",
+    "version": "1.0.0",
+    "description": "Same-origin, session-guarded Portal read model for an active R2 approval and its immutable capital-preview scope. It does not authorize an R2 decision or execution action."
+  },
+  "servers": [{ "url": "/" }],
+  "security": [{ "portalSession": [] }],
+  "paths": {
+    "/api/v1/execution/governance/approvals/{approval_id}/r2": {
+      "get": {
+        "operationId": "executionGovernanceR2Review",
+        "description": "Returns an active, workspace-bound R2 review only when its immutable portfolio/currency scope exists. Missing, cross-workspace, closed, and expired reviews are not disclosed.",
+        "parameters": [
+          { "$ref": "#/components/parameters/ApprovalId" },
+          { "$ref": "#/components/parameters/WorkspaceId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Portal-owned R2 review scope",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/R2ReviewResponse" }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" }
+    },
+    "parameters": {
+      "ApprovalId": {
+        "name": "approval_id",
+        "in": "path",
+        "required": true,
+        "schema": { "$ref": "#/components/schemas/Identifier" }
+      },
+      "WorkspaceId": {
+        "name": "workspace_id",
+        "in": "query",
+        "required": false,
+        "schema": { "$ref": "#/components/schemas/WorkspaceId" }
+      }
+    },
+    "responses": {
+      "Problem": {
+        "description": "Typed fail-closed error",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } }
+        }
+      }
+    },
+    "schemas": {
+      "Identifier": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._-]{1,128}$"
+      },
+      "WorkspaceId": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 96
+      },
+      "Currency": {
+        "type": "string",
+        "pattern": "^[A-Z0-9]{2,12}$"
+      },
+      "DateTime": { "type": "string", "format": "date-time" },
+      "Hash": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      },
+      "PortalActor": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["user_id", "username"],
+        "properties": {
+          "user_id": { "$ref": "#/components/schemas/Identifier" },
+          "username": { "type": "string", "minLength": 1, "maxLength": 128 }
+        }
+      },
+      "ReviewActor": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["user_id", "username", "roles"],
+        "properties": {
+          "user_id": { "$ref": "#/components/schemas/Identifier" },
+          "username": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "roles": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "items": { "type": "string", "enum": ["ADMIN", "USER"] }
+          }
+        }
+      },
+      "R2Approval": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "approval_id",
+          "gate",
+          "subject_type",
+          "subject_id",
+          "subject_label",
+          "release_candidate",
+          "environment",
+          "target_label",
+          "requester",
+          "creator",
+          "status",
+          "policy_version",
+          "quorum_met",
+          "quorum_required",
+          "approval_version",
+          "evidence_set_hash",
+          "evidence_complete",
+          "blocker_count",
+          "blocker_summary",
+          "sla_due_at",
+          "expires_at",
+          "created_at",
+          "updated_at",
+          "portfolio_id",
+          "currency"
+        ],
+        "properties": {
+          "approval_id": { "$ref": "#/components/schemas/Identifier" },
+          "gate": { "type": "string", "const": "R2" },
+          "subject_type": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "subject_id": { "$ref": "#/components/schemas/Identifier" },
+          "subject_label": { "type": "string", "minLength": 1, "maxLength": 512 },
+          "release_candidate": { "type": ["string", "null"], "maxLength": 256 },
+          "environment": { "type": "string", "minLength": 1, "maxLength": 32 },
+          "target_label": { "type": "string", "minLength": 1, "maxLength": 256 },
+          "requester": { "$ref": "#/components/schemas/PortalActor" },
+          "creator": { "$ref": "#/components/schemas/PortalActor" },
+          "status": { "type": "string", "const": "PENDING" },
+          "policy_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "quorum_met": { "type": "integer", "minimum": 0 },
+          "quorum_required": { "type": "integer", "minimum": 1 },
+          "approval_version": { "type": "integer", "minimum": 1 },
+          "evidence_set_hash": { "$ref": "#/components/schemas/Hash" },
+          "evidence_complete": { "type": "boolean" },
+          "blocker_count": { "type": "integer", "minimum": 0 },
+          "blocker_summary": { "type": ["string", "null"], "maxLength": 2000 },
+          "sla_due_at": { "$ref": "#/components/schemas/DateTime" },
+          "expires_at": { "$ref": "#/components/schemas/DateTime" },
+          "created_at": { "$ref": "#/components/schemas/DateTime" },
+          "updated_at": { "$ref": "#/components/schemas/DateTime" },
+          "portfolio_id": { "$ref": "#/components/schemas/Identifier" },
+          "currency": { "$ref": "#/components/schemas/Currency" }
+        }
+      },
+      "R2ReviewData": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["approval", "actor"],
+        "properties": {
+          "approval": { "$ref": "#/components/schemas/R2Approval" },
+          "actor": { "$ref": "#/components/schemas/ReviewActor" }
+        }
+      },
+      "R2ReviewResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "record_authority",
+          "delivery_profile",
+          "read_at",
+          "data"
+        ],
+        "properties": {
+          "schema_version": { "type": "string", "const": "governance.r2-review.v1" },
+          "record_authority": { "type": "string", "const": "PORTAL" },
+          "delivery_profile": { "type": "string", "const": "fixture" },
+          "read_at": { "$ref": "#/components/schemas/DateTime" },
+          "data": { "$ref": "#/components/schemas/R2ReviewData" }
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["error", "request_id"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "message"],
+            "properties": {
+              "code": { "type": "string", "minLength": 1, "maxLength": 128 },
+              "message": { "type": "string", "minLength": 1, "maxLength": 512 }
+            }
+          },
+          "request_id": { "type": "string", "minLength": 1, "maxLength": 128 }
+        }
+      }
+    }
+  }
+}

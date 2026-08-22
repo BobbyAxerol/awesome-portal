@@ -60,6 +60,16 @@ export class GovernanceController {
     return this.governance.detail(request.portalUser, workspaceId, approvalId);
   }
 
+  @Get("/governance/approvals/:approval_id/r2")
+  async r2(
+    @Req() request: GovernanceRequest,
+    @Param("approval_id") approvalId: string,
+    @Query("workspace_id") rawWorkspaceId?: unknown,
+  ) {
+    const workspaceId = await this.workspace(request, rawWorkspaceId);
+    return this.governance.r2Detail(request.portalUser, workspaceId, approvalId);
+  }
+
   @Post("/commands/plans")
   @HttpCode(201)
   async plan(@Req() request: GovernanceRequest, @Body() body: unknown) {

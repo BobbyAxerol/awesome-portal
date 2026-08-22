@@ -13,6 +13,13 @@ same-origin routes; it is not a generic analytics/query API. Its envelopes keep
 epoch, source snapshot, capability identity, delivery profile, projection
 sequence, freshness policy and string decimals explicit.
 
+Execution governance and realtime use separate narrow contracts:
+`openapi/execution-governance.openapi.json` / `generated/execution-governance.d.ts`
+for the Portal-owned active R2 review binding, and
+`openapi/execution-realtime.openapi.json` / `generated/execution-realtime.d.ts`
+for the same-origin SSE boundary. The analytics projection-page component is a
+typed future screen shape, not authorization to expose a generic query route.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields
@@ -49,17 +56,28 @@ packages/contracts/
     command-envelope.v1.schema.json
     event-envelope.v1.schema.json
     keyset-page.v1.schema.json
+    execution-projection-page.v1.schema.json
+    execution-governance-r2-review.v1.schema.json
+    execution-realtime-event.v1.schema.json
   fixtures/
     problem.valid.json
     command.valid.json
     event.valid.json
     keyset-page.valid.json
     execution-analytics.capital-preview.valid.json
+    execution-projection-page.valid.json
+    execution-governance.r2-review.valid.json
+    execution-realtime.auth-expiring.valid.json
+    execution-realtime.projection-gap.valid.json
   openapi/
     execution-analytics.openapi.json
+    execution-governance.openapi.json
+    execution-realtime.openapi.json
   generated/
     portal-api.d.ts
     execution-analytics.d.ts
+    execution-governance.d.ts
+    execution-realtime.d.ts
   contracts-snapshot.json
   package.json
   tsconfig.json

@@ -261,7 +261,7 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     return { manifestHash, evidenceHashes: [HASH_A, HASH_B] };
   }
 
-  async function seedR2CapitalScope(approvalId: string) {
+  async function seedR2CapitalScope(approvalId: string, targetWorkspaceId = workspaceId) {
     await ctx.pool.query(
       `INSERT INTO governance_approval_requests
          (approval_id, workspace_id, gate, subject_type, subject_id, subject_label,
@@ -273,13 +273,13 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
                'PAPER', 'R2 capital review', $3, $4, $3, $4, 'PENDING',
                'approval.v3', 1, $5, true, 0,
                now() + interval '6 hours', now() + interval '48 hours')`,
-      [approvalId, workspaceId, stan.userId, stan.username, HASH_A],
+      [approvalId, targetWorkspaceId, stan.userId, stan.username, HASH_A],
     );
     await ctx.pool.query(
       `INSERT INTO governance_approval_analytics_scopes
          (approval_id, workspace_id, portfolio_id, currency)
        VALUES ($1, $2, 'PF_R2_1', 'USDT')`,
-      [approvalId, workspaceId],
+      [approvalId, targetWorkspaceId],
     );
   }
 
@@ -423,6 +423,16 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     });
   });
 
+  it("fails closed when a deprecated inbox filter selector would otherwise become INBOX", async () => {
+    const response = await inject(
+      bobby,
+      `/api/v1/execution/governance/approvals?workspace_id=${workspaceId}&filter=OVERDUE`,
+    );
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.code).toBe("FILTER_NOT_ALLOWED");
+  });
+
   it("fails closed when the stored evidence-set digest does not match immutable entries", async () => {
     await seedApproval({ approvalId: "AP-TAMPER" });
     await ctx.pool.query(
@@ -460,6 +470,58 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     const userPlan = await plan(stan, payload);
     expect(userPlan.statusCode).toBe(403);
     expect(userPlan.json().error.code).toBe("APPROVER_ROLE_REQUIRED");
+  });
+
+  it("serves an active R2 review with its immutable workspace-bound capital scope", async () => {
+    await seedR2CapitalScope("AP-R2-DETAIL");
+    const path = `/api/v1/execution/governance/approvals/AP-R2-DETAIL/r2?workspace_id=${workspaceId}`;
+
+    const response = await inject(bobby, path);
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      schema_version: "governance.r2-review.v1",
+      record_authority: "PORTAL",
+      delivery_profile: "fixture",
+      data: {
+        approval: {
+          approval_id: "AP-R2-DETAIL",
+          gate: "R2",
+          portfolio_id: "PF_R2_1",
+          currency: "USDT",
+        },
+      },
+    });
+
+    const memberRead = await inject(stan, path);
+    expect(memberRead.statusCode).toBe(200);
+    expect(memberRead.json().data.approval).toMatchObject({
+      portfolio_id: "PF_R2_1",
+      currency: "USDT",
+    });
+
+    const lanWorkspaces = await inject(lan, "/api/workspaces");
+    const otherWorkspace = lanWorkspaces
+      .json()
+      .workspaces.find((item: { owner_user_id: string }) => item.owner_user_id === lan.userId);
+    expect(otherWorkspace).toBeDefined();
+    await seedR2CapitalScope("AP-R2-OTHER-WORKSPACE", otherWorkspace.workspace_id);
+    const isolated = await inject(
+      bobby,
+      `/api/v1/execution/governance/approvals/AP-R2-OTHER-WORKSPACE/r2?workspace_id=${workspaceId}`,
+    );
+    expect(isolated.statusCode).toBe(404);
+    expect(isolated.json().error.code).toBe("APPROVAL_NOT_FOUND");
+
+    await ctx.pool.query(
+      `UPDATE governance_approval_requests
+          SET created_at = now() - interval '3 minutes',
+              sla_due_at = now() - interval '2 minutes',
+              expires_at = now() - interval '1 minute'
+        WHERE approval_id = 'AP-R2-DETAIL'`,
+    );
+    const expired = await inject(bobby, path);
+    expect(expired.statusCode).toBe(404);
+    expect(expired.json().error.code).toBe("APPROVAL_NOT_FOUND");
   });
 
   it("binds R2 capital preview to ADMIN and an immutable approval scope", async () => {

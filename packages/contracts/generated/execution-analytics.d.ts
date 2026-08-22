@@ -346,6 +346,45 @@ export interface components {
         BindingExposureResponse: components["schemas"]["AnalyticsScreenMetadata"] & {
             analytics: components["schemas"]["BindingExposureAnalytics"];
         };
+        ProjectionPageRetention: {
+            /** @enum {string} */
+            availability: "HOT" | "PARTIAL_HOT" | "COLD_REQUESTABLE" | "PURGED" | "UNKNOWN";
+            policy_version: string;
+        };
+        ProjectionCurrencyAggregate: {
+            currency: components["schemas"]["Currency"] | null;
+            row_count: number;
+            quantity_count: number;
+            quantity: components["schemas"]["Decimal"];
+            notional_count: number;
+            notional: components["schemas"]["Decimal"];
+            invalid_numeric_count: number;
+        };
+        ProjectionAppliedFilter: {
+            field: string;
+            /** @enum {string} */
+            op: "eq" | "in" | "contains" | "gte" | "lte";
+            value: string;
+        };
+        ProjectionAppliedSort: {
+            field: string;
+            /** @enum {string} */
+            direction: "asc" | "desc";
+        };
+        /** @description Published component for a future approved narrow projection screen endpoint; it is not a generic query route. */
+        ProjectionKeysetPage: {
+            rows: unknown[];
+            total_count: number;
+            filtered_count: number;
+            next_cursor: string | null;
+            prev_cursor: string | null;
+            has_more: boolean;
+            has_previous: boolean;
+            applied_filters: components["schemas"]["ProjectionAppliedFilter"][];
+            applied_sort: components["schemas"]["ProjectionAppliedSort"][];
+            aggregates_by_currency: components["schemas"]["ProjectionCurrencyAggregate"][];
+            retention: components["schemas"]["ProjectionPageRetention"];
+        };
     };
     responses: {
         /** @description Typed fail-closed error */

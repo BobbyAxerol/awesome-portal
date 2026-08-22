@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-governance-r2-review.v1.schema.json",
+  "title": "Portal Execution Governance R2 Review v1",
+  "description": "Read-only, workspace-bound active R2 review with the immutable capital-preview scope. This document is not an R2 decision or execution authorization.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_authority",
+    "delivery_profile",
+    "read_at",
+    "data"
+  ],
+  "properties": {
+    "schema_version": { "const": "governance.r2-review.v1" },
+    "record_authority": { "const": "PORTAL" },
+    "delivery_profile": { "const": "fixture" },
+    "read_at": { "$ref": "#/$defs/date_time" },
+    "data": { "$ref": "#/$defs/review_data" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]{1,128}$"
+    },
+    "date_time": { "type": "string", "format": "date-time" },
+    "hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "portal_actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["user_id", "username"],
+      "properties": {
+        "user_id": { "$ref": "#/$defs/identifier" },
+        "username": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "review_actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["user_id", "username", "roles"],
+      "properties": {
+        "user_id": { "$ref": "#/$defs/identifier" },
+        "username": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "roles": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": { "enum": ["ADMIN", "USER"] }
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approval_id",
+        "gate",
+        "subject_type",
+        "subject_id",
+        "subject_label",
+        "release_candidate",
+        "environment",
+        "target_label",
+        "requester",
+        "creator",
+        "status",
+        "policy_version",
+        "quorum_met",
+        "quorum_required",
+        "approval_version",
+        "evidence_set_hash",
+        "evidence_complete",
+        "blocker_count",
+        "blocker_summary",
+        "sla_due_at",
+        "expires_at",
+        "created_at",
+        "updated_at",
+        "portfolio_id",
+        "currency"
+      ],
+      "properties": {
+        "approval_id": { "$ref": "#/$defs/identifier" },
+        "gate": { "const": "R2" },
+        "subject_type": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "subject_id": { "$ref": "#/$defs/identifier" },
+        "subject_label": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "release_candidate": { "type": ["string", "null"], "maxLength": 256 },
+        "environment": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "target_label": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "requester": { "$ref": "#/$defs/portal_actor" },
+        "creator": { "$ref": "#/$defs/portal_actor" },
+        "status": { "const": "PENDING" },
+        "policy_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "quorum_met": { "type": "integer", "minimum": 0 },
+        "quorum_required": { "type": "integer", "minimum": 1 },
+        "approval_version": { "type": "integer", "minimum": 1 },
+        "evidence_set_hash": { "$ref": "#/$defs/hash" },
+        "evidence_complete": { "type": "boolean" },
+        "blocker_count": { "type": "integer", "minimum": 0 },
+        "blocker_summary": { "type": ["string", "null"], "maxLength": 2000 },
+        "sla_due_at": { "$ref": "#/$defs/date_time" },
+        "expires_at": { "$ref": "#/$defs/date_time" },
+        "created_at": { "$ref": "#/$defs/date_time" },
+        "updated_at": { "$ref": "#/$defs/date_time" },
+        "portfolio_id": { "$ref": "#/$defs/identifier" },
+        "currency": { "type": "string", "pattern": "^[A-Z0-9]{2,12}$" }
+      }
+    },
+    "review_data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approval", "actor"],
+      "properties": {
+        "approval": { "$ref": "#/$defs/approval" },
+        "actor": { "$ref": "#/$defs/review_actor" }
+      }
+    }
+  }
+}

@@ -299,6 +299,11 @@ function inFilter(field: string, raw: unknown): RawFilterInput | null {
 
 export function approvalListQuery(raw: Record<string, unknown>): RawKeysetQuery {
   const filters: RawFilterInput[] = [];
+  // `view` is the only published selector for inbox chips. Reject the former
+  // frontend spelling rather than silently serving the default INBOX view.
+  if (raw.filter !== undefined) {
+    filters.push({ field: "filter", op: "invalid", value: raw.filter });
+  }
   const view = typeof raw.view === "string" ? raw.view : "INBOX";
   const viewFilter: Record<string, RawFilterInput[]> = {
     INBOX: [{ field: "status", op: "eq", value: "PENDING" }],

@@ -258,6 +258,19 @@ authority.
   payload bounds and a bounded TypeScript HTTP/2 analytics bulkhead close H3.
   Evidence: Rust/PostgreSQL 75/75 + strict Clippy/rustfmt; fresh-PG Control API
   build + 111/111. No runtime/profile activation was made.
+- **Execution frontend contract reconciliation (2026-08-22):** native
+  EventSource reconnects now prefer a newer `Last-Event-ID` over the retained
+  URL cursor; `auth.expiring` carries the verified assertion's RFC3339 expiry;
+  and reason-specific `projection.gap` facts are documented as nullable. Rust
+  keyset pages use the published `next_cursor`/`prev_cursor`/`applied_sort`
+  names and surface exact currency aggregates plus fail-closed page retention
+  (`UNKNOWN` until a source policy and time range can classify it). A read-only
+  R2 detail endpoint now provides immutable `portfolio_id` and `currency`.
+  `DecimalString` rejects precision that would round, and the canonical Approval
+  Inbox selector is `view` (`filter` now fails closed). No generic order list,
+  aggregate exposure verdict, or packed-matrix sample count was invented: those
+  remain owner/source capability decisions. The registry stays `fixture`; all
+  runtime flags stay false.
 - [EX-BE-08a offline source qualification](./EX_BE_08A_OFFLINE_SOURCE_QUALIFICATION.md)
   — **offline foundation complete / live evidence pending:** sealed
   contract/gateway/adapter/capability-bound corpora, frozen semantic digest,

@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 
-use std::{collections::BTreeMap, fmt, str::FromStr};
+use std::{collections::BTreeMap, fmt};
 
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
@@ -104,14 +104,14 @@ impl DecimalString {
         Self(value)
     }
 
-    /// Parses a base-10 decimal without passing through a binary float.
+    /// Parses a base-10 decimal without binary-float conversion or rounding.
     ///
     /// # Errors
     ///
     /// Returns [`ContractError::InvalidDecimal`] when `raw` is not a valid
     /// decimal representation.
     pub fn parse(raw: &str) -> Result<Self, ContractError> {
-        Decimal::from_str(raw)
+        Decimal::from_str_exact(raw)
             .map(Self)
             .map_err(|_| ContractError::InvalidDecimal(raw.to_owned()))
     }
@@ -296,6 +296,17 @@ mod tests {
         assert_eq!(decimal.to_string(), "100.2500");
         assert_eq!(serde_json::to_string(&decimal).unwrap(), "\"100.2500\"");
         assert!(serde_json::from_str::<DecimalString>("100.25").is_err());
+    }
+
+    #[test]
+    fn decimal_rejects_precision_that_would_be_silently_rounded() {
+        let too_precise = "123456789012.000000000000000001";
+
+        assert_eq!(
+            DecimalString::parse(too_precise),
+            Err(ContractError::InvalidDecimal(too_precise.to_owned()))
+        );
+        assert!(serde_json::from_str::<DecimalString>(&format!("\"{too_precise}\"")).is_err());
     }
 
     #[test]

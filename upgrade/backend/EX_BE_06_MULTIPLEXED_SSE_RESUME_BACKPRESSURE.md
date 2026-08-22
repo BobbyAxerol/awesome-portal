@@ -35,10 +35,16 @@ credential, edge certificate or delegated token.
   a `GAP_APPLIED` source observation or an epoch change becomes a typed gap.
 - Event `id` is exactly `{projection_epoch}:{projection_sequence}`. Source
   cursor/sequence remain separate nullable facts.
+- Gap supplement fields are nullable by reason, not placeholders: every gap
+  keeps its last-good cursor; slow consumers include `missed_events`; and
+  resume/history decisions include the active epoch and earliest retained
+  sequence only when those facts are applicable.
 - Replay is capped at 1,024 events by default and at 2,048 by validation. A
   larger recovery becomes `replay_window_exceeded` and requires a snapshot.
 - Heartbeats are typed and do not advance the Last-Event-ID. The stream emits
-  `auth.expiring` and closes before the maximum 60-second assertion expires.
+  `auth.expiring` with the verified delegated assertion's RFC3339 `expires_at`
+  and closes two seconds before the maximum 60-second assertion expires. This
+  is a reconnect deadline, not the Portal-session expiration.
 
 Resume uses the EX-BE-03 decision unchanged:
 
@@ -51,7 +57,10 @@ Resume uses the EX-BE-03 decision unchanged:
 ## 3. TypeScript same-origin boundary
 
 - Initial connect requires the snapshot cursor query parameter; reconnect uses
-  `Last-Event-ID`. Conflicting, repeated, missing or malformed cursors fail 400.
+  `Last-Event-ID`. Native `EventSource` retains its original URL cursor while
+  adding a newer `Last-Event-ID` on automatic reconnect, so the header takes
+  precedence when both are present. Missing, repeated or malformed cursors
+  still fail 400.
 - The proxy pins HTTPS, a configured CA and client certificate/key, and requests
   ALPN `h2`. Redirects and browser-supplied upstream origins do not exist.
 - One HTTP/2 session is reused; the proxy caps four streams per Portal session
@@ -105,6 +114,8 @@ subscription reducer:
 3. on `projection.gap`, keep the last-good view visibly aging, clear the resume
    cursor and resnapshot no earlier than `resnapshot_not_before`;
 4. on `auth.expiring`/disconnect, show reconnecting and let same-origin retry;
+   `expires_at` is the short delegated assertion deadline, not a Portal-session
+   timer;
 5. add fixture tests for slow consumer, history eviction, source discontinuity,
    epoch jitter and heartbeat-without-cursor-advance;
 6. keep the registry profile `fixture` and do not mark the endpoint live.

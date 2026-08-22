@@ -4,9 +4,9 @@ use projection_core::{ProjectionEntityKind, ProjectionScope};
 use query_api::{
     select_series_interval, CurrencyAggregate, CursorBoundary, CursorCodec, CursorContext,
     CursorDirection, CursorScalar, EntityQueryRequest, ExactSeries, ExactSeriesPoint, FilterField,
-    FilterOperator, ProjectionQueryPage, ProjectionQueryRow, QueryAllowlist, QueryFilter,
-    QuerySort, RetentionAvailability, RetentionDecision, RetentionPolicy, SeriesIntent,
-    SortDirection, SortField, QUERY_SCHEMA_VERSION,
+    FilterOperator, ProjectionPageRetention, ProjectionQueryPage, ProjectionQueryRow,
+    QueryAllowlist, QueryFilter, QuerySort, RetentionAvailability, RetentionDecision,
+    RetentionPolicy, SeriesIntent, SortDirection, SortField, QUERY_SCHEMA_VERSION,
 };
 use sqlx::{Postgres, QueryBuilder, Row as _};
 use uuid::Uuid;
@@ -157,7 +157,7 @@ impl PgProjectionStore {
             query_fingerprint: &validated.fingerprint,
             ..unbound_context
         };
-        let next = if has_more {
+        let next_cursor = if has_more {
             if let Some(row) = rows.last() {
                 Some(cursor_codec.encode(
                     &bound_context,
@@ -171,7 +171,7 @@ impl PgProjectionStore {
         } else {
             None
         };
-        let previous = if has_previous {
+        let prev_cursor = if has_previous {
             if let Some(row) = rows.first() {
                 Some(cursor_codec.encode(
                     &bound_context,
@@ -191,13 +191,20 @@ impl PgProjectionStore {
             total_count: required_u64(total_count)?,
             filtered_count: required_u64(filtered_count)?,
             rows,
-            next,
-            previous,
+            next_cursor,
+            prev_cursor,
             has_more,
             has_previous,
             applied_filters: validated.filters,
-            applied_sorts: validated.sorts,
+            applied_sort: validated.sorts,
             aggregates_by_currency: aggregates,
+            // Order/fill/entity retention has no source policy plus requested
+            // range yet. Do not let an empty page masquerade as an empty hot
+            // result until that authority is published.
+            retention: ProjectionPageRetention {
+                availability: RetentionAvailability::Unknown,
+                policy_version: "UNCONFIGURED".to_owned(),
+            },
         })
     }
 

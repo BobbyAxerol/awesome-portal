@@ -274,6 +274,33 @@ export class GovernanceService {
     };
   }
 
+  /**
+   * Publishes only the Portal-owned, immutable R2 review binding needed to
+   * issue a capital-preview request. This is a read model, not an R2 decision
+   * or execution authorization.
+   */
+  async r2Detail(user: PortalUser, workspaceId: string, approvalId: string) {
+    const detail = await this.repository.r2Detail(workspaceId, approvalId);
+    if (!detail) {
+      throw new GovernanceError("APPROVAL_NOT_FOUND", "Approval not found.", 404);
+    }
+    const { approval, scope } = detail;
+    return {
+      schema_version: "governance.r2-review.v1",
+      record_authority: "PORTAL",
+      delivery_profile: "fixture",
+      read_at: new Date().toISOString(),
+      data: {
+        approval: {
+          ...this.publicApproval(approval),
+          portfolio_id: scope.portfolioId,
+          currency: scope.currency,
+        },
+        actor: { user_id: user.userId, username: user.username, roles: [user.role] },
+      },
+    };
+  }
+
   async plan(user: PortalUser, input: PlanInput, requestId: string) {
     if (user.role !== "ADMIN") {
       await this.rejected(user, input, requestId, "APPROVER_ROLE_REQUIRED", "DENIED");

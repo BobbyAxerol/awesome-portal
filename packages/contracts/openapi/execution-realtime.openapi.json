@@ -1,0 +1,115 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal Execution Realtime Stream API",
+    "version": "1.0.0",
+    "description": "EX-BE-06 same-origin, session-guarded Server-Sent Events. The browser never receives a delegated edge assertion."
+  },
+  "servers": [{ "url": "/" }],
+  "security": [{ "portalSession": [] }],
+  "paths": {
+    "/api/v1/execution/command-center/stream": {
+      "get": {
+        "operationId": "executionCommandCenterStream",
+        "description": "Initial connects supply cursor. Native EventSource reconnects retain that query value and send Last-Event-ID; the newer header wins.",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Initial snapshot cursor. Required only when Last-Event-ID is absent.",
+            "schema": { "$ref": "#/components/schemas/ProjectionCursor" }
+          },
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "required": false,
+            "description": "Last delivered SSE id. Takes precedence over a retained cursor query parameter on reconnect.",
+            "schema": { "$ref": "#/components/schemas/ProjectionCursor" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "text/event-stream; documented envelopes are carried as SSE data JSON.",
+            "content": {
+              "text/event-stream": {
+                "schema": { "type": "string" },
+                "x-sse-events": {
+                  "auth.expiring": { "$ref": "#/components/schemas/AuthExpiringEvent" },
+                  "projection.gap": { "$ref": "#/components/schemas/ProjectionGapEvent" }
+                }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" }
+    },
+    "responses": {
+      "Problem": {
+        "description": "Typed fail-closed error",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Problem" }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ProjectionCursor": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}:[0-9]+$",
+        "maxLength": 80
+      },
+      "DateTime": { "type": "string", "format": "date-time" },
+      "NullableDateTime": {
+        "oneOf": [{ "$ref": "#/components/schemas/DateTime" }, { "type": "null" }]
+      },
+      "Problem": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" }
+            }
+          }
+        }
+      },
+      "AuthExpiringEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["event_type", "schema_version", "reconnect_required", "expires_at"],
+        "properties": {
+          "event_type": { "type": "string", "const": "auth.expiring" },
+          "schema_version": { "type": "string", "const": "execution.realtime.v1" },
+          "reconnect_required": { "type": "boolean", "const": true },
+          "expires_at": { "$ref": "#/components/schemas/DateTime" }
+        }
+      },
+      "ProjectionGapEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["event_type", "schema_version", "reason", "last_good_cursor", "earliest_available_sequence", "missed_events", "active_epoch_id", "resnapshot_not_before"],
+        "properties": {
+          "event_type": { "type": "string", "const": "projection.gap" },
+          "schema_version": { "type": "string", "const": "execution.realtime.v1" },
+          "reason": { "type": "string", "enum": ["history_evicted", "replay_window_exceeded", "slow_consumer", "epoch_changed", "source_discontinuity"] },
+          "last_good_cursor": { "oneOf": [{ "$ref": "#/components/schemas/ProjectionCursor" }, { "type": "null" }] },
+          "earliest_available_sequence": { "type": ["integer", "null"], "minimum": 0 },
+          "missed_events": { "type": ["integer", "null"], "minimum": 1 },
+          "active_epoch_id": { "type": ["string", "null"], "format": "uuid" },
+          "resnapshot_not_before": { "$ref": "#/components/schemas/NullableDateTime" }
+        }
+      }
+    }
+  }
+}

@@ -1443,7 +1443,7 @@ mod tests {
         assert_eq!(first.rows.len(), 100);
         assert!(first.has_more);
         assert!(!first.has_previous);
-        assert!(first.next.is_some());
+        assert!(first.next_cursor.is_some());
 
         sqlx::query(
             "INSERT INTO portal_projection.entities
@@ -1469,7 +1469,7 @@ mod tests {
         .await
         .unwrap();
         let second_request = EntityQueryRequest {
-            after: first.next.clone(),
+            after: first.next_cursor.clone(),
             ..EntityQueryRequest::default()
         };
         let second = store
@@ -1484,7 +1484,7 @@ mod tests {
             .unwrap();
         assert_eq!(second.total_count, 182_000);
         assert!(second.has_previous);
-        assert!(second.previous.is_some());
+        assert!(second.prev_cursor.is_some());
         assert!(first.rows.iter().all(|left| {
             second
                 .rows
@@ -1498,7 +1498,7 @@ mod tests {
                 &scope,
                 ProjectionEntityKind::Order,
                 &EntityQueryRequest {
-                    before: second.previous.clone(),
+                    before: second.prev_cursor.clone(),
                     ..EntityQueryRequest::default()
                 },
                 &codec,
@@ -1528,6 +1528,11 @@ mod tests {
             .unwrap();
         assert_eq!(filtered.total_count, 182_000);
         assert_eq!(filtered.filtered_count, 91_000);
+        assert_eq!(
+            filtered.retention.availability,
+            RetentionAvailability::Unknown
+        );
+        assert_eq!(filtered.retention.policy_version, "UNCONFIGURED");
         assert_eq!(
             filtered
                 .aggregates_by_currency

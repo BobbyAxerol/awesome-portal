@@ -48,6 +48,11 @@ interface CapitalPreviewApprovalScopeRow {
   currency: string;
 }
 
+export interface R2ApprovalDetailRecord {
+  approval: ApprovalRecord;
+  scope: CapitalPreviewApprovalScope;
+}
+
 interface ApprovalRow {
   approval_id: string;
   workspace_id: string;
@@ -78,6 +83,11 @@ interface ApprovalRow {
   updated_at: Date;
   decided_at: Date | null;
   decided_by_user_id: string | null;
+}
+
+interface R2ApprovalDetailRow extends ApprovalRow {
+  portfolio_id: string;
+  currency: string;
 }
 
 export interface EvidenceRecord {
@@ -392,6 +402,53 @@ export class GovernanceRepository {
           currency: row.currency,
         }
       : null;
+  }
+
+  /**
+   * Reads the active R2 review and its immutable capital-preview binding in one
+   * workspace-bound, repeatable-read snapshot. Closed or expired reviews do
+   * not disclose a scope that cannot be used for a preview.
+   */
+  async r2Detail(
+    workspaceId: string,
+    approvalId: string,
+  ): Promise<R2ApprovalDetailRecord | null> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      const result = await client.query<R2ApprovalDetailRow>(
+        `SELECT request.*, scope.portfolio_id, scope.currency
+           FROM governance_approval_requests request
+           JOIN governance_approval_analytics_scopes scope
+             ON scope.approval_id = request.approval_id
+            AND scope.workspace_id = request.workspace_id
+            AND scope.gate = request.gate
+          WHERE request.workspace_id = $1
+            AND request.approval_id = $2
+            AND request.gate = 'R2'
+            AND request.status = 'PENDING'
+            AND request.expires_at > now()`,
+        [workspaceId, approvalId],
+      );
+      await client.query("COMMIT");
+      const row = result.rows[0];
+      return row
+        ? {
+            approval: approval(row),
+            scope: {
+              approvalId: row.approval_id,
+              workspaceId: row.workspace_id,
+              portfolioId: row.portfolio_id,
+              currency: row.currency,
+            },
+          }
+        : null;
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async detail(workspaceId: string, approvalId: string): Promise<{

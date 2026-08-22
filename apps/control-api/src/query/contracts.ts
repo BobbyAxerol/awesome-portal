@@ -43,6 +43,45 @@ export interface KeysetPage<T> {
   applied_sort: readonly AppliedSort[];
 }
 
+/** Exact, server-computed totals; consumers must never recompute these from a page. */
+export interface CurrencyAggregate {
+  currency: string | null;
+  row_count: number;
+  quantity_count: number;
+  quantity: string;
+  notional_count: number;
+  notional: string;
+  invalid_numeric_count: number;
+}
+
+export const RETENTION_AVAILABILITIES = [
+  "HOT",
+  "PARTIAL_HOT",
+  "COLD_REQUESTABLE",
+  "PURGED",
+  "UNKNOWN",
+] as const;
+export type RetentionAvailability = (typeof RETENTION_AVAILABILITIES)[number];
+
+/**
+ * Page-level availability is explicit so an empty projection page is never
+ * silently interpreted as an ordinary empty data set.
+ */
+export interface ProjectionPageRetention {
+  availability: RetentionAvailability;
+  policy_version: string;
+}
+
+/**
+ * The normalized public shape for a projection-backed list once its narrow
+ * screen endpoint is approved. It deliberately extends the published keyset
+ * vocabulary and retains server-side aggregates as exact decimal strings.
+ */
+export interface ProjectionKeysetPage<T> extends KeysetPage<T> {
+  aggregates_by_currency: readonly CurrencyAggregate[];
+  retention: ProjectionPageRetention;
+}
+
 export interface QueryActorContext {
   actorId: string;
   workspaceId: string;
