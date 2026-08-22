@@ -152,6 +152,22 @@ Chúng không thay thế phase hoặc exit gate trong
   PostgreSQL 15 suites/139 tests, Command Center 10/10, contracts 26/26 and a
   20,000-row response-budget gate. Claude's five-state mapping and later real
   source/SSE parity remain explicit dependencies.
+- [PRE-IAM-04 — Offline Hardening Closeout](./PRE_IAM_04_OFFLINE_HARDENING_CLOSEOUT.md)
+  — **integration complete / production inactive:** H-1–H-12 are closed with
+  loss-detectable cursor/gap semantics, typed analytics errors, bounded exact
+  Ledger/Funnel windows, six-fixture OpenAPI/Rust parity and executable
+  restore/rollback evidence. Current evidence is contracts 32/32, fresh-PG
+  Control API 139/139 and Rust/PostgreSQL 89/89.
+- [PRE-IAM-05 — D2 Dark Preparation Closeout](./PRE_IAM_05_D2_DARK_PREPARATION_CLOSEOUT.md)
+  — **integration complete / production inactive:** pinned Edge/Source Proxy
+  images, non-root/read-only/resource-bounded manifests, identity/config
+  preflight and config-preserving rollback are accepted offline. D2 is not
+  authorized and no AWS/network/source/service/runtime state changed.
+- [PRE-IAM-06 — Tracking Reconciliation Closeout](./PRE_IAM_06_TRACKING_RECONCILIATION_CLOSEOUT.md)
+  — **integration complete / production inactive:** Master Plan, backend
+  guide, shared tracker, frontend roadmap and canonical request ledger agree on
+  owner/blocker/status. `execution-tracking-test.sh` prevents drift and keeps
+  all eight unpublished `ops` routes externally owned and unreachable.
 
 **Runway complete (BAR-00 → BAR-16).** Guide v0.5 bổ sung (không thay thế)
 tại `upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md`
@@ -322,8 +338,12 @@ authority.
 - Backend tiếp theo của `EX-BE-08a` chỉ bắt đầu sau owner-approved D1–D4: real
   source mapper/parity, BUILDING epoch shadow, cross-cell load/fault/soak/
   restore/rollback evidence, rồi owner quyết định `fixture -> shadow`.
-  `EX-BE-05b` vẫn chờ source command capability và không bị read qualification
-  ngầm mở khóa.
+  Live `EX-BE-05b` vẫn chờ source command capability và không bị read
+  qualification ngầm mở khóa. Phần contract-only `EX-BE-05b/F0` chạy được
+  offline ngay: canonical BR-EX-28 catalogue, BR-EX-29 typed conditions và
+  deny-by-default plan/apply/verify/Rust relay foundation. Tám `ops` route chưa
+  được Trading System công bố giữ `portal_reachable=false`; không thay bằng
+  DB/Redis/CLI trực tiếp.
 
 ## BAR-21 — Strategy Import & Quarantine Ingest foundation
 

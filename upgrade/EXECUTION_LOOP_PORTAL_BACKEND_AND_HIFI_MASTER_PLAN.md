@@ -822,7 +822,7 @@ window opens.
 | PRE-IAM-03 | Build Command Center snapshot API dark | bounded snapshot composition over existing projection contracts; no SSE/profile activation | consume snapshot, empty, partial, stale, unavailable fixtures and wire the component without client re-ranking | response budget, per-panel authority/freshness, exact counts and fail-closed source gaps | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — fresh PG 139/139 and contracts 26/26 green 2026-08-22 |
 | PRE-IAM-04 | Offline operational hardening | close confirmed H-series contract/security issues, load/replay/restore/rollback evidence that needs no AWS source | consume only published fixtures/contracts; keep failure states visible | focused regression + workspace gates; credential-free evidence report | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — H-series, 32/32 contracts, 139/139 Control API, 89 Rust/PG and restore/rollback gates green 2026-08-22 |
 | PRE-IAM-05 | Prepare D2 dark deployment | image/config/service manifests for AWS Portal Edge + Source Proxy with interfaces/routes/source reads still off | no AWS/live UI activation; continue fixture work | offline render, non-root/read-only image checks, preflight and rollback rehearsal | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — both images built/inspected; dark preflight, identity, resource and rollback gates green 2026-08-22 |
-| PRE-IAM-06 | Tracking cleanup | reconcile Master Plan, backend README/guide, shared tracker and request ledger; classify every blocker by owner | reconcile FE status/evidence and close superseded requests | no contradictory status, no bare `COMPLETE`, exact next dependency/owner per row | `PLANNED` |
+| PRE-IAM-06 | Tracking cleanup | reconcile Master Plan, backend README/guide, shared tracker and request ledger; classify every blocker by owner | reconcile FE status/evidence and close superseded requests | no contradictory status, no bare `COMPLETE`, exact next dependency/owner per row | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — canonical ledger and automated drift gate accepted 2026-08-22 |
 
 After PRE-IAM-05, two more credential-free steps can run without waiting for
 IAM: PRE-IAM-06 reconciliation, then the contract-only foundation of existing
@@ -873,6 +873,13 @@ identities and proves candidate/rollback manifest equivalence. It did not start
 a service or change AWS/network/source/runtime state. Exact evidence and the
 future owner stop-gates are recorded in
 [`PRE_IAM_05_D2_DARK_PREPARATION_CLOSEOUT.md`](backend/PRE_IAM_05_D2_DARK_PREPARATION_CLOSEOUT.md).
+
+`PRE-IAM-06` reconciles documentation and coordination only. The canonical
+request ledger now classifies H-1–H-12, A-1–A-7, BR-EX-23–29, the eight
+unpublished `ops` routes and D1–D4 by exact owner/blocker/status. An executable
+drift gate keeps Master Plan, shared tracker, frontend roadmap and backend
+README aligned. It changes no runtime authority. Evidence:
+[`PRE_IAM_06_TRACKING_RECONCILIATION_CLOSEOUT.md`](backend/PRE_IAM_06_TRACKING_RECONCILIATION_CLOSEOUT.md).
 
 Claude request `BR-EX-28` is now a tracked cross-queue input. Its 2026-08-22
 contract-pack audit correctly found that eight `ops` actions inherit the same

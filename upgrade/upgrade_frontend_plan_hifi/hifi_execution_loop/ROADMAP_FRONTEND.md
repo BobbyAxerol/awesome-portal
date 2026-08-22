@@ -36,8 +36,12 @@ Nghĩa là khoảng trống thật là **15 action**, không phải 7. Và mở 
 để **đổi nguồn**: màn đang chạy catalogue fixture và tự nói ra điều đó trên
 giao diện. Không có nó thì phase 6 không activate được, nhưng đã dựng xong.
 
-**Bạn cần làm:** giục codex theo thứ tự **A1a trước A1b**. A1a chặn ba màn chưa
-dựng; A1b chỉ chặn việc activate một màn đã dựng.
+**Owner và thứ tự đúng:** A1b là EX-BE-05b/F0 của Codex và có thể hoàn thành
+offline ngay. A1a thuộc **Trading System contract owner**: owner phải publish
+purpose-built authenticated HTTP routes trước; sau đó Codex mới viết Portal
+compatibility adapter. Portal không tự tạo route thay Trading System và không
+đọc DB/Redis/CLI trực tiếp. A1a vẫn chặn ba màn dữ liệu thật; A1b chỉ chặn việc
+activate một màn đã dựng.
 
 Chi tiết: `BR_EX_28_PHASE6_CATALOGUE_AND_UNBLOCK.md` §8.
 

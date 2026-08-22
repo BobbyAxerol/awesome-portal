@@ -44,7 +44,7 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 0 | Shell & shared components | **DONE** | `CONTRACT_COMPLETE` | — EX-BE-00R4 delivered | FE: 42 tests · build · visual baseline **drifted, see §9**; BE: registry rev 4 · 17 fixture profiles · fail-closed policy tests · generated OpenAPI/TS contract |
 | 1 | Approval Inbox (4a) | `WIP` (screen + adapter complete; awaiting data) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | **Claude:** canonical `view`, CSRF transport and reviewed registry activation; backend SGP gate is green | 117/117 fresh-PG; 182k Inbox; public-gateway Inbox/R1 smoke; registry remains fixture |
 | 2 | Gate R1 Review (1a) | `WIP` (adapter built, on the port) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | **Claude:** canonical plan/apply/poll routes + CSRF + distinct Portal-governance-write policy | immutable evidence + SoD/concurrency/audit implemented; public-gateway decision:audit:outbox = 1:1:1 |
-| 3 | Gate R2 Review (1b) | `WIP` (screen + adapter, on the port) | `INTEGRATION_COMPLETE` | **Claude:** consume generated R2 `portfolio_id`/`currency`, remove fixture defaults; source activation/evidence + EX-BE-05a decision integration | EX-BE-07b active-epoch capital-preview repository/API delivered; flags/profile remain fixture/off |
+| 3 | Gate R2 Review (1b) | `WIP` (screen + adapter, on the port) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | source activation/evidence + EX-BE-05a decision integration; generated `portfolio_id`/`currency` already consumed | EX-BE-07b active-epoch capital-preview repository/API delivered; flags/profile remain fixture/off |
 | 4 | Paper Workbench (1c) | **screen built** (fixtures, scale-refined) | `FOUNDATION_COMPLETE` | screen API + source integration; M7 evidence | EX-BE-04b adaptive six-rung/exact series + cold contract delivered; production source remains inactive |
 | 5 | Paper Exit Review (4b) | **screen closed on Lane A** (5 capability, 3 outcome, CSRF) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | PRE-IAM-02 đã map xong (`5b39e34`); còn real Paper source activation | PRE-IAM-02 fresh PG 129/129 + contract 20/20 + SGP runtime green; closeout linked below |
 | 6 | Admin Action Drawer (1i) | **screen built** (21 lệnh / 6 nhóm, fixtures) | `FOUNDATION_COMPLETE` | canonical catalogue (BR-EX-28) để đổi nguồn; **8 endpoint `ops` còn thiếu chặn phase 7/8/9 — xem BR-EX-28 §8.1** | EX-BE-02 authenticated boundary and request-key/UNCERTAIN contract delivered; production disabled |
@@ -55,10 +55,10 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 11 | Canary Control Room (1e) | `BLOCKED` | `PRODUCTION_INACTIVE` | EX-BE-05b; owner live-canary gate | EX-BE-04b query + EX-BE-06 SSE foundations delivered; shadow parity and production source still required |
 | 12 | Live Full Operations (1f) | `BLOCKED` | `PRODUCTION_INACTIVE` | phase 11 evidence; EX-BE-08 | rev 4 profile contract delivered; source completeness + UNCERTAIN policy remain; master plan §10.12 |
 | 13 | Paper Workbench VNM (4h) | **screen built** (variant of phase 4, fixtures) | `INTEGRATION_PENDING` | source/screen API integration; venue/ATO/ATC decision | EX-BE-04b adaptive query + EX-BE-03 PAUSED semantics delivered; timezone decision remains |
-| 14 | Full Blotter (4c) | **screen built** (fixtures, scale-refined) | `INTEGRATION_COMPLETE` | **CẦN BOBBY:** scope-bound order-list capability; Claude retains fixture and 4-stage funnel limitation | EX-BE-07b typed active-epoch funnel API delivered over mTLS/delegated auth; flag remains off |
-| 15 | Alpha 360° (2a+2b) | **screen built** (9 tabs, fixtures, scale-refined) | `INTEGRATION_COMPLETE` | source activation/parity + remaining detail/series integration | EX-BE-07b capped portfolio-bound insight API delivered; flag/profile remain off/fixture |
-| 16 | Portfolio 360° (1h→3a) | **screen built** (3 representations, fixtures, scale-refined) | `INTEGRATION_COMPLETE` | **CẦN BOBBY:** source semantics for packed `sample_counts`; Claude labels per-cell floor unavailable | EX-BE-07b source-backed correlation + capital-ledger APIs delivered with exact decimals |
-| 17 | Account/Broker 360° (1g) | **screen built** (fixtures, scale-refined) | `INTEGRATION_COMPLETE` | **CẦN BOBBY:** authoritative aggregate exposure verdict; Claude keeps unavailable, never sums | EX-BE-07b source-backed full-population exposure API delivered; count mismatches fail closed |
+| 14 | Full Blotter (4c) | **screen built** (fixtures, scale-refined) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | **Trading System source owner + Bobby:** publish scope-bound order-list capability; Claude retains fixture and 4-stage funnel limitation | EX-BE-07b typed active-epoch funnel API delivered over mTLS/delegated auth; flag remains off |
+| 15 | Alpha 360° (2a+2b) | **screen built** (9 tabs, fixtures, scale-refined) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | source owner/Codex activation parity + remaining detail/series integration | EX-BE-07b capped portfolio-bound insight API delivered; flag/profile remain off/fixture |
+| 16 | Portfolio 360° (1h→3a) | **screen built** (3 representations, fixtures, scale-refined) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | **Trading System source owner:** publish packed `sample_counts`; Claude labels per-cell floor unavailable | EX-BE-07b source-backed correlation + capital-ledger APIs delivered with exact decimals |
+| 17 | Account/Broker 360° (1g) | **screen built** (fixtures, scale-refined) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | **Trading System source owner:** publish authoritative aggregate exposure verdict; Claude keeps unavailable, never sums | EX-BE-07b source-backed full-population exposure API delivered; count mismatches fail closed |
 | 18 | Hardening | `BLOCKED` | `OPERATIONAL_EVIDENCE_PENDING` | live EX-BE-08 cross-cell/load/soak/DR; offline foundation delivered | BE: 81-test sealed-corpus/replay qualification gate; production SLO/restore/rollback evidence remains; master plan §§13–14 |
 
 ¹ Phase 6's drawer shell, state machine and blocking rules are already built and
@@ -1490,11 +1490,11 @@ reads, projection ingestion, SSE or Trading System commands.
 | ID | Backend / codex | Frontend / Claude | Shared status |
 |---|---|---|---|
 | PRE-IAM-01 | close Phase 1 Approval Inbox + Phase 2 Gate R1 on SGP with fresh-PG and public-gateway operational evidence | correct Phase 1/2 HTTP integration listed below; do not activate registry policy | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend gate green |
-| PRE-IAM-02 | source-safe Paper Exit repository/API and deterministic evidence evaluation | finish Phase 5 contract mapping, missing/stale/partial/error states and lineage | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend accepted; FE mapping remains |
-| PRE-IAM-03 | dark Command Center snapshot API | consume the generated snapshot contract; retain busy/empty/partial/stale/unavailable and do not re-rank client-side | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend accepted; FE mapping remains |
-| PRE-IAM-04 | offline security/contract/load/replay/restore hardening | consume frozen contracts and keep every degraded state visible | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend accepted; FE contract mapping remains |
+| PRE-IAM-02 | source-safe Paper Exit repository/API and deterministic evidence evaluation | Phase 5 Lane A mapping closed; retain real-source activation boundary | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — BE and FE Lane A accepted; source inactive |
+| PRE-IAM-03 | dark Command Center snapshot API | five-state Lane A mapping closed; retain source/SSE parity boundary | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — BE and FE Lane A accepted; source/SSE inactive |
+| PRE-IAM-04 | offline security/contract/load/replay/restore hardening | consume gap/cursor codes, bounded fields, typed errors and fixtures; keep every degraded state visible | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend accepted; Claude consumer work active |
 | PRE-IAM-05 | D2 dark image/config/preflight/rollback preparation | no live/source activation work required; continue PRE-IAM-04 Lane A packet | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — images, preflight, identity/resource and rollback gates accepted; D2 unauthorized |
-| PRE-IAM-06 | reconcile backend guides, shared board and request ledger | reconcile FE evidence/status and retire superseded requests | `PLANNED` |
+| PRE-IAM-06 | reconcile backend guides, shared board and request ledger | FE evidence/status and superseded H-series reconciled; future drift is gated | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — ledger + automated tracking gate accepted |
 
 ### 24A.1 Claude handoff required before Phase 1/2 product activation
 
@@ -1592,9 +1592,9 @@ production SLO from offline test budgets. Source/realtime/command flags remain
 dark. Full backend evidence:
 [`PRE_IAM_04_OFFLINE_HARDENING_CLOSEOUT.md`](../../backend/PRE_IAM_04_OFFLINE_HARDENING_CLOSEOUT.md).
 
-The next backend queue item is PRE-IAM-05: D2 dark image/config/service,
-non-root/read-only, offline preflight and rollback preparation. It does not
-authorize an AWS network change, source read or Trading System mutation.
+PRE-IAM-05 has now closed the D2 offline image/config/service, non-root/read-
+only, preflight and rollback preparation lane. It did not authorize an AWS
+network change, source read or Trading System mutation.
 
 Claude's full task packet, exact contract read order, acceptance tests and the
 three-step no-IAM continuation are recorded in
@@ -1618,6 +1618,20 @@ registry/runtime state changed. Full evidence:
 Claude has no D2 deployment task and continues the linked PRE-IAM-04 Lane A
 packet. The next shared phase is PRE-IAM-06 reconciliation; D2 remains owner-
 and change-window-gated.
+
+### 24A.6 PRE-IAM-06 tracking reconciliation closeout
+
+Master Plan, backend README, this board, frontend roadmap and the canonical
+[`EXECUTION_REQUEST_LEDGER.md`](EXECUTION_REQUEST_LEDGER.md) now agree on exact
+owner, blocker and qualified maturity. H-1–H-12 are retired; A-1–A-7 and
+BR-EX-23–29 retain their real residual dependencies. The eight unpublished
+Trading System `ops` actions remain externally owned and unreachable; generic
+DB/Redis/CLI access remains prohibited. `scripts/execution-tracking-test.sh`
+enforces those facts in the root workspace gate.
+
+Next backend phase: EX-BE-05b/F0 contract foundation. Claude continues the
+PRE-IAM-04 consumer packet and may prepare catalogue/typed-condition mapping on
+Lane A, but no product route or runtime flag is enabled.
 
 ---
 

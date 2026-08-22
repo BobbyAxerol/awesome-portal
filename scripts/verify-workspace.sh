@@ -252,6 +252,7 @@ for required in \
   "${ROOT_DIR}/scripts/execution-d2-preflight.sh" \
   "${ROOT_DIR}/scripts/execution-d2-render-source-proxy.sh" \
   "${ROOT_DIR}/scripts/execution-d2-test.sh" \
+  "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/deploy/execution-d1/README.md" \
   "${ROOT_DIR}/deploy/execution-d1/owner-input.env.example" \
   "${ROOT_DIR}/deploy/execution-d1/edge-source-proxy.env.example" \
@@ -553,6 +554,7 @@ for tracked_source in \
   scripts/execution-d2-preflight.sh \
   scripts/execution-d2-render-source-proxy.sh \
   scripts/execution-d2-test.sh \
+  scripts/execution-tracking-test.sh \
   deploy/execution-d1/README.md \
   deploy/execution-d1/owner-input.env.example \
   deploy/execution-d1/edge-source-proxy.env.example \
@@ -572,6 +574,8 @@ for tracked_source in \
   upgrade/backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md \
   upgrade/backend/EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md \
   upgrade/backend/EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md \
+  upgrade/backend/PRE_IAM_06_TRACKING_RECONCILIATION_CLOSEOUT.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/EXECUTION_REQUEST_LEDGER.md \
   upgrade/backend/adr/ADR-007-PORTAL-PROJECTION-EPOCH-CURSOR-AND-FRESHNESS.md \
   apps/control-api/test/facade.spec.ts \
   upgrade/backend/BAR_07_CONTROL_API_FACADE.md \
@@ -695,6 +699,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-d2-preflight.sh" \
   "${ROOT_DIR}/scripts/execution-d2-render-source-proxy.sh" \
   "${ROOT_DIR}/scripts/execution-d2-test.sh" \
+  "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
   "${ROOT_DIR}/apps/portal/scripts/test_backend.sh" \
   "${ROOT_DIR}/features/roadmap-task-board/tooling/clean-generated.sh"
@@ -719,4 +724,5 @@ docker compose --project-directory "${ROOT_DIR}" \
   -f "${ROOT_DIR}/deploy/compose.execution-edge.yaml" config --quiet
 "${ROOT_DIR}/scripts/execution-d1-test.sh"
 "${ROOT_DIR}/scripts/execution-d2-test.sh"
+"${ROOT_DIR}/scripts/execution-tracking-test.sh"
 printf 'Portal monorepo verification passed.\n'
