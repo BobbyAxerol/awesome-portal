@@ -8,8 +8,11 @@
  */
 import { describe, expect, it, vi } from "vitest";
 import {
+  CURSOR_MAX_BYTES,
+  PROJECTION_EVENTS,
   REPLAY_WINDOW,
   REPLAY_WINDOW_MAX,
+  SSE_EVENTS,
   openStream,
   streamUrl,
   toSubscriptionEvent,
@@ -43,42 +46,112 @@ function feed(events: Parameters<typeof subscriptionReducer>[1][]): Subscription
   return events.reduce(subscriptionReducer, INITIAL_SUBSCRIPTION);
 }
 
-describe("M3 transport — the stream URL carries exactly one resume parameter", () => {
-  it("sends a snapshot cursor on a first connect and no resume id", () => {
-    const url = streamUrl("/api/v1/execution/stream", ["deployments"], {
+describe("M3 transport — one cursor, named as the server names it", () => {
+  it("sends the snapshot cursor as `cursor` on a first connect", () => {
+    // `realtime.controller.ts:40` reads `@Query("cursor")`. The first draft
+    // sent `snapshot_cursor` and would have been rejected on connect.
+    const url = streamUrl("/api/v1/execution/command-center/stream", {
       kind: "snapshot",
       cursor: "snap-1",
     });
-    expect(url).toContain("snapshot_cursor=snap-1");
-    expect(url).not.toContain("last_event_id");
-  });
-
-  it("sends a resume id on a reconnect and no snapshot cursor", () => {
-    const url = streamUrl("/api/v1/execution/stream", ["deployments"], {
-      kind: "resume",
-      lastEventId: "epoch-7:1200",
-    });
-    expect(url).toContain("last_event_id=epoch-7%3A1200");
+    expect(url).toContain("cursor=snap-1");
     expect(url).not.toContain("snapshot_cursor");
   });
 
-  it("multiplexes every topic onto the one connection", () => {
-    const url = streamUrl("/s", ["deployments", "approvals", "incidents"], {
-      kind: "snapshot",
-      cursor: "c",
-    });
-    expect(url.match(/topic=/g)).toHaveLength(3);
+  it("sends a resume through the same parameter, not a second one", () => {
+    // The server takes `Last-Event-ID` from a request header, which
+    // `EventSource` will not let a client set — so a client-driven resume has
+    // to travel as `cursor` too.
+    const url = streamUrl("/s", { kind: "resume", lastEventId: "epoch-7:1200" });
+    expect(url).toContain("cursor=epoch-7%3A1200");
+    expect(url).not.toContain("last_event_id");
   });
 
-  it("refuses a stream with no topics rather than opening one that delivers nothing", () => {
-    expect(() => streamUrl("/s", [], { kind: "snapshot", cursor: "c" })).toThrow(/at least one/);
+  it("refuses an empty cursor rather than earning a 400", () => {
+    expect(() => streamUrl("/s", { kind: "snapshot", cursor: "" })).toThrow(/exactly one cursor/);
   });
 
-  it("asks for a replay window inside the server's bound", () => {
-    expect(REPLAY_WINDOW).toBeLessThanOrEqual(REPLAY_WINDOW_MAX);
-    expect(streamUrl("/s", ["t"], { kind: "snapshot", cursor: "c" })).toContain(
-      `replay_limit=${REPLAY_WINDOW}`,
+  it("refuses a cursor past the proxy's byte bound", () => {
+    expect(() => streamUrl("/s", { kind: "resume", lastEventId: "x".repeat(81) })).toThrow(
+      new RegExp(`${CURSOR_MAX_BYTES} bytes`),
     );
+    expect(() => streamUrl("/s", { kind: "resume", lastEventId: "x".repeat(80) })).not.toThrow();
+  });
+
+  it("keeps the replay window inside the server's bound", () => {
+    expect(REPLAY_WINDOW).toBeLessThanOrEqual(REPLAY_WINDOW_MAX);
+  });
+});
+
+describe("M3 transport — the event names come from the edge, not from the plan", () => {
+  it("subscribes to every name the edge emits and to nothing it does not", () => {
+    // Read out of realtime-sse/src/lib.rs:63-72 and edge-service/src/main.rs.
+    expect([...SSE_EVENTS]).toEqual([
+      "order.updated",
+      "fill.recorded",
+      "position.updated",
+      "runtime.updated",
+      "account.updated",
+      "broker_binding.updated",
+      "reconciliation.updated",
+      "performance.updated",
+      "operation.updated",
+      "projection.gap",
+      "projection.heartbeat",
+      "auth.expiring",
+    ]);
+  });
+
+  it("has no snapshot or delta event, because the stream carries neither", () => {
+    // The first adapter listened for both and would have received only gaps.
+    expect(SSE_EVENTS).not.toContain("snapshot");
+    expect(SSE_EVENTS).not.toContain("delta");
+    expect(SSE_EVENTS).not.toContain("heartbeat");
+    expect(SSE_EVENTS).not.toContain("epoch.changed");
+  });
+
+  it("maps every projection event to a delta", () => {
+    for (const name of PROJECTION_EVENTS) {
+      const mapped = toSubscriptionEvent(name, {
+        data: JSON.stringify({ as_of: "2026-08-22T10:00:00Z" }),
+        lastEventId: "e1:7",
+      } as MessageEvent);
+      expect(mapped, name).toMatchObject({ type: "DELTA", epoch: "e1", sequence: 7 });
+    }
+  });
+
+  it("treats a delta whose source skipped as a gap, not as contiguity", () => {
+    // Our delivery was perfect and the Trading System still jumped. The edge's
+    // own sequence check cannot see that, which is why the flag exists.
+    const mapped = toSubscriptionEvent("fill.recorded", {
+      data: JSON.stringify({ source_discontinuity: true }),
+      lastEventId: "e1:2",
+    } as MessageEvent);
+    const state = feed([
+      { type: "SUBSCRIBE" },
+      { type: "SNAPSHOT", epoch: "e1", sequence: 1, asOf: null },
+      mapped!,
+    ]);
+    expect(state.phase).toBe("gap");
+    expect(state.gapReason).toBe("source_discontinuity");
+  });
+
+  it("reports the server's missed-event count rather than inferring a range", () => {
+    const mapped = toSubscriptionEvent("projection.gap", {
+      data: JSON.stringify({ reason: "slow_consumer", missed_events: 1204 }),
+      lastEventId: "",
+    } as MessageEvent);
+    const state = subscriptionReducer(INITIAL_SUBSCRIPTION, mapped!);
+    expect(state.missedEvents).toBe(1204);
+    expect(state.note).toContain("1,204 events were not delivered");
+  });
+
+  it("accepts auth.expiring without an expiry time, because none is sent", () => {
+    const mapped = toSubscriptionEvent("auth.expiring", {
+      data: JSON.stringify({ reconnect_required: true }),
+      lastEventId: "",
+    } as MessageEvent);
+    expect(mapped).toEqual({ type: "AUTH_EXPIRING", expiresAt: null });
   });
 });
 
@@ -105,7 +178,7 @@ describe("M3 transport — a heartbeat proves liveness and nothing else", () => 
   });
 
   it("maps a heartbeat carrying a sequence to an event that has nowhere to put it", () => {
-    const mapped = toSubscriptionEvent("heartbeat", {
+    const mapped = toSubscriptionEvent("projection.heartbeat", {
       data: JSON.stringify({ at: "2026-08-22T10:00:00Z", projection_sequence: 999 }),
       lastEventId: "e1:999",
     } as MessageEvent);
@@ -166,20 +239,19 @@ describe("M3 transport — gaps arrive typed", () => {
 describe("M3 transport — snapshot first", () => {
   it("opens no connection until the snapshot resolves", async () => {
     const factory = vi.fn();
-    let release: (value: { cursor: string }) => void = () => {};
+    let release: (value: { cursor: string; epoch: string; sequence: number }) => void = () => {};
     const handle = openStream({
       path: "/s",
-      topics: ["deployments"],
       fetchSnapshot: () => new Promise((resolve) => (release = resolve)),
       factory: factory as never,
       onState: () => {},
     });
     expect(factory).not.toHaveBeenCalled();
     expect(handle.state().phase).toBe("snapshotting");
-    release({ cursor: "snap-9" });
+    release({ cursor: "snap-9", epoch: "e1", sequence: 9 });
     await Promise.resolve();
     expect(factory).toHaveBeenCalledOnce();
-    expect(handle.url()).toContain("snapshot_cursor=snap-9");
+    expect(handle.url()).toContain("cursor=snap-9");
     handle.close();
   });
 
@@ -188,7 +260,6 @@ describe("M3 transport — snapshot first", () => {
     const states: SubscriptionState[] = [];
     openStream({
       path: "/s",
-      topics: ["deployments"],
       fetchSnapshot: () => Promise.reject(new Error("Snapshot service unavailable.")),
       factory: factory as never,
       onState: (s) => states.push(s),
@@ -205,17 +276,17 @@ describe("M3 transport — snapshot first", () => {
     const resnapshot = vi.fn();
     const handle = openStream({
       path: "/s",
-      topics: ["deployments"],
-      fetchSnapshot: () => Promise.resolve({ cursor: "snap-1" }),
+      fetchSnapshot: () => Promise.resolve({ cursor: "snap-1", epoch: "e1", sequence: 100 }),
       factory: () => fake.source,
       onState: () => {},
       onResnapshotRequired: resnapshot,
     });
     await Promise.resolve();
 
-    fake.emit("snapshot", { as_of: "2026-08-22T10:00:00Z" }, "e1:100");
+    // The snapshot came from the HTTP call, not from the stream, so the
+    // reducer is already live before a single event arrives.
     expect(handle.state().phase).toBe("live");
-    fake.emit("delta", { as_of: "2026-08-22T10:00:05Z" }, "e1:101");
+    fake.emit("order.updated", { as_of: "2026-08-22T10:00:05Z" }, "e1:101");
     expect(handle.state().sequence).toBe(101);
 
     fake.emit("auth.expiring", { expires_at: "2026-08-22T11:00:00Z" });
@@ -235,16 +306,15 @@ describe("M3 transport — snapshot first", () => {
     const fake = fakeSource();
     const handle = openStream({
       path: "/s",
-      topics: ["deployments"],
-      fetchSnapshot: () => Promise.resolve({ cursor: "snap-1" }),
+      fetchSnapshot: () => Promise.resolve({ cursor: "snap-1", epoch: "e1", sequence: 100 }),
       factory: () => fake.source,
       onState: () => {},
     });
     await Promise.resolve();
-    fake.emit("snapshot", {}, "e1:1");
+    fake.emit("order.updated", {}, "e1:101");
     handle.close();
-    fake.emit("delta", {}, "e1:2");
-    expect(handle.state().sequence).toBe(1);
+    fake.emit("order.updated", {}, "e1:102");
+    expect(handle.state().sequence).toBe(101);
   });
 });
 

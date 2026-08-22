@@ -119,9 +119,12 @@ export interface SubscriptionState {
    * The server warns before it cuts, so the screen can say so rather than
    * present an authentication drop as a network fault.
    */
+  /** Warned by the server before it cuts. `null` when no expiry time is sent. */
   authExpiresAt: string | null;
   /** Last heartbeat observed. Proves the transport is alive with no data behind it. */
   lastHeartbeatAt: string | null;
+  /** How many events the server says were lost. `null` when it did not say. */
+  missedEvents: number | null;
   /** Human-readable reason for the current phase. */
   note: string | null;
 }
@@ -137,13 +140,27 @@ export const INITIAL_SUBSCRIPTION: SubscriptionState = {
   gapReason: null,
   authExpiresAt: null,
   lastHeartbeatAt: null,
+  missedEvents: null,
   note: null,
 };
 
 export type SubscriptionEvent =
   | { type: "SUBSCRIBE" }
   | { type: "SNAPSHOT"; epoch: string; sequence: number; asOf: string | null }
-  | { type: "DELTA"; epoch: string; sequence: number; asOf: string | null }
+  | {
+      type: "DELTA";
+      epoch: string;
+      sequence: number;
+      asOf: string | null;
+      /**
+       * The Trading System's own sequence broke, upstream of the edge.
+       *
+       * Carried on every envelope rather than only on gaps, and it means
+       * something the edge's own contiguity check cannot see: our delivery was
+       * perfect and the source still skipped.
+       */
+      sourceDiscontinuity?: boolean;
+    }
   /**
    * Transport liveness only. Carries no sequence **by construction**.
    *
@@ -155,8 +172,16 @@ export type SubscriptionEvent =
    * separate event with no sequence field for anyone to plumb in later.
    */
   | { type: "HEARTBEAT"; at: string }
-  | { type: "AUTH_EXPIRING"; expiresAt: string }
-  | { type: "PROJECTION_GAP"; reason: GapReason; resnapshotNotBefore?: string | null }
+  | { type: "AUTH_EXPIRING"; expiresAt: string | null }
+  | {
+      type: "PROJECTION_GAP";
+      reason: GapReason;
+      resnapshotNotBefore?: string | null;
+      /** Server-counted. Beats a range inferred from two sequence numbers. */
+      missedEvents?: number | null;
+      /** Where a resnapshot should resume from. */
+      lastGoodCursor?: string | null;
+    }
   | { type: "EPOCH_CHANGED"; epoch: string; resnapshotNotBefore?: string | null }
   | { type: "DISCONNECTED"; reason?: string }
   | { type: "SNAPSHOT_FAILED"; reason: string };
@@ -215,6 +240,7 @@ export function subscriptionReducer(
         lastGoodAsOf: event.asOf ?? state.lastGoodAsOf,
         freshness: "OK",
         gapReason: null,
+        missedEvents: null,
         authExpiresAt: state.authExpiresAt,
         lastHeartbeatAt: state.lastHeartbeatAt,
         note: null,
@@ -262,6 +288,20 @@ export function subscriptionReducer(
           note: `Events ${state.sequence + 1}–${event.sequence - 1} were not delivered. Re-snapshotting.`,
         };
       }
+      if (event.sourceDiscontinuity) {
+        // Our delivery was contiguous and the source still skipped. The edge's
+        // sequence check cannot see this, which is why the flag exists.
+        return {
+          ...state,
+          phase: "gap",
+          epoch: event.epoch,
+          sequence: event.sequence,
+          resumeToken: null,
+          gapReason: "source_discontinuity",
+          freshness: "STALE",
+          note: GAP_REASON_TEXT.source_discontinuity,
+        };
+      }
       return {
         ...state,
         phase: "live",
@@ -273,6 +313,7 @@ export function subscriptionReducer(
         // Cleared with the phase it belongs to. A reason left behind would have
         // a live panel still naming a gap it has recovered from.
         gapReason: null,
+        missedEvents: null,
         note: null,
       };
     }
@@ -295,7 +336,11 @@ export function subscriptionReducer(
         resumeToken: null,
         gapReason: event.reason,
         resnapshotNotBefore: event.resnapshotNotBefore ?? null,
-        note: GAP_REASON_TEXT[event.reason],
+        missedEvents: event.missedEvents ?? null,
+        note:
+          typeof event.missedEvents === "number"
+            ? `${event.missedEvents.toLocaleString("en-US")} events were not delivered. ${GAP_REASON_TEXT[event.reason]}`
+            : GAP_REASON_TEXT[event.reason],
       };
 
     case "EPOCH_CHANGED":

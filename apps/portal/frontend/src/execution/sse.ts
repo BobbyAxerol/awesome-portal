@@ -15,8 +15,11 @@
  *      connection, not one connection per panel — browsers cap concurrent
  *      connections per origin, and a six-panel screen that opened six streams
  *      would starve the seventh request on the page.
- *   3. **Exactly one resume parameter.** `snapshot_cursor` on a first connect,
- *      `last_event_id` on a resume, never both, never neither.
+ *   3. **Exactly one cursor, always named `cursor`.** The snapshot's cursor on
+ *      a first connect and the last event id on a resume — the same query
+ *      parameter carrying a later value, because the server reads
+ *      `Last-Event-ID` from a request header that `EventSource` will not let a
+ *      client set.
  *   4. **Heartbeats do not advance the cursor.** Enforced by routing them to an
  *      event that has no sequence to advance it with.
  */
@@ -46,21 +49,44 @@ export interface SseLike {
 
 export type SseFactory = (url: string) => SseLike;
 
-/** The named events the edge emits (§2). Anything else is ignored, not guessed. */
-export const SSE_EVENTS = [
-  "snapshot",
-  "delta",
-  "heartbeat",
-  "projection.gap",
-  "epoch.changed",
-  "auth.expiring",
+/**
+ * The event names the edge actually emits.
+ *
+ * Read out of the source, not out of the plan:
+ * `realtime-sse/src/lib.rs:63-72` for the entity events and
+ * `edge-service/src/main.rs:1050,1061,1104` for the three control events.
+ *
+ * There is **no `snapshot` event and no `delta` event.** The first draft of
+ * this adapter listened for both and would have received nothing but gaps. A
+ * snapshot arrives over its own HTTP call and seeds the cursor; what the stream
+ * carries afterwards is one event per entity kind. Keeping the real names in a
+ * single exported list means the day one is renamed upstream, one constant
+ * changes and the tests that assert against it go red.
+ */
+export const PROJECTION_EVENTS = [
+  "order.updated",
+  "fill.recorded",
+  "position.updated",
+  "runtime.updated",
+  "account.updated",
+  "broker_binding.updated",
+  "reconciliation.updated",
+  "performance.updated",
+  "operation.updated",
 ] as const;
 
+export const CONTROL_EVENTS = ["projection.gap", "projection.heartbeat", "auth.expiring"] as const;
+
+export const SSE_EVENTS = [...PROJECTION_EVENTS, ...CONTROL_EVENTS] as const;
+
 export type ResumePoint =
-  /** First connect. The snapshot we are anchoring deltas to. */
+  /** First connect. The cursor the bounded snapshot ended at. */
   | { kind: "snapshot"; cursor: string }
-  /** Resume inside a retained epoch. */
+  /** Resume inside a retained epoch. Same parameter, later value. */
   | { kind: "resume"; lastEventId: string };
+
+/** The proxy rejects a cursor longer than this (`realtime.proxy.ts`). */
+export const CURSOR_MAX_BYTES = 80;
 
 /**
  * Build the stream URL.
@@ -75,18 +101,22 @@ export type ResumePoint =
  * automatic reconnect sends the `Last-Event-ID` header instead — which is why
  * this adapter disables that path and reconnects deliberately (see `connect`).
  */
-export function streamUrl(base: string, topics: readonly string[], at: ResumePoint): string {
-  if (topics.length === 0) {
-    throw new Error("A stream with no topics would deliver nothing; pass at least one.");
+export function streamUrl(base: string, at: ResumePoint): string {
+  const cursor = at.kind === "snapshot" ? at.cursor : at.lastEventId;
+  if (!cursor) {
+    throw new Error("A stream needs exactly one cursor; the proxy answers 400 with none.");
+  }
+  if (new TextEncoder().encode(cursor).length > CURSOR_MAX_BYTES) {
+    // Refused here rather than discovered as a 400, for the same reason the
+    // keyset builder refuses a double cursor: a bound written only in prose is
+    // a bound learned in production.
+    throw new Error(`A resume cursor is at most ${CURSOR_MAX_BYTES} bytes.`);
   }
   const url = new URL(base, "https://portal.invalid");
-  for (const topic of topics) url.searchParams.append("topic", topic);
-  if (at.kind === "snapshot") {
-    url.searchParams.set("snapshot_cursor", at.cursor);
-  } else {
-    url.searchParams.set("last_event_id", at.lastEventId);
-  }
-  url.searchParams.set("replay_limit", String(REPLAY_WINDOW));
+  // One parameter, named `cursor`, whichever kind of resume this is —
+  // `realtime.controller.ts:40`. The server takes `Last-Event-ID` from the
+  // request header instead, which `EventSource` will not let a client set.
+  url.searchParams.set("cursor", cursor);
   return base.startsWith("http") ? url.toString() : `${url.pathname}${url.search}`;
 }
 
@@ -127,13 +157,7 @@ export function toSubscriptionEvent(
       : NaN;
 
   switch (name) {
-    case "snapshot":
-      if (!epoch || !Number.isInteger(sequence)) return null;
-      return { type: "SNAPSHOT", epoch, sequence, asOf: str(body.as_of) };
-    case "delta":
-      if (!epoch || !Number.isInteger(sequence)) return null;
-      return { type: "DELTA", epoch, sequence, asOf: str(body.as_of) };
-    case "heartbeat":
+    case "projection.heartbeat":
       // Note what is *not* read: no epoch, no sequence. A heartbeat that
       // carried them would still not advance the cursor, because the event it
       // maps to has nowhere to put them.
@@ -143,30 +167,46 @@ export function toSubscriptionEvent(
         type: "PROJECTION_GAP",
         reason: readGapReason(body.reason),
         resnapshotNotBefore: str(body.resnapshot_not_before),
+        // Published by the server and worth more than a locally derived range:
+        // "1,204 events were not delivered" is a fact, and "events 105–1,309"
+        // is an inference from two sequence numbers.
+        missedEvents: typeof body.missed_events === "number" ? body.missed_events : null,
+        lastGoodCursor: str(body.last_good_cursor),
       };
-    case "epoch.changed":
-      if (!str(body.projection_epoch)) return null;
-      return {
-        type: "EPOCH_CHANGED",
-        epoch: str(body.projection_epoch)!,
-        resnapshotNotBefore: str(body.resnapshot_not_before),
-      };
-    case "auth.expiring": {
-      const expiresAt = str(body.expires_at);
-      return expiresAt ? { type: "AUTH_EXPIRING", expiresAt } : null;
-    }
+    case "auth.expiring":
+      // The payload is `{reconnect_required: true}` — no expiry time is sent
+      // (audit A-6). Absent stays absent rather than becoming a guess.
+      return { type: "AUTH_EXPIRING", expiresAt: str(body.expires_at) };
     default:
+      // Every projection event is a delta. There is no `delta` event name: the
+      // stream carries one name per entity kind.
+      if ((PROJECTION_EVENTS as readonly string[]).includes(name)) {
+        if (!epoch || !Number.isInteger(sequence)) return null;
+        return {
+          type: "DELTA",
+          epoch,
+          sequence,
+          asOf: str(body.as_of),
+          // Upstream of the edge. A delta that says the Trading System itself
+          // skipped must not render as contiguous.
+          sourceDiscontinuity: body.source_discontinuity === true,
+        };
+      }
       return null;
   }
 }
 
 export interface StreamOptions {
-  /** Path or absolute URL of the multiplexed endpoint. */
+  /** Path or absolute URL of the stream endpoint. */
   path: string;
-  /** Topics multiplexed onto this one connection. */
-  topics: readonly string[];
-  /** Fetches the bounded snapshot. Must resolve before any delta is applied. */
-  fetchSnapshot: () => Promise<{ cursor: string }>;
+  /**
+   * Fetches the bounded snapshot.
+   *
+   * Returns the epoch and sequence it was taken at, not only a cursor — the
+   * reducer needs them to leave `snapshotting`, and the first draft returned a
+   * cursor alone and left every stream permanently stuck with no delta applied.
+   */
+  fetchSnapshot: () => Promise<{ cursor: string; epoch: string; sequence: number; asOf?: string | null }>;
   factory: SseFactory;
   onState: (state: SubscriptionState) => void;
   /** Called when the reducer says a resnapshot is required. */
@@ -209,7 +249,7 @@ export function openStream(options: StreamOptions): StreamHandle {
 
   const connect = (at: ResumePoint) => {
     if (closed) return;
-    url = streamUrl(options.path, options.topics, at);
+    url = streamUrl(options.path, at);
     const opened = options.factory(url);
     source = opened;
     for (const name of SSE_EVENTS) {
@@ -228,10 +268,15 @@ export function openStream(options: StreamOptions): StreamHandle {
   dispatch({ type: "SUBSCRIBE" });
   void options
     .fetchSnapshot()
-    .then(({ cursor }) => {
-      // Snapshot first, always: the connection opens only once there is a
-      // baseline for its deltas to be diffs against.
-      if (!closed) connect({ kind: "snapshot", cursor });
+    .then(({ cursor, epoch, sequence, asOf }) => {
+      if (closed) return;
+      // The baseline itself, fed to the reducer. Without this the phase never
+      // leaves `snapshotting` and the delta guard drops every event that
+      // follows — a stream that connects, receives, and shows nothing.
+      dispatch({ type: "SNAPSHOT", epoch, sequence, asOf: asOf ?? null });
+      // Only then the connection: a delta against no baseline is an unanchored
+      // diff.
+      connect({ kind: "snapshot", cursor });
     })
     .catch((error: unknown) => {
       dispatch({
