@@ -12,7 +12,7 @@
  * Plus a ranked-pairs result, which is what the server sends above 150.
  */
 import { readCapitalLedger, readCorrelation, type Correlation } from "./analytics";
-import { CAPITAL_LEDGER } from "./analytics.fixtures";
+import { CAPITAL_LEDGER } from "./analytics.presentation.fixtures";
 import type { ApprovalRow, HoldingRow, LeaderList, PortfolioThreeSixtyProps } from "./screens/PortfolioThreeSixty";
 
 /**

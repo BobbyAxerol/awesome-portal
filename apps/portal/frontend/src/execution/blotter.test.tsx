@@ -15,7 +15,7 @@ import {
   FUNNEL_COMPLETE,
   FUNNEL_MISSING_BROKER_ACK,
   FUNNEL_SUBMIT_ONLY,
-} from "./analytics.fixtures";
+} from "./analytics.presentation.fixtures";
 import {
   BLOTTER_CROSS_FILTER,
   BLOTTER_SELECTION,

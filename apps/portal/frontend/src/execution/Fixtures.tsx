@@ -100,7 +100,7 @@ import { PortfolioThreeSixty } from "./screens/PortfolioThreeSixty";
 import { AccountBroker360 } from "./screens/AccountBroker360";
 import { PaperWorkbench } from "./screens/PaperWorkbench";
 import { BLOTTER_CROSS_FILTER, blotterPage } from "./blotter.fixtures";
-import { FUNNEL_BOUNDED, FUNNEL_MISSING_BROKER_ACK } from "./analytics.fixtures";
+import { FUNNEL_BOUNDED, FUNNEL_MISSING_BROKER_ACK } from "./analytics.presentation.fixtures";
 import { readOrderFunnel } from "./analytics";
 import { alpha360, alpha360AtScale } from "./alpha360.fixtures";
 import { CORRELATION_CEILING, portfolio360 } from "./portfolio360.fixtures";

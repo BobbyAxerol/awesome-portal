@@ -55,7 +55,7 @@ import {
   INSIGHT_BATCH_MIXED,
   PACKED_LENGTH_AT_LIMIT,
   packedCorrelationFixture,
-} from "./analytics.fixtures";
+} from "./analytics.presentation.fixtures";
 
 /** Shared by the sweep and the proof, so they cannot drift apart. */
 const MONEY_ARITHMETIC =

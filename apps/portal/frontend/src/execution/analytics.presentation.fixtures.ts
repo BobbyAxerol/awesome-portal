@@ -1,5 +1,17 @@
 /**
- * Analytics fixtures (EX-BE-07a/b).
+ * Analytics PRESENTATION and SCALE fixtures — not backend examples.
+ *
+ * The name carries the distinction because the distinction was invisible while
+ * it was `analytics.fixtures.ts`, and C-PI04-06 turns on it. The canonical
+ * backend documents are the six files in `packages/contracts/fixtures`, loaded
+ * directly by `contractFixtures.test.ts`; nothing in here is authority for what
+ * the server sends.
+ *
+ * What these are for is the other half: rendering at a scale and in states the
+ * canonical examples do not reach — a funnel bounded at 4,180 events, a
+ * correlation matrix at the packed limit, a batch with mixed errors. Deleting
+ * them in favour of the contract fixtures would leave every degradation path
+ * untested, because the canonical documents are deliberately small.
  *
  * Shaped to the published schema, including the two-layer envelope: screen
  * metadata on the outside, `analytics` (the computation) around `data` (the

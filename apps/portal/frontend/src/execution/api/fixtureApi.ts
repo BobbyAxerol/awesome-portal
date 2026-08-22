@@ -18,7 +18,7 @@ import {
   CAPITAL_PREVIEW_BREACH,
   CAPITAL_PREVIEW_OK,
   CAPITAL_PREVIEW_STALE,
-} from "../analytics.fixtures";
+} from "../analytics.presentation.fixtures";
 import type {
   ApplyReceipt,
   ExecutionApi,

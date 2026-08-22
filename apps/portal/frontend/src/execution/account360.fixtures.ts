@@ -17,7 +17,7 @@ import type {
   StateColumn,
   SyncRow,
 } from "./screens/AccountBroker360";
-import { EXPOSURE_PARTIAL } from "./analytics.fixtures";
+import { EXPOSURE_PARTIAL } from "./analytics.presentation.fixtures";
 import { readBindingExposure } from "./analytics";
 
 /**
