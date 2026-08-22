@@ -103,7 +103,14 @@ export interface ReadinessGroup {
   entries: readonly { label: string; value: string; revision?: string | null }[];
 }
 
-export type R2Lock = "SELF_APPROVAL" | "R1_NOT_VALID" | "CAPITAL_BREACH" | "EXPIRED" | "NOT_ELIGIBLE";
+export type R2Lock =
+  | "SELF_APPROVAL"
+  | "R1_NOT_VALID"
+  | "CAPITAL_BREACH"
+  /** The engine returned the preview with `decision_eligible=false` (EX-BE-07a §2.2). */
+  | "PREVIEW_NOT_DECIDABLE"
+  | "EXPIRED"
+  | "NOT_ELIGIBLE";
 
 /**
  * Which locks stop a denial. Same rule as Gate R1: the plan author may refuse
@@ -122,6 +129,8 @@ const LOCK_REASON: Record<R2Lock, string> = {
   SELF_APPROVAL: "Approve blocked — the plan author cannot be the sole approver.",
   R1_NOT_VALID: "Approve blocked — see the R1 status above.",
   CAPITAL_BREACH: "Approve blocked — the capital preview breaches a policy ceiling.",
+  PREVIEW_NOT_DECIDABLE:
+    "Approve blocked — the capital preview is not current enough to decide against. It stays visible below so the gap can be diagnosed.",
   EXPIRED: "This request expired and must be resubmitted.",
   NOT_ELIGIBLE: "You do not hold a role that can decide this gate.",
 };
@@ -148,6 +157,7 @@ export function GateR2Review({
   readiness,
   capital,
   capitalEnvelope,
+  capitalDecidable,
   observationPolicy,
   conditions,
   grantName,
@@ -195,6 +205,15 @@ export function GateR2Review({
    * a computation without its authority and as_of is an unattributed number.
    */
   capitalEnvelope?: Envelope;
+  /**
+   * The engine's `decision_eligible` verdict on the capital preview.
+   *
+   * Tri-state on purpose. `undefined` means no preview was requested and the
+   * lock does not apply; `false` is an explicit refusal from the engine. A
+   * boolean defaulting to `true` would turn "we never asked" into "the engine
+   * said yes", which is the one reading that must never happen by omission.
+   */
+  capitalDecidable?: boolean;
   observationPolicy?: ReactNode;
   /**
    * Typed conditions attached to this decision (DS §4). §3's exit criterion is
@@ -229,6 +248,11 @@ export function GateR2Review({
   const selfApproval = planAuthor === actor;
   const blockedReason = r1Block(r1State, r1Id, r1State === "EXPIRED" ? (r1Expiry ?? null) : null);
   const breach = capital.some((c) => c.breach);
+  // §2.2: an ineligible preview blocks approval and nothing else. It is not
+  // hidden — the numbers are how an operator works out what went stale — and it
+  // does not block a denial, because refusing to approve against figures nobody
+  // stands behind is exactly the decision this state should make easy.
+  const previewNotDecidable = capitalDecidable === false;
 
   // Derived, in the same way Gate R1 derives its separation-of-duty lock. The
   // three conditions that must never depend on a caller remembering to pass a
@@ -238,6 +262,7 @@ export function GateR2Review({
       ...(selfApproval ? (["SELF_APPROVAL"] as R2Lock[]) : []),
       ...(blockedReason ? (["R1_NOT_VALID"] as R2Lock[]) : []),
       ...(breach ? (["CAPITAL_BREACH"] as R2Lock[]) : []),
+      ...(previewNotDecidable ? (["PREVIEW_NOT_DECIDABLE"] as R2Lock[]) : []),
       ...locks,
     ]),
   );

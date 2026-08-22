@@ -40,7 +40,7 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 0 | Shell & shared components | **DONE** | `CONTRACT_COMPLETE` | — EX-BE-00R4 delivered | FE: 42 tests · build · visual baseline **drifted, see §9**; BE: registry rev 4 · 17 fixture profiles · fail-closed policy tests · generated OpenAPI/TS contract |
 | 1 | Approval Inbox (4a) | `WIP` (screen + adapter complete; awaiting data) | `OPERATIONAL_EVIDENCE_PENDING` | registry activation (`query_enabled`) — **not** the fresh-PG rerun | EX-BE-05a endpoint over EX-BE-04a; FE adapter reconciled against the §5 field map; FE runs on `createFixtureApi` |
 | 2 | Gate R1 Review (1a) | `WIP` (adapter built, on the port) | `OPERATIONAL_EVIDENCE_PENDING` | registry activation (`query_enabled`) — **not** the fresh-PG rerun | immutable evidence + plan/apply/poll + SoD/concurrency/audit implemented; FE obeys `eligibility.can_*` separately |
-| 3 | Gate R2 Review (1b) | `WIP` (screen + adapter, on the port) | `FOUNDATION_COMPLETE` | EX-BE-07b source-backed capital preview API + EX-BE-05a decision integration | EX-BE-07a exact per-currency preview, formula/freshness and stale blocker delivered |
+| 3 | Gate R2 Review (1b) | `WIP` (screen + adapter, on the port) | `INTEGRATION_COMPLETE` | source activation/evidence + EX-BE-05a decision integration | EX-BE-07b active-epoch capital-preview repository/API delivered; flags/profile remain fixture/off |
 | 4 | Paper Workbench (1c) | `BLOCKED` | `FOUNDATION_COMPLETE` | screen API + source integration; M7 evidence | EX-BE-04b adaptive six-rung/exact series + cold contract delivered; production source remains inactive |
 | 5 | Paper Exit Review (4b) | `WIP` (screen + adapter, on the port) | `FOUNDATION_COMPLETE` | EX-BE-05a evidence integration | EX-BE-03 freshness basis delivered; master plan §§10.5, 12.2 |
 | 6 | Admin Action Drawer (1i) | `READY`¹ | `FOUNDATION_COMPLETE` | EX-BE-05b; production TS command capability | EX-BE-02 authenticated boundary and request-key/UNCERTAIN contract delivered; production disabled |
@@ -51,10 +51,10 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 11 | Canary Control Room (1e) | `BLOCKED` | `PRODUCTION_INACTIVE` | EX-BE-05b; owner live-canary gate | EX-BE-04b query + EX-BE-06 SSE foundations delivered; shadow parity and production source still required |
 | 12 | Live Full Operations (1f) | `BLOCKED` | `PRODUCTION_INACTIVE` | phase 11 evidence; EX-BE-08 | rev 4 profile contract delivered; source completeness + UNCERTAIN policy remain; master plan §10.12 |
 | 13 | Paper Workbench VNM (4h) | `BLOCKED` | `INTEGRATION_PENDING` | source/screen API integration; venue/ATO/ATC decision | EX-BE-04b adaptive query + EX-BE-03 PAUSED semantics delivered; timezone decision remains |
-| 14 | Full Blotter (4c) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-07b screen API/source repository | EX-BE-04b keyset/cold primitives + EX-BE-07a explicit four-stage funnel delivered |
-| 15 | Alpha 360° (2a+2b) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-07b screen API/source repository | EX-BE-07a 64-item batch, per-item errors and required/echoed portfolio context delivered |
-| 16 | Portfolio 360° (1h→3a) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-07b screen API/source repository | EX-BE-07a packed 150×150/ranked fallback, currency ledger and exact decimal delivered |
-| 17 | Account/Broker 360° (1g) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-07b screen API/source repository | EX-BE-07a full-population binding exposure, count, timestamps and partiality delivered |
+| 14 | Full Blotter (4c) | `BLOCKED` | `INTEGRATION_COMPLETE` | source activation/parity + remaining blotter detail integration | EX-BE-07b typed active-epoch funnel API delivered over mTLS/delegated auth; flag remains off |
+| 15 | Alpha 360° (2a+2b) | `BLOCKED` | `INTEGRATION_COMPLETE` | source activation/parity + remaining detail/series integration | EX-BE-07b capped portfolio-bound insight API delivered; flag/profile remain off/fixture |
+| 16 | Portfolio 360° (1h→3a) | `BLOCKED` | `INTEGRATION_COMPLETE` | source activation/load evidence + remaining detail/series integration | EX-BE-07b source-backed correlation + capital-ledger APIs delivered with exact decimals |
+| 17 | Account/Broker 360° (1g) | `BLOCKED` | `INTEGRATION_COMPLETE` | source activation/population parity + remaining detail integration | EX-BE-07b source-backed full-population exposure API delivered; count mismatches fail closed |
 | 18 | Hardening | `BLOCKED` | `OPERATIONAL_EVIDENCE_PENDING` | EX-BE-08; implemented target subset | master plan §§13–14 |
 
 ¹ Phase 6's drawer shell, state machine and blocking rules are already built and
@@ -140,7 +140,9 @@ nav — it is the Phase 0 exit gate, not a product screen).
 | `GateR2Review` | `screens/GateR2Review.tsx` | an expired R1 locks the bar; a capital preview without an envelope is refused; **every capital row names its currency** |
 | `PaperExitReview` | `screens/PaperExitReview.tsx` | `met` is the server's; INSUFFICIENT_DATA carries forward; **every evidence number links its source** |
 | `series.ts` (M2) | `series.ts` | finest interval that fits; a series that misdescribes its own resolution is caught |
-| `subscription.ts` (M3) | `subscription.ts` | a gap voids the resume token; an epoch cutover waits for the server's deadline |
+| `subscription.ts` (M3) | `subscription.ts` | a gap voids the resume token; an epoch cutover waits for the server's deadline; a heartbeat advances nothing |
+| M3 transport | `sse.ts` | one stream per screen, snapshot first, exactly one resume parameter |
+| Analytics contracts | `analytics.ts` | read the engine's figures; never compute money, a breach, or a direction |
 
 Tests are behavioural, not snapshots: `execution.test.tsx` fails if PARTIAL turns
 green, if canary loses its double border, if the skeleton enters the
@@ -260,6 +262,18 @@ floor and population completeness. Evidence is 21 focused analytics tests and a
 [`EX_BE_07A_ANALYTICS_CONTRACTS_AND_PURE_ENGINE.md`](../../backend/EX_BE_07A_ANALYTICS_CONTRACTS_AND_PURE_ENGINE.md)
 against fixtures only; registry delivery remains `fixture`.
 
+`EX-BE-07b` is `INTEGRATION_COMPLETE / SOURCE_ACTIVATION_AND_OPERATIONAL_EVIDENCE_PENDING`.
+Six PostgreSQL repositories now read only the active epoch in a read-only
+repeatable-read snapshot and require exact delivery profile, capability,
+adapter and fact counts before invoking EX-BE-07a. Six narrow private Rust
+screen routes are exposed through a session-guarded TypeScript same-origin BFF
+over reusable mTLS HTTP/2 and exact-resource delegated JWTs. OpenAPI, generated
+TypeScript types and a canonical fixture are committed. Both runtime flags stay
+false and every registry profile stays `fixture`; this is not a live-source
+claim. Claude may wire the six public routes and failure fixtures per §7 of
+[`EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md`](../../backend/EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md)
+without waiting for source activation.
+
 ### 6.2 BR-EX decisions
 
 The binding contract is
@@ -302,11 +316,14 @@ target- and command-aware rather than a blanket lock. The immediate backend runw
 5. Claude: implement M3 EventSource integration/fixtures from the EX-BE-06
    handoff, while keeping registry delivery `fixture`;
 6. Codex: `EX-BE-07a` pure analytics contracts/engines for phases 3 and 14–17 —
-   delivered; source-backed APIs remain EX-BE-07b;
-7. Claude: implement the EX-BE-07a field map and failure fixtures while keeping
-   delivery `fixture` and all decimal values as strings;
-8. Codex: EX-BE-07b repository/narrow screen API integration when source reads
-   exist; `EX-BE-05b` only after source command/auth capability is proven.
+   delivered;
+7. Codex: `EX-BE-07b` source repository and six narrow authenticated screen API
+   integrations — delivered dark; source activation/evidence remains;
+8. Claude: wire the generated EX-BE-07b same-origin contract and complete/
+   partial/missing/forbidden/unavailable fixtures while keeping delivery
+   `fixture` and all decimal values as strings;
+9. Codex: `EX-BE-08a` source-ingestion parity, qualification and observability;
+   `EX-BE-05b` only after source command/auth capability is proven.
 
 This closes the architectural disagreement: Approval Inbox and Gate R1 do not wait
 for AWS networking, a Rust projection or a Trading System change.
@@ -753,3 +770,85 @@ they differ the drawing is the specification.
 amount"*. That belongs to a server endpoint — a client that recomputes capital
 is a client inventing a number — and becomes a request when EX-BE-07 is picked
 up.
+
+---
+
+## 16. M3 EventSource adapter and the analytics contracts (2026-08-22)
+
+Bám `EX_BE_06_*.md` §6 (handoff cho Claude) và `EX_BE_07A_*.md` §2/§3/§6.
+Frontend giữ nguyên `source_profile: fixture`; không endpoint nào được nối thật.
+
+### 16.1 M3 — reducer và transport
+
+`subscription.ts` thiếu ba thứ so với SSE thật, và một trong ba là lỗ do client
+tự tạo ra:
+
+| # | Thiếu | Vì sao nguy hiểm |
+|---|---|---|
+| M3-1 | không có **heartbeat** | heartbeat gộp vào `DELTA` sẽ đẩy `Last-Event-ID` qua những event chưa bao giờ được giao. Lần reconnect sau resume từ một điểm client tự bịa — một lỗ do client mở, và sau đó nhìn *giống hệt* delivery liền mạch |
+| M3-2 | không có `auth.expiring` | credential hết hạn sẽ hiện ra như lỗi mạng, và operator đi kiểm tra nhầm chỗ |
+| M3-3 | gap reason là **free text** | `slow_consumer` là lỗi của browser này, `history_evicted` thì không client nào sửa được. Gộp cả hai thành "connection problem" là gửi operator đi sai hướng |
+
+Đã sửa: `GapReason` sáu giá trị + `readGapReason` (narrow, không đoán),
+`HEARTBEAT` **không mang sequence — theo cấu trúc**, `AUTH_EXPIRING` không đổi
+phase (stream vẫn đúng, chỉ là ta biết vì sao nó sẽ dừng).
+
+`sse.ts` mới: một `EventSource` cho mỗi màn, snapshot-first, `streamUrl` ép
+**đúng một** tham số resume (`snapshot_cursor` khi connect đầu, `last_event_id`
+khi reconnect — gửi cả hai là 400). Native `EventSource` không set được header,
+nên reconnect do client chủ động phải mang cursor qua query param.
+
+**Mutation check:** dựng lại đúng lỗi M3-1 (heartbeat → `DELTA`) ⇒ test đỏ 1/18,
+gỡ ra ⇒ 18/18. Gate cắn thật.
+
+### 16.2 Analytics — viết theo OpenAPI, không theo prose
+
+Codex publish `packages/contracts/openapi/execution-analytics.openapi.json` +
+fixture `execution-analytics.capital-preview.valid.json` giữa chừng slice này.
+Bản `analytics.ts` đầu tiên viết theo prose và **sai 9 tên trường**:
+
+| Đoán | Thật |
+|---|---|
+| `data.lines[]` | field map phẳng: `allocated_before/after`, `available_before/after`, `allocation_headroom_before/after`, `maximum_allocated` |
+| `data.*` | envelope hai lớp: `analytics.data`, metadata đọc ở `analytics` và ở gốc |
+| `stage.name` | `stage.stage` |
+| `claim_code` | `insight_id` + `alpha_id` |
+| `value`/`unit` | `metrics[]` với enum 5 giá trị |
+| `packing: "LOWER_TRIANGLE"` | `representation.matrix.packing: "LOWER_INCLUDING_DIAGONAL_ROW_MAJOR"` |
+| `pairs[].a/b/value` | `left_id/right_id/coefficient/sample_count` |
+| `external_account_ref` | `binding_id` |
+| `completeness` | `population_completeness` |
+
+**Không màn nào đổi.** Chỉ `analytics.ts` + fixtures. Đây là lần thứ hai port
+design trả công đúng như vậy (lần đầu: EX-BE-05a, 4 trường).
+
+Test đọc thẳng fixture codex publish, nên schema đổi ở upstream sẽ đỏ ở đây chứ
+không đỏ trong browser.
+
+### 16.3 Sáu ràng buộc đã đóng bằng test
+
+| Ràng buộc | Cách giữ |
+|---|---|
+| Không tính tiền phía frontend | mọi line dựng bằng **gọi tên** một cặp field server; thêm gate quét toàn bộ `execution/**` tìm phép toán trên tên field tiền — có test tự chứng minh gate cắn. `?? "0"` bị gỡ: thiếu số ≠ số 0 |
+| `decision_eligible=false` | lock `PREVIEW_NOT_DECIDABLE` — khoá Approve, **giữ số hiển thị**, **không khoá Deny**. Prop tri-state: `undefined` ("chưa hỏi") không được đọc thành "engine đồng ý" |
+| Funnel đủ 4 stage | luôn render cả bốn theo thứ tự canonical dù server gửi một; ack không bao giờ suy ra từ fill đến sau |
+| Batch ≤ 64 | `insightBatchRequest` **ném** thay vì để server từ chối; `chunkInsightRequests` chia sẵn; portfolio bắt buộc và echo lại, lệch thì fail closed |
+| Correlation 150/151 | 150 → packed `n(n+1)/2 = 11,325`, đường chéo đúng `"1"`, ngoài biên trả `null` (không phải `0` — `0` là khẳng định độc lập); 151 → `RANKED_PAIRS` ≤ 500 + clusters, không bao giờ cấp phát ma trận vuông |
+| Population không được gọi là total | `isFullPopulation` đòi `COMPLETE` **và** `account_count === expected_account_count`; cờ và số mâu thuẫn thì lấy nghĩa yếu hơn |
+
+Thêm capital ledger: bucket theo currency, `direction` lấy từ server —
+entry `REBALANCE` amount `0` direction `UNCHANGED` là chuyện có thật, client đọc
+dấu của amount sẽ gọi nó là không có gì.
+
+### 16.4 Evidence
+
+`vitest` **807 passed / 1 skipped** (từ 734, +73) · `tsc -b --noEmit` sạch ·
+`npm run build` sạch · visual baseline **101/101**.
+
+### 16.5 Còn treo
+
+- `EX-BE-07b` chưa giao source-backed API → các màn 14–17 vẫn `BLOCKED`, adapter
+  đã sẵn nhưng chưa có gì để nối.
+- `sse.ts` chưa gắn vào màn nào: cần `EX-BE-07b` chốt topic name trước, gắn sớm
+  là đoán tên topic.
+- R2-1…R2-4 (§15) vẫn chưa sửa — Lane A, không chờ backend.

@@ -26,6 +26,62 @@
  */
 import type { FreshnessState } from "./contracts";
 
+/**
+ * Why the stream stopped being contiguous (EX-BE-06 §2).
+ *
+ * Typed rather than free text because these are not five phrasings of one
+ * event, they are five different operational stories and only one of them is
+ * the client's fault. `slow_consumer` means this browser could not keep up and
+ * a smaller subscription would help; `history_evicted` and
+ * `replay_window_exceeded` mean the server no longer holds what we asked to
+ * resume from, and no client-side change fixes that. A screen that rendered all
+ * of them as "connection problem" would send an operator to check their network
+ * during a projection rebuild.
+ */
+export type GapReason =
+  /** This client fell behind the server's buffer and was cut. */
+  | "slow_consumer"
+  /** The retained history no longer reaches back to our cursor. */
+  | "history_evicted"
+  /** The resume point is older than the bounded replay window. */
+  | "replay_window_exceeded"
+  /** The projection was rebuilt underneath us. */
+  | "epoch_changed"
+  /** The Trading System itself skipped, upstream of the edge. */
+  | "source_discontinuity"
+  /** The server reported a gap without a reason we recognise. */
+  | "unknown";
+
+/** Is this gap something the operator can act on, or only wait out? */
+export function gapIsClientSide(reason: GapReason): boolean {
+  return reason === "slow_consumer";
+}
+
+const GAP_REASONS: readonly GapReason[] = [
+  "slow_consumer",
+  "history_evicted",
+  "replay_window_exceeded",
+  "epoch_changed",
+  "source_discontinuity",
+  "unknown",
+];
+
+/** Narrow a server string, never guess. Unrecognised becomes `unknown`. */
+export function readGapReason(raw: unknown): GapReason {
+  return typeof raw === "string" && (GAP_REASONS as readonly string[]).includes(raw)
+    ? (raw as GapReason)
+    : "unknown";
+}
+
+export const GAP_REASON_TEXT: Record<GapReason, string> = {
+  slow_consumer: "This view fell behind the stream and was disconnected. Re-snapshotting.",
+  history_evicted: "The server no longer retains events from this point. Re-snapshotting.",
+  replay_window_exceeded: "The resume point is older than the replay window. Re-snapshotting.",
+  epoch_changed: "The projection was rebuilt. Re-snapshotting.",
+  source_discontinuity: "The Trading System reported a break in its own sequence.",
+  unknown: "The server reported a gap. Re-snapshotting.",
+};
+
 export type SubscriptionPhase =
   /** Nothing requested yet. */
   | "idle"
@@ -55,6 +111,17 @@ export interface SubscriptionState {
   lastGoodAsOf: string | null;
   /** What the panels should render as freshness right now. */
   freshness: FreshnessState;
+  /** Set whenever `phase` is `gap`. Typed, so screens can differentiate. */
+  gapReason: GapReason | null;
+  /**
+   * When the credential behind this stream expires (EX-BE-06 §2).
+   *
+   * The server warns before it cuts, so the screen can say so rather than
+   * present an authentication drop as a network fault.
+   */
+  authExpiresAt: string | null;
+  /** Last heartbeat observed. Proves the transport is alive with no data behind it. */
+  lastHeartbeatAt: string | null;
   /** Human-readable reason for the current phase. */
   note: string | null;
 }
@@ -67,6 +134,9 @@ export const INITIAL_SUBSCRIPTION: SubscriptionState = {
   resnapshotNotBefore: null,
   lastGoodAsOf: null,
   freshness: "UNKNOWN",
+  gapReason: null,
+  authExpiresAt: null,
+  lastHeartbeatAt: null,
   note: null,
 };
 
@@ -74,7 +144,19 @@ export type SubscriptionEvent =
   | { type: "SUBSCRIBE" }
   | { type: "SNAPSHOT"; epoch: string; sequence: number; asOf: string | null }
   | { type: "DELTA"; epoch: string; sequence: number; asOf: string | null }
-  | { type: "PROJECTION_GAP"; resnapshotNotBefore?: string | null; reason?: string }
+  /**
+   * Transport liveness only. Carries no sequence **by construction**.
+   *
+   * This is the sharpest edge in the whole mechanism. A heartbeat that were
+   * folded into `DELTA` would advance `Last-Event-ID` past events that were
+   * never delivered, and the next reconnect would resume from a point the
+   * client had invented — a hole opened by us, not by the network, and one that
+   * looks exactly like healthy contiguous delivery afterwards. So it stays a
+   * separate event with no sequence field for anyone to plumb in later.
+   */
+  | { type: "HEARTBEAT"; at: string }
+  | { type: "AUTH_EXPIRING"; expiresAt: string }
+  | { type: "PROJECTION_GAP"; reason: GapReason; resnapshotNotBefore?: string | null }
   | { type: "EPOCH_CHANGED"; epoch: string; resnapshotNotBefore?: string | null }
   | { type: "DISCONNECTED"; reason?: string }
   | { type: "SNAPSHOT_FAILED"; reason: string };
@@ -132,6 +214,9 @@ export function subscriptionReducer(
         resnapshotNotBefore: null,
         lastGoodAsOf: event.asOf ?? state.lastGoodAsOf,
         freshness: "OK",
+        gapReason: null,
+        authExpiresAt: state.authExpiresAt,
+        lastHeartbeatAt: state.lastHeartbeatAt,
         note: null,
       };
 
@@ -157,6 +242,7 @@ export function subscriptionReducer(
           phase: "gap",
           freshness: "STALE",
           resumeToken: null,
+          gapReason: "source_discontinuity",
           note: `Events ${state.sequence + 1}–${event.sequence - 1} were not delivered. Re-snapshotting.`,
         };
       }
@@ -172,14 +258,25 @@ export function subscriptionReducer(
       };
     }
 
+    case "HEARTBEAT":
+      // Records liveness and nothing else. `sequence` and `resumeToken` are
+      // untouched on purpose — see the event's declaration.
+      return { ...state, lastHeartbeatAt: event.at };
+
+    case "AUTH_EXPIRING":
+      // Not a phase change. The stream is still live and still correct; what
+      // changes is that we now know why it will end, and can say so.
+      return { ...state, authExpiresAt: event.expiresAt };
+
     case "PROJECTION_GAP":
       return {
         ...state,
         phase: "gap",
         freshness: "STALE",
         resumeToken: null,
+        gapReason: event.reason,
         resnapshotNotBefore: event.resnapshotNotBefore ?? null,
-        note: event.reason ?? "The server reported a gap. Re-snapshotting.",
+        note: GAP_REASON_TEXT[event.reason],
       };
 
     case "EPOCH_CHANGED":
@@ -190,6 +287,7 @@ export function subscriptionReducer(
         // Void, not merely unused: a cursor from the previous epoch has no
         // meaning in the new one and resuming with it would silently skip.
         resumeToken: null,
+        gapReason: "epoch_changed",
         resnapshotNotBefore: event.resnapshotNotBefore ?? null,
         note: event.resnapshotNotBefore
           ? `The projection was rebuilt. Showing the previous epoch, ageing, until ${event.resnapshotNotBefore}.`

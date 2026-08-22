@@ -27,6 +27,7 @@ import { readDecimal, readEnum, readId, readTimestamp, type MaybeKnown } from ".
 import type { ApprovalId, EvidenceMark, Sla } from "../contracts";
 import type { ApprovalGate, ApprovalRow, InertReason } from "../screens/ApprovalInbox";
 import type { ChecklistItem, DecisionLock, PassportEntry } from "../screens/GateR1Review";
+import type { CapitalPreview } from "../analytics";
 
 const GATES: readonly ApprovalGate[] = ["R1", "R2", "PAPER_EXIT", "SANDBOX_EXIT", "LIVE_GATE"];
 const INERT: readonly InertReason[] = ["SELF", "QUORUM", "BLOCKED"];
@@ -576,4 +577,36 @@ export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
     eligibility: readEligibility(data.eligibility),
     gaps,
   };
+}
+
+/**
+ * Turn an engine capital preview into the rows Gate R2 renders (EX-BE-07a §2.2).
+ *
+ * A rename and nothing else. Every figure is passed through as the string the
+ * engine produced — there is no place in this function where a number could be
+ * made, which is the property that matters more than the shape.
+ *
+ * Lines whose `before` or `after` is absent are dropped rather than rendered
+ * blank: a capital row with one side missing reads as a change from nothing,
+ * and on this panel that is the most expensive misreading available.
+ */
+export function capitalDeltasFromPreview(preview: CapitalPreview): CapitalDelta[] {
+  return preview.lines.flatMap((line) =>
+    line.before !== null && line.after !== null
+      ? [
+          {
+            label: line.label,
+            before: line.before,
+            after: line.after,
+            currency: line.currency ?? preview.currency,
+            note: line.note,
+            // No per-line breach flag is set here. The published contract does
+            // not carry one: the engine states a breach through
+            // `decision_eligible` and a blocker sentence, and a client that
+            // inferred one from a negative headroom would be deciding what a
+            // breach is. Gate R2 locks on the engine's verdict instead.
+          },
+        ]
+      : [],
+  );
 }

@@ -2108,6 +2108,31 @@ describe("Gate R2 Review", () => {
     }
   });
 
+  it("blocks approval on a preview the engine will not stand behind, but still shows it", () => {
+    // EX-BE-07a §2.2 asks for both halves. The numbers stay because they are
+    // how an operator works out what went stale; the button locks because
+    // approving against them would commit to figures nobody vouches for.
+    render(r2({ capitalDecidable: false }));
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
+    expect(screen.getByText(/not current enough to decide against/)).toBeTruthy();
+    expect(screen.getByText("50,000.00 USDT")).toBeTruthy();
+  });
+
+  it("still allows a denial against an ineligible preview", () => {
+    // Refusing to approve figures nobody stands behind is the decision this
+    // state should make easy, not the one it should block.
+    render(r2({ capitalDecidable: false }));
+    expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", false);
+  });
+
+  it("does not treat an unrequested preview as an approved one", () => {
+    // `capitalDecidable` omitted means no preview was asked for. That must not
+    // read as the engine having said yes.
+    render(r2());
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", false);
+    expect(screen.queryByText(/not current enough to decide against/)).toBeNull();
+  });
+
   it("allows approval on an R1 approved with a condition", () => {
     // A carried condition is not a lapse. It travels forward.
     render(r2({ r1State: "APPROVED_WITH_CONDITION" }));
@@ -2441,7 +2466,7 @@ describe("M3 — a gap is a state, not a retry", () => {
     const s = feed([
       { type: "SUBSCRIBE" },
       SNAP,
-      { type: "PROJECTION_GAP", reason: "source cursor discontinuity" },
+      { type: "PROJECTION_GAP", reason: "source_discontinuity" },
     ]);
     expect(s.resumeToken).toBeNull();
   });
