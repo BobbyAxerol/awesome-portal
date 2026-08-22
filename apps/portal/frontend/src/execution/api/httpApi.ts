@@ -24,6 +24,7 @@ import type { RiskTier } from "../contracts";
 import { commandBlockedReason, type DeliveryPolicy } from "../profile";
 import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./rows";
 import { readAnalyticsEnvelope, readCapitalPreview } from "../analytics";
+import { analyticsFailureReason, readAnalyticsFailure } from "../analyticsProblem";
 import type {
   ApplyReceipt,
   ExecutionApi,
@@ -103,6 +104,31 @@ async function problem(response: Response): Promise<Result<never>> {
   }
   const p = readProblem(body, response.status);
   return { ok: false, status: panelStatusForHttp(response.status) as never, reason: `${p.code}: ${p.message}` };
+}
+
+/**
+ * The failure path for an analytics endpoint.
+ *
+ * Separate from `problem` because the generic one resolves every 422 to
+ * `unavailable` — correct for governance routes, which have no client-
+ * correctable 422, and wrong for these six, where six of the seven codes are
+ * exactly that. Routing analytics through the shared typed adapter is what
+ * turns "backend unavailable" into "ask for fewer alphas".
+ */
+async function analyticsProblem(response: Response): Promise<Result<never>> {
+  let body: unknown = null;
+  try {
+    body = await response.json();
+  } catch {
+    // A failure whose body is not JSON still has a status, and the adapter
+    // fails closed on the code it cannot find.
+  }
+  const failure = readAnalyticsFailure(body, response.status);
+  return {
+    ok: false,
+    status: failure.panelStatus as never,
+    reason: analyticsFailureReason(failure),
+  };
 }
 
 export interface HttpApiOptions {
@@ -206,7 +232,7 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
         requestBody,
         signal,
       );
-      if (!response.ok) return problem(response);
+      if (!response.ok) return analyticsProblem(response);
       const body = await response.json();
       const preview = readCapitalPreview(body);
       const envelope = readAnalyticsEnvelope(body);
