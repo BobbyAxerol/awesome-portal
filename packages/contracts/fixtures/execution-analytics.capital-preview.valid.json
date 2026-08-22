@@ -1,0 +1,36 @@
+{
+  "schema_version": "execution.analytics.screen.v1",
+  "epoch_id": "018f0d5e-7b61-7a00-8000-000000000001",
+  "source_snapshot_id": "018f0d5e-7b61-7a00-8000-000000000002",
+  "capability_snapshot_id": "cap_fixture_v1",
+  "source_profile": "fixture",
+  "projection_sequence": 42,
+  "freshness_policy_version": "paper.analytics.v1",
+  "read_at": "2026-08-22T10:00:00Z",
+  "analytics": {
+    "schema_version": "execution.analytics.v1",
+    "formula_version": "capital-preview.v1",
+    "source_authority": "DERIVED",
+    "input_freshness_floor": "OK",
+    "panel_state": "ok",
+    "input_completeness": "COMPLETE",
+    "input_as_of": "2026-08-22T09:59:59Z",
+    "warnings": [],
+    "data": {
+      "portfolio_id": "PF-1",
+      "currency": "USDT",
+      "requested_amount": "50.000000000000000001",
+      "allocated_before": "500",
+      "allocated_after": "550.000000000000000001",
+      "maximum_allocated": "1000",
+      "used": "100",
+      "reserved": "25",
+      "available_before": "375",
+      "available_after": "425.000000000000000001",
+      "allocation_headroom_before": "500",
+      "allocation_headroom_after": "449.999999999999999999",
+      "decision_eligible": true,
+      "blockers": []
+    }
+  }
+}

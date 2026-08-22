@@ -467,7 +467,7 @@ impl PgProjectionStore {
     }
 }
 
-async fn active_epoch(
+pub(super) async fn active_epoch(
     transaction: &mut sqlx::Transaction<'_, Postgres>,
     workspace_id: &str,
     environment: &str,

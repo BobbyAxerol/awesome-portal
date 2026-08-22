@@ -60,6 +60,10 @@ services:
       EDGE_REALTIME_POLL_BATCH: ${EDGE_REALTIME_POLL_BATCH:-512}
       EDGE_REALTIME_HEARTBEAT_SECONDS: ${EDGE_REALTIME_HEARTBEAT_SECONDS:-15}
       EDGE_REALTIME_EPOCH_JITTER_MS: ${EDGE_REALTIME_EPOCH_JITTER_MS:-5000}
+      # EX-BE-07b is independently dark; profile must match the source snapshot
+      # exactly when an owner-approved overlay eventually enables it.
+      EDGE_ANALYTICS_QUERY_ENABLED: ${EDGE_ANALYTICS_QUERY_ENABLED:-false}
+      EDGE_ANALYTICS_SOURCE_PROFILE: ${EDGE_ANALYTICS_SOURCE_PROFILE:-fixture}
     healthcheck:
       test: ["CMD", "/usr/local/bin/portal-execution-edge", "healthcheck"]
       interval: 15s

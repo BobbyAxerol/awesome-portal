@@ -490,6 +490,7 @@ dependencies = [
 name = "edge-service"
 version = "0.1.0"
 dependencies = [
+ "analytics",
  "axum",
  "axum-server",
  "base64",
@@ -1394,11 +1395,13 @@ dependencies = [
 name = "projection-store-pg"
 version = "0.1.0"
 dependencies = [
+ "analytics",
  "chrono",
  "execution-contracts",
  "home",
  "projection-core",
  "query-api",
+ "serde",
  "serde_json",
  "sha2",
  "sqlx",

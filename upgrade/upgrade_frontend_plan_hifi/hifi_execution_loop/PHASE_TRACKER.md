@@ -270,7 +270,9 @@ screen routes are exposed through a session-guarded TypeScript same-origin BFF
 over reusable mTLS HTTP/2 and exact-resource delegated JWTs. OpenAPI, generated
 TypeScript types and a canonical fixture are committed. Both runtime flags stay
 false and every registry profile stays `fixture`; this is not a live-source
-claim. Claude may wire the six public routes and failure fixtures per §7 of
+claim. Backend evidence is 74/74 Rust/PostgreSQL tests with strict Clippy,
+105/105 Control API tests, 9/9 contract tests and a green root workspace/Compose
+gate. Claude may wire the six public routes and failure fixtures per §7 of
 [`EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md`](../../backend/EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md)
 without waiting for source activation.
 
@@ -847,8 +849,9 @@ dấu của amount sẽ gọi nó là không có gì.
 
 ### 16.5 Còn treo
 
-- `EX-BE-07b` chưa giao source-backed API → các màn 14–17 vẫn `BLOCKED`, adapter
-  đã sẵn nhưng chưa có gì để nối.
-- `sse.ts` chưa gắn vào màn nào: cần `EX-BE-07b` chốt topic name trước, gắn sớm
-  là đoán tên topic.
+- `EX-BE-07b` đã giao sáu source-backed API ở trạng thái dark. Adapter có thể
+  nối sáu same-origin route ngay; dữ liệu thật cho màn 14–17 vẫn `BLOCKED` đến
+  `EX-BE-08a` source parity/qualification/activation.
+- `sse.ts` chưa gắn vào màn nào: topic/source binding thuộc `EX-BE-08a`; không
+  đoán topic trước khi contract ingestion được chốt.
 - R2-1…R2-4 (§15) vẫn chưa sửa — Lane A, không chờ backend.

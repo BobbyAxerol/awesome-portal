@@ -97,4 +97,18 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(generated).toContain("PortalSummaryV1");
     expect(generated).toContain("PortalRegistryDocument");
   });
+
+  it("generated execution analytics types cover all six narrow screen APIs", () => {
+    const generated = readFileSync(join(ROOT, "generated", "execution-analytics.d.ts"), "utf8");
+    for (const route of [
+      "/api/v1/execution/approvals/{approvalId}/capital-preview",
+      "/api/v1/execution/orders/{orderId}/funnel",
+      "/api/v1/execution/alphas/{alphaId}/insight-previews",
+      "/api/v1/execution/portfolios/{portfolioId}/correlation",
+      "/api/v1/execution/portfolios/{portfolioId}/capital-ledger",
+      "/api/v1/execution/broker-bindings/{bindingId}/exposure",
+    ]) expect(generated).toContain(`"${route}"`);
+    expect(generated).toContain("AnalyticsScreenMetadata");
+    expect(generated).toContain("CapitalPreviewData");
+  });
 });

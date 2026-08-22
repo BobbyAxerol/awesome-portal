@@ -10,6 +10,7 @@ import { AuthError } from "./auth/auth.service";
 import { FacadeError } from "./facade/proxy.service";
 import { GovernanceError } from "./governance/governance.service";
 import { QueryContractError } from "./query";
+import { AnalyticsProxyError } from "./execution/analytics.proxy";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -26,7 +27,8 @@ export class HttpErrorFilter implements ExceptionFilter {
       exception instanceof AuthError ||
       exception instanceof FacadeError ||
       exception instanceof GovernanceError ||
-      exception instanceof QueryContractError
+      exception instanceof QueryContractError ||
+      exception instanceof AnalyticsProxyError
     ) {
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },

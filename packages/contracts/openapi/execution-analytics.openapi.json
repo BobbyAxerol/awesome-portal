@@ -1,0 +1,153 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal Execution Analytics Screen API",
+    "version": "1.0.0",
+    "description": "EX-BE-07b same-origin, session-guarded, narrow screen contracts. No generic evaluator."
+  },
+  "servers": [{ "url": "/" }],
+  "security": [{ "portalSession": [] }],
+  "paths": {
+    "/api/v1/execution/approvals/{approvalId}/capital-preview": {
+      "post": {
+        "operationId": "executionCapitalPreview",
+        "parameters": [{ "$ref": "#/components/parameters/ApprovalId" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CapitalPreviewRequest" } } } },
+        "responses": { "200": { "description": "Exact capital preview", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CapitalPreviewResponse" } } } }, "default": { "$ref": "#/components/responses/Problem" } }
+      }
+    },
+    "/api/v1/execution/orders/{orderId}/funnel": {
+      "get": {
+        "operationId": "executionOrderFunnel",
+        "parameters": [{ "$ref": "#/components/parameters/OrderId" }],
+        "responses": { "200": { "description": "Explicit four-stage order funnel", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderFunnelResponse" } } } }, "default": { "$ref": "#/components/responses/Problem" } }
+      }
+    },
+    "/api/v1/execution/alphas/{alphaId}/insight-previews": {
+      "post": {
+        "operationId": "executionInsightPreviews",
+        "parameters": [{ "$ref": "#/components/parameters/AlphaId" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InsightBatchRequest" } } } },
+        "responses": { "200": { "description": "Bounded per-item insight batch", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InsightBatchResponse" } } } }, "default": { "$ref": "#/components/responses/Problem" } }
+      }
+    },
+    "/api/v1/execution/portfolios/{portfolioId}/correlation": {
+      "get": {
+        "operationId": "executionPortfolioCorrelation",
+        "parameters": [{ "$ref": "#/components/parameters/PortfolioId" }],
+        "responses": { "200": { "description": "Adaptive portfolio correlation", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CorrelationResponse" } } } }, "default": { "$ref": "#/components/responses/Problem" } }
+      }
+    },
+    "/api/v1/execution/portfolios/{portfolioId}/capital-ledger": {
+      "get": {
+        "operationId": "executionCapitalLedger",
+        "parameters": [{ "$ref": "#/components/parameters/PortfolioId" }],
+        "responses": { "200": { "description": "Currency-isolated capital ledger", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CapitalLedgerResponse" } } } }, "default": { "$ref": "#/components/responses/Problem" } }
+      }
+    },
+    "/api/v1/execution/broker-bindings/{bindingId}/exposure": {
+      "get": {
+        "operationId": "executionBindingExposure",
+        "parameters": [{ "$ref": "#/components/parameters/BindingId" }],
+        "responses": { "200": { "description": "Full-population binding exposure", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BindingExposureResponse" } } } }, "default": { "$ref": "#/components/responses/Problem" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": { "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" } },
+    "parameters": {
+      "ApprovalId": { "name": "approvalId", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "OrderId": { "name": "orderId", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "AlphaId": { "name": "alphaId", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "PortfolioId": { "name": "portfolioId", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "BindingId": { "name": "bindingId", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/Identifier" } }
+    },
+    "responses": {
+      "Problem": { "description": "Typed fail-closed error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+    },
+    "schemas": {
+      "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$" },
+      "Decimal": { "type": "string", "pattern": "^[+-]?[0-9]+([.][0-9]+)?$" },
+      "Currency": { "type": "string", "pattern": "^[A-Z0-9]{2,12}$" },
+      "DateTime": { "type": "string", "format": "date-time" },
+      "NullableDateTime": { "oneOf": [{ "$ref": "#/components/schemas/DateTime" }, { "type": "null" }] },
+      "FreshnessState": { "type": "string", "enum": ["OK", "AGING", "STALE", "PAUSED", "UNKNOWN"] },
+      "PopulationCompleteness": { "type": "string", "enum": ["COMPLETE", "PARTIAL", "UNKNOWN"] },
+      "PanelState": { "type": "string", "enum": ["loading", "ok", "empty", "partial", "stale", "denied", "unavailable", "insufficient_data", "terminal"] },
+      "SourceAuthority": { "type": "string", "enum": ["RESEARCH", "EXECUTION", "BROKER", "DERIVED"] },
+      "DeliveryProfile": { "type": "string", "enum": ["fixture", "shadow", "paper", "sandbox", "live_canary", "live_full"] },
+      "Warning": { "type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": { "code": { "type": "string" }, "message": { "type": "string" } } },
+      "Problem": { "type": "object", "required": ["error"], "properties": { "error": { "type": "object", "required": ["code", "message"], "properties": { "code": { "type": "string" }, "message": { "type": "string" } } }, "request_id": { "type": "string" } } },
+      "AnalyticsScreenMetadata": {
+        "type": "object",
+        "required": ["schema_version", "epoch_id", "source_snapshot_id", "capability_snapshot_id", "source_profile", "projection_sequence", "freshness_policy_version", "read_at"],
+        "properties": {
+          "schema_version": { "type": "string", "const": "execution.analytics.screen.v1" },
+          "epoch_id": { "type": "string", "format": "uuid" },
+          "source_snapshot_id": { "type": "string", "format": "uuid" },
+          "capability_snapshot_id": { "type": "string" },
+          "source_profile": { "$ref": "#/components/schemas/DeliveryProfile" },
+          "projection_sequence": { "type": "integer", "minimum": 1 },
+          "freshness_policy_version": { "type": "string" },
+          "read_at": { "$ref": "#/components/schemas/DateTime" }
+        }
+      },
+      "DerivedMetadata": {
+        "type": "object",
+        "required": ["schema_version", "formula_version", "source_authority", "input_freshness_floor", "panel_state", "input_completeness", "input_as_of", "warnings"],
+        "properties": {
+          "schema_version": { "type": "string", "const": "execution.analytics.v1" },
+          "formula_version": { "type": "string" },
+          "source_authority": { "type": "string", "const": "DERIVED" },
+          "input_freshness_floor": { "$ref": "#/components/schemas/FreshnessState" },
+          "panel_state": { "$ref": "#/components/schemas/PanelState" },
+          "input_completeness": { "$ref": "#/components/schemas/PopulationCompleteness" },
+          "input_as_of": { "$ref": "#/components/schemas/NullableDateTime" },
+          "warnings": { "type": "array", "items": { "$ref": "#/components/schemas/Warning" } }
+        }
+      },
+      "FactQuality": { "type": "object", "required": ["source_authority", "freshness_state", "completeness", "as_of"], "properties": { "source_authority": { "$ref": "#/components/schemas/SourceAuthority" }, "freshness_state": { "$ref": "#/components/schemas/FreshnessState" }, "completeness": { "$ref": "#/components/schemas/PopulationCompleteness" }, "as_of": { "$ref": "#/components/schemas/NullableDateTime" } } },
+      "CapitalPreviewRequest": { "type": "object", "additionalProperties": false, "required": ["portfolio_id", "requested_amount", "currency"], "properties": { "portfolio_id": { "$ref": "#/components/schemas/Identifier" }, "requested_amount": { "$ref": "#/components/schemas/Decimal" }, "currency": { "$ref": "#/components/schemas/Currency" } } },
+      "CapitalPreviewData": {
+        "type": "object", "additionalProperties": false,
+        "required": ["portfolio_id", "currency", "requested_amount", "allocated_before", "allocated_after", "maximum_allocated", "used", "reserved", "available_before", "available_after", "allocation_headroom_before", "allocation_headroom_after", "decision_eligible", "blockers"],
+        "properties": {
+          "portfolio_id": { "$ref": "#/components/schemas/Identifier" }, "currency": { "$ref": "#/components/schemas/Currency" },
+          "requested_amount": { "$ref": "#/components/schemas/Decimal" }, "allocated_before": { "$ref": "#/components/schemas/Decimal" }, "allocated_after": { "$ref": "#/components/schemas/Decimal" }, "maximum_allocated": { "$ref": "#/components/schemas/Decimal" }, "used": { "$ref": "#/components/schemas/Decimal" }, "reserved": { "$ref": "#/components/schemas/Decimal" }, "available_before": { "$ref": "#/components/schemas/Decimal" }, "available_after": { "$ref": "#/components/schemas/Decimal" }, "allocation_headroom_before": { "$ref": "#/components/schemas/Decimal" }, "allocation_headroom_after": { "$ref": "#/components/schemas/Decimal" },
+          "decision_eligible": { "type": "boolean" }, "blockers": { "type": "array", "items": { "type": "string", "enum": ["STALE_INPUT", "INCOMPLETE_INPUT", "EXCEEDS_ALLOCATION_LIMIT"] } }
+        }
+      },
+      "CapitalPreviewAnalytics": { "allOf": [{ "$ref": "#/components/schemas/DerivedMetadata" }, { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/CapitalPreviewData" } } }] },
+      "CapitalPreviewResponse": { "allOf": [{ "$ref": "#/components/schemas/AnalyticsScreenMetadata" }, { "type": "object", "required": ["analytics"], "properties": { "analytics": { "$ref": "#/components/schemas/CapitalPreviewAnalytics" } } }] },
+      "FunnelEvent": { "type": "object", "required": ["stage", "source_authority", "source_id", "occurred_at", "quantity", "quality"], "properties": { "stage": { "type": "string", "enum": ["SUBMIT", "SOURCE_ACK", "BROKER_ACK", "FILL"] }, "source_authority": { "$ref": "#/components/schemas/SourceAuthority" }, "source_id": { "$ref": "#/components/schemas/Identifier" }, "occurred_at": { "$ref": "#/components/schemas/DateTime" }, "quantity": { "oneOf": [{ "$ref": "#/components/schemas/Decimal" }, { "type": "null" }] }, "quality": { "$ref": "#/components/schemas/FactQuality" } } },
+      "FunnelStage": { "type": "object", "required": ["stage", "state", "events"], "properties": { "stage": { "type": "string", "enum": ["SUBMIT", "SOURCE_ACK", "BROKER_ACK", "FILL"] }, "state": { "type": "string", "enum": ["OBSERVED", "MISSING", "PARTIAL"] }, "events": { "type": "array", "items": { "$ref": "#/components/schemas/FunnelEvent" } } } },
+      "OrderFunnelData": { "type": "object", "required": ["order_id", "stages"], "properties": { "order_id": { "$ref": "#/components/schemas/Identifier" }, "stages": { "type": "array", "minItems": 4, "maxItems": 4, "items": { "$ref": "#/components/schemas/FunnelStage" } } } },
+      "OrderFunnelAnalytics": { "allOf": [{ "$ref": "#/components/schemas/DerivedMetadata" }, { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/OrderFunnelData" } } }] },
+      "OrderFunnelResponse": { "allOf": [{ "$ref": "#/components/schemas/AnalyticsScreenMetadata" }, { "type": "object", "required": ["analytics"], "properties": { "analytics": { "$ref": "#/components/schemas/OrderFunnelAnalytics" } } }] },
+      "InsightItemRequest": { "type": "object", "additionalProperties": false, "required": ["insight_id", "alpha_id"], "properties": { "insight_id": { "$ref": "#/components/schemas/Identifier" }, "alpha_id": { "$ref": "#/components/schemas/Identifier" } } },
+      "InsightBatchRequest": { "type": "object", "additionalProperties": false, "required": ["portfolio_id", "items"], "properties": { "portfolio_id": { "$ref": "#/components/schemas/Identifier" }, "items": { "type": "array", "maxItems": 64, "items": { "$ref": "#/components/schemas/InsightItemRequest" } } } },
+      "InsightMetric": { "type": "object", "required": ["metric", "value"], "properties": { "metric": { "type": "string", "enum": ["ALLOCATED_CAPITAL", "USED_CAPITAL", "NET_PNL", "DRAWDOWN", "CONTRIBUTION"] }, "value": { "$ref": "#/components/schemas/Decimal" } } },
+      "InsightItem": { "type": "object", "required": ["insight_id", "alpha_id", "portfolio_id", "state", "freshness_state", "metrics", "error_code", "error_message"], "properties": { "insight_id": { "$ref": "#/components/schemas/Identifier" }, "alpha_id": { "$ref": "#/components/schemas/Identifier" }, "portfolio_id": { "$ref": "#/components/schemas/Identifier" }, "state": { "type": "string", "enum": ["READY", "ERROR", "MISSING"] }, "freshness_state": { "$ref": "#/components/schemas/FreshnessState" }, "metrics": { "type": "array", "items": { "$ref": "#/components/schemas/InsightMetric" } }, "error_code": { "type": ["string", "null"] }, "error_message": { "type": ["string", "null"] } } },
+      "InsightBatchData": { "type": "object", "required": ["portfolio_id", "requested_count", "ready_count", "error_count", "items"], "properties": { "portfolio_id": { "$ref": "#/components/schemas/Identifier" }, "requested_count": { "type": "integer" }, "ready_count": { "type": "integer" }, "error_count": { "type": "integer" }, "items": { "type": "array", "maxItems": 64, "items": { "$ref": "#/components/schemas/InsightItem" } } } },
+      "InsightBatchAnalytics": { "allOf": [{ "$ref": "#/components/schemas/DerivedMetadata" }, { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/InsightBatchData" } } }] },
+      "InsightBatchResponse": { "allOf": [{ "$ref": "#/components/schemas/AnalyticsScreenMetadata" }, { "type": "object", "required": ["analytics"], "properties": { "analytics": { "$ref": "#/components/schemas/InsightBatchAnalytics" } } }] },
+      "CorrelationLabel": { "type": "object", "required": ["entity_id", "display_name"], "properties": { "entity_id": { "$ref": "#/components/schemas/Identifier" }, "display_name": { "type": "string" } } },
+      "CorrelationPair": { "type": "object", "required": ["left_id", "right_id", "coefficient", "sample_count"], "properties": { "left_id": { "$ref": "#/components/schemas/Identifier" }, "right_id": { "$ref": "#/components/schemas/Identifier" }, "coefficient": { "$ref": "#/components/schemas/Decimal" }, "sample_count": { "type": "integer" } } },
+      "CorrelationCluster": { "type": "object", "required": ["cluster_id", "label", "members"], "properties": { "cluster_id": { "$ref": "#/components/schemas/Identifier" }, "label": { "type": "string" }, "members": { "type": "array", "items": { "$ref": "#/components/schemas/Identifier" } } } },
+      "PackedMatrixRepresentation": { "type": "object", "required": ["kind", "matrix"], "properties": { "kind": { "type": "string", "const": "PACKED_MATRIX" }, "matrix": { "type": "object", "required": ["dimension", "packing", "values"], "properties": { "dimension": { "type": "integer", "maximum": 150 }, "packing": { "type": "string", "const": "LOWER_INCLUDING_DIAGONAL_ROW_MAJOR" }, "values": { "type": "array", "items": { "$ref": "#/components/schemas/Decimal" } } } } } },
+      "RankedPairsRepresentation": { "type": "object", "required": ["kind", "pairs"], "properties": { "kind": { "type": "string", "const": "RANKED_PAIRS" }, "pairs": { "type": "array", "maxItems": 500, "items": { "$ref": "#/components/schemas/CorrelationPair" } } } },
+      "CorrelationData": { "type": "object", "required": ["portfolio_id", "labels", "clusters", "representation"], "properties": { "portfolio_id": { "$ref": "#/components/schemas/Identifier" }, "labels": { "type": "array", "maxItems": 500, "items": { "$ref": "#/components/schemas/CorrelationLabel" } }, "clusters": { "type": "array", "items": { "$ref": "#/components/schemas/CorrelationCluster" } }, "representation": { "oneOf": [{ "$ref": "#/components/schemas/PackedMatrixRepresentation" }, { "$ref": "#/components/schemas/RankedPairsRepresentation" }] } } },
+      "CorrelationAnalytics": { "allOf": [{ "$ref": "#/components/schemas/DerivedMetadata" }, { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/CorrelationData" } } }] },
+      "CorrelationResponse": { "allOf": [{ "$ref": "#/components/schemas/AnalyticsScreenMetadata" }, { "type": "object", "required": ["analytics"], "properties": { "analytics": { "$ref": "#/components/schemas/CorrelationAnalytics" } } }] },
+      "CapitalLedgerEntry": { "type": "object", "required": ["ledger_id", "allocation_id", "account_id", "movement_type", "direction", "amount", "before_allocated", "after_allocated", "occurred_at"], "properties": { "ledger_id": { "$ref": "#/components/schemas/Identifier" }, "allocation_id": { "oneOf": [{ "$ref": "#/components/schemas/Identifier" }, { "type": "null" }] }, "account_id": { "$ref": "#/components/schemas/Identifier" }, "movement_type": { "type": "string", "enum": ["INITIAL_ALLOCATE", "ALLOCATE", "WITHDRAW", "REBALANCE", "ADJUST"] }, "direction": { "type": "string", "enum": ["INCREASE", "DECREASE", "UNCHANGED"] }, "amount": { "$ref": "#/components/schemas/Decimal" }, "before_allocated": { "$ref": "#/components/schemas/Decimal" }, "after_allocated": { "$ref": "#/components/schemas/Decimal" }, "occurred_at": { "$ref": "#/components/schemas/DateTime" } } },
+      "CapitalLedgerBucket": { "type": "object", "required": ["currency", "gross_increase", "gross_decrease", "entries"], "properties": { "currency": { "$ref": "#/components/schemas/Currency" }, "gross_increase": { "$ref": "#/components/schemas/Decimal" }, "gross_decrease": { "$ref": "#/components/schemas/Decimal" }, "entries": { "type": "array", "maxItems": 250, "items": { "$ref": "#/components/schemas/CapitalLedgerEntry" } } } },
+      "CapitalLedgerData": { "type": "object", "required": ["portfolio_id", "buckets"], "properties": { "portfolio_id": { "$ref": "#/components/schemas/Identifier" }, "buckets": { "type": "array", "items": { "$ref": "#/components/schemas/CapitalLedgerBucket" } } } },
+      "CapitalLedgerAnalytics": { "allOf": [{ "$ref": "#/components/schemas/DerivedMetadata" }, { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/CapitalLedgerData" } } }] },
+      "CapitalLedgerResponse": { "allOf": [{ "$ref": "#/components/schemas/AnalyticsScreenMetadata" }, { "type": "object", "required": ["analytics"], "properties": { "analytics": { "$ref": "#/components/schemas/CapitalLedgerAnalytics" } } }] },
+      "BindingExposureBucket": { "type": "object", "required": ["currency", "account_count", "used", "reserved", "available", "headroom", "oldest_source_as_of", "newest_source_as_of"], "properties": { "currency": { "$ref": "#/components/schemas/Currency" }, "account_count": { "type": "integer" }, "used": { "$ref": "#/components/schemas/Decimal" }, "reserved": { "$ref": "#/components/schemas/Decimal" }, "available": { "$ref": "#/components/schemas/Decimal" }, "headroom": { "$ref": "#/components/schemas/Decimal" }, "oldest_source_as_of": { "$ref": "#/components/schemas/NullableDateTime" }, "newest_source_as_of": { "$ref": "#/components/schemas/NullableDateTime" } } },
+      "BindingExposureData": { "type": "object", "required": ["binding_id", "account_count", "expected_account_count", "population_completeness", "buckets"], "properties": { "binding_id": { "$ref": "#/components/schemas/Identifier" }, "account_count": { "type": "integer" }, "expected_account_count": { "type": ["integer", "null"] }, "population_completeness": { "$ref": "#/components/schemas/PopulationCompleteness" }, "buckets": { "type": "array", "items": { "$ref": "#/components/schemas/BindingExposureBucket" } } } },
+      "BindingExposureAnalytics": { "allOf": [{ "$ref": "#/components/schemas/DerivedMetadata" }, { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/BindingExposureData" } } }] },
+      "BindingExposureResponse": { "allOf": [{ "$ref": "#/components/schemas/AnalyticsScreenMetadata" }, { "type": "object", "required": ["analytics"], "properties": { "analytics": { "$ref": "#/components/schemas/BindingExposureAnalytics" } } }] }
+    }
+  }
+}

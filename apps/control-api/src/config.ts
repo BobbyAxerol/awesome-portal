@@ -72,6 +72,7 @@ const EnvSchema = z.object({
   FEATURE_NATIVE_WORKSPACES: z.enum(["true", "false"]).default("true"),
   FEATURE_EXECUTION_EDGE: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_REALTIME_SSE: z.enum(["true", "false"]).default("false"),
+  FEATURE_EXECUTION_ANALYTICS_QUERY: z.enum(["true", "false"]).default("false"),
   EXECUTION_EDGE_ORIGIN: ServiceOriginSchema.default("https://portal-execution-edge:8443"),
   EXECUTION_EDGE_ENVIRONMENT: z.enum(["paper", "sandbox", "live"]).default("paper"),
   EXECUTION_EDGE_PRIVATE_KEY_FILE: z.preprocess(
@@ -172,9 +173,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
       "FEATURE_EXECUTION_EDGE=true requires EXECUTION_EDGE_PRIVATE_KEY_FILE",
     );
   }
-  if (config.FEATURE_EXECUTION_REALTIME_SSE === "true") {
+  if (
+    config.FEATURE_EXECUTION_REALTIME_SSE === "true" ||
+    config.FEATURE_EXECUTION_ANALYTICS_QUERY === "true"
+  ) {
     if (config.FEATURE_EXECUTION_EDGE !== "true") {
-      throw new Error("FEATURE_EXECUTION_REALTIME_SSE=true requires FEATURE_EXECUTION_EDGE=true");
+      throw new Error("execution edge delivery requires FEATURE_EXECUTION_EDGE=true");
     }
     const missing = [
       "EXECUTION_EDGE_CA_FILE",
@@ -182,10 +186,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
       "EXECUTION_EDGE_CLIENT_KEY_FILE",
     ].filter((key) => config[key as keyof ControlApiConfig] === undefined);
     if (missing.length > 0) {
-      throw new Error(`execution realtime mTLS requires: ${missing.join(", ")}`);
+      throw new Error(`execution edge mTLS requires: ${missing.join(", ")}`);
     }
     if (new URL(config.EXECUTION_EDGE_ORIGIN).protocol !== "https:") {
-      throw new Error("execution realtime edge origin must use HTTPS");
+      throw new Error("execution edge origin must use HTTPS");
     }
   }
   return config;

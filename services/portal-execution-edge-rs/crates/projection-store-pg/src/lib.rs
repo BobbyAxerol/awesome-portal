@@ -13,9 +13,11 @@ use sqlx::{postgres::PgPoolOptions, PgPool, Postgres, Row, Transaction};
 use thiserror::Error;
 use uuid::Uuid;
 
+mod analytics_repository;
 mod query;
 mod realtime;
 
+pub use analytics_repository::{AnalyticsReadRequirement, AnalyticsSourceRead};
 pub use query::{RetentionPolicySnapshot, SeriesPointWrite};
 pub use realtime::{
     RealtimeEpochAvailability, RealtimeJournalPage, RealtimeJournalRecord,
@@ -969,6 +971,18 @@ pub enum StoreError {
     ActiveEpochNotFound,
     #[error("realtime replay page limit is outside the bounded range")]
     InvalidRealtimePageLimit,
+    #[error("analytics source snapshot does not exist")]
+    AnalyticsSourceNotFound,
+    #[error("analytics source snapshot delivery profile does not match the requested profile")]
+    AnalyticsSourceProfileMismatch,
+    #[error("analytics source capability snapshot does not match the active capability")]
+    AnalyticsCapabilityMismatch,
+    #[error("analytics source snapshot is not internally complete")]
+    AnalyticsPopulationMismatch,
+    #[error("analytics source payload is invalid for its narrow screen contract")]
+    InvalidAnalyticsSourcePayload,
+    #[error("analytics source query exceeds its bounded repository limit")]
+    AnalyticsSourceLimitExceeded,
 }
 
 #[cfg(test)]
@@ -1579,5 +1593,430 @@ mod tests {
             cold.retention.access_request_path.as_deref(),
             Some("/admin/data-access-requests")
         );
+    }
+
+    async fn insert_analytics_snapshot(
+        store: &PgProjectionStore,
+        epoch_id: Uuid,
+        kind: &str,
+        resource_id: &str,
+        context_key: &str,
+        expected_fact_count: i64,
+        expected_population_count: Option<i64>,
+    ) -> Uuid {
+        let snapshot_id = Uuid::now_v7();
+        sqlx::query(
+            "INSERT INTO portal_projection.analytics_source_snapshots
+             (snapshot_id,epoch_id,analytics_kind,resource_id,context_key,source_profile,
+              population_completeness,expected_fact_count,expected_population_count,
+              source_read_at,projected_at,freshness_policy_version,
+              freshness_warning_after_ms,freshness_stale_after_ms,maximum_future_skew_ms,
+              projection_sequence,adapter_version,capability_snapshot_id,payload_digest)
+             VALUES ($1,$2,$3,$4,$5,'paper','COMPLETE',$6,$7,$8,$9,'paper.analytics.v1',
+                     20000,60000,2000,10,'ts-adapter-v1','cap_analytics','sha256:test')",
+        )
+        .bind(snapshot_id)
+        .bind(epoch_id)
+        .bind(kind)
+        .bind(resource_id)
+        .bind(context_key)
+        .bind(expected_fact_count)
+        .bind(expected_population_count)
+        .bind(at(90))
+        .bind(at(91))
+        .execute(&store.pool)
+        .await
+        .unwrap();
+        snapshot_id
+    }
+
+    async fn insert_analytics_fact(
+        store: &PgProjectionStore,
+        snapshot_id: Uuid,
+        fact_id: &str,
+        fact_kind: &str,
+        ordinal: i64,
+        authority: &str,
+        payload: serde_json::Value,
+    ) {
+        sqlx::query(
+            "INSERT INTO portal_projection.analytics_source_facts
+             (snapshot_id,fact_id,fact_kind,ordinal,source_authority,as_of,payload)
+             VALUES ($1,$2,$3,$4,$5,$6,$7)",
+        )
+        .bind(snapshot_id)
+        .bind(fact_id)
+        .bind(fact_kind)
+        .bind(ordinal)
+        .bind(authority)
+        .bind(at(90))
+        .bind(payload)
+        .execute(&store.pool)
+        .await
+        .unwrap();
+    }
+
+    fn analytics_quality() -> serde_json::Value {
+        serde_json::json!({
+            "source_authority": "EXECUTION",
+            "freshness_state": "OK",
+            "completeness": "COMPLETE",
+            "as_of": at(90),
+        })
+    }
+
+    #[tokio::test]
+    #[allow(clippy::too_many_lines)]
+    async fn analytics_repositories_are_epoch_scoped_complete_and_profile_bound() {
+        use analytics::{
+            aggregate_binding_exposure, build_capital_ledger, build_capital_preview,
+            build_correlation, build_insight_batch, build_order_funnel, CapitalPreviewRequest,
+            CurrencyCode, InsightBatchRequest, InsightItemRequest,
+        };
+        use execution_contracts::{DecimalString, DeliveryProfile};
+
+        let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
+            return;
+        };
+        let _guard = postgres_test_lock().lock().await;
+        let store = PgProjectionStore::connect(&database_url).await.unwrap();
+        store.migrate().await.unwrap();
+        reset(&store, &database_url).await;
+        let scope = scope();
+        let epoch_id = Uuid::now_v7();
+        sqlx::query(
+            "INSERT INTO portal_projection.epochs
+             (epoch_id,workspace_id,environment,status,adapter_version,source_gateway_digest,
+              capability_snapshot_id,created_at,activated_at,next_projection_sequence)
+             VALUES ($1,$2,$3,'ACTIVE','ts-adapter-v1','sha256:analytics','cap_analytics',$4,$4,10)",
+        )
+        .bind(epoch_id)
+        .bind(scope.workspace_id.as_str())
+        .bind(&scope.environment)
+        .bind(at(80))
+        .execute(&store.pool)
+        .await
+        .unwrap();
+
+        let capital = insert_analytics_snapshot(
+            &store,
+            epoch_id,
+            "CAPITAL_PREVIEW",
+            "PF-1",
+            "USDT",
+            1,
+            Some(1),
+        )
+        .await;
+        insert_analytics_fact(
+            &store,
+            capital,
+            "capital-USDT",
+            "CAPITAL_BUCKET",
+            0,
+            "EXECUTION",
+            serde_json::json!({
+                "portfolio_id":"ignored", "currency":"USDC", "allocated":"500",
+                "used":"100", "reserved":"25", "maximum_allocated":"1000",
+                "quality": analytics_quality(),
+            }),
+        )
+        .await;
+
+        let funnel =
+            insert_analytics_snapshot(&store, epoch_id, "ORDER_FUNNEL", "order-1", "", 2, Some(2))
+                .await;
+        for (ordinal, stage, authority) in [(0, "SUBMIT", "EXECUTION"), (1, "BROKER_ACK", "BROKER")]
+        {
+            insert_analytics_fact(
+                &store,
+                funnel,
+                &format!("event-{ordinal}"),
+                "FUNNEL_EVENT",
+                ordinal,
+                authority,
+                serde_json::json!({
+                    "stage":stage, "source_authority":authority,
+                    "source_id":format!("event-{ordinal}"), "occurred_at":at(90 + ordinal),
+                    "quantity":"1", "quality":analytics_quality(),
+                }),
+            )
+            .await;
+        }
+
+        let insight =
+            insert_analytics_snapshot(&store, epoch_id, "INSIGHT_PREVIEW", "PF-1", "", 1, Some(1))
+                .await;
+        insert_analytics_fact(
+            &store,
+            insight,
+            "insight-1",
+            "INSIGHT_OBSERVATION",
+            0,
+            "EXECUTION",
+            serde_json::json!({
+                "insight_id":"insight-1", "portfolio_id":"ignored",
+                "quality":analytics_quality(),
+                "metrics":[{"metric":"NET_PNL","value":"12.500"}],
+                "error_code":null, "error_message":null,
+            }),
+        )
+        .await;
+
+        let correlation = insert_analytics_snapshot(
+            &store,
+            epoch_id,
+            "PORTFOLIO_CORRELATION",
+            "PF-1",
+            "",
+            3,
+            Some(2),
+        )
+        .await;
+        for (ordinal, id, kind, payload) in [
+            (
+                0,
+                "label-a",
+                "CORRELATION_LABEL",
+                serde_json::json!({"entity_id":"alpha-a","display_name":"Alpha A"}),
+            ),
+            (
+                1,
+                "label-b",
+                "CORRELATION_LABEL",
+                serde_json::json!({"entity_id":"alpha-b","display_name":"Alpha B"}),
+            ),
+            (
+                2,
+                "pair-ab",
+                "CORRELATION_PAIR",
+                serde_json::json!({
+                    "left_id":"alpha-a","right_id":"alpha-b",
+                    "coefficient":"0.125","sample_count":100
+                }),
+            ),
+        ] {
+            insert_analytics_fact(&store, correlation, id, kind, ordinal, "EXECUTION", payload)
+                .await;
+        }
+
+        let ledger =
+            insert_analytics_snapshot(&store, epoch_id, "CAPITAL_LEDGER", "PF-1", "", 1, Some(1))
+                .await;
+        insert_analytics_fact(
+            &store,
+            ledger,
+            "ledger-1",
+            "CAPITAL_LEDGER_ENTRY",
+            0,
+            "EXECUTION",
+            serde_json::json!({
+                "ledger_id":"ledger-1","portfolio_id":"ignored","allocation_id":null,
+                "account_id":"account-1","currency":"USDT","movement_type":"ALLOCATE",
+                "amount":"10","before_allocated":"0","after_allocated":"10",
+                "occurred_at":at(90),"quality":analytics_quality(),
+            }),
+        )
+        .await;
+
+        let exposure = insert_analytics_snapshot(
+            &store,
+            epoch_id,
+            "BINDING_EXPOSURE",
+            "binding-1",
+            "",
+            1,
+            Some(1),
+        )
+        .await;
+        insert_analytics_fact(
+            &store,
+            exposure,
+            "account-1-USDT",
+            "VIRTUAL_ACCOUNT_EXPOSURE",
+            0,
+            "BROKER",
+            serde_json::json!({
+                "account_id":"account-1","currency":"USDT","used":"100",
+                "reserved":"20","available":"80","headroom":"200",
+                "quality":analytics_quality(),
+            }),
+        )
+        .await;
+
+        let requirement = AnalyticsReadRequirement {
+            expected_profile: DeliveryProfile::Paper,
+            capability_snapshot_id: "cap_analytics",
+            read_at: at(100),
+        };
+        let portfolio = CanonicalId::parse("PF-1").unwrap();
+        let currency = CurrencyCode::parse("USDT").unwrap();
+        let capital_read = store
+            .load_capital_preview_source(&scope, &portfolio, &currency, &requirement)
+            .await
+            .unwrap();
+        assert_eq!(capital_read.epoch_id, epoch_id);
+        assert!(
+            build_capital_preview(
+                &CapitalPreviewRequest {
+                    portfolio_id: portfolio.clone(),
+                    requested_amount: DecimalString::parse("50").unwrap(),
+                    currency,
+                },
+                &capital_read.input,
+            )
+            .unwrap()
+            .data
+            .decision_eligible
+        );
+        assert_eq!(
+            build_order_funnel(
+                &store
+                    .load_order_funnel_source(
+                        &scope,
+                        &CanonicalId::parse("order-1").unwrap(),
+                        &requirement,
+                    )
+                    .await
+                    .unwrap()
+                    .input,
+            )
+            .unwrap()
+            .data
+            .stages
+            .len(),
+            4
+        );
+        let batch = InsightBatchRequest {
+            portfolio_id: portfolio.clone(),
+            items: vec![InsightItemRequest {
+                insight_id: CanonicalId::parse("insight-1").unwrap(),
+                alpha_id: CanonicalId::parse("alpha-a").unwrap(),
+            }],
+        };
+        let insight_read = store
+            .load_insight_preview_source(&scope, &portfolio, &requirement)
+            .await
+            .unwrap();
+        assert_eq!(
+            build_insight_batch(&batch, &insight_read.input)
+                .unwrap()
+                .data
+                .ready_count,
+            1
+        );
+        assert_eq!(
+            build_correlation(
+                &store
+                    .load_correlation_source(&scope, &portfolio, &requirement)
+                    .await
+                    .unwrap()
+                    .input,
+            )
+            .unwrap()
+            .data
+            .labels
+            .len(),
+            2
+        );
+        assert_eq!(
+            build_capital_ledger(
+                &store
+                    .load_capital_ledger_source(&scope, &portfolio, &requirement)
+                    .await
+                    .unwrap()
+                    .input,
+            )
+            .unwrap()
+            .data
+            .buckets
+            .len(),
+            1
+        );
+        assert_eq!(
+            aggregate_binding_exposure(
+                &store
+                    .load_binding_exposure_source(
+                        &scope,
+                        &CanonicalId::parse("binding-1").unwrap(),
+                        &requirement,
+                    )
+                    .await
+                    .unwrap()
+                    .input,
+            )
+            .unwrap()
+            .data
+            .account_count,
+            1
+        );
+
+        let wrong_profile = AnalyticsReadRequirement {
+            expected_profile: DeliveryProfile::Sandbox,
+            ..requirement.clone()
+        };
+        assert!(matches!(
+            store
+                .load_capital_preview_source(
+                    &scope,
+                    &portfolio,
+                    &CurrencyCode::parse("USDT").unwrap(),
+                    &wrong_profile,
+                )
+                .await,
+            Err(StoreError::AnalyticsSourceProfileMismatch)
+        ));
+        let wrong_capability = AnalyticsReadRequirement {
+            expected_profile: DeliveryProfile::Paper,
+            capability_snapshot_id: "cap_wrong",
+            read_at: at(100),
+        };
+        assert!(matches!(
+            store
+                .load_capital_preview_source(
+                    &scope,
+                    &portfolio,
+                    &CurrencyCode::parse("USDT").unwrap(),
+                    &wrong_capability,
+                )
+                .await,
+            Err(StoreError::AnalyticsCapabilityMismatch)
+        ));
+
+        let incomplete = insert_analytics_snapshot(
+            &store,
+            epoch_id,
+            "CAPITAL_PREVIEW",
+            "PF-incomplete",
+            "USDT",
+            2,
+            Some(1),
+        )
+        .await;
+        insert_analytics_fact(
+            &store,
+            incomplete,
+            "capital-incomplete-USDT",
+            "CAPITAL_BUCKET",
+            0,
+            "EXECUTION",
+            serde_json::json!({
+                "portfolio_id":"ignored", "currency":"USDT", "allocated":"500",
+                "used":"100", "reserved":"25", "maximum_allocated":"1000",
+                "quality":analytics_quality(),
+            }),
+        )
+        .await;
+        assert!(matches!(
+            store
+                .load_capital_preview_source(
+                    &scope,
+                    &CanonicalId::parse("PF-incomplete").unwrap(),
+                    &CurrencyCode::parse("USDT").unwrap(),
+                    &requirement,
+                )
+                .await,
+            Err(StoreError::AnalyticsPopulationMismatch)
+        ));
     }
 }

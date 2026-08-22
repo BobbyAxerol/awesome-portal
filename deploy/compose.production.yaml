@@ -15,6 +15,8 @@ x-control-api-environment: &control-api-environment
   # EX-BE-06 stays dark unless the opt-in execution-realtime overlay is used.
   FEATURE_EXECUTION_EDGE: "false"
   FEATURE_EXECUTION_REALTIME_SSE: "false"
+  # EX-BE-07b remains dark until source parity/cross-cell qualification passes.
+  FEATURE_EXECUTION_ANALYTICS_QUERY: "false"
   INTERNAL_PRINCIPAL_SECRET: ${CONTROL_API_INTERNAL_PRINCIPAL_SECRET:?Set CONTROL_API_INTERNAL_PRINCIPAL_SECRET}
   QUERY_CURSOR_ACTIVE_KEY_ID: ${CONTROL_API_QUERY_CURSOR_ACTIVE_KEY_ID:-query-k1}
   QUERY_CURSOR_KEYS_JSON: '${CONTROL_API_QUERY_CURSOR_KEYS_JSON:?Set CONTROL_API_QUERY_CURSOR_KEYS_JSON}'

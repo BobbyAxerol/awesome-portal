@@ -799,7 +799,8 @@ so one slice may unlock several screens without inventing a second product roadm
 | EX-BE-04b | P1 / foundation complete; screen API/source integration pending | Rust projection query primitives: bidirectional keyset, filter/sort/count, adaptive series ladder, exact decimals and typed cold retention | phases 4, 9, 11–17 |
 | EX-BE-05b | P1 | TypeScript operations/plan/apply/verify plus authenticated Rust relay | phases 6–12 mutation/operation paths |
 | EX-BE-06 | P1 | multiplexed SSE, gap recovery, backpressure and same-origin proxy | phase 9 and live screens |
-| EX-BE-07 | P2 | correlation, exposure, funnel, capital-ledger and batched preview analytics | phases 3, 14–17 |
+| EX-BE-07a | P2 / foundation complete | pure correlation, exposure, funnel, capital-ledger and batched preview analytics | phases 3, 14–17 contracts |
+| EX-BE-07b | P2 / integration complete; source activation evidence pending | active-epoch source repositories and six narrow authenticated screen APIs | phases 3, 14–17 integration |
 | EX-BE-08 | P2 | security/load/soak/DR/rollback evidence and production profiles | phase 18 and production activation |
 
 EX-BE-04a→05a has delivered the Portal-owned control-plane foundation without an AWS, Rust,
@@ -848,12 +849,26 @@ is 21 focused analytics tests and a 72-test locked Rust/PostgreSQL workspace gat
 the Claude field map is in
 [`EX_BE_07A_ANALYTICS_CONTRACTS_AND_PURE_ENGINE.md`](backend/EX_BE_07A_ANALYTICS_CONTRACTS_AND_PURE_ENGINE.md).
 
+`EX-BE-07b` now binds that pure engine to Portal-owned PostgreSQL source
+snapshots. Six repositories read the active epoch in one repeatable-read,
+read-only transaction and require exact source profile, capability snapshot,
+adapter identity and declared fact count. Six narrow Rust routes are reachable
+only through the session-guarded TypeScript same-origin BFF over reusable mTLS
+HTTP/2 and exact-resource delegated JWTs. Canonical OpenAPI/generated types and
+a fixture freeze the public contract. Status is `INTEGRATION_COMPLETE /
+SOURCE_ACTIVATION_AND_OPERATIONAL_EVIDENCE_PENDING`: registry profiles remain
+`fixture`, runtime flags remain false and no Trading System private storage or
+command surface is touched. Detail:
+[`EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md`](backend/EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md).
+
 ### 12.2 Per-phase backend slices
 
 Statuses use the architecture vocabulary, never bare `COMPLETE`:
 
 - `CONTRACT_COMPLETE`: a validated contract/registry exists; no real authority implied.
 - `FOUNDATION_COMPLETE`: reusable Portal foundation exists; screen integration remains.
+- `INTEGRATION_COMPLETE`: screen-shaped source/repository/API path exists, but
+  source activation and production evidence may still be pending.
 - `INTEGRATION_PENDING`: screen needs a real adapter/query/workflow slice.
 - `PRODUCTION_INACTIVE`: integrated shape exists or is planned but mutation/realtime authority remains disabled.
 - `OPERATIONAL_EVIDENCE_PENDING`: implementation exists but load/security/soak/DR evidence is incomplete.
@@ -864,7 +879,7 @@ Statuses use the architecture vocabulary, never bare `COMPLETE`:
 | 0 Shell/shared | Registry renders all 17 canonical routes and explicit delivery profiles without data coupling | `/api/v1/portal/registry` rev 4 | Portal registry; no execution freshness | `CONTRACT_COMPLETE` | none | 17 unique `EXECUTION_*` screens; fixture policy fail-closed; schema/API/OpenAPI/generated-type sync and root verify |
 | 1 Approval Inbox | scalable approval queue | `GET /governance/approvals` | Portal record; linked source facts keep their own envelopes | `OPERATIONAL_EVIDENCE_PENDING` | EX-BE-04a/05a; EX-BE-08 qualification | fresh-PG bidirectional keyset/filter/sort/exact-count tests at 182k rows; RBAC tests |
 | 2 Gate R1 | immutable evidence and valid SoD approval | `GET /governance/approvals/{id}/r1`; plan/apply/poll decision | Portal decision; evidence source-attributed | `OPERATIONAL_EVIDENCE_PENDING` | EX-BE-05a; EX-BE-08 qualification | fresh-PG concurrent-version, SoD, evidence-hash, expiry, quorum, deny/approve/condition audit tests; no AWS dependency |
-| 3 Gate R2 | safe capital preview and R2 decision | R2 detail, `/capital-preview`, command plan | Portal decision; EXECUTION/BROKER inputs; DERIVED preview | `FOUNDATION_COMPLETE` | EX-BE-03/05a/07 | multi-currency buckets, stale blocker and dual-approval tests |
+| 3 Gate R2 | safe capital preview and R2 decision | R2 detail, `/capital-preview`, command plan | Portal decision; EXECUTION/BROKER inputs; DERIVED preview | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-03/05a/07b; EX-BE-08 activation evidence | source-backed exact-decimal preview, profile/capability/count mismatch refusal; dual-approval and activation tests remain |
 | 4 Paper Workbench | real Paper observation without client aggregation | deployment summary/series; operation status | EXECUTION/BROKER/DERIVED; per-panel policy | `FOUNDATION_COMPLETE` | EX-BE-03/04b; M7 gate evidence | 500-deployment corpus, adaptive ≤5k chart points, Paper action disabled unless verified |
 | 5 Paper Exit Review | server evaluates observation exit evidence | exit-review read/decision | Portal record; DERIVED with source-attributed inputs | `FOUNDATION_COMPLETE` | EX-BE-03/05a | deterministic policy replay, missing/stale evidence states, audit proof |
 | 6 Admin Action Drawer | generic safe plan→apply→verify | command catalog, plan, apply, operation poll | Portal policy record; EXECUTION terminal outcome | `FOUNDATION_COMPLETE` | EX-BE-02/05b; TS command capability | plan `request_key`, blocker completeness, duplicate/uncertain reconciliation tests; production flag remains off |
@@ -875,10 +890,10 @@ Statuses use the architecture vocabulary, never bare `COMPLETE`:
 | 11 Canary Control Room | observe versioned envelope and guarded live canary | canary query/series; later protective operations | EXECUTION/BROKER/DERIVED panels; Portal envelope record | `PRODUCTION_INACTIVE` | EX-BE-00R4/03/04b/05b/06; owner live-canary gate | profile-labelled read shadow parity, envelope/rollback tests, dual approval, explicit activation decision |
 | 12 Live Full Operations | continuous live truth with gap visibility | live query/series/SSE; later R3/R4 operations | EXECUTION/BROKER/DERIVED; gaps become stale | `PRODUCTION_INACTIVE` | phase 11 evidence + EX-BE-00R4/08 | no-gap soak, ambiguous-result drills, capital envelope and rollback rehearsal |
 | 13 Paper Workbench VNM | venue-aware Paper behavior | deployment query + venue session | EXECUTION plus authoritative venue calendar | `INTEGRATION_PENDING` | EX-BE-03/04b; venue contract; ATO/ATC decision | open/lunch/closed/holiday/timezone fixtures; server age/precision contract; no browser clock inference |
-| 14 Full Blotter | 182k-row scalable blotter and lifecycle | blotter page/aggregate/funnel | EXECUTION/BROKER/DERIVED | `INTEGRATION_PENDING` | EX-BE-03/04b/07 | bidirectional keyset, exact count, full-filter aggregate, missing-stage funnel and decimal tests |
-| 15 Alpha 360 | portfolio-specific alpha execution view | alpha detail/series/batched previews | RESEARCH/EXECUTION/DERIVED | `INTEGRATION_PENDING` | EX-BE-03/04b/07 | required echoed `portfolio_id`, capped batch, no N+1, lineage/evidence links |
-| 16 Portfolio 360 | scalable portfolio analytics without false totals | portfolio detail/correlation/capital ledger | EXECUTION/BROKER/DERIVED | `INTEGRATION_PENDING` | EX-BE-03/04b/07 | 150×150 load, packed symmetry, ranked-pair fallback, currency isolation |
-| 17 Account/Broker 360 | binding-wide exposure over full population | account detail + binding exposure | EXECUTION/BROKER/DERIVED | `INTEGRATION_PENDING` | EX-BE-03/04b/07 | 500 accounts/~5 bindings fixture; page-independent totals; partial source handling |
+| 14 Full Blotter | 182k-row scalable blotter and lifecycle | blotter page/aggregate/funnel | EXECUTION/BROKER/DERIVED | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-03/04b/07b; EX-BE-08 activation evidence | source-backed typed funnel delivered; full-filter load/source parity remains |
+| 15 Alpha 360 | portfolio-specific alpha execution view | alpha detail/series/batched previews | RESEARCH/EXECUTION/DERIVED | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-03/04b/07b; EX-BE-08 activation evidence | source-backed capped portfolio-bound batch delivered; source parity/no-N+1 load remains |
+| 16 Portfolio 360 | scalable portfolio analytics without false totals | portfolio detail/correlation/capital ledger | EXECUTION/BROKER/DERIVED | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-03/04b/07b; EX-BE-08 activation evidence | source-backed correlation/ledger delivered; 150×150 cross-cell load remains |
+| 17 Account/Broker 360 | binding-wide exposure over full population | account detail + binding exposure | EXECUTION/BROKER/DERIVED | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-03/04b/07b; EX-BE-08 activation evidence | source-backed population-count exposure delivered; 500-account source parity/load remains |
 | 18 Hardening | release evidence, observability, rollback and DR | health/capabilities/metrics/admin diagnostics | all authority preserved | `OPERATIONAL_EVIDENCE_PENDING` | phases 1–17 target subset + EX-BE-08 | contract/integration/replay/load/security gates, SLO burn test, restore and rollback rehearsal |
 
 ### 12.3 Delivery profiles and stop gates

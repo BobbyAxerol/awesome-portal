@@ -6,6 +6,13 @@ IDs, timestamps, decimals, RFC 7807 problem documents, command envelopes
 guide). Schemas live in `schemas/`, canonical fixtures in `fixtures/`, and the
 committed TypeScript types generated from the Portal OpenAPI in `generated/`.
 
+Execution analytics has its own narrow, source-backed screen contract at
+`openapi/execution-analytics.openapi.json`, generated as
+`generated/execution-analytics.d.ts`. It covers exactly the six EX-BE-07b
+same-origin routes; it is not a generic analytics/query API. Its envelopes keep
+epoch, source snapshot, capability identity, delivery profile, projection
+sequence, freshness policy and string decimals explicit.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields
@@ -47,8 +54,12 @@ packages/contracts/
     command.valid.json
     event.valid.json
     keyset-page.valid.json
+    execution-analytics.capital-preview.valid.json
+  openapi/
+    execution-analytics.openapi.json
   generated/
     portal-api.d.ts
+    execution-analytics.d.ts
   contracts-snapshot.json
   package.json
   tsconfig.json

@@ -7,11 +7,13 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+analytics = { path = "../analytics" }
 chrono.workspace = true
 execution-contracts = { path = "../execution-contracts" }
 home.workspace = true
 projection-core = { path = "../projection-core" }
 query-api = { path = "../query-api" }
+serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
 sqlx.workspace = true

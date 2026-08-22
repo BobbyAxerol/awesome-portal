@@ -871,6 +871,19 @@ deep-dive → ADR → slice → evidence discipline documented above.
   runtime flag, direct Trading System store access or execution authority was
   added. Deep dive and Claude field map:
   [`EX_BE_07A_ANALYTICS_CONTRACTS_AND_PURE_ENGINE.md`](./backend/EX_BE_07A_ANALYTICS_CONTRACTS_AND_PURE_ENGINE.md).
+- **EX-BE-07b source-backed screen integration (2026-08-22):** six typed
+  PostgreSQL repositories now bind the EX-BE-07a engines to active-epoch,
+  profile/capability/adapter-pinned source snapshots in one read-only
+  repeatable-read transaction. Six narrow private Rust routes are exposed only
+  through a session-guarded TypeScript same-origin BFF over reusable mTLS
+  HTTP/2 and exact-resource delegated JWTs. Counts, fact kinds, source
+  authority, freshness and decimal precision fail closed; there is no generic
+  evaluator or Trading System DB/Redis/CLI access. OpenAPI, generated types and
+  a canonical fixture are committed. Status is `INTEGRATION_COMPLETE /
+  SOURCE_ACTIVATION_AND_OPERATIONAL_EVIDENCE_PENDING`: all registry profiles
+  stay `fixture` and both runtime flags stay false. Deep dive and Claude
+  handoff:
+  [`EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md`](./backend/EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md).
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**

@@ -113,7 +113,10 @@ for required in \
   "${ROOT_DIR}/packages/contracts/fixtures/command.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/event.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/keyset-page.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.capital-preview.valid.json" \
   "${ROOT_DIR}/packages/contracts/generated/portal-api.d.ts" \
+  "${ROOT_DIR}/packages/contracts/generated/execution-analytics.d.ts" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-analytics.openapi.json" \
   "${ROOT_DIR}/packages/contracts/vitest.config.ts" \
   "${ROOT_DIR}/packages/contracts/test/fixtures.spec.ts" \
   "${ROOT_DIR}/scripts/contracts-test.sh" \
@@ -207,8 +210,10 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/Cargo.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/query.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/analytics_repository.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0001_projection_foundation.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0002_projection_query_foundation.sql" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0003_analytics_source_projection.sql" \
   "${ROOT_DIR}/deploy/images/execution-edge-ci.Dockerfile" \
   "${ROOT_DIR}/deploy/images/execution-edge.Dockerfile" \
   "${ROOT_DIR}/deploy/compose.execution-edge.yaml" \
@@ -218,6 +223,7 @@ for required in \
   "${ROOT_DIR}/upgrade/backend/EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md" \
   "${ROOT_DIR}/upgrade/backend/adr/ADR-007-PORTAL-PROJECTION-EPOCH-CURSOR-AND-FRESHNESS.md" \
   "${ROOT_DIR}/apps/control-api/src/execution/delegation.ts" \
   "${ROOT_DIR}/apps/control-api/test/execution-delegation.spec.ts" \
@@ -230,6 +236,9 @@ for required in \
   "${ROOT_DIR}/apps/control-api/src/domain.ts" \
   "${ROOT_DIR}/apps/control-api/src/tokens.ts" \
   "${ROOT_DIR}/apps/control-api/src/http-error.filter.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution/analytics.controller.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution/analytics.proxy.ts" \
+  "${ROOT_DIR}/apps/control-api/test/execution-analytics.spec.ts" \
   "${ROOT_DIR}/apps/control-api/src/auth/auth.service.ts" \
   "${ROOT_DIR}/apps/control-api/src/auth/auth.controller.ts" \
   "${ROOT_DIR}/apps/control-api/src/auth/argon.ts" \
@@ -365,7 +374,10 @@ for tracked_source in \
   packages/contracts/fixtures/command.valid.json \
   packages/contracts/fixtures/event.valid.json \
   packages/contracts/fixtures/keyset-page.valid.json \
+  packages/contracts/fixtures/execution-analytics.capital-preview.valid.json \
   packages/contracts/generated/portal-api.d.ts \
+  packages/contracts/generated/execution-analytics.d.ts \
+  packages/contracts/openapi/execution-analytics.openapi.json \
   packages/contracts/vitest.config.ts \
   packages/contracts/test/fixtures.spec.ts \
   scripts/contracts-test.sh \
@@ -454,13 +466,16 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/projection-store-pg/Cargo.toml \
   services/portal-execution-edge-rs/crates/projection-store-pg/src/lib.rs \
   services/portal-execution-edge-rs/crates/projection-store-pg/src/query.rs \
+  services/portal-execution-edge-rs/crates/projection-store-pg/src/analytics_repository.rs \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0001_projection_foundation.sql \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0002_projection_query_foundation.sql \
+  services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0003_analytics_source_projection.sql \
   deploy/images/execution-edge-ci.Dockerfile \
   scripts/execution-edge-test.sh \
   upgrade/backend/EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md \
   upgrade/backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md \
   upgrade/backend/EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md \
+  upgrade/backend/EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md \
   upgrade/backend/adr/ADR-007-PORTAL-PROJECTION-EPOCH-CURSOR-AND-FRESHNESS.md \
   apps/control-api/test/facade.spec.ts \
   upgrade/backend/BAR_07_CONTROL_API_FACADE.md \
@@ -471,6 +486,9 @@ for tracked_source in \
   apps/control-api/src/domain.ts \
   apps/control-api/src/tokens.ts \
   apps/control-api/src/http-error.filter.ts \
+  apps/control-api/src/execution/analytics.controller.ts \
+  apps/control-api/src/execution/analytics.proxy.ts \
+  apps/control-api/test/execution-analytics.spec.ts \
   apps/control-api/src/auth/auth.service.ts \
   apps/control-api/src/auth/auth.controller.ts \
   apps/control-api/src/auth/argon.ts \
@@ -525,6 +543,8 @@ for json_contract in \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-links.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/keyset-page.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/keyset-page.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.capital-preview.valid.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-analytics.openapi.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contract-pack.lock.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/planning-api.openapi.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/run-request.schema.json" \

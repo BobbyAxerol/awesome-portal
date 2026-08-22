@@ -11,22 +11,30 @@ use std::{
     time::Duration,
 };
 
+use analytics::{
+    aggregate_binding_exposure, build_capital_ledger, build_capital_preview, build_correlation,
+    build_insight_batch, build_order_funnel, AnalyticsError, CapitalPreviewRequest,
+    DerivedAnalytics, InsightBatchRequest,
+};
 use axum::{
-    extract::State,
+    extract::{Path as AxumPath, State},
     http::{header::AUTHORIZATION, HeaderMap, HeaderValue, StatusCode},
     response::{sse::Event, IntoResponse, Response, Sse},
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
 use axum_server::tls_rustls::RustlsConfig;
 use chrono::Utc;
 use edge_auth::{DelegatedClaims, DelegationVerifier, RequiredRead};
 use execution_contracts::{
-    CanonicalId, CapabilitySnapshot, CapabilityState, ExecutionReadCapability,
+    CanonicalId, CapabilitySnapshot, CapabilityState, DeliveryProfile, ExecutionReadCapability,
 };
 use futures_util::stream;
 use projection_core::{resume_decision, ProjectionCursor, ProjectionScope, ResumeDecision};
-use projection_store_pg::{PgProjectionStore, RealtimeJournalRecord, RealtimeScopeAvailability};
+use projection_store_pg::{
+    AnalyticsReadRequirement, AnalyticsSourceRead, PgProjectionStore, RealtimeJournalRecord,
+    RealtimeScopeAvailability, StoreError,
+};
 use realtime_sse::{
     GapEnvelope, GapReason, RealtimeEnvelope, RealtimeHub, RealtimeSubscription,
     SubscriptionDelivery, COMMAND_CENTER_RESOURCE, REALTIME_SCHEMA_VERSION,
@@ -50,6 +58,7 @@ use ts_transport::{
 };
 
 const MAX_SECRET_FILE_BYTES: u64 = 1024 * 1024;
+const ANALYTICS_SCREEN_SCHEMA_VERSION: &str = "execution.analytics.screen.v1";
 
 #[derive(Clone)]
 struct AppState {
@@ -63,6 +72,8 @@ struct AppState {
     realtime_replay_limit: usize,
     realtime_heartbeat: Duration,
     realtime_epoch_jitter: Duration,
+    analytics_query_enabled: bool,
+    analytics_source_profile: DeliveryProfile,
 }
 
 #[derive(Debug)]
@@ -94,6 +105,8 @@ struct EdgeConfig {
     realtime_poll_batch: usize,
     realtime_heartbeat: Duration,
     realtime_epoch_jitter: Duration,
+    analytics_query_enabled: bool,
+    analytics_source_profile: DeliveryProfile,
 }
 
 impl EdgeConfig {
@@ -116,8 +129,11 @@ impl EdgeConfig {
         let projection_ingestion_enabled =
             strict_boolean("EDGE_PROJECTION_INGESTION_ENABLED", false)?;
         let realtime_sse_enabled = strict_boolean("EDGE_REALTIME_SSE_ENABLED", false)?;
+        let analytics_query_enabled = strict_boolean("EDGE_ANALYTICS_QUERY_ENABLED", false)?;
+        let analytics_source_profile =
+            delivery_profile(&value_or("EDGE_ANALYTICS_SOURCE_PROFILE", "fixture"))?;
         let projection_database_url_file = optional_path("EDGE_PROJECTION_DATABASE_URL_FILE");
-        if (projection_ingestion_enabled || realtime_sse_enabled)
+        if (projection_ingestion_enabled || realtime_sse_enabled || analytics_query_enabled)
             && projection_database_url_file.is_none()
         {
             return Err(ConfigError::Missing("EDGE_PROJECTION_DATABASE_URL_FILE"));
@@ -170,6 +186,8 @@ impl EdgeConfig {
                 0,
                 30_000,
             )? as u64),
+            analytics_query_enabled,
+            analytics_source_profile,
         })
     }
 }
@@ -271,13 +289,17 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         environment: config.environment.clone(),
         verifier,
         snapshot: Arc::clone(&snapshot),
-        projection_required: config.projection_ingestion_enabled || config.realtime_sse_enabled,
+        projection_required: config.projection_ingestion_enabled
+            || config.realtime_sse_enabled
+            || config.analytics_query_enabled,
         projection_ready: Arc::clone(&projection_ready),
         projection_store: projection_store.clone(),
         realtime_hub: realtime_hub.clone(),
         realtime_replay_limit: config.realtime_replay_limit,
         realtime_heartbeat: config.realtime_heartbeat,
         realtime_epoch_jitter: config.realtime_epoch_jitter,
+        analytics_query_enabled: config.analytics_query_enabled,
+        analytics_source_profile: config.analytics_source_profile,
     };
 
     spawn_background_tasks(
@@ -315,7 +337,10 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
 async fn connect_projection_store(
     config: &EdgeConfig,
 ) -> Result<Option<PgProjectionStore>, ServiceError> {
-    if !config.projection_ingestion_enabled && !config.realtime_sse_enabled {
+    if !config.projection_ingestion_enabled
+        && !config.realtime_sse_enabled
+        && !config.analytics_query_enabled
+    {
         return Ok(None);
     }
     let database_url_file = config
@@ -371,6 +396,30 @@ fn private_router(state: AppState) -> Router {
     Router::new()
         .route("/internal/v1/compatibility", get(compatibility))
         .route("/internal/v1/realtime/stream", get(realtime_stream))
+        .route(
+            "/internal/v1/screens/gate-r2/:approval_id/capital-preview",
+            post(capital_preview),
+        )
+        .route(
+            "/internal/v1/screens/blotter/orders/:order_id/funnel",
+            get(order_funnel),
+        )
+        .route(
+            "/internal/v1/screens/alpha-360/:alpha_id/insight-previews",
+            post(insight_previews),
+        )
+        .route(
+            "/internal/v1/screens/portfolio-360/:portfolio_id/correlation",
+            get(portfolio_correlation),
+        )
+        .route(
+            "/internal/v1/screens/portfolio-360/:portfolio_id/capital-ledger",
+            get(capital_ledger),
+        )
+        .route(
+            "/internal/v1/screens/account-broker-360/:binding_id/exposure",
+            get(binding_exposure),
+        )
         .with_state(state)
 }
 
@@ -402,6 +451,300 @@ async fn compatibility(State(state): State<AppState>, headers: HeaderMap) -> Res
         Some(snapshot) => Json(snapshot).into_response(),
         None => StatusCode::SERVICE_UNAVAILABLE.into_response(),
     }
+}
+
+async fn capital_preview(
+    State(state): State<AppState>,
+    AxumPath(approval_id): AxumPath<String>,
+    headers: HeaderMap,
+    Json(request): Json<CapitalPreviewRequest>,
+) -> Response {
+    let Ok(approval_id) = screen_identifier(approval_id) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    let resource = format!("execution:screen:gate-r2:{}", approval_id.as_str());
+    let context = match analytics_context(&state, &headers, &resource).await {
+        Ok(context) => context,
+        Err(status) => return status.into_response(),
+    };
+    let requirement = context.requirement(&state);
+    let read = context
+        .store
+        .load_capital_preview_source(
+            &context.scope,
+            &request.portfolio_id,
+            &request.currency,
+            &requirement,
+        )
+        .await;
+    match read {
+        Ok(read) => {
+            let analytics = build_capital_preview(&request, &read.input);
+            analytics_response(read, analytics)
+        }
+        Err(error) => analytics_store_error(&error),
+    }
+}
+
+async fn order_funnel(
+    State(state): State<AppState>,
+    AxumPath(order_id): AxumPath<String>,
+    headers: HeaderMap,
+) -> Response {
+    let Ok(order_id) = screen_identifier(order_id) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    let resource = format!("execution:screen:blotter:{}", order_id.as_str());
+    let context = match analytics_context(&state, &headers, &resource).await {
+        Ok(context) => context,
+        Err(status) => return status.into_response(),
+    };
+    let requirement = context.requirement(&state);
+    match context
+        .store
+        .load_order_funnel_source(&context.scope, &order_id, &requirement)
+        .await
+    {
+        Ok(read) => {
+            let analytics = build_order_funnel(&read.input);
+            analytics_response(read, analytics)
+        }
+        Err(error) => analytics_store_error(&error),
+    }
+}
+
+async fn insight_previews(
+    State(state): State<AppState>,
+    AxumPath(alpha_id): AxumPath<String>,
+    headers: HeaderMap,
+    Json(request): Json<InsightBatchRequest>,
+) -> Response {
+    let Ok(alpha_id) = screen_identifier(alpha_id) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    if request.items.iter().any(|item| item.alpha_id != alpha_id) {
+        return StatusCode::BAD_REQUEST.into_response();
+    }
+    let resource = format!("execution:screen:alpha-360:{}", alpha_id.as_str());
+    let context = match analytics_context(&state, &headers, &resource).await {
+        Ok(context) => context,
+        Err(status) => return status.into_response(),
+    };
+    let requirement = context.requirement(&state);
+    match context
+        .store
+        .load_insight_preview_source(&context.scope, &request.portfolio_id, &requirement)
+        .await
+    {
+        Ok(read) => {
+            let analytics = build_insight_batch(&request, &read.input);
+            analytics_response(read, analytics)
+        }
+        Err(error) => analytics_store_error(&error),
+    }
+}
+
+async fn portfolio_correlation(
+    State(state): State<AppState>,
+    AxumPath(portfolio_id): AxumPath<String>,
+    headers: HeaderMap,
+) -> Response {
+    let Ok(portfolio_id) = screen_identifier(portfolio_id) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    let resource = format!("execution:screen:portfolio-360:{}", portfolio_id.as_str());
+    let context = match analytics_context(&state, &headers, &resource).await {
+        Ok(context) => context,
+        Err(status) => return status.into_response(),
+    };
+    let requirement = context.requirement(&state);
+    match context
+        .store
+        .load_correlation_source(&context.scope, &portfolio_id, &requirement)
+        .await
+    {
+        Ok(read) => {
+            let analytics = build_correlation(&read.input);
+            analytics_response(read, analytics)
+        }
+        Err(error) => analytics_store_error(&error),
+    }
+}
+
+async fn capital_ledger(
+    State(state): State<AppState>,
+    AxumPath(portfolio_id): AxumPath<String>,
+    headers: HeaderMap,
+) -> Response {
+    let Ok(portfolio_id) = screen_identifier(portfolio_id) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    let resource = format!("execution:screen:portfolio-360:{}", portfolio_id.as_str());
+    let context = match analytics_context(&state, &headers, &resource).await {
+        Ok(context) => context,
+        Err(status) => return status.into_response(),
+    };
+    let requirement = context.requirement(&state);
+    match context
+        .store
+        .load_capital_ledger_source(&context.scope, &portfolio_id, &requirement)
+        .await
+    {
+        Ok(read) => {
+            let analytics = build_capital_ledger(&read.input);
+            analytics_response(read, analytics)
+        }
+        Err(error) => analytics_store_error(&error),
+    }
+}
+
+async fn binding_exposure(
+    State(state): State<AppState>,
+    AxumPath(binding_id): AxumPath<String>,
+    headers: HeaderMap,
+) -> Response {
+    let Ok(binding_id) = screen_identifier(binding_id) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    let resource = format!(
+        "execution:screen:account-broker-360:{}",
+        binding_id.as_str()
+    );
+    let context = match analytics_context(&state, &headers, &resource).await {
+        Ok(context) => context,
+        Err(status) => return status.into_response(),
+    };
+    let requirement = context.requirement(&state);
+    match context
+        .store
+        .load_binding_exposure_source(&context.scope, &binding_id, &requirement)
+        .await
+    {
+        Ok(read) => {
+            let analytics = aggregate_binding_exposure(&read.input);
+            analytics_response(read, analytics)
+        }
+        Err(error) => analytics_store_error(&error),
+    }
+}
+
+struct AnalyticsRequestContext {
+    store: PgProjectionStore,
+    scope: ProjectionScope,
+    capability_snapshot_id: String,
+    read_at: chrono::DateTime<Utc>,
+}
+
+impl AnalyticsRequestContext {
+    fn requirement<'a>(&'a self, state: &AppState) -> AnalyticsReadRequirement<'a> {
+        AnalyticsReadRequirement {
+            expected_profile: state.analytics_source_profile,
+            capability_snapshot_id: &self.capability_snapshot_id,
+            read_at: self.read_at,
+        }
+    }
+}
+
+async fn analytics_context(
+    state: &AppState,
+    headers: &HeaderMap,
+    resource: &str,
+) -> Result<AnalyticsRequestContext, StatusCode> {
+    if !state.analytics_query_enabled {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    let store = state
+        .projection_store
+        .clone()
+        .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let token = bearer(headers).ok_or(StatusCode::UNAUTHORIZED)?;
+    let claims = state
+        .verifier
+        .verify_read(
+            token,
+            &RequiredRead {
+                environment: &state.environment,
+                resource: Some(resource),
+            },
+        )
+        .map_err(|_| StatusCode::FORBIDDEN)?;
+    let workspace_id =
+        CanonicalId::parse(claims.workspace_id).map_err(|_| StatusCode::FORBIDDEN)?;
+    let scope = ProjectionScope::new(workspace_id, state.environment.clone())
+        .map_err(|_| StatusCode::FORBIDDEN)?;
+    let snapshot = state.snapshot.read().await;
+    let snapshot = snapshot
+        .as_ref()
+        .filter(|snapshot| snapshot_ready(snapshot))
+        .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    Ok(AnalyticsRequestContext {
+        store,
+        scope,
+        capability_snapshot_id: snapshot.identity.capability_snapshot_id.clone(),
+        read_at: Utc::now(),
+    })
+}
+
+#[derive(Serialize)]
+struct AnalyticsScreenEnvelope<T> {
+    schema_version: &'static str,
+    epoch_id: uuid::Uuid,
+    source_snapshot_id: uuid::Uuid,
+    capability_snapshot_id: String,
+    source_profile: DeliveryProfile,
+    projection_sequence: u64,
+    freshness_policy_version: String,
+    read_at: chrono::DateTime<Utc>,
+    analytics: DerivedAnalytics<T>,
+}
+
+fn analytics_response<I, O>(
+    read: AnalyticsSourceRead<I>,
+    analytics: Result<DerivedAnalytics<O>, AnalyticsError>,
+) -> Response
+where
+    O: Serialize,
+{
+    match analytics {
+        Ok(analytics) => Json(AnalyticsScreenEnvelope {
+            schema_version: ANALYTICS_SCREEN_SCHEMA_VERSION,
+            epoch_id: read.epoch_id,
+            source_snapshot_id: read.source_snapshot_id,
+            capability_snapshot_id: read.capability_snapshot_id,
+            source_profile: read.source_profile,
+            projection_sequence: read.projection_sequence,
+            freshness_policy_version: read.freshness_policy_version,
+            read_at: read.read_at,
+            analytics,
+        })
+        .into_response(),
+        Err(_) => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+    }
+}
+
+fn analytics_store_error(error: &StoreError) -> Response {
+    match error {
+        StoreError::AnalyticsSourceNotFound => StatusCode::NOT_FOUND.into_response(),
+        StoreError::AnalyticsSourceProfileMismatch
+        | StoreError::AnalyticsCapabilityMismatch
+        | StoreError::AnalyticsPopulationMismatch
+        | StoreError::InvalidAnalyticsSourcePayload
+        | StoreError::AnalyticsSourceLimitExceeded
+        | StoreError::ActiveEpochNotFound
+        | StoreError::EpochNotFound => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+        _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+fn screen_identifier(raw: String) -> Result<CanonicalId, StatusCode> {
+    if raw.len() > 128
+        || !raw
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-'))
+    {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    CanonicalId::parse(raw).map_err(|_| StatusCode::BAD_REQUEST)
 }
 
 async fn realtime_stream(State(state): State<AppState>, headers: HeaderMap) -> Response {
@@ -954,6 +1297,18 @@ fn strict_boolean(name: &'static str, default: bool) -> Result<bool, ConfigError
     }
 }
 
+fn delivery_profile(value: &str) -> Result<DeliveryProfile, ConfigError> {
+    match value {
+        "fixture" => Ok(DeliveryProfile::Fixture),
+        "shadow" => Ok(DeliveryProfile::Shadow),
+        "paper" => Ok(DeliveryProfile::Paper),
+        "sandbox" => Ok(DeliveryProfile::Sandbox),
+        "live_canary" => Ok(DeliveryProfile::LiveCanary),
+        "live_full" => Ok(DeliveryProfile::LiveFull),
+        _ => Err(ConfigError::Invalid("EDGE_ANALYTICS_SOURCE_PROFILE")),
+    }
+}
+
 fn read_file(path: &Path) -> Result<Vec<u8>, ServiceError> {
     let metadata = fs::metadata(path)?;
     if !metadata.is_file() || metadata.len() == 0 || metadata.len() > MAX_SECRET_FILE_BYTES {
@@ -1057,6 +1412,15 @@ mod tests {
         assert_eq!(bearer(&headers), None);
         headers.insert(AUTHORIZATION, "Bearer assertion".parse().unwrap());
         assert_eq!(bearer(&headers), Some("assertion"));
+    }
+
+    #[test]
+    fn screen_identifiers_are_ascii_bounded_and_resource_safe() {
+        assert!(screen_identifier("PF_1.alpha-2".to_owned()).is_ok());
+        assert!(screen_identifier(String::new()).is_err());
+        assert!(screen_identifier("../other".to_owned()).is_err());
+        assert!(screen_identifier("id:other".to_owned()).is_err());
+        assert!(screen_identifier("x".repeat(129)).is_err());
     }
 
     #[test]

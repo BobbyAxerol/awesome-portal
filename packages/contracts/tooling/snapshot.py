@@ -31,6 +31,9 @@ TRACKED = (
     "fixtures/event.valid.json",
     "fixtures/keyset-page.valid.json",
     "generated/portal-api.d.ts",
+    "generated/execution-analytics.d.ts",
+    "openapi/execution-analytics.openapi.json",
+    "fixtures/execution-analytics.capital-preview.valid.json",
     "package.json",
 )
 

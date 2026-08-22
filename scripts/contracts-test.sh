@@ -29,5 +29,7 @@ docker run --rm --name "${NODE_CONTAINER}" \
     npx vitest run
     npx openapi-typescript /repo/apps/portal/registry/openapi/portal-api.openapi.json -o /tmp/portal-api.d.ts
     diff -q /tmp/portal-api.d.ts generated/portal-api.d.ts
+    npx openapi-typescript openapi/execution-analytics.openapi.json -o /tmp/execution-analytics.d.ts
+    diff -q /tmp/execution-analytics.d.ts generated/execution-analytics.d.ts
   '
 printf 'Contracts workspace tests passed.\n'

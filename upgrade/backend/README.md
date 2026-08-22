@@ -229,9 +229,18 @@ authority.
   analytics, tổng gate Rust/PostgreSQL 72 tests + 182.000 rows, strict Clippy/
   rustfmt. Không endpoint/flag/source write nào được thêm. Chi tiết:
   [`EX_BE_07A_ANALYTICS_CONTRACTS_AND_PURE_ENGINE.md`](./EX_BE_07A_ANALYTICS_CONTRACTS_AND_PURE_ENGINE.md).
-- Backend tiếp theo là `EX-BE-07b`: repository + narrow screen APIs dùng các
-  contract trên khi source projection/capability sẵn sàng. `EX-BE-05b` vẫn chờ
-  source command capability và không bị 07a ngầm mở khóa.
+- `EX-BE-07b` **integration complete / source activation and operational
+  evidence pending:** PostgreSQL source snapshots/facts và sáu repository đọc
+  active epoch trong `REPEATABLE READ READ ONLY`; profile, capability, adapter,
+  declared fact count và typed payload đều fail-closed. Sáu screen API Rust chỉ
+  đi qua TypeScript same-origin BFF có session, reusable mTLS HTTP/2 và delegated
+  JWT đúng resource. OpenAPI/generated types/fixture đã khóa contract. Hai
+  runtime flag vẫn false, registry vẫn `fixture`, không đọc storage riêng hay
+  tạo side effect bên Trading System. Chi tiết:
+  [`EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md`](./EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md).
+- Backend tiếp theo là `EX-BE-08a`: source-ingestion parity, qualification và
+  observability trước khi xét `fixture -> shadow`. `EX-BE-05b` vẫn chờ source
+  command capability và không bị EX-BE-07b ngầm mở khóa.
 
 ## BAR-21 — Strategy Import & Quarantine Ingest foundation
 

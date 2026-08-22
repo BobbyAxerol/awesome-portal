@@ -21,6 +21,8 @@ import { GovernanceRepository } from "./governance/governance.repository";
 import { GovernanceService } from "./governance/governance.service";
 import { ExecutionRealtimeController } from "./execution/realtime.controller";
 import { ExecutionRealtimeProxy } from "./execution/realtime.proxy";
+import { ExecutionAnalyticsController } from "./execution/analytics.controller";
+import { ExecutionAnalyticsProxy } from "./execution/analytics.proxy";
 
 @Module({})
 export class AppModule {
@@ -35,6 +37,7 @@ export class AppModule {
         PlanningFacadeController,
         GovernanceController,
         ExecutionRealtimeController,
+        ExecutionAnalyticsController,
       ],
       providers: [
         { provide: CONTROL_API_CONFIG, useValue: config },
@@ -68,6 +71,11 @@ export class AppModule {
         {
           provide: ExecutionRealtimeProxy,
           useFactory: (cfg: ControlApiConfig) => ExecutionRealtimeProxy.create(cfg),
+          inject: [CONTROL_API_CONFIG],
+        },
+        {
+          provide: ExecutionAnalyticsProxy,
+          useFactory: (cfg: ControlApiConfig) => ExecutionAnalyticsProxy.create(cfg),
           inject: [CONTROL_API_CONFIG],
         },
         {
