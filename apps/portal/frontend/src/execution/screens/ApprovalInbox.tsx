@@ -63,8 +63,9 @@ export interface ApprovalRow {
 export interface InboxCounts {
   /** Whole queue, from the server. */
   pending: number;
-  overdue: number;
-  dueSoon: number;
+  /** `null` when unpublished. "0 overdue" is a claim the queue is clear. */
+  overdue: number | null;
+  dueSoon: number | null;
 }
 
 /**
@@ -80,8 +81,16 @@ function CountLine({ counts, status }: { counts: InboxCounts | null; status: Pan
     return (
       <div className="exec-inbox-counts">
         <strong>{counts.pending}</strong> PENDING
-        {counts.overdue > 0 ? ` · ${counts.overdue} overdue` : null}
-        {counts.dueSoon > 0 ? ` · ${counts.dueSoon} due < 8h` : null}
+        {counts.overdue === null
+          ? " · overdue not counted"
+          : counts.overdue > 0
+            ? ` · ${counts.overdue} overdue`
+            : null}
+        {counts.dueSoon === null
+          ? " · due-soon not counted"
+          : counts.dueSoon > 0
+            ? ` · ${counts.dueSoon} due < 8h`
+            : null}
       </div>
     );
   }

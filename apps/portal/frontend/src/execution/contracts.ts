@@ -324,8 +324,9 @@ export interface SortSpec {
 /** One allowlisted filter the server applied, echoed back. */
 export interface FilterEcho {
   field: string;
-  op: string;
-  value: string;
+  /** `null` when the server's echo did not say. Never defaulted to `eq`. */
+  op: string | null;
+  value: string | null;
 }
 
 /**

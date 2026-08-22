@@ -38,7 +38,15 @@ export type DecisionPhase =
   /** Verification returned UNCERTAIN. Not settled, and it will not settle itself. */
   | "uncertain"
   /** The request failed before an operation existed. Safe to retry. */
-  | "failed";
+  | "failed"
+  /**
+   * Portal stopped watching. The operation did not stop.
+   *
+   * Not `failed` — nothing went wrong — and not `uncertain`, which is the
+   * server's own verdict. This is the client saying it ran out of budget, and
+   * it must read differently from both.
+   */
+  | "abandoned";
 
 export interface DecisionState {
   phase: DecisionPhase;
@@ -89,6 +97,15 @@ export type DecisionEvent =
       verification: MaybeKnown<VerificationResult> | null;
     }
   | { type: "POLL_FAILED"; error: string }
+  /**
+   * The client stopped watching. The operation did not stop.
+   *
+   * Distinct from a failure: nothing went wrong, we simply ran out of budget.
+   * Without it the panel sat on "Still observing. Nothing has been confirmed."
+   * forever while nothing was in fact still observing — a screen claiming to be
+   * doing something it had given up on.
+   */
+  | { type: "POLL_BUDGET_EXHAUSTED" }
   | { type: "RESET"; requestKey: string };
 
 export function decisionReducer(state: DecisionState, event: DecisionEvent): DecisionState {
@@ -185,6 +202,13 @@ export function decisionReducer(state: DecisionState, event: DecisionEvent): Dec
       };
     }
 
+    case "POLL_BUDGET_EXHAUSTED":
+      return {
+        ...state,
+        phase: "abandoned",
+        note: "Portal stopped polling for this operation. It may still be in flight — check the Operations queue or the command journal before deciding again.",
+      };
+
     case "POLL_FAILED":
       // The operation still exists. Losing sight of it is not the same as it
       // having failed, so the phase does not regress to `failed`.
@@ -221,5 +245,13 @@ export function succeeded(state: DecisionState): boolean {
 
 /** Is the operator still owed an answer? */
 export function outstanding(state: DecisionState): boolean {
-  return state.phase === "accepted" || state.phase === "verifying" || state.phase === "uncertain";
+  return (
+    state.phase === "accepted" ||
+    state.phase === "verifying" ||
+    state.phase === "uncertain" ||
+    // Abandoned is outstanding by definition: Portal stopped watching, the
+    // operation did not stop. Leaving it out would have let a screen treat a
+    // command still in flight as finished business.
+    state.phase === "abandoned"
+  );
 }

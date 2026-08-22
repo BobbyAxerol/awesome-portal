@@ -42,7 +42,7 @@ export interface InboxQuery {
 
 export interface InboxResult {
   page: KeysetPage<ApprovalRow>;
-  counts: { pending: number; overdue: number; dueSoon: number } | null;
+  counts: { pending: number; overdue: number | null; dueSoon: number | null } | null;
   /** Server-counted over the whole filter. See `ApprovalInbox.inertCount`. */
   inertCount?: number | null;
   /**

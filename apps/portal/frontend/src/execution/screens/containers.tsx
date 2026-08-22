@@ -75,6 +75,14 @@ function loading<T>(): LoadState<T> {
  * and `CursorContextMismatch` into one `INVALID_CURSOR` (audit A-8) and the
  * problem body is the only place the distinction survives at all.
  */
+/**
+ * The sort the inbox asks for, and the only one the server will honour.
+ *
+ * Exported so a test can hold it against the server's allowlist rather than
+ * against a copy of itself.
+ */
+export const INBOX_SCOPE_SORT = "sla_due_at:asc,approval_id:asc";
+
 const CURSOR_REJECTED = /INVALID_CURSOR|CURSOR_EXPIRED|CURSOR_CONTEXT|cursor/i;
 
 export function ApprovalInboxContainer({
@@ -112,7 +120,12 @@ export function ApprovalInboxContainer({
   // The query shape this render would issue a cursor against.
   const scope: CursorScope = {
     filter,
-    sort: "sla_state:desc,approval_id:asc",
+    // The server's own default. `sla_state` is not in its sort allowlist
+    // (`governance/contracts.ts` sorts: sla_due_at, created_at, updated_at,
+    // requester, approval_id), so claiming it in the cursor scope described a
+    // query the server would never have run — and the cursor is scoped by the
+    // sort, so the mismatch voids every page reference on the first real call.
+    sort: INBOX_SCOPE_SORT,
     limit: PAGE_SIZE,
     resource: "governance.approvals",
   };
@@ -245,7 +258,14 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
   // answered — and it stops at a bound so a stuck operation cannot poll for
   // ever.
   useEffect(() => {
-    if (!shouldPoll(decision) || !decision.operationId || decision.polls >= MAX_POLLS) return;
+    if (!shouldPoll(decision) || !decision.operationId) return;
+    if (decision.polls >= MAX_POLLS) {
+      // Say so. The panel used to sit on "Still observing" after the loop had
+      // stopped, which is a screen claiming to be doing something it gave up
+      // on — and the operation may well still be in flight.
+      dispatch({ type: "POLL_BUDGET_EXHAUSTED" });
+      return;
+    }
     const id = setTimeout(() => {
       void api.pollOperation(decision.operationId as string).then((result) => {
         if (!result.ok) {
@@ -400,7 +420,14 @@ function useDecision(api: ExecutionApi) {
   const workspaceId = "default";
 
   useEffect(() => {
-    if (!shouldPoll(decision) || !decision.operationId || decision.polls >= MAX_POLLS) return;
+    if (!shouldPoll(decision) || !decision.operationId) return;
+    if (decision.polls >= MAX_POLLS) {
+      // Say so. The panel used to sit on "Still observing" after the loop had
+      // stopped, which is a screen claiming to be doing something it gave up
+      // on — and the operation may well still be in flight.
+      dispatch({ type: "POLL_BUDGET_EXHAUSTED" });
+      return;
+    }
     const id = setTimeout(() => {
       void api.pollOperation(decision.operationId as string).then((result) => {
         if (!result.ok) {

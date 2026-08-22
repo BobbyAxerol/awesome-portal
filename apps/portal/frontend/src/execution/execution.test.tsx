@@ -63,6 +63,7 @@ import {
 } from "./components/conditions";
 import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./api/rows";
 import type { ExecutionApi } from "./api/ports";
+import { INBOX_SCOPE_SORT } from "./screens/containers";
 import { readAnalyticsEnvelope, readOrderFunnel } from "./analytics";
 import { createFixtureApi } from "./api/fixtureApi";
 import {
@@ -3335,7 +3336,14 @@ describe("the fixture API pages, so the container's paging is exercised", () => 
     if (!r.ok) return;
     expect(r.value.page.appliedFilters?.[0]).toEqual({ field: "view", op: "eq", value: "OVERDUE" });
     // Overdue sort order has to survive paging, so it is echoed on every page.
-    expect(r.value.page.appliedSort?.map((s) => s.field)).toEqual(["sla_state", "approval_id"]);
+    // `sla_due_at`, not `sla_state`: the server's sort allowlist is
+    // sla_due_at / created_at / updated_at / requester / approval_id, and a
+    // cursor is scoped by its sort — claiming one the server cannot run voids
+    // every page reference on the first real call.
+    expect(r.value.page.appliedSort?.map((s) => s.field)).toEqual([
+      "sla_due_at",
+      "approval_id",
+    ]);
   });
 
   it("counts inert rows over the whole filter, not the page", async () => {
@@ -4730,5 +4738,66 @@ describe("every control is reachable without a mouse", () => {
       }),
     );
     expect(screen.getByText("BREACH")).toBeTruthy();
+  });
+});
+
+describe("echoes and counts say only what the server said", () => {
+  it("does not invent an operator for a filter it could not read", () => {
+    // `field x eq ""` reads as a real constraint the server applied. It never
+    // did: the echo simply did not say.
+    const p = readKeysetPage(
+      { data: { rows: [], total_count: 0, applied_filters: [{ field: "status" }] } },
+      () => null,
+    );
+    expect(p.appliedFilters?.[0]).toEqual({ field: "status", op: null, value: null });
+  });
+
+  it("says overdue was not counted rather than counting zero", () => {
+    // "0 overdue" is the claim an operator most wants to trust, so it must
+    // never come from an absent field.
+    render(
+      <ApprovalInbox
+        page={{ rows: [], totalCount: 0, filteredCount: 0 } as never}
+        filter="INBOX"
+        counts={{ pending: 4, overdue: null, dueSoon: null }}
+      />,
+    );
+    expect(screen.getByText(/overdue not counted/)).toBeTruthy();
+  });
+
+  it("claims only a sort the server will actually run", () => {
+    // The cursor is scoped by its sort. Claiming `sla_state`, which is not in
+    // the server's allowlist, voids every page reference on the first call.
+    const allowed = ["sla_due_at", "created_at", "updated_at", "requester", "approval_id"];
+    for (const field of INBOX_SCOPE_SORT.split(",").map((s) => s.split(":")[0])) {
+      expect(allowed, field).toContain(field);
+    }
+  });
+});
+
+describe("the poll loop admits when it stops", () => {
+  it("moves to abandoned rather than sitting on 'still observing'", () => {
+    // The panel used to keep saying "Still observing. Nothing has been
+    // confirmed." after the loop had given up — a screen claiming to be doing
+    // something it was not, about an operation that may still be in flight.
+    const after = decisionReducer(
+      { ...initialDecision("rk_1"), phase: "verifying", operationId: "cmd_1", polls: 40 },
+      { type: "POLL_BUDGET_EXHAUSTED" },
+    );
+    expect(after.phase).toBe("abandoned");
+    expect(after.note).toMatch(/stopped polling/);
+    // Not failed — nothing went wrong — and not uncertain, which is the
+    // server's verdict rather than the client's budget.
+    expect(after.phase).not.toBe("failed");
+    expect(after.phase).not.toBe("uncertain");
+  });
+
+  it("still does not count as success", () => {
+    const after = decisionReducer(
+      { ...initialDecision("rk_1"), phase: "verifying", operationId: "cmd_1", polls: 40 },
+      { type: "POLL_BUDGET_EXHAUSTED" },
+    );
+    expect(succeeded(after)).toBe(false);
+    expect(outstanding(after)).toBe(true);
   });
 });

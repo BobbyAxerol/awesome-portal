@@ -454,7 +454,7 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
           has_previous: start > 0,
           applied_filters: [{ field: "view", op: "eq", value: query.filter }],
           applied_sort: [
-            { field: "sla_state", direction: "desc" },
+            { field: "sla_due_at", direction: "asc" },
             { field: "approval_id", direction: "asc" },
           ],
         },

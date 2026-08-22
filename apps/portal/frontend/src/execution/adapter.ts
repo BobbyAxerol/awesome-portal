@@ -307,8 +307,17 @@ function readFilters(raw: unknown): readonly FilterEcho[] {
     return [
       {
         field: o.field,
-        op: typeof o.op === "string" ? o.op : "eq",
-        value: typeof o.value === "string" ? o.value : String(o.value ?? ""),
+        // No defaults. This echo exists so a reader can see what the server
+        // actually filtered by; inventing `eq` and `""` for a filter we could
+        // not read produced a line that says the server filtered on an empty
+        // string — which it never did, and which reads as a real constraint.
+        op: typeof o.op === "string" ? o.op : null,
+        value:
+          typeof o.value === "string"
+            ? o.value
+            : Array.isArray(o.value)
+              ? o.value.filter((v): v is string => typeof v === "string").join(", ")
+              : null,
       } as FilterEcho,
     ];
   });

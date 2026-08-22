@@ -365,7 +365,13 @@ function TableFooter<T>({
       {filters.length > 0 || sort.length > 0 ? (
         <div className="exec-table-applied">
           {filters.length > 0
-            ? `server filter: ${filters.map((f) => `${f.field} ${f.op} ${f.value}`).join(", ")}`
+            ? `server filter: ${filters
+                .map((f) =>
+                  f.op !== null && f.value !== null
+                    ? `${f.field} ${f.op} ${f.value}`
+                    : `${f.field} (constraint not stated)`,
+                )
+                .join(", ")}`
             : null}
           {filters.length > 0 && sort.length > 0 ? " · " : null}
           {sort.length > 0

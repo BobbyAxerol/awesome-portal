@@ -129,8 +129,11 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
             counts && typeof counts.pending === "number"
               ? {
                   pending: counts.pending,
-                  overdue: typeof counts.overdue === "number" ? counts.overdue : 0,
-                  dueSoon: typeof counts.due_soon === "number" ? counts.due_soon : 0,
+                  // Not zero. "0 overdue" is a claim that the queue is clear,
+                  // and it is the one an operator most wants to be able to
+                  // trust — so it must never be produced by an absent field.
+                  overdue: typeof counts.overdue === "number" ? counts.overdue : null,
+                  dueSoon: typeof counts.due_soon === "number" ? counts.due_soon : null,
                 }
               : null,
           // Its own query when the endpoint offers one; absent is not empty.
@@ -250,17 +253,33 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
         signal,
       );
       if (response.status === 409) {
-        // Distinguished from every other 409 by the published problem type,
-        // not by assuming what a 409 on this route must mean.
+        // Two different 409s reach this route and they need different words. A
+        // request-key conflict means this key was used with another payload —
+        // the operator's own retry, changed. A version conflict means somebody
+        // else decided first. Telling a reviewer to "reload and decide again"
+        // for the first is wrong, and telling them their key clashed for the
+        // second sends them looking at the wrong thing.
         const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-        const code = typeof body.type === "string" ? body.type : "";
-        return {
-          ok: false,
-          status: "unavailable",
-          reason: code.includes("request-key")
-            ? "REQUEST_KEY_CONFLICT: this key was used with a different payload."
-            : `The approval moved while this plan was being made. ${code || "Reload and decide again."}`,
-        };
+        const code = [body.type, body.code, body.title]
+          .filter((v): v is string => typeof v === "string")
+          .join(" ")
+          .toLowerCase();
+        if (code.includes("request_key") || code.includes("request-key")) {
+          return {
+            ok: false,
+            status: "unavailable",
+            reason: "REQUEST_KEY_CONFLICT: this key was used with a different payload.",
+          };
+        }
+        if (code.includes("version")) {
+          return {
+            ok: false,
+            status: "stale",
+            reason:
+              "This request was decided or changed while the plan was being made. Reload to see the current state before deciding.",
+          };
+        }
+        return problem(response);
       }
       if (!response.ok) return problem(response);
       const body = (await response.json()) as Record<string, unknown>;
