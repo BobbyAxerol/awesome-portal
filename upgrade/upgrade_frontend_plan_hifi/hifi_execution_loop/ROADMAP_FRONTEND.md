@@ -114,7 +114,7 @@ Codex giao lane này ngày 2026-08-22 (PHASE_TRACKER §24A.2).
 | B7 | Canonical `view` param + registry activation review | 1 | ⏳ |
 | B8 | Canonical plan/apply/poll route + policy Portal-governance-write riêng | 2 | ⏳ |
 | B9 | Dùng `portfolio_id`/`currency` sinh ra, bỏ default fixture | 3 | ✅ xong `8d8779a` |
-| B10 | Tiêu thụ SSE expiry/gap semantics đã publish | 9 | ⏳ chờ SSE parity |
+| B10 | Tiêu thụ SSE expiry/gap semantics đã publish | 9 | ⏳ **code được ngay** (C-PI04-02); chặn *activation* bởi snapshot/SSE parity + profile evidence thật |
 
 **Lane Command Center — codex giao 2026-08-22 (PRE-IAM-03, tracker §24A.3).**
 Backend đã giao `GET /api/v1/execution/command-center` + schema
@@ -185,22 +185,38 @@ lại màn.
 
 ## E. Request đang treo với codex
 
+### E.1 · H-1…H-12 — **đã đóng** bởi PRE-IAM-04 (`5e28693`)
+
+Tôi từng liệt kê cả 12 là còn treo. Sai — chúng đóng rồi. Đã kiểm chứng bốn
+claim nặng nhất bằng code chứ không tin lời:
+
+| Mã | Bằng chứng tôi tự kiểm |
+|---|---|
+| **H-1** decimal | `DecimalString::parse` dùng `from_str_exact` — **lỗi** thay vì làm tròn âm thầm. Đây đúng chỗ tôi báo. |
+| **H-10** schema gate | `packages/contracts/test/fixtures.spec.ts` map **cả 6** fixture vào component OpenAPI của nó |
+| **H-11** Rust parity | `edge-service/src/main.rs` deserialize thẳng 6 file fixture vào type Rust |
+| **H-12** phủ fixture | `ls` cho ra **6/6**: capital-preview, order-funnel, insight-batch, correlation, capital-ledger, binding-exposure |
+| H-2…H-9 | ghi trong `PRE_IAM_04_OFFLINE_HARDENING_CLOSEOUT.md` §26–35 kèm evidence từng dòng |
+
+**Hệ quả cho frontend, không phải cho backend:** H-1 nay *từ chối* decimal vượt
+scale. Một lệnh gọi trước đây thành công (với số bị làm tròn) giờ có thể trả
+**422** — nên `C-PI04-05` mới gấp.
+
+### E.2 · Vẫn đang mở
+
 | Mã | Nội dung | Mức |
 |---|---|---|
-| **H-1** | `DecimalString::parse` làm tròn âm thầm quá 28 chữ số | 🔴 nặng nhất |
-| **H-11** | Không test nào chứng minh Rust analytics khớp OpenAPI | 🔴 |
-| H-3 | Live `epoch_changed` gap thiếu jitter deadline → thundering herd | 🟠 |
-| H-10 | Analytics là contract duy nhất không có schema gate | 🟠 |
-| H-12 | 5/6 endpoint analytics không có fixture | 🟠 |
-| H-4…H-9 | reason gap, 503 cho lỗi client, cap cứng, cursor code, operation status | 🟡 |
-| BR-EX-24 | endpoint list order | → A2 |
-| BR-EX-25 | funnel 5 hop vs 4 stage | 🟡 chờ trả lời |
-| BR-EX-26 | aggregate headroom verdict | → A3 |
-| BR-EX-27 | `sample_counts` | → A4 |
-| BR-EX-28 §8.1 | **8 endpoint `ops` chưa tồn tại** | → A1a 🔴 |
+| **BR-EX-28 §8.1** | **8 endpoint `ops` chưa tồn tại** — Portal **không** được thay bằng đọc thẳng DB/Redis | → A1a 🔴 |
 | BR-EX-28 §4 | catalogue canonical | → A1b |
 | BR-EX-28 §8.2 | `allocation` còn UNCLASSIFIED | 🟠 |
+| BR-EX-24 | endpoint list order | → A2 |
+| BR-EX-26 | aggregate headroom verdict | → A3 |
+| BR-EX-27 | `sample_counts` | → A4 |
+| BR-EX-25 | funnel 5 hop vs 4 stage | 🟡 chờ trả lời |
 | BR-EX-29 | `conditions[]` thay cho một chuỗi | 🟡 |
+
+BR-EX-24…29 **không** bị PRE-IAM-04 đóng; chúng chờ contract của chính chúng.
+Codex xác nhận trong §10 bước 3 rằng BR-EX-28 và BR-EX-29 nằm trong EX-BE-05b/F0.
 
 ---
 
