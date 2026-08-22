@@ -47,10 +47,10 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 3 | Gate R2 Review (1b) | `WIP` (screen + adapter, on the port) | `INTEGRATION_COMPLETE` | **Claude:** consume generated R2 `portfolio_id`/`currency`, remove fixture defaults; source activation/evidence + EX-BE-05a decision integration | EX-BE-07b active-epoch capital-preview repository/API delivered; flags/profile remain fixture/off |
 | 4 | Paper Workbench (1c) | **screen built** (fixtures, scale-refined) | `FOUNDATION_COMPLETE` | screen API + source integration; M7 evidence | EX-BE-04b adaptive six-rung/exact series + cold contract delivered; production source remains inactive |
 | 5 | Paper Exit Review (4b) | `WIP` (canonical HTTP/eligibility mapping remains) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Claude maps PRE-IAM-02 contract; later real Paper source activation | PRE-IAM-02 fresh PG 129/129 + contract 20/20 + SGP runtime green; closeout linked below |
-| 6 | Admin Action Drawer (1i) | `READY`¹ | `FOUNDATION_COMPLETE` | **CẦN BOBBY:** select capability per catalog; Claude keeps unsupported actions unavailable | EX-BE-02 authenticated boundary and request-key/UNCERTAIN contract delivered; production disabled |
+| 6 | Admin Action Drawer (1i) | **screen built** (21 lệnh / 6 nhóm, fixtures) | `FOUNDATION_COMPLETE` | canonical catalogue (BR-EX-28) để đổi nguồn; **8 endpoint `ops` còn thiếu chặn phase 7/8/9 — xem BR-EX-28 §8.1** | EX-BE-02 authenticated boundary and request-key/UNCERTAIN contract delivered; production disabled |
 | 7 | Operations Queue (4e) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-05b operation integration | EX-BE-04a bidirectional keyset delivered; ack≠resolve remains |
 | 8 | Incident Detail (4d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a/05b source integration | EX-BE-03 completeness + EX-BE-06 gap/reconnect transport delivered; source integration remains |
-| 9 | Command Center (5a) | `BLOCKED` | `FOUNDATION_COMPLETE` | source projection + snapshot API + activation evidence; Claude consumes published SSE expiry/gap semantics | EX-BE-06 bounded multiplexed SSE, resume/gap/backpressure and same-origin proxy delivered; flags remain false |
+| 9 | Command Center (5a) | `BLOCKED` | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Claude consumes dark snapshot/five states; BR-EX-28 §8.1 typed `streams`/`alpha-activity`, real source + snapshot/SSE parity remain | PRE-IAM-03 bounded snapshot: fresh PG 139/139, contracts 26/26, 20k exact-observed corpus; EX-BE-06 SSE remains dark |
 | 10 | Sandbox Certification (1d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a/05b; TS sandbox capability | EX-BE-03 stale/gap blocker delivered; production commands inactive; master plan §10.10 |
 | 11 | Canary Control Room (1e) | `BLOCKED` | `PRODUCTION_INACTIVE` | EX-BE-05b; owner live-canary gate | EX-BE-04b query + EX-BE-06 SSE foundations delivered; shadow parity and production source still required |
 | 12 | Live Full Operations (1f) | `BLOCKED` | `PRODUCTION_INACTIVE` | phase 11 evidence; EX-BE-08 | rev 4 profile contract delivered; source completeness + UNCERTAIN policy remain; master plan §10.12 |
@@ -343,7 +343,7 @@ The binding contract is
 | BR-EX-05 | **ACCEPT + MODIFY** | zoom re-queries at the next finer rung; qualification records p50/p95/p99/RSS/scan cost |
 | BR-EX-06 | **ACCEPT** | capped batched insight previews |
 | BR-EX-07 | **MODIFY** | packed correlation through 150; ranked pairs/clusters above cap |
-| BR-EX-08, 09, 10 | **ACCEPT** | ranked triage, typed grouping with ack≠resolve, one multiplexed SSE |
+| BR-EX-08, 09, 10 | **ACCEPT** | PRE-IAM-03 delivers dark server-ranked triage; typed grouping keeps ack≠resolve; EX-BE-06 SSE remains dark until parity evidence |
 | BR-EX-11 | **MODIFY** | nullable true source sequence; Portal epoch/sequence + cursor and gap/resnapshot semantics |
 | BR-EX-12, 13, 14, 15 | **ACCEPT** | server precision, funnel, full binding aggregate, required/echoed portfolio context |
 | BR-EX-16, 17 | **ACCEPT** | source completeness and bidirectional keyset remove false continuity/navigation claims |
@@ -1491,7 +1491,7 @@ reads, projection ingestion, SSE or Trading System commands.
 |---|---|---|---|
 | PRE-IAM-01 | close Phase 1 Approval Inbox + Phase 2 Gate R1 on SGP with fresh-PG and public-gateway operational evidence | correct Phase 1/2 HTTP integration listed below; do not activate registry policy | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend gate green |
 | PRE-IAM-02 | source-safe Paper Exit repository/API and deterministic evidence evaluation | finish Phase 5 contract mapping, missing/stale/partial/error states and lineage | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend accepted; FE mapping remains |
-| PRE-IAM-03 | dark Command Center snapshot API | implement/retain snapshot and five honest failure-state fixtures | `PLANNED` |
+| PRE-IAM-03 | dark Command Center snapshot API | consume the generated snapshot contract; retain busy/empty/partial/stale/unavailable and do not re-rank client-side | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend accepted; FE mapping remains |
 | PRE-IAM-04 | offline security/contract/load/replay/restore hardening | consume frozen contracts and keep every degraded state visible | `PLANNED` |
 | PRE-IAM-05 | D2 dark image/config/preflight/rollback preparation | no live/source activation work required | `PLANNED` |
 | PRE-IAM-06 | reconcile backend guides, shared board and request ledger | reconcile FE evidence/status and retire superseded requests | `PLANNED` |
@@ -1551,6 +1551,28 @@ Full backend evidence:
 Latest request `BR-EX-28` is acknowledged as a separate Phase 6 unblocker. It
 requires a canonical command catalogue plus purpose-built typed HTTP endpoints;
 it does not authorize Portal-to-Redis access or generic Redis `get`/`scan`.
+
+### 24A.3 PRE-IAM-03 Command Center handoff
+
+Codex accepted the dark Phase 9 snapshot backend lane on 2026-08-22. Canonical
+contract is `GET /api/v1/execution/command-center` with schema
+`execution.command-center-snapshot.v1` and generated TypeScript declaration.
+It returns capped Needs You (10), six Fleet cells, user pins (5) and Today (12).
+Ranking is server-owned `command-center.triage-rank.v1`.
+
+Claude lane before activation: map busy/empty/partial/stale/unavailable; retain
+per-panel authority and freshness; treat `observed_total_count` as a known
+subset when `exact_total=false`; do not re-rank; keep a pinned target visibly
+unavailable without Fleet; and keep EventSource/profile controls absent while
+`stream_available=false`. Real incident/operation/Fleet sources and SSE parity
+are deliberately not claimed. Full backend evidence:
+[`PRE_IAM_03_DARK_COMMAND_CENTER_SNAPSHOT_CLOSEOUT.md`](../../backend/PRE_IAM_03_DARK_COMMAND_CENTER_SNAPSHOT_CLOSEOUT.md).
+
+`BR-EX-28` remains a separate source/Phase 6 unblocker. Its §8.1 audit is
+confirmed: OpenAPI has only four emergency-close `ops` paths, not routes for the
+other eight extracted actions. Command Center later needs purpose-built
+`streams` and `alpha-activity`; do not guess those routes or add generic Redis
+reads.
 
 ---
 
