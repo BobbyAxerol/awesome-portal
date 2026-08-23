@@ -230,7 +230,7 @@ codex (EX-BE-05b cho phase 7/8/10/11/12) và ở chủ Trading System (§A′).
 | 9 | Command Center | ✅ | Lane A đóng; nguồn thật cần **A1a** |
 | 10 | Sandbox Certification | ⏳ | Claude consumes F2 source-dark contract; real source still needs D2→D4 + TS sandbox capability |
 | 11 | Canary Control Room | ⏳ | Claude consumes F3 source-dark contract; real source/activation still needs D2→D4 + rollback evidence + owner gate |
-| 12 | Live Full Operations | ⛔ | phase 11 + EX-BE-08 |
+| 12 | Live Full Operations | ⏳ | Claude consumes F4 source-dark contract; real source/live authority still needs D2→D4 + EX-BE-08 |
 | 13 | Paper Workbench VNM | ✅ | screen API (codex) |
 | 14 | Full Blotter | ✅ | **A2 — Bobby** |
 | 15 | Alpha 360° | ✅ | source activation (codex) |

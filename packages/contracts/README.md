@@ -64,6 +64,14 @@ scale actions remain invisible/disabled while production commands are
 inactive. No source ingestion, outbox, activation or command endpoint is part
 of this contract.
 
+EX-BE-05b/F4 adds the source-dark Live Full Operations read contract. It
+requires a Portal Canary predecessor but never treats that DRAFT envelope as
+active Live authority. Runtime, five KPIs, Internal/Broker/Difference,
+positions, orders, exact open-order footer, incidents, series, projection
+continuity, rollback and realtime are explicitly unavailable. The broker panel
+is suppressed and cannot carry data; `BROKER_MISMATCH_SUPPRESSES_VALUES_AND_SOURCE_GAP_BLOCKS_R4`
+is machine-checked while both R3 and R4 actions remain invisible/disabled.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields

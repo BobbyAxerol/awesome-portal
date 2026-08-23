@@ -1,0 +1,37 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Primus Portal Execution Live Full API",
+    "version": "1.0.0",
+    "description": "SGP source-dark Phase 12 contract. No source read, realtime, command or activation capability is exposed."
+  },
+  "paths": {
+    "/api/v1/execution/deployments/{deployment_id}/live": {
+      "get": {
+        "operationId": "getLiveFullOperations",
+        "parameters": [
+          { "name": "deployment_id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "workspace_id", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Portal predecessor facts plus explicit source-dark live panels.",
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-live-full-operations.v1.schema.json#/$defs/LiveFullOperations" } } }
+          },
+          "404": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Problem": {
+        "type": "object", "additionalProperties": true, "required": ["type", "title", "status"],
+        "properties": { "type": { "type": "string" }, "title": { "type": "string" }, "status": { "type": "integer" }, "detail": { "type": "string" }, "code": { "type": "string" } }
+      }
+    },
+    "responses": {
+      "Problem": { "description": "Typed fail-closed problem.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+    }
+  }
+}

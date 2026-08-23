@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-live-full-operations.v1.schema.json",
+  "title": "Execution Live Full Operations v1 source-dark",
+  "$ref": "#/$defs/LiveFullOperations",
+  "$defs": {
+    "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{1,191}$" },
+    "Hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "Timestamp": { "type": "string", "format": "date-time" },
+    "NullableTimestamp": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
+    "PositiveDecimal": { "type": "string", "pattern": "^(?:[1-9][0-9]*(?:\\.[0-9]+)?|0\\.0*[1-9][0-9]*)$", "maxLength": 57 },
+    "Warning": {
+      "type": "object", "additionalProperties": false, "required": ["code"],
+      "properties": { "code": { "type": "string", "minLength": 1, "maxLength": 191 } }
+    },
+    "SourceEnvelope": {
+      "type": "object", "additionalProperties": false,
+      "required": ["panel_id", "source_authority", "panel_state", "freshness_state", "delivery_profile", "source_verification_state", "as_of", "read_at", "age_seconds", "lag_ms", "source_cursor", "projection_epoch", "projection_sequence", "capability_snapshot_id", "data", "warnings"],
+      "properties": {
+        "panel_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "source_authority": { "enum": ["EXECUTION", "BROKER", "DERIVED"] },
+        "panel_state": { "enum": ["unavailable", "suppressed"] },
+        "freshness_state": { "const": "UNKNOWN" },
+        "delivery_profile": { "const": "fixture" },
+        "source_verification_state": { "const": "UNAVAILABLE" },
+        "as_of": { "type": "null" }, "read_at": { "$ref": "#/$defs/Timestamp" },
+        "age_seconds": { "type": "null" }, "lag_ms": { "type": "null" },
+        "source_cursor": { "type": "null" }, "projection_epoch": { "type": "null" },
+        "projection_sequence": { "type": "null" }, "capability_snapshot_id": { "type": "null" },
+        "data": { "type": "null" },
+        "warnings": { "type": "array", "minItems": 1, "maxItems": 8, "items": { "$ref": "#/$defs/Warning" } }
+      }
+    },
+    "UnavailableCollection": {
+      "type": "object", "additionalProperties": false,
+      "required": ["envelope", "exact_total", "returned_count", "next_cursor", "previous_cursor", "rows"],
+      "properties": {
+        "envelope": { "$ref": "#/$defs/SourceEnvelope" }, "exact_total": { "type": "null" },
+        "returned_count": { "const": 0 }, "next_cursor": { "type": "null" },
+        "previous_cursor": { "type": "null" }, "rows": { "type": "array", "maxItems": 0 }
+      }
+    },
+    "ActionPolicy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["risk_tier", "visible", "enabled", "source_gap_blocks", "blocker_codes"],
+      "properties": {
+        "risk_tier": { "enum": ["R3_LIVE_PROTECTIVE", "R4_LIVE_RISK_INCREASING"] },
+        "visible": { "const": false }, "enabled": { "const": false },
+        "source_gap_blocks": { "type": "boolean" },
+        "blocker_codes": { "type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 191 } }
+      }
+    },
+    "LiveFullOperations": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_authority", "delivery_profile", "source_integration_state", "source_side_effect_requested", "runtime_activation_requested", "promotion_execution_requested", "production_command_active", "realtime_active", "read_at", "actor", "deployment", "lineage", "lifecycle", "predecessor_canary_envelope", "kpis", "source_panels", "broker_consistency", "projection_continuity", "positions", "orders", "open_order_footer", "incidents", "series", "rollback_readiness", "realtime", "command_policy"],
+      "properties": {
+        "schema_version": { "const": "execution.live-full-operations.v1" },
+        "record_authority": { "const": "PORTAL" }, "delivery_profile": { "const": "fixture" },
+        "source_integration_state": { "const": "UNAVAILABLE" },
+        "source_side_effect_requested": { "const": false }, "runtime_activation_requested": { "const": false },
+        "promotion_execution_requested": { "const": false }, "production_command_active": { "const": false },
+        "realtime_active": { "const": false }, "read_at": { "$ref": "#/$defs/Timestamp" },
+        "actor": {
+          "type": "object", "additionalProperties": false, "required": ["user_id", "username", "roles"],
+          "properties": { "user_id": { "$ref": "#/$defs/Identifier" }, "username": { "type": "string", "minLength": 1, "maxLength": 191 }, "roles": { "type": "array", "minItems": 1, "maxItems": 8, "items": { "enum": ["ADMIN", "USER"] } } }
+        },
+        "deployment": {
+          "type": "object", "additionalProperties": false,
+          "required": ["deployment_id", "portfolio_id", "account_id", "external_account_ref", "venue", "declared_environment", "runtime_state", "activated_at"],
+          "properties": { "deployment_id": { "$ref": "#/$defs/Identifier" }, "portfolio_id": { "$ref": "#/$defs/Identifier" }, "account_id": { "$ref": "#/$defs/Identifier" }, "external_account_ref": { "$ref": "#/$defs/Identifier" }, "venue": { "$ref": "#/$defs/Identifier" }, "declared_environment": { "const": "LIVE_FULL" }, "runtime_state": { "type": "null" }, "activated_at": { "type": "null" } }
+        },
+        "lineage": {
+          "type": "array", "minItems": 7, "maxItems": 7,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["kind", "state", "value", "href"],
+            "properties": { "kind": { "enum": ["ARTIFACT", "R1_APPROVAL", "R2_APPROVAL", "SANDBOX_EXIT", "CANARY_ENVELOPE", "CANARY_EXIT", "LIVE_DUAL_APPROVAL"] }, "state": { "enum": ["AVAILABLE", "UNAVAILABLE"] }, "value": { "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 191 }, { "type": "null" }] }, "href": { "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 512 }, { "type": "null" }] } }
+          }
+        },
+        "lifecycle": {
+          "type": "object", "additionalProperties": false, "required": ["declared_stage", "runtime_state", "activated_at", "blocker_codes"],
+          "properties": { "declared_stage": { "const": "LIVE_FULL" }, "runtime_state": { "type": "null" }, "activated_at": { "type": "null" }, "blocker_codes": { "type": "array", "minItems": 8, "maxItems": 16, "uniqueItems": true, "items": { "type": "string" } } }
+        },
+        "predecessor_canary_envelope": {
+          "type": "object", "additionalProperties": false,
+          "required": ["envelope_id", "revision", "status", "currency", "limits", "evidence_set_hash", "active_for_live_full"],
+          "properties": {
+            "envelope_id": { "$ref": "#/$defs/Identifier" }, "revision": { "type": "integer", "minimum": 1 }, "status": { "const": "DRAFT" },
+            "currency": { "type": "string", "pattern": "^[A-Z0-9]{2,12}$" },
+            "limits": { "type": "object", "additionalProperties": false, "required": ["capital_cap", "gross_notional_cap", "daily_loss_cap", "max_open_orders"], "properties": { "capital_cap": { "$ref": "#/$defs/PositiveDecimal" }, "gross_notional_cap": { "$ref": "#/$defs/PositiveDecimal" }, "daily_loss_cap": { "$ref": "#/$defs/PositiveDecimal" }, "max_open_orders": { "type": "integer", "minimum": 1 } } },
+            "evidence_set_hash": { "$ref": "#/$defs/Hash" }, "active_for_live_full": { "const": false }
+          }
+        },
+        "kpis": {
+          "type": "array", "minItems": 5, "maxItems": 5,
+          "items": { "type": "object", "additionalProperties": false, "required": ["key", "label", "value", "unit", "envelope"], "properties": { "key": { "enum": ["capital", "gross_notional", "daily_pnl", "open_orders", "broker_equity"] }, "label": { "type": "string", "minLength": 1, "maxLength": 96 }, "value": { "type": "null" }, "unit": { "type": "string", "pattern": "^[A-Z0-9]{2,12}$" }, "envelope": { "$ref": "#/$defs/SourceEnvelope" } } }
+        },
+        "source_panels": {
+          "type": "object", "additionalProperties": false, "required": ["internal", "broker", "difference"],
+          "properties": { "internal": { "$ref": "#/$defs/SourceEnvelope" }, "broker": { "$ref": "#/$defs/SourceEnvelope" }, "difference": { "$ref": "#/$defs/SourceEnvelope" } }
+        },
+        "broker_consistency": {
+          "type": "object", "additionalProperties": false, "required": ["state", "mismatch_behavior", "broker_values_visible", "finding_href", "dry_run_reconcile_href", "blocker_codes"],
+          "properties": { "state": { "enum": ["UNAVAILABLE", "MISMATCH"] }, "mismatch_behavior": { "const": "SUPPRESS_ALL_BROKER_VALUES" }, "broker_values_visible": { "const": false }, "finding_href": { "type": "null" }, "dry_run_reconcile_href": { "type": "null" }, "blocker_codes": { "type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": { "type": "string" } } }
+        },
+        "projection_continuity": {
+          "type": "object", "additionalProperties": false, "required": ["state", "epoch", "cursor", "sequence", "gap_detected", "affected_authorities", "blocker_codes"],
+          "properties": { "state": { "const": "UNAVAILABLE" }, "epoch": { "type": "null" }, "cursor": { "type": "null" }, "sequence": { "type": "null" }, "gap_detected": { "type": "null" }, "affected_authorities": { "type": "array", "minItems": 3, "maxItems": 3, "uniqueItems": true, "items": { "enum": ["EXECUTION", "BROKER", "DERIVED"] } }, "blocker_codes": { "type": "array", "minItems": 2, "maxItems": 8, "uniqueItems": true, "items": { "type": "string" } } }
+        },
+        "positions": { "$ref": "#/$defs/UnavailableCollection" }, "orders": { "$ref": "#/$defs/UnavailableCollection" }, "incidents": { "$ref": "#/$defs/UnavailableCollection" },
+        "open_order_footer": { "type": "object", "additionalProperties": false, "required": ["envelope", "exact_open_order_count"], "properties": { "envelope": { "$ref": "#/$defs/SourceEnvelope" }, "exact_open_order_count": { "type": "null" } } },
+        "series": { "type": "object", "additionalProperties": false, "required": ["envelope", "resolution", "points"], "properties": { "envelope": { "$ref": "#/$defs/SourceEnvelope" }, "resolution": { "type": "null" }, "points": { "type": "array", "maxItems": 0 } } },
+        "rollback_readiness": { "type": "object", "additionalProperties": false, "required": ["envelope", "ready", "evidence_hash", "blocker_codes"], "properties": { "envelope": { "$ref": "#/$defs/SourceEnvelope" }, "ready": { "const": false }, "evidence_hash": { "type": "null" }, "blocker_codes": { "type": "array", "minItems": 2, "maxItems": 8, "uniqueItems": true, "items": { "type": "string" } } } },
+        "realtime": { "type": "object", "additionalProperties": false, "required": ["active", "stream_url", "subscription_id", "blocker_codes"], "properties": { "active": { "const": false }, "stream_url": { "type": "null" }, "subscription_id": { "type": "null" }, "blocker_codes": { "type": "array", "minItems": 2, "maxItems": 8, "uniqueItems": true, "items": { "type": "string" } } } },
+        "command_policy": {
+          "type": "object", "additionalProperties": false, "required": ["production_command_active", "guard_semantics", "protective", "risk_increasing"],
+          "properties": { "production_command_active": { "const": false }, "guard_semantics": { "const": "BROKER_MISMATCH_SUPPRESSES_VALUES_AND_SOURCE_GAP_BLOCKS_R4" }, "protective": { "$ref": "#/$defs/ActionPolicy" }, "risk_increasing": { "$ref": "#/$defs/ActionPolicy" } }
+        }
+      }
+    }
+  }
+}

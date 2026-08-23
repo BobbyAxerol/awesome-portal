@@ -111,6 +111,19 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-sandbox-certification.v1.schema.json#/$defs/CertificationResponse",
   "execution-canary-control-room.unavailable.valid.json":
     "https://schemas.primusspark.com/portal/execution-canary-control-room.v1.schema.json#/$defs/CanaryControlRoom",
+  "execution-live-full-operations.unavailable.valid.json":
+    "https://schemas.primusspark.com/portal/execution-live-full-operations.v1.schema.json#/$defs/LiveFullOperations",
+};
+
+const liveFullFixture = loadJson(
+  join(fixtureDir, "execution-live-full-operations.unavailable.valid.json"),
+) as Record<string, unknown> & {
+  source_panels: Record<string, unknown> & { broker: Record<string, unknown> };
+  broker_consistency: Record<string, unknown>;
+  command_policy: {
+    protective: Record<string, unknown>;
+    risk_increasing: Record<string, unknown>;
+  };
 };
 
 describe("canonical contracts (cross-language fixture compilation)", () => {
@@ -152,6 +165,30 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(commandValidate!({ ...command, injected: true })).toBe(false);
     expect(commandValidate!({ ...command, expected_aggregate_version: 0 })).toBe(false);
     expect(commandValidate!({ ...command, idempotency_key: "bad key!" })).toBe(false);
+  });
+
+  it("keeps Live Full broker values suppressed and all runtime authorities inactive", () => {
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-live-full-operations.v1.schema.json#/$defs/LiveFullOperations",
+    );
+    expect(validate).toBeDefined();
+    expect(liveFullFixture.source_panels.broker).toMatchObject({
+      panel_state: "suppressed", data: null,
+    });
+    expect(liveFullFixture.broker_consistency).toMatchObject({
+      mismatch_behavior: "SUPPRESS_ALL_BROKER_VALUES", broker_values_visible: false,
+    });
+    expect(liveFullFixture.command_policy.protective.visible).toBe(false);
+    expect(liveFullFixture.command_policy.risk_increasing.source_gap_blocks).toBe(true);
+    expect(validate!({
+      ...liveFullFixture,
+      source_panels: {
+        ...liveFullFixture.source_panels,
+        broker: { ...liveFullFixture.source_panels.broker, data: { equity: "5000" } },
+      },
+    })).toBe(false);
+    expect(validate!({ ...liveFullFixture, production_command_active: true })).toBe(false);
+    expect(validate!({ ...liveFullFixture, realtime_active: true })).toBe(false);
   });
 
   it("rejects malformed event envelopes", () => {

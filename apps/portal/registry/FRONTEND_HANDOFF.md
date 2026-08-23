@@ -973,3 +973,18 @@ scale gate, not a protective gate; it does not make protective actions
 executable now. Both action groups remain absent while `visible=false`. Exact
 read order and test matrix:
 `upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F3_HANDOFF.md`.
+
+### 8.16 EX-BE-05b/F4 Live Full Operations — Lane A can integrate (2026-08-23)
+
+Backend status is `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`. SGP publishes
+a read-only Phase 12 response from the latest Portal Canary predecessor, which
+is explicitly `active_for_live_full=false`. Runtime, five KPIs, all source
+panels, positions, orders, exact open-order footer, incidents, series,
+continuity, rollback and realtime remain typed unavailable. No source call,
+outbox, runtime activation, SSE or command route exists.
+
+Claude may wire Phase 12 to `execution-live-full.d.ts` and its unavailable
+fixture. Broker is schema-suppressed; render no broker number. Preserve
+`BROKER_MISMATCH_SUPPRESSES_VALUES_AND_SOURCE_GAP_BLOCKS_R4`, but keep both R3
+and R4 actions absent while `visible=false`. Exact read order and UI matrix:
+`upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F4_HANDOFF.md`.

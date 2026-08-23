@@ -17,15 +17,17 @@ F2_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_05B_F2_SANDBOX_CERTIFICATION.md"
 F2_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F2_HANDOFF.md"
 F3_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_05B_F3_CANARY_CONTROL_ROOM.md"
 F3_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F3_HANDOFF.md"
+F4_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_05B_F4_LIVE_FULL_OPERATIONS.md"
+F4_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F4_HANDOFF.md"
 
-python3 - "${MASTER}" "${TRACKER}" "${ROADMAP}" "${LEDGER}" "${BACKEND_README}" "${ARCHITECTURE}" "${FRONTEND_HANDOFF}" "${CATALOG}" "${ADMISSION_HISTORY}" "${UNIFIED}" "${F2_REPORT}" "${F2_HANDOFF}" "${F3_REPORT}" "${F3_HANDOFF}" "${IAM_REVISION}" <<'PY'
+python3 - "${MASTER}" "${TRACKER}" "${ROADMAP}" "${LEDGER}" "${BACKEND_README}" "${ARCHITECTURE}" "${FRONTEND_HANDOFF}" "${CATALOG}" "${ADMISSION_HISTORY}" "${UNIFIED}" "${F2_REPORT}" "${F2_HANDOFF}" "${F3_REPORT}" "${F3_HANDOFF}" "${IAM_REVISION}" "${F4_REPORT}" "${F4_HANDOFF}" <<'PY'
 from pathlib import Path
 import json
 import re
 import sys
 
-master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified, f2_report, f2_handoff, f3_report, f3_handoff, iam_revision = [Path(p) for p in sys.argv[1:]]
-for path in (master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified, f2_report, f2_handoff, f3_report, f3_handoff, iam_revision):
+master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified, f2_report, f2_handoff, f3_report, f3_handoff, iam_revision, f4_report, f4_handoff = [Path(p) for p in sys.argv[1:]]
+for path in (master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified, f2_report, f2_handoff, f3_report, f3_handoff, iam_revision, f4_report, f4_handoff):
     if not path.is_file():
         raise SystemExit(f"tracking file missing: {path}")
 
@@ -44,12 +46,17 @@ f2h = f2_handoff.read_text()
 f3 = f3_report.read_text()
 f3h = f3_handoff.read_text()
 iamr = iam_revision.read_text()
+f4 = f4_report.read_text()
+f4h = f4_handoff.read_text()
 
 qualified = "`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`"
 for phase in (3, 14, 15, 16, 17):
     row = next((line for line in t.splitlines() if line.startswith(f"| {phase} |")), None)
     if row is None or qualified not in row:
         raise SystemExit(f"tracker phase {phase} does not carry qualified inactive status")
+phase12 = next((line for line in t.splitlines() if line.startswith("| 12 |")), None)
+if phase12 is None or qualified not in phase12 or "F4" not in phase12:
+    raise SystemExit("tracker phase 12 lost the qualified F4 source-dark boundary")
 
 for phase in range(1, 7):
     token = f"| PRE-IAM-0{phase} |"
@@ -141,6 +148,26 @@ for label, text in (
         raise SystemExit(f"{label} lost the D2 IAM revision-2 stop-gate")
 if "bca3ee7d9aa7cc3d27318ce3e27d4e655becd9d7bea5a0b674768c62066fb476" not in iamr:
     raise SystemExit("IAM revision report lost the private policy digest")
+
+for label, text in (
+    ("master", m), ("tracker", t), ("backend README", b),
+    ("architecture guide", a), ("frontend handoff", h),
+    ("unified plan", u), ("F4 report", f4), ("F4 Claude handoff", f4h),
+):
+    for token in (
+        "EX-BE-05b/F4",
+        "INTEGRATION_COMPLETE / PRODUCTION_INACTIVE",
+        "BROKER_MISMATCH_SUPPRESSES_VALUES_AND_SOURCE_GAP_BLOCKS_R4",
+    ):
+        if token not in text:
+            raise SystemExit(f"{label} lost F4 invariant {token}")
+for token in (
+    "GET /api/v1/execution/deployments/{deployment_id}/live",
+    "active_for_live_full=false",
+    "No F4 POST/command/SSE/source-ingestion route exists",
+):
+    if token not in f4:
+        raise SystemExit(f"F4 report lost source-dark invariant {token}")
 
 for label, text in (
     ("master", m),

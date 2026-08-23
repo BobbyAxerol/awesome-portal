@@ -1154,6 +1154,18 @@ deep-dive → ADR → slice → evidence discipline documented above.
   ingestion, outbox, activation or command endpoint exists. Status is
   `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`. Evidence is contracts 47/47,
   fresh-PG Control API 167/167 and twelve-migration dump/restore.
+- **EX-BE-05b/F4 Live Full Operations (2026-08-23):** the SGP TypeScript
+  Control API composes the latest immutable Canary predecessor into a read-only
+  Phase 12 source-dark response. The predecessor is not active Live authority;
+  runtime, five KPIs, source panels, positions/orders/incidents, exact open-
+  order footer, series, continuity, rollback and realtime are unavailable.
+  Broker data is schema-suppressed and source gaps are typed R4 blockers while
+  `BROKER_MISMATCH_SUPPRESSES_VALUES_AND_SOURCE_GAP_BLOCKS_R4` remains the
+  canonical future guard and
+  both R3/R4 actions remain invisible/disabled. No source, outbox, activation,
+  SSE or command route exists. Status is
+  `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`; contracts 49/49 and Control API
+  169/169 plus restore are green.
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**

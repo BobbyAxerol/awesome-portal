@@ -1810,6 +1810,18 @@ không phải 17 màn.
 > activation hay command route. Chi tiết:
 > [`EX_BE_05B_F3_CANARY_CONTROL_ROOM.md`](./backend/EX_BE_05B_F3_CANARY_CONTROL_ROOM.md).
 
+> **Backend checkpoint 2026-08-23 — EX-BE-05b/F4 Phase 12:** Live Full
+> Operations Lane A source-dark trên SGP đạt
+> `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`. Latest Canary envelope chỉ là
+> predecessor và `active_for_live_full=false`; mọi runtime/KPI/source/positions/
+> orders/open-order count/incidents/series/continuity/rollback/realtime đều
+> unavailable. Broker panel bị schema suppress và source gap chặn R4; cả R3/R4
+> vẫn ẩn/tắt. Canonical guard là
+> `BROKER_MISMATCH_SUPPRESSES_VALUES_AND_SOURCE_GAP_BLOCKS_R4`. Không source
+> call, outbox, activation, SSE hoặc command route.
+> Chi tiết:
+> [`EX_BE_05B_F4_LIVE_FULL_OPERATIONS.md`](./backend/EX_BE_05B_F4_LIVE_FULL_OPERATIONS.md).
+
 > **D2 placement/resource checkpoint 2026-08-23:** toàn bộ Portal, browser BFF,
 > Control API và product database vẫn chạy tại SGP Research. AWS-HK hiện hữu
 > chỉ nhận Source Proxy, Rust Execution Edge, dark projection PostgreSQL và

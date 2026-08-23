@@ -217,6 +217,15 @@ Chúng không thay thế phase hoặc exit gate trong
   outbox, runtime activation or command route exists. Contracts 47/47 and
   fresh-PG Control API 167/167 across twelve migrations plus dump/restore are
   green.
+- [EX-BE-05b/F4 — Portal Live Full Operations](./EX_BE_05B_F4_LIVE_FULL_OPERATIONS.md)
+  — **`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`:** SGP composes the latest
+  Canary predecessor into a read-only source-dark Phase 12 response. Broker
+  values are schema-suppressed, source gaps are typed R4 blockers, every source/
+  runtime/realtime fact stays unavailable and both action groups remain hidden.
+  Canonical guard is
+  `BROKER_MISMATCH_SUPPRESSES_VALUES_AND_SOURCE_GAP_BLOCKS_R4`.
+  No source call, outbox, activation, SSE or command route exists. Contracts
+  49/49 and fresh-PG Control API 169/169 plus dump/restore are green.
 
 **Runway complete (BAR-00 → BAR-16).** Guide v0.5 bổ sung (không thay thế)
 tại `upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md`
@@ -497,7 +506,8 @@ authority.
   DB/Redis/CLI trực tiếp. F1a/F1b đã đóng workflow Operations Queue/Incident
   trên dữ liệu Portal/fixture; F2 đã đóng workflow Sandbox Certification
   source-dark với bảy bước và promotion plan luôn `BLOCKED`; F3 đã đóng Canary
-  DRAFT-envelope/read-model source-dark. Source adapters vẫn chờ owner publish
+  DRAFT-envelope/read-model source-dark; F4 đã đóng Live Full Lane A source-dark
+  và broker suppression contract. Source adapters vẫn chờ owner publish
   typed HTTP contracts và accepted D2→D4/rollback evidence.
 
 ## BAR-21 — Strategy Import & Quarantine Ingest foundation

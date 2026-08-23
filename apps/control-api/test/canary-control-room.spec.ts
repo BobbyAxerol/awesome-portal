@@ -323,6 +323,76 @@ describe("EX-BE-05b/F3 Canary Control Room source-dark", () => {
     expect(counts.rows[0]).toEqual({ audit: "1", outbox: "0" });
   });
 
+  it("composes Live Full Operations as source-dark and suppresses every broker value", async () => {
+    const lineage = await seedApprovedLineage("live-full");
+    const created = await mutation(bobby, payload(lineage, "live-full-canary-predecessor"));
+    expect(created.statusCode).toBe(201);
+
+    const response = await inject(
+      reader,
+      `/api/v1/execution/deployments/${lineage.deploymentId}/live?workspace_id=${workspaceId}`,
+    );
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      schema_version: "execution.live-full-operations.v1",
+      record_authority: "PORTAL",
+      delivery_profile: "fixture",
+      source_integration_state: "UNAVAILABLE",
+      source_side_effect_requested: false,
+      runtime_activation_requested: false,
+      promotion_execution_requested: false,
+      production_command_active: false,
+      realtime_active: false,
+      deployment: { declared_environment: "LIVE_FULL", runtime_state: null, activated_at: null },
+      predecessor_canary_envelope: {
+        envelope_id: created.json().envelope.envelope_id,
+        active_for_live_full: false,
+      },
+      source_panels: {
+        internal: { panel_state: "unavailable", data: null },
+        broker: { panel_state: "suppressed", data: null },
+        difference: { panel_state: "unavailable", data: null },
+      },
+      broker_consistency: {
+        state: "UNAVAILABLE",
+        mismatch_behavior: "SUPPRESS_ALL_BROKER_VALUES",
+        broker_values_visible: false,
+      },
+      projection_continuity: { state: "UNAVAILABLE", gap_detected: null },
+      command_policy: {
+        guard_semantics: "BROKER_MISMATCH_SUPPRESSES_VALUES_AND_SOURCE_GAP_BLOCKS_R4",
+        protective: { visible: false, enabled: false, source_gap_blocks: false },
+        risk_increasing: { visible: false, enabled: false, source_gap_blocks: true },
+      },
+    });
+    expect(response.json().kpis).toHaveLength(5);
+    expect(response.json().kpis.every((item: { value: unknown }) => item.value === null)).toBe(true);
+    expect(response.json().positions.rows).toEqual([]);
+    expect(response.json().orders.rows).toEqual([]);
+    expect(response.json().open_order_footer.exact_open_order_count).toBeNull();
+    const counts = await ctx.pool.query<{ audit: string; outbox: string }>(
+      `SELECT
+         (SELECT count(*)::text FROM product_audit_events WHERE aggregate_type = 'canary_envelope') AS audit,
+         (SELECT count(*)::text FROM outbox_messages) AS outbox`,
+    );
+    expect(counts.rows[0]).toEqual({ audit: "1", outbox: "0" });
+  });
+
+  it("rejects Live Full Operations without a canary predecessor or workspace access", async () => {
+    const noPredecessor = await inject(
+      reader,
+      `/api/v1/execution/deployments/dep_missing_live/live?workspace_id=${workspaceId}`,
+    );
+    expect(noPredecessor.statusCode).toBe(404);
+    expect(noPredecessor.json().error.code).toBe("CANARY_ENVELOPE_NOT_FOUND");
+    const foreignWorkspace = await inject(
+      reader,
+      "/api/v1/execution/deployments/dep_missing_live/live?workspace_id=foreign-workspace",
+    );
+    expect(foreignWorkspace.statusCode).toBe(404);
+    expect(foreignWorkspace.json().error.code).toBe("WORKSPACE_NOT_FOUND");
+  });
+
   it("replays equal requests, rejects drift and appends an exact predecessor revision", async () => {
     const lineage = await seedApprovedLineage("revision");
     const firstPayload = payload(lineage, "canary-revision-one");

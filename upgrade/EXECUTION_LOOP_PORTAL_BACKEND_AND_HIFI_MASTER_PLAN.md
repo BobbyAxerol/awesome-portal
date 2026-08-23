@@ -1009,7 +1009,7 @@ Statuses use the architecture vocabulary, never bare `COMPLETE`:
 | 9 Command Center | ranked snapshot plus loss-detectable realtime | command-center snapshot and SSE | mixed per row; DERIVED ranking; epoch/sequence freshness | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | PRE-IAM-03 dark snapshot; BR-EX-28 §8.1 typed `streams`/`alpha-activity`; real source activation + EX-BE-06 parity evidence | bounded snapshot, five failure states, 20k exact-observed corpus and response budget pass; source contracts, snapshot/SSE parity, overlap+jitter resnapshot, slow-consumer and auth-expiry remain |
 | 10 Sandbox Certification | auditable certification state machine | certification create/read/submit/decide/promote plan | Portal record; EXECUTION/BROKER/DERIVED panels | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-05b/F2; real source still needs D2→D4 and TS sandbox capabilities | 7-step transition/freshness/SoD/idempotency tests; promotion plan blocked and command production inactive |
 | 11 Canary Control Room | observe versioned envelope and guarded live canary | canary query/series; later protective operations | EXECUTION/BROKER/DERIVED panels; Portal envelope record | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-05b/F3; real source still needs D2→D4, rollback evidence and owner live-canary gate | immutable DRAFT envelope/predecessor/evidence tests; source panels unavailable; command production inactive |
-| 12 Live Full Operations | continuous live truth with gap visibility | live query/series/SSE; later R3/R4 operations | EXECUTION/BROKER/DERIVED; gaps become stale | `PRODUCTION_INACTIVE` | phase 11 evidence + EX-BE-00R4/08 | no-gap soak, ambiguous-result drills, capital envelope and rollback rehearsal |
+| 12 Live Full Operations | continuous live truth with gap visibility | source-dark predecessor/read API delivered; live query/series/SSE and later R3/R4 remain gated | EXECUTION/BROKER/DERIVED; gaps become stale | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-05b/F4 delivered; real source still needs D2→D4 + EX-BE-08 | broker suppression/source-gap invariants are typed; no-gap soak, ambiguous-result drills, capital envelope and rollback rehearsal remain |
 | 13 Paper Workbench VNM | venue-aware Paper behavior | deployment query + venue session | EXECUTION plus authoritative venue calendar | `INTEGRATION_PENDING` | EX-BE-03/04b; venue contract; ATO/ATC decision | open/lunch/closed/holiday/timezone fixtures; server age/precision contract; no browser clock inference |
 | 14 Full Blotter | 182k-row scalable blotter and lifecycle | blotter page/aggregate/funnel | EXECUTION/BROKER/DERIVED | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-03/04b/07b; EX-BE-08 activation evidence | source-backed typed funnel delivered; full-filter load/source parity remains |
 | 15 Alpha 360 | portfolio-specific alpha execution view | alpha detail/series/batched previews | RESEARCH/EXECUTION/DERIVED | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-03/04b/07b; EX-BE-08 activation evidence | source-backed capped portfolio-bound batch delivered; source parity/no-N+1 load remains |
@@ -1048,6 +1048,16 @@ explicitly unavailable in `fixture`. The future asymmetry is canonical as
 action eligibility; both action
 groups remain invisible/disabled while production command authority is off.
 No source ingestion, outbox, runtime activation or command route exists.
+
+`EX-BE-05b/F4` closes the Portal-owned Phase 12 Lane A backend on SGP at
+`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`. It requires an F3 Canary
+predecessor but marks that envelope inactive for Live Full. Runtime, five KPIs,
+Internal/Broker/Difference, positions, orders, exact open-order footer,
+incidents, series, projection continuity, rollback and realtime remain typed
+unavailable. The broker panel is schema-suppressed and
+`BROKER_MISMATCH_SUPPRESSES_VALUES_AND_SOURCE_GAP_BLOCKS_R4` is canonical.
+Both R3/R4 actions remain invisible/disabled; no source, outbox, activation,
+SSE or command route exists.
 
 ### 12.3 Delivery profiles and stop gates
 
