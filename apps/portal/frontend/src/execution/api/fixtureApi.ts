@@ -827,6 +827,13 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
         value: {
           status: terminal ? "VERIFIED" : "APPLIED_UNVERIFIED",
           verificationRaw: terminal && options.uncertain ? "UNCERTAIN" : VERIFICATION_WALK[index],
+          // This walk models an operation that was relayed, so nothing blocks
+          // it and the source was asked. The BLOCKED shape the contract ships
+          // is exercised in `commandOperation.test.ts` against the fixture
+          // itself rather than modelled a second time here.
+          blockers: [],
+          relayReceipt: "rcpt_fixture_walk",
+          sourceSideEffectRequested: true,
         },
       };
     },

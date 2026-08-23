@@ -528,6 +528,15 @@ export const BLOTTER_UNBUCKETED: readonly OrderStatus[] = ["CANCELED", "EXPIRED"
  * request was accepted and nothing is confirmed yet.
  */
 export type OperationStatus =
+  /**
+   * The command was accepted but nothing was relayed, and `blockers` says why.
+   *
+   * Published by `execution.command-operation.v1` and absent from this union
+   * until 2026-08-23, so `readEnum` scored the contract's own fixture as an
+   * unrecognised token and the screen dropped it: an operator polling a
+   * blocked operation was shown no status at all.
+   */
+  | "BLOCKED"
   | "PLANNED"
   | "AWAITING_APPLY"
   | "APPLIED_UNVERIFIED"
@@ -549,6 +558,17 @@ export type OperationStatus =
  * proven to have failed.
  */
 export type VerificationResult =
+  /**
+   * Verification has not begun. Published by `execution.command-operation.v1`
+   * and missing from this union until 2026-08-23, so the contract's own
+   * canonical fixture scored as an unrecognised token: the walk stalled on
+   * "this build does not recognise" for the ordinary starting state of every
+   * operation. `operations.ts` had it all along — two copies of one axis with
+   * different members, and only one of them matched the contract.
+   *
+   * Not settled: see `isSettled`, which is an allowlist for that reason.
+   */
+  | "NOT_STARTED"
   | "PENDING"
   | "ACKNOWLEDGED"
   | "SUCCEEDED"

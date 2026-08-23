@@ -183,6 +183,10 @@ const ORDER_STATUSES: OrderStatus[] = [
   "TRIGGERED",
 ];
 const OPERATION_STATUSES: OperationStatus[] = [
+  // Published by `execution.command-operation.v1`. This evidence surface is
+  // meant to show every state a screen can render, so a status the contract
+  // ships and this page omits is a gap in the evidence, not a tidier list.
+  "BLOCKED",
   "PLANNED",
   "AWAITING_APPLY",
   "APPLIED_UNVERIFIED",
@@ -556,6 +560,11 @@ const R1_CHECKLIST = [
 ];
 
 const VERIFICATION_RESULTS: VerificationResult[] = [
+  // Published by `execution.command-operation.v1` as the starting state of
+  // every operation, and absent from this strip while it was absent from the
+  // type. Same reasoning as BLOCKED above: a state the contract ships and this
+  // evidence surface omits is a gap in the evidence.
+  "NOT_STARTED",
   "PENDING",
   "ACKNOWLEDGED",
   "SUCCEEDED",
@@ -662,11 +671,23 @@ const PANEL_REASON: Partial<Record<PanelStatus, string>> = {
  * rather than describing it.
  */
 function Group({
+  id,
   title,
   note,
   surface,
   children,
 }: {
+  /**
+   * Stable address for this group, used by the visual baseline to shoot one
+   * section at a time rather than one 116-case page nobody can review.
+   *
+   * Written out rather than derived from `title`, because three groups share a
+   * heading: a slug would collide and two different groups would silently
+   * overwrite each other's baseline image — coverage that reads as present and
+   * is not. It must also stay put when a title is reworded, or every reworded
+   * heading would orphan its baseline.
+   */
+  id: string;
   title: string;
   note?: string;
   surface?: ExecutionSurfaceKind;
@@ -680,7 +701,7 @@ function Group({
     </>
   );
   return (
-    <section className="exec-fixtures-group">
+    <section className="exec-fixtures-group" data-group={id} id={`group-${id}`}>
       {surface ? <ExecutionSurface kind={surface}>{body}</ExecutionSurface> : body}
     </section>
   );
@@ -711,6 +732,7 @@ export default function ExecutionFixtures() {
         </header>
 
         <Group
+          id="authoritybadge"
           title="AuthorityBadge"
           note="One tone for all four authorities: the hi-fi differentiates them by the word, and a hue-coded authority is invisible to a reader who cannot separate the hues."
         >
@@ -731,6 +753,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="freshnessindicator"
           title="FreshnessIndicator"
           note="PAUSED is a venue calendar fact, not a fault. Rendering it as STALE would raise a false alarm every night VN MARKET is shut."
         >
@@ -750,6 +773,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="statuschip-four-vocabularies-never-one-field"
           title="StatusChip — four vocabularies, never one field"
           note="Runtime state, promotion stage, readiness and broker sync are separate by contract (spec §5.2). PARTIAL never renders green in either vocabulary that has one."
         >
@@ -796,6 +820,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="environmentbadge-and-guardband"
           title="EnvironmentBadge and GuardBand"
           note="Decision D2: canary and live share one red. Canary draws a double border and reads LIVE · CANARY; live draws a solid border. The treatment carries the difference so it survives a print-out."
         >
@@ -815,6 +840,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="lifecyclerail"
           title="LifecycleRail"
           note="Screen-level on workbenches only. On Alpha 360° and Portfolio 360° the lifecycle is per-deployment (DS §9 note 1), because the whole point of those screens is that one alpha is in several stages at once."
         >
@@ -841,6 +867,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="observationprogress"
           title="ObservationProgress"
           note="`met` is passed in, never inferred from current ≥ target: the gate rule is evaluated server-side (spec §10.5), and a client that recomputed it would eventually disagree with the server while the button said otherwise."
         >
@@ -869,6 +896,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="evidencepanel-and-sla"
           title="EvidencePanel and SLA"
           note="A row that states a verdict without linking what produced it is an opinion. Watch items are visible and non-blocking; missing evidence reads `insufficient`, never a silent pass."
         >
@@ -911,6 +939,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="venuescope"
           title="VenueScope"
           note="Venue is data (decision D5): this row is fed by the registry and a sixth venue appears without a frontend release. Five chips fit as drawn, so the documented multiselect fallback above eight is deliberately not built."
         >
@@ -923,6 +952,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="charttile"
           title="ChartTile"
           note="The caption is the contract, not decoration. `43,800 → 4,368 samples` is what tells a reader they are looking at hourly buckets over six months; no other field on the tile says it."
         >
@@ -966,6 +996,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="panel-states"
           title="Panel states"
           note="Each of these is a different claim about the world. `empty` says the query matched nothing; `unavailable` says we could not ask; `denied` says you may not see it; `insufficient_data` says we have rows but too few to compute honestly."
         >
@@ -993,6 +1024,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="commandplandrawer"
           title="CommandPlanDrawer"
           note="The only path to a mutation. Apply reports every unmet condition rather than the first, because a button that says only `disabled` makes an operator guess which of four things to fix."
         >
@@ -1055,6 +1087,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="cold-retention-six-answers-to-why-are-there-no-rows"
           title="Cold retention — six answers to “why are there no rows?”"
           note="EX-BE-04b §3: COLD_REQUESTABLE, PURGED and UNKNOWN “may have no points, but are not semantically an ordinary empty hot series.” Nothing matched, older than we keep, deleted under policy, no policy published, and the question was too big are five different answers, and only the first is an empty result."
         >
@@ -1093,6 +1126,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="mechanism-m2-zoom-re-queries-it-does-not-magnify"
           title="Mechanism M2 — zoom re-queries, it does not magnify"
           note="Zooming into an already-aggregated array renders a shape the data does not have: four hourly buckets stretched across a screen look like four measurements when they are 440 averaged, and the peak that mattered is inside one of them. So a zoom that earns a finer rung asks the server again — and a zoom that does not is told so, because silently doing nothing reads as a broken control."
         >
@@ -1104,6 +1138,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="mechanism-m3-a-subscription-through-its-whole-lifecycle"
           title="Mechanism M3 — a subscription through its whole lifecycle"
           note="The states worth getting right are the unhappy ones, which are exactly what a screenshot of a working system never shows. This drives the real reducer, not a copy of it: subscribe, snapshot, deltas, three dropped events, a rebuild with the server's wait window, then a disconnect."
         >
@@ -1115,6 +1150,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="subscription-states-side-by-side"
           title="Subscription states, side by side"
           note="Live renders no banner at all — a banner that is always there is a banner nobody reads. Everything else carries what happened, how old the values below are, and what is being done."
         >
@@ -1128,6 +1164,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="source-completeness-not-the-same-question-as-freshness"
           title="Source completeness — not the same question as freshness"
           note="Freshness answers how old this is; completeness answers whether it is all of it. A panel can be one second old and still be missing every transition that happened between two polls. At the current runtime only ORDER_STATUS is event-sourced, so POLL_BOUNDED is the normal case."
         >
@@ -1145,6 +1182,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="phase-1-approval-inbox-states-only"
           title="Phase 1 — Approval Inbox (states only)"
           surface="governance"
           note="Lane A: props and fixtures. Real integration waits on EX-BE-04a and EX-BE-05a, neither of which needs the Rust edge, AWS or the Trading System. AP-259 is dimmed because you wrote it — it stays in the list, because a queue that hides its un-actionable rows lies about its own size."
@@ -1196,6 +1234,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="phase-2-gate-r1-review-states-only"
           title="Phase 2 — Gate R1 Review (states only)"
           surface="governance"
           note="The screen exists to make one refusal impossible to work around. Separation of duty is derived from creator vs actor rather than trusted from a prop, and Deny is never locked: a reviewer who cannot approve can always refuse."
@@ -1282,6 +1321,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="wired-flow-list-detail-plan-apply-poll"
           title="Wired flow — list · detail · plan · apply · poll"
           surface="governance"
           note="The same components, driven through the ExecutionApi port instead of literal props. The data source is still fixtures and every endpoint the registry has not enabled answers unavailable — but the mapping, the failure handling and the 202 discipline are the real ones. Swapping createFixtureApi for createHttpApi is the only change EX-BE-05a needs."
@@ -1309,6 +1349,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="phase-3-gate-r2-review-states-only"
           title="Phase 3 — Gate R2 Review (states only)"
           surface="governance"
           note="R2 rests on R1. An expired R1 locks the decision bar no matter how good the operational evidence is, and the capital preview refuses to render without an authority envelope — an unattributed before/after table about money looks exactly like a record of something that happened."
@@ -1387,6 +1428,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="phase-5-paper-exit-review-states-only"
           title="Phase 5 — Paper Exit Review (states only)"
           surface="governance"
           note="GATE MET comes from the server and is never computed from the coverage numbers beside it — the policy can require more than they show. INSUFFICIENT_DATA is a third outcome: not a pass, not a failure, a question that follows the deployment into sandbox certification."
@@ -1482,6 +1524,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="risk-tier-and-delivery-policy-what-apply-demands"
           title="Risk tier and delivery policy — what Apply demands"
           note="R3 and R4 are two permissions, not two rungs. R3 protects a position and needs a step-up but no second person, because waiting for one is how a live position keeps bleeding. R4 enlarges a position and needs both. A step-up satisfied for an emergency halt never carries into a capital expansion."
         >
@@ -1525,6 +1568,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="verificationchip-what-verify-observed-a-second-axis"
           title="VerificationChip — what verify observed, a second axis"
           note="UNCERTAIN is toned bad rather than warn. Nothing has been proven to have failed, but an amber chip beside a grey PENDING invites waiting, and waiting is the wrong response to not knowing whether a halt took effect."
         >
@@ -1538,6 +1582,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="capabilitychip-per-capability-never-rolled-up"
           title="CapabilityChip — per capability, never rolled up"
           note="Master plan §6.2 forbids a global green flag. Reads stay supported while the matching command path is disabled, and one badge cannot say that."
         >
@@ -1551,6 +1596,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="profilebadge-registry-revision-4"
           title="ProfileBadge — registry revision 4"
           note="Renders for fixture and shadow only. The other four profiles are already carried by the environment badge and the guard band; shadow has no other tell at all, because shadow reads are real values from the real system on the real screen."
         >
@@ -1564,6 +1610,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="profile-reconciliation-fail-closed"
           title="Profile reconciliation — fail-closed"
           note="A panel may claim less authority than its screen was commissioned for. It may never claim more: that is a routing error or a bug, and both are reasons to render nothing."
         >
@@ -1587,6 +1634,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="keysettable-mechanism-m1"
           title="KeysetTable — mechanism M1"
           note="No page numbers, because keyset cannot seek to page n. Counts come from the server over the full population, never from the rows the browser is holding. Numerics are mono, tabular and never ellipsised."
         >
@@ -1646,6 +1694,7 @@ export default function ExecutionFixtures() {
           state" precisely so that cannot happen.
         */}
         <Group
+          id="live-full-operations-1f"
           title="Live Full Operations (1f)"
           note="No broker figure reaches this screen while consistency is unverified — the reader drops them, so they never become props. Suppressed is rendered apart from unavailable, and R4 is blocked because nobody can say whether a projection gap exists."
           surface="deployments"
@@ -1662,6 +1711,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="sandbox-certification-1d"
           title="Sandbox Certification (1d)"
           note="Seven ordered steps from the server, three independently degradable panels, and nothing computed here — not progress, not the current step, not evidence expiry. runtime_state stays null rather than becoming HALTED."
           surface="deployments"
@@ -1678,6 +1728,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="canary-control-room-1e"
           title="Canary Control Room (1e)"
           note="The guard is words and a shield, not a colour. Production command is inactive, so both action groups are absent rather than disabled — and the broker-stale asymmetry is stated as two separate sentences."
           surface="deployments"
@@ -1691,6 +1742,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="operations-queue-4e"
           title="Operations Queue (4e)"
           note="Three states per row and never merged: what the Trading System is doing, what verify observed, and what a person in the Portal has done. Acknowledging or resolving changes only the third."
           surface="deployments"
@@ -1707,6 +1759,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="incident-detail-4d"
           title="Incident Detail (4d)"
           note="Forward-only OPEN → MITIGATED → RESOLVED. Four source panels unavailable, one frame each. Resolving closes the Portal record and never resumes a deployment — there is no Resume control anywhere on this screen."
           surface="deployments"
@@ -1723,6 +1776,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="analytics-containers-port-screen"
           title="Analytics containers — port → screen"
           note="Every one of these fetches through the port rather than taking props. That join is where a route typo or a mismapped state actually shows up, and four of them were built and never mounted."
           surface="deployments"
@@ -1763,6 +1817,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="command-center-5a"
           title="Command Center (5a)"
           note="Backend dark: the snapshot is real, the incident/operation/fleet sources behind it are not claimed. Four panels carry four verdicts — there is no page-level health badge to be wrong."
           surface="deployments"
@@ -1778,6 +1833,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="admin-action-drawer-1i"
           title="Admin Action Drawer (1i)"
           note="Sixty-four canonical actions, grouped by the server. Revision 2 marks the relay DISABLED and every entry unreachable, so the screen lists what exists and says why each is out of reach — it offers nothing to press."
           surface="deployments"
@@ -1797,6 +1853,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="full-blotter-4c"
           title="Full Blotter (4c)"
           note="Ten to the seventh rows. The chips re-query rather than filtering what is loaded, and both counts come from the server."
           surface="deployments"
@@ -1821,6 +1878,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="paper-workbench-1c-and-its-vn-variant-4h"
           title="Paper Workbench (1c) and its VN variant (4h)"
           note="One component. The VN screen is the same code with a calendar attached."
           surface="deployments"
@@ -1843,6 +1901,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="alpha-360-2a-2b"
           title="Alpha 360° (2a+2b)"
           note="Nine tabs under one scope. Bounded panels cap; unbounded ones page."
           surface="deployments"
@@ -1856,6 +1915,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="portfolio-360-1h-3a"
           title="Portfolio 360° (1h→3a)"
           note="150 is a transport limit, not a rendering one: past the cell budget the leader lens becomes the primary view."
           surface="deployments"
@@ -1874,6 +1934,7 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="account-broker-360-1g"
           title="Account / Broker 360° (1g)"
           note="Three authorities side by side, and an aggregate the screen shows but never computes."
           surface="deployments"

@@ -58,6 +58,23 @@ export interface DecisionState {
   receipt: string | null;
   operationStatus: OperationStatus | null;
   verification: VerificationResult | null;
+  /**
+   * Why the operation is stopped, verbatim from the server.
+   *
+   * `execution.command-operation.v1` publishes `blockers` beside a BLOCKED
+   * status, and nothing read it: a screen could report that an operation was
+   * stopped and never say what stopped it, which leaves an operator to guess
+   * between "the relay is off" and "you lack the role".
+   */
+  blockers: readonly string[];
+  /**
+   * Whether this operation asked anything of the Trading System.
+   *
+   * The plan carries the same flag, but the plan is gone once applied and this
+   * is the record that outlives it — so after an apply, this is the only
+   * published answer to "did that reach the source?".
+   */
+  sourceSideEffectRequested: boolean;
   /** Set when a repeat used the same key with a different payload (409). */
   conflict: boolean;
   /** How many times the poll has run. Bounded by the caller, not here. */
@@ -75,6 +92,11 @@ export function initialDecision(requestKey: string): DecisionState {
     receipt: null,
     operationStatus: null,
     verification: null,
+    blockers: [],
+    // `true` before anything is known: the same fail-closed direction the
+    // readers use, so an intent whose fate has not been reported never reads
+    // as one that touched nothing.
+    sourceSideEffectRequested: true,
     conflict: false,
     polls: 0,
     error: null,
@@ -95,6 +117,8 @@ export type DecisionEvent =
       type: "POLLED";
       status: OperationStatus | null;
       verification: MaybeKnown<VerificationResult> | null;
+      blockers?: readonly string[];
+      sourceSideEffectRequested?: boolean;
     }
   | { type: "POLL_FAILED"; error: string }
   /**
@@ -156,6 +180,17 @@ export function decisionReducer(state: DecisionState, event: DecisionEvent): Dec
     case "POLLED": {
       const verification = event.verification?.known ? event.verification.value : null;
       const unknownToken = event.verification && !event.verification.known ? event.verification.raw : null;
+      // Carried into every branch below rather than into one. A poll that
+      // reports a blocker while the walk happens to be in "verifying" is the
+      // same fact as one that reports it while settling, and putting it on a
+      // single branch is how a field ends up published, read, and still
+      // invisible on three paths out of four. `??`, not `||`: an empty blocker
+      // list is an answer ("nothing is blocking"), not an absence.
+      const carried = {
+        blockers: event.blockers ?? state.blockers,
+        sourceSideEffectRequested:
+          event.sourceSideEffectRequested ?? state.sourceSideEffectRequested,
+      };
 
       if (unknownToken) {
         // An unrecognised verification value is not success and not failure. It
@@ -163,6 +198,7 @@ export function decisionReducer(state: DecisionState, event: DecisionEvent): Dec
         // cannot read.
         return {
           ...state,
+          ...carried,
           phase: "verifying",
           polls: state.polls + 1,
           operationStatus: event.status ?? state.operationStatus,
@@ -173,6 +209,7 @@ export function decisionReducer(state: DecisionState, event: DecisionEvent): Dec
       if (verification === "UNCERTAIN") {
         return {
           ...state,
+          ...carried,
           phase: "uncertain",
           polls: state.polls + 1,
           operationStatus: event.status ?? state.operationStatus,
@@ -184,6 +221,7 @@ export function decisionReducer(state: DecisionState, event: DecisionEvent): Dec
       if (verification && isSettled(verification)) {
         return {
           ...state,
+          ...carried,
           phase: "settled",
           polls: state.polls + 1,
           operationStatus: event.status ?? state.operationStatus,
@@ -194,6 +232,7 @@ export function decisionReducer(state: DecisionState, event: DecisionEvent): Dec
 
       return {
         ...state,
+        ...carried,
         phase: "verifying",
         polls: state.polls + 1,
         operationStatus: event.status ?? state.operationStatus,

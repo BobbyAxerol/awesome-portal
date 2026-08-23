@@ -165,6 +165,11 @@ const ORDER_TONE: Record<OrderStatus, ChipTone> = {
 };
 
 const OPERATION_TONE: Record<OperationStatus, ChipTone> = {
+  // Not "bad" and not "mute". The command did not fail — nothing was relayed —
+  // so "bad" would report an outcome that never happened, and "mute" would let
+  // a stopped operation read as inert. "warn" says the thing that is true:
+  // nothing moved and someone has to look at `blockers`.
+  BLOCKED: "warn",
   PLANNED: "mute",
   AWAITING_APPLY: "warn",
   APPLIED_UNVERIFIED: "warn",
@@ -190,6 +195,10 @@ const RUNTIME_TONE: Record<RuntimeState, ChipTone> = {
  * surface is allowed to overstate is the place where understating costs money.
  */
 const VERIFY_TONE: Record<VerificationResult, ChipTone> = {
+  // Verification has not begun. "mute" like PENDING: there is nothing to warn
+  // about in a state that simply has not started, and any louder tone would
+  // read as a finding.
+  NOT_STARTED: "mute",
   PENDING: "mute",
   ACKNOWLEDGED: "mute",
   SUCCEEDED: "good",

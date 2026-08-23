@@ -376,6 +376,7 @@ export function readKeysetPage<T>(
  * ------------------------------------------------------------------------ */
 
 export const VERIFICATION_RESULTS: readonly VerificationResult[] = [
+  "NOT_STARTED",
   "PENDING",
   "ACKNOWLEDGED",
   "SUCCEEDED",
@@ -422,10 +423,27 @@ export interface OperationRead {
   /** What verify observed. A second axis — see contracts.ts. */
   verification: MaybeKnown<VerificationResult> | null;
   receipt: string | null;
+  /**
+   * Why nothing was relayed, verbatim from the server.
+   *
+   * `execution.command-operation.v1` publishes `blockers: ["COMMAND_RELAY_DISABLED"]`
+   * beside a BLOCKED status, and this reader used to drop it — leaving a screen
+   * that could say an operation was stuck and never say what stuck it.
+   */
+  blockers: readonly string[];
+  /**
+   * Whether this operation asked anything of the Trading System.
+   *
+   * Read here as well as on the plan because the operation is the record that
+   * outlives the drawer: after an apply, this is the only published answer to
+   * "did that reach the source?".
+   */
+  sourceSideEffectRequested: boolean;
   unsupported: readonly { field: string; raw: string }[];
 }
 
 export const OPERATION_STATUSES: readonly OperationStatus[] = [
+  "BLOCKED",
   "PLANNED",
   "AWAITING_APPLY",
   "APPLIED_UNVERIFIED",
@@ -471,7 +489,13 @@ export function readOperation(raw: unknown, httpStatus?: number): OperationRead 
     verification: accepted
       ? { known: true, value: "PENDING" }
       : (verificationParsed ?? null),
-    receipt: readId(o.receipt) ?? readId(o.receipt_id),
+    // `relay_receipt` is the published name. The two below are earlier guesses
+    // kept for the apply response; against the contract's own fixture the old
+    // pair matched nothing, so the receipt was always null and the evidence of
+    // what the relay did never reached the screen.
+    receipt: readId(o.relay_receipt) ?? readId(o.receipt) ?? readId(o.receipt_id),
+    blockers: Array.isArray(o.blockers) ? o.blockers.filter((b): b is string => typeof b === "string") : [],
+    sourceSideEffectRequested: o.source_side_effect_requested !== false,
     unsupported,
   };
 }

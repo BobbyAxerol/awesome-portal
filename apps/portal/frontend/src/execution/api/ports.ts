@@ -123,6 +123,18 @@ export interface OperationSnapshot {
   status: string | null;
   /** Raw token preserved; `decision.ts` decides what it means. */
   verificationRaw: string | null;
+  /**
+   * Why nothing was relayed, verbatim.
+   *
+   * `execution.command-operation.v1` publishes this beside a BLOCKED status and
+   * this port carried two fields out of the contract's twelve, so the reason an
+   * operation was stuck never left the transport.
+   */
+  blockers: readonly string[];
+  /** The contract's `relay_receipt`. Evidence of what the relay did. */
+  relayReceipt: string | null;
+  /** Whether this operation asked anything of the Trading System. */
+  sourceSideEffectRequested: boolean;
 }
 
 export interface ExecutionApi {

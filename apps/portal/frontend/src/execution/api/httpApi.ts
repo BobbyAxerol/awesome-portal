@@ -840,6 +840,16 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
         value: {
           status: typeof data.status === "string" ? data.status : null,
           verificationRaw: raw,
+          // The contract publishes twelve fields and this read two of them.
+          // `blockers` is the one that matters most: it is the difference
+          // between "stopped" and "stopped because the relay is disabled".
+          blockers: Array.isArray(data.blockers)
+            ? data.blockers.filter((b): b is string => typeof b === "string")
+            : [],
+          relayReceipt: typeof data.relay_receipt === "string" ? data.relay_receipt : null,
+          // `!== false`: an unreadable flag must not report that nothing
+          // reached the Trading System.
+          sourceSideEffectRequested: data.source_side_effect_requested !== false,
         },
       };
     },

@@ -378,6 +378,10 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
           // reducer every token was recognised — including one this build has
           // never seen — which is exactly the guard `readEnum` exists to be.
           verification: readEnum(result.value.verificationRaw, VERIFICATION_RESULTS),
+          // Passed through untouched. The reducer decides what a blocker means
+          // for the walk; the container's job is not to lose it on the way.
+          blockers: result.value.blockers,
+          sourceSideEffectRequested: result.value.sourceSideEffectRequested,
         });
       });
     }, POLL_MS);
@@ -561,6 +565,10 @@ function useDecision(api: ExecutionApi) {
           // reducer every token was recognised — including one this build has
           // never seen — which is exactly the guard `readEnum` exists to be.
           verification: readEnum(result.value.verificationRaw, VERIFICATION_RESULTS),
+          // Passed through untouched. The reducer decides what a blocker means
+          // for the walk; the container's job is not to lose it on the way.
+          blockers: result.value.blockers,
+          sourceSideEffectRequested: result.value.sourceSideEffectRequested,
         });
       });
     }, POLL_MS);
