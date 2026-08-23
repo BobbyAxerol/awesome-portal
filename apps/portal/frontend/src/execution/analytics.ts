@@ -18,7 +18,7 @@
  * double drops the digit that makes it one.
  */
 import { readDecimal, readId, readTimestamp, type Decimal } from "./adapter";
-import type { Authority, FreshnessState, PanelStatus } from "./contracts";
+import type { Authority, Envelope, FreshnessState, PanelStatus } from "./contracts";
 
 function obj(raw: unknown): Record<string, unknown> | null {
   return raw && typeof raw === "object" && !Array.isArray(raw)
@@ -919,6 +919,33 @@ function readAggregateVerdict(raw: unknown): AggregateVerdict | null {
  * is that a verdict with no visible working is an assertion — and half its
  * working is still no working.
  */
+/**
+ * Turn a computation envelope into the row envelope a badge renders.
+ *
+ * Not a cast — three of these fields carry a different claim on each side, and
+ * getting any of them wrong makes the badge say something the analytics
+ * envelope never said:
+ *
+ *   * `asOf` comes from `inputAsOf`, when the DATA was true. `readAt` is when
+ *     the connector read it, and substituting one for the other turns a stale
+ *     figure into a fresh-looking one.
+ *   * `freshness` comes from `inputFreshnessFloor`, the WORST input rather than
+ *     an average — an aggregate is exactly as fresh as its stalest part.
+ *   * `deliveryProfile` comes from `sourceProfile`, so a fixture-sourced
+ *     computation cannot present itself as live.
+ */
+export function envelopeFromAnalytics(analytics: AnalyticsEnvelope): Envelope {
+  return {
+    authority: analytics.authority,
+    asOf: analytics.inputAsOf,
+    readAt: analytics.readAt,
+    freshness: analytics.inputFreshnessFloor,
+    projectionEpoch: analytics.epochId,
+    projectionSequence: analytics.projectionSequence,
+    deliveryProfile: (analytics.sourceProfile as Envelope["deliveryProfile"]) ?? undefined,
+  };
+}
+
 export function aggregateHeadroomFrom(
   aggregate: AggregateVerdict | null,
 ): {

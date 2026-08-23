@@ -42,6 +42,9 @@ import type {
 } from "../analytics";
 import { OrderFunnelStrip } from "./FullBlotter";
 import { AdminActionDrawerScreen, type TierFilter } from "./AdminActionDrawer";
+import { HeadroomBanner } from "./AccountBroker360";
+import { PanelState } from "../components/states";
+import { aggregateHeadroomFrom, envelopeFromAnalytics } from "../analytics";
 import type { CatalogEntry } from "../adminCatalog";
 import { capitalDeltasFromPreview } from "../api/rows";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "../api/rows";
@@ -1025,6 +1028,45 @@ export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
         setSelected(null);
         setTier(next);
       }}
+    />
+  );
+}
+
+/**
+ * The aggregate headroom banner, fed from the port.
+ *
+ * Narrow on purpose. `AccountBroker360` needs sync rows, linked accounts and a
+ * policy that the exposure endpoint does not carry, so a container for the whole
+ * screen would have to invent them. The banner is the part the exposure contract
+ * actually answers, and it is the part that decides whether an operator places
+ * an order — so it is the part worth wiring first.
+ *
+ * `aggregateHeadroomFrom` returns null unless every figure is present, and the
+ * banner renders null as unavailable with its own reason. Nothing here computes
+ * a verdict, and nothing falls back to summing the buckets when one is missing.
+ */
+export function ExposureHeadroomContainer({
+  api,
+  bindingId,
+}: {
+  api: ExecutionApi;
+  bindingId: string;
+}) {
+  const state = useAnalyticsRead(() => api.getBindingExposure(bindingId), [api, bindingId]);
+  const exposure = state.value?.exposure ?? null;
+  const envelope = state.value?.envelope ?? null;
+  const figures = aggregateHeadroomFrom(exposure?.aggregate ?? null);
+
+  if (state.status !== "ok" && state.status !== "partial") {
+    return <PanelState status={state.status} reason={state.reason} />;
+  }
+  return (
+    <HeadroomBanner
+      // Both or neither: a verdict without its envelope is an unattributed
+      // claim about exposure, and this banner is the one place that must not
+      // make one.
+      aggregate={figures && envelope ? { ...figures, envelope: envelopeFromAnalytics(envelope) } : null}
+      exposure={exposure}
     />
   );
 }

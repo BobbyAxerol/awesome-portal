@@ -59,34 +59,40 @@ Màn đã dựng xong, chạy fixture.
 
 ---
 
-### A3 · Verdict aggregate exposure → mở Account/Broker 360 🟠
+### A3 · Verdict aggregate exposure — ✅ **frontend xong**, chờ field
 
-**Câu hỏi:** ai phán "còn headroom hay không"?
+Màn đã hiện `unavailable` kèm lý do và **chưa bao giờ tự cộng**. Thiếu là
+`readBindingExposure` **không đọc verdict**, nên dù server gửi thì cũng không
+tới được màn — cùng pattern `readCorrelation` đã làm với `sample_counts` từ
+lâu, mà tôi không làm cùng lúc.
 
-Đây là control **fail-closed**. Browser cộng ba dòng thấy được ra `+2,120`
-trong khi execution cell giữ `46,800` và chặn mọi lệnh → **màn nói ngược với
-thứ sắp xảy ra**. Và browser không cộng đúng được: nó chỉ thấy `linked[]` mà
-endpoint trả.
+Đã sửa (`fc14d71`, và container ở commit này):
 
-**Trạng thái:** màn hiện `unavailable` kèm lý do khi không có verdict. Không bao
-giờ tự cộng.
+- reader đọc `aggregate` forward-compatible, kèm `virtual_total`/`physical_total`
+  là **bằng chứng** đứng sau verdict;
+- verdict thiếu nửa thì **từ chối**, không vẽ với lỗ hổng;
+- `ExposureHeadroomContainer` nối port → màn, có `envelopeFromAnalytics` ánh xạ
+  `asOf` từ **input** chứ không từ `readAt`, và freshness từ **input xấu nhất**;
+- test khẳng định field **vẫn vắng** — ngày nó tới, test đỏ và Portal dùng ngay.
 
-**Bạn cần làm:** duyệt `BR-EX-26`.
+Việc còn lại: `TRADING_SYSTEM_OWNER_REQUEST_2026-08-22.md` mục 2.
 
 ---
 
-### A4 · `sample_counts` cho correlation → đóng Portfolio 360 🟡
+### A4 · `sample_counts` cho correlation — ✅ **frontend không còn việc**
 
-**Câu hỏi:** packed matrix có gửi số mẫu từng cặp không?
+**Trả lời, không phải việc treo.** Tôi từng để mục này trong danh sách như thể
+còn dở. Nó không:
 
-`IMPLEMENTATION_PHASES` §16 đóng phase bằng *"render INSUFFICIENT_DATA when
-samples < threshold"*. Hiện **không làm được per-cell**: `RANKED_PAIRS` có
-`sample_count`, packed matrix không có gì.
+- `readCorrelation` đọc `sample_counts` forward-compatible từ lâu;
+- màn chỉ đánh `INSUFFICIENT_DATA` **khi count được publish** — count vắng nghĩa
+  là luật không áp được, không phải luật đã trượt;
+- caption nói thẳng sàn 200 mẫu chưa áp được từng ô;
+- **cả hai nhánh đều có test** (`portfolio360.test.tsx`).
 
-**Trạng thái:** màn nói thẳng trên caption rằng sàn 200 mẫu **không áp được**.
-Không đánh dấu ô nào là insufficient chỉ vì thiếu count.
-
-**Bạn cần làm:** duyệt `BR-EX-27`.
+Ngày `sample_counts` tới, **không dòng code màn nào phải đổi**. Việc còn lại là
+của chủ Trading System, và nằm ở
+`TRADING_SYSTEM_OWNER_REQUEST_2026-08-22.md` mục 1.
 
 ---
 
