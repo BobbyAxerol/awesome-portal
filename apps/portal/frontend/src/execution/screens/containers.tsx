@@ -31,7 +31,16 @@ import {
   shouldPoll,
   type DecisionState,
 } from "../decision";
-import type { CapitalPreviewInput, ExecutionApi } from "../api/ports";
+import type { ReactNode } from "react";
+
+import type { CapitalPreviewInput, ExecutionApi, InsightBatchInput, Result } from "../api/ports";
+import type {
+  BindingExposure,
+  CapitalLedger,
+  Correlation,
+  InsightBatch,
+} from "../analytics";
+import { OrderFunnelStrip } from "./FullBlotter";
 import { capitalDeltasFromPreview } from "../api/rows";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "../api/rows";
 import type { AnalyticsEnvelope, CapitalPreview } from "../analytics";
@@ -115,6 +124,47 @@ function describeCondition(condition: {
 }
 
 export const INBOX_SCOPE_SORT = "sla_due_at:asc,approval_id:asc";
+
+/**
+ * One read, its four states, and nothing else.
+ *
+ * The four analytics screens each needed the same effect — set loading, call
+ * the port, drop the answer if the component moved on, map ok/partial from the
+ * warnings — and four copies of that is four places for the cancellation guard
+ * to be forgotten. `deps` is explicit rather than derived from `read`, because
+ * a closure changes identity every render and depending on it would re-fetch
+ * forever.
+ */
+function useAnalyticsRead<T>(
+  read: () => Promise<Result<T>>,
+  deps: readonly unknown[],
+): LoadState<T> {
+  const [state, setState] = useState<LoadState<T>>(loading);
+  useEffect(() => {
+    let cancelled = false;
+    setState(loading);
+    void read().then((result) => {
+      if (cancelled) return;
+      setState(
+        result.ok
+          ? {
+              // Warnings mean the answer is real but incomplete. `partial`, not
+              // `ok`: a screen that showed them as equal would let a gap in the
+              // evidence read as evidence.
+              status: result.warnings?.length ? "partial" : "ok",
+              value: result.value,
+              warnings: result.warnings ?? [],
+            }
+          : { status: result.status, reason: result.reason, value: null, warnings: [] },
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+  return state;
+}
 
 export function ApprovalInboxContainer({
   api,
@@ -808,6 +858,153 @@ export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi;
         }
       />
       {decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : null}
+    </>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * The four analytics screens
+ *
+ * Each screen was reachable only by passing it props, which meant the port
+ * method, the reader and the screen had never been joined anywhere — the join
+ * is where a route typo or a mismapped state actually shows up.
+ *
+ * They stay on Lane A. These containers take an `api`, and the fixtures page
+ * hands them the fixture port; nothing here mounts a product route or enables a
+ * registry flag.
+ * ------------------------------------------------------------------------ */
+
+export function FullBlotterFunnelContainer({
+  api,
+  orderId,
+}: {
+  api: ExecutionApi;
+  orderId: string;
+}) {
+  const state = useAnalyticsRead(() => api.getOrderFunnel(orderId), [api, orderId]);
+  return (
+    <OrderFunnelStrip
+      funnel={state.value?.funnel ?? null}
+      status={state.status}
+      reason={state.reason}
+    />
+  );
+}
+
+export function AlphaInsightContainer({
+  api,
+  alphaId,
+  request,
+  render,
+}: {
+  api: ExecutionApi;
+  alphaId: string;
+  request: InsightBatchInput;
+  /** The screen decides how a batch is drawn; this only supplies it. */
+  render: (state: {
+    batch: InsightBatch | null;
+    envelope: AnalyticsEnvelope | null;
+    status: PanelStatus;
+    reason?: string;
+  }) => ReactNode;
+}) {
+  // `request` is an object literal at most call sites, so a new identity every
+  // render. Depending on it directly would re-fetch forever; the fields that
+  // change the answer are the dependency.
+  const itemKey = request.items.map((i) => `${i.insightId}:${i.alphaId}`).join(",");
+  const state = useAnalyticsRead(
+    () => api.getInsightBatch(alphaId, request),
+    [api, alphaId, request.portfolioId, itemKey],
+  );
+  return (
+    <>
+      {render({
+        batch: state.value?.batch ?? null,
+        envelope: state.value?.envelope ?? null,
+        status: state.status,
+        reason: state.reason,
+      })}
+    </>
+  );
+}
+
+export function CorrelationContainer({
+  api,
+  portfolioId,
+  render,
+}: {
+  api: ExecutionApi;
+  portfolioId: string;
+  render: (state: {
+    correlation: Correlation | null;
+    envelope: AnalyticsEnvelope | null;
+    status: PanelStatus;
+    reason?: string;
+  }) => ReactNode;
+}) {
+  const state = useAnalyticsRead(() => api.getCorrelation(portfolioId), [api, portfolioId]);
+  return (
+    <>
+      {render({
+        correlation: state.value?.correlation ?? null,
+        envelope: state.value?.envelope ?? null,
+        status: state.status,
+        reason: state.reason,
+      })}
+    </>
+  );
+}
+
+export function CapitalLedgerContainer({
+  api,
+  portfolioId,
+  render,
+}: {
+  api: ExecutionApi;
+  portfolioId: string;
+  render: (state: {
+    ledger: CapitalLedger | null;
+    envelope: AnalyticsEnvelope | null;
+    status: PanelStatus;
+    reason?: string;
+  }) => ReactNode;
+}) {
+  const state = useAnalyticsRead(() => api.getCapitalLedger(portfolioId), [api, portfolioId]);
+  return (
+    <>
+      {render({
+        ledger: state.value?.ledger ?? null,
+        envelope: state.value?.envelope ?? null,
+        status: state.status,
+        reason: state.reason,
+      })}
+    </>
+  );
+}
+
+export function BindingExposureContainer({
+  api,
+  bindingId,
+  render,
+}: {
+  api: ExecutionApi;
+  bindingId: string;
+  render: (state: {
+    exposure: BindingExposure | null;
+    envelope: AnalyticsEnvelope | null;
+    status: PanelStatus;
+    reason?: string;
+  }) => ReactNode;
+}) {
+  const state = useAnalyticsRead(() => api.getBindingExposure(bindingId), [api, bindingId]);
+  return (
+    <>
+      {render({
+        exposure: state.value?.exposure ?? null,
+        envelope: state.value?.envelope ?? null,
+        status: state.status,
+        reason: state.reason,
+      })}
     </>
   );
 }

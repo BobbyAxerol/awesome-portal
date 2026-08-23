@@ -13,11 +13,27 @@
  */
 import { readKeysetPage } from "../adapter";
 import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./rows";
-import { readAnalyticsEnvelope, readCapitalPreview } from "../analytics";
 import {
+  readAnalyticsEnvelope,
+  readBindingExposure,
+  readCapitalLedger,
+  readCapitalPreview,
+  readCorrelation,
+  readInsightBatch,
+  readOrderFunnel,
+} from "../analytics";
+import {
+  CAPITAL_LEDGER,
   CAPITAL_PREVIEW_BREACH,
   CAPITAL_PREVIEW_OK,
   CAPITAL_PREVIEW_STALE,
+  CORRELATION_ABOVE_LIMIT,
+  CORRELATION_AT_LIMIT,
+  EXPOSURE_COMPLETE,
+  FUNNEL_BOUNDED,
+  FUNNEL_COMPLETE,
+  INSIGHT_BATCH_FULL,
+  INSIGHT_BATCH_MIXED,
 } from "../analytics.presentation.fixtures";
 import type {
   ApplyReceipt,
@@ -28,7 +44,7 @@ import type {
   Result,
 } from "./ports";
 import { unavailable } from "./ports";
-import type { CapitalPreviewInput, DecisionPlan } from "./ports";
+import type { CapitalPreviewInput, InsightBatchInput, DecisionPlan } from "./ports";
 
 /** Wire-shaped, snake_case, exactly as the endpoint will send it. */
 /* The five pending rows of the Approval Inbox hi-fi, and they are the cast's.
@@ -401,6 +417,12 @@ export interface FixtureApiOptions {
   stalePreview?: boolean;
   /** Blocker codes the plan comes back with. A blocked plan issues no token. */
   planBlockers?: readonly string[];
+  /** Serve the funnel whose window is bounded at 4,180 events. */
+  boundedFunnel?: boolean;
+  /** Serve the batch that carries errors beside ready items. */
+  mixedInsights?: boolean;
+  /** Serve the correlation that exceeds the packed transport limit. */
+  correlationAboveLimit?: boolean;
 }
 
 /**
@@ -541,6 +563,72 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       return preview && envelope
         ? { ok: true as const, value: { preview, envelope } }
         : unavailable("The capital preview response could not be read.");
+    },
+
+    /**
+     * The five analytics reads, served from the PRESENTATION fixtures.
+     *
+     * Deliberately not from `packages/contracts/fixtures`: those documents are
+     * one row each, which is right for a contract example and useless for
+     * seeing a screen behave. The canonical documents are loaded directly by
+     * `contractFixtures.test.ts`, which is where they belong — proving the
+     * reader agrees with the server. These serve the fixtures page, where the
+     * job is showing a funnel bounded at 4,180 events and a matrix at the
+     * packed limit.
+     */
+    async getOrderFunnel(_orderId: string) {
+      const blocked = gate<never>("getOrderFunnel");
+      if (blocked) return blocked as Result<never>;
+      const source = options.boundedFunnel ? FUNNEL_BOUNDED : FUNNEL_COMPLETE;
+      const funnel = readOrderFunnel(source);
+      const envelope = readAnalyticsEnvelope(source);
+      return funnel && envelope
+        ? { ok: true as const, value: { funnel, envelope } }
+        : unavailable("The order funnel response could not be read.");
+    },
+
+    async getInsightBatch(_alphaId: string, request: InsightBatchInput) {
+      const blocked = gate<never>("getInsightBatch");
+      if (blocked) return blocked as Result<never>;
+      const source = options.mixedInsights ? INSIGHT_BATCH_MIXED : INSIGHT_BATCH_FULL;
+      const batch = readInsightBatch(source, request.portfolioId);
+      const envelope = readAnalyticsEnvelope(source);
+      return batch && envelope
+        ? { ok: true as const, value: { batch, envelope } }
+        : unavailable("The insight batch response could not be read.");
+    },
+
+    async getCorrelation(_portfolioId: string) {
+      const blocked = gate<never>("getCorrelation");
+      if (blocked) return blocked as Result<never>;
+      const source = options.correlationAboveLimit
+        ? CORRELATION_ABOVE_LIMIT
+        : CORRELATION_AT_LIMIT;
+      const correlation = readCorrelation(source);
+      const envelope = readAnalyticsEnvelope(source);
+      return correlation && envelope
+        ? { ok: true as const, value: { correlation, envelope } }
+        : unavailable("The correlation response could not be read.");
+    },
+
+    async getCapitalLedger(_portfolioId: string) {
+      const blocked = gate<never>("getCapitalLedger");
+      if (blocked) return blocked as Result<never>;
+      const ledger = readCapitalLedger(CAPITAL_LEDGER);
+      const envelope = readAnalyticsEnvelope(CAPITAL_LEDGER);
+      return ledger && envelope
+        ? { ok: true as const, value: { ledger, envelope } }
+        : unavailable("The capital ledger response could not be read.");
+    },
+
+    async getBindingExposure(_bindingId: string) {
+      const blocked = gate<never>("getBindingExposure");
+      if (blocked) return blocked as Result<never>;
+      const exposure = readBindingExposure(EXPOSURE_COMPLETE);
+      const envelope = readAnalyticsEnvelope(EXPOSURE_COMPLETE);
+      return exposure && envelope
+        ? { ok: true as const, value: { exposure, envelope } }
+        : unavailable("The binding exposure response could not be read.");
     },
 
     async getPaperExit(reviewId: string) {

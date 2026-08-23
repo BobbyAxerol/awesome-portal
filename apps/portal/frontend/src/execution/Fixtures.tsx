@@ -45,6 +45,7 @@ import {
   ApprovalInboxContainer,
   GateR1ReviewContainer,
   GateR2ReviewContainer,
+  FullBlotterFunnelContainer,
   PaperExitReviewContainer,
 } from "./screens/containers";
 import { createFixtureApi } from "./api/fixtureApi";
@@ -1737,6 +1738,9 @@ export default function ExecutionFixtures() {
           </Case>
           <Case caption="a bounded window — 4 of 4,180 events, and the screen says so instead of reading as a complete history">
             <OrderFunnelStrip funnel={readOrderFunnel(FUNNEL_BOUNDED)} status="ok" />
+          </Case>
+          <Case caption="the same funnel fetched THROUGH the port — the join the props above skip">
+            <FullBlotterFunnelContainer api={WIRED_API} orderId="order-1" />
           </Case>
         </Group>
 

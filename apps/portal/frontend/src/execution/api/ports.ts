@@ -13,7 +13,15 @@
 import type { KeysetPage, PanelStatus } from "../contracts";
 import type { ApprovalRow } from "../screens/ApprovalInbox";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "./rows";
-import type { AnalyticsEnvelope, CapitalPreview } from "../analytics";
+import type {
+  AnalyticsEnvelope,
+  BindingExposure,
+  CapitalLedger,
+  CapitalPreview,
+  Correlation,
+  InsightBatch,
+  OrderFunnel,
+} from "../analytics";
 
 export type Result<T> =
   | { ok: true; value: T; warnings?: readonly string[] }
@@ -26,6 +34,18 @@ export type Result<T> =
  * yet published on the R2 review row — see the backend request in
  * `FRONTEND_HANDOFF.md` §8.3 — so today they are supplied by the caller.
  */
+/**
+ * `InsightBatchRequest`, in the frontend's casing.
+ *
+ * The schema caps `items` at 64. The cap is not enforced here — the server owns
+ * it and a client that silently truncated would hide a request the operator
+ * made — but `INSIGHT_BATCH_LIMIT` states it so a caller can page instead.
+ */
+export interface InsightBatchInput {
+  portfolioId: string;
+  items: readonly { insightId: string; alphaId: string }[];
+}
+
 export interface CapitalPreviewInput {
   portfolioId: string;
   requestedAmount: string;
@@ -121,6 +141,40 @@ export interface ExecutionApi {
    * keystroke or serve a preview for an amount the reviewer has already moved
    * past — the second being the dangerous one.
    */
+  /**
+   * The five analytics reads, alongside the capital preview that was already
+   * here. Each returns its parsed domain object with the envelope beside it —
+   * both or neither, for the reason the preview states: a figure without its
+   * authority and freshness is an unattributed claim, and every one of these
+   * screens exists to attribute.
+   *
+   * `GET /api/v1/execution/orders/{orderId}/funnel`
+   */
+  getOrderFunnel(
+    orderId: string,
+  ): Promise<Result<{ funnel: OrderFunnel; envelope: AnalyticsEnvelope }>>;
+  /**
+   * `POST /api/v1/execution/alphas/{alphaId}/insight-previews`
+   *
+   * A POST because the batch is a body, not a query string: the schema caps it
+   * at 64 items and a URL cannot carry them safely.
+   */
+  getInsightBatch(
+    alphaId: string,
+    request: InsightBatchInput,
+  ): Promise<Result<{ batch: InsightBatch; envelope: AnalyticsEnvelope }>>;
+  /** `GET /api/v1/execution/portfolios/{portfolioId}/correlation` */
+  getCorrelation(
+    portfolioId: string,
+  ): Promise<Result<{ correlation: Correlation; envelope: AnalyticsEnvelope }>>;
+  /** `GET /api/v1/execution/portfolios/{portfolioId}/capital-ledger` */
+  getCapitalLedger(
+    portfolioId: string,
+  ): Promise<Result<{ ledger: CapitalLedger; envelope: AnalyticsEnvelope }>>;
+  /** `GET /api/v1/execution/broker-bindings/{bindingId}/exposure` */
+  getBindingExposure(
+    bindingId: string,
+  ): Promise<Result<{ exposure: BindingExposure; envelope: AnalyticsEnvelope }>>;
   getCapitalPreview(
     approvalId: string,
     request: CapitalPreviewInput,

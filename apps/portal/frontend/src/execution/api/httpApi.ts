@@ -23,7 +23,16 @@ import {
 import type { RiskTier } from "../contracts";
 import { commandBlockedReason, type DeliveryPolicy } from "../profile";
 import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./rows";
-import { readAnalyticsEnvelope, readCapitalPreview } from "../analytics";
+import {
+  INSIGHT_BATCH_LIMIT,
+  readAnalyticsEnvelope,
+  readBindingExposure,
+  readCapitalLedger,
+  readCapitalPreview,
+  readCorrelation,
+  readInsightBatch,
+  readOrderFunnel,
+} from "../analytics";
 import { analyticsFailureReason, readAnalyticsFailure } from "../analyticsProblem";
 import type {
   ApplyReceipt,
@@ -34,11 +43,12 @@ import type {
   Result,
 } from "./ports";
 import { isPaperExitDecision, PAPER_EXIT_EXTENSION_DAYS, unavailable } from "./ports";
-import type { CapitalPreviewInput } from "./ports";
+import type { CapitalPreviewInput, InsightBatchInput } from "./ports";
 import type { components } from "@portal/contracts-analytics";
 import type { components as GovernanceComponents } from "@portal/contracts-governance";
 
 type PaperExitPlanRequest = GovernanceComponents["schemas"]["PaperExitDecisionPlanRequest"];
+type InsightBatchRequest = components["schemas"]["InsightBatchRequest"];
 
 type CapitalPreviewRequest = components["schemas"]["CapitalPreviewRequest"];
 
@@ -249,6 +259,117 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       return preview && envelope
         ? { ok: true as const, value: { preview, envelope } }
         : unavailable("The capital preview response could not be read.");
+    },
+
+    /**
+     * The five analytics reads.
+     *
+     * Each is the same four steps and they are written out rather than folded
+     * into a helper, because the differences are the interesting part: which
+     * reader parses the body, and whether the call carries one.
+     *
+     * `analyticsProblem` rather than `problem` throughout — six of the seven
+     * codes these endpoints return are 422s the operator can act on, and the
+     * generic mapper resolves every one of them to `unavailable`.
+     *
+     * Both the parsed object and the envelope, or neither. A figure without its
+     * authority and freshness is an unattributed claim about money or risk, and
+     * every screen downstream refuses to render one — so it is refused here,
+     * where the reason can still be said.
+     */
+    async getOrderFunnel(orderId: string) {
+      const blocked = readBlocked();
+      if (blocked) return unavailable(blocked);
+      const response = await get(`/orders/${encodeURIComponent(orderId)}/funnel`, signal);
+      if (!response.ok) return analyticsProblem(response);
+      const body = await response.json();
+      const funnel = readOrderFunnel(body);
+      const envelope = readAnalyticsEnvelope(body);
+      return funnel && envelope
+        ? { ok: true as const, value: { funnel, envelope } }
+        : unavailable("The order funnel response could not be read.");
+    },
+
+    async getInsightBatch(alphaId: string, request: InsightBatchInput) {
+      const blocked = readBlocked();
+      if (blocked) return unavailable(blocked);
+      // The server owns the 64 cap. Refused here rather than truncated,
+      // because a client that quietly dropped items would answer a question
+      // nobody asked and label it as the answer to the one they did.
+      if (request.items.length > INSIGHT_BATCH_LIMIT) {
+        return unavailable(
+          `One batch carries at most ${INSIGHT_BATCH_LIMIT} items; this asked for ${request.items.length}. Ask in pages.`,
+        );
+      }
+      const requestBody: InsightBatchRequest = {
+        portfolio_id: request.portfolioId,
+        items: request.items.map((item) => ({
+          insight_id: item.insightId,
+          alpha_id: item.alphaId,
+        })),
+      };
+      const response = await post(
+        `/alphas/${encodeURIComponent(alphaId)}/insight-previews`,
+        requestBody,
+        signal,
+      );
+      if (!response.ok) return analyticsProblem(response);
+      const body = await response.json();
+      // The expected portfolio is passed in so a batch computed for another one
+      // cannot be rendered as this one's.
+      const batch = readInsightBatch(body, request.portfolioId);
+      const envelope = readAnalyticsEnvelope(body);
+      return batch && envelope
+        ? { ok: true as const, value: { batch, envelope } }
+        : unavailable("The insight batch response could not be read.");
+    },
+
+    async getCorrelation(portfolioId: string) {
+      const blocked = readBlocked();
+      if (blocked) return unavailable(blocked);
+      const response = await get(
+        `/portfolios/${encodeURIComponent(portfolioId)}/correlation`,
+        signal,
+      );
+      if (!response.ok) return analyticsProblem(response);
+      const body = await response.json();
+      const correlation = readCorrelation(body);
+      const envelope = readAnalyticsEnvelope(body);
+      return correlation && envelope
+        ? { ok: true as const, value: { correlation, envelope } }
+        : unavailable("The correlation response could not be read.");
+    },
+
+    async getCapitalLedger(portfolioId: string) {
+      const blocked = readBlocked();
+      if (blocked) return unavailable(blocked);
+      const response = await get(
+        `/portfolios/${encodeURIComponent(portfolioId)}/capital-ledger`,
+        signal,
+      );
+      if (!response.ok) return analyticsProblem(response);
+      const body = await response.json();
+      const ledger = readCapitalLedger(body);
+      const envelope = readAnalyticsEnvelope(body);
+      return ledger && envelope
+        ? { ok: true as const, value: { ledger, envelope } }
+        : unavailable("The capital ledger response could not be read.");
+    },
+
+    async getBindingExposure(bindingId: string) {
+      const blocked = readBlocked();
+      if (blocked) return unavailable(blocked);
+      const response = await get(
+        `/broker-bindings/${encodeURIComponent(bindingId)}/exposure`,
+        signal,
+      );
+      if (!response.ok) return analyticsProblem(response);
+      const body = await response.json();
+      const exposure = readBindingExposure(body);
+      const envelope = readAnalyticsEnvelope(body);
+      return exposure && envelope
+        ? { ok: true as const, value: { exposure, envelope } }
+        : unavailable("The binding exposure response could not be read.");
     },
 
     async getGateR2(approvalId: string) {
