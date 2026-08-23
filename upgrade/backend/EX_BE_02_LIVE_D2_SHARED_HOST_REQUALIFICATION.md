@@ -48,10 +48,21 @@ it only to another role/profile does not satisfy D2.
 safe DryRun input, and detachment is reserved for the bounded D2 change window
 after publication, workload identity staging and a fresh admitted baseline.
 
+The owner reported attaching the policy and Codex re-ran the exact check at
+`2026-08-23T08:36:20Z`. STS proved that the caller is the expected
+`PrimusPortalExecutionD1Operator-v1` session on the exact instance and EC2
+proved the expected profile association remains stable. The DryRun still
+returned `UnauthorizedOperation` with AWS' explicit reason that no identity-
+based policy allows `ec2:ModifyInstanceMetadataOptions` on the exact instance.
+Read-only IAM policy listing and authorization-message decode are not granted
+to the instance role, so they cannot distinguish an unattached policy from a
+Permissions boundary or a condition mismatch. Detachment remains prohibited.
+
 ## 3. Required order
 
 1. attach the reviewed private D2 isolation policy to the exact existing D1
-   operator role;
+   operator role under **Permissions policies** (not only as the Permissions
+   boundary), then verify the policy attachment in the IAM console;
 2. re-run the IMDS hop-limit-one DryRun and require `DryRunOperation`;
 3. merge the verified feature through `dev` and the release-ready `main` PR;
 4. publish and verify immutable signed Edge/Proxy images;

@@ -341,7 +341,10 @@ authority.
   The exact IMDS→detach→credential-absence order is now enforced by a tested
   operator tool with status `D2_ISOLATION_EXECUTABLE_PREPARED /
   LIVE_D2_UNAUTHORIZED`; its verify mode is read-only and activation remains
-  window-gated.
+  window-gated. A post-attachment recheck at `2026-08-23T08:36:20Z` proved the
+  caller/instance/profile association are exact but AWS still reports that no
+  identity-based policy allows the metadata action. The console attachment or
+  boundary placement must therefore be corrected; no detachment occurred.
 - `EX-BE-02-LIVE` **D3 offline preparation complete / live unauthorized**
   (`D3_OFFLINE_PREPARATION_COMPLETE / LIVE_D3_UNAUTHORIZED`): a
   separate Compose/env/config delta opens only three credential-free public
