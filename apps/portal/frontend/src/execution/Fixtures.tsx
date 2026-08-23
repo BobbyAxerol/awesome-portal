@@ -46,6 +46,10 @@ import {
   GateR1ReviewContainer,
   GateR2ReviewContainer,
   AdminCatalogueContainer,
+  AlphaInsightContainer,
+  CapitalLedgerContainer,
+  CorrelationContainer,
+  ExposureHeadroomContainer,
   FullBlotterFunnelContainer,
   PaperExitReviewContainer,
 } from "./screens/containers";
@@ -55,6 +59,12 @@ import { FullBlotter, OrderFunnelStrip } from "./screens/FullBlotter";
 import { AdminActionDrawerScreen } from "./screens/AdminActionDrawer";
 
 /** Every Paper Exit capability granted. Absence is refusal, so cases say so. */
+/** Stable across renders: a fresh literal would re-fetch on every one. */
+const ALPHA_BATCH_REQUEST = {
+  portfolioId: "PF-1",
+  items: [{ insightId: "insight-1", alphaId: "alpha-1" }],
+} as const;
+
 const EXIT_ELIGIBLE = {
   canApprove: true,
   canApproveWithCondition: true,
@@ -1627,6 +1637,46 @@ export default function ExecutionFixtures() {
           the Phase 0 exit gate is "every shared Execution component in every
           state" precisely so that cannot happen.
         */}
+        <Group
+          title="Analytics containers — port → screen"
+          note="Every one of these fetches through the port rather than taking props. That join is where a route typo or a mismapped state actually shows up, and four of them were built and never mounted."
+          surface="deployments"
+        >
+          <Case caption="correlation — the panel degrades to the leader lens at the packed limit, and says why">
+            <CorrelationContainer api={WIRED_API} portfolioId="PF-1" />
+          </Case>
+          <Case caption="aggregate headroom — unavailable, because the source publishes no verdict yet (BR-EX-26)">
+            <ExposureHeadroomContainer api={WIRED_API} bindingId="binding-1" />
+          </Case>
+          <Case caption="capital ledger — bounded window and per-currency gross totals, read from the port">
+            <CapitalLedgerContainer
+              api={WIRED_API}
+              portfolioId="PF-1"
+              render={({ ledger, status }) => (
+                <p className="exec-blotter-note">
+                  {status === "ok"
+                    ? `${ledger?.buckets.length ?? 0} currency bucket(s) · window ${ledger?.window ?? "not stated"} · ${ledger?.bounded.returned ?? 0} of ${ledger?.bounded.total ?? "—"} entries`
+                    : `ledger ${status}`}
+                </p>
+              )}
+            />
+          </Case>
+          <Case caption="alpha insight batch — the three counts the server owns, never derived from the item list">
+            <AlphaInsightContainer
+              api={WIRED_API}
+              alphaId="alpha-1"
+              request={ALPHA_BATCH_REQUEST}
+              render={({ batch, status }) => (
+                <p className="exec-blotter-note">
+                  {status === "ok"
+                    ? `requested ${batch?.requestedCount ?? "—"} · ready ${batch?.readyCount ?? "—"} · error ${batch?.errorCount ?? "—"}`
+                    : `batch ${status}`}
+                </p>
+              )}
+            />
+          </Case>
+        </Group>
+
         <Group
           title="Command Center (5a)"
           note="Backend dark: the snapshot is real, the incident/operation/fleet sources behind it are not claimed. Four panels carry four verdicts — there is no page-level health badge to be wrong."

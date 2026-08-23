@@ -234,22 +234,31 @@ describe("the analytics containers join the port to the screens", () => {
     await waitFor(() => expect(screen.queryByText(/not observed/)).toBeNull());
   });
 
-  it("hands the correlation to its renderer with the envelope beside it", async () => {
-    render(
+  it("draws the correlation panel from the port, envelope included", async () => {
+    const { container } = render(
+      <CorrelationContainer api={createFixtureApi()} portfolioId="PF-1" />,
+    );
+    // The panel itself, not a stand-in renderer: the container is concrete now
+    // because no screen ever supplied the render prop it used to demand.
+    //
+    // Asserting the matrix table would be wrong — the fixture sits at the
+    // packed transport limit, so 150 entities are 22,500 cells against a 4,096
+    // budget and the panel correctly degrades to the leader lens. What proves
+    // the container is that the panel rendered and says why.
+    await waitFor(() => expect(container.textContent).toMatch(/past the/));
+    expect(container.textContent).toMatch(/4,096/);
+    // The authority badge proves the envelope travelled with the figures.
+    expect(container.textContent).toMatch(/EXECUTION|DERIVED|PORTAL|BROKER/);
+  });
+
+  it("shows the port's failure instead of an empty matrix", async () => {
+    const { container } = render(
       <CorrelationContainer
-        api={createFixtureApi()}
+        api={createFixtureApi({ unavailableEndpoints: ["getCorrelation"] })}
         portfolioId="PF-1"
-        render={({ correlation, envelope, status }) => (
-          <div>
-            <span>{status}</span>
-            <span>{correlation?.kind ?? "none"}</span>
-            <span>{envelope?.authority ?? "no authority"}</span>
-          </div>
-        )}
       />,
     );
-    expect(await screen.findByText("PACKED_MATRIX")).toBeTruthy();
-    expect(screen.queryByText("no authority")).toBeNull();
+    await waitFor(() => expect(container.textContent).not.toMatch(/past the/));
   });
 
   it("does not re-fetch forever when the request object is rebuilt each render", async () => {

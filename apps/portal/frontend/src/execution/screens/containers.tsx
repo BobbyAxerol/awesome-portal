@@ -34,15 +34,11 @@ import {
 import type { ReactNode } from "react";
 
 import type { CapitalPreviewInput, ExecutionApi, InsightBatchInput, Result } from "../api/ports";
-import type {
-  BindingExposure,
-  CapitalLedger,
-  Correlation,
-  InsightBatch,
-} from "../analytics";
+import type { CapitalLedger, InsightBatch } from "../analytics";
 import { OrderFunnelStrip } from "./FullBlotter";
 import { AdminActionDrawerScreen, type TierFilter } from "./AdminActionDrawer";
 import { HeadroomBanner } from "./AccountBroker360";
+import { CorrelationPanel } from "./PortfolioThreeSixty";
 import { PanelState } from "../components/states";
 import { aggregateHeadroomFrom, envelopeFromAnalytics } from "../analytics";
 import type { CatalogEntry } from "../adminCatalog";
@@ -924,30 +920,34 @@ export function AlphaInsightContainer({
   );
 }
 
+/**
+ * Concrete rather than a render prop.
+ *
+ * The first draft handed the parsed correlation to a callback so a screen could
+ * decide how to draw it, and no screen ever did — the panel already exists and
+ * already owns those decisions, including the leader lens and the cell budget.
+ * A container whose only consumer is its own test is not a seam, it is an
+ * unfinished bridge.
+ */
 export function CorrelationContainer({
   api,
   portfolioId,
-  render,
 }: {
   api: ExecutionApi;
   portfolioId: string;
-  render: (state: {
-    correlation: Correlation | null;
-    envelope: AnalyticsEnvelope | null;
-    status: PanelStatus;
-    reason?: string;
-  }) => ReactNode;
 }) {
+  const [lensIndex, setLensIndex] = useState<number | null>(null);
   const state = useAnalyticsRead(() => api.getCorrelation(portfolioId), [api, portfolioId]);
+  if (state.status !== "ok" && state.status !== "partial") {
+    return <PanelState status={state.status} reason={state.reason} />;
+  }
   return (
-    <>
-      {render({
-        correlation: state.value?.correlation ?? null,
-        envelope: state.value?.envelope ?? null,
-        status: state.status,
-        reason: state.reason,
-      })}
-    </>
+    <CorrelationPanel
+      correlation={state.value?.correlation ?? null}
+      envelope={state.value ? envelopeFromAnalytics(state.value.envelope) : undefined}
+      lensIndex={lensIndex}
+      onLensChange={setLensIndex}
+    />
   );
 }
 
@@ -978,32 +978,14 @@ export function CapitalLedgerContainer({
   );
 }
 
-export function BindingExposureContainer({
-  api,
-  bindingId,
-  render,
-}: {
-  api: ExecutionApi;
-  bindingId: string;
-  render: (state: {
-    exposure: BindingExposure | null;
-    envelope: AnalyticsEnvelope | null;
-    status: PanelStatus;
-    reason?: string;
-  }) => ReactNode;
-}) {
-  const state = useAnalyticsRead(() => api.getBindingExposure(bindingId), [api, bindingId]);
-  return (
-    <>
-      {render({
-        exposure: state.value?.exposure ?? null,
-        envelope: state.value?.envelope ?? null,
-        status: state.status,
-        reason: state.reason,
-      })}
-    </>
-  );
-}
+/*
+ * `BindingExposureContainer` was here and is gone.
+ *
+ * It handed the parsed exposure to a render prop and nothing consumed it, while
+ * `ExposureHeadroomContainer` below does the job the contract actually answers.
+ * Two containers for one endpoint, one of them unused, is not a choice of
+ * seams — it is one seam and one leftover.
+ */
 
 export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
   const [selected, setSelected] = useState<CatalogEntry | null>(null);
