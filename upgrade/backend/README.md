@@ -315,6 +315,12 @@ authority.
   profile/command/Trading System flags remain false. Exact status:
   `D2_AUTHORIZATION_CONTRACT_PREPARED / LIVE_D2_UNAUTHORIZED`. Evidence:
   [`EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md`](./EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md).
+  A 05:43 UTC recheck kept admission rejected: the shared 3,000-IOPS gp3 volume
+  was effectively saturated by existing workloads, and both historical OOMs
+  were non-Portal 256 MiB candidate workers rather than stale false positives.
+  The current role also failed the IMDS-hardening DryRun. No service or cloud
+  state changed; a dedicated AWS-HK Portal host/storage boundary is the safest
+  owner option if an admitted shared-host window cannot be obtained.
 - `EX-BE-02-LIVE` **D3 offline preparation complete / live unauthorized**
   (`D3_OFFLINE_PREPARATION_COMPLETE / LIVE_D3_UNAUTHORIZED`): a
   separate Compose/env/config delta opens only three credential-free public

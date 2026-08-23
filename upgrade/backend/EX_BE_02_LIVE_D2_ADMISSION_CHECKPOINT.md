@@ -80,3 +80,43 @@ network/container/volume was created.
 Claude continues only fixture/dark/unavailable/recovery UX. The frontend must
 not treat a capacity or IAM result as source availability. Registry profile,
 Query, analytics, SSE, Lane B and commands remain off.
+
+## 6. Requalification and root cause — 2026-08-23 05:43 UTC
+
+The repeated live gate remained `D2_HOST_ADMISSION_REJECTED` with I/O
+full-pressure 7.93%, current memory full-pressure zero, about 9.3 GB available
+memory and no Portal workload/listener collision. This is persistent storage
+contention, not a Portal process: a three-second sample attributed about
+13 MiB/s of writes to existing source/stream workloads. The single gp3 root
+volume is provisioned for 3,000 IOPS; CloudWatch over 30 minutes observed about
+122,421 write operations/minute on average (~2,040 IOPS) and a maximum of
+181,642/minute (~3,027 IOPS), with average queue length 1.86 and maximum 2.73.
+
+The two historical OOM records are also non-Portal candidate workers. Both had
+a hard 256 MiB memory limit, exited 137 with `OOMKilled=true` on 2026-08-22 and
+were not restarted. A currently running sibling was observed near that same
+limit, so historical review cannot be treated as a harmless stale artifact.
+Codex did not stop, resize or reconfigure any of those workloads.
+
+The root volume is not encrypted. D2's locked
+`LOCAL_DARK_NO_INGESTION` empty-schema pilot may not contain business data, and
+D4 must not store Paper projections there. D4 retains its independently
+approved encrypted projection-store boundary.
+
+The IAM role still lacks D2 isolation authority:
+`ModifyInstanceMetadataOptions` with `DryRun=true` returned
+`UnauthorizedOperation`. `DisassociateIamInstanceProfile` has no DryRun input,
+so it was not invoked. A separate exact-instance private policy and an
+unauthorized mode-0600 D2 owner-input were prepared outside Git; an AWS admin
+must attach/verify that policy before any D2 window. No AWS, Docker, WireGuard,
+Trading System or Portal runtime state changed during this requalification.
+
+Safe resolution remains one of the following owner decisions:
+
+1. use a dedicated Portal Execution Edge host/storage boundary in AWS-HK;
+2. open D2 only during a demonstrably admitted low-pressure window after the
+   Trading System owner reviews the OOM evidence; or
+3. let the Trading System/infrastructure owner independently remediate its
+   storage and worker budgets, then rerun the unchanged Portal gate.
+
+Codex has no authority to implement option 3 or weaken the 5% admission limit.

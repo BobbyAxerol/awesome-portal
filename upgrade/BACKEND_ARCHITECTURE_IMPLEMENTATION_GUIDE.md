@@ -985,6 +985,12 @@ deep-dive → ADR → slice → evidence discipline documented above.
   `D2_AUTHORIZATION_CONTRACT_PREPARED / LIVE_D2_UNAUTHORIZED`; no runtime state
   changed. Evidence:
   [`EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md`](./backend/EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md).
+  Requalification at 05:43 UTC confirmed the shared host's 3,000-IOPS gp3
+  volume was effectively saturated by existing source/stream writes and that
+  two 256 MiB non-Portal candidate workers genuinely exited OOM. The role also
+  failed the IMDS-hardening DryRun. The gate and no-Trading-System-mutation
+  boundary remain unchanged; prefer a dedicated AWS-HK Portal host/storage
+  boundary if no admitted shared-host window exists.
 - **EX-BE-02-LIVE D3 offline preparation (2026-08-23):** a separate probe-only
   overlay now opens exactly three public contract/health source routes while
   four alpha routes remain 503 and ingestion/query/SSE/analytics/command stay

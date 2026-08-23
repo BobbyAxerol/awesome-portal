@@ -35,6 +35,11 @@ runtime, while activation remains limited to source-dark D2 and requires
 profile-detachment/IMDS proof. Claude keeps every live capability and Lane B
 off until a later accepted D2 evidence packet.
 
+The 05:43 UTC admission recheck remains rejected because existing AWS-HK
+storage load saturates the shared volume and the two historical OOM records are
+real non-Portal worker exits. This remains an operations-only state: do not
+surface a source-ready UI, poll AWS or alter the fixture/dark consumer model.
+
 ## 1. Hai endpoint public
 
 | Endpoint | Method | Cache | Body |
