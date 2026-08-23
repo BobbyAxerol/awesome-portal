@@ -2729,19 +2729,7 @@
   min-width: 0;
 }
 
-.exec-admin-lead,
-.exec-admin-source {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  color: var(--ink-faint);
-  margin: 0 0 var(--space-2);
-}
 
-.exec-admin-source {
-  margin: var(--space-3) 0 0;
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--line-soft);
-}
 
 .exec-admin-group {
   margin-bottom: var(--space-3);
@@ -2866,38 +2854,10 @@
   color: var(--ink-mute);
 }
 
-.exec-admin-read {
-  padding: var(--space-2);
-  border: 1px solid var(--good);
-  background: var(--good-bg);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  color: var(--ink-soft);
-}
 
-.exec-admin-read b { color: var(--good); }
 
-.exec-admin-returns {
-  padding: var(--space-2);
-  border: 1px solid var(--line);
-  background: var(--surface-3);
-}
 
-.exec-admin-returns h3 {
-  margin: 0 0 var(--space-1);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--ink-mute);
-}
 
-.exec-admin-returns p {
-  margin: 0;
-  font-size: var(--text-xs);
-  color: var(--ink-soft);
-}
 
 .exec-admin-blocked {
   padding: var(--space-2);
@@ -2918,9 +2878,6 @@
   color: var(--ink-soft);
 }
 
-.exec-admin-blockedcli {
-  color: var(--ink-mute);
-}
 
 .exec-admin-blocked code {
   display: block;
@@ -3132,4 +3089,85 @@
   border-left: 2px solid var(--warn);
   padding-left: var(--space-2);
   margin: var(--space-1) 0 0;
+}
+
+/* Revision 2 of the catalogue reaches nothing, so the styles below dress a
+   reference list rather than a control surface: no affordance suggests a row
+   can be pressed into action, only that it can be read. */
+.exec-admin-capability {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2);
+  border: 1px solid var(--warn);
+  background: var(--warn-bg);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-soft);
+}
+
+.exec-admin-action {
+  color: var(--accent);
+}
+
+.exec-admin-owner,
+.exec-admin-steps {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+.exec-admin-owner {
+  border: 1px solid var(--line);
+  padding: 0 var(--space-1);
+}
+
+/* An absent path is a fact, not a blank. Dashed rather than faded, so it does
+   not fall under the 3:1 boundary contrast a UI element owes. */
+.exec-admin-steps[data-empty="true"] {
+  border-bottom: 1px dashed var(--ink-faint);
+}
+
+.exec-admin-groupname span {
+  color: var(--ink-faint);
+  margin-left: var(--space-1);
+}
+
+/* Unreachable is the norm here, so it is not marked in red — that would make
+   sixty-four rows shout. The reason is carried in the detail pane instead. */
+.exec-admin-row[data-reachable="false"] .exec-admin-cli {
+  color: var(--ink-mute);
+}
+
+.exec-admin-facts {
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.exec-admin-facts > div {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.exec-admin-facts dt {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+.exec-admin-facts dd {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.exec-admin-facts code {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+@media (max-width: 720px) {
+  .exec-admin-facts > div { grid-template-columns: 1fr; }
 }

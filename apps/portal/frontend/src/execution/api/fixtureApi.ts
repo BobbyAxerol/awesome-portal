@@ -22,6 +22,8 @@ import {
   readInsightBatch,
   readOrderFunnel,
 } from "../analytics";
+import { readCommandCatalogue } from "../adminCatalog";
+import { COMMAND_CATALOGUE_FIXTURE } from "../adminCatalog.fixtures";
 import {
   CAPITAL_LEDGER,
   CAPITAL_PREVIEW_BREACH,
@@ -563,6 +565,18 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       return preview && envelope
         ? { ok: true as const, value: { preview, envelope } }
         : unavailable("The capital preview response could not be read.");
+    },
+
+    async getCommandCatalogue() {
+      const blocked = gate<never>("getCommandCatalogue");
+      if (blocked) return blocked as Result<never>;
+      // The canonical document, not a presentation variant: this catalogue's
+      // whole value is that it is complete and unedited, and a trimmed copy
+      // would make the screen look finished when it is not.
+      const catalogue = readCommandCatalogue(COMMAND_CATALOGUE_FIXTURE);
+      return catalogue
+        ? { ok: true as const, value: catalogue }
+        : unavailable("The command catalogue response could not be read.");
     },
 
     /**

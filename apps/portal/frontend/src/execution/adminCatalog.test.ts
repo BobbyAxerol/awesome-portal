@@ -1,163 +1,222 @@
 /**
- * Gates for the phase 6 catalogue.
+ * Phase 6 — the canonical catalogue, read rather than authored.
  *
- * The point of this file is the last two tests, and they exist because of a
- * mistake made earlier in this cluster: a gate was written that compared a
- * constant to a copy of itself pasted into the same file, and its commit
- * claimed an upstream rename would go red. It would not have.
+ * The previous version of this file gated a hand-written list of twenty-one
+ * commands against `extract/cli-command-map.json`. That list is gone: EX-BE-05b
+ * published the contract, so these read the published document and assert the
+ * reader does not soften any of it.
  *
- * So these read the evidence pack from disk. If codex reclassifies a command's
- * risk tier, or the OpenAPI stops serving a path this catalogue calls
- * reachable, the assertion fails here rather than in an operator's hands.
+ * The three constants the screen turns on are asserted from the fixture rather
+ * than trusted, because each one, if it silently changed, would make the drawer
+ * claim something is runnable.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { ADMIN_CATALOG, catalogCount, findCommand, type CatalogCommand } from "./adminCatalog";
-import type { RiskTier } from "./contracts";
+import {
+  BLOCKED_REASONS,
+  BLOCKED_REASON_TEXT,
+  CATALOG_GROUPS,
+  CATALOG_RISK_TIERS,
+  GROUP_LABEL,
+  blockedText,
+  groupEntries,
+  readCommandCatalogue,
+  type CatalogEntry,
+} from "./adminCatalog";
+import { COMMAND_CATALOGUE_FIXTURE } from "./adminCatalog.fixtures";
 
-const REPO = join(__dirname, "../../../../..");
-const PACK = "upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack";
+const PUBLISHED = JSON.parse(
+  readFileSync(
+    join(
+      __dirname,
+      "../../../../../packages/contracts/fixtures/execution-command-catalog.valid.json",
+    ),
+    "utf8",
+  ),
+);
 
-interface ExtractCommand {
-  command: string;
-  action: string;
-  risk_tier_proposed: string;
-  portal_reachable: string;
-  http_paths: string[];
-}
+const SCHEMA = JSON.parse(
+  readFileSync(
+    join(
+      __dirname,
+      "../../../../../packages/contracts/schemas/execution-operations.v1.schema.json",
+    ),
+    "utf8",
+  ),
+);
 
-function extractMap(): Map<string, ExtractCommand> {
-  const raw = readFileSync(join(REPO, PACK, "extract/cli-command-map.json"), "utf8");
-  const commands = JSON.parse(raw).commands as ExtractCommand[];
-  return new Map(commands.map((c) => [`${c.command}/${c.action}`, c]));
-}
+const catalogue = () => readCommandCatalogue(PUBLISHED)!;
 
-function openApiPaths(): Set<string> {
-  const raw = readFileSync(join(REPO, PACK, "openapi.sanitized.json"), "utf8");
-  return new Set(Object.keys(JSON.parse(raw).paths ?? {}));
-}
-
-const TIER_OF: Record<string, RiskTier | null> = {
-  R0_READ: "R0",
-  R1_PAPER_MUTATION: "R1",
-  R2_SANDBOX: "R2",
-  R3_LIVE_PROTECTIVE: "R3",
-  UNCLASSIFIED: null,
-};
-
-function everyCommand(): CatalogCommand[] {
-  return ADMIN_CATALOG.flatMap((g) => [...g.items]);
-}
-
-describe("admin catalogue shape", () => {
-  it("is the hi-fi's 21 commands in 6 groups", () => {
-    expect(ADMIN_CATALOG).toHaveLength(6);
-    expect(catalogCount()).toBe(21);
-  });
-
-  it("uses the group names IMPLEMENTATION_PHASES fixes", () => {
-    expect(ADMIN_CATALOG.map((g) => g.name)).toEqual([
-      "Read & inspect",
-      "Portfolio & capital",
-      "Deployment & risk",
-      "Account",
-      "Broker sync & reconciliation",
-      "Emergency & destructive",
-    ]);
-  });
-
-  it("gives every unreachable command a reason, and every reachable one none", () => {
-    for (const c of everyCommand()) {
-      if (c.reachability === "HTTP") {
-        expect(c.blockedReason, `${c.id} is reachable but carries a blocked reason`).toBeUndefined();
-      } else {
-        expect(c.blockedReason?.length ?? 0, `${c.id} is blocked with no reason`).toBeGreaterThan(20);
-      }
-    }
-  });
-
-  it("marks every blocked command BLOCKED, so none can be tagged as runnable", () => {
-    for (const c of everyCommand()) {
-      if (c.reachability !== "HTTP") expect(c.tag, c.id).toBe("BLOCKED");
-    }
-  });
-
-  it("has unique ids", () => {
-    const ids = everyCommand().map((c) => c.id);
-    expect(new Set(ids).size).toBe(ids.length);
-  });
-
-  it("finds by id and returns null for an unknown one", () => {
-    expect(findCommand("portfolio/list")?.title).toBe("List portfolios");
-    expect(findCommand("portfolio/nope")).toBeNull();
+describe("the inlined copy has not drifted from the contract", () => {
+  it("equals the published document byte for byte", () => {
+    expect(COMMAND_CATALOGUE_FIXTURE).toEqual(PUBLISHED);
   });
 });
 
-describe("catalogue agrees with the evidence pack", () => {
-  it("never claims a lower risk tier than the extract proposes", () => {
-    const extract = extractMap();
-    const checked: string[] = [];
-    for (const c of everyCommand()) {
-      const e = extract.get(c.id);
-      if (!e) continue;
-      checked.push(c.id);
-      const expected = TIER_OF[e.risk_tier_proposed];
-      if (expected === null) {
-        // UNCLASSIFIED means the extract has no opinion. The one thing the
-        // catalogue must not do is resolve that silence into "read".
-        expect(c.tier, `${c.id} is UNCLASSIFIED upstream and must not be sold as a read`).not.toBe(
-          "R0",
-        );
-        continue;
-      }
-      expect(c.tier, `${c.id} tier disagrees with the extract`).toBe(expected);
-    }
-    // Guards the join itself: if ids drift, the loop above silently checks
-    // nothing and passes.
-    expect(checked.length).toBeGreaterThanOrEqual(19);
+describe("the vocabulary is the schema's", () => {
+  it("knows every group the schema declares, and invents none", () => {
+    expect([...CATALOG_GROUPS].sort()).toEqual(
+      [...SCHEMA.$defs.CommandCatalogueEntry.properties.group.enum].sort(),
+    );
   });
 
-  it("only calls a command DIRECT_DB_ONLY when the extract says it has no HTTP path", () => {
-    const extract = extractMap();
-    for (const c of everyCommand()) {
-      if (c.reachability !== "DIRECT_DB_ONLY") continue;
-      const e = extract.get(c.id);
-      if (!e) continue; // lab reset is a documented procedure, not a CLI action
-      expect(e.portal_reachable, c.id).toBe("NO — no HTTP equivalent");
+  it("knows every risk tier, including the two that are not tiers at all", () => {
+    expect([...CATALOG_RISK_TIERS].sort()).toEqual([...SCHEMA.$defs.RiskTier.enum].sort());
+    // UNCLASSIFIED and BLOCKED are in the union deliberately: treating either
+    // as a low tier is how an unclassified capital movement reads as harmless.
+    expect(CATALOG_RISK_TIERS).toContain("UNCLASSIFIED");
+    expect(CATALOG_RISK_TIERS).toContain("BLOCKED");
+  });
+
+  it("knows every blocked reason and has words for each", () => {
+    expect([...BLOCKED_REASONS].sort()).toEqual(
+      [...SCHEMA.$defs.CommandCatalogueEntry.properties.blocked_reason.enum].sort(),
+    );
+    for (const reason of BLOCKED_REASONS) {
+      expect(BLOCKED_REASON_TEXT[reason]?.length ?? 0, reason).toBeGreaterThan(40);
     }
   });
 
-  it("keeps the emergency-close route this screen's DANGER command depends on", () => {
-    // The one mutation on this screen that reaches a live position. If the
-    // route disappears, the drawer would offer a plan for a command with
-    // nowhere to send it.
-    expect(openApiPaths().has("/v1/admin/ops/emergency-close")).toBe(true);
-    expect(findCommand("ops/emergency-close")?.tier).toBe("R3");
+  it("labels every group without regrouping any of them", () => {
+    for (const code of CATALOG_GROUPS) expect(GROUP_LABEL[code], code).toBeTruthy();
+  });
+});
+
+describe("reading the published catalogue", () => {
+  it("reads all sixty-four entries and the counts that describe them", () => {
+    const c = catalogue();
+    expect(c.entries).toHaveLength(64);
+    expect(c.totalEntries).toBe(64);
+    expect(c.returnedEntries).toBe(64);
+    expect(c.revision).toBe(2);
   });
 
-  it("records that the eight ops read actions still have no route of their own", () => {
-    // Not a catalogue assertion — a standing note about phases 7, 8 and 9,
-    // which need these. The extract marks them PARTIAL because it attributes
-    // the handler's emergency-close paths to every action in the handler; the
-    // OpenAPI has no route for any of them. When codex publishes them, this
-    // test goes red and the catalogue gains eight entries.
-    const paths = [...openApiPaths()];
-    for (const action of [
-      "trace-order",
-      "dead-letters",
-      "findings",
-      "streams",
-      "command-journal",
-      "redis-retention",
-      "alerts",
-      "alpha-activity",
-    ]) {
-      expect(
-        paths.filter((p) => p.includes(action)),
-        `ops ${action} now has a route — phase 7/8/9 can consume it`,
-      ).toEqual([]);
+  it("reads the capability as DISABLED, which is what makes the screen honest", () => {
+    const c = catalogue();
+    expect(c.capabilityState).toBe("DISABLED");
+    expect(c.capabilityReason).toBe("EX_BE_05B_F0_CONTRACT_ONLY");
+  });
+
+  it("finds no reachable entry, and reads the flag rather than assuming it", () => {
+    expect(catalogue().entries.filter((e) => e.portalReachable)).toEqual([]);
+    // Read, not hard-coded: a later revision that flips one to true must be
+    // reported, not overwritten by the current constant.
+    const flipped = readCommandCatalogue({
+      ...PUBLISHED,
+      entries: [{ ...PUBLISHED.entries[0], portal_reachable: true }],
+    })!;
+    expect(flipped.entries[0].portalReachable).toBe(true);
+  });
+
+  it("gives every entry a blocked reason with words behind it", () => {
+    for (const e of catalogue().entries) {
+      expect(e.blockedReason, e.key).not.toBeNull();
+      expect(blockedText(e).length, e.key).toBeGreaterThan(40);
     }
+  });
+
+  it("keeps the Portal's tier apart from the source's", () => {
+    const c = catalogue();
+    const differing = c.entries.filter(
+      (e) => e.sourceRiskTier !== null && e.sourceRiskTier !== e.riskTier,
+    );
+    // If these never differed the distinction would be untestable — and the
+    // stop gate forbidding source-as-effective would be guarding nothing.
+    expect(differing.length).toBeGreaterThan(0);
+    const policy = c.entries.find((e) => e.key === "account/policy")!;
+    expect(policy.sourceRiskTier).toBe("R0_READ");
+    expect(policy.riskTier).toBe("R1_PAPER_MUTATION");
+  });
+
+  it("does not assume every command has plan, apply and verify", () => {
+    const c = catalogue();
+    expect(c.entries.some((e) => !e.verifyRequired)).toBe(true);
+    expect(c.entries.some((e) => !e.planRequired)).toBe(true);
+  });
+});
+
+describe("the eight ops actions codex requires to stay visible", () => {
+  const REQUIRED_VISIBLE = [
+    "ops/trace-order",
+    "ops/dead-letters",
+    "ops/findings",
+    "ops/streams",
+    "ops/command-journal",
+    "ops/redis-retention",
+    "ops/alerts",
+    "ops/alpha-activity",
+  ];
+
+  it("lists all eight, unreachable, each with a reason", () => {
+    const byKey = new Map(catalogue().entries.map((e) => [e.key, e]));
+    for (const key of REQUIRED_VISIBLE) {
+      const entry = byKey.get(key);
+      expect(entry, `${key} is missing from the catalogue`).toBeTruthy();
+      expect(entry!.portalReachable, key).toBe(false);
+      expect(entry!.blockedReason, key).toBe("TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED");
+    }
+  });
+
+  it("keeps them in the grouped render rather than filtering them out", () => {
+    const rendered = groupEntries(catalogue().entries).flatMap((g) => g.items.map((i) => i.key));
+    for (const key of REQUIRED_VISIBLE) expect(rendered, key).toContain(key);
+  });
+});
+
+describe("grouping is the server's", () => {
+  it("renders every entry exactly once", () => {
+    const c = catalogue();
+    const rendered = groupEntries(c.entries).flatMap((g) => g.items);
+    expect(rendered).toHaveLength(64);
+    expect(new Set(rendered.map((e) => e.key)).size).toBe(64);
+  });
+
+  it("omits a group with no entries instead of showing an empty heading", () => {
+    // Revision 2 carries nothing under MARKET_REFERENCE.
+    const codes = groupEntries(catalogue().entries).map((g) => g.code);
+    expect(codes).not.toContain("MARKET_REFERENCE");
+    expect(codes.length).toBeGreaterThan(1);
+  });
+
+  it("keeps an entry whose group it cannot read, under a stated heading", () => {
+    const odd: CatalogEntry[] = [
+      ...catalogue().entries,
+      { ...catalogue().entries[0], key: "mystery/thing", group: null },
+    ];
+    const groups = groupEntries(odd);
+    expect(groups.at(-1)?.label).toBe("Group not stated");
+    expect(groups.flatMap((g) => g.items)).toHaveLength(65);
+  });
+});
+
+describe("the reader denies by default", () => {
+  it("returns null for a document it cannot read", () => {
+    expect(readCommandCatalogue(null)).toBeNull();
+    expect(readCommandCatalogue("{}")).toBeNull();
+  });
+
+  it("drops an entry with no key rather than inventing one", () => {
+    const c = readCommandCatalogue({ entries: [{ command: "a", action: "b" }] })!;
+    expect(c.entries).toEqual([]);
+  });
+
+  it("does not read an unrecognised group, tier or reason as a valid one", () => {
+    const c = readCommandCatalogue({
+      entries: [
+        {
+          key: "x/y",
+          group: "SOMETHING_NEW",
+          risk_tier: "R9",
+          blocked_reason: "BECAUSE",
+          source_route_state: "MAYBE",
+        },
+      ],
+    })!;
+    expect(c.entries[0].group).toBeNull();
+    expect(c.entries[0].riskTier).toBeNull();
+    expect(c.entries[0].blockedReason).toBeNull();
+    expect(c.entries[0].routeState).toBeNull();
   });
 });

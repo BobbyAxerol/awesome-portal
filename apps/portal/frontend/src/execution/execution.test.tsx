@@ -4341,7 +4341,9 @@ describe("plan → apply, shaped to DecisionPlanRequestSchema", () => {
       workspaceId: "default",
       decision: "DENY",
       reason: "insufficient evidence",
-      condition: "add a rollback plan",
+      conditions: [
+        { text: "add a rollback plan", owner: "Lan", deadline: null, expiry: null, blocking: true },
+      ],
       expectedApprovalVersion: 7,
       requestKey: "rk_1",
     });
@@ -4888,7 +4890,8 @@ describe("the wired containers pass what the screens were built to show", () => 
     deny.click();
     await screen.findByText(/PLAN|DENY|plan/i).catch(() => undefined);
     const call = spy.mock.calls.at(-1)?.[0];
-    if (call) expect(call.condition).toBeNull();
+    // Conditions travel only with approve-with-condition; a DENY carries none.
+    if (call) expect(call.conditions ?? []).toEqual([]);
   });
 });
 

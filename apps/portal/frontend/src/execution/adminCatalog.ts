@@ -1,334 +1,284 @@
 /**
- * Admin Action Drawer catalogue — phase 6, Lane A.
+ * Phase 6 — the canonical command catalogue.
  *
- * The hi-fi (WF 1i) draws "21 commands in 6 groups exactly as the CLI guide".
- * This module is that list, and nothing here is invented: every entry is a
- * command that appears in `PORTFOLIO_MANAGEMENT_CLI_GUIDE.md`, and every
- * `reachability`/`tier` value is copied from
- * `extract/cli-command-map.json` — the machine-derived map that CLAUDE.md §0
- * ranks above hand-written prose.
+ * This file used to hold twenty-one commands derived by hand from the CLI
+ * guide, because no contract existed. EX-BE-05b/F0 published one, so the hand
+ * list is gone: sixty-four entries now arrive from
+ * `GET /api/v1/execution/commands/catalog` and this reads them.
  *
- * WHY THIS FILE IS A FIXTURE AND NOT THE CONTRACT
+ * Three constants in that contract decide the whole screen, and none of them is
+ * a detail:
  *
- * BR-EX-28 asks codex to publish a canonical catalogue in `packages/contracts`.
- * Until it exists, the drawer would otherwise have nothing to render, so this
- * file stands in — deliberately shaped as the schema BR-EX-28 proposes, so the
- * day the contract lands the swap is an adapter, not a rewrite.
+ *   * `capability.state` is `DISABLED`, reason `EX_BE_05B_F0_CONTRACT_ONLY`;
+ *   * `portal_reachable` is `false` on EVERY entry;
+ *   * `catalogue_revision` is 2 and `total_entries` is 64.
  *
- * It is NOT authority. `catalogSource` says so on screen, so nobody mistakes a
- * frontend list for the operator's real permissions.
+ * So nothing here is runnable. The drawer's job is not to offer commands — it
+ * is to show which sixty-four exist, and to say precisely why each is out of
+ * reach. Codex's stop gates put it plainly: unavailable actions stay visible
+ * and explain themselves, and `BLOCKED`, `UNPUBLISHED` and `AMBIGUOUS` must
+ * never be turned into a success or an empty state.
+ *
+ * Two risk tiers travel per entry and they are not interchangeable.
+ * `source_risk_tier` is what the Trading System's own map proposed;
+ * `risk_tier` is what the Portal is bound by. `account/policy` is R0 at the
+ * source and R1 here, and rendering the first would understate what the command
+ * costs — which the stop gates also forbid, in those words.
  */
-import type { RiskTier } from "./contracts";
 
-/** Why the Portal cannot reach a command that the CLI can run. */
-export type Reachability =
-  /** An HTTP route exists in the sanitized OpenAPI for this exact action. */
-  | "HTTP"
-  /**
-   * The CLI reaches it only through direct Postgres or Redis access. Handoff
-   * §2.3 forbids the Portal that path, so this is a capability gap, not a
-   * convenience gap — the drawer shows it, disabled, with the reason.
-   */
-  | "DIRECT_DB_ONLY"
-  /**
-   * The extract attributes an HTTP path to this action's *handler*, but no
-   * route in the OpenAPI serves the action itself. Looks reachable, is not.
-   */
-  | "HANDLER_PATH_ONLY";
+/* ---------------------------------------------------------------------------
+ * Vocabulary, all of it the contract's
+ * ------------------------------------------------------------------------ */
 
-export type CommandTag = "READ" | "MUTATION" | "DANGER" | "BLOCKED";
-
-export interface CatalogCommand {
-  /** `noun/verb`, the key that will join to the canonical catalogue. */
-  readonly id: string;
-  readonly title: string;
-  readonly tag: CommandTag;
-  /** What this command touches, shown right-aligned on the row. */
-  readonly scope: string;
-  /** First CLI line, display-only. The browser never runs a shell. */
-  readonly cliShort: string;
-  readonly tier: RiskTier;
-  readonly reachability: Reachability;
-  /** Present exactly when `reachability !== "HTTP"`. Rendered verbatim. */
-  readonly blockedReason?: string;
-  /** What a read command returns; drives the READ panel. */
-  readonly returns?: string;
-}
-
-export interface CatalogGroup {
-  readonly name: string;
-  readonly items: readonly CatalogCommand[];
-}
-
-const CLI = "docker compose --profile cli run --rm --no-deps cli";
-
-const REDIS_BLOCKED =
-  "Reachable only through direct Redis access from the CLI host. The Portal is " +
-  "forbidden that path (handoff §2.3), and opening a generic key reader would " +
-  "expose every key in the cell, not this one view.";
-
-const LAB_RESET_BLOCKED =
-  "Pre-production lab reset deletes alpha, deployment and ledger rows outright. " +
-  "It has no plan/apply/verify path and no audit trail to reverse it, so it is " +
-  "not exposed in the Portal at any tier.";
-
-export const ADMIN_CATALOG: readonly CatalogGroup[] = [
-  {
-    name: "Read & inspect",
-    items: [
-      {
-        id: "health/<root>",
-        title: "Gateway health",
-        tag: "READ",
-        scope: "cell",
-        cliShort: `${CLI} health`,
-        tier: "R0",
-        reachability: "HTTP",
-        returns: "Gateway reachability, build digest and dependency states.",
-      },
-      {
-        id: "portfolio/list",
-        title: "List portfolios",
-        tag: "READ",
-        scope: "workspace",
-        cliShort: `${CLI} portfolio list`,
-        tier: "R0",
-        reachability: "HTTP",
-        returns: "Every portfolio with its state, base currency and allocated capital.",
-      },
-      {
-        id: "portfolio/state",
-        title: "Portfolio state",
-        tag: "READ",
-        scope: "portfolio",
-        cliShort: `${CLI} portfolio state <portfolio_id>`,
-        tier: "R0",
-        reachability: "HTTP",
-        returns: "Lifecycle state, deployments and the capital ledger head.",
-      },
-      {
-        id: "alpha/inspect",
-        title: "Inspect alpha",
-        tag: "READ",
-        scope: "alpha",
-        cliShort: `${CLI} alpha inspect <alpha_id>`,
-        tier: "R0",
-        reachability: "HTTP",
-        returns: "Registration record, parameters and the deployments referencing it.",
-      },
-      {
-        id: "capital/history",
-        title: "Capital history",
-        tag: "READ",
-        scope: "portfolio",
-        cliShort: `${CLI} capital history <portfolio_id>`,
-        tier: "R0",
-        reachability: "HTTP",
-        returns: "Ledger movements in order, each with actor, reason and resulting balance.",
-      },
-      {
-        id: "redis/trading-state",
-        title: "Redis trading state",
-        tag: "BLOCKED",
-        scope: "cell",
-        cliShort: `${CLI} redis trading-state <alpha_id>`,
-        tier: "R0",
-        reachability: "DIRECT_DB_ONLY",
-        blockedReason: REDIS_BLOCKED,
-      },
-    ],
-  },
-  {
-    name: "Portfolio & capital",
-    items: [
-      {
-        id: "portfolio/create",
-        title: "Create portfolio",
-        tag: "MUTATION",
-        scope: "workspace",
-        cliShort: `${CLI} portfolio create --name <name> --currency <ccy>`,
-        tier: "R1",
-        reachability: "HTTP",
-      },
-      {
-        id: "alpha/register",
-        title: "Register alpha",
-        tag: "MUTATION",
-        scope: "alpha",
-        cliShort: `${CLI} alpha register --file <spec.json>`,
-        tier: "R1",
-        reachability: "HTTP",
-      },
-      {
-        // The extract keys this as `allocation/<root>`: its parser found no
-        // sub-command, though the guide documents `allocation alpha`. Joined on
-        // the extract's key so the gate below can actually match it, with the
-        // discrepancy reported in BR-EX-28 rather than smoothed over here.
-        id: "allocation/<root>",
-        title: "Allocate capital to alpha",
-        tag: "MUTATION",
-        scope: "deployment",
-        cliShort: `${CLI} allocation alpha <deployment_id> --amount <amount>`,
-        tier: "R1",
-        reachability: "HTTP",
-      },
-      {
-        id: "config/apply",
-        title: "Apply declarative config",
-        tag: "MUTATION",
-        scope: "portfolio",
-        cliShort: `${CLI} config apply --file <portfolio.yaml>`,
-        tier: "R1",
-        reachability: "HTTP",
-      },
-    ],
-  },
-  {
-    name: "Deployment & risk",
-    items: [
-      {
-        id: "deployment/state",
-        title: "Deployment state",
-        tag: "READ",
-        scope: "deployment",
-        cliShort: `${CLI} deployment state <deployment_id>`,
-        tier: "R0",
-        reachability: "HTTP",
-        returns: "Runtime state, promotion stage, readiness and broker sync — four separate fields.",
-      },
-      {
-        id: "risk/state",
-        title: "Risk state",
-        tag: "READ",
-        scope: "deployment",
-        cliShort: `${CLI} risk state <deployment_id>`,
-        tier: "R0",
-        reachability: "HTTP",
-        returns: "Effective limits and which precedence level supplied each one.",
-      },
-      {
-        id: "config/plan",
-        title: "Plan declarative config",
-        tag: "READ",
-        scope: "portfolio",
-        cliShort: `${CLI} config plan --file <portfolio.yaml>`,
-        tier: "R0",
-        reachability: "HTTP",
-        returns: "The diff apply would make. Computes nothing on the client.",
-      },
-    ],
-  },
-  {
-    name: "Account",
-    items: [
-      {
-        id: "account/state",
-        title: "Account state",
-        tag: "READ",
-        scope: "account",
-        cliShort: `${CLI} account state <account_id>`,
-        tier: "R0",
-        reachability: "HTTP",
-        returns: "Balances, positions, open orders and the last broker sync.",
-      },
-      {
-        id: "account/policy",
-        title: "Account policy",
-        tag: "READ",
-        scope: "account",
-        cliShort: `${CLI} account policy <account_id>`,
-        tier: "R0",
-        reachability: "HTTP",
-        returns: "Position accounting mode, leverage and order policy in force.",
-      },
-      {
-        id: "account/seed-paper",
-        title: "Seed paper account",
-        tag: "MUTATION",
-        scope: "account",
-        cliShort: `${CLI} account seed-paper <account_id> --balance <amount>`,
-        tier: "R1",
-        reachability: "HTTP",
-      },
-    ],
-  },
-  {
-    name: "Broker sync & reconciliation",
-    items: [
-      {
-        id: "broker/bindings",
-        title: "Broker bindings",
-        tag: "READ",
-        scope: "account",
-        cliShort: `${CLI} broker bindings`,
-        tier: "R0",
-        reachability: "HTTP",
-        returns: "Every binding with its venue, credential state and sync age.",
-      },
-      {
-        id: "broker/exposure",
-        title: "Broker exposure",
-        tag: "READ",
-        scope: "venue",
-        cliShort: `${CLI} broker exposure <venue>`,
-        tier: "R0",
-        reachability: "HTTP",
-        returns: "Exposure the venue reports. The authoritative number, not a client sum.",
-      },
-      {
-        id: "account/reconcile-positions",
-        title: "Reconcile positions",
-        tag: "MUTATION",
-        scope: "account",
-        cliShort: `${CLI} account reconcile-positions <account_id>`,
-        tier: "R2",
-        reachability: "HTTP",
-      },
-    ],
-  },
-  {
-    name: "Emergency & destructive",
-    items: [
-      {
-        id: "ops/emergency-close",
-        title: "Emergency close",
-        tag: "DANGER",
-        scope: "deployment",
-        cliShort: `${CLI} ops emergency-close <deployment_id> --confirm CLOSE`,
-        tier: "R3",
-        reachability: "HTTP",
-      },
-      {
-        id: "lab/reset",
-        title: "Pre-production lab reset",
-        tag: "BLOCKED",
-        scope: "cell",
-        cliShort: `${CLI} <lab reset procedure, guide §22>`,
-        tier: "R4",
-        reachability: "DIRECT_DB_ONLY",
-        blockedReason: LAB_RESET_BLOCKED,
-      },
-    ],
-  },
-];
+export const CATALOG_GROUPS = [
+  "ACCOUNT_CAPITAL",
+  "ALPHA_DEPLOYMENT",
+  "ORDER_CONTROL",
+  "OPERATIONS_INCIDENTS",
+  "MARKET_REFERENCE",
+  "PLATFORM_DIAGNOSTICS",
+] as const;
+export type CatalogGroupCode = (typeof CATALOG_GROUPS)[number];
 
 /**
- * Shown under the catalogue so a fixture is never mistaken for authority.
- * Replaced by the contract's own provenance when BR-EX-28 lands.
+ * Display names for the server's groups.
+ *
+ * A relabelling, never a regrouping. The hi-fi arranged its six groups by what
+ * an operator is doing (read & inspect, emergency & destructive); the contract
+ * arranges by system domain. Codex's handoff settles which wins — "grouped
+ * using server `group`" — and quietly re-sorting sixty-four entries into the
+ * hi-fi's shape would put a mapping in the browser that no contract vouches
+ * for. So the order and membership are the server's, and only the words are
+ * ours.
  */
-export const CATALOG_SOURCE =
-  "Fixture catalogue derived from PORTFOLIO_MANAGEMENT_CLI_GUIDE and " +
-  "extract/cli-command-map.json. Not the operator's permissions — the canonical " +
-  "catalogue (BR-EX-28) has not been published yet.";
+export const GROUP_LABEL: Record<CatalogGroupCode, string> = {
+  ACCOUNT_CAPITAL: "Account & capital",
+  ALPHA_DEPLOYMENT: "Alpha & deployment",
+  ORDER_CONTROL: "Order control",
+  OPERATIONS_INCIDENTS: "Operations & incidents",
+  MARKET_REFERENCE: "Market reference",
+  PLATFORM_DIAGNOSTICS: "Platform diagnostics",
+};
 
-export function catalogCount(groups: readonly CatalogGroup[] = ADMIN_CATALOG): number {
-  return groups.reduce((n, g) => n + g.items.length, 0);
+export const CATALOG_RISK_TIERS = [
+  "R0_READ",
+  "R1_PAPER_MUTATION",
+  "R2_SANDBOX",
+  "R3_LIVE_PROTECTIVE",
+  "R4_LIVE_RISK_INCREASING",
+  "UNCLASSIFIED",
+  "BLOCKED",
+] as const;
+export type CatalogRiskTier = (typeof CATALOG_RISK_TIERS)[number];
+
+export const RISK_TIER_LABEL: Record<CatalogRiskTier, string> = {
+  R0_READ: "R0 · read",
+  R1_PAPER_MUTATION: "R1 · paper mutation",
+  R2_SANDBOX: "R2 · sandbox",
+  R3_LIVE_PROTECTIVE: "R3 · live protective",
+  R4_LIVE_RISK_INCREASING: "R4 · live risk-increasing",
+  // Not a low tier. The source map could not classify it, and treating silence
+  // as "read" is how an unclassified capital movement gets shown as harmless.
+  UNCLASSIFIED: "unclassified",
+  BLOCKED: "blocked",
+};
+
+export const ROUTE_STATES = [
+  "OBSERVED",
+  "AMBIGUOUS",
+  "UNPUBLISHED",
+  "DIRECT_ACCESS_PROHIBITED",
+] as const;
+export type RouteState = (typeof ROUTE_STATES)[number];
+
+export const BLOCKED_REASONS = [
+  "COMMAND_RELAY_DISABLED",
+  "SOURCE_ROUTE_MAPPING_AMBIGUOUS",
+  "TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED",
+  "TRADING_SYSTEM_TYPED_HTTP_ROUTE_UNPUBLISHED",
+  "GENERIC_REDIS_ACCESS_PROHIBITED",
+  "DESTRUCTIVE_OR_LAB_ONLY_COMMAND_PROHIBITED",
+] as const;
+export type BlockedReason = (typeof BLOCKED_REASONS)[number];
+
+/**
+ * What each blocked reason means, in the operator's terms.
+ *
+ * Written here because the codes are for machines. An operator reading
+ * `SOURCE_ROUTE_MAPPING_AMBIGUOUS` learns nothing; one reading "the CLI reaches
+ * this through a handler that serves several actions, so the Portal cannot tell
+ * which route belongs to it" knows both why it is off and who could fix it.
+ */
+export const BLOCKED_REASON_TEXT: Record<BlockedReason, string> = {
+  COMMAND_RELAY_DISABLED:
+    "The Portal's command relay is off. The route exists and the Portal is not permitted to use it yet.",
+  SOURCE_ROUTE_MAPPING_AMBIGUOUS:
+    "The CLI reaches this through a handler that serves several actions, so which route belongs to this one is not established.",
+  TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED:
+    "The Trading System publishes no HTTP route for this action. Operators run it from the CLI host.",
+  TRADING_SYSTEM_TYPED_HTTP_ROUTE_UNPUBLISHED:
+    "The Trading System publishes no typed HTTP route for this action, so the Portal cannot call it safely.",
+  GENERIC_REDIS_ACCESS_PROHIBITED:
+    "This reads Redis directly. The Portal is forbidden that path, and a generic key reader would expose every key in the cell rather than this one view.",
+  DESTRUCTIVE_OR_LAB_ONLY_COMMAND_PROHIBITED:
+    "Destructive or lab-only. It has no plan/apply/verify path and no audit trail to reverse it, so it is not exposed at any tier.",
+};
+
+/* ---------------------------------------------------------------------------
+ * Reading
+ * ------------------------------------------------------------------------ */
+
+function obj(raw: unknown): Record<string, unknown> | null {
+  return typeof raw === "object" && raw !== null && !Array.isArray(raw)
+    ? (raw as Record<string, unknown>)
+    : null;
 }
 
-export function findCommand(id: string, groups: readonly CatalogGroup[] = ADMIN_CATALOG) {
-  for (const g of groups) {
-    const hit = g.items.find((i) => i.id === id);
-    if (hit) return hit;
+function str(raw: unknown): string | null {
+  return typeof raw === "string" && raw.length > 0 ? raw : null;
+}
+
+function int(raw: unknown): number | null {
+  return typeof raw === "number" && Number.isInteger(raw) ? raw : null;
+}
+
+function pick<T extends string>(raw: unknown, allowed: readonly T[]): T | null {
+  return typeof raw === "string" && (allowed as readonly string[]).includes(raw) ? (raw as T) : null;
+}
+
+export interface CatalogEntry {
+  /** `noun/verb`, or `noun/<root>`. The join key across every artefact. */
+  key: string;
+  command: string;
+  action: string;
+  group: CatalogGroupCode | null;
+  /** What the PORTAL is bound by. The tier that governs this screen. */
+  riskTier: CatalogRiskTier | null;
+  /** What the source map proposed. Reported, never substituted for the above. */
+  sourceRiskTier: CatalogRiskTier | null;
+  ownerReviewRequired: boolean;
+  planRequired: boolean;
+  applyRequired: boolean;
+  verifyRequired: boolean;
+  /** `false` for every entry in revision 2, and read rather than assumed. */
+  portalReachable: boolean;
+  routeState: RouteState | null;
+  httpMethod: string | null;
+  httpPath: string | null;
+  blockedReason: BlockedReason | null;
+  /** Where in the CLI this was observed, e.g. `cli/__main__.py:1690`. */
+  sourceReference: string | null;
+}
+
+export interface CatalogScope {
+  workspaceId: string | null;
+  actorRole: string | null;
+  environment: string | null;
+  capabilityState: string | null;
+  freshnessState: string | null;
+  policyRevision: number | null;
+}
+
+export interface CommandCatalogue {
+  revision: number | null;
+  deliveryProfile: string | null;
+  /** `DISABLED` in revision 2. Anything else is not permission to run. */
+  capabilityState: string | null;
+  capabilityReason: string | null;
+  /** Which Trading System commit and extracts this was generated from. */
+  sourceCommit: string | null;
+  scope: CatalogScope | null;
+  totalEntries: number | null;
+  returnedEntries: number | null;
+  entries: readonly CatalogEntry[];
+}
+
+function readEntry(raw: unknown): CatalogEntry | null {
+  const o = obj(raw);
+  const key = str(o?.key);
+  if (!o || !key) return null;
+  return {
+    key,
+    command: str(o.command) ?? key.split("/")[0],
+    action: str(o.action) ?? key.split("/")[1] ?? "",
+    group: pick(o.group, CATALOG_GROUPS),
+    riskTier: pick(o.risk_tier, CATALOG_RISK_TIERS),
+    sourceRiskTier: pick(o.source_risk_tier, CATALOG_RISK_TIERS),
+    // Every one of these four is deny-by-default: a flag we cannot read is not
+    // a flag that grants anything.
+    ownerReviewRequired: o.owner_review_required === true,
+    planRequired: o.plan_required === true,
+    applyRequired: o.apply_required === true,
+    verifyRequired: o.verify_required === true,
+    // Read, not assumed from the const. If a later revision flips one to true
+    // this reports it rather than continuing to say false.
+    portalReachable: o.portal_reachable === true,
+    routeState: pick(o.source_route_state, ROUTE_STATES),
+    httpMethod: str(o.http_method),
+    httpPath: str(o.http_path),
+    blockedReason: pick(o.blocked_reason, BLOCKED_REASONS),
+    sourceReference: str(o.source_reference),
+  };
+}
+
+export function readCommandCatalogue(raw: unknown): CommandCatalogue | null {
+  const root = obj(raw);
+  if (!root) return null;
+  const capability = obj(root.capability);
+  const source = obj(root.source);
+  const scope = obj(root.scope);
+  return {
+    revision: int(root.catalogue_revision),
+    deliveryProfile: str(root.delivery_profile),
+    capabilityState: str(capability?.state),
+    capabilityReason: str(capability?.reason),
+    sourceCommit: str(source?.trading_system_commit),
+    scope: scope
+      ? {
+          workspaceId: str(scope.workspace_id),
+          actorRole: str(scope.actor_role),
+          environment: str(scope.environment),
+          capabilityState: str(scope.capability_state),
+          freshnessState: str(scope.freshness_state),
+          policyRevision: int(scope.policy_revision),
+        }
+      : null,
+    totalEntries: int(root.total_entries),
+    returnedEntries: int(root.returned_entries),
+    entries: (Array.isArray(root.entries) ? root.entries : []).flatMap((e) => {
+      const entry = readEntry(e);
+      return entry ? [entry] : [];
+    }),
+  };
+}
+
+/**
+ * Group the entries for rendering, in the contract's declared group order.
+ *
+ * Groups with no entries are omitted rather than rendered empty: revision 2
+ * carries nothing under `MARKET_REFERENCE`, and an empty heading would read as
+ * "these exist and none is shown".
+ */
+export function groupEntries(
+  entries: readonly CatalogEntry[],
+): readonly { code: CatalogGroupCode | null; label: string; items: readonly CatalogEntry[] }[] {
+  const out: { code: CatalogGroupCode | null; label: string; items: CatalogEntry[] }[] = [];
+  for (const code of CATALOG_GROUPS) {
+    const items = entries.filter((e) => e.group === code);
+    if (items.length > 0) out.push({ code, label: GROUP_LABEL[code], items });
   }
-  return null;
+  // An entry whose group we could not read still has to appear. Dropping it
+  // would quietly shrink a catalogue whose whole point is completeness.
+  const ungrouped = entries.filter((e) => e.group === null);
+  if (ungrouped.length > 0) {
+    out.push({ code: null, label: "Group not stated", items: ungrouped });
+  }
+  return out;
+}
+
+/** The one sentence an entry's unavailability is allowed to say. */
+export function blockedText(entry: CatalogEntry): string {
+  return entry.blockedReason
+    ? BLOCKED_REASON_TEXT[entry.blockedReason]
+    : "This command is not available through the Portal, and no reason was published.";
 }

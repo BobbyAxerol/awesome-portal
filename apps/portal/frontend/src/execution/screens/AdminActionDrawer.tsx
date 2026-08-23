@@ -1,251 +1,249 @@
 /**
  * Phase 6 — Admin Action Drawer (hi-fi 1i, WF 1i, ops dark, no sidebar).
  *
- * IMPLEMENTATION_PHASES says "Depends: Phase 0 only; unlocks all later mutation
- * links", and that is the whole reason this screen exists before the backend
- * catalogue does. Phases 7–12 each link into this drawer; none of them can be
- * built while the thing they link to is missing.
+ * Rebuilt against the canonical catalogue. The earlier version rendered
+ * twenty-one commands derived by hand and offered plan/apply on the mutations;
+ * revision 2 of the contract says every one of sixty-four is unreachable and
+ * the capability itself is `DISABLED`. So this screen no longer offers a
+ * command. It answers a different and, for now, more useful question: which
+ * sixty-four exist, and exactly why each is out of reach.
  *
- * Three rules the hi-fi states and this screen enforces structurally rather
- * than by convention:
+ * That is not a degraded version of the screen. An operator who cannot see the
+ * catalogue assumes the Portal is complete and discovers the gap during an
+ * incident — which is the failure the whole cluster is built to prevent. So
+ * every entry is listed, every one says why, and none is dressed up as
+ * something you could press.
  *
- *   1. **A read is not a small mutation.** READ selections render no footer at
- *      all — there is no plan, no reason field, no apply button to disable. The
- *      hi-fi's green banner says why: read commands need no admin password and
- *      no step-up, and are safe during an incident.
- *   2. **A blocked command is shown, not hidden.** `NOT EXPOSED IN PORTAL` with
- *      the reason in full. Hiding it teaches the operator the Portal is
- *      complete when it is not, and they discover the gap during an incident.
- *   3. **Every mutation goes through CommandPlanDrawer.** This screen chooses
- *      *which* command; it does not re-implement plan/apply/verify. That
- *      machine — plan gates apply, plan expires, reason required, 202 is not
- *      success, PARTIAL never green — lives in one component so seventeen
- *      screens cannot each drift a little.
+ * The four facts each row carries that a plainer list would drop:
  *
- * The catalogue itself is a fixture (`adminCatalog.ts`) until BR-EX-28 lands.
- * `CATALOG_SOURCE` is rendered on screen so that is never ambiguous.
+ *   * the PORTAL's risk tier, beside the source's when they differ — showing
+ *     the source's alone understates what a command costs;
+ *   * whether plan, apply and verify are required, since assuming all three is
+ *     explicitly forbidden;
+ *   * the route state, which separates "no route exists" from "we cannot tell
+ *     which route is this one";
+ *   * `owner_review_required`, which is not implied by the tier.
  */
 import type { ReactNode } from "react";
 
 import {
-  ADMIN_CATALOG,
-  CATALOG_SOURCE,
-  type CatalogCommand,
-  type CatalogGroup,
-  type CommandTag,
+  blockedText,
+  groupEntries,
+  RISK_TIER_LABEL,
+  type CatalogEntry,
+  type CommandCatalogue,
 } from "../adminCatalog";
-import { CommandPlanDrawer, type CommandPlan, type DrawerStep, type VerifyEntry } from "../components/drawer";
-import type { DeliveryProfile, VerificationResult } from "../contracts";
-import type { DeliveryPolicy } from "../profile";
 import { ExecutionSurface } from "../ExecutionSurface";
+import { PanelState } from "../components/states";
+import type { PanelStatus } from "../contracts";
 
-const TAG_LABEL: Record<CommandTag, string> = {
-  READ: "READ",
-  MUTATION: "MUTATION",
-  DANGER: "DANGER",
-  BLOCKED: "BLOCKED",
-};
+/** `PLAN → APPLY → VERIFY`, but only the steps this command actually requires. */
+function StepRail({ entry }: { entry: CatalogEntry }) {
+  const steps = [
+    entry.planRequired ? "PLAN" : null,
+    entry.applyRequired ? "APPLY" : null,
+    entry.verifyRequired ? "VERIFY" : null,
+  ].filter((s): s is string => s !== null);
+  if (steps.length === 0) {
+    // Said rather than left blank: a command with no plan step is a different
+    // thing from one whose steps we failed to render.
+    return <span className="exec-admin-steps" data-empty="true">no plan/apply/verify path</span>;
+  }
+  return <span className="exec-admin-steps">{steps.join(" → ")}</span>;
+}
 
-/**
- * A row is a button, not a div with onClick.
- *
- * The catalogue is a list of things you activate, and an operator driving this
- * screen from the keyboard during an incident is not an edge case. A div would
- * need role, tabIndex and a key handler bolted on to reach the same place a
- * button reaches for free — and would still lose the native disabled semantics
- * that BLOCKED rows depend on.
- */
-function CommandRow({
-  command,
+function EntryRow({
+  entry,
   selected,
   onSelect,
 }: {
-  command: CatalogCommand;
+  entry: CatalogEntry;
   selected: boolean;
-  onSelect: (command: CatalogCommand) => void;
+  onSelect: (entry: CatalogEntry) => void;
 }) {
   return (
     <button
       type="button"
       className="exec-admin-row"
-      data-tag={command.tag}
+      data-reachable={entry.portalReachable ? "true" : "false"}
       data-selected={selected ? "true" : undefined}
       aria-pressed={selected}
-      onClick={() => onSelect(command)}
+      onClick={() => onSelect(entry)}
     >
       <span className="exec-admin-rowhead">
-        <span className="exec-admin-rowtitle">{command.title}</span>
-        <span className="exec-admin-tag" data-tag={command.tag}>
-          {TAG_LABEL[command.tag]}
+        <span className="exec-admin-rowtitle">
+          {entry.command} <span className="exec-admin-action">{entry.action}</span>
         </span>
-        <span className="exec-admin-scope">{command.scope}</span>
+        <span className="exec-admin-tag" data-tier={entry.riskTier ?? "UNKNOWN"}>
+          {entry.riskTier ? RISK_TIER_LABEL[entry.riskTier] : "tier not stated"}
+        </span>
+        {entry.ownerReviewRequired ? (
+          <span className="exec-admin-owner">owner review</span>
+        ) : null}
+        <span className="exec-admin-scope">{entry.routeState ?? "route not stated"}</span>
       </span>
-      <span className="exec-admin-cli">{command.cliShort}</span>
+      <span className="exec-admin-cli">
+        {entry.httpMethod && entry.httpPath
+          ? `${entry.httpMethod} ${entry.httpPath}`
+          : "no HTTP route published"}
+      </span>
     </button>
   );
 }
 
-export function AdminActionCatalog({
-  groups = ADMIN_CATALOG,
-  selectedId,
-  onSelect,
-}: {
-  groups?: readonly CatalogGroup[];
-  selectedId?: string | null;
-  onSelect: (command: CatalogCommand) => void;
-}) {
-  return (
-    <div className="exec-admin-catalog">
-      <p className="exec-admin-lead">
-        every mutation follows PLAN → APPLY (step-up) → VERIFY · pick a command to load it into the drawer →
-      </p>
-      {groups.map((group) => (
-        <section className="exec-admin-group" key={group.name}>
-          <h2 className="exec-admin-groupname">{group.name}</h2>
-          {group.items.map((command) => (
-            <CommandRow
-              key={command.id}
-              command={command}
-              selected={command.id === selectedId}
-              onSelect={onSelect}
-            />
-          ))}
-        </section>
-      ))}
-      <p className="exec-admin-source">{CATALOG_SOURCE}</p>
-    </div>
-  );
-}
-
-/** READ selection: green banner, returns panel, and deliberately no footer. */
-function ReadPanel({ command }: { command: CatalogCommand }) {
+/**
+ * The detail pane.
+ *
+ * There is no plan/apply footer at any tier, because there is no reachable
+ * command at any tier. Adding a disabled one would advertise a capability that
+ * does not exist and teach an operator that the blocker is negotiable.
+ */
+function EntryDetail({ entry }: { entry: CatalogEntry }) {
   return (
     <>
-      <div className="exec-admin-read">
-        <b>READ-ONLY</b> — no admin password (CLI) · no step-up (web) · safe during incidents
+      <h2 className="exec-admin-seltitle">
+        {entry.command} {entry.action}
+      </h2>
+      <p className="exec-admin-selmeta">{entry.key}</p>
+
+      <div className="exec-admin-blocked" role="note">
+        <b>NOT EXPOSED IN PORTAL</b>
+        <p>{blockedText(entry)}</p>
       </div>
-      {command.returns ? (
-        <div className="exec-admin-returns">
-          <h3>Returns</h3>
-          <p>{command.returns}</p>
+
+      <dl className="exec-admin-facts">
+        <div>
+          <dt>Portal risk tier</dt>
+          <dd>{entry.riskTier ? RISK_TIER_LABEL[entry.riskTier] : "not stated"}</dd>
         </div>
-      ) : null}
-      <p className="exec-admin-nofooter">no mutation footer — nothing to plan or apply</p>
+        {entry.sourceRiskTier && entry.sourceRiskTier !== entry.riskTier ? (
+          // Only when they differ, and never in place of the Portal's. The
+          // difference is the point: account/policy is a read at the source and
+          // a paper mutation here.
+          <div>
+            <dt>Source proposed</dt>
+            <dd>{RISK_TIER_LABEL[entry.sourceRiskTier]} — the Portal is bound by its own tier</dd>
+          </div>
+        ) : null}
+        <div>
+          <dt>Steps required</dt>
+          <dd>
+            <StepRail entry={entry} />
+          </dd>
+        </div>
+        <div>
+          <dt>Owner review</dt>
+          <dd>{entry.ownerReviewRequired ? "required" : "not required"}</dd>
+        </div>
+        <div>
+          <dt>Route</dt>
+          <dd>
+            {entry.httpMethod && entry.httpPath
+              ? `${entry.httpMethod} ${entry.httpPath}`
+              : "none published"}
+            {entry.routeState ? ` · ${entry.routeState}` : null}
+          </dd>
+        </div>
+        {entry.sourceReference ? (
+          <div>
+            <dt>Observed at</dt>
+            <dd>
+              <code>{entry.sourceReference}</code>
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+
+      <p className="exec-admin-nofooter">
+        No plan or apply is offered: the command relay is disabled for this catalogue revision, so
+        there is nothing here to run.
+      </p>
     </>
   );
 }
 
-/** BLOCKED selection: the gap, named, with the reason in full. */
-function BlockedPanel({ command }: { command: CatalogCommand }) {
-  return (
-    <div className="exec-admin-blocked" role="note">
-      <b>NOT EXPOSED IN PORTAL</b>
-      <p>{command.blockedReason}</p>
-      <p className="exec-admin-blockedcli">
-        Operators run this from the CLI host. The equivalent invocation is shown for audit and
-        training only — the browser never runs a shell.
-      </p>
-      <code>{command.cliShort}</code>
-    </div>
-  );
-}
-
-export interface AdminDrawerFlow {
-  plan?: CommandPlan | null;
-  step: DrawerStep;
-  verifyEntries?: readonly VerifyEntry[];
-  outcome?: "VERIFIED" | "PARTIAL" | "FAILED" | null;
-  verification?: VerificationResult | null;
-  onGeneratePlan?: () => void;
-  onApply?: (reason: string) => void;
-}
-
-/**
- * Phase 6 screen: catalogue on the left, drawer on the right.
- *
- * `flow` is supplied by the caller rather than owned here because the same
- * screen is driven by fixtures on Lane A and by the decision reducer on Lane B,
- * and a screen that owned its own plan state would have to be rewritten at the
- * boundary instead of re-wired.
- */
 export function AdminActionDrawerScreen({
-  groups = ADMIN_CATALOG,
+  catalogue,
+  status = "ok",
+  reason,
   selected,
   onSelect,
-  flow,
-  policy,
-  dataProfile,
-  freshAuthSatisfied,
-  secondApproverSatisfied,
-  emptyHint = "Pick a command from the catalogue to load it into the drawer.",
   children,
 }: {
-  groups?: readonly CatalogGroup[];
-  selected: CatalogCommand | null;
-  onSelect: (command: CatalogCommand) => void;
-  flow?: AdminDrawerFlow;
-  policy?: DeliveryPolicy | null;
-  dataProfile?: DeliveryProfile | null;
-  freshAuthSatisfied?: boolean;
-  secondApproverSatisfied?: boolean;
-  emptyHint?: string;
-  /** Extra evidence the caller wants under the drawer body. */
+  catalogue: CommandCatalogue | null;
+  /** `denied` when the actor is not ADMIN; the catalogue is not fetched at all. */
+  status?: PanelStatus;
+  reason?: string;
+  selected: CatalogEntry | null;
+  onSelect: (entry: CatalogEntry) => void;
   children?: ReactNode;
 }) {
-  const isMutation = selected != null && (selected.tag === "MUTATION" || selected.tag === "DANGER");
+  const groups = catalogue ? groupEntries(catalogue.entries) : [];
 
   return (
     <ExecutionSurface kind="deployments" className="exec-admin">
       <header className="exec-admin-head">
         <h1>Admin actions</h1>
         <p className="exec-admin-sub">
-          Operator Admin scope · UI and CLI share ONE command authority — the browser never runs a shell
+          Operator Admin scope · UI and CLI share ONE command authority — the browser never runs a
+          shell
         </p>
-        <p className="exec-admin-sub">
-          CLI password confirm ⇢ web step-up auth · read-only commands need neither
-        </p>
+        {catalogue ? (
+          <p className="exec-admin-sub">
+            catalogue revision {catalogue.revision ?? "not stated"} ·{" "}
+            {catalogue.returnedEntries ?? catalogue.entries.length} of{" "}
+            {catalogue.totalEntries ?? "an unpublished number of"} actions
+            {catalogue.sourceCommit ? ` · source ${catalogue.sourceCommit.slice(0, 12)}` : null}
+          </p>
+        ) : null}
       </header>
-      <div className="exec-admin-panes">
-        <AdminActionCatalog groups={groups} selectedId={selected?.id ?? null} onSelect={onSelect} />
-        <aside className="exec-admin-drawer" aria-label="Command drawer">
-          {selected == null ? (
-            <p className="exec-admin-empty">{emptyHint}</p>
-          ) : selected.tag === "BLOCKED" ? (
-            <>
-              <h2 className="exec-admin-seltitle">{selected.title}</h2>
-              <p className="exec-admin-selmeta">{selected.id} · {selected.scope}</p>
-              <BlockedPanel command={selected} />
-            </>
-          ) : selected.tag === "READ" ? (
-            <>
-              <h2 className="exec-admin-seltitle">{selected.title}</h2>
-              <p className="exec-admin-selmeta">{selected.id} · {selected.scope}</p>
-              <ReadPanel command={selected} />
-            </>
-          ) : (
-            <CommandPlanDrawer
-              title={selected.title}
-              meta={`${selected.id} · ${selected.scope} · tier ${selected.tier}`}
-              plan={flow?.plan ?? null}
-              step={flow?.step ?? "plan"}
-              verifyEntries={flow?.verifyEntries}
-              outcome={flow?.outcome ?? null}
-              danger={selected.tag === "DANGER"}
-              confirmWord={selected.tag === "DANGER" ? "CLOSE" : undefined}
-              riskTier={selected.tier}
-              policy={policy ?? null}
-              dataProfile={dataProfile ?? null}
-              freshAuthSatisfied={freshAuthSatisfied}
-              secondApproverSatisfied={secondApproverSatisfied}
-              verification={flow?.verification ?? null}
-              requestKey={`admin:${selected.id}`}
-              onGeneratePlan={flow?.onGeneratePlan}
-              onApply={flow?.onApply}
-            />
-          )}
-          {isMutation ? children : null}
-        </aside>
-      </div>
+
+      {status !== "ok" ? (
+        <PanelState status={status} reason={reason} />
+      ) : (
+        <>
+          {/* Stated once, at the top, because it is true of every row below and
+              repeating it sixty-four times would turn it into wallpaper. */}
+          {catalogue?.capabilityState === "DISABLED" ? (
+            <p className="exec-admin-capability">
+              The Portal&apos;s command relay is <b>disabled</b> for this catalogue
+              {catalogue.capabilityReason ? ` (${catalogue.capabilityReason})` : null}. Every action
+              below is listed so you know it exists — none of them can be run from here.
+            </p>
+          ) : null}
+
+          <div className="exec-admin-panes">
+            <div className="exec-admin-catalog">
+              {groups.map((group) => (
+                <section className="exec-admin-group" key={group.code ?? "ungrouped"}>
+                  <h2 className="exec-admin-groupname">
+                    {group.label} <span>{group.items.length}</span>
+                  </h2>
+                  {group.items.map((entry) => (
+                    <EntryRow
+                      key={entry.key}
+                      entry={entry}
+                      selected={entry.key === selected?.key}
+                      onSelect={onSelect}
+                    />
+                  ))}
+                </section>
+              ))}
+            </div>
+            <aside className="exec-admin-drawer" aria-label="Command detail">
+              {selected ? (
+                <EntryDetail entry={selected} />
+              ) : (
+                <p className="exec-admin-empty">
+                  Pick an action to see its risk tier, the steps it would require and why it is not
+                  available here.
+                </p>
+              )}
+              {children}
+            </aside>
+          </div>
+        </>
+      )}
     </ExecutionSurface>
   );
 }

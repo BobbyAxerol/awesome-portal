@@ -41,6 +41,8 @@ import type {
   InsightBatch,
 } from "../analytics";
 import { OrderFunnelStrip } from "./FullBlotter";
+import { AdminActionDrawerScreen } from "./AdminActionDrawer";
+import type { CatalogEntry } from "../adminCatalog";
 import { capitalDeltasFromPreview } from "../api/rows";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "../api/rows";
 import type { AnalyticsEnvelope, CapitalPreview } from "../analytics";
@@ -110,19 +112,6 @@ function lineageChip(
  * to the text — and BR-EX-29 asks for `data.conditions[]` so the structure
  * survives the wire.
  */
-function describeCondition(condition: {
-  text: string;
-  owner?: string | null;
-  deadline?: string | null;
-  expiresAt?: string | null;
-}): string {
-  const parts = [condition.text];
-  if (condition.owner) parts.push(`owner ${condition.owner}`);
-  if (condition.deadline) parts.push(`deadline ${condition.deadline}`);
-  if (condition.expiresAt) parts.push(`expires ${condition.expiresAt}`);
-  return parts.join(" · ");
-}
-
 export const INBOX_SCOPE_SORT = "sla_due_at:asc,approval_id:asc";
 
 /**
@@ -386,7 +375,7 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
     async (
       verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION",
       reason: string,
-      extra?: { condition?: string | null },
+      extra?: { conditions?: readonly TypedCondition[] },
     ) => {
       const detail = state.value;
       if (!detail) return;
@@ -396,9 +385,12 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
         workspaceId: "default",
         decision: verdict,
         reason,
-        // The schema refuses this decision without a condition, and refuses a
-        // condition with any other — so it travels only where it belongs.
-        condition: verdict === "APPROVE_WITH_CONDITION" ? (extra?.condition ?? null) : null,
+        // The schema refuses this decision without conditions, and refuses
+        // conditions with any other — so they travel only where they belong.
+        // Typed objects now, never a flattened sentence: the server checks each
+        // for an owner, holds its expiry against its deadline and rejects
+        // duplicates, and none of that survives being turned into prose.
+        conditions: verdict === "APPROVE_WITH_CONDITION" ? (extra?.conditions ?? []) : [],
         expectedApprovalVersion: detail.expectedVersion,
         // Keyed by the intent, so a DENY after an APPROVE is a new command and
         // not an idempotent replay of the one before it (BR-EX-18).
@@ -477,11 +469,9 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
           // meaning is the condition attached went out with nothing attached.
           const latest = conditions.at(-1);
           if (!latest) return;
-          void decide(
-            "APPROVE_WITH_CONDITION",
-            "Approved with a condition.",
-            { condition: describeCondition(latest) },
-          );
+          // Every condition the reviewer composed travels, not just the last
+          // one flattened into a sentence. `latest` only gates the click.
+          void decide("APPROVE_WITH_CONDITION", "Approved with a condition.", { conditions });
         }}
       />
       {decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : null}
@@ -570,7 +560,7 @@ function useDecision(api: ExecutionApi) {
       verdict: Parameters<ExecutionApi["planDecision"]>[0]["decision"],
       reason: string,
       expectedApprovalVersion: number | null,
-      extra?: { condition?: string | null; workspaceId?: string },
+      extra?: { conditions?: readonly TypedCondition[]; workspaceId?: string },
     ) => {
       dispatch({ type: "PLAN_REQUESTED" });
       const planned = await api.planDecision({
@@ -578,7 +568,7 @@ function useDecision(api: ExecutionApi) {
         workspaceId: extra?.workspaceId ?? workspaceId,
         decision: verdict,
         reason,
-        condition: extra?.condition ?? null,
+        conditions: verdict === "APPROVE_WITH_CONDITION" ? (extra?.conditions ?? []) : [],
         expectedApprovalVersion,
         // Per intent, not per container. One key reused across APPROVE and
         // DENY makes the second call an idempotent replay of the first: the
@@ -723,8 +713,11 @@ export function GateR2ReviewContainer({
   const run = (
     verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION",
     reason: string,
-    condition?: string,
-  ) => void decide(approvalId, verdict, reason, d?.expectedVersion ?? null, { condition });
+    attached?: readonly TypedCondition[],
+  ) =>
+    void decide(approvalId, verdict, reason, d?.expectedVersion ?? null, {
+      conditions: attached ?? [],
+    });
   const served = preview && !("failed" in preview) ? preview : null;
 
   return (
@@ -785,7 +778,7 @@ export function GateR2ReviewContainer({
         onRequestCondition={() => {
           const latest = conditions.at(-1);
           if (!latest) return;
-          run("APPROVE_WITH_CONDITION", "Approved with a condition.", describeCondition(latest));
+          run("APPROVE_WITH_CONDITION", "Approved with a condition.", conditions);
         }}
       />
       {decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : null}
@@ -1006,5 +999,19 @@ export function BindingExposureContainer({
         reason: state.reason,
       })}
     </>
+  );
+}
+
+export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
+  const [selected, setSelected] = useState<CatalogEntry | null>(null);
+  const state = useAnalyticsRead(() => api.getCommandCatalogue(), [api]);
+  return (
+    <AdminActionDrawerScreen
+      catalogue={state.value}
+      status={state.status}
+      reason={state.reason}
+      selected={selected}
+      onSelect={setSelected}
+    />
   );
 }

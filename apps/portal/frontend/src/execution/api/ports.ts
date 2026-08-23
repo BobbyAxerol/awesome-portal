@@ -22,6 +22,8 @@ import type {
   InsightBatch,
   OrderFunnel,
 } from "../analytics";
+import type { CommandCatalogue } from "../adminCatalog";
+import type { TypedCondition } from "../components/conditions";
 
 export type Result<T> =
   | { ok: true; value: T; warnings?: readonly string[] }
@@ -142,6 +144,21 @@ export interface ExecutionApi {
    * past — the second being the dangerous one.
    */
   /**
+   * `GET /api/v1/execution/commands/catalog` — ADMIN only.
+   *
+   * A 403 for a non-ADMIN actor is not a failure to report as "unavailable":
+   * it is an answer, and the catalogue must not leak through the error text.
+   * The adapter maps it to `denied` with a sentence that names neither an entry
+   * nor a count.
+   */
+  getCommandCatalogue(query?: {
+    workspaceId?: string;
+    environment?: string;
+    targetType?: string;
+    targetId?: string;
+    riskTier?: string;
+  }): Promise<Result<CommandCatalogue>>;
+  /**
    * The five analytics reads, alongside the capital preview that was already
    * here. Each returns its parsed domain object with the envelope beside it —
    * both or neither, for the reason the preview states: a figure without its
@@ -206,8 +223,15 @@ export interface ExecutionApi {
       | "REJECT";
     /** The schema floor is eight characters; a one-word reason is refused. */
     reason: string;
-    /** Required for `APPROVE_WITH_CONDITION`, refused for anything else. */
-    condition?: string | null;
+    /**
+     * Required for `APPROVE_WITH_CONDITION`, refused for anything else.
+     *
+     * Typed objects, not a flattened string (BR-EX-29). The server checks each
+     * one for an owner, compares its expiry against its deadline and rejects
+     * duplicates — none of which is possible against prose, which is why the
+     * singular `condition` is gone from the write path entirely.
+     */
+    conditions?: readonly TypedCondition[];
     /**
      * Optimistic concurrency, as an integer.
      *

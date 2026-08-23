@@ -33,6 +33,8 @@ import {
   readOrderFunnel,
 } from "../analytics";
 import { analyticsFailureReason, readAnalyticsFailure } from "../analyticsProblem";
+import { readCommandCatalogue } from "../adminCatalog";
+import { toConditionWire } from "../conditionWire";
 import type {
   ApplyReceipt,
   ExecutionApi,
@@ -256,6 +258,40 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
         : unavailable("The capital preview response could not be read.");
     },
 
+    async getCommandCatalogue(query) {
+      const blocked = readBlocked();
+      if (blocked) return unavailable(blocked);
+      // Every filter is optional and server-owned. An entity target is always
+      // the pair, never one half — a `target_id` with no `target_type` names
+      // nothing the server can resolve.
+      const params = new URLSearchParams();
+      if (query?.workspaceId) params.set("workspace_id", query.workspaceId);
+      if (query?.environment) params.set("environment", query.environment);
+      if (query?.targetType && query?.targetId) {
+        params.set("target_type", query.targetType);
+        params.set("target_id", query.targetId);
+      }
+      if (query?.riskTier) params.set("risk_tier", query.riskTier);
+      const qs = params.toString();
+      const response = await get(`/commands/catalog${qs ? `?${qs}` : ""}`, signal);
+
+      if (response.status === 403) {
+        // An answer, not an outage. The reason names no entry and no count:
+        // "you may not see this" must not become a way to learn its size.
+        return {
+          ok: false,
+          status: "denied",
+          reason: "The command catalogue is available to Admin operators only.",
+        };
+      }
+      if (!response.ok) return problem(response);
+
+      const catalogue = readCommandCatalogue(await response.json());
+      return catalogue
+        ? { ok: true as const, value: catalogue }
+        : unavailable("The command catalogue response could not be read.");
+    },
+
     /**
      * The five analytics reads.
      *
@@ -419,19 +455,23 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       if (input.reason.trim().length < 8) {
         return unavailable("A decision needs a reason of at least eight characters.");
       }
-      // A condition belongs to the R1/R2 vocabulary only. Paper Exit has three
+      // Conditions belong to the R1/R2 vocabulary only. Paper Exit has three
       // outcomes and no condition field at all.
-      if (isPaperExitDecision(input.decision) && (input.condition?.trim().length ?? 0) > 0) {
-        return unavailable("A Paper Exit decision takes no condition.");
+      const supplied = input.conditions ?? [];
+      if (isPaperExitDecision(input.decision) && supplied.length > 0) {
+        return unavailable("A Paper Exit decision takes no conditions.");
       }
       const wantsCondition = input.decision === "APPROVE_WITH_CONDITION";
-      const condition = input.condition?.trim() ?? "";
-      if (wantsCondition && condition.length < 8) {
+      if (wantsCondition && supplied.length === 0) {
         return unavailable("Approving with a condition requires the condition itself.");
       }
-      if (!wantsCondition && condition.length > 0) {
-        return unavailable("A condition may only accompany approve-with-condition.");
+      if (!wantsCondition && supplied.length > 0) {
+        return unavailable("Conditions may only accompany approve-with-condition.");
       }
+      // Converted here rather than at the call site so every screen that plans
+      // a decision gets the same checks and the same sentences.
+      const conditionWire = toConditionWire(supplied);
+      if (!conditionWire.ok) return unavailable(conditionWire.reason);
 
       // ONE route, discriminated by body shape.
       //
@@ -476,7 +516,7 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
             payload: {
               decision: input.decision,
               reason: input.reason,
-              ...(wantsCondition ? { condition } : {}),
+              ...(wantsCondition ? { conditions: conditionWire.value } : {}),
               evidence_hashes: [...(input.evidenceHashes ?? [])],
             },
           };
