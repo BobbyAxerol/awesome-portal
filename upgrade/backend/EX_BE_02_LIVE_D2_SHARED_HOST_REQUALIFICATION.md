@@ -65,3 +65,18 @@ after publication, workload identity staging and a fresh admitted baseline.
 No D3, D4, frontend live consumer, source read, projection ingestion, Query,
 SSE, analytics, command or Trading System mutation is authorized by this
 requalification.
+
+## 4. Executable isolation preparation
+
+The ordered change is now implemented by
+[`execution-d2-isolation.py`](../../scripts/execution-d2-isolation.py) rather
+than left as two independent console actions. `verify` accepts only the exact
+IMDS hardening `DryRunOperation`. `activate` requires an explicit confirmation
+token and current <=2-hour UTC window, checks the exact running instance,
+profile ARN and association ID, waits for hop-limit one, detaches only that
+association and then requires the IMDS role-credential endpoint to disappear.
+
+Five fixture tests cover accepted/unauthorized DryRun, association drift,
+window bounds and the harden-before-detach-before-absence order. Status is
+`D2_ISOLATION_EXECUTABLE_PREPARED / LIVE_D2_UNAUTHORIZED`; no EC2 change was
+made by preparation.

@@ -90,6 +90,26 @@ hop-limit one is independently verified. Both modes permanently reject source,
 ingestion, Query, analytics, SSE, delivery-profile, command and Trading System
 change authority.
 
+The EC2 isolation itself is also machine-checked. On AWS-HK, use only the
+privately recorded exact target values:
+
+```bash
+python3 scripts/execution-d2-isolation.py \
+  --mode verify \
+  --region AWS_REGION \
+  --instance-id AWS_INSTANCE_ID \
+  --association-id INSTANCE_PROFILE_ASSOCIATION_ID \
+  --expected-profile-arn EXPECTED_D1_PROFILE_ARN
+```
+
+`verify` changes nothing and passes only on EC2 `DryRunOperation`. Inside the
+approved <=2-hour window, repeat with `--mode activate`, the exact window UTC
+timestamps and `--authorize D2_ISOLATE_TEMPORARY_OPERATOR_PROFILE`. Activation
+checks the exact instance/profile/association, applies IMDSv2 endpoint enabled,
+tokens required and hop-limit one, waits for `applied`, detaches that one
+association, and then fails closed until the IMDS role-credential endpoint is
+absent. It never starts a Portal service and cannot reattach a profile.
+
 The full Portal remains on SGP. D2 deploys only the minimal Edge, Source Proxy,
 schema-only projection PostgreSQL and one-shot migrator on the existing AWS-HK
 execution host; no dedicated Portal EC2 is planned.

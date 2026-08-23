@@ -338,6 +338,10 @@ authority.
   Status is `HOST_PREFLIGHT_ACCEPTED / IAM_ISOLATION_NOT_AUTHORIZED /
   LIVE_D2_UNAUTHORIZED`; no service started. Evidence:
   [`EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md`](./EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md).
+  The exact IMDS→detach→credential-absence order is now enforced by a tested
+  operator tool with status `D2_ISOLATION_EXECUTABLE_PREPARED /
+  LIVE_D2_UNAUTHORIZED`; its verify mode is read-only and activation remains
+  window-gated.
 - `EX-BE-02-LIVE` **D3 offline preparation complete / live unauthorized**
   (`D3_OFFLINE_PREPARATION_COMPLETE / LIVE_D3_UNAUTHORIZED`): a
   separate Compose/env/config delta opens only three credential-free public

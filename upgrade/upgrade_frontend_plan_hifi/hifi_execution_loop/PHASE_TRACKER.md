@@ -388,6 +388,11 @@ IAM_ISOLATION_NOT_AUTHORIZED / LIVE_D2_UNAUTHORIZED`. This changes no frontend
 profile: Claude keeps source/query/realtime/command consumers off. Evidence:
 [`EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md`](../../backend/EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md).
 
+The backend isolation operation is now machine-ordered and fixture-tested:
+IMDS hop-limit one, exact profile detachment, then IMDS credential absence.
+Status is `D2_ISOLATION_EXECUTABLE_PREPARED / LIVE_D2_UNAUTHORIZED`; it remains
+backend-only and unlocks no Claude consumer.
+
 D3 offline preparation is `D3_OFFLINE_PREPARATION_COMPLETE /
 LIVE_D3_UNAUTHORIZED`. A separate overlay opens only the three public
 contract/health/capability probes; the four alpha paths remain 503 and all

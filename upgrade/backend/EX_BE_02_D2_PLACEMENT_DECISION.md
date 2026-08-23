@@ -107,6 +107,14 @@ the same temporary role for the bounded change window. Before any D2 pull:
 4. prove no Portal workload, including host-network Source Proxy, can obtain
    instance-profile credentials.
 
+[`execution-d2-isolation.py`](../../scripts/execution-d2-isolation.py) makes
+this order executable. Its verify mode accepts only EC2 `DryRunOperation` and
+changes nothing. Its activate mode requires an explicit <=2-hour UTC window
+and confirmation token, validates the exact instance/profile/association,
+waits for hop-limit one to be applied, detaches only that association and then
+requires the IMDS role-credential endpoint to be absent. A failure starts no
+Portal service and cannot silently reattach or widen IAM authority.
+
 The IAM role may remain dormant for audit/rollback, but the instance profile
 must not remain attached while Portal workloads run.
 

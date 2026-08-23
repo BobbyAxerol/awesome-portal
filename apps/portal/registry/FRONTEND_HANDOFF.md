@@ -52,6 +52,11 @@ operator role. Backend status is `HOST_PREFLIGHT_ACCEPTED /
 IAM_ISOLATION_NOT_AUTHORIZED / LIVE_D2_UNAUTHORIZED`. This is not a source or
 frontend readiness signal; Claude keeps every AWS-HK consumer disabled.
 
+The IMDS hardening/profile-detach operation is now a tested, window-bound
+backend tool with status `D2_ISOLATION_EXECUTABLE_PREPARED /
+LIVE_D2_UNAUTHORIZED`. Preparation changed no EC2 state and unlocks no
+frontend profile.
+
 ## 1. Hai endpoint public
 
 | Endpoint | Method | Cache | Body |

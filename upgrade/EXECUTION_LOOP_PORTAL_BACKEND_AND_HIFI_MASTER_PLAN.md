@@ -1236,6 +1236,13 @@ Status is `HOST_PREFLIGHT_ACCEPTED / IAM_ISOLATION_NOT_AUTHORIZED /
 LIVE_D2_UNAUTHORIZED`; no service started. Evidence:
 [`EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md`](backend/EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md).
 
+The exact isolation sequence is now executable rather than prose-only. A
+tested operator tool verifies the DryRun, binds the exact instance/profile/
+association and <=2-hour window, applies hop-limit one before detachment and
+requires the IMDS role-credential endpoint to disappear. Status is
+`D2_ISOLATION_EXECUTABLE_PREPARED / LIVE_D2_UNAUTHORIZED`; preparation changed
+no EC2 state.
+
 The D3 offline package is `D3_OFFLINE_PREPARATION_COMPLETE /
 LIVE_D3_UNAUTHORIZED`. Its
 separate overlay opens only the three public contract/health/capability routes,

@@ -275,6 +275,8 @@ for required in \
   "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py" \
   "${ROOT_DIR}/scripts/execution-d2-authorization.py" \
   "${ROOT_DIR}/scripts/test_execution_d2_authorization.py" \
+  "${ROOT_DIR}/scripts/execution-d2-isolation.py" \
+  "${ROOT_DIR}/scripts/test_execution_d2_isolation.py" \
   "${ROOT_DIR}/scripts/execution-d2-preflight.sh" \
   "${ROOT_DIR}/scripts/execution-d2-render-source-proxy.sh" \
   "${ROOT_DIR}/scripts/execution-d2-test.sh" \
@@ -620,6 +622,8 @@ for tracked_source in \
   scripts/test_execution_d2_host_admission.py \
   scripts/execution-d2-authorization.py \
   scripts/test_execution_d2_authorization.py \
+  scripts/execution-d2-isolation.py \
+  scripts/test_execution_d2_isolation.py \
   scripts/execution-d2-preflight.sh \
   scripts/execution-d2-render-source-proxy.sh \
   scripts/execution-d2-test.sh \
@@ -806,10 +810,13 @@ python3 -m py_compile \
   "${ROOT_DIR}/scripts/execution-d2-host-admission.py" \
   "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py" \
   "${ROOT_DIR}/scripts/execution-d2-authorization.py" \
-  "${ROOT_DIR}/scripts/test_execution_d2_authorization.py"
+  "${ROOT_DIR}/scripts/test_execution_d2_authorization.py" \
+  "${ROOT_DIR}/scripts/execution-d2-isolation.py" \
+  "${ROOT_DIR}/scripts/test_execution_d2_isolation.py"
 python3 "${ROOT_DIR}/scripts/test_execution_iam_verify.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_authorization.py"
+python3 "${ROOT_DIR}/scripts/test_execution_d2_isolation.py"
 
 while IFS= read -r tracked_path; do
   case "${tracked_path}" in

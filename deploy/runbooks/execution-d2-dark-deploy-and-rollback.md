@@ -54,6 +54,38 @@ resource/OOM decisions and named owners. It cannot authorize source reads,
 ingestion, Query, analytics, SSE, profile activation, commands or Trading
 System changes.
 
+Do not perform the two EC2 operations as unrelated console clicks. First prove
+the exact request has authority without changing state:
+
+```bash
+python3 scripts/execution-d2-isolation.py \
+  --mode verify \
+  --region AWS_REGION \
+  --instance-id AWS_INSTANCE_ID \
+  --association-id INSTANCE_PROFILE_ASSOCIATION_ID \
+  --expected-profile-arn EXPECTED_D1_PROFILE_ARN
+```
+
+Only after readiness authorization passes and while the recorded window is
+open, run the ordered activation:
+
+```bash
+python3 scripts/execution-d2-isolation.py \
+  --mode activate \
+  --region AWS_REGION \
+  --instance-id AWS_INSTANCE_ID \
+  --association-id INSTANCE_PROFILE_ASSOCIATION_ID \
+  --expected-profile-arn EXPECTED_D1_PROFILE_ARN \
+  --window-start-utc D2_CHANGE_WINDOW_START_UTC \
+  --window-end-utc D2_CHANGE_WINDOW_END_UTC \
+  --authorize D2_ISOLATE_TEMPORARY_OPERATOR_PROFILE
+```
+
+The tool enforces harden-before-detach and requires the IMDS role-credential
+path to disappear. Any rejected/timeout result keeps every D2 container off.
+SSH recovery remains available; do not restore hop-limit two as an automatic
+rollback.
+
 The target-host preflight baseline is produced immediately before the window
 and stored outside Git with mode `0600`:
 

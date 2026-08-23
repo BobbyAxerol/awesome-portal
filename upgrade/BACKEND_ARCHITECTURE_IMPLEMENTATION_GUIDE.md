@@ -1011,6 +1011,9 @@ deep-dive → ADR → slice → evidence discipline documented above.
   Status is `HOST_PREFLIGHT_ACCEPTED / IAM_ISOLATION_NOT_AUTHORIZED /
   LIVE_D2_UNAUTHORIZED`; no Portal service started. Evidence:
   [`EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md`](./backend/EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md).
+  A tested operator tool now enforces the exact IMDS harden, profile detach and
+  credential-absence order. Status is `D2_ISOLATION_EXECUTABLE_PREPARED /
+  LIVE_D2_UNAUTHORIZED`; preparation made no EC2 change.
 - **EX-BE-02-LIVE D3 offline preparation (2026-08-23):** a separate probe-only
   overlay now opens exactly three public contract/health source routes while
   four alpha routes remain 503 and ingestion/query/SSE/analytics/command stay
