@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  gapIsClientSide,
   INITIAL_SUBSCRIPTION,
   readGapReason,
   resnapshotDecision,
@@ -219,5 +220,17 @@ describe("only a completed snapshot repairs continuity", () => {
     // The transport state may move; the hole in the data does not close.
     expect(dropped.continuityLost).toBe(true);
     expect(dropped.resumeToken).toBeNull();
+  });
+});
+
+describe("only slow_consumer is something the operator can act on", () => {
+  it("keeps the two new reasons out of the actionable set", () => {
+    // A new reason defaulting to false is the safe direction, but silent — so
+    // it is asserted rather than assumed. cursor_ahead in particular reads as
+    // the client's fault and is not: the projection was rebuilt beneath it.
+    expect(gapIsClientSide("slow_consumer")).toBe(true);
+    for (const reason of contractReasons().filter((r) => r !== "slow_consumer")) {
+      expect(gapIsClientSide(readGapReason(reason)), reason).toBe(false);
+    }
   });
 });

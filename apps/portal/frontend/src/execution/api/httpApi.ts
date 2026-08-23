@@ -106,7 +106,11 @@ async function problem(response: Response): Promise<Result<never>> {
     // A failure whose body is not JSON is still a failure with a status.
   }
   const p = readProblem(body, response.status);
-  return { ok: false, status: panelStatusForHttp(response.status) as never, reason: `${p.code}: ${p.message}` };
+  return {
+    ok: false,
+    status: panelStatusForHttp(response.status),
+    reason: `${p.code}: ${p.message}`,
+  };
 }
 
 /**
@@ -129,7 +133,7 @@ async function analyticsProblem(response: Response): Promise<Result<never>> {
   const failure = readAnalyticsFailure(body, response.status);
   return {
     ok: false,
-    status: failure.panelStatus as never,
+    status: failure.panelStatus,
     reason: analyticsFailureReason(failure),
   };
 }

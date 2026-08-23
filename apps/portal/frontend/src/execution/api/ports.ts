@@ -76,16 +76,6 @@ export function isPaperExitDecision(decision: string): decision is PaperExitDeci
   return PAPER_EXIT_DECISIONS.includes(decision);
 }
 
-/**
- * What each outcome leaves behind (`Decision.resulting_state`). Rendered so a
- * reviewer reads the consequence, not just the verb.
- */
-export const PAPER_EXIT_RESULTING_STATE: Record<PaperExitDecision, string> = {
-  PROMOTE: "PROMOTION_AUTHORIZED",
-  EXTEND_OBSERVATION: "EXTENDED",
-  REJECT: "REJECTED_TO_PAPER_HELD",
-};
-
 /** The schema pins the extension to one term; it is not a free number. */
 export const PAPER_EXIT_EXTENSION_DAYS = 14;
 

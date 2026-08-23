@@ -151,19 +151,20 @@ function FunnelCard({
   //     events came back, and `truncated` says so per stage.
   //   * The CLIENT then capped what it received to `FILL_BUDGET`.
   //
-  // `total` is the population, not what arrived, so the notice reads "showing 6
-  // of 4,180" rather than "6 of 12" — the second would describe the window as
-  // if it were the population, which is exactly the lie this stage exists to
-  // avoid. The server's own truncation is stated separately below, because a
-  // reader needs to know the missing rows are not merely un-rendered: they were
-  // never sent, and no amount of scrolling reaches them.
+  // The cap notice describes the RENDER against what was DELIVERED; the line
+  // below describes what was delivered against what EXISTS. Giving the cap the
+  // population instead made both sentences carry the same figures for the same
+  // cause — "showing 1 of 4,177" twice — which reads as one fact stated twice
+  // rather than two facts, and loses the part that matters: those rows were
+  // never sent, so no amount of scrolling reaches them.
+  const delivered = stage.returnedEventCount ?? stage.events.length;
   const shownEvents = capPreserving(
     stage.events,
     FILL_BUDGET,
     (event) => event === last || event.completeness !== "COMPLETE",
-    stage.eventCount ?? stage.events.length,
+    delivered,
   );
-  const eventsNotice = capNotice(shownEvents, "fills");
+  const eventsNotice = capNotice(shownEvents, stage.truncated ? "fills received" : "fills");
   return (
     <li className="exec-funnel-card" data-state={stage.state}>
       <div className="exec-funnel-hop">{label}</div>

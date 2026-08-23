@@ -484,8 +484,14 @@ export interface Problem {
   code: string;
   message: string;
   retryAfterSeconds: number | null;
-  /** Which panel state this failure resolves to. */
-  panelStatus: PanelStatus;
+  /**
+   * Which panel state this failure resolves to.
+   *
+   * Never `ok`. Stated in the type so the callers that build a `Result` from
+   * this do not need a cast — and a cast is what was hiding the fact that
+   * nothing proved it.
+   */
+  panelStatus: Exclude<PanelStatus, "ok">;
 }
 
 /**
@@ -496,7 +502,7 @@ export interface Problem {
  * the three failures below need three different responses from a human, and one
  * generic error box would flatten them into "something went wrong".
  */
-export function panelStatusForHttp(status: number): PanelStatus {
+export function panelStatusForHttp(status: number): Exclude<PanelStatus, "ok"> {
   if (status === 401 || status === 403) return "denied";
   if (status >= 500) return "unavailable";
   if (status === 406 || status === 409) return "unavailable";

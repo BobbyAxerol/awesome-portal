@@ -42,7 +42,8 @@ export interface AnalyticsFailure {
    * the only thing on this object a screen should branch on.
    */
   kind: "correctable" | "infrastructure" | "unknown";
-  panelStatus: PanelStatus;
+  /** Never `ok`: this type only describes failures. */
+  panelStatus: Exclude<PanelStatus, "ok">;
   /**
    * What to tell the operator. Written here, never taken from the server's
    * `message`: the server's text is for a log, may name a source id or an

@@ -127,3 +127,21 @@ describe("ledger reads the population, and its totals describe it", () => {
     expect(readCapitalLedger(raw)!.bounded.hasMore).toBe(false);
   });
 });
+
+describe("the render cap and the transport window are two different sentences", () => {
+  it("does not state the same figures twice for the same cause", () => {
+    const raw = load("order-funnel");
+    const stage = raw.analytics.data.stages.find((s: { stage: string }) => s.stage === "FILL")
+      ?? raw.analytics.data.stages[0];
+    stage.event_count = 4177;
+    stage.returned_event_count = 1;
+    stage.truncated = true;
+    render(<OrderFunnelStrip funnel={readOrderFunnel(raw)} status="ok" />);
+
+    // The transport line owns the population figure.
+    expect(screen.getByText(/4,177 events for this stage/)).toBeTruthy();
+    // The cap notice must not repeat it: one event was delivered and one was
+    // rendered, so the client capped nothing and has nothing to report.
+    expect(screen.queryByText(/showing 1 of 4,177/)).toBeNull();
+  });
+});
