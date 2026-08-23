@@ -4,15 +4,15 @@
     "object_store": "mc mirror portal-minio/quant-platform backup/quant-platform",
     "planning_sqlite": "cp $PLANNING_DB_PATH planning-backup.sqlite"
   },
-  "generated_at": "2026-08-16T06:40:22.985756+00:00",
-  "git_commit": "5c68c8079b42d4e898e9130188787d58736aca14",
+  "generated_at": "2026-08-23T17:23:23.622593+00:00",
+  "git_commit": "28aa8dd15ba18f1271226184b8a74f5c94505269",
   "hygiene": {
     "clean": true,
     "findings": [],
     "tracked_files_scanned_note": "sources only; lockfiles excluded"
   },
-  "m0_freeze_manifest_digest": "sha256:8c7c9e567c6512bc6f8042baef3347185b6199aa288b79726f86cb1b771abed4",
-  "openapi_digest": "sha256:4e2907d8cd36426e9b3943a4cb38f109f0dfc0ae71c427d6eb1b5b84a83e26ea",
+  "m0_freeze_manifest_digest": "sha256:9063a1f3e0e7bcc3053c71e7d0d7724e8a78efe51c9837a526c7b546a7908408",
+  "openapi_digest": "sha256:3db643491b32f2aaf0a8490dcb5d457529185b0c35daab420a5e4fe295bcb2ee",
   "protected_strategy_sha256": "sha256:34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
   "restore_checklist": [
     "restore PostgreSQL dump into a fresh database",

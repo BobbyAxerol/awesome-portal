@@ -164,9 +164,9 @@ def test_only_the_web_gateway_exposes_a_public_port() -> None:
     compose = COMPOSE_PATH.read_text(encoding="utf-8")
 
     assert compose.count("    ports:") == 1
-    web_service = compose.split("portal-web:", 1)[1].split("\n\n")[0]
+    web_service = compose.split("\n  portal-web:", 1)[1].split("\n\n")[0]
     assert "ports:" in web_service
-    for private in ("portal-api:", "roadmap-task-board-api:"):
+    for private in ("\n  portal-api:\n", "\n  roadmap-task-board-api:\n"):
         section = compose.split(private, 1)[1].split("\n\n")[0]
         assert "expose:" in section
         assert "ports:" not in section

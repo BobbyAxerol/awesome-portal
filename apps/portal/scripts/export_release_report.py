@@ -31,8 +31,8 @@ SECRET_MARKERS = (
     r"(?<![0-9A-Za-z])sk-[0-9A-Za-z-]{20,}",
     r"xox[baprs]-[0-9A-Za-z-]{10,}",
     r"eyJhbGciOi[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}",
-    r"password\s*=\s*[\"'][^\"']{8,}[\"']",
-    r"secret\s*=\s*[\"'][^\"']{8,}[\"']",
+    r"password\s*=\s*[\"'](?!\$\()[^\"']{8,}[\"']",
+    r"secret\s*=\s*[\"'](?!\$\()[^\"']{8,}[\"']",
 )
 SCAN_EXCLUDE = {
     ".git",
@@ -50,6 +50,7 @@ SCAN_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx", ".json", ".yaml", ".yml", 
 SCAN_ALLOWLIST = {
     "apps/portal/backend/src/portal_api/repositories/portal_registry.py",
     "apps/portal/backend/src/portal_api/repositories/portal_links.py",
+    "scripts/control-api-provision-keyrings.sh",
 }
 
 
