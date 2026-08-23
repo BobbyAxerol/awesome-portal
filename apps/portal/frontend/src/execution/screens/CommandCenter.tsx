@@ -249,14 +249,23 @@ export function CommandCenterScreen({
             The sentence comes from `streamGate` rather than being written here,
             so the words the operator reads and the decision the transport makes
             are the same fact and cannot drift apart. */}
-        {gate.allowed ? (
+        {!gate.allowed ? (
+          <p className="exec-cc-sub">{gate.reason} Reload to re-read.</p>
+        ) : live ? (
           <p className="exec-cc-sub" data-live="true">
-            Live — {live?.freshness ?? "UNKNOWN"}
-            {live?.phase ? ` · ${live.phase}` : null}
-            {live?.note ? ` · ${live.note}` : null}
+            Live — {live.freshness}
+            {live.phase ? ` · ${live.phase}` : null}
+            {live.note ? ` · ${live.note}` : null}
           </p>
         ) : (
-          <p className="exec-cc-sub">{gate.reason} Reload to re-read.</p>
+          /* Published is not connected. This branch read `live?.freshness ??
+             "UNKNOWN"` and printed `Live — UNKNOWN` under a `data-live="true"`
+             marker while holding no subscription at all, which is the page
+             claiming to be updating itself and naming its own ignorance as the
+             freshness. A stream can be published and not yet open — the flag
+             is the server's, the socket is ours — so the two are separate
+             sentences and only the second one is `data-live`. */
+          <p className="exec-cc-sub">Stream published — not connected. Values are as read.</p>
         )}
       </header>
 

@@ -534,7 +534,11 @@ function Ledger({
         // a reader who sees "showing 12" beside a large total will otherwise
         // assume one of the two numbers is wrong.
         <p className="exec-ledger-bounded">
-          Bounded window — {(ledger.bounded.returned ?? 0).toLocaleString("en-US")} of{" "}
+          {/* Not `?? 0`. An absent count is not a count of zero, and "0 of
+              1,234 entries were returned" is a false sentence sitting inside
+              the one paragraph written to stop a reader misreading this pair.
+              It matches how `total` is handled on the next line. */}
+          Bounded window — {ledger.bounded.returned?.toLocaleString("en-US") ?? "an unstated number of"} of{" "}
           {ledger.bounded.total?.toLocaleString("en-US") ?? "an unpublished number of"} entries were
           returned.
           {ledger.window === "LATEST" ? " The source sent the latest entries only." : null}

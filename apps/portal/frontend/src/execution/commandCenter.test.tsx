@@ -14,7 +14,8 @@ import { join } from "node:path";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { countLabel, readCommandCenter, readPanelState } from "./commandCenter";
+import { countLabel, readCommandCenter, readPanelState, type CommandCenter } from "./commandCenter";
+import { INITIAL_SUBSCRIPTION } from "./subscription";
 import { CommandCenterScreen } from "./screens/CommandCenter";
 import { CC_FIXTURES } from "./commandCenter.fixtures";
 
@@ -208,4 +209,55 @@ describe("the inlined fixtures have not drifted from the contract", () => {
       expect(CC_FIXTURES[name]).toEqual(fixture(name));
     });
   }
+});
+
+/**
+ * The live banner, all three of its states.
+ *
+ * None of these had a test. Every published fixture carries
+ * `stream_available: false`, so the suite only ever rendered the dark branch,
+ * and the two branches behind the gate — the ones that appear on the day codex
+ * flips the flag — were unexercised code. The screen printed `Live — UNKNOWN`
+ * under a `data-live="true"` marker whenever the gate opened, whether or not a
+ * subscription existed, because `live?.freshness ?? "UNKNOWN"` treats "I hold
+ * no stream" and "the stream says UNKNOWN" as the same sentence.
+ */
+describe("the live banner distinguishes published from connected", () => {
+  const opened = (): CommandCenter => {
+    const base = snapshot("busy");
+    // Built here rather than in a fixture on purpose: the fixtures are
+    // generated from `packages/contracts/fixtures/` and drift-tested byte for
+    // byte, so the branch cannot be reached by editing one.
+    return { ...base, streamAvailable: true };
+  };
+
+  it("says nothing is connected when the stream is published but no state has arrived", () => {
+    render(<CommandCenterScreen snapshot={opened()} live={null} />);
+    expect(screen.getByText(/Stream published — not connected/)).toBeTruthy();
+    // The marker is the claim. It must track the socket, not the server flag.
+    expect(document.querySelector('[data-live="true"]')).toBeNull();
+    // `UNKNOWN` is a real `FreshnessState`, not a placeholder, so the old
+    // `?? "UNKNOWN"` did not merely leave a blank — it reported a value the
+    // stream is entitled to send and in this case never sent.
+    expect(document.body.textContent).not.toContain("UNKNOWN");
+  });
+
+  it("reports the subscription's own freshness once one exists", () => {
+    render(
+      <CommandCenterScreen
+        snapshot={opened()}
+        live={{ ...INITIAL_SUBSCRIPTION, freshness: "OK", phase: "live" }}
+      />,
+    );
+    const banner = document.querySelector('[data-live="true"]');
+    expect(banner).not.toBeNull();
+    expect(banner?.textContent).toContain("OK");
+    expect(banner?.textContent).toContain("live");
+  });
+
+  it("still refuses to mention a stream at all while the gate is shut", () => {
+    render(<CommandCenterScreen snapshot={snapshot("busy")} live={null} />);
+    expect(document.querySelector('[data-live="true"]')).toBeNull();
+    expect(screen.queryByText(/Stream published/)).toBeNull();
+  });
 });

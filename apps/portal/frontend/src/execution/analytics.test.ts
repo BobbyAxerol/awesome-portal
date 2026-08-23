@@ -559,7 +559,7 @@ describe("Gate R2 container — the preview arrives through the port", () => {
     const api = createFixtureApi();
     const result = await api.getCapitalPreview("AP-207", input());
     expect(result.ok).toBe(true);
-    if (!result.ok) return;
+    if (!result.ok) throw new Error(`expected ok, got ${result.status}: ${result.reason}`);
     expect(result.value.preview.decisionEligible).toBe(true);
     // The envelope is read from the response, not assembled by the caller.
     expect(result.value.envelope.formulaVersion).toBe("capital-preview.v1");
@@ -570,7 +570,7 @@ describe("Gate R2 container — the preview arrives through the port", () => {
     const api = createFixtureApi();
     const result = await api.getCapitalPreview("AP-207", input(BREACHING_AMOUNT));
     expect(result.ok).toBe(true);
-    if (!result.ok) return;
+    if (!result.ok) throw new Error(`expected ok, got ${result.status}: ${result.reason}`);
     expect(result.value.preview.decisionEligible).toBe(false);
     expect(result.value.preview.blockers[0]).toMatch(/exceeds the portfolio ceiling/);
   });
@@ -579,7 +579,7 @@ describe("Gate R2 container — the preview arrives through the port", () => {
     const api = createFixtureApi({ stalePreview: true });
     const result = await api.getCapitalPreview("AP-207", input());
     expect(result.ok).toBe(true);
-    if (!result.ok) return;
+    if (!result.ok) throw new Error(`expected ok, got ${result.status}: ${result.reason}`);
     expect(result.value.preview.decisionEligible).toBe(false);
     expect(result.value.envelope.inputFreshnessFloor).toBe("STALE");
   });
@@ -588,7 +588,7 @@ describe("Gate R2 container — the preview arrives through the port", () => {
     const api = createFixtureApi({ unavailableEndpoints: ["getCapitalPreview"] });
     const result = await api.getCapitalPreview("AP-207", input("1"));
     expect(result.ok).toBe(false);
-    if (result.ok) return;
+    if (result.ok) throw new Error("expected a failure, got ok");
     expect(result.status).toBe("unavailable");
   });
 });

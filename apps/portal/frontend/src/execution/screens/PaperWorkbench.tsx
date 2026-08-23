@@ -417,7 +417,13 @@ export function PaperWorkbench({
           <div className="exec-tile-title">Drift vs approved evidence</div>
           <table className="exec-360-sync">
             <caption className="exec-blotter-note">
-              {driftNote ?? "Linked to the approved run by artifact digest."}
+              {/* The fallback used to assert the linkage: with no note
+                  published the caption read "Linked to the approved run by
+                  artifact digest," which is a provenance claim invented out of
+                  silence — on the one panel whose job is to report divergence.
+                  `driftNote` carries the server's own sentence; absence of it
+                  is absence of the statement, not confirmation. */}
+              {driftNote ?? "No linkage to the approved run is stated. Absence is not a match."}
             </caption>
             <thead>
               <tr>

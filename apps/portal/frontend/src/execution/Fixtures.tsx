@@ -81,7 +81,7 @@ const EXIT_ELIGIBLE = {
   canReject: true,
   separationOfDuties: "OK" as const,
 };
-import { CommandCenterScreen } from "./screens/CommandCenter";
+import { CommandCenterLive } from "./screens/containers";
 import { CC_FIXTURES } from "./commandCenter.fixtures";
 import { readCommandCenter } from "./commandCenter";
 
@@ -1771,7 +1771,7 @@ export default function ExecutionFixtures() {
             const parsed = readCommandCenter(CC_FIXTURES[name]);
             return parsed ? (
               <Case key={name} caption={`${name} — panel states read from the contract, never merged`}>
-                <CommandCenterScreen snapshot={parsed} />
+                <CommandCenterLive snapshot={parsed} />
               </Case>
             ) : null;
           })}

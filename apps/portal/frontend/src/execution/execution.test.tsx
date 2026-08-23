@@ -2753,7 +2753,7 @@ describe("the fixture API exercises the real mapping path", () => {
     const api = createFixtureApi();
     const result = await api.listApprovals({ filter: "INBOX" });
     expect(result.ok).toBe(true);
-    if (!result.ok) return;
+    if (!result.ok) throw new Error(`expected ok, got ${result.status}: ${result.reason}`);
     expect(result.value.page.rows.map((r) => r.id)).toContain("AP-352");
     // Server counts, not row counts.
     expect(result.value.page.totalCount).toBe(5);
@@ -2772,7 +2772,7 @@ describe("the fixture API exercises the real mapping path", () => {
     const api = createFixtureApi({ unavailableEndpoints: ["getGateR1"] });
     const result = await api.getGateR1("AP-201");
     expect(result.ok).toBe(false);
-    if (result.ok) return;
+    if (result.ok) throw new Error("expected a failure, got ok");
     expect(result.status).toBe("unavailable");
     expect(result.reason).toContain("not wired");
   });
@@ -2932,7 +2932,7 @@ describe("plan → apply → poll: 202 is never the end", () => {
       requestKey: s.requestKey,
     });
     expect(plan.ok).toBe(true);
-    if (!plan.ok) return;
+    if (!plan.ok) throw new Error(`expected ok, got ${plan.status}: ${plan.reason}`);
     s = decisionReducer(s, { type: "PLANNED", planId: plan.value.operationId });
     // The token the server issued, not a pair the client re-derived: an apply
     // must not be able to reach a plan it was never issued for.
@@ -2940,7 +2940,7 @@ describe("plan → apply → poll: 202 is never the end", () => {
 
     const applied = await api.applyPlan(plan.value.operationId, plan.value.applyToken!, "default");
     expect(applied.ok).toBe(true);
-    if (!applied.ok) return;
+    if (!applied.ok) throw new Error(`expected ok, got ${applied.status}: ${applied.reason}`);
     s = decisionReducer(s, { type: "APPLY_ACCEPTED", ...applied.value });
     expect(succeeded(s)).toBe(false);
 
@@ -2965,7 +2965,7 @@ describe("plan → apply → poll: 202 is never the end", () => {
     const api = createFixtureApi({ uncertain: true });
     const applied = await api.applyPlan("cmd_x", "gat1.fixture.cmd_x.token", "default");
     expect(applied.ok).toBe(true);
-    if (!applied.ok) return;
+    if (!applied.ok) throw new Error(`expected ok, got ${applied.status}: ${applied.reason}`);
     let s = decisionReducer(start(), { type: "APPLY_ACCEPTED", ...applied.value });
     for (let i = 0; i < 3; i += 1) {
       const polled = await api.pollOperation(applied.value.operationId);
@@ -3329,7 +3329,7 @@ describe("the fixture API pages, so the container's paging is exercised", () => 
     // INBOX is "mine" — the three rows flagged needs_you, not the whole queue.
     const first = await api.listApprovals({ filter: "INBOX", limit: 2 });
     expect(first.ok).toBe(true);
-    if (!first.ok) return;
+    if (!first.ok) throw new Error(`expected ok, got ${first.status}: ${first.reason}`);
     expect(first.value.page.filteredCount).toBe(3);
     expect(first.value.page.totalCount).toBe(5);
     expect(first.value.page.rows.map((r) => r.id)).toEqual(["AP-352", "AP-201"]);
@@ -3342,7 +3342,7 @@ describe("the fixture API pages, so the container's paging is exercised", () => 
       after: first.value.page.nextCursor ?? undefined,
     });
     expect(second.ok).toBe(true);
-    if (!second.ok) return;
+    if (!second.ok) throw new Error(`expected ok, got ${second.status}: ${second.reason}`);
     // AP-360 is not "mine", so the INBOX view ends after EX-771.
     expect(second.value.page.rows.map((r) => r.id)).toEqual(["EX-771"]);
     expect(second.value.page.hasPrevious).toBe(true);
@@ -3351,21 +3351,21 @@ describe("the fixture API pages, so the container's paging is exercised", () => 
   it("moves back on a prev cursor", async () => {
     const api = createFixtureApi();
     const second = await api.listApprovals({ filter: "INBOX", limit: 2, after: "c_AP-201" });
-    if (!second.ok) return;
+    if (!second.ok) throw new Error(`expected ok, got second=${second.status}: ${second.reason}`);
     const back = await api.listApprovals({
       filter: "INBOX",
       limit: 2,
       before: second.value.page.prevCursor ?? undefined,
     });
     expect(back.ok).toBe(true);
-    if (!back.ok) return;
+    if (!back.ok) throw new Error(`expected ok, got ${back.status}: ${back.reason}`);
     expect(back.value.page.rows.map((r) => r.id)).toEqual(["AP-352", "AP-201"]);
   });
 
   it("echoes the view it applied and the sort it used", async () => {
     const api = createFixtureApi();
     const r = await api.listApprovals({ filter: "OVERDUE" });
-    if (!r.ok) return;
+    if (!r.ok) throw new Error(`expected ok, got r=${r.status}: ${r.reason}`);
     expect(r.value.page.appliedFilters?.[0]).toEqual({ field: "view", op: "eq", value: "OVERDUE" });
     // Overdue sort order has to survive paging, so it is echoed on every page.
     // `sla_due_at`, not `sla_state`: the server's sort allowlist is
@@ -3383,12 +3383,12 @@ describe("the fixture API pages, so the container's paging is exercised", () => 
     // Over ALL, both inert rows are in view: AP-360 blocked before review and
     // AP-311 separation of duty. Neither is "mine", so INBOX has none.
     const all = await api.listApprovals({ filter: "ALL", limit: 2 });
-    if (!all.ok) return;
+    if (!all.ok) throw new Error(`expected ok, got all=${all.status}: ${all.reason}`);
     expect(all.value.page.rows.length).toBe(2);
     expect(all.value.inertCount).toBe(2);
 
     const mine = await api.listApprovals({ filter: "INBOX", limit: 2 });
-    if (!mine.ok) return;
+    if (!mine.ok) throw new Error(`expected ok, got mine=${mine.status}: ${mine.reason}`);
     expect(mine.value.inertCount).toBe(0);
   });
 });
@@ -3958,7 +3958,7 @@ describe("the filter chips filter (EX-BE-05a §3's eight views)", () => {
     // applied — the same lie in the other direction.
     const api = createFixtureApi();
     const r = await api.listApprovals({ filter: "NOT_A_VIEW", limit: 20 });
-    if (!r.ok) return;
+    if (!r.ok) throw new Error(`expected ok, got r=${r.status}: ${r.reason}`);
     expect(r.value.page.rows).toEqual([]);
     expect(r.value.page.filteredCount).toBe(0);
   });
@@ -3966,7 +3966,7 @@ describe("the filter chips filter (EX-BE-05a §3's eight views)", () => {
   it("keeps the queue total while the view count follows the filter", async () => {
     const api = createFixtureApi();
     const r = await api.listApprovals({ filter: "OVERDUE", limit: 20 });
-    if (!r.ok) return;
+    if (!r.ok) throw new Error(`expected ok, got r=${r.status}: ${r.reason}`);
     expect(r.value.page.filteredCount).toBe(1);
     expect(r.value.page.totalCount).toBe(5);
   });
@@ -4313,7 +4313,7 @@ describe("plan → apply, shaped to DecisionPlanRequestSchema", () => {
       requestKey: "rk_1",
     });
     expect(plan.ok).toBe(false);
-    if (plan.ok) return;
+    if (plan.ok) throw new Error("expected a failure, got ok");
     expect(plan.reason).toMatch(/no version to decide against/);
   });
 
@@ -4330,7 +4330,7 @@ describe("plan → apply, shaped to DecisionPlanRequestSchema", () => {
       requestKey: "rk_1",
     });
     expect(plan.ok).toBe(false);
-    if (plan.ok) return;
+    if (plan.ok) throw new Error("expected a failure, got ok");
     expect(plan.reason).toMatch(/requires the condition itself/);
   });
 
@@ -4363,7 +4363,7 @@ describe("plan → apply, shaped to DecisionPlanRequestSchema", () => {
       requestKey: "rk_1",
     });
     expect(plan.ok).toBe(true);
-    if (!plan.ok) return;
+    if (!plan.ok) throw new Error(`expected ok, got ${plan.status}: ${plan.reason}`);
     expect(plan.value.blockers.map((b) => b.code)).toEqual(["QUORUM_NOT_MET"]);
     // No token either — the two go together on the real endpoint.
     expect(plan.value.applyToken).toBeNull();
@@ -4575,7 +4575,7 @@ describe("the operation poll reads what the endpoint publishes", () => {
       const api = createHttpApi({ policy: FULL_POLICY });
       const polled = await api.pollOperation("cmd_1");
       expect(polled.ok).toBe(true);
-      if (!polled.ok) return;
+      if (!polled.ok) throw new Error(`expected ok, got ${polled.status}: ${polled.reason}`);
       expect(polled.value.verificationRaw).toBe("SUCCEEDED");
       const walked = decisionReducer(
         { ...initialDecision("rk_1"), phase: "verifying", operationId: "cmd_1" },
@@ -4602,7 +4602,7 @@ describe("the operation poll reads what the endpoint publishes", () => {
       const api = createHttpApi({ policy: FULL_POLICY });
       const polled = await api.pollOperation("cmd_1");
       expect(polled.ok).toBe(true);
-      if (!polled.ok) return;
+      if (!polled.ok) throw new Error(`expected ok, got ${polled.status}: ${polled.reason}`);
       // The observed outcome wins over the workflow status: a workflow that
       // finished and an effect that only partly landed are different facts.
       expect(polled.value.verificationRaw).toBe("PARTIAL");

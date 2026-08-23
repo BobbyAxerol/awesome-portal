@@ -48,6 +48,10 @@ import { IncidentDetailScreen } from "./IncidentDetail";
 import { SandboxCertificationScreen } from "./SandboxCertification";
 import { CanaryControlRoomScreen } from "./CanaryControlRoom";
 import { LiveFullOperationsScreen } from "./LiveFullOperations";
+import { CommandCenterScreen } from "./CommandCenter";
+import { useCommandCentreStream } from "../commandCenterStream";
+import type { CommandCenter } from "../commandCenter";
+import type { SseFactory } from "../sse";
 import { workflowEffectText, type QueueRow, type WorkflowResult } from "../operations";
 import { PanelState } from "../components/states";
 import { aggregateHeadroomFrom, envelopeFromAnalytics } from "../analytics";
@@ -1270,4 +1274,39 @@ export function LiveFullOperationsContainer({
   return (
     <LiveFullOperationsScreen live={state.value} status={state.status} reason={state.reason} />
   );
+}
+
+/**
+ * The Command Centre with its subscription attached.
+ *
+ * `useCommandCentreStream` existed with no caller: the hook decided whether to
+ * open a stream and the screen took a `live` prop, and nothing joined them, so
+ * the screen's live branch could never receive state. A bridge built from one
+ * bank is not a bridge, and the missing half is always the half nobody tests.
+ *
+ * Wiring it does not open anything. The hook refuses unless the snapshot says
+ * `stream_available` — codex's stop gate — and refuses again unless a factory
+ * is supplied, so the fixtures page passes `null` and provably connects
+ * nothing while still exercising the composition.
+ */
+export function CommandCenterLive({
+  snapshot,
+  factory = null,
+  fetchSnapshot,
+}: {
+  snapshot: CommandCenter;
+  factory?: SseFactory | null;
+  fetchSnapshot?: () => Promise<{ cursor: string; epoch: string; sequence: number; asOf?: string | null }>;
+}) {
+  const { live } = useCommandCentreStream({
+    snapshot,
+    factory,
+    // Only ever called to recover from a gap, which requires an open stream.
+    // Rejecting is honest: there is no snapshot endpoint behind a null factory,
+    // and a resolved stub would hand the reducer an invented resume point.
+    fetchSnapshot:
+      fetchSnapshot ??
+      (() => Promise.reject(new Error("no snapshot endpoint: this Command Centre has no stream"))),
+  });
+  return <CommandCenterScreen snapshot={snapshot} live={live} />;
 }

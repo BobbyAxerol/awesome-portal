@@ -244,7 +244,7 @@ export function CommandPlanDrawer({
                   : "\u00b7 "}
             </span>
             {STEP_LABEL[candidate]}
-            <span className="exec-sr-only">
+            <span className="sr-only">
               {STEPS.indexOf(candidate) < STEPS.indexOf(step)
                 ? " (done)"
                 : candidate === step

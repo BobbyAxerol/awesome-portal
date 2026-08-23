@@ -25,7 +25,6 @@ import type { ReactNode } from "react";
 import { slaOverdue, type ApprovalId, type KeysetPage, type PanelStatus, type Sla } from "../contracts";
 import { StatusChip } from "../components/badges";
 import { SlaCell } from "../components/evidence";
-import { PanelState } from "../components/states";
 import { KeysetTable, type Column } from "../components/table";
 
 /** The gate a request is asking to pass. Portal-owned workflow vocabulary. */
@@ -424,28 +423,6 @@ export function ApprovalInbox({
           />
         </div>
       ) : null}
-    </section>
-  );
-}
-
-/**
- * The inbox with no table at all — used when the whole screen, rather than one
- * panel, is unavailable. Kept separate so a caller cannot accidentally render
- * counts from a queue it could not read.
- */
-export function ApprovalInboxUnavailable({
-  status,
-  reason,
-}: {
-  status: Exclude<PanelStatus, "ok">;
-  reason: string;
-}) {
-  return (
-    <section className="exec-inbox" aria-label="Approval Inbox">
-      <header className="exec-inbox-head">
-        <div className="exec-tile-title">Approval Inbox</div>
-      </header>
-      <PanelState status={status} reason={reason} />
     </section>
   );
 }

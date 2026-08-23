@@ -24,6 +24,8 @@ import {
   portfolio360,
   rankedFixture,
 } from "./portfolio360.fixtures";
+import { CAPITAL_LEDGER } from "./analytics.presentation.fixtures";
+import { readCapitalLedger } from "./analytics";
 
 afterEach(cleanup);
 
@@ -255,5 +257,38 @@ describe("Portfolio 360° — ledger and structure", () => {
   it("says the correlation is unavailable rather than drawing an empty grid", () => {
     render(<CorrelationPanel correlation={null} />);
     expect(screen.getByText(/No correlation result was published/)).toBeTruthy();
+  });
+});
+
+describe("the bounded-window sentence states neither count it was not given", () => {
+  const ledgerWith = (patch: Record<string, unknown>) => {
+    const raw = JSON.parse(JSON.stringify(CAPITAL_LEDGER));
+    Object.assign(raw.analytics.data, { has_more: true, ...patch });
+    return readCapitalLedger(raw);
+  };
+
+  it("prints both counts when the source published both", () => {
+    render(
+      <PortfolioThreeSixty
+        {...portfolio360({ tab: "Capital Ledger", ledger: ledgerWith({ entry_count: 4180, returned_entry_count: 4 }) })}
+      />,
+    );
+    expect(screen.getByText(/Bounded window — 4 of 4,180 entries/)).toBeTruthy();
+  });
+
+  it("does not report zero returned when the returned count is absent", () => {
+    // `?? 0` was here, and it produced "Bounded window — 0 of 4,180 entries
+    // were returned" — a statement that nothing came back, inside the one
+    // paragraph written to stop a reader misreading this exact pair of
+    // numbers. `total` on the same line already refused to guess; this half
+    // did not.
+    const { container } = render(
+      <PortfolioThreeSixty
+        {...portfolio360({ tab: "Capital Ledger", ledger: ledgerWith({ entry_count: 4180, returned_entry_count: null }) })}
+      />,
+    );
+    const note = container.querySelector(".exec-ledger-bounded")?.textContent ?? "";
+    expect(note).toContain("an unstated number of");
+    expect(note).not.toMatch(/—\s*0\s*of/);
   });
 });

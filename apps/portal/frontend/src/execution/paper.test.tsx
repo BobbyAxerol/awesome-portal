@@ -172,3 +172,21 @@ describe("Paper Workbench — at the volume the Trading System holds", () => {
     expect(screen.getByText("no limit price")).toBeTruthy();
   });
 });
+
+describe("the drift caption never invents a linkage", () => {
+  it("states the linkage the server stated", () => {
+    render(<PaperWorkbench {...paperWorkbench()} />);
+    expect(screen.getByText(/linked by run_5512/)).toBeTruthy();
+  });
+
+  it("says the linkage is unstated when no note was published", () => {
+    // The fallback used to read "Linked to the approved run by artifact
+    // digest." — a provenance claim manufactured from silence, printed as the
+    // caption of the one table whose purpose is to report divergence from the
+    // approved run. An operator reading it would believe the digest had been
+    // checked.
+    render(<PaperWorkbench {...paperWorkbench({ driftNote: null })} />);
+    expect(screen.getByText(/No linkage to the approved run is stated/)).toBeTruthy();
+    expect(screen.queryByText(/Linked to the approved run by artifact digest/)).toBeNull();
+  });
+});

@@ -102,7 +102,12 @@ export function readCommandPlan(raw: unknown): CommandPlan | null {
     relayCapability: str(o.relay_capability),
     // Deny-by-default in the honest direction: absent means nothing was asked
     // of the source, which is the claim F0 makes.
-    sourceSideEffectRequested: o.source_side_effect_requested === true,
+    // `!== false`, matching every other reader of this field. `=== true` was
+    // here and it is the reassuring direction: an unreadable flag became
+    // `false`, and `planOutcomeText` then told the operator that nothing was
+    // asked of the Trading System — a claim nobody made. The safe error is
+    // saying something might have happened when it did not.
+    sourceSideEffectRequested: o.source_side_effect_requested !== false,
     payloadStoragePolicy: str(o.payload_storage_policy),
     payloadHash: str(o.payload_hash),
     planDigest: str(o.plan_digest),

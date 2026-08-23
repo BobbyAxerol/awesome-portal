@@ -499,7 +499,11 @@ export function readIncidentDetail(raw: unknown): IncidentDetail | null {
             : [],
           cleanDryRunEvidencePresent: gate.clean_dry_run_evidence_present === true,
           reasonRequired: gate.reason_required !== false,
-          deploymentResumeRequested: gate.deployment_resume_requested === true,
+          // `!== false`, matching the incident record's own copy of this field
+          // twenty lines up. One field read two ways is a defect waiting for a
+          // second consumer: the screen happens to read the incident's, so the
+          // rendered claim is safe today and would not have been tomorrow.
+          deploymentResumeRequested: gate.deployment_resume_requested !== false,
         }
       : null,
     actorRoles: Array.isArray(actor?.roles)
