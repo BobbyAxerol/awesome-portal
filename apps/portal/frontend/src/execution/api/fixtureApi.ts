@@ -567,9 +567,25 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
         : unavailable("The capital preview response could not be read.");
     },
 
-    async getCommandCatalogue() {
+    async getCommandCatalogue(query) {
       const blocked = gate<never>("getCommandCatalogue");
       if (blocked) return blocked as Result<never>;
+      if (query?.riskTier) {
+        // Narrowed the way the server would, so the screen's chips exercise a
+        // real re-query rather than a filter the fixture pretends to apply.
+        // `returned_entries` moves with the rows; `total_entries` does not.
+        const all = COMMAND_CATALOGUE_FIXTURE.entries.filter(
+          (e) => e.risk_tier === query.riskTier,
+        );
+        const narrowed = readCommandCatalogue({
+          ...COMMAND_CATALOGUE_FIXTURE,
+          returned_entries: all.length,
+          entries: all,
+        });
+        return narrowed
+          ? { ok: true as const, value: narrowed }
+          : unavailable("The command catalogue response could not be read.");
+      }
       // The canonical document, not a presentation variant: this catalogue's
       // whole value is that it is complete and unedited, and a trimmed copy
       // would make the screen look finished when it is not.

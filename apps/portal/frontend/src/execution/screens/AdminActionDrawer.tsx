@@ -162,12 +162,47 @@ function EntryDetail({ entry }: { entry: CatalogEntry }) {
   );
 }
 
+/**
+ * Risk-tier narrowing, applied by the SERVER.
+ *
+ * Sixty-four entries in one column is three times what the hi-fi drew, and
+ * "show me only the live-protective ones" is the question an operator arrives
+ * with. The chips report a change and the caller re-queries; they do not filter
+ * the loaded array.
+ *
+ * That distinction is not pedantry here even though the response currently
+ * carries the whole population. `total_entries` equals `returned_entries` in
+ * revision 2 and may not in the next one, and a browser-side filter that is
+ * truthful today becomes a filter over a window tomorrow — silently, with the
+ * count still reading as a total.
+ */
+export const TIER_FILTERS = [
+  "ALL",
+  "R0_READ",
+  "R1_PAPER_MUTATION",
+  "R2_SANDBOX",
+  "R3_LIVE_PROTECTIVE",
+  "R4_LIVE_RISK_INCREASING",
+] as const;
+export type TierFilter = (typeof TIER_FILTERS)[number];
+
+const TIER_FILTER_LABEL: Record<TierFilter, string> = {
+  ALL: "All",
+  R0_READ: "R0 read",
+  R1_PAPER_MUTATION: "R1 paper",
+  R2_SANDBOX: "R2 sandbox",
+  R3_LIVE_PROTECTIVE: "R3 protective",
+  R4_LIVE_RISK_INCREASING: "R4 risk-increasing",
+};
+
 export function AdminActionDrawerScreen({
   catalogue,
   status = "ok",
   reason,
   selected,
   onSelect,
+  tier = "ALL",
+  onTierChange,
   children,
 }: {
   catalogue: CommandCatalogue | null;
@@ -176,6 +211,9 @@ export function AdminActionDrawerScreen({
   reason?: string;
   selected: CatalogEntry | null;
   onSelect: (entry: CatalogEntry) => void;
+  /** Reported to the caller, which re-queries. Never applied to `catalogue`. */
+  tier?: TierFilter;
+  onTierChange?: (tier: TierFilter) => void;
   children?: ReactNode;
 }) {
   const groups = catalogue ? groupEntries(catalogue.entries) : [];
@@ -210,6 +248,22 @@ export function AdminActionDrawerScreen({
               {catalogue.capabilityReason ? ` (${catalogue.capabilityReason})` : null}. Every action
               below is listed so you know it exists — none of them can be run from here.
             </p>
+          ) : null}
+
+          {onTierChange ? (
+            <div className="exec-admin-tiers" role="group" aria-label="Filter by risk tier">
+              {TIER_FILTERS.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  data-tier-filter={option}
+                  aria-pressed={option === tier}
+                  onClick={() => onTierChange(option)}
+                >
+                  {TIER_FILTER_LABEL[option]}
+                </button>
+              ))}
+            </div>
           ) : null}
 
           <div className="exec-admin-panes">

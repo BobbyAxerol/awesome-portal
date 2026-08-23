@@ -3072,6 +3072,20 @@
 /* Dimmed, dashed, and still there. */
 .exec-cc-pin[data-target-state="unavailable"] { border-left: 2px dashed var(--ink-faint); padding-left: var(--space-1); }
 
+/* Written when the pin row was built and never styled, so the label and its
+   target ran together at the same weight. The pin is what the operator chose;
+   the target is what it currently points at, and they are not the same claim. */
+.exec-cc-pinlabel {
+  font-size: var(--text-xs);
+  color: var(--ink);
+}
+
+.exec-cc-pintarget {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-soft);
+}
+
 .exec-cc-pinunavailable {
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
@@ -3170,4 +3184,35 @@
 
 @media (max-width: 720px) {
   .exec-admin-facts > div { grid-template-columns: 1fr; }
+}
+
+/* Sixty-four entries need a way in. The chips re-query rather than filtering
+   what is loaded, so they are styled as controls, not as a legend. */
+.exec-admin-tiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.exec-admin-tiers button {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--line);
+  background: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+  cursor: pointer;
+}
+
+.exec-admin-tiers button:hover { background: var(--surface-2); }
+
+.exec-admin-tiers button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.exec-admin-tiers button[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--ink);
 }

@@ -13,7 +13,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
-import { MAX_CONDITIONS, MIN_CONDITION_TEXT, readConditions, toConditionWire } from "./conditionWire";
+import { MAX_CONDITIONS, MIN_CONDITION_TEXT, toConditionWire } from "./conditionWire";
 import { createHttpApi } from "./api/httpApi";
 import type { DeliveryPolicy } from "./profile";
 import type { TypedCondition } from "./components/conditions";
@@ -131,53 +131,6 @@ describe("converting to the wire", () => {
     const out = toConditionWire([cond({ deadline: null, expiry: null })]);
     expect(out.ok).toBe(true);
     if (out.ok) expect(out.value[0]).toMatchObject({ deadline: null, expires_at: null });
-  });
-});
-
-describe("reading conditions back", () => {
-  it("reads the canonical array", () => {
-    const read = readConditions({
-      conditions: [
-        { text: "cap capacity", owner: "Lan", deadline: "2026-09-01", expires_at: "2026-10-01", blocking: false },
-      ],
-    });
-    expect(read).toHaveLength(1);
-    expect(read[0]).toEqual({
-      text: "cap capacity",
-      owner: "Lan",
-      deadline: "2026-09-01",
-      expiry: "2026-10-01",
-      blocking: false,
-    });
-  });
-
-  it("treats an unreadable blocking flag as blocking", () => {
-    // Showing a blocker as advisory is the worse of the two failures.
-    expect(readConditions({ conditions: [{ text: "x", blocking: "yes" }] })[0].blocking).toBe(true);
-  });
-
-  it("still reads a stored response that carries the singular string", () => {
-    const read = readConditions({ condition: "cap 50,000 · owner Lan · deadline 2026-09-01" });
-    expect(read).toHaveLength(1);
-    // The parts cannot be recovered from prose, so they stay absent rather than
-    // being guessed back out of the sentence.
-    expect(read[0].owner).toBeNull();
-    expect(read[0].deadline).toBeNull();
-  });
-
-  it("prefers the array when both are present", () => {
-    const read = readConditions({
-      conditions: [{ text: "canonical", owner: "Lan", blocking: true }],
-      condition: "legacy",
-    });
-    expect(read).toHaveLength(1);
-    expect(read[0].text).toBe("canonical");
-  });
-
-  it("returns nothing rather than inventing a condition", () => {
-    expect(readConditions({})).toEqual([]);
-    expect(readConditions(null)).toEqual([]);
-    expect(readConditions({ conditions: [{ owner: "Lan" }] })).toEqual([]);
   });
 });
 

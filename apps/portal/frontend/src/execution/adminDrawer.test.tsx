@@ -195,3 +195,96 @@ describe("the container fetches through the port", () => {
     expect(screen.queryByText(/command relay is/)).toBeNull();
   });
 });
+
+describe("sixty-four entries need a way in, and the server provides it", () => {
+  it("offers a chip for every tier an operator can act on", () => {
+    render(
+      <AdminActionDrawerScreen
+        catalogue={CATALOGUE}
+        selected={null}
+        onSelect={() => {}}
+        onTierChange={() => {}}
+      />,
+    );
+    const chips = screen.getByRole("group", { name: /risk tier/i });
+    expect(chips.querySelectorAll("button")).toHaveLength(6);
+    expect(chips.querySelector('[data-tier-filter="ALL"]')?.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("reports the change and never filters the loaded array itself", () => {
+    const onTierChange = vi.fn();
+    const { container } = render(
+      <AdminActionDrawerScreen
+        catalogue={CATALOGUE}
+        selected={null}
+        onSelect={() => {}}
+        tier="ALL"
+        onTierChange={onTierChange}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "R3 protective" }));
+    expect(onTierChange).toHaveBeenCalledWith("R3_LIVE_PROTECTIVE");
+    // Still sixty-four: the screen renders what it was given. A chip that
+    // filtered here would show a narrowed list beside an unnarrowed count.
+    expect(container.querySelectorAll(".exec-admin-row")).toHaveLength(64);
+    cleanup();
+
+    // The load-bearing half. Above, `tier` is ALL, so a client-side filter
+    // would be a no-op and the assertion would pass either way — which is what
+    // the first version of this test did. Here the tier is set and the
+    // catalogue is still the full sixty-four: any filtering in the screen shows
+    // up immediately.
+    const full = render(
+      <AdminActionDrawerScreen
+        catalogue={CATALOGUE}
+        selected={null}
+        onSelect={() => {}}
+        tier="R3_LIVE_PROTECTIVE"
+        onTierChange={() => {}}
+      />,
+    );
+    expect(full.container.querySelectorAll(".exec-admin-row")).toHaveLength(64);
+  });
+
+  it("hides the chips entirely when the caller cannot re-query", () => {
+    render(<AdminActionDrawerScreen catalogue={CATALOGUE} selected={null} onSelect={() => {}} />);
+    expect(screen.queryByRole("group", { name: /risk tier/i })).toBeNull();
+  });
+
+  it("re-queries through the port and moves returned_entries, not total", async () => {
+    const api = createFixtureApi();
+    const spy = vi.spyOn(api, "getCommandCatalogue");
+    const { container } = render(<AdminCatalogueContainer api={api} />);
+    await waitFor(() => expect(container.querySelectorAll(".exec-admin-row")).toHaveLength(64));
+
+    fireEvent.click(screen.getByRole("button", { name: "R3 protective" }));
+    await waitFor(() =>
+      expect(container.querySelectorAll(".exec-admin-row").length).toBeLessThan(64),
+    );
+    expect(spy).toHaveBeenLastCalledWith({ riskTier: "R3_LIVE_PROTECTIVE" });
+    // The population is still sixty-four and the header still says so.
+    expect(screen.getByText(/of 64 actions/)).toBeTruthy();
+  });
+
+  it("sends no filter at all for ALL, rather than a sentinel", async () => {
+    const api = createFixtureApi();
+    const spy = vi.spyOn(api, "getCommandCatalogue");
+    const { container } = render(<AdminCatalogueContainer api={api} />);
+    await waitFor(() => expect(container.querySelectorAll(".exec-admin-row")).toHaveLength(64));
+    expect(spy).toHaveBeenCalledWith(undefined);
+  });
+
+  it("drops the selection when the result set changes underneath it", async () => {
+    const api = createFixtureApi();
+    const { container } = render(<AdminCatalogueContainer api={api} />);
+    await waitFor(() => expect(container.querySelectorAll(".exec-admin-row")).toHaveLength(64));
+    fireEvent.click(screen.getAllByRole("button", { name: /account policy/i })[0]);
+    expect(screen.getByLabelText("Command detail").textContent).toContain("account");
+
+    fireEvent.click(screen.getByRole("button", { name: "R3 protective" }));
+    // Otherwise the detail pane describes an entry no longer in the list.
+    await waitFor(() =>
+      expect(screen.getByLabelText("Command detail").textContent).toContain("Pick an action"),
+    );
+  });
+});

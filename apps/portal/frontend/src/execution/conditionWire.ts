@@ -80,42 +80,16 @@ export function toConditionWire(
   return { ok: true, value: wire };
 }
 
-/**
- * Read conditions back, from either spelling.
+/*
+ * There is deliberately no `readConditions` here.
  *
- * The canonical field is `conditions[]`. `condition` is kept as a read-only
- * compatibility path because stored responses written before this change still
- * carry it — codex's handoff permits exactly that, for reads only. Nothing here
- * writes the singular form.
+ * Codex's handoff permits a read compatibility path "only where old stored
+ * responses still expose singular `condition`", and none does: neither the R2
+ * review schema nor the Paper Exit schema carries `conditions` or `condition`
+ * at all, and no reader in this folder reads one. A function with no call site
+ * is not a compatibility path, it is a claim the code does not make.
+ *
+ * Writing one anyway would also contradict BR-EX-30, raised three commits ago
+ * against exactly this: reading a field no contract publishes. The moment a
+ * response documents either spelling, the reader belongs here — and not before.
  */
-export function readConditions(raw: unknown): readonly TypedCondition[] {
-  const o = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
-
-  if (Array.isArray(o.conditions)) {
-    return o.conditions.flatMap((entry) => {
-      const c = typeof entry === "object" && entry !== null ? (entry as Record<string, unknown>) : null;
-      const text = typeof c?.text === "string" ? c.text : null;
-      if (!text) return [];
-      return [
-        {
-          text,
-          owner: typeof c!.owner === "string" && c!.owner.length > 0 ? c!.owner : null,
-          deadline: typeof c!.deadline === "string" ? c!.deadline : null,
-          expiry: typeof c!.expires_at === "string" ? c!.expires_at : null,
-          // Deny-by-default in the honest direction: a condition whose blocking
-          // flag we cannot read is treated as blocking, because the failure of
-          // showing a blocker as advisory is worse than the reverse.
-          blocking: c!.blocking !== false,
-        },
-      ];
-    });
-  }
-
-  // Legacy stored response: one string, and no way to recover the parts it was
-  // flattened from. Rendered as the text it is, with the missing fields absent
-  // rather than invented.
-  if (typeof o.condition === "string" && o.condition.length > 0) {
-    return [{ text: o.condition, owner: null, deadline: null, expiry: null, blocking: true }];
-  }
-  return [];
-}

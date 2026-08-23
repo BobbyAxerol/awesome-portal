@@ -41,7 +41,7 @@ import type {
   InsightBatch,
 } from "../analytics";
 import { OrderFunnelStrip } from "./FullBlotter";
-import { AdminActionDrawerScreen } from "./AdminActionDrawer";
+import { AdminActionDrawerScreen, type TierFilter } from "./AdminActionDrawer";
 import type { CatalogEntry } from "../adminCatalog";
 import { capitalDeltasFromPreview } from "../api/rows";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "../api/rows";
@@ -1004,7 +1004,13 @@ export function BindingExposureContainer({
 
 export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
   const [selected, setSelected] = useState<CatalogEntry | null>(null);
-  const state = useAnalyticsRead(() => api.getCommandCatalogue(), [api]);
+  const [tier, setTier] = useState<TierFilter>("ALL");
+  // `ALL` sends no filter at all rather than a sentinel the server would have
+  // to know about. The chip is the client's word; the query is the contract's.
+  const state = useAnalyticsRead(
+    () => api.getCommandCatalogue(tier === "ALL" ? undefined : { riskTier: tier }),
+    [api, tier],
+  );
   return (
     <AdminActionDrawerScreen
       catalogue={state.value}
@@ -1012,6 +1018,13 @@ export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
       reason={state.reason}
       selected={selected}
       onSelect={setSelected}
+      tier={tier}
+      onTierChange={(next) => {
+        // The selection belongs to the previous result set; carrying it across
+        // would leave a detail pane describing an entry no longer in the list.
+        setSelected(null);
+        setTier(next);
+      }}
     />
   );
 }
