@@ -240,6 +240,17 @@ doc của codex ở hai chỗ (bounded lên đầu, realtime xuống thứ năm)
 | 6 | C-PI04-06 fixture | `85cf5eb` | 6/6 fixture canonical được nạp; đổi tên fixture presentation |
 | 7 | C-PI04-01 audit | `d363b9d` | ghim trường vào contract sinh ra; tìm ra **BR-EX-30** |
 
+### Hai pass audit sau đó
+
+| Commit | Nội dung |
+|---|---|
+| `5e63499` | 4 lỗi trong chính công việc trên: 3 cast `as never` nuốt cả `"ok"`; funnel nói cùng con số hai lần; một export chết; `gapIsClientSide` im lặng |
+| `022fdd9` | **5 endpoint analytics chưa có port method** — funnel, insight batch, correlation, ledger, exposure. Cộng 4 container để đường đó có người đi |
+
+Sau `022fdd9`, cả **6/6** endpoint analytics đều có port, đi qua adapter lỗi
+typed, và bị delivery policy chặn **trước** khi gửi request. Vẫn Lane A: container
+nhận `api` từ ngoài, không route sản phẩm nào được mount.
+
 **Bốn lỗi tiềm ẩn tìm ra khi làm, không nằm trong yêu cầu:**
 
 1. **BR-EX-30** — reader R2 đọc **7 trường không contract nào publish**. Với
