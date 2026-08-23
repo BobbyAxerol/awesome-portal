@@ -271,6 +271,8 @@ for required in \
   "${ROOT_DIR}/scripts/execution-d1-test.sh" \
   "${ROOT_DIR}/scripts/execution-iam-verify.py" \
   "${ROOT_DIR}/scripts/test_execution_iam_verify.py" \
+  "${ROOT_DIR}/scripts/execution-d2-host-admission.py" \
+  "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py" \
   "${ROOT_DIR}/scripts/execution-d2-preflight.sh" \
   "${ROOT_DIR}/scripts/execution-d2-render-source-proxy.sh" \
   "${ROOT_DIR}/scripts/execution-d2-test.sh" \
@@ -300,6 +302,7 @@ for required in \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md" \
@@ -608,6 +611,8 @@ for tracked_source in \
   scripts/execution-d1-test.sh \
   scripts/execution-iam-verify.py \
   scripts/test_execution_iam_verify.py \
+  scripts/execution-d2-host-admission.py \
+  scripts/test_execution_d2_host_admission.py \
   scripts/execution-d2-preflight.sh \
   scripts/execution-d2-render-source-proxy.sh \
   scripts/execution-d2-test.sh \
@@ -637,6 +642,7 @@ for tracked_source in \
   upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md \
   upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md \
   upgrade/backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md \
+  upgrade/backend/EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md \
   upgrade/backend/EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md \
   upgrade/backend/EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md \
   upgrade/backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md \
@@ -786,8 +792,11 @@ bash -n \
 (cd "${ROOT_DIR}/apps/portal" && sha256sum -c strategy/PROTECTED_SHA256)
 python3 -m py_compile \
   "${ROOT_DIR}/scripts/execution-iam-verify.py" \
-  "${ROOT_DIR}/scripts/test_execution_iam_verify.py"
+  "${ROOT_DIR}/scripts/test_execution_iam_verify.py" \
+  "${ROOT_DIR}/scripts/execution-d2-host-admission.py" \
+  "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py"
 python3 "${ROOT_DIR}/scripts/test_execution_iam_verify.py"
+python3 "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py"
 
 while IFS= read -r tracked_path; do
   case "${tracked_path}" in

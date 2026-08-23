@@ -86,5 +86,27 @@ class WireGuardRuleAuditTest(unittest.TestCase):
             )
 
 
+class ProhibitedIngressAuditTest(unittest.TestCase):
+    def test_accepts_no_rule_covering_private_service_ports(self) -> None:
+        report = MODULE.audit_prohibited_ingress(
+            [rule(protocol="tcp", from_port=22, to_port=22)],
+            prohibited_ports=(5432, 8443, 8444),
+        )
+        self.assertEqual(report["covering_rule_count"], 0)
+
+    def test_rejects_exact_range_and_all_traffic_rules(self) -> None:
+        unsafe_rules = (
+            rule(protocol="tcp", from_port=8443, to_port=8443),
+            rule(protocol="tcp", from_port=8000, to_port=9000),
+            rule(protocol="-1", from_port=None, to_port=None),
+        )
+        for unsafe in unsafe_rules:
+            with self.subTest(unsafe=unsafe):
+                with self.assertRaisesRegex(MODULE.VerificationError, "prohibited D2"):
+                    MODULE.audit_prohibited_ingress(
+                        [unsafe], prohibited_ports=(5432, 8443, 8444)
+                    )
+
+
 if __name__ == "__main__":
     unittest.main()

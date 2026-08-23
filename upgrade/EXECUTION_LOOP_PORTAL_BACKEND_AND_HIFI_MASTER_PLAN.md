@@ -1193,6 +1193,15 @@ workload PKI/JWKS must exist, AWS pressure must be admitted and a new D2 window
 must open. Evidence:
 [`EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md`](backend/EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md).
 
+The live D2 admission checkpoint is
+`D2_ADMISSION_REJECTED / APPLICATION_DARK`. Cloud ingress has zero rule
+covering 5432/8443/8444 and host CPU/memory/disk/NTP/ownership/listener/
+container checks pass, but I/O full-pressure exceeded the locked 5% gate and
+two historical OOM kills lack Bobby's explicit disposition. No threshold was
+weakened and no service was started. The signed-image, role/IMDS, identity and
+separate-window gates remain. Evidence:
+[`EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md`](backend/EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md).
+
 The D3 offline package is `D3_OFFLINE_PREPARATION_COMPLETE /
 LIVE_D3_UNAUTHORIZED`. Its
 separate overlay opens only the three public contract/health/capability routes,

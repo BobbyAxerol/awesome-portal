@@ -350,6 +350,13 @@ continues typed unavailable/dark states only; no EventSource, Lane B, query,
 analytics or command activation. Evidence:
 [`EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md`](../../backend/EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md).
 
+Live host admission is currently
+`D2_ADMISSION_REJECTED / APPLICATION_DARK`: cloud private-port rules,
+capacity, NTP, ownership, listeners and Portal-container absence pass, while
+I/O pressure and unreviewed historical OOM evidence keep deployment closed.
+No source/UI capability changes. Evidence:
+[`EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md`](../../backend/EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md).
+
 D3 offline preparation is `D3_OFFLINE_PREPARATION_COMPLETE /
 LIVE_D3_UNAUTHORIZED`. A separate overlay opens only the three public
 contract/health/capability probes; the four alpha paths remain 503 and all

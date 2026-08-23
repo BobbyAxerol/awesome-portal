@@ -23,6 +23,11 @@ projection service is running. The frontend contract does not change: keep
 EventSource and commands off, and do not poll AWS-HK. The attached temporary
 role/IMDS condition remains a backend-only D2 blocker.
 
+D2 host admission is `D2_ADMISSION_REJECTED / APPLICATION_DARK` because live
+I/O pressure and historical OOM review remain open. This is an operational
+backend state only: Claude keeps the same fixture/dark/unavailable contract and
+must not enable AWS polling, Query, analytics, SSE, Lane B or commands.
+
 ## 1. Hai endpoint public
 
 | Endpoint | Method | Cache | Body |

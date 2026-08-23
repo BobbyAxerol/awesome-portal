@@ -38,6 +38,18 @@ gate never contacts AWS/Trading System, reads business data, changes a registry
 profile or enables a runtime capability; all test containers, networks,
 volumes and images are removed by its scoped cleanup trap.
 
+Before opening a live D2 window, run the read-only target-host admission gate:
+
+```bash
+sudo -n python3 scripts/execution-d2-host-admission.py
+```
+
+It fails closed below 8 GiB available memory or 50 GiB Docker disk, above the
+locked CPU/memory/I/O pressure thresholds, on NTP/listener/container/runtime-
+ownership drift, and until historical OOM evidence has an explicit owner
+review. `--acknowledge-historical-oom D2_HISTORICAL_OOM_REVIEWED` records only
+that decision; it cannot override a live pressure or collision failure.
+
 `--mode readiness` additionally requires the real `portal-runtime` group and
 root/group-owned secret layout on the target host. It remains a future D2
 change-window check and is not satisfied by offline preparation.

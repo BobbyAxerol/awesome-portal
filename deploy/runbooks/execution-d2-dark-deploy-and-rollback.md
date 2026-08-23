@@ -36,6 +36,16 @@ Before any pull, migration or container creation:
    secret values;
 8. no public/VPC-wide 5432/8443/8444 rule exists.
 
+The target-host admission evidence is produced immediately before the window:
+
+```bash
+sudo -n python3 scripts/execution-d2-host-admission.py
+```
+
+Do not lower its committed thresholds or use the historical-OOM acknowledgement
+until Bobby has reviewed the OOM evidence and accepted the bounded dark-service
+budget. An OOM acknowledgement never overrides current I/O/memory/CPU pressure.
+
 The image gate is closed only by a successful **Build and publish Portal
 images** workflow using scope `execution-d2` on the exact deployment ref. Its
 artifact must bind both GHCR digests to the source commit, include maximum

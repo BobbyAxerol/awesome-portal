@@ -964,6 +964,16 @@ deep-dive → ADR → slice → evidence discipline documented above.
   digest-bound provenance/SBOM, Trivy evidence and OIDC Cosign sign+verify
   evidence; preparation is not publication, and HIGH findings retain an owner
   disposition gate.
+- **EX-BE-02-LIVE D2 admission checkpoint (2026-08-23):** a new live,
+  aggregate-only host gate locks minimum available memory/disk, maximum CPU/
+  memory/I/O pressure, NTP, prohibited listeners, Portal-container absence and
+  runtime ownership. SG verification independently proves zero rule covering
+  5432/8443/8444. Current status is
+  `D2_ADMISSION_REJECTED / APPLICATION_DARK`: I/O full-pressure exceeded 5%
+  and two historical OOMs await Bobby's explicit disposition; the attached
+  D1 role/IMDS and image-publication gates also remain. No service started.
+  Evidence:
+  [`EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md`](./backend/EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md).
 - **EX-BE-02-LIVE D3 offline preparation (2026-08-23):** a separate probe-only
   overlay now opens exactly three public contract/health source routes while
   four alpha routes remain 503 and ingestion/query/SSE/analytics/command stay

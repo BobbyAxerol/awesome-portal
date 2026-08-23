@@ -98,6 +98,34 @@ def _rule_covers_port(rule: dict[str, Any], port: int) -> bool:
     return int(from_port) <= port <= int(to_port)
 
 
+def audit_prohibited_ingress(
+    rules: Iterable[dict[str, Any]], *, prohibited_ports: Iterable[int]
+) -> dict[str, Any]:
+    ports = tuple(sorted(set(prohibited_ports)))
+    matched: list[dict[str, Any]] = []
+    for rule in rules:
+        if rule.get("IsEgress", False):
+            continue
+        protocol = str(rule.get("IpProtocol", ""))
+        if protocol == "-1":
+            matched.append(rule)
+            continue
+        if protocol not in {"tcp", "6", "udp", "17"}:
+            continue
+        from_port = rule.get("FromPort")
+        to_port = rule.get("ToPort")
+        if from_port is None or to_port is None or any(
+            int(from_port) <= port <= int(to_port) for port in ports
+        ):
+            matched.append(rule)
+
+    _expect(
+        not matched,
+        "observed an ingress rule covering a prohibited D2 public/VPC port",
+    )
+    return {"ports": list(ports), "covering_rule_count": 0}
+
+
 def _is_exact_wireguard_rule(
     rule: dict[str, Any], *, port: int, expected_cidr: str
 ) -> bool:
@@ -205,6 +233,9 @@ def verify_live_inventory(sts: Any, ec2: Any, expected: ExpectedInventory) -> di
         expected_cidr=expected.sgp_cidr,
         expected_rule_id=expected.wireguard_rule_id,
     )
+    prohibited_ingress = audit_prohibited_ingress(
+        rules, prohibited_ports=(5432, 8443, 8444)
+    )
 
     metadata = instance.get("MetadataOptions", {})
     profile_arn = instance.get("IamInstanceProfile", {}).get("Arn")
@@ -237,6 +268,7 @@ def verify_live_inventory(sts: Any, ec2: Any, expected: ExpectedInventory) -> di
             "route_table_id": route_table["RouteTableId"],
         },
         "wireguard_ingress": wireguard_audit,
+        "prohibited_d2_ingress": prohibited_ingress,
         "instance_identity_boundary": {
             "instance_profile_attached": bool(profile_arn),
             "metadata_http_tokens": metadata.get("HttpTokens"),

@@ -91,6 +91,16 @@ for label, text in (
     if "IAM_VERIFIED / D1_REVALIDATED / APPLICATION_DARK" not in text:
         raise SystemExit(f"{label} lost the IAM/D1 revalidation boundary")
 
+for label, text in (
+    ("master", m),
+    ("tracker", t),
+    ("backend README", b),
+    ("architecture guide", a),
+    ("frontend handoff", h),
+):
+    if "D2_ADMISSION_REJECTED / APPLICATION_DARK" not in text:
+        raise SystemExit(f"{label} lost the live D2 admission boundary")
+
 phase6 = next((line for line in t.splitlines() if line.startswith("| 6 |")), None)
 if phase6 is None or "`FOUNDATION_COMPLETE / PRODUCTION_INACTIVE`" not in phase6:
     raise SystemExit("tracker phase 6 lost the qualified F0 foundation status")

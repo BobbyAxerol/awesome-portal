@@ -298,6 +298,14 @@ authority.
   digest-bound Trivy reports/CRITICAL rejection, OIDC Cosign sign+verify and a
   checksummed evidence artifact. It remains unexecuted until this workflow
   revision reaches the default branch.
+- `EX-BE-02-LIVE` **D2 admission rejected / application dark:** the live SG has
+  zero rule covering 5432/8443/8444 and CPU, memory, disk, NTP, runtime
+  ownership/listener/container boundaries pass. Deployment remains fail-closed
+  because I/O full-pressure exceeded the 5% gate and two historical OOM kills
+  lack Bobby's explicit disposition. The instance-role/IMDS and unpublished
+  signed-image gates also remain. Exact status:
+  `D2_ADMISSION_REJECTED / APPLICATION_DARK`. Evidence:
+  [`EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md`](./EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md).
 - `EX-BE-02-LIVE` **D3 offline preparation complete / live unauthorized**
   (`D3_OFFLINE_PREPARATION_COMPLETE / LIVE_D3_UNAUTHORIZED`): a
   separate Compose/env/config delta opens only three credential-free public
