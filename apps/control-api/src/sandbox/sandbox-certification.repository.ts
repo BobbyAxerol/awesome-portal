@@ -161,6 +161,16 @@ export class SandboxCertificationRepository {
     return this.loadDetail(this.pool, workspaceId, certificationId);
   }
 
+  /** Locks the aggregate and reads one transaction-consistent evidence set for downstream gates. */
+  async detailByIdForUpdate(
+    client: PoolClient,
+    workspaceId: string,
+    certificationId: string,
+  ): Promise<SandboxCertificationDetail> {
+    await this.lock(client, workspaceId, certificationId);
+    return this.loadDetail(client, workspaceId, certificationId);
+  }
+
   async create(input: CreateSandboxCertificationWrite): Promise<{ detail: SandboxCertificationDetail; replayed: boolean }> {
     let outcome: { certificationId: string; replayed: boolean };
     try {

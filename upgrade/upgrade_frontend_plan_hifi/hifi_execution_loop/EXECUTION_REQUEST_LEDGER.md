@@ -144,7 +144,15 @@ delivery profiles remain `fixture`.
 5. Claude consumes F1a Queue, F1b Incident Detail and F2 Sandbox Certification
    on Lane A. It keeps the eight actions, source panels and Sandbox runtime
    visibly unavailable and does not enable a product/source/command route.
-6. Bobby/Trading System owners resolve BR-EX-24–28 source semantics and publish
+6. `EX-BE-05b/F3` Canary Control Room is complete at
+   `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`: immutable DRAFT envelope
+   revisions and a source-dark read model are available on SGP.
+   `BROKER_STALE_BLOCKS_SCALE_ONLY` is typed; both command groups remain
+   invisible/disabled. No source ingestion, outbox or activation exists.
+7. Claude consumes F3 on Lane A using `execution-canary.d.ts` and the unavailable
+   fixture; it must preserve fixture/production-inactive and null-runtime truth.
+8. Bobby/Trading System owners resolve BR-EX-24–28 source semantics and publish
    purpose-built contracts. Portal work then creates compatibility adapters,
    never Trading System implementations.
-7. D1–D4 remain owner/change-window gated and are not implied by F0/F1a/F1b/F2.
+9. D1–D4 remain owner/change-window gated and are not implied by
+   F0/F1a/F1b/F2/F3.

@@ -38,6 +38,9 @@ import { IncidentService } from "./operations/incident.service";
 import { SandboxCertificationController } from "./sandbox/sandbox-certification.controller";
 import { SandboxCertificationRepository } from "./sandbox/sandbox-certification.repository";
 import { SandboxCertificationService } from "./sandbox/sandbox-certification.service";
+import { CanaryController } from "./canary/canary.controller";
+import { CanaryRepository } from "./canary/canary.repository";
+import { CanaryService } from "./canary/canary.service";
 
 @Module({})
 export class AppModule {
@@ -56,6 +59,7 @@ export class AppModule {
         CommandCenterController,
         IncidentController,
         SandboxCertificationController,
+        CanaryController,
       ],
       providers: [
         { provide: CONTROL_API_CONFIG, useValue: config },
@@ -98,6 +102,8 @@ export class AppModule {
         IncidentService,
         SandboxCertificationRepository,
         SandboxCertificationService,
+        CanaryRepository,
+        CanaryService,
         {
           provide: ExecutionRealtimeProxy,
           useFactory: (cfg: ControlApiConfig) => ExecutionRealtimeProxy.create(cfg),

@@ -14,15 +14,17 @@ ADMISSION_HISTORY="${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D2_ADMISSION_CHECKP
 UNIFIED="${ROOT_DIR}/upgrade/UNIFIED_IMPLEMENTATION_PLAN.md"
 F2_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_05B_F2_SANDBOX_CERTIFICATION.md"
 F2_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F2_HANDOFF.md"
+F3_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_05B_F3_CANARY_CONTROL_ROOM.md"
+F3_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F3_HANDOFF.md"
 
-python3 - "${MASTER}" "${TRACKER}" "${ROADMAP}" "${LEDGER}" "${BACKEND_README}" "${ARCHITECTURE}" "${FRONTEND_HANDOFF}" "${CATALOG}" "${ADMISSION_HISTORY}" "${UNIFIED}" "${F2_REPORT}" "${F2_HANDOFF}" <<'PY'
+python3 - "${MASTER}" "${TRACKER}" "${ROADMAP}" "${LEDGER}" "${BACKEND_README}" "${ARCHITECTURE}" "${FRONTEND_HANDOFF}" "${CATALOG}" "${ADMISSION_HISTORY}" "${UNIFIED}" "${F2_REPORT}" "${F2_HANDOFF}" "${F3_REPORT}" "${F3_HANDOFF}" <<'PY'
 from pathlib import Path
 import json
 import re
 import sys
 
-master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified, f2_report, f2_handoff = [Path(p) for p in sys.argv[1:]]
-for path in (master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified, f2_report, f2_handoff):
+master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified, f2_report, f2_handoff, f3_report, f3_handoff = [Path(p) for p in sys.argv[1:]]
+for path in (master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified, f2_report, f2_handoff, f3_report, f3_handoff):
     if not path.is_file():
         raise SystemExit(f"tracking file missing: {path}")
 
@@ -38,6 +40,8 @@ history = admission_history.read_text()
 u = unified.read_text()
 f2 = f2_report.read_text()
 f2h = f2_handoff.read_text()
+f3 = f3_report.read_text()
+f3h = f3_handoff.read_text()
 
 qualified = "`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`"
 for phase in (3, 14, 15, 16, 17):
@@ -196,6 +200,9 @@ if phase8 is None or "`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`" not in phase
 phase10 = next((line for line in t.splitlines() if line.startswith("| 10 |")), None)
 if phase10 is None or "`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`" not in phase10:
     raise SystemExit("tracker phase 10 lost the qualified F2 Sandbox Certification status")
+phase11 = next((line for line in t.splitlines() if line.startswith("| 11 |")), None)
+if phase11 is None or "`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`" not in phase11:
+    raise SystemExit("tracker phase 11 lost the qualified F3 Canary Control Room status")
 for label, text in (
     ("master", m),
     ("tracker", t),
@@ -239,6 +246,26 @@ for label, text in (
         raise SystemExit(f"{label} lost the F2 source-dark/no-outbox boundary")
     if not re.search(r"promotion.{0,100}blocked|blocked.{0,100}promotion", normalized, re.I):
         raise SystemExit(f"{label} lost the blocked F2 promotion invariant")
+for label, text in (
+    ("master", m),
+    ("tracker", t),
+    ("request ledger", l),
+    ("backend README", b),
+    ("architecture guide", a),
+    ("frontend handoff", h),
+    ("unified plan", u),
+    ("F3 report", f3),
+    ("F3 Claude handoff", f3h),
+):
+    normalized = re.sub(r"\s+", " ", text)
+    if "EX-BE-05b/F3" not in normalized or "PRODUCTION_INACTIVE" not in normalized:
+        raise SystemExit(f"{label} lost the qualified F3 Canary boundary")
+    if "BROKER_STALE_BLOCKS_SCALE_ONLY" not in normalized:
+        raise SystemExit(f"{label} lost the protective/scale asymmetry")
+    if not re.search(r"(?:no|không) (?:source ingestion|outbox|source|activation|command route)", normalized, re.I):
+        raise SystemExit(f"{label} lost the F3 source-dark/no-side-effect boundary")
+    if not re.search(r"(?:invisible|hidden|absent|ẩn).{0,80}(?:disabled|inactive|tắt)|(?:disabled|inactive|tắt).{0,80}(?:invisible|hidden|absent|ẩn)|visible=false.{0,80}enabled=false", normalized, re.I):
+        raise SystemExit(f"{label} lost the F3 command-inactive visibility boundary")
 for request in ("BR-EX-28 canonical command catalogue", "BR-EX-29 typed `conditions[]`"):
     row = next((line for line in l.splitlines() if request in line), None)
     if row is None or "`FOUNDATION_COMPLETE / PRODUCTION_INACTIVE`" not in row:

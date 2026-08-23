@@ -1135,6 +1135,18 @@ deep-dive → ADR → slice → evidence discipline documented above.
   Evidence: contracts 45/45, fresh-PG Control API 163/163, eleven migrations
   and dump/restore. Status is `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`;
   profile remains `fixture/UNAVAILABLE`.
+- **EX-BE-05b/F3 Canary Control Room (2026-08-23):** the SGP TypeScript
+  Control API now owns append-only, exact-decimal DRAFT capital-envelope
+  revisions bound to an approved/current F2 evidence set and its exact blocked
+  CANARY promotion plan. Database and serializable application gates enforce
+  monotonic revision, exact predecessor, idempotent replay, payload-drift
+  refusal and atomic audit. The read model retains five KPI and all source
+  panels as `fixture/UNAVAILABLE`, runtime state null and exact counts unknown.
+  `BROKER_STALE_BLOCKS_SCALE_ONLY` preserves the future protective/scale
+  asymmetry, while both action groups remain invisible/disabled. No source
+  ingestion, outbox, activation or command endpoint exists. Status is
+  `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`. Evidence is contracts 47/47,
+  fresh-PG Control API 167/167 and twelve-migration dump/restore.
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**
@@ -1144,7 +1156,8 @@ activation or the phase):**
   workload-identity/window gates precede D2, then authenticated transport and
   Paper BUILDING-epoch evidence. Full Portal remains on SGP.
 - **Execution product lane:** Command Center real-source snapshot/SSE parity,
-  Paper/VNM projections, Sandbox real-source adapter/parity, Canary, Live Full,
+  Paper/VNM projections, Sandbox real-source adapter/parity, Canary real-source
+  parity/activation, Live Full,
   authenticated live relay and cross-cell fault/soak/restore/DR.
 - **U14 certification slice** (BAR-21 continuation): quarantine → hermetic
   build → lock/SBOM/secret/license scan → contract/determinism/no-lookahead/

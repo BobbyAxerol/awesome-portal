@@ -956,3 +956,20 @@ freshness, turn `runtime_state=null` into HALTED, enable submit/exit on any
 missing/stale/failed evidence, or activate registry/source/realtime/command
 flags. Exact read order and UI matrix:
 `upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F2_HANDOFF.md`.
+
+### 8.15 EX-BE-05b/F3 Canary Control Room — Lane A can integrate (2026-08-23)
+
+Backend status is `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`. SGP now
+publishes immutable versioned DRAFT capital envelopes plus a source-dark Phase
+11 response. Envelope caps and Portal lineage are available; runtime, five
+KPIs, Internal/Broker/Difference, positions, blotter, series, consumption,
+headroom and rollback evidence remain typed unavailable. No outbox, source
+ingestion, runtime activation or command route exists.
+
+Claude may wire Phase 11 to `execution-canary.d.ts` and its unavailable
+fixture. Preserve the explicit `fixture · PRODUCTION INACTIVE` guard and null
+runtime. `BROKER_STALE_BLOCKS_SCALE_ONLY` means broker freshness is a future
+scale gate, not a protective gate; it does not make protective actions
+executable now. Both action groups remain absent while `visible=false`. Exact
+read order and test matrix:
+`upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F3_HANDOFF.md`.

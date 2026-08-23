@@ -56,6 +56,14 @@ that is always blocked while production commands are inactive. The fixture is
 explicitly `fixture/UNAVAILABLE`; no source-evidence ingestion, outbox, runtime
 activation or promotion execution is part of this contract.
 
+EX-BE-05b/F3 adds a separate Canary contract surface. Portal DRAFT capital
+envelopes are immutable, exact-decimal, evidence/plan-bound revisions. The
+control-room fixture keeps runtime and every source-backed value explicitly
+unavailable and encodes `BROKER_STALE_BLOCKS_SCALE_ONLY`; both protective and
+scale actions remain invisible/disabled while production commands are
+inactive. No source ingestion, outbox, activation or command endpoint is part
+of this contract.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields

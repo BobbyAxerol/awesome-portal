@@ -206,6 +206,17 @@ Chúng không thay thế phase hoặc exit gate trong
   request or runtime/promotion activation is possible. Contracts 45/45 and
   fresh-PG Control API 163/163 across eleven migrations plus dump/restore are
   green.
+- [EX-BE-05b/F3 — Portal Canary Control Room](./EX_BE_05B_F3_CANARY_CONTROL_ROOM.md)
+  — **`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`:** SGP
+  TypeScript/PostgreSQL owns immutable versioned DRAFT capital envelopes bound
+  to current approved F2 evidence and the exact blocked CANARY promotion plan.
+  Exact predecessor, serializable idempotency and append-only/audit gates
+  prevent forks. All runtime/KPI/position/blotter/series/rollback facts remain
+  `fixture/UNAVAILABLE`; `BROKER_STALE_BLOCKS_SCALE_ONLY` is typed, but both
+  protective and scale groups remain invisible/disabled. No source ingestion,
+  outbox, runtime activation or command route exists. Contracts 47/47 and
+  fresh-PG Control API 167/167 across twelve migrations plus dump/restore are
+  green.
 
 **Runway complete (BAR-00 → BAR-16).** Guide v0.5 bổ sung (không thay thế)
 tại `upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md`
@@ -478,8 +489,9 @@ authority.
   được Trading System công bố giữ `portal_reachable=false`; không thay bằng
   DB/Redis/CLI trực tiếp. F1a/F1b đã đóng workflow Operations Queue/Incident
   trên dữ liệu Portal/fixture; F2 đã đóng workflow Sandbox Certification
-  source-dark với bảy bước và promotion plan luôn `BLOCKED`. Source adapters
-  vẫn chờ owner publish typed HTTP contracts và accepted D2→D4 evidence.
+  source-dark với bảy bước và promotion plan luôn `BLOCKED`; F3 đã đóng Canary
+  DRAFT-envelope/read-model source-dark. Source adapters vẫn chờ owner publish
+  typed HTTP contracts và accepted D2→D4/rollback evidence.
 
 ## BAR-21 — Strategy Import & Quarantine Ingest foundation
 

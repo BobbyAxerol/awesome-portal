@@ -1,0 +1,85 @@
+{
+  "schema_version": "execution.canary-control-room.v1",
+  "record_authority": "PORTAL",
+  "delivery_profile": "fixture",
+  "source_integration_state": "UNAVAILABLE",
+  "source_side_effect_requested": false,
+  "runtime_activation_requested": false,
+  "promotion_execution_requested": false,
+  "production_command_active": false,
+  "replayed": false,
+  "read_at": "2026-08-23T11:00:00.000Z",
+  "actor": { "user_id": "usr_fixture_admin", "username": "bobby", "roles": ["ADMIN"] },
+  "deployment": {
+    "deployment_id": "dep_88",
+    "portfolio_id": "pf_crypto",
+    "account_id": "acct_canary_grid",
+    "external_account_ref": "acct-canary-grid",
+    "venue": "BINANCE",
+    "declared_environment": "LIVE_CANARY",
+    "runtime_state": null
+  },
+  "lineage": [
+    { "kind": "ARTIFACT", "value": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "href": null },
+    { "kind": "R1_APPROVAL", "value": "AP-118", "href": "/governance/approvals/AP-118/r1" },
+    { "kind": "R2_APPROVAL", "value": "AP-152", "href": "/governance/approvals/AP-152/r2" },
+    { "kind": "SANDBOX_EXIT", "value": "SX-14", "href": "/deployments/sandbox/dep_88" },
+    { "kind": "CANARY_PROMOTION_PLAN", "value": "AP-311", "href": null }
+  ],
+  "envelope": {
+    "envelope_id": "cenv_01K3D8R64WYH5M8MQM5H96J7BF",
+    "revision": 1,
+    "previous_envelope_id": null,
+    "status": "DRAFT",
+    "base_risk_profile_revision": "risk-profile-rev-12",
+    "currency": "USDT",
+    "limits": {
+      "capital_cap": "5000",
+      "gross_notional_cap": "10000",
+      "daily_loss_cap": "250",
+      "max_open_orders": 20,
+      "duration_days": 14
+    },
+    "evidence_set_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "blocker_codes": ["PRODUCTION_COMMAND_INACTIVE", "CANARY_OWNER_GATE_REQUIRED", "LIVE_SOURCE_UNAVAILABLE", "BASE_RISK_PROFILE_UNVERIFIED"],
+    "created_by_user_id": "usr_fixture_admin",
+    "reason": "Draft canary envelope for source-dark interface qualification.",
+    "created_at": "2026-08-23T10:59:00.000Z"
+  },
+  "lifecycle": {
+    "declared_stage": "LIVE_CANARY",
+    "runtime_state": null,
+    "day_index": null,
+    "duration_days": 14,
+    "blocker_codes": ["PRODUCTION_COMMAND_INACTIVE", "CANARY_OWNER_GATE_REQUIRED", "LIVE_SOURCE_UNAVAILABLE", "BASE_RISK_PROFILE_UNVERIFIED"]
+  },
+  "kpis": [
+    { "key": "capital_consumed", "label": "Capital consumed", "value": null, "unit": "USDT", "envelope": { "panel_id": "kpi-capital_consumed", "source_authority": "EXECUTION", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_KPI-CAPITAL_CONSUMED_UNAVAILABLE" }] } },
+    { "key": "gross_notional", "label": "Gross notional", "value": null, "unit": "USDT", "envelope": { "panel_id": "kpi-gross_notional", "source_authority": "EXECUTION", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_KPI-GROSS_NOTIONAL_UNAVAILABLE" }] } },
+    { "key": "daily_pnl", "label": "Daily P&L", "value": null, "unit": "USDT", "envelope": { "panel_id": "kpi-daily_pnl", "source_authority": "DERIVED", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_KPI-DAILY_PNL_UNAVAILABLE" }] } },
+    { "key": "open_orders", "label": "Open orders", "value": null, "unit": "USDT", "envelope": { "panel_id": "kpi-open_orders", "source_authority": "EXECUTION", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_KPI-OPEN_ORDERS_UNAVAILABLE" }] } },
+    { "key": "broker_equity", "label": "Broker equity", "value": null, "unit": "USDT", "envelope": { "panel_id": "kpi-broker_equity", "source_authority": "BROKER", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_KPI-BROKER_EQUITY_UNAVAILABLE" }] } }
+  ],
+  "envelope_compliance": {
+    "envelope": { "panel_id": "envelope-compliance", "source_authority": "DERIVED", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_ENVELOPE-COMPLIANCE_UNAVAILABLE" }] },
+    "limits": { "capital_cap": "5000", "gross_notional_cap": "10000", "daily_loss_cap": "250", "max_open_orders": 20 },
+    "consumed": null,
+    "headroom": null,
+    "base_risk_profile_verified": false
+  },
+  "source_panels": [
+    { "panel_id": "internal", "source_authority": "EXECUTION", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_INTERNAL_UNAVAILABLE" }] },
+    { "panel_id": "broker", "source_authority": "BROKER", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_BROKER_UNAVAILABLE" }] },
+    { "panel_id": "difference", "source_authority": "DERIVED", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_DIFFERENCE_UNAVAILABLE" }] }
+  ],
+  "positions": { "envelope": { "panel_id": "positions", "source_authority": "EXECUTION", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_POSITIONS_UNAVAILABLE" }] }, "exact_total": null, "returned_count": 0, "rows": [] },
+  "blotter": { "envelope": { "panel_id": "blotter", "source_authority": "EXECUTION", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_BLOTTER_UNAVAILABLE" }] }, "exact_total": null, "returned_count": 0, "rows": [] },
+  "series": { "envelope": { "panel_id": "series", "source_authority": "DERIVED", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_SERIES_UNAVAILABLE" }] }, "resolution": null, "points": [] },
+  "rollback_readiness": { "envelope": { "panel_id": "rollback-readiness", "source_authority": "EXECUTION", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_ROLLBACK-READINESS_UNAVAILABLE" }] }, "ready": false, "evidence_hash": null, "blocker_codes": ["ROLLBACK_EVIDENCE_UNAVAILABLE"] },
+  "command_policy": {
+    "production_command_active": false,
+    "guard_semantics": "BROKER_STALE_BLOCKS_SCALE_ONLY",
+    "protective": { "risk_tier": "R3_LIVE_PROTECTIVE", "visible": false, "enabled": false, "broker_sync_blocks": false, "blocker_codes": ["PRODUCTION_COMMAND_INACTIVE", "PROTECTIVE_CAPABILITY_UNAVAILABLE"] },
+    "scale_up": { "risk_tier": "R4_LIVE_RISK_INCREASING", "visible": false, "enabled": false, "broker_sync_blocks": true, "blocker_codes": ["PRODUCTION_COMMAND_INACTIVE", "CANARY_OWNER_GATE_REQUIRED", "BROKER_SYNC_UNAVAILABLE", "LIVE_SOURCE_UNAVAILABLE"] }
+  }
+}

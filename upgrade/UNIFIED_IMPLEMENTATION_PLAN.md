@@ -1799,6 +1799,17 @@ không phải 17 màn.
 > Chi tiết:
 > [`EX_BE_05B_F2_SANDBOX_CERTIFICATION.md`](./backend/EX_BE_05B_F2_SANDBOX_CERTIFICATION.md).
 
+> **Backend checkpoint 2026-08-23 — EX-BE-05b/F3 Phase 11:** Portal-owned
+> Canary Control Room source-dark trên SGP đạt
+> `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`. Capital envelope DRAFT là
+> append-only revision, exact decimal, bind current approved F2 evidence +
+> blocked CANARY plan và exact predecessor. Năm KPI và mọi source/runtime/
+> positions/blotter/series/rollback value đều `fixture/UNAVAILABLE`.
+> `BROKER_STALE_BLOCKS_SCALE_ONLY` giữ đúng bất đối xứng tương lai, nhưng cả
+> protective lẫn scale hiện vẫn ẩn/tắt. Không source ingestion, outbox,
+> activation hay command route. Chi tiết:
+> [`EX_BE_05B_F3_CANARY_CONTROL_ROOM.md`](./backend/EX_BE_05B_F3_CANARY_CONTROL_ROOM.md).
+
 > **D2 placement/resource checkpoint 2026-08-23:** toàn bộ Portal, browser BFF,
 > Control API và product database vẫn chạy tại SGP Research. AWS-HK hiện hữu
 > chỉ nhận Source Proxy, Rust Execution Edge, dark projection PostgreSQL và

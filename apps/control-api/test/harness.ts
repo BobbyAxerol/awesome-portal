@@ -40,6 +40,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_incident_events: boolean;
       has_sandbox_certifications: boolean;
       has_sandbox_events: boolean;
+      has_canary_envelopes: boolean;
     }>(
       `SELECT
          (SELECT count(*)::integer FROM pgmigrations) AS migration_count,
@@ -59,11 +60,12 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
          to_regclass('public.execution_incidents') IS NOT NULL AS has_incidents,
          to_regclass('public.execution_incident_events') IS NOT NULL AS has_incident_events,
          to_regclass('public.governance_sandbox_certifications') IS NOT NULL AS has_sandbox_certifications,
-         to_regclass('public.governance_sandbox_certification_events') IS NOT NULL AS has_sandbox_events`,
+         to_regclass('public.governance_sandbox_certification_events') IS NOT NULL AS has_sandbox_events,
+         to_regclass('public.governance_canary_envelopes') IS NOT NULL AS has_canary_envelopes`,
     );
     const row = result.rows[0];
     if (
-      row.migration_count < 11 ||
+      row.migration_count < 12 ||
       !row.has_f0 ||
       !row.has_hash_only_policy ||
       !row.has_hash_only_constraint ||
@@ -72,10 +74,11 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_incidents ||
       !row.has_incident_events ||
       !row.has_sandbox_certifications ||
-      !row.has_sandbox_events
+      !row.has_sandbox_events ||
+      !row.has_canary_envelopes
     ) {
       throw new Error(
-        `Control API test migration gate did not reach EX-BE-05b/F2 ` +
+        `Control API test migration gate did not reach EX-BE-05b/F3 ` +
         `(count=${row.migration_count}, has_f0=${row.has_f0}, ` +
         `hash_only_policy=${row.has_hash_only_policy}, ` +
         `hash_only_constraint=${row.has_hash_only_constraint}, ` +
@@ -85,6 +88,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `incident_events=${row.has_incident_events}, ` +
         `sandbox_certifications=${row.has_sandbox_certifications}, ` +
         `sandbox_events=${row.has_sandbox_events}, ` +
+        `canary_envelopes=${row.has_canary_envelopes}, ` +
         `dir=${migrationsDir})`,
       );
     }

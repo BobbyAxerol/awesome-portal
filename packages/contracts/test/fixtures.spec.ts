@@ -109,6 +109,8 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/IncidentWorkflowResponse",
   "execution-sandbox-certification.unavailable.valid.json":
     "https://schemas.primusspark.com/portal/execution-sandbox-certification.v1.schema.json#/$defs/CertificationResponse",
+  "execution-canary-control-room.unavailable.valid.json":
+    "https://schemas.primusspark.com/portal/execution-canary-control-room.v1.schema.json#/$defs/CanaryControlRoom",
 };
 
 describe("canonical contracts (cross-language fixture compilation)", () => {
@@ -457,6 +459,35 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(realtime).toContain('"/api/v1/execution/command-center/stream"');
     expect(realtime).toContain("AuthExpiringEvent");
     expect(realtime).toContain("expires_at");
+  });
+
+  it("keeps the Canary source-dark and preserves protective/scale asymmetry", () => {
+    const canary = loadJson(join(ROOT, "fixtures", "execution-canary-control-room.unavailable.valid.json")) as {
+      production_command_active: boolean;
+      source_side_effect_requested: boolean;
+      deployment: { runtime_state: unknown };
+      source_panels: Array<{ panel_state: string; data: unknown }>;
+      command_policy: {
+        guard_semantics: string;
+        protective: { visible: boolean; enabled: boolean; broker_sync_blocks: boolean };
+        scale_up: { visible: boolean; enabled: boolean; broker_sync_blocks: boolean };
+      };
+    };
+    expect(canary).toMatchObject({
+      production_command_active: false,
+      source_side_effect_requested: false,
+      deployment: { runtime_state: null },
+    });
+    expect(canary.source_panels.every((panel) => panel.panel_state === "unavailable" && panel.data === null)).toBe(true);
+    expect(canary.command_policy).toMatchObject({
+      guard_semantics: "BROKER_STALE_BLOCKS_SCALE_ONLY",
+      protective: { visible: false, enabled: false, broker_sync_blocks: false },
+      scale_up: { visible: false, enabled: false, broker_sync_blocks: true },
+    });
+    const generated = readFileSync(join(ROOT, "generated", "execution-canary.d.ts"), "utf8");
+    expect(generated).toContain('"/api/v1/execution/deployments/{deployment_id}/canary"');
+    expect(generated).toContain('"/api/v1/execution/governance/canary-envelopes"');
+    expect(generated).toContain("BROKER_STALE_BLOCKS_SCALE_ONLY");
   });
 
   it("keeps the Command Center bounded, dark and exact-or-null", () => {

@@ -52,7 +52,7 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 8 | Incident Detail (4d) | `FRONTEND_INTEGRATION_PENDING` | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Claude consumes F1b Lane A; real source contracts remain external | SGP Portal workflow/evidence/correlation delivered; 159/159 fresh-PG + 44/44 contracts; four source panels fixture/unavailable; no auto-resume/outbox |
 | 9 | Command Center (5a) | **screen built** (4 panel, 5 state, fixtures) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | dark snapshot + 5 state đã tiêu thụ (`ee3576c`); còn BR-EX-28 §8.1 `streams`/`alpha-activity`, real source + SSE parity | PRE-IAM-03 bounded snapshot: fresh PG 139/139, contracts 26/26, 20k exact-observed corpus; EX-BE-06 SSE remains dark |
 | 10 | Sandbox Certification (1d) | `FRONTEND_INTEGRATION_PENDING` | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Claude consumes F2 Lane A; real source still needs D2→D4 + TS sandbox capability | F2 7-step source-dark workflow/evidence/SoD + blocked promotion plan; 163/163 fresh-PG, 45/45 contracts, 11-migration restore; no outbox/activation |
-| 11 | Canary Control Room (1e) | `BLOCKED` | `PRODUCTION_INACTIVE` | EX-BE-05b; owner live-canary gate | EX-BE-04b query + EX-BE-06 SSE foundations delivered; shadow parity and production source still required |
+| 11 | Canary Control Room (1e) | `FRONTEND_INTEGRATION_PENDING` | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Claude consumes F3 Lane A; real source still needs D2→D4 + rollback evidence + owner live-canary gate | versioned immutable DRAFT envelope + source-dark read model + protective/scale asymmetry; no outbox/command activation |
 | 12 | Live Full Operations (1f) | `BLOCKED` | `PRODUCTION_INACTIVE` | phase 11 evidence; EX-BE-08 | rev 4 profile contract delivered; source completeness + UNCERTAIN policy remain; master plan §10.12 |
 | 13 | Paper Workbench VNM (4h) | **screen built** (variant of phase 4, fixtures) | `INTEGRATION_PENDING` | source/screen API integration; venue/ATO/ATC decision | EX-BE-04b adaptive query + EX-BE-03 PAUSED semantics delivered; timezone decision remains |
 | 14 | Full Blotter (4c) | **screen built** (fixtures, scale-refined) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | **Trading System source owner + Bobby:** publish scope-bound order-list capability; Claude retains fixture and 4-stage funnel limitation | EX-BE-07b typed active-epoch funnel API delivered over mTLS/delegated auth; flag remains off |
@@ -1790,6 +1790,27 @@ Lane A packet is
 Claude owns adapter, seven-step strip, triptych/degraded-state and accessibility
 tests. Registry/profile activation remains prohibited; real Sandbox data still
 requires D2→D4, a dedicated identity and published bounded source contracts.
+
+### 24A.11 EX-BE-05b/F3 Portal Canary Control Room
+
+Codex accepted the SGP Portal-owned F3 boundary at
+`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` on 2026-08-23. The Control API
+publishes immutable versioned DRAFT capital envelopes bound to current approved
+F2 evidence and the exact blocked CANARY promotion plan. Revisions are
+append-only, exact-predecessor/idempotency guarded and audited atomically.
+
+The Phase 11 read model carries five KPI slots, envelope compliance,
+Internal/Broker/Difference, positions, blotter, series and rollback readiness;
+every source value remains typed unavailable in `fixture`. It encodes
+`BROKER_STALE_BLOCKS_SCALE_ONLY`, while both protective and scale actions remain
+invisible/disabled because production command authority is inactive. No source
+ingestion, outbox, runtime activation or command route exists. Evidence is
+contracts 47/47 and fresh-PG Control API 167/167 plus twelve-migration
+dump/restore. Claude's Lane A
+packet is
+[`CODEX_TO_CLAUDE_EX_BE_05B_F3_HANDOFF.md`](CODEX_TO_CLAUDE_EX_BE_05B_F3_HANDOFF.md).
+Real Canary remains independently gated by D2→D4, source parity, rollback
+evidence and owner activation.
 
 ---
 

@@ -1,0 +1,66 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Primus Portal Execution Canary API",
+    "version": "1.0.0",
+    "description": "SGP Portal-owned source-dark Canary envelope and control-room contract. No production command or runtime activation is exposed."
+  },
+  "paths": {
+    "/api/v1/execution/deployments/{deployment_id}/canary": {
+      "get": {
+        "operationId": "getCanaryControlRoom",
+        "parameters": [
+          { "name": "deployment_id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "workspace_id", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Latest Portal envelope composed with explicit unavailable source panels.",
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-canary-control-room.v1.schema.json#/$defs/CanaryControlRoom" } } }
+          },
+          "404": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/execution/governance/canary-envelopes": {
+      "post": {
+        "operationId": "createCanaryEnvelope",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "../schemas/execution-canary-control-room.v1.schema.json#/$defs/CanaryEnvelopeCreateRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Immutable source-dark DRAFT envelope. This does not activate Canary.",
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-canary-control-room.v1.schema.json#/$defs/CanaryControlRoom" } } }
+          },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "409": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Problem": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["type", "title", "status"],
+        "properties": {
+          "type": { "type": "string" },
+          "title": { "type": "string" },
+          "status": { "type": "integer" },
+          "detail": { "type": "string" },
+          "code": { "type": "string" }
+        }
+      }
+    },
+    "responses": {
+      "Problem": {
+        "description": "Typed fail-closed problem.",
+        "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+      }
+    }
+  }
+}
