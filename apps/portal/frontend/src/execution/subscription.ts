@@ -264,15 +264,19 @@ export function parseResumeToken(token: string): { epoch: string; sequence: numb
 /**
  * May the client fetch the new epoch's snapshot yet?
  *
- * `now` is passed in rather than read from the clock, so the caller decides
- * where time comes from and this stays pure. A missing deadline means the server
- * did not assign one and the client may proceed — it never invents a delay of
- * its own, because uncoordinated client jitter is the herd it was trying to
- * avoid.
+ * Kept as the boolean the demo and the screens ask for, but no longer a second
+ * implementation of the rule. It defers to `resnapshotDecision`, which arrived
+ * later with the parts this was missing: a jitter offset, an unparseable
+ * deadline that fails closed rather than comparing NaN, and a reason.
+ *
+ * `continuityLost` is deliberately not required here. This answers "has the
+ * deadline passed", which a caller may ask before a gap has been declared;
+ * `resnapshotDecision` answers "should I snapshot now", which is a different
+ * question and the one the transport asks.
  */
 export function mayResnapshot(state: SubscriptionState, now: string): boolean {
-  if (!state.resnapshotNotBefore) return true;
-  return Date.parse(now) >= Date.parse(state.resnapshotNotBefore);
+  const decision = resnapshotDecision({ ...state, continuityLost: true }, new Date(now));
+  return decision.allowed;
 }
 
 export function subscriptionReducer(

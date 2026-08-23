@@ -241,6 +241,10 @@ export interface CommandCenter {
    * EventSource control at all rather than a disabled one.
    */
   streamAvailable: boolean;
+  /** Resume point, when the snapshot publishes one. Null while dark. */
+  cursor: string | null;
+  projectionEpoch: string | null;
+  projectionSequence: number | null;
   needsYou: NeedsYouPanel | null;
   fleet: FleetPanel | null;
   pinned: PinnedPanel | null;
@@ -288,6 +292,12 @@ export function readCommandCenter(raw: unknown): CommandCenter | null {
     deliveryProfile: str(root.delivery_profile),
     // Absent is not available. A stream nobody published is not a stream.
     streamAvailable: snapshot?.stream_available === true,
+    // Null throughout revision 2 by construction — the dark snapshot publishes
+    // no identity. Read anyway, because the day it does the transport needs
+    // exactly these three and nothing else in this file would carry them.
+    cursor: str(snapshot?.cursor),
+    projectionEpoch: str(snapshot?.projection_epoch),
+    projectionSequence: int(snapshot?.projection_sequence),
     needsYou: needsRaw
       ? {
           ...readHeader(needsRaw),
@@ -371,4 +381,55 @@ export function readCommandCenter(raw: unknown): CommandCenter | null {
       return code ? [{ code, message: str(o?.message) ?? "" }] : [];
     }),
   };
+}
+
+/* ---------------------------------------------------------------------------
+ * B10 — the activation seam
+ * ------------------------------------------------------------------------ */
+
+/**
+ * The route the Command Centre stream is served on.
+ *
+ * `realtime.controller.ts` mounts it and proxies upstream. It exists, it is
+ * reachable, and that is precisely why the check below has to be explicit:
+ * "the route is there" is not "the stream is published".
+ */
+export const COMMAND_CENTER_STREAM = "/api/v1/execution/command-center/stream";
+
+export interface StreamGate {
+  allowed: boolean;
+  /** What the screen tells the operator. Never blank. */
+  reason: string;
+}
+
+/**
+ * May this snapshot's stream be opened?
+ *
+ * Codex's stop gates say it plainly: do not create an EventSource while
+ * `stream_available=false`. Every published fixture carries false today, so the
+ * honest state of this screen is snapshot-only — and the point of this function
+ * is that flipping the flag is the ONLY thing that changes that. No delivery
+ * policy, no local override and no retry loop can talk its way past it.
+ *
+ * The other two conditions are the reducer's preconditions rather than
+ * permissions: a stream resumes from a cursor inside an epoch, and without
+ * either there is nothing to resume from. They are reported separately because
+ * "not published yet" and "we hold no resume point" call for different things
+ * from whoever is reading.
+ */
+export function streamGate(snapshot: CommandCenter | null): StreamGate {
+  if (!snapshot) {
+    return { allowed: false, reason: "No snapshot has been read, so there is nothing to resume from." };
+  }
+  if (!snapshot.streamAvailable) {
+    return {
+      allowed: false,
+      // Deliberately not "live updates are off" — that sounds like a setting.
+      // The stream is not published for this profile, and no control here
+      // changes that.
+      reason:
+        "This profile publishes no live stream, so the page shows a snapshot and does not update itself.",
+    };
+  }
+  return { allowed: true, reason: "The stream is published for this profile." };
 }

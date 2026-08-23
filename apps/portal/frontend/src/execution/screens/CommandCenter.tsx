@@ -18,6 +18,7 @@ import type { ReactNode } from "react";
 
 import {
   countLabel,
+  streamGate,
   type CommandCenter as CommandCenterSnapshot,
   type FleetPanel,
   type NeedsYouPanel,
@@ -28,6 +29,7 @@ import {
 import { AuthorityWord, FreshnessIndicator } from "../components/badges";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
+import type { SubscriptionState } from "../subscription";
 
 /**
  * One panel frame.
@@ -220,10 +222,17 @@ export function Today({ panel }: { panel: TodayPanel }) {
 export function CommandCenterScreen({
   snapshot,
   onOpen,
+  live,
 }: {
   snapshot: CommandCenterSnapshot;
   onOpen?: (item: TriageItem) => void;
+  /**
+   * Subscription state, when a stream was opened. Absent while dark, and the
+   * screen must read the same as it does today when it is.
+   */
+  live?: SubscriptionState | null;
 }) {
+  const gate = streamGate(snapshot);
   const critical =
     snapshot.needsYou?.items.filter((i) => i.severity === "CRITICAL").length ?? 0;
 
@@ -236,11 +245,18 @@ export function CommandCenterScreen({
         </h1>
         {/* No EventSource control while the stream is dark. A disabled live
             toggle would advertise a capability that does not exist yet, and an
-            operator who sees one assumes the page updates itself. */}
-        {snapshot.streamAvailable ? null : (
-          <p className="exec-cc-sub">
-            Snapshot only — this page does not update itself. Reload to re-read.
+            operator who sees one assumes the page updates itself.
+            The sentence comes from `streamGate` rather than being written here,
+            so the words the operator reads and the decision the transport makes
+            are the same fact and cannot drift apart. */}
+        {gate.allowed ? (
+          <p className="exec-cc-sub" data-live="true">
+            Live — {live?.freshness ?? "UNKNOWN"}
+            {live?.phase ? ` · ${live.phase}` : null}
+            {live?.note ? ` · ${live.note}` : null}
           </p>
+        ) : (
+          <p className="exec-cc-sub">{gate.reason} Reload to re-read.</p>
         )}
       </header>
 
