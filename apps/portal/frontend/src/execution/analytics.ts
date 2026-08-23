@@ -859,8 +859,100 @@ export interface ExposureBucket {
   newestSourceAsOf: string | null;
 }
 
+/**
+ * The server's verdict on whether a binding still has room.
+ *
+ * Read forward-compatibly, exactly as `sample_counts` is: BR-EX-26 asks for it
+ * and no response carries it yet, so `null` here means "the source published no
+ * verdict" and the screen renders `unavailable` rather than an `OK` it invented.
+ *
+ * The browser must never compute this. It sees only the buckets the endpoint
+ * chose to return, so summing them answers a question about the response rather
+ * than about the binding — and the screen it feeds is a fail-closed control:
+ * a client that reports +2,120 of room while the execution cell holds 46,800
+ * and refuses every order has told the operator the opposite of what is about
+ * to happen.
+ */
+export interface AggregateVerdict {
+  verdict: "OK" | "EXCEEDED" | "UNKNOWN";
+  /** The authoritative figure behind the verdict, as a decimal string. */
+  headroom: Decimal | null;
+  /**
+   * The two totals the verdict rests on: what the Portal's own records add to,
+   * and what the venue holds. The hi-fi shows both because a verdict with no
+   * visible working is an assertion, and this screen refuses assertions about
+   * exposure.
+   */
+  virtualTotal: Decimal | null;
+  physicalTotal: Decimal | null;
+  currency: string | null;
+  /** What evaluated it, so the screen can attribute the claim. */
+  evaluatedBy: string | null;
+  asOf: string | null;
+}
+
+const AGGREGATE_VERDICTS: readonly AggregateVerdict["verdict"][] = ["OK", "EXCEEDED", "UNKNOWN"];
+
+function readAggregateVerdict(raw: unknown): AggregateVerdict | null {
+  const o = obj(raw);
+  if (!o) return null;
+  const verdict = str(o.verdict);
+  // Deny-by-default: an unrecognised verdict is not `OK`, and an absent one is
+  // not a verdict at all.
+  if (!verdict || !(AGGREGATE_VERDICTS as readonly string[]).includes(verdict)) return null;
+  return {
+    verdict: verdict as AggregateVerdict["verdict"],
+    headroom: readDecimal(o.headroom),
+    virtualTotal: readDecimal(o.virtual_total),
+    physicalTotal: readDecimal(o.physical_total),
+    currency: str(o.currency),
+    evaluatedBy: str(o.evaluated_by),
+    asOf: readTimestamp(o.as_of),
+  };
+}
+
+/**
+ * Map the server's verdict onto the shape `AccountBroker360` renders.
+ *
+ * Returns `null` unless every figure the screen displays is present. A partial
+ * verdict is refused rather than shown with gaps, because the screen's own rule
+ * is that a verdict with no visible working is an assertion — and half its
+ * working is still no working.
+ */
+export function aggregateHeadroomFrom(
+  aggregate: AggregateVerdict | null,
+): {
+  virtualTotal: Decimal;
+  physicalTotal: Decimal;
+  headroom: Decimal;
+  currency: string;
+  verdict: AggregateVerdict["verdict"];
+} | null {
+  if (
+    !aggregate ||
+    aggregate.headroom === null ||
+    aggregate.virtualTotal === null ||
+    aggregate.physicalTotal === null ||
+    aggregate.currency === null
+  ) {
+    return null;
+  }
+  return {
+    virtualTotal: aggregate.virtualTotal,
+    physicalTotal: aggregate.physicalTotal,
+    headroom: aggregate.headroom,
+    currency: aggregate.currency,
+    verdict: aggregate.verdict,
+  };
+}
+
 export interface BindingExposure {
   bindingId: string;
+  /**
+   * `null` until BR-EX-26 lands. Rendered as an unavailable verdict with a
+   * reason — never as `OK`, and never derived from `buckets`.
+   */
+  aggregate: AggregateVerdict | null;
   /** How many virtual accounts the aggregate actually covered. */
   accountCount: number | null;
   /** How many it should have covered. A mismatch is the whole point. */
@@ -890,6 +982,7 @@ export function readBindingExposure(raw: unknown): BindingExposure | null {
   if (!bindingId) return null;
   return {
     bindingId,
+    aggregate: readAggregateVerdict(data.aggregate),
     accountCount: int(data.account_count),
     expectedAccountCount: int(data.expected_account_count),
     completeness: readCompleteness(data.population_completeness),
