@@ -272,6 +272,9 @@ for required in \
   "${ROOT_DIR}/scripts/execution-d2-preflight.sh" \
   "${ROOT_DIR}/scripts/execution-d2-render-source-proxy.sh" \
   "${ROOT_DIR}/scripts/execution-d2-test.sh" \
+  "${ROOT_DIR}/scripts/execution-d3-render-probe-env.sh" \
+  "${ROOT_DIR}/scripts/execution-d3-live-probe.sh" \
+  "${ROOT_DIR}/scripts/execution-d3-test.sh" \
   "${ROOT_DIR}/scripts/execution-image-publication-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/.github/workflows/publish-images.yml" \
@@ -289,15 +292,21 @@ for required in \
   "${ROOT_DIR}/deploy/execution-d2/README.md" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
   "${ROOT_DIR}/deploy/runbooks/execution-d2-dark-deploy-and-rollback.md" \
+  "${ROOT_DIR}/deploy/execution-d3/README.md" \
+  "${ROOT_DIR}/deploy/execution-d3/compose.probes.yaml" \
+  "${ROOT_DIR}/deploy/runbooks/execution-d3-contract-auth-probes-and-rollback.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md" \
   "${ROOT_DIR}/upgrade/backend/adr/ADR-007-PORTAL-PROJECTION-EPOCH-CURSOR-AND-FRESHNESS.md" \
   "${ROOT_DIR}/apps/control-api/src/execution/delegation.ts" \
+  "${ROOT_DIR}/apps/control-api/src/cli/execution-d3-assertions.ts" \
   "${ROOT_DIR}/apps/control-api/test/execution-delegation.spec.ts" \
+  "${ROOT_DIR}/apps/control-api/test/execution-d3-assertions.spec.ts" \
   "${ROOT_DIR}/apps/control-api/test/facade.spec.ts" \
   "${ROOT_DIR}/upgrade/backend/BAR_07_CONTROL_API_FACADE.md" \
   "${ROOT_DIR}/apps/control-api/src/main.ts" \
@@ -597,6 +606,9 @@ for tracked_source in \
   scripts/execution-d2-preflight.sh \
   scripts/execution-d2-render-source-proxy.sh \
   scripts/execution-d2-test.sh \
+  scripts/execution-d3-render-probe-env.sh \
+  scripts/execution-d3-live-probe.sh \
+  scripts/execution-d3-test.sh \
   scripts/execution-image-publication-test.sh \
   scripts/execution-tracking-test.sh \
   .github/workflows/publish-images.yml \
@@ -614,8 +626,12 @@ for tracked_source in \
   deploy/execution-d2/README.md \
   deploy/execution-d2/init-projection-database.sh \
   deploy/runbooks/execution-d2-dark-deploy-and-rollback.md \
+  deploy/execution-d3/README.md \
+  deploy/execution-d3/compose.probes.yaml \
+  deploy/runbooks/execution-d3-contract-auth-probes-and-rollback.md \
   upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md \
   upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md \
+  upgrade/backend/EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md \
   upgrade/backend/EX_BE_01_RUST_CONTRACTS_AND_TS_ADAPTER.md \
   upgrade/backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md \
   upgrade/backend/EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md \
@@ -751,6 +767,9 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-d2-preflight.sh" \
   "${ROOT_DIR}/scripts/execution-d2-render-source-proxy.sh" \
   "${ROOT_DIR}/scripts/execution-d2-test.sh" \
+  "${ROOT_DIR}/scripts/execution-d3-render-probe-env.sh" \
+  "${ROOT_DIR}/scripts/execution-d3-live-probe.sh" \
+  "${ROOT_DIR}/scripts/execution-d3-test.sh" \
   "${ROOT_DIR}/scripts/execution-image-publication-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
@@ -778,6 +797,7 @@ docker compose --project-directory "${ROOT_DIR}" \
   -f "${ROOT_DIR}/deploy/compose.execution-edge.yaml" config --quiet
 "${ROOT_DIR}/scripts/execution-d1-test.sh"
 "${ROOT_DIR}/scripts/execution-d2-test.sh"
+"${ROOT_DIR}/scripts/execution-d3-test.sh"
 "${ROOT_DIR}/scripts/execution-image-publication-test.sh"
 "${ROOT_DIR}/scripts/execution-tracking-test.sh"
 printf 'Portal monorepo verification passed.\n'

@@ -341,6 +341,16 @@ continues typed unavailable/dark states only; no EventSource, Lane B, query,
 analytics or command activation. Evidence:
 [`EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md`](../../backend/EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md).
 
+D3 offline preparation is `D3_OFFLINE_PREPARATION_COMPLETE /
+LIVE_D3_UNAUTHORIZED`. A separate overlay opens only the three public
+contract/health/capability probes; the four alpha paths remain 503 and all
+projection/query/SSE/analytics/command flags remain false/`fixture`. The
+canonical TypeScript issuer, mode-0600 negative JWT corpus and redacted
+H2/TLS1.3 mTLS probe harness are tested offline, but no live cross-cell claim is
+made. This unlocks no frontend profile. Claude continues fixture, dark,
+auth-denied and recovery UX only; no EventSource/Lane B/AWS polling. Evidence:
+[`EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md`](../../backend/EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md).
+
 ### 6.2 BR-EX decisions
 
 The binding contract is

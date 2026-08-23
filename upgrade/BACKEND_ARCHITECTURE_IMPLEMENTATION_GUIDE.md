@@ -953,6 +953,19 @@ deep-dive → ADR → slice → evidence discipline documented above.
   digest-bound provenance/SBOM, Trivy evidence and OIDC Cosign sign+verify
   evidence; preparation is not publication, and HIGH findings retain an owner
   disposition gate.
+- **EX-BE-02-LIVE D3 offline preparation (2026-08-23):** a separate probe-only
+  overlay now opens exactly three public contract/health source routes while
+  four alpha routes remain 503 and ingestion/query/SSE/analytics/command stay
+  false/`fixture`. Preflight distinguishes dark, credential-free
+  `contract-probe` and future credentialed `paper-read`; private env files are
+  mode 0600. The canonical TypeScript delegation issuer produces a 45-second
+  positive RS256 assertion plus a mode-0600 negative corpus, and the redacted
+  live harness enforces H2/TLS1.3 mTLS, ten JWT rejection classes, latency and
+  fail-closed route/method behavior. D3's Control API publication scope also
+  adds provenance/SBOM/Trivy/OIDC-Cosign evidence. Status is
+  `D3_OFFLINE_PREPARATION_COMPLETE / LIVE_D3_UNAUTHORIZED`; it unlocks no
+  frontend or source profile. Evidence:
+  [`EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md`](./backend/EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

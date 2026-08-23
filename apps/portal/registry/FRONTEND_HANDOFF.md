@@ -832,3 +832,19 @@ Full evidence:
 The image publication workflow is now prepared but has not run. Its future
 signed digest/evidence artifact is an operations input only and does not change
 any frontend capability or availability state.
+
+### 8.10 D3 offline preparation — no live frontend unlock (2026-08-23)
+
+Backend status is now `D3_OFFLINE_PREPARATION_COMPLETE /
+LIVE_D3_UNAUTHORIZED`. This is tooling and contract preparation, not a live
+source milestone. The future D3 overlay can probe only contracts, health and
+capabilities; orders/fills/positions/events remain blocked, and there is no
+projection ingestion, Query API, SSE, analytics source or command capability.
+
+Claude should continue in parallel on fixture and explicit dark/unavailable/
+auth-denied/recovery states. Keep `source_available=false`,
+`stream_available=false`, analytics profile `fixture`, Lane B closed and every
+command affordance disabled. Do not add a browser-to-AWS probe or a second
+transport. Codex will publish a new handoff only after real SGP→AWS H2/TLS1.3
+mTLS/JWT/fault evidence passes. Full backend detail:
+`upgrade/backend/EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md`.

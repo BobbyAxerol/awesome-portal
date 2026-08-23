@@ -71,6 +71,16 @@ if "catalogue revision 2" not in a or "HASH_ONLY_NO_RAW" not in a:
 if "catalogue revision 2" not in h or "owner_review_required" not in h:
     raise SystemExit("frontend handoff lost F0 revision-2 consumer rules")
 
+for label, text in (
+    ("master", m),
+    ("tracker", t),
+    ("backend README", b),
+    ("architecture guide", a),
+    ("frontend handoff", h),
+):
+    if "D3_OFFLINE_PREPARATION_COMPLETE" not in text or "LIVE_D3_UNAUTHORIZED" not in text:
+        raise SystemExit(f"{label} lost the qualified D3 offline/live boundary")
+
 phase6 = next((line for line in t.splitlines() if line.startswith("| 6 |")), None)
 if phase6 is None or "`FOUNDATION_COMPLETE / PRODUCTION_INACTIVE`" not in phase6:
     raise SystemExit("tracker phase 6 lost the qualified F0 foundation status")

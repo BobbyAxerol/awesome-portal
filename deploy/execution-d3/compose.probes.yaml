@@ -1,0 +1,15 @@
+# D3 contract/auth probe overlay. Apply only after D2 dark acceptance and an
+# independently approved D3 window. It opens source probes for the three public
+# contract/health routes while every business data plane remains disabled.
+services:
+  execution-edge:
+    environment:
+      EDGE_SOURCE_PROBES_ENABLED: "true"
+      EDGE_PROBE_ALPHA_ID: ""
+      EDGE_PROJECTION_INGESTION_ENABLED: "false"
+      EDGE_REALTIME_SSE_ENABLED: "false"
+      EDGE_ANALYTICS_QUERY_ENABLED: "false"
+      EDGE_ANALYTICS_SOURCE_PROFILE: fixture
+      EDGE_COMMAND_RELAY_ENABLED: "false"
+    labels:
+      com.primusspark.portal.execution-phase: d3-contract-probe

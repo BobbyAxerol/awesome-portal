@@ -13,6 +13,7 @@ fi
 
 preflight="${root_dir}/scripts/execution-d2-preflight.sh"
 renderer="${root_dir}/scripts/execution-d2-render-source-proxy.sh"
+probe_renderer="${root_dir}/scripts/execution-d3-render-probe-env.sh"
 env_example="${root_dir}/deploy/execution-d1/edge-source-proxy.env.example"
 compose_base="${root_dir}/deploy/compose.execution-edge.yaml"
 compose_dark="${root_dir}/deploy/execution-d1/compose.dark.yaml"
@@ -75,6 +76,7 @@ sed -i \
   -e "s#^PROJECTION_DB_SECRET_DIRECTORY=.*#PROJECTION_DB_SECRET_DIRECTORY=${projection_secrets}#" \
   -e "s#^PROJECTION_DB_INIT_SCRIPT=.*#PROJECTION_DB_INIT_SCRIPT=${projection_init}#" \
   "${tmp_dir}/candidate.env"
+chmod 0600 "${tmp_dir}/candidate.env"
 
 "${renderer}" --env-file "${tmp_dir}/candidate.env" --output "${proxy_config}" >/dev/null
 [[ "$(stat -c '%a' "${proxy_config}")" == 640 ]]
@@ -201,6 +203,29 @@ if grep -Fq 'X-API-Key' "${proxy_config}"; then
   printf 'D2 dark Source Proxy unexpectedly rendered a Trading System API key.\n' >&2
   exit 1
 fi
+
+# The same accepted D2 identity boundary may be promoted to D3 only by the
+# three-field probe-only delta. Public contracts/health open; all four
+# alpha/account paths and every projection/query/realtime/command gate remain
+# closed, and the harmless dark header replaces a Trading System credential.
+probe_config="${tmp_dir}/srv/primus/portal/source-proxy/nginx.d3-probe.conf"
+"${probe_renderer}" --d2-env "${tmp_dir}/candidate.env" \
+  --output "${tmp_dir}/probe.env" --proxy-config "${probe_config}" >/dev/null
+"${preflight}" --env-file "${tmp_dir}/probe.env" --mode probe-offline >/dev/null
+[[ "$(grep -c 'return 503;' "${probe_config}")" -eq 4 ]]
+[[ "$(grep -c 'D3 contract-probe gate accepted' "${probe_config}")" -eq 3 ]]
+if grep -Fq 'X-API-Key' "${probe_config}"; then
+  printf 'D3 contract probe unexpectedly rendered a Trading System API key.\n' >&2
+  exit 1
+fi
+cp "${tmp_dir}/probe.env" "${tmp_dir}/unsafe-probe-alpha.env"
+sed -i 's/^EDGE_PROBE_ALPHA_ID=$/EDGE_PROBE_ALPHA_ID=alpha-not-authorized/' \
+  "${tmp_dir}/unsafe-probe-alpha.env"
+if "${preflight}" --env-file "${tmp_dir}/unsafe-probe-alpha.env" \
+    --mode probe-offline >/dev/null 2>&1; then
+  printf 'D3 preflight unexpectedly accepted an alpha-scoped contract probe.\n' >&2
+  exit 1
+fi
 if "${preflight}" --env-file "${env_example}" --mode offline >/dev/null 2>&1; then
   printf 'D2 offline preflight unexpectedly accepted template digests.\n' >&2
   exit 1
@@ -209,6 +234,7 @@ fi
 cp "${tmp_dir}/candidate.env" "${tmp_dir}/rollback.env"
 sed -i '/^PORTAL_.*_IMAGE=/ s/sha256:1111111111111111111111111111111111111111111111111111111111111111/sha256:2222222222222222222222222222222222222222222222222222222222222222/' \
   "${tmp_dir}/rollback.env"
+chmod 0600 "${tmp_dir}/rollback.env"
 "${preflight}" --env-file "${tmp_dir}/rollback.env" --mode offline >/dev/null
 
 command -v docker >/dev/null 2>&1 || {
@@ -255,24 +281,28 @@ diff -u "${tmp_dir}/candidate.normalized" "${tmp_dir}/rollback.normalized"
 # Fail closed on a widened runtime flag and on parser injection.
 cp "${tmp_dir}/candidate.env" "${tmp_dir}/unsafe.env"
 sed -i 's/^EDGE_ANALYTICS_QUERY_ENABLED=false$/EDGE_ANALYTICS_QUERY_ENABLED=true/' "${tmp_dir}/unsafe.env"
+chmod 0600 "${tmp_dir}/unsafe.env"
 if "${preflight}" --env-file "${tmp_dir}/unsafe.env" --mode offline >/dev/null 2>&1; then
   printf 'D2 preflight unexpectedly accepted an enabled analytics flag.\n' >&2
   exit 1
 fi
 cp "${tmp_dir}/candidate.env" "${tmp_dir}/unsafe-command.env"
 sed -i 's/^EDGE_COMMAND_RELAY_ENABLED=false$/EDGE_COMMAND_RELAY_ENABLED=true/' "${tmp_dir}/unsafe-command.env"
+chmod 0600 "${tmp_dir}/unsafe-command.env"
 if "${preflight}" --env-file "${tmp_dir}/unsafe-command.env" --mode offline >/dev/null 2>&1; then
   printf 'D2 preflight unexpectedly accepted command relay.\n' >&2
   exit 1
 fi
 cp "${tmp_dir}/candidate.env" "${tmp_dir}/unsafe-probe.env"
 sed -i 's/^EDGE_SOURCE_PROBES_ENABLED=false$/EDGE_SOURCE_PROBES_ENABLED=true/' "${tmp_dir}/unsafe-probe.env"
+chmod 0600 "${tmp_dir}/unsafe-probe.env"
 if "${preflight}" --env-file "${tmp_dir}/unsafe-probe.env" --mode offline >/dev/null 2>&1; then
   printf 'D2 preflight unexpectedly accepted source probes.\n' >&2
   exit 1
 fi
 cp "${tmp_dir}/candidate.env" "${tmp_dir}/malicious.env"
 sed -i 's/^EDGE_ENVIRONMENT=paper$/EDGE_ENVIRONMENT=$(touch bad)/' "${tmp_dir}/malicious.env"
+chmod 0600 "${tmp_dir}/malicious.env"
 if "${preflight}" --env-file "${tmp_dir}/malicious.env" --mode template >/dev/null 2>&1; then
   printf 'D2 preflight unexpectedly accepted executable input.\n' >&2
   exit 1

@@ -4,7 +4,7 @@
 set -euo pipefail
 
 usage() {
-  printf 'Usage: %s --env-file PATH --mode template|offline|readiness|source-readiness\n' "$0" >&2
+  printf 'Usage: %s --env-file PATH --mode template|offline|readiness|probe-offline|probe-readiness|source-readiness\n' "$0" >&2
   exit 2
 }
 
@@ -18,7 +18,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 [[ -n "${env_file}" && -f "${env_file}" ]] || usage
-[[ "${mode}" =~ ^(template|offline|readiness|source-readiness)$ ]] || usage
+[[ "${mode}" =~ ^(template|offline|readiness|probe-offline|probe-readiness|source-readiness)$ ]] || usage
+if [[ "${mode}" != template ]]; then
+  [[ ! -L "${env_file}" && "$(stat -c '%a' "${env_file}")" == 600 ]] || {
+    printf 'Execution preflight requires a non-symlink mode-0600 env file.\n' >&2
+    exit 1
+  }
+fi
 
 declare -A values=()
 allowed_keys=' PORTAL_EXECUTION_EDGE_IMAGE PORTAL_SOURCE_PROXY_IMAGE PORTAL_PROJECTION_POSTGRES_IMAGE PORTAL_RUNTIME_GID EDGE_PRIVATE_BIND_IP EDGE_SECRET_DIRECTORY SOURCE_PROXY_SECRET_DIRECTORY SOURCE_PROXY_CONFIG_FILE PORTAL_BRIDGE_CIDR PORTAL_BRIDGE_GATEWAY_IP SOURCE_PROXY_PRIVATE_PORT SOURCE_PROXY_SOURCE_MODE PROJECTION_DB_SECRET_DIRECTORY PROJECTION_DB_INIT_SCRIPT PROJECTION_DB_VOLUME_NAME PROJECTION_DB_CONTAINER_GID PROJECTION_DB_NAME PROJECTION_DB_OWNER_USER PROJECTION_DB_RUNTIME_USER EDGE_ENVIRONMENT EDGE_DELEGATION_ISSUER EDGE_DELEGATION_AUDIENCE EDGE_SOURCE_ORIGIN EDGE_SOURCE_GATEWAY_DIGEST EDGE_SOURCE_PROBES_ENABLED EDGE_SOURCE_CLIENT_IDENTITY_FILE EDGE_SOURCE_API_KEY_FILE EDGE_PROBE_ALPHA_ID EDGE_PROJECTION_INGESTION_ENABLED EDGE_REALTIME_SSE_ENABLED EDGE_ANALYTICS_QUERY_ENABLED EDGE_ANALYTICS_SOURCE_PROFILE EDGE_COMMAND_RELAY_ENABLED '
@@ -144,6 +150,12 @@ case "${mode}" in
       exit 1
     }
     ;;
+  probe-offline|probe-readiness)
+    [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" == contract-probe ]] || {
+      printf 'D3 probe readiness requires contract-probe mode.\n' >&2
+      exit 1
+    }
+    ;;
   offline|readiness)
     [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" == dark ]] || {
       printf 'D2 requires the Source Proxy to remain dark.\n' >&2
@@ -157,15 +169,35 @@ case "${mode}" in
     }
     ;;
 esac
+expected_source_probes=false
+if [[ "${mode}" =~ ^(probe-offline|probe-readiness|source-readiness)$ ]]; then
+  expected_source_probes=true
+elif [[ "${mode}" == template && "${values[SOURCE_PROXY_SOURCE_MODE]}" != dark ]]; then
+  expected_source_probes=true
+fi
 [[ "${values[EDGE_PROJECTION_INGESTION_ENABLED]}" == false &&
-   "${values[EDGE_SOURCE_PROBES_ENABLED]}" == false &&
+   "${values[EDGE_SOURCE_PROBES_ENABLED]}" == "${expected_source_probes}" &&
    "${values[EDGE_REALTIME_SSE_ENABLED]}" == false &&
    "${values[EDGE_ANALYTICS_QUERY_ENABLED]}" == false &&
    "${values[EDGE_COMMAND_RELAY_ENABLED]}" == false &&
    "${values[EDGE_ANALYTICS_SOURCE_PROFILE]}" == fixture ]] || {
-  printf 'D2 preflight rejected a non-dark runtime capability.\n' >&2
+  printf 'Execution preflight rejected a runtime capability outside the selected gate.\n' >&2
   exit 1
 }
+case "${mode}" in
+  probe-offline|probe-readiness|offline|readiness)
+    [[ -z "${values[EDGE_PROBE_ALPHA_ID]:-}" ]] || {
+      printf 'D2/D3 preflight forbids alpha-scoped source probes.\n' >&2
+      exit 1
+    }
+    ;;
+  source-readiness)
+    [[ "${values[EDGE_PROBE_ALPHA_ID]:-}" =~ ^[A-Za-z0-9._-]{1,128}$ ]] || {
+      printf 'Source-read readiness requires one bounded alpha scope.\n' >&2
+      exit 1
+    }
+    ;;
+esac
 [[ "${values[EDGE_SOURCE_CLIENT_IDENTITY_FILE]}" == /run/secrets/source-proxy-client.pem &&
    "${values[EDGE_SOURCE_API_KEY_FILE]}" == /run/secrets/source-proxy-admission-token ]] || {
   printf 'D2 preflight rejected a source identity path outside the Edge secret mount.\n' >&2
@@ -178,7 +210,7 @@ for key in EDGE_SECRET_DIRECTORY SOURCE_PROXY_SECRET_DIRECTORY SOURCE_PROXY_CONF
     exit 1
   }
 done
-if [[ "${mode}" == readiness || "${mode}" == source-readiness ]]; then
+if [[ "${mode}" =~ ^(readiness|probe-readiness|source-readiness)$ ]]; then
   for key in EDGE_SECRET_DIRECTORY SOURCE_PROXY_SECRET_DIRECTORY SOURCE_PROXY_CONFIG_FILE \
     PROJECTION_DB_SECRET_DIRECTORY PROJECTION_DB_INIT_SCRIPT; do
     [[ "${values[${key}]}" == /srv/primus/portal/* ]] || {
@@ -255,7 +287,7 @@ if [[ "${mode}" != template ]]; then
     exit 1
   }
   bash -n "${values[PROJECTION_DB_INIT_SCRIPT]}"
-  if [[ "${mode}" == readiness || "${mode}" == source-readiness ]]; then
+  if [[ "${mode}" =~ ^(readiness|probe-readiness|source-readiness)$ ]]; then
     [[ "$(stat -c '%u:%g:%a' "${values[PROJECTION_DB_INIT_SCRIPT]}")" == \
       "0:${values[PROJECTION_DB_CONTAINER_GID]}:550" ]] || {
       printf 'D2 readiness requires a root-owned immutable projection bootstrap script.\n' >&2
@@ -415,10 +447,10 @@ for key in keys:
 PY
 
   header_file="${proxy_dir}/trading-system-read-header.conf"
-  if [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" == dark ]]; then
+  if [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" =~ ^(dark|contract-probe)$ ]]; then
     if [[ "$(wc -l < "${header_file}")" -ne 1 ]] ||
         ! grep -Fxq 'proxy_set_header X-Portal-Source-Mode dark;' "${header_file}"; then
-      printf 'D2 preflight requires the exact non-credential dark marker.\n' >&2
+      printf 'D2/D3 preflight requires the exact non-credential dark marker.\n' >&2
       exit 1
     fi
   elif [[ "$(wc -l < "${header_file}")" -ne 1 ]] ||
@@ -432,7 +464,11 @@ PY
   }
 fi
 
-if [[ "${mode}" == readiness || "${mode}" == source-readiness ]]; then
+if [[ "${mode}" =~ ^(readiness|probe-readiness|source-readiness)$ ]]; then
+  [[ "$(stat -c '%u' "${env_file}")" == 0 ]] || {
+    printf 'Execution readiness requires a root-owned env file.\n' >&2
+    exit 1
+  }
   runtime_group="$(getent group portal-runtime 2>/dev/null || true)"
   [[ -n "${runtime_group}" ]] || {
     printf 'D2 readiness requires the portal-runtime system group.\n' >&2

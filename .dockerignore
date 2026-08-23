@@ -13,6 +13,7 @@ logs
 backups
 secrets
 credentials
+*.jwt
 **/.venv
 **/venv
 **/__pycache__

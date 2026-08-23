@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Static gate for the D2 image-publication trust chain. It validates workflow
+# Static gate for the D2/D3 image-publication trust chain. It validates workflow
 # structure only and never contacts GitHub/GHCR or reads repository secrets.
 set -euo pipefail
 
@@ -20,7 +20,7 @@ if not isinstance(document, dict):
 if "pull_request_target" in raw:
     raise SystemExit("Image publication must never run with pull_request_target authority.")
 if "COSIGN_PRIVATE_KEY" in raw:
-    raise SystemExit("D2 publication must use workload OIDC, not a repository signing key.")
+    raise SystemExit("Execution publication must use workload OIDC, not a repository signing key.")
 
 permissions = document.get("permissions")
 expected_permissions = {
@@ -44,18 +44,30 @@ by_name = {
 
 edge_build = by_name.get("Build and publish execution edge image", {})
 proxy_build = by_name.get("Build and publish source proxy image", {})
+control_build = by_name.get("Build and publish Control API image", {})
 if edge_build.get("id") != "execution-edge-build" or proxy_build.get("id") != "source-proxy-build":
     raise SystemExit("D2 image digest outputs are not named deterministically.")
+if control_build.get("id") != "control-api-build":
+    raise SystemExit("D3 Control API digest output is not named deterministically.")
 for step in (edge_build, proxy_build):
     options = step.get("with")
     if not isinstance(options, dict) or options.get("push") is not True:
         raise SystemExit("D2 images must be pushed before digest verification.")
     if options.get("provenance") != "mode=max" or options.get("sbom") is not True:
         raise SystemExit("D2 images require maximum provenance and SBOM attestations.")
+control_options = control_build.get("with")
+if (
+    not isinstance(control_options, dict)
+    or control_options.get("push") is not True
+    or control_options.get("provenance") != "mode=max"
+    or control_options.get("sbom") is not True
+):
+    raise SystemExit("D3 Control API requires push, maximum provenance and SBOM attestations.")
 
 required_actions = {
     "Install keyless image signer": "sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6",
     "Upload execution D2 publication evidence": "actions/upload-artifact@v7",
+    "Upload execution D3 publication evidence": "actions/upload-artifact@v7",
 }
 for name, action in required_actions.items():
     if by_name.get(name, {}).get("uses") != action:
@@ -67,10 +79,10 @@ trivy_steps = [
     if isinstance(step, dict)
     and step.get("uses") == "aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25"
 ]
-if len(trivy_steps) != 4:
-    raise SystemExit("D2 requires report and critical gates for both runtime images.")
-if sum(step.get("with", {}).get("exit-code") == "1" for step in trivy_steps) != 2:
-    raise SystemExit("Exactly two critical vulnerability gates must fail closed.")
+if len(trivy_steps) != 6:
+    raise SystemExit("D2/D3 require report and critical gates for all three execution images.")
+if sum(step.get("with", {}).get("exit-code") == "1" for step in trivy_steps) != 3:
+    raise SystemExit("Exactly three critical vulnerability gates must fail closed.")
 for step in trivy_steps:
     image_ref = str(step.get("with", {}).get("image-ref", ""))
     if "outputs.digest" not in image_ref:
@@ -86,14 +98,23 @@ if verify.count("cosign verify") != 2:
 for boundary in ("--certificate-identity", "--certificate-oidc-issuer", "SOURCE_COMMIT", "SHA256SUMS"):
     if boundary not in verify:
         raise SystemExit(f"D2 publication evidence is missing {boundary}.")
+d3_sign = by_name.get("Sign D3 Control API by immutable digest", {}).get("run", "")
+d3_verify = by_name.get("Verify keyless signature and write D3 Control API evidence", {}).get("run", "")
+if 'cosign sign --yes "${CONTROL_API_IMAGE}"' not in d3_sign:
+    raise SystemExit("D3 Control API must be signed by digest.")
+if d3_verify.count("cosign verify") != 1:
+    raise SystemExit("D3 Control API signature must be verified before evidence publication.")
+for boundary in ("--certificate-identity", "--certificate-oidc-issuer", "SOURCE_COMMIT", "SHA256SUMS"):
+    if boundary not in d3_verify:
+        raise SystemExit(f"D3 publication evidence is missing {boundary}.")
 
 dispatch = document.get("on", document.get(True, {}))
 dispatch = dispatch.get("workflow_dispatch") if isinstance(dispatch, dict) else None
 inputs = dispatch.get("inputs") if isinstance(dispatch, dict) else None
 scope = inputs.get("scope") if isinstance(inputs, dict) else None
 options = scope.get("options") if isinstance(scope, dict) else None
-if options != ["all", "execution-d2"]:
-    raise SystemExit("Manual publication must expose only all or execution-d2 scope.")
+if options != ["all", "execution-d2", "execution-d3"]:
+    raise SystemExit("Manual publication must expose only all, execution-d2 or execution-d3 scope.")
 PY
 
-printf 'Execution D2 image publication trust-chain gate passed. No image was published.\n'
+printf 'Execution D2/D3 image publication trust-chain gate passed. No image was published.\n'

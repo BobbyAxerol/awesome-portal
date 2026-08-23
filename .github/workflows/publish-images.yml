@@ -14,6 +14,7 @@ on:
         options:
           - all
           - execution-d2
+          - execution-d3
 
 permissions:
   contents: read
@@ -82,7 +83,7 @@ jobs:
 
       - name: Derive Control API image metadata
         id: control-api-meta
-        if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all'
+        if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all' || inputs.scope == 'execution-d3'
         uses: docker/metadata-action@v5
         with:
           images: ${{ steps.image-prefix.outputs.value }}-control-api
@@ -170,7 +171,8 @@ jobs:
           cache-to: type=gha,mode=max,scope=portal-web
 
       - name: Build and publish Control API image
-        if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all'
+        id: control-api-build
+        if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all' || inputs.scope == 'execution-d3'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -178,6 +180,8 @@ jobs:
           push: true
           tags: ${{ steps.control-api-meta.outputs.tags }}
           labels: ${{ steps.control-api-meta.outputs.labels }}
+          provenance: mode=max
+          sbom: true
           cache-from: type=gha,scope=control-api
           cache-to: type=gha,mode=max,scope=control-api
 
@@ -275,6 +279,35 @@ jobs:
           TRIVY_USERNAME: ${{ github.actor }}
           TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Scan D3 Control API for high and critical vulnerabilities
+        if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all' || inputs.scope == 'execution-d3'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.image-prefix.outputs.value }}-control-api@${{ steps.control-api-build.outputs.digest }}
+          format: json
+          output: control-api-trivy.json
+          exit-code: "0"
+          ignore-unfixed: false
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Reject critical D3 Control API vulnerabilities
+        if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all' || inputs.scope == 'execution-d3'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.image-prefix.outputs.value }}-control-api@${{ steps.control-api-build.outputs.digest }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: false
+          vuln-type: os,library
+          severity: CRITICAL
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Install keyless image signer
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
@@ -285,6 +318,12 @@ jobs:
         run: |
           cosign sign --yes "${EXECUTION_EDGE_IMAGE}"
           cosign sign --yes "${SOURCE_PROXY_IMAGE}"
+
+      - name: Sign D3 Control API by immutable digest
+        if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all' || inputs.scope == 'execution-d3'
+        env:
+          CONTROL_API_IMAGE: ${{ steps.image-prefix.outputs.value }}-control-api@${{ steps.control-api-build.outputs.digest }}
+        run: cosign sign --yes "${CONTROL_API_IMAGE}"
 
       - name: Verify keyless signatures and write D2 evidence
         env:
@@ -324,6 +363,40 @@ jobs:
         with:
           name: execution-d2-publication-${{ github.sha }}
           path: release/execution-d2
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Verify keyless signature and write D3 Control API evidence
+        if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all' || inputs.scope == 'execution-d3'
+        env:
+          CONTROL_API_IMAGE: ${{ steps.image-prefix.outputs.value }}-control-api@${{ steps.control-api-build.outputs.digest }}
+        run: |
+          mkdir -p release/execution-d3
+          certificate_identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/publish-images.yml@${GITHUB_REF}"
+          issuer="https://token.actions.githubusercontent.com"
+          cosign verify \
+            --certificate-identity "${certificate_identity}" \
+            --certificate-oidc-issuer "${issuer}" \
+            --output json "${CONTROL_API_IMAGE}" \
+            > release/execution-d3/control-api-signature.json
+          cp control-api-trivy.json release/execution-d3/
+          {
+            printf 'SOURCE_COMMIT=%s\n' "${GITHUB_SHA}"
+            printf 'SOURCE_REF=%s\n' "${GITHUB_REF}"
+            printf 'PORTAL_CONTROL_API_IMAGE=%s\n' "${CONTROL_API_IMAGE}"
+          } > release/execution-d3/execution-d3-control-api-image.env
+          sha256sum \
+            release/execution-d3/control-api-signature.json \
+            release/execution-d3/control-api-trivy.json \
+            release/execution-d3/execution-d3-control-api-image.env \
+            > release/execution-d3/SHA256SUMS
+
+      - name: Upload execution D3 publication evidence
+        if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all' || inputs.scope == 'execution-d3'
+        uses: actions/upload-artifact@v7
+        with:
+          name: execution-d3-publication-${{ github.sha }}
+          path: release/execution-d3
           if-no-files-found: error
           retention-days: 30
 

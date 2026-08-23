@@ -1182,6 +1182,17 @@ workload PKI/JWKS must exist, AWS pressure must be admitted and a new D2 window
 must open. Evidence:
 [`EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md`](backend/EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md).
 
+The D3 offline package is `D3_OFFLINE_PREPARATION_COMPLETE /
+LIVE_D3_UNAUTHORIZED`. Its
+separate overlay opens only the three public contract/health/capability routes,
+keeps four business routes at 503, requires an empty alpha probe scope and
+reasserts ingestion/query/SSE/analytics/command as false/`fixture`. The
+canonical TypeScript issuer and redacted operator harness cover H2/TLS1.3 mTLS,
+the <=60-second RS256 positive/negative matrix, bounded latency and fail-closed
+fault probes. This preparation is not cross-cell evidence and unlocks no
+frontend profile. Detail:
+[`EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md`](backend/EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md).
+
 The detailed evidence, recommended defaults, decision sheet and rollback are in
 [`EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md`](backend/EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md).
 

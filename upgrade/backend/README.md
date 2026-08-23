@@ -287,6 +287,17 @@ authority.
   digest-bound Trivy reports/CRITICAL rejection, OIDC Cosign sign+verify and a
   checksummed evidence artifact. It remains unexecuted until this workflow
   revision reaches the default branch.
+- `EX-BE-02-LIVE` **D3 offline preparation complete / live unauthorized**
+  (`D3_OFFLINE_PREPARATION_COMPLETE / LIVE_D3_UNAUTHORIZED`): a
+  separate Compose/env/config delta opens only three credential-free public
+  source probes; four alpha routes remain 503 and every business capability
+  remains false/`fixture`. The Control API canonical issuer creates the
+  short-lived positive/negative assertion corpus, while the live harness forces
+  H2/TLS1.3 mTLS and emits status/timing/snapshot-only evidence. Offline gates
+  cover 19 probe outcomes and preserve D2 rollback. Actual cross-cell transport,
+  latency and source-loss evidence still wait for accepted D2 plus a D3 window.
+  Detail:
+  [`EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md`](./EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md).
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã
