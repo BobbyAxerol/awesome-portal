@@ -25,6 +25,7 @@ import type {
 import type { CommandCatalogue } from "../adminCatalog";
 import type { CommandPlan, CommandPlanRequestInput } from "../commandPlan";
 import type { IncidentDetail, OperationsQueue, WorkflowResult } from "../operations";
+import type { CanaryControlRoom, SandboxCertification } from "../certification";
 import type { TypedCondition } from "../components/conditions";
 
 export type Result<T> =
@@ -145,6 +146,10 @@ export interface ExecutionApi {
    * keystroke or serve a preview for an amount the reviewer has already moved
    * past — the second being the dangerous one.
    */
+  /** `GET /api/v1/execution/deployments/{id}/certification` */
+  getSandboxCertification(deploymentId: string): Promise<Result<SandboxCertification>>;
+  /** `GET /api/v1/execution/deployments/{id}/canary` */
+  getCanaryControlRoom(deploymentId: string): Promise<Result<CanaryControlRoom>>;
   /**
    * `GET /api/v1/execution/operations` — the triage queue.
    *

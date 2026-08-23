@@ -35,6 +35,7 @@ import {
 import { analyticsFailureReason, readAnalyticsFailure } from "../analyticsProblem";
 import { readCommandCatalogue } from "../adminCatalog";
 import { readIncidentDetail, readOperationsQueue, readWorkflowResult } from "../operations";
+import { readCanaryControlRoom, readSandboxCertification } from "../certification";
 import type { WorkflowResult } from "../operations";
 import {
   commandPlanRequest,
@@ -293,6 +294,31 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       return preview && envelope
         ? { ok: true as const, value: { preview, envelope } }
         : unavailable("The capital preview response could not be read.");
+    },
+
+    async getSandboxCertification(deploymentId) {
+      const blocked = readBlocked();
+      if (blocked) return unavailable(blocked);
+      const response = await get(
+        `/deployments/${encodeURIComponent(deploymentId)}/certification`,
+        signal,
+      );
+      if (!response.ok) return problem(response);
+      const cert = readSandboxCertification(await response.json());
+      return cert
+        ? { ok: true as const, value: cert }
+        : unavailable("The certification response could not be read.");
+    },
+
+    async getCanaryControlRoom(deploymentId) {
+      const blocked = readBlocked();
+      if (blocked) return unavailable(blocked);
+      const response = await get(`/deployments/${encodeURIComponent(deploymentId)}/canary`, signal);
+      if (!response.ok) return problem(response);
+      const room = readCanaryControlRoom(await response.json());
+      return room
+        ? { ok: true as const, value: room }
+        : unavailable("The canary control room response could not be read.");
     },
 
     async listOperations(query) {

@@ -45,6 +45,8 @@ import {
   type QueueFilter,
 } from "./OperationsQueue";
 import { IncidentDetailScreen } from "./IncidentDetail";
+import { SandboxCertificationScreen } from "./SandboxCertification";
+import { CanaryControlRoomScreen } from "./CanaryControlRoom";
 import { workflowEffectText, type QueueRow, type WorkflowResult } from "../operations";
 import { PanelState } from "../components/states";
 import { aggregateHeadroomFrom, envelopeFromAnalytics } from "../analytics";
@@ -1201,6 +1203,54 @@ export function IncidentDetailContainer({
       incident={state.value}
       status={state.status}
       reason={state.reason}
+    />
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * Phase 10 and 11
+ * ------------------------------------------------------------------------ */
+
+export function SandboxCertificationContainer({
+  api,
+  deploymentId,
+}: {
+  api: ExecutionApi;
+  deploymentId: string;
+}) {
+  const state = useAnalyticsRead(
+    () => api.getSandboxCertification(deploymentId),
+    [api, deploymentId],
+  );
+  return (
+    <SandboxCertificationScreen
+      certification={state.value}
+      status={state.status}
+      reason={state.reason}
+    />
+  );
+}
+
+export function CanaryControlRoomContainer({
+  api,
+  deploymentId,
+  brokerStale,
+}: {
+  api: ExecutionApi;
+  deploymentId: string;
+  /** The hi-fi's OK / STALE demo state. Drives the asymmetry, not the copy. */
+  brokerStale?: boolean;
+}) {
+  const state = useAnalyticsRead(
+    () => api.getCanaryControlRoom(deploymentId),
+    [api, deploymentId],
+  );
+  return (
+    <CanaryControlRoomScreen
+      room={state.value}
+      status={state.status}
+      reason={state.reason}
+      brokerStale={brokerStale}
     />
   );
 }

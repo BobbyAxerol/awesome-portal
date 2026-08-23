@@ -3571,3 +3571,263 @@
 @media (max-width: 900px) {
   .exec-inc-panels { grid-template-columns: 1fr; }
 }
+
+/* ---------------------------------------------------------------------------
+ * Phase 10 — Sandbox Certification (hi-fi 1d, ops dark)
+ * ------------------------------------------------------------------------ */
+.exec-cert-kicker {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 0 var(--space-1);
+}
+
+.exec-cert-head h1 { margin: var(--space-1) 0 0; font-size: var(--text-lg); font-weight: 400; }
+.exec-cert-venue { color: var(--ink-mute); }
+
+.exec-cert-note,
+.exec-canary-note {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+  margin: var(--space-1) 0 0;
+}
+
+.exec-cert-h2,
+.exec-canary-h2 {
+  margin: var(--space-3) 0 var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-mute);
+}
+
+.exec-cert-lineage,
+.exec-canary-lineage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-soft);
+}
+
+.exec-cert-critical {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2);
+  border: 1px solid var(--bad);
+  background: var(--bad-bg);
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.exec-cert-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.exec-cert-step {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--line);
+  background: var(--surface-2);
+}
+
+.exec-cert-step[data-strip="CURRENT"] { border-left-color: var(--accent); }
+.exec-cert-step[data-strip="DONE"] { border-left-color: var(--good); }
+
+/* STALE and FAIL are never the same mark: expired evidence is not failed
+   evidence, and one red would report a check that went wrong. */
+.exec-cert-step[data-evaluation="PASS"] .exec-cert-eval { color: var(--good); }
+.exec-cert-step[data-evaluation="FAIL"] .exec-cert-eval { color: var(--bad); }
+.exec-cert-step[data-evaluation="STALE"] .exec-cert-eval { color: var(--warn); }
+.exec-cert-step[data-evaluation="UNAVAILABLE"] .exec-cert-eval {
+  color: var(--ink-mute);
+  border-bottom: 1px dashed var(--ink-faint);
+}
+
+.exec-cert-ordinal,
+.exec-cert-eval,
+.exec-cert-summary,
+.exec-cert-blocker {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
+
+.exec-cert-label { font-size: var(--text-xs); color: var(--ink); }
+.exec-cert-blocker { color: var(--warn); }
+
+.exec-cert-triptych {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.exec-cert-source,
+.exec-canary-panel {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  padding: var(--space-2);
+}
+
+.exec-cert-source h2,
+.exec-canary-panel h2 {
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-mute);
+}
+
+.exec-cert-table { width: 100%; border-collapse: collapse; font-size: var(--text-xs); }
+.exec-cert-table th,
+.exec-cert-table td {
+  text-align: left;
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--line-soft);
+  font-weight: 400;
+}
+.exec-cert-table thead th { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--ink-mute); }
+.exec-cert-table tr[data-severity="CRITICAL"] { background: var(--bad-bg); }
+
+.exec-cert-actions,
+.exec-canary-actions button { display: flex; gap: var(--space-1); margin-top: var(--space-2); }
+
+.exec-cert-actions button,
+.exec-canary-actions button {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--line);
+  background: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+  cursor: pointer;
+}
+
+.exec-cert-actions button:disabled,
+.exec-canary-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+.exec-cert-actions button:focus-visible,
+.exec-canary-actions button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.exec-cert-footer, .exec-cert-plans, .exec-cert-findings { margin-top: var(--space-3); }
+
+@media (max-width: 900px) {
+  .exec-cert-triptych { grid-template-columns: 1fr; }
+}
+
+/* ---------------------------------------------------------------------------
+ * Phase 11 — Canary Control Room (hi-fi 1e, ops dark)
+ * ------------------------------------------------------------------------ */
+
+/* Double-red band, shield and words. The words are the guard; the colour only
+   reinforces it, because a band that differs by hue alone is a band half the
+   operators never see. */
+.exec-canary-guard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 2px solid var(--bad);
+  border-top-width: 6px;
+  background: var(--bad-bg);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink);
+}
+
+.exec-canary-shield { font-size: var(--text-sm); color: var(--bad); }
+.exec-canary-guardnote { color: var(--ink-mute); }
+
+.exec-canary-inactive {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2);
+  border: 1px solid var(--warn);
+  background: var(--warn-bg);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-soft);
+}
+
+.exec-canary-head h1 { margin: var(--space-2) 0 0; font-size: var(--text-lg); font-weight: 400; }
+
+.exec-canary-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-2);
+}
+
+.exec-canary-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2);
+  border: 1px solid var(--line-soft);
+  background: var(--surface-3);
+}
+
+.exec-canary-kpilabel { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--ink-mute); }
+.exec-canary-kpivalue { font-size: var(--text-lg); color: var(--ink); }
+
+/* Never styled like a figure: an unavailable slot must not read as a value. */
+.exec-canary-kpiunavailable {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+  border-bottom: 1px dashed var(--ink-faint);
+  align-self: flex-start;
+}
+
+.exec-canary-limits { display: grid; gap: var(--space-1); margin: 0; }
+.exec-canary-limits > div { display: grid; grid-template-columns: 12rem 1fr; gap: var(--space-2); }
+.exec-canary-limits dt { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--ink-mute); }
+.exec-canary-limits dd { margin: 0; font-size: var(--text-xs); color: var(--ink-soft); }
+
+.exec-canary-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.exec-canary-guardrule { margin-top: var(--space-3); }
+.exec-canary-guardrule p { font-size: var(--text-xs); color: var(--ink-soft); }
+
+/* Two lines, never merged into one — the asymmetry is the screen. */
+.exec-canary-asym {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.exec-canary-actions { margin-top: var(--space-2); }
+.exec-canary-actions h3 {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 400;
+  color: var(--ink-mute);
+}
+
+@media (max-width: 900px) {
+  .exec-canary-limits > div { grid-template-columns: 1fr; }
+}

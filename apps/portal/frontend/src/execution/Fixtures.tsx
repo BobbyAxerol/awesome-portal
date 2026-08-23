@@ -46,6 +46,8 @@ import {
   GateR1ReviewContainer,
   GateR2ReviewContainer,
   AdminCatalogueContainer,
+  CanaryControlRoomContainer,
+  SandboxCertificationContainer,
   IncidentDetailContainer,
   OperationsQueueContainer,
   AlphaInsightContainer,
@@ -1642,6 +1644,35 @@ export default function ExecutionFixtures() {
           the Phase 0 exit gate is "every shared Execution component in every
           state" precisely so that cannot happen.
         */}
+        <Group
+          title="Sandbox Certification (1d)"
+          note="Seven ordered steps from the server, three independently degradable panels, and nothing computed here — not progress, not the current step, not evidence expiry. runtime_state stays null rather than becoming HALTED."
+          surface="deployments"
+        >
+          <Case caption="0/7 unavailable — seven blocker codes named, and no source panel claims a clean result">
+            <SandboxCertificationContainer api={WIRED_API} deploymentId="dep_77" />
+          </Case>
+          <Case caption="the port refuses — an empty strip would read as a certification with no steps">
+            <SandboxCertificationContainer
+              api={createFixtureApi({ unavailableEndpoints: ["getSandboxCertification"] })}
+              deploymentId="dep_77"
+            />
+          </Case>
+        </Group>
+
+        <Group
+          title="Canary Control Room (1e)"
+          note="The guard is words and a shield, not a colour. Production command is inactive, so both action groups are absent rather than disabled — and the broker-stale asymmetry is stated as two separate sentences."
+          surface="deployments"
+        >
+          <Case caption="fixture · production inactive — five KPI slots unavailable, never zero">
+            <CanaryControlRoomContainer api={WIRED_API} deploymentId="dep_88" />
+          </Case>
+          <Case caption="broker stale — the asymmetry holds: it would block scale-up and not protective actions">
+            <CanaryControlRoomContainer api={WIRED_API} deploymentId="dep_88" brokerStale />
+          </Case>
+        </Group>
+
         <Group
           title="Operations Queue (4e)"
           note="Three states per row and never merged: what the Trading System is doing, what verify observed, and what a person in the Portal has done. Acknowledging or resolving changes only the third."
