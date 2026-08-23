@@ -466,9 +466,9 @@ authority.
   offline: canonical BR-EX-28 catalogue, BR-EX-29 typed conditions và
   deny-by-default plan/apply/verify/Rust relay foundation. Tám `ops` route chưa
   được Trading System công bố giữ `portal_reachable=false`; không thay bằng
-  DB/Redis/CLI trực tiếp. Bước không-IAM tiếp theo có thể thiết kế workflow
-  Operations Queue/Incident trên dữ liệu Portal/fixture, nhưng source adapters
-  vẫn chờ owner publish typed HTTP contracts.
+  DB/Redis/CLI trực tiếp. F1a/F1b đã đóng workflow Operations Queue/Incident
+  trên dữ liệu Portal/fixture; source adapters vẫn chờ owner publish typed HTTP
+  contracts và accepted D2→D4 evidence.
 
 ## BAR-21 — Strategy Import & Quarantine Ingest foundation
 

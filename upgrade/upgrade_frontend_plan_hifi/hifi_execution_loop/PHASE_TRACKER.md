@@ -1731,11 +1731,12 @@ Claude's exact Lane A consumer contract and test list are in
 No route/profile/command activation is authorized. Full backend evidence:
 [`EX_BE_05B_F0_OFFLINE_OPERATIONS_FOUNDATION.md`](../../backend/EX_BE_05B_F0_OFFLINE_OPERATIONS_FOUNDATION.md).
 
-Next safe backend lane without IAM: Portal-owned Operations Queue/Incident
-workflow contracts and repositories over fixture/Portal records only. The
-source-backed `command-journal`, findings, alerts, dead letters, trace-order,
-streams and alpha-activity adapters remain blocked on Trading System owner
-publication; Portal does not substitute DB/Redis/CLI access.
+That no-IAM lane is now delivered by F1a/F1b below. The source-backed
+`command-journal`, findings, alerts, dead letters, trace-order, streams and
+alpha-activity adapters remain blocked on Trading System owner publication;
+Portal does not substitute DB/Redis/CLI access. Further product work follows
+the phase board and requires an explicit owner priority rather than silently
+expanding F0 authority.
 
 ### 24A.8 EX-BE-05b/F1a Portal Operations Queue
 
