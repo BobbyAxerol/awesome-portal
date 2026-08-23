@@ -1,7 +1,7 @@
 # EX-BE-02-LIVE — D1 execution evidence
 
-> Status: `D1_HOSTS_STAGED / AWS_OWNER_SG_RULE_PENDING`  
-> Evidence date: 2026-08-22 UTC  
+> Status: `D1_NETWORK_ACCEPTED / APPLICATION_DARK`  
+> Evidence date: 2026-08-22 staging; 2026-08-23 activation UTC  
 > Runtime profile: `fixture`; every Execution flag remains `false`  
 > Trading System impact: none
 
@@ -27,36 +27,38 @@
 - Both `/etc/wireguard/portal0.conf` files were rendered atomically, validated
   with `wg-quick strip`, and verified as `0600 root:root`.
 
-## 2. Current runtime truth
+## 2. IAM and network acceptance
 
-- `portal0` is down on both hosts and is not enabled at boot.
-- No host firewall or AWS Security Group rule was changed.
-- No Edge, Source Proxy, projection, query, SSE or command service was started.
-- SGP SSH and Docker remained available after package installation. Package
-  post-install reported a pending kernel update and restarted/deferred normal
-  host services through `needrestart`; there was no reboot and the post-checks
-  passed.
-- AWS SSH and the Trading System public health route remained available.
+- Scoped STS and EC2 inventory proved the expected account, instance, VPC,
+  subnet, attached Security Group, Elastic IP association and effective route
+  table. EIP allocation and route-table IDs are recorded only in the private
+  mode-0600 owner input.
+- The pre-change Security Group contained no UDP 51820 overlap. Inside a new
+  bounded owner window, exactly one UDP 51820-from-SGP-`/32` rule was created;
+  its `sgr-...` identity is privately retained for exact rollback.
+- Both cells passed the same activation preflight with zero warnings and zero
+  errors. AWS started first and SGP second.
+- Bidirectional peer-only reachability, recent handshake and bounded acceptance
+  bytes passed. Default routes stayed unchanged and TCP 8443/8444 remained
+  absent publicly and locally.
+- A real link-loss drill stopped SGP `portal0`: the private path closed while
+  existing SGP Portal and AWS-HK Trading System health stayed HTTP 200. The
+  peer was restored, handshake recovered and both units were enabled.
+- A collision-checked shared `portal-runtime` system GID was created on both
+  cells. `/etc/portal`, `/srv/primus/portal` and its Edge/Source Proxy children
+  are `0750 root:portal-runtime`.
 
-## 3. Intentional stop-gate
+No Edge, Source Proxy, projection, query, SSE or command service was started.
+No source/business endpoint, Trading System container, database, Redis, CLI,
+broker path, firewall or Portal delivery flag was changed.
 
-Neither cell currently has a usable AWS API identity, while the owner contract
-requires `AWS_SG_CHANGE_MODE=OWNER_MANUAL`. Therefore D1 correctly stopped
-before interface activation. The missing proof is exactly one AWS inbound rule:
+## 3. Remaining stop-gate
 
-```text
-type       Custom UDP
-port       51820
-source     approved SGP_STABLE_PUBLIC_IP/32 from the private owner input
-target     AWS_SECURITY_GROUP_ID from the private owner input
-authority  Bobby AWS Console owner action
-```
+The temporary operator instance profile is still attached to the shared AWS-HK
+host and IMDSv2 currently permits a two-hop response. It must be detached, or
+replaced by a separately reviewed workload-safe AWS identity boundary, before
+D2 containers start. D2 also retains independent image-attestation, PKI/JWKS,
+resource, projection-database, backup/restore and owner-window gates.
 
-After creation, store the exact `sgr-...` identifier in
-`AWS_WG_SG_RULE_ID`. Both cells must pass `--mode activation`; only then may the
-operator start AWS `portal0`, start SGP `portal0`, prove the handshake and
-perform link-loss/route/SSH/health acceptance. The interface must not be enabled
-at boot until non-persistent acceptance is complete.
-
-This is a permission stop-gate, not a failed D1 and not authorization to widen
-the SG, edit Trading System, activate a delivery profile or deploy D2 services.
+D1 acceptance is not authorization to widen the SG, edit Trading System,
+activate a delivery profile or deploy D2 services.

@@ -927,15 +927,17 @@ deep-dive → ADR → slice → evidence discipline documented above.
   System state changed. `AWS_EIP_ALLOCATION_ID` and `AWS_ROUTE_TABLE_ID` remain
   D1 warnings but are mandatory production stop-gates. Deep dive:
   [`EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md`](./backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md).
-- **EX-BE-02-LIVE D1 execution checkpoint (2026-08-22):** owner-input v1,
+- **EX-BE-02-LIVE D1 execution checkpoint (2026-08-22, accepted
+  2026-08-23):** owner-input v1,
   bounded authorization window, exact package versions, separate root-only
   WireGuard identities and validated `portal0` configs are staged on both
-  cells. Both readiness preflights pass and TS public health is unchanged, but
-  interfaces remain down/not enabled. Status is `D1_HOSTS_STAGED /
-  AWS_OWNER_SG_RULE_PENDING`: neither host has AWS API authority and the
-  approved mode is owner-manual, so activation is blocked until Bobby creates
-  exactly UDP 51820 from the SGP `/32`, records its `sgr-...` ID and both cells
-  pass the new activation preflight. Evidence:
+  cells. Scoped IAM verified the exact AWS inventory; one UDP
+  51820-from-SGP-`/32` rule was privately recorded by `sgr-...`; both activation
+  preflights, bidirectional handshake, public-port denial and link-loss
+  containment passed without changing Trading System health. Both units are
+  enabled and status is `D1_NETWORK_ACCEPTED / APPLICATION_DARK`. D2 remains
+  separately blocked by operator-instance-role isolation plus image, identity,
+  resource, database and owner-window gates. Evidence:
   [`EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md`](./backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,

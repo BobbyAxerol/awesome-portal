@@ -265,11 +265,14 @@ authority.
   allocation and route-table IDs warn at D1 and hard-fail the production gate.
   Detail:
   [`EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md`](./EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md).
-- `EX-BE-02-LIVE` **D1 hosts staged / AWS owner SG rule pending:** both hosts
-  have pinned WireGuard tools and separate validated root-only configs;
-  readiness passes, interfaces remain down and TS health is unchanged. No AWS
-  identity is available, so the owner-manual exact UDP 51820-from-SGP-`/32`
-  rule plus its `sgr-...` rollback identity blocks activation. Evidence:
+- `EX-BE-02-LIVE` **D1 network accepted / application dark:** scoped STS and
+  EC2 inventory verified the expected AWS boundary; exactly one UDP
+  51820-from-SGP-`/32` rule is privately recorded by its rollback `sgr-...`.
+  Both activation preflights, bidirectional WireGuard and link-loss containment
+  passed; public 8443/8444 remain denied, existing SGP/Trading-System health
+  stayed HTTP 200 and both units are enabled. No Portal service or business
+  traffic started. The temporary operator instance profile must be detached or
+  separately isolated before D2. Evidence:
   [`EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md`](./EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md).
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,

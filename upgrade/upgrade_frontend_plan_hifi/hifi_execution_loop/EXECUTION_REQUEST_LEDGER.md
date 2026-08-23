@@ -103,7 +103,7 @@ that use case. Portal never receives a generic DB, Redis or CLI escape hatch.
 
 | Gate | Owner | Blocker | Status |
 |---|---|---|---|
-| D1 private network | Bobby/AWS owner | exact Security Group rule identity, change window and live evidence | `D1_HOSTS_STAGED / AWS_OWNER_SG_RULE_PENDING` |
+| D1 private network | Bobby/AWS owner | accepted 2026-08-23: exact privately recorded SG rule, two-cell preflight, handshake, public denial and link-loss evidence | `D1_NETWORK_ACCEPTED / APPLICATION_DARK` |
 | D2 dark services | Bobby authorizes; Codex executes runbook | D1 evidence, resource admission, signed image digests, real identities, private PG decision | `D2_PREPARED / NOT_AUTHORIZED` |
 | D3 public/auth transport | Bobby + Codex | accepted D2 plus explicit window | `PLANNED / PREDECESSOR_BLOCKED` |
 | D4 Paper source shadow | Trading System source owner + Bobby + Codex | typed source capability, dedicated read identity and D3 evidence | `PLANNED / PREDECESSOR_BLOCKED` |

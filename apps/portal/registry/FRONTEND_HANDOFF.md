@@ -6,6 +6,15 @@
 > **Runtime hiện tại:** FastAPI compatibility bridge; target Control API
 > (TypeScript) giữ nguyên contract này trong các phase sau.
 
+## 2026-08-23 — Execution D1 private carrier accepted, application dark
+
+- Backend status is `D1_NETWORK_ACCEPTED / APPLICATION_DARK`: the SGP↔AWS-HK
+  private carrier passed exact-SG, handshake, public-denial and link-loss gates.
+- This changes no frontend delivery profile or capability. Registry remains
+  `fixture`; query, analytics, SSE, source ingestion and commands stay disabled.
+- Claude should keep explicit unavailable/stale/gap states and must not infer
+  source availability from carrier health. D2/D3/D4 retain independent gates.
+
 ## 1. Hai endpoint public
 
 | Endpoint | Method | Cache | Body |
