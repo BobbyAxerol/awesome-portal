@@ -49,6 +49,13 @@ guarantee `source_side_effect_requested=false` plus
 `deployment_resume_requested=false`. Evidence is hash-only metadata; no raw
 artifact body or Trading System payload belongs in these schemas.
 
+EX-BE-05b/F2 adds the Portal-owned Sandbox Certification contract: exactly
+seven ordered authority-labelled steps, immutable evidence lineage,
+hash/version-bound submit and decision semantics, and a CANARY promotion plan
+that is always blocked while production commands are inactive. The fixture is
+explicitly `fixture/UNAVAILABLE`; no source-evidence ingestion, outbox, runtime
+activation or promotion execution is part of this contract.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields

@@ -107,6 +107,8 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/IncidentDetail",
   "execution-incident-workflow.resolved.valid.json":
     "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/IncidentWorkflowResponse",
+  "execution-sandbox-certification.unavailable.valid.json":
+    "https://schemas.primusspark.com/portal/execution-sandbox-certification.v1.schema.json#/$defs/CertificationResponse",
 };
 
 describe("canonical contracts (cross-language fixture compilation)", () => {
@@ -446,6 +448,10 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(governance).toContain("PaperExitReviewResponse");
     expect(governance).toContain("GOVERNANCE_PAPER_EXIT_DECISION");
     expect(governance).toContain("external_side_effect_requested");
+    expect(governance).toContain('"/api/v1/execution/deployments/{deployment_id}/certification"');
+    expect(governance).toContain('"/api/v1/execution/governance/sandbox-certifications/{certification_id}/decisions"');
+    expect(governance).toContain("CertificationResponse");
+    expect(governance).toContain("PromotionPlanResponse");
 
     const realtime = readFileSync(join(ROOT, "generated", "execution-realtime.d.ts"), "utf8");
     expect(realtime).toContain('"/api/v1/execution/command-center/stream"');

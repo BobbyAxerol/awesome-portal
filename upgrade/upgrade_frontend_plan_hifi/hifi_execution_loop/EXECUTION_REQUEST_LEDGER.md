@@ -137,10 +137,14 @@ delivery profiles remain `fixture`.
    `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`: Portal-owned workflow,
    evidence, annotations and operation correlation are available on SGP; four
    Execution source panels remain typed unavailable and resolve cannot resume.
-4. Claude consumes F1a Queue and F1b Incident Detail on Lane A; it keeps the
-   eight actions and four source panels visibly unavailable and does not enable
-   a product route.
-5. Bobby/Trading System owners resolve BR-EX-24–28 source semantics and publish
+4. `EX-BE-05b/F2` Sandbox Certification is complete at
+   `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`: exactly seven source-dark
+   steps, hash-bound evidence, SoD decisions and permanently blocked CANARY
+   promotion planning are available on SGP; no outbox or activation exists.
+5. Claude consumes F1a Queue, F1b Incident Detail and F2 Sandbox Certification
+   on Lane A. It keeps the eight actions, source panels and Sandbox runtime
+   visibly unavailable and does not enable a product/source/command route.
+6. Bobby/Trading System owners resolve BR-EX-24–28 source semantics and publish
    purpose-built contracts. Portal work then creates compatibility adapters,
    never Trading System implementations.
-6. D1–D4 remain owner/change-window gated and are not implied by F0/F1a/F1b.
+7. D1–D4 remain owner/change-window gated and are not implied by F0/F1a/F1b/F2.

@@ -51,7 +51,7 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 7 | Operations Queue (4e) | `FRONTEND_INTEGRATION_PENDING` | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Claude consumes F1a Lane A; source routes remain external | SGP exact-count 182k bidirectional keyset + ack→resolve/idempotency/audit delivered; fixture/unavailable source retained |
 | 8 | Incident Detail (4d) | `FRONTEND_INTEGRATION_PENDING` | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Claude consumes F1b Lane A; real source contracts remain external | SGP Portal workflow/evidence/correlation delivered; 159/159 fresh-PG + 44/44 contracts; four source panels fixture/unavailable; no auto-resume/outbox |
 | 9 | Command Center (5a) | **screen built** (4 panel, 5 state, fixtures) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | dark snapshot + 5 state đã tiêu thụ (`ee3576c`); còn BR-EX-28 §8.1 `streams`/`alpha-activity`, real source + SSE parity | PRE-IAM-03 bounded snapshot: fresh PG 139/139, contracts 26/26, 20k exact-observed corpus; EX-BE-06 SSE remains dark |
-| 10 | Sandbox Certification (1d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a/05b; TS sandbox capability | EX-BE-03 stale/gap blocker delivered; production commands inactive; master plan §10.10 |
+| 10 | Sandbox Certification (1d) | `FRONTEND_INTEGRATION_PENDING` | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Claude consumes F2 Lane A; real source still needs D2→D4 + TS sandbox capability | F2 7-step source-dark workflow/evidence/SoD + blocked promotion plan; 163/163 fresh-PG, 45/45 contracts, 11-migration restore; no outbox/activation |
 | 11 | Canary Control Room (1e) | `BLOCKED` | `PRODUCTION_INACTIVE` | EX-BE-05b; owner live-canary gate | EX-BE-04b query + EX-BE-06 SSE foundations delivered; shadow parity and production source still required |
 | 12 | Live Full Operations (1f) | `BLOCKED` | `PRODUCTION_INACTIVE` | phase 11 evidence; EX-BE-08 | rev 4 profile contract delivered; source completeness + UNCERTAIN policy remain; master plan §10.12 |
 | 13 | Paper Workbench VNM (4h) | **screen built** (variant of phase 4, fixtures) | `INTEGRATION_PENDING` | source/screen API integration; venue/ATO/ATC decision | EX-BE-04b adaptive query + EX-BE-03 PAUSED semantics delivered; timezone decision remains |
@@ -1772,6 +1772,24 @@ unavailable source panels. Claude's exact Lane A consumer packet is
 Claude owns Phase 8 adapter/rail/degraded-state/accessibility tests. Codex next
 rechecks the exact D2 IAM DryRun; D2/D3/D4 and source-backed Incident Detail
 remain independently owner/contract/evidence gated.
+
+### 24A.10 EX-BE-05b/F2 Portal Sandbox Certification
+
+Codex accepted F2 at `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` on
+2026-08-23. SGP TypeScript/PostgreSQL owns a fixed seven-step certification
+workflow, append-only source-attributed evidence, deterministic freshness and
+evidence-set hashing, submitter/approver separation of duties and an immutable
+blocked CANARY promotion intent. Missing source evidence is explicitly
+unavailable; no public source-ingestion route exists.
+
+Evidence is contracts 45/45 and fresh-PG Control API 163/163 plus eleven-
+migration dump/restore. Every source/runtime/promotion side-effect flag is
+database-checked false and no outbox row is emitted. Claude's exact Phase 10
+Lane A packet is
+[`CODEX_TO_CLAUDE_EX_BE_05B_F2_HANDOFF.md`](CODEX_TO_CLAUDE_EX_BE_05B_F2_HANDOFF.md).
+Claude owns adapter, seven-step strip, triptych/degraded-state and accessibility
+tests. Registry/profile activation remains prohibited; real Sandbox data still
+requires D2→D4, a dedicated identity and published bounded source contracts.
 
 ---
 

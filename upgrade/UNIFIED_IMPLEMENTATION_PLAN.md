@@ -1788,6 +1788,17 @@ không phải 17 màn.
 > typed unavailable chờ Trading System contract và D2→D4. Chi tiết:
 > [`EX_BE_05B_F1B_INCIDENT_DETAIL.md`](./backend/EX_BE_05B_F1B_INCIDENT_DETAIL.md).
 
+> **Backend checkpoint 2026-08-23 — EX-BE-05b/F2 Phase 10:** Portal-owned
+> Sandbox Certification trên SGP đạt
+> `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`: DRAFT→IN_REVIEW→APPROVED|DENIED,
+> đúng bảy bước có authority/freshness/evidence, evidence-set hash chống TOCTOU,
+> SoD submitter/approver và CANARY promotion plan luôn `BLOCKED`. Profile vẫn
+> `fixture/UNAVAILABLE`; không có public source-evidence route, outbox, AWS-HK/
+> source call, runtime activation hoặc promotion execution. Evidence: 45/45
+> contracts, fresh-PG Control API 163/163, eleven migrations + dump/restore.
+> Chi tiết:
+> [`EX_BE_05B_F2_SANDBOX_CERTIFICATION.md`](./backend/EX_BE_05B_F2_SANDBOX_CERTIFICATION.md).
+
 > **D2 placement/resource checkpoint 2026-08-23:** toàn bộ Portal, browser BFF,
 > Control API và product database vẫn chạy tại SGP Research. AWS-HK hiện hữu
 > chỉ nhận Source Proxy, Rust Execution Edge, dark projection PostgreSQL và

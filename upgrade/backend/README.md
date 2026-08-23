@@ -196,6 +196,16 @@ Chúng không thay thế phase hoặc exit gate trong
   resumes a deployment. Four Execution source panels remain typed unavailable,
   all source/relay/outbox side effects remain false. Contracts 44/44 and
   fresh-PG Control API 159/159 plus dump/restore are green.
+- [EX-BE-05b/F2 — Portal Sandbox Certification](./EX_BE_05B_F2_SANDBOX_CERTIFICATION.md)
+  — **`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`:** SGP TypeScript/PostgreSQL
+  owns the forward-only DRAFT→IN_REVIEW→APPROVED|DENIED certification workflow,
+  exactly seven authority-labelled steps, immutable evidence lineage,
+  deterministic evidence-set hash, submitter/approver separation of duties and
+  blocked CANARY promotion intents. Public source-evidence ingestion does not
+  exist; the profile remains `fixture/UNAVAILABLE`. No outbox, AWS-HK/source
+  request or runtime/promotion activation is possible. Contracts 45/45 and
+  fresh-PG Control API 163/163 across eleven migrations plus dump/restore are
+  green.
 
 **Runway complete (BAR-00 → BAR-16).** Guide v0.5 bổ sung (không thay thế)
 tại `upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md`
@@ -467,8 +477,9 @@ authority.
   deny-by-default plan/apply/verify/Rust relay foundation. Tám `ops` route chưa
   được Trading System công bố giữ `portal_reachable=false`; không thay bằng
   DB/Redis/CLI trực tiếp. F1a/F1b đã đóng workflow Operations Queue/Incident
-  trên dữ liệu Portal/fixture; source adapters vẫn chờ owner publish typed HTTP
-  contracts và accepted D2→D4 evidence.
+  trên dữ liệu Portal/fixture; F2 đã đóng workflow Sandbox Certification
+  source-dark với bảy bước và promotion plan luôn `BLOCKED`. Source adapters
+  vẫn chờ owner publish typed HTTP contracts và accepted D2→D4 evidence.
 
 ## BAR-21 — Strategy Import & Quarantine Ingest foundation
 

@@ -1,0 +1,337 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-sandbox-certification.v1.schema.json",
+  "title": "Portal Sandbox Certification contracts v1",
+  "$defs": {
+    "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{1,191}$" },
+    "RequestKey": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$" },
+    "Hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "Timestamp": { "type": "string", "format": "date-time" },
+    "NullableTimestamp": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
+    "NullableIdentifier": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] },
+    "NullableHash": { "oneOf": [{ "$ref": "#/$defs/Hash" }, { "type": "null" }] },
+    "Actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["user_id", "username", "roles"],
+      "properties": {
+        "user_id": { "$ref": "#/$defs/Identifier" },
+        "username": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "roles": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["ADMIN", "USER"] } }
+      }
+    },
+    "CreateRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "workspace_id", "request_key", "deployment_id", "promotion_grant_id", "account_binding"],
+      "properties": {
+        "schema_version": { "const": "governance.sandbox-certification-create-request.v1" },
+        "workspace_id": { "$ref": "#/$defs/Identifier" },
+        "request_key": { "$ref": "#/$defs/RequestKey" },
+        "deployment_id": { "$ref": "#/$defs/Identifier" },
+        "promotion_grant_id": { "$ref": "#/$defs/Identifier" },
+        "account_binding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["account_id", "external_account_ref"],
+          "properties": {
+            "account_id": { "$ref": "#/$defs/Identifier" },
+            "external_account_ref": { "$ref": "#/$defs/Identifier" }
+          }
+        }
+      }
+    },
+    "SubmitRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "workspace_id", "request_key", "expected_workflow_version", "expected_evidence_set_hash"],
+      "properties": {
+        "schema_version": { "const": "governance.sandbox-certification-submit-request.v1" },
+        "workspace_id": { "$ref": "#/$defs/Identifier" },
+        "request_key": { "$ref": "#/$defs/RequestKey" },
+        "expected_workflow_version": { "type": "integer", "minimum": 1 },
+        "expected_evidence_set_hash": { "$ref": "#/$defs/Hash" }
+      }
+    },
+    "DecisionRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "workspace_id", "request_key", "expected_workflow_version", "expected_evidence_set_hash", "decision", "reason"],
+      "properties": {
+        "schema_version": { "const": "governance.sandbox-certification-decision-request.v1" },
+        "workspace_id": { "$ref": "#/$defs/Identifier" },
+        "request_key": { "$ref": "#/$defs/RequestKey" },
+        "expected_workflow_version": { "type": "integer", "minimum": 1 },
+        "expected_evidence_set_hash": { "$ref": "#/$defs/Hash" },
+        "decision": { "enum": ["APPROVE", "DENY"] },
+        "reason": { "type": "string", "minLength": 8, "maxLength": 2000 }
+      }
+    },
+    "PromotionPlanRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "workspace_id", "request_key", "expected_workflow_version", "expected_evidence_set_hash", "target_stage", "reason"],
+      "properties": {
+        "schema_version": { "const": "governance.sandbox-promotion-plan-request.v1" },
+        "workspace_id": { "$ref": "#/$defs/Identifier" },
+        "request_key": { "$ref": "#/$defs/RequestKey" },
+        "expected_workflow_version": { "type": "integer", "minimum": 1 },
+        "expected_evidence_set_hash": { "$ref": "#/$defs/Hash" },
+        "target_stage": { "const": "CANARY" },
+        "reason": { "type": "string", "minLength": 8, "maxLength": 2000 }
+      }
+    },
+    "CertificationRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "certification_id", "deployment_id", "portfolio_id", "venue", "environment",
+        "workflow_state", "workflow_version", "runtime_state", "account_binding",
+        "policy_version", "formula_version", "submitted_at", "submitted_by_user_id",
+        "submitted_evidence_set_hash", "decided_at", "decided_by_user_id",
+        "decided_evidence_set_hash", "decision_reason", "created_by_user_id", "created_at", "updated_at"
+      ],
+      "properties": {
+        "certification_id": { "$ref": "#/$defs/Identifier" },
+        "deployment_id": { "$ref": "#/$defs/Identifier" },
+        "portfolio_id": { "$ref": "#/$defs/Identifier" },
+        "venue": { "$ref": "#/$defs/Identifier" },
+        "environment": { "const": "SANDBOX" },
+        "workflow_state": { "enum": ["DRAFT", "IN_REVIEW", "APPROVED", "DENIED"] },
+        "workflow_version": { "type": "integer", "minimum": 1 },
+        "runtime_state": { "type": "null" },
+        "account_binding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["account_id", "external_account_ref", "source_authority"],
+          "properties": {
+            "account_id": { "$ref": "#/$defs/Identifier" },
+            "external_account_ref": { "$ref": "#/$defs/Identifier" },
+            "source_authority": { "const": "PORTAL" }
+          }
+        },
+        "policy_version": { "type": "string", "minLength": 1 },
+        "formula_version": { "type": "string", "minLength": 1 },
+        "submitted_at": { "$ref": "#/$defs/NullableTimestamp" },
+        "submitted_by_user_id": { "$ref": "#/$defs/NullableIdentifier" },
+        "submitted_evidence_set_hash": { "$ref": "#/$defs/NullableHash" },
+        "decided_at": { "$ref": "#/$defs/NullableTimestamp" },
+        "decided_by_user_id": { "$ref": "#/$defs/NullableIdentifier" },
+        "decided_evidence_set_hash": { "$ref": "#/$defs/NullableHash" },
+        "decision_reason": { "oneOf": [{ "type": "string", "minLength": 8 }, { "type": "null" }] },
+        "created_by_user_id": { "$ref": "#/$defs/Identifier" },
+        "created_at": { "$ref": "#/$defs/Timestamp" },
+        "updated_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "LineageItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value", "href", "source_authority"],
+      "properties": {
+        "kind": { "enum": ["ARTIFACT", "R1_APPROVAL", "R2_APPROVAL", "PAPER_EXIT", "PROMOTION_GRANT"] },
+        "value": { "type": "string", "minLength": 1 },
+        "href": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+        "source_authority": { "enum": ["RESEARCH", "PORTAL"] }
+      }
+    },
+    "Progress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passed_count", "total_count", "eligible", "evidence_set_hash", "blocker_codes"],
+      "properties": {
+        "passed_count": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "total_count": { "const": 7 },
+        "eligible": { "type": "boolean" },
+        "evidence_set_hash": { "$ref": "#/$defs/Hash" },
+        "blocker_codes": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "Step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step_key", "ordinal", "label", "strip_state", "evaluation_state", "source_authority",
+        "evidence_hash", "evidence_schema_version", "source_verification_state", "summary",
+        "as_of", "expires_at", "blocker_code"
+      ],
+      "properties": {
+        "step_key": { "enum": ["CONNECT", "SYNC", "ORDER_TYPES", "RECONCILIATION", "TIMEBOXED_RUN", "CLEANUP", "EXIT_REVIEW"] },
+        "ordinal": { "type": "integer", "minimum": 0, "maximum": 6 },
+        "label": { "type": "string", "minLength": 1 },
+        "strip_state": { "enum": ["DONE", "CURRENT", "PENDING"] },
+        "evaluation_state": { "enum": ["PASS", "FAIL", "STALE", "UNAVAILABLE"] },
+        "source_authority": { "enum": ["PORTAL", "EXECUTION", "BROKER", "DERIVED"] },
+        "evidence_hash": { "$ref": "#/$defs/NullableHash" },
+        "evidence_schema_version": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+        "source_verification_state": { "enum": ["VERIFIED", "UNAVAILABLE"] },
+        "summary": { "type": "string", "minLength": 8 },
+        "as_of": { "$ref": "#/$defs/NullableTimestamp" },
+        "expires_at": { "$ref": "#/$defs/NullableTimestamp" },
+        "blocker_code": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] }
+      }
+    },
+    "SourcePanel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "panel_id", "source_authority", "as_of", "read_at", "source_cursor", "source_sequence",
+        "projection_epoch", "projection_sequence", "source_completeness", "poll_interval_ms",
+        "panel_state", "freshness_state", "age_seconds", "lag_ms", "formula_version",
+        "capability_snapshot_id", "delivery_profile", "source_verification_state", "data", "warnings"
+      ],
+      "properties": {
+        "panel_id": { "enum": ["internal", "broker", "difference"] },
+        "source_authority": { "enum": ["EXECUTION", "BROKER", "DERIVED"] },
+        "as_of": { "$ref": "#/$defs/NullableTimestamp" },
+        "read_at": { "$ref": "#/$defs/Timestamp" },
+        "source_cursor": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+        "source_sequence": { "type": "null" },
+        "projection_epoch": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+        "projection_sequence": { "oneOf": [{ "type": "string", "pattern": "^[0-9]+$" }, { "type": "null" }] },
+        "source_completeness": { "enum": ["EVENT_SOURCED", "POLL_BOUNDED", "UNKNOWN"] },
+        "poll_interval_ms": { "oneOf": [{ "type": "integer", "minimum": 100 }, { "type": "null" }] },
+        "panel_state": { "enum": ["ready", "stale", "error", "unavailable"] },
+        "freshness_state": { "enum": ["OK", "STALE", "UNKNOWN"] },
+        "age_seconds": { "type": "null" },
+        "lag_ms": { "type": "null" },
+        "formula_version": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+        "capability_snapshot_id": { "$ref": "#/$defs/NullableIdentifier" },
+        "delivery_profile": { "enum": ["fixture", "shadow"] },
+        "source_verification_state": { "enum": ["VERIFIED", "UNAVAILABLE"] },
+        "data": { "type": ["object", "null"] },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code"],
+            "properties": { "code": { "type": "string", "minLength": 1 } }
+          }
+        }
+      }
+    },
+    "FindingCollection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total_count", "returned_count", "truncated", "rows"],
+      "properties": {
+        "total_count": { "type": "integer", "minimum": 0 },
+        "returned_count": { "type": "integer", "minimum": 0, "maximum": 50 },
+        "truncated": { "type": "boolean" },
+        "rows": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["finding_id", "severity", "source_authority", "finding_code", "summary", "blocking", "evidence_hash", "as_of", "resolved_at", "created_at"],
+            "properties": {
+              "finding_id": { "$ref": "#/$defs/Identifier" },
+              "severity": { "enum": ["INFO", "WARNING", "ERROR", "CRITICAL"] },
+              "source_authority": { "enum": ["EXECUTION", "BROKER", "DERIVED"] },
+              "finding_code": { "type": "string", "minLength": 1 },
+              "summary": { "type": "string", "minLength": 8 },
+              "blocking": { "type": "boolean" },
+              "evidence_hash": { "$ref": "#/$defs/NullableHash" },
+              "as_of": { "$ref": "#/$defs/NullableTimestamp" },
+              "resolved_at": { "$ref": "#/$defs/NullableTimestamp" },
+              "created_at": { "$ref": "#/$defs/Timestamp" }
+            }
+          }
+        }
+      }
+    },
+    "Timeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total_count", "returned_count", "truncated", "rows"],
+      "properties": {
+        "total_count": { "type": "integer", "minimum": 0 },
+        "returned_count": { "type": "integer", "minimum": 0, "maximum": 250 },
+        "truncated": { "type": "boolean" },
+        "rows": {
+          "type": "array",
+          "maxItems": 250,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["event_id", "actor_user_id", "action", "workflow_version_before", "workflow_version_after", "created_at"],
+            "properties": {
+              "event_id": { "$ref": "#/$defs/Identifier" },
+              "actor_user_id": { "$ref": "#/$defs/Identifier" },
+              "action": { "enum": ["CREATE", "SUBMIT", "APPROVE", "DENY", "PLAN_PROMOTION"] },
+              "workflow_version_before": { "type": "integer", "minimum": 0 },
+              "workflow_version_after": { "type": "integer", "minimum": 0 },
+              "created_at": { "$ref": "#/$defs/Timestamp" }
+            }
+          }
+        }
+      }
+    },
+    "PromotionPlanSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plan_id", "target_stage", "evidence_set_hash", "status", "blocker_codes", "source_side_effect_requested", "created_at"],
+      "properties": {
+        "plan_id": { "$ref": "#/$defs/Identifier" },
+        "target_stage": { "const": "CANARY" },
+        "evidence_set_hash": { "$ref": "#/$defs/Hash" },
+        "status": { "const": "BLOCKED" },
+        "blocker_codes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "source_side_effect_requested": { "const": false },
+        "created_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "CertificationResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "record_authority", "delivery_profile", "source_integration_state",
+        "source_side_effect_requested", "runtime_activation_requested", "promotion_execution_requested",
+        "replayed", "read_at", "actor", "certification", "lineage", "progress", "steps",
+        "source_panels", "timeboxed_run_policy", "findings", "timeline", "promotion_plans"
+      ],
+      "properties": {
+        "schema_version": { "const": "governance.sandbox-certification.v1" },
+        "record_authority": { "const": "PORTAL" },
+        "delivery_profile": { "enum": ["fixture", "shadow"] },
+        "source_integration_state": { "enum": ["UNAVAILABLE", "SHADOW"] },
+        "source_side_effect_requested": { "const": false },
+        "runtime_activation_requested": { "const": false },
+        "promotion_execution_requested": { "const": false },
+        "replayed": { "type": "boolean" },
+        "read_at": { "$ref": "#/$defs/Timestamp" },
+        "actor": { "$ref": "#/$defs/Actor" },
+        "certification": { "$ref": "#/$defs/CertificationRecord" },
+        "lineage": { "type": "array", "minItems": 5, "maxItems": 5, "items": { "$ref": "#/$defs/LineageItem" } },
+        "progress": { "$ref": "#/$defs/Progress" },
+        "steps": { "type": "array", "minItems": 7, "maxItems": 7, "items": { "$ref": "#/$defs/Step" } },
+        "source_panels": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "$ref": "#/$defs/SourcePanel" } },
+        "timeboxed_run_policy": { "type": "null" },
+        "findings": { "$ref": "#/$defs/FindingCollection" },
+        "timeline": { "$ref": "#/$defs/Timeline" },
+        "promotion_plans": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/PromotionPlanSummary" } }
+      }
+    },
+    "PromotionPlanResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "plan_id", "certification_id", "target_stage", "evidence_set_hash", "status", "blocker_codes", "source_side_effect_requested", "runtime_activation_requested", "promotion_execution_requested", "replayed", "created_at"],
+      "properties": {
+        "schema_version": { "const": "governance.sandbox-promotion-plan.v1" },
+        "plan_id": { "$ref": "#/$defs/Identifier" },
+        "certification_id": { "$ref": "#/$defs/Identifier" },
+        "target_stage": { "const": "CANARY" },
+        "evidence_set_hash": { "$ref": "#/$defs/Hash" },
+        "status": { "const": "BLOCKED" },
+        "blocker_codes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "source_side_effect_requested": { "const": false },
+        "runtime_activation_requested": { "const": false },
+        "promotion_execution_requested": { "const": false },
+        "replayed": { "type": "boolean" },
+        "created_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    }
+  }
+}

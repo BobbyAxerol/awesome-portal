@@ -12,15 +12,17 @@ FRONTEND_HANDOFF="${ROOT_DIR}/apps/portal/registry/FRONTEND_HANDOFF.md"
 CATALOG="${ROOT_DIR}/packages/contracts/fixtures/execution-command-catalog.valid.json"
 ADMISSION_HISTORY="${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md"
 UNIFIED="${ROOT_DIR}/upgrade/UNIFIED_IMPLEMENTATION_PLAN.md"
+F2_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_05B_F2_SANDBOX_CERTIFICATION.md"
+F2_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F2_HANDOFF.md"
 
-python3 - "${MASTER}" "${TRACKER}" "${ROADMAP}" "${LEDGER}" "${BACKEND_README}" "${ARCHITECTURE}" "${FRONTEND_HANDOFF}" "${CATALOG}" "${ADMISSION_HISTORY}" "${UNIFIED}" <<'PY'
+python3 - "${MASTER}" "${TRACKER}" "${ROADMAP}" "${LEDGER}" "${BACKEND_README}" "${ARCHITECTURE}" "${FRONTEND_HANDOFF}" "${CATALOG}" "${ADMISSION_HISTORY}" "${UNIFIED}" "${F2_REPORT}" "${F2_HANDOFF}" <<'PY'
 from pathlib import Path
 import json
 import re
 import sys
 
-master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified = [Path(p) for p in sys.argv[1:]]
-for path in (master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified):
+master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified, f2_report, f2_handoff = [Path(p) for p in sys.argv[1:]]
+for path in (master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified, f2_report, f2_handoff):
     if not path.is_file():
         raise SystemExit(f"tracking file missing: {path}")
 
@@ -34,6 +36,8 @@ h = handoff.read_text()
 c = json.loads(catalog_path.read_text())
 history = admission_history.read_text()
 u = unified.read_text()
+f2 = f2_report.read_text()
+f2h = f2_handoff.read_text()
 
 qualified = "`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`"
 for phase in (3, 14, 15, 16, 17):
@@ -189,6 +193,9 @@ if phase7 is None or "`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`" not in phase
 phase8 = next((line for line in t.splitlines() if line.startswith("| 8 |")), None)
 if phase8 is None or "`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`" not in phase8:
     raise SystemExit("tracker phase 8 lost the qualified F1b Incident Detail status")
+phase10 = next((line for line in t.splitlines() if line.startswith("| 10 |")), None)
+if phase10 is None or "`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`" not in phase10:
+    raise SystemExit("tracker phase 10 lost the qualified F2 Sandbox Certification status")
 for label, text in (
     ("master", m),
     ("tracker", t),
@@ -212,6 +219,26 @@ for label, text in (
         raise SystemExit(f"{label} lost the qualified F1b Incident Detail boundary")
     if not re.search(r"(no auto-resume|never resumes?|cannot resume|không auto-resume)", normalized, re.I):
         raise SystemExit(f"{label} lost the F1b no-auto-resume invariant")
+for label, text in (
+    ("master", m),
+    ("tracker", t),
+    ("request ledger", l),
+    ("backend README", b),
+    ("architecture guide", a),
+    ("frontend handoff", h),
+    ("unified plan", u),
+    ("F2 report", f2),
+    ("F2 Claude handoff", f2h),
+):
+    normalized = re.sub(r"\s+", " ", text)
+    if "EX-BE-05b/F2" not in normalized or "PRODUCTION_INACTIVE" not in normalized:
+        raise SystemExit(f"{label} lost the qualified F2 Sandbox Certification boundary")
+    if not re.search(r"(?:exactly|fixed|đúng) seven|bảy bước|seven ordered|seven-step", normalized, re.I):
+        raise SystemExit(f"{label} lost the canonical seven-step F2 boundary")
+    if not re.search(r"(?:no|không có) (?:public )?(?:source-evidence|source evidence|`?outbox)|no `?outbox", normalized, re.I):
+        raise SystemExit(f"{label} lost the F2 source-dark/no-outbox boundary")
+    if not re.search(r"promotion.{0,100}blocked|blocked.{0,100}promotion", normalized, re.I):
+        raise SystemExit(f"{label} lost the blocked F2 promotion invariant")
 for request in ("BR-EX-28 canonical command catalogue", "BR-EX-29 typed `conditions[]`"):
     row = next((line for line in l.splitlines() if request in line), None)
     if row is None or "`FOUNDATION_COMPLETE / PRODUCTION_INACTIVE`" not in row:

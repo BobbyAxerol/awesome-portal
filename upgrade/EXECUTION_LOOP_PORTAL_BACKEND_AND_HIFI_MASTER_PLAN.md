@@ -1007,7 +1007,7 @@ Statuses use the architecture vocabulary, never bare `COMPLETE`:
 | 7 Operations Queue | scalable, typed operations triage | `GET /operations`; ack/resolve | Portal workflow record; EXECUTION result remains unavailable/immutable in F1a | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-04a/05b F1a | 182k bidirectional keyset/exact-count tests, ack-before-resolve, optimistic version/idempotency, audit/event atomicity and zero outbox |
 | 8 Incident Detail | correlated evidence and explicit incident workflow | create/detail, assign/ack/annotate/evidence/correlate/mitigate/resolve | Portal workflow record; four EXECUTION source panels explicitly unavailable in F1b | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-05b/F1b; real sources still need EX-BE-02/06/08 | 159/159 fresh-PG tests, optimistic/idempotent workflow, append-only history, evidence-required mitigation/resolution, no auto-resume/outbox and 44/44 contracts |
 | 9 Command Center | ranked snapshot plus loss-detectable realtime | command-center snapshot and SSE | mixed per row; DERIVED ranking; epoch/sequence freshness | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | PRE-IAM-03 dark snapshot; BR-EX-28 §8.1 typed `streams`/`alpha-activity`; real source activation + EX-BE-06 parity evidence | bounded snapshot, five failure states, 20k exact-observed corpus and response budget pass; source contracts, snapshot/SSE parity, overlap+jitter resnapshot, slow-consumer and auth-expiry remain |
-| 10 Sandbox Certification | auditable certification state machine | certification read/decide/promote plan | Portal record; EXECUTION/BROKER/DERIVED panels | `FOUNDATION_COMPLETE` | EX-BE-03/05a/05b; TS sandbox capabilities | state-transition/property tests, stale evidence denial, command production inactive |
+| 10 Sandbox Certification | auditable certification state machine | certification create/read/submit/decide/promote plan | Portal record; EXECUTION/BROKER/DERIVED panels | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-05b/F2; real source still needs D2→D4 and TS sandbox capabilities | 7-step transition/freshness/SoD/idempotency tests; promotion plan blocked and command production inactive |
 | 11 Canary Control Room | observe versioned envelope and guarded live canary | canary query/series; later protective operations | EXECUTION/BROKER/DERIVED panels; Portal envelope record | `PRODUCTION_INACTIVE` | EX-BE-00R4/03/04b/05b/06; owner live-canary gate | profile-labelled read shadow parity, envelope/rollback tests, dual approval, explicit activation decision |
 | 12 Live Full Operations | continuous live truth with gap visibility | live query/series/SSE; later R3/R4 operations | EXECUTION/BROKER/DERIVED; gaps become stale | `PRODUCTION_INACTIVE` | phase 11 evidence + EX-BE-00R4/08 | no-gap soak, ambiguous-result drills, capital envelope and rollback rehearsal |
 | 13 Paper Workbench VNM | venue-aware Paper behavior | deployment query + venue session | EXECUTION plus authoritative venue calendar | `INTEGRATION_PENDING` | EX-BE-03/04b; venue contract; ATO/ATC decision | open/lunch/closed/holiday/timezone fixtures; server age/precision contract; no browser clock inference |
@@ -1029,6 +1029,14 @@ durable and audited. Findings, alerts, dead letters and trace-order remain
 typed unavailable; no source side effect or deployment resume is possible.
 Source-backed Operations and Incident Detail still require D2→D3→D4 and
 purpose-built Trading System read contracts.
+
+`EX-BE-05b/F2` closes the Portal-owned Phase 10 backend on SGP at
+`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`. The fixed seven-step
+certification, evidence hash, freshness gates, SoD decision and blocked CANARY
+promotion plan are durable and audited. The active delivery profile remains
+`fixture`; Internal, Broker and Difference are source-attributed and unavailable
+until a trusted D4/Sandbox adapter is qualified. No outbox, runtime activation,
+promotion execution or source side effect is possible.
 
 ### 12.3 Delivery profiles and stop gates
 

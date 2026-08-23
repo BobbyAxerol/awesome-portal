@@ -89,6 +89,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/execution/deployments/{deployment_id}/certification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Returns the Portal-owned seven-step Sandbox Certification and three source-attributed panels. Missing source evidence remains explicitly unavailable. */
+        get: operations["getSandboxCertification"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/governance/sandbox-certifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Creates one Portal-owned certification from an available Paper Exit promotion grant; does not activate sandbox runtime. */
+        post: operations["createSandboxCertification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/governance/sandbox-certifications/{certification_id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Submits only a complete, verified and current 7/7 evidence set for review. */
+        post: operations["submitSandboxCertification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/governance/sandbox-certifications/{certification_id}/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Approves or denies an in-review certification. Approval is separation-of-duties and evidence-hash gated. */
+        post: operations["decideSandboxCertification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/governance/sandbox-certifications/{certification_id}/promotion-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Records a hash-bound CANARY promotion intent as BLOCKED. No outbox, runtime activation or Trading System side effect is created. */
+        post: operations["planSandboxPromotion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -465,6 +550,250 @@ export interface components {
             /** @constant */
             external_side_effect_requested: false;
         };
+        /** Format: date-time */
+        Timestamp: string;
+        "$defs-Identifier": string;
+        "$defs-Actor": {
+            user_id: components["schemas"]["$defs-Identifier"];
+            username: string;
+            roles: ("ADMIN" | "USER")[];
+        };
+        NullableTimestamp: components["schemas"]["Timestamp"] | null;
+        NullableIdentifier: components["schemas"]["$defs-Identifier"] | null;
+        NullableHash: components["schemas"]["Hash"] | null;
+        CertificationRecord: {
+            certification_id: components["schemas"]["$defs-Identifier"];
+            deployment_id: components["schemas"]["$defs-Identifier"];
+            portfolio_id: components["schemas"]["$defs-Identifier"];
+            venue: components["schemas"]["$defs-Identifier"];
+            /** @constant */
+            environment: "SANDBOX";
+            /** @enum {unknown} */
+            workflow_state: "DRAFT" | "IN_REVIEW" | "APPROVED" | "DENIED";
+            workflow_version: number;
+            runtime_state: null;
+            account_binding: {
+                account_id: components["schemas"]["$defs-Identifier"];
+                external_account_ref: components["schemas"]["$defs-Identifier"];
+                /** @constant */
+                source_authority: "PORTAL";
+            };
+            policy_version: string;
+            formula_version: string;
+            submitted_at: components["schemas"]["NullableTimestamp"];
+            submitted_by_user_id: components["schemas"]["NullableIdentifier"];
+            submitted_evidence_set_hash: components["schemas"]["NullableHash"];
+            decided_at: components["schemas"]["NullableTimestamp"];
+            decided_by_user_id: components["schemas"]["NullableIdentifier"];
+            decided_evidence_set_hash: components["schemas"]["NullableHash"];
+            decision_reason: string | null;
+            created_by_user_id: components["schemas"]["$defs-Identifier"];
+            created_at: components["schemas"]["Timestamp"];
+            updated_at: components["schemas"]["Timestamp"];
+        };
+        LineageItem: {
+            /** @enum {unknown} */
+            kind: "ARTIFACT" | "R1_APPROVAL" | "R2_APPROVAL" | "PAPER_EXIT" | "PROMOTION_GRANT";
+            value: string;
+            href: string | null;
+            /** @enum {unknown} */
+            source_authority: "RESEARCH" | "PORTAL";
+        };
+        Progress: {
+            passed_count: number;
+            /** @constant */
+            total_count: 7;
+            eligible: boolean;
+            evidence_set_hash: components["schemas"]["Hash"];
+            blocker_codes: string[];
+        };
+        Step: {
+            /** @enum {unknown} */
+            step_key: "CONNECT" | "SYNC" | "ORDER_TYPES" | "RECONCILIATION" | "TIMEBOXED_RUN" | "CLEANUP" | "EXIT_REVIEW";
+            ordinal: number;
+            label: string;
+            /** @enum {unknown} */
+            strip_state: "DONE" | "CURRENT" | "PENDING";
+            /** @enum {unknown} */
+            evaluation_state: "PASS" | "FAIL" | "STALE" | "UNAVAILABLE";
+            /** @enum {unknown} */
+            source_authority: "PORTAL" | "EXECUTION" | "BROKER" | "DERIVED";
+            evidence_hash: components["schemas"]["NullableHash"];
+            evidence_schema_version: string | null;
+            /** @enum {unknown} */
+            source_verification_state: "VERIFIED" | "UNAVAILABLE";
+            summary: string;
+            as_of: components["schemas"]["NullableTimestamp"];
+            expires_at: components["schemas"]["NullableTimestamp"];
+            blocker_code: string | null;
+        };
+        SourcePanel: {
+            /** @enum {unknown} */
+            panel_id: "internal" | "broker" | "difference";
+            /** @enum {unknown} */
+            source_authority: "EXECUTION" | "BROKER" | "DERIVED";
+            as_of: components["schemas"]["NullableTimestamp"];
+            read_at: components["schemas"]["Timestamp"];
+            source_cursor: string | null;
+            source_sequence: null;
+            projection_epoch: string | null;
+            projection_sequence: string | null;
+            /** @enum {unknown} */
+            source_completeness: "EVENT_SOURCED" | "POLL_BOUNDED" | "UNKNOWN";
+            poll_interval_ms: number | null;
+            /** @enum {unknown} */
+            panel_state: "ready" | "stale" | "error" | "unavailable";
+            /** @enum {unknown} */
+            freshness_state: "OK" | "STALE" | "UNKNOWN";
+            age_seconds: null;
+            lag_ms: null;
+            formula_version: string | null;
+            capability_snapshot_id: components["schemas"]["NullableIdentifier"];
+            /** @enum {unknown} */
+            delivery_profile: "fixture" | "shadow";
+            /** @enum {unknown} */
+            source_verification_state: "VERIFIED" | "UNAVAILABLE";
+            data: Record<string, never> | null;
+            warnings: {
+                code: string;
+            }[];
+        };
+        FindingCollection: {
+            total_count: number;
+            returned_count: number;
+            truncated: boolean;
+            rows: {
+                finding_id: components["schemas"]["$defs-Identifier"];
+                /** @enum {unknown} */
+                severity: "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+                /** @enum {unknown} */
+                source_authority: "EXECUTION" | "BROKER" | "DERIVED";
+                finding_code: string;
+                summary: string;
+                blocking: boolean;
+                evidence_hash: components["schemas"]["NullableHash"];
+                as_of: components["schemas"]["NullableTimestamp"];
+                resolved_at: components["schemas"]["NullableTimestamp"];
+                created_at: components["schemas"]["Timestamp"];
+            }[];
+        };
+        Timeline: {
+            total_count: number;
+            returned_count: number;
+            truncated: boolean;
+            rows: {
+                event_id: components["schemas"]["$defs-Identifier"];
+                actor_user_id: components["schemas"]["$defs-Identifier"];
+                /** @enum {unknown} */
+                action: "CREATE" | "SUBMIT" | "APPROVE" | "DENY" | "PLAN_PROMOTION";
+                workflow_version_before: number;
+                workflow_version_after: number;
+                created_at: components["schemas"]["Timestamp"];
+            }[];
+        };
+        PromotionPlanSummary: {
+            plan_id: components["schemas"]["$defs-Identifier"];
+            /** @constant */
+            target_stage: "CANARY";
+            evidence_set_hash: components["schemas"]["Hash"];
+            /** @constant */
+            status: "BLOCKED";
+            blocker_codes: string[];
+            /** @constant */
+            source_side_effect_requested: false;
+            created_at: components["schemas"]["Timestamp"];
+        };
+        CertificationResponse: {
+            /** @constant */
+            schema_version: "governance.sandbox-certification.v1";
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @enum {unknown} */
+            delivery_profile: "fixture" | "shadow";
+            /** @enum {unknown} */
+            source_integration_state: "UNAVAILABLE" | "SHADOW";
+            /** @constant */
+            source_side_effect_requested: false;
+            /** @constant */
+            runtime_activation_requested: false;
+            /** @constant */
+            promotion_execution_requested: false;
+            replayed: boolean;
+            read_at: components["schemas"]["Timestamp"];
+            actor: components["schemas"]["$defs-Actor"];
+            certification: components["schemas"]["CertificationRecord"];
+            lineage: components["schemas"]["LineageItem"][];
+            progress: components["schemas"]["Progress"];
+            steps: components["schemas"]["Step"][];
+            source_panels: components["schemas"]["SourcePanel"][];
+            timeboxed_run_policy: null;
+            findings: components["schemas"]["FindingCollection"];
+            timeline: components["schemas"]["Timeline"];
+            promotion_plans: components["schemas"]["PromotionPlanSummary"][];
+        };
+        RequestKey: string;
+        CreateRequest: {
+            /** @constant */
+            schema_version: "governance.sandbox-certification-create-request.v1";
+            workspace_id: components["schemas"]["$defs-Identifier"];
+            request_key: components["schemas"]["RequestKey"];
+            deployment_id: components["schemas"]["$defs-Identifier"];
+            promotion_grant_id: components["schemas"]["$defs-Identifier"];
+            account_binding: {
+                account_id: components["schemas"]["$defs-Identifier"];
+                external_account_ref: components["schemas"]["$defs-Identifier"];
+            };
+        };
+        SubmitRequest: {
+            /** @constant */
+            schema_version: "governance.sandbox-certification-submit-request.v1";
+            workspace_id: components["schemas"]["$defs-Identifier"];
+            request_key: components["schemas"]["RequestKey"];
+            expected_workflow_version: number;
+            expected_evidence_set_hash: components["schemas"]["Hash"];
+        };
+        DecisionRequest: {
+            /** @constant */
+            schema_version: "governance.sandbox-certification-decision-request.v1";
+            workspace_id: components["schemas"]["$defs-Identifier"];
+            request_key: components["schemas"]["RequestKey"];
+            expected_workflow_version: number;
+            expected_evidence_set_hash: components["schemas"]["Hash"];
+            /** @enum {unknown} */
+            decision: "APPROVE" | "DENY";
+            reason: string;
+        };
+        PromotionPlanRequest: {
+            /** @constant */
+            schema_version: "governance.sandbox-promotion-plan-request.v1";
+            workspace_id: components["schemas"]["$defs-Identifier"];
+            request_key: components["schemas"]["RequestKey"];
+            expected_workflow_version: number;
+            expected_evidence_set_hash: components["schemas"]["Hash"];
+            /** @constant */
+            target_stage: "CANARY";
+            reason: string;
+        };
+        PromotionPlanResponse: {
+            /** @constant */
+            schema_version: "governance.sandbox-promotion-plan.v1";
+            plan_id: components["schemas"]["$defs-Identifier"];
+            certification_id: components["schemas"]["$defs-Identifier"];
+            /** @constant */
+            target_stage: "CANARY";
+            evidence_set_hash: components["schemas"]["Hash"];
+            /** @constant */
+            status: "BLOCKED";
+            blocker_codes: string[];
+            /** @constant */
+            source_side_effect_requested: false;
+            /** @constant */
+            runtime_activation_requested: false;
+            /** @constant */
+            promotion_execution_requested: false;
+            replayed: boolean;
+            created_at: components["schemas"]["Timestamp"];
+        };
     };
     responses: {
         /** @description Typed fail-closed error */
@@ -481,6 +810,8 @@ export interface components {
         ApprovalId: components["schemas"]["Identifier"];
         ReviewId: components["schemas"]["Identifier"];
         OperationId: components["schemas"]["Identifier"];
+        DeploymentId: components["schemas"]["Identifier"];
+        CertificationId: components["schemas"]["Identifier"];
         WorkspaceId: components["schemas"]["WorkspaceId"];
     };
     requestBodies: never;
@@ -611,6 +942,137 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaperExitDecisionOperation"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getSandboxCertification: {
+        parameters: {
+            query?: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+            };
+            header?: never;
+            path: {
+                deployment_id: components["parameters"]["DeploymentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sandbox Certification detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CertificationResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createSandboxCertification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created or idempotently replayed certification */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CertificationResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    submitSandboxCertification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                certification_id: components["parameters"]["CertificationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitRequest"];
+            };
+        };
+        responses: {
+            /** @description Submitted or idempotently replayed certification */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CertificationResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    decideSandboxCertification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                certification_id: components["parameters"]["CertificationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Recorded or idempotently replayed decision */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CertificationResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    planSandboxPromotion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                certification_id: components["parameters"]["CertificationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromotionPlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Immutable blocked promotion plan */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromotionPlanResponse"];
                 };
             };
             default: components["responses"]["Problem"];

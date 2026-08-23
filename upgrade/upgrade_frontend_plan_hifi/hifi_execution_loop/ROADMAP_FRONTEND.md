@@ -228,7 +228,7 @@ codex (EX-BE-05b cho phase 7/8/10/11/12) và ở chủ Trading System (§A′).
 | 7 | Operations Queue | ⛔ | **A1a** — `command-journal`, `findings` |
 | 8 | Incident Detail | ⛔ | **A1a** — `alerts`, `dead-letters`, `trace-order` |
 | 9 | Command Center | ✅ | Lane A đóng; nguồn thật cần **A1a** |
-| 10 | Sandbox Certification | ⛔ | phase 4–6 + TS sandbox capability |
+| 10 | Sandbox Certification | ⏳ | Claude consumes F2 source-dark contract; real source still needs D2→D4 + TS sandbox capability |
 | 11 | Canary Control Room | ⛔ | phase 10 + cổng owner |
 | 12 | Live Full Operations | ⛔ | phase 11 + EX-BE-08 |
 | 13 | Paper Workbench VNM | ✅ | screen API (codex) |

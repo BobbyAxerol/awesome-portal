@@ -1124,6 +1124,17 @@ deep-dive → ADR → slice → evidence discipline documented above.
   atomicity are PostgreSQL-enforced; no outbox exists. Four source panels remain
   typed unavailable. Evidence: contracts 44/44, fresh-PG Control API 159/159
   and dump/restore. Status is `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`.
+- **EX-BE-05b/F2 Sandbox Certification (2026-08-23):** the SGP TypeScript
+  Control API now owns DRAFT→IN_REVIEW→APPROVED|DENIED certification state,
+  exactly seven ordered authority-labelled steps, append-only evidence and
+  findings, deterministic evidence-set hashes, optimistic/idempotent writes
+  and submitter/approver separation of duties. Submit and approval require 7/7
+  verified, unexpired PASS evidence and no blocking finding. CANARY promotion
+  plans remain durably `BLOCKED`; no public source-evidence route, outbox,
+  AWS-HK/source request, runtime activation or promotion execution exists.
+  Evidence: contracts 45/45, fresh-PG Control API 163/163, eleven migrations
+  and dump/restore. Status is `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`;
+  profile remains `fixture/UNAVAILABLE`.
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**
@@ -1133,7 +1144,7 @@ activation or the phase):**
   workload-identity/window gates precede D2, then authenticated transport and
   Paper BUILDING-epoch evidence. Full Portal remains on SGP.
 - **Execution product lane:** Command Center real-source snapshot/SSE parity,
-  Paper/VNM projections, Sandbox Certification, Canary, Live Full,
+  Paper/VNM projections, Sandbox real-source adapter/parity, Canary, Live Full,
   authenticated live relay and cross-cell fault/soak/restore/DR.
 - **U14 certification slice** (BAR-21 continuation): quarantine → hermetic
   build → lock/SBOM/secret/license scan → contract/determinism/no-lookahead/

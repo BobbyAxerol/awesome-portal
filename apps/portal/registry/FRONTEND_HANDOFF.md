@@ -938,3 +938,21 @@ server counts and expected workflow versions, and fail closed on typed
 conflicts. Do not invent source facts, upload evidence bodies, add auto-resume
 or activate the registry route. Exact read order and test matrix:
 `upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F1B_HANDOFF.md`.
+
+### 8.14 EX-BE-05b/F2 Sandbox Certification — Lane A can integrate (2026-08-23)
+
+Backend status is `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`. The SGP
+Control API publishes the Portal-owned DRAFT→IN_REVIEW→APPROVED|DENIED
+certification workflow, exactly seven ordered steps, authority-labelled
+evidence/freshness, blocking findings, evidence-set hash, SoD decisions and a
+CANARY promotion plan that is always `BLOCKED`. Profile remains
+`fixture/UNAVAILABLE`; there is no public source-evidence ingestion, outbox,
+AWS-HK/source call, runtime activation or promotion execution.
+
+Claude may wire Phase 10 to the generated execution-governance declaration and
+the unavailable fixture. Render the seven server steps and Internal/Broker/
+Difference as independently degradable panels. Do not recompute eligibility or
+freshness, turn `runtime_state=null` into HALTED, enable submit/exit on any
+missing/stale/failed evidence, or activate registry/source/realtime/command
+flags. Exact read order and UI matrix:
+`upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F2_HANDOFF.md`.

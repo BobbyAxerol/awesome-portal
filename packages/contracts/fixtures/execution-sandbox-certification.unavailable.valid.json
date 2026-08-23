@@ -1,0 +1,80 @@
+{
+  "schema_version": "governance.sandbox-certification.v1",
+  "record_authority": "PORTAL",
+  "delivery_profile": "fixture",
+  "source_integration_state": "UNAVAILABLE",
+  "source_side_effect_requested": false,
+  "runtime_activation_requested": false,
+  "promotion_execution_requested": false,
+  "replayed": false,
+  "read_at": "2026-08-23T18:00:00.000Z",
+  "actor": { "user_id": "usr_fixture_admin", "username": "bobby", "roles": ["ADMIN"] },
+  "certification": {
+    "certification_id": "scert_fixture_77",
+    "deployment_id": "dep_77",
+    "portfolio_id": "pf_crypto",
+    "venue": "OKX",
+    "environment": "SANDBOX",
+    "workflow_state": "DRAFT",
+    "workflow_version": 1,
+    "runtime_state": null,
+    "account_binding": { "account_id": "acct_sandbox_77", "external_account_ref": "okx_testnet_main", "source_authority": "PORTAL" },
+    "policy_version": "sandbox-certification.v1",
+    "formula_version": "sandbox-certification.v1",
+    "submitted_at": null,
+    "submitted_by_user_id": null,
+    "submitted_evidence_set_hash": null,
+    "decided_at": null,
+    "decided_by_user_id": null,
+    "decided_evidence_set_hash": null,
+    "decision_reason": null,
+    "created_by_user_id": "usr_fixture_admin",
+    "created_at": "2026-08-23T17:59:00.000Z",
+    "updated_at": "2026-08-23T17:59:00.000Z"
+  },
+  "lineage": [
+    { "kind": "ARTIFACT", "value": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "href": null, "source_authority": "RESEARCH" },
+    { "kind": "R1_APPROVAL", "value": "AP-101", "href": "/governance/approvals/AP-101/r1", "source_authority": "PORTAL" },
+    { "kind": "R2_APPROVAL", "value": "AP-207", "href": "/governance/approvals/AP-207/r2", "source_authority": "PORTAL" },
+    { "kind": "PAPER_EXIT", "value": "PX-29", "href": "/deployments/paper/exit/PX-29", "source_authority": "PORTAL" },
+    { "kind": "PROMOTION_GRANT", "value": "grant_sandbox_77", "href": null, "source_authority": "PORTAL" }
+  ],
+  "progress": {
+    "passed_count": 0,
+    "total_count": 7,
+    "eligible": false,
+    "evidence_set_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "blocker_codes": [
+      "SANDBOX_STEP_CONNECT_UNAVAILABLE",
+      "SANDBOX_STEP_SYNC_UNAVAILABLE",
+      "SANDBOX_STEP_ORDER_TYPES_UNAVAILABLE",
+      "SANDBOX_STEP_RECONCILIATION_UNAVAILABLE",
+      "SANDBOX_STEP_TIMEBOXED_RUN_UNAVAILABLE",
+      "SANDBOX_STEP_CLEANUP_UNAVAILABLE",
+      "SANDBOX_STEP_EXIT_REVIEW_UNAVAILABLE"
+    ]
+  },
+  "steps": [
+    { "step_key": "CONNECT", "ordinal": 0, "label": "Connect", "strip_state": "CURRENT", "evaluation_state": "UNAVAILABLE", "source_authority": "BROKER", "evidence_hash": null, "evidence_schema_version": null, "source_verification_state": "UNAVAILABLE", "summary": "Source evidence is not available in the current delivery profile.", "as_of": null, "expires_at": null, "blocker_code": "SANDBOX_STEP_CONNECT_UNAVAILABLE" },
+    { "step_key": "SYNC", "ordinal": 1, "label": "Sync", "strip_state": "PENDING", "evaluation_state": "UNAVAILABLE", "source_authority": "BROKER", "evidence_hash": null, "evidence_schema_version": null, "source_verification_state": "UNAVAILABLE", "summary": "Source evidence is not available in the current delivery profile.", "as_of": null, "expires_at": null, "blocker_code": "SANDBOX_STEP_SYNC_UNAVAILABLE" },
+    { "step_key": "ORDER_TYPES", "ordinal": 2, "label": "Order types", "strip_state": "PENDING", "evaluation_state": "UNAVAILABLE", "source_authority": "BROKER", "evidence_hash": null, "evidence_schema_version": null, "source_verification_state": "UNAVAILABLE", "summary": "Source evidence is not available in the current delivery profile.", "as_of": null, "expires_at": null, "blocker_code": "SANDBOX_STEP_ORDER_TYPES_UNAVAILABLE" },
+    { "step_key": "RECONCILIATION", "ordinal": 3, "label": "Reconciliation clean", "strip_state": "PENDING", "evaluation_state": "UNAVAILABLE", "source_authority": "DERIVED", "evidence_hash": null, "evidence_schema_version": null, "source_verification_state": "UNAVAILABLE", "summary": "Source evidence is not available in the current delivery profile.", "as_of": null, "expires_at": null, "blocker_code": "SANDBOX_STEP_RECONCILIATION_UNAVAILABLE" },
+    { "step_key": "TIMEBOXED_RUN", "ordinal": 4, "label": "Timeboxed run", "strip_state": "PENDING", "evaluation_state": "UNAVAILABLE", "source_authority": "EXECUTION", "evidence_hash": null, "evidence_schema_version": null, "source_verification_state": "UNAVAILABLE", "summary": "Source evidence is not available in the current delivery profile.", "as_of": null, "expires_at": null, "blocker_code": "SANDBOX_STEP_TIMEBOXED_RUN_UNAVAILABLE" },
+    { "step_key": "CLEANUP", "ordinal": 5, "label": "Cleanup", "strip_state": "PENDING", "evaluation_state": "UNAVAILABLE", "source_authority": "DERIVED", "evidence_hash": null, "evidence_schema_version": null, "source_verification_state": "UNAVAILABLE", "summary": "Source evidence is not available in the current delivery profile.", "as_of": null, "expires_at": null, "blocker_code": "SANDBOX_STEP_CLEANUP_UNAVAILABLE" },
+    { "step_key": "EXIT_REVIEW", "ordinal": 6, "label": "Exit review", "strip_state": "PENDING", "evaluation_state": "UNAVAILABLE", "source_authority": "PORTAL", "evidence_hash": null, "evidence_schema_version": null, "source_verification_state": "UNAVAILABLE", "summary": "Source evidence is not available in the current delivery profile.", "as_of": null, "expires_at": null, "blocker_code": "SANDBOX_STEP_EXIT_REVIEW_UNAVAILABLE" }
+  ],
+  "source_panels": [
+    { "panel_id": "internal", "source_authority": "EXECUTION", "as_of": null, "read_at": "2026-08-23T18:00:00.000Z", "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "panel_state": "unavailable", "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "formula_version": null, "capability_snapshot_id": null, "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "data": null, "warnings": [{ "code": "SANDBOX_INTERNAL_UNAVAILABLE" }] },
+    { "panel_id": "broker", "source_authority": "BROKER", "as_of": null, "read_at": "2026-08-23T18:00:00.000Z", "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "panel_state": "unavailable", "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "formula_version": null, "capability_snapshot_id": null, "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "data": null, "warnings": [{ "code": "SANDBOX_BROKER_UNAVAILABLE" }] },
+    { "panel_id": "difference", "source_authority": "DERIVED", "as_of": null, "read_at": "2026-08-23T18:00:00.000Z", "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "panel_state": "unavailable", "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "formula_version": "sandbox-certification.v1", "capability_snapshot_id": null, "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "data": null, "warnings": [{ "code": "SANDBOX_DIFFERENCE_UNAVAILABLE" }] }
+  ],
+  "timeboxed_run_policy": null,
+  "findings": { "total_count": 0, "returned_count": 0, "truncated": false, "rows": [] },
+  "timeline": {
+    "total_count": 1,
+    "returned_count": 1,
+    "truncated": false,
+    "rows": [{ "event_id": "scevt_fixture_create", "actor_user_id": "usr_fixture_admin", "action": "CREATE", "workflow_version_before": 0, "workflow_version_after": 1, "created_at": "2026-08-23T17:59:00.000Z" }]
+  },
+  "promotion_plans": []
+}

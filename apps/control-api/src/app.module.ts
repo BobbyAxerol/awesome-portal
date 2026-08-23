@@ -35,6 +35,9 @@ import { OperationsWorkflowService } from "./operations/workflow.service";
 import { IncidentController } from "./operations/incident.controller";
 import { IncidentRepository } from "./operations/incident.repository";
 import { IncidentService } from "./operations/incident.service";
+import { SandboxCertificationController } from "./sandbox/sandbox-certification.controller";
+import { SandboxCertificationRepository } from "./sandbox/sandbox-certification.repository";
+import { SandboxCertificationService } from "./sandbox/sandbox-certification.service";
 
 @Module({})
 export class AppModule {
@@ -52,6 +55,7 @@ export class AppModule {
         ExecutionAnalyticsController,
         CommandCenterController,
         IncidentController,
+        SandboxCertificationController,
       ],
       providers: [
         { provide: CONTROL_API_CONFIG, useValue: config },
@@ -92,6 +96,8 @@ export class AppModule {
         OperationsWorkflowService,
         IncidentRepository,
         IncidentService,
+        SandboxCertificationRepository,
+        SandboxCertificationService,
         {
           provide: ExecutionRealtimeProxy,
           useFactory: (cfg: ControlApiConfig) => ExecutionRealtimeProxy.create(cfg),

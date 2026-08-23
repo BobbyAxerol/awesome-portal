@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Portal Execution Governance Review API",
-    "version": "1.1.0",
-    "description": "Same-origin, session-guarded Portal governance boundaries for R2 scope and Paper Exit Review. Paper Exit approval creates Portal promotion authority only; activation remains a separate operation and no endpoint in this slice commands the Trading System."
+    "version": "1.2.0",
+    "description": "Same-origin, session-guarded Portal governance boundaries for R2, Paper Exit and source-dark Sandbox Certification. No endpoint in this slice commands the Trading System."
   },
   "servers": [{ "url": "/" }],
   "security": [{ "portalSession": [] }],
@@ -121,6 +121,94 @@
           "default": { "$ref": "#/components/responses/Problem" }
         }
       }
+    },
+    "/api/v1/execution/deployments/{deployment_id}/certification": {
+      "get": {
+        "operationId": "getSandboxCertification",
+        "description": "Returns the Portal-owned seven-step Sandbox Certification and three source-attributed panels. Missing source evidence remains explicitly unavailable.",
+        "parameters": [
+          { "$ref": "#/components/parameters/DeploymentId" },
+          { "$ref": "#/components/parameters/WorkspaceId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sandbox Certification detail",
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/CertificationResponse" } } }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/execution/governance/sandbox-certifications": {
+      "post": {
+        "operationId": "createSandboxCertification",
+        "description": "Creates one Portal-owned certification from an available Paper Exit promotion grant; does not activate sandbox runtime.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/CreateRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Created or idempotently replayed certification",
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/CertificationResponse" } } }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/execution/governance/sandbox-certifications/{certification_id}/submit": {
+      "post": {
+        "operationId": "submitSandboxCertification",
+        "description": "Submits only a complete, verified and current 7/7 evidence set for review.",
+        "parameters": [{ "$ref": "#/components/parameters/CertificationId" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/SubmitRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Submitted or idempotently replayed certification",
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/CertificationResponse" } } }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/execution/governance/sandbox-certifications/{certification_id}/decisions": {
+      "post": {
+        "operationId": "decideSandboxCertification",
+        "description": "Approves or denies an in-review certification. Approval is separation-of-duties and evidence-hash gated.",
+        "parameters": [{ "$ref": "#/components/parameters/CertificationId" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/DecisionRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Recorded or idempotently replayed decision",
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/CertificationResponse" } } }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/execution/governance/sandbox-certifications/{certification_id}/promotion-plans": {
+      "post": {
+        "operationId": "planSandboxPromotion",
+        "description": "Records a hash-bound CANARY promotion intent as BLOCKED. No outbox, runtime activation or Trading System side effect is created.",
+        "parameters": [{ "$ref": "#/components/parameters/CertificationId" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/PromotionPlanRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Immutable blocked promotion plan",
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/PromotionPlanResponse" } } }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
     }
   },
   "components": {
@@ -142,6 +230,18 @@
       },
       "OperationId": {
         "name": "operation_id",
+        "in": "path",
+        "required": true,
+        "schema": { "$ref": "#/components/schemas/Identifier" }
+      },
+      "DeploymentId": {
+        "name": "deployment_id",
+        "in": "path",
+        "required": true,
+        "schema": { "$ref": "#/components/schemas/Identifier" }
+      },
+      "CertificationId": {
+        "name": "certification_id",
         "in": "path",
         "required": true,
         "schema": { "$ref": "#/components/schemas/Identifier" }
