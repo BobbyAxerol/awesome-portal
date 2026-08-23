@@ -348,3 +348,39 @@ describe("#8 — keyboard and narrow viewport", () => {
     expect(screen.getByLabelText("Alerts")).toBeTruthy();
   });
 });
+
+describe("a chip the server cannot honour says so", () => {
+  it("disables Mine, because the endpoint publishes no actor filter", () => {
+    render(<OperationsQueueScreen queue={queue()} now={NOW} onFilterChange={() => {}} />);
+    const mine = screen.getByRole("button", { name: /^Mine$/ });
+    // Visible and disabled, not deleted: a missing chip reads as a design
+    // choice, and one that silently returns everybody's work is worse than
+    // both.
+    expect(mine.hasAttribute("disabled")).toBe(true);
+    expect(screen.getByText(/publishes no actor filter/)).toBeTruthy();
+  });
+
+  it("leaves the two the server does honour enabled", () => {
+    render(<OperationsQueueScreen queue={queue()} now={NOW} onFilterChange={() => {}} />);
+    expect(
+      screen.getByRole("button", { name: /Needs attention/ }).hasAttribute("disabled"),
+    ).toBe(false);
+    expect(screen.getByRole("button", { name: /All \(24h\)/ }).hasAttribute("disabled")).toBe(false);
+  });
+
+  it("matches the parameters the endpoint actually declares", () => {
+    const paths = JSON.parse(
+      readFileSync(
+        join(__dirname, "../../../../../packages/contracts/openapi/execution-operations.openapi.json"),
+        "utf8",
+      ),
+    ).paths;
+    const params: string[] = (paths["/api/v1/execution/operations"].get.parameters ?? []).map(
+      (p: { name: string }) => p.name,
+    );
+    // The day an actor filter is published this goes red and the chip can be
+    // enabled — which is the signal, not a failure.
+    expect(params.some((p) => /actor|assignee|owner|user/.test(p))).toBe(false);
+    expect(params).toContain("triage_state");
+  });
+});

@@ -47,6 +47,7 @@ import {
 import { IncidentDetailScreen } from "./IncidentDetail";
 import { SandboxCertificationScreen } from "./SandboxCertification";
 import { CanaryControlRoomScreen } from "./CanaryControlRoom";
+import { LiveFullOperationsScreen } from "./LiveFullOperations";
 import { workflowEffectText, type QueueRow, type WorkflowResult } from "../operations";
 import { PanelState } from "../components/states";
 import { aggregateHeadroomFrom, envelopeFromAnalytics } from "../analytics";
@@ -1252,5 +1253,21 @@ export function CanaryControlRoomContainer({
       reason={state.reason}
       brokerStale={brokerStale}
     />
+  );
+}
+
+export function LiveFullOperationsContainer({
+  api,
+  deploymentId,
+}: {
+  api: ExecutionApi;
+  deploymentId: string;
+}) {
+  const state = useAnalyticsRead(
+    () => api.getLiveFullOperations(deploymentId),
+    [api, deploymentId],
+  );
+  return (
+    <LiveFullOperationsScreen live={state.value} status={state.status} reason={state.reason} />
   );
 }

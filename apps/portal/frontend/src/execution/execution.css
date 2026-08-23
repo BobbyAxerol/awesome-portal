@@ -3831,3 +3831,168 @@
 @media (max-width: 900px) {
   .exec-canary-limits > div { grid-template-columns: 1fr; }
 }
+
+/* ---------------------------------------------------------------------------
+ * Phase 12 — Live Full Operations (hi-fi 1f, ops dark)
+ *
+ * Reuses the canary vocabulary except where a distinction has to survive:
+ * `suppressed` is styled apart from `unavailable`, because "we are withholding
+ * this" and "we could not read this" send an operator to different places.
+ * ------------------------------------------------------------------------ */
+.exec-live-guard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 2px solid var(--bad);
+  border-top-width: 8px;
+  background: var(--bad-bg);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink);
+}
+
+.exec-live-shield { font-size: var(--text-sm); color: var(--bad); }
+.exec-live-guardnote { color: var(--ink-mute); }
+
+.exec-live-inactive {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2);
+  border: 1px solid var(--warn);
+  background: var(--warn-bg);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-soft);
+}
+
+.exec-live-head h1 { margin: var(--space-2) 0 0; font-size: var(--text-lg); font-weight: 400; }
+
+.exec-live-note {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+  margin: var(--space-1) 0 0;
+}
+
+.exec-live-h2 {
+  margin: var(--space-3) 0 var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-mute);
+}
+
+.exec-live-lineage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-soft);
+}
+
+.exec-live-predecessor,
+.exec-live-continuity,
+.exec-live-guardrule { margin-top: var(--space-3); }
+
+.exec-live-guardrule p { font-size: var(--text-xs); color: var(--ink-soft); }
+
+.exec-live-limits { display: grid; gap: var(--space-1); margin: var(--space-1) 0 0; }
+.exec-live-limits > div { display: grid; grid-template-columns: 12rem 1fr; gap: var(--space-2); }
+.exec-live-limits dt { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--ink-mute); }
+.exec-live-limits dd { margin: 0; font-size: var(--text-xs); color: var(--ink-soft); }
+
+.exec-live-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-2);
+}
+
+.exec-live-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2);
+  border: 1px solid var(--line-soft);
+  background: var(--surface-3);
+}
+
+/* Suppressed reads differently from unavailable, deliberately: one is a policy
+   the operator can act on, the other is a fault they cannot. */
+.exec-live-kpi[data-suppressed="true"] { border-left: 2px solid var(--warn); }
+
+.exec-live-kpilabel { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--ink-mute); }
+.exec-live-kpivalue { font-size: var(--text-lg); color: var(--ink); }
+
+.exec-live-kpiunavailable {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+  border-bottom: 1px dashed var(--ink-faint);
+  align-self: flex-start;
+}
+
+.exec-live-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.exec-live-panel {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  padding: var(--space-2);
+}
+
+.exec-live-panel[data-suppressed="true"] { border-left: 2px solid var(--warn); }
+
+.exec-live-panel h2 {
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-mute);
+}
+
+.exec-live-actions { margin-top: var(--space-2); }
+.exec-live-actions h3 {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 400;
+  color: var(--ink-mute);
+}
+.exec-live-actions button {
+  margin-top: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--line);
+  background: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+  cursor: pointer;
+}
+.exec-live-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+.exec-live-actions button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (max-width: 900px) {
+  .exec-live-limits > div { grid-template-columns: 1fr; }
+}
+
+/* The canary envelope section had no rule of its own: its children were styled
+   and the frame was not, so it ran flush against the KPI grid above it. */
+.exec-canary-envelope {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  padding: var(--space-2);
+  margin-top: var(--space-3);
+}

@@ -133,7 +133,9 @@ describe("5/7 mixed and 7/7 eligible", () => {
     const mixed = withSteps("STALE", true);
     const gate = certificationBlocked(mixed);
     expect(gate.blocked).toBe(true);
-    expect(gate.reasons.join(" ")).toMatch(/7 of 7 steps are not PASS/);
+    // The message quotes the SERVER's counts, never a browser tally — the two
+    // can differ, and a screen that printed both would argue with itself.
+    expect(gate.reasons.join(" ")).toMatch(/0 of 7 steps have passed/);
   });
 
   it("distinguishes a stale step from a failed one in the markup", () => {
@@ -298,5 +300,20 @@ describe("the container fetches through the port", () => {
       />,
     );
     await waitFor(() => expect(screen.queryByLabelText("Certification steps")).toBeNull());
+  });
+});
+
+describe("suppression survives the shared reader", () => {
+  it("is a flag on the envelope, not collapsed into unavailable", () => {
+    const raw = JSON.parse(JSON.stringify(SANDBOX_CERTIFICATION_FIXTURE));
+    raw.source_panels[1].panel_state = "suppressed";
+    const parsed = readSandboxCertification(raw)!;
+    // The rendering state still fails closed...
+    expect(parsed.sourcePanels[1].panelState).toBe("unavailable");
+    // ...and the reason survives, so a screen can say "withheld" rather than
+    // "missing". Phase 12 proved that difference matters; this stops the other
+    // two screens losing it silently the day it reaches them.
+    expect(parsed.sourcePanels[1].suppressed).toBe(true);
+    expect(parsed.sourcePanels[0].suppressed).toBe(false);
   });
 });

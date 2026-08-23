@@ -43,6 +43,22 @@ const FILTER_LABEL: Record<QueueFilter, string> = {
 };
 
 /**
+ * Chips the server cannot honour yet.
+ *
+ * `GET /operations` publishes no actor, assignee or owner parameter, so "Mine"
+ * would send exactly what "All (24h)" sends and return exactly the same rows.
+ * A chip labelled Mine that shows everybody's operations is worse than a chip
+ * that is visibly unavailable: the first is a filter the operator trusts, and
+ * the second is a gap they can see. Kept visible and disabled, with the reason,
+ * rather than deleted — a missing chip reads as a design choice.
+ */
+export const UNSUPPORTED_FILTERS: Record<QueueFilter, string | null> = {
+  NEEDS_ATTENTION: null,
+  MINE: "The operations endpoint publishes no actor filter, so this cannot narrow to your own work yet.",
+  ALL_24H: null,
+};
+
+/**
  * Which rows the hi-fi tints amber.
  *
  * Derived from the SOURCE state, never from triage: an operation a person has
@@ -164,12 +180,21 @@ export function OperationsQueueScreen({
               type="button"
               data-queue-filter={option}
               aria-pressed={option === filter}
+              disabled={UNSUPPORTED_FILTERS[option] !== null}
+              title={UNSUPPORTED_FILTERS[option] ?? undefined}
               onClick={() => onFilterChange(option)}
             >
               {FILTER_LABEL[option]}
               {option === "NEEDS_ATTENTION" && attention > 0 ? ` (${attention})` : null}
             </button>
           ))}
+          {Object.entries(UNSUPPORTED_FILTERS)
+            .filter(([, reason]) => reason !== null)
+            .map(([option, reason]) => (
+              <p className="exec-disabled-reason" key={option}>
+                {FILTER_LABEL[option as QueueFilter]}: {reason}
+              </p>
+            ))}
         </div>
       ) : null}
 

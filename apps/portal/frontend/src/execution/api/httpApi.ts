@@ -36,6 +36,7 @@ import { analyticsFailureReason, readAnalyticsFailure } from "../analyticsProble
 import { readCommandCatalogue } from "../adminCatalog";
 import { readIncidentDetail, readOperationsQueue, readWorkflowResult } from "../operations";
 import { readCanaryControlRoom, readSandboxCertification } from "../certification";
+import { readLiveFullOperations } from "../liveFull";
 import type { WorkflowResult } from "../operations";
 import {
   commandPlanRequest,
@@ -319,6 +320,17 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       return room
         ? { ok: true as const, value: room }
         : unavailable("The canary control room response could not be read.");
+    },
+
+    async getLiveFullOperations(deploymentId) {
+      const blocked = readBlocked();
+      if (blocked) return unavailable(blocked);
+      const response = await get(`/deployments/${encodeURIComponent(deploymentId)}/live`, signal);
+      if (!response.ok) return problem(response);
+      const live = readLiveFullOperations(await response.json());
+      return live
+        ? { ok: true as const, value: live }
+        : unavailable("The live full operations response could not be read.");
     },
 
     async listOperations(query) {

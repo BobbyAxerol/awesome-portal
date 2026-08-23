@@ -898,3 +898,42 @@ Gom toàn bộ chỗ nhập nhằng vào **một** hàm `governanceWriteBlocked(
 `profile.ts`, thay vì rải `commandBlockedReason(policy, "R1")` ở từng call site.
 Thông báo cho operator nêu thẳng đây là cờ mượn và trỏ tới BR-EX-31. Ngày cờ
 thật xuất hiện, đây là **một** chỗ sửa chứ không phải một cuộc tìm kiếm.
+
+---
+
+## BR-EX-32 — `GET /operations` thiếu filter theo actor
+
+**Phát hiện:** 2026-08-23, khi audit phase 7.
+
+### Vấn đề
+
+Hi-fi 4e vẽ ba chip: **Needs attention · Mine · All (24h)**. Endpoint publish
+12 tham số — `workspace_id`, `after`, `before`, `limit`, `triage_state`,
+`environment`, `source_status`, `verification_result`, `severity`,
+`target_type`, `command_key`, `sort` — **không có** actor, assignee, owner hay
+user.
+
+Nên chip "Mine" gửi **y hệt** chip "All (24h)" và trả về **cùng một danh sách**.
+Một chip ghi *Mine* mà hiện công việc của mọi người không phải chip vô dụng — nó
+là chip người vận hành **tin tưởng** và bị dẫn sai.
+
+### Xin
+
+Một tham số lọc theo người, tên tuỳ codex chọn:
+
+```
+GET /api/v1/execution/operations?assigned_to=me
+```
+
+hoặc `actor_user_id=<id>`. Ngữ nghĩa "của tôi" cũng cần codex chốt: người
+**acknowledge**, người **resolve**, hay người được **giao**? Ba nghĩa khác nhau
+và hi-fi không nói rõ.
+
+### Frontend đã làm gì
+
+Chip vẫn **hiện** và bị **disable**, kèm lý do — chứ không xoá. Chip biến mất
+đọc như một lựa chọn thiết kế; chip lặng lẽ trả về mọi thứ thì tệ hơn cả hai.
+
+`operations.test.tsx` có gate khẳng định endpoint **vẫn chưa** có tham số nào
+khớp `actor|assignee|owner|user`. Ngày codex publish, test đỏ — đó là tín hiệu
+bật chip, không phải hỏng.

@@ -25,7 +25,8 @@ import {
 import { readCommandCatalogue } from "../adminCatalog";
 import { readIncidentDetail, readOperationsQueue, readWorkflowResult } from "../operations";
 import { readCanaryControlRoom, readSandboxCertification } from "../certification";
-import { CANARY_ROOM_FIXTURE, SANDBOX_CERTIFICATION_FIXTURE } from "../certification.fixtures";
+import { CANARY_ROOM_FIXTURE, LIVE_FULL_FIXTURE, SANDBOX_CERTIFICATION_FIXTURE } from "../certification.fixtures";
+import { readLiveFullOperations } from "../liveFull";
 import {
   INCIDENT_OPEN_FIXTURE,
   INCIDENT_RESOLVED_FIXTURE,
@@ -596,6 +597,15 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       return room
         ? { ok: true as const, value: room }
         : unavailable("The canary control room response could not be read.");
+    },
+
+    async getLiveFullOperations() {
+      const blocked = gate<never>("getLiveFullOperations");
+      if (blocked) return blocked as Result<never>;
+      const live = readLiveFullOperations(LIVE_FULL_FIXTURE);
+      return live
+        ? { ok: true as const, value: live }
+        : unavailable("The live full operations response could not be read.");
     },
 
     async listOperations(query) {

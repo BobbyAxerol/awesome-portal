@@ -59,6 +59,17 @@ export interface PanelEnvelope {
   deliveryProfile: string | null;
   /** `VERIFIED` or `UNAVAILABLE`. Distinct from `panelState`. */
   sourceVerification: string | null;
+  /**
+   * The server marked this panel `suppressed`.
+   *
+   * Kept as a flag rather than a tenth `PanelStatus`, because the nine states
+   * are a rendering vocabulary shared by seventeen screens while this is a
+   * policy outcome. It lives here rather than only in the live-full reader so
+   * that the day a canary or certification panel is suppressed, the screen
+   * reports withholding instead of quietly degrading to "unavailable" — which
+   * is what this reader used to do, and would have kept doing silently.
+   */
+  suppressed: boolean;
   asOf: string | null;
   readAt: string | null;
 }
@@ -74,6 +85,7 @@ export function readPanelEnvelope(raw: unknown, fallbackId = ""): PanelEnvelope 
     freshness: pick(o.freshness_state, FRESHNESS),
     deliveryProfile: str(o.delivery_profile),
     sourceVerification: str(o.source_verification_state),
+    suppressed: o.panel_state === "suppressed",
     asOf: str(o.as_of),
     readAt: str(o.read_at),
   };
@@ -351,8 +363,17 @@ export function certificationBlocked(
   }
   const notPassed = cert.steps.filter((s) => s.evaluationState !== "PASS");
   if (notPassed.length > 0) {
+    // The COUNT comes from the server's progress, not from this filter. The
+    // two can legitimately differ — the server evaluates against a policy that
+    // may weigh steps the strip does not — and printing a browser tally beside
+    // a server gate is how a screen ends up arguing with itself. The filter
+    // decides only WHETHER to say something; `progress` decides what.
+    const passed = cert.progress?.passedCount;
+    const total = cert.progress?.totalCount;
     reasons.push(
-      `${notPassed.length} of ${cert.steps.length} steps are not PASS.`,
+      passed !== null && passed !== undefined && total !== null && total !== undefined
+        ? `${passed} of ${total} steps have passed.`
+        : "Not every step has passed.",
     );
   }
   return { blocked: reasons.length > 0, reasons };

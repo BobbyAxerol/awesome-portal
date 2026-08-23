@@ -47,6 +47,7 @@ import {
   GateR2ReviewContainer,
   AdminCatalogueContainer,
   CanaryControlRoomContainer,
+  LiveFullOperationsContainer,
   SandboxCertificationContainer,
   IncidentDetailContainer,
   OperationsQueueContainer,
@@ -1644,6 +1645,22 @@ export default function ExecutionFixtures() {
           the Phase 0 exit gate is "every shared Execution component in every
           state" precisely so that cannot happen.
         */}
+        <Group
+          title="Live Full Operations (1f)"
+          note="No broker figure reaches this screen while consistency is unverified — the reader drops them, so they never become props. Suppressed is rendered apart from unavailable, and R4 is blocked because nobody can say whether a projection gap exists."
+          surface="deployments"
+        >
+          <Case caption="fixture · production inactive — broker panel suppressed, and it says the Portal is withholding rather than failing to read">
+            <LiveFullOperationsContainer api={WIRED_API} deploymentId="dep_88" />
+          </Case>
+          <Case caption="the port refuses — a guard band over nothing would read as a live deployment">
+            <LiveFullOperationsContainer
+              api={createFixtureApi({ unavailableEndpoints: ["getLiveFullOperations"] })}
+              deploymentId="dep_88"
+            />
+          </Case>
+        </Group>
+
         <Group
           title="Sandbox Certification (1d)"
           note="Seven ordered steps from the server, three independently degradable panels, and nothing computed here — not progress, not the current step, not evidence expiry. runtime_state stays null rather than becoming HALTED."
