@@ -40,6 +40,12 @@ storage load saturates the shared volume and the two historical OOM records are
 real non-Portal worker exits. This remains an operations-only state: do not
 surface a source-ready UI, poll AWS or alter the fixture/dark consumer model.
 
+After three repeated rejections, backend status adds
+`D2_PLACEMENT_OWNER_DECISION_REQUIRED / APPLICATION_DARK`. A dedicated/split
+Portal placement is being considered, but placement does not alter any browser
+contract and authorizes no AWS resource. Claude continues the same dark/
+fixture/recovery work only.
+
 ## 1. Hai endpoint public
 
 | Endpoint | Method | Cache | Body |

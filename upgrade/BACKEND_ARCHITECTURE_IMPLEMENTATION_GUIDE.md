@@ -991,6 +991,15 @@ deep-dive → ADR → slice → evidence discipline documented above.
   failed the IMDS-hardening DryRun. The gate and no-Trading-System-mutation
   boundary remain unchanged; prefer a dedicated AWS-HK Portal host/storage
   boundary if no admitted shared-host window exists.
+- **EX-BE-02-LIVE D2 placement gate (2026-08-23):** three repeated admissions
+  established `D2_PLACEMENT_OWNER_DECISION_REQUIRED / APPLICATION_DARK`.
+  Because the Trading System gateway is loopback-only, the recommended split
+  keeps a tiny Portal-owned Source Proxy on the existing host while placing
+  WireGuard, Rust Edge/ingestor and encrypted projection storage in a dedicated
+  Portal cell. A full move is invalid without a published private Trading
+  System gateway. Planning does not authorize billable resources or a D1B
+  carrier migration. Detail:
+  [`EX_BE_02_D2_PLACEMENT_DECISION.md`](./backend/EX_BE_02_D2_PLACEMENT_DECISION.md).
 - **EX-BE-02-LIVE D3 offline preparation (2026-08-23):** a separate probe-only
   overlay now opens exactly three public contract/health source routes while
   four alpha routes remain 503 and ingestion/query/SSE/analytics/command stay

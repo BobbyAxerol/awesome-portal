@@ -321,6 +321,15 @@ authority.
   The current role also failed the IMDS-hardening DryRun. No service or cloud
   state changed; a dedicated AWS-HK Portal host/storage boundary is the safest
   owner option if an admitted shared-host window cannot be obtained.
+- `EX-BE-02-LIVE` **D2 placement owner decision required / application dark:**
+  three repeated live rejections make placement a first-class gate. The
+  recommended split puts WireGuard, Edge/ingestor and encrypted projection
+  storage on a dedicated Portal cell, retaining only a bounded Portal Source
+  Proxy beside the loopback-only Trading System gateway. No resource may be
+  provisioned and no D1 peer changed until Bobby selects the placement and
+  opens a D1B window. Exact status:
+  `D2_PLACEMENT_OWNER_DECISION_REQUIRED / APPLICATION_DARK`. Detail:
+  [`EX_BE_02_D2_PLACEMENT_DECISION.md`](./EX_BE_02_D2_PLACEMENT_DECISION.md).
 - `EX-BE-02-LIVE` **D3 offline preparation complete / live unauthorized**
   (`D3_OFFLINE_PREPARATION_COMPLETE / LIVE_D3_UNAUTHORIZED`): a
   separate Compose/env/config delta opens only three credential-free public

@@ -1213,6 +1213,16 @@ analytics, SSE, delivery-profile, command and Trading System mutation authority
 remain permanently false for D2. Evidence:
 [`EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md`](backend/EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md).
 
+Repeated live admission now makes placement an explicit owner gate:
+`D2_PLACEMENT_OWNER_DECISION_REQUIRED / APPLICATION_DARK`. The shared 3,000
+IOPS root volume remained above the locked pressure threshold and is
+unencrypted. The recommended option is a dedicated Portal Edge/ingestor plus
+encrypted projection store, retaining only a resource-bounded Portal Source
+Proxy beside the Trading System's loopback-only gateway. Moving the whole stack
+is invalid until Trading System publishes a private gateway; SSH/direct DB/
+Redis/routing workarounds remain prohibited. Decision packet:
+[`EX_BE_02_D2_PLACEMENT_DECISION.md`](backend/EX_BE_02_D2_PLACEMENT_DECISION.md).
+
 The D3 offline package is `D3_OFFLINE_PREPARATION_COMPLETE /
 LIVE_D3_UNAUTHORIZED`. Its
 separate overlay opens only the three public contract/health/capability routes,

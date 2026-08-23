@@ -300,6 +300,7 @@ for required in \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
   "${ROOT_DIR}/deploy/runbooks/execution-d2-dark-deploy-and-rollback.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_D2_PLACEMENT_DECISION.md" \
   "${ROOT_DIR}/deploy/execution-d3/README.md" \
   "${ROOT_DIR}/deploy/execution-d3/compose.probes.yaml" \
   "${ROOT_DIR}/deploy/runbooks/execution-d3-contract-auth-probes-and-rollback.md" \
@@ -644,6 +645,7 @@ for tracked_source in \
   deploy/execution-d2/init-projection-database.sh \
   deploy/runbooks/execution-d2-dark-deploy-and-rollback.md \
   upgrade/backend/EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md \
+  upgrade/backend/EX_BE_02_D2_PLACEMENT_DECISION.md \
   deploy/execution-d3/README.md \
   deploy/execution-d3/compose.probes.yaml \
   deploy/runbooks/execution-d3-contract-auth-probes-and-rollback.md \

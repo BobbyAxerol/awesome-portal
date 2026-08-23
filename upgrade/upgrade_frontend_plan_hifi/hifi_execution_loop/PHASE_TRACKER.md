@@ -365,6 +365,14 @@ change authority. No window is open and no runtime changed. This unlocks no FE
 profile; Claude continues only fixture/dark/unavailable/recovery work. Evidence:
 [`EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md`](../../backend/EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md).
 
+Three repeated host rejections establish
+`D2_PLACEMENT_OWNER_DECISION_REQUIRED / APPLICATION_DARK`. The recommended
+backend option is a dedicated Portal Edge/ingestor/storage cell with only the
+bounded Portal Source Proxy remaining next to the TS loopback gateway. This is
+not a frontend or provisioning authorization; Claude keeps all live consumers
+off. Decision packet:
+[`EX_BE_02_D2_PLACEMENT_DECISION.md`](../../backend/EX_BE_02_D2_PLACEMENT_DECISION.md).
+
 D3 offline preparation is `D3_OFFLINE_PREPARATION_COMPLETE /
 LIVE_D3_UNAUTHORIZED`. A separate overlay opens only the three public
 contract/health/capability probes; the four alpha paths remain 503 and all
