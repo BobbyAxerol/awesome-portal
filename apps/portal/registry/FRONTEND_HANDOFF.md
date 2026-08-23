@@ -46,6 +46,12 @@ host. No new EC2/EIP/D1B is part of D2. This remains operations-only: do not
 surface a source-ready UI, poll AWS or alter the fixture/dark consumer model.
 Claude continues the same dark/fixture/recovery work only.
 
+The subsequent live aggregate preflight accepted the shared host with zero
+blockers, but IMDS hop-limit-one DryRun remains unauthorized on the actual D1
+operator role. Backend status is `HOST_PREFLIGHT_ACCEPTED /
+IAM_ISOLATION_NOT_AUTHORIZED / LIVE_D2_UNAUTHORIZED`. This is not a source or
+frontend readiness signal; Claude keeps every AWS-HK consumer disabled.
+
 ## 1. Hai endpoint public
 
 | Endpoint | Method | Cache | Body |

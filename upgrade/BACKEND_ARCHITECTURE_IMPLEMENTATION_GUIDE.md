@@ -1003,6 +1003,14 @@ deep-dive → ADR → slice → evidence discipline documented above.
   Status is `D2_SHARED_HOST_REALIGNMENT_COMPLETE / LIVE_D2_UNAUTHORIZED`.
   Detail:
   [`EX_BE_02_D2_PLACEMENT_DECISION.md`](./backend/EX_BE_02_D2_PLACEMENT_DECISION.md).
+- **EX-BE-02-LIVE D2 shared-host requalification (2026-08-23):** the revised
+  gate accepted the live AWS-HK host with zero blockers and retained elevated
+  existing I/O as a warning/baseline. The ephemeral diagnostic is not valid
+  change-window evidence. The IMDS hop-limit-one DryRun still failed because
+  the D2 isolation policy is not effective on the actual D1 operator role.
+  Status is `HOST_PREFLIGHT_ACCEPTED / IAM_ISOLATION_NOT_AUTHORIZED /
+  LIVE_D2_UNAUTHORIZED`; no Portal service started. Evidence:
+  [`EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md`](./backend/EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md).
 - **EX-BE-02-LIVE D3 offline preparation (2026-08-23):** a separate probe-only
   overlay now opens exactly three public contract/health source routes while
   four alpha routes remain 503 and ingestion/query/SSE/analytics/command stay

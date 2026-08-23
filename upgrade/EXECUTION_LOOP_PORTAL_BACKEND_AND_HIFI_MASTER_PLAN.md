@@ -1225,6 +1225,17 @@ approved store. SSH/direct DB/Redis/routing workarounds remain prohibited.
 Decision packet:
 [`EX_BE_02_D2_PLACEMENT_DECISION.md`](backend/EX_BE_02_D2_PLACEMENT_DECISION.md).
 
+The subsequent live aggregate requalification returned
+`D2_HOST_ADMISSION_ACCEPTED` with zero blockers on the existing AWS-HK host;
+available capacity was about 8.5 GiB memory and 57.5 GiB Docker disk, with zero
+Portal container or private-port collision. Elevated existing I/O remains a
+visible baseline warning. This ephemeral result expired and is not deploy
+evidence. The IMDS hop-limit-one DryRun still returned `UnauthorizedOperation`,
+so the D2 isolation policy is not effective on the actual D1 operator role.
+Status is `HOST_PREFLIGHT_ACCEPTED / IAM_ISOLATION_NOT_AUTHORIZED /
+LIVE_D2_UNAUTHORIZED`; no service started. Evidence:
+[`EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md`](backend/EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md).
+
 The D3 offline package is `D3_OFFLINE_PREPARATION_COMPLETE /
 LIVE_D3_UNAUTHORIZED`. Its
 separate overlay opens only the three public contract/health/capability routes,

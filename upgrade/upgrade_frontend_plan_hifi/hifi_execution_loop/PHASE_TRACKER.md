@@ -381,6 +381,13 @@ classified as reproducible local visual evidence and is intentionally ignored,
 not product source. Claude's tracked `hifi.config.ts`, exporter, routes and
 fixtures remain the canonical implementation inputs.
 
+The live aggregate shared-host diagnostic subsequently passed with zero
+blockers, but the IMDS hop-limit-one DryRun remains unauthorized on the actual
+D1 operator role. Backend status is `HOST_PREFLIGHT_ACCEPTED /
+IAM_ISOLATION_NOT_AUTHORIZED / LIVE_D2_UNAUTHORIZED`. This changes no frontend
+profile: Claude keeps source/query/realtime/command consumers off. Evidence:
+[`EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md`](../../backend/EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md).
+
 D3 offline preparation is `D3_OFFLINE_PREPARATION_COMPLETE /
 LIVE_D3_UNAUTHORIZED`. A separate overlay opens only the three public
 contract/health/capability probes; the four alpha paths remain 503 and all

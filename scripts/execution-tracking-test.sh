@@ -113,6 +113,17 @@ for label, text in (
     ("architecture guide", a),
     ("frontend handoff", h),
 ):
+    normalized = re.sub(r"\s+", " ", text)
+    if "HOST_PREFLIGHT_ACCEPTED / IAM_ISOLATION_NOT_AUTHORIZED / LIVE_D2_UNAUTHORIZED" not in normalized:
+        raise SystemExit(f"{label} lost the D2 live requalification/IAM stop-gate")
+
+for label, text in (
+    ("master", m),
+    ("tracker", t),
+    ("backend README", b),
+    ("architecture guide", a),
+    ("frontend handoff", h),
+):
     if "D2_AUTHORIZATION_CONTRACT_PREPARED / LIVE_D2_UNAUTHORIZED" not in text:
         raise SystemExit(f"{label} lost the D2 authorization/live boundary")
 

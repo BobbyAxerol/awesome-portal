@@ -328,6 +328,16 @@ authority.
   store. Exact status:
   `D2_SHARED_HOST_REALIGNMENT_COMPLETE / LIVE_D2_UNAUTHORIZED`. Detail:
   [`EX_BE_02_D2_PLACEMENT_DECISION.md`](./EX_BE_02_D2_PLACEMENT_DECISION.md).
+- **EX-BE-02-LIVE D2 shared-host requalification (2026-08-23):** the live
+  schema-v2 aggregate preflight accepted the existing AWS-HK host with zero
+  blockers (about 8.5 GiB memory and 57.5 GiB Docker disk available, zero
+  Portal container/listener collision). Existing I/O remains a visible
+  baseline warning. The diagnostic expired and is not deployment evidence.
+  The IMDS hop-limit-one DryRun still returned `UnauthorizedOperation`, proving
+  the private D2 policy is not effective on the actual D1 operator role.
+  Status is `HOST_PREFLIGHT_ACCEPTED / IAM_ISOLATION_NOT_AUTHORIZED /
+  LIVE_D2_UNAUTHORIZED`; no service started. Evidence:
+  [`EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md`](./EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md).
 - `EX-BE-02-LIVE` **D3 offline preparation complete / live unauthorized**
   (`D3_OFFLINE_PREPARATION_COMPLETE / LIVE_D3_UNAUTHORIZED`): a
   separate Compose/env/config delta opens only three credential-free public
