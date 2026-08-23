@@ -1848,10 +1848,14 @@ baseline **101/101** · contrast 14/14. Phase 4 giữ nguyên 18/18 sau khi sử
 **10 đã dựng** (0, 1, 2, 3, 4, 5, 13, 14, 15, 16, 17 — tính cả shared).
 **7 còn lại** (6, 7, 8, 9, 10, 11, 12) đều đi qua phase 6.
 
-Bobby đã chốt **phương án B** cho catalogue phase 6: 7 action chỉ chạy qua
-Postgres/Redis trực tiếp **sẽ được mở HTTP, ưu tiên ngay**. Nghĩa là phase 6
-không còn chờ quyết định — nó chờ codex mở endpoint. Request ở
-`HOTFIX_REQUEST_2026-08-22.md`.
+Bobby đã chốt **phương án B** cho catalogue phase 6: các use case hiện chỉ có
+PostgreSQL/Redis/CLI cần được Trading System owner công bố thành HTTP contract
+typed, bounded và authenticated. Codex chỉ viết Portal compatibility adapter
+sau khi contract đó được công bố; Codex không mở endpoint trong Trading System
+và Portal không truy cập trực tiếp DB/Redis/CLI. Vì vậy phase 6 vẫn chờ source
+contract owner, không chờ một Portal escape hatch. Request lịch sử ở
+`HOTFIX_REQUEST_2026-08-22.md`; ruling hiện hành ở `EXECUTION_REQUEST_LEDGER.md`
+§4.3–§4.4.
 
 ## 27. D4 Paper-shadow offline authorization checkpoint — 2026-08-23
 
