@@ -48,3 +48,10 @@ immutable Edge/Proxy digests and attestations exist, workload PKI/JWKS are
 staged, the AWS pressure baseline is admitted and a D2 change window is open.
 The Trading System read identity is deliberately not a D2 requirement: all
 seven Source Proxy routes contain an exact 503 guard and no `X-API-Key` secret.
+
+After this workflow revision is merged to the default branch, use GitHub
+Actions → **Build and publish Portal images** → **Run workflow**, select the
+immutable `feat/execution_loop` ref and scope `execution-d2`. The job emits the
+checksummed `execution-d2-publication-<commit>` artifact only after provenance,
+SBOM, Trivy CRITICAL rejection and keyless Cosign sign+verify succeed. HIGH
+findings still require an explicit owner disposition before live D2.

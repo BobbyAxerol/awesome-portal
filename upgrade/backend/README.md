@@ -283,6 +283,10 @@ authority.
   still waits for operator-instance-role isolation, signed Edge/Proxy digests,
   real workload PKI/JWKS, pressure admission and a new window. Evidence:
   [`EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md`](./EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md).
+  The publication lane is also prepared: scoped `execution-d2` dispatch,
+  digest-bound Trivy reports/CRITICAL rejection, OIDC Cosign sign+verify and a
+  checksummed evidence artifact. It remains unexecuted until this workflow
+  revision reaches the default branch.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

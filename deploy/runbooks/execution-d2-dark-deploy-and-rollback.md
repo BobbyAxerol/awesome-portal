@@ -36,6 +36,13 @@ Before any pull, migration or container creation:
    secret values;
 8. no public/VPC-wide 5432/8443/8444 rule exists.
 
+The image gate is closed only by a successful **Build and publish Portal
+images** workflow using scope `execution-d2` on the exact deployment ref. Its
+artifact must bind both GHCR digests to the source commit, include maximum
+provenance/SBOM, Trivy reports with zero CRITICAL findings and verified keyless
+Cosign signatures. Review and record every HIGH disposition; a green workflow
+alone is not the vulnerability owner decision.
+
 ## 3. Render, establish ownership and run readiness preflight
 
 Run on the target host using a private mode-0600 env file:

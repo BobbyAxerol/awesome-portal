@@ -949,6 +949,10 @@ deep-dive → ADR → slice → evidence discipline documented above.
   LIVE_DEPLOYMENT_BLOCKED` pending operator-role isolation, signed images,
   workload identities, pressure admission and a new window. Evidence:
   [`EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md`](./backend/EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md).
+  The publication path now has a bounded `execution-d2` dispatch that emits
+  digest-bound provenance/SBOM, Trivy evidence and OIDC Cosign sign+verify
+  evidence; preparation is not publication, and HIGH findings retain an owner
+  disposition gate.
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

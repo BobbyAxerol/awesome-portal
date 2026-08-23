@@ -828,3 +828,7 @@ availability. D3 mTLS/JWT compatibility probes and D4 Paper BUILDING-epoch
 qualification will each publish a new handoff before any frontend activation.
 Full evidence:
 `upgrade/backend/EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md`.
+
+The image publication workflow is now prepared but has not run. Its future
+signed digest/evidence artifact is an operations input only and does not change
+any frontend capability or availability state.

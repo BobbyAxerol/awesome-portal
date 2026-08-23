@@ -109,6 +109,15 @@ These are deployment controls, not missing feature code. Lowering them would
 make D3/D4 evidence ambiguous and would expose a temporary AWS operator
 identity to application workloads.
 
+The publication workflow now has a bounded `execution-d2` manual scope. It
+builds only Edge/Proxy for the selected ref, publishes maximum provenance and
+SBOM, writes HIGH/CRITICAL Trivy JSON, rejects any CRITICAL finding, performs
+OIDC keyless Cosign signing, verifies both exact workflow identities and uploads
+a checksummed digest/evidence artifact. This workflow revision must first reach
+the default branch; then Bobby selects `feat/execution_loop` plus
+`execution-d2`. A green job and reviewed HIGH findings close the image part of
+stop gate 2; preparing the workflow does not close it.
+
 ## 5. Next sequence
 
 After D2 live acceptance:
