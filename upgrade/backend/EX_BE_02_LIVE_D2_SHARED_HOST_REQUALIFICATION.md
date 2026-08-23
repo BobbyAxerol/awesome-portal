@@ -58,6 +58,23 @@ Read-only IAM policy listing and authorization-message decode are not granted
 to the instance role, so they cannot distinguish an unattached policy from a
 Permissions boundary or a condition mismatch. Detachment remains prohibited.
 
+Codex repeated the check at `2026-08-23T10:48:40Z` after the owner reported a
+new policy attachment. SSH and IMDSv2 resolved the exact running instance
+`i-00a12daa5535dc225`; STS resolved the caller to the instance session of
+`PrimusPortalExecutionD1Operator-v1`; EC2 returned the single expected stable
+association and hop limit two. The repository verifier was streamed to
+`python3` without installing a CLI or writing a remote file. The exact
+hop-limit-one request again returned `UnauthorizedOperation`. The local private
+policy digest was
+`sha256:694603b2c3aeb331216f27808d03d786466ee2cd2c7a64e587c6237504a224f1`;
+its action, exact instance ARN, region and metadata condition keys are aligned
+with the request. The role still cannot list attached/inline policies, inspect
+its permissions boundary or decode the denial, so the remaining owner-side
+checks are: attach it under the role's **Permissions policies**, make the new
+managed-policy version the default if the document was edited, and verify that
+neither a permissions boundary nor an Organizations SCP denies the action.
+No EC2 setting, profile association, service or network state changed.
+
 ## 3. Required order
 
 1. attach the reviewed private D2 isolation policy to the exact existing D1
