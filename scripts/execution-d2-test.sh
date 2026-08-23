@@ -18,6 +18,28 @@ env_example="${root_dir}/deploy/execution-d1/edge-source-proxy.env.example"
 compose_base="${root_dir}/deploy/compose.execution-edge.yaml"
 compose_dark="${root_dir}/deploy/execution-d1/compose.dark.yaml"
 
+python3 - "${compose_base}" "${compose_dark}" <<'PY'
+from pathlib import Path
+import sys
+
+base = Path(sys.argv[1]).read_text()
+dark = Path(sys.argv[2]).read_text()
+for token in ('cpus: "1.5"', 'mem_limit: 1024m', 'mem_reservation: 256m'):
+    if token not in base:
+        raise SystemExit(f"D2 Edge resource contract missing: {token}")
+for token in (
+    'cpus: "1.0"',
+    'mem_limit: 1024m',
+    'cpus: "0.50"',
+    'mem_limit: 512m',
+    'cpus: "0.25"',
+    'mem_limit: 256m',
+    'mem_reservation: 64m',
+):
+    if token not in dark:
+        raise SystemExit(f"D2 shared-host resource contract missing: {token}")
+PY
+
 bash -n "${preflight}" "${renderer}" "$0"
 "${preflight}" --env-file "${env_example}" --mode template >/dev/null
 grep -Eq '^EDGE_SECRET_DIRECTORY=/srv/primus/portal/' "${env_example}"

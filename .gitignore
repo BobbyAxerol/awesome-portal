@@ -63,6 +63,9 @@
 **/playwright-report/
 **/test-results/
 **/target/
+# Claude/Playwright local visual export. The exporter and HiFi routes are
+# tracked source; this 33 MiB HTML/PNG/font capture is reproducible evidence.
+/upgrade/upgrade_frontend_plan_hifi/portal_current_hifi_research_loop/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

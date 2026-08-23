@@ -1193,13 +1193,13 @@ workload PKI/JWKS must exist, AWS pressure must be admitted and a new D2 window
 must open. Evidence:
 [`EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md`](backend/EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md).
 
-The live D2 admission checkpoint is
-`D2_ADMISSION_REJECTED / APPLICATION_DARK`. Cloud ingress has zero rule
-covering 5432/8443/8444 and host CPU/memory/disk/NTP/ownership/listener/
-container checks pass, but I/O full-pressure exceeded the locked 5% gate and
-two historical OOM kills lack Bobby's explicit disposition. No threshold was
-weakened and no service was started. The signed-image, role/IMDS, identity and
-separate-window gates remain. Evidence:
+The historical live D2 admission checkpoint recorded zero cloud rule covering
+5432/8443/8444 and passing CPU/memory/disk/NTP/ownership/listener/container
+boundaries, while the already-busy shared root volume exceeded the former
+absolute 5% I/O gate. Both OOM exits were non-Portal 256 MiB workers. Bobby has
+reviewed the attribution and replaced that non-attributable I/O rule with the
+shared-host preflight plus baseline/delta observation gate. No service was
+started in the historical checkpoint. Evidence:
 [`EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md`](backend/EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md).
 
 The separate D2 owner/window boundary is now
@@ -1213,14 +1213,16 @@ analytics, SSE, delivery-profile, command and Trading System mutation authority
 remain permanently false for D2. Evidence:
 [`EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md`](backend/EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md).
 
-Repeated live admission now makes placement an explicit owner gate:
-`D2_PLACEMENT_OWNER_DECISION_REQUIRED / APPLICATION_DARK`. The shared 3,000
-IOPS root volume remained above the locked pressure threshold and is
-unencrypted. The recommended option is a dedicated Portal Edge/ingestor plus
-encrypted projection store, retaining only a resource-bounded Portal Source
-Proxy beside the Trading System's loopback-only gateway. Moving the whole stack
-is invalid until Trading System publishes a private gateway; SSH/direct DB/
-Redis/routing workarounds remain prohibited. Decision packet:
+The owner placement decision is now
+`D2_SHARED_HOST_REALIGNMENT_COMPLETE / LIVE_D2_UNAUTHORIZED`. Full Portal,
+identity and product/control-plane services remain on SGP. The existing AWS-HK
+host receives only the minimal Rust Edge, Source Proxy, schema-only projection
+PostgreSQL and one-shot migrator; no new EC2/EIP/D1B cell is planned. Peak
+startup ceiling is 3.25 CPU / 2,816 MiB, and D2 observes pressure deltas against
+the exact pre-start baseline. The unencrypted root remains dark-only; D4 needs
+separately approved encrypted projection storage on the same host or another
+approved store. SSH/direct DB/Redis/routing workarounds remain prohibited.
+Decision packet:
 [`EX_BE_02_D2_PLACEMENT_DECISION.md`](backend/EX_BE_02_D2_PLACEMENT_DECISION.md).
 
 The D3 offline package is `D3_OFFLINE_PREPARATION_COMPLETE /

@@ -350,11 +350,13 @@ continues typed unavailable/dark states only; no EventSource, Lane B, query,
 analytics or command activation. Evidence:
 [`EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md`](../../backend/EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md).
 
-Live host admission is currently
-`D2_ADMISSION_REJECTED / APPLICATION_DARK`: cloud private-port rules,
-capacity, NTP, ownership, listeners and Portal-container absence pass, while
-I/O pressure and unreviewed historical OOM evidence keep deployment closed.
-No source/UI capability changes. Evidence:
+Live host admission is now realigned for the owner-approved shared-host model.
+`D2_SHARED_HOST_REALIGNMENT_COMPLETE / LIVE_D2_UNAUTHORIZED` means the current
+Trading System workload is captured as a preflight baseline and D2 is judged
+by bounded 15-minute CPU/memory/I/O deltas plus emergency absolute ceilings.
+Both historical OOMs were non-Portal 256 MiB workers and Bobby accepted that
+attribution. No Portal service has started and there are no source/UI
+capability changes. Evidence:
 [`EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md`](../../backend/EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md).
 
 D2 owner/change-window handling is now
@@ -365,13 +367,19 @@ change authority. No window is open and no runtime changed. This unlocks no FE
 profile; Claude continues only fixture/dark/unavailable/recovery work. Evidence:
 [`EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md`](../../backend/EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md).
 
-Three repeated host rejections establish
-`D2_PLACEMENT_OWNER_DECISION_REQUIRED / APPLICATION_DARK`. The recommended
-backend option is a dedicated Portal Edge/ingestor/storage cell with only the
-bounded Portal Source Proxy remaining next to the TS loopback gateway. This is
-not a frontend or provisioning authorization; Claude keeps all live consumers
-off. Decision packet:
+The D2 placement decision is final for this release: the full Portal remains
+on SGP, while only the bounded Source Proxy, Rust Edge and private dark
+projection boundary may run on the existing AWS-HK host. No new EC2/EIP/D1B is
+authorized. D2 has a 3.25 vCPU / 2,816 MiB peak ceiling and a 2.75 vCPU / 2,304
+MiB long-running ceiling. D4 business projection storage will require a
+separately encrypted volume on that same host. This still authorizes no live
+frontend consumer; Claude keeps all live consumers off. Decision packet:
 [`EX_BE_02_D2_PLACEMENT_DECISION.md`](../../backend/EX_BE_02_D2_PLACEMENT_DECISION.md).
+
+The generated `portal_current_hifi_research_loop/` HTML/PNG/font export is
+classified as reproducible local visual evidence and is intentionally ignored,
+not product source. Claude's tracked `hifi.config.ts`, exporter, routes and
+fixtures remain the canonical implementation inputs.
 
 D3 offline preparation is `D3_OFFLINE_PREPARATION_COMPLETE /
 LIVE_D3_UNAUTHORIZED`. A separate overlay opens only the three public

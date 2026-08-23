@@ -44,11 +44,27 @@ Before opening a live D2 window, run the read-only target-host admission gate:
 sudo -n python3 scripts/execution-d2-host-admission.py
 ```
 
-It fails closed below 8 GiB available memory or 50 GiB Docker disk, above the
-locked CPU/memory/I/O pressure thresholds, on NTP/listener/container/runtime-
-ownership drift, and until historical OOM evidence has an explicit owner
-review. `--acknowledge-historical-oom D2_HISTORICAL_OOM_REVIEWED` records only
-that decision; it cannot override a live pressure or collision failure.
+Preflight fails closed below 8 GiB available memory or 50 GiB Docker disk, on
+unsafe current CPU/memory pressure, NTP/listener/container/runtime-ownership
+drift, and until historical non-Portal OOM evidence has an explicit owner
+review. Elevated pre-existing I/O is recorded as a warning. Observation then
+requires an accepted baseline from the same boot that is no more than 30
+minutes old, exactly three running dark services, at least 6 GiB available
+memory and bounded positive CPU/memory/I/O PSI deltas.
+`--acknowledge-historical-oom D2_NON_PORTAL_OOM_REVIEWED` records only the
+owner attribution; it cannot override either stage.
+
+```bash
+sudo -n python3 scripts/execution-d2-host-admission.py \
+  --acknowledge-historical-oom D2_NON_PORTAL_OOM_REVIEWED \
+  > /secure/path/d2-preflight.json
+
+sudo -n python3 scripts/execution-d2-host-admission.py \
+  --mode observation \
+  --baseline-report /secure/path/d2-preflight.json \
+  --expected-portal-containers 3 \
+  --acknowledge-historical-oom D2_NON_PORTAL_OOM_REVIEWED
+```
 
 `--mode readiness` additionally requires the real `portal-runtime` group and
 root/group-owned secret layout on the target host. It remains a future D2
@@ -73,6 +89,10 @@ with `--mode activation` only after the profile is proven detached and IMDS
 hop-limit one is independently verified. Both modes permanently reject source,
 ingestion, Query, analytics, SSE, delivery-profile, command and Trading System
 change authority.
+
+The full Portal remains on SGP. D2 deploys only the minimal Edge, Source Proxy,
+schema-only projection PostgreSQL and one-shot migrator on the existing AWS-HK
+execution host; no dedicated Portal EC2 is planned.
 
 Deployment is still forbidden until the temporary D1 operator instance profile
 is detached or otherwise proven unreachable by every Portal container, real

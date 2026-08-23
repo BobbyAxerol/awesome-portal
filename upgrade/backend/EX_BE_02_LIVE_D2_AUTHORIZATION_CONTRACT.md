@@ -63,10 +63,11 @@ readiness-versus-activation separation, profile/IMDS proof, every permanently
 false capability and commit/evidence/window drift. The committed template
 passes `--mode template` without changing state.
 
-No D2 authorization is currently open. Host admission remains independently
-rejected until live I/O pressure is below the locked threshold and Bobby has
-reviewed historical OOM evidence. Signed deployment images, real workload
-identities, profile detachment and IMDS hardening also remain unproven.
+No D2 authorization is currently open. Bobby accepted the shared-host
+placement and the non-Portal historical-OOM attribution; admission now binds a
+preflight baseline and rejects unsafe absolute pressure or excessive D2
+observation deltas. Signed deployment images, real workload identities,
+profile detachment, IMDS hardening and the bounded live window remain unproven.
 
 ## 5. Frontend coordination
 

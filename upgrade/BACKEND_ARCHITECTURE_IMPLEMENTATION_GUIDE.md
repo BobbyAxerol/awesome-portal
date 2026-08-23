@@ -964,14 +964,18 @@ deep-dive → ADR → slice → evidence discipline documented above.
   digest-bound provenance/SBOM, Trivy evidence and OIDC Cosign sign+verify
   evidence; preparation is not publication, and HIGH findings retain an owner
   disposition gate.
-- **EX-BE-02-LIVE D2 admission checkpoint (2026-08-23):** a new live,
-  aggregate-only host gate locks minimum available memory/disk, maximum CPU/
-  memory/I/O pressure, NTP, prohibited listeners, Portal-container absence and
-  runtime ownership. SG verification independently proves zero rule covering
-  5432/8443/8444. Current status is
-  `D2_ADMISSION_REJECTED / APPLICATION_DARK`: I/O full-pressure exceeded 5%
-  and two historical OOMs await Bobby's explicit disposition; the attached
-  D1 role/IMDS and image-publication gates also remain. No service started.
+- **EX-BE-02-LIVE D2 shared-host admission (2026-08-23):** a live,
+  aggregate-only host gate locks minimum available memory/disk, current
+  emergency pressure, NTP, prohibited listeners, Portal-container ownership
+  and exact container count. The admitted preflight becomes a baseline; the
+  15-minute soak is evaluated against bounded CPU/memory/I/O deltas instead of
+  rejecting the existing Trading System workload at an arbitrary absolute I/O
+  number. SG verification independently proves zero public rule covering
+  5432/8443/8444. Both historical OOMs were non-Portal 256 MiB workers and
+  Bobby accepted that attribution. Status is
+  `D2_SHARED_HOST_REALIGNMENT_COMPLETE / LIVE_D2_UNAUTHORIZED`; the attached
+  D1 role/IMDS, signed-image, identity and live-window gates remain. No Portal
+  service has started.
   Evidence:
   [`EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md`](./backend/EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md).
 - **EX-BE-02-LIVE D2 authorization contract (2026-08-23):** a versioned
@@ -985,20 +989,19 @@ deep-dive → ADR → slice → evidence discipline documented above.
   `D2_AUTHORIZATION_CONTRACT_PREPARED / LIVE_D2_UNAUTHORIZED`; no runtime state
   changed. Evidence:
   [`EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md`](./backend/EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md).
-  Requalification at 05:43 UTC confirmed the shared host's 3,000-IOPS gp3
-  volume was effectively saturated by existing source/stream writes and that
-  two 256 MiB non-Portal candidate workers genuinely exited OOM. The role also
-  failed the IMDS-hardening DryRun. The gate and no-Trading-System-mutation
-  boundary remain unchanged; prefer a dedicated AWS-HK Portal host/storage
-  boundary if no admitted shared-host window exists.
-- **EX-BE-02-LIVE D2 placement gate (2026-08-23):** three repeated admissions
-  established `D2_PLACEMENT_OWNER_DECISION_REQUIRED / APPLICATION_DARK`.
-  Because the Trading System gateway is loopback-only, the recommended split
-  keeps a tiny Portal-owned Source Proxy on the existing host while placing
-  WireGuard, Rust Edge/ingestor and encrypted projection storage in a dedicated
-  Portal cell. A full move is invalid without a published private Trading
-  System gateway. Planning does not authorize billable resources or a D1B
-  carrier migration. Detail:
+  Requalification at 05:43 UTC confirmed that existing source/stream writes
+  establish a material I/O baseline and that two 256 MiB non-Portal candidate
+  workers genuinely exited OOM. The old operator role also failed the initial
+  IMDS-hardening DryRun; a scoped D2 policy is now a separate predecessor.
+- **EX-BE-02-LIVE D2 placement decision (2026-08-23):** Bobby selected the
+  existing AWS-HK Trading System host for only the bounded Source Proxy, Rust
+  Edge and private dark projection boundary. The full Portal, Control API and
+  browser-facing backend remain on SGP. No new EC2/EIP or D1B carrier is part of
+  D2. Peak D2 ceiling is 3.25 vCPU / 2,816 MiB; long-running ceiling is 2.75
+  vCPU / 2,304 MiB. Future D4 business projections require encrypted storage
+  attached to the same host; they must not silently reuse the root volume.
+  Status is `D2_SHARED_HOST_REALIGNMENT_COMPLETE / LIVE_D2_UNAUTHORIZED`.
+  Detail:
   [`EX_BE_02_D2_PLACEMENT_DECISION.md`](./backend/EX_BE_02_D2_PLACEMENT_DECISION.md).
 - **EX-BE-02-LIVE D3 offline preparation (2026-08-23):** a separate probe-only
   overlay now opens exactly three public contract/health source routes while

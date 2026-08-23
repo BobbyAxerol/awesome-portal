@@ -24,7 +24,8 @@ Before any pull, migration or container creation:
 2. the temporary D1 operator instance profile is detached from the shared
    AWS-HK host, or a separately reviewed control proves IMDS unavailable from
    every Portal workload, including the host-network Source Proxy;
-3. AWS OOM/I/O review assigns CPU, memory, PID, file and disk budgets;
+3. Bobby has accepted the non-Portal OOM attribution and the bounded shared-
+   host CPU, memory, PID, file and disk budgets in the placement decision;
 4. both image digests have verified provenance/SBOM/signature and an accepted
    vulnerability decision;
 5. `portal-runtime` numeric GID, secret/config directories and separate mTLS/
@@ -53,15 +54,22 @@ resource/OOM decisions and named owners. It cannot authorize source reads,
 ingestion, Query, analytics, SSE, profile activation, commands or Trading
 System changes.
 
-The target-host admission evidence is produced immediately before the window:
+The target-host preflight baseline is produced immediately before the window
+and stored outside Git with mode `0600`:
 
 ```bash
-sudo -n python3 scripts/execution-d2-host-admission.py
+sudo -n python3 scripts/execution-d2-host-admission.py \
+  --acknowledge-historical-oom D2_NON_PORTAL_OOM_REVIEWED \
+  > /secure/path/d2-preflight.json
 ```
 
-Do not lower its committed thresholds or use the historical-OOM acknowledgement
-until Bobby has reviewed the OOM evidence and accepted the bounded dark-service
-budget. An OOM acknowledgement never overrides current I/O/memory/CPU pressure.
+The elevated pre-existing I/O baseline is a warning, not an attribution of
+Portal impact. Capacity, current memory pressure, NTP, listener, identity and
+ownership remain hard preflight gates. After startup, use the same accepted
+baseline in `--mode observation`; it expires after 30 minutes and is rejected
+after a reboot. The positive PSI delta, Portal container count and post-start
+memory floor are hard gates. The OOM acknowledgement never overrides either
+stage.
 
 The image gate is closed only by a successful **Build and publish Portal
 images** workflow using scope `execution-d2` on the exact deployment ref. Its
@@ -117,7 +125,20 @@ Only inside the approved window:
 8. send only local health/config negative-auth probes — no business route;
 9. prove an absent Source Proxy upstream does not prevent Edge readiness while
    `EDGE_SOURCE_PROBES_ENABLED=false`;
-10. record sanitized container/image/config/limit evidence.
+10. after the three long-running services are healthy, run at least three
+    baseline/delta observations across a 15-minute soak:
+
+    ```bash
+    sudo -n python3 scripts/execution-d2-host-admission.py \
+      --mode observation \
+      --baseline-report /secure/path/d2-preflight.json \
+      --expected-portal-containers 3 \
+      --acknowledge-historical-oom D2_NON_PORTAL_OOM_REVIEWED
+    ```
+
+11. record sanitized container/image/config/limit evidence and Trading System
+    health/latency comparison. Roll back on any source request, restart/OOM,
+    unexpected listener, pressure-delta rejection or Trading System regression.
 
 Exit is `D2_DARK_ACCEPTED / SOURCE_INACTIVE`, never source availability.
 

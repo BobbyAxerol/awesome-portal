@@ -298,13 +298,13 @@ authority.
   digest-bound Trivy reports/CRITICAL rejection, OIDC Cosign sign+verify and a
   checksummed evidence artifact. It remains unexecuted until this workflow
   revision reaches the default branch.
-- `EX-BE-02-LIVE` **D2 admission rejected / application dark:** the live SG has
-  zero rule covering 5432/8443/8444 and CPU, memory, disk, NTP, runtime
-  ownership/listener/container boundaries pass. Deployment remains fail-closed
-  because I/O full-pressure exceeded the 5% gate and two historical OOM kills
-  lack Bobby's explicit disposition. The instance-role/IMDS and unpublished
-  signed-image gates also remain. Exact status:
-  `D2_ADMISSION_REJECTED / APPLICATION_DARK`. Evidence:
+- `EX-BE-02-LIVE` **historical D2 admission rejection / application dark:** the
+  first live admission proved the SG/listener/capacity boundaries and recorded
+  elevated shared-host I/O plus two non-Portal 256 MiB worker OOM exits. Bobby
+  has reviewed that attribution; the former absolute 5% I/O rule is superseded
+  by the shared-host preflight plus baseline/delta observation gate. The
+  instance-role/IMDS and unpublished signed-image gates still remain.
+  Historical evidence:
   [`EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md`](./EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md).
 - `EX-BE-02-LIVE` **D2 authorization contract prepared / live unauthorized:**
   the public schema and non-sourcing validator bind exact deployment/image and
@@ -315,20 +315,18 @@ authority.
   profile/command/Trading System flags remain false. Exact status:
   `D2_AUTHORIZATION_CONTRACT_PREPARED / LIVE_D2_UNAUTHORIZED`. Evidence:
   [`EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md`](./EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md).
-  A 05:43 UTC recheck kept admission rejected: the shared 3,000-IOPS gp3 volume
-  was effectively saturated by existing workloads, and both historical OOMs
-  were non-Portal 256 MiB candidate workers rather than stale false positives.
-  The current role also failed the IMDS-hardening DryRun. No service or cloud
-  state changed; a dedicated AWS-HK Portal host/storage boundary is the safest
-  owner option if an admitted shared-host window cannot be obtained.
-- `EX-BE-02-LIVE` **D2 placement owner decision required / application dark:**
-  three repeated live rejections make placement a first-class gate. The
-  recommended split puts WireGuard, Edge/ingestor and encrypted projection
-  storage on a dedicated Portal cell, retaining only a bounded Portal Source
-  Proxy beside the loopback-only Trading System gateway. No resource may be
-  provisioned and no D1 peer changed until Bobby selects the placement and
-  opens a D1B window. Exact status:
-  `D2_PLACEMENT_OWNER_DECISION_REQUIRED / APPLICATION_DARK`. Detail:
+  A 05:43 UTC recheck showed the shared 3,000-IOPS root volume was already busy
+  before Portal existed. The role also failed the then-current IMDS-hardening
+  DryRun. No service or cloud state changed during that checkpoint.
+- `EX-BE-02-LIVE` **D2 shared-host realignment complete / live unauthorized:**
+  Bobby selected the existing AWS-HK execution host for the minimal Rust Edge,
+  Source Proxy and schema-only projection boundary; full Portal remains SGP and
+  `DEDICATED_SPLIT_PORTAL_CELL` is withdrawn. Resource ceilings are raised to a
+  3.25 CPU / 2,816 MiB startup peak and admission now compares bounded positive
+  PSI deltas with the exact pre-start baseline. D4 still requires separately
+  approved encrypted projection storage on the same host or another approved
+  store. Exact status:
+  `D2_SHARED_HOST_REALIGNMENT_COMPLETE / LIVE_D2_UNAUTHORIZED`. Detail:
   [`EX_BE_02_D2_PLACEMENT_DECISION.md`](./EX_BE_02_D2_PLACEMENT_DECISION.md).
 - `EX-BE-02-LIVE` **D3 offline preparation complete / live unauthorized**
   (`D3_OFFLINE_PREPARATION_COMPLETE / LIVE_D3_UNAUTHORIZED`): a

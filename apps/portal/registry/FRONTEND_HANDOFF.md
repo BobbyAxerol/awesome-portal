@@ -23,10 +23,13 @@ projection service is running. The frontend contract does not change: keep
 EventSource and commands off, and do not poll AWS-HK. The attached temporary
 role/IMDS condition remains a backend-only D2 blocker.
 
-D2 host admission is `D2_ADMISSION_REJECTED / APPLICATION_DARK` because live
-I/O pressure and historical OOM review remain open. This is an operational
-backend state only: Claude keeps the same fixture/dark/unavailable contract and
-must not enable AWS polling, Query, analytics, SSE, Lane B or commands.
+D2 host admission is
+`D2_SHARED_HOST_REALIGNMENT_COMPLETE / LIVE_D2_UNAUTHORIZED`. Bobby accepted
+the non-Portal historical-OOM
+attribution and the baseline/delta shared-host admission model. This is an
+operational backend state only: Claude keeps the same fixture/dark/unavailable
+contract and must not enable AWS polling, Query, analytics, SSE, Lane B or
+commands.
 
 D2 owner/window validation is
 `D2_AUTHORIZATION_CONTRACT_PREPARED / LIVE_D2_UNAUTHORIZED`. It creates no
@@ -35,16 +38,13 @@ runtime, while activation remains limited to source-dark D2 and requires
 profile-detachment/IMDS proof. Claude keeps every live capability and Lane B
 off until a later accepted D2 evidence packet.
 
-The 05:43 UTC admission recheck remains rejected because existing AWS-HK
-storage load saturates the shared volume and the two historical OOM records are
-real non-Portal worker exits. This remains an operations-only state: do not
+The 05:43 UTC admission recheck established the existing AWS-HK I/O baseline
+and confirmed two real non-Portal 256 MiB worker OOMs. The owner-selected
+placement keeps the full Portal on SGP and allows only the bounded Source
+Proxy, Rust Edge and private dark projection boundary on the existing AWS-HK
+host. No new EC2/EIP/D1B is part of D2. This remains operations-only: do not
 surface a source-ready UI, poll AWS or alter the fixture/dark consumer model.
-
-After three repeated rejections, backend status adds
-`D2_PLACEMENT_OWNER_DECISION_REQUIRED / APPLICATION_DARK`. A dedicated/split
-Portal placement is being considered, but placement does not alter any browser
-contract and authorizes no AWS resource. Claude continues the same dark/
-fixture/recovery work only.
+Claude continues the same dark/fixture/recovery work only.
 
 ## 1. Hai endpoint public
 

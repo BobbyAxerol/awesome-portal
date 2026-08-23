@@ -10,15 +10,16 @@ BACKEND_README="${ROOT_DIR}/upgrade/backend/README.md"
 ARCHITECTURE="${ROOT_DIR}/upgrade/BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md"
 FRONTEND_HANDOFF="${ROOT_DIR}/apps/portal/registry/FRONTEND_HANDOFF.md"
 CATALOG="${ROOT_DIR}/packages/contracts/fixtures/execution-command-catalog.valid.json"
+ADMISSION_HISTORY="${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md"
 
-python3 - "${MASTER}" "${TRACKER}" "${ROADMAP}" "${LEDGER}" "${BACKEND_README}" "${ARCHITECTURE}" "${FRONTEND_HANDOFF}" "${CATALOG}" <<'PY'
+python3 - "${MASTER}" "${TRACKER}" "${ROADMAP}" "${LEDGER}" "${BACKEND_README}" "${ARCHITECTURE}" "${FRONTEND_HANDOFF}" "${CATALOG}" "${ADMISSION_HISTORY}" <<'PY'
 from pathlib import Path
 import json
 import re
 import sys
 
-master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path = [Path(p) for p in sys.argv[1:]]
-for path in (master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path):
+master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history = [Path(p) for p in sys.argv[1:]]
+for path in (master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history):
     if not path.is_file():
         raise SystemExit(f"tracking file missing: {path}")
 
@@ -30,6 +31,7 @@ b = backend.read_text()
 a = architecture.read_text()
 h = handoff.read_text()
 c = json.loads(catalog_path.read_text())
+history = admission_history.read_text()
 
 qualified = "`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`"
 for phase in (3, 14, 15, 16, 17):
@@ -91,6 +93,9 @@ for label, text in (
     if "IAM_VERIFIED / D1_REVALIDATED / APPLICATION_DARK" not in text:
         raise SystemExit(f"{label} lost the IAM/D1 revalidation boundary")
 
+if "D2_ADMISSION_REJECTED / APPLICATION_DARK" not in history:
+    raise SystemExit("D2 admission history lost the original rejected evidence")
+
 for label, text in (
     ("master", m),
     ("tracker", t),
@@ -98,8 +103,8 @@ for label, text in (
     ("architecture guide", a),
     ("frontend handoff", h),
 ):
-    if "D2_ADMISSION_REJECTED / APPLICATION_DARK" not in text:
-        raise SystemExit(f"{label} lost the live D2 admission boundary")
+    if "D2_SHARED_HOST_REALIGNMENT_COMPLETE / LIVE_D2_UNAUTHORIZED" not in text:
+        raise SystemExit(f"{label} lost the owner-approved D2 shared-host boundary")
 
 for label, text in (
     ("master", m),
@@ -118,8 +123,8 @@ for label, text in (
     ("architecture guide", a),
     ("frontend handoff", h),
 ):
-    if "D2_PLACEMENT_OWNER_DECISION_REQUIRED / APPLICATION_DARK" not in text:
-        raise SystemExit(f"{label} lost the D2 placement owner boundary")
+    if "full Portal" not in text or "SGP" not in text or "AWS-HK" not in text:
+        raise SystemExit(f"{label} lost the SGP full-Portal/AWS-HK minimal-Edge placement")
 
 phase6 = next((line for line in t.splitlines() if line.startswith("| 6 |")), None)
 if phase6 is None or "`FOUNDATION_COMPLETE / PRODUCTION_INACTIVE`" not in phase6:

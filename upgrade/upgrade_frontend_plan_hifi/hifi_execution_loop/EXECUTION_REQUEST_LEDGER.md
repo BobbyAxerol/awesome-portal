@@ -104,7 +104,7 @@ that use case. Portal never receives a generic DB, Redis or CLI escape hatch.
 | Gate | Owner | Blocker | Status |
 |---|---|---|---|
 | D1 private network | Bobby/AWS owner | accepted 2026-08-23: exact privately recorded SG rule, two-cell preflight, handshake, public denial and link-loss evidence | `D1_NETWORK_ACCEPTED / APPLICATION_DARK` |
-| D2 dark services | Bobby authorizes; Codex executes runbook | detach/isolate temporary operator instance profile; publish signed Edge/Proxy digests; stage real workload PKI/JWKS; re-admit AWS pressure and open D2 window; private TLS/SCRAM PG boundary is now integration-proven | `D2_HARDENED / LIVE_DEPLOYMENT_BLOCKED` |
+| D2 dark services | Bobby authorizes; Codex executes runbook | owner-approved existing AWS-HK host; baseline/delta admission; detach/isolate temporary operator instance profile; publish signed Edge/Proxy digests; stage real workload PKI/JWKS and open D2 window; private TLS/SCRAM PG boundary is integration-proven | `D2_SHARED_HOST_REALIGNMENT_COMPLETE / LIVE_D2_UNAUTHORIZED` |
 | D3 public/auth transport | Bobby + Codex | accepted D2 plus explicit window | `PLANNED / PREDECESSOR_BLOCKED` |
 | D4 Paper source shadow | Trading System source owner + Bobby + Codex | typed source capability, dedicated read identity and D3 evidence | `PLANNED / PREDECESSOR_BLOCKED` |
 | EX-BE-05b live relay | Trading System command owner + Bobby + Codex | published command capability, mTLS/delegated auth and activation decision | `PRODUCTION_INACTIVE` |

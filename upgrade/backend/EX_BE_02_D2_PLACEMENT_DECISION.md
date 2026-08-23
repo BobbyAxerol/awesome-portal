@@ -1,145 +1,124 @@
-# EX-BE-02-LIVE — D2 placement decision after repeated AWS-HK rejection
+# EX-BE-02-LIVE — D2 shared-host minimal Edge decision
 
-> Status: `D2_PLACEMENT_OWNER_DECISION_REQUIRED / APPLICATION_DARK`  
-> Evidence date: 2026-08-23 UTC  
-> Scope: Portal-owned infrastructure only; no Trading System implementation,
-> container, database, Redis, CLI, broker or business-data change
+> Status: `D2_SHARED_HOST_REALIGNMENT_COMPLETE / LIVE_D2_UNAUTHORIZED`  
+> Owner decision: 2026-08-23  
+> Runtime state: `D1_NETWORK_ACCEPTED / APPLICATION_DARK`
 
-## 1. Why placement must be decided now
+## 1. Locked placement
 
-Three live admission observations found the same shared-host condition: I/O
-full-pressure remained approximately 7.4–7.9%, above the locked 5% gate. The
-single 3,000-IOPS gp3 volume is effectively saturated by existing source/
-stream writes, and two non-Portal 256 MiB candidate workers genuinely exited
-OOM. The current root volume is also unencrypted, so it cannot hold D4 Paper
-projection data.
-
-This is not a reason to weaken the gate or alter Trading System workloads. It
-means D2 placement is now an owner architecture/cost decision rather than an
-operator timing detail.
-
-## 2. Non-negotiable topology facts
-
-- Trading System publishes the Portal-compatible gateway only on
-  `127.0.0.1:8000`.
-- The browser never reaches AWS-HK directly.
-- SGP Control API reaches only the Rust Execution Edge over WireGuard plus
-  HTTP/2/TLS 1.3 mTLS and delegated JWT.
-- Only a Portal-owned Source Proxy may reach the Trading System loopback
-  gateway, with exact GET routes and a dedicated read identity beginning D4.
-- SSH is operator access, never a runtime tunnel or application credential.
-- D2 is source-dark; D3 opens only public contract/health probes; D4 is the
-  first Paper business-data read.
-
-Consequently, moving every Portal component to a new EC2 host is **not** viable
-unless the Trading System owner separately publishes a private, authenticated
-gateway contract. No such endpoint exists today.
-
-## 3. Owner choices
-
-### Option A — current shared host
-
-Keep the accepted D1 carrier and original host-local topology:
+The full Portal remains on the SGP Research server. AWS-HK runs only the
+Portal-owned compatibility and projection boundary required to communicate
+with the Trading System:
 
 ```text
-SGP -> WireGuard -> Edge + projection PG + ingestor
-                            -> Source Proxy -> TS loopback
+SGP Portal Web + TypeScript Control API
+  -> WireGuard + TLS 1.3 mTLS + delegated JWT
+  -> AWS-HK shared execution host
+       -> Rust Execution Edge
+       -> Portal Source Proxy
+       -> Portal projection PostgreSQL + one-shot migrator
+       -> Trading System loopback gateway (exact published routes only)
 ```
 
-Admission requirements remain unchanged:
+`DEDICATED_SPLIT_PORTAL_CELL` is withdrawn. No new EC2 instance, EIP, D1B
+carrier or second Portal deployment is authorized or required. The future
+AWS-HK emergency UI profile from v0.5 is deferred and is not part of D2-D4.
 
-1. I/O full-pressure below 5% at the immediate preflight and through the dark
-   observation window;
-2. explicit OOM/resource-budget review;
-3. exact-instance IMDS hardening and temporary-profile detachment;
-4. signed immutable images and verified workload identities;
-5. local projection DB remains empty and ingestion false in D2;
-6. a later encrypted DB decision is mandatory before D4.
+The Source Proxy remains on the existing host because the Trading System
+publishes its Portal-compatible gateway only on `127.0.0.1:8000`. It is Portal
+code, uses a read-only filesystem and exact route allowlist, and never grants
+Portal direct PostgreSQL, Redis, CLI, SSH or broker access.
 
-This has the smallest network change, but repeated evidence makes scheduling
-unpredictable and preserves a shared failure domain. It is acceptable only as
-a bounded Paper pilot, not the target production placement.
+## 2. Resource decision
 
-### Option B — dedicated split Portal cell (**recommended**)
+The two historical OOM exits were non-Portal candidate workers with 256 MiB
+hard limits. No Portal D2 service had been started. They are retained as owner-
+reviewed shared-host evidence, not attributed to the Portal.
 
-Provision a dedicated Portal Execution Edge host in the same AWS-HK VPC and a
-private encrypted PostgreSQL/RDS boundary. Keep only the minimal Source Proxy
-beside the Trading System loopback:
+The D2 resource envelope is deliberately large enough for the minimal Edge but
+still bounded so an Edge fault cannot consume Trading System headroom:
 
-```text
-SGP
-  -> WireGuard on dedicated Portal EC2
-  -> Rust Edge / ingestor
-  -> encrypted private projection PostgreSQL
-  -> mTLS over exact VPC peer rule
-  -> Source Proxy on existing TS host
-  -> 127.0.0.1:8000
+| Service | CPU ceiling | Memory ceiling | Long-running reservation |
+|---|---:|---:|---:|
+| Rust Execution Edge | 1.50 | 1,024 MiB | 0.50 CPU / 256 MiB |
+| Projection PostgreSQL | 1.00 | 1,024 MiB | 0.25 CPU / 256 MiB |
+| Source Proxy | 0.25 | 256 MiB | 0.05 CPU / 64 MiB |
+| One-shot migrator | 0.50 | 512 MiB | none after completion |
+
+Peak startup ceiling is 3.25 CPU and 2,816 MiB. Long-running ceiling is 2.75
+CPU and 2,304 MiB. The last read-only inventory observed 8 CPUs, about 16 GiB
+RAM and about 9.3 GiB available; D2 observation must retain at least 6 GiB.
+
+## 3. Baseline/delta admission
+
+The former absolute `io.full avg10 <= 5%` admission is retired for D2. The
+shared host already sustained roughly 7.4-7.9% before Portal existed, so an
+absolute threshold could not attribute impact to the change under review.
+
+D2 now has two machine-checked stages:
+
+1. `preflight` records the accepted shared-host baseline before any Portal
+   container exists. Elevated I/O remains a visible warning. Capacity,
+   memory-pressure, NTP, listener, ownership and historical-OOM review remain
+   hard gates.
+2. `observation` compares the running dark stack with that exact baseline.
+   It rejects a different host boot or a baseline older than 30 minutes, and
+   requires the expected Edge/Proxy/PostgreSQL count, at least 6 GiB available
+   memory and bounded positive CPU/memory/I/O PSI deltas. Any Trading System
+   health or latency regression remains an immediate manual rollback trigger
+   even if the aggregate pressure delta passes.
+
+Canonical commands:
+
+```bash
+sudo -n python3 scripts/execution-d2-host-admission.py \
+  --acknowledge-historical-oom D2_NON_PORTAL_OOM_REVIEWED \
+  > /secure/path/d2-preflight.json
+
+sudo -n python3 scripts/execution-d2-host-admission.py \
+  --mode observation \
+  --baseline-report /secure/path/d2-preflight.json \
+  --expected-portal-containers 3 \
+  --acknowledge-historical-oom D2_NON_PORTAL_OOM_REVIEWED
 ```
 
-The Source Proxy is Portal code, not a Trading System change. It has no
-persistent volume, no business credential in D2/D3, a read-only filesystem,
-all capabilities dropped, <=128 MiB memory, <=0.25 CPU, bounded PIDs/logs and
-exact route guards. It may bind only the existing host's private VPC address
-and accept 8444 solely from the dedicated Portal host security group via mTLS.
+The runbook takes repeated observations during a bounded soak. One passing
+sample is not production evidence.
 
-The dedicated host owns:
+## 4. Storage decision
 
-- the stable WireGuard endpoint and exact SGP `/32` ingress;
-- Edge/ingestor containers and Portal-only observability;
-- no broad instance profile; workload identities are separately scoped;
-- encrypted storage and an independently admitted resource budget;
-- no public 8443/8444, database or application ingress.
+D2 remains `LOCAL_DARK_NO_INGESTION`: it stores schema only and no Trading
+System business data. The existing unencrypted root volume is therefore not
+accepted for D4 Paper projections.
 
-Minimum Paper-pilot admission is 4 vCPU, 8 GiB RAM, encrypted root storage and
-an encrypted private PostgreSQL boundary. Final instance/database class,
-storage/IOPS, backup/PITR and RPO/RTO are selected from the measured D4 load
-budget, not guessed from D2 idle usage.
+Before D4, attach a separately approved encrypted gp3 EBS volume to the same
+EC2 instance (or use another explicitly approved encrypted PostgreSQL
+boundary), move the Portal projection volume there, and prove backup/restore,
+capacity and I/O ownership. This is storage isolation, not a new Portal host.
 
-This option requires a new D1B migration window because the accepted
-WireGuard endpoint changes. Old D1 remains intact until the new peer passes SG,
-handshake, route, public-denial and link-loss gates. Rollback restores the old
-peer and removes only the new exact SG rules/resources.
+## 5. IAM lifecycle
 
-### Option C — all Portal components on a dedicated host
+Keep the D1 operator policy and add the exact-instance D2 isolation policy to
+the same temporary role for the bounded change window. Before any D2 pull:
 
-Rejected with the current contract. A remote Source Proxy cannot reach
-`127.0.0.1:8000`. SSH forwarding, host routing tricks, direct DB/Redis access or
-binding the Trading System gateway publicly are prohibited substitutes. This
-option becomes reviewable only after the Trading System owner publishes a
-versioned private gateway with its own mTLS/auth/rollback contract.
+1. verify `ModifyInstanceMetadataOptions` authorization;
+2. require IMDSv2 tokens and apply the reviewed hop-limit;
+3. disassociate the temporary instance profile;
+4. prove no Portal workload, including host-network Source Proxy, can obtain
+   instance-profile credentials.
 
-## 4. Required owner decision
+The IAM role may remain dormant for audit/rollback, but the instance profile
+must not remain attached while Portal workloads run.
 
-Record exactly one value:
+## 6. Remaining gates
 
-```text
-D2_PLACEMENT=SHARED_HOST_BOUNDED_PILOT
-# or
-D2_PLACEMENT=DEDICATED_SPLIT_PORTAL_CELL
-```
+1. publish signed Edge/Proxy images from the exact reviewed commit;
+2. stage separate workload mTLS/JWKS identities;
+3. pass D2 readiness authorization, IAM isolation and preflight baseline;
+4. deploy source-dark services inside an explicit change window;
+5. run the baseline/delta soak and rollback rehearsal;
+6. open D3 and D4 only through their separate owner gates.
 
-Choosing the recommended split option also authorizes planning only. Creating
-billable EC2/RDS/EIP resources, changing the WireGuard peer or adding the exact
-private Source Proxy SG rule still requires a separately bounded D1B change
-window and an explicit resource budget.
-
-## 5. Work that remains common to both choices
-
-1. merge the feature flow through `dev` to `main` and publish signed D2/D3
-   images from the exact deployment commit;
-2. make the exact-instance D2 isolation policy effective and verify IMDS
-   DryRun before mutation;
-3. provision separate mTLS workload identities and the SGP delegated-JWT key/
-   JWKS boundary;
-4. run D2 dark deployment and rollback with all source/query/realtime/command
-   flags false;
-5. open a separate D3 probe window;
-6. obtain the Trading System's dedicated Paper read identity before D4;
-7. keep activation and Command runway as later independent owner gates.
-
-## 6. Frontend coordination
-
-Placement is invisible to frontend contracts. Claude keeps registry profile
-`fixture`, `source_available=false`, `stream_available=false`, Lane B closed
-and all Query/analytics/SSE/command controls inactive until Codex publishes an
-accepted D2/D3/D4 evidence handoff.
+Claude keeps every Execution delivery profile at `fixture`, all source/stream/
+query/command flags false and Lane B inactive until accepted activation
+evidence is published.

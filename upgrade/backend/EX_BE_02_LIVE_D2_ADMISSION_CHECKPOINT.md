@@ -111,12 +111,18 @@ unauthorized mode-0600 D2 owner-input were prepared outside Git; an AWS admin
 must attach/verify that policy before any D2 window. No AWS, Docker, WireGuard,
 Trading System or Portal runtime state changed during this requalification.
 
-Safe resolution remains one of the following owner decisions:
+## 7. Superseded admission ruling — 2026-08-23
 
-1. use a dedicated Portal Execution Edge host/storage boundary in AWS-HK;
-2. open D2 only during a demonstrably admitted low-pressure window after the
-   Trading System owner reviews the OOM evidence; or
-3. let the Trading System/infrastructure owner independently remediate its
-   storage and worker budgets, then rerun the unchanged Portal gate.
+Bobby selected the existing AWS-HK host for a minimal Portal Execution Edge and
+explicitly rejected a new EC2 instance. The two OOM records are accepted as
+non-Portal 256 MiB worker-limit evidence. The absolute 5% I/O gate is superseded
+for D2 because it measured a workload that existed before Portal and could not
+attribute incremental impact.
 
-Codex has no authority to implement option 3 or weaken the 5% admission limit.
+The replacement is the schema-v2 shared-host preflight plus baseline/delta
+observation gate described in
+[`EX_BE_02_D2_PLACEMENT_DECISION.md`](./EX_BE_02_D2_PLACEMENT_DECISION.md).
+Capacity, current memory pressure, NTP, listeners, ownership, IAM isolation,
+Trading System health and rollback remain hard gates. D4 still requires an
+encrypted projection-storage boundary on the same host or another separately
+approved store.
