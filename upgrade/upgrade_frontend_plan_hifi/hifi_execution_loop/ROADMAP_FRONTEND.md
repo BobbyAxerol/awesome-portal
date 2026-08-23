@@ -103,6 +103,69 @@ request quay lại người nộp ở trạng thái nào, ai đóng nó, nó có
 
 ---
 
+## A′. Quyết bốn việc kia thế nào
+
+Bốn việc A1a/A2/A3/A4 **không phải bốn quyết định của bạn** — chúng là **một
+cuộc nói chuyện với chủ Trading System**. Bạn không chọn phương án; bạn chọn
+**xin gì trước**. Dưới đây là thứ bạn cần để chọn.
+
+### Điều quan trọng nhất: hôm nay không có màn nào nói dối
+
+Cả bốn màn đều đã xuống cấp trung thực:
+
+| | Màn nói gì hôm nay |
+|---|---|
+| A1a | Catalogue liệt kê 8 action `ops` kèm `TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED` |
+| A2 | Full Blotter chạy fixture, không ở route sản phẩm |
+| A3 | Account/Broker 360 hiện `unavailable` kèm lý do, **không bao giờ tự cộng** |
+| A4 | Portfolio 360 ghi thẳng trên caption rằng sàn 200 mẫu **không áp được** từng ô |
+
+Nên **không việc nào gấp vì lý do đúng/sai**. Cả bốn là chuyện *năng lực*, không
+phải chuyện *sự thật*. Bạn có thời gian.
+
+### Nhưng một trong bốn khác hẳn ba cái kia
+
+Ba cái là **sự vắng mặt** — màn nói "tôi không có". Người vận hành biết.
+
+**A4 là con số trông chắc chắn mà không chắc chắn.** Ma trận correlation vẫn vẽ
+0.9 dù nó tính từ 4 mẫu hay 4.000 mẫu — trông y hệt nhau. Caption có cảnh báo,
+nhưng caption yếu; con số thì to và ở giữa màn.
+
+Đó là khác biệt duy nhất đáng dùng để xếp thứ tự.
+
+### Xếp theo hai thước đo
+
+| Xếp theo **rủi ro quyết định sai** | Xếp theo **mở được bao nhiêu** |
+|---|---|
+| 1. **A4** — số trông đúng mà có thể sai | 1. **A1a** — mở phase 7 và 8 |
+| 2. A3 — panel không bao giờ trả lời được câu hỏi của chính nó | 2. A3 |
+| 3. A1a | 3. A2 |
+| 4. A2 | 4. A4 |
+
+### Đề xuất
+
+**Xin cả bốn trong một cuộc nói chuyện.** Chúng cùng một người, và chia nhỏ ra
+thì mỗi lần lại tốn một vòng chờ.
+
+**Nếu họ chỉ làm được một: chọn A4.** Không phải vì nó mở nhiều nhất — nó mở ít
+nhất — mà vì nó là cái duy nhất mà người vận hành hiện có thể bị **một con số
+trông hợp lý** dẫn sai. Ba cái kia chỉ là chưa có, và màn đã nói rồi.
+
+### Xin cụ thể cái gì
+
+| # | Xin | Vì sao họ nên đồng ý |
+|---|---|---|
+| **A4** | `sample_counts` đóng gói **cùng cách** với `values` trong packed matrix | Họ đã gửi `sample_count` cho `RANKED_PAIRS`; đây là cùng dữ liệu, khác cách đóng gói |
+| **A3** | Một verdict headroom **do server phán**, không phải các dòng để cộng | Browser chỉ thấy `linked[]` mà endpoint trả — nó **không thể** cộng đúng, kể cả khi muốn |
+| **A1a** | 8 route HTTP có kiểu cho `ops`: `trace-order`, `dead-letters`, `findings`, `streams`, `command-journal`, `redis-retention`, `alerts`, `alpha-activity` | Codex đã ghi chúng `portal_reachable=false` cho tới khi có; đây là chỗ duy nhất mở được |
+| **A2** | Endpoint list order theo keyset, **bounded theo scope** | Đã có `/orders/{id}/funnel` cho một order; thiếu đúng phần danh sách |
+
+**Một câu nên nói kèm A1a:** Portal **không** xin quyền đọc thẳng Postgres/Redis
+để thay thế. Codex đã ghi rõ điều đó trong stop gate, và nếu chủ Trading System
+hiểu nhầm thành "Portal muốn vào DB" thì cuộc nói chuyện sẽ đi sai hướng ngay.
+
+---
+
 ## B. Claude đang làm — không chờ ai
 
 Codex giao lane này ngày 2026-08-22 (PHASE_TRACKER §24A.2).
@@ -118,7 +181,7 @@ Codex giao lane này ngày 2026-08-22 (PHASE_TRACKER §24A.2).
 | B7 | Canonical `view` param + registry activation review | 1 | ✅ `view` vốn đã đúng; **thiếu chip R2** server vẫn phục vụ |
 | B8 | Canonical plan/apply/poll route + policy write riêng | 2 | ✅ route apply+poll **đang 404**, đã sửa; policy → **BR-EX-31** |
 | B9 | Dùng `portfolio_id`/`currency` sinh ra, bỏ default fixture | 3 | ✅ xong `8d8779a` |
-| B10 | Tiêu thụ SSE expiry/gap semantics đã publish | 9 | ⏳ **code được ngay** (C-PI04-02); chặn *activation* bởi snapshot/SSE parity + profile evidence thật |
+| B10 | Tiêu thụ SSE expiry/gap semantics đã publish | 9 | ✅ `20c8fc4` — đấu dây xong, **cổng đóng**; mở khi `stream_available` bật |
 
 **Lane Command Center — codex giao 2026-08-22 (PRE-IAM-03, tracker §24A.3).**
 Backend đã giao `GET /api/v1/execution/command-center` + schema
@@ -140,8 +203,8 @@ thêm generic Redis read.
 
 **Đã xong:** B3–B6 (phase 5) · B11–B17 (phase 9) · B7, B8 (phase 1, 2).
 
-**Còn lại trong lane này:** chỉ **B10** — tiêu thụ SSE expiry/gap semantics. Code
-đã sẵn (C-PI04-02); chặn bởi snapshot/SSE parity, không phải bởi tôi.
+**Lane này đã hết việc.** B1–B17 xong. Việc còn lại của Execution Loop nằm ở
+codex (EX-BE-05b cho phase 7/8/10/11/12) và ở chủ Trading System (§A′).
 
 ---
 
