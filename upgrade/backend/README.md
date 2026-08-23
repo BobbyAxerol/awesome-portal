@@ -586,3 +586,29 @@ alphas are never executable. Fixtures: `visual-baseline-run` (COMPLETED) +
   reader group and recreate `portal-api`; never chmod canonical storage
   world-readable. Real doctor, bounded market-data smoke, three-window and WFO
   regression evidence are required before merge.
+
+## Backend state — 2026-08-23 (test sweep on feat/execution_loop — for codex)
+
+Full backend sweep (portal pytest, roadmap, control-api 173, contracts, FE
+1423, verify) found **5 failing backend gates — all tracking/stale, no
+runtime logic errors**. Please regenerate/update:
+
+1. `test_compat_parity.py::test_only_the_web_gateway_exposes_a_public_port` —
+   compose.yaml restructured (control-api first + `control-api-migrate` /
+   `control-api-bootstrap` one-shots); the test splits on `"portal-api:"` and
+   now matches the image line instead of the service block. portal-api still
+   `expose: 8000` (safe), web still the only public port — the test needs to
+   anchor on the service block, not a substring.
+2. `test_m0_freeze.py` (both tests) — `compose.yaml`, `deploy/nginx/portal.conf`,
+   `.env.example` changed but `upgrade/backend/bar05/m0-freeze-manifest.json`
+   was not regenerated (`python apps/portal/scripts/export_m0_freeze.py`).
+3. `test_canonical_contracts.py::test_contracts_snapshot_digests_verify_every_tracked_file`
+   — `packages/contracts/README.md` drifted from `contracts-snapshot.json`
+   (regenerate with `packages/contracts/tooling/snapshot.py`).
+4. `test_release_report.py::test_hygiene_scan_is_clean_and_detects_planted_secrets`
+   — false positive: `scripts/control-api-provision-keyrings.sh:43` uses
+   `query_secret="$(openssl rand -hex 32)"` (generates, never leaks); the
+   scanner needs an exception for `$(openssl rand ...)` patterns.
+
+Nothing else fails: portal backend 405 passed/1 skipped, control-api 173/173,
+FE 1423 passed/1 skipped, verify-workspace pass.
