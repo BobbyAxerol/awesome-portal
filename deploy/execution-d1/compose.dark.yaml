@@ -6,6 +6,8 @@ services:
     depends_on:
       source-proxy:
         condition: service_healthy
+      projection-migrator:
+        condition: service_completed_successfully
     environment:
       EDGE_SOURCE_ORIGIN: ${EDGE_SOURCE_ORIGIN:?set the private Source Proxy HTTPS origin}
       EDGE_SOURCE_CA_FILE: /run/secrets/source-proxy-ca.crt
@@ -13,6 +15,7 @@ services:
       # This is a non-TS admission sentinel. The Source Proxy discards it and
       # injects the real TS read identity, which never enters this container.
       EDGE_SOURCE_API_KEY_FILE: ${EDGE_SOURCE_API_KEY_FILE:?set the Source Proxy admission-token file}
+      EDGE_SOURCE_PROBES_ENABLED: "false"
       EDGE_PROJECTION_INGESTION_ENABLED: "false"
       EDGE_REALTIME_SSE_ENABLED: "false"
       EDGE_ANALYTICS_QUERY_ENABLED: "false"
@@ -27,6 +30,111 @@ services:
         reservations:
           cpus: "0.25"
           memory: 128M
+
+  projection-postgres:
+    image: ${PORTAL_PROJECTION_POSTGRES_IMAGE:?set a pinned official PostgreSQL 16 digest}
+    pull_policy: always
+    restart: unless-stopped
+    init: true
+    read_only: true
+    pids_limit: 128
+    cpus: "0.50"
+    mem_limit: 512m
+    mem_reservation: 128m
+    shm_size: 64m
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-bootstrap-password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=trust
+      PROJECTION_DB_NAME: ${PROJECTION_DB_NAME:?set the Portal projection database}
+      PROJECTION_DB_OWNER_USER: ${PROJECTION_DB_OWNER_USER:?set the migration owner role}
+      PROJECTION_DB_RUNTIME_USER: ${PROJECTION_DB_RUNTIME_USER:?set the runtime role}
+    command:
+      - postgres
+      - -c
+      - ssl=on
+      - -c
+      - ssl_cert_file=/run/secrets/projection-postgres.crt
+      - -c
+      - ssl_key_file=/run/secrets/projection-postgres.key
+      - -c
+      - password_encryption=scram-sha-256
+    volumes:
+      - projection-postgres-data:/var/lib/postgresql/data
+      - type: bind
+        source: ${PROJECTION_DB_SECRET_DIRECTORY:?set the root-owned projection DB secret directory}
+        target: /run/secrets
+        read_only: true
+      - type: bind
+        source: ${PROJECTION_DB_INIT_SCRIPT:?set the reviewed role/bootstrap script}
+        target: /docker-entrypoint-initdb.d/10-portal-projection.sh
+        read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
+      - /run/postgresql:rw,noexec,nosuid,nodev,size=8m,mode=3775,uid=70,gid=70
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -q -h 127.0.0.1 -U postgres -d postgres"]
+      interval: 10s
+      timeout: 3s
+      retries: 8
+      start_period: 20s
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - execution-private
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+          pids: 128
+        reservations:
+          cpus: "0.10"
+          memory: 128M
+
+  projection-migrator:
+    image: ${PORTAL_EXECUTION_EDGE_IMAGE:?set PORTAL_EXECUTION_EDGE_IMAGE to an immutable digest}
+    pull_policy: always
+    restart: "no"
+    init: true
+    user: "65532:65532"
+    group_add:
+      - "${PORTAL_RUNTIME_GID:?set the numeric portal-runtime group ID}"
+    read_only: true
+    pids_limit: 64
+    cpus: "0.25"
+    mem_limit: 256m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      EDGE_PROJECTION_DATABASE_URL_FILE: /run/secrets/projection-migration-database-url
+    command: ["projection-migrate"]
+    volumes:
+      - type: bind
+        source: ${EDGE_SECRET_DIRECTORY:?set the root-owned edge secret directory}
+        target: /run/secrets
+        read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=8m,mode=1777
+    depends_on:
+      projection-postgres:
+        condition: service_healthy
+    networks:
+      - execution-private
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
 
   source-proxy:
     image: ${PORTAL_SOURCE_PROXY_IMAGE:?set PORTAL_SOURCE_PROXY_IMAGE to an immutable digest}
@@ -91,3 +199,7 @@ networks:
       config:
         - subnet: ${PORTAL_BRIDGE_CIDR:?set the approved Portal-only bridge CIDR}
           gateway: ${PORTAL_BRIDGE_GATEWAY_IP:?set the approved Portal bridge gateway IP}
+
+volumes:
+  projection-postgres-data:
+    name: ${PROJECTION_DB_VOLUME_NAME:?set a versioned Portal-owned volume name}

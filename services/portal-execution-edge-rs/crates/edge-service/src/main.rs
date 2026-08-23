@@ -63,14 +63,37 @@ use ts_transport::{
 const MAX_SECRET_FILE_BYTES: u64 = 1024 * 1024;
 const ANALYTICS_SCREEN_SCHEMA_VERSION: &str = "execution.analytics.screen.v1";
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum RuntimeGate {
+    Disabled,
+    Enabled,
+}
+
+impl RuntimeGate {
+    const fn is_enabled(self) -> bool {
+        matches!(self, Self::Enabled)
+    }
+}
+
+impl From<bool> for RuntimeGate {
+    fn from(value: bool) -> Self {
+        if value {
+            Self::Enabled
+        } else {
+            Self::Disabled
+        }
+    }
+}
+
 #[derive(Clone)]
 struct AppState {
     environment: String,
     verifier: DelegationVerifier,
     snapshot: Arc<RwLock<Option<CapabilitySnapshot>>>,
-    projection_required: bool,
+    source_probe_required: RuntimeGate,
+    projection_required: RuntimeGate,
     projection_ready: Arc<RwLock<bool>>,
-    realtime_required: bool,
+    realtime_required: RuntimeGate,
     realtime_poller_ready: Arc<RwLock<bool>>,
     projection_store: Option<PgProjectionStore>,
     realtime_hub: Option<RealtimeHub>,
@@ -79,7 +102,7 @@ struct AppState {
     realtime_epoch_jitter: Duration,
     realtime_freshness_policy: FreshnessPolicy,
     realtime_venue_session: VenueSessionState,
-    analytics_query_enabled: bool,
+    analytics_query_enabled: RuntimeGate,
     analytics_source_profile: DeliveryProfile,
 }
 
@@ -100,12 +123,13 @@ struct EdgeConfig {
     source_client_identity_file: Option<PathBuf>,
     source_api_key_file: Option<PathBuf>,
     source_gateway_digest: String,
+    source_probes_enabled: RuntimeGate,
     probe_alpha_id: Option<String>,
     probe_interval: Duration,
     transport_limits: TransportLimits,
-    projection_ingestion_enabled: bool,
+    projection_ingestion_enabled: RuntimeGate,
     projection_database_url_file: Option<PathBuf>,
-    realtime_sse_enabled: bool,
+    realtime_sse_enabled: RuntimeGate,
     realtime_queue_capacity: usize,
     realtime_replay_limit: usize,
     realtime_poll_interval: Duration,
@@ -114,7 +138,7 @@ struct EdgeConfig {
     realtime_epoch_jitter: Duration,
     realtime_freshness_policy: FreshnessPolicy,
     realtime_venue_session: VenueSessionState,
-    analytics_query_enabled: bool,
+    analytics_query_enabled: RuntimeGate,
     analytics_source_profile: DeliveryProfile,
 }
 
@@ -135,10 +159,14 @@ impl EdgeConfig {
             return Err(ConfigError::Invalid("EDGE_HEALTH_BIND_ADDRESS"));
         }
         let probe_interval_seconds = bounded_usize("EDGE_PROBE_INTERVAL_SECONDS", 30, 5, 300)?;
+        let source_probes_enabled =
+            RuntimeGate::from(strict_boolean("EDGE_SOURCE_PROBES_ENABLED", false)?);
         let projection_ingestion_enabled =
-            strict_boolean("EDGE_PROJECTION_INGESTION_ENABLED", false)?;
-        let realtime_sse_enabled = strict_boolean("EDGE_REALTIME_SSE_ENABLED", false)?;
-        let analytics_query_enabled = strict_boolean("EDGE_ANALYTICS_QUERY_ENABLED", false)?;
+            RuntimeGate::from(strict_boolean("EDGE_PROJECTION_INGESTION_ENABLED", false)?);
+        let realtime_sse_enabled =
+            RuntimeGate::from(strict_boolean("EDGE_REALTIME_SSE_ENABLED", false)?);
+        let analytics_query_enabled =
+            RuntimeGate::from(strict_boolean("EDGE_ANALYTICS_QUERY_ENABLED", false)?);
         if strict_boolean("EDGE_COMMAND_RELAY_ENABLED", false)? {
             return Err(ConfigError::Invalid("EDGE_COMMAND_RELAY_ENABLED"));
         }
@@ -147,7 +175,9 @@ impl EdgeConfig {
         let (realtime_freshness_policy, realtime_venue_session) =
             realtime_freshness_from_environment()?;
         let projection_database_url_file = optional_path("EDGE_PROJECTION_DATABASE_URL_FILE");
-        if (projection_ingestion_enabled || realtime_sse_enabled || analytics_query_enabled)
+        if (projection_ingestion_enabled.is_enabled()
+            || realtime_sse_enabled.is_enabled()
+            || analytics_query_enabled.is_enabled())
             && projection_database_url_file.is_none()
         {
             return Err(ConfigError::Missing("EDGE_PROJECTION_DATABASE_URL_FILE"));
@@ -173,6 +203,7 @@ impl EdgeConfig {
             source_client_identity_file: optional_path("EDGE_SOURCE_CLIENT_IDENTITY_FILE"),
             source_api_key_file: optional_path("EDGE_SOURCE_API_KEY_FILE"),
             source_gateway_digest: required("EDGE_SOURCE_GATEWAY_DIGEST")?,
+            source_probes_enabled,
             probe_alpha_id: optional("EDGE_PROBE_ALPHA_ID"),
             probe_interval: Duration::from_secs(probe_interval_seconds as u64),
             transport_limits: transport_limits_from_environment()?,
@@ -325,12 +356,15 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         limits: config.transport_limits.clone(),
     })?;
     let negotiator = CapabilityNegotiator::new(source_client);
-    let snapshot = Arc::new(RwLock::new(Some(
-        negotiator.probe(config.probe_alpha_id.as_deref()).await,
-    )));
+    let initial_snapshot = if config.source_probes_enabled.is_enabled() {
+        Some(negotiator.probe(config.probe_alpha_id.as_deref()).await)
+    } else {
+        None
+    };
+    let snapshot = Arc::new(RwLock::new(initial_snapshot));
     let projection_ready = Arc::new(RwLock::new(projection_store.is_some()));
-    let realtime_poller_ready = Arc::new(RwLock::new(!config.realtime_sse_enabled));
-    let realtime_hub = if config.realtime_sse_enabled {
+    let realtime_poller_ready = Arc::new(RwLock::new(!config.realtime_sse_enabled.is_enabled()));
+    let realtime_hub = if config.realtime_sse_enabled.is_enabled() {
         Some(RealtimeHub::new(config.realtime_queue_capacity)?)
     } else {
         None
@@ -339,9 +373,12 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         environment: config.environment.clone(),
         verifier,
         snapshot: Arc::clone(&snapshot),
-        projection_required: config.projection_ingestion_enabled
-            || config.realtime_sse_enabled
-            || config.analytics_query_enabled,
+        source_probe_required: config.source_probes_enabled,
+        projection_required: RuntimeGate::from(
+            config.projection_ingestion_enabled.is_enabled()
+                || config.realtime_sse_enabled.is_enabled()
+                || config.analytics_query_enabled.is_enabled(),
+        ),
         projection_ready: Arc::clone(&projection_ready),
         realtime_required: config.realtime_sse_enabled,
         realtime_poller_ready: Arc::clone(&realtime_poller_ready),
@@ -392,9 +429,9 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
 async fn connect_projection_store(
     config: &EdgeConfig,
 ) -> Result<Option<PgProjectionStore>, ServiceError> {
-    if !config.projection_ingestion_enabled
-        && !config.realtime_sse_enabled
-        && !config.analytics_query_enabled
+    if !config.projection_ingestion_enabled.is_enabled()
+        && !config.realtime_sse_enabled.is_enabled()
+        && !config.analytics_query_enabled.is_enabled()
     {
         return Ok(None);
     }
@@ -417,17 +454,19 @@ fn spawn_background_tasks(
     realtime_poller_ready: Arc<RwLock<bool>>,
     realtime_hub: Option<RealtimeHub>,
 ) {
-    let probe_alpha_id = config.probe_alpha_id.clone();
-    let probe_interval = config.probe_interval;
-    tokio::spawn(async move {
-        let mut interval = tokio::time::interval(probe_interval);
-        interval.tick().await;
-        loop {
+    if config.source_probes_enabled.is_enabled() {
+        let probe_alpha_id = config.probe_alpha_id.clone();
+        let probe_interval = config.probe_interval;
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(probe_interval);
             interval.tick().await;
-            let next = negotiator.probe(probe_alpha_id.as_deref()).await;
-            *snapshot.write().await = Some(next);
-        }
-    });
+            loop {
+                interval.tick().await;
+                let next = negotiator.probe(probe_alpha_id.as_deref()).await;
+                *snapshot.write().await = Some(next);
+            }
+        });
+    }
     if let Some(store) = projection_store.clone() {
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(10));
@@ -709,7 +748,7 @@ async fn analytics_context(
     headers: &HeaderMap,
     resource: &str,
 ) -> Result<AnalyticsRequestContext, StatusCode> {
-    if !state.analytics_query_enabled {
+    if !state.analytics_query_enabled.is_enabled() {
         return Err(StatusCode::NOT_FOUND);
     }
     let store = state
@@ -1368,12 +1407,15 @@ async fn livez() -> impl IntoResponse {
 }
 
 async fn readyz(State(state): State<AppState>) -> Response {
-    let dependencies = RequiredDependencyReadiness {
-        projection: !state.projection_required || *state.projection_ready.read().await,
-        realtime: !state.realtime_required || *state.realtime_poller_ready.read().await,
-    };
     let snapshot = state.snapshot.read().await;
-    let ready = service_ready(snapshot.as_ref(), dependencies);
+    let dependencies = RequiredDependencyReadiness {
+        source: !state.source_probe_required.is_enabled()
+            || snapshot.as_ref().is_some_and(snapshot_ready),
+        projection: !state.projection_required.is_enabled() || *state.projection_ready.read().await,
+        realtime: !state.realtime_required.is_enabled()
+            || *state.realtime_poller_ready.read().await,
+    };
+    let ready = service_ready(dependencies);
     let status = if ready {
         StatusCode::OK
     } else {
@@ -1390,15 +1432,13 @@ async fn readyz(State(state): State<AppState>) -> Response {
 
 #[derive(Clone, Copy)]
 struct RequiredDependencyReadiness {
+    source: bool,
     projection: bool,
     realtime: bool,
 }
 
-fn service_ready(
-    snapshot: Option<&CapabilitySnapshot>,
-    dependencies: RequiredDependencyReadiness,
-) -> bool {
-    snapshot.is_some_and(snapshot_ready) && dependencies.projection && dependencies.realtime
+fn service_ready(dependencies: RequiredDependencyReadiness) -> bool {
+    dependencies.source && dependencies.projection && dependencies.realtime
 }
 
 fn snapshot_ready(snapshot: &CapabilitySnapshot) -> bool {
@@ -1845,34 +1885,26 @@ mod tests {
         assert!(snapshot_ready(&snapshot("READ_ONLY")));
         assert!(!snapshot_ready(&snapshot("DISABLED")));
         assert!(!snapshot_ready(&snapshot("INCOMPATIBLE")));
-        assert!(service_ready(
-            Some(&snapshot("READ_ONLY")),
-            RequiredDependencyReadiness {
-                projection: true,
-                realtime: true,
-            },
-        ));
-        assert!(!service_ready(
-            Some(&snapshot("READ_ONLY")),
-            RequiredDependencyReadiness {
-                projection: false,
-                realtime: true,
-            },
-        ));
-        assert!(service_ready(
-            Some(&snapshot("READ_ONLY")),
-            RequiredDependencyReadiness {
-                projection: true,
-                realtime: true,
-            },
-        ));
-        assert!(!service_ready(
-            Some(&snapshot("READ_ONLY")),
-            RequiredDependencyReadiness {
-                projection: true,
-                realtime: false,
-            },
-        ));
+        assert!(service_ready(RequiredDependencyReadiness {
+            source: true,
+            projection: true,
+            realtime: true,
+        }));
+        assert!(!service_ready(RequiredDependencyReadiness {
+            source: false,
+            projection: true,
+            realtime: true,
+        }));
+        assert!(!service_ready(RequiredDependencyReadiness {
+            source: true,
+            projection: false,
+            realtime: true,
+        }));
+        assert!(!service_ready(RequiredDependencyReadiness {
+            source: true,
+            projection: true,
+            realtime: false,
+        }));
     }
 
     #[test]

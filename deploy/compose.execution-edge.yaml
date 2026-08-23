@@ -48,6 +48,9 @@ services:
       EDGE_SOURCE_CLIENT_IDENTITY_FILE: ${EDGE_SOURCE_CLIENT_IDENTITY_FILE:-}
       EDGE_SOURCE_API_KEY_FILE: ${EDGE_SOURCE_API_KEY_FILE:-}
       EDGE_SOURCE_GATEWAY_DIGEST: ${EDGE_SOURCE_GATEWAY_DIGEST:?set the observed immutable gateway digest}
+      # D2 is application-dark and must not contact even public source routes.
+      # D3 enables contract/health probes in a separately reviewed overlay.
+      EDGE_SOURCE_PROBES_ENABLED: ${EDGE_SOURCE_PROBES_ENABLED:-false}
       EDGE_PROBE_ALPHA_ID: ${EDGE_PROBE_ALPHA_ID:-}
       EDGE_PROBE_INTERVAL_SECONDS: ${EDGE_PROBE_INTERVAL_SECONDS:-30}
       EDGE_CONNECT_TIMEOUT_MS: ${EDGE_CONNECT_TIMEOUT_MS:-2000}

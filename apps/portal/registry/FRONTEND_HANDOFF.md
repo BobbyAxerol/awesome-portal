@@ -810,3 +810,21 @@ flag false. Full backend evidence remains in
 `upgrade/backend/EX_BE_05B_F0_OFFLINE_OPERATIONS_FOUNDATION.md` and the detailed
 consumer packet in
 `upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F0_HANDOFF.md`.
+
+### 8.9 D2 hardening checkpoint — source remains dark (2026-08-23)
+
+The backend status is `D2_HARDENED / LIVE_DEPLOYMENT_BLOCKED`, not deployed and
+not source-active. Dark Edge no longer makes an initial or background source
+probe. All seven Source Proxy routes return transport-level 503 before
+proxying, and no Trading System read credential exists in D2. The new private
+projection PostgreSQL/migrator boundary is backend-only and contains no
+business data while ingestion remains false.
+
+Claude should keep `source_available=false`, `stream_available=false`, fixture
+analytics and every command control inactive. It is safe to consume the
+existing dark/unavailable/error contracts and render explicit degraded states;
+it is not safe to open EventSource, switch Lane B, poll AWS-HK, or infer D3/D4
+availability. D3 mTLS/JWT compatibility probes and D4 Paper BUILDING-epoch
+qualification will each publish a new handoff before any frontend activation.
+Full evidence:
+`upgrade/backend/EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md`.

@@ -285,6 +285,7 @@ for required in \
   "${ROOT_DIR}/deploy/execution-d1/source-proxy/trading-system-read-header.conf.example" \
   "${ROOT_DIR}/deploy/runbooks/execution-d1-bootstrap-and-rollback.md" \
   "${ROOT_DIR}/deploy/execution-d2/README.md" \
+  "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
   "${ROOT_DIR}/deploy/runbooks/execution-d2-dark-deploy-and-rollback.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md" \
@@ -607,6 +608,7 @@ for tracked_source in \
   deploy/execution-d1/source-proxy/trading-system-read-header.conf.example \
   deploy/runbooks/execution-d1-bootstrap-and-rollback.md \
   deploy/execution-d2/README.md \
+  deploy/execution-d2/init-projection-database.sh \
   deploy/runbooks/execution-d2-dark-deploy-and-rollback.md \
   upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md \
   upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md \
@@ -746,6 +748,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-d2-render-source-proxy.sh" \
   "${ROOT_DIR}/scripts/execution-d2-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
+  "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
   "${ROOT_DIR}/apps/portal/scripts/test_backend.sh" \
   "${ROOT_DIR}/features/roadmap-task-board/tooling/clean-generated.sh"

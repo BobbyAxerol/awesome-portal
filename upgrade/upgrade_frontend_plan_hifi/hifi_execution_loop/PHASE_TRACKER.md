@@ -331,6 +331,16 @@ live FE profile; Claude should continue fixture/failure-state work only.
 Evidence:
 [`EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md`](../../backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md).
 
+The D2 hardening checkpoint is `D2_HARDENED / LIVE_DEPLOYMENT_BLOCKED`.
+Dark Edge now starts without initial/background source probes; seven exact
+Source Proxy guards return 503 with no Trading System read credential. A private
+TLS/SCRAM projection PostgreSQL, separate migration/runtime roles and one-shot
+Rust migrator are integration-tested, including no-DDL/no-plaintext and Edge
+readiness with no source. This still unlocks no frontend live profile. Claude
+continues typed unavailable/dark states only; no EventSource, Lane B, query,
+analytics or command activation. Evidence:
+[`EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md`](../../backend/EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md).
+
 ### 6.2 BR-EX decisions
 
 The binding contract is

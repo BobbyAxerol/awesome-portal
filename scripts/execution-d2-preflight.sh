@@ -4,7 +4,7 @@
 set -euo pipefail
 
 usage() {
-  printf 'Usage: %s --env-file PATH --mode template|offline|readiness\n' "$0" >&2
+  printf 'Usage: %s --env-file PATH --mode template|offline|readiness|source-readiness\n' "$0" >&2
   exit 2
 }
 
@@ -18,10 +18,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 [[ -n "${env_file}" && -f "${env_file}" ]] || usage
-[[ "${mode}" =~ ^(template|offline|readiness)$ ]] || usage
+[[ "${mode}" =~ ^(template|offline|readiness|source-readiness)$ ]] || usage
 
 declare -A values=()
-allowed_keys=' PORTAL_EXECUTION_EDGE_IMAGE PORTAL_SOURCE_PROXY_IMAGE PORTAL_RUNTIME_GID EDGE_PRIVATE_BIND_IP EDGE_SECRET_DIRECTORY SOURCE_PROXY_SECRET_DIRECTORY SOURCE_PROXY_CONFIG_FILE PORTAL_BRIDGE_CIDR PORTAL_BRIDGE_GATEWAY_IP SOURCE_PROXY_PRIVATE_PORT EDGE_ENVIRONMENT EDGE_DELEGATION_ISSUER EDGE_DELEGATION_AUDIENCE EDGE_SOURCE_ORIGIN EDGE_SOURCE_GATEWAY_DIGEST EDGE_SOURCE_CLIENT_IDENTITY_FILE EDGE_SOURCE_API_KEY_FILE EDGE_PROBE_ALPHA_ID EDGE_PROJECTION_INGESTION_ENABLED EDGE_REALTIME_SSE_ENABLED EDGE_ANALYTICS_QUERY_ENABLED EDGE_ANALYTICS_SOURCE_PROFILE EDGE_COMMAND_RELAY_ENABLED '
+allowed_keys=' PORTAL_EXECUTION_EDGE_IMAGE PORTAL_SOURCE_PROXY_IMAGE PORTAL_PROJECTION_POSTGRES_IMAGE PORTAL_RUNTIME_GID EDGE_PRIVATE_BIND_IP EDGE_SECRET_DIRECTORY SOURCE_PROXY_SECRET_DIRECTORY SOURCE_PROXY_CONFIG_FILE PORTAL_BRIDGE_CIDR PORTAL_BRIDGE_GATEWAY_IP SOURCE_PROXY_PRIVATE_PORT SOURCE_PROXY_SOURCE_MODE PROJECTION_DB_SECRET_DIRECTORY PROJECTION_DB_INIT_SCRIPT PROJECTION_DB_VOLUME_NAME PROJECTION_DB_CONTAINER_GID PROJECTION_DB_NAME PROJECTION_DB_OWNER_USER PROJECTION_DB_RUNTIME_USER EDGE_ENVIRONMENT EDGE_DELEGATION_ISSUER EDGE_DELEGATION_AUDIENCE EDGE_SOURCE_ORIGIN EDGE_SOURCE_GATEWAY_DIGEST EDGE_SOURCE_PROBES_ENABLED EDGE_SOURCE_CLIENT_IDENTITY_FILE EDGE_SOURCE_API_KEY_FILE EDGE_PROBE_ALPHA_ID EDGE_PROJECTION_INGESTION_ENABLED EDGE_REALTIME_SSE_ENABLED EDGE_ANALYTICS_QUERY_ENABLED EDGE_ANALYTICS_SOURCE_PROFILE EDGE_COMMAND_RELAY_ENABLED '
 
 while IFS= read -r line || [[ -n "${line}" ]]; do
   [[ -z "${line}" || "${line}" == \#* ]] && continue
@@ -43,11 +43,15 @@ while IFS= read -r line || [[ -n "${line}" ]]; do
 done < "${env_file}"
 
 required=(
-  PORTAL_EXECUTION_EDGE_IMAGE PORTAL_SOURCE_PROXY_IMAGE PORTAL_RUNTIME_GID
+  PORTAL_EXECUTION_EDGE_IMAGE PORTAL_SOURCE_PROXY_IMAGE PORTAL_PROJECTION_POSTGRES_IMAGE PORTAL_RUNTIME_GID
   EDGE_PRIVATE_BIND_IP EDGE_SECRET_DIRECTORY SOURCE_PROXY_SECRET_DIRECTORY
   SOURCE_PROXY_CONFIG_FILE PORTAL_BRIDGE_CIDR PORTAL_BRIDGE_GATEWAY_IP
-  SOURCE_PROXY_PRIVATE_PORT EDGE_ENVIRONMENT EDGE_DELEGATION_ISSUER
+  SOURCE_PROXY_PRIVATE_PORT SOURCE_PROXY_SOURCE_MODE EDGE_ENVIRONMENT EDGE_DELEGATION_ISSUER
+  PROJECTION_DB_SECRET_DIRECTORY PROJECTION_DB_INIT_SCRIPT PROJECTION_DB_VOLUME_NAME
+  PROJECTION_DB_CONTAINER_GID PROJECTION_DB_NAME PROJECTION_DB_OWNER_USER
+  PROJECTION_DB_RUNTIME_USER
   EDGE_DELEGATION_AUDIENCE EDGE_SOURCE_ORIGIN EDGE_SOURCE_GATEWAY_DIGEST
+  EDGE_SOURCE_PROBES_ENABLED
   EDGE_SOURCE_CLIENT_IDENTITY_FILE EDGE_SOURCE_API_KEY_FILE
   EDGE_PROJECTION_INGESTION_ENABLED EDGE_REALTIME_SSE_ENABLED
   EDGE_ANALYTICS_QUERY_ENABLED EDGE_ANALYTICS_SOURCE_PROFILE EDGE_COMMAND_RELAY_ENABLED
@@ -58,6 +62,10 @@ for key in "${required[@]}"; do
     exit 1
   }
 done
+[[ "${values[PORTAL_PROJECTION_POSTGRES_IMAGE]}" =~ ^docker\.io/library/postgres@sha256:[a-f0-9]{64}$ ]] || {
+  printf 'D2 preflight requires an immutable official PostgreSQL digest.\n' >&2
+  exit 1
+}
 
 image_pattern='^ghcr\.io/[a-z0-9._/-]+@sha256:[a-f0-9]{64}$'
 for key in PORTAL_EXECUTION_EDGE_IMAGE PORTAL_SOURCE_PROXY_IMAGE; do
@@ -72,6 +80,24 @@ done
 }
 [[ "${values[PORTAL_RUNTIME_GID]}" =~ ^[1-9][0-9]{1,8}$ ]] || {
   printf 'D2 preflight requires a positive numeric portal-runtime GID.\n' >&2
+  exit 1
+}
+[[ "${values[PROJECTION_DB_CONTAINER_GID]}" =~ ^[1-9][0-9]{0,8}$ ]] || {
+  printf 'D2 preflight rejected the PostgreSQL container GID.\n' >&2
+  exit 1
+}
+for key in PROJECTION_DB_NAME PROJECTION_DB_OWNER_USER PROJECTION_DB_RUNTIME_USER; do
+  [[ "${values[${key}]}" =~ ^[a-z][a-z0-9_]{2,62}$ ]] || {
+    printf 'D2 preflight rejected a projection database identifier.\n' >&2
+    exit 1
+  }
+done
+[[ "${values[PROJECTION_DB_OWNER_USER]}" != "${values[PROJECTION_DB_RUNTIME_USER]}" ]] || {
+  printf 'D2 preflight requires separate projection owner/runtime roles.\n' >&2
+  exit 1
+}
+[[ "${values[PROJECTION_DB_VOLUME_NAME]}" =~ ^portal-execution-projection-pgdata-v[1-9][0-9]*$ ]] || {
+  printf 'D2 preflight rejected the versioned projection volume name.\n' >&2
   exit 1
 }
 [[ "${values[SOURCE_PROXY_PRIVATE_PORT]}" =~ ^[0-9]{4,5}$ ]] || {
@@ -111,7 +137,28 @@ PY
   printf 'D2 preflight is locked to the first Paper scope.\n' >&2
   exit 1
 }
+case "${mode}" in
+  source-readiness)
+    [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" == paper-read ]] || {
+      printf 'Source-read readiness requires paper-read mode.\n' >&2
+      exit 1
+    }
+    ;;
+  offline|readiness)
+    [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" == dark ]] || {
+      printf 'D2 requires the Source Proxy to remain dark.\n' >&2
+      exit 1
+    }
+    ;;
+  template)
+    [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" =~ ^(dark|contract-probe|paper-read)$ ]] || {
+      printf 'D2 template rejected the Source Proxy source mode.\n' >&2
+      exit 1
+    }
+    ;;
+esac
 [[ "${values[EDGE_PROJECTION_INGESTION_ENABLED]}" == false &&
+   "${values[EDGE_SOURCE_PROBES_ENABLED]}" == false &&
    "${values[EDGE_REALTIME_SSE_ENABLED]}" == false &&
    "${values[EDGE_ANALYTICS_QUERY_ENABLED]}" == false &&
    "${values[EDGE_COMMAND_RELAY_ENABLED]}" == false &&
@@ -124,14 +171,16 @@ PY
   printf 'D2 preflight rejected a source identity path outside the Edge secret mount.\n' >&2
   exit 1
 }
-for key in EDGE_SECRET_DIRECTORY SOURCE_PROXY_SECRET_DIRECTORY SOURCE_PROXY_CONFIG_FILE; do
+for key in EDGE_SECRET_DIRECTORY SOURCE_PROXY_SECRET_DIRECTORY SOURCE_PROXY_CONFIG_FILE \
+  PROJECTION_DB_SECRET_DIRECTORY PROJECTION_DB_INIT_SCRIPT; do
   [[ "${values[${key}]}" == /* && "${values[${key}]}" != *'/../'* ]] || {
     printf 'D2 preflight rejected a non-absolute or traversing runtime path.\n' >&2
     exit 1
   }
 done
-if [[ "${mode}" == readiness ]]; then
-  for key in EDGE_SECRET_DIRECTORY SOURCE_PROXY_SECRET_DIRECTORY SOURCE_PROXY_CONFIG_FILE; do
+if [[ "${mode}" == readiness || "${mode}" == source-readiness ]]; then
+  for key in EDGE_SECRET_DIRECTORY SOURCE_PROXY_SECRET_DIRECTORY SOURCE_PROXY_CONFIG_FILE \
+    PROJECTION_DB_SECRET_DIRECTORY PROJECTION_DB_INIT_SCRIPT; do
     [[ "${values[${key}]}" == /srv/primus/portal/* ]] || {
       printf 'D2 readiness rejected a runtime path outside /srv/primus/portal.\n' >&2
       exit 1
@@ -148,42 +197,71 @@ if [[ "${mode}" != template ]]; then
     exit 1
   }
 
-  check_directory() {
-    local path="$1"
+  check_directory_group() {
+    local path="$1" expected_gid="$2"
     [[ -d "${path}" && ! -L "${path}" ]] || {
       printf 'D2 preflight requires a real runtime directory.\n' >&2
       exit 1
     }
-    [[ "$(stat -c '%a' "${path}")" == 750 && "$(stat -c '%g' "${path}")" == "${values[PORTAL_RUNTIME_GID]}" ]] || {
+    [[ "$(stat -c '%a' "${path}")" == 750 && "$(stat -c '%g' "${path}")" == "${expected_gid}" ]] || {
       printf 'D2 preflight rejected runtime directory mode or group.\n' >&2
       exit 1
     }
   }
-  check_secret() {
-    local path="$1" expected_mode="$2"
+  check_secret_group() {
+    local path="$1" expected_mode="$2" expected_gid="$3"
     [[ -f "${path}" && ! -L "${path}" && -s "${path}" ]] || {
       printf 'D2 preflight requires a regular non-symlink secret/config file.\n' >&2
       exit 1
     }
-    [[ "$(stat -c '%a' "${path}")" == "${expected_mode}" && "$(stat -c '%g' "${path}")" == "${values[PORTAL_RUNTIME_GID]}" ]] || {
+    [[ "$(stat -c '%a' "${path}")" == "${expected_mode}" && "$(stat -c '%g' "${path}")" == "${expected_gid}" ]] || {
       printf 'D2 preflight rejected secret/config mode or group.\n' >&2
       exit 1
     }
   }
+  check_directory() { check_directory_group "$1" "${values[PORTAL_RUNTIME_GID]}"; }
+  check_secret() { check_secret_group "$1" "$2" "${values[PORTAL_RUNTIME_GID]}"; }
 
   check_directory "${values[EDGE_SECRET_DIRECTORY]}"
   check_directory "${values[SOURCE_PROXY_SECRET_DIRECTORY]}"
+  check_directory_group "${values[PROJECTION_DB_SECRET_DIRECTORY]}" \
+    "${values[PROJECTION_DB_CONTAINER_GID]}"
   check_secret "${values[SOURCE_PROXY_CONFIG_FILE]}" 640
   for file in edge-server.crt edge-server.key sgp-client-ca.crt control-api.jwks.json \
     source-proxy-ca.crt source-proxy-client.pem source-proxy-admission-token; do
     case "${file}" in *.crt|*.json) expected=644 ;; *) expected=640 ;; esac
     check_secret "${values[EDGE_SECRET_DIRECTORY]}/${file}" "${expected}"
   done
+  check_secret "${values[EDGE_SECRET_DIRECTORY]}/projection-db-ca.crt" 644
+  check_secret "${values[EDGE_SECRET_DIRECTORY]}/projection-database-url" 640
+  check_secret "${values[EDGE_SECRET_DIRECTORY]}/projection-migration-database-url" 640
   for file in source-proxy-server.crt source-proxy-server.key projection-ingestor-ca.crt \
     trading-system-read-header.conf; do
     case "${file}" in *.crt) expected=644 ;; *) expected=640 ;; esac
     check_secret "${values[SOURCE_PROXY_SECRET_DIRECTORY]}/${file}" "${expected}"
   done
+  check_secret_group "${values[PROJECTION_DB_SECRET_DIRECTORY]}/projection-postgres.crt" \
+    644 "${values[PROJECTION_DB_CONTAINER_GID]}"
+  for file in projection-postgres.key postgres-bootstrap-password \
+    projection-owner-password projection-runtime-password; do
+    check_secret_group "${values[PROJECTION_DB_SECRET_DIRECTORY]}/${file}" 640 \
+      "${values[PROJECTION_DB_CONTAINER_GID]}"
+  done
+
+  [[ -f "${values[PROJECTION_DB_INIT_SCRIPT]}" &&
+     ! -L "${values[PROJECTION_DB_INIT_SCRIPT]}" &&
+     -x "${values[PROJECTION_DB_INIT_SCRIPT]}" ]] || {
+    printf 'D2 preflight rejected the projection bootstrap script.\n' >&2
+    exit 1
+  }
+  bash -n "${values[PROJECTION_DB_INIT_SCRIPT]}"
+  if [[ "${mode}" == readiness || "${mode}" == source-readiness ]]; then
+    [[ "$(stat -c '%u:%g:%a' "${values[PROJECTION_DB_INIT_SCRIPT]}")" == \
+      "0:${values[PROJECTION_DB_CONTAINER_GID]}:550" ]] || {
+      printf 'D2 readiness requires a root-owned immutable projection bootstrap script.\n' >&2
+      exit 1
+    }
+  fi
 
   edge_dir="${values[EDGE_SECRET_DIRECTORY]}"
   proxy_dir="${values[SOURCE_PROXY_SECRET_DIRECTORY]}"
@@ -241,6 +319,69 @@ if [[ "${mode}" != template ]]; then
       exit 1
     }
 
+  projection_dir="${values[PROJECTION_DB_SECRET_DIRECTORY]}"
+  openssl x509 -in "${projection_dir}/projection-postgres.crt" -noout \
+    -checkend 86400 >/dev/null 2>&1 &&
+    openssl pkey -in "${projection_dir}/projection-postgres.key" -noout \
+      >/dev/null 2>&1 || {
+      printf 'D2 preflight rejected the projection PostgreSQL TLS identity.\n' >&2
+      exit 1
+    }
+  matches_key "${projection_dir}/projection-postgres.crt" \
+    "${projection_dir}/projection-postgres.key" || {
+      printf 'D2 preflight rejected a mismatched projection PostgreSQL identity.\n' >&2
+      exit 1
+    }
+  openssl verify -verify_hostname projection-postgres \
+    -CAfile "${edge_dir}/projection-db-ca.crt" \
+    "${projection_dir}/projection-postgres.crt" >/dev/null 2>&1 || {
+      printf 'D2 preflight rejected the projection PostgreSQL trust chain.\n' >&2
+      exit 1
+    }
+
+  python3 - \
+    "${edge_dir}/projection-migration-database-url" \
+    "${edge_dir}/projection-database-url" \
+    "${projection_dir}/projection-owner-password" \
+    "${projection_dir}/projection-runtime-password" \
+    "${values[PROJECTION_DB_NAME]}" \
+    "${values[PROJECTION_DB_OWNER_USER]}" \
+    "${values[PROJECTION_DB_RUNTIME_USER]}" <<'PY'
+import pathlib
+import sys
+import urllib.parse
+
+migration_url, runtime_url, owner_password_file, runtime_password_file = map(
+    pathlib.Path, sys.argv[1:5]
+)
+database, owner_user, runtime_user = sys.argv[5:8]
+owner_password = owner_password_file.read_text(encoding="utf-8").strip()
+runtime_password = runtime_password_file.read_text(encoding="utf-8").strip()
+if owner_password == runtime_password:
+    raise SystemExit("D2 preflight rejected reused projection role credentials.")
+
+def validate(path: pathlib.Path, expected_user: str, expected_password: str) -> None:
+    raw = path.read_text(encoding="utf-8").strip()
+    parsed = urllib.parse.urlparse(raw)
+    query = urllib.parse.parse_qs(parsed.query, strict_parsing=True)
+    if (
+        parsed.scheme not in {"postgres", "postgresql"}
+        or parsed.hostname != "projection-postgres"
+        or parsed.port != 5432
+        or parsed.path != f"/{database}"
+        or urllib.parse.unquote(parsed.username or "") != expected_user
+        or urllib.parse.unquote(parsed.password or "") != expected_password
+        or query != {
+            "sslmode": ["verify-full"],
+            "sslrootcert": ["/run/secrets/projection-db-ca.crt"],
+        }
+    ):
+        raise SystemExit("D2 preflight rejected a projection database URL boundary.")
+
+validate(migration_url, owner_user, owner_password)
+validate(runtime_url, runtime_user, runtime_password)
+PY
+
   key_fingerprints="$(
     for private_key in \
       "${edge_dir}/edge-server.key" \
@@ -273,10 +414,16 @@ for key in keys:
         raise SystemExit("D2 preflight rejected a non-RSA or incomplete JWKS key.")
 PY
 
-header_file="${proxy_dir}/trading-system-read-header.conf"
-if [[ "$(wc -l < "${header_file}")" -ne 1 ]] ||
-    ! grep -Eq '^proxy_set_header X-API-Key [A-Za-z0-9._~-]{16,256};$' "${header_file}"; then
-    printf 'D2 preflight rejected a placeholder Trading System read identity.\n' >&2
+  header_file="${proxy_dir}/trading-system-read-header.conf"
+  if [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" == dark ]]; then
+    if [[ "$(wc -l < "${header_file}")" -ne 1 ]] ||
+        ! grep -Fxq 'proxy_set_header X-Portal-Source-Mode dark;' "${header_file}"; then
+      printf 'D2 preflight requires the exact non-credential dark marker.\n' >&2
+      exit 1
+    fi
+  elif [[ "$(wc -l < "${header_file}")" -ne 1 ]] ||
+      ! grep -Eq '^proxy_set_header X-API-Key [A-Za-z0-9._~-]{16,256};$' "${header_file}"; then
+    printf 'Source-read readiness requires a dedicated Trading System read identity.\n' >&2
     exit 1
   fi
   [[ "$(wc -c < "${edge_dir}/source-proxy-admission-token")" -ge 32 ]] || {
@@ -285,7 +432,7 @@ if [[ "$(wc -l < "${header_file}")" -ne 1 ]] ||
   }
 fi
 
-if [[ "${mode}" == readiness ]]; then
+if [[ "${mode}" == readiness || "${mode}" == source-readiness ]]; then
   runtime_group="$(getent group portal-runtime 2>/dev/null || true)"
   [[ -n "${runtime_group}" ]] || {
     printf 'D2 readiness requires the portal-runtime system group.\n' >&2

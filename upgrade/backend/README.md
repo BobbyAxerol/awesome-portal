@@ -274,6 +274,15 @@ authority.
   traffic started. The temporary operator instance profile must be detached or
   separately isolated before D2. Evidence:
   [`EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md`](./EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md).
+- `EX-BE-02-LIVE` **D2 hardened / live deployment blocked:** the audit removed
+  all startup/background source probes from dark mode, replaced the premature
+  Trading System credential with seven exact 503 guards and added the private
+  TLS/SCRAM projection PostgreSQL + separate owner/runtime roles + one-shot
+  Rust migrator. The isolated gate proves migration/check, runtime DDL denial,
+  plaintext denial and Edge readiness with no Source Proxy present. Live D2
+  still waits for operator-instance-role isolation, signed Edge/Proxy digests,
+  real workload PKI/JWKS, pressure admission and a new window. Evidence:
+  [`EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md`](./EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md).
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

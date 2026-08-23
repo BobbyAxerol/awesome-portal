@@ -939,6 +939,16 @@ deep-dive → ADR → slice → evidence discipline documented above.
   separately blocked by operator-instance-role isolation plus image, identity,
   resource, database and owner-window gates. Evidence:
   [`EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md`](./backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md).
+- **EX-BE-02-LIVE D2 hardening checkpoint (2026-08-23):** dark Edge startup no
+  longer performs initial or periodic source probes; Source Proxy has seven
+  exact 503 guards and no Trading System read credential before D4. D2 now owns
+  a private pinned PostgreSQL 16 boundary with TLS/SCRAM, separate non-superuser
+  migration/runtime roles and a one-shot Rust migrator. Local integration
+  proves bootstrap, migration, runtime check, no-DDL/no-plaintext and Edge
+  readiness without a source. Status remains `D2_HARDENED /
+  LIVE_DEPLOYMENT_BLOCKED` pending operator-role isolation, signed images,
+  workload identities, pressure admission and a new window. Evidence:
+  [`EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md`](./backend/EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

@@ -56,6 +56,7 @@ http {
             proxy_set_header Host 127.0.0.1:8000;
             proxy_set_header Accept application/json;
             proxy_set_header X-Trading-Contract-Revision $http_x_trading_contract_revision;
+            __PUBLIC_PROBE_GUARD__
             proxy_pass http://127.0.0.1:8000/v1/contracts$is_args$args;
         }
 
@@ -65,6 +66,7 @@ http {
             proxy_set_header Host 127.0.0.1:8000;
             proxy_set_header Accept application/json;
             proxy_set_header X-Trading-Contract-Revision $http_x_trading_contract_revision;
+            __PUBLIC_PROBE_GUARD__
             proxy_pass http://127.0.0.1:8000/v1/health$is_args$args;
         }
 
@@ -74,17 +76,21 @@ http {
             proxy_set_header Host 127.0.0.1:8000;
             proxy_set_header Accept application/json;
             proxy_set_header X-Trading-Contract-Revision $http_x_trading_contract_revision;
+            __PUBLIC_PROBE_GUARD__
             proxy_pass http://127.0.0.1:8000/v1/health/capabilities$is_args$args;
         }
 
         # Alpha-scoped reads: discard any caller key, then inject the dedicated
-        # source credential from the root/group-readable runtime include.
+        # source credential from the root/group-readable runtime include. D2
+        # renders an unconditional 503 guard here; only D4 source-readiness may
+        # remove it after a dedicated read identity exists.
         location = /v1/orders {
             limit_except GET { deny all; }
             proxy_pass_request_headers off;
             proxy_set_header Host 127.0.0.1:8000;
             proxy_set_header Accept application/json;
             proxy_set_header X-Trading-Contract-Revision $http_x_trading_contract_revision;
+            __ALPHA_READ_GUARD__
             include /run/secrets/trading-system-read-header.conf;
             proxy_pass http://127.0.0.1:8000/v1/orders$is_args$args;
         }
@@ -95,6 +101,7 @@ http {
             proxy_set_header Host 127.0.0.1:8000;
             proxy_set_header Accept application/json;
             proxy_set_header X-Trading-Contract-Revision $http_x_trading_contract_revision;
+            __ALPHA_READ_GUARD__
             include /run/secrets/trading-system-read-header.conf;
             proxy_pass http://127.0.0.1:8000/v1/fills$is_args$args;
         }
@@ -105,6 +112,7 @@ http {
             proxy_set_header Host 127.0.0.1:8000;
             proxy_set_header Accept application/json;
             proxy_set_header X-Trading-Contract-Revision $http_x_trading_contract_revision;
+            __ALPHA_READ_GUARD__
             include /run/secrets/trading-system-read-header.conf;
             proxy_pass http://127.0.0.1:8000/v1/positions$is_args$args;
         }
@@ -115,6 +123,7 @@ http {
             proxy_set_header Host 127.0.0.1:8000;
             proxy_set_header Accept application/json;
             proxy_set_header X-Trading-Contract-Revision $http_x_trading_contract_revision;
+            __ALPHA_READ_GUARD__
             include /run/secrets/trading-system-read-header.conf;
             proxy_pass http://127.0.0.1:8000/v1/events$is_args$args;
         }

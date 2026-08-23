@@ -30,6 +30,22 @@ read_value() {
 bridge_ip="$(read_value PORTAL_BRIDGE_GATEWAY_IP)"
 private_port="$(read_value SOURCE_PROXY_PRIVATE_PORT)"
 runtime_gid="$(read_value PORTAL_RUNTIME_GID)"
+source_mode="$(read_value SOURCE_PROXY_SOURCE_MODE)"
+case "${source_mode}" in
+  dark)
+    public_probe_guard='return 503;'
+    alpha_read_guard='return 503;'
+    ;;
+  contract-probe)
+    public_probe_guard='# D3 contract-probe gate accepted'
+    alpha_read_guard='return 503;'
+    ;;
+  paper-read)
+    public_probe_guard='# D3 contract-probe gate accepted'
+    alpha_read_guard='# D4 source-read gate accepted'
+    ;;
+  *) printf 'D2 renderer rejected an unknown Source Proxy source mode.\n' >&2; exit 1 ;;
+esac
 
 output_dir="$(dirname "${output}")"
 [[ -d "${output_dir}" && ! -L "${output_dir}" ]] || {
@@ -42,6 +58,8 @@ trap cleanup EXIT
 sed \
   -e "s/__PORTAL_BRIDGE_GATEWAY_IP__/${bridge_ip}/g" \
   -e "s/__SOURCE_PROXY_PRIVATE_PORT__/${private_port}/g" \
+  -e "s/__PUBLIC_PROBE_GUARD__/${public_probe_guard}/g" \
+  -e "s/__ALPHA_READ_GUARD__/${alpha_read_guard}/g" \
   "${template}" > "${temporary}"
 if grep -Eq '__[A-Z0-9_]+__' "${temporary}"; then
   printf 'D2 renderer left an unresolved configuration placeholder.\n' >&2

@@ -1170,6 +1170,18 @@ Delivery therefore advances through separate stop gates:
 5. **Activation:** separate owner decision for ACTIVE cutover and
    `fixture -> shadow`; command and Live authority remain separate.
 
+The 2026-08-23 D2 hardening audit is now the binding implementation detail for
+step 2. Dark Edge performs no initial/background source probe; all seven
+Source Proxy routes return 503 and mount no Trading System read credential.
+Projection PostgreSQL is internal-only, TLS/SCRAM, has separate non-superuser
+owner/runtime roles and is migrated by a one-shot Rust process. The disposable
+integration gate proves migration, runtime no-DDL, plaintext denial and Edge
+readiness with no Source Proxy. This does not deploy D2: the temporary D1
+operator instance profile must be isolated, signed Edge/Proxy digests and real
+workload PKI/JWKS must exist, AWS pressure must be admitted and a new D2 window
+must open. Evidence:
+[`EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md`](backend/EX_BE_02_LIVE_D2_HARDENING_CHECKPOINT.md).
+
 The detailed evidence, recommended defaults, decision sheet and rollback are in
 [`EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md`](backend/EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md).
 
