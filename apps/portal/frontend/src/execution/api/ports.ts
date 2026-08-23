@@ -23,6 +23,7 @@ import type {
   OrderFunnel,
 } from "../analytics";
 import type { CommandCatalogue } from "../adminCatalog";
+import type { CommandPlan, CommandPlanRequestInput } from "../commandPlan";
 import type { TypedCondition } from "../components/conditions";
 
 export type Result<T> =
@@ -143,6 +144,15 @@ export interface ExecutionApi {
    * keystroke or serve a preview for an amount the reviewer has already moved
    * past — the second being the dangerous one.
    */
+  /**
+   * `POST /api/v1/execution/commands/plans` with the EXECUTION_COMMAND body.
+   *
+   * Distinct from `planDecision`, which plans a GOVERNANCE decision on the same
+   * route. Same endpoint, different envelope — the controller discriminates on
+   * the body, and folding the two together here would make the caller choose a
+   * shape by guessing.
+   */
+  planCommand(input: CommandPlanRequestInput): Promise<Result<CommandPlan>>;
   /**
    * `GET /api/v1/execution/commands/catalog` — ADMIN only.
    *

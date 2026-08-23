@@ -34,6 +34,12 @@ import {
 } from "../analytics";
 import { analyticsFailureReason, readAnalyticsFailure } from "../analyticsProblem";
 import { readCommandCatalogue } from "../adminCatalog";
+import {
+  commandPlanRequest,
+  readCommandPlan,
+  readPayloadRejection,
+  readRelayDenial,
+} from "../commandPlan";
 import { toConditionWire } from "../conditionWire";
 import type {
   ApplyReceipt,
@@ -256,6 +262,46 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       return preview && envelope
         ? { ok: true as const, value: { preview, envelope } }
         : unavailable("The capital preview response could not be read.");
+    },
+
+    async planCommand(input) {
+      const blocked = readBlocked();
+      if (blocked) return unavailable(blocked);
+
+      const body = commandPlanRequest(input);
+      if (!body.ok) return unavailable(body.reason);
+
+      const response = await post("/commands/plans", body.value, signal);
+
+      // Checked before the generic problem mapper: a refused payload is the one
+      // failure whose message must never reach the screen, and `problem` builds
+      // its reason from exactly that message.
+      if (response.status === 422) {
+        const parsed = await response.json().catch(() => null);
+        const rejection = readPayloadRejection(parsed, 422);
+        if (rejection) {
+          return { ok: false, status: "insufficient_data", reason: rejection.reason };
+        }
+        return { ok: false, status: "unavailable", reason: "This command could not be planned." };
+      }
+      if (response.status === 409) {
+        // A key reused with a different payload. Never retried automatically:
+        // the server is telling us two different intents share one key, and
+        // repeating either would be choosing between them on the operator's
+        // behalf.
+        return {
+          ok: false,
+          status: "unavailable",
+          reason:
+            "REQUEST_KEY_CONFLICT: this request key was already used with a different payload. Start a new command rather than resending this one.",
+        };
+      }
+      if (!response.ok) return problem(response);
+
+      const plan = readCommandPlan(await response.json());
+      return plan
+        ? { ok: true as const, value: plan }
+        : unavailable("The command plan response could not be read.");
     },
 
     async getCommandCatalogue(query) {
@@ -599,6 +645,21 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
         },
         signal,
       );
+      if (response.status === 409) {
+        // `RelayDenied`. Routed before the generic mapper because the two facts
+        // that matter — whether a retry is permitted, and whether anything
+        // reached the Trading System — live in the body and `problem` reads
+        // only the code and message.
+        const denial = readRelayDenial(await response.json().catch(() => null));
+        if (denial) {
+          return {
+            ok: false,
+            // Not `unavailable`: the system answered. It refused.
+            status: denial.sourceRequestSent ? "terminal" : "denied",
+            reason: denial.text,
+          };
+        }
+      }
       if (!response.ok && response.status !== 202) return problem(response);
 
       // Read with the status, so a body claiming SUCCEEDED alongside a 202 is

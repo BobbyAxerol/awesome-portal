@@ -35,6 +35,7 @@ import {
 } from "../adminCatalog";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
+import { planApplicable, planOutcomeText, type CommandPlan } from "../commandPlan";
 import type { PanelStatus } from "../contracts";
 
 /** `PLAN → APPLY → VERIFY`, but only the steps this command actually requires. */
@@ -98,7 +99,7 @@ function EntryRow({
  * command at any tier. Adding a disabled one would advertise a capability that
  * does not exist and teach an operator that the blocker is negotiable.
  */
-function EntryDetail({ entry }: { entry: CatalogEntry }) {
+function EntryDetail({ entry, plan }: { entry: CatalogEntry; plan?: CommandPlan | null }) {
   return (
     <>
       <h2 className="exec-admin-seltitle">
@@ -154,6 +155,28 @@ function EntryDetail({ entry }: { entry: CatalogEntry }) {
         ) : null}
       </dl>
 
+      {plan ? (
+        // A plan that came back, shown for what it is. `operation_id` looks
+        // like work started and is not — F0 records that the request was
+        // understood and refused.
+        <div className="exec-admin-plan">
+          <h3>Plan {plan.operationId}</h3>
+          <p>{planOutcomeText(plan)}</p>
+          <p className="exec-admin-planfacts">
+            status {plan.status ?? "not stated"} · relay {plan.relayCapability ?? "not stated"} ·{" "}
+            {plan.replayed ? "replayed" : "new"}
+            {plan.blockers.length > 0 ? ` · blocked: ${plan.blockers.join(", ")}` : null}
+          </p>
+          <p className="exec-admin-planfacts">{planApplicable(plan).reason}</p>
+          {plan.payloadStoragePolicy === "HASH_ONLY_NO_RAW" ? (
+            <p className="exec-admin-planfacts">
+              The request payload is stored as a hash and never kept. It cannot be read back here,
+              and this screen never repeats a refused value.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <p className="exec-admin-nofooter">
         No plan or apply is offered: the command relay is disabled for this catalogue revision, so
         there is nothing here to run.
@@ -203,6 +226,7 @@ export function AdminActionDrawerScreen({
   onSelect,
   tier = "ALL",
   onTierChange,
+  plan,
   children,
 }: {
   catalogue: CommandCatalogue | null;
@@ -214,6 +238,8 @@ export function AdminActionDrawerScreen({
   /** Reported to the caller, which re-queries. Never applied to `catalogue`. */
   tier?: TierFilter;
   onTierChange?: (tier: TierFilter) => void;
+  /** A plan that came back for the selected entry, when one was made. */
+  plan?: CommandPlan | null;
   children?: ReactNode;
 }) {
   const groups = catalogue ? groupEntries(catalogue.entries) : [];
@@ -286,7 +312,7 @@ export function AdminActionDrawerScreen({
             </div>
             <aside className="exec-admin-drawer" aria-label="Command detail">
               {selected ? (
-                <EntryDetail entry={selected} />
+                <EntryDetail entry={selected} plan={plan} />
               ) : (
                 <p className="exec-admin-empty">
                   Pick an action to see its risk tier, the steps it would require and why it is not

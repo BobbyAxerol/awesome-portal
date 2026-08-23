@@ -1189,3 +1189,31 @@ export const COMMAND_CATALOGUE_FIXTURE = {
     }
   ]
 } as const;
+
+/**
+ * The canonical F0 plan: BLOCKED, no apply token, relay DISABLED.
+ *
+ * GENERATED from `packages/contracts/fixtures/execution-command-plan.valid.json`;
+ * `adminCatalog.test.ts` compares it against that file on every run.
+ */
+export const COMMAND_PLAN_FIXTURE = {
+  "schema_version": "execution.command-plan.v1",
+  "operation_id": "op_01K3COMMANDPLAN000000000000",
+  "command_type": "EXECUTION_COMMAND",
+  "command_version": 1,
+  "command_key": "account/sync",
+  "risk_tier": "R2_SANDBOX",
+  "payload_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "plan_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "status": "BLOCKED",
+  "blockers": [
+    "COMMAND_RELAY_DISABLED"
+  ],
+  "warnings": [],
+  "apply_token": null,
+  "expires_at": "2026-08-22T12:05:00Z",
+  "relay_capability": "DISABLED",
+  "source_side_effect_requested": false,
+  "payload_storage_policy": "HASH_ONLY_NO_RAW",
+  "replayed": false
+} as const;

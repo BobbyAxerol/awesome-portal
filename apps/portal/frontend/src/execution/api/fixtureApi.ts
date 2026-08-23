@@ -23,6 +23,8 @@ import {
   readOrderFunnel,
 } from "../analytics";
 import { readCommandCatalogue } from "../adminCatalog";
+import { commandPlanRequest, readCommandPlan } from "../commandPlan";
+import { COMMAND_PLAN_FIXTURE } from "../adminCatalog.fixtures";
 import { COMMAND_CATALOGUE_FIXTURE } from "../adminCatalog.fixtures";
 import {
   CAPITAL_LEDGER,
@@ -565,6 +567,23 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       return preview && envelope
         ? { ok: true as const, value: { preview, envelope } }
         : unavailable("The capital preview response could not be read.");
+    },
+
+    async planCommand(input) {
+      const blocked = gate<never>("planCommand");
+      if (blocked) return blocked as Result<never>;
+      const body = commandPlanRequest(input);
+      if (!body.ok) return unavailable(body.reason);
+      // The canonical F0 document: BLOCKED, no token, relay DISABLED. Serving a
+      // friendlier one here would let the drawer be built against a plan the
+      // server never produces.
+      const plan = readCommandPlan({
+        ...COMMAND_PLAN_FIXTURE,
+        command_key: input.commandKey,
+      });
+      return plan
+        ? { ok: true as const, value: plan }
+        : unavailable("The command plan response could not be read.");
     },
 
     async getCommandCatalogue(query) {

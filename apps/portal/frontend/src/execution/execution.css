@@ -3216,3 +3216,31 @@
   border-color: var(--accent);
   color: var(--ink);
 }
+
+/* A plan in F0 is a record of refusal, so it is styled as evidence rather than
+   as a step in a flow — nothing here should read as "next". */
+.exec-admin-plan {
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  background: var(--surface-3);
+}
+
+.exec-admin-plan h3 {
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 400;
+  color: var(--ink-mute);
+}
+
+.exec-admin-plan p {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.exec-admin-planfacts {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--ink-mute);
+}
