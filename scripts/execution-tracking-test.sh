@@ -11,15 +11,16 @@ ARCHITECTURE="${ROOT_DIR}/upgrade/BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md"
 FRONTEND_HANDOFF="${ROOT_DIR}/apps/portal/registry/FRONTEND_HANDOFF.md"
 CATALOG="${ROOT_DIR}/packages/contracts/fixtures/execution-command-catalog.valid.json"
 ADMISSION_HISTORY="${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md"
+UNIFIED="${ROOT_DIR}/upgrade/UNIFIED_IMPLEMENTATION_PLAN.md"
 
-python3 - "${MASTER}" "${TRACKER}" "${ROADMAP}" "${LEDGER}" "${BACKEND_README}" "${ARCHITECTURE}" "${FRONTEND_HANDOFF}" "${CATALOG}" "${ADMISSION_HISTORY}" <<'PY'
+python3 - "${MASTER}" "${TRACKER}" "${ROADMAP}" "${LEDGER}" "${BACKEND_README}" "${ARCHITECTURE}" "${FRONTEND_HANDOFF}" "${CATALOG}" "${ADMISSION_HISTORY}" "${UNIFIED}" <<'PY'
 from pathlib import Path
 import json
 import re
 import sys
 
-master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history = [Path(p) for p in sys.argv[1:]]
-for path in (master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history):
+master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified = [Path(p) for p in sys.argv[1:]]
+for path in (master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified):
     if not path.is_file():
         raise SystemExit(f"tracking file missing: {path}")
 
@@ -32,6 +33,7 @@ a = architecture.read_text()
 h = handoff.read_text()
 c = json.loads(catalog_path.read_text())
 history = admission_history.read_text()
+u = unified.read_text()
 
 qualified = "`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`"
 for phase in (3, 14, 15, 16, 17):
@@ -152,12 +154,31 @@ for label, text in (
 for label, text in (
     ("master", m),
     ("tracker", t),
+    ("request ledger", l),
     ("backend README", b),
     ("architecture guide", a),
     ("frontend handoff", h),
+    ("unified plan", u),
 ):
     if "full Portal" not in text or "SGP" not in text or "AWS-HK" not in text:
         raise SystemExit(f"{label} lost the SGP full-Portal/AWS-HK minimal-Edge placement")
+    normalized = re.sub(r"\s+", " ", text)
+    for token in ("5.00", "5,632", "4.00", "4,608"):
+        if token not in normalized:
+            raise SystemExit(f"{label} lost D2 resource boundary {token}")
+
+for label, text in (
+    ("master", m),
+    ("tracker", t),
+    ("request ledger", l),
+    ("backend README", b),
+    ("architecture guide", a),
+    ("frontend handoff", h),
+    ("unified plan", u),
+):
+    normalized = re.sub(r"\s+", " ", text)
+    if not re.search(r"no new EC2(?:/EIP(?:/D1B)?)?|không tạo EC2/EIP/D1B mới", normalized, re.I):
+        raise SystemExit(f"{label} lost the no-new-EC2 D2 placement decision")
 
 phase6 = next((line for line in t.splitlines() if line.startswith("| 6 |")), None)
 if phase6 is None or "`FOUNDATION_COMPLETE / PRODUCTION_INACTIVE`" not in phase6:

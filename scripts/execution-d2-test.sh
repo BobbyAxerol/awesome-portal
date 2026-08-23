@@ -24,17 +24,17 @@ import sys
 
 base = Path(sys.argv[1]).read_text()
 dark = Path(sys.argv[2]).read_text()
-for token in ('cpus: "1.5"', 'mem_limit: 1024m', 'mem_reservation: 256m'):
+for token in ('cpus: "2.0"', 'mem_limit: 2048m', 'mem_reservation: 512m'):
     if token not in base:
         raise SystemExit(f"D2 Edge resource contract missing: {token}")
 for token in (
+    'cpus: "1.5"',
+    'mem_limit: 2048m',
     'cpus: "1.0"',
     'mem_limit: 1024m',
     'cpus: "0.50"',
     'mem_limit: 512m',
-    'cpus: "0.25"',
-    'mem_limit: 256m',
-    'mem_reservation: 64m',
+    'mem_reservation: 128m',
 ):
     if token not in dark:
         raise SystemExit(f"D2 shared-host resource contract missing: {token}")

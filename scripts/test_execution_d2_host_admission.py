@@ -98,10 +98,10 @@ class AdmissionTest(unittest.TestCase):
         self.assertEqual(report["status"], "D2_HOST_ADMISSION_ACCEPTED")
         self.assertIn("ELEVATED_SHARED_HOST_IO_BASELINE", report["warnings"])
 
-    def test_observation_accepts_bounded_delta_and_lower_memory_floor(self) -> None:
+    def test_observation_accepts_bounded_delta_and_four_gib_memory_floor(self) -> None:
         baseline = healthy(io_full_avg10=8.45, io_full_avg60=7.9)
         observed = healthy(
-            memory_available_bytes=7 * MODULE.GIB,
+            memory_available_bytes=4 * MODULE.GIB,
             cpu_some_avg60=17.0,
             io_full_avg10=9.0,
             io_full_avg60=8.4,
@@ -115,6 +115,18 @@ class AdmissionTest(unittest.TestCase):
         )
         self.assertEqual(report["status"], "D2_HOST_ADMISSION_ACCEPTED")
         self.assertEqual(report["pressure_deltas"]["io_full_avg60"], 0.5)
+
+    def test_observation_rejects_below_four_gib_even_when_deltas_are_bounded(self) -> None:
+        report = MODULE.assess_host(
+            healthy(
+                memory_available_bytes=4 * MODULE.GIB - 1,
+                execution_portal_container_count=3,
+            ),
+            historical_oom_reviewed=True,
+            mode="observation",
+            baseline=healthy(),
+        )
+        self.assertIn("INSUFFICIENT_AVAILABLE_MEMORY", report["blockers"])
 
     def test_observation_rejects_portal_pressure_delta_and_container_drift(self) -> None:
         baseline = healthy(io_full_avg10=8.0, io_full_avg60=7.5)

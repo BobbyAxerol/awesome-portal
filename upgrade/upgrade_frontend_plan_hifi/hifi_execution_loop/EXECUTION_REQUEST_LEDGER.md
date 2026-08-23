@@ -117,7 +117,7 @@ delivery profiles remain `fixture`.
 | Gate | Owner | Blocker | Status |
 |---|---|---|---|
 | D1 private network | Bobby/AWS owner | accepted 2026-08-23: exact privately recorded SG rule, two-cell preflight, handshake, public denial and link-loss evidence | `D1_NETWORK_ACCEPTED / APPLICATION_DARK` |
-| D2 dark services | Bobby authorizes; Codex executes runbook | owner-approved existing AWS-HK host; baseline/delta admission; detach/isolate temporary operator instance profile; publish signed Edge/Proxy digests; stage real workload PKI/JWKS and open D2 window; private TLS/SCRAM PG boundary is integration-proven | `D2_SHARED_HOST_REALIGNMENT_COMPLETE / LIVE_D2_UNAUTHORIZED` |
+| D2 dark services | Bobby authorizes; Codex executes runbook | owner-approved existing AWS-HK host only; full Portal stays on SGP; hard ceilings are 5.00 vCPU / 5,632 MiB peak and 4.00 vCPU / 4,608 MiB long-running, not reservations; baseline/delta admission remains authoritative; keep the existing D1 IAM role but detach/isolate its instance profile while workloads run; publish signed Edge/Proxy digests; stage real workload PKI/JWKS and open D2 window; private TLS/SCRAM PG boundary is integration-proven; no new EC2/EIP/D1B | `D2_SHARED_HOST_REALIGNMENT_COMPLETE / LIVE_D2_UNAUTHORIZED` |
 | D3 public/auth transport | Bobby + Codex | accepted D2 plus explicit window | `PLANNED / PREDECESSOR_BLOCKED` |
 | D4 Paper source shadow | Trading System source owner + Bobby + Codex | typed source capability, dedicated read identity and D3 evidence | `PLANNED / PREDECESSOR_BLOCKED` |
 | EX-BE-05b live relay | Trading System command owner + Bobby + Codex | published command capability, mTLS/delegated auth and activation decision | `PRODUCTION_INACTIVE` |

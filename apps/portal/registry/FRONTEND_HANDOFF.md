@@ -46,6 +46,11 @@ host. No new EC2/EIP/D1B is part of D2. This remains operations-only: do not
 surface a source-ready UI, poll AWS or alter the fixture/dark consumer model.
 Claude continues the same dark/fixture/recovery work only.
 
+The D2 hard limits were raised to 5.00 vCPU / 5,632 MiB peak and 4.00 vCPU /
+4,608 MiB long-running so an undersized per-container limit does not create a
+false OOM. They are not reservations and do not change any frontend profile;
+baseline/delta admission and Trading System health rollback remain mandatory.
+
 The subsequent live aggregate preflight accepted the shared host with zero
 blockers, but IMDS hop-limit-one DryRun remains unauthorized on the actual D1
 operator role. Backend status is `HOST_PREFLIGHT_ACCEPTED /

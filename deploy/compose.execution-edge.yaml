@@ -11,9 +11,9 @@ services:
       - "${PORTAL_RUNTIME_GID:?set the numeric portal-runtime group ID}"
     read_only: true
     pids_limit: 128
-    cpus: "1.5"
-    mem_limit: 1024m
-    mem_reservation: 256m
+    cpus: "2.0"
+    mem_limit: 2048m
+    mem_reservation: 512m
     cap_drop:
       - ALL
     security_opt:

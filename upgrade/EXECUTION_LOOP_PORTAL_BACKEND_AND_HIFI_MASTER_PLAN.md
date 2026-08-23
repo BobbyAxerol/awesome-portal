@@ -1237,7 +1237,8 @@ The owner placement decision is now
 identity and product/control-plane services remain on SGP. The existing AWS-HK
 host receives only the minimal Rust Edge, Source Proxy, schema-only projection
 PostgreSQL and one-shot migrator; no new EC2/EIP/D1B cell is planned. Peak
-startup ceiling is 3.25 CPU / 2,816 MiB, and D2 observes pressure deltas against
+startup ceiling is 5.00 CPU / 5,632 MiB (hard limits; long-running ceiling
+4.00 CPU / 4,608 MiB), and D2 observes pressure deltas against
 the exact pre-start baseline. The unencrypted root remains dark-only; D4 needs
 separately approved encrypted projection storage on the same host or another
 approved store. SSH/direct DB/Redis/routing workarounds remain prohibited.

@@ -24,12 +24,12 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.5"
-          memory: 1024M
+          cpus: "2.0"
+          memory: 2048M
           pids: 128
         reservations:
-          cpus: "0.50"
-          memory: 256M
+          cpus: "0.75"
+          memory: 512M
 
   projection-postgres:
     image: ${PORTAL_PROJECTION_POSTGRES_IMAGE:?set a pinned official PostgreSQL 16 digest}
@@ -38,9 +38,9 @@ services:
     init: true
     read_only: true
     pids_limit: 128
-    cpus: "1.0"
-    mem_limit: 1024m
-    mem_reservation: 256m
+    cpus: "1.5"
+    mem_limit: 2048m
+    mem_reservation: 512m
     shm_size: 128m
     security_opt:
       - no-new-privileges:true
@@ -92,12 +92,12 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.0"
-          memory: 1024M
+          cpus: "1.5"
+          memory: 2048M
           pids: 128
         reservations:
-          cpus: "0.25"
-          memory: 256M
+          cpus: "0.50"
+          memory: 512M
 
   projection-migrator:
     image: ${PORTAL_EXECUTION_EDGE_IMAGE:?set PORTAL_EXECUTION_EDGE_IMAGE to an immutable digest}
@@ -109,8 +109,8 @@ services:
       - "${PORTAL_RUNTIME_GID:?set the numeric portal-runtime group ID}"
     read_only: true
     pids_limit: 64
-    cpus: "0.50"
-    mem_limit: 512m
+    cpus: "1.0"
+    mem_limit: 1024m
     cap_drop:
       - ALL
     security_opt:
@@ -135,6 +135,12 @@ services:
       options:
         max-size: "5m"
         max-file: "2"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1024M
+          pids: 64
 
   source-proxy:
     image: ${PORTAL_SOURCE_PROXY_IMAGE:?set PORTAL_SOURCE_PROXY_IMAGE to an immutable digest}
@@ -146,9 +152,9 @@ services:
       - "${PORTAL_RUNTIME_GID:?set the numeric portal-runtime group ID}"
     read_only: true
     pids_limit: 64
-    cpus: "0.25"
-    mem_limit: 256m
-    mem_reservation: 64m
+    cpus: "0.50"
+    mem_limit: 512m
+    mem_reservation: 128m
     cap_drop:
       - ALL
     security_opt:
@@ -185,12 +191,12 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.25"
-          memory: 256M
+          cpus: "0.50"
+          memory: 512M
           pids: 64
         reservations:
-          cpus: "0.05"
-          memory: 64M
+          cpus: "0.10"
+          memory: 128M
 
 networks:
   execution-private:

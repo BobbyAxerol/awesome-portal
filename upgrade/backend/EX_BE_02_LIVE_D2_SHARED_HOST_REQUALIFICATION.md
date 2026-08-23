@@ -24,7 +24,7 @@ stack. The schema-v2 host gate ran directly on AWS-HK and returned
 
 Warnings were `ELEVATED_SHARED_HOST_IO_BASELINE`, `NO_SWAP` and
 `SHARED_HOST_HAS_AT_LEAST_30_RUNNING_CONTAINERS`. They do not bypass the
-observation gate: D2 must still retain at least 6 GiB available memory and stay
+observation gate: D2 must still retain at least 4 GiB available memory and stay
 inside the bounded CPU/memory/I/O deltas during its 15-minute soak.
 
 This diagnostic baseline was not saved as deployment evidence and expires

@@ -997,8 +997,8 @@ deep-dive → ADR → slice → evidence discipline documented above.
   existing AWS-HK Trading System host for only the bounded Source Proxy, Rust
   Edge and private dark projection boundary. The full Portal, Control API and
   browser-facing backend remain on SGP. No new EC2/EIP or D1B carrier is part of
-  D2. Peak D2 ceiling is 3.25 vCPU / 2,816 MiB; long-running ceiling is 2.75
-  vCPU / 2,304 MiB. Future D4 business projections require encrypted storage
+  D2. Peak D2 hard ceiling is 5.00 vCPU / 5,632 MiB; long-running hard ceiling
+  is 4.00 vCPU / 4,608 MiB. These are not steady-state reservations. Future D4 business projections require encrypted storage
   attached to the same host; they must not silently reuse the root volume.
   Status is `D2_SHARED_HOST_REALIGNMENT_COMPLETE / LIVE_D2_UNAUTHORIZED`.
   Detail:

@@ -45,9 +45,10 @@ D2 now includes an internal PostgreSQL 16 service and one-shot Rust migrator:
 - ingestion, analytics and realtime remain off, so D2 stores schema only and no
   Trading System business data.
 
-The owner-reviewed shared-host envelope now provides a 3.25 CPU / 2,816 MiB
+The owner-reviewed shared-host envelope now provides a 5.00 CPU / 5,632 MiB
 peak startup ceiling across Edge, Proxy, PostgreSQL and the short-lived
-migrator. The long-running ceiling is 2.75 CPU / 2,304 MiB. AWS-HK has 8 CPU,
+migrator. The long-running ceiling is 4.00 CPU / 4,608 MiB. These are hard
+per-container ceilings rather than steady-state reservations. AWS-HK has 8 CPU,
 about 16 GiB RAM, about 9 GiB available and about 66 GiB free under `/srv`.
 Because full I/O PSI was already roughly 8–9 percent before Portal existed,
 D2 now records that pre-existing baseline and accepts only a bounded positive

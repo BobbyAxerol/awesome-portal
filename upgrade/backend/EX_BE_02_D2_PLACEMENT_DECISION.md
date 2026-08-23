@@ -40,14 +40,17 @@ still bounded so an Edge fault cannot consume Trading System headroom:
 
 | Service | CPU ceiling | Memory ceiling | Long-running reservation |
 |---|---:|---:|---:|
-| Rust Execution Edge | 1.50 | 1,024 MiB | 0.50 CPU / 256 MiB |
-| Projection PostgreSQL | 1.00 | 1,024 MiB | 0.25 CPU / 256 MiB |
-| Source Proxy | 0.25 | 256 MiB | 0.05 CPU / 64 MiB |
-| One-shot migrator | 0.50 | 512 MiB | none after completion |
+| Rust Execution Edge | 2.00 | 2,048 MiB | 0.75 CPU / 512 MiB |
+| Projection PostgreSQL | 1.50 | 2,048 MiB | 0.50 CPU / 512 MiB |
+| Source Proxy | 0.50 | 512 MiB | 0.10 CPU / 128 MiB |
+| One-shot migrator | 1.00 | 1,024 MiB | none after completion |
 
-Peak startup ceiling is 3.25 CPU and 2,816 MiB. Long-running ceiling is 2.75
-CPU and 2,304 MiB. The last read-only inventory observed 8 CPUs, about 16 GiB
-RAM and about 9.3 GiB available; D2 observation must retain at least 6 GiB.
+Peak startup ceiling is 5.00 CPU and 5,632 MiB. Long-running ceiling is 4.00
+CPU and 4,608 MiB. These are per-container hard ceilings, not expected steady-
+state consumption or reservations; raising them prevents an artificial small
+container limit from becoming the OOM cause while the baseline/delta gate still
+protects Trading System headroom. The last read-only inventory observed 8 CPUs, about 16 GiB
+RAM and about 9.3 GiB available; D2 observation must retain at least 4 GiB.
 
 ## 3. Baseline/delta admission
 
@@ -63,7 +66,7 @@ D2 now has two machine-checked stages:
    hard gates.
 2. `observation` compares the running dark stack with that exact baseline.
    It rejects a different host boot or a baseline older than 30 minutes, and
-   requires the expected Edge/Proxy/PostgreSQL count, at least 6 GiB available
+   requires the expected Edge/Proxy/PostgreSQL count, at least 4 GiB available
    memory and bounded positive CPU/memory/I/O PSI deltas. Any Trading System
    health or latency regression remains an immediate manual rollback trigger
    even if the aggregate pressure delta passes.
@@ -115,7 +118,9 @@ waits for hop-limit one to be applied, detaches only that association and then
 requires the IMDS role-credential endpoint to be absent. A failure starts no
 Portal service and cannot silently reattach or widen IAM authority.
 
-The IAM role may remain dormant for audit/rollback, but the instance profile
+The existing D1 IAM role may remain dormant for audit/rollback after its D2
+isolation policy has been added; it must not be deleted merely to deploy D2.
+The instance profile
 must not remain attached while Portal workloads run.
 
 ## 6. Remaining gates

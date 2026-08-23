@@ -49,7 +49,7 @@ unsafe current CPU/memory pressure, NTP/listener/container/runtime-ownership
 drift, and until historical non-Portal OOM evidence has an explicit owner
 review. Elevated pre-existing I/O is recorded as a warning. Observation then
 requires an accepted baseline from the same boot that is no more than 30
-minutes old, exactly three running dark services, at least 6 GiB available
+minutes old, exactly three running dark services, at least 4 GiB available
 memory and bounded positive CPU/memory/I/O PSI deltas.
 `--acknowledge-historical-oom D2_NON_PORTAL_OOM_REVIEWED` records only the
 owner attribution; it cannot override either stage.

@@ -370,8 +370,8 @@ profile; Claude continues only fixture/dark/unavailable/recovery work. Evidence:
 The D2 placement decision is final for this release: the full Portal remains
 on SGP, while only the bounded Source Proxy, Rust Edge and private dark
 projection boundary may run on the existing AWS-HK host. No new EC2/EIP/D1B is
-authorized. D2 has a 3.25 vCPU / 2,816 MiB peak ceiling and a 2.75 vCPU / 2,304
-MiB long-running ceiling. D4 business projection storage will require a
+authorized. D2 has a 5.00 vCPU / 5,632 MiB peak hard ceiling and a 4.00 vCPU /
+4,608 MiB long-running hard ceiling; these are not reservations. D4 business projection storage will require a
 separately encrypted volume on that same host. This still authorizes no live
 frontend consumer; Claude keeps all live consumers off. Decision packet:
 [`EX_BE_02_D2_PLACEMENT_DECISION.md`](../../backend/EX_BE_02_D2_PLACEMENT_DECISION.md).

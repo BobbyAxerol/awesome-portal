@@ -329,8 +329,10 @@ authority.
 - `EX-BE-02-LIVE` **D2 shared-host realignment complete / live unauthorized:**
   Bobby selected the existing AWS-HK execution host for the minimal Rust Edge,
   Source Proxy and schema-only projection boundary; full Portal remains SGP and
-  `DEDICATED_SPLIT_PORTAL_CELL` is withdrawn. Resource ceilings are raised to a
-  3.25 CPU / 2,816 MiB startup peak and admission now compares bounded positive
+  `DEDICATED_SPLIT_PORTAL_CELL` is withdrawn. No new EC2/EIP/D1B is part of D2.
+  Resource ceilings are raised to a
+  5.00 CPU / 5,632 MiB startup hard ceiling (4.00 CPU / 4,608 MiB long-running)
+  and admission now compares bounded positive
   PSI deltas with the exact pre-start baseline. D4 still requires separately
   approved encrypted projection storage on the same host or another approved
   store. Exact status:

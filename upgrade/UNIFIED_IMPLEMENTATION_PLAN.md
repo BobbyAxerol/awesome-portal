@@ -1779,6 +1779,20 @@ không phải 17 màn.
 > Rail/source-backed Incident Detail chưa được tuyên bố xong. Chi tiết:
 > [`EX_BE_05B_F1A_OPERATIONS_QUEUE.md`](./backend/EX_BE_05B_F1A_OPERATIONS_QUEUE.md).
 
+> **D2 placement/resource checkpoint 2026-08-23:** toàn bộ Portal, browser BFF,
+> Control API và product database vẫn chạy tại SGP Research. AWS-HK hiện hữu
+> chỉ nhận Source Proxy, Rust Execution Edge, dark projection PostgreSQL và
+> one-shot migrator; không tạo EC2/EIP/D1B mới. Hard ceiling được nới lên 5.00
+> vCPU / 5,632 MiB lúc startup và 4.00 vCPU / 4,608 MiB khi chạy dài hạn để
+> tránh OOM do limit quá nhỏ; đây không phải reservation và baseline/delta
+> admission cùng Trading System rollback gate vẫn bắt buộc. Giữ IAM role D1
+> hiện hữu để audit/rollback nhưng instance profile phải được detach sau khi
+> harden IMDS và trước khi workload chạy. Live D2 vẫn chưa được phép cho tới
+> khi exact IAM DryRun, signed images, workload PKI/JWKS và change window đều
+> xanh. Chi tiết: [`EX_BE_02_D2_PLACEMENT_DECISION.md`](./backend/EX_BE_02_D2_PLACEMENT_DECISION.md).
+> Canonical placement: full Portal stays on SGP; AWS-HK hosts only the minimal
+> Execution Edge boundary.
+
 ## 12.4 Thứ tự slice của frontend
 
 Lane A chạy trước; mỗi slice đóng độc lập và không slice nào chờ codex.
