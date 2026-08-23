@@ -386,6 +386,13 @@ authority.
   caller/instance/profile association are exact but AWS still reports that no
   identity-based policy allows the metadata action. The console attachment or
   boundary placement must therefore be corrected; no detachment occurred.
+  A later propagation retry also failed. The mode-0600 private policy has been
+  narrowed to revision 2 with the exact two actions, instance ARN and region,
+  but without request-parameter conditions that did not create an effective
+  Allow. Status is `IAM_POLICY_REVISION_2_REQUIRED / LIVE_D2_UNAUTHORIZED`.
+  The owner must replace the attached document/default managed-policy version
+  before another DryRun. Evidence:
+  [`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](./EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
 - `EX-BE-02-LIVE` **D3 offline preparation complete / live unauthorized**
   (`D3_OFFLINE_PREPARATION_COMPLETE / LIVE_D3_UNAUTHORIZED`): a
   separate Compose/env/config delta opens only three credential-free public

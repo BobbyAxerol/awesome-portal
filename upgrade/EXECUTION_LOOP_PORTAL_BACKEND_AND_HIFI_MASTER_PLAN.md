@@ -1282,6 +1282,15 @@ Status is `HOST_PREFLIGHT_ACCEPTED / IAM_ISOLATION_NOT_AUTHORIZED /
 LIVE_D2_UNAUTHORIZED`; no service started. Evidence:
 [`EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md`](backend/EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md).
 
+Two later exact retries still failed after the owner-reported attachment. The
+private exact-instance policy was revised to remove request-parameter
+conditions that did not yield an effective Allow while retaining the region
+and two-action boundary. Current status is
+`IAM_POLICY_REVISION_2_REQUIRED / LIVE_D2_UNAUTHORIZED`; the owner must replace
+the attached document (and select it as the managed-policy default version)
+before another DryRun. Evidence:
+[`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](backend/EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
+
 The exact isolation sequence is now executable rather than prose-only. A
 tested operator tool verifies the DryRun, binds the exact instance/profile/
 association and <=2-hour window, applies hop-limit one before detachment and

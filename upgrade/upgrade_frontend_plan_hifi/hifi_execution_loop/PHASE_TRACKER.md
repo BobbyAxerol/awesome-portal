@@ -388,6 +388,14 @@ IAM_ISOLATION_NOT_AUTHORIZED / LIVE_D2_UNAUTHORIZED`. This changes no frontend
 profile: Claude keeps source/query/realtime/command consumers off. Evidence:
 [`EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md`](../../backend/EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md).
 
+The owner-reported IAM attachment and a propagation retry still returned
+`UnauthorizedOperation`. Backend prepared a narrower exact-instance revision-2
+document without request-parameter conditions; it must become the effective
+attached/default managed-policy version before the next DryRun. Status remains
+`IAM_POLICY_REVISION_2_REQUIRED / LIVE_D2_UNAUTHORIZED`. This unlocks no
+frontend source, query, stream or command consumer. Evidence:
+[`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](../../backend/EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
+
 The backend isolation operation is now machine-ordered and fixture-tested:
 IMDS hop-limit one, exact profile detachment, then IMDS credential absence.
 Status is `D2_ISOLATION_EXECUTABLE_PREPARED / LIVE_D2_UNAUTHORIZED`; it remains

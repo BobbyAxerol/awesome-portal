@@ -1018,6 +1018,13 @@ deep-dive → ADR → slice → evidence discipline documented above.
   that no identity-based policy permits the action. Caller identity and profile
   association are correct, so IAM console attachment/boundary placement remains
   the stop-gate and no detach was attempted.
+  Two further exact retries remained unauthorized. The private policy is now
+  revision 2: exact two actions, exact instance and region, without the request-
+  parameter conditions that failed to yield an effective Allow. Status is
+  `IAM_POLICY_REVISION_2_REQUIRED / LIVE_D2_UNAUTHORIZED`; the attached managed
+  policy must use this document as its default version before another DryRun.
+  Evidence:
+  [`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](./backend/EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
 - **EX-BE-02-LIVE D3 offline preparation (2026-08-23):** a separate probe-only
   overlay now opens exactly three public contract/health source routes while
   four alpha routes remain 503 and ingestion/query/SSE/analytics/command stay

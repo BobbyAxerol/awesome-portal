@@ -75,6 +75,18 @@ managed-policy version the default if the document was edited, and verify that
 neither a permissions boundary nor an Organizations SCP denies the action.
 No EC2 setting, profile association, service or network state changed.
 
+A further pair of exact retries at `2026-08-23T11:22:22Z`, including time for
+IAM propagation, still returned `UnauthorizedOperation`. The request-parameter
+conditions were therefore removed from the private Allow while retaining the
+exact instance ARN, exact two actions and `ap-east-1` boundary. The resulting
+mode-0600 revision-2 policy has digest
+`sha256:bca3ee7d9aa7cc3d27318ce3e27d4e655becd9d7bea5a0b674768c62066fb476`.
+It must replace the attached policy document and, for a managed policy, become
+the default version before the next DryRun. Status is now
+`IAM_POLICY_REVISION_2_REQUIRED / LIVE_D2_UNAUTHORIZED`; no detach or runtime
+change occurred. Detail:
+[`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](./EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
+
 ## 3. Required order
 
 1. attach the reviewed private D2 isolation policy to the exact existing D1

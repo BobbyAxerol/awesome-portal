@@ -11,20 +11,21 @@ ARCHITECTURE="${ROOT_DIR}/upgrade/BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md"
 FRONTEND_HANDOFF="${ROOT_DIR}/apps/portal/registry/FRONTEND_HANDOFF.md"
 CATALOG="${ROOT_DIR}/packages/contracts/fixtures/execution-command-catalog.valid.json"
 ADMISSION_HISTORY="${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md"
+IAM_REVISION="${ROOT_DIR}/upgrade/backend/EX_BE_02_D2_IAM_POLICY_REVISION_2.md"
 UNIFIED="${ROOT_DIR}/upgrade/UNIFIED_IMPLEMENTATION_PLAN.md"
 F2_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_05B_F2_SANDBOX_CERTIFICATION.md"
 F2_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F2_HANDOFF.md"
 F3_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_05B_F3_CANARY_CONTROL_ROOM.md"
 F3_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F3_HANDOFF.md"
 
-python3 - "${MASTER}" "${TRACKER}" "${ROADMAP}" "${LEDGER}" "${BACKEND_README}" "${ARCHITECTURE}" "${FRONTEND_HANDOFF}" "${CATALOG}" "${ADMISSION_HISTORY}" "${UNIFIED}" "${F2_REPORT}" "${F2_HANDOFF}" "${F3_REPORT}" "${F3_HANDOFF}" <<'PY'
+python3 - "${MASTER}" "${TRACKER}" "${ROADMAP}" "${LEDGER}" "${BACKEND_README}" "${ARCHITECTURE}" "${FRONTEND_HANDOFF}" "${CATALOG}" "${ADMISSION_HISTORY}" "${UNIFIED}" "${F2_REPORT}" "${F2_HANDOFF}" "${F3_REPORT}" "${F3_HANDOFF}" "${IAM_REVISION}" <<'PY'
 from pathlib import Path
 import json
 import re
 import sys
 
-master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified, f2_report, f2_handoff, f3_report, f3_handoff = [Path(p) for p in sys.argv[1:]]
-for path in (master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified, f2_report, f2_handoff, f3_report, f3_handoff):
+master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified, f2_report, f2_handoff, f3_report, f3_handoff, iam_revision = [Path(p) for p in sys.argv[1:]]
+for path in (master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified, f2_report, f2_handoff, f3_report, f3_handoff, iam_revision):
     if not path.is_file():
         raise SystemExit(f"tracking file missing: {path}")
 
@@ -42,6 +43,7 @@ f2 = f2_report.read_text()
 f2h = f2_handoff.read_text()
 f3 = f3_report.read_text()
 f3h = f3_handoff.read_text()
+iamr = iam_revision.read_text()
 
 qualified = "`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`"
 for phase in (3, 14, 15, 16, 17):
@@ -126,6 +128,19 @@ for label, text in (
     normalized = re.sub(r"\s+", " ", text)
     if "HOST_PREFLIGHT_ACCEPTED / IAM_ISOLATION_NOT_AUTHORIZED / LIVE_D2_UNAUTHORIZED" not in normalized:
         raise SystemExit(f"{label} lost the D2 live requalification/IAM stop-gate")
+
+for label, text in (
+    ("master", m),
+    ("tracker", t),
+    ("backend README", b),
+    ("architecture guide", a),
+    ("IAM revision report", iamr),
+):
+    normalized = re.sub(r"\s+", " ", text)
+    if "IAM_POLICY_REVISION_2_REQUIRED / LIVE_D2_UNAUTHORIZED" not in normalized:
+        raise SystemExit(f"{label} lost the D2 IAM revision-2 stop-gate")
+if "bca3ee7d9aa7cc3d27318ce3e27d4e655becd9d7bea5a0b674768c62066fb476" not in iamr:
+    raise SystemExit("IAM revision report lost the private policy digest")
 
 for label, text in (
     ("master", m),
