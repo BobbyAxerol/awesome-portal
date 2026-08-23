@@ -14,6 +14,7 @@ their own private runtime services.
 | Backend lead | codex | Backend authority: services, contracts, infra, migrations |
 | Member (backend + frontend) | opencode agent | Implements alongside both leads, keeps the contract bridge |
 | Frontend lead / UIUX | Claude | U02–U05, U07 frontend and design system; see `CLAUDE.md` |
+| Frontend sparring & reviewer | Antigravity | Supports Claude on frontend, independent reviewer (contracts, 7 states, scale refine, design tokens), strict approval gate (no edits without Bobby approval); see `.agents/rules/antigravity.md` |
 
 Rules for these agents:
 
@@ -21,8 +22,15 @@ Rules for these agents:
   BAR deep-dive discipline and supports frontend work.
 - Claude owns UI/UX and frontend; backend needs go through a Backend request
   to codex, never direct edits (full handoff context in `CLAUDE.md`).
+- Antigravity supports Claude on frontend and serves as an independent sparring
+  and review partner (verifying contracts, 7 UI states, scale refine, design tokens,
+  and test evidence). Antigravity operates under a strict approval gate: never
+  mutate or edit files without explicit approval from Bobby.
 - opencode works both sides, commits coherent slices on the assigned branch
   and keeps `FRONTEND_HANDOFF.md` and the BAR docs up to date.
+- opencode agent is a backend team member: may implement, test and verify
+  backend slices under codex's BAR deep-dive discipline (and frontend slices
+  under Claude), and is trusted to run the full backend/frontend gate suite.
 - Cross-boundary changes (contracts, schemas, registry data) are reviewed by
   codex before merge; UI copy is Vietnamese with English technical terms.
 - All agents follow the contributor/branch rules below; only Bobby merges.
