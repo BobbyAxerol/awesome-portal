@@ -254,14 +254,25 @@ describe("the request body is the schema's", () => {
 });
 
 describe("#8 — a denied apply shows the two facts that make it safe to act on", () => {
-  const DENIED = {
-    schema_version: "execution.command-relay-decision.v1",
-    operation_id: "op_1",
-    decision: "DENIED",
-    reason: "COMMAND_RELAY_DISABLED",
-    retry_allowed: false,
-    source_request_sent: false,
-  };
+  // Loaded, not hand-built. A fixture the contract publishes and a test writes
+  // out by hand are two documents that agree until one of them moves, and the
+  // whole point of a published example is that it cannot.
+  const DENIED = JSON.parse(
+    readFileSync(
+      join(
+        __dirname,
+        "../../../../../packages/contracts/fixtures/execution-command-relay-denied.valid.json",
+      ),
+      "utf8",
+    ),
+  ) as Record<string, unknown>;
+
+  it("is the published denial document, not a copy of it", () => {
+    expect(DENIED.decision).toBe("DENIED");
+    expect(DENIED.reason).toBe("COMMAND_RELAY_DISABLED");
+    expect(DENIED.retry_allowed).toBe(false);
+    expect(DENIED.source_request_sent).toBe(false);
+  });
 
   it("matches the schema the Control API publishes", () => {
     const schema = JSON.parse(

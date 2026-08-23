@@ -274,6 +274,51 @@ không tự chọn mô tả tiện lợi.
    chờ ai, (c) đang chờ codex. Trộn ba nhóm này lại chính là thứ làm báo cáo
    thành không quyết được.
 
+8. **Trước MỖI slice, đọc handoff mới của codex** (Bobby chốt 2026-08-22).
+   Bước đầu tiên của mọi slice, không phải bước tuỳ chọn:
+
+   ```bash
+   # 1. codex giao gì cho tôi
+   ls -t upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_*.md | head -5
+
+   # 2. codex vừa làm gì
+   git log --oneline -20 --invert-grep --grep="Claude"
+
+   # 3. contract nào đã publish mà frontend chưa đọc
+   for f in packages/contracts/fixtures/*.valid.json; do
+     slug=$(basename "$f" | sed 's/^execution-//; s/\.valid\.json$//; s/\.[a-z-]*$//')
+     [ $(grep -rl -- "$slug" apps/portal/frontend/src/execution | wc -l) -eq 0 ] \
+       && echo "chưa đọc: $slug"
+   done | sort -u
+   ```
+
+   Ba câu khác nhau, và `git log` một mình không trả lời câu nào trong hai câu
+   còn lại — commit của codex không nói gói nào là việc của tôi.
+
+   Lệnh 3 khớp theo **slug đặc trưng**, không theo tên file hay tên schema. Hai
+   cách kia đều thử rồi và đều kêu oan: khớp tên schema báo nhầm 3/8, khớp tên
+   file báo nhầm 26/26 vì test dựng đường dẫn bằng template. **Một check kêu oan
+   sẽ bị bỏ qua**, nên nó phải chính xác trước khi đáng chạy.
+
+   Lần đầu chạy lệnh 3 nó tìm ra 10 contract chưa đọc — trong đó **hai cái là lỗ
+   trong việc tôi vừa làm xong**: test tự dựng object thay vì nạp fixture đã
+   publish. Nếu fixture canonical tồn tại thì test phải nạp nó, không phải chép
+   lại nó.
+
+   **Vì sao có luật này.** Ngày 2026-08-22, năm gói `F1a`, `F1b`, `F2`, `F3`,
+   `F4` nằm chờ trong lúc tôi làm việc khác. Backend của phase 7, 8, 10, 11, 12
+   đều `INTEGRATION_COMPLETE`, contract và fixture canonical đầy đủ — frontend
+   chậm **năm màn**, và không phải vì thiếu gì cả. Cùng thói quen đó khiến tôi
+   đọc nửa gói `F0` rồi báo cáo là xong.
+
+   **Đọc handoff nghĩa là đọc hết**, kể cả phần "required tests" ở cuối. Gói F0
+   có 14 test bắt buộc; tôi làm phần đầu, bỏ qua §4, và bốn test có **0
+   coverage** trong đó có một cái chặn rò rỉ payload nhạy cảm.
+
+   Khi đọc xong một gói, ghi vào `PHASE_TRACKER.md` là **đã đọc** — không phải
+   là đã làm. Hai trạng thái đó khác nhau, và gộp chúng là cách một gói biến
+   mất khỏi tầm mắt.
+
 ## 8. Scale refine — bắt buộc cho mỗi màn Execution Loop
 
 Hi-fi mô tả trạng thái đẹp ở 1440px với dữ liệu mẫu nhỏ. Thực tế: nhiều alpha,
