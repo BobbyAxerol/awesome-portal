@@ -1170,6 +1170,17 @@ Delivery therefore advances through separate stop gates:
 5. **Activation:** separate owner decision for ACTIVE cutover and
    `fixture -> shadow`; command and Live authority remain separate.
 
+The 2026-08-23 IAM/D1 requalification is
+`IAM_VERIFIED / D1_REVALIDATED / APPLICATION_DARK`. The live instance role
+proved the expected STS, instance, VPC, subnet, SG, EIP and effective route
+table, while the WireGuard rule audit found one exact rollback-addressable
+SGP-`/32` rule and zero unsafe overlaps. Both peers remain healthy, public
+8443/8444 are denied and no Execution Portal workload is running. This does not
+advance D2: the temporary instance profile remains attached and IMDS hop-limit
+is two, in addition to the independent image/PKI/resource/DB/window gates.
+Evidence:
+[`EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md`](backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md).
+
 The 2026-08-23 D2 hardening audit is now the binding implementation detail for
 step 2. Dark Edge performs no initial/background source probe; all seven
 Source Proxy routes return 503 and mount no Trading System read credential.

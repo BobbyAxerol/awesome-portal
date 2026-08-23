@@ -15,6 +15,14 @@
 - Claude should keep explicit unavailable/stale/gap states and must not infer
   source availability from carrier health. D2/D3/D4 retain independent gates.
 
+IAM/D1 revalidation is now
+`IAM_VERIFIED / D1_REVALIDATED / APPLICATION_DARK`: live AWS inventory and the
+single exact WireGuard rule match the private owner record, but no Edge/Proxy/
+projection service is running. The frontend contract does not change: keep
+`source_available=false`, `stream_available=false`, profile `fixture`, Lane B,
+EventSource and commands off, and do not poll AWS-HK. The attached temporary
+role/IMDS condition remains a backend-only D2 blocker.
+
 ## 1. Hai endpoint public
 
 | Endpoint | Method | Cache | Body |

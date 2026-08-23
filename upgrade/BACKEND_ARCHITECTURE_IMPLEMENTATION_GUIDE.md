@@ -939,6 +939,17 @@ deep-dive → ADR → slice → evidence discipline documented above.
   separately blocked by operator-instance-role isolation plus image, identity,
   resource, database and owner-window gates. Evidence:
   [`EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md`](./backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md).
+- **EX-BE-02-LIVE IAM verification and D1 revalidation (2026-08-23):** the
+  scoped instance role passed the actual STS/EC2 inventory calls and matched
+  the private EIP allocation, effective route table, VPC/subnet/SG and exact
+  rollback rule. A fail-closed verifier rejects duplicate, ranged, wildcard or
+  wrong-ID WireGuard ingress. Both peers remain active with current handshake,
+  peer-only reachability and public 8443/8444 denial; no Portal workload is
+  running and Trading System public health remains green. Status is
+  `IAM_VERIFIED / D1_REVALIDATED / APPLICATION_DARK`. The attached temporary
+  instance profile and IMDS hop-limit two remain explicit D2 stop-gates.
+  Evidence:
+  [`EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md`](./backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md).
 - **EX-BE-02-LIVE D2 hardening checkpoint (2026-08-23):** dark Edge startup no
   longer performs initial or periodic source probes; Source Proxy has seven
   exact 503 guards and no Trading System read credential before D4. D2 now owns

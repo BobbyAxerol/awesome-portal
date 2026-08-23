@@ -1,6 +1,6 @@
 # EX-BE-02-LIVE D1 preparation assets
 
-Status: `OFFLINE_PREPARATION_COMPLETE / D1_NOT_EXECUTED`
+Status: `D1_NETWORK_ACCEPTED / APPLICATION_DARK`
 
 These files prepare the smallest reversible SGP↔AWS-HK bootstrap. They do not
 authorize or perform D1 and do not activate a Portal source, projection, query,
@@ -63,6 +63,14 @@ only D1 decision gates and preserves all five permanent safety locks as false.
 `scripts/execution-d1-render-wireguard.sh` is the reviewed root-only renderer;
 it reads identity files internally, validates the resulting config with
 `wg-quick strip` and never places a key in argv or stdout.
+
+After activation, requalify the AWS control-plane record without exposing
+credentials by running `scripts/execution-iam-verify.py` on AWS-HK with values
+read from the private owner file. It accepts only one exact UDP 51820 rule,
+fails on duplicate/ranged/wildcard sources, verifies the EIP allocation and
+effective route table, and reports attached-instance-profile/IMDS conditions as
+D2 stop-gates. Its pure rule audit is covered by
+`scripts/test_execution_iam_verify.py`.
 
 The operator procedure and rollback are in
 [`deploy/runbooks/execution-d1-bootstrap-and-rollback.md`](../runbooks/execution-d1-bootstrap-and-rollback.md).

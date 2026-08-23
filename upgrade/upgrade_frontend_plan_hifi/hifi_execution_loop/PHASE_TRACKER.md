@@ -331,6 +331,15 @@ live FE profile; Claude should continue fixture/failure-state work only.
 Evidence:
 [`EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md`](../../backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md).
 
+IAM and D1 were requalified on 2026-08-23 as
+`IAM_VERIFIED / D1_REVALIDATED / APPLICATION_DARK`. The real role matched the
+private EC2/VPC/subnet/SG/EIP/route-table record, with one exact WireGuard rule
+and zero unsafe overlaps. Both peers remain healthy, public 8443/8444 are
+denied, no Execution Portal workload is running and Trading System public
+health is unchanged. The attached temporary role and IMDS hop-limit two still
+block D2. This unlocks no live frontend consumer. Evidence:
+[`EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md`](../../backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md).
+
 The D2 hardening checkpoint is `D2_HARDENED / LIVE_DEPLOYMENT_BLOCKED`.
 Dark Edge now starts without initial/background source probes; seven exact
 Source Proxy guards return 503 with no Trading System read credential. A private

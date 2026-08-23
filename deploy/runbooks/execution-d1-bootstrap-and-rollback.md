@@ -85,6 +85,29 @@ On AWS, confirm that the recorded EC2 instance ID, Elastic IP and SSH host-key
 fingerprint still identify the D0 host. AWS Security Group changes are owner
 manual until a reviewed IAM read/change boundary exists.
 
+After the scoped IAM boundary exists, run the versioned read-only verifier on
+AWS-HK with the expected values from the private owner record:
+
+```bash
+python3 scripts/execution-iam-verify.py \
+  --expected-account EXPECTED_ACCOUNT \
+  --region ap-east-1 \
+  --expected-role-name EXPECTED_ROLE \
+  --instance-id EXPECTED_INSTANCE \
+  --public-ip EXPECTED_EIP \
+  --security-group-id EXPECTED_SG \
+  --vpc-id EXPECTED_VPC \
+  --subnet-id EXPECTED_SUBNET \
+  --expected-eip-allocation-id EXPECTED_EIP_ALLOCATION \
+  --expected-route-table-id EXPECTED_ROUTE_TABLE \
+  --expected-sgp-cidr EXPECTED_SGP_IP/32 \
+  --expected-wireguard-rule-id EXPECTED_SGR
+```
+
+Retain the JSON only in private mode-0600 evidence. The command is accepted
+only when all STS/EC2 reads succeed and exactly one non-broad WireGuard rule
+matches the rollback ID. It never changes AWS state.
+
 ## 4. D1a — freeze and recovery boundary
 
 Record a sanitized change record containing:

@@ -274,6 +274,17 @@ authority.
   traffic started. The temporary operator instance profile must be detached or
   separately isolated before D2. Evidence:
   [`EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md`](./EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md).
+- `EX-BE-02-LIVE` **IAM verified / D1 revalidated / application dark
+  (2026-08-23):** the real instance role successfully re-read STS, instance,
+  VPC, subnet, SG, EIP and effective route-table state against the private
+  owner record. Exactly one UDP 51820-from-SGP-`/32` rule exists and its ID
+  matches the rollback record; zero duplicate or broad rules were observed.
+  Both peers are active with current handshakes, 0%-loss peer-only probes,
+  public 8443/8444 denial, no Execution Portal containers/listeners and
+  unchanged Trading System public health. The same verifier confirms D2 is
+  still blocked by the attached D1 role and IMDS hop-limit two. Evidence:
+  [`EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md`](./EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md).
+  Exact status: `IAM_VERIFIED / D1_REVALIDATED / APPLICATION_DARK`.
 - `EX-BE-02-LIVE` **D2 hardened / live deployment blocked:** the audit removed
   all startup/background source probes from dark mode, replaced the premature
   Trading System credential with seven exact 503 guards and added the private
