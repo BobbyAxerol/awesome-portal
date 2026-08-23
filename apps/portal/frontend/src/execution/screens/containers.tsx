@@ -39,6 +39,13 @@ import { OrderFunnelStrip } from "./FullBlotter";
 import { AdminActionDrawerScreen, type TierFilter } from "./AdminActionDrawer";
 import { HeadroomBanner } from "./AccountBroker360";
 import { CorrelationPanel } from "./PortfolioThreeSixty";
+import {
+  OperationsQueueScreen,
+  TriagePanel,
+  type QueueFilter,
+} from "./OperationsQueue";
+import { IncidentDetailScreen } from "./IncidentDetail";
+import { workflowEffectText, type QueueRow, type WorkflowResult } from "../operations";
 import { PanelState } from "../components/states";
 import { aggregateHeadroomFrom, envelopeFromAnalytics } from "../analytics";
 import type { CatalogEntry } from "../adminCatalog";
@@ -1049,6 +1056,151 @@ export function ExposureHeadroomContainer({
       // make one.
       aggregate={figures && envelope ? { ...figures, envelope: envelopeFromAnalytics(envelope) } : null}
       exposure={exposure}
+    />
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * Phase 7 and 8
+ * ------------------------------------------------------------------------ */
+
+/**
+ * The queue, its cursors and its triage.
+ *
+ * The cursor is held with the query it was issued against, exactly as the
+ * inbox's is: changing the filter voids it, and sending a voided one asks the
+ * server to page a list that no longer exists.
+ */
+export function OperationsQueueContainer({
+  api,
+  workspaceId = "default",
+  now,
+}: {
+  api: ExecutionApi;
+  workspaceId?: string;
+  now?: Date;
+}) {
+  const [filter, setFilter] = useState<QueueFilter>("NEEDS_ATTENTION");
+  const [cursor, setCursor] = useState<{ after?: string; before?: string }>({});
+  const [selected, setSelected] = useState<QueueRow | null>(null);
+  const [effect, setEffect] = useState<string | null>(null);
+  const [conflict, setConflict] = useState(false);
+  const requestKey = useRef(newRequestKey());
+
+  const triageState =
+    filter === "NEEDS_ATTENTION" ? "UNACKNOWLEDGED" : filter === "MINE" ? undefined : undefined;
+
+  const state = useAnalyticsRead(
+    () =>
+      api.listOperations({
+        workspaceId,
+        after: cursor.after,
+        before: cursor.before,
+        triageState,
+      }),
+    [api, workspaceId, cursor.after, cursor.before, triageState],
+  );
+
+  const queue = state.value;
+  const roles = queue?.actorRoles ?? [];
+
+  const runTriage = async (run: () => Promise<Result<WorkflowResult>>) => {
+    setConflict(false);
+    const result = await run();
+    if (!result.ok) {
+      // A `stale` result is the typed 409. Refresh and review; nothing here
+      // retries, because the record the operator was looking at has moved.
+      setConflict(result.status === "stale");
+      setEffect(result.reason);
+      return;
+    }
+    // The sentence is the server's, built from the flags it returned — never a
+    // reassurance this file composed.
+    setEffect(workflowEffectText(result.value));
+    if (result.value.operation) setSelected(result.value.operation);
+    // A replayed mutation returns the record that already existed. Reusing the
+    // same request key is what makes that a replay rather than a second
+    // operation, so the key is NOT regenerated here.
+  };
+
+  return (
+    <>
+      <OperationsQueueScreen
+        queue={queue}
+        status={state.status}
+        reason={state.reason}
+        filter={filter}
+        now={now}
+        onFilterChange={(next) => {
+          // The cursor belongs to the previous query.
+          setCursor({});
+          setSelected(null);
+          setFilter(next);
+        }}
+        onOpen={setSelected}
+        onLoadNext={
+          queue?.page.hasMore && queue.page.nextCursor
+            ? () => setCursor({ after: queue.page.nextCursor ?? undefined })
+            : undefined
+        }
+        onLoadPrevious={
+          queue?.page.hasPrevious && queue.page.prevCursor
+            ? () => setCursor({ before: queue.page.prevCursor ?? undefined })
+            : undefined
+        }
+      />
+      {selected ? (
+        <TriagePanel
+          row={selected}
+          roles={roles}
+          effectText={effect}
+          conflict={conflict}
+          onAcknowledge={(row) =>
+            void runTriage(() =>
+              api.acknowledgeOperation({
+                operationId: row.operationId,
+                workspaceId,
+                requestKey: requestKey.current,
+                expectedWorkflowVersion: row.workflowVersion ?? 0,
+              }),
+            )
+          }
+          onResolve={(row, reason, evidenceHash) =>
+            void runTriage(() =>
+              api.resolveOperation({
+                operationId: row.operationId,
+                workspaceId,
+                requestKey: requestKey.current,
+                expectedWorkflowVersion: row.workflowVersion ?? 0,
+                reason,
+                evidenceHash,
+              }),
+            )
+          }
+        />
+      ) : null}
+    </>
+  );
+}
+
+export function IncidentDetailContainer({
+  api,
+  incidentId,
+  workspaceId,
+}: {
+  api: ExecutionApi;
+  incidentId: string;
+  workspaceId?: string;
+}) {
+  const state = useAnalyticsRead(
+    () => api.getIncident(incidentId, workspaceId),
+    [api, incidentId, workspaceId],
+  );
+  return (
+    <IncidentDetailScreen
+      incident={state.value}
+      status={state.status}
+      reason={state.reason}
     />
   );
 }

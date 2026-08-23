@@ -24,6 +24,7 @@ import type {
 } from "../analytics";
 import type { CommandCatalogue } from "../adminCatalog";
 import type { CommandPlan, CommandPlanRequestInput } from "../commandPlan";
+import type { IncidentDetail, OperationsQueue, WorkflowResult } from "../operations";
 import type { TypedCondition } from "../components/conditions";
 
 export type Result<T> =
@@ -144,6 +145,50 @@ export interface ExecutionApi {
    * keystroke or serve a preview for an amount the reviewer has already moved
    * past — the second being the dangerous one.
    */
+  /**
+   * `GET /api/v1/execution/operations` — the triage queue.
+   *
+   * Cursors are opaque and mutually exclusive, exactly as the inbox's are: a
+   * page requested in both directions is a page whose position the client
+   * cannot place.
+   */
+  listOperations(query: {
+    workspaceId?: string;
+    after?: string;
+    before?: string;
+    limit?: number;
+    triageState?: string;
+    environment?: string;
+    sourceStatus?: string;
+  }): Promise<Result<OperationsQueue>>;
+  /**
+   * `POST /api/v1/execution/operations/{id}/acknowledge`
+   *
+   * A Portal record. `expected_workflow_version` is mandatory, and a 409 means
+   * the row moved — refresh and review, never blind retry.
+   */
+  acknowledgeOperation(input: {
+    operationId: string;
+    workspaceId: string;
+    requestKey: string;
+    expectedWorkflowVersion: number;
+  }): Promise<Result<WorkflowResult>>;
+  /**
+   * `POST /api/v1/execution/operations/{id}/resolve`
+   *
+   * Requires a reason AND an evidence hash. Acknowledging first is the server's
+   * rule as well as the screen's.
+   */
+  resolveOperation(input: {
+    operationId: string;
+    workspaceId: string;
+    requestKey: string;
+    expectedWorkflowVersion: number;
+    reason: string;
+    evidenceHash: string;
+  }): Promise<Result<WorkflowResult>>;
+  /** `GET /api/v1/execution/operations/incidents/{id}` */
+  getIncident(incidentId: string, workspaceId?: string): Promise<Result<IncidentDetail>>;
   /**
    * `POST /api/v1/execution/commands/plans` with the EXECUTION_COMMAND body.
    *

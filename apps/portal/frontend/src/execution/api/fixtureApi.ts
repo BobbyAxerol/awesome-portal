@@ -23,6 +23,13 @@ import {
   readOrderFunnel,
 } from "../analytics";
 import { readCommandCatalogue } from "../adminCatalog";
+import { readIncidentDetail, readOperationsQueue, readWorkflowResult } from "../operations";
+import {
+  INCIDENT_OPEN_FIXTURE,
+  INCIDENT_RESOLVED_FIXTURE,
+  OPERATIONS_QUEUE_FIXTURE,
+  OPERATION_WORKFLOW_FIXTURE,
+} from "../operations.fixtures";
 import { commandPlanRequest, readCommandPlan } from "../commandPlan";
 import { COMMAND_PLAN_FIXTURE } from "../adminCatalog.fixtures";
 import { COMMAND_CATALOGUE_FIXTURE } from "../adminCatalog.fixtures";
@@ -427,6 +434,8 @@ export interface FixtureApiOptions {
   mixedInsights?: boolean;
   /** Serve the correlation that exceeds the packed transport limit. */
   correlationAboveLimit?: boolean;
+  /** Serve the resolved incident rather than the open one. */
+  resolvedIncident?: boolean;
 }
 
 /**
@@ -567,6 +576,54 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       return preview && envelope
         ? { ok: true as const, value: { preview, envelope } }
         : unavailable("The capital preview response could not be read.");
+    },
+
+    async listOperations(query) {
+      const blocked = gate<never>("listOperations");
+      if (blocked) return blocked as Result<never>;
+      if (query.after && query.before) {
+        return unavailable("A page cannot be requested in both directions at once.");
+      }
+      const queue = readOperationsQueue(OPERATIONS_QUEUE_FIXTURE);
+      return queue
+        ? { ok: true as const, value: queue }
+        : unavailable("The operations queue response could not be read.");
+    },
+
+    async acknowledgeOperation() {
+      const blocked = gate<never>("acknowledgeOperation");
+      if (blocked) return blocked as Result<never>;
+      const result = readWorkflowResult(OPERATION_WORKFLOW_FIXTURE);
+      return result
+        ? { ok: true as const, value: result }
+        : unavailable("The triage response could not be read.");
+    },
+
+    async resolveOperation(input) {
+      const blocked = gate<never>("resolveOperation");
+      if (blocked) return blocked as Result<never>;
+      // The same floors the HTTP adapter enforces, so a screen tested against
+      // fixtures cannot pass a request the real endpoint would refuse.
+      if (input.reason.trim().length < 8) {
+        return unavailable("Resolving an operation needs a reason of at least eight characters.");
+      }
+      if (!input.evidenceHash.trim()) {
+        return unavailable("Resolving an operation needs an evidence reference.");
+      }
+      const result = readWorkflowResult(OPERATION_WORKFLOW_FIXTURE);
+      return result
+        ? { ok: true as const, value: result }
+        : unavailable("The triage response could not be read.");
+    },
+
+    async getIncident() {
+      const blocked = gate<never>("getIncident");
+      if (blocked) return blocked as Result<never>;
+      const source = options.resolvedIncident ? INCIDENT_RESOLVED_FIXTURE : INCIDENT_OPEN_FIXTURE;
+      const incident = readIncidentDetail(source);
+      return incident
+        ? { ok: true as const, value: incident }
+        : unavailable("The incident response could not be read.");
     },
 
     async planCommand(input) {

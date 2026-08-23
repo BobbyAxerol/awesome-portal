@@ -34,6 +34,8 @@ import {
 } from "../analytics";
 import { analyticsFailureReason, readAnalyticsFailure } from "../analyticsProblem";
 import { readCommandCatalogue } from "../adminCatalog";
+import { readIncidentDetail, readOperationsQueue, readWorkflowResult } from "../operations";
+import type { WorkflowResult } from "../operations";
 import {
   commandPlanRequest,
   readCommandPlan,
@@ -167,6 +169,35 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     return commandBlockedReason(policy, "R0");
   }
 
+  /**
+   * Acknowledge and resolve differ only in their body, and a 409 means the
+   * same thing to both: the row moved while the operator was looking at it.
+   * Written once because two copies would eventually disagree about that,
+   * and the wrong half of that disagreement is a blind retry against a
+   * record that has changed.
+   */
+  const triageMutation = async (
+    path: string,
+    body: unknown,
+  ): Promise<Result<WorkflowResult>> => {
+    const blocked = readBlocked();
+    if (blocked) return unavailable(blocked);
+    const response = await post(path, body, signal);
+    if (response.status === 409) {
+      return {
+        ok: false,
+        status: "stale",
+        reason:
+          "This operation changed while you were looking at it. Reload and review before deciding — repeating the request would apply a decision to a record that has moved.",
+      };
+    }
+    if (!response.ok) return problem(response);
+    const result = readWorkflowResult(await response.json());
+    return result
+      ? { ok: true as const, value: result }
+      : unavailable("The triage response could not be read.");
+  };
+
   return {
     async listApprovals(query: InboxQuery): Promise<Result<InboxResult>> {
       const blocked = readBlocked();
@@ -262,6 +293,83 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       return preview && envelope
         ? { ok: true as const, value: { preview, envelope } }
         : unavailable("The capital preview response could not be read.");
+    },
+
+    async listOperations(query) {
+      const blocked = readBlocked();
+      if (blocked) return unavailable(blocked);
+      if (query.after && query.before) {
+        // BR-EX-17 again: one direction per request. The server would pick
+        // otherwise, and a page whose direction the client did not choose is a
+        // page it cannot place.
+        return unavailable("A page cannot be requested in both directions at once.");
+      }
+      const params = new URLSearchParams();
+      for (const [key, value] of [
+        ["workspace_id", query.workspaceId],
+        ["after", query.after],
+        ["before", query.before],
+        ["triage_state", query.triageState],
+        ["environment", query.environment],
+        ["source_status", query.sourceStatus],
+      ] as const) {
+        if (value) params.set(key, value);
+      }
+      if (query.limit) params.set("limit", String(query.limit));
+      const qs = params.toString();
+      const response = await get(`/operations${qs ? `?${qs}` : ""}`, signal);
+      if (!response.ok) return problem(response);
+      const queue = readOperationsQueue(await response.json());
+      return queue
+        ? { ok: true as const, value: queue }
+        : unavailable("The operations queue response could not be read.");
+    },
+
+    async acknowledgeOperation(input) {
+      return triageMutation(
+        `/operations/${encodeURIComponent(input.operationId)}/acknowledge`,
+        {
+          schema_version: "execution.operation-acknowledge-request.v1",
+          workspace_id: input.workspaceId,
+          request_key: input.requestKey,
+          expected_workflow_version: input.expectedWorkflowVersion,
+        },
+      );
+    },
+
+    async resolveOperation(input) {
+      if (input.reason.trim().length < 8) {
+        return unavailable("Resolving an operation needs a reason of at least eight characters.");
+      }
+      if (!input.evidenceHash.trim()) {
+        return unavailable("Resolving an operation needs an evidence reference.");
+      }
+      return triageMutation(
+        `/operations/${encodeURIComponent(input.operationId)}/resolve`,
+        {
+          schema_version: "execution.operation-resolve-request.v1",
+          workspace_id: input.workspaceId,
+          request_key: input.requestKey,
+          expected_workflow_version: input.expectedWorkflowVersion,
+          reason: input.reason,
+          evidence_hash: input.evidenceHash,
+        },
+      );
+    },
+
+    async getIncident(incidentId, workspaceId) {
+      const blocked = readBlocked();
+      if (blocked) return unavailable(blocked);
+      const qs = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : "";
+      const response = await get(
+        `/operations/incidents/${encodeURIComponent(incidentId)}${qs}`,
+        signal,
+      );
+      if (!response.ok) return problem(response);
+      const incident = readIncidentDetail(await response.json());
+      return incident
+        ? { ok: true as const, value: incident }
+        : unavailable("The incident response could not be read.");
     },
 
     async planCommand(input) {

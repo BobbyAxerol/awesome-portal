@@ -46,6 +46,8 @@ import {
   GateR1ReviewContainer,
   GateR2ReviewContainer,
   AdminCatalogueContainer,
+  IncidentDetailContainer,
+  OperationsQueueContainer,
   AlphaInsightContainer,
   CapitalLedgerContainer,
   CorrelationContainer,
@@ -60,6 +62,9 @@ import { AdminActionDrawerScreen } from "./screens/AdminActionDrawer";
 
 /** Every Paper Exit capability granted. Absence is refusal, so cases say so. */
 /** Stable across renders: a fresh literal would re-fetch on every one. */
+/** Frozen so the age column does not rewrite the visual baseline every run. */
+const QUEUE_NOW = new Date("2026-08-23T09:05:00.000Z");
+
 const ALPHA_BATCH_REQUEST = {
   portfolioId: "PF-1",
   items: [{ insightId: "insight-1", alphaId: "alpha-1" }],
@@ -1637,6 +1642,38 @@ export default function ExecutionFixtures() {
           the Phase 0 exit gate is "every shared Execution component in every
           state" precisely so that cannot happen.
         */}
+        <Group
+          title="Operations Queue (4e)"
+          note="Three states per row and never merged: what the Trading System is doing, what verify observed, and what a person in the Portal has done. Acknowledging or resolving changes only the third."
+          surface="deployments"
+        >
+          <Case caption="the queue through the port — alert rail unavailable, because the Trading System publishes no alerts route">
+            <OperationsQueueContainer api={WIRED_API} now={QUEUE_NOW} />
+          </Case>
+          <Case caption="the port refuses — an empty table would read as an empty queue">
+            <OperationsQueueContainer
+              api={createFixtureApi({ unavailableEndpoints: ["listOperations"] })}
+              now={QUEUE_NOW}
+            />
+          </Case>
+        </Group>
+
+        <Group
+          title="Incident Detail (4d)"
+          note="Forward-only OPEN → MITIGATED → RESOLVED. Four source panels unavailable, one frame each. Resolving closes the Portal record and never resumes a deployment — there is no Resume control anywhere on this screen."
+          surface="deployments"
+        >
+          <Case caption="open — four blockers named, not one greyed button">
+            <IncidentDetailContainer api={WIRED_API} incidentId="inc_fixture_44" />
+          </Case>
+          <Case caption="resolved — and the deployment is still halted, said out loud">
+            <IncidentDetailContainer
+              api={createFixtureApi({ resolvedIncident: true })}
+              incidentId="inc_fixture_44"
+            />
+          </Case>
+        </Group>
+
         <Group
           title="Analytics containers — port → screen"
           note="Every one of these fetches through the port rather than taking props. That join is where a route typo or a mismapped state actually shows up, and four of them were built and never mounted."
