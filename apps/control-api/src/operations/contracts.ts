@@ -163,3 +163,51 @@ export const ExecutionCommandApplyRequestSchema = z
     command_type: z.literal("EXECUTION_COMMAND"),
   })
   .strict();
+
+export const OperationQueueQuerySchema = z
+  .object({
+    workspace_id: z.string().min(3).max(96).optional(),
+    after: z.string().min(1).max(4096).optional(),
+    before: z.string().min(1).max(4096).optional(),
+    limit: z.coerce.number().int().min(1).max(250).optional(),
+    triage_state: z.enum(["UNACKNOWLEDGED", "ACKNOWLEDGED", "RESOLVED"]).optional(),
+    environment: ExecutionEnvironmentSchema.optional(),
+    source_status: z.enum([
+      "BLOCKED", "PENDING", "RUNNING", "SUCCEEDED", "FAILED", "EXPIRED", "UNCERTAIN",
+    ]).optional(),
+    verification_result: z.enum([
+      "NOT_STARTED", "PENDING", "SUCCEEDED", "FAILED", "PARTIAL", "UNCERTAIN", "DENIED", "EXPIRED",
+    ]).optional(),
+    severity: z.enum(["INFO", "WARNING", "ERROR", "CRITICAL"]).optional(),
+    target_type: ExecutionTargetTypeSchema.optional(),
+    command_key: z.string().regex(/^[a-z0-9-]+\/(?:[a-z0-9-]+|<root>)$/).optional(),
+    sort: z.enum(["created_at:asc", "created_at:desc"]).default("created_at:desc"),
+  })
+  .strict()
+  .refine((query) => !(query.after && query.before), "after and before are mutually exclusive");
+
+export type OperationQueueQuery = z.infer<typeof OperationQueueQuerySchema>;
+
+export const OperationAcknowledgeRequestSchema = z
+  .object({
+    schema_version: z.literal("execution.operation-acknowledge-request.v1"),
+    workspace_id: z.string().min(3).max(96),
+    request_key: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/),
+    expected_workflow_version: z.number().int().positive(),
+  })
+  .strict();
+
+export type OperationAcknowledgeRequest = z.infer<typeof OperationAcknowledgeRequestSchema>;
+
+export const OperationResolveRequestSchema = z
+  .object({
+    schema_version: z.literal("execution.operation-resolve-request.v1"),
+    workspace_id: z.string().min(3).max(96),
+    request_key: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/),
+    expected_workflow_version: z.number().int().positive(),
+    reason: z.string().trim().min(8).max(2000),
+    evidence_hash: z.string().regex(/^sha256:[0-9a-f]{64}$/),
+  })
+  .strict();
+
+export type OperationResolveRequest = z.infer<typeof OperationResolveRequestSchema>;

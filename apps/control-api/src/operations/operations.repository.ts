@@ -146,6 +146,27 @@ export class ExecutionOperationsRepository {
         );
         if (inserted.rows[0]) {
           await client.query(
+            `INSERT INTO execution_operation_queue_items
+               (operation_id, workspace_id, operation_kind, command_key, environment,
+                target_type, target_id, risk_tier, severity, source_authority,
+                source_status, verification_result, triage_state, workflow_version,
+                created_at, updated_at)
+             VALUES ($1, $2, 'EXECUTION_COMMAND', $3, $4, $5, $6, $7,
+                     'WARNING', 'PORTAL', 'BLOCKED', 'NOT_STARTED',
+                     'UNACKNOWLEDGED', 1, $8, $9)`,
+            [
+              inserted.rows[0].operation_id,
+              inserted.rows[0].workspace_id,
+              inserted.rows[0].command_key,
+              inserted.rows[0].environment,
+              inserted.rows[0].target_type,
+              inserted.rows[0].target_id,
+              inserted.rows[0].risk_tier,
+              inserted.rows[0].created_at,
+              inserted.rows[0].updated_at,
+            ],
+          );
+          await client.query(
             `INSERT INTO product_audit_events
                (event_id, event_type, actor_user_id, workspace_id, request_id,
                 idempotency_key, aggregate_type, aggregate_id, aggregate_version,

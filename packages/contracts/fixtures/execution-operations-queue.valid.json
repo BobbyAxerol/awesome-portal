@@ -1,0 +1,49 @@
+{
+  "schema_version": "execution.operations-queue.v1",
+  "record_authority": "PORTAL",
+  "delivery_profile": "fixture",
+  "source_integration_state": "UNAVAILABLE",
+  "read_at": "2026-08-23T09:00:00.000Z",
+  "actor": {
+    "user_id": "usr_fixture_admin",
+    "username": "bobby",
+    "roles": ["ADMIN"]
+  },
+  "page": {
+    "rows": [
+      {
+        "operation_id": "op_fixture_queue_1",
+        "operation_kind": "EXECUTION_COMMAND",
+        "command_key": "account/sync",
+        "environment": "PAPER",
+        "target": { "type": "ACCOUNT", "id": "paper-account-1" },
+        "risk_tier": "BLOCKED",
+        "severity": "WARNING",
+        "source_authority": "PORTAL",
+        "source_status": "BLOCKED",
+        "verification_result": "NOT_STARTED",
+        "triage_state": "UNACKNOWLEDGED",
+        "workflow_version": 1,
+        "acknowledged_at": null,
+        "acknowledged_by_user_id": null,
+        "resolved_at": null,
+        "resolved_by_user_id": null,
+        "resolution_reason": null,
+        "resolution_evidence_hash": null,
+        "created_at": "2026-08-23T08:59:00.000Z",
+        "updated_at": "2026-08-23T08:59:00.000Z"
+      }
+    ],
+    "total_count": 1,
+    "filtered_count": 1,
+    "next_cursor": null,
+    "prev_cursor": null,
+    "has_more": false,
+    "has_previous": false,
+    "applied_filters": [],
+    "applied_sort": [
+      { "field": "created_at", "direction": "desc" },
+      { "field": "operation_id", "direction": "desc" }
+    ]
+  }
+}

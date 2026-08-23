@@ -48,7 +48,7 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 4 | Paper Workbench (1c) | **screen built** (fixtures, scale-refined) | `FOUNDATION_COMPLETE` | screen API + source integration; M7 evidence | EX-BE-04b adaptive six-rung/exact series + cold contract delivered; production source remains inactive |
 | 5 | Paper Exit Review (4b) | **screen closed on Lane A** (5 capability, 3 outcome, CSRF) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | PRE-IAM-02 đã map xong (`5b39e34`); còn real Paper source activation | PRE-IAM-02 fresh PG 129/129 + contract 20/20 + SGP runtime green; closeout linked below |
 | 6 | Admin Action Drawer (1i) | **screen built** (64 lệnh canonical, nhóm theo server, 403 denied) | `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | đã tiêu thụ catalogue revision 2 (`6da8a43`); còn relay capability + Lane B | EX-BE-05b/F0: ADMIN-scoped conservative catalogue, immutable hash-only blocked plan/no outbox, bounded retry + real concurrent replay/conflict, denied apply, Rust replay/conflict/UNCERTAIN and 149 TS + 95 Rust tests; all command flags false |
-| 7 | Operations Queue (4e) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-05b operation integration | EX-BE-04a bidirectional keyset delivered; ack≠resolve remains |
+| 7 | Operations Queue (4e) | `FRONTEND_INTEGRATION_PENDING` | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Claude consumes F1a Lane A; source routes remain external | SGP exact-count 182k bidirectional keyset + ack→resolve/idempotency/audit delivered; fixture/unavailable source retained |
 | 8 | Incident Detail (4d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a/05b source integration | EX-BE-03 completeness + EX-BE-06 gap/reconnect transport delivered; source integration remains |
 | 9 | Command Center (5a) | **screen built** (4 panel, 5 state, fixtures) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | dark snapshot + 5 state đã tiêu thụ (`ee3576c`); còn BR-EX-28 §8.1 `streams`/`alpha-activity`, real source + SSE parity | PRE-IAM-03 bounded snapshot: fresh PG 139/139, contracts 26/26, 20k exact-observed corpus; EX-BE-06 SSE remains dark |
 | 10 | Sandbox Certification (1d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a/05b; TS sandbox capability | EX-BE-03 stale/gap blocker delivered; production commands inactive; master plan §10.10 |
@@ -1736,6 +1736,23 @@ workflow contracts and repositories over fixture/Portal records only. The
 source-backed `command-journal`, findings, alerts, dead letters, trace-order,
 streams and alpha-activity adapters remain blocked on Trading System owner
 publication; Portal does not substitute DB/Redis/CLI access.
+
+### 24A.8 EX-BE-05b/F1a Portal Operations Queue
+
+Codex accepted F1a at `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` on
+2026-08-23. SGP TypeScript/PostgreSQL now owns an ADMIN/workspace-bound queue
+for Portal-created F0 operations, exact total/filtered counts, signed expiring
+forward/back keysets and ordered `UNACKNOWLEDGED → ACKNOWLEDGED → RESOLVED`
+triage. Source identity/status/verification are immutable, every workflow write
+is optimistic/idempotent/audited and no outbox or source request is created.
+
+Evidence is contracts 41/41 and fresh-PG Control API 155/155 including the
+182,000-row corpus and dump/restore drill. Registry remains `fixture` and source
+integration `UNAVAILABLE`. Claude's consumer packet is
+[`CODEX_TO_CLAUDE_EX_BE_05B_F1A_HANDOFF.md`](CODEX_TO_CLAUDE_EX_BE_05B_F1A_HANDOFF.md).
+Claude owns the Phase 7 Lane A adapter/UX/tests; Codex next owns F1b Portal
+Incident Detail. Source-backed operations remain blocked on published typed
+Trading System routes and D4 evidence.
 
 ---
 

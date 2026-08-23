@@ -1103,10 +1103,29 @@ deep-dive → ADR → slice → evidence discipline documented above.
   generated declarations carry the same scope, counts, condition semantics and
   payload policy. Evidence: contracts 39/39 and fresh-PG Control API 149/149;
   the complete Rust and D2 gates are recorded by the final audit closeout.
+- **EX-BE-05b/F1a Operations Queue (2026-08-23):** the SGP TypeScript Control
+  API now owns an ADMIN/workspace-bound, exact-count operations queue over
+  Portal-created F0 records. Signed/expiring bidirectional keysets qualify at
+  182,000 rows. Acknowledge and resolve are ordered, optimistic, idempotent and
+  audited in PostgreSQL; source identity/status/verification are immutable and
+  no outbox/source request is produced. Evidence: contracts 41/41 and fresh-PG
+  Control API 155/155 plus dump/restore. Status is
+  `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`; profile remains `fixture`,
+  source integration remains `UNAVAILABLE`, and F1b Incident Detail is next.
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**
 
+- **EX-BE-05b/F1b Incident Detail on SGP:** Portal-owned incident identity,
+  assignment/annotation/evidence and operation correlation; source panels stay
+  unavailable until purpose-built Trading System contracts exist.
+- **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
+  PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
+  workload-identity/window gates precede D2, then authenticated transport and
+  Paper BUILDING-epoch evidence. Full Portal remains on SGP.
+- **Execution product lane:** Command Center real-source snapshot/SSE parity,
+  Paper/VNM projections, Sandbox Certification, Canary, Live Full,
+  authenticated live relay and cross-cell fault/soak/restore/DR.
 - **U14 certification slice** (BAR-21 continuation): quarantine → hermetic
   build → lock/SBOM/secret/license scan → contract/determinism/no-lookahead/
   QuantBT smoke → signed publication; lifecycle/promotion transitions

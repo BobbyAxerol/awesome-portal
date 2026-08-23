@@ -23,8 +23,12 @@ import {
   ExecutionCommandApplyRequestSchema,
   ExecutionCommandCatalogueQuerySchema,
   ExecutionCommandPlanRequestSchema,
+  OperationAcknowledgeRequestSchema,
+  OperationQueueQuerySchema,
+  OperationResolveRequestSchema,
 } from "../operations/contracts";
 import { ExecutionOperationsService } from "../operations/operations.service";
+import { OperationsWorkflowService } from "../operations/workflow.service";
 import {
   ApplyOperationRequestSchema,
   approvalListQuery,
@@ -48,9 +52,63 @@ export class GovernanceController {
     @Inject(GovernanceService) private readonly governance: GovernanceService,
     @Inject(PaperExitService) private readonly paperExit: PaperExitService,
     @Inject(ExecutionOperationsService) private readonly operations: ExecutionOperationsService,
+    @Inject(OperationsWorkflowService) private readonly operationWorkflow: OperationsWorkflowService,
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
+
+  @Get("/operations")
+  async operationsQueue(
+    @Req() request: GovernanceRequest,
+    @Query() query: Record<string, unknown>,
+  ) {
+    const parsed = OperationQueueQuerySchema.safeParse(query);
+    if (!parsed.success) {
+      throw new GovernanceError("INVALID_OPERATION_QUEUE_QUERY", "Invalid operation queue query.", 400);
+    }
+    const workspaceId = await this.workspace(request, parsed.data.workspace_id);
+    return this.operationWorkflow.list(request.portalUser, workspaceId, parsed.data);
+  }
+
+  @Post("/operations/:operation_id/acknowledge")
+  async acknowledgeOperation(
+    @Req() request: GovernanceRequest,
+    @Param("operation_id") operationId: string,
+    @Body() body: unknown,
+  ) {
+    this.assertMutationSecurity(request);
+    const parsed = OperationAcknowledgeRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new GovernanceError("INVALID_OPERATION_ACKNOWLEDGEMENT", "Invalid acknowledgement request.", 400);
+    }
+    const workspaceId = await this.workspace(request, parsed.data.workspace_id);
+    return this.operationWorkflow.acknowledge(
+      request.portalUser,
+      operationId,
+      { ...parsed.data, workspace_id: workspaceId },
+      this.requestId(request),
+    );
+  }
+
+  @Post("/operations/:operation_id/resolve")
+  async resolveOperation(
+    @Req() request: GovernanceRequest,
+    @Param("operation_id") operationId: string,
+    @Body() body: unknown,
+  ) {
+    this.assertMutationSecurity(request);
+    const parsed = OperationResolveRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new GovernanceError("INVALID_OPERATION_RESOLUTION", "Invalid resolution request.", 400);
+    }
+    const workspaceId = await this.workspace(request, parsed.data.workspace_id);
+    return this.operationWorkflow.resolve(
+      request.portalUser,
+      operationId,
+      { ...parsed.data, workspace_id: workspaceId },
+      this.requestId(request),
+    );
+  }
 
   @Get("/commands/catalog")
   async catalogue(

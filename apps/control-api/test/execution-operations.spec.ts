@@ -67,7 +67,8 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
 
   beforeEach(async () => {
     await ctx.pool.query(
-      "TRUNCATE execution_command_plans_f0, outbox_messages, product_audit_events CASCADE",
+      "TRUNCATE execution_operation_workflow_events, execution_operation_queue_items, " +
+      "execution_command_plans_f0, outbox_messages, product_audit_events CASCADE",
     );
   });
 
@@ -152,6 +153,30 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
       await ctx.pool.query(`
         DROP TRIGGER IF EXISTS test_execution_plan_insert_delay ON execution_command_plans_f0;
         DROP FUNCTION IF EXISTS test_execution_plan_insert_delay();
+      `);
+    }
+  }
+
+  async function withConcurrentWorkflowDelay<T>(run: () => Promise<T>): Promise<T> {
+    await ctx.pool.query(`
+      CREATE OR REPLACE FUNCTION test_execution_workflow_update_delay() RETURNS trigger
+      LANGUAGE plpgsql AS $$
+      BEGIN
+        PERFORM pg_sleep(0.15);
+        RETURN NEW;
+      END;
+      $$;
+      CREATE TRIGGER test_execution_workflow_update_delay
+      BEFORE UPDATE ON execution_operation_queue_items
+      FOR EACH ROW EXECUTE FUNCTION test_execution_workflow_update_delay();
+    `);
+    try {
+      return await run();
+    } finally {
+      await ctx.pool.query(`
+        DROP TRIGGER IF EXISTS test_execution_workflow_update_delay
+          ON execution_operation_queue_items;
+        DROP FUNCTION IF EXISTS test_execution_workflow_update_delay();
       `);
     }
   }
@@ -440,4 +465,234 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
       source_side_effect_requested: false,
     });
   });
+
+  it("projects blocked plans into an ADMIN-only, exact-count and bidirectional operations queue", async () => {
+    expect((await rawInject("/api/v1/execution/operations")).statusCode).toBe(401);
+    const denied = await inject(user, `/api/v1/execution/operations?workspace_id=${workspaceId}`);
+    expect(denied.statusCode).toBe(403);
+    expect(denied.json().error.code).toBe("QUERY_FORBIDDEN");
+
+    for (let index = 0; index < 4; index += 1) {
+      const created = await mutation(bobby, "/api/v1/execution/commands/plans", payload({
+        request_key: `ops:queue:${index}`,
+        target: { type: "ACCOUNT", id: `paper-account-${index}` },
+      }));
+      expect(created.statusCode).toBe(201);
+    }
+    const first = await inject(
+      bobby,
+      `/api/v1/execution/operations?workspace_id=${workspaceId}` +
+      "&triage_state=UNACKNOWLEDGED&environment=PAPER&limit=2",
+    );
+    expect(first.statusCode).toBe(200);
+    expect(first.json()).toMatchObject({
+      schema_version: "execution.operations-queue.v1",
+      record_authority: "PORTAL",
+      delivery_profile: "fixture",
+      source_integration_state: "UNAVAILABLE",
+      page: {
+        total_count: 4,
+        filtered_count: 4,
+        has_more: true,
+        has_previous: false,
+      },
+    });
+    expect(first.json().page.rows).toHaveLength(2);
+    expect(first.json().page.rows.every(
+      (item: { source_status: string; verification_result: string }) =>
+        item.source_status === "BLOCKED" && item.verification_result === "NOT_STARTED",
+    )).toBe(true);
+
+    const second = await inject(
+      bobby,
+      `/api/v1/execution/operations?workspace_id=${workspaceId}` +
+      "&triage_state=UNACKNOWLEDGED&environment=PAPER&limit=2" +
+      `&after=${encodeURIComponent(first.json().page.next_cursor)}`,
+    );
+    expect(second.statusCode).toBe(200);
+    expect(second.json().page.rows).toHaveLength(2);
+    expect(second.json().page.has_previous).toBe(true);
+    expect(second.json().page.prev_cursor).toBeTypeOf("string");
+    const previous = await inject(
+      bobby,
+      `/api/v1/execution/operations?workspace_id=${workspaceId}` +
+      "&triage_state=UNACKNOWLEDGED&environment=PAPER&limit=2" +
+      `&before=${encodeURIComponent(second.json().page.prev_cursor)}`,
+    );
+    expect(previous.statusCode).toBe(200);
+    expect(previous.json().page.rows.map((item: { operation_id: string }) => item.operation_id))
+      .toEqual(first.json().page.rows.map((item: { operation_id: string }) => item.operation_id));
+  });
+
+  it("keeps acknowledgement and resolution local, ordered, audited and idempotent", async () => {
+    const created = await mutation(bobby, "/api/v1/execution/commands/plans", payload());
+    const operationId = created.json().operation_id;
+    const premature = await mutation(
+      bobby,
+      `/api/v1/execution/operations/${operationId}/resolve`,
+      {
+        schema_version: "execution.operation-resolve-request.v1",
+        workspace_id: workspaceId,
+        request_key: "resolve-before-ack",
+        expected_workflow_version: 1,
+        reason: "Evidence confirms the blocked plan is no longer actionable.",
+        evidence_hash: `sha256:${"a".repeat(64)}`,
+      },
+    );
+    expect(premature.statusCode).toBe(409);
+    expect(premature.json().error.code).toBe("OPERATION_REQUIRES_ACKNOWLEDGEMENT");
+
+    const acknowledgement = {
+      schema_version: "execution.operation-acknowledge-request.v1",
+      workspace_id: workspaceId,
+      request_key: "ack-operation-1",
+      expected_workflow_version: 1,
+    };
+    expect((await mutation(
+      user,
+      `/api/v1/execution/operations/${operationId}/acknowledge`,
+      acknowledgement,
+    )).statusCode).toBe(403);
+    const acknowledged = await mutation(
+      bobby,
+      `/api/v1/execution/operations/${operationId}/acknowledge`,
+      acknowledgement,
+    );
+    expect(acknowledged.statusCode).toBe(201);
+    expect(acknowledged.json()).toMatchObject({
+      schema_version: "execution.operation-workflow.v1",
+      source_status_unchanged: true,
+      source_side_effect_requested: false,
+      replayed: false,
+      operation: {
+        triage_state: "ACKNOWLEDGED",
+        workflow_version: 2,
+        source_status: "BLOCKED",
+        verification_result: "NOT_STARTED",
+      },
+    });
+    const replay = await mutation(
+      bobby,
+      `/api/v1/execution/operations/${operationId}/acknowledge`,
+      acknowledgement,
+    );
+    expect(replay.statusCode).toBe(201);
+    expect(replay.json().replayed).toBe(true);
+
+    const stale = await mutation(
+      bobby,
+      `/api/v1/execution/operations/${operationId}/resolve`,
+      {
+        schema_version: "execution.operation-resolve-request.v1",
+        workspace_id: workspaceId,
+        request_key: "resolve-stale",
+        expected_workflow_version: 1,
+        reason: "Evidence confirms the blocked plan is no longer actionable.",
+        evidence_hash: `sha256:${"b".repeat(64)}`,
+      },
+    );
+    expect(stale.statusCode).toBe(409);
+    expect(stale.json().error.code).toBe("OPERATION_WORKFLOW_VERSION_CONFLICT");
+
+    const resolved = await mutation(
+      bobby,
+      `/api/v1/execution/operations/${operationId}/resolve`,
+      {
+        schema_version: "execution.operation-resolve-request.v1",
+        workspace_id: workspaceId,
+        request_key: "resolve-operation-1",
+        expected_workflow_version: 2,
+        reason: "Evidence confirms the blocked plan is no longer actionable.",
+        evidence_hash: `sha256:${"c".repeat(64)}`,
+      },
+    );
+    expect(resolved.statusCode).toBe(201);
+    expect(resolved.json().operation).toMatchObject({
+      triage_state: "RESOLVED",
+      workflow_version: 3,
+      source_status: "BLOCKED",
+      verification_result: "NOT_STARTED",
+    });
+    const counts = await ctx.pool.query<{
+      events: string; audits: string; outbox: string;
+    }>(
+      `SELECT
+         (SELECT count(*) FROM execution_operation_workflow_events)::text AS events,
+         (SELECT count(*) FROM product_audit_events
+          WHERE event_type IN ('execution.operation.acknowledged', 'execution.operation.resolved'))::text AS audits,
+         (SELECT count(*) FROM outbox_messages)::text AS outbox`,
+    );
+    expect(counts.rows[0]).toEqual({ events: "2", audits: "2", outbox: "0" });
+    await expect(ctx.pool.query(
+      "UPDATE execution_operation_queue_items SET source_status = 'SUCCEEDED' WHERE operation_id = $1",
+      [operationId],
+    )).rejects.toThrow(/immutable/);
+  });
+
+  it("serializes concurrent equal workflow request keys into one event and one replay", async () => {
+    const created = await mutation(bobby, "/api/v1/execution/commands/plans", payload());
+    const operationId = created.json().operation_id;
+    const acknowledgement = {
+      schema_version: "execution.operation-acknowledge-request.v1",
+      workspace_id: workspaceId,
+      request_key: "ack-concurrent-operation-1",
+      expected_workflow_version: 1,
+    };
+    await withConcurrentWorkflowDelay(async () => {
+      const [first, second] = await Promise.all([
+        mutation(
+          bobby,
+          `/api/v1/execution/operations/${operationId}/acknowledge`,
+          acknowledgement,
+        ),
+        mutation(
+          bobby,
+          `/api/v1/execution/operations/${operationId}/acknowledge`,
+          acknowledgement,
+        ),
+      ]);
+      expect([first.statusCode, second.statusCode]).toEqual([201, 201]);
+      expect([first.json().replayed, second.json().replayed].sort()).toEqual([false, true]);
+      expect(first.json().operation.operation_id).toBe(second.json().operation.operation_id);
+    });
+    const counts = await ctx.pool.query<{ events: string; audits: string }>(
+      `SELECT
+         (SELECT count(*) FROM execution_operation_workflow_events)::text AS events,
+         (SELECT count(*) FROM product_audit_events
+          WHERE event_type = 'execution.operation.acknowledged')::text AS audits`,
+    );
+    expect(counts.rows[0]).toEqual({ events: "1", audits: "1" });
+  });
+
+  it("keeps exact counts and bounded pages over the 182k queue design corpus", async () => {
+    await ctx.pool.query(
+      `INSERT INTO execution_operation_queue_items
+         (operation_id, workspace_id, operation_kind, command_key, environment,
+          target_type, target_id, risk_tier, severity, source_authority,
+          source_status, verification_result, triage_state, workflow_version,
+          created_at, updated_at)
+       SELECT 'op_load_' || lpad(value::text, 12, '0'), $1,
+              'EXECUTION_COMMAND', 'account/sync', 'PAPER', 'ACCOUNT',
+              'load-' || value, 'BLOCKED', 'WARNING', 'PORTAL', 'BLOCKED',
+              'NOT_STARTED', 'UNACKNOWLEDGED', 1,
+              timestamptz '2026-01-01 00:00:00+00' + value * interval '1 millisecond',
+              timestamptz '2026-01-01 00:00:00+00' + value * interval '1 millisecond'
+       FROM generate_series(1, 182000) AS value`,
+      [workspaceId],
+    );
+    const started = performance.now();
+    const response = await inject(
+      bobby,
+      `/api/v1/execution/operations?workspace_id=${workspaceId}&limit=250`,
+    );
+    expect(response.statusCode).toBe(200);
+    expect(response.json().page).toMatchObject({
+      total_count: 182000,
+      filtered_count: 182000,
+      has_more: true,
+      has_previous: false,
+    });
+    expect(response.json().page.rows).toHaveLength(250);
+    expect(performance.now() - started).toBeLessThan(2_500);
+  }, 15_000);
 });

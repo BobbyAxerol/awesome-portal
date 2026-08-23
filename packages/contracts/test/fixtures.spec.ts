@@ -99,6 +99,10 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/ExecutionCommandOperation",
   "execution-command-relay-denied.valid.json":
     "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/RelayDenied",
+  "execution-operations-queue.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/OperationQueueResponse",
+  "execution-operation-workflow.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/OperationWorkflowResponse",
 };
 
 describe("canonical contracts (cross-language fixture compilation)", () => {

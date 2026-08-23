@@ -178,6 +178,14 @@ Chúng không thay thế phase hoặc exit gate trong
   Rust relay journal retains replay/conflict/`UNCERTAIN` no-retry rules. All
   actions remain unreachable; the eight unpublished `ops` routes and generic
   Redis access stay blocked.
+- [EX-BE-05b/F1a — Portal Operations Queue and Incident Triage Sidecar](./EX_BE_05B_F1A_OPERATIONS_QUEUE.md)
+  — **integration complete / production inactive:** ADMIN/workspace-bound
+  TypeScript/PostgreSQL queue on SGP with exact counts, 182k bidirectional
+  keyset qualification and ordered acknowledge→resolve workflow. Source result
+  fields are immutable; transitions write audit/event atomically and create no
+  outbox/source side effect. Contracts 41/41 and fresh-PG Control API 155/155
+  plus dump/restore are green. Registry remains `fixture`; Incident Detail and
+  source-backed operations remain later slices.
 
 **Runway complete (BAR-00 → BAR-16).** Guide v0.5 bổ sung (không thay thế)
 tại `upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md`

@@ -241,6 +241,134 @@
         "updated_at": { "$ref": "#/$defs/DateTime" }
       }
     },
+    "OperationQueueItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation_id", "operation_kind", "command_key", "environment", "target",
+        "risk_tier", "severity", "source_authority", "source_status",
+        "verification_result", "triage_state", "workflow_version",
+        "acknowledged_at", "acknowledged_by_user_id", "resolved_at",
+        "resolved_by_user_id", "resolution_reason", "resolution_evidence_hash",
+        "created_at", "updated_at"
+      ],
+      "properties": {
+        "operation_id": { "$ref": "#/$defs/Identifier" },
+        "operation_kind": { "const": "EXECUTION_COMMAND" },
+        "command_key": { "type": "string", "pattern": "^[a-z0-9-]+/(?:[a-z0-9-]+|<root>)$" },
+        "environment": { "enum": ["PAPER", "SANDBOX", "LIVE"] },
+        "target": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["ACCOUNT", "BROKER_BINDING", "DEPLOYMENT", "ORDER", "PORTFOLIO", "SYSTEM"] },
+            "id": { "$ref": "#/$defs/Identifier" }
+          }
+        },
+        "risk_tier": { "$ref": "#/$defs/RiskTier" },
+        "severity": { "enum": ["INFO", "WARNING", "ERROR", "CRITICAL"] },
+        "source_authority": { "enum": ["PORTAL", "EXECUTION", "BROKER"] },
+        "source_status": { "enum": ["BLOCKED", "PENDING", "RUNNING", "SUCCEEDED", "FAILED", "EXPIRED", "UNCERTAIN"] },
+        "verification_result": { "enum": ["NOT_STARTED", "PENDING", "SUCCEEDED", "FAILED", "PARTIAL", "UNCERTAIN", "DENIED", "EXPIRED"] },
+        "triage_state": { "enum": ["UNACKNOWLEDGED", "ACKNOWLEDGED", "RESOLVED"] },
+        "workflow_version": { "type": "integer", "minimum": 1 },
+        "acknowledged_at": { "oneOf": [{ "$ref": "#/$defs/DateTime" }, { "type": "null" }] },
+        "acknowledged_by_user_id": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] },
+        "resolved_at": { "oneOf": [{ "$ref": "#/$defs/DateTime" }, { "type": "null" }] },
+        "resolved_by_user_id": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] },
+        "resolution_reason": { "type": ["string", "null"], "minLength": 8, "maxLength": 2000 },
+        "resolution_evidence_hash": { "oneOf": [{ "$ref": "#/$defs/Hash" }, { "type": "null" }] },
+        "created_at": { "$ref": "#/$defs/DateTime" },
+        "updated_at": { "$ref": "#/$defs/DateTime" }
+      }
+    },
+    "OperationQueueResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "record_authority", "delivery_profile",
+        "source_integration_state", "read_at", "actor", "page"
+      ],
+      "properties": {
+        "schema_version": { "const": "execution.operations-queue.v1" },
+        "record_authority": { "const": "PORTAL" },
+        "delivery_profile": { "const": "fixture" },
+        "source_integration_state": { "const": "UNAVAILABLE" },
+        "read_at": { "$ref": "#/$defs/DateTime" },
+        "actor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["user_id", "username", "roles"],
+          "properties": {
+            "user_id": { "$ref": "#/$defs/Identifier" },
+            "username": { "type": "string", "minLength": 1, "maxLength": 128 },
+            "roles": { "type": "array", "const": ["ADMIN"] }
+          }
+        },
+        "page": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "rows", "total_count", "filtered_count", "next_cursor", "prev_cursor",
+            "has_more", "has_previous", "applied_filters", "applied_sort"
+          ],
+          "properties": {
+            "rows": { "type": "array", "maxItems": 250, "items": { "$ref": "#/$defs/OperationQueueItem" } },
+            "total_count": { "type": "integer", "minimum": 0 },
+            "filtered_count": { "type": "integer", "minimum": 0 },
+            "next_cursor": { "type": ["string", "null"] },
+            "prev_cursor": { "type": ["string", "null"] },
+            "has_more": { "type": "boolean" },
+            "has_previous": { "type": "boolean" },
+            "applied_filters": { "type": "array", "maxItems": 12, "items": { "type": "object" } },
+            "applied_sort": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "object" } }
+          }
+        }
+      }
+    },
+    "OperationAcknowledgeRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "workspace_id", "request_key", "expected_workflow_version"],
+      "properties": {
+        "schema_version": { "const": "execution.operation-acknowledge-request.v1" },
+        "workspace_id": { "type": "string", "minLength": 3, "maxLength": 96 },
+        "request_key": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$" },
+        "expected_workflow_version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "OperationResolveRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "workspace_id", "request_key", "expected_workflow_version", "reason", "evidence_hash"],
+      "properties": {
+        "schema_version": { "const": "execution.operation-resolve-request.v1" },
+        "workspace_id": { "type": "string", "minLength": 3, "maxLength": 96 },
+        "request_key": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$" },
+        "expected_workflow_version": { "type": "integer", "minimum": 1 },
+        "reason": { "type": "string", "minLength": 8, "maxLength": 2000 },
+        "evidence_hash": { "$ref": "#/$defs/Hash" }
+      }
+    },
+    "OperationWorkflowResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "record_authority", "delivery_profile", "source_integration_state",
+        "source_status_unchanged", "source_side_effect_requested", "replayed", "operation"
+      ],
+      "properties": {
+        "schema_version": { "const": "execution.operation-workflow.v1" },
+        "record_authority": { "const": "PORTAL" },
+        "delivery_profile": { "const": "fixture" },
+        "source_integration_state": { "const": "UNAVAILABLE" },
+        "source_status_unchanged": { "const": true },
+        "source_side_effect_requested": { "const": false },
+        "replayed": { "type": "boolean" },
+        "operation": { "$ref": "#/$defs/OperationQueueItem" }
+      }
+    },
     "RelayDenied": {
       "type": "object",
       "additionalProperties": false,

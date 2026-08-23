@@ -30,6 +30,8 @@ import { CommandCenterRepository } from "./command-center/command-center.reposit
 import { CommandCenterService } from "./command-center/command-center.service";
 import { ExecutionOperationsRepository } from "./operations/operations.repository";
 import { ExecutionOperationsService } from "./operations/operations.service";
+import { OperationsWorkflowRepository } from "./operations/workflow.repository";
+import { OperationsWorkflowService } from "./operations/workflow.service";
 
 @Module({})
 export class AppModule {
@@ -82,6 +84,8 @@ export class AppModule {
         CommandCenterService,
         ExecutionOperationsRepository,
         ExecutionOperationsService,
+        OperationsWorkflowRepository,
+        OperationsWorkflowService,
         {
           provide: ExecutionRealtimeProxy,
           useFactory: (cfg: ControlApiConfig) => ExecutionRealtimeProxy.create(cfg),

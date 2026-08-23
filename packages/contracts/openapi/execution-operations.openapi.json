@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Portal Execution Operations API",
-    "version": "0.2.0-f0-hardening",
-    "description": "EX-BE-05b/F0 revision 2: scoped conservative catalogue, typed conditions and deny-by-default operation foundation. Command payloads are hash-only and no relay or Trading System side effect is active."
+    "version": "0.3.0-f1a-operations-queue",
+    "description": "EX-BE-05b/F1a: F0 deny-by-default command planning plus a Portal-owned operations queue and ordered incident triage. Acknowledge/resolve are sidecar-only and never relay to the Trading System."
   },
   "servers": [{ "url": "/" }],
   "security": [{ "portalSession": [] }],
@@ -45,6 +45,30 @@
         }
       }
     },
+    "/api/v1/execution/operations": {
+      "get": {
+        "operationId": "listExecutionOperationsQueue",
+        "description": "ADMIN-only Portal-owned queue with exact counts and opaque bidirectional keysets. Source integration remains unavailable in F1a.",
+        "parameters": [
+          { "name": "workspace_id", "in": "query", "required": false, "schema": { "type": "string", "minLength": 3, "maxLength": 96 } },
+          { "name": "after", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 4096 } },
+          { "name": "before", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 4096 } },
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 250 } },
+          { "name": "triage_state", "in": "query", "required": false, "schema": { "type": "string", "enum": ["UNACKNOWLEDGED", "ACKNOWLEDGED", "RESOLVED"] } },
+          { "name": "environment", "in": "query", "required": false, "schema": { "type": "string", "enum": ["PAPER", "SANDBOX", "LIVE"] } },
+          { "name": "source_status", "in": "query", "required": false, "schema": { "type": "string", "enum": ["BLOCKED", "PENDING", "RUNNING", "SUCCEEDED", "FAILED", "EXPIRED", "UNCERTAIN"] } },
+          { "name": "verification_result", "in": "query", "required": false, "schema": { "type": "string", "enum": ["NOT_STARTED", "PENDING", "SUCCEEDED", "FAILED", "PARTIAL", "UNCERTAIN", "DENIED", "EXPIRED"] } },
+          { "name": "severity", "in": "query", "required": false, "schema": { "type": "string", "enum": ["INFO", "WARNING", "ERROR", "CRITICAL"] } },
+          { "name": "target_type", "in": "query", "required": false, "schema": { "type": "string", "enum": ["ACCOUNT", "BROKER_BINDING", "DEPLOYMENT", "ORDER", "PORTFOLIO", "SYSTEM"] } },
+          { "name": "command_key", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "sort", "in": "query", "required": false, "schema": { "type": "string", "enum": ["created_at:asc", "created_at:desc"], "default": "created_at:desc" } }
+        ],
+        "responses": {
+          "200": { "description": "Bounded Portal operations queue", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationQueueResponse" } } } },
+          "403": { "description": "ADMIN or query policy required" }
+        }
+      }
+    },
     "/api/v1/execution/operations/{operation_id}": {
       "get": {
         "operationId": "getExecutionCommandOperationF0",
@@ -58,6 +82,24 @@
             "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/ExecutionCommandOperation" } } }
           }
         }
+      }
+    },
+    "/api/v1/execution/operations/{operation_id}/acknowledge": {
+      "post": {
+        "operationId": "acknowledgeExecutionOperation",
+        "description": "ADMIN-only Portal sidecar workflow mutation; never changes source status or requests a source side effect.",
+        "parameters": [{ "name": "operation_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationAcknowledgeRequest" } } } },
+        "responses": { "201": { "description": "Acknowledged or idempotently replayed", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationWorkflowResponse" } } } } }
+      }
+    },
+    "/api/v1/execution/operations/{operation_id}/resolve": {
+      "post": {
+        "operationId": "resolveExecutionOperation",
+        "description": "ADMIN-only resolution after acknowledgement with evidence hash; never changes source status or requests a source side effect.",
+        "parameters": [{ "name": "operation_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationResolveRequest" } } } },
+        "responses": { "201": { "description": "Resolved or idempotently replayed", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationWorkflowResponse" } } } } }
       }
     },
     "/api/v1/execution/operations/{operation_id}/apply": {

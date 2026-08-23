@@ -901,3 +901,18 @@ explicitly unavailable. The full Portal remains on SGP; only a future minimal
 Source Proxy/Rust Edge/projection boundary runs on AWS-HK. The current optional-
 key source reads and incomplete cursor/event semantics are deliberately
 rejected instead of hidden by a UI fallback.
+
+### 8.12 EX-BE-05b/F1a Operations Queue — Lane A can integrate (2026-08-23)
+
+Backend status is `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`. The same-origin
+SGP Control API now publishes an ADMIN/workspace-bound queue with exact counts,
+opaque forward/back keysets and Portal-only acknowledge→resolve workflow. It
+does not make source data available: `delivery_profile=fixture`,
+`source_integration_state=UNAVAILABLE`, and source status/verification remain
+immutable across triage actions. No outbox or Trading System request exists.
+
+Claude may wire Phase 7 to the generated execution-operations declaration and
+the two F1a fixtures, preserving exact server counts and distinct source versus
+triage states. Do not add page numbers, browser aggregates, EventSource or any
+AWS/DB/Redis/CLI call. Exact read order and UI test matrix:
+`upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F1A_HANDOFF.md`.

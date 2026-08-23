@@ -162,6 +162,18 @@ for label, text in (
 phase6 = next((line for line in t.splitlines() if line.startswith("| 6 |")), None)
 if phase6 is None or "`FOUNDATION_COMPLETE / PRODUCTION_INACTIVE`" not in phase6:
     raise SystemExit("tracker phase 6 lost the qualified F0 foundation status")
+phase7 = next((line for line in t.splitlines() if line.startswith("| 7 |")), None)
+if phase7 is None or "`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`" not in phase7:
+    raise SystemExit("tracker phase 7 lost the qualified F1a Operations Queue status")
+for label, text in (
+    ("master", m),
+    ("tracker", t),
+    ("backend README", b),
+    ("architecture guide", a),
+    ("frontend handoff", h),
+):
+    if "EX-BE-05b/F1a" not in text or "source" not in text.lower():
+        raise SystemExit(f"{label} lost the F1a source-dark boundary")
 for request in ("BR-EX-28 canonical command catalogue", "BR-EX-29 typed `conditions[]`"):
     row = next((line for line in l.splitlines() if request in line), None)
     if row is None or "`FOUNDATION_COMPLETE / PRODUCTION_INACTIVE`" not in row:

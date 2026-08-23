@@ -1772,6 +1772,13 @@ không phải 17 màn.
 | 17 | Account/Broker 360° (1g) | triptych, binding panel, linked accounts + headroom | **aggregate exposure** | 14/01/12 | headroom tính từ toàn tập, không từ một trang |
 | 18 | Hardening | ECharts thay SVG, role lens, break-glass, density | analytics + role lens | 05 | caption envelope giữ nguyên văn sau khi thay chart |
 
+> **Backend checkpoint 2026-08-23:** Phase 7 F1a đã đạt
+> `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` cho phần Portal-owned trên SGP:
+> exact-count/bidirectional-keyset Operations Queue và acknowledge→resolve
+> sidecar. Trading System result/source vẫn unavailable và immutable; Alert
+> Rail/source-backed Incident Detail chưa được tuyên bố xong. Chi tiết:
+> [`EX_BE_05B_F1A_OPERATIONS_QUEUE.md`](./backend/EX_BE_05B_F1A_OPERATIONS_QUEUE.md).
+
 ## 12.4 Thứ tự slice của frontend
 
 Lane A chạy trước; mỗi slice đóng độc lập và không slice nào chờ codex.

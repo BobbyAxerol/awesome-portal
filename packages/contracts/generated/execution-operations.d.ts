@@ -38,6 +38,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/execution/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ADMIN-only Portal-owned queue with exact counts and opaque bidirectional keysets. Source integration remains unavailable in F1a. */
+        get: operations["listExecutionOperationsQueue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/execution/operations/{operation_id}": {
         parameters: {
             query?: never;
@@ -48,6 +65,40 @@ export interface paths {
         get: operations["getExecutionCommandOperationF0"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/operations/{operation_id}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADMIN-only Portal sidecar workflow mutation; never changes source status or requests a source side effect. */
+        post: operations["acknowledgeExecutionOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/operations/{operation_id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADMIN-only resolution after acknowledgement with evidence hash; never changes source status or requests a source side effect. */
+        post: operations["resolveExecutionOperation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -206,6 +257,69 @@ export interface components {
             source_side_effect_requested: false;
             replayed: boolean;
         };
+        OperationQueueItem: {
+            operation_id: components["schemas"]["Identifier"];
+            /** @constant */
+            operation_kind: "EXECUTION_COMMAND";
+            command_key: string;
+            /** @enum {unknown} */
+            environment: "PAPER" | "SANDBOX" | "LIVE";
+            target: {
+                /** @enum {unknown} */
+                type: "ACCOUNT" | "BROKER_BINDING" | "DEPLOYMENT" | "ORDER" | "PORTFOLIO" | "SYSTEM";
+                id: components["schemas"]["Identifier"];
+            };
+            risk_tier: components["schemas"]["RiskTier"];
+            /** @enum {unknown} */
+            severity: "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+            /** @enum {unknown} */
+            source_authority: "PORTAL" | "EXECUTION" | "BROKER";
+            /** @enum {unknown} */
+            source_status: "BLOCKED" | "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "EXPIRED" | "UNCERTAIN";
+            /** @enum {unknown} */
+            verification_result: "NOT_STARTED" | "PENDING" | "SUCCEEDED" | "FAILED" | "PARTIAL" | "UNCERTAIN" | "DENIED" | "EXPIRED";
+            /** @enum {unknown} */
+            triage_state: "UNACKNOWLEDGED" | "ACKNOWLEDGED" | "RESOLVED";
+            workflow_version: number;
+            acknowledged_at: components["schemas"]["DateTime"] | null;
+            acknowledged_by_user_id: components["schemas"]["Identifier"] | null;
+            resolved_at: components["schemas"]["DateTime"] | null;
+            resolved_by_user_id: components["schemas"]["Identifier"] | null;
+            resolution_reason: string | null;
+            resolution_evidence_hash: components["schemas"]["Hash"] | null;
+            created_at: components["schemas"]["DateTime"];
+            updated_at: components["schemas"]["DateTime"];
+        };
+        OperationQueueResponse: {
+            /** @constant */
+            schema_version: "execution.operations-queue.v1";
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            delivery_profile: "fixture";
+            /** @constant */
+            source_integration_state: "UNAVAILABLE";
+            read_at: components["schemas"]["DateTime"];
+            actor: {
+                user_id: components["schemas"]["Identifier"];
+                username: string;
+                /** @constant */
+                roles: [
+                    "ADMIN"
+                ];
+            };
+            page: {
+                rows: components["schemas"]["OperationQueueItem"][];
+                total_count: number;
+                filtered_count: number;
+                next_cursor: string | null;
+                prev_cursor: string | null;
+                has_more: boolean;
+                has_previous: boolean;
+                applied_filters: Record<string, never>[];
+                applied_sort: Record<string, never>[];
+            };
+        };
         ExecutionCommandOperation: {
             /** @constant */
             schema_version: "execution.command-operation.v1";
@@ -224,6 +338,38 @@ export interface components {
             source_side_effect_requested: false;
             created_at: components["schemas"]["DateTime"];
             updated_at: components["schemas"]["DateTime"];
+        };
+        OperationAcknowledgeRequest: {
+            /** @constant */
+            schema_version: "execution.operation-acknowledge-request.v1";
+            workspace_id: string;
+            request_key: string;
+            expected_workflow_version: number;
+        };
+        OperationWorkflowResponse: {
+            /** @constant */
+            schema_version: "execution.operation-workflow.v1";
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            delivery_profile: "fixture";
+            /** @constant */
+            source_integration_state: "UNAVAILABLE";
+            /** @constant */
+            source_status_unchanged: true;
+            /** @constant */
+            source_side_effect_requested: false;
+            replayed: boolean;
+            operation: components["schemas"]["OperationQueueItem"];
+        };
+        OperationResolveRequest: {
+            /** @constant */
+            schema_version: "execution.operation-resolve-request.v1";
+            workspace_id: string;
+            request_key: string;
+            expected_workflow_version: number;
+            reason: string;
+            evidence_hash: components["schemas"]["Hash"];
         };
         ExecutionCommandApplyRequest: {
             /** @constant */
@@ -307,6 +453,46 @@ export interface operations {
             };
         };
     };
+    listExecutionOperationsQueue: {
+        parameters: {
+            query?: {
+                workspace_id?: string;
+                after?: string;
+                before?: string;
+                limit?: number;
+                triage_state?: "UNACKNOWLEDGED" | "ACKNOWLEDGED" | "RESOLVED";
+                environment?: "PAPER" | "SANDBOX" | "LIVE";
+                source_status?: "BLOCKED" | "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "EXPIRED" | "UNCERTAIN";
+                verification_result?: "NOT_STARTED" | "PENDING" | "SUCCEEDED" | "FAILED" | "PARTIAL" | "UNCERTAIN" | "DENIED" | "EXPIRED";
+                severity?: "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+                target_type?: "ACCOUNT" | "BROKER_BINDING" | "DEPLOYMENT" | "ORDER" | "PORTFOLIO" | "SYSTEM";
+                command_key?: string;
+                sort?: "created_at:asc" | "created_at:desc";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bounded Portal operations queue */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationQueueResponse"];
+                };
+            };
+            /** @description ADMIN or query policy required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getExecutionCommandOperationF0: {
         parameters: {
             query?: {
@@ -327,6 +513,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExecutionCommandOperation"];
+                };
+            };
+        };
+    };
+    acknowledgeExecutionOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperationAcknowledgeRequest"];
+            };
+        };
+        responses: {
+            /** @description Acknowledged or idempotently replayed */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationWorkflowResponse"];
+                };
+            };
+        };
+    };
+    resolveExecutionOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperationResolveRequest"];
+            };
+        };
+        responses: {
+            /** @description Resolved or idempotently replayed */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationWorkflowResponse"];
                 };
             };
         };
