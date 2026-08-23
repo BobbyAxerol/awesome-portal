@@ -357,6 +357,14 @@ I/O pressure and unreviewed historical OOM evidence keep deployment closed.
 No source/UI capability changes. Evidence:
 [`EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md`](../../backend/EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md).
 
+D2 owner/change-window handling is now
+`D2_AUTHORIZATION_CONTRACT_PREPARED / LIVE_D2_UNAUTHORIZED`. The backend
+validator separates readiness from activation and permanently rejects source,
+ingestion, Query, analytics, SSE, delivery-profile, command and Trading System
+change authority. No window is open and no runtime changed. This unlocks no FE
+profile; Claude continues only fixture/dark/unavailable/recovery work. Evidence:
+[`EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md`](../../backend/EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md).
+
 D3 offline preparation is `D3_OFFLINE_PREPARATION_COMPLETE /
 LIVE_D3_UNAUTHORIZED`. A separate overlay opens only the three public
 contract/health/capability probes; the four alpha paths remain 503 and all

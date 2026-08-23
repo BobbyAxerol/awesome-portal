@@ -36,6 +36,23 @@ Before any pull, migration or container creation:
    secret values;
 8. no public/VPC-wide 5432/8443/8444 rule exists.
 
+The owner decision and window are not prose-only. Create the private input from
+`deploy/execution-d2/owner-input.env.example`, keep it mode `0600`, and require
+the readiness result before changing IMDS or detaching the temporary profile:
+
+```bash
+./scripts/execution-d2-authorization.py \
+  --input /home/bobby/secure/portal-execution-d2-owner-input.env \
+  --mode readiness
+```
+
+After those two isolation changes, require `--mode activation` before the first
+pull or container creation. The validator binds the window, deployment/image
+commit, publication/evidence digests, host admission, workload identities,
+resource/OOM decisions and named owners. It cannot authorize source reads,
+ingestion, Query, analytics, SSE, profile activation, commands or Trading
+System changes.
+
 The target-host admission evidence is produced immediately before the window:
 
 ```bash

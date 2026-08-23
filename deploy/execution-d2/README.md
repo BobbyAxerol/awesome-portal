@@ -54,6 +54,26 @@ that decision; it cannot override a live pressure or collision failure.
 root/group-owned secret layout on the target host. It remains a future D2
 change-window check and is not satisfied by offline preparation.
 
+Owner authority is a separate, machine-checked input. Copy
+[`owner-input.env.example`](./owner-input.env.example) to a Bobby-owned mode
+`0600` file outside the repository, fill evidence references without secrets,
+then run:
+
+```bash
+./scripts/execution-d2-authorization.py \
+  --input /home/bobby/secure/portal-execution-d2-owner-input.env \
+  --mode readiness
+```
+
+Readiness validates an active window of at most two hours, an exact source
+commit and image/evidence digests, signed-image and workload-identity review,
+accepted host/OOM/resource gates, the exact instance-profile association and
+explicit detach/IMDS approvals. It never sources or prints the input. Repeat
+with `--mode activation` only after the profile is proven detached and IMDS
+hop-limit one is independently verified. Both modes permanently reject source,
+ingestion, Query, analytics, SSE, delivery-profile, command and Trading System
+change authority.
+
 Deployment is still forbidden until the temporary D1 operator instance profile
 is detached or otherwise proven unreachable by every Portal container, real
 immutable Edge/Proxy digests and attestations exist, workload PKI/JWKS are

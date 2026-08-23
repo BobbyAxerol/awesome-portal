@@ -974,6 +974,17 @@ deep-dive → ADR → slice → evidence discipline documented above.
   D1 role/IMDS and image-publication gates also remain. No service started.
   Evidence:
   [`EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md`](./backend/EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md).
+- **EX-BE-02-LIVE D2 authorization contract (2026-08-23):** a versioned
+  owner-input schema and fail-closed validator separate readiness from live
+  activation. They bind exact commit/evidence digests, image/identity reviews,
+  admitted host/OOM/resource state, named operators/owners, the temporary
+  profile association, IMDS hardening and a <=2-hour window. Activation also
+  requires proof of profile detachment and hop-limit one. Every source,
+  ingestion, Query, analytics, SSE, profile, command and Trading System change
+  flag remains false. Status is
+  `D2_AUTHORIZATION_CONTRACT_PREPARED / LIVE_D2_UNAUTHORIZED`; no runtime state
+  changed. Evidence:
+  [`EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md`](./backend/EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md).
 - **EX-BE-02-LIVE D3 offline preparation (2026-08-23):** a separate probe-only
   overlay now opens exactly three public contract/health source routes while
   four alpha routes remain 503 and ingestion/query/SSE/analytics/command stay

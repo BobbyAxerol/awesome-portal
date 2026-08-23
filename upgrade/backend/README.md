@@ -306,6 +306,15 @@ authority.
   signed-image gates also remain. Exact status:
   `D2_ADMISSION_REJECTED / APPLICATION_DARK`. Evidence:
   [`EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md`](./EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md).
+- `EX-BE-02-LIVE` **D2 authorization contract prepared / live unauthorized:**
+  the public schema and non-sourcing validator bind exact deployment/image and
+  evidence digests, signature/identity review, host/OOM/resource decisions,
+  named owners, the temporary profile association, IMDS hardening and a
+  <=2-hour window. Readiness and activation are distinct; activation requires
+  proven profile detachment and hop-limit one. All source/query/realtime/
+  profile/command/Trading System flags remain false. Exact status:
+  `D2_AUTHORIZATION_CONTRACT_PREPARED / LIVE_D2_UNAUTHORIZED`. Evidence:
+  [`EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md`](./EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md).
 - `EX-BE-02-LIVE` **D3 offline preparation complete / live unauthorized**
   (`D3_OFFLINE_PREPARATION_COMPLETE / LIVE_D3_UNAUTHORIZED`): a
   separate Compose/env/config delta opens only three credential-free public

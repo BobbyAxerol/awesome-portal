@@ -28,6 +28,13 @@ I/O pressure and historical OOM review remain open. This is an operational
 backend state only: Claude keeps the same fixture/dark/unavailable contract and
 must not enable AWS polling, Query, analytics, SSE, Lane B or commands.
 
+D2 owner/window validation is
+`D2_AUTHORIZATION_CONTRACT_PREPARED / LIVE_D2_UNAUTHORIZED`. It creates no
+consumer contract and no window is currently open. Readiness cannot activate a
+runtime, while activation remains limited to source-dark D2 and requires
+profile-detachment/IMDS proof. Claude keeps every live capability and Lane B
+off until a later accepted D2 evidence packet.
+
 ## 1. Hai endpoint public
 
 | Endpoint | Method | Cache | Body |

@@ -273,6 +273,8 @@ for required in \
   "${ROOT_DIR}/scripts/test_execution_iam_verify.py" \
   "${ROOT_DIR}/scripts/execution-d2-host-admission.py" \
   "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py" \
+  "${ROOT_DIR}/scripts/execution-d2-authorization.py" \
+  "${ROOT_DIR}/scripts/test_execution_d2_authorization.py" \
   "${ROOT_DIR}/scripts/execution-d2-preflight.sh" \
   "${ROOT_DIR}/scripts/execution-d2-render-source-proxy.sh" \
   "${ROOT_DIR}/scripts/execution-d2-test.sh" \
@@ -294,8 +296,10 @@ for required in \
   "${ROOT_DIR}/deploy/execution-d1/source-proxy/trading-system-read-header.conf.example" \
   "${ROOT_DIR}/deploy/runbooks/execution-d1-bootstrap-and-rollback.md" \
   "${ROOT_DIR}/deploy/execution-d2/README.md" \
+  "${ROOT_DIR}/deploy/execution-d2/owner-input.env.example" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
   "${ROOT_DIR}/deploy/runbooks/execution-d2-dark-deploy-and-rollback.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md" \
   "${ROOT_DIR}/deploy/execution-d3/README.md" \
   "${ROOT_DIR}/deploy/execution-d3/compose.probes.yaml" \
   "${ROOT_DIR}/deploy/runbooks/execution-d3-contract-auth-probes-and-rollback.md" \
@@ -613,6 +617,8 @@ for tracked_source in \
   scripts/test_execution_iam_verify.py \
   scripts/execution-d2-host-admission.py \
   scripts/test_execution_d2_host_admission.py \
+  scripts/execution-d2-authorization.py \
+  scripts/test_execution_d2_authorization.py \
   scripts/execution-d2-preflight.sh \
   scripts/execution-d2-render-source-proxy.sh \
   scripts/execution-d2-test.sh \
@@ -634,8 +640,10 @@ for tracked_source in \
   deploy/execution-d1/source-proxy/trading-system-read-header.conf.example \
   deploy/runbooks/execution-d1-bootstrap-and-rollback.md \
   deploy/execution-d2/README.md \
+  deploy/execution-d2/owner-input.env.example \
   deploy/execution-d2/init-projection-database.sh \
   deploy/runbooks/execution-d2-dark-deploy-and-rollback.md \
+  upgrade/backend/EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md \
   deploy/execution-d3/README.md \
   deploy/execution-d3/compose.probes.yaml \
   deploy/runbooks/execution-d3-contract-auth-probes-and-rollback.md \
@@ -794,9 +802,12 @@ python3 -m py_compile \
   "${ROOT_DIR}/scripts/execution-iam-verify.py" \
   "${ROOT_DIR}/scripts/test_execution_iam_verify.py" \
   "${ROOT_DIR}/scripts/execution-d2-host-admission.py" \
-  "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py"
+  "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py" \
+  "${ROOT_DIR}/scripts/execution-d2-authorization.py" \
+  "${ROOT_DIR}/scripts/test_execution_d2_authorization.py"
 python3 "${ROOT_DIR}/scripts/test_execution_iam_verify.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py"
+python3 "${ROOT_DIR}/scripts/test_execution_d2_authorization.py"
 
 while IFS= read -r tracked_path; do
   case "${tracked_path}" in

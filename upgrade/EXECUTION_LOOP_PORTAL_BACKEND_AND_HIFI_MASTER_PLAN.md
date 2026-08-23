@@ -1202,6 +1202,17 @@ weakened and no service was started. The signed-image, role/IMDS, identity and
 separate-window gates remain. Evidence:
 [`EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md`](backend/EX_BE_02_LIVE_D2_ADMISSION_CHECKPOINT.md).
 
+The separate D2 owner/window boundary is now
+`D2_AUTHORIZATION_CONTRACT_PREPARED / LIVE_D2_UNAUTHORIZED`. A versioned
+schema and fail-closed validator bind the exact deployment/image commit,
+publication and identity/admission digests, signature/vulnerability decisions,
+host/OOM/resource admission, named owners, the temporary profile association,
+IMDS hardening and a positive window of at most two hours. Activation requires
+proof of profile detachment and IMDS hop-limit one. Source, ingestion, Query,
+analytics, SSE, delivery-profile, command and Trading System mutation authority
+remain permanently false for D2. Evidence:
+[`EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md`](backend/EX_BE_02_LIVE_D2_AUTHORIZATION_CONTRACT.md).
+
 The D3 offline package is `D3_OFFLINE_PREPARATION_COMPLETE /
 LIVE_D3_UNAUTHORIZED`. Its
 separate overlay opens only the three public contract/health/capability routes,
