@@ -16,10 +16,11 @@
     "TypedCondition": {
       "type": "object",
       "additionalProperties": false,
+      "$comment": "expires_at must be on or after deadline when both values are non-null; enforced by the application semantic validator",
       "required": ["text", "owner", "deadline", "expires_at", "blocking"],
       "properties": {
-        "text": { "type": "string", "minLength": 8, "maxLength": 2000 },
-        "owner": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "text": { "type": "string", "minLength": 8, "maxLength": 2000, "pattern": "\\S" },
+        "owner": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "\\S" },
         "deadline": { "oneOf": [{ "$ref": "#/$defs/Date" }, { "type": "null" }] },
         "expires_at": { "oneOf": [{ "$ref": "#/$defs/Date" }, { "type": "null" }] },
         "blocking": { "type": "boolean" }
@@ -30,6 +31,7 @@
       "additionalProperties": false,
       "required": [
         "key", "command", "action", "group", "risk_tier", "source_risk_tier",
+        "owner_review_required",
         "plan_required", "apply_required", "verify_required", "portal_reachable",
         "source_route_state", "http_method", "http_path", "blocked_reason",
         "source_reference"
@@ -46,6 +48,7 @@
         },
         "risk_tier": { "$ref": "#/$defs/RiskTier" },
         "source_risk_tier": { "$ref": "#/$defs/RiskTier" },
+        "owner_review_required": { "type": "boolean" },
         "plan_required": { "type": "boolean" },
         "apply_required": { "type": "boolean" },
         "verify_required": { "type": "boolean" },
@@ -67,13 +70,48 @@
         "source_reference": { "type": "string", "minLength": 1, "maxLength": 256 }
       }
     },
+    "CommandCatalogueScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workspace_id", "actor_user_id", "actor_role", "environment", "entity",
+        "requested_risk_tier", "capability_state", "freshness_state", "policy_revision"
+      ],
+      "properties": {
+        "workspace_id": { "type": "string", "minLength": 3, "maxLength": 96 },
+        "actor_user_id": { "$ref": "#/$defs/Identifier" },
+        "actor_role": { "const": "ADMIN" },
+        "environment": { "enum": ["PAPER", "SANDBOX", "LIVE"] },
+        "entity": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "id"],
+              "properties": {
+                "type": { "enum": ["ACCOUNT", "BROKER_BINDING", "DEPLOYMENT", "ORDER", "PORTFOLIO", "SYSTEM"] },
+                "id": { "$ref": "#/$defs/Identifier" }
+              }
+            }
+          ]
+        },
+        "requested_risk_tier": { "oneOf": [{ "$ref": "#/$defs/RiskTier" }, { "type": "null" }] },
+        "capability_state": { "const": "DISABLED" },
+        "freshness_state": { "const": "UNAVAILABLE" },
+        "policy_revision": { "const": "execution.command-catalogue.f0.v2" }
+      }
+    },
     "CommandCatalogue": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["schema_version", "catalogue_revision", "delivery_profile", "capability", "source", "entries"],
+      "required": [
+        "schema_version", "catalogue_revision", "delivery_profile", "capability", "source",
+        "scope", "total_entries", "returned_entries", "entries"
+      ],
       "properties": {
         "schema_version": { "const": "execution.command-catalog.v1" },
-        "catalogue_revision": { "const": 1 },
+        "catalogue_revision": { "const": 2 },
         "delivery_profile": { "const": "fixture" },
         "capability": {
           "type": "object",
@@ -95,9 +133,12 @@
             "generated_from_read_only_extract": { "const": true }
           }
         },
+        "scope": { "$ref": "#/$defs/CommandCatalogueScope" },
+        "total_entries": { "const": 64 },
+        "returned_entries": { "type": "integer", "minimum": 0, "maximum": 64 },
         "entries": {
           "type": "array",
-          "minItems": 64,
+          "minItems": 0,
           "maxItems": 64,
           "items": { "$ref": "#/$defs/CommandCatalogueEntry" }
         }
@@ -129,7 +170,12 @@
           }
         },
         "expected_target_version": { "type": "integer", "minimum": 1 },
-        "payload": { "type": "object", "maxProperties": 64 },
+        "payload": {
+          "type": "object",
+          "maxProperties": 64,
+          "propertyNames": { "maxLength": 128 },
+          "$comment": "Application validator enforces HASH_ONLY_NO_RAW storage, max 32768 UTF-8 bytes, depth 6, 512 nodes, 128 array items, 4096-character strings, and forbidden sensitive key fragments"
+        },
         "conditions": { "type": "array", "maxItems": 16, "uniqueItems": true, "items": { "$ref": "#/$defs/TypedCondition" } }
       }
     },
@@ -139,7 +185,7 @@
       "required": [
         "schema_version", "operation_id", "command_type", "command_version",
         "command_key", "risk_tier", "payload_hash", "plan_digest", "status",
-        "blockers", "warnings", "apply_token", "expires_at",
+        "blockers", "warnings", "apply_token", "expires_at", "payload_storage_policy",
         "relay_capability", "source_side_effect_requested", "replayed"
       ],
       "properties": {
@@ -156,6 +202,7 @@
         "warnings": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 128 } },
         "apply_token": { "type": "null" },
         "expires_at": { "$ref": "#/$defs/DateTime" },
+        "payload_storage_policy": { "const": "HASH_ONLY_NO_RAW" },
         "relay_capability": { "const": "DISABLED" },
         "source_side_effect_requested": { "const": false },
         "replayed": { "type": "boolean" }

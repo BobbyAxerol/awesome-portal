@@ -21,6 +21,7 @@ import { WorkspacesRepository } from "../repos/workspaces";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
   ExecutionCommandApplyRequestSchema,
+  ExecutionCommandCatalogueQuerySchema,
   ExecutionCommandPlanRequestSchema,
 } from "../operations/contracts";
 import { ExecutionOperationsService } from "../operations/operations.service";
@@ -52,8 +53,26 @@ export class GovernanceController {
   ) {}
 
   @Get("/commands/catalog")
-  catalogue() {
-    return this.operations.catalogue();
+  async catalogue(
+    @Req() request: GovernanceRequest,
+    @Query() query: Record<string, unknown>,
+  ) {
+    if (request.portalUser.role !== "ADMIN") {
+      throw new GovernanceError("ADMIN_ROLE_REQUIRED", "Access denied.", 403);
+    }
+    const parsed = ExecutionCommandCatalogueQuerySchema.safeParse(query);
+    if (!parsed.success) {
+      throw new GovernanceError(
+        "INVALID_EXECUTION_COMMAND_CATALOGUE_QUERY",
+        "Invalid execution command catalogue query.",
+        400,
+      );
+    }
+    const workspaceId = await this.workspace(request, parsed.data.workspace_id);
+    return this.operations.catalogue(request.portalUser, {
+      ...parsed.data,
+      workspace_id: workspaceId,
+    });
   }
 
   @Get("/governance/approvals")
@@ -125,6 +144,22 @@ export class GovernanceController {
         request.portalUser,
         { ...execution.data, workspace_id: workspaceId },
         this.requestId(request),
+      );
+    }
+    if (
+      body !== null &&
+      typeof body === "object" &&
+      (body as Record<string, unknown>).schema_version === "execution.command-plan-request.v1"
+    ) {
+      const sensitive = execution.error.issues.some(
+        (issue) => issue.message === "SENSITIVE_PAYLOAD_FIELD_FORBIDDEN",
+      );
+      throw new GovernanceError(
+        sensitive ? "SENSITIVE_PAYLOAD_FIELD_FORBIDDEN" : "INVALID_EXECUTION_COMMAND_PLAN",
+        sensitive
+          ? "Sensitive credential fields are prohibited in execution command payloads."
+          : "Invalid execution command plan request.",
+        400,
       );
     }
     const parsed = DecisionPlanRequestSchema.safeParse(body);

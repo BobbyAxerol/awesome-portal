@@ -14,5 +14,6 @@
   "expires_at": "2026-08-22T12:05:00Z",
   "relay_capability": "DISABLED",
   "source_side_effect_requested": false,
+  "payload_storage_policy": "HASH_ONLY_NO_RAW",
   "replayed": false
 }

@@ -201,6 +201,7 @@ for required in \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000004_governance-paper-exit.sql" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000005_command-center-pins.sql" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000006_execution-operations-f0.sql" \
+  "${ROOT_DIR}/apps/control-api/migrations/1723680000007_execution-operations-f0-hardening.sql" \
   "${ROOT_DIR}/apps/control-api/src/id.ts" \
   "${ROOT_DIR}/apps/control-api/src/repos/workspaces.ts" \
   "${ROOT_DIR}/apps/control-api/src/repos/runs.ts" \
@@ -529,6 +530,7 @@ for tracked_source in \
   apps/control-api/migrations/1723680000004_governance-paper-exit.sql \
   apps/control-api/migrations/1723680000005_command-center-pins.sql \
   apps/control-api/migrations/1723680000006_execution-operations-f0.sql \
+  apps/control-api/migrations/1723680000007_execution-operations-f0-hardening.sql \
   apps/control-api/src/id.ts \
   apps/control-api/src/repos/workspaces.ts \
   apps/control-api/src/repos/runs.ts \

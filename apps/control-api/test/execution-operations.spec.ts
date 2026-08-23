@@ -133,6 +133,29 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
     };
   }
 
+  async function withConcurrentInsertDelay<T>(run: () => Promise<T>): Promise<T> {
+    await ctx.pool.query(`
+      CREATE OR REPLACE FUNCTION test_execution_plan_insert_delay() RETURNS trigger
+      LANGUAGE plpgsql AS $$
+      BEGIN
+        PERFORM pg_sleep(0.15);
+        RETURN NEW;
+      END;
+      $$;
+      CREATE TRIGGER test_execution_plan_insert_delay
+      BEFORE INSERT ON execution_command_plans_f0
+      FOR EACH ROW EXECUTE FUNCTION test_execution_plan_insert_delay();
+    `);
+    try {
+      return await run();
+    } finally {
+      await ctx.pool.query(`
+        DROP TRIGGER IF EXISTS test_execution_plan_insert_delay ON execution_command_plans_f0;
+        DROP FUNCTION IF EXISTS test_execution_plan_insert_delay();
+      `);
+    }
+  }
+
   function payload(overrides: Record<string, unknown> = {}) {
     return {
       schema_version: "execution.command-plan-request.v1",
@@ -158,10 +181,34 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
     })).toThrowError(/not commissioned/);
   });
 
-  it("serves exactly 64 authenticated, unreachable catalogue entries", async () => {
+  it("serves an ADMIN-only, workspace-bound and filterable unreachable catalogue", async () => {
     expect((await rawInject("/api/v1/execution/commands/catalog")).statusCode).toBe(401);
-    const response = await inject(user, "/api/v1/execution/commands/catalog");
+    const denied = await inject(user, "/api/v1/execution/commands/catalog");
+    expect(denied.statusCode).toBe(403);
+    expect(denied.json().error.code).toBe("ADMIN_ROLE_REQUIRED");
+
+    const response = await inject(
+      bobby,
+      `/api/v1/execution/commands/catalog?workspace_id=${workspaceId}` +
+      "&environment=PAPER&target_type=ACCOUNT&target_id=paper-account-1",
+    );
     expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      catalogue_revision: 2,
+      total_entries: 64,
+      returned_entries: 64,
+      scope: {
+        workspace_id: workspaceId,
+        actor_user_id: bobby.userId,
+        actor_role: "ADMIN",
+        environment: "PAPER",
+        entity: { type: "ACCOUNT", id: "paper-account-1" },
+        requested_risk_tier: null,
+        capability_state: "DISABLED",
+        freshness_state: "UNAVAILABLE",
+        policy_revision: "execution.command-catalogue.f0.v2",
+      },
+    });
     expect(response.json().entries).toHaveLength(64);
     expect(response.json().entries.every((entry: { portal_reachable: boolean }) => !entry.portal_reachable)).toBe(true);
     for (const key of [
@@ -171,6 +218,27 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
       expect(response.json().entries.find((entry: { key: string }) => entry.key === key))
         .toMatchObject({ source_route_state: "UNPUBLISHED", portal_reachable: false });
     }
+
+    const filtered = await inject(
+      bobby,
+      `/api/v1/execution/commands/catalog?workspace_id=${workspaceId}&risk_tier=R1_PAPER_MUTATION`,
+    );
+    expect(filtered.statusCode).toBe(200);
+    expect(filtered.json().returned_entries).toBeGreaterThan(0);
+    expect(filtered.json().returned_entries).toBeLessThan(64);
+    expect(filtered.json().scope.requested_risk_tier).toBe("R1_PAPER_MUTATION");
+    expect(filtered.json().entries.every(
+      (entry: { risk_tier: string }) => entry.risk_tier === "R1_PAPER_MUTATION",
+    )).toBe(true);
+
+    expect((await inject(
+      bobby,
+      `/api/v1/execution/commands/catalog?workspace_id=${workspaceId}&target_type=ACCOUNT`,
+    )).statusCode).toBe(400);
+    expect((await inject(
+      bobby,
+      "/api/v1/execution/commands/catalog?workspace_id=ws_not_a_membership",
+    )).statusCode).toBe(404);
   });
 
   it("creates only an immutable BLOCKED plan and never creates an outbox message", async () => {
@@ -183,9 +251,11 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
       apply_token: null,
       relay_capability: "DISABLED",
       source_side_effect_requested: false,
+      payload_storage_policy: "HASH_ONLY_NO_RAW",
       replayed: false,
     });
     expect(response.json().blockers).toContain("COMMAND_RELAY_DISABLED");
+    expect(response.json().blockers).toContain("OWNER_REVIEW_REQUIRED");
     const counts = await ctx.pool.query<{ plans: string; audits: string; outbox: string }>(
       `SELECT
          (SELECT count(*) FROM execution_command_plans_f0)::text AS plans,
@@ -193,6 +263,18 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
          (SELECT count(*) FROM outbox_messages)::text AS outbox`,
     );
     expect(counts.rows[0]).toEqual({ plans: "1", audits: "1", outbox: "0" });
+    const stored = await ctx.pool.query<{
+      payload_json: Record<string, unknown>;
+      payload_storage_policy: string;
+      payload_hash: string;
+    }>(
+      `SELECT payload_json, payload_storage_policy, payload_hash
+       FROM execution_command_plans_f0 WHERE operation_id = $1`,
+      [response.json().operation_id],
+    );
+    expect(stored.rows[0].payload_json).toEqual({});
+    expect(stored.rows[0].payload_storage_policy).toBe("HASH_ONLY_NO_RAW");
+    expect(stored.rows[0].payload_hash).toBe(response.json().payload_hash);
     await expect(ctx.pool.query(
       "UPDATE execution_command_plans_f0 SET updated_at = now() WHERE operation_id = $1",
       [response.json().operation_id],
@@ -216,6 +298,97 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
     expect((await ctx.pool.query(
       "SELECT 1 FROM product_audit_events WHERE reason_code = 'REQUEST_KEY_PAYLOAD_CONFLICT'",
     )).rowCount).toBe(1);
+  });
+
+  it("retries real concurrent SERIALIZABLE duplicates and returns one replay", async () => {
+    await withConcurrentInsertDelay(async () => {
+      const [first, second] = await Promise.all([
+        mutation(bobby, "/api/v1/execution/commands/plans", payload()),
+        mutation(bobby, "/api/v1/execution/commands/plans", payload()),
+      ]);
+      expect([first.statusCode, second.statusCode]).toEqual([201, 201]);
+      expect(first.json().operation_id).toBe(second.json().operation_id);
+      expect([first.json().replayed, second.json().replayed].sort()).toEqual([false, true]);
+    });
+    const counts = await ctx.pool.query<{ plans: string; audits: string; outbox: string }>(
+      `SELECT
+         (SELECT count(*) FROM execution_command_plans_f0)::text AS plans,
+         (SELECT count(*) FROM product_audit_events WHERE event_type = 'execution.command.plan_blocked')::text AS audits,
+         (SELECT count(*) FROM outbox_messages)::text AS outbox`,
+    );
+    expect(counts.rows[0]).toEqual({ plans: "1", audits: "1", outbox: "0" });
+  });
+
+  it("retries a concurrent request-key conflict and returns one typed 409", async () => {
+    await withConcurrentInsertDelay(async () => {
+      const [first, second] = await Promise.all([
+        mutation(bobby, "/api/v1/execution/commands/plans", payload()),
+        mutation(
+          bobby,
+          "/api/v1/execution/commands/plans",
+          payload({ payload: { dry_run: false } }),
+        ),
+      ]);
+      expect([first.statusCode, second.statusCode].sort()).toEqual([201, 409]);
+      const conflict = first.statusCode === 409 ? first : second;
+      expect(conflict.json().error.code).toBe("REQUEST_KEY_PAYLOAD_CONFLICT");
+    });
+    expect((await ctx.pool.query("SELECT 1 FROM execution_command_plans_f0")).rowCount).toBe(1);
+    expect((await ctx.pool.query(
+      "SELECT 1 FROM product_audit_events WHERE reason_code = 'REQUEST_KEY_PAYLOAD_CONFLICT'",
+    )).rowCount).toBe(1);
+  });
+
+  it("rejects sensitive, excessive and semantically invalid plan payloads without storage", async () => {
+    const sensitive = await mutation(
+      bobby,
+      "/api/v1/execution/commands/plans",
+      payload({ payload: { nested: { api_key: "must-never-persist" } } }),
+    );
+    expect(sensitive.statusCode).toBe(400);
+    expect(sensitive.json().error.code).toBe("SENSITIVE_PAYLOAD_FIELD_FORBIDDEN");
+
+    let deep: Record<string, unknown> = { value: true };
+    for (let index = 0; index < 8; index += 1) deep = { nested: deep };
+    const excessive = await mutation(
+      bobby,
+      "/api/v1/execution/commands/plans",
+      payload({ request_key: "ops:account-sync:deep", payload: deep }),
+    );
+    expect(excessive.statusCode).toBe(400);
+    expect(excessive.json().error.code).toBe("INVALID_EXECUTION_COMMAND_PLAN");
+
+    const excessiveUtf8 = await mutation(
+      bobby,
+      "/api/v1/execution/commands/plans",
+      payload({
+        request_key: "ops:account-sync:utf8",
+        payload: { note: "界".repeat(1_400) },
+      }),
+    );
+    expect(excessiveUtf8.statusCode).toBe(400);
+    expect(excessiveUtf8.json().error.code).toBe("INVALID_EXECUTION_COMMAND_PLAN");
+
+    const invalidCondition = await mutation(
+      bobby,
+      "/api/v1/execution/commands/plans",
+      payload({
+        request_key: "ops:account-sync:condition",
+        conditions: [{
+          text: "valid condition text",
+          owner: "   ",
+          deadline: "2026-08-23",
+          expires_at: "2026-08-22",
+          blocking: true,
+        }],
+      }),
+    );
+    expect(invalidCondition.statusCode).toBe(400);
+    expect(invalidCondition.json().error.code).toBe("INVALID_EXECUTION_COMMAND_PLAN");
+    expect((await ctx.pool.query("SELECT 1 FROM execution_command_plans_f0")).rowCount).toBe(0);
+    expect((await ctx.pool.query(
+      "SELECT metadata_json::text FROM product_audit_events WHERE metadata_json::text LIKE '%must-never-persist%'",
+    )).rowCount).toBe(0);
   });
 
   it("denies non-admin planning, unknown commands, and all apply attempts", async () => {

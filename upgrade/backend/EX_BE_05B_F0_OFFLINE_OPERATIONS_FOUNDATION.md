@@ -12,8 +12,8 @@ F0 is accepted as an offline foundation. It gives the Portal and Claude one
 canonical contract for Admin Action Drawer while granting no Trading System
 authority:
 
-- exactly 64 immutable `noun/verb` catalogue entries are generated from the
-  supplied read-only Trading System contract pack;
+- exactly 64 immutable `noun/verb` catalogue revision-2 entries are generated
+  from the supplied read-only Trading System contract pack;
 - all entries have `portal_reachable=false` in F0;
 - eight `ops` actions without purpose-built Trading System HTTP routes remain
   `UNPUBLISHED`;
@@ -45,9 +45,11 @@ of both source documents so a contract-pack change cannot masquerade as the
 same catalogue revision.
 
 Each entry publishes command/action/group, conservative risk, source risk,
-plan/apply/verify facts, source route state, observed HTTP mapping when exact,
-blocked reason and source reference. `allocation/<root>` receives an R1 floor;
-it cannot fall to R0 until the owner publishes a narrower semantic ruling.
+owner-review and plan/apply/verify facts, source route state, observed HTTP
+mapping when exact, blocked reason and source reference. Every observed non-GET
+route is upgraded to at least R1 and owner review; every R1–R4 entry requires
+plan and apply. `allocation/<root>` retains the R1 floor and cannot fall to R0
+until the owner publishes a narrower semantic ruling.
 
 The eight stop-gated actions are:
 
@@ -76,12 +78,30 @@ idempotent. The canonical payload hash binds command version/key, environment,
 target/version, payload and conditions. Equal replay returns the same operation;
 payload drift returns `REQUEST_KEY_PAYLOAD_CONFLICT`.
 
-Migration `1723680000006_execution-operations-f0.sql` adds an immutable F0
+The catalogue is also ADMIN-only and derives workspace, actor role/user,
+environment, optional target and optional requested risk from validated request
+scope. Its response publishes exact total/returned counts plus capability,
+freshness and policy revision; no client can use a free-form filter as an
+authorization boundary.
+
+Payload validation is recursive and bounded before hashing: depth, node count,
+array/object cardinality, key length, string bytes and overall UTF-8 bytes all
+have explicit ceilings. Password/secret/token/API-key/private-key/credential/
+authorization/cookie-like keys fail with
+`SENSITIVE_PAYLOAD_FIELD_FORBIDDEN`. The immutable response and database row
+declare `payload_storage_policy=HASH_ONLY_NO_RAW`; only the digest survives and
+`payload_json` is always `{}`.
+
+Migration `1723680000006_execution-operations-f0.sql` adds the immutable F0
 plan table with database CHECK constraints that prohibit non-blocked status,
-relay capability and source side effects. Plan insert and denial audit are one
-serializable transaction. No outbox row is written. A post-migration test gate
-requires both seven migration records and the F0 relation, preventing the
-"recorded but not applied" class of migration failure.
+relay capability and source side effects. Hardening migration `0007` scrubs any
+legacy raw payload, adds the hash-only column/constraint and restores the
+immutable trigger. Plan insert and denial audit are one serializable
+transaction. Only SQLSTATE `40001` and `40P01` are retried, for at most three
+fresh transactions with bounded backoff. No outbox row is written. The
+post-migration gate requires all eight migration records, the F0 relation and
+both hash-only column/constraint, preventing the "recorded but not applied"
+class of migration failure.
 
 ## 4. BR-EX-29 typed conditions
 
@@ -122,21 +142,24 @@ tests reject attempted activation.
 
 ## 6. Verification evidence
 
-- Contract gate: schema/fixture validation, catalogue regeneration drift and
-  OpenAPI generated-type parity pass.
+- Contract gate: 39/39 schema/fixture validation, catalogue regeneration drift
+  and OpenAPI/generated-type parity tests pass. JSON Schema carries the same
+  catalogue scope/counts and typed-condition semantics as Zod.
 - Control API gate: fresh PostgreSQL migration/build/tests and dump/restore pass;
-  146 tests include catalogue auth, 64-entry invariants, immutable plan,
-  no-outbox, replay/conflict, role denial and denied apply/readback.
-- Rust gate: 94 tests, strict Clippy and PostgreSQL restore pass; 5 are dedicated
-  to the F0 relay/catalogue/idempotency boundary.
+  149 tests include ADMIN/scoped catalogue access, 64-entry risk invariants,
+  bounded/redacted hash-only plans, real concurrent serialization replay/
+  conflict, no-outbox, role denial and denied apply/readback.
+- Rust gate: 95 tests, strict Clippy and PostgreSQL restore pass; the F0 tests
+  additionally pin conservative non-GET review/plan/apply policy.
 - D1/D2 gates assert relay false and reject any non-dark configuration.
 - Root verification tracks every F0 contract, migration, TypeScript service,
   Rust crate and closeout document.
 
-The migration defect found during verification was real: the first F0 SQL file
-lacked `-- Up Migration`, so node-pg-migrate recorded revision seven without
-applying the schema. The marker was restored and the explicit relation gate was
-kept as a permanent regression control.
+Two migration-marker defects found during verification were real: the first F0
+SQL file could be recorded without applying its schema, and the initial `0007`
+draft could likewise be counted without applying hash-only retention. Both
+markers are present, while explicit relation/column/constraint gates remain as
+permanent regression controls.
 
 ## 7. Claude handoff
 
@@ -144,16 +167,18 @@ Claude may now replace the Phase 6 fixture catalogue with the generated
 `execution-operations.d.ts` contract on Lane A and send canonical
 `conditions[]`. The frontend must:
 
-1. render all 64 entries from the server catalogue rather than hardcode a
-   second feature model;
+1. render all 64 entries from catalogue revision 2 rather than hardcode a
+   second feature model; derive filters/counts from its explicit scope;
 2. keep `portal_reachable=false` entries visible but unavailable with their
    exact `blocked_reason`;
 3. keep the eight unpublished `ops` actions unavailable;
-4. preserve plan/apply/verify facts per entry instead of assuming every
-   mutation has all three stages;
+4. preserve `owner_review_required` and plan/apply/verify facts per entry;
+   never downgrade an observed non-GET route using its source risk label;
 5. treat blocked plan and denied apply as expected F0 states, never success;
 6. remove condition flattening only after using typed `conditions[]` end to end;
-7. keep Phase 6 outside production navigation/profile activation until a later
+7. explain `HASH_ONLY_NO_RAW` and map sensitive/oversized-payload errors without
+   echoing submitted values;
+8. keep Phase 6 outside production navigation/profile activation until a later
    reviewed gate.
 
 The detailed consumer map is

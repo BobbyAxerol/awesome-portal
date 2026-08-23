@@ -978,6 +978,26 @@ deep-dive → ADR → slice → evidence discipline documented above.
   LIVE_SOURCE_AND_CROSS_CELL_EVIDENCE_PENDING`: no AWS endpoint, credential,
   production mapper, runtime flag or registry profile changed. Detail:
   [`EX_BE_08A_OFFLINE_SOURCE_QUALIFICATION.md`](./backend/EX_BE_08A_OFFLINE_SOURCE_QUALIFICATION.md).
+- **PRE-IAM-03 / PRE-IAM-04 / PRE-IAM-05 / PRE-IAM-06 closeout
+  (2026-08-22):** the dark Command Center
+  snapshot, offline contract/load/replay/restore hardening, D2 dark image/config/
+  preflight/rollback preparation and cross-team tracking reconciliation are
+  `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`. The D2 renderer now assigns the
+  configured runtime group before atomic publication; the target order is
+  render → `root:<portal-runtime-gid>` ownership → readiness preflight. No
+  network, source, runtime or Trading System authority is implied.
+- **EX-BE-05b/F0 catalogue revision 2 hardening (2026-08-23):** the 64-entry
+  catalogue is ADMIN-only and scoped by workspace, actor, environment, entity,
+  requested risk, capability and freshness. Observed non-GET routes can never
+  remain R0, require owner review, and every R1–R4 command requires plan plus
+  apply. Command payloads are bounded and sensitive-key rejected before a
+  digest is computed; durable plans declare `HASH_ONLY_NO_RAW` and store no raw
+  payload. PostgreSQL retries only `40001`/`40P01`, at most three fresh
+  serializable attempts; real concurrent duplicate and drift API tests prove
+  one immutable replay versus typed conflict. JSON Schema/OpenAPI/Zod and
+  generated declarations carry the same scope, counts, condition semantics and
+  payload policy. Evidence: contracts 39/39 and fresh-PG Control API 149/149;
+  the complete Rust and D2 gates are recorded by the final audit closeout.
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**

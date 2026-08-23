@@ -150,6 +150,16 @@ future defect exists.
 above. It requires no cloud or source credential and does not make a network or
 runtime activation change.
 
+### 4.5 2026-08-23 audit requalification
+
+The post-F0 audit reran the complete current gates after catalogue policy,
+payload-retention, migration and concurrent-transaction hardening. Current
+evidence is 39/39 contract tests, 149/149 fresh-PostgreSQL Control API tests and
+95 Rust/PostgreSQL tests plus strict formatting/Clippy. The original PRE-IAM-04
+acceptance counts above remain the historical slice evidence; the higher counts
+prove that its cursor, analytics, replay and restore guarantees still compose
+with the later F0 work.
+
 ## 5. Runtime and worktree isolation
 
 - no AWS-HK host, WireGuard peer, IAM role or Security Group was contacted or

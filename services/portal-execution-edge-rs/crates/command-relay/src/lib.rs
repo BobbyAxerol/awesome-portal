@@ -162,9 +162,26 @@ mod tests {
     #[derive(Deserialize)]
     struct CatalogueEntry {
         key: String,
-        portal_reachable: bool,
+        risk_tier: String,
+        #[serde(flatten)]
+        review_policy: ReviewPolicy,
+        #[serde(flatten)]
+        delivery_policy: DeliveryPolicy,
         source_route_state: String,
+        http_method: Option<String>,
         blocked_reason: String,
+    }
+
+    #[derive(Deserialize)]
+    struct ReviewPolicy {
+        owner_review_required: bool,
+        plan_required: bool,
+    }
+
+    #[derive(Deserialize)]
+    struct DeliveryPolicy {
+        apply_required: bool,
+        portal_reachable: bool,
     }
 
     fn catalogue() -> Catalogue {
@@ -192,7 +209,34 @@ mod tests {
         assert!(catalogue
             .entries
             .iter()
-            .all(|entry| !entry.portal_reachable));
+            .all(|entry| !entry.delivery_policy.portal_reachable));
+    }
+
+    #[test]
+    fn portal_catalogue_applies_conservative_mutation_policy() {
+        let catalogue = catalogue();
+        for entry in catalogue.entries {
+            let observed_http_mutation = entry
+                .http_method
+                .as_deref()
+                .is_some_and(|method| method != "GET");
+            let mutation_risk = matches!(
+                entry.risk_tier.as_str(),
+                "R1_PAPER_MUTATION"
+                    | "R2_SANDBOX"
+                    | "R3_LIVE_PROTECTIVE"
+                    | "R4_LIVE_RISK_INCREASING"
+            );
+            if observed_http_mutation {
+                assert_ne!(entry.risk_tier, "R0_READ", "{}", entry.key);
+                assert!(entry.review_policy.owner_review_required, "{}", entry.key);
+            }
+            if mutation_risk {
+                assert!(entry.review_policy.owner_review_required, "{}", entry.key);
+                assert!(entry.review_policy.plan_required, "{}", entry.key);
+                assert!(entry.delivery_policy.apply_required, "{}", entry.key);
+            }
+        }
     }
 
     #[test]

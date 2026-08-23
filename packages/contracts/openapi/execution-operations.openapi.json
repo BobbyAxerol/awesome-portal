@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Portal Execution Operations API",
-    "version": "0.1.0-f0",
-    "description": "EX-BE-05b/F0 contract-only catalogue and deny-by-default operation foundation. No relay or Trading System side effect is active."
+    "version": "0.2.0-f0-hardening",
+    "description": "EX-BE-05b/F0 revision 2: scoped conservative catalogue, typed conditions and deny-by-default operation foundation. Command payloads are hash-only and no relay or Trading System side effect is active."
   },
   "servers": [{ "url": "/" }],
   "security": [{ "portalSession": [] }],
@@ -11,18 +11,28 @@
     "/api/v1/execution/commands/catalog": {
       "get": {
         "operationId": "executionCommandCatalog",
+        "description": "ADMIN-only catalogue evaluated for one Portal workspace/environment/entity scope. Capability remains disabled and freshness unavailable in F0.",
+        "parameters": [
+          { "name": "workspace_id", "in": "query", "required": false, "schema": { "type": "string", "minLength": 3, "maxLength": 96 } },
+          { "name": "environment", "in": "query", "required": false, "schema": { "type": "string", "enum": ["PAPER", "SANDBOX", "LIVE"], "default": "PAPER" } },
+          { "name": "target_type", "in": "query", "required": false, "description": "Must be supplied together with target_id.", "schema": { "type": "string", "enum": ["ACCOUNT", "BROKER_BINDING", "DEPLOYMENT", "ORDER", "PORTFOLIO", "SYSTEM"] } },
+          { "name": "target_id", "in": "query", "required": false, "description": "Must be supplied together with target_type.", "schema": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{1,191}$" } },
+          { "name": "risk_tier", "in": "query", "required": false, "schema": { "type": "string", "enum": ["R0_READ", "R1_PAPER_MUTATION", "R2_SANDBOX", "R3_LIVE_PROTECTIVE", "R4_LIVE_RISK_INCREASING", "UNCLASSIFIED", "BLOCKED"] } }
+        ],
         "responses": {
           "200": {
             "description": "Canonical 64-action catalogue; F0 entries are all unreachable",
             "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/CommandCatalogue" } } }
-          }
+          },
+          "403": { "description": "ADMIN_ROLE_REQUIRED" },
+          "404": { "description": "WORKSPACE_NOT_FOUND" }
         }
       }
     },
     "/api/v1/execution/commands/plans": {
       "post": {
         "operationId": "planExecutionCommandF0",
-        "description": "Creates an immutable blocked plan. F0 never issues an apply token.",
+        "description": "Creates an immutable blocked plan. Conditions require nonblank text/owner and expiry on or after deadline. Payloads have bounded shape, reject sensitive credential keys and are persisted as hash-only. F0 never issues an apply token.",
         "requestBody": {
           "required": true,
           "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/ExecutionCommandPlanRequest" } } }

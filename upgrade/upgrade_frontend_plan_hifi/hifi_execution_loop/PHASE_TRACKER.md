@@ -47,7 +47,7 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 3 | Gate R2 Review (1b) | `WIP` (screen + adapter, on the port) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | source activation/evidence + EX-BE-05a decision integration; generated `portfolio_id`/`currency` already consumed | EX-BE-07b active-epoch capital-preview repository/API delivered; flags/profile remain fixture/off |
 | 4 | Paper Workbench (1c) | **screen built** (fixtures, scale-refined) | `FOUNDATION_COMPLETE` | screen API + source integration; M7 evidence | EX-BE-04b adaptive six-rung/exact series + cold contract delivered; production source remains inactive |
 | 5 | Paper Exit Review (4b) | **screen closed on Lane A** (5 capability, 3 outcome, CSRF) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | PRE-IAM-02 đã map xong (`5b39e34`); còn real Paper source activation | PRE-IAM-02 fresh PG 129/129 + contract 20/20 + SGP runtime green; closeout linked below |
-| 6 | Admin Action Drawer (1i) | **screen built** (21 lệnh / 6 nhóm, fixtures) | `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | Claude đổi sang canonical 64-action catalogue + typed conditions; live relay vẫn chờ TS command capability; **8 endpoint `ops` còn thiếu chặn phase 7/8/9** | EX-BE-05b/F0: generated catalogue, immutable blocked plan/no outbox, denied apply, Rust replay/conflict/UNCERTAIN and 146 TS + 94 Rust tests; all command flags false |
+| 6 | Admin Action Drawer (1i) | **screen built** (21 lệnh / 6 nhóm, fixtures) | `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | Claude đổi sang canonical 64-action catalogue revision 2 + typed conditions/scoped counts/owner review/hash-only copy; live relay vẫn chờ TS command capability; **8 endpoint `ops` còn thiếu chặn phase 7/8/9** | EX-BE-05b/F0: ADMIN-scoped conservative catalogue, immutable hash-only blocked plan/no outbox, bounded retry + real concurrent replay/conflict, denied apply, Rust replay/conflict/UNCERTAIN and 149 TS + 95 Rust tests; all command flags false |
 | 7 | Operations Queue (4e) | `BLOCKED` | `INTEGRATION_PENDING` | EX-BE-05b operation integration | EX-BE-04a bidirectional keyset delivered; ack≠resolve remains |
 | 8 | Incident Detail (4d) | `BLOCKED` | `FOUNDATION_COMPLETE` | EX-BE-05a/05b source integration | EX-BE-03 completeness + EX-BE-06 gap/reconnect transport delivered; source integration remains |
 | 9 | Command Center (5a) | **screen built** (4 panel, 5 state, fixtures) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | dark snapshot + 5 state đã tiêu thụ (`ee3576c`); còn BR-EX-28 §8.1 `streams`/`alpha-activity`, real source + SSE parity | PRE-IAM-03 bounded snapshot: fresh PG 139/139, contracts 26/26, 20k exact-observed corpus; EX-BE-06 SSE remains dark |
@@ -1492,9 +1492,9 @@ reads, projection ingestion, SSE or Trading System commands.
 | PRE-IAM-01 | close Phase 1 Approval Inbox + Phase 2 Gate R1 on SGP with fresh-PG and public-gateway operational evidence | correct Phase 1/2 HTTP integration listed below; do not activate registry policy | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend gate green |
 | PRE-IAM-02 | source-safe Paper Exit repository/API and deterministic evidence evaluation | Phase 5 Lane A mapping closed; retain real-source activation boundary | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — BE and FE Lane A accepted; source inactive |
 | PRE-IAM-03 | dark Command Center snapshot API | five-state Lane A mapping closed; retain source/SSE parity boundary | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — BE and FE Lane A accepted; source/SSE inactive |
-| PRE-IAM-04 | offline security/contract/load/replay/restore hardening | consume gap/cursor codes, bounded fields, typed errors and fixtures; keep every degraded state visible | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — backend accepted; Claude consumer work active |
-| PRE-IAM-05 | D2 dark image/config/preflight/rollback preparation | no live/source activation work required; continue PRE-IAM-04 Lane A packet | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — images, preflight, identity/resource and rollback gates accepted; D2 unauthorized |
-| PRE-IAM-06 | reconcile backend guides, shared board and request ledger | FE evidence/status and superseded H-series reconciled; future drift is gated | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — ledger + automated tracking gate accepted |
+| PRE-IAM-04 | offline security/contract/load/replay/restore hardening | consume gap/cursor codes, bounded fields, typed errors and fixtures; keep every degraded state visible | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — requalified with contracts 39/39, Control API 149/149 and Rust/PG 95 |
+| PRE-IAM-05 | D2 dark image/config/preflight/rollback preparation | no live/source activation work required; continue PRE-IAM-04 Lane A packet | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — renderer group ownership + render→ownership→readiness order requalified; D2 unauthorized |
+| PRE-IAM-06 | reconcile backend guides, shared board and request ledger | FE evidence/status and superseded H-series reconciled; future drift is gated | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — seven doc authorities + generated catalogue drift gate accepted |
 
 ### 24A.1 Claude handoff required before Phase 1/2 product activation
 
@@ -1644,6 +1644,14 @@ is denied before source/relay construction and no outbox command is emitted.
 The Rust relay crate has no network client and locks same-key replay,
 payload-conflict and `UNCERTAIN` no-retry behavior. Governance now stores typed
 `conditions[]`; singular `condition` is a deprecated compatibility alias.
+
+Hardening requalification on 2026-08-23 advances only the contract catalogue to
+revision 2. Catalogue reads are ADMIN/workspace/actor/environment/entity/risk
+scoped with exact counts. Observed non-GET routes are at least R1 and require
+owner review; every R1–R4 entry requires plan/apply. Plans validate bounded
+payloads, reject sensitive keys and durably retain only the digest under
+`HASH_ONLY_NO_RAW`. Bounded PostgreSQL `40001`/`40P01` retry is proven by real
+concurrent replay/conflict requests. No reachability or runtime flag changed.
 
 Claude's exact Lane A consumer contract and test list are in
 [`CODEX_TO_CLAUDE_EX_BE_05B_F0_HANDOFF.md`](CODEX_TO_CLAUDE_EX_BE_05B_F0_HANDOFF.md).

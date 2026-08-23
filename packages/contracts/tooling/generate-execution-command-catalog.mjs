@@ -71,9 +71,15 @@ function groupFor(noun) {
   return "PLATFORM_DIAGNOSTICS";
 }
 
-function riskFor(key, sourceRisk) {
+function riskFor(key, sourceRisk, route) {
   if (/reset|delete-lab|shared-testnet/i.test(key)) return "BLOCKED";
   if (key === "allocation/<root>") return "R1_PAPER_MUTATION";
+  // Source metadata is evidence, not Portal authorization. Any observed HTTP
+  // mutation receives at least the Paper mutation floor even when the source
+  // CLI labelled the action as a read.
+  if (route && route.method !== "GET" && sourceRisk === "R0_READ") {
+    return "R1_PAPER_MUTATION";
+  }
   return sourceRisk;
 }
 
@@ -108,10 +114,11 @@ const entries = cli.commands.map((command) => {
   const key = `${command.command}/${command.action}`;
   const directOnly = !command.access_paths.includes("HTTP");
   const route = exactSourceRoute(command, key);
-  const riskTier = riskFor(key, command.risk_tier_proposed);
+  const riskTier = riskFor(key, command.risk_tier_proposed, route);
   const blockedByDefinition = riskTier === "BLOCKED";
   const mutation = ["R1_PAPER_MUTATION", "R2_SANDBOX", "R3_LIVE_PROTECTIVE", "R4_LIVE_RISK_INCREASING"].includes(riskTier);
   const emergency = key === "ops/emergency-close" || key === "ops/emergency-close-verify";
+  const ownerReviewRequired = mutation || (route !== null && route.method !== "GET");
   let sourceRouteState = "AMBIGUOUS";
   let blockedReason = "SOURCE_ROUTE_MAPPING_AMBIGUOUS";
   if (unpublishedOps.has(key)) {
@@ -137,8 +144,9 @@ const entries = cli.commands.map((command) => {
     group: groupFor(command.command),
     risk_tier: riskTier,
     source_risk_tier: command.risk_tier_proposed,
-    plan_required: emergency,
-    apply_required: emergency || mutation,
+    owner_review_required: ownerReviewRequired,
+    plan_required: mutation,
+    apply_required: mutation,
     verify_required: emergency,
     portal_reachable: false,
     source_route_state: sourceRouteState,
@@ -164,10 +172,22 @@ for (const key of genericRedis) {
     throw new Error(`generic Redis capability was not rejected: ${key}`);
   }
 }
+for (const entry of entries) {
+  const observedHttpMutation = entry.http_method !== null && entry.http_method !== "GET";
+  const mutationRisk = [
+    "R1_PAPER_MUTATION", "R2_SANDBOX", "R3_LIVE_PROTECTIVE", "R4_LIVE_RISK_INCREASING",
+  ].includes(entry.risk_tier);
+  if (observedHttpMutation && (!entry.owner_review_required || entry.risk_tier === "R0_READ")) {
+    throw new Error(`Portal policy did not conservatively classify HTTP mutation: ${entry.key}`);
+  }
+  if (mutationRisk && (!entry.owner_review_required || !entry.plan_required || !entry.apply_required)) {
+    throw new Error(`Portal mutation policy lost owner-review/plan/apply: ${entry.key}`);
+  }
+}
 
 const catalog = {
   schema_version: "execution.command-catalog.v1",
-  catalogue_revision: 1,
+  catalogue_revision: 2,
   delivery_profile: "fixture",
   capability: {
     state: "DISABLED",
@@ -179,6 +199,19 @@ const catalog = {
     openapi_sha256: sha256(openApiBytes),
     generated_from_read_only_extract: true,
   },
+  scope: {
+    workspace_id: "fixture-workspace",
+    actor_user_id: "fixture-admin",
+    actor_role: "ADMIN",
+    environment: "PAPER",
+    entity: null,
+    requested_risk_tier: null,
+    capability_state: "DISABLED",
+    freshness_state: "UNAVAILABLE",
+    policy_revision: "execution.command-catalogue.f0.v2",
+  },
+  total_entries: entries.length,
+  returned_entries: entries.length,
   entries,
 };
 

@@ -252,7 +252,18 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     const catalogue = loadJson(join(fixtureDir, "execution-command-catalog.valid.json")) as {
       entries: Array<Record<string, unknown>>;
       capability: { state: string };
+      catalogue_revision: number;
+      total_entries: number;
+      returned_entries: number;
+      scope: { actor_role: string; policy_revision: string };
     };
+    expect(catalogue.catalogue_revision).toBe(2);
+    expect(catalogue.total_entries).toBe(64);
+    expect(catalogue.returned_entries).toBe(64);
+    expect(catalogue.scope).toMatchObject({
+      actor_role: "ADMIN",
+      policy_revision: "execution.command-catalogue.f0.v2",
+    });
     expect(catalogue.entries).toHaveLength(64);
     expect(new Set(catalogue.entries.map((entry) => entry.key)).size).toBe(64);
     expect(catalogue.capability.state).toBe("DISABLED");
@@ -272,6 +283,59 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     }
     expect(catalogue.entries.find((entry) => entry.key === "allocation/<root>")?.risk_tier)
       .toBe("R1_PAPER_MUTATION");
+    const mutationRisks = new Set([
+      "R1_PAPER_MUTATION", "R2_SANDBOX", "R3_LIVE_PROTECTIVE", "R4_LIVE_RISK_INCREASING",
+    ]);
+    for (const entry of catalogue.entries) {
+      if (entry.http_method !== null && entry.http_method !== "GET") {
+        expect(entry.risk_tier).not.toBe("R0_READ");
+        expect(entry.owner_review_required).toBe(true);
+      }
+      if (mutationRisks.has(String(entry.risk_tier))) {
+        expect(entry.owner_review_required).toBe(true);
+        expect(entry.plan_required).toBe(true);
+        expect(entry.apply_required).toBe(true);
+      }
+    }
+  });
+
+  it("keeps typed-condition whitespace and semantic ordering rules explicit", () => {
+    const schema = loadJson(join(schemaDir, "execution-operations.v1.schema.json")) as {
+      $defs: Record<string, Record<string, unknown>>;
+    };
+    expect(schema.$defs.TypedCondition.$comment).toContain("expires_at must be on or after deadline");
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/ExecutionCommandPlanRequest",
+    );
+    expect(validate).toBeDefined();
+    const request = {
+      schema_version: "execution.command-plan-request.v1",
+      workspace_id: "fixture-workspace",
+      request_key: "fixture:condition:1",
+      command_type: "EXECUTION_COMMAND",
+      command_version: 1,
+      command_key: "account/sync",
+      environment: "PAPER",
+      target: { type: "ACCOUNT", id: "paper-account-1" },
+      expected_target_version: 1,
+      payload: { dry_run: true },
+      conditions: [{
+        text: "valid condition text",
+        owner: "fixture-owner",
+        deadline: "2026-08-23",
+        expires_at: "2026-08-24",
+        blocking: true,
+      }],
+    };
+    expect(validate!(request)).toBe(true);
+    expect(validate!({
+      ...request,
+      conditions: [{ ...request.conditions[0], text: "        " }],
+    })).toBe(false);
+    expect(validate!({
+      ...request,
+      conditions: [{ ...request.conditions[0], owner: "   " }],
+    })).toBe(false);
   });
 
   it("generated portal types reference both handoff endpoints", () => {

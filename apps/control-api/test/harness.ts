@@ -29,15 +29,38 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
   });
   const gate = new Pool({ connectionString: databaseUrl });
   try {
-    const result = await gate.query<{ migration_count: number; has_f0: boolean }>(
+    const result = await gate.query<{
+      migration_count: number;
+      has_f0: boolean;
+      has_hash_only_policy: boolean;
+      has_hash_only_constraint: boolean;
+    }>(
       `SELECT
          (SELECT count(*)::integer FROM pgmigrations) AS migration_count,
-         to_regclass('public.execution_command_plans_f0') IS NOT NULL AS has_f0`,
+         to_regclass('public.execution_command_plans_f0') IS NOT NULL AS has_f0,
+         EXISTS (
+           SELECT 1 FROM information_schema.columns
+           WHERE table_schema = 'public'
+             AND table_name = 'execution_command_plans_f0'
+             AND column_name = 'payload_storage_policy'
+         ) AS has_hash_only_policy,
+         EXISTS (
+           SELECT 1 FROM pg_constraint
+           WHERE conname = 'execution_command_plans_f0_payload_hash_only'
+         ) AS has_hash_only_constraint`,
     );
-    if (result.rows[0].migration_count < 7 || !result.rows[0].has_f0) {
+    const row = result.rows[0];
+    if (
+      row.migration_count < 8 ||
+      !row.has_f0 ||
+      !row.has_hash_only_policy ||
+      !row.has_hash_only_constraint
+    ) {
       throw new Error(
         `Control API test migration gate did not reach EX-BE-05b/F0 ` +
-        `(count=${result.rows[0].migration_count}, has_f0=${result.rows[0].has_f0}, ` +
+        `(count=${row.migration_count}, has_f0=${row.has_f0}, ` +
+        `hash_only_policy=${row.has_hash_only_policy}, ` +
+        `hash_only_constraint=${row.has_hash_only_constraint}, ` +
         `dir=${migrationsDir})`,
       );
     }

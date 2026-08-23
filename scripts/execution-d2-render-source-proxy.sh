@@ -29,6 +29,7 @@ read_value() {
 }
 bridge_ip="$(read_value PORTAL_BRIDGE_GATEWAY_IP)"
 private_port="$(read_value SOURCE_PROXY_PRIVATE_PORT)"
+runtime_gid="$(read_value PORTAL_RUNTIME_GID)"
 
 output_dir="$(dirname "${output}")"
 [[ -d "${output_dir}" && ! -L "${output_dir}" ]] || {
@@ -47,6 +48,10 @@ if grep -Eq '__[A-Z0-9_]+__' "${temporary}"; then
   exit 1
 fi
 chmod 0640 "${temporary}"
+chgrp "${runtime_gid}" "${temporary}" || {
+  printf 'D2 renderer could not assign the configured portal-runtime group.\n' >&2
+  exit 1
+}
 mv -f -- "${temporary}" "${output}"
 trap - EXIT
 printf 'Rendered D2 Source Proxy config without source credentials.\n'

@@ -72,8 +72,8 @@ activation remains independently gated by the per-phase table in §12.2.
 | BR-EX-25 five-hop vs four-stage funnel | Bobby product/source owner | published contract has four stages; UI labels the limitation and does not invent a fifth hop | `OWNER_DECISION_PENDING` |
 | BR-EX-26 aggregate exposure verdict | Trading System source owner; Codex adapter after publication | no authoritative full-population verdict; UI is `unavailable`, never sums visible rows | `EXTERNAL_CONTRACT_PENDING` |
 | BR-EX-27 packed correlation `sample_counts` | Trading System source owner; Codex adapter after publication | per-cell sample floor unavailable; UI does not infer insufficient data | `EXTERNAL_CONTRACT_PENDING` |
-| BR-EX-28 canonical command catalogue | Codex EX-BE-05b/F0; Claude consumer | 64-action generated catalogue delivered offline; all entries unreachable and all runtime command flags remain false | `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` |
-| BR-EX-28 allocation classification | Bobby/Trading System command owner; Codex enforces conservative floor | remains at least R1 and can never fall to R0 without a published ruling | `OWNER_DECISION_PENDING` |
+| BR-EX-28 canonical command catalogue | Codex EX-BE-05b/F0; Claude consumer | revision-2 64-action catalogue is ADMIN/workspace/actor/environment/entity/risk scoped; non-GET owner review and R1–R4 plan/apply are enforced; all entries remain unreachable and all runtime command flags remain false | `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` |
+| BR-EX-28 allocation classification | Bobby/Trading System command owner; Codex enforces conservative floor | remains at least R1, owner-reviewed and plan/apply-gated; it can never fall to R0 without a published ruling | `OWNER_DECISION_PENDING` |
 | BR-EX-29 typed `conditions[]` | Codex EX-BE-05b/F0; Claude consumer | backend/schema/PostgreSQL canonical array delivered; legacy singular value remains only at explicit compatibility boundary | `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` |
 
 ### 4.3 BR-EX-28 reachability stop gate
@@ -112,7 +112,8 @@ that use case. Portal never receives a generic DB, Redis or CLI escape hatch.
 ## 6. Exact next sequence
 
 1. `EX-BE-05b/F0` is complete at `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE`:
-   catalogue, typed conditions and deny-by-default plan/apply/verify/Rust relay
+   scoped catalogue revision 2, typed conditions, `HASH_ONLY_NO_RAW` plans,
+   bounded concurrent retry and deny-by-default plan/apply/verify/Rust relay
    contract foundation are delivered.
 2. Claude consumes the catalogue and typed conditions on Lane A; it keeps the
    eight actions visibly unavailable and does not enable a product route.

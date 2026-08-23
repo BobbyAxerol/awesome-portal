@@ -69,9 +69,12 @@ Readiness additionally requires the real `portal-runtime` group and the
 approved `/srv/primus/portal` layout. It remains unexecuted on AWS.
 
 The Source Proxy renderer substitutes only the validated bridge IP and private
-port into an atomic mode-0640 output. The Trading System read identity remains
-a separate runtime include and is never parsed, logged or copied by the
-renderer.
+port into an atomic mode-0640 output and assigns the configured numeric
+`portal-runtime` group before rename. The target runbook then establishes
+`root:<portal-runtime-gid>` ownership and runs readiness against that final
+file; no placeholder config is required on first deploy. The Trading System
+read identity remains a separate runtime include and is never parsed, logged or
+copied by the renderer.
 
 ### 2.4 Rollback preparation
 
@@ -81,10 +84,11 @@ must be identical. Both revisions independently pass every dark/security/
 resource invariant. This proves a config-preserving image rollback plan, not a
 live RTO/RPO or host rollback.
 
-The D2 runbook fixes the future order: preflight, verify attestations and
-baselines, Source Proxy then Edge; rollback stops Edge then Proxy and removes
-only D2-owned containers/network. It never restarts or edits Trading System and
-does not remove accepted D1 unless D1 itself is implicated.
+The D2 runbook fixes the future order: render, establish root/group ownership,
+readiness preflight, verify attestations and baselines, Source Proxy then Edge;
+rollback stops Edge then Proxy and removes only D2-owned containers/network. It
+never restarts or edits Trading System and does not remove accepted D1 unless
+D1 itself is implicated.
 
 ## 3. Qualification evidence
 

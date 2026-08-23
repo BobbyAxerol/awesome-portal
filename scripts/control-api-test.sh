@@ -62,7 +62,7 @@ fi
     npm test
   '
 
-CONTROL_SIGNATURE_SQL="SELECT concat((SELECT count(*) FROM pgmigrations), ':', (SELECT count(*) FROM portal_users), ':', (SELECT count(*) FROM governance_approval_requests), ':', (SELECT count(*) FROM governance_paper_exit_reviews), ':', (SELECT count(*) FROM execution_command_plans_f0));"
+CONTROL_SIGNATURE_SQL="SELECT concat((SELECT count(*) FROM pgmigrations), ':', (SELECT count(*) FROM portal_users), ':', (SELECT count(*) FROM governance_approval_requests), ':', (SELECT count(*) FROM governance_paper_exit_reviews), ':', (SELECT count(*) FROM execution_command_plans_f0), ':', (SELECT count(*) FROM execution_command_plans_f0 WHERE payload_json <> '{}'::jsonb), ':', (SELECT count(*) FROM execution_command_plans_f0 WHERE payload_storage_policy <> 'HASH_ONLY_NO_RAW'));"
 source_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_control_test -Atc "${CONTROL_SIGNATURE_SQL}")"
 "${DOCKER[@]}" exec "${PG_CONTAINER}" pg_dump -U portal -d portal_control_test \
   --format=custom --file=/tmp/portal_control_test.dump

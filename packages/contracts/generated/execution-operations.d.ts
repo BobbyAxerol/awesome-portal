@@ -11,6 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description ADMIN-only catalogue evaluated for one Portal workspace/environment/entity scope. Capability remains disabled and freshness unavailable in F0. */
         get: operations["executionCommandCatalog"];
         put?: never;
         post?: never;
@@ -29,7 +30,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Creates an immutable blocked plan. F0 never issues an apply token. */
+        /** @description Creates an immutable blocked plan. Conditions require nonblank text/owner and expiry on or after deadline. Payloads have bounded shape, reject sensitive credential keys and are persisted as hash-only. F0 never issues an apply token. */
         post: operations["planExecutionCommandF0"];
         delete?: never;
         options?: never;
@@ -75,8 +76,29 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         Hash: string;
+        Identifier: string;
         /** @enum {unknown} */
         RiskTier: "R0_READ" | "R1_PAPER_MUTATION" | "R2_SANDBOX" | "R3_LIVE_PROTECTIVE" | "R4_LIVE_RISK_INCREASING" | "UNCLASSIFIED" | "BLOCKED";
+        CommandCatalogueScope: {
+            workspace_id: string;
+            actor_user_id: components["schemas"]["Identifier"];
+            /** @constant */
+            actor_role: "ADMIN";
+            /** @enum {unknown} */
+            environment: "PAPER" | "SANDBOX" | "LIVE";
+            entity: null | {
+                /** @enum {unknown} */
+                type: "ACCOUNT" | "BROKER_BINDING" | "DEPLOYMENT" | "ORDER" | "PORTFOLIO" | "SYSTEM";
+                id: components["schemas"]["Identifier"];
+            };
+            requested_risk_tier: components["schemas"]["RiskTier"] | null;
+            /** @constant */
+            capability_state: "DISABLED";
+            /** @constant */
+            freshness_state: "UNAVAILABLE";
+            /** @constant */
+            policy_revision: "execution.command-catalogue.f0.v2";
+        };
         CommandCatalogueEntry: {
             key: string;
             command: string;
@@ -85,6 +107,7 @@ export interface components {
             group: "ACCOUNT_CAPITAL" | "ALPHA_DEPLOYMENT" | "ORDER_CONTROL" | "OPERATIONS_INCIDENTS" | "MARKET_REFERENCE" | "PLATFORM_DIAGNOSTICS";
             risk_tier: components["schemas"]["RiskTier"];
             source_risk_tier: components["schemas"]["RiskTier"];
+            owner_review_required: boolean;
             plan_required: boolean;
             apply_required: boolean;
             verify_required: boolean;
@@ -103,7 +126,7 @@ export interface components {
             /** @constant */
             schema_version: "execution.command-catalog.v1";
             /** @constant */
-            catalogue_revision: 1;
+            catalogue_revision: 2;
             /** @constant */
             delivery_profile: "fixture";
             capability: {
@@ -119,9 +142,12 @@ export interface components {
                 /** @constant */
                 generated_from_read_only_extract: true;
             };
+            scope: components["schemas"]["CommandCatalogueScope"];
+            /** @constant */
+            total_entries: 64;
+            returned_entries: number;
             entries: components["schemas"]["CommandCatalogueEntry"][];
         };
-        Identifier: string;
         /** Format: date */
         Date: string;
         TypedCondition: {
@@ -173,6 +199,8 @@ export interface components {
             apply_token: null;
             expires_at: components["schemas"]["DateTime"];
             /** @constant */
+            payload_storage_policy: "HASH_ONLY_NO_RAW";
+            /** @constant */
             relay_capability: "DISABLED";
             /** @constant */
             source_side_effect_requested: false;
@@ -215,7 +243,15 @@ export type $defs = Record<string, never>;
 export interface operations {
     executionCommandCatalog: {
         parameters: {
-            query?: never;
+            query?: {
+                workspace_id?: string;
+                environment?: "PAPER" | "SANDBOX" | "LIVE";
+                /** @description Must be supplied together with target_id. */
+                target_type?: "ACCOUNT" | "BROKER_BINDING" | "DEPLOYMENT" | "ORDER" | "PORTFOLIO" | "SYSTEM";
+                /** @description Must be supplied together with target_type. */
+                target_id?: string;
+                risk_tier?: "R0_READ" | "R1_PAPER_MUTATION" | "R2_SANDBOX" | "R3_LIVE_PROTECTIVE" | "R4_LIVE_RISK_INCREASING" | "UNCLASSIFIED" | "BLOCKED";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -230,6 +266,20 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CommandCatalogue"];
                 };
+            };
+            /** @description ADMIN_ROLE_REQUIRED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description WORKSPACE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

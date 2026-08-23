@@ -15,7 +15,6 @@ export interface ExecutionCommandPlanRecord {
   expectedTargetVersion: number;
   payloadHash: string;
   planDigest: string;
-  payload: Record<string, unknown>;
   conditions: TypedCondition[];
   riskTier: string;
   blockerCodes: string[];
@@ -38,7 +37,6 @@ interface PlanRow {
   expected_target_version: number;
   payload_hash: string;
   plan_digest: string;
-  payload_json: Record<string, unknown>;
   conditions: TypedCondition[];
   risk_tier: string;
   blocker_codes: string[];
@@ -62,7 +60,6 @@ function plan(row: PlanRow): ExecutionCommandPlanRecord {
     expectedTargetVersion: row.expected_target_version,
     payloadHash: row.payload_hash,
     planDigest: row.plan_digest,
-    payload: row.payload_json,
     conditions: row.conditions,
     riskTier: row.risk_tier,
     blockerCodes: row.blocker_codes,
@@ -116,7 +113,6 @@ export class ExecutionOperationsRepository {
     expectedTargetVersion: number;
     payloadHash: string;
     planDigest: string;
-    payload: Record<string, unknown>;
     conditions: TypedCondition[];
     riskTier: string;
     blockerCodes: string[];
@@ -125,62 +121,74 @@ export class ExecutionOperationsRepository {
     requestId: string;
     auditEventId: string;
   }): Promise<{ record: ExecutionCommandPlanRecord; created: boolean }> {
-    const client = await this.pool.connect();
-    try {
-      await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
-      const inserted = await client.query<PlanRow>(
-        `INSERT INTO execution_command_plans_f0
-           (operation_id, workspace_id, actor_user_id, request_key, command_key,
-            environment, target_type, target_id, expected_target_version,
-            payload_hash, plan_digest, payload_json, conditions, risk_tier,
-            blocker_codes, warning_codes, expires_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-                 $14, $15, $16, $17)
-         ON CONFLICT (workspace_id, actor_user_id, request_key) DO NOTHING
-         RETURNING *`,
-        [
-          input.operationId, input.workspaceId, input.actorUserId, input.requestKey,
-          input.commandKey, input.environment, input.targetType, input.targetId,
-          input.expectedTargetVersion, input.payloadHash, input.planDigest,
-          JSON.stringify(input.payload), JSON.stringify(input.conditions), input.riskTier,
-          input.blockerCodes, input.warningCodes, input.expiresAt,
-        ],
-      );
-      if (inserted.rows[0]) {
-        await client.query(
-          `INSERT INTO product_audit_events
-             (event_id, event_type, actor_user_id, workspace_id, request_id,
-              idempotency_key, aggregate_type, aggregate_id, aggregate_version,
-              result, reason_code, metadata_json)
-           VALUES ($1, 'execution.command.plan_blocked', $2, $3, $4, $5,
-                   'execution_command', $6, 1, 'DENIED', 'COMMAND_RELAY_DISABLED', $7)`,
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      const client = await this.pool.connect();
+      try {
+        await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
+        const inserted = await client.query<PlanRow>(
+          `INSERT INTO execution_command_plans_f0
+             (operation_id, workspace_id, actor_user_id, request_key, command_key,
+              environment, target_type, target_id, expected_target_version,
+              payload_hash, plan_digest, payload_json, conditions, risk_tier,
+              blocker_codes, warning_codes, expires_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, '{}'::jsonb, $12,
+                   $13, $14, $15, $16)
+           ON CONFLICT (workspace_id, actor_user_id, request_key) DO NOTHING
+           RETURNING *`,
           [
-            input.auditEventId, input.actorUserId, input.workspaceId, input.requestId,
-            input.requestKey, input.operationId,
-            JSON.stringify({
-              command_key: input.commandKey,
-              payload_hash: input.payloadHash,
-              plan_digest: input.planDigest,
-              blocker_codes: input.blockerCodes,
-              source_side_effect_requested: false,
-            }),
+            input.operationId, input.workspaceId, input.actorUserId, input.requestKey,
+            input.commandKey, input.environment, input.targetType, input.targetId,
+            input.expectedTargetVersion, input.payloadHash, input.planDigest,
+            JSON.stringify(input.conditions), input.riskTier,
+            input.blockerCodes, input.warningCodes, input.expiresAt,
           ],
         );
+        if (inserted.rows[0]) {
+          await client.query(
+            `INSERT INTO product_audit_events
+               (event_id, event_type, actor_user_id, workspace_id, request_id,
+                idempotency_key, aggregate_type, aggregate_id, aggregate_version,
+                result, reason_code, metadata_json)
+             VALUES ($1, 'execution.command.plan_blocked', $2, $3, $4, $5,
+                     'execution_command', $6, 1, 'DENIED', 'COMMAND_RELAY_DISABLED', $7)`,
+            [
+              input.auditEventId, input.actorUserId, input.workspaceId, input.requestId,
+              input.requestKey, input.operationId,
+              JSON.stringify({
+                command_key: input.commandKey,
+                payload_hash: input.payloadHash,
+                plan_digest: input.planDigest,
+                blocker_codes: input.blockerCodes,
+                payload_storage_policy: "HASH_ONLY_NO_RAW",
+                source_side_effect_requested: false,
+              }),
+            ],
+          );
+          await client.query("COMMIT");
+          return { record: plan(inserted.rows[0]), created: true };
+        }
+        const existing = await client.query<PlanRow>(
+          `SELECT * FROM execution_command_plans_f0
+           WHERE workspace_id = $1 AND actor_user_id = $2 AND request_key = $3`,
+          [input.workspaceId, input.actorUserId, input.requestKey],
+        );
         await client.query("COMMIT");
-        return { record: plan(inserted.rows[0]), created: true };
+        return { record: plan(existing.rows[0]), created: false };
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        const code = typeof error === "object" && error !== null && "code" in error
+          ? String((error as { code?: unknown }).code ?? "")
+          : "";
+        if ((code === "40001" || code === "40P01") && attempt < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, attempt * 10));
+          continue;
+        }
+        throw error;
+      } finally {
+        client.release();
       }
-      const existing = await client.query<PlanRow>(
-        `SELECT * FROM execution_command_plans_f0
-         WHERE workspace_id = $1 AND actor_user_id = $2 AND request_key = $3`,
-        [input.workspaceId, input.actorUserId, input.requestKey],
-      );
-      await client.query("COMMIT");
-      return { record: plan(existing.rows[0]), created: false };
-    } catch (error) {
-      await client.query("ROLLBACK").catch(() => undefined);
-      throw error;
-    } finally {
-      client.release();
     }
+    throw new Error("execution plan transaction retry budget exhausted");
   }
 }

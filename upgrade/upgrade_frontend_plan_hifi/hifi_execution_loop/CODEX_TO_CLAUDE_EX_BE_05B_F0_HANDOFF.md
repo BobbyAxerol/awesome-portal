@@ -21,16 +21,24 @@ generated type into a second hand-maintained model.
 
 - Replace the Phase 6 catalogue fixture with the same-origin
   `GET /api/v1/execution/commands/catalog` response behind the existing Lane A
-  adapter.
+  adapter. The route is ADMIN-only; handle 403 for USER without leaking the
+  catalogue.
 - Render 64 canonical `noun/verb` actions, grouped using server `group` and
-  showing exact `risk_tier`, plan/apply/verify facts, route state and blocked
-  reason.
+  showing exact `risk_tier`, `owner_review_required`, plan/apply/verify facts,
+  route state and blocked reason.
+- Consume catalogue revision 2 scope and exact total/returned counts. Optional
+  environment/entity/risk filters are server-owned, and an entity target is
+  always the `target_type` + `target_id` pair.
 - Keep every entry unavailable while `portal_reachable=false`; unavailable
   actions stay visible and explain why.
 - Model the F0 plan response as a blocked preview: no apply token, no source
   side effect and no claim of terminal execution.
 - Model apply denial and operation polling distinctly. HTTP 202 remains an
   acknowledgement in future profiles, never proof of completion.
+- Display `payload_storage_policy=HASH_ONLY_NO_RAW` as the plan evidence rule;
+  never expect the API to return submitted payload values. Map
+  `SENSITIVE_PAYLOAD_FIELD_FORBIDDEN` and bounded-payload rejection without
+  echoing the rejected value.
 - Replace flattened condition text with canonical `conditions[]` containing
   `text`, `owner`, `deadline`, wire `expires_at` and `blocking`. Retain a read
   compatibility path only where old stored responses still expose singular
@@ -47,6 +55,8 @@ Do not:
 - turn `BLOCKED`, `UNPUBLISHED`, `AMBIGUOUS`, `NOT_STARTED` or denied apply into
   success/empty state;
 - assume all mutations have plan/apply/verify;
+- downgrade an observed non-GET action from its canonical risk/review policy;
+- treat source risk as Portal effective risk;
 - implement live/sandbox command semantics or retry an `UNCERTAIN` outcome.
 
 These eight actions must remain visibly unavailable:
@@ -62,15 +72,20 @@ These eight actions must remain visibly unavailable:
 3. the eight unpublished actions remain unavailable even if an inherited HTTP
    path appears in a future source extract;
 4. generic `redis/get` and `redis/scan` cannot produce an actionable control;
-5. `allocation/<root>` cannot render below R1;
-6. plan/apply/verify steps follow entry booleans, not a global mutation rule;
+5. every observed non-GET item is at least R1 and visibly requires owner review;
+6. every R1–R4 item has plan and apply; step display still follows entry
+   booleans rather than a separate frontend policy;
 7. blocked plan has no apply CTA/token and is not announced as completed;
 8. denied apply displays safe retry/source-request facts;
 9. multiple typed conditions round-trip without flattening; legacy singular
    and canonical array are never sent together;
-10. malformed/unknown schema or blocked reason fails closed;
-11. keyboard/focus/reduced-motion and narrow drawer states remain covered;
-12. all registry/source/realtime/command flags remain false in tests.
+10. plan copy states hash-only retention, and sensitive/oversized payload
+    failures do not echo user data;
+11. two concurrent equal requests render one replayed operation, while payload
+    drift renders the typed conflict and never auto-retries;
+12. malformed/unknown schema or blocked reason fails closed;
+13. keyboard/focus/reduced-motion and narrow drawer states remain covered;
+14. all registry/source/realtime/command flags remain false in tests.
 
 ## 5. Coordination after this packet
 

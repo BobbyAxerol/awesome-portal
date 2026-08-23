@@ -29,20 +29,29 @@ Before any pull, migration or container creation:
    secret values;
 7. no public/VPC-wide 8443/8444 rule exists.
 
-## 3. Preflight and render
+## 3. Render, establish ownership and run readiness preflight
 
 Run on the target host using a private mode-0600 env file:
 
 ```bash
-./scripts/execution-d2-preflight.sh --env-file /secure/path/d2.env --mode readiness
 ./scripts/execution-d2-render-source-proxy.sh \
   --env-file /secure/path/d2.env \
   --output /srv/primus/portal/source-proxy/nginx.conf
+sudo chown root:PORTAL_RUNTIME_GID /srv/primus/portal/source-proxy/nginx.conf
+sudo chmod 0640 /srv/primus/portal/source-proxy/nginx.conf
+./scripts/execution-d2-preflight.sh --env-file /secure/path/d2.env --mode readiness
 docker compose --project-directory /srv/primus/portal \
   --env-file /secure/path/d2.env \
   -f deploy/compose.execution-edge.yaml \
   -f deploy/execution-d1/compose.dark.yaml config --quiet
 ```
+
+Replace `PORTAL_RUNTIME_GID` with the exact numeric value already recorded in
+the private D2 env file; do not source that file in a shell. The renderer also
+assigns this group before its atomic rename and fails closed when the invoking
+operator lacks permission. The explicit root ownership above is the target-host
+boundary; readiness runs after it so the validated file is the file Compose
+will mount. This order also removes the first-deploy placeholder requirement.
 
 Rendering or preflight is not authorization to pull or start.
 

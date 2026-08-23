@@ -34,10 +34,16 @@ not touched.
 
 ## 3. Automated drift gate
 
-`scripts/execution-tracking-test.sh` validates the five tracking authorities.
+`scripts/execution-tracking-test.sh` validates seven tracking authorities:
+Master Plan, backend architecture guide, backend README, shared phase tracker,
+frontend roadmap, canonical request ledger and frontend handoff. It also reads
+the generated catalogue as an executable eighth input.
 It fails when qualified phase status drifts, an unpublished action loses its
 external owner, generic Redis rejection disappears, H-series retirement is
-reopened, the next sequence vanishes, or a bare `COMPLETE` status returns.
+reopened, the next sequence vanishes, or a bare `COMPLETE` status returns. The
+revision-2 extension additionally prevents loss of catalogue scope/counts,
+conservative non-GET owner review, mandatory R1–R4 plan/apply gates and the
+hash-only frontend handoff.
 
 The gate runs inside `scripts/verify-workspace.sh`, so future contract/runtime
 work cannot silently leave the coordination documents behind.

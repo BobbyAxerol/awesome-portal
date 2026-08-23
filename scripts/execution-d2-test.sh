@@ -53,7 +53,8 @@ sed -i \
   "${tmp_dir}/candidate.env"
 
 "${renderer}" --env-file "${tmp_dir}/candidate.env" --output "${proxy_config}" >/dev/null
-chgrp "${runtime_gid}" "${proxy_config}"
+[[ "$(stat -c '%a' "${proxy_config}")" == 640 ]]
+[[ "$(stat -c '%g' "${proxy_config}")" == "${runtime_gid}" ]]
 grep -Fq 'listen 172.23.0.1:8444 ssl;' "${proxy_config}"
 proxy_syntax_config="${tmp_dir}/source-proxy.syntax-test.conf"
 sed 's/listen 172\.23\.0\.1:8444 ssl;/listen 127.0.0.1:18444 ssl;/' \
@@ -192,6 +193,12 @@ fi
   printf 'D2 env input was executed.\n' >&2
   exit 1
 }
+
+# Prove the renderer establishes the configured supplemental group before the
+# target-host readiness step. The fixture uses temporary paths, so it runs the
+# identical file/identity validation in offline mode; real readiness remains
+# locked to /srv/primus/portal and is an explicit D2 deployment gate.
+"${preflight}" --env-file "${tmp_dir}/candidate.env" --mode offline >/dev/null
 
 if [[ "${build_images}" == true ]]; then
   "${docker_cli[@]}" build --pull \

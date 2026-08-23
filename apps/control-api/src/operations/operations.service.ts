@@ -5,7 +5,10 @@ import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
 import { ProductAuditRepository } from "../repos/outbox";
 import { EXECUTION_COMMAND_CATALOG } from "./catalog.generated";
-import { ExecutionCommandPlanRequest } from "./contracts";
+import {
+  ExecutionCommandCatalogueQuery,
+  ExecutionCommandPlanRequest,
+} from "./contracts";
 import {
   ExecutionCommandPlanRecord,
   ExecutionOperationsRepository,
@@ -41,6 +44,7 @@ function response(plan: ExecutionCommandPlanRecord, replayed: boolean) {
     expires_at: plan.expiresAt.toISOString(),
     relay_capability: "DISABLED",
     source_side_effect_requested: false,
+    payload_storage_policy: "HASH_ONLY_NO_RAW",
     replayed,
   };
 }
@@ -52,8 +56,35 @@ export class ExecutionOperationsService {
     @Inject(ProductAuditRepository) private readonly audit: ProductAuditRepository,
   ) {}
 
-  catalogue() {
-    return EXECUTION_COMMAND_CATALOG;
+  catalogue(
+    user: PortalUser,
+    scope: ExecutionCommandCatalogueQuery & { workspace_id: string },
+  ) {
+    if (user.role !== "ADMIN") {
+      throw new GovernanceError("ADMIN_ROLE_REQUIRED", "Access denied.", 403);
+    }
+    const entries = scope.risk_tier === undefined
+      ? [...EXECUTION_COMMAND_CATALOG.entries]
+      : EXECUTION_COMMAND_CATALOG.entries.filter((entry) => entry.risk_tier === scope.risk_tier);
+    return {
+      ...EXECUTION_COMMAND_CATALOG,
+      scope: {
+        workspace_id: scope.workspace_id,
+        actor_user_id: user.userId,
+        actor_role: "ADMIN" as const,
+        environment: scope.environment,
+        entity: scope.target_type === undefined
+          ? null
+          : { type: scope.target_type, id: scope.target_id! },
+        requested_risk_tier: scope.risk_tier ?? null,
+        capability_state: "DISABLED" as const,
+        freshness_state: "UNAVAILABLE" as const,
+        policy_revision: "execution.command-catalogue.f0.v2" as const,
+      },
+      total_entries: EXECUTION_COMMAND_CATALOG.entries.length,
+      returned_entries: entries.length,
+      entries,
+    };
   }
 
   async plan(user: PortalUser, input: ExecutionCommandPlanRequest, requestId: string) {
@@ -102,7 +133,11 @@ export class ExecutionOperationsService {
       payload: input.payload,
       conditions: input.conditions,
     });
-    const blockers = [...new Set(["COMMAND_RELAY_DISABLED", entry.blocked_reason])].sort();
+    const blockers = [...new Set([
+      "COMMAND_RELAY_DISABLED",
+      entry.blocked_reason,
+      ...(entry.owner_review_required ? ["OWNER_REVIEW_REQUIRED"] : []),
+    ])].sort();
     const planDigest = digest({
       payload_hash: payloadHash,
       catalog_revision: EXECUTION_COMMAND_CATALOG.catalogue_revision,
@@ -123,7 +158,6 @@ export class ExecutionOperationsService {
       expectedTargetVersion: input.expected_target_version,
       payloadHash,
       planDigest,
-      payload: input.payload,
       conditions: input.conditions,
       riskTier: entry.risk_tier,
       blockerCodes: blockers,

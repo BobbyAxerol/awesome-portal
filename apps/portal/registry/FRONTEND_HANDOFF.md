@@ -762,3 +762,42 @@ workbench đều dựa lên nó; (b) **registry revision 3** — nav group hi-fi
 (COMMAND/GOVERNANCE/DEPLOYMENTS/ADMINISTRATION) và 17 màn chưa có trong rev 2,
 mà nav render từ registry là rule cứng và `registry.json` thuộc backend → nửa nav
 của Phase 0 vẫn chặn ở codex, độc lập với nửa component.
+
+### 8.8 Execution command catalogue revision 2 — Codex handoff (2026-08-23)
+
+This packet preserves the accepted PRE-IAM-04 contract/replay/restore boundary,
+PRE-IAM-05 dark-deployment boundary and PRE-IAM-06 tracking boundary while
+hardening EX-BE-05b/F0.
+
+`EX-BE-05b/F0` remains `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE`; this is a
+contract hardening revision, not command activation. The canonical consumer is
+`GET /api/v1/execution/commands/catalog`, now ADMIN-only and session/workspace
+scoped. The response carries `catalogue_revision=2`, exact
+`total_entries`/`returned_entries`, actor/environment/entity/risk scope,
+capability/freshness state and policy revision. Optional environment, target
+and risk filters are server validated; an invalid target pair fails closed.
+
+Claude should consume these revision-2 facts rather than retain a parallel
+catalogue model:
+
+1. every observed non-GET route is at least R1 and has
+   `owner_review_required=true`;
+2. every R1–R4 item requires both plan and apply; the UI must not infer safety
+   from the Trading System source label alone;
+3. all 64 F0 entries remain `portal_reachable=false`, including all eight
+   unpublished `ops` actions and prohibited generic Redis actions;
+4. command plan payloads are validated and bounded before hashing; sensitive
+   key names fail with `SENSITIVE_PAYLOAD_FIELD_FORBIDDEN`;
+5. the durable plan returns `payload_storage_policy=HASH_ONLY_NO_RAW`; raw
+   payload values are never retrievable from the Portal plan/audit record;
+6. duplicate concurrent request keys replay one immutable plan, while a
+   different payload returns the typed conflict and must not be retried as a
+   new command.
+
+Frontend tests should cover ADMIN versus USER catalogue access, scoped/filtered
+counts, visible owner-review state, hash-only copy, the sensitive-payload error,
+and both replay/conflict outcomes. Keep every product/source/realtime/command
+flag false. Full backend evidence remains in
+`upgrade/backend/EX_BE_05B_F0_OFFLINE_OPERATIONS_FOUNDATION.md` and the detailed
+consumer packet in
+`upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F0_HANDOFF.md`.
