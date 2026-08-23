@@ -22,6 +22,18 @@ const SENSITIVE_KEY_FRAGMENTS = [
   "authorization", "cookie",
 ];
 
+function containsCredentialLikeAssignment(value: string): boolean {
+  return /(?:password|secret|token|api[ _-]?key|private[ _-]?key|authorization|cookie)\s*[:=]/i
+    .test(value);
+}
+
+const SafeOperatorTextSchema = (minimum: number, maximum: number) => z
+  .string()
+  .trim()
+  .min(minimum)
+  .max(maximum)
+  .refine((value) => !containsCredentialLikeAssignment(value), "SENSITIVE_OPERATOR_TEXT_FORBIDDEN");
+
 function payloadPolicyIssue(payload: Record<string, unknown>): string | null {
   let nodes = 0;
   const visit = (value: unknown, depth: number): string | null => {
@@ -211,3 +223,83 @@ export const OperationResolveRequestSchema = z
   .strict();
 
 export type OperationResolveRequest = z.infer<typeof OperationResolveRequestSchema>;
+
+const IncidentRequestKeySchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/);
+const IncidentHashSchema = z.string().regex(/^sha256:[0-9a-f]{64}$/);
+
+export const IncidentCreateRequestSchema = z
+  .object({
+    schema_version: z.literal("execution.incident-create-request.v1"),
+    workspace_id: z.string().min(3).max(96),
+    request_key: IncidentRequestKeySchema,
+    title: SafeOperatorTextSchema(8, 200),
+    summary: SafeOperatorTextSchema(8, 2000),
+    severity: z.enum(["INFO", "WARNING", "ERROR", "CRITICAL"]),
+    environment: ExecutionEnvironmentSchema,
+    target: z.object({ type: ExecutionTargetTypeSchema, id: IdentifierSchema }).strict(),
+    correlated_operation_ids: z.array(IdentifierSchema).max(20).default([]),
+  })
+  .strict()
+  .refine(
+    (request) => new Set(request.correlated_operation_ids).size === request.correlated_operation_ids.length,
+    "correlated_operation_ids must be unique",
+  );
+
+export type IncidentCreateRequest = z.infer<typeof IncidentCreateRequestSchema>;
+
+const IncidentMutationBaseSchema = z.object({
+  workspace_id: z.string().min(3).max(96),
+  request_key: IncidentRequestKeySchema,
+  expected_workflow_version: z.number().int().positive(),
+});
+
+export const IncidentAcknowledgeRequestSchema = IncidentMutationBaseSchema.extend({
+  schema_version: z.literal("execution.incident-acknowledge-request.v1"),
+}).strict();
+export type IncidentAcknowledgeRequest = z.infer<typeof IncidentAcknowledgeRequestSchema>;
+
+export const IncidentAssignRequestSchema = IncidentMutationBaseSchema.extend({
+  schema_version: z.literal("execution.incident-assign-request.v1"),
+  assignee_user_id: IdentifierSchema,
+}).strict();
+export type IncidentAssignRequest = z.infer<typeof IncidentAssignRequestSchema>;
+
+export const IncidentAnnotateRequestSchema = IncidentMutationBaseSchema.extend({
+  schema_version: z.literal("execution.incident-annotate-request.v1"),
+  body: SafeOperatorTextSchema(1, 4000),
+}).strict();
+export type IncidentAnnotateRequest = z.infer<typeof IncidentAnnotateRequestSchema>;
+
+export const IncidentEvidenceRequestSchema = IncidentMutationBaseSchema.extend({
+  schema_version: z.literal("execution.incident-evidence-request.v1"),
+  evidence_kind: z.enum([
+    "MITIGATION_ATTESTATION", "CLEAN_DRY_RUN", "SYNC_SNAPSHOT",
+    "FINDING_REFERENCE", "BLAST_RADIUS", "PROBABLE_CAUSE", "OTHER",
+  ]),
+  sha256: IncidentHashSchema,
+  evidence_schema_version: z.string().regex(/^[A-Za-z0-9._:-]{1,128}$/),
+  declared_source_authority: z.enum(["PORTAL", "EXECUTION", "BROKER", "DERIVED"]),
+  summary: SafeOperatorTextSchema(8, 1000),
+  captured_at: z.string().datetime({ offset: true }),
+}).strict();
+export type IncidentEvidenceRequest = z.infer<typeof IncidentEvidenceRequestSchema>;
+
+export const IncidentCorrelateOperationRequestSchema = IncidentMutationBaseSchema.extend({
+  schema_version: z.literal("execution.incident-correlate-operation-request.v1"),
+  operation_id: IdentifierSchema,
+  relationship: z.enum(["TRIGGERED_BY", "MITIGATES", "RELATED"]),
+}).strict();
+export type IncidentCorrelateOperationRequest = z.infer<typeof IncidentCorrelateOperationRequestSchema>;
+
+export const IncidentMitigateRequestSchema = IncidentMutationBaseSchema.extend({
+  schema_version: z.literal("execution.incident-mitigate-request.v1"),
+  mitigation_evidence_hash: IncidentHashSchema,
+}).strict();
+export type IncidentMitigateRequest = z.infer<typeof IncidentMitigateRequestSchema>;
+
+export const IncidentResolveRequestSchema = IncidentMutationBaseSchema.extend({
+  schema_version: z.literal("execution.incident-resolve-request.v1"),
+  reason: SafeOperatorTextSchema(8, 2000),
+  clean_dry_run_evidence_hash: IncidentHashSchema,
+}).strict();
+export type IncidentResolveRequest = z.infer<typeof IncidentResolveRequestSchema>;

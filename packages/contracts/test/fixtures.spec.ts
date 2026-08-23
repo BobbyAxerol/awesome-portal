@@ -103,6 +103,10 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/OperationQueueResponse",
   "execution-operation-workflow.valid.json":
     "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/OperationWorkflowResponse",
+  "execution-incident-detail.open.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/IncidentDetail",
+  "execution-incident-workflow.resolved.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/IncidentWorkflowResponse",
 };
 
 describe("canonical contracts (cross-language fixture compilation)", () => {
@@ -367,12 +371,68 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(generated).toContain("ProjectionCurrencyAggregate");
   });
 
-  it("generated execution operation types expose only the F0 plan/read surface", () => {
+  it("generated execution operation types expose F0/F1 operations and incident surfaces", () => {
     const generated = readFileSync(join(ROOT, "generated", "execution-operations.d.ts"), "utf8");
     expect(generated).toContain('"/api/v1/execution/commands/catalog"');
     expect(generated).toContain('"/api/v1/execution/commands/plans"');
     expect(generated).toContain('"/api/v1/execution/operations/{operation_id}/apply"');
+    expect(generated).toContain('"/api/v1/execution/operations/incidents"');
+    expect(generated).toContain('"/api/v1/execution/operations/incidents/{incident_id}"');
+    expect(generated).toContain('"/api/v1/execution/operations/incidents/{incident_id}/resolve"');
+    expect(generated).toContain("IncidentDetail");
+    expect(generated).toContain("IncidentWorkflowResponse");
     expect(generated).toContain("COMMAND_RELAY_DISABLED");
+  });
+
+  it("keeps F1b incidents source-dark, bounded and unable to resume deployments", () => {
+    const detail = loadJson(join(ROOT, "fixtures", "execution-incident-detail.open.valid.json")) as {
+      source_integration_state: string;
+      incident: { source_side_effect_requested: boolean; deployment_resume_requested: boolean };
+      source_panels: Array<{
+        source_authority: string;
+        panel_state: string;
+        freshness_state: string;
+        delivery_profile: string;
+        read_at: string;
+        data: unknown;
+      }>;
+      timeline: { returned_count: number; rows: unknown[] };
+      resolution_gate: { eligible: boolean; blocker_codes: string[]; deployment_resume_requested: boolean };
+    };
+    expect(detail.source_integration_state).toBe("UNAVAILABLE");
+    expect(detail.incident).toMatchObject({
+      source_side_effect_requested: false,
+      deployment_resume_requested: false,
+    });
+    expect(detail.source_panels).toHaveLength(4);
+    expect(detail.source_panels.every((panel) =>
+      panel.source_authority === "EXECUTION" &&
+      panel.panel_state === "unavailable" &&
+      panel.freshness_state === "UNKNOWN" &&
+      panel.delivery_profile === "fixture" &&
+      panel.read_at === "2026-08-23T12:00:00.000Z" &&
+      panel.data === null,
+    ))
+      .toBe(true);
+    expect(detail.timeline.returned_count).toBe(detail.timeline.rows.length);
+    expect(detail.resolution_gate.eligible).toBe(false);
+    expect(detail.resolution_gate.blocker_codes).toContain("CLEAN_DRY_RUN_EVIDENCE_REQUIRED");
+    expect(detail.resolution_gate.deployment_resume_requested).toBe(false);
+
+    const resolved = loadJson(join(ROOT, "fixtures", "execution-incident-workflow.resolved.valid.json")) as {
+      source_side_effect_requested: boolean;
+      deployment_resume_requested: boolean;
+      detail: { incident: { workflow_state: string }; resolution_gate: { eligible: boolean; blocker_codes: string[] } };
+    };
+    expect(resolved).toMatchObject({
+      source_side_effect_requested: false,
+      deployment_resume_requested: false,
+    });
+    expect(resolved.detail.incident.workflow_state).toBe("RESOLVED");
+    expect(resolved.detail.resolution_gate).toMatchObject({
+      eligible: false,
+      blocker_codes: ["INCIDENT_ALREADY_RESOLVED"],
+    });
   });
 
   it("generated governance and realtime types cover their narrow boundaries", () => {

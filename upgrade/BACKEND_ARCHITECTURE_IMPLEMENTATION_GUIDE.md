@@ -1111,14 +1111,23 @@ deep-dive → ADR → slice → evidence discipline documented above.
   no outbox/source request is produced. Evidence: contracts 41/41 and fresh-PG
   Control API 155/155 plus dump/restore. Status is
   `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`; profile remains `fixture`,
-  source integration remains `UNAVAILABLE`, and F1b Incident Detail is next.
+  source integration remains `UNAVAILABLE`. F1b Incident Detail is closed in
+  the next checkpoint.
+- **EX-BE-05b/F1b Incident Detail (2026-08-23):** the SGP TypeScript Control
+  API now owns forward-only OPEN→MITIGATED→RESOLVED incidents,
+  acknowledgement, workspace-member assignment, append-only redacted operator
+  notes, hash-only evidence references, same-workspace operation correlation
+  and bounded exact-count collections. Mitigate requires acknowledgement,
+  assignment and stored mitigation evidence; resolve requires MITIGATED, stored
+  clean-dry-run evidence and reason, and can never resume a deployment.
+  Idempotency, optimistic versions, source-field immutability and audit/event
+  atomicity are PostgreSQL-enforced; no outbox exists. Four source panels remain
+  typed unavailable. Evidence: contracts 44/44, fresh-PG Control API 159/159
+  and dump/restore. Status is `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`.
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**
 
-- **EX-BE-05b/F1b Incident Detail on SGP:** Portal-owned incident identity,
-  assignment/annotation/evidence and operation correlation; source panels stay
-  unavailable until purpose-built Trading System contracts exist.
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
   workload-identity/window gates precede D2, then authenticated transport and

@@ -1779,6 +1779,15 @@ không phải 17 màn.
 > Rail/source-backed Incident Detail chưa được tuyên bố xong. Chi tiết:
 > [`EX_BE_05B_F1A_OPERATIONS_QUEUE.md`](./backend/EX_BE_05B_F1A_OPERATIONS_QUEUE.md).
 
+> **Backend checkpoint 2026-08-23 — EX-BE-05b/F1b Phase 8:** Portal-owned Incident
+> Detail trên SGP đạt `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` với rail
+> OPEN→MITIGATED→RESOLVED, acknowledge/assign, append-only annotation/evidence,
+> operation correlation, optimistic/idempotent writes và resolution bắt buộc
+> clean-dry-run hash + reason. Resolve không auto-resume; outbox/source side
+> effect luôn false. Bốn panel findings/alerts/dead-letters/trace-order vẫn
+> typed unavailable chờ Trading System contract và D2→D4. Chi tiết:
+> [`EX_BE_05B_F1B_INCIDENT_DETAIL.md`](./backend/EX_BE_05B_F1B_INCIDENT_DETAIL.md).
+
 > **D2 placement/resource checkpoint 2026-08-23:** toàn bộ Portal, browser BFF,
 > Control API và product database vẫn chạy tại SGP Research. AWS-HK hiện hữu
 > chỉ nhận Source Proxy, Rust Execution Edge, dark projection PostgreSQL và

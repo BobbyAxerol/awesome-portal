@@ -184,8 +184,18 @@ Chúng không thay thế phase hoặc exit gate trong
   keyset qualification and ordered acknowledge→resolve workflow. Source result
   fields are immutable; transitions write audit/event atomically and create no
   outbox/source side effect. Contracts 41/41 and fresh-PG Control API 155/155
-  plus dump/restore are green. Registry remains `fixture`; Incident Detail and
-  source-backed operations remain later slices.
+  plus dump/restore are green. Registry remains `fixture`; source-backed
+  operations remain a later slice and Portal-owned Incident Detail is closed
+  by F1b below.
+- [EX-BE-05b/F1b — Portal Incident Detail](./EX_BE_05B_F1B_INCIDENT_DETAIL.md)
+  — **`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`:** ADMIN/workspace-bound
+  TypeScript/PostgreSQL incident workflow on SGP with forward-only
+  OPEN→MITIGATED→RESOLVED state, acknowledgement, assignment, append-only
+  annotations/evidence/timeline and same-workspace operation correlation.
+  Mitigation and resolution require stored hash-only evidence; resolve never
+  resumes a deployment. Four Execution source panels remain typed unavailable,
+  all source/relay/outbox side effects remain false. Contracts 44/44 and
+  fresh-PG Control API 159/159 plus dump/restore are green.
 
 **Runway complete (BAR-00 → BAR-16).** Guide v0.5 bổ sung (không thay thế)
 tại `upgrade/RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md`

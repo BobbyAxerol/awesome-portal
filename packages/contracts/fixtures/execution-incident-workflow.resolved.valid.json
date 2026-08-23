@@ -1,0 +1,61 @@
+{
+  "schema_version": "execution.incident-workflow.v1",
+  "record_authority": "PORTAL",
+  "delivery_profile": "fixture",
+  "source_integration_state": "UNAVAILABLE",
+  "source_side_effect_requested": false,
+  "deployment_resume_requested": false,
+  "replayed": false,
+  "detail": {
+    "schema_version": "execution.incident-detail.v1",
+    "record_authority": "PORTAL",
+    "delivery_profile": "fixture",
+    "source_integration_state": "UNAVAILABLE",
+    "read_at": "2026-08-23T12:10:00.000Z",
+    "actor": { "user_id": "usr_fixture_admin", "username": "bobby", "roles": ["ADMIN"] },
+    "incident": {
+      "incident_id": "inc_fixture_44",
+      "title": "Position mismatch requires investigation",
+      "summary": "Portal operator resolved the local workflow with hash-only evidence.",
+      "severity": "CRITICAL",
+      "environment": "PAPER",
+      "target": { "type": "ACCOUNT", "id": "acct_paper_grid_v21" },
+      "workflow_state": "RESOLVED",
+      "workflow_version": 7,
+      "assigned_to_user_id": "usr_fixture_admin",
+      "acknowledged_at": "2026-08-23T12:01:00.000Z",
+      "acknowledged_by_user_id": "usr_fixture_admin",
+      "mitigated_at": "2026-08-23T12:05:00.000Z",
+      "mitigated_by_user_id": "usr_fixture_admin",
+      "mitigation_evidence_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "resolved_at": "2026-08-23T12:10:00.000Z",
+      "resolved_by_user_id": "usr_fixture_admin",
+      "resolution_reason": "A clean dry-run confirmed the Portal workflow can close safely.",
+      "clean_dry_run_evidence_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "opened_by_user_id": "usr_fixture_admin",
+      "source_side_effect_requested": false,
+      "deployment_resume_requested": false,
+      "created_at": "2026-08-23T12:00:00.000Z",
+      "updated_at": "2026-08-23T12:10:00.000Z"
+    },
+    "source_panels": [
+      { "panel_id": "findings", "source_authority": "EXECUTION", "as_of": null, "read_at": "2026-08-23T12:10:00.000Z", "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "panel_state": "unavailable", "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "formula_version": null, "capability_snapshot_id": null, "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "data": null, "warnings": [{ "code": "TRADING_SYSTEM_FINDINGS_ROUTE_UNPUBLISHED" }] },
+      { "panel_id": "alerts", "source_authority": "EXECUTION", "as_of": null, "read_at": "2026-08-23T12:10:00.000Z", "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "panel_state": "unavailable", "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "formula_version": null, "capability_snapshot_id": null, "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "data": null, "warnings": [{ "code": "TRADING_SYSTEM_ALERTS_ROUTE_UNPUBLISHED" }] },
+      { "panel_id": "dead_letters", "source_authority": "EXECUTION", "as_of": null, "read_at": "2026-08-23T12:10:00.000Z", "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "panel_state": "unavailable", "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "formula_version": null, "capability_snapshot_id": null, "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "data": null, "warnings": [{ "code": "TRADING_SYSTEM_DEAD_LETTERS_ROUTE_UNPUBLISHED" }] },
+      { "panel_id": "trace_order", "source_authority": "EXECUTION", "as_of": null, "read_at": "2026-08-23T12:10:00.000Z", "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "panel_state": "unavailable", "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "formula_version": null, "capability_snapshot_id": null, "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "data": null, "warnings": [{ "code": "TRADING_SYSTEM_TRACE_ORDER_ROUTE_UNPUBLISHED" }] }
+    ],
+    "correlated_operations": { "total_count": 0, "returned_count": 0, "truncated": false, "rows": [] },
+    "evidence": {
+      "total_count": 2,
+      "returned_count": 2,
+      "truncated": false,
+      "rows": [
+        { "evidence_id": "iev_fixture_1", "evidence_kind": "MITIGATION_ATTESTATION", "sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "schema_version": "portal.incident-evidence.v1", "declared_source_authority": "PORTAL", "source_verification_state": "UNAVAILABLE", "summary": "Portal mitigation attestation reference.", "captured_at": "2026-08-23T12:04:00.000Z", "attached_by_user_id": "usr_fixture_admin", "created_at": "2026-08-23T12:04:00.000Z" },
+        { "evidence_id": "iev_fixture_2", "evidence_kind": "CLEAN_DRY_RUN", "sha256": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "schema_version": "portal.incident-evidence.v1", "declared_source_authority": "PORTAL", "source_verification_state": "UNAVAILABLE", "summary": "Portal clean dry-run evidence reference.", "captured_at": "2026-08-23T12:08:00.000Z", "attached_by_user_id": "usr_fixture_admin", "created_at": "2026-08-23T12:08:00.000Z" }
+      ]
+    },
+    "annotations": { "total_count": 0, "returned_count": 0, "truncated": false, "rows": [] },
+    "timeline": { "total_count": 0, "returned_count": 0, "truncated": false, "rows": [] },
+    "resolution_gate": { "eligible": false, "blocker_codes": ["INCIDENT_ALREADY_RESOLVED"], "clean_dry_run_evidence_present": true, "reason_required": true, "deployment_resume_requested": false }
+  }
+}

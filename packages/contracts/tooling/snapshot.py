@@ -52,6 +52,8 @@ TRACKED = (
     "fixtures/execution-command-relay-denied.valid.json",
     "fixtures/execution-operations-queue.valid.json",
     "fixtures/execution-operation-workflow.valid.json",
+    "fixtures/execution-incident-detail.open.valid.json",
+    "fixtures/execution-incident-workflow.resolved.valid.json",
     "generated/portal-api.d.ts",
     "generated/execution-analytics.d.ts",
     "generated/execution-governance.d.ts",

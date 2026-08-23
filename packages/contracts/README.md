@@ -42,6 +42,13 @@ and no source request or outbox command is created. `TypedCondition` is the
 canonical multi-condition shape; a singular governance condition is accepted
 only as a deprecated transition alias.
 
+EX-BE-05b/F1a and F1b add the Portal-owned Operations Queue and Incident Detail
+surfaces to the same contract. Incident responses keep four Execution source
+panels explicitly unavailable, bound all history collections to 250 rows and
+guarantee `source_side_effect_requested=false` plus
+`deployment_resume_requested=false`. Evidence is hash-only metadata; no raw
+artifact body or Trading System payload belongs in these schemas.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields

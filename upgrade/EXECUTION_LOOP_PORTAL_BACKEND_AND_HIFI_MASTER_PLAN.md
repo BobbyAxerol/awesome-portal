@@ -1005,13 +1005,7 @@ Statuses use the architecture vocabulary, never bare `COMPLETE`:
 | 5 Paper Exit Review | server evaluates observation exit evidence | exit-review read + canonical plan/apply/poll decision | Portal record; DERIVED with source-attributed inputs; grant-only promotion | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | PRE-IAM-02; Claude HTTP/eligibility mapping; later source activation | fresh PG 129/129, contract 20/20, deterministic missing/partial/stale/unavailable/error, immutable audit/outbox/grant and no execution command |
 | 6 Admin Action Drawer | generic safe plan→apply→verify | scoped command catalog, blocked plan, denied apply, operation poll | Portal F0 policy record; no EXECUTION outcome authority | `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-05b/F0 revision 2 delivered; Claude consumer; live relay still needs TS command capability | 64-entry conservative owner-review catalogue, typed conditions, hash-only immutable blocked plan/no outbox, real concurrent duplicate/conflict and uncertain reconciliation tests; every command flag remains off |
 | 7 Operations Queue | scalable, typed operations triage | `GET /operations`; ack/resolve | Portal workflow record; EXECUTION result remains unavailable/immutable in F1a | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-04a/05b F1a | 182k bidirectional keyset/exact-count tests, ack-before-resolve, optimistic version/idempotency, audit/event atomicity and zero outbox |
-| 8 Incident Detail | correlated evidence and explicit incident workflow | incident detail, assign/ack/annotate/resolve | Portal workflow record; source-attributed findings | `FOUNDATION_COMPLETE` | EX-BE-05a/05b/06 | completeness badges, optimistic concurrency, evidence-required resolution and redaction tests |
-
-`EX-BE-05b/F1a` closed the Portal-owned Phase 7 queue on SGP at
-`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`. Exact-count keyset reads and
-acknowledge→resolve triage are implemented, while source status/result remain
-immutable and source integration remains unavailable. Source-backed operations
-and Incident Detail are not implied by this checkpoint.
+| 8 Incident Detail | correlated evidence and explicit incident workflow | create/detail, assign/ack/annotate/evidence/correlate/mitigate/resolve | Portal workflow record; four EXECUTION source panels explicitly unavailable in F1b | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-05b/F1b; real sources still need EX-BE-02/06/08 | 159/159 fresh-PG tests, optimistic/idempotent workflow, append-only history, evidence-required mitigation/resolution, no auto-resume/outbox and 44/44 contracts |
 | 9 Command Center | ranked snapshot plus loss-detectable realtime | command-center snapshot and SSE | mixed per row; DERIVED ranking; epoch/sequence freshness | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | PRE-IAM-03 dark snapshot; BR-EX-28 §8.1 typed `streams`/`alpha-activity`; real source activation + EX-BE-06 parity evidence | bounded snapshot, five failure states, 20k exact-observed corpus and response budget pass; source contracts, snapshot/SSE parity, overlap+jitter resnapshot, slow-consumer and auth-expiry remain |
 | 10 Sandbox Certification | auditable certification state machine | certification read/decide/promote plan | Portal record; EXECUTION/BROKER/DERIVED panels | `FOUNDATION_COMPLETE` | EX-BE-03/05a/05b; TS sandbox capabilities | state-transition/property tests, stale evidence denial, command production inactive |
 | 11 Canary Control Room | observe versioned envelope and guarded live canary | canary query/series; later protective operations | EXECUTION/BROKER/DERIVED panels; Portal envelope record | `PRODUCTION_INACTIVE` | EX-BE-00R4/03/04b/05b/06; owner live-canary gate | profile-labelled read shadow parity, envelope/rollback tests, dual approval, explicit activation decision |
@@ -1022,6 +1016,19 @@ and Incident Detail are not implied by this checkpoint.
 | 16 Portfolio 360 | scalable portfolio analytics without false totals | portfolio detail/correlation/capital ledger | EXECUTION/BROKER/DERIVED | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-03/04b/07b; EX-BE-08 activation evidence | source-backed correlation/ledger delivered; 150×150 cross-cell load remains |
 | 17 Account/Broker 360 | binding-wide exposure over full population | account detail + binding exposure | EXECUTION/BROKER/DERIVED | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | EX-BE-03/04b/07b; EX-BE-08 activation evidence | source-backed population-count exposure delivered; 500-account source parity/load remains |
 | 18 Hardening | release evidence, observability, rollback and DR | health/capabilities/metrics/admin diagnostics | all authority preserved | `OPERATIONAL_EVIDENCE_PENDING` | phases 1–17 target subset + EX-BE-08 | contract/integration/replay/load/security gates, SLO burn test, restore and rollback rehearsal |
+
+`EX-BE-05b/F1a` closed the Portal-owned Phase 7 queue on SGP at
+`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`. Exact-count keyset reads and
+acknowledge→resolve triage are implemented, while source status/result remain
+immutable and source integration remains unavailable.
+
+`EX-BE-05b/F1b` closes the Portal-owned Phase 8 Lane A backend on SGP at
+`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`. Incident identity, workflow,
+assignment, annotations, hash-only evidence and operation correlations are
+durable and audited. Findings, alerts, dead letters and trace-order remain
+typed unavailable; no source side effect or deployment resume is possible.
+Source-backed Operations and Incident Detail still require D2→D3→D4 and
+purpose-built Trading System read contracts.
 
 ### 12.3 Delivery profiles and stop gates
 

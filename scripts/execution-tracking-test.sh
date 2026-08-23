@@ -186,6 +186,9 @@ if phase6 is None or "`FOUNDATION_COMPLETE / PRODUCTION_INACTIVE`" not in phase6
 phase7 = next((line for line in t.splitlines() if line.startswith("| 7 |")), None)
 if phase7 is None or "`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`" not in phase7:
     raise SystemExit("tracker phase 7 lost the qualified F1a Operations Queue status")
+phase8 = next((line for line in t.splitlines() if line.startswith("| 8 |")), None)
+if phase8 is None or "`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`" not in phase8:
+    raise SystemExit("tracker phase 8 lost the qualified F1b Incident Detail status")
 for label, text in (
     ("master", m),
     ("tracker", t),
@@ -195,6 +198,20 @@ for label, text in (
 ):
     if "EX-BE-05b/F1a" not in text or "source" not in text.lower():
         raise SystemExit(f"{label} lost the F1a source-dark boundary")
+for label, text in (
+    ("master", m),
+    ("tracker", t),
+    ("request ledger", l),
+    ("backend README", b),
+    ("architecture guide", a),
+    ("frontend handoff", h),
+    ("unified plan", u),
+):
+    normalized = re.sub(r"\s+", " ", text)
+    if "EX-BE-05b/F1b" not in normalized or "PRODUCTION_INACTIVE" not in normalized:
+        raise SystemExit(f"{label} lost the qualified F1b Incident Detail boundary")
+    if not re.search(r"(no auto-resume|never resumes?|cannot resume|không auto-resume)", normalized, re.I):
+        raise SystemExit(f"{label} lost the F1b no-auto-resume invariant")
 for request in ("BR-EX-28 canonical command catalogue", "BR-EX-29 typed `conditions[]`"):
     row = next((line for line in l.splitlines() if request in line), None)
     if row is None or "`FOUNDATION_COMPLETE / PRODUCTION_INACTIVE`" not in row:

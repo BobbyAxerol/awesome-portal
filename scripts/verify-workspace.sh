@@ -135,6 +135,8 @@ for required in \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-command-relay-denied.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-operations-queue.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-operation-workflow.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-incident-detail.open.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-incident-workflow.resolved.valid.json" \
   "${ROOT_DIR}/packages/contracts/generated/portal-api.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-analytics.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-governance.d.ts" \
@@ -205,6 +207,7 @@ for required in \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000006_execution-operations-f0.sql" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000007_execution-operations-f0-hardening.sql" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000008_execution-operations-queue.sql" \
+  "${ROOT_DIR}/apps/control-api/migrations/1723680000009_execution-incidents.sql" \
   "${ROOT_DIR}/apps/control-api/src/id.ts" \
   "${ROOT_DIR}/apps/control-api/src/repos/workspaces.ts" \
   "${ROOT_DIR}/apps/control-api/src/repos/runs.ts" \
@@ -236,6 +239,12 @@ for required in \
   "${ROOT_DIR}/apps/control-api/src/operations/workflow.repository.ts" \
   "${ROOT_DIR}/apps/control-api/src/operations/workflow.service.ts" \
   "${ROOT_DIR}/apps/control-api/test/execution-operations.spec.ts" \
+  "${ROOT_DIR}/apps/control-api/src/operations/incident.controller.ts" \
+  "${ROOT_DIR}/apps/control-api/src/operations/incident.repository.ts" \
+  "${ROOT_DIR}/apps/control-api/src/operations/incident.service.ts" \
+  "${ROOT_DIR}/apps/control-api/test/incident-workflow.spec.ts" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_05B_F1B_INCIDENT_DETAIL.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F1B_HANDOFF.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_05B_F0_OFFLINE_OPERATIONS_FOUNDATION.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F0_HANDOFF.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_05B_F1A_OPERATIONS_QUEUE.md" \
@@ -504,6 +513,8 @@ for tracked_source in \
   packages/contracts/fixtures/execution-command-relay-denied.valid.json \
   packages/contracts/fixtures/execution-operations-queue.valid.json \
   packages/contracts/fixtures/execution-operation-workflow.valid.json \
+  packages/contracts/fixtures/execution-incident-detail.open.valid.json \
+  packages/contracts/fixtures/execution-incident-workflow.resolved.valid.json \
   packages/contracts/generated/portal-api.d.ts \
   packages/contracts/generated/execution-analytics.d.ts \
   packages/contracts/generated/execution-governance.d.ts \
@@ -572,6 +583,7 @@ for tracked_source in \
   apps/control-api/migrations/1723680000006_execution-operations-f0.sql \
   apps/control-api/migrations/1723680000007_execution-operations-f0-hardening.sql \
   apps/control-api/migrations/1723680000008_execution-operations-queue.sql \
+  apps/control-api/migrations/1723680000009_execution-incidents.sql \
   apps/control-api/src/id.ts \
   apps/control-api/src/repos/workspaces.ts \
   apps/control-api/src/repos/runs.ts \
@@ -603,10 +615,16 @@ for tracked_source in \
   apps/control-api/src/operations/workflow.repository.ts \
   apps/control-api/src/operations/workflow.service.ts \
   apps/control-api/test/execution-operations.spec.ts \
+  apps/control-api/src/operations/incident.controller.ts \
+  apps/control-api/src/operations/incident.repository.ts \
+  apps/control-api/src/operations/incident.service.ts \
+  apps/control-api/test/incident-workflow.spec.ts \
   upgrade/backend/EX_BE_05B_F0_OFFLINE_OPERATIONS_FOUNDATION.md \
   upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F0_HANDOFF.md \
   upgrade/backend/EX_BE_05B_F1A_OPERATIONS_QUEUE.md \
   upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F1A_HANDOFF.md \
+  upgrade/backend/EX_BE_05B_F1B_INCIDENT_DETAIL.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F1B_HANDOFF.md \
   upgrade/backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md \
   services/portal-execution-edge-rs/Cargo.toml \
   services/portal-execution-edge-rs/Cargo.lock \
@@ -781,6 +799,8 @@ for json_contract in \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-command-relay-denied.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-operations-queue.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-operation-workflow.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-incident-detail.open.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-incident-workflow.resolved.valid.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-analytics.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-governance.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-realtime.openapi.json" \

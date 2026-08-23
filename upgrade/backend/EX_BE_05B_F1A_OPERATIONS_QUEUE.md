@@ -89,10 +89,10 @@ SGP↔AWS latency SLO. Live cross-cell performance remains D3/D4 evidence.
 
 ## 5. Residual work
 
-F1a does not make Incident Detail source-backed. The next safe SGP slice is
-`EX-BE-05b/F1b`: Portal incident records, assignment/annotation/evidence and
-correlation to queue operations, still source-dark. Purpose-built Trading
-System routes for command journal, findings, alerts, dead letters, trace order,
+F1a does not make Incident Detail source-backed. `EX-BE-05b/F1b` subsequently
+closed Portal incident records, assignment/annotation/evidence and correlation
+to queue operations while remaining source-dark. Purpose-built Trading System
+routes for command journal, findings, alerts, dead letters, trace order,
 streams and alpha activity remain external contract blockers.
 
 D2/D3/D4 progress independently: AWS-HK hosts only the bounded Rust Edge,

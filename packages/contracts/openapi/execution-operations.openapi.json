@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Portal Execution Operations API",
-    "version": "0.3.0-f1a-operations-queue",
-    "description": "EX-BE-05b/F1a: F0 deny-by-default command planning plus a Portal-owned operations queue and ordered incident triage. Acknowledge/resolve are sidecar-only and never relay to the Trading System."
+    "version": "0.4.0-f1b-incident-detail",
+    "description": "EX-BE-05b/F1b: F0/F1a plus a Portal-owned Incident Detail workflow. Incident mutations are source-dark, evidence-gated, audited and never relay to the Trading System or resume a deployment."
   },
   "servers": [{ "url": "/" }],
   "security": [{ "portalSession": [] }],
@@ -100,6 +100,86 @@
         "parameters": [{ "name": "operation_id", "in": "path", "required": true, "schema": { "type": "string" } }],
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationResolveRequest" } } } },
         "responses": { "201": { "description": "Resolved or idempotently replayed", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationWorkflowResponse" } } } } }
+      }
+    },
+    "/api/v1/execution/operations/incidents": {
+      "post": {
+        "operationId": "createExecutionIncident",
+        "description": "ADMIN-only Portal incident creation with optional same-workspace operation correlation. No source fact or side effect is inferred.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentCreateRequest" } } } },
+        "responses": { "201": { "description": "Created or idempotently replayed Portal incident", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentWorkflowResponse" } } } } }
+      }
+    },
+    "/api/v1/execution/operations/incidents/{incident_id}": {
+      "get": {
+        "operationId": "getExecutionIncidentDetail",
+        "description": "ADMIN-only bounded incident detail. Findings, alerts, dead letters and trace-order panels remain explicitly unavailable.",
+        "parameters": [
+          { "name": "incident_id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "workspace_id", "in": "query", "required": false, "schema": { "type": "string", "minLength": 3, "maxLength": 96 } }
+        ],
+        "responses": { "200": { "description": "Portal-owned incident detail", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentDetail" } } } } }
+      }
+    },
+    "/api/v1/execution/operations/incidents/{incident_id}/acknowledge": {
+      "post": {
+        "operationId": "acknowledgeExecutionIncident",
+        "parameters": [{ "name": "incident_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentAcknowledgeRequest" } } } },
+        "responses": { "201": { "description": "Acknowledged incident", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentWorkflowResponse" } } } } }
+      }
+    },
+    "/api/v1/execution/operations/incidents/{incident_id}/assign": {
+      "post": {
+        "operationId": "assignExecutionIncident",
+        "parameters": [{ "name": "incident_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentAssignRequest" } } } },
+        "responses": { "201": { "description": "Assigned incident", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentWorkflowResponse" } } } } }
+      }
+    },
+    "/api/v1/execution/operations/incidents/{incident_id}/annotations": {
+      "post": {
+        "operationId": "annotateExecutionIncident",
+        "description": "Appends a bounded workspace note after credential-like content rejection.",
+        "parameters": [{ "name": "incident_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentAnnotateRequest" } } } },
+        "responses": { "201": { "description": "Annotated incident", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentWorkflowResponse" } } } } }
+      }
+    },
+    "/api/v1/execution/operations/incidents/{incident_id}/evidence": {
+      "post": {
+        "operationId": "attachExecutionIncidentEvidence",
+        "description": "Appends hash-only evidence metadata. Declared EXECUTION/BROKER authority remains unverified while source integration is unavailable.",
+        "parameters": [{ "name": "incident_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentEvidenceRequest" } } } },
+        "responses": { "201": { "description": "Attached incident evidence reference", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentWorkflowResponse" } } } } }
+      }
+    },
+    "/api/v1/execution/operations/incidents/{incident_id}/operations": {
+      "post": {
+        "operationId": "correlateExecutionIncidentOperation",
+        "description": "Links one existing operation from the same workspace without changing either source result.",
+        "parameters": [{ "name": "incident_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentCorrelateOperationRequest" } } } },
+        "responses": { "201": { "description": "Correlated incident operation", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentWorkflowResponse" } } } } }
+      }
+    },
+    "/api/v1/execution/operations/incidents/{incident_id}/mitigate": {
+      "post": {
+        "operationId": "mitigateExecutionIncident",
+        "description": "Moves the Portal workflow OPEN to MITIGATED only after acknowledgement, assignment and a stored mitigation-attestation hash. No source side effect is requested.",
+        "parameters": [{ "name": "incident_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentMitigateRequest" } } } },
+        "responses": { "201": { "description": "Mitigated incident workflow", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentWorkflowResponse" } } } } }
+      }
+    },
+    "/api/v1/execution/operations/incidents/{incident_id}/resolve": {
+      "post": {
+        "operationId": "resolveExecutionIncident",
+        "description": "Moves MITIGATED to RESOLVED only with a stored clean-dry-run hash and bounded reason. Resolution never resumes a deployment.",
+        "parameters": [{ "name": "incident_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentResolveRequest" } } } },
+        "responses": { "201": { "description": "Resolved incident workflow", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentWorkflowResponse" } } } } }
       }
     },
     "/api/v1/execution/operations/{operation_id}/apply": {

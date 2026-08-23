@@ -36,6 +36,8 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_hash_only_constraint: boolean;
       has_operations_queue: boolean;
       has_workflow_events: boolean;
+      has_incidents: boolean;
+      has_incident_events: boolean;
     }>(
       `SELECT
          (SELECT count(*)::integer FROM pgmigrations) AS migration_count,
@@ -51,24 +53,30 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
            WHERE conname = 'execution_command_plans_f0_payload_hash_only'
          ) AS has_hash_only_constraint,
          to_regclass('public.execution_operation_queue_items') IS NOT NULL AS has_operations_queue,
-         to_regclass('public.execution_operation_workflow_events') IS NOT NULL AS has_workflow_events`,
+         to_regclass('public.execution_operation_workflow_events') IS NOT NULL AS has_workflow_events,
+         to_regclass('public.execution_incidents') IS NOT NULL AS has_incidents,
+         to_regclass('public.execution_incident_events') IS NOT NULL AS has_incident_events`,
     );
     const row = result.rows[0];
     if (
-      row.migration_count < 9 ||
+      row.migration_count < 10 ||
       !row.has_f0 ||
       !row.has_hash_only_policy ||
       !row.has_hash_only_constraint ||
       !row.has_operations_queue ||
-      !row.has_workflow_events
+      !row.has_workflow_events ||
+      !row.has_incidents ||
+      !row.has_incident_events
     ) {
       throw new Error(
-        `Control API test migration gate did not reach EX-BE-05b/F1a ` +
+        `Control API test migration gate did not reach EX-BE-05b/F1b ` +
         `(count=${row.migration_count}, has_f0=${row.has_f0}, ` +
         `hash_only_policy=${row.has_hash_only_policy}, ` +
         `hash_only_constraint=${row.has_hash_only_constraint}, ` +
         `operations_queue=${row.has_operations_queue}, ` +
         `workflow_events=${row.has_workflow_events}, ` +
+        `incidents=${row.has_incidents}, ` +
+        `incident_events=${row.has_incident_events}, ` +
         `dir=${migrationsDir})`,
       );
     }

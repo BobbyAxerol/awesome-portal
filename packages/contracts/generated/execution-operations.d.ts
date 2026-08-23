@@ -105,6 +105,157 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/execution/operations/incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADMIN-only Portal incident creation with optional same-workspace operation correlation. No source fact or side effect is inferred. */
+        post: operations["createExecutionIncident"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/operations/incidents/{incident_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ADMIN-only bounded incident detail. Findings, alerts, dead letters and trace-order panels remain explicitly unavailable. */
+        get: operations["getExecutionIncidentDetail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/operations/incidents/{incident_id}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["acknowledgeExecutionIncident"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/operations/incidents/{incident_id}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["assignExecutionIncident"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/operations/incidents/{incident_id}/annotations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Appends a bounded workspace note after credential-like content rejection. */
+        post: operations["annotateExecutionIncident"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/operations/incidents/{incident_id}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Appends hash-only evidence metadata. Declared EXECUTION/BROKER authority remains unverified while source integration is unavailable. */
+        post: operations["attachExecutionIncidentEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/operations/incidents/{incident_id}/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Links one existing operation from the same workspace without changing either source result. */
+        post: operations["correlateExecutionIncidentOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/operations/incidents/{incident_id}/mitigate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Moves the Portal workflow OPEN to MITIGATED only after acknowledgement, assignment and a stored mitigation-attestation hash. No source side effect is requested. */
+        post: operations["mitigateExecutionIncident"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/operations/incidents/{incident_id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Moves MITIGATED to RESOLVED only with a stored clean-dry-run hash and bounded reason. Resolution never resumes a deployment. */
+        post: operations["resolveExecutionIncident"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/execution/operations/{operation_id}/apply": {
         parameters: {
             query?: never;
@@ -371,6 +522,272 @@ export interface components {
             reason: string;
             evidence_hash: components["schemas"]["Hash"];
         };
+        IncidentCreateRequest: {
+            /** @constant */
+            schema_version: "execution.incident-create-request.v1";
+            workspace_id: string;
+            request_key: string;
+            title: string;
+            summary: string;
+            /** @enum {unknown} */
+            severity: "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+            /** @enum {unknown} */
+            environment: "PAPER" | "SANDBOX" | "LIVE";
+            target: {
+                /** @enum {unknown} */
+                type: "ACCOUNT" | "BROKER_BINDING" | "DEPLOYMENT" | "ORDER" | "PORTFOLIO" | "SYSTEM";
+                id: components["schemas"]["Identifier"];
+            };
+            correlated_operation_ids: components["schemas"]["Identifier"][];
+        };
+        IncidentRecord: {
+            incident_id: components["schemas"]["Identifier"];
+            title: string;
+            summary: string;
+            /** @enum {unknown} */
+            severity: "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+            /** @enum {unknown} */
+            environment: "PAPER" | "SANDBOX" | "LIVE";
+            target: {
+                /** @enum {unknown} */
+                type: "ACCOUNT" | "BROKER_BINDING" | "DEPLOYMENT" | "ORDER" | "PORTFOLIO" | "SYSTEM";
+                id: components["schemas"]["Identifier"];
+            };
+            /** @enum {unknown} */
+            workflow_state: "OPEN" | "MITIGATED" | "RESOLVED";
+            workflow_version: number;
+            assigned_to_user_id: components["schemas"]["Identifier"] | null;
+            acknowledged_at: components["schemas"]["DateTime"] | null;
+            acknowledged_by_user_id: components["schemas"]["Identifier"] | null;
+            mitigated_at: components["schemas"]["DateTime"] | null;
+            mitigated_by_user_id: components["schemas"]["Identifier"] | null;
+            mitigation_evidence_hash: components["schemas"]["Hash"] | null;
+            resolved_at: components["schemas"]["DateTime"] | null;
+            resolved_by_user_id: components["schemas"]["Identifier"] | null;
+            resolution_reason: string | null;
+            clean_dry_run_evidence_hash: components["schemas"]["Hash"] | null;
+            opened_by_user_id: components["schemas"]["Identifier"];
+            /** @constant */
+            source_side_effect_requested: false;
+            /** @constant */
+            deployment_resume_requested: false;
+            created_at: components["schemas"]["DateTime"];
+            updated_at: components["schemas"]["DateTime"];
+        };
+        IncidentUnavailablePanel: {
+            /** @enum {unknown} */
+            panel_id: "findings" | "alerts" | "dead_letters" | "trace_order";
+            /** @constant */
+            source_authority: "EXECUTION";
+            as_of: null;
+            read_at: components["schemas"]["DateTime"];
+            source_cursor: null;
+            source_sequence: null;
+            projection_epoch: null;
+            projection_sequence: null;
+            /** @constant */
+            source_completeness: "UNKNOWN";
+            poll_interval_ms: null;
+            /** @constant */
+            panel_state: "unavailable";
+            /** @constant */
+            freshness_state: "UNKNOWN";
+            age_seconds: null;
+            lag_ms: null;
+            formula_version: null;
+            capability_snapshot_id: null;
+            /** @constant */
+            delivery_profile: "fixture";
+            /** @constant */
+            source_verification_state: "UNAVAILABLE";
+            data: null;
+            warnings: {
+                code: string;
+            }[];
+        };
+        IncidentOperationCollection: {
+            total_count: number;
+            returned_count: number;
+            truncated: boolean;
+            rows: {
+                operation_id: components["schemas"]["Identifier"];
+                /** @enum {unknown} */
+                relationship: "TRIGGERED_BY" | "MITIGATES" | "RELATED";
+                linked_by_user_id: components["schemas"]["Identifier"];
+                linked_at: components["schemas"]["DateTime"];
+                command_key: string;
+                /** @enum {unknown} */
+                severity: "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+                /** @enum {unknown} */
+                triage_state: "UNACKNOWLEDGED" | "ACKNOWLEDGED" | "RESOLVED";
+                source_status: string;
+                verification_result: string;
+                workflow_version: number;
+            }[];
+        };
+        IncidentEvidenceCollection: {
+            total_count: number;
+            returned_count: number;
+            truncated: boolean;
+            rows: {
+                evidence_id: components["schemas"]["Identifier"];
+                /** @enum {unknown} */
+                evidence_kind: "MITIGATION_ATTESTATION" | "CLEAN_DRY_RUN" | "SYNC_SNAPSHOT" | "FINDING_REFERENCE" | "BLAST_RADIUS" | "PROBABLE_CAUSE" | "OTHER";
+                sha256: components["schemas"]["Hash"];
+                schema_version: string;
+                /** @enum {unknown} */
+                declared_source_authority: "PORTAL" | "EXECUTION" | "BROKER" | "DERIVED";
+                /** @constant */
+                source_verification_state: "UNAVAILABLE";
+                summary: string;
+                captured_at: components["schemas"]["DateTime"];
+                attached_by_user_id: components["schemas"]["Identifier"];
+                created_at: components["schemas"]["DateTime"];
+            }[];
+        };
+        IncidentAnnotationCollection: {
+            total_count: number;
+            returned_count: number;
+            truncated: boolean;
+            rows: {
+                annotation_id: components["schemas"]["Identifier"];
+                author_user_id: components["schemas"]["Identifier"];
+                body: string;
+                /** @constant */
+                redaction_state: "CLEAR";
+                created_at: components["schemas"]["DateTime"];
+            }[];
+        };
+        IncidentTimelineCollection: {
+            total_count: number;
+            returned_count: number;
+            truncated: boolean;
+            rows: {
+                event_id: components["schemas"]["Identifier"];
+                actor_user_id: components["schemas"]["Identifier"];
+                /** @enum {unknown} */
+                action: "CREATE" | "ACKNOWLEDGE" | "ASSIGN" | "ANNOTATE" | "ATTACH_EVIDENCE" | "CORRELATE_OPERATION" | "MITIGATE" | "RESOLVE";
+                workflow_version_before: number;
+                workflow_version_after: number;
+                metadata: Record<string, never>;
+                created_at: components["schemas"]["DateTime"];
+            }[];
+        };
+        IncidentDetail: {
+            /** @constant */
+            schema_version: "execution.incident-detail.v1";
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            delivery_profile: "fixture";
+            /** @constant */
+            source_integration_state: "UNAVAILABLE";
+            read_at: components["schemas"]["DateTime"];
+            actor: {
+                user_id: components["schemas"]["Identifier"];
+                username: string;
+                /** @constant */
+                roles: [
+                    "ADMIN"
+                ];
+            };
+            incident: components["schemas"]["IncidentRecord"];
+            source_panels: components["schemas"]["IncidentUnavailablePanel"][];
+            correlated_operations: components["schemas"]["IncidentOperationCollection"];
+            evidence: components["schemas"]["IncidentEvidenceCollection"];
+            annotations: components["schemas"]["IncidentAnnotationCollection"];
+            timeline: components["schemas"]["IncidentTimelineCollection"];
+            resolution_gate: {
+                eligible: boolean;
+                blocker_codes: string[];
+                clean_dry_run_evidence_present: boolean;
+                /** @constant */
+                reason_required: true;
+                /** @constant */
+                deployment_resume_requested: false;
+            };
+        };
+        IncidentWorkflowResponse: {
+            /** @constant */
+            schema_version: "execution.incident-workflow.v1";
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            delivery_profile: "fixture";
+            /** @constant */
+            source_integration_state: "UNAVAILABLE";
+            /** @constant */
+            source_side_effect_requested: false;
+            /** @constant */
+            deployment_resume_requested: false;
+            replayed: boolean;
+            detail: components["schemas"]["IncidentDetail"];
+        };
+        IncidentAcknowledgeRequest: {
+            /** @constant */
+            schema_version: "execution.incident-acknowledge-request.v1";
+            workspace_id: string;
+            request_key: components["schemas"]["Identifier"];
+            expected_workflow_version: number;
+        };
+        IncidentAssignRequest: {
+            /** @constant */
+            schema_version: "execution.incident-assign-request.v1";
+            workspace_id: string;
+            request_key: components["schemas"]["Identifier"];
+            expected_workflow_version: number;
+            assignee_user_id: components["schemas"]["Identifier"];
+        };
+        IncidentAnnotateRequest: {
+            /** @constant */
+            schema_version: "execution.incident-annotate-request.v1";
+            workspace_id: string;
+            request_key: components["schemas"]["Identifier"];
+            expected_workflow_version: number;
+            body: string;
+        };
+        IncidentEvidenceRequest: {
+            /** @constant */
+            schema_version: "execution.incident-evidence-request.v1";
+            workspace_id: string;
+            request_key: components["schemas"]["Identifier"];
+            expected_workflow_version: number;
+            /** @enum {unknown} */
+            evidence_kind: "MITIGATION_ATTESTATION" | "CLEAN_DRY_RUN" | "SYNC_SNAPSHOT" | "FINDING_REFERENCE" | "BLAST_RADIUS" | "PROBABLE_CAUSE" | "OTHER";
+            sha256: components["schemas"]["Hash"];
+            evidence_schema_version: string;
+            /** @enum {unknown} */
+            declared_source_authority: "PORTAL" | "EXECUTION" | "BROKER" | "DERIVED";
+            summary: string;
+            captured_at: components["schemas"]["DateTime"];
+        };
+        IncidentCorrelateOperationRequest: {
+            /** @constant */
+            schema_version: "execution.incident-correlate-operation-request.v1";
+            workspace_id: string;
+            request_key: components["schemas"]["Identifier"];
+            expected_workflow_version: number;
+            operation_id: components["schemas"]["Identifier"];
+            /** @enum {unknown} */
+            relationship: "TRIGGERED_BY" | "MITIGATES" | "RELATED";
+        };
+        IncidentMitigateRequest: {
+            /** @constant */
+            schema_version: "execution.incident-mitigate-request.v1";
+            workspace_id: string;
+            request_key: components["schemas"]["Identifier"];
+            expected_workflow_version: number;
+            mitigation_evidence_hash: components["schemas"]["Hash"];
+        };
+        IncidentResolveRequest: {
+            /** @constant */
+            schema_version: "execution.incident-resolve-request.v1";
+            workspace_id: string;
+            request_key: components["schemas"]["Identifier"];
+            expected_workflow_version: number;
+            reason: string;
+            clean_dry_run_evidence_hash: components["schemas"]["Hash"];
+        };
         ExecutionCommandApplyRequest: {
             /** @constant */
             schema_version: "execution.command-apply-request.v1";
@@ -565,6 +982,236 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OperationWorkflowResponse"];
+                };
+            };
+        };
+    };
+    createExecutionIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncidentCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created or idempotently replayed Portal incident */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentWorkflowResponse"];
+                };
+            };
+        };
+    };
+    getExecutionIncidentDetail: {
+        parameters: {
+            query?: {
+                workspace_id?: string;
+            };
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Portal-owned incident detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentDetail"];
+                };
+            };
+        };
+    };
+    acknowledgeExecutionIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncidentAcknowledgeRequest"];
+            };
+        };
+        responses: {
+            /** @description Acknowledged incident */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentWorkflowResponse"];
+                };
+            };
+        };
+    };
+    assignExecutionIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncidentAssignRequest"];
+            };
+        };
+        responses: {
+            /** @description Assigned incident */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentWorkflowResponse"];
+                };
+            };
+        };
+    };
+    annotateExecutionIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncidentAnnotateRequest"];
+            };
+        };
+        responses: {
+            /** @description Annotated incident */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentWorkflowResponse"];
+                };
+            };
+        };
+    };
+    attachExecutionIncidentEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncidentEvidenceRequest"];
+            };
+        };
+        responses: {
+            /** @description Attached incident evidence reference */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentWorkflowResponse"];
+                };
+            };
+        };
+    };
+    correlateExecutionIncidentOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncidentCorrelateOperationRequest"];
+            };
+        };
+        responses: {
+            /** @description Correlated incident operation */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentWorkflowResponse"];
+                };
+            };
+        };
+    };
+    mitigateExecutionIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncidentMitigateRequest"];
+            };
+        };
+        responses: {
+            /** @description Mitigated incident workflow */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentWorkflowResponse"];
+                };
+            };
+        };
+    };
+    resolveExecutionIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncidentResolveRequest"];
+            };
+        };
+        responses: {
+            /** @description Resolved incident workflow */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentWorkflowResponse"];
                 };
             };
         };

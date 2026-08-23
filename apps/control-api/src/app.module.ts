@@ -32,6 +32,9 @@ import { ExecutionOperationsRepository } from "./operations/operations.repositor
 import { ExecutionOperationsService } from "./operations/operations.service";
 import { OperationsWorkflowRepository } from "./operations/workflow.repository";
 import { OperationsWorkflowService } from "./operations/workflow.service";
+import { IncidentController } from "./operations/incident.controller";
+import { IncidentRepository } from "./operations/incident.repository";
+import { IncidentService } from "./operations/incident.service";
 
 @Module({})
 export class AppModule {
@@ -48,6 +51,7 @@ export class AppModule {
         ExecutionRealtimeController,
         ExecutionAnalyticsController,
         CommandCenterController,
+        IncidentController,
       ],
       providers: [
         { provide: CONTROL_API_CONFIG, useValue: config },
@@ -86,6 +90,8 @@ export class AppModule {
         ExecutionOperationsService,
         OperationsWorkflowRepository,
         OperationsWorkflowService,
+        IncidentRepository,
+        IncidentService,
         {
           provide: ExecutionRealtimeProxy,
           useFactory: (cfg: ControlApiConfig) => ExecutionRealtimeProxy.create(cfg),

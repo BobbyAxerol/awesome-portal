@@ -921,3 +921,20 @@ the two F1a fixtures, preserving exact server counts and distinct source versus
 triage states. Do not add page numbers, browser aggregates, EventSource or any
 AWS/DB/Redis/CLI call. Exact read order and UI test matrix:
 `upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F1A_HANDOFF.md`.
+
+### 8.13 EX-BE-05b/F1b Incident Detail — Lane A can integrate (2026-08-23)
+
+Backend status is `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`. The SGP
+Control API now publishes the Portal-owned OPEN→MITIGATED→RESOLVED incident
+workflow, acknowledgement/assignment, append-only annotations and hash-only
+evidence, operation correlation and bounded exact-count timeline collections.
+Mitigation and resolution are server-gated; resolve never resumes a deployment.
+No outbox, source request or AWS-HK call exists.
+
+Claude may wire Phase 8 to the generated execution-operations declaration and
+the two F1b fixtures. Render findings, alerts, dead letters and trace-order as
+four independent unavailable panels, preserve `delivery_profile=fixture`, use
+server counts and expected workflow versions, and fail closed on typed
+conflicts. Do not invent source facts, upload evidence bodies, add auto-resume
+or activate the registry route. Exact read order and test matrix:
+`upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F1B_HANDOFF.md`.

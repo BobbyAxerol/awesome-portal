@@ -49,6 +49,6 @@ source panels and the eight unpublished `ops/*` capabilities remain blocked.
 8. narrow viewport, keyboard/focus and reduced-motion coverage;
 9. malformed/unknown schema fails closed.
 
-Claude should work on these consumer/UX tests in parallel while Codex proceeds
-with F1b Incident Detail and the separate D2 IAM/resource checkpoint.
-
+Claude should work on these consumer/UX tests in parallel with the separate
+F1b Incident Detail handoff. Codex proceeds with the D2 IAM checkpoint without
+changing either Lane A source/profile boundary.

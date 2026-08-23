@@ -133,11 +133,14 @@ delivery profiles remain `fixture`.
    keyset reads and acknowledge→resolve triage are live in contract/API tests,
    while source result fields remain immutable/unavailable and outbox stays
    empty.
-3. Claude consumes the catalogue, typed conditions and F1a queue on Lane A; it keeps the
-   eight actions visibly unavailable and does not enable a product route.
-4. Codex can implement F1b Portal Incident Detail independently of AWS, without
-   inventing any source-backed finding/alert/trace capability.
+3. `EX-BE-05b/F1b` Incident Detail is complete at
+   `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`: Portal-owned workflow,
+   evidence, annotations and operation correlation are available on SGP; four
+   Execution source panels remain typed unavailable and resolve cannot resume.
+4. Claude consumes F1a Queue and F1b Incident Detail on Lane A; it keeps the
+   eight actions and four source panels visibly unavailable and does not enable
+   a product route.
 5. Bobby/Trading System owners resolve BR-EX-24–28 source semantics and publish
    purpose-built contracts. Portal work then creates compatibility adapters,
    never Trading System implementations.
-6. D1–D4 remain owner/change-window gated and are not implied by F0/F1a.
+6. D1–D4 remain owner/change-window gated and are not implied by F0/F1a/F1b.
