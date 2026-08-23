@@ -155,7 +155,7 @@ thêm generic Redis read.
 | 3 | Gate R2 | ✅ | source activation (codex) |
 | 4 | Paper Workbench | ✅ | screen API (codex) |
 | 5 | Paper Exit | ✅ | Lane A đóng; chờ Paper source thật |
-| 6 | Admin Drawer | ✅ | A1b — catalogue để activate |
+| 6 | Admin Drawer | ✅ | catalogue canonical **đã tiêu thụ**; relay `DISABLED` phía backend |
 | 7 | Operations Queue | ⛔ | **A1a** — `command-journal`, `findings` |
 | 8 | Incident Detail | ⛔ | **A1a** — `alerts`, `dead-letters`, `trace-order` |
 | 9 | Command Center | ✅ | Lane A đóng; nguồn thật cần **A1a** |
@@ -214,13 +214,13 @@ scale. Một lệnh gọi trước đây thành công (với số bị làm trò
 | Mã | Nội dung | Mức |
 |---|---|---|
 | **BR-EX-28 §8.1** | **8 endpoint `ops` chưa tồn tại** — Portal **không** được thay bằng đọc thẳng DB/Redis | → A1a 🔴 |
-| BR-EX-28 §4 | catalogue canonical | → A1b |
+| ~~BR-EX-28 §4~~ | ~~catalogue canonical~~ | ✅ **giao rồi**, đã tiêu thụ `6da8a43` |
 | BR-EX-28 §8.2 | `allocation` còn UNCLASSIFIED | 🟠 |
 | BR-EX-24 | endpoint list order | → A2 |
 | BR-EX-26 | aggregate headroom verdict | → A3 |
 | BR-EX-27 | `sample_counts` | → A4 |
 | BR-EX-25 | funnel 5 hop vs 4 stage | 🟡 chờ trả lời |
-| BR-EX-29 | `conditions[]` thay cho một chuỗi | 🟡 |
+| ~~BR-EX-29~~ | ~~`conditions[]` thay cho một chuỗi~~ | ✅ **giao rồi**, đã tiêu thụ `6da8a43` |
 | **BR-EX-30** | **R2 response thiếu 7 trường màn R2 đang đọc** — lineage R1, grant, vai trò, passport | 🔴 mới 2026-08-22 |
 | **BR-EX-31** | **`delivery_policy` chưa có cờ ghi governance của Portal** — duyệt đang mượn cờ lệnh paper | 🟠 mới 2026-08-22 |
 
