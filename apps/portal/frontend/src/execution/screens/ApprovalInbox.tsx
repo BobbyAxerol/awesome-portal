@@ -110,6 +110,11 @@ export const INBOX_FILTERS = [
   "INBOX",
   "ALL",
   "R1",
+  // R2 was missing while the server had served this view all along
+  // (`approvalListQuery`), so an operator could filter to research gates and
+  // not to the capital gates beside them — on the one screen whose job is
+  // routing them to both. IMPLEMENTATION_PHASES phase 1 lists it explicitly.
+  "R2",
   "PAPER",
   "SANDBOX",
   "LIVE_GATES",
@@ -122,6 +127,7 @@ const FILTER_LABEL: Record<InboxFilter, string> = {
   INBOX: "Inbox",
   ALL: "All",
   R1: "Research · R1",
+  R2: "Capital · R2",
   PAPER: "Paper",
   SANDBOX: "Sandbox",
   LIVE_GATES: "Live gates",

@@ -20,8 +20,7 @@ import {
   readOperation,
   readProblem,
 } from "../adapter";
-import type { RiskTier } from "../contracts";
-import { commandBlockedReason, type DeliveryPolicy } from "../profile";
+import { commandBlockedReason, governanceWriteBlocked, type DeliveryPolicy } from "../profile";
 import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./rows";
 import {
   INSIGHT_BATCH_LIMIT,
@@ -158,10 +157,6 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
   /** R0 covers every read on this surface. */
   function readBlocked(): string | null {
     return commandBlockedReason(policy, "R0");
-  }
-
-  function commandBlocked(tier: RiskTier): string | null {
-    return commandBlockedReason(policy, tier);
   }
 
   return {
@@ -395,11 +390,12 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     },
 
     async planDecision(input) {
-      // A governance decision is a Portal workflow write. R1 is the lowest tier
-      // that covers an operational command, and planning one is gated the same
-      // way applying it is — a plan the actor could never apply is a form that
+      // A governance decision is a Portal workflow write, not a Trading System
+      // command — see `governanceWriteBlocked` for why those are different
+      // permissions and what the registry still owes. Planning is gated the
+      // same way applying is: a plan the actor could never apply is a form that
       // wastes their time.
-      const blocked = commandBlocked("R1");
+      const blocked = governanceWriteBlocked(policy);
       if (blocked) return unavailable(blocked);
 
       // `expected_approval_version` is a required positive integer. Without one
@@ -547,10 +543,15 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       applyToken: string,
       workspaceId: string,
     ): Promise<Result<ApplyReceipt>> {
-      const blocked = commandBlocked("R1");
+      const blocked = governanceWriteBlocked(policy);
       if (blocked) return unavailable(blocked);
+      // `/operations/...`, NOT `/governance/operations/...`. The controller
+      // mounts these two under the base path directly, and the extra segment
+      // made both 404 — the same defect the plan route carried, fixed there and
+      // missed here. The OpenAPI agrees:
+      // `/api/v1/execution/operations/{operation_id}/apply`.
       const response = await post(
-        `/governance/operations/${encodeURIComponent(operationId)}/apply`,
+        `/operations/${encodeURIComponent(operationId)}/apply`,
         {
           schema_version: "governance.r1-decision-apply-request.v1",
           workspace_id: workspaceId,
@@ -571,10 +572,7 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     async pollOperation(operationId: string): Promise<Result<OperationSnapshot>> {
       const blocked = readBlocked();
       if (blocked) return unavailable(blocked);
-      const response = await get(
-        `/governance/operations/${encodeURIComponent(operationId)}`,
-        signal,
-      );
+      const response = await get(`/operations/${encodeURIComponent(operationId)}`, signal);
       if (!response.ok) return problem(response);
       const body = (await response.json()) as Record<string, unknown>;
       const data = (body.data as Record<string, unknown>) ?? body;

@@ -1827,7 +1827,10 @@ describe("Approval Inbox", () => {
         filter="OVERDUE"
       />,
     );
-    expect(INBOX_FILTERS.length).toBe(8);
+    // Nine, not eight: R2 was added once the server's own view list was read
+    // (`inboxView.test.tsx` pins the two together, which is the assertion that
+    // matters — this one only guards the render).
+    expect(INBOX_FILTERS.length).toBe(9);
     expect(screen.getByRole("button", { name: "Overdue" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByRole("button", { name: "Inbox" }).getAttribute("aria-pressed")).toBe("false");
   });

@@ -852,3 +852,49 @@ Nếu một trong số đó **cố ý không publish**, xin nói rõ — fronten
 `contractFixtures.test.ts` có một gate khẳng định bảy tên này **vẫn vắng**.
 Ngày codex publish bất kỳ cái nào, test đỏ và reader thôi đoán. Đây là bản ghi
 sống của khoảng trống, không phải chấp nhận lỗi.
+
+---
+
+## BR-EX-31 — `delivery_policy` chưa có cờ cho **write của Portal**
+
+**Phát hiện:** 2026-08-22, khi làm B8 (policy Portal-governance-write riêng).
+
+### Vấn đề
+
+`portal-registry-source.v1.schema.json` publish **7** cờ trong `delivery_policy`:
+
+```
+query_enabled · projection_ingestion_enabled · sse_enabled
+paper_commands_enabled · sandbox_commands_enabled
+live_protective_commands_enabled · live_risk_increasing_commands_enabled
+```
+
+Không cờ nào mô tả **ghi governance của Portal** — duyệt, từ chối, gia hạn,
+reject. Nên frontend đang phải mượn `paper_commands_enabled`, và **sai cả hai
+chiều**:
+
+| Tình huống | Hệ quả hôm nay | Đúng ra |
+|---|---|---|
+| Workspace tắt lệnh paper | **không ghi được một quyết định nào**, dù duyệt chỉ cấp thẩm quyền và không chạy gì | ghi được |
+| Workspace bật lệnh paper | **quyết được cả live gate**, vì tier đang duyệt không liên quan tới cờ được tra | phải theo cờ riêng |
+
+Duyệt **không phải** là chạy lệnh. Duyệt cấp thẩm quyền; lệnh mới là thứ dùng
+thẩm quyền đó. Gộp hai thứ vào một cờ nghĩa là bật một cái là bật cái kia.
+
+### Xin codex
+
+Thêm vào `delivery_policy` (tên là đề xuất):
+
+```
+governance_write_enabled: boolean
+```
+
+Nếu cần chi tiết hơn theo tier đang duyệt, xin nói rõ hình dạng — frontend sẽ
+theo, miễn là nó **không** phải cờ lệnh Trading System.
+
+### Frontend đã làm gì
+
+Gom toàn bộ chỗ nhập nhằng vào **một** hàm `governanceWriteBlocked(policy)` ở
+`profile.ts`, thay vì rải `commandBlockedReason(policy, "R1")` ở từng call site.
+Thông báo cho operator nêu thẳng đây là cờ mượn và trỏ tới BR-EX-31. Ngày cờ
+thật xuất hiện, đây là **một** chỗ sửa chứ không phải một cuộc tìm kiếm.

@@ -115,8 +115,8 @@ Codex giao lane này ngày 2026-08-22 (PHASE_TRACKER §24A.2).
 | B4 | Bind extend/reject vào `can_extend_observation` / `can_reject` | 5 | ✅ |
 | B5 | Chọn plan schema + decision vocabulary cho Paper Exit | 5 | ✅ + **sửa route sai** |
 | B6 | CSRF double-submit same-origin trên mọi mutation | 1, 2, 5 | ✅ |
-| B7 | Canonical `view` param + registry activation review | 1 | ⏳ |
-| B8 | Canonical plan/apply/poll route + policy Portal-governance-write riêng | 2 | ⏳ |
+| B7 | Canonical `view` param + registry activation review | 1 | ✅ `view` vốn đã đúng; **thiếu chip R2** server vẫn phục vụ |
+| B8 | Canonical plan/apply/poll route + policy write riêng | 2 | ✅ route apply+poll **đang 404**, đã sửa; policy → **BR-EX-31** |
 | B9 | Dùng `portfolio_id`/`currency` sinh ra, bỏ default fixture | 3 | ✅ xong `8d8779a` |
 | B10 | Tiêu thụ SSE expiry/gap semantics đã publish | 9 | ⏳ **code được ngay** (C-PI04-02); chặn *activation* bởi snapshot/SSE parity + profile evidence thật |
 
@@ -138,7 +138,10 @@ backend* sang **việc của tôi**.
 Codex nói rõ: **không** gộp catalogue BR-EX-28 vào Command Center, và **không**
 thêm generic Redis read.
 
-**Đã xong:** B3–B6 (phase 5) · B11–B17 (phase 9). **Tiếp theo:** B7 (canonical `view` + registry, phase 1) → B8 (policy Portal-governance-write riêng, phase 2).
+**Đã xong:** B3–B6 (phase 5) · B11–B17 (phase 9) · B7, B8 (phase 1, 2).
+
+**Còn lại trong lane này:** chỉ **B10** — tiêu thụ SSE expiry/gap semantics. Code
+đã sẵn (C-PI04-02); chặn bởi snapshot/SSE parity, không phải bởi tôi.
 
 ---
 
@@ -219,6 +222,7 @@ scale. Một lệnh gọi trước đây thành công (với số bị làm trò
 | BR-EX-25 | funnel 5 hop vs 4 stage | 🟡 chờ trả lời |
 | BR-EX-29 | `conditions[]` thay cho một chuỗi | 🟡 |
 | **BR-EX-30** | **R2 response thiếu 7 trường màn R2 đang đọc** — lineage R1, grant, vai trò, passport | 🔴 mới 2026-08-22 |
+| **BR-EX-31** | **`delivery_policy` chưa có cờ ghi governance của Portal** — duyệt đang mượn cờ lệnh paper | 🟠 mới 2026-08-22 |
 
 BR-EX-24…29 **không** bị PRE-IAM-04 đóng; chúng chờ contract của chính chúng.
 Codex xác nhận trong §10 bước 3 rằng BR-EX-28 và BR-EX-29 nằm trong EX-BE-05b/F0.
