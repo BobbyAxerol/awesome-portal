@@ -890,3 +890,14 @@ command affordance disabled. Do not add a browser-to-AWS probe or a second
 transport. Codex will publish a new handoff only after real SGP→AWS H2/TLS1.3
 mTLS/JWT/fault evidence passes. Full backend detail:
 `upgrade/backend/EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md`.
+
+### 8.11 D4 offline authorization — no live frontend unlock (2026-08-23)
+
+Backend status is `D4_OFFLINE_AUTHORIZATION_PREPARED /
+LIVE_D4_PREDECESSOR_BLOCKED`. This adds no frontend availability. Claude may
+align fixtures with the published typed freshness/gap/error states, but must
+keep profile labelling `fixture`, EventSource closed and Paper source panels
+explicitly unavailable. The full Portal remains on SGP; only a future minimal
+Source Proxy/Rust Edge/projection boundary runs on AWS-HK. The current optional-
+key source reads and incomplete cursor/event semantics are deliberately
+rejected instead of hidden by a UI fallback.

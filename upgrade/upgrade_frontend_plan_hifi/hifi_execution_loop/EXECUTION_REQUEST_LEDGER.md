@@ -99,6 +99,19 @@ capabilities**. If a screen needs data currently discovered through either CLI
 command, the Trading System owner must publish a bounded typed endpoint for
 that use case. Portal never receives a generic DB, Redis or CLI escape hatch.
 
+### 4.4 D4 source-identity/cursor ruling
+
+Status: `D4_OFFLINE_AUTHORIZATION_PREPARED /
+LIVE_D4_PREDECESSOR_BLOCKED`.
+
+The discovered optional `X-API-Key` behavior is not accepted as a dedicated
+Paper read identity. Orders/fills/positions limit-only reads and the currently
+sparse event feed do not yet prove a complete cursor/resync source. These are
+Trading System owner contract requests, not permission for Portal to use DB,
+Redis, CLI or broker access. Until published and proven, related source work is
+`EXTERNAL_CONTRACT_PENDING`, the D4 epoch cannot leave `BUILDING`, and all
+delivery profiles remain `fixture`.
+
 ## 5. Deployment and source gates
 
 | Gate | Owner | Blocker | Status |

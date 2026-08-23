@@ -1027,6 +1027,17 @@ deep-dive → ADR → slice → evidence discipline documented above.
   `D3_OFFLINE_PREPARATION_COMPLETE / LIVE_D3_UNAUTHORIZED`; it unlocks no
   frontend or source profile. Evidence:
   [`EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md`](./backend/EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md).
+- **EX-BE-02-LIVE D4 offline authorization preparation (2026-08-23):** a
+  credential-free owner/evidence contract and tested fail-closed validator now
+  bind accepted D2/D3 predecessors, exact commit, dedicated Paper read identity,
+  route/cursor/completeness/resync digests and encrypted approved storage. The
+  current optional-key alpha reads and incomplete paging/event semantics are
+  explicitly incompatible with D4. Qualification is BUILDING-epoch-only and
+  keeps registry `fixture`, activation, Query, analytics, SSE, commands and
+  Trading System changes false. Status is
+  `D4_OFFLINE_AUTHORIZATION_PREPARED / LIVE_D4_PREDECESSOR_BLOCKED`; no source
+  route, service or network was touched. Evidence:
+  [`EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md`](./backend/EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

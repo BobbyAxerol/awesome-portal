@@ -1170,6 +1170,19 @@ Delivery therefore advances through separate stop gates:
 5. **Activation:** separate owner decision for ACTIVE cutover and
    `fixture -> shadow`; command and Live authority remain separate.
 
+### D4 offline authorization checkpoint — 2026-08-23
+
+Status: `D4_OFFLINE_AUTHORIZATION_PREPARED / LIVE_D4_PREDECESSOR_BLOCKED`.
+The full Portal remains on SGP; AWS-HK remains limited to Source Proxy, Rust
+Execution Edge and private projection storage on the existing shared host. A
+tested owner/evidence validator rejects D4 unless D2/D3 are accepted, the source
+identity is dedicated/read-only and rejects missing/wrong credentials, exact
+GET/cursor/completeness/resync contracts are digest-locked and projection
+storage is encrypted and approved. Qualification is limited to a `BUILDING`
+epoch and cannot open Query, analytics, SSE, commands, activation or the
+registry profile. The currently observed optional-key reads and incomplete
+source paging/event semantics fail this gate by design.
+
 The 2026-08-23 IAM/D1 requalification is
 `IAM_VERIFIED / D1_REVALIDATED / APPLICATION_DARK`. The live instance role
 proved the expected STS, instance, VPC, subnet, SG, EIP and effective route

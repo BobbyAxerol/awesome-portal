@@ -353,6 +353,14 @@ authority.
   latency and source-loss evidence still wait for accepted D2 plus a D3 window.
   Detail:
   [`EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md`](./EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md).
+- [EX-BE-02-LIVE D4 offline Paper-shadow authorization](./EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md)
+  — **offline authorization prepared / live predecessors blocked:** credential-
+  free owner/evidence schema, fail-closed readiness/qualification validator and
+  BUILDING-epoch-only rollback runbook. The current optional-key source reads,
+  incomplete paging/event semantics and unapproved projection storage are hard
+  blockers. D4 cannot enable Query, analytics, SSE, commands, activation or a
+  non-fixture registry profile. Status:
+  `D4_OFFLINE_AUTHORIZATION_PREPARED / LIVE_D4_PREDECESSOR_BLOCKED`.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

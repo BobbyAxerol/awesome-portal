@@ -145,6 +145,17 @@ for label, text in (
     ("architecture guide", a),
     ("frontend handoff", h),
 ):
+    normalized = re.sub(r"\s+", " ", text)
+    if "D4_OFFLINE_AUTHORIZATION_PREPARED / LIVE_D4_PREDECESSOR_BLOCKED" not in normalized:
+        raise SystemExit(f"{label} lost the D4 offline/live stop-gate")
+
+for label, text in (
+    ("master", m),
+    ("tracker", t),
+    ("backend README", b),
+    ("architecture guide", a),
+    ("frontend handoff", h),
+):
     if "full Portal" not in text or "SGP" not in text or "AWS-HK" not in text:
         raise SystemExit(f"{label} lost the SGP full-Portal/AWS-HK minimal-Edge placement")
 

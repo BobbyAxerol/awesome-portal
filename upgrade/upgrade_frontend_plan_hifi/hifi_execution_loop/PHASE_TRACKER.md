@@ -1852,3 +1852,19 @@ Bobby đã chốt **phương án B** cho catalogue phase 6: 7 action chỉ chạ
 Postgres/Redis trực tiếp **sẽ được mở HTTP, ưu tiên ngay**. Nghĩa là phase 6
 không còn chờ quyết định — nó chờ codex mở endpoint. Request ở
 `HOTFIX_REQUEST_2026-08-22.md`.
+
+## 27. D4 Paper-shadow offline authorization checkpoint — 2026-08-23
+
+Backend status: `D4_OFFLINE_AUTHORIZATION_PREPARED /
+LIVE_D4_PREDECESSOR_BLOCKED`.
+
+- Full Portal/Control API/browser ingress remains on SGP; AWS-HK receives only
+  the minimal Source Proxy + Rust Edge + private projection boundary.
+- D4 cannot begin until D2 dark and D3 transport are accepted, dedicated Paper
+  read identity rejects missing/wrong credentials, exact GET/cursor/
+  completeness/resync contracts are published and encrypted projection storage
+  is approved.
+- Any future D4 epoch remains `BUILDING`; registry stays `fixture`; Query,
+  analytics, SSE, commands and activation remain off.
+- Claude may consume typed offline fixtures and error/gap codes only. It must
+  not label Paper data live or open EventSource based on this checkpoint.

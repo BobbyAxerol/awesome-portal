@@ -283,6 +283,8 @@ for required in \
   "${ROOT_DIR}/scripts/execution-d3-render-probe-env.sh" \
   "${ROOT_DIR}/scripts/execution-d3-live-probe.sh" \
   "${ROOT_DIR}/scripts/execution-d3-test.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-authorization.py" \
+  "${ROOT_DIR}/scripts/test_execution_d4_authorization.py" \
   "${ROOT_DIR}/scripts/execution-image-publication-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/.github/workflows/publish-images.yml" \
@@ -306,6 +308,10 @@ for required in \
   "${ROOT_DIR}/deploy/execution-d3/README.md" \
   "${ROOT_DIR}/deploy/execution-d3/compose.probes.yaml" \
   "${ROOT_DIR}/deploy/runbooks/execution-d3-contract-auth-probes-and-rollback.md" \
+  "${ROOT_DIR}/deploy/execution-d4/README.md" \
+  "${ROOT_DIR}/deploy/execution-d4/owner-input.env.example" \
+  "${ROOT_DIR}/deploy/runbooks/execution-d4-paper-shadow-and-rollback.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md" \
@@ -630,6 +636,8 @@ for tracked_source in \
   scripts/execution-d3-render-probe-env.sh \
   scripts/execution-d3-live-probe.sh \
   scripts/execution-d3-test.sh \
+  scripts/execution-d4-authorization.py \
+  scripts/test_execution_d4_authorization.py \
   scripts/execution-image-publication-test.sh \
   scripts/execution-tracking-test.sh \
   .github/workflows/publish-images.yml \
@@ -653,6 +661,10 @@ for tracked_source in \
   deploy/execution-d3/README.md \
   deploy/execution-d3/compose.probes.yaml \
   deploy/runbooks/execution-d3-contract-auth-probes-and-rollback.md \
+  deploy/execution-d4/README.md \
+  deploy/execution-d4/owner-input.env.example \
+  deploy/runbooks/execution-d4-paper-shadow-and-rollback.md \
+  upgrade/backend/EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md \
   upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md \
   upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md \
   upgrade/backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md \
@@ -812,11 +824,14 @@ python3 -m py_compile \
   "${ROOT_DIR}/scripts/execution-d2-authorization.py" \
   "${ROOT_DIR}/scripts/test_execution_d2_authorization.py" \
   "${ROOT_DIR}/scripts/execution-d2-isolation.py" \
-  "${ROOT_DIR}/scripts/test_execution_d2_isolation.py"
+  "${ROOT_DIR}/scripts/test_execution_d2_isolation.py" \
+  "${ROOT_DIR}/scripts/execution-d4-authorization.py" \
+  "${ROOT_DIR}/scripts/test_execution_d4_authorization.py"
 python3 "${ROOT_DIR}/scripts/test_execution_iam_verify.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_authorization.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_isolation.py"
+python3 "${ROOT_DIR}/scripts/test_execution_d4_authorization.py"
 
 while IFS= read -r tracked_path; do
   case "${tracked_path}" in
