@@ -503,13 +503,15 @@
   --radius-lg: 0;
   --radius-pill: 0;
 
-  /* Mono-forward typography (DS §7). No serif on this surface: --font-display
-   * resolves to the sans face so a shared component that reaches for it does
-   * not reintroduce Newsreader. IBM Plex falls back to the faces already
-   * bundled until the fontsource packages are added. */
-  --font-display: "IBM Plex Sans", "Inter", system-ui, sans-serif;
-  --font-body: "IBM Plex Sans", "Inter", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace;
+  /* Two families, and only the two the repository bundles (EL-V2-02, §5.1
+   * path 2). IBM Plex used to be declared first here with these as fallbacks —
+   * a claim the build never honoured, since Plex was never loaded, so the
+   * "Carbon typography" was silently Inter/JetBrains all along. The claim now
+   * matches the bytes. No serif on this surface: --font-display is the sans,
+   * so a shared component that reads it does not reintroduce Newsreader. */
+  --font-display: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   color-scheme: dark;
 }

@@ -65,6 +65,7 @@ const GROUPS = [
   "profilebadge-registry-revision-4",
   "profile-reconciliation-fail-closed",
   "keysettable-mechanism-m1",
+  "v2-anatomy-paper-demo",
   "live-full-operations-1f",
   "sandbox-certification-1d",
   "canary-control-room-1e",

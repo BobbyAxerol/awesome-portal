@@ -118,12 +118,17 @@ test("every control shows where the keyboard is", async ({ page }) => {
         "[data-group] button:not([disabled]), [data-group] [role='button'], [data-group] [role='tab'], [data-group] input:not([disabled]), [data-group] select:not([disabled]), [data-group] a[href]",
       ),
     ];
+    // Controls inside a CLOSED <details> are not focusable until the user
+    // opens it — the browser refuses the focus() call, so the style cannot
+    // change. They are reachable, just not yet; skipping them is honest,
+    // asserting on them is a false alarm.
+    const reachable = controls.filter((n) => !n.closest("details:not([open])"));
     const style = (n: HTMLElement) => {
       const s = getComputedStyle(n);
       return `${s.outlineWidth}|${s.outlineStyle}|${s.outlineColor}|${s.boxShadow}|${s.backgroundColor}|${s.borderColor}|${s.color}`;
     };
     const invisible: string[] = [];
-    for (const n of controls) {
+    for (const n of reachable) {
       const before = style(n);
       n.focus();
       // Compared against the element's own resting style rather than looking

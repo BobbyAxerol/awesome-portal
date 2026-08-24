@@ -19,7 +19,7 @@ Kế hoạch chi tiết từng phase: các khối **Claude supplement** trong ch
 |---|---|---|---|---|
 | EL-V2-00 | Re-baseline + ledger 18 HiFi + truth in tracking | **hoàn tất 2026-08-24, chờ Bobby duyệt gate** | ledger 0 unknown ✓; "screen built" reframed ✓ | ledger 118 dòng + 16 before-shots + danh sách 8 assertion lỗi thời (cuối file) |
 | EL-V2-01 | Một workspace Carbon theo route | **hoàn tất 2026-08-24, chờ Bobby duyệt gate** | seam probe đo trên route thật ✓ · 0 assertion Governance-Light ✓ · QuantBT 101 pass **không sinh lại** ✓ | `presentation.tsx` + themeWriter + 2 commit (276dd5a + teardown); 16 after-shots `el-v2-01-after/`; leak check: đúng 5 nhóm governance × 2 khổ đổi baseline, 70 ảnh khác byte-identical |
-| EL-V2-02 | Typography ngữ nghĩa + primitive workspace | `QUEUED` | 2 font; thang vai trò khoá; anatomy tái dùng | — |
+| EL-V2-02 | Typography ngữ nghĩa + primitive workspace | **hoàn tất 2026-08-24, chờ Bobby duyệt gate** | 2 font (Inter+JetBrains, Plex claim gỡ) ✓ · thang §5.2 khoá bằng test đọc stylesheet + probe render 5 khổ ✓ · 7 primitive có fixture+test ✓ · **0 clip** mọi khổ (kể cả 390, allowance cũ bỏ) ✓ · sparse không phóng chữ ✓ | `typeRoles.test.ts` + `workspace.test.tsx` (25 test); `execution.css` 151+201 literal → 0; audit 5 khổ; QuantBT 101 không sinh lại; fixtures 82 ảnh sinh lại (thay đổi chữ mandated) + rerun byte-identical; reuse report cuối file |
 | EL-V2-03 | Preview có state, zero no-op | `QUEUED` | mọi control enabled có hậu quả quan sát được | — |
 | EL-V2-04 | Paper + Paper Exit lát cắt dọc chuẩn | `QUEUED` | **Bobby duyệt hình ảnh** — bắt buộc | — |
 | EL-V2-05 | Chuỗi Governance | `QUEUED` | mọi capability có disposition; zero write bịa | — |
@@ -2398,3 +2398,52 @@ D2→D4 evidence and later delivery-profile promotion.
 - Banner một dòng EN + PREVIEW badge + selector effective + breadcrumb entity (producer-owns-cleanup).
 - Còn theo dõi sang phase sau: screenId trong banner → inspector (V2-03); breadcrumb grammar đầy đủ
   `<Cluster>/<Module>/<Entity>` khi màn thật thay preview (V2-04+).
+
+### EL-V2-02 — component responsibility & reuse report (2026-08-24)
+
+**Quyết định font (§5.1):** đường 2 — **Inter + JetBrains Mono**, hai họ đã bundle. IBM Plex từng
+được khai làm fallback và **chưa bao giờ được load**; claim đã gỡ khỏi `tokens.css`, gate cấm quay
+lại trong khai báo. Bobby chưa chốt nên tôi chọn đường zero-rủi-ro; đổi sang Plex sau = đổi 3 token
++ bundle, không đụng thang.
+
+**Thang vai trò §5.2 — nguyên văn, khoá bằng test đọc stylesheet** (`typeRoles.test.ts`):
+
+| Trước | Sau |
+|---|---|
+| 151 `font-family` + 201 `font-size` literal; **127/213 rule = mono 10px** | **0 literal** — mọi rule đi qua `font: var(--exec-font-<role>)`; 12 vai |
+| uppercase rải khắp | chỉ vai `th` được uppercase |
+| `--text-2xs` = 10px cho chữ load-bearing | 10px chỉ còn ở `caption` **trong `<details>`** — probe e2e ép ở 5 khổ |
+
+Phân vai tự động 209 rule bằng bộ phân loại theo tên class + bảng ghi đè tay 20 mục; kết quả:
+meta 82 · body 48 · th 15 · section 14 · num 13 · data 10 · control 10 · title 8 · kpi 7 · term 2.
+
+**Bảy primitive (§6) — `components/workspace.tsx`, mỗi cái có fixture + test:**
+
+| Primitive | Trách nhiệm | Tái dùng từ | Test |
+|---|---|---|---|
+| `ExecutionWorkspace` | khung: max 1440 centered; canvas+rail grid ≥1280; layout sparse/balanced/dense | grid rules WF 4f | fixture 3 layout |
+| `ExecutionPageHeader` | masthead §6.1: tên + id ngắn + **4 badge tách trục** + 1 câu purpose + 1 CTA | `exec-chip` | axes tách, vai title |
+| `ExecutionDecisionStrip` | KPI strip auto-fit minmax(160,1fr); null → "not published", không bao giờ 0 | quy tắc `not-published` sẵn có | null không thành số |
+| `ExecutionTabs` | tablist/tab/tabpanel; hash `#key=tab`; phím mũi tên wrap; count chỉ khi có | `useId` (V2-01 fix) | switch+aria+hash+deep-link+keyboard |
+| `ExecutionContextRail` | thứ tự cố định next→blockers→freshness→alerts→provenance; blocker **có tên** | — | thứ tự + tên |
+| `ExecutionProvenanceDrawer` | digest head-6/tail-2, full chỉ khi Copy | — | không in full mặc định; copy đúng full |
+| `ExecutionTerminal` | §9.2: toolbar sticky, 4 cột ổn định, follow/pause, copy selected/full, export, clear-local, typed GAP/RECONNECT rows, 220–320px expand, **202 ≠ success** | `decision.ts` verdict vocab | 202 không thành VERIFIED; severity text+icon; handlers |
+
+**Nguyên tắc V2-03 áp sớm:** `onChange`/`onCopy`/… là prop **bắt buộc** — có test `@ts-expect-error`
+chứng minh tab strip thiếu handler không compile.
+
+**Typography primitives (§5.3) — `components/typography.tsx`:** `ExecutionPageTitle`,
+`ExecutionSectionTitle`, `ExecutionMeta`, `ExecutionDataValue`, `ExecutionEvidenceCaption` (10px duy
+nhất, và chỉ vì nó expand). Doc-comment ghi phương pháp §11.8 (4 bước) — đúng yêu cầu "formalize as
+component documentation".
+
+**Pilot màn thật:** đúng một chỗ — head Command Center dùng vai `title`. 17 màn còn lại **chưa** đổi
+anatomy (theo lệnh "do not mass-restyle"); riêng **lớp chữ** của chúng đổi vì rule CSS đi qua vai —
+đó là việc V2-02 tự khai ("remove screen-local type improvisation"), không phải tôi lấn phase.
+
+**Fixture bằng chứng:** group `v2-anatomy-paper-demo` — bảy primitive ghép trên cast Paper ở **ba
+layout**, cùng một thang chữ (title 24px ở cả sparse lẫn dense — assert được).
+
+**Gate bổ sung đã dựng:** audit e2e thêm khổ **1440** (đủ 390/834/1280/1440/1728) + probe "mọi phần
+tử chữ ∈ thang §5.2, 10px chỉ trong details, không load-bearing <11px" — đo trên trang render, không
+phải trên stylesheet.

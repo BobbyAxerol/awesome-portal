@@ -28,6 +28,7 @@ import {
 } from "./components/badges";
 import { ChartTile } from "./components/chart";
 import { CommandPlanDrawer } from "./components/drawer";
+import { AnatomyDemo } from "./components/anatomyDemo";
 import { EvidencePanel, SlaCell } from "./components/evidence";
 import { GuardBand, LifecycleRail, ObservationProgress, stageRail } from "./components/lifecycle";
 import { VenueIdentity, VenueScope } from "./components/scope";
@@ -1030,7 +1031,7 @@ export default function ExecutionFixtures() {
         >
           <div className="exec-fixtures-grid">
             <Case caption="no plan yet — apply blocked, reasons listed">
-              <CommandPlanDrawer
+              <CommandPlanDrawer requestKey="rk_fixture_01"
                 title="Allocate capital"
                 meta="PF-MAIN → Carry v3.2 · dep_77 · OKX TESTNET"
                 step="plan"
@@ -1038,7 +1039,7 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="planned — reason still required">
-              <CommandPlanDrawer
+              <CommandPlanDrawer requestKey="rk_fixture_02"
                 title="Allocate capital"
                 meta="PF-MAIN → Carry v3.2 · dep_77 · OKX TESTNET"
                 step="apply"
@@ -1056,7 +1057,7 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="verify — 202 first, PARTIAL never green">
-              <CommandPlanDrawer
+              <CommandPlanDrawer requestKey="rk_fixture_03"
                 title="Allocate capital"
                 step="verify"
                 plan={{
@@ -1074,7 +1075,7 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="destructive — typed confirmation, danger styling">
-              <CommandPlanDrawer
+              <CommandPlanDrawer requestKey="rk_fixture_04"
                 title="Emergency close all positions"
                 meta="acct-live-grid-v21 · BINANCE"
                 step="plan"
@@ -1530,7 +1531,7 @@ export default function ExecutionFixtures() {
         >
           <div className="exec-fixtures-stack">
             <Case caption="R3 protective — policy allows it; step-up outstanding">
-              <CommandPlanDrawer
+              <CommandPlanDrawer requestKey="rk_fixture_05"
                 title="Halt deployment"
                 meta="dep_94 · BINANCE · live"
                 step="apply"
@@ -1541,7 +1542,7 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="R4 risk-increasing — security key and a second person">
-              <CommandPlanDrawer
+              <CommandPlanDrawer requestKey="rk_fixture_06"
                 title="Expand capital envelope"
                 meta="pf_alpha_core · +40% notional"
                 step="apply"
@@ -1555,7 +1556,7 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="R1 on a fixture screen — the registry has it switched off">
-              <CommandPlanDrawer
+              <CommandPlanDrawer requestKey="rk_fixture_07"
                 title="Flatten paper position"
                 meta="dep_88 · paper"
                 step="apply"
@@ -1693,6 +1694,14 @@ export default function ExecutionFixtures() {
           the Phase 0 exit gate is "every shared Execution component in every
           state" precisely so that cannot happen.
         */}
+        <Group
+          id="v2-anatomy-paper-demo"
+          title="V2 anatomy — the shared page skeleton on Paper data"
+          note="EL-V2-02 reference: workspace · masthead · decision strip · tabs · context rail · provenance · bounded terminal. Sparse/balanced/dense are layouts, not font sizes — the type ramp is identical in all three."
+        >
+          <AnatomyDemo />
+        </Group>
+
         <Group
           id="live-full-operations-1f"
           title="Live Full Operations (1f)"

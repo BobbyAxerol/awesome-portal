@@ -239,7 +239,10 @@ export function CommandCenterScreen({
   return (
     <ExecutionSurface kind="deployments" className="exec-cc">
       <header className="exec-cc-head">
-        <h1>
+        {/* EL-V2-02 pilot: the one screen migrated to a type role before the
+            anatomy migration in EL-V2-04. Page identity is sans 24/32 — the
+            first thing on the surface that is not 10px monospace. */}
+        <h1 className="exec-role-title exec-page-title">
           {snapshot.actorName ? `Good morning, ${snapshot.actorName}` : "Command Center"}
           {critical > 0 ? <span className="exec-cc-critical">{critical} CRITICAL</span> : null}
         </h1>
