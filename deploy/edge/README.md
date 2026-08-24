@@ -1,4 +1,4 @@
-# Edge deploy runbook — portal.primusspark.com (U06)
+# Edge deploy runbook — stable and dev release channels (U06)
 
 > Owner-operational steps. This directory contains **templates only**;
 > credentials, certs and real values never enter the repository.
@@ -10,12 +10,22 @@
   24 h, hostname `portal.primusspark.com`, và **không** có `Bypass/Everyone`.
 - Named tunnel created in Zero Trust → note `<TUNNEL_UUID>` + the
   credentials JSON.
+- `portal.primusspark.com` always routes to the stable/main release runtime on
+  loopback port `18081`.
+- `dev.portal.primusspark.com` routes to the disposable dev runtime on loopback
+  port `8080`. It has no Access application, but the Portal local login remains
+  mandatory and its Compose project/database namespace must stay separate.
 
 ## 1. DNS record (Cloudflare dashboard)
 
 ```text
 Type:  CNAME
 Name:  portal
+Target: <TUNNEL_UUID>.cfargotunnel.com
+Proxy: enabled (orange cloud)
+
+Type:  CNAME
+Name:  dev.portal
 Target: <TUNNEL_UUID>.cfargotunnel.com
 Proxy: enabled (orange cloud)
 ```
@@ -32,6 +42,7 @@ sudo chmod 0640 /etc/cloudflared/<TUNNEL_UUID>.json
 
 sudo cloudflared --config /etc/cloudflared/config.yml tunnel ingress validate
 sudo cloudflared --config /etc/cloudflared/config.yml tunnel ingress rule https://portal.primusspark.com
+sudo cloudflared --config /etc/cloudflared/config.yml tunnel ingress rule https://dev.portal.primusspark.com
 sudo systemctl restart cloudflared
 ```
 
@@ -46,7 +57,10 @@ sudo cp deploy/nginx/portal-loopback.conf /etc/nginx/conf.d/
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-Portal binds `127.0.0.1:8080` (loopback only).
+Stable binds `127.0.0.1:18081`; dev binds `127.0.0.1:8080`. Both remain
+loopback-only. Never reuse the stable PostgreSQL, planning or artifact volume
+from the dev Compose project. If representative dev data is needed, restore a
+one-way sanitized snapshot into the dev-owned volumes.
 
 ## 4. Firewall
 
