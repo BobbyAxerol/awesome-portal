@@ -406,10 +406,12 @@ backend-only and unlocks no Claude consumer.
 The D2 release candidate is now `D2_RELEASE_CANDIDATE_REMEDIATED /
 LIVE_D2_UNAUTHORIZED`. Main CI caught a Python 3.12 patch drift and image
 publication rejected four CRITICAL findings in unused Debian-slim packages.
-Backend pinned Python 3.12.14 across CI/runtime/BAR-05 and moved the Rust Edge
-to pinned shell-less Distroless; full Python and D2 runtime gates plus a
-zero-CRITICAL local scan pass. IAM and signed-main evidence are still closed,
-so Claude must keep every live source/query/stream/command consumer off.
+Backend pinned Python 3.12.14 across CI/runtime/BAR-05, moved the Rust Edge to
+pinned shell-less Distroless and pinned Source Proxy to official NGINX 1.31.4 /
+Alpine 3.24 slim after the first republish caught two fixed OpenSSL findings.
+Full Python and D2 runtime gates plus zero-CRITICAL scans now pass. IAM and
+signed-main evidence are still closed, so Claude must keep every live
+source/query/stream/command consumer off.
 Evidence:
 [`EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md`](../../backend/EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md).
 

@@ -14,6 +14,8 @@ failures before any AWS-HK deployment:
 2. The Rust Execution Edge binary needed only glibc, libm and libgcc, but its
    Debian-slim runtime carried unused `perl-base` and `zlib` packages. Trivy
    rejected four CRITICAL findings before signing.
+3. The first remediated main publication then exposed two fixed OpenSSL
+   CRITICAL findings in the old Source Proxy base before signing.
 
 The candidate now pins Python 3.12.14 in CI, the BAR-05 report and both Python
 runtime images. The Python image is also pinned by digest, and a regression test
@@ -26,6 +28,11 @@ by the compiled Rust binary. The D2 harness no longer assumes a shell inside
 the Edge image; fixture staging uses the isolated PostgreSQL utility image and
 the real Edge still proves migration, projection-check and source-dark startup.
 
+The Source Proxy now pins official NGINX unprivileged 1.31.4 on Alpine 3.24
+slim by digest. Its exact base has 21 OS packages rather than 67 and the same
+offline Trivy CRITICAL rejection scan reports zero findings. The mTLS/TLS 1.3,
+GET-only route guards and non-root runtime contract remain unchanged.
+
 ## Evidence
 
 - exact Python 3.12.14 BAR-05 tests: 10/10;
@@ -34,6 +41,11 @@ the real Edge still proves migration, projection-check and source-dark startup.
 - pinned Python runtime tag reports Python 3.12.14;
 - fixed Edge local image: UID/GID `65532:65532`, 14,489,167 bytes;
 - Trivy CRITICAL rejection scan over the fixed image tar: 0 findings;
+- fixed Source Proxy local image:
+  `sha256:0bb04bf928bbb174ebd7ed7d8315e484b03446a5a655e84d9756ff34218967b6`,
+  UID/GID `101:101`, 5,768,982 bytes;
+- Trivy CRITICAL rejection scan over the exact fixed Source Proxy image: 0
+  findings;
 - full D2 image/PostgreSQL/migrator/source-dark integration gate: pass;
 - no AWS metadata, IAM association, network, service or Trading System state
   changed.

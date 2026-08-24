@@ -412,8 +412,11 @@ authority.
   now pin Python 3.12.14, and the shell-less Rust Edge uses pinned Distroless
   `cc-debian12:nonroot`. Python 401/401 executable tests passed (plus one
   skip), the full D2 image/PostgreSQL/source-dark gate passed and the fixed
-  Edge scan reports zero CRITICAL findings. IAM DryRun is still unauthorized,
-  so no AWS/runtime state changed and D2 remains closed. Evidence:
+  Edge scan reports zero CRITICAL findings. The first republish then caught two
+  fixed OpenSSL CRITICAL findings in the old Source Proxy base; it now pins
+  official NGINX 1.31.4 / Alpine 3.24 slim by digest and its exact offline scan
+  also reports zero CRITICAL findings. IAM DryRun is still unauthorized, so no
+  AWS/runtime state changed and D2 remains closed. Evidence:
   [`EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md`](./EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md).
 - `EX-BE-02-LIVE` **D3 offline preparation complete / live unauthorized**
   (`D3_OFFLINE_PREPARATION_COMPLETE / LIVE_D3_UNAUTHORIZED`): a

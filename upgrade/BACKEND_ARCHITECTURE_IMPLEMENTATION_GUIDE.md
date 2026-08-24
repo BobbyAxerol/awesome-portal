@@ -1032,10 +1032,12 @@ deep-dive → ADR → slice → evidence discipline documented above.
   [`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](./backend/EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
 - **EX-BE-02-LIVE D2 release-gate remediation (2026-08-24):** main CI exposed
   floating Python 3.12 patch drift, while the image publisher rejected four
-  CRITICAL findings from unused Debian-slim `perl-base`/`zlib` packages before
-  any signature or deployment. CI/BAR-05/Python images now lock 3.12.14 and
-  the Rust Edge runtime is pinned shell-less Distroless. Full Python regression,
-  D2 database/source-dark integration and a zero-CRITICAL fixed-image scan pass.
+  CRITICAL findings from unused Debian-slim `perl-base`/`zlib` packages and a
+  subsequent republish rejected two fixed OpenSSL findings in the old Source
+  Proxy base before any signature or deployment. CI/BAR-05/Python images now
+  lock 3.12.14, the Rust Edge runtime is pinned shell-less Distroless and Source
+  Proxy pins official NGINX 1.31.4 / Alpine 3.24 slim. Full Python regression,
+  D2 database/source-dark integration and zero-CRITICAL fixed-image scans pass.
   Status is `D2_RELEASE_CANDIDATE_REMEDIATED / LIVE_D2_UNAUTHORIZED`; IAM,
   main CI/signing and the live change window remain predecessors. Evidence:
   [`EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md`](./backend/EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md).

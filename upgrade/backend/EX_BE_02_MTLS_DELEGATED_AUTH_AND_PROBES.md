@@ -100,6 +100,11 @@ Debian-slim `perl-base`/`zlib` CRITICAL findings. Verified image properties:
 - read-only capable, no Linux capabilities, `no-new-privileges`;
 - unsupported command fails closed.
 
+The Source Proxy pins official NGINX unprivileged 1.31.4 on Alpine 3.24 slim
+by digest. The slim base keeps the TLS/proxy modules required by the exact
+mTLS GET-only contract, drops unused dynamic modules/packages and passes the
+same zero-CRITICAL offline image rejection scan.
+
 `deploy/compose.execution-edge.yaml` is an AWS-HK-only stack. It publishes
 8443 only on `EDGE_PRIVATE_BIND_IP`, keeps plaintext health on
 `127.0.0.1:9100` inside the container, mounts one read-only secret directory
