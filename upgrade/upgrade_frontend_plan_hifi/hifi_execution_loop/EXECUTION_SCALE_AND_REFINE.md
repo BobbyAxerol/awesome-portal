@@ -937,3 +937,15 @@ Chip vẫn **hiện** và bị **disable**, kèm lý do — chứ không xoá. C
 `operations.test.tsx` có gate khẳng định endpoint **vẫn chưa** có tham số nào
 khớp `actor|assignee|owner|user`. Ngày codex publish, test đỏ — đó là tín hiệu
 bật chip, không phải hỏng.
+
+### BR-EX-33 — operation ↔ incident reference on Operations Queue rows (2026-08-24, EL-V2-03)
+
+- **Endpoint/field cần:** `GET /operations` row: `incident_id: string | null` (và/hoặc `target.type =
+  "incident"` với `target.id`).
+- **Lý do UI:** HiFi 4e next-step "review in incident inc_44 →" và journey §8.2 #6 (Queue → Incident).
+  Không có trường này, hop Queue→Incident chỉ có thể render **disabled kèm lý do** (đang làm vậy) —
+  frontend không đoán incident từ tên account/deployment.
+- **Ảnh hưởng hiện tại:** `/execution/operations` triage panel hiện "Open incident — not published
+  (BR-EX-33)"; journey #6 đi vào incident qua Command Center (href server) thay vì từ Queue.
+- **Đề xuất schema:** thêm `incident_id` nullable vào `execution-operations.v1` row; null khi operation
+  không thuộc incident nào.

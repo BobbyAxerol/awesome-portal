@@ -11,21 +11,17 @@ import { useParams } from "react-router-dom";
 
 import { usePresentation } from "../app/presentation";
 
-import { account360 } from "./account360.fixtures";
-import { alpha360 } from "./alpha360.fixtures";
 import { createFixtureApi } from "./api/fixtureApi";
-import { BLOTTER_CROSS_FILTER, blotterPage } from "./blotter.fixtures";
 import { CC_FIXTURES } from "./commandCenter.fixtures";
 import { readCommandCenter } from "./commandCenter";
 import { ExecutionSurface, type ExecutionSurfaceKind } from "./ExecutionSurface";
-import { GATE_MET, paperWorkbench } from "./paper.fixtures";
-import { portfolio360 } from "./portfolio360.fixtures";
-import { vnmWorkbench } from "./vnm.fixtures";
-import { AccountBroker360 } from "./screens/AccountBroker360";
-import { AlphaThreeSixty } from "./screens/AlphaThreeSixty";
-import { FullBlotter } from "./screens/FullBlotter";
-import { PaperWorkbench } from "./screens/PaperWorkbench";
-import { PortfolioThreeSixty } from "./screens/PortfolioThreeSixty";
+import {
+  AccountBroker360Preview,
+  AlphaThreeSixtyPreview,
+  FullBlotterPreview,
+  PaperWorkbenchPreview,
+  PortfolioThreeSixtyPreview,
+} from "./previewControllers";
 import {
   AdminCatalogueContainer,
   ApprovalInboxContainer,
@@ -60,8 +56,7 @@ function PreviewFrame({ screenId, children }: { screenId: string; children: Reac
           previous banner was a Vietnamese paragraph (violating the UI-English
           rule §3.8) at production-warning volume; the detail it carried now
           lives in the disclosure so the default reading cost is one glance.
-          `screenId` remains here until EL-V2-03 moves it into the preview
-          inspector. */}
+          `screenId` moved into the inspector in EL-V2-03. */}
       <aside className="exec-preview-banner" role="status" data-execution-preview="fixture">
         <strong>FIXTURE PREVIEW</strong>
         <span>No live connection · Actions are simulated</span>
@@ -73,7 +68,16 @@ function PreviewFrame({ screenId, children }: { screenId: string; children: Reac
             anywhere.
           </p>
         </details>
-        <code>{screenId}</code>
+        {/* EL-V2-03 §4.3: implementation identity lives in an inspector the
+            operator opens on purpose, never in the default scan path. */}
+        <details className="exec-preview-inspector">
+          <summary>Inspector</summary>
+          <dl className="exec-preview-inspector-list">
+            <div><dt>screen</dt><dd><code data-preview-screen-id>{screenId}</code></dd></div>
+            <div><dt>delivery</dt><dd><code>fixture</code></dd></div>
+            <div><dt>build flag</dt><dd><code>VITE_EXECUTION_PREVIEW_ENABLED=true</code></dd></div>
+          </dl>
+        </details>
       </aside>
       {children}
     </ExecutionSurface>
@@ -142,10 +146,10 @@ export function ExecutionPreviewRoute({ screenId }: { screenId: string }) {
       content = <PaperExitReviewContainer api={api} reviewId={reviewId} />;
       break;
     case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN":
-      content = <PaperWorkbench {...vnmWorkbench({ deploymentId })} />;
+      content = <PaperWorkbenchPreview deploymentId={deploymentId} variant="vnm" />;
       break;
     case "EXECUTION_PAPER_WORKBENCH_SCREEN":
-      content = <PaperWorkbench {...paperWorkbench({ ...GATE_MET, deploymentId })} />;
+      content = <PaperWorkbenchPreview deploymentId={deploymentId} />;
       break;
     case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN":
       content = <SandboxCertificationContainer api={api} deploymentId={deploymentId} />;
@@ -157,27 +161,16 @@ export function ExecutionPreviewRoute({ screenId }: { screenId: string }) {
       content = <LiveFullOperationsContainer api={api} deploymentId={deploymentId} />;
       break;
     case "EXECUTION_FULL_BLOTTER_SCREEN":
-      content = (
-        <FullBlotter
-          envelope={{ authority: "EXECUTION", asOf: "2026-08-22T10:42:01Z", freshness: "OK" }}
-          page={blotterPage("FILLED")}
-          filter="FILLED"
-          crossFilter={BLOTTER_CROSS_FILTER}
-        />
-      );
+      content = <FullBlotterPreview initialFilter="FILLED" />;
       break;
     case "EXECUTION_ALPHA_360_SCREEN":
-      content = <AlphaThreeSixty {...alpha360({ alphaId: params.alphaId ?? "alpha_grid_v21" })} />;
+      content = <AlphaThreeSixtyPreview alphaId={params.alphaId ?? "av_2041"} />;
       break;
     case "EXECUTION_PORTFOLIO_360_SCREEN":
-      content = (
-        <PortfolioThreeSixty
-          {...portfolio360({ portfolioId: params.portfolioId ?? "PF-MAIN" })}
-        />
-      );
+      content = <PortfolioThreeSixtyPreview portfolioId={params.portfolioId ?? "PF-CRYPTO"} />;
       break;
     case "EXECUTION_ACCOUNT_BROKER_360_SCREEN":
-      content = <AccountBroker360 {...account360({ accountId: params.accountId ?? "acct_paper_grid_v21" })} />;
+      content = <AccountBroker360Preview accountId={params.accountId ?? "acct-live-grid-v21"} />;
       break;
     case "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN":
       content = <AdminCatalogueContainer api={api} />;

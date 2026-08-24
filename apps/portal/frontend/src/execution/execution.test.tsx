@@ -135,6 +135,7 @@ import { CommandPlanDrawer } from "./components/drawer";
 import { EvidencePanel, SlaCell } from "./components/evidence";
 import { GuardBand, ObservationProgress, stageRail } from "./components/lifecycle";
 import { CapNotice, PanelState } from "./components/states";
+import { alphaHandlers } from "./testHandlers";
 
 afterEach(cleanup);
 
@@ -1885,7 +1886,7 @@ function gate(over: Record<string, unknown> = {}) {
   const creator = (over.creator as string) ?? "Minh";
   const actor = (over.actor as string) ?? "Lan";
   return (
-    <GateR1Review
+    <GateR1Review onRequestCondition={() => undefined}
       approvalId="AP-201"
       alphaLabel="RSI v1.7"
       releaseCandidate="RC-41"
@@ -2138,7 +2139,7 @@ const CAP_ENVELOPE: Envelope = {
 
 function r2(over: Record<string, unknown> = {}) {
   return (
-    <GateR2Review
+    <GateR2Review onRequestCondition={() => undefined}
       approvalId="AP-207"
       subject="Carry v3.2 → PF-MAIN · Paper · BINANCE"
       r1Id="AP-201"
@@ -4901,19 +4902,19 @@ describe("Alpha 360° Overview shows the equity overlay it was drawn with", () =
   it("renders the equity-by-stage tile beside the contribution panel", () => {
     // An alpha in three stages at once is this screen's premise, and a reader
     // comparing paper against canary should not have to open a tab for it.
-    const { container } = render(<AlphaThreeSixty {...alpha360()} />);
+    const { container } = render(<AlphaThreeSixty {...alphaHandlers()} {...alpha360()} />);
     const grid = container.querySelector('.exec-grid-2[data-ratio="1.35"]') as HTMLElement;
     expect(within(grid).getByText("Equity by stage")).toBeTruthy();
     expect(within(grid).getByText(/Per-venue contribution/)).toBeTruthy();
   });
 
   it("names the join key, because two alphas are not comparable on one axis", () => {
-    render(<AlphaThreeSixty {...alpha360()} />);
+    render(<AlphaThreeSixty {...alphaHandlers()} {...alpha360()} />);
     expect(screen.getByText(/joined by artifact digest/)).toBeTruthy();
   });
 
   it("says unavailable rather than drawing an empty frame", () => {
-    render(<AlphaThreeSixty {...alpha360({ equity: null })} />);
+    render(<AlphaThreeSixty {...alphaHandlers()} {...alpha360({ equity: null })} />);
     expect(screen.getByText(/No equity series was published/)).toBeTruthy();
   });
 });

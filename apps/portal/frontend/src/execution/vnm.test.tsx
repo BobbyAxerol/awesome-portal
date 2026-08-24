@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { PaperWorkbench } from "./screens/PaperWorkbench";
 import { VNM_OPEN, vnmWorkbench } from "./vnm.fixtures";
 import { VN_MARKET, formatUntil, sessionState, tradingDaysBetween } from "./vnCalendar";
+import { paperHandlers } from "./testHandlers";
 
 afterEach(cleanup);
 
@@ -73,13 +74,13 @@ describe("Paper Workbench VNM — the session variant", () => {
   it("shows the session chip and the runtime chip together", () => {
     // Session state is not runtime state. The venue is shut and the deployment
     // is still ready; collapsing the two reports a healthy deployment stopped.
-    render(<PaperWorkbench {...vnmWorkbench()} />);
+    render(<PaperWorkbench {...paperHandlers()} {...vnmWorkbench()} />);
     expect(screen.getByText("SUSPENDED_BY_CALENDAR")).toBeTruthy();
     expect(screen.getByText("READY")).toBeTruthy();
   });
 
   it("explains the closure in INFO tone and says it is not STALE", () => {
-    const { container } = render(<PaperWorkbench {...vnmWorkbench()} />);
+    const { container } = render(<PaperWorkbench {...paperHandlers()} {...vnmWorkbench()} />);
     expect(screen.getByText(/paused against the venue calendar/)).toBeTruthy();
     expect(screen.getByText(/this is not STALE/)).toBeTruthy();
     // And it is the calendar banner, not the stale banner.
@@ -88,13 +89,13 @@ describe("Paper Workbench VNM — the session variant", () => {
   });
 
   it("says off-hours signals queue and risk re-validates at open", () => {
-    render(<PaperWorkbench {...vnmWorkbench()} />);
+    render(<PaperWorkbench {...paperHandlers()} {...vnmWorkbench()} />);
     expect(screen.getByText(/queue as at-open intents/)).toBeTruthy();
     expect(screen.getByText(/re-validated by risk at session open/)).toBeTruthy();
   });
 
   it("drops the closure banner once the market opens", () => {
-    const { container } = render(<PaperWorkbench {...vnmWorkbench(VNM_OPEN)} />);
+    const { container } = render(<PaperWorkbench {...paperHandlers()} {...vnmWorkbench(VNM_OPEN)} />);
     expect(container.querySelector(".exec-paper-calendar")).toBeNull();
     expect(screen.queryByText("SUSPENDED_BY_CALENDAR")).toBeNull();
   });
@@ -103,7 +104,7 @@ describe("Paper Workbench VNM — the session variant", () => {
     // ATO and ATC are not MARKET, and LO is not LIMIT: they match at the
     // auctions under rules a continuous-session type does not have, and a
     // translated word is one the venue would not recognise on a support call.
-    render(<PaperWorkbench {...vnmWorkbench()} />);
+    render(<PaperWorkbench {...paperHandlers()} {...vnmWorkbench()} />);
     expect(screen.getByText("ATO BUY")).toBeTruthy();
     expect(screen.getByText("ATC SELL")).toBeTruthy();
     expect(screen.getAllByText("LO BUY").length).toBeGreaterThan(0);
@@ -111,7 +112,7 @@ describe("Paper Workbench VNM — the session variant", () => {
   });
 
   it("counts the gate in sessions and says closures do not consume it", () => {
-    render(<PaperWorkbench {...vnmWorkbench()} />);
+    render(<PaperWorkbench {...paperHandlers()} {...vnmWorkbench()} />);
     expect(screen.getByText(/counts TRADING days/)).toBeTruthy();
     expect(screen.getByText(/21 more trading sessions/)).toBeTruthy();
   });
@@ -119,7 +120,7 @@ describe("Paper Workbench VNM — the session variant", () => {
   it("shows credential status without offering a control that does nothing", () => {
     // Renewal is Execution-side. A button here would be a promise the Portal
     // cannot keep.
-    const { container } = render(<PaperWorkbench {...vnmWorkbench()} />);
+    const { container } = render(<PaperWorkbench {...paperHandlers()} {...vnmWorkbench()} />);
     const strip = container.querySelector(".exec-paper-credential") as HTMLElement;
     expect(within(strip).getByText("DNSE-01")).toBeTruthy();
     expect(within(strip).getByText("EXPIRING")).toBeTruthy();
@@ -128,13 +129,13 @@ describe("Paper Workbench VNM — the session variant", () => {
   });
 
   it("keeps every figure in VND and never mixes a second currency", () => {
-    const { container } = render(<PaperWorkbench {...vnmWorkbench()} />);
+    const { container } = render(<PaperWorkbench {...paperHandlers()} {...vnmWorkbench()} />);
     expect(container.textContent).not.toContain("USDT");
     expect(screen.getAllByText("VND").length).toBeGreaterThan(0);
   });
 
   it("names the settlement convention the venue actually uses", () => {
-    render(<PaperWorkbench {...vnmWorkbench()} />);
+    render(<PaperWorkbench {...paperHandlers()} {...vnmWorkbench()} />);
     expect(screen.getByText(/T\+2\.5/)).toBeTruthy();
     expect(screen.getByText(/lot size/)).toBeTruthy();
   });

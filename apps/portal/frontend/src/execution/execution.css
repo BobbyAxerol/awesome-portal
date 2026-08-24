@@ -133,6 +133,13 @@
   flex-basis: 100%;
 }
 
+.exec-preview-inspector summary { cursor: pointer; color: var(--ink-mute); font: var(--exec-font-meta); }
+.exec-preview-inspector[open] { flex-basis: 100%; }
+.exec-preview-inspector-list { margin: 4px 0 0; display: flex; gap: var(--space-3); flex-wrap: wrap; }
+.exec-preview-inspector-list div { display: flex; gap: var(--space-1); }
+.exec-preview-inspector-list dt { color: var(--ink-mute); font: var(--exec-font-meta); }
+.exec-preview-inspector-list dd { margin: 0; font: var(--exec-font-meta); }
+
 .exec-preview-details p {
   font: var(--exec-font-body);
   margin: 4px 0 0;
@@ -4086,6 +4093,13 @@
  * beside another goes underneath it.
  * ------------------------------------------------------------------------ */
 @media (max-width: 900px) {
+  /* A 24px mono KPI such as "125,000 / 200,000" needs ~200px; five of them
+     auto-fitting into a tablet column squeezed each to 130px and clipped the
+     value. Wider tracks, fewer columns — the type stays the same size. */
+  .exec-alpha-kpis {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
   /* Scoped to narrow widths on purpose, after learning why the alternative is
      worse. Applied at every width, `overflow-wrap: anywhere` left the admin
      drawer's text sitting on a wrap boundary at laptop size: two identical runs
@@ -4323,3 +4337,13 @@
 .exec-term-row[data-severity="warn"] .exec-term-sev { color: var(--warn); }
 .exec-term-row[data-severity="bad"] .exec-term-sev { color: var(--bad); }
 .exec-term-empty { color: var(--ink-mute); }
+
+/* EL-V2-03 — simulated-action ledger and in-table navigation buttons. */
+.exec-sim { margin-top: var(--space-2); border-top: 1px dashed var(--line); padding-top: var(--space-1); }
+.exec-sim-live { margin: 0; color: var(--ink-soft); }
+.exec-sim-list { margin: var(--space-1) 0 0; padding-left: var(--space-3); color: var(--ink-mute); }
+/* A row or chip that navigates is a button that looks like a link — reachable
+   by keyboard, announced as a control, never a bare cell with an onClick. */
+.exec-link { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font: inherit; text-decoration: underline dotted; }
+.exec-link:hover { color: var(--accent-strong); }
+.exec-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

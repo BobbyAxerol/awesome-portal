@@ -16,6 +16,7 @@ import { IncidentDetailContainer } from "./screens/containers";
 import { blockerText, incidentRail, readIncidentDetail, INCIDENT_STATES } from "./operations";
 import { INCIDENT_OPEN_FIXTURE, INCIDENT_RESOLVED_FIXTURE } from "./operations.fixtures";
 import { createFixtureApi } from "./api/fixtureApi";
+import { MemoryRouter } from "react-router-dom";
 
 afterEach(cleanup);
 
@@ -60,12 +61,12 @@ describe("#1 — the rail is forward-only, and fails closed", () => {
     // A plausible-looking rail over an unknown state is worse than none: it
     // invites the reader to believe a transition exists.
     expect(incidentRail(null)).toEqual([]);
-    render(<IncidentDetailScreen incident={withIncident({ workflow_state: "REOPENED" })} />);
+    render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={withIncident({ workflow_state: "REOPENED" })} />);
     expect(screen.getByText(/not one this screen recognises/)).toBeTruthy();
   });
 
   it("never renders a reverse or reopen step", () => {
-    const { container } = render(<IncidentDetailScreen incident={open()} />);
+    const { container } = render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={open()} />);
     const rail = container.querySelector(".exec-inc-rail")!;
     expect(rail.textContent).not.toMatch(/reopen|revert|back/i);
     expect(screen.getByText(/forward-only · each transition audited/)).toBeTruthy();
@@ -74,14 +75,14 @@ describe("#1 — the rail is forward-only, and fails closed", () => {
 
 describe("#2 — four source panels, unavailable rather than empty", () => {
   it("renders one frame for each of the four", () => {
-    render(<IncidentDetailScreen incident={open()} />);
+    render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={open()} />);
     for (const title of ["Findings", "Alerts", "Dead letters", "Order trace"]) {
       expect(screen.getByLabelText(title), title).toBeTruthy();
     }
   });
 
   it("says the evidence is missing, not that there is none", () => {
-    render(<IncidentDetailScreen incident={open()} />);
+    render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={open()} />);
     const findings = screen.getByLabelText("Findings");
     expect(within(findings).getByText(/missing evidence, not an absence of findings/)).toBeTruthy();
   });
@@ -95,7 +96,7 @@ describe("#2 — four source panels, unavailable rather than empty", () => {
 
 describe("#3 — exact and truncated collection counts", () => {
   it("states each collection's own total", () => {
-    render(<IncidentDetailScreen incident={open()} />);
+    render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={open()} />);
     expect(screen.getByText("1 operations")).toBeTruthy();
     expect(screen.getByText("0 references")).toBeTruthy();
     expect(screen.getByText("2 events")).toBeTruthy();
@@ -106,14 +107,14 @@ describe("#3 — exact and truncated collection counts", () => {
     raw.timeline.total_count = 4180;
     raw.timeline.returned_count = 2;
     raw.timeline.truncated = true;
-    render(<IncidentDetailScreen incident={readIncidentDetail(raw)!} />);
+    render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={readIncidentDetail(raw)!} />);
     expect(screen.getByText(/showing 2 of 4180 events — the rest were not sent/)).toBeTruthy();
   });
 
   it("says a count is unpublished rather than printing zero", () => {
     const raw = JSON.parse(JSON.stringify(INCIDENT_OPEN_FIXTURE));
     delete raw.evidence.total_count;
-    render(<IncidentDetailScreen incident={readIncidentDetail(raw)!} />);
+    render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={readIncidentDetail(raw)!} />);
     expect(screen.getByText(/references count not published/)).toBeTruthy();
   });
 });
@@ -122,20 +123,20 @@ describe("#4 — ADMIN visibility", () => {
   it("offers no actions to a USER, and says why", () => {
     const raw = JSON.parse(JSON.stringify(INCIDENT_OPEN_FIXTURE));
     raw.actor.roles = ["USER"];
-    render(<IncidentDetailScreen incident={readIncidentDetail(raw)!} />);
+    render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={readIncidentDetail(raw)!} />);
     expect(screen.queryByRole("button", { name: /Mark RESOLVED/ })).toBeNull();
     expect(screen.getByText(/Admin operators only/)).toBeTruthy();
   });
 
   it("shows the port's failure rather than a blank incident", () => {
-    render(<IncidentDetailScreen incident={null} status="denied" reason="not your workspace" />);
+    render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={null} status="denied" reason="not your workspace" />);
     expect(screen.queryByRole("button", { name: /Mark RESOLVED/ })).toBeNull();
   });
 });
 
 describe("#6 — the resolution gate names which blocker, not merely that there is one", () => {
   it("lists all four in the operator's words", () => {
-    const { container } = render(<IncidentDetailScreen incident={open()} onResolve={() => {}} />);
+    const { container } = render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={open()} onResolve={() => {}} />);
     // Scoped to the footer: the header also says "no assignee", which is the
     // same fact stated for a different reason and would satisfy an unscoped
     // match without the blocker ever rendering.
@@ -147,7 +148,7 @@ describe("#6 — the resolution gate names which blocker, not merely that there 
   });
 
   it("keeps resolve disabled while the server says ineligible", () => {
-    render(<IncidentDetailScreen incident={open()} onResolve={() => {}} />);
+    render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={open()} onResolve={() => {}} />);
     expect(
       screen.getByRole("button", { name: /Mark RESOLVED/ }).hasAttribute("disabled"),
     ).toBe(true);
@@ -174,20 +175,20 @@ describe("#6 — the resolution gate names which blocker, not merely that there 
 
 describe("#10 — resolving never resumes a deployment", () => {
   it("offers no resume control anywhere on the screen", () => {
-    const { container } = render(<IncidentDetailScreen incident={open()} onResolve={() => {}} />);
+    const { container } = render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={open()} onResolve={() => {}} />);
     // Named in codex's stop gates as the affordance that must not appear.
     expect(container.textContent).not.toMatch(/\bresume\b(?!\s+is)/i);
     expect(screen.queryByRole("button", { name: /resume/i })).toBeNull();
   });
 
   it("states that resolving closes the Portal record only", () => {
-    render(<IncidentDetailScreen incident={open()} />);
+    render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={open()} />);
     expect(screen.getByText(/closes the Portal incident only/)).toBeTruthy();
     expect(screen.getByText(/never resumes a deployment/)).toBeTruthy();
   });
 
   it("says the deployment is still halted once resolved", () => {
-    render(<IncidentDetailScreen incident={withIncident({ workflow_state: "RESOLVED" })} />);
+    render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={withIncident({ workflow_state: "RESOLVED" })} />);
     expect(screen.getByText(/remains halted/)).toBeTruthy();
     expect(screen.getByText(/deliberately left to the operator/)).toBeTruthy();
   });
@@ -205,7 +206,7 @@ describe("#10 — resolving never resumes a deployment", () => {
 
 describe("evidence is a reference, never a body", () => {
   it("says so, so nobody looks for a download that does not exist", () => {
-    render(<IncidentDetailScreen incident={open()} />);
+    render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={open()} />);
     expect(screen.getByText(/never an artifact body/)).toBeTruthy();
   });
 });
@@ -214,7 +215,7 @@ describe("#9 — an annotation renders without echoing anything unsafe", () => {
   it("shows the server's redaction state rather than re-deriving one", () => {
     const raw = JSON.parse(JSON.stringify(INCIDENT_OPEN_FIXTURE));
     raw.annotations.rows[0].redaction_state = "REDACTED";
-    render(<IncidentDetailScreen incident={readIncidentDetail(raw)!} />);
+    render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={readIncidentDetail(raw)!} />);
     expect(screen.getByText(/REDACTED/)).toBeTruthy();
   });
 
@@ -227,7 +228,7 @@ describe("#9 — an annotation renders without echoing anything unsafe", () => {
 
 describe("#11 — keyboard and structure", () => {
   it("labels every panel so each can be reached directly", () => {
-    render(<IncidentDetailScreen incident={open()} />);
+    render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={open()} />);
     for (const label of ["Operations taken", "Evidence", "Annotations", "Timeline", "Incident state"]) {
       expect(screen.getByLabelText(label), label).toBeTruthy();
     }
@@ -241,17 +242,15 @@ describe("#11 — keyboard and structure", () => {
 
 describe("the container fetches through the port", () => {
   it("renders the incident", async () => {
-    render(<IncidentDetailContainer api={createFixtureApi()} incidentId="inc_fixture_44" />);
+    render(<MemoryRouter><IncidentDetailContainer api={createFixtureApi()} incidentId="inc_fixture_44" /></MemoryRouter>);
     expect(await screen.findByText(/inc_fixture_44/)).toBeTruthy();
   });
 
   it("shows the port's failure rather than an empty incident", async () => {
-    render(
-      <IncidentDetailContainer
+    render(<MemoryRouter><IncidentDetailContainer
         api={createFixtureApi({ unavailableEndpoints: ["getIncident"] })}
         incidentId="inc_fixture_44"
-      />,
-    );
+      /></MemoryRouter>);
     await waitFor(() => expect(screen.queryByLabelText("Timeline")).toBeNull());
   });
 });

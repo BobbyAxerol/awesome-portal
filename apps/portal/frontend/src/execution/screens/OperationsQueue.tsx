@@ -93,12 +93,13 @@ function QueueTableRow({
 }: {
   row: QueueRow;
   now: Date;
-  onOpen?: (row: QueueRow) => void;
+  /** Required: a row opens its plan/verify surface (Action Drawer) — never an inert row. */
+  onOpen: (row: QueueRow) => void;
 }) {
   return (
     <tr data-attention={needsAttention(row) ? "true" : undefined}>
       <th scope="row">
-        <button type="button" className="exec-linkbtn" onClick={() => onOpen?.(row)}>
+        <button type="button" className="exec-linkbtn" onClick={() => onOpen(row)}>
           {row.operationId}
         </button>
       </th>
@@ -135,7 +136,8 @@ export function OperationsQueueScreen({
   reason?: string;
   filter?: QueueFilter;
   onFilterChange?: (filter: QueueFilter) => void;
-  onOpen?: (row: QueueRow) => void;
+  /** Required: a row opens its plan/verify surface (Action Drawer) — never an inert row. */
+  onOpen: (row: QueueRow) => void;
   onLoadNext?: () => void;
   onLoadPrevious?: () => void;
   /** Injected so tests and the fixtures page control the clock. */
@@ -336,6 +338,19 @@ export function TriagePanel({
   return (
     <section className="exec-queue-triage" aria-label={`Triage ${row.operationId}`}>
       <h3>{row.operationId}</h3>
+      {/* HiFi 4e links an operation to the incident it serves ("review in
+          incident inc_44 →"). The queue contract publishes no incident_id on a
+          row, so the hop cannot be built truthfully today: it renders as an
+          unavailable control with the reason (§8.1) and BR-EX-33 asks for the
+          field. An enabled link to a guessed incident would be worse. */}
+      <button
+        type="button"
+        className="exec-linkbtn"
+        disabled
+        title="Not published: the operation contract carries no incident reference (BR-EX-33)"
+      >
+        Open incident — not published (BR-EX-33)
+      </button>
       <p className="exec-queue-note">
         source {row.sourceStatus ?? "not stated"} · verify{" "}
         {row.verificationResult ?? "not stated"} · triage{" "}

@@ -128,12 +128,12 @@ describe("no EventSource is created while the stream is dark", () => {
 
 describe("the screen reads the gate's own sentence", () => {
   it("shows the refusal rather than a phrase of its own", () => {
-    render(<CommandCenterScreen snapshot={snap("busy")} />);
+    render(<CommandCenterScreen onOpen={() => undefined} snapshot={snap("busy")} />);
     expect(screen.getByText(new RegExp(streamGate(snap("busy")).reason.slice(0, 40)))).toBeTruthy();
   });
 
   it("offers no live or connect control while dark", () => {
-    render(<CommandCenterScreen snapshot={snap("busy")} />);
+    render(<CommandCenterScreen onOpen={() => undefined} snapshot={snap("busy")} />);
     expect(screen.queryByRole("button", { name: /live|stream|connect/i })).toBeNull();
   });
 });

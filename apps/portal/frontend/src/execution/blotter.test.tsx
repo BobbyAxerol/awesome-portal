@@ -24,6 +24,7 @@ import {
 } from "./blotter.fixtures";
 import type { Envelope } from "./contracts";
 import { FullBlotter, OrderFunnelStrip, bucketOf, hopDelta } from "./screens/FullBlotter";
+import { blotterHandlers } from "./testHandlers";
 
 afterEach(cleanup);
 
@@ -35,7 +36,7 @@ const ENVELOPE: Envelope = {
 
 function blotter(over: Record<string, unknown> = {}) {
   return (
-    <FullBlotter
+    <FullBlotter {...blotterHandlers()}
       envelope={ENVELOPE}
       page={blotterPage()}
       filter="ALL"

@@ -49,7 +49,15 @@ test("all reviewed screens and sidebar roots mount fixture-only previews", async
     await page.goto(route);
     const banner = page.locator('[data-execution-preview="fixture"]');
     await expect(banner).toBeVisible();
-    await expect(banner.locator("code")).toHaveText(screenId);
+    // EL-V2-03: the screen id is inspector-only. It must be absent from the
+    // default chrome and present once the inspector is opened.
+    // Closed <details> keeps its text in the DOM, so "absent" is measured as
+    // NOT VISIBLE by default and visible once the inspector is opened.
+    await expect(banner.locator("[data-preview-screen-id]")).toBeHidden();
+    await banner.locator("details.exec-preview-inspector > summary").click();
+    await expect(banner.locator("[data-preview-screen-id]")).toBeVisible();
+    await expect(banner.locator("[data-preview-screen-id]")).toHaveText(screenId);
+    await banner.locator("details.exec-preview-inspector > summary").click();
     // EL-V2-01 rewrote the banner to the one-line English §7.2 treatment; the
     // old assertion pinned the Vietnamese paragraph it replaced.
     await expect(banner).toContainText("No live connection");

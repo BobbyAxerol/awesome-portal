@@ -73,12 +73,12 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testIgnore: ["**/execution-preview.spec.ts", "**/el-v2-evidence-shots.spec.ts"],
+      testIgnore: ["**/execution-preview.spec.ts", "**/el-v2-evidence-shots.spec.ts", "**/execution-journeys.spec.ts", "**/_probe*.spec.ts"],
       use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:4174" },
     },
     {
       name: "chromium-preview",
-      testMatch: ["**/execution-preview.spec.ts", "**/el-v2-evidence-shots.spec.ts"],
+      testMatch: ["**/execution-preview.spec.ts", "**/el-v2-evidence-shots.spec.ts", "**/execution-journeys.spec.ts", "**/_probe*.spec.ts"],
       use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:4175" },
     },
   ],

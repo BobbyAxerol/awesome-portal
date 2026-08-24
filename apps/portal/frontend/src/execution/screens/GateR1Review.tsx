@@ -184,7 +184,8 @@ export function GateR1Review({
   onAttachCondition?: (condition: TypedCondition) => void;
   onApprove?: () => void;
   onDeny?: () => void;
-  onRequestCondition?: () => void;
+  /** Required. Enabled only once a condition is attached — the decision's whole meaning is the condition. */
+  onRequestCondition: () => void;
 }) {
   // `partial` and `stale` still render the review — a reviewer can read a
   // passport whose evidence chart timed out. The rest cannot be reasoned about
@@ -370,7 +371,8 @@ export function GateR1Review({
           <button
             type="button"
             className="exec-btn-ghost"
-            disabled={conditionLocked}
+            disabled={conditionLocked || (conditions?.length ?? 0) === 0}
+            title={(conditions?.length ?? 0) === 0 ? "Attach at least one condition first — this decision carries nothing without one" : undefined}
             onClick={onRequestCondition}
           >
             Approve with condition

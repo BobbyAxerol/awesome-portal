@@ -15,6 +15,14 @@ import type {
 } from "./screens/PaperWorkbench";
 import { VN_MARKET } from "./vnCalendar";
 import { paperWorkbench } from "./paper.fixtures";
+/**
+ * Fixture DATA, not behaviour (EL-V2-03): the screen's handlers are required
+ * in its props, and a fixture factory that stubbed them would be the exact
+ * enabled-no-op this phase removes. Callers supply handlers — the preview
+ * controllers on product routes, explicit spies in tests.
+ */
+export type PaperWorkbenchData = Omit<PaperWorkbenchProps, "onRequestExit" | "onTabChange" | "onLoadOlder" | "onAdminActions">;
+
 
 const EQUITY: ChartEnvelope = {
   window: "9 sessions",
@@ -81,7 +89,7 @@ const SESSIONS: WorkbenchSession[] = [
 ];
 
 /** Outside the session: 20:14 ICT, twelve hours and change before the open. */
-export function vnmWorkbench(over: Partial<PaperWorkbenchProps> = {}): PaperWorkbenchProps {
+export function vnmWorkbench(over: Partial<PaperWorkbenchData> = {}): PaperWorkbenchData {
   return paperWorkbench({
     alphaLabel: "VnMomo v0.9",
     deploymentId: "dep_102",

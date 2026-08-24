@@ -70,7 +70,8 @@ export function IncidentDetailScreen({
   reason?: string;
   onResolve?: () => void;
   onAcknowledge?: () => void;
-  onOpenOperation?: (operationId: string) => void;
+  /** Required: an operation row opens its plan/verify surface (the Action Drawer). */
+  onOpenOperation: (operationId: string) => void;
   conflict?: boolean;
   children?: ReactNode;
 }) {
@@ -168,7 +169,7 @@ export function IncidentDetailScreen({
         <ul>
           {incident.correlatedOperations.rows.map((op) => (
             <li key={op.operationId}>
-              <button type="button" className="exec-linkbtn" onClick={() => onOpenOperation?.(op.operationId)}>
+              <button type="button" className="exec-linkbtn" onClick={() => onOpenOperation(op.operationId)}>
                 {op.operationId}
               </button>
               <span className="exec-inc-note">

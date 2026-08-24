@@ -277,7 +277,8 @@ export function GateR2Review({
   onAttachCondition?: (condition: TypedCondition) => void;
   onApprove?: () => void;
   onDeny?: () => void;
-  onRequestCondition?: () => void;
+  /** Required. Enabled only once a condition is attached — the decision's whole meaning is the condition. */
+  onRequestCondition: () => void;
 }) {
   if (status !== "ok" && status !== "partial" && status !== "stale") {
     return (
@@ -598,7 +599,8 @@ export function GateR2Review({
         <button
           type="button"
           className="exec-btn-ghost"
-          disabled={conditionLocked}
+          disabled={conditionLocked || (conditions?.length ?? 0) === 0}
+            title={(conditions?.length ?? 0) === 0 ? "Attach at least one condition first — this decision carries nothing without one" : undefined}
           onClick={onRequestCondition}
         >
           Approve with condition

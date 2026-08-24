@@ -67,14 +67,16 @@ function Panel({
   );
 }
 
-function TriageRow({ item, onOpen }: { item: TriageItem; onOpen?: (item: TriageItem) => void }) {
+function TriageRow({ item, onOpen }: { item: TriageItem; onOpen: (item: TriageItem) => void }) {
   return (
     <button
       type="button"
       className="exec-cc-row"
       data-severity={item.severity ?? undefined}
       data-sla={item.slaState ?? undefined}
-      onClick={() => onOpen?.(item)}
+      onClick={() => onOpen(item)}
+      disabled={!item.href}
+      title={item.href ? undefined : "The owning screen for this item was not published"}
     >
       {/* The server's rank, shown as given. The screen does not renumber. */}
       <span className="exec-cc-rank">{item.rank ?? "—"}</span>
@@ -94,7 +96,7 @@ export function NeedsYou({
   onOpen,
 }: {
   panel: NeedsYouPanel;
-  onOpen?: (item: TriageItem) => void;
+  onOpen: (item: TriageItem) => void;
 }) {
   return (
     <Panel
@@ -225,7 +227,7 @@ export function CommandCenterScreen({
   live,
 }: {
   snapshot: CommandCenterSnapshot;
-  onOpen?: (item: TriageItem) => void;
+  onOpen: (item: TriageItem) => void;
   /**
    * Subscription state, when a stream was opened. Absent while dark, and the
    * screen must read the same as it does today when it is.

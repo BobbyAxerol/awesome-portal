@@ -13,22 +13,11 @@
 import { useState } from "react";
 
 import { ExecutionSurface, type ExecutionSurfaceKind } from "./ExecutionSurface";
-import {
-  AuthorityBadge,
-  BrokerSyncChip,
-  CapabilityChip,
-  EnvironmentBadge,
-  FreshnessIndicator,
-  OperationStatusChip,
-  OrderStatusChip,
-  ProfileBadge,
-  RuntimeStateChip,
-  StatusChip,
-  VerificationChip,
-} from "./components/badges";
+import { AuthorityBadge, BrokerSyncChip, CapabilityChip, EnvironmentBadge, FreshnessIndicator, OperationStatusChip, OrderStatusChip, ProfileBadge, RuntimeStateChip, StatusChip, VerificationChip } from "./components/badges";
 import { ChartTile } from "./components/chart";
 import { CommandPlanDrawer } from "./components/drawer";
 import { AnatomyDemo } from "./components/anatomyDemo";
+import { AccountBroker360Preview, AlphaThreeSixtyPreview, FullBlotterPreview, PaperWorkbenchPreview, PortfolioThreeSixtyPreview } from "./previewControllers";
 import { EvidencePanel, SlaCell } from "./components/evidence";
 import { GuardBand, LifecycleRail, ObservationProgress, stageRail } from "./components/lifecycle";
 import { VenueIdentity, VenueScope } from "./components/scope";
@@ -42,26 +31,10 @@ import { INITIAL_SUBSCRIPTION, type SubscriptionState } from "./subscription";
 import { ApprovalInbox, type ApprovalRow } from "./screens/ApprovalInbox";
 import { GateR1Review } from "./screens/GateR1Review";
 import { GateR2Review } from "./screens/GateR2Review";
-import {
-  ApprovalInboxContainer,
-  GateR1ReviewContainer,
-  GateR2ReviewContainer,
-  AdminCatalogueContainer,
-  CanaryControlRoomContainer,
-  LiveFullOperationsContainer,
-  SandboxCertificationContainer,
-  IncidentDetailContainer,
-  OperationsQueueContainer,
-  AlphaInsightContainer,
-  CapitalLedgerContainer,
-  CorrelationContainer,
-  ExposureHeadroomContainer,
-  FullBlotterFunnelContainer,
-  PaperExitReviewContainer,
-} from "./screens/containers";
+import { ApprovalInboxContainer, GateR1ReviewContainer, GateR2ReviewContainer, AdminCatalogueContainer, CanaryControlRoomContainer, LiveFullOperationsContainer, SandboxCertificationContainer, IncidentDetailContainer, OperationsQueueContainer, AlphaInsightContainer, CapitalLedgerContainer, CorrelationContainer, ExposureHeadroomContainer, FullBlotterFunnelContainer, PaperExitReviewContainer } from "./screens/containers";
 import { createFixtureApi } from "./api/fixtureApi";
 import { PaperExitReview } from "./screens/PaperExitReview";
-import { FullBlotter, OrderFunnelStrip } from "./screens/FullBlotter";
+import { OrderFunnelStrip } from "./screens/FullBlotter";
 import { AdminActionDrawerScreen } from "./screens/AdminActionDrawer";
 
 /** Every Paper Exit capability granted. Absence is refusal, so cases say so. */
@@ -86,36 +59,15 @@ import { CommandCenterLive } from "./screens/containers";
 import { CC_FIXTURES } from "./commandCenter.fixtures";
 import { readCommandCenter } from "./commandCenter";
 
-import { AlphaThreeSixty } from "./screens/AlphaThreeSixty";
-import { PortfolioThreeSixty } from "./screens/PortfolioThreeSixty";
-import { AccountBroker360 } from "./screens/AccountBroker360";
-import { PaperWorkbench } from "./screens/PaperWorkbench";
-import { BLOTTER_CROSS_FILTER, blotterPage } from "./blotter.fixtures";
 import { FUNNEL_BOUNDED, FUNNEL_MISSING_BROKER_ACK } from "./analytics.presentation.fixtures";
 import { readOrderFunnel } from "./analytics";
-import { alpha360, alpha360AtScale } from "./alpha360.fixtures";
-import { CORRELATION_CEILING, portfolio360 } from "./portfolio360.fixtures";
-import { HEADROOM_EXCEEDED, PARTIAL_EXPOSURE, account360 } from "./account360.fixtures";
-import { GATE_MET, STALE, paperWorkbench } from "./paper.fixtures";
-import { VNM_OPEN, vnmWorkbench } from "./vnm.fixtures";
-import {
-  PROFILE_ORDER,
-  profileNeedsLabel,
-  reconcilePanelProfile,
-  screenDeliveryPolicy,
-} from "./profile";
-import type {
-  CapabilityState,
-  DeliveryProfile,
-  Envelope,
-  FreshnessState,
-  OperationStatus,
-  OrderStatus,
-  PanelStatus,
-  PromotionStage,
-  VenueCode,
-  VerificationResult,
-} from "./contracts";
+import { alpha360AtScale } from "./alpha360.fixtures";
+import { CORRELATION_CEILING } from "./portfolio360.fixtures";
+import { HEADROOM_EXCEEDED, PARTIAL_EXPOSURE } from "./account360.fixtures";
+import { GATE_MET, STALE } from "./paper.fixtures";
+import { VNM_OPEN } from "./vnm.fixtures";
+import { PROFILE_ORDER, profileNeedsLabel, reconcilePanelProfile, screenDeliveryPolicy } from "./profile";
+import type { CapabilityState, DeliveryProfile, Envelope, FreshnessState, OperationStatus, OrderStatus, PanelStatus, PromotionStage, VenueCode, VerificationResult } from "./contracts";
 
 /* -------------------------------------------------------------------------
  * Cast (CANONICAL_CAST.md)
@@ -1242,7 +1194,7 @@ export default function ExecutionFixtures() {
         >
           <div className="exec-fixtures-stack">
             <Case caption="separation of duty OK — one warning, no blockers, Approve available, condition composable">
-              <GateR1Review
+              <GateR1Review onRequestCondition={() => undefined}
                 onAttachCondition={() => {}}
                 approvalId="AP-201"
                 alphaLabel="RSI v1.7"
@@ -1258,7 +1210,7 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="you wrote it — Approve locked, Deny still available">
-              <GateR1Review
+              <GateR1Review onRequestCondition={() => undefined}
                 approvalId="AP-201"
                 alphaLabel="RSI v1.7"
                 releaseCandidate="RC-41"
@@ -1272,7 +1224,7 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="blocking finding plus an expired request — every lock reported, not just the first">
-              <GateR1Review
+              <GateR1Review onRequestCondition={() => undefined}
                 approvalId="AP-201"
                 alphaLabel="RSI v1.7"
                 quorumMet={0}
@@ -1290,7 +1242,7 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="already decided — a record, not a form; the controls are gone">
-              <GateR1Review
+              <GateR1Review onRequestCondition={() => undefined}
                 approvalId="AP-201"
                 alphaLabel="RSI v1.7"
                 quorumMet={2}
@@ -1304,7 +1256,7 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="unavailable — still says which gate failed to load">
-              <GateR1Review
+              <GateR1Review onRequestCondition={() => undefined}
                 approvalId="AP-201"
                 alphaLabel="RSI v1.7"
                 quorumMet={0}
@@ -1357,7 +1309,7 @@ export default function ExecutionFixtures() {
         >
           <div className="exec-fixtures-stack">
             <Case caption="R1 approved — preview marked derived, not applied">
-              <GateR2Review
+              <GateR2Review onRequestCondition={() => undefined}
                 approvalId="AP-352"
                 subject="Carry v3.2 → PF-MAIN · Sandbox · OKX TESTNET"
                 r1Id="AP-101"
@@ -1392,7 +1344,7 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="R1 expired — every operational panel still readable, Approve locked">
-              <GateR2Review
+              <GateR2Review onRequestCondition={() => undefined}
                 approvalId="AP-352"
                 subject="Carry v3.2 → PF-MAIN · Sandbox · OKX TESTNET"
                 r1Id="AP-101"
@@ -1411,7 +1363,7 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="preview without an authority envelope — refused rather than rendered bare">
-              <GateR2Review
+              <GateR2Review onRequestCondition={() => undefined}
                 approvalId="AP-352"
                 subject="Carry v3.2 → PF-MAIN"
                 r1Id="AP-101"
@@ -1868,12 +1820,7 @@ export default function ExecutionFixtures() {
           surface="deployments"
         >
           <Case caption="a page, with a chart cross-filter narrowing it">
-            <FullBlotter
-              envelope={{ authority: "EXECUTION", asOf: "2026-08-22T10:42:01Z", freshness: "OK" }}
-              page={blotterPage("FILLED")}
-              filter="FILLED"
-              crossFilter={BLOTTER_CROSS_FILTER}
-            />
+            <FullBlotterPreview initialFilter="FILLED" />
           </Case>
           <Case caption="the funnel with a broker acknowledgement nobody observed — MISSING, never inferred from the fills that followed">
             <OrderFunnelStrip funnel={readOrderFunnel(FUNNEL_MISSING_BROKER_ACK)} status="ok" />
@@ -1893,19 +1840,19 @@ export default function ExecutionFixtures() {
           surface="deployments"
         >
           <Case caption="gate unmet — the CTA names each missing criterion rather than counting them">
-            <PaperWorkbench {...paperWorkbench()} />
+            <PaperWorkbenchPreview deploymentId="dep_74" />
           </Case>
           <Case caption="gate met — the exit is reachable">
-            <PaperWorkbench {...paperWorkbench(GATE_MET)} />
+            <PaperWorkbenchPreview deploymentId="dep_74" initial={GATE_MET} />
           </Case>
           <Case caption="stale projection — last good values kept and marked, orders still authoritative in the Execution cell">
-            <PaperWorkbench {...paperWorkbench(STALE)} />
+            <PaperWorkbenchPreview deploymentId="dep_74" initial={STALE} />
           </Case>
           <Case caption="VN market closed — PAUSED, not STALE, and the banner is INFO because a shut market is not a fault">
-            <PaperWorkbench {...vnmWorkbench()} />
+            <PaperWorkbenchPreview deploymentId="dep_102" variant="vnm" />
           </Case>
           <Case caption="VN market open — the same screen with the calendar banner gone">
-            <PaperWorkbench {...vnmWorkbench(VNM_OPEN)} />
+            <PaperWorkbenchPreview deploymentId="dep_102" variant="vnm" initial={VNM_OPEN} />
           </Case>
         </Group>
 
@@ -1916,10 +1863,10 @@ export default function ExecutionFixtures() {
           surface="deployments"
         >
           <Case caption="the wireframe's cast — four venues, three deployments, three of twelve tiles unable to draw">
-            <AlphaThreeSixty {...alpha360({ tab: "Insight Charts" })} />
+            <AlphaThreeSixtyPreview alphaId="av_2041" initial={{ tab: "Insight Charts" }} />
           </Case>
           <Case caption="the runtime's cast — 22 venues, 60 deployments, and the shard that stopped publishing survives the cap">
-            <AlphaThreeSixty {...alpha360AtScale()} />
+            <AlphaThreeSixtyPreview alphaId="av_2041" initial={alpha360AtScale()} />
           </Case>
         </Group>
 
@@ -1930,15 +1877,16 @@ export default function ExecutionFixtures() {
           surface="deployments"
         >
           <Case caption="the drawn cast — a full matrix, with MM's whole row dashed because nine days is not enough history">
-            <PortfolioThreeSixty {...portfolio360({ tab: "Structure & Correlation" })} />
+            <PortfolioThreeSixtyPreview portfolioId="PF-CRYPTO" initial={{ tab: "Structure & Correlation" }} />
           </Case>
           <Case caption="150 entities — 22,500 cells nobody can lay out, so one alpha's row at a time">
-            <PortfolioThreeSixty
-              {...portfolio360({ tab: "Structure & Correlation", correlation: CORRELATION_CEILING })}
+            <PortfolioThreeSixtyPreview
+              portfolioId="PF-CRYPTO"
+              initial={{ tab: "Structure & Correlation", correlation: CORRELATION_CEILING }}
             />
           </Case>
           <Case caption="the capital ledger, bucketed by currency with the server's own direction on every entry">
-            <PortfolioThreeSixty {...portfolio360({ tab: "Capital Ledger" })} />
+            <PortfolioThreeSixtyPreview portfolioId="PF-CRYPTO" initial={{ tab: "Capital Ledger" }} />
           </Case>
         </Group>
 
@@ -1949,16 +1897,16 @@ export default function ExecutionFixtures() {
           surface="deployments"
         >
           <Case caption="within headroom, full population">
-            <AccountBroker360 {...account360()} />
+            <AccountBroker360Preview accountId="acct-live-grid-v21" />
           </Case>
           <Case caption="breached — every linked account fails closed until it clears">
-            <AccountBroker360 {...account360({ aggregate: HEADROOM_EXCEEDED })} />
+            <AccountBroker360Preview accountId="acct-live-grid-v21" initial={{ aggregate: HEADROOM_EXCEEDED }} />
           </Case>
           <Case caption="21 of 24 accounts reported — a sum, and the screen refuses to call it the total">
-            <AccountBroker360 {...account360({ exposure: PARTIAL_EXPOSURE })} />
+            <AccountBroker360Preview accountId="acct-live-grid-v21" initial={{ exposure: PARTIAL_EXPOSURE }} />
           </Case>
           <Case caption="no aggregate published — unavailable with the reason, never a silent green">
-            <AccountBroker360 {...account360({ aggregate: null })} />
+            <AccountBroker360Preview accountId="acct-live-grid-v21" initial={{ aggregate: null }} />
           </Case>
         </Group>
       </div>

@@ -14,6 +14,7 @@
  * it never becomes a thrown error the shell has to guess about.
  */
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
   OPERATION_STATUSES,
@@ -1207,6 +1208,7 @@ export function IncidentDetailContainer({
   incidentId: string;
   workspaceId?: string;
 }) {
+  const navigateIncident = useNavigate();
   const state = useAnalyticsRead(
     () => api.getIncident(incidentId, workspaceId),
     [api, incidentId, workspaceId],
@@ -1216,7 +1218,8 @@ export function IncidentDetailContainer({
       incident={state.value}
       status={state.status}
       reason={state.reason}
-    />
+    onOpenOperation={(operationId) => navigateIncident(`/administration/actions?operation=${encodeURIComponent(operationId)}`)}
+      />
   );
 }
 
@@ -1316,5 +1319,8 @@ export function CommandCenterLive({
       fetchSnapshot ??
       (() => Promise.reject(new Error("no snapshot endpoint: this Command Centre has no stream"))),
   });
-  return <CommandCenterScreen snapshot={snapshot} live={live} />;
+  const navigate = useNavigate();
+  // Every ranked row links to its owning screen (HiFi 5a). The href is the
+  // server's; a row without one renders disabled inside the screen.
+  return <CommandCenterScreen snapshot={snapshot} live={live} onOpen={(item) => item.href && navigate(item.href)} />;
 }

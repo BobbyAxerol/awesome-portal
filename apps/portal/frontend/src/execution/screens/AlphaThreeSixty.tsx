@@ -145,9 +145,9 @@ export interface AlphaThreeSixtyProps {
   modeOptions: readonly string[];
   windowOptions: readonly string[];
   scope: AlphaScope;
-  onScopeChange?: (scope: AlphaScope) => void;
+  onScopeChange: (scope: AlphaScope) => void;
   tab: AlphaTab;
-  onTabChange?: (tab: AlphaTab) => void;
+  onTabChange: (tab: AlphaTab) => void;
   venues: readonly VenueRow[];
   kpis: readonly Kpi[];
   contributions: readonly VenueContribution[];
@@ -165,7 +165,11 @@ export interface AlphaThreeSixtyProps {
   positions?: KeysetPage<PositionRow> | null;
   orders?: KeysetPage<OrderRow> | null;
   audit?: KeysetPage<AuditRow> | null;
-  onLoadOlder?: (tab: AlphaTab) => void;
+  onLoadOlder: (tab: AlphaTab) => void;
+  /** Row → the stage workbench that owns the deployment (HiFi 2a: "row → stage workbench"). */
+  onOpenDeployment: (row: DeploymentRow) => void;
+  /** Account cell → Account/Broker 360° (HiFi 2a: "account → Account 360°"). */
+  onOpenAccount: (accountId: string) => void;
   accounting?: readonly AccountingRow[];
   sessions?: readonly SessionRow[];
   reconciliation?: readonly ReconciliationRow[];
@@ -260,7 +264,7 @@ function ScopeBar({
   AlphaThreeSixtyProps,
   "scope" | "onScopeChange" | "portfolioOptions" | "modeOptions" | "venueOptions" | "windowOptions"
 >) {
-  const set = (patch: Partial<AlphaScope>) => onScopeChange?.({ ...scope, ...patch });
+  const set = (patch: Partial<AlphaScope>) => onScopeChange({ ...scope, ...patch });
   return (
     <div className="exec-alpha-scope">
       <span className="exec-tile-title">Scope</span>
@@ -397,6 +401,8 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
     scope,
     tab,
     onTabChange,
+    onOpenDeployment,
+    onOpenAccount,
     venues,
     kpis,
     contributions,
@@ -458,7 +464,7 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
             className="exec-inbox-filter"
             data-active={tab === option ? "true" : undefined}
             aria-selected={tab === option}
-            onClick={() => onTabChange?.(option)}
+            onClick={() => onTabChange(option)}
           >
             {option}
           </button>
@@ -509,7 +515,7 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
               )}
               <Contribution rows={contributions} />
             </div>
-            <Deployments rows={deployments} scope={scope} />
+            <Deployments onOpenDeployment={onOpenDeployment} onOpenAccount={onOpenAccount} rows={deployments} scope={scope} />
           </>
         ) : null}
 
@@ -560,7 +566,7 @@ function Contribution({ rows }: { rows: readonly VenueContribution[] }) {
   );
 }
 
-function Deployments({ rows, scope }: { rows: readonly DeploymentRow[]; scope: AlphaScope }) {
+function Deployments({ onOpenDeployment, onOpenAccount, rows, scope }: { rows: readonly DeploymentRow[]; scope: AlphaScope; onOpenDeployment: (row: DeploymentRow) => void; onOpenAccount: (accountId: string) => void; }) {
   // Anything not READY survives the cap: a halted deployment buried at row 40
   // is the row somebody opened this screen to find.
   const shown = capPreserving(rows, DEPLOYMENT_BUDGET, (row) => row.readiness !== "READY");
@@ -586,14 +592,22 @@ function Deployments({ rows, scope }: { rows: readonly DeploymentRow[]; scope: A
         <tbody>
           {shown.shown.map((row) => (
             <tr key={row.deploymentId} data-emphasis={row.readiness !== "READY" ? "warn" : undefined}>
-              <th scope="row">{row.deploymentId}</th>
+              <th scope="row">
+                <button type="button" className="exec-link" onClick={() => onOpenDeployment(row)}>
+                  {row.deploymentId}
+                </button>
+              </th>
               <td>
                 {row.venue} · {row.mode}
               </td>
               <td>
                 <EnvironmentBadge stage={row.stage} />
               </td>
-              <td>{row.accountId}</td>
+              <td>
+                <button type="button" className="exec-link" onClick={() => onOpenAccount(row.accountId)}>
+                  {row.accountId}
+                </button>
+              </td>
               <td>
                 <Num value={row.allocation} absent="not published" />
                 {row.allocation && row.currency ? (
@@ -663,7 +677,7 @@ function Positions({ positions, onLoadOlder }: AlphaThreeSixtyProps) {
       page={positions}
       rowKey={(r) => `${r.deploymentId}-${r.symbol}-${r.side}`}
       minWidth={980}
-      onLoadOlder={() => onLoadOlder?.("Positions")}
+      onLoadOlder={() => onLoadOlder("Positions")}
     />
   ) : (
     <PanelState status="loading" reason="Loading positions." />
@@ -686,7 +700,7 @@ function Orders({ orders, onLoadOlder }: AlphaThreeSixtyProps) {
       page={orders}
       rowKey={(r) => r.orderId}
       minWidth={980}
-      onLoadOlder={() => onLoadOlder?.("Orders & Fills")}
+      onLoadOlder={() => onLoadOlder("Orders & Fills")}
     />
   ) : (
     <PanelState status="loading" reason="Loading orders." />
@@ -708,7 +722,7 @@ function Audit({ audit, onLoadOlder }: AlphaThreeSixtyProps) {
       page={audit}
       rowKey={(r) => `${r.at}-${r.command}-${r.target}`}
       minWidth={900}
-      onLoadOlder={() => onLoadOlder?.("Audit")}
+      onLoadOlder={() => onLoadOlder("Audit")}
     />
   ) : (
     <PanelState status="loading" reason="Loading the command journal." />

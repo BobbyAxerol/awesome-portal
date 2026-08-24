@@ -145,8 +145,8 @@ export interface AccountBroker360Props {
   resolvedFindings?: number | null;
   /** False hides the mutation buttons entirely rather than disabling them. */
   operatorAdmin?: boolean;
-  onSyncNow?: () => void;
-  onDryRun?: () => void;
+  onSyncNow: () => void;
+  onDryRun: () => void;
   status?: PanelStatus;
   reason?: string;
 }
@@ -411,7 +411,7 @@ export function AccountBroker360({
           rows={difference.rows}
           envelope={difference.envelope}
           action={
-            operatorAdmin && onDryRun ? (
+            operatorAdmin ? (
               <button type="button" className="exec-btn-ghost" onClick={onDryRun}>
                 dry-run reconcile →
               </button>

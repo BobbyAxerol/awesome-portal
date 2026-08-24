@@ -134,19 +134,19 @@ export interface PaperWorkbenchProps {
   };
   /** Named, so "blocked" is an instruction rather than a refusal. */
   unmetCriteria: readonly string[];
-  onRequestExit?: () => void;
+  onRequestExit: () => void;
   drift: readonly DriftRow[];
   driftNote?: string | null;
   runtime: readonly { label: string; value: string | null; note?: string | null }[];
   accounting: readonly { label: string; value: string | null; note?: string | null }[];
   contribution: readonly { label: string; value: string | null; note?: string | null }[];
   tab: WorkbenchTab;
-  onTabChange?: (tab: WorkbenchTab) => void;
+  onTabChange: (tab: WorkbenchTab) => void;
   /** Unbounded: orders and fills carry no retention policy. Paged, never capped. */
   orders?: KeysetPage<WorkbenchOrder> | null;
   fills?: KeysetPage<WorkbenchFill> | null;
   positions?: KeysetPage<WorkbenchPosition> | null;
-  onLoadOlder?: (tab: WorkbenchTab) => void;
+  onLoadOlder: (tab: WorkbenchTab) => void;
   sessions: readonly WorkbenchSession[];
   /**
    * The venue's trading calendar, for venues that have one.
@@ -170,7 +170,7 @@ export interface PaperWorkbenchProps {
   credential?: { alias: string; status: string; expiresAt?: string | null } | null;
   /** False hides every mutation control. Not disables — hides. */
   operatorAdmin?: boolean;
-  onAdminActions?: () => void;
+  onAdminActions: () => void;
   status?: PanelStatus;
   reason?: string;
 }
@@ -483,7 +483,7 @@ export function PaperWorkbench({
             className="exec-inbox-filter"
             data-active={tab === option ? "true" : undefined}
             aria-selected={tab === option}
-            onClick={() => onTabChange?.(option)}
+            onClick={() => onTabChange(option)}
           >
             {option}
           </button>
@@ -619,7 +619,7 @@ function Orders({
       page={orders}
       rowKey={(r) => r.orderId}
       minWidth={980}
-      onLoadOlder={() => onLoadOlder?.("Orders")}
+      onLoadOlder={() => onLoadOlder("Orders")}
     />
   ) : (
     <PanelState status="loading" reason="Loading orders." />
@@ -642,7 +642,7 @@ function Fills({ fills, onLoadOlder }: Pick<PaperWorkbenchProps, "fills" | "onLo
       page={fills}
       rowKey={(r) => r.fillId}
       minWidth={860}
-      onLoadOlder={() => onLoadOlder?.("Fills")}
+      onLoadOlder={() => onLoadOlder("Fills")}
     />
   ) : (
     <PanelState status="loading" reason="Loading fills." />
@@ -668,7 +668,7 @@ function Positions({
       page={positions}
       rowKey={(r) => `${r.symbol}-${r.side}`}
       minWidth={820}
-      onLoadOlder={() => onLoadOlder?.("Positions")}
+      onLoadOlder={() => onLoadOlder("Positions")}
     />
   ) : (
     <PanelState status="loading" reason="Loading positions." />

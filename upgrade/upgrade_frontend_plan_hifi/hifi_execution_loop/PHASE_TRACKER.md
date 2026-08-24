@@ -20,7 +20,7 @@ Kế hoạch chi tiết từng phase: các khối **Claude supplement** trong ch
 | EL-V2-00 | Re-baseline + ledger 18 HiFi + truth in tracking | **hoàn tất 2026-08-24, chờ Bobby duyệt gate** | ledger 0 unknown ✓; "screen built" reframed ✓ | ledger 118 dòng + 16 before-shots + danh sách 8 assertion lỗi thời (cuối file) |
 | EL-V2-01 | Một workspace Carbon theo route | **hoàn tất 2026-08-24, chờ Bobby duyệt gate** | seam probe đo trên route thật ✓ · 0 assertion Governance-Light ✓ · QuantBT 101 pass **không sinh lại** ✓ | `presentation.tsx` + themeWriter + 2 commit (276dd5a + teardown); 16 after-shots `el-v2-01-after/`; leak check: đúng 5 nhóm governance × 2 khổ đổi baseline, 70 ảnh khác byte-identical |
 | EL-V2-02 | Typography ngữ nghĩa + primitive workspace | **hoàn tất 2026-08-24, chờ Bobby duyệt gate** | 2 font (Inter+JetBrains, Plex claim gỡ) ✓ · thang §5.2 khoá bằng test đọc stylesheet + probe render 5 khổ ✓ · 7 primitive có fixture+test ✓ · **0 clip** mọi khổ (kể cả 390, allowance cũ bỏ) ✓ · sparse không phóng chữ ✓ | `typeRoles.test.ts` + `workspace.test.tsx` (25 test); `execution.css` 151+201 literal → 0; audit 5 khổ; QuantBT 101 không sinh lại; fixtures 82 ảnh sinh lại (thay đổi chữ mandated) + rerun byte-identical; reuse report cuối file |
-| EL-V2-03 | Preview có state, zero no-op | `QUEUED` | mọi control enabled có hậu quả quan sát được | — |
+| EL-V2-03 | Preview có state, zero no-op | **hoàn tất 2026-08-24, chờ Bobby duyệt gate** | handler bắt buộc trong type ✓ · 6/6 journey §8.2 ✓ · sweep cô lập 17 route: **183 control → 95 đổi state · 80 điều hướng · 8 đã chọn · 0 NO-OP** ✓ · screenId → inspector ✓ | `previewControllers.tsx` (5 controller + ledger role=status), `testHandlers.ts`, `execution-journeys.spec.ts`, `e2e/el-v2-03-evidence/controls.json`; 2 NO-OP thật tìm thấy và sửa (Approve-with-condition không có điều kiện; hop Queue→Incident thiếu contract → BR-EX-33) |
 | EL-V2-04 | Paper + Paper Exit lát cắt dọc chuẩn | `QUEUED` | **Bobby duyệt hình ảnh** — bắt buộc | — |
 | EL-V2-05 | Chuỗi Governance | `QUEUED` | mọi capability có disposition; zero write bịa | — |
 | EL-V2-06 | Workbench VNM→Sandbox→Canary→Live | `QUEUED` | ledger stage đóng; anatomy chung, safety khác biệt giữ | — |
@@ -2447,3 +2447,31 @@ layout**, cùng một thang chữ (title 24px ở cả sparse lẫn dense — as
 **Gate bổ sung đã dựng:** audit e2e thêm khổ **1440** (đủ 390/834/1280/1440/1728) + probe "mọi phần
 tử chữ ∈ thang §5.2, 10px chỉ trong details, không load-bearing <11px" — đo trên trang render, không
 phải trên stylesheet.
+
+### EL-V2-03 — control ledger theo §8.1 (2026-08-24)
+
+Nguyên tắc thi hành: **handler là prop bắt buộc trong type**. 13 callback optional trên 5 màn
+(`PaperWorkbench` 4, `AlphaThreeSixty` 3, `PortfolioThreeSixty` 2+4 sub-component, `AccountBroker360`
+2, `FullBlotter` 4) đã bỏ dấu `?`; `AccountBroker360` thôi dùng *sự có mặt của handler* làm tín hiệu
+quyền (`operatorAdmin` quyết một mình). Fixture factories trả **Data** (`Omit<Props, handlers>`) —
+dữ liệu và hành vi tách hẳn: controller cấp hành vi trên route sản phẩm, spy tường minh trong test
+(`testHandlers.ts`). tsc là máy quét: mọi chỗ mount thiếu handler đều không compile.
+
+| Lớp §8.1 | Control | Thi hành | Quan sát được bằng |
+|---|---|---|---|
+| Local UI | tab (Paper/Alpha/Portfolio), filter (Blotter), venue scope (Alpha), lens (Portfolio), expand row (Blotter) | `useParamState` → **URL search** (`?tab=`, `?filter=`, `?venue=`); giá trị lạ rơi về mặc định | `aria-selected`, URL đổi, DOM đổi |
+| Canonical navigation | deployment row → workbench theo stage; account cell → Account 360°; holdings alpha → Alpha 360°; Request exit → Exit Review; Admin actions → drawer | `useNavigate` tới route registry, entity trong path, `?from=` giữ context quay về | URL đổi; `goBack` phục hồi tab/scope |
+| Safe simulated | sync now, dry-run reconcile, load older, reset cross-filter, scope window/mode | `useSimulationLedger`: `role=status` + danh sách hành động; kết quả fixture nói rõ ("no older rows exist", "0 findings", "nothing was sent to a broker") | live region đổi, `data-simulation-ledger` tăng |
+| Unavailable mutation | plan/apply thật, command relay | disabled + lý do (giữ từ F0) | không đổi khi click — **và không render enabled** |
+| Forbidden | mutation Canary/Live cho viewer, `labReset` | hidden theo policy | không có trong DOM |
+
+**Scope Alpha không bịa số:** đổi venue lọc bảng deployment/venue; KPI alpha-wide thành `null` +
+`absentReason` ("not published for scope X") — cần query scoped từ backend (ghi vào BR) thay vì cộng
+trong browser.
+
+**`screenId` rời chrome** → `details.exec-preview-inspector` (screen / delivery / build flag), test e2e
+assert vắng mặt mặc định và có khi mở.
+
+**Bằng chứng sinh bằng máy:** `e2e/el-v2-03-evidence/controls.json` — mọi control enabled trên 17
+route, mỗi cái một verdict `changed | navigated | skipped:selected | skipped:hidden | NO-OP`; gate:
+**0 NO-OP**, kể cả `href="#"` (link tới hư không bị coi là no-op mặc áo link).

@@ -294,7 +294,7 @@ export interface FullBlotterProps {
   page: KeysetPage<BlotterRow>;
   /** Applied server-side. The chips report; they do not filter. */
   filter: BlotterFilter;
-  onFilterChange?: (filter: BlotterFilter) => void;
+  onFilterChange: (filter: BlotterFilter) => void;
   /**
    * The chart selection that narrowed this list, in the words the chart used.
    *
@@ -304,18 +304,18 @@ export interface FullBlotterProps {
    * the table come to disagree.
    */
   crossFilter?: string | null;
-  onResetCrossFilter?: () => void;
+  onResetCrossFilter: () => void;
   scope?: ReactNode;
   status?: PanelStatus;
   reason?: string;
-  onLoadOlder?: () => void;
+  onLoadOlder: () => void;
   loading?: boolean;
   /** The expanded row's funnel. Fetched per order, not with the page. */
   expandedOrderId?: string | null;
   funnel?: OrderFunnel | null;
   funnelStatus?: PanelStatus;
   funnelReason?: string;
-  onExpand?: (row: BlotterRow) => void;
+  onExpand: (row: BlotterRow) => void;
 }
 
 export function FullBlotter({
@@ -437,7 +437,7 @@ export function FullBlotter({
             className="exec-inbox-filter"
             data-active={filter === option ? "true" : undefined}
             aria-pressed={filter === option}
-            onClick={() => onFilterChange?.(option)}
+            onClick={() => onFilterChange(option)}
           >
             {FILTER_LABEL[option]}
           </button>

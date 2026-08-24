@@ -1102,3 +1102,16 @@ D3 live transport acceptance under a new owner window; D3 will open only public
 contracts/health/capabilities for H2/TLS1.3/mTLS/JWT/latency/fault evidence.
 Full evidence:
 `upgrade/backend/EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md`.
+
+### 8.19 Execution screens: handlers are required props; fixtures are data (2026-08-24, EL-V2-03)
+
+Design decision recorded per §7.3. Every interaction handler on the five
+directly-mounted Execution screens (`PaperWorkbench`, `AlphaThreeSixty`,
+`PortfolioThreeSixty`, `AccountBroker360`, `FullBlotter`) is **required** in
+its props type. A screen cannot be mounted enabled-but-inert: optional chaining
+had turned clicks into silence on the product preview (handoff §2.3), and a
+type error is cheaper than a distrustful operator. Fixture factories therefore
+return `<Screen>Data = Omit<Props, handlers>`; behaviour comes from
+`src/execution/previewControllers.tsx` on product routes and from
+`testHandlers.ts` spies in tests. Capability is never inferred from handler
+presence (`AccountBroker360.operatorAdmin` decides visibility alone).

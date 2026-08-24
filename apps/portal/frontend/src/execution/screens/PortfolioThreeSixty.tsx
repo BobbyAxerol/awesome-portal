@@ -152,7 +152,11 @@ export interface PortfolioThreeSixtyProps {
   benchmark: string;
   benchmarkId: string;
   tab: PortfolioTab;
-  onTabChange?: (tab: PortfolioTab) => void;
+  onTabChange: (tab: PortfolioTab) => void;
+  /** Holdings row → Alpha 360° (HiFi 3a: "alpha click → Alpha 360°"). */
+  onOpenAlpha: (alphaId: string) => void;
+  /** Account cell → Account/Broker 360° (HiFi 3a: "account click → Account 360°"). */
+  onOpenAccount: (accountId: string) => void;
   kpis: readonly { label: string; value: string | null; unit?: string | null }[];
   holdings: readonly HoldingRow[];
   /** FX note the hi-fi requires wherever a total crosses currencies. */
@@ -161,7 +165,7 @@ export interface PortfolioThreeSixtyProps {
   correlationEnvelope?: Envelope;
   /** Index of the alpha the leader lens is focused on. */
   lensIndex?: number | null;
-  onLensChange?: (index: number | null) => void;
+  onLensChange: (index: number | null) => void;
   leaders: readonly LeaderList[];
   insight?: { code: string; grade: string; window: string; text: string } | null;
   ledger: CapitalLedger | null;
@@ -221,7 +225,7 @@ function CorrelationMatrix({
 }: {
   matrix: PackedCorrelation;
   lensIndex: number | null;
-  onLensChange?: (index: number | null) => void;
+  onLensChange: (index: number | null) => void;
 }) {
   const labels = matrix.labels;
   return (
@@ -245,7 +249,7 @@ function CorrelationMatrix({
                 <button
                   type="button"
                   className="exec-pf-lensbtn"
-                  onClick={() => onLensChange?.(row === lensIndex ? null : row)}
+                  onClick={() => onLensChange(row === lensIndex ? null : row)}
                 >
                   {rowLabel.displayName}
                 </button>
@@ -289,7 +293,7 @@ function CorrelationLens({
 }: {
   matrix: PackedCorrelation;
   lensIndex: number;
-  onLensChange?: (index: number | null) => void;
+  onLensChange: (index: number | null) => void;
 }) {
   const subject = matrix.labels[lensIndex];
   const others = matrix.labels
@@ -309,7 +313,7 @@ function CorrelationLens({
         <span>Leader lens</span>
         <select
           value={lensIndex}
-          onChange={(event) => onLensChange?.(Number(event.target.value))}
+          onChange={(event) => onLensChange(Number(event.target.value))}
         >
           {matrix.labels.map((label, index) => (
             <option key={label.entityId} value={index}>
@@ -421,7 +425,7 @@ export function CorrelationPanel({
   correlation: Correlation | null;
   envelope?: Envelope;
   lensIndex?: number | null;
-  onLensChange?: (index: number | null) => void;
+  onLensChange: (index: number | null) => void;
   cellBudget?: number;
 }) {
   if (!correlation) {
@@ -655,6 +659,8 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
     benchmarkId,
     tab,
     onTabChange,
+    onOpenAlpha,
+    onOpenAccount,
     kpis,
     holdings,
     fxNote,
@@ -719,7 +725,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
             className="exec-inbox-filter"
             data-active={tab === option ? "true" : undefined}
             aria-selected={tab === option}
-            onClick={() => onTabChange?.(option)}
+            onClick={() => onTabChange(option)}
           >
             {option}
           </button>
@@ -780,9 +786,17 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                       key={row.deploymentId}
                       data-emphasis={row.readiness !== "READY" ? "warn" : undefined}
                     >
-                      <th scope="row">{row.alpha}</th>
+                      <th scope="row">
+                        <button type="button" className="exec-link" onClick={() => onOpenAlpha(row.alpha)}>
+                          {row.alpha}
+                        </button>
+                      </th>
                       <td>{row.deploymentId}</td>
-                      <td>{row.accountId}</td>
+                      <td>
+                        <button type="button" className="exec-link" onClick={() => onOpenAccount(row.accountId)}>
+                          {row.accountId}
+                        </button>
+                      </td>
                       <td>
                         {row.venue} · {row.mode}
                       </td>
