@@ -36,6 +36,8 @@ import {
   type FreshnessState,
   type KeysetPage,
   type PanelStatus,
+  type RetentionOutcome,
+  type RetentionState,
   type SortSpec,
   type OperationStatus,
   type SourceCompleteness,
@@ -332,6 +334,47 @@ function readFilters(raw: unknown): readonly FilterEcho[] {
  * exists to prevent. A missing count surfaces as `0`, which reads as wrong
  * rather than as plausible.
  */
+export const RETENTION_OUTCOMES: readonly RetentionOutcome[] = [
+  "HOT",
+  "PARTIAL_HOT",
+  "COLD_REQUESTABLE",
+  "PURGED",
+  "UNKNOWN",
+];
+
+/**
+ * Read the retention envelope off a page.
+ *
+ * `KeysetPage.retention` has been declared since phase 0 and **no reader ever
+ * populated it**, so the whole retention module — five outcomes, the
+ * empty-versus-unavailable rule, the restore request — sat downstream of a
+ * field nothing parsed.
+ *
+ * The wire name is `availability`. `execution-projection-page.v1` is the only
+ * contract that publishes retention at all, and it publishes
+ * `{ availability, policy_version }`; `outcome` was a frontend guess, and
+ * `EX-BE-04b` names the five values in prose without ever giving the field a
+ * name. `outcome` is still accepted so that a server which adopts the guessed
+ * name is not misread, but `availability` is what the contract says.
+ *
+ * An unreadable value becomes `UNKNOWN`, never `HOT`: "nobody can say" is the
+ * safe answer, and the one thing that must never happen here is an unrecognised
+ * token resolving to "all of it is online".
+ */
+export function readRetention(raw: unknown): RetentionState | null {
+  const o = obj(raw);
+  if (!o) return null;
+  const parsed = readEnum(o.availability ?? o.outcome, RETENTION_OUTCOMES);
+  return {
+    outcome: parsed?.known ? parsed.value : "UNKNOWN",
+    hotFrom: typeof o.hot_from === "string" ? o.hot_from : null,
+    // `UNCONFIGURED` is a real published value, not a missing one — the policy
+    // exists as a field and says no policy is configured. It is carried through
+    // verbatim rather than blanked, so the notice can name it.
+    policyVersion: typeof o.policy_version === "string" ? o.policy_version : null,
+  };
+}
+
 export function readKeysetPage<T>(
   raw: unknown,
   mapRow: (row: Record<string, unknown>) => T | null,
@@ -368,6 +411,7 @@ export function readKeysetPage<T>(
     hasPrevious: readBool(data.has_previous),
     appliedSort: readSort(data.applied_sort),
     appliedFilters: readFilters(data.applied_filters),
+    retention: readRetention(data.retention ?? o.retention),
   };
 }
 
