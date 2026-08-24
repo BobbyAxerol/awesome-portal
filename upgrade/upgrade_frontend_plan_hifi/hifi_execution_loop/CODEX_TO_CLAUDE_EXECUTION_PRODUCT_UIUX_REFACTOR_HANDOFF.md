@@ -155,7 +155,7 @@ the owner. Do not report the former as completion of the latter.
 
 The current work is therefore a **responsive-hardening subtask**, not the promised product refactor.
 Its CSS and table containment fixes should be carried forward rather than discarded, but they do not
-close UX-R0 through UX-R6.
+close any of the mandatory EL-V2-00 through EL-V2-09 phases in §12.
 
 #### 2.7.2 Concrete omissions and contradictory implementation
 
@@ -283,7 +283,8 @@ Do not update screenshots merely to make the current composition green before ow
 1. Reconcile the current branch with this owner override and classify the responsive patch as a kept
    subtask, not a finished refactor.
 2. Finish and publish the full §11.6 coverage ledger; mark unknowns instead of assuming coverage.
-3. Complete UX-R1 (route-aware Carbon shell) and UX-R2 (semantic typography/anatomy).
+3. Complete EL-V2-01 (route-aware Carbon shell) and EL-V2-02 (semantic
+   typography/anatomy) only after EL-V2-00 is accepted.
 4. Rebuild Paper Workbench as the measured vertical slice, including real chart, working tabs,
    context rail, provenance disclosure and Paper Exit journey.
 5. Obtain owner review of that single integrated route with the real shell visible.
@@ -747,94 +748,321 @@ following:
 Decorative prose, raw hashes, internal ids and repeated explanations do not count as useful added
 content.
 
+### 11.8 HiFi is the capability floor, not a pixel prison
+
+Claude has explicit authority to improve composition, copy, grouping, responsive behavior and
+information density. The eighteen HiFi files define the **minimum capabilities, states and journeys**;
+they do not require literal copying of every paragraph, font size, box dimension or vertical stack.
+Creativity is expected where the reference is verbose, visually unbalanced or inefficient.
+
+Use this decision method on every screen before writing JSX:
+
+1. Write the one operator/reviewer question the route must answer.
+2. Select the state, consequence and next action that must be understood in the first scan.
+3. Keep only that decision layer and its essential evidence above the fold.
+4. Move supporting analysis into named tabs; move provenance/raw detail into a drawer; move blockers,
+   scope and contextual actions into the right rail.
+5. Verify that every moved HiFi capability remains reachable and appears in the coverage ledger.
+
+#### When the HiFi has too much text
+
+- Rewrite prose into **state → consequence → next action**; do not preserve paragraphs merely because
+  they appear in the mockup.
+- Use a one-line summary plus progressive disclosure for policy explanation, methodology and caveats.
+- Convert comparable facts into a compact table, checklist, timeline or labelled key/value group.
+- De-duplicate facts repeated in masthead, lineage, KPI and panel copy.
+- Keep exact source wording only when it is an immutable policy/error/audit value.
+- Never hide a blocker, eligibility condition, authority, source freshness or destructive consequence
+  behind a generic “More” disclosure.
+
+#### When a screen has little data
+
+- Do **not** enlarge fonts, KPIs, buttons or panel padding to fill the viewport.
+- Keep the global type ramp in §5.2 unchanged and use a constrained content width or asymmetric grid.
+- Give the primary entity/decision an appropriately sized focal region, then use the remaining space
+  for useful context: stage timeline, readiness/blockers, related entity links, recent activity or the
+  contextual rail—only when those values are contract-backed.
+- Prefer a deliberate quiet/empty state with a reason and next action over giant empty cards.
+- If no additional truthful content exists, whitespace is acceptable. Fabricated metrics and inflated
+  typography are not.
+
+#### When a screen has dense data
+
+- Keep one stable summary and action region; divide independent data families into tabs.
+- Give tables and charts the canvas; keep their filters/toolbars locally sticky.
+- Use virtualization/keyset continuation for large tables and adaptive resolution for charts.
+- Preserve exact decimals and bounded counts; never shrink them until unreadable or ellipsize financial
+  values merely to avoid composition work.
+- Let the contextual rail follow the active selection instead of appending another full-width panel.
+
+#### Creative freedom and hard boundaries
+
+Claude may add a comparison, summary, small visualization, related-entity path, quiet-state guidance or
+better drill-down when it improves a real decision and follows §11.7. Claude may also merge redundant
+cards or replace a verbose block with a better component. Claude may **not** drop a nested HiFi
+capability, invent a financial/risk truth, alter authority semantics, turn unavailable data into zero,
+or solve sparse content by making the text arbitrarily large.
+
 ## 12. Implementation phases
 
-### UX-R0 — Re-baseline the merge gate
+The Execution Loop V2 upgrade has **exactly ten mandatory phases**. Claude must execute them in order,
+keep at most one frontend phase `WIP`, update `PHASE_TRACKER.md` at the beginning and end of each phase,
+and attach the named evidence. A later phase may be explored in a disposable spike, but its production
+code may not be called complete or merged ahead of its predecessors. Phases may not be combined to
+avoid an exit gate.
 
-**Goal:** stop treating isolated component fidelity as product acceptance.
+Backend/IAM work runs in parallel under §12.11. It never allows Claude to skip a frontend phase, and a
+frontend phase never implies that a live source or command path is active.
 
-- Mark current product-route preview visual composition `REWORK_REQUIRED` in tracking.
-- Keep backend/runtime feature flags unchanged.
-- Add owner screenshot findings to the review evidence.
-- Build the §11.6 HTML coverage ledger from a complete read of all eighteen source files.
-- Reconcile active frontend docs that still prescribe Governance Light or literal HiFi copying.
-- Do not merge the preview as a finished product surface.
+### EL-V2-00 — Re-baseline, full HiFi inventory and truth in tracking
 
-**Exit:** tracker and PR description clearly distinguish contract integration from product UI approval;
-every HiFi source and nested feature has an accountable ledger row.
+**Goal:** establish an honest V2 baseline before changing the visual system.
 
-### UX-R1 — Shell presentation context + real typography
+**Required work:**
 
-**Goal:** one Carbon Execution workspace and two truthful font families.
+- mark the integrated product composition `REWORK_REQUIRED` without reopening completed backend work;
+- read all eighteen `.dc.html` sources completely, including demo props, hidden variants and scripts;
+- build the §11.6 row-level ledger for every view, tab, state, action, drawer and drill-down;
+- split every tracker item into `component contract`, `product route`, `nested interactions` and
+  `integrated visual approval`;
+- record the current shell-visible screenshots and the §2.7 defects as the before baseline;
+- reconcile or supersede documents/tests that mandate Governance Light or literal HiFi copying;
+- preserve the current responsive containment work as a named subtask, including its known clipping
+  debt, rather than mislabelling it V2 completion.
 
-- route-aware effective theme/density on the entire shell;
-- topbar/sidebar/overlay alignment;
-- load the selected font packages or correct the DS claim;
-- semantic type roles and scale;
-- compact preview strip.
+**Evidence:** completed ledger; before screenshots at 1280×800, 1440×900 and 1728×1000; tracker diff;
+list of obsolete assertions/docs to rewrite.
 
-**Exit:** Research/Planning baselines unchanged; all Execution routes from Approval Inbox/R1 onward are
-Carbon and show no light/dark seam at 1280, 1440 and 1728 widths.
+**Exit gate:** no `unknown` ledger row lacks an owner/disposition, and no “screen built” claim remains
+ambiguous. **Nothing in EL-V2-01 may be merged before this gate.**
 
-### UX-R2 — Shared workspace primitives
+### EL-V2-01 — One route-aware Carbon workspace
 
-**Goal:** stop solving composition independently in seventeen files.
+**Goal:** eliminate the light shell/dark island and establish one visual environment from Approval
+Inbox/Gate R1 through Live.
 
-- `ExecutionWorkspace`;
-- `ExecutionPageHeader`;
-- `ExecutionContextRail`;
-- `ExecutionTabs`;
-- `ExecutionProvenanceDrawer`;
-- `ExecutionTerminal`;
-- action-capability helper that prevents enabled no-op controls.
+**Required work:**
 
-**Exit:** component fixture covers visual and interaction states; reuse report lists old components
-retained, replaced and deleted.
+- own `PortalPresentationMode` above `PortalShell` and derive it from the canonical resolved route;
+- apply Execution Carbon atomically to topbar, sidebar, canvas, right rail, modal/drawer, palette and
+  screen content;
+- make the appearance control show the effective mode; it must never say Research Light on an
+  Execution route;
+- replace the obsolete `governance -> operations-carbon-light` branch and its tests;
+- retain Research and Planning rendering unchanged;
+- compress the fixture warning to the truthful one-line treatment in §7.2.
 
-### UX-R3 — Paper Workbench vertical slice
+**Evidence:** shell-visible screenshots for Approval Inbox, R1, Paper and Live at the three canonical
+desktop widths; route transition test; Research/Planning non-drift suite.
 
-**Goal:** owner-reviewable reference route.
+**Exit gate:** zero mixed-theme seam and zero obsolete Governance-Light assertion.
 
-- implement §10;
-- stateful fixture preview journey;
-- real shell route snapshots;
-- visual review at actual viewport, not only fixture group.
+### EL-V2-02 — Semantic typography, density and workspace primitives
 
-**Exit:** owner/Claude/Antigravity review; all §10.3 checks pass.
+**Goal:** replace the terminal-dump grammar with a consistent institutional product system.
 
-### UX-R4 — Archetype migration
+**Required work:**
 
-**Goal:** migrate by information architecture, not file order.
+- resolve the actual bundled font families and implement the locked role scale in §5.2;
+- remove screen-local type improvisation and reduce mono to numeric/identity/evidence roles;
+- implement the shared responsibilities in §6: workspace, page header, decision summary, tabs,
+  contextual rail, provenance drawer and bounded terminal;
+- implement constrained widths and responsive grid rules for sparse, balanced and dense screens;
+- formalize the §11.8 copy/density decision method as component documentation and lint/testable class
+  roles where practical;
+- migrate only a small component fixture at this phase—do not mass-restyle the seventeen screens.
 
-1. remaining workbenches;
-2. governance;
-3. operations;
-4. entity 360;
-5. tools.
+**Evidence:** type-role fixture; contrast/focus states; component responsibility/reuse report; 390,
+834, 1280, 1440 and 1728 measurements.
 
-**Exit:** every screen uses the shared anatomy or documents why its archetype requires an exception.
+**Exit gate:** two-family maximum, fixed role scale, reusable anatomy and zero component-level
+unexplained clipping. Making sparse pages use larger text is an automatic rejection.
 
-### UX-R5 — Interaction completion
+### EL-V2-03 — Stateful preview and interaction integrity
 
-**Goal:** zero active-looking no-op controls.
+**Goal:** make the dev product preview truthful and remove every enabled no-op before visual migration.
 
-- route journeys in §8.2;
-- canonical navigation/context preservation;
-- simulated vs disabled mutation behavior;
-- keyboard/focus/announcement checks.
+**Required work:**
 
-**Exit:** interaction completeness test and journeys pass.
+- replace stateless direct mounting with per-route preview controllers/state machines;
+- classify every ledger control using §8.1;
+- make tabs, filters, expand/collapse, scope and drawers work locally;
+- make safe fixture workflows visibly simulated and source mutations explicitly disabled with reasons;
+- preserve canonical route/entity/scope context through navigation and back navigation;
+- remove raw `screenId` from normal chrome and expose it only through a preview inspector;
+- add the structural enabled-control test and all six journeys in §8.2.
 
-### UX-R6 — Product visual/performance gate
+**Evidence:** route-level interaction suite; keyboard/focus/announcement evidence; a generated list of
+all enabled controls with an observable result.
 
-**Goal:** approve the integrated product, not merely its parts.
+**Exit gate:** zero active-looking no-op controls. A control with an optional missing handler must not
+render enabled.
 
-- product-route screenshots with shell visible;
-- fixture-group snapshots retained for state coverage;
-- contrast, overflow and duplicate-id audit;
-- render/DOM budgets for dense tabs;
-- verify no Research/Planning drift;
-- owner visual sign-off before merge.
+### EL-V2-04 — Paper Workbench + Paper Exit reference vertical slice
+
+**Goal:** prove the complete V2 composition and journey on one owner-reviewable domain slice.
+
+**Required work:**
+
+- implement §10 with a decision-first masthead, lifecycle, concise KPI strip, contextual exit rail,
+  working detail tabs and provenance disclosure;
+- implement a real equity/evidence chart with readable axes, tooltip, approved envelope, reset, expand
+  and table/accessibility view—never a blank `ChartTile`;
+- cover FRESH/AGING/STALE/PAUSED/UNKNOWN and MET/UNMET/INSUFFICIENT evidence states without inventing
+  eligibility;
+- complete Paper → request exit → Paper Exit Review → outcome/back journey in fixture mode;
+- apply §11.8: reduce redundant prose and do not enlarge sparse regions.
+
+**Evidence:** shell-visible route screenshots, interaction recording/test, chart tests, all §10.3
+checks, and explicit owner visual review.
+
+**Exit gate:** **Bobby approval is mandatory.** Claude must not migrate the remaining archetypes before
+the Paper reference slice is approved or returned with named corrections.
+
+### EL-V2-05 — Governance decision chain
+
+**Goal:** deliver a continuous reviewer experience across Approval Inbox, Gate R1, Gate R2 and Exit
+Reviews without reverting to a light document page.
+
+**Required work:**
+
+- implement every Governance ledger row: filters/history, evidence/checklists, conditions, capital
+  preview, observation gate, immutable decisions and SoD/role variants;
+- keep decision/blocker/action visible and move full provenance to disclosure;
+- provide request-changes only through a published backend verb; otherwise show an explicit unavailable
+  reason and raise a narrow backend request;
+- test creator/reviewer/admin/denied/expired/conflict paths and context-preserving navigation;
+- bind real SGP Control API data where the registry policy permits, independently of AWS-HK D4.
+
+**Evidence:** four-route visual set; Inbox→R1/R2/Exit journeys; permission/CSRF/conflict tests; ledger
+coverage for all governance variants.
+
+**Exit gate:** every Governance capability has an implemented/improved/disabled/hidden/backend-request
+disposition and zero fabricated write path.
+
+### EL-V2-06 — Stage workbenches from Paper VNM through Live
+
+**Goal:** reuse the approved Paper anatomy while preserving the distinct safety model of every stage.
+
+**Required work:**
+
+- complete Paper VNM, Sandbox Certification, Canary Control Room and Live Full Operations;
+- implement all VNM calendar/session/order/settlement semantics and all seven Sandbox steps;
+- preserve Canary/Live guard bands, source mismatch suppression and protective-versus-risk-increasing
+  action asymmetry;
+- make dense content tabbed and contextual; do not append all evidence vertically;
+- keep commands disabled unless a later authority contract explicitly enables them.
+
+**Evidence:** state matrix across VNM/Sandbox/Canary/Live; role and authority tests; source-unavailable,
+stale, mismatch and recovery screenshots; workbench reuse report.
+
+**Exit gate:** all stage-specific ledger rows are closed and the shared anatomy remains visually
+consistent without erasing safety differences.
+
+### EL-V2-07 — Operations, incident and command workflow
+
+**Goal:** turn Command Center, Queue, Incident Detail and Admin Action Drawer into one coherent triage
+and verification workflow.
+
+**Required work:**
+
+- rank attention in Command Center and provide truthful BUSY/QUIET states;
+- connect Queue selection to a contextual alert rail and preserve ack ≠ resolve;
+- implement Incident evidence, blast radius, timeline, containment and forward-only resolution rules;
+- implement the full action catalogue, selection, reason, step-up, PLAN/APPLY/VERIFY, PARTIAL/residue
+  handling and Equivalent CLI disclosure;
+- implement the bounded terminal in §9 and typed reconnect/gap/error rows;
+- include Break-glass only as the full ceremony from the HiFi/authority contract—never as a convenient
+  red button or fixture command.
+
+**Evidence:** Queue→Incident→Drawer→Verify→Queue journey; terminal accessibility/copy/export tests;
+BUSY/QUIET and VERIFIED/PARTIAL visual evidence; command-authority negative tests.
+
+**Exit gate:** operations read paths are complete, terminal states are truthful and no browser action
+can bypass plan/apply/verify or command authority.
+
+### EL-V2-08 — Entity 360, analytical surfaces and Full Blotter
+
+**Goal:** make Alpha, Portfolio, Account/Broker and Blotter useful for analysis without turning them
+into vertically stacked catalogues.
+
+**Required work:**
+
+- complete every Alpha/Portfolio/Account tab and role lens from the §11.6 ledger;
+- propagate scope to all KPIs, charts, tables, links and contextual rail;
+- implement internal/physical/difference, correlation/leader lens, capital/authority and source
+  mismatch semantics without frontend financial recomputation;
+- give Blotter the primary canvas with working filters, cross-filter/reset, funnel detail, keyset
+  continuation, exact currency aggregates and virtualization;
+- implement chart inspect/tooltip/zoom/reset/expand/table/export/cross-filter behavior and explicit
+  insufficient-data states;
+- apply §11.8: sparse tabs use constrained composition and related truthful context, never larger type.
+
+**Evidence:** all entity/tab journeys; exact-decimal and aggregate contract tests; chart interaction and
+screen-reader alternatives; large-row performance profile; route screenshots at supported widths.
+
+**Exit gate:** every analytical ledger row is closed, no financial value is recomputed in the browser,
+and dense routes meet the agreed render/DOM/interaction budgets.
+
+### EL-V2-09 — Real-source Lane B, full hardening and V2 release acceptance
+
+**Goal:** validate the finished product against approved real Paper projections, then close the V2
+release without weakening safety or stable isolation.
+
+**Required work:**
+
+- consume only the source/query/SSE capabilities explicitly activated after §12.11 acceptance;
+- activate one screen/profile at a time, Paper read-only first; retain fixture/unavailable fallback and
+  show authority/freshness truthfully;
+- compare fixture, shadow and source-backed rendering for schema, state, decimal and completeness
+  parity—never hide a mismatch to make the screen look complete;
+- complete typed 401/auth-expiry, gap/cursor/epoch, reconnect, backpressure and source-loss UX;
+- run shell-visible visual, accessibility, keyboard, responsive, load, memory, DOM, reconnect and
+  journey gates across all routes;
+- prove Research/Planning and stable runtime non-regression, plus frontend rollback to the prior
+  delivery profile;
+- obtain owner visual/functional approval and record remaining command/live-source limitations
+  explicitly.
+
+**Evidence:** accepted D2/D3/D4 handoffs; per-screen Lane B activation record; shadow parity report;
+complete coverage ledger; performance/a11y/visual reports; rollback rehearsal; owner sign-off.
+
+**Exit gate:** all ten phases are accepted, every visible control and nested HiFi capability is
+accounted for, real Paper read data works through the Portal boundary, and V2 can be rolled back without
+touching Trading System. Only Bobby may authorize merge/release.
+
+### 12.11 Codex backend/IAM lane running in parallel
+
+The frontend sequence above is independent of live infrastructure until EL-V2-09, but Codex will use
+the same development window to make a real read-only Paper source available as early as safely
+possible. Current truth on 2026-08-24 is:
+
+- D1 private carrier is accepted;
+- D2/D3/D4 repository/offline preparation is complete;
+- live D2 is **not accepted** because the exact IAM DryRun still returns `UnauthorizedOperation`;
+- D3 has no live mTLS/H2/delegated-JWT evidence;
+- D4 lacks its accepted predecessors, dedicated Paper read identity/contract, production mapper and
+  approved encrypted projection storage;
+- no Portal code may modify Trading System source, database, Redis, CLI, risk, accounting, broker or
+  execution behavior.
+
+The full Portal/browser/TypeScript Control API remains on SGP. AWS-HK receives only the bounded
+Portal-owned Source Proxy, Rust Execution Edge and approved private projection boundary next to the
+Trading System loopback API. The browser never connects to AWS-HK directly.
+
+| Backend gate | Codex action | Owner/Trading System input | Frontend benefit |
+|---|---|---|---|
+| BE-V2-A — IAM effective allow | Re-run the exact-instance `ModifyInstanceMetadataOptions(DryRun=true)` verifier and accept only `DryRunOperation` | Ensure revision-2 policy is attached under the existing role's **Permissions policies**, is the managed policy default version, and no permissions boundary/SCP explicitly denies it | None yet; fixture work continues |
+| BE-V2-B — Signed D2 admission | Verify default-branch signed Edge/Proxy images, workload PKI/JWKS, shared-host delta budget, listeners, ownership, TS health and rollback inputs | Approve the bounded D2 change window after the gate is green | Deployable dark services, still no source data |
+| BE-V2-C — D2 dark deployment | Harden IMDS/detach temporary operator profile in the approved order; deploy Edge/Proxy dark; prove health, resource delta and rollback without TS changes | Window/rollback operator approval | Real service topology for frontend contract tests, source remains off |
+| BE-V2-D — D3 transport acceptance | Run real WireGuard/private route, TLS 1.3 + mTLS, HTTP/2, delegated short-lived JWT, negative-auth and latency/source-loss probes | Provide/approve scoped identities and D3 window | Trusted SGP↔AWS transport and typed auth/availability errors |
+| BE-V2-E — D4 Paper read contract | Validate a dedicated read-only identity, exact GET routes, stable cursor/completeness/resync semantics and encrypted Portal projection storage | Trading System owner publishes the bounded Paper contract/identity; Bobby opens D4 window | A lawful source for Paper/Blotter/account projections |
+| BE-V2-F — Shadow projection | Ingest only into a BUILDING epoch, run replay/parity/completeness/freshness checks and keep registry/query/SSE activation off | Review the redacted parity/evidence report | Claude can test real-shaped source data without product activation |
+| BE-V2-G — One-screen Lane B canary | Promote the accepted epoch and activate read-only Paper query, then SSE, one capability at a time with rollback | Bobby explicitly approves each registry/profile change | EL-V2-09 real-data validation, beginning with Paper |
+
+No frontend phase may infer that the next backend row is complete. Codex publishes a narrow handoff
+with exact endpoints, fields, delivery profile, error/freshness codes and activation status after each
+accepted gate. Until then Claude must render fixture, shadow, unavailable or disabled truthfully.
 
 ## 13. Acceptance matrix
 
@@ -855,6 +1083,9 @@ retained, replaced and deleted.
 | Visual evidence | real product-route baselines include shell; fixture baselines remain |
 | Isolation | Research and Planning snapshots do not drift |
 | Contracts | no financial recomputation, invented state or weakened fail-closed behavior |
+| Phase discipline | EL-V2-00…09 completed in order; tracker and evidence updated at every gate |
+| Content design | verbose screens use progressive disclosure; sparse screens never inflate typography to fill space |
+| Real source | browser never reaches AWS-HK directly; Paper Lane B requires accepted D2→D3→D4 evidence |
 
 ## 14. What Claude should do next
 
@@ -863,14 +1094,16 @@ retained, replaced and deleted.
    uncommitted review/fixes. Do not report the current responsive containment patch as the requested
    product refactor.
 2. Build the §11.6 coverage ledger, including demo-prop variants, tabs, drawers, links and actions.
-3. Update `ROADMAP_FRONTEND.md` and `PHASE_TRACKER.md`: record UX-R0…UX-R6, reconcile the Carbon-only
-   owner override, and mark the integrated
-   product composition as `REWORK_REQUIRED`, while keeping completed backend/contract work completed.
-4. Produce a short measured layout proposal for **Paper Workbench only** at 1440×900 and 1728×1000:
+3. Update `ROADMAP_FRONTEND.md` and `PHASE_TRACKER.md`: record all ten EL-V2-00…EL-V2-09 phases,
+   reconcile the Carbon-only owner override, and mark the integrated product composition as
+   `REWORK_REQUIRED`, while keeping completed backend/contract work completed.
+4. Complete and provide the evidence for **EL-V2-00 only**. Do not start a mass CSS/screen rewrite.
+5. Produce a short measured layout proposal for **Paper Workbench only** at 1440×900 and 1728×1000:
    bounding regions, type roles, right-rail behavior, disclosure moves and interaction matrix.
-5. Ask Antigravity for an independent critique of hierarchy, type scale and state/action semantics.
-6. Implement UX-R1 then UX-R2; do not mass-refactor all screens before Paper proves the system.
-7. If any required UI behavior needs a new backend field/endpoint, send a narrow Backend Request to
+6. Ask Antigravity for an independent critique of hierarchy, type scale and state/action semantics.
+7. Proceed to EL-V2-01 only after EL-V2-00 evidence is recorded; stop at each phase gate and update the
+   shared tracker. EL-V2-04 requires Bobby's explicit visual approval before EL-V2-05 begins.
+8. If any required UI behavior needs a new backend field/endpoint, send a narrow Backend Request to
    Codex. The shell/theme/type/no-op-preview fixes themselves do not require Trading System changes.
 
 ## 15. Non-regression boundary for Codex/Claude coordination
