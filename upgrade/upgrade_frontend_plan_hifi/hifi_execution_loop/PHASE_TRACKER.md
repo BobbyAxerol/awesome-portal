@@ -1,5 +1,34 @@
 # PHASE_TRACKER.md
 
+> **⛔ V2 OWNER OVERRIDE — 2026-08-24.** Bobby đã từ chối composition sản phẩm hiện tại
+> (`OWNER_REJECTED_CURRENT_PRODUCT_COMPOSITION`, xem
+> `CODEX_TO_CLAUDE_EXECUTION_PRODUCT_UIUX_REFACTOR_HANDOFF.md`). Toàn bộ **integrated product
+> composition** của 17 màn là `REWORK_REQUIRED`. Backend, contract, reader, fixture, 7 states,
+> fail-closed và unit test **giữ nguyên giá trị** — thứ bị rework là cách sản phẩm trình bày.
+> Bảng 19 phase bên dưới từ nay đọc theo bốn trạng thái tách biệt:
+> `component contract` ✅ (phần lớn đã có) · `product route` (preview, chưa duyệt) ·
+> `nested interactions` ❌ · `integrated visual approved` ❌.
+> "Screen built" trong các dòng cũ nghĩa là **component contract built**, không hơn.
+> Patch responsive 2026-08-23 được giữ như **subtask đặt tên** (KEEP 7/10), không phải V2.
+
+## V2 — Mười phase bắt buộc EL-V2-00…09 (làm tuần tự, 1 phase WIP)
+
+Kế hoạch chi tiết từng phase: `PLAN_EL_V2_FRONTEND.md`. Backend lane song song: §12.11 của handoff.
+
+| Phase | Tên | FE | Gate thoát | Evidence |
+|---|---|---|---|---|
+| EL-V2-00 | Re-baseline + ledger 18 HiFi + truth in tracking | `URGENT — NEXT` | ledger không còn ô unknown; hết "screen built" mơ hồ | — |
+| EL-V2-01 | Một workspace Carbon theo route | `QUEUED` | zero seam sáng/tối; zero assertion Governance-Light | — |
+| EL-V2-02 | Typography ngữ nghĩa + primitive workspace | `QUEUED` | 2 font; thang vai trò khoá; anatomy tái dùng | — |
+| EL-V2-03 | Preview có state, zero no-op | `QUEUED` | mọi control enabled có hậu quả quan sát được | — |
+| EL-V2-04 | Paper + Paper Exit lát cắt dọc chuẩn | `QUEUED` | **Bobby duyệt hình ảnh** — bắt buộc | — |
+| EL-V2-05 | Chuỗi Governance | `QUEUED` | mọi capability có disposition; zero write bịa | — |
+| EL-V2-06 | Workbench VNM→Sandbox→Canary→Live | `QUEUED` | ledger stage đóng; anatomy chung, safety khác biệt giữ | — |
+| EL-V2-07 | Ops + Incident + Command + Terminal | `QUEUED` | read path đủ; terminal thật; không vượt plan/apply/verify | — |
+| EL-V2-08 | 360° + Blotter analytical | `QUEUED` | ledger analytical đóng; zero recompute; budget đạt | — |
+| EL-V2-09 | Lane B Paper + hardening + nghiệm thu | `QUEUED` | mười phase accepted; owner sign-off; rollback chứng minh | — |
+
+
 > **The shared board for the Execution Loop.** Claude (frontend) and codex
 > (backend) both read and write it, one row per phase, one row per hi-fi screen.
 > Opened 2026-08-21.
