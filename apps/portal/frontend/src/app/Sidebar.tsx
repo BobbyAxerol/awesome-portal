@@ -9,6 +9,10 @@ import { NavLink } from "react-router-dom";
 
 import { MaturityBadge } from "../components/semantic";
 import { maturityPresentation } from "../lib/portalState";
+import {
+  EXECUTION_PREVIEW_ENABLED,
+  EXECUTION_PREVIEW_FEATURE_DEFAULTS,
+} from "../execution/previewRegistry";
 import type { PortalRegistryDocument } from "../portal/contracts";
 import { sidebarGroups, type NavOptions } from "../portal/navigation";
 import { iconFor } from "./icons";
@@ -40,13 +44,21 @@ export function Sidebar({
             {features.map((feature) => {
               const presentation = maturityPresentation(feature.maturity);
               const Icon = iconFor(feature.navigation.icon_key);
+              // A route the user can open RIGHT NOW as a fixture preview must
+              // not say "SOON" beside itself (handoff §4.3): one truthful
+              // state. Only the execution features the preview actually
+              // mounts; unrelated future routes keep their maturity badge.
+              const previewMounted =
+                EXECUTION_PREVIEW_ENABLED &&
+                (feature.id in EXECUTION_PREVIEW_FEATURE_DEFAULTS ||
+                  feature.id.startsWith("EXECUTION_"));
               return (
                 <li key={feature.id}>
                   <NavLink
                     to={feature.canonical_route}
                     end={feature.canonical_route === "/"}
                     className={({ isActive }) => `portal-navitem${isActive ? " portal-navitem-active" : ""}`}
-                    style={{ opacity: presentation.opacity }}
+                    style={{ opacity: previewMounted ? 1 : presentation.opacity }}
                     title={collapsed ? `${feature.label} — ${feature.description}` : feature.description}
                     data-maturity={feature.maturity}
                     onClick={onNavigate}
@@ -57,7 +69,11 @@ export function Sidebar({
                     ) : (
                       <>
                         <span className="portal-navitem-label">{feature.label}</span>
-                        <MaturityBadge maturity={feature.maturity} />
+                        {previewMounted ? (
+                          <span className="badge-maturity badge-maturity-preview">PREVIEW</span>
+                        ) : (
+                          <MaturityBadge maturity={feature.maturity} />
+                        )}
                       </>
                     )}
                   </NavLink>

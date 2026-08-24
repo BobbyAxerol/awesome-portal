@@ -52,6 +52,23 @@
   font-size: var(--text-xs);
 }
 
+.exec-preview-details summary {
+  cursor: pointer;
+  color: var(--ink-mute);
+  font-size: var(--text-2xs);
+}
+
+.exec-preview-details[open] {
+  flex-basis: 100%;
+}
+
+.exec-preview-details p {
+  margin: 4px 0 0;
+  font-size: var(--text-2xs);
+  color: var(--ink-soft);
+  max-width: 72ch;
+}
+
 .exec-preview-banner strong,
 .exec-preview-banner code {
   font-family: var(--font-mono);

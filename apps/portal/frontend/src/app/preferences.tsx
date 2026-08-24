@@ -63,11 +63,16 @@ function readStored(): Preferences {
 export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [preferences, setPreferences] = useState<Preferences>(readStored);
 
-  // Theme and density are attributes on <html> so the token cascade — and any
-  // canvas renderer reading activeTheme() — sees one source of truth.
+  // Density is an attribute on <html> so the token cascade sees one source of
+  // truth. The THEME attribute is deliberately not written here any more: the
+  // route-aware presentation provider owns it (app/presentation.tsx), because
+  // on an Execution route the workspace is Carbon regardless of preference,
+  // and two writers of one attribute race on every preference change — the
+  // loser painting half the workspace. This provider still owns the stored
+  // preference; presentation reads it and applies it wherever no override is
+  // active.
   useEffect(() => {
     const root = document.documentElement;
-    root.setAttribute("data-theme", preferences.theme);
     root.setAttribute("data-density", preferences.density);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));

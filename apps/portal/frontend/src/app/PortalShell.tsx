@@ -16,6 +16,7 @@ import { StateView } from "../components/ui";
 import { PortalRequestError } from "../portal/client";
 import { useRegistry, useSummary } from "../portal/hooks";
 import { breadcrumbsFor, type NavOptions } from "../portal/navigation";
+import { PortalPresentationProvider } from "./presentation";
 import { CommandPalette, useCommandPaletteShortcut } from "./CommandPalette";
 import { PortalContext } from "./context";
 import { PortalRoutes } from "./PortalRoutes";
@@ -75,6 +76,10 @@ export function PortalShell() {
 
   return (
     <PortalContext.Provider value={contextValue}>
+      {/* Presentation wraps every piece of chrome the workspace mode covers —
+          topbar, rail, drawer, canvas, palette — so an Execution route flips
+          them together or not at all (EL-V2-01 §4.1). */}
+      <PortalPresentationProvider registry={registry.data}>
       <div className="portal-shell" data-sidebar-collapsed={preferences.sidebarCollapsed}>
         <TopBar
           breadcrumbs={breadcrumbs}
@@ -123,6 +128,7 @@ export function PortalShell() {
           onClose={() => setPaletteOpen(false)}
         />
       </div>
+      </PortalPresentationProvider>
     </PortalContext.Provider>
   );
 }

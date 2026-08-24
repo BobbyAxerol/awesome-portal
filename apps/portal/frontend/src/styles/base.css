@@ -144,6 +144,12 @@
   .badge-maturity-dashed {
     border-style: dashed;
   }
+  /* EL-V2-01: a route the user can open right now as a fixture preview. Solid
+   * accent border where SOON is dashed mute — one truthful state per §4.3. */
+  .badge-maturity-preview {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
 
   .badge-env {
     @apply mono inline-flex items-center rounded-sm border px-1.5 py-px text-[10px] font-semibold tracking-wide;

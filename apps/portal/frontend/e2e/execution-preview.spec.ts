@@ -50,7 +50,9 @@ test("all reviewed screens and sidebar roots mount fixture-only previews", async
     const banner = page.locator('[data-execution-preview="fixture"]');
     await expect(banner).toBeVisible();
     await expect(banner.locator("code")).toHaveText(screenId);
-    await expect(banner).toContainText("không kết nối AWS-HK");
+    // EL-V2-01 rewrote the banner to the one-line English §7.2 treatment; the
+    // old assertion pinned the Vietnamese paragraph it replaced.
+    await expect(banner).toContainText("No live connection");
     await settle(page);
   }
 

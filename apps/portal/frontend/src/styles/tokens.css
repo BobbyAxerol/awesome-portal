@@ -356,7 +356,12 @@
  * hi-fi files — DS §7 makes the rendered hex authoritative, not the prose.
  * Flat geometry per DS §7: every radius collapses to 0.
  * ------------------------------------------------------------------------ */
-[data-theme="operations-carbon"] {
+/* EL-V2-01: `execution-carbon` at :root is the WHOLE-WORKSPACE form of the
+ * same Carbon ramp — one shared rule so shell chrome and screen content can
+ * never drift apart. The element-scoped form remains for the semantic screen
+ * container. */
+[data-theme="operations-carbon"],
+:root[data-theme="execution-carbon"] {
   /* Carbon grey ramp: 100 #161616 · 90 #262626 · 80 #393939 · 70 #525252
    * 60 #6f6f6f · 50 #8d8d8d · 30 #c6c6c6 · 10 #f4f4f4 */
   --paper: #161616;

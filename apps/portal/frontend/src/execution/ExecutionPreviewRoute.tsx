@@ -54,12 +54,23 @@ function PreviewFrame({ screenId, children }: { screenId: string; children: Reac
 
   return (
     <ExecutionSurface kind={kind} className="exec-preview-shell">
+      {/* One line, English, below the breadcrumb — §7.2's exact treatment. The
+          previous banner was a Vietnamese paragraph (violating the UI-English
+          rule §3.8) at production-warning volume; the detail it carried now
+          lives in the disclosure so the default reading cost is one glance.
+          `screenId` remains here until EL-V2-03 moves it into the preview
+          inspector. */}
       <aside className="exec-preview-banner" role="status" data-execution-preview="fixture">
-        <strong>DEV INTEGRATION PREVIEW</strong>
-        <span>
-          Dữ liệu fixture cục bộ · không kết nối AWS-HK, Trading System, broker hoặc realtime ·
-          mọi thao tác chỉ mô phỏng trong trình duyệt.
-        </span>
+        <strong>FIXTURE PREVIEW</strong>
+        <span>No live connection · Actions are simulated</span>
+        <details className="exec-preview-details">
+          <summary>Details</summary>
+          <p>
+            Local fixture data only. No connection to AWS-HK, the Trading System, any broker or any
+            realtime stream. Every action is simulated inside the browser and nothing is sent
+            anywhere.
+          </p>
+        </details>
         <code>{screenId}</code>
       </aside>
       {children}
