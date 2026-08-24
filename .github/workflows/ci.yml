@@ -47,7 +47,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          # BAR-05 freezes the exact Python patch used by CI and runtime images.
+          python-version: "3.12.14"
           cache: pip
           cache-dependency-path: |
             apps/portal/backend/pyproject.toml

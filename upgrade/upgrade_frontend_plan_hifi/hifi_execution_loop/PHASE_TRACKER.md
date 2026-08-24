@@ -403,6 +403,16 @@ IMDS hop-limit one, exact profile detachment, then IMDS credential absence.
 Status is `D2_ISOLATION_EXECUTABLE_PREPARED / LIVE_D2_UNAUTHORIZED`; it remains
 backend-only and unlocks no Claude consumer.
 
+The D2 release candidate is now `D2_RELEASE_CANDIDATE_REMEDIATED /
+LIVE_D2_UNAUTHORIZED`. Main CI caught a Python 3.12 patch drift and image
+publication rejected four CRITICAL findings in unused Debian-slim packages.
+Backend pinned Python 3.12.14 across CI/runtime/BAR-05 and moved the Rust Edge
+to pinned shell-less Distroless; full Python and D2 runtime gates plus a
+zero-CRITICAL local scan pass. IAM and signed-main evidence are still closed,
+so Claude must keep every live source/query/stream/command consumer off.
+Evidence:
+[`EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md`](../../backend/EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md).
+
 D3 offline preparation is `D3_OFFLINE_PREPARATION_COMPLETE /
 LIVE_D3_UNAUTHORIZED`. A separate overlay opens only the three public
 contract/health/capability probes; the four alpha paths remain 503 and all

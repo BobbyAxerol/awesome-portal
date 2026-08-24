@@ -365,11 +365,14 @@ if [[ "${build_images}" == true ]]; then
     --tmpfs /tmp:rw,noexec,nosuid,nodev,size=8m \
     --tmpfs /var/cache/nginx:rw,noexec,nosuid,nodev,size=8m,mode=0750,uid=101,gid=101 \
     --entrypoint nginx portal-source-proxy:pre-iam-05 -t -q
-  "${docker_cli[@]}" run --rm --network none --read-only --cap-drop ALL \
-    --security-opt no-new-privileges --group-add "${runtime_gid}" \
-    --volume "${edge_secrets}:/run/secrets:ro" --entrypoint /bin/sh \
-    portal-execution-edge:pre-iam-05 -ceu \
-    'test "$(id -u)" = 65532; test -x /usr/local/bin/portal-execution-edge; test -r /run/secrets/edge-server.key; test ! -w /'
+  if "${docker_cli[@]}" run --rm --network none --read-only --cap-drop ALL \
+      --security-opt no-new-privileges --group-add "${runtime_gid}" \
+      --volume "${edge_secrets}:/run/secrets:ro" \
+      portal-execution-edge:pre-iam-05 unsupported-command-for-runtime-proof \
+      >/dev/null 2>&1; then
+    printf 'Distroless D2 Edge unexpectedly accepted an unsupported command.\n' >&2
+    exit 1
+  fi
 
   # Exercise the real first-boot PostgreSQL boundary and the compiled Rust
   # migrator on an isolated, unpublished Docker network. Named volumes let the
@@ -389,7 +392,7 @@ if [[ "${build_images}" == true ]]; then
   "${docker_cli[@]}" run --rm --user 0:0 \
     --volume "${edge_secrets}:/fixture:ro" \
     --volume "${integration_edgesecrets}:/destination" \
-    --entrypoint /bin/sh portal-execution-edge:pre-iam-05 \
+    --entrypoint /bin/sh "${PORTAL_PROJECTION_POSTGRES_IMAGE:-docker.io/library/postgres@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685}" \
     -ceu 'cp /fixture/* /destination/; chown -R 65532:65532 /destination; chmod 0750 /destination; chmod 0644 /destination/*.crt /destination/*.json; chmod 0640 /destination/*.key /destination/*.pem /destination/*token /destination/*database-url'
 
   "${docker_cli[@]}" run --detach --name "${integration_pg}" \

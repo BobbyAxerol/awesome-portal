@@ -15,6 +15,11 @@ FREEZE_EXPORTER = PORTAL_ROOT / "scripts" / "export_m0_freeze.py"
 REPORT_EXPORTER = PORTAL_ROOT / "scripts" / "export_environment_report.py"
 MANIFEST_PATH = FREEZE_ROOT / "m0-freeze-manifest.json"
 REPORT_PATH = FREEZE_ROOT / "environment-report.json"
+CI_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "ci.yml"
+PYTHON_IMAGE_PATHS = (
+    REPO_ROOT / "deploy" / "images" / "portal-api.Dockerfile",
+    REPO_ROOT / "deploy" / "images" / "roadmap-task-board-api.Dockerfile",
+)
 
 FORBIDDEN_MARKERS = (
     "password",
@@ -153,6 +158,18 @@ def test_environment_report_stable_subset_is_deterministic() -> None:
     assert regenerated["python_version"] == committed["python_version"]
     assert regenerated["platform"] == committed["platform"]
     assert regenerated["control_api_version"] == committed["control_api_version"]
+
+
+def test_environment_report_python_patch_matches_ci_and_runtime_images() -> None:
+    report = _load_json(REPORT_PATH)
+    python_version = report["python_version"]
+    assert isinstance(python_version, str)
+
+    ci_workflow = CI_WORKFLOW_PATH.read_text(encoding="utf-8")
+    assert f'python-version: "{python_version}"' in ci_workflow
+    for dockerfile_path in PYTHON_IMAGE_PATHS:
+        dockerfile = dockerfile_path.read_text(encoding="utf-8")
+        assert f"FROM python:{python_version}-slim@sha256:" in dockerfile
 
 
 # -------------------------------------------------------------- golden gate

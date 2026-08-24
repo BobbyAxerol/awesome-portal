@@ -19,6 +19,6 @@
     "quantbt-engine": "1.0.8"
   },
   "platform": "linux",
-  "python_version": "3.12.13",
+  "python_version": "3.12.14",
   "schema_version": "bar05.env-report.v1"
 }

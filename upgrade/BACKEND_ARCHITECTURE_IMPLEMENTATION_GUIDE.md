@@ -1020,8 +1020,8 @@ deep-dive → ADR → slice → evidence discipline documented above.
   the stop-gate and no detach was attempted.
   Two further exact retries remained unauthorized. The private policy is now
   revision 2: exact two actions, exact instance and region, without the request-
-  parameter conditions that failed to yield an effective Allow. Status is
-  The owner then reported attaching revision 2, but the exact 2026-08-24
+  parameter conditions that failed to yield an effective Allow. The owner then
+  reported attaching revision 2, but the exact 2026-08-24
   post-attachment DryRun still returned `UnauthorizedOperation`. Status is
   `REVISION_2_REPORTED_ATTACHED / EFFECTIVE_ALLOW_NOT_PROVEN /
   LIVE_D2_UNAUTHORIZED`; verify the policy under the existing role's Permissions
@@ -1030,6 +1030,15 @@ deep-dive → ADR → slice → evidence discipline documented above.
   detached as a bypass.
   Evidence:
   [`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](./backend/EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
+- **EX-BE-02-LIVE D2 release-gate remediation (2026-08-24):** main CI exposed
+  floating Python 3.12 patch drift, while the image publisher rejected four
+  CRITICAL findings from unused Debian-slim `perl-base`/`zlib` packages before
+  any signature or deployment. CI/BAR-05/Python images now lock 3.12.14 and
+  the Rust Edge runtime is pinned shell-less Distroless. Full Python regression,
+  D2 database/source-dark integration and a zero-CRITICAL fixed-image scan pass.
+  Status is `D2_RELEASE_CANDIDATE_REMEDIATED / LIVE_D2_UNAUTHORIZED`; IAM,
+  main CI/signing and the live change window remain predecessors. Evidence:
+  [`EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md`](./backend/EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md).
 - **EX-BE-02-LIVE D3 offline preparation (2026-08-23):** a separate probe-only
   overlay now opens exactly three public contract/health source routes while
   four alpha routes remain 503 and ingestion/query/SSE/analytics/command stay

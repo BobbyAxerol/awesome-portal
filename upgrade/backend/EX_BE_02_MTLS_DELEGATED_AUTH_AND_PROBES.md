@@ -87,12 +87,15 @@ do not make the identity unstable.
 
 ## 5. Runtime and deployment
 
-`deploy/images/execution-edge.Dockerfile` uses Rust 1.85.1 and Debian Bookworm
-Slim bases pinned by digest. BuildKit caches compilation but copies only the
-release binary into the final image. Verified local image properties:
+`deploy/images/execution-edge.Dockerfile` uses Rust 1.85.1 and a Distroless
+`cc-debian12:nonroot` runtime, both pinned by digest. BuildKit caches
+compilation but copies only the release binary into the shell-less final
+image. The runtime supplies only the glibc/libgcc boundary required by the
+compiled binary; the 2026-08-24 publication hardening scan removed the
+Debian-slim `perl-base`/`zlib` CRITICAL findings. Verified image properties:
 
-- image ID `sha256:3106d59855cce29a8312c9c408cf7073e007a992f20633f01fb32c1a881e87d6`;
-- 32,106,185 bytes;
+- verified local image ID `sha256:101cce1a7f96edb8ae5523aba0eaa28c74f3eea11ef344556b1dcb3a046ba7a0`;
+- 14,489,167 bytes;
 - UID/GID `65532:65532`;
 - read-only capable, no Linux capabilities, `no-new-privileges`;
 - unsupported command fails closed.

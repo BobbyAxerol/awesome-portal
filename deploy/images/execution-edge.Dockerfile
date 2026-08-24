@@ -9,7 +9,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     cargo build --locked --release --package edge-service --quiet && \
     cp target/release/edge-service /portal-execution-edge
 
-FROM debian:bookworm-slim@sha256:abd67ffcfa541b485a3dff59865ab629aa048a6c613e639d36e7456b0b229241
+FROM gcr.io/distroless/cc-debian12:nonroot@sha256:9dac0a79194e45a7da0158a9c6da57b217585af0786db3845d1f0ec1a0dd182f
 
 LABEL org.opencontainers.image.title="Primus Portal execution edge" \
       org.opencontainers.image.description="Read-only Rust compatibility edge for the AWS HK execution cell"
