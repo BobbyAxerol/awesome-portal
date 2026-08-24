@@ -136,6 +136,7 @@ services:
         ROADMAP_TASK_BOARD_LOCAL_ONLY: ${ROADMAP_TASK_BOARD_LOCAL_ONLY:-false}
         ROADMAP_TASK_BOARD_PERSISTENCE: ${ROADMAP_TASK_BOARD_PERSISTENCE:-v1}
         ROADMAP_TASK_BOARD_API_BASE: ${ROADMAP_TASK_BOARD_API_BASE:-/roadmap-task-board/api}
+        EXECUTION_PREVIEW_ENABLED: ${PORTAL_EXECUTION_PREVIEW_ENABLED:-false}
     image: ${PORTAL_IMAGE_PREFIX:-local/portal}-portal-web:${PORTAL_IMAGE_TAG:-dev}
     restart: unless-stopped
     ports:
