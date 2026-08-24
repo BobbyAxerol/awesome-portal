@@ -39,7 +39,9 @@ jobs:
       - name: Check out deployment definition
         uses: actions/checkout@v7
         with:
+          ref: main
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Validate deployment configuration
         run: |
@@ -53,14 +55,28 @@ jobs:
             echo 'DEPLOY_PORT must be numeric.' >&2
             exit 1
           fi
-          if ! [[ "${IMAGE_TAG}" =~ ^[A-Za-z0-9._-]+$ ]]; then
-            echo 'Invalid image tag.' >&2
+          if [[ "${GITHUB_REF}" != "refs/heads/main" ]]; then
+            printf 'Production deployment must be dispatched from main, found: %s\n' "${GITHUB_REF}" >&2
+            exit 1
+          fi
+          if ! [[ "${IMAGE_TAG}" =~ ^sha-[0-9a-f]{40}$ ]]; then
+            echo 'Production image tag must be sha-<40 lowercase hexadecimal commit>.' >&2
             exit 1
           fi
           if ! [[ "${DEPLOY_PATH}" =~ ^/[A-Za-z0-9._/-]+$ ]]; then
             echo 'Deployment path must be an absolute safe path.' >&2
             exit 1
           fi
+          source_commit="${IMAGE_TAG#sha-}"
+          git cat-file -e "${source_commit}^{commit}" 2>/dev/null || {
+            printf 'Image source commit is unavailable in Portal Git: %s\n' "${source_commit}" >&2
+            exit 1
+          }
+          git merge-base --is-ancestor "${source_commit}" HEAD || {
+            printf 'Image source commit is not reachable from main: %s\n' "${source_commit}" >&2
+            exit 1
+          }
+          printf 'SOURCE_COMMIT=%s\n' "${source_commit}" >> "${GITHUB_ENV}"
 
       - name: Configure pinned SSH access
         run: |
@@ -78,21 +94,72 @@ jobs:
           ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
             "mv '${DEPLOY_PATH}/deploy/compose.production.yaml.next' '${DEPLOY_PATH}/deploy/compose.production.yaml'"
 
-      - name: Pull and start immutable images
+      - name: Back up, migrate and start immutable images
         run: |
           ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "DEPLOY_PATH='${DEPLOY_PATH}' IMAGE_TAG='${IMAGE_TAG}' bash -s" <<'REMOTE'
-          set -eu
+            "DEPLOY_PATH='${DEPLOY_PATH}' IMAGE_TAG='${IMAGE_TAG}' SOURCE_COMMIT='${SOURCE_COMMIT}' bash -s" <<'REMOTE'
+          set -euo pipefail
           cd "${DEPLOY_PATH}"
           test -f .env.production
-          PORTAL_IMAGE_TAG="${IMAGE_TAG}" docker compose \
-            --env-file .env.production \
-            -f deploy/compose.production.yaml config -q
-          PORTAL_IMAGE_TAG="${IMAGE_TAG}" docker compose \
-            --env-file .env.production \
-            -f deploy/compose.production.yaml pull
-          PORTAL_IMAGE_TAG="${IMAGE_TAG}" docker compose \
-            --env-file .env.production \
-            -f deploy/compose.production.yaml up -d --remove-orphans
-          docker compose --env-file .env.production -f deploy/compose.production.yaml ps
+
+          compose() {
+            PORTAL_IMAGE_TAG="${IMAGE_TAG}" docker compose \
+              --env-file .env.production \
+              -f deploy/compose.production.yaml "$@"
+          }
+
+          compose config -q
+
+          timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          backup_dir="${DEPLOY_PATH}/backups/${timestamp}-${IMAGE_TAG}"
+          if compose ps --services --status running | grep -qx portal-postgres; then
+            install -d -m 0700 "${backup_dir}"
+            compose exec -T portal-postgres sh -ec \
+              'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom' \
+              > "${backup_dir}/portal-control.dump"
+            test -s "${backup_dir}/portal-control.dump"
+            (
+              cd "${backup_dir}"
+              sha256sum portal-control.dump > SHA256SUMS
+            )
+
+            if compose ps --services --status running | grep -qx roadmap-task-board-api; then
+              roadmap_tmp="/var/lib/roadmap-task-board/.predeploy-${timestamp}.db"
+              compose exec -T roadmap-task-board-api python -m backend.scripts.portal_db backup \
+                --database /var/lib/roadmap-task-board/portal.db \
+                --output "${roadmap_tmp}"
+              compose cp \
+                "roadmap-task-board-api:${roadmap_tmp}" \
+                "${backup_dir}/roadmap-task-board.db"
+              compose exec -T roadmap-task-board-api rm -f "${roadmap_tmp}"
+              test -s "${backup_dir}/roadmap-task-board.db"
+              (
+                cd "${backup_dir}"
+                sha256sum roadmap-task-board.db >> SHA256SUMS
+              )
+            fi
+            printf 'Pre-deploy backup written to %s\n' "${backup_dir}"
+          else
+            printf 'No running production PostgreSQL service; treating this as a first deployment.\n'
+          fi
+
+          compose pull
+          compose up -d --remove-orphans --wait --wait-timeout 180
+          compose exec -T control-api node -e \
+            "fetch('http://127.0.0.1:4000/api/control/readyz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+          compose exec -T portal-api python -c \
+            "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ready', timeout=3)"
+          compose exec -T roadmap-task-board-api python -c \
+            "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ready', timeout=3)"
+
+          marker_next="${DEPLOY_PATH}/.deployed-release.env.next"
+          umask 077
+          {
+            printf 'SOURCE_BRANCH=main\n'
+            printf 'SOURCE_COMMIT=%s\n' "${SOURCE_COMMIT}"
+            printf 'IMAGE_TAG=%s\n' "${IMAGE_TAG}"
+            printf 'DEPLOYED_AT_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > "${marker_next}"
+          mv "${marker_next}" "${DEPLOY_PATH}/deployed-release.env"
+          compose ps
           REMOTE

@@ -33,11 +33,11 @@ ingress:
   # hostname has no Cloudflare Access policy; the dev Control API uses its own
   # local username/password session and a separate Compose database namespace.
   # Loopback HTTP is intentional because the current Origin CA wildcard covers
-  # one label only and does not cover dev.portal.primusspark.com.
-  - hostname: dev.portal.primusspark.com
+  # one label only, so the preview hostname also stays one label deep.
+  - hostname: dev-portal.primusspark.com
     service: http://127.0.0.1:80
     originRequest:
-      httpHostHeader: dev.portal.primusspark.com
+      httpHostHeader: dev-portal.primusspark.com
       connectTimeout: 10s
       keepAliveTimeout: 90s
 

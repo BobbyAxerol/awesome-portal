@@ -27,7 +27,7 @@ def test_public_hostname_is_pinned_to_stable_and_dev_is_isolated() -> None:
         re.DOTALL,
     )
     dev = re.search(
-        r"server\s*\{(?=[^}]*server_name dev\.portal\.primusspark\.com;).*?"
+        r"server\s*\{(?=[^}]*server_name dev-portal\.primusspark\.com;).*?"
         r"proxy_pass http://portal_dev_app;.*?\n\}",
         nginx,
         re.DOTALL,
@@ -40,7 +40,7 @@ def test_public_hostname_is_pinned_to_stable_and_dev_is_isolated() -> None:
 def test_tunnel_keeps_access_on_stable_but_not_on_dev() -> None:
     tunnel = (REPO_ROOT / "deploy/cloudflared/config.example.yml").read_text()
     stable_start = tunnel.index("  - hostname: portal.primusspark.com")
-    dev_start = tunnel.index("  - hostname: dev.portal.primusspark.com")
+    dev_start = tunnel.index("  - hostname: dev-portal.primusspark.com")
     fallback_start = tunnel.index("  - service: http_status:404")
 
     stable = tunnel[stable_start:dev_start]

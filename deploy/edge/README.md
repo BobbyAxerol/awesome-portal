@@ -12,9 +12,12 @@
   credentials JSON.
 - `portal.primusspark.com` always routes to the stable/main release runtime on
   loopback port `18081`.
-- `dev.portal.primusspark.com` routes to the disposable dev runtime on loopback
+- `dev-portal.primusspark.com` routes to the disposable dev runtime on loopback
   port `8080`. It has no Access application, but the Portal local login remains
   mandatory and its Compose project/database namespace must stay separate.
+- A feature branch may occupy `dev-portal` only as an explicit preview. After
+  merge, rebuild it from the exact `origin/dev` commit. `portal.primusspark.com`
+  is always built/deployed from main with an immutable production image.
 
 ## 1. DNS record (Cloudflare dashboard)
 
@@ -25,7 +28,7 @@ Target: <TUNNEL_UUID>.cfargotunnel.com
 Proxy: enabled (orange cloud)
 
 Type:  CNAME
-Name:  dev.portal
+Name:  dev-portal
 Target: <TUNNEL_UUID>.cfargotunnel.com
 Proxy: enabled (orange cloud)
 ```
@@ -42,7 +45,7 @@ sudo chmod 0640 /etc/cloudflared/<TUNNEL_UUID>.json
 
 sudo cloudflared --config /etc/cloudflared/config.yml tunnel ingress validate
 sudo cloudflared --config /etc/cloudflared/config.yml tunnel ingress rule https://portal.primusspark.com
-sudo cloudflared --config /etc/cloudflared/config.yml tunnel ingress rule https://dev.portal.primusspark.com
+sudo cloudflared --config /etc/cloudflared/config.yml tunnel ingress rule https://dev-portal.primusspark.com
 sudo systemctl restart cloudflared
 ```
 
@@ -61,6 +64,12 @@ Stable binds `127.0.0.1:18081`; dev binds `127.0.0.1:8080`. Both remain
 loopback-only. Never reuse the stable PostgreSQL, planning or artifact volume
 from the dev Compose project. If representative dev data is needed, restore a
 one-way sanitized snapshot into the dev-owned volumes.
+
+Before any source-managed build, run the release-channel guard from the target
+worktree (`preview`, `dev` or `stable` as appropriate). Git merge never copies
+database data. Main deployment retains the stable volumes and applies only new
+forward migrations after consistent backups; the AWS-HK Execution Edge
+projection database follows its own D2/D4 lifecycle.
 
 ## 4. Firewall
 
