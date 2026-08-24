@@ -200,6 +200,7 @@ export function SandboxCertificationScreen({
               : "Findings count not published."}
           </p>
         ) : (
+          <div className="exec-scroll-x">
           <table className="exec-cert-table">
             <thead>
               <tr>
@@ -222,6 +223,7 @@ export function SandboxCertificationScreen({
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
 

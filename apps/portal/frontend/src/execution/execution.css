@@ -17,6 +17,12 @@
   color: var(--ink);
   font-family: var(--font-body);
   min-height: 100%;
+  /* A flex or grid item defaults to `min-width: auto`, which refuses to shrink
+     below its content's minimum — and this surface holds tables whose own
+     minimum is 980px. Without this the surface inflates to the table instead of
+     letting the table's `overflow-x: auto` box do its job, and the whole page
+     scrolls sideways at every width under about 1000px. */
+  min-width: 0;
 }
 
 /* ---------------------------------------------------------------------------
@@ -106,6 +112,11 @@
 .exec-chip {
   display: inline-flex;
   align-items: center;
+  /* Chips carry sentences as well as tokens — the blotter's cross-filter chip
+     reads "Cross-filter · chart selection · Aug 12 10:00–14:00 ✕ reset" and was
+     403px of unbreakable text. Wrapping between words costs nothing; a value
+     inside a chip has no spaces, so it still cannot be split. */
+  flex-wrap: wrap;
   gap: var(--space-1);
   padding: 1px var(--space-2);
   border: 1px solid var(--line);
@@ -718,6 +729,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  min-width: 0;
 }
 
 .exec-fixtures-heading {
@@ -2098,6 +2110,31 @@
   white-space: nowrap;
 }
 
+.exec-chip-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The chip is itself a flex ITEM of the row above, and a flex item defaults to
+   `min-width: auto` — it refuses to shrink below its longest line no matter
+   what its children are allowed to do. Constraining the child was not enough,
+   and that is the whole lesson: the shrink has to be permitted at every level
+   between the text and the box that is too narrow. */
+.exec-chip {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* And its children, for the same reason one level down. The reset button is a
+   flex item too, and 42px of "✕ reset" that refused to shrink was the last
+   thing holding the blotter chip open. Chasing this took four passes because
+   `min-width: auto` has to be cleared at EVERY level between the text and the
+   box that is too narrow — clearing it at one level moves the number a little
+   and looks like the fix not working. */
+.exec-chip > * {
+  min-width: 0;
+}
+
 .exec-blotter-scope,
 .exec-blotter-cross {
   display: flex;
@@ -3346,6 +3383,7 @@
 
 .exec-queue-rail {
   width: 340px;
+  max-width: 100%;
   flex: none;
   border: 1px solid var(--line);
   background: var(--surface-2);
@@ -3464,6 +3502,15 @@
 
 @media (max-width: 900px) {
   .exec-queue-body { flex-direction: column; }
+  /* The direction change was already here; the alignment was not. In a row,
+     `align-items: flex-start` stops a short rail stretching to the height of a
+     long queue. In a column it means the opposite thing — each item takes its
+     CONTENT width — so the queue sized itself to 612px inside a 326px parent
+     and kept the page scrolling sideways long after every table had a scroll
+     box. `nowrap` matters for the same reason: wrapping a COLUMN flex makes
+     extra columns and grows the container sideways, which is the trap an
+     earlier attempt at this fix fell into. */
+  .exec-queue-body { align-items: stretch; flex-wrap: nowrap; }
   .exec-queue-rail { width: auto; }
   .exec-queue-table { display: block; overflow-x: auto; }
 }
@@ -4026,4 +4073,89 @@
   background: var(--surface-2);
   padding: var(--space-2);
   margin-top: var(--space-3);
+}
+
+/* Digests and artifact references have no space to break at — a full
+   `sha256:…` is 64 characters — so on a narrow screen they push their list
+   item past the viewport. Broken anywhere rather than ellipsised: M6 wants
+   every character on screen, and half a digest is not a digest. */
+/* Guard-rule and policy notes carry machine tokens with no space to break at —
+   `BROKER_MISMATCH_SUPPRESSES_VALUES_AND_SOURCE_GAP_BLOCKS_R4` is one word to a
+   browser. The paragraph fits its column, but the word does not, and the
+   overflow lands in the ancestors' scroll width: this one token was the last
+   48px of horizontal page scroll at phone width. */
+.exec-live-note,
+.exec-cert-note,
+.exec-canary-note,
+.exec-live-lineage li,
+.exec-cert-lineage li,
+.exec-canary-lineage li,
+.exec-exit-lineage li,
+.exec-paper-lineage li,
+.exec-inc-evidence li,
+.exec-evidence-link {
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------------------
+ * Phone width (Bobby, 2026-08-23: build for laptop and phone too).
+ *
+ * Everything above is laid out for an operator workstation, and by 834px the
+ * surface already fits without help — that was fixed by giving wide tables
+ * scroll boxes and letting identity lines wrap, not by hiding anything. What
+ * a phone additionally cannot do is hold two or three columns side by side,
+ * so the shared grid primitives collapse to one.
+ *
+ * 640px, not 834: the tablet layout measured clean, and moving its breakpoint
+ * would rewrite a layout that works to fix one that does not.
+ *
+ * Nothing here hides content or shortens a value. A column that cannot fit
+ * beside another goes underneath it.
+ * ------------------------------------------------------------------------ */
+@media (max-width: 900px) {
+  /* Scoped to narrow widths on purpose, after learning why the alternative is
+     worse. Applied at every width, `overflow-wrap: anywhere` left the admin
+     drawer's text sitting on a wrap boundary at laptop size: two identical runs
+     produced images 3925px and 3932px tall, a 7px difference and 3% of pixels,
+     which is a flaky baseline rather than a fixed layout. These rules solve a
+     narrow-width problem and have no business changing a layout that already
+     works. */
+  .exec-blotter-scope,
+  .exec-blotter-cross,
+  .exec-admin-rowhead,
+  .exec-alpha-kpi {
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 640px) {
+  /* `repeat(auto-fit, minmax(22rem, 1fr))` still demands 352px per track, which
+     is wider than a 326px column once the page padding is taken off — auto-fit
+     drops to one track and that track is still 352. */
+  .exec-alpha-tiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .exec-grid-2,
+  .exec-grid-auto,
+  .exec-360-grid3,
+  .exec-cc-twoup,
+  .exec-cc-cells,
+  .exec-cert-triptych {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* `2.5rem 6rem 1fr 6rem 8rem` is a table pretending to be a grid. On a phone
+     it becomes what it actually is: a stack of labelled facts. */
+  .exec-cc-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  /* `minmax(160px, 1fr)` still asks for 160px per track, which is two tracks
+     on a 390px screen minus padding — enough to push a long step label out. */
+  .exec-cert-strip {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

@@ -388,10 +388,19 @@ export function AccountBroker360({
         <div className="exec-tile-title">{accountId}</div>
         <div className="exec-360-identity">
           <EnvironmentBadge stage={stage} />
-          <span className="exec-num">
-            {alpha} · {deployment} · {portfolio} · {venue} · {marginMode} · settle{" "}
-            {settleCurrency} · {accountRevision}
-          </span>
+          {/* One span per part, separators outside them — the pattern Portfolio
+              360° already uses. A single span around the whole sentence wears
+              `.exec-num`'s `white-space: nowrap`, which exists to stop a NUMBER
+              breaking mid-value; applied to a seven-part identity line it made
+              one unbreakable 900px box that scrolled the page sideways at every
+              width under about 950px. Each identifier still cannot break,
+              because each is its own span. */}
+          <span className="exec-num">{alpha}</span> ·{" "}
+          <span className="exec-num">{deployment}</span> ·{" "}
+          <span className="exec-num">{portfolio}</span> · <span className="exec-num">{venue}</span> ·{" "}
+          <span className="exec-num">{marginMode}</span> · settle{" "}
+          <span className="exec-num">{settleCurrency}</span> ·{" "}
+          <span className="exec-num">{accountRevision}</span>
         </div>
       </header>
 
@@ -426,6 +435,7 @@ export function AccountBroker360({
           <span className="exec-360-note">{positionMode} position mode</span>
         </div>
 
+        <div className="exec-scroll-x">
         <table className="exec-360-linked">
           <caption>
             linked virtual account ({linked.length})
@@ -460,6 +470,7 @@ export function AccountBroker360({
             ))}
           </tbody>
         </table>
+        </div>
         {linkedNotice ? <p className="exec-360-note">{linkedNotice}</p> : null}
         <p className="exec-360-note">
           the aggregate check is this screen&apos;s job — one physical account backs several
@@ -471,6 +482,7 @@ export function AccountBroker360({
         <section className="exec-gate-panel">
           <div className="exec-tile-title">Sync history</div>
           <div className="exec-360-note">policy {syncPolicy}</div>
+          <div className="exec-scroll-x">
           <table className="exec-360-sync">
             <caption className="exec-blotter-note">Broker sync history</caption>
             <thead>
@@ -505,6 +517,7 @@ export function AccountBroker360({
               ))}
             </tbody>
           </table>
+          </div>
           {syncNotice ? <p className="exec-360-note">{syncNotice}</p> : null}
           {syncTotal === null ? (
             // Said, not implied. Without this the ten rows read as the history.
@@ -526,9 +539,11 @@ export function AccountBroker360({
             <dt>last dry-run</dt>
             <dd>
               {lastDryRun ? (
-                <span className="exec-num">
-                  {lastDryRun.verdict} · {lastDryRun.at} · {lastDryRun.id}
-                </span>
+                <>
+                  <span className="exec-num">{lastDryRun.verdict}</span> ·{" "}
+                  <span className="exec-num">{lastDryRun.at}</span> ·{" "}
+                  <span className="exec-num">{lastDryRun.id}</span>
+                </>
               ) : (
                 <span className="exec-gate-unverified">never run</span>
               )}

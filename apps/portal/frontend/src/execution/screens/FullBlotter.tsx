@@ -464,7 +464,12 @@ export function FullBlotter({
           crossFilter ? (
             <div className="exec-blotter-cross">
               <span className="exec-chip" data-tone="warn">
-                Cross-filter · {crossFilter}
+                {/* Wrapped in a span rather than left as bare text. Inside an
+                    inline-flex chip a bare text run becomes an anonymous flex
+                    item, and an anonymous item cannot be given `min-width: 0`,
+                    so it sized the chip to its longest line and pushed the
+                    blotter 42px past its column on a phone. */}
+                <span className="exec-chip-text">Cross-filter · {crossFilter}</span>
                 <button
                   type="button"
                   className="exec-chip-reset"

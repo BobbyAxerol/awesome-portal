@@ -502,6 +502,7 @@ export function PaperWorkbench({
         {tab === "Sessions" ? (
           <section className="exec-gate-panel">
             <div className="exec-tile-title">Sessions</div>
+            <div className="exec-scroll-x">
             <table className="exec-360-sync">
               <caption className="exec-blotter-note">Runtime sessions and their recovery</caption>
               <thead>
@@ -534,6 +535,7 @@ export function PaperWorkbench({
                 ))}
               </tbody>
             </table>
+            </div>
             {sessionNotice ? <p className="exec-blotter-note">{sessionNotice}</p> : null}
           </section>
         ) : null}

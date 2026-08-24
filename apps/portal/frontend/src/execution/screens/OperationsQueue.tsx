@@ -209,6 +209,7 @@ export function OperationsQueueScreen({
             />
           ) : (
             <>
+              <div className="exec-scroll-x">
               <table className="exec-queue-table">
                 <caption>
                   one row = one operation_id from plan → apply → verify · nothing ages silently
@@ -231,6 +232,7 @@ export function OperationsQueueScreen({
                   ))}
                 </tbody>
               </table>
+              </div>
 
               {/* Keyset only. There are no page numbers because the server
                   publishes opaque cursors and an offset drawn over them would

@@ -226,6 +226,7 @@ function CorrelationMatrix({
   const labels = matrix.labels;
   return (
     <div className="exec-pf-matrixwrap">
+      <div className="exec-scroll-x">
       <table className="exec-pf-matrix">
         <thead>
           <tr>
@@ -268,6 +269,7 @@ function CorrelationMatrix({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -316,6 +318,7 @@ function CorrelationLens({
           ))}
         </select>
       </label>
+      <div className="exec-scroll-x">
       <table className="exec-360-sync">
         <caption>{subject?.displayName} against every other entity</caption>
         <thead>
@@ -343,6 +346,7 @@ function CorrelationLens({
           ))}
         </tbody>
       </table>
+      </div>
       {notice ? <p className="exec-blotter-note">{notice}</p> : null}
     </div>
   );
@@ -357,6 +361,7 @@ function RankedPairs({ ranked }: { ranked: RankedCorrelation }) {
   const notice = capNotice(shown, "ranked pairs");
   return (
     <div>
+      <div className="exec-scroll-x">
       <table className="exec-360-sync">
         <thead>
           <tr>
@@ -391,6 +396,7 @@ function RankedPairs({ ranked }: { ranked: RankedCorrelation }) {
           })}
         </tbody>
       </table>
+      </div>
       {notice ? <p className="exec-blotter-note">{notice}</p> : null}
       {ranked.clusters.length > 0 ? (
         <ul className="exec-pf-clusters">
@@ -564,6 +570,7 @@ function Ledger({
         const notice = capNotice(shown, `${bucket.currency} entries`);
         return (
           <div key={bucket.currency}>
+            <div className="exec-scroll-x">
             <table className="exec-360-sync">
               <caption>
                 {bucket.currency} — gross increase{" "}
@@ -618,6 +625,7 @@ function Ledger({
                 ))}
               </tbody>
             </table>
+            </div>
             {notice ? <p className="exec-blotter-note">{notice}</p> : null}
             {bucket.entryCount === null || bucket.entryCount === undefined ? (
               <p className="exec-blotter-note">
@@ -749,6 +757,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
               <div className="exec-blotter-note">
                 one account = one alpha, never shared
               </div>
+              <div className="exec-scroll-x">
               <table className="exec-alpha-deployments">
                 <caption className="exec-blotter-note">
                   Holdings — one row per deployment
@@ -798,6 +807,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                   ))}
                 </tbody>
               </table>
+              </div>
               {holdingsNotice ? <p className="exec-blotter-note">{holdingsNotice}</p> : null}
               {/* Required wherever a total crosses currencies. A portfolio total
                   over USDT and USDC is only meaningful with a named rate, and
@@ -835,6 +845,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
         {tab === "Approvals" ? (
           <section className="exec-gate-panel">
             <div className="exec-tile-title">Approvals touching this portfolio</div>
+            <div className="exec-scroll-x">
             <table className="exec-360-sync">
               <caption className="exec-blotter-note">Approvals touching this portfolio</caption>
               <thead>
@@ -864,6 +875,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                 ))}
               </tbody>
             </table>
+            </div>
           </section>
         ) : null}
 
@@ -882,6 +894,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                   No incidents are open against this portfolio in this window.
                 </p>
               ) : (
+                <div className="exec-scroll-x">
                 <table className="exec-360-sync">
                   <thead>
                     <tr>
@@ -902,8 +915,10 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
               {incidents.resolved.length > 0 ? (
+                <div className="exec-scroll-x">
                 <table className="exec-360-sync">
                   <caption>resolved — and what closed them</caption>
                   <thead>
@@ -929,6 +944,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                     ))}
                   </tbody>
                 </table>
+                </div>
               ) : null}
             </section>
           ) : (

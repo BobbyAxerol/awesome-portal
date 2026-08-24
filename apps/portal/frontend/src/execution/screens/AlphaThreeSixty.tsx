@@ -337,6 +337,7 @@ function DeploymentMap({ venues }: { venues: readonly VenueRow[] }) {
       <div className="exec-blotter-note">
         one deployment = one venue account · multi-venue = parallel deployments
       </div>
+      <div className="exec-scroll-x">
       <table className="exec-alpha-map">
         <caption className="exec-blotter-note">Venue by stage</caption>
         <thead>
@@ -377,6 +378,7 @@ function DeploymentMap({ venues }: { venues: readonly VenueRow[] }) {
           ))}
         </tbody>
       </table>
+      </div>
       {notice ? <p className="exec-blotter-note">{notice}</p> : null}
     </section>
   );
@@ -566,6 +568,7 @@ function Deployments({ rows, scope }: { rows: readonly DeploymentRow[]; scope: A
   return (
     <section className="exec-gate-panel">
       <div className="exec-tile-title">Deployments in scope — {scope.venue}</div>
+      <div className="exec-scroll-x">
       <table className="exec-alpha-deployments">
         <caption className="exec-blotter-note">Deployments in scope</caption>
         <thead>
@@ -613,6 +616,7 @@ function Deployments({ rows, scope }: { rows: readonly DeploymentRow[]; scope: A
           ))}
         </tbody>
       </table>
+      </div>
       {notice ? <p className="exec-blotter-note">{notice}</p> : null}
     </section>
   );
@@ -744,6 +748,7 @@ function Sessions({ rows }: { rows: readonly SessionRow[] }) {
   return (
     <section className="exec-gate-panel">
       <div className="exec-tile-title">Sessions — restart and recovery evidence</div>
+      <div className="exec-scroll-x">
       <table className="exec-360-sync">
         <caption className="exec-blotter-note">Session and recovery events</caption>
         <thead>
@@ -770,6 +775,7 @@ function Sessions({ rows }: { rows: readonly SessionRow[] }) {
           ))}
         </tbody>
       </table>
+      </div>
       {notice ? <p className="exec-blotter-note">{notice}</p> : null}
     </section>
   );
@@ -784,6 +790,7 @@ function Accounting({ rows }: { rows: readonly AccountingRow[] }) {
   return (
     <section className="exec-gate-panel">
       <div className="exec-tile-title">Accounting — per account and currency</div>
+      <div className="exec-scroll-x">
       <table className="exec-360-sync">
         <caption className="exec-blotter-note">Accounting by account and currency</caption>
         <thead>
@@ -809,6 +816,7 @@ function Accounting({ rows }: { rows: readonly AccountingRow[] }) {
           ))}
         </tbody>
       </table>
+      </div>
       {notice ? <p className="exec-blotter-note">{notice}</p> : null}
       <p className="exec-blotter-note">
         canonical in the Execution cell · one row per account and currency, never one row per
@@ -822,6 +830,7 @@ function Reconciliation({ rows }: { rows: readonly ReconciliationRow[] }) {
   return (
     <section className="exec-gate-panel">
       <div className="exec-tile-title">Reconciliation — per venue policy freshness</div>
+      <div className="exec-scroll-x">
       <table className="exec-360-sync">
         <caption className="exec-blotter-note">Reconciliation policy freshness</caption>
         <thead>
@@ -850,6 +859,7 @@ function Reconciliation({ rows }: { rows: readonly ReconciliationRow[] }) {
           ))}
         </tbody>
       </table>
+      </div>
       <p className="exec-blotter-note">paper deployments reconcile against nothing — N/A is correct there</p>
     </section>
   );
