@@ -1018,16 +1018,15 @@ deep-dive → ADR → slice → evidence discipline documented above.
   that no identity-based policy permits the action. Caller identity and profile
   association are correct, so IAM console attachment/boundary placement remains
   the stop-gate and no detach was attempted.
-  Two further exact retries remained unauthorized. The private policy is now
-  revision 2: exact two actions, exact instance and region, without the request-
-  parameter conditions that failed to yield an effective Allow. The owner then
-  reported attaching revision 2, but the exact 2026-08-24
-  post-attachment DryRun still returned `UnauthorizedOperation`. Status is
-  `REVISION_2_REPORTED_ATTACHED / EFFECTIVE_ALLOW_NOT_PROVEN /
-  LIVE_D2_UNAUTHORIZED`; verify the policy under the existing role's Permissions
-  policies/default managed-policy version and inspect boundary/SCP denies before
-  retrying. The role is retained until the D2 window; it is not deleted or
-  detached as a bypass.
+  Two further exact retries remained unauthorized after the first reported
+  attachment. The private policy was revised to exact two actions, exact
+  instance and region, without the metadata request-parameter conditions. Bobby
+  then made revision 2 the default permissions-policy version on the exact role
+  and confirmed there is no permissions boundary. The 2026-08-24 exact verifier
+  passed with `D2_ISOLATION_AUTHORITY_VERIFIED`; EC2 returned the required
+  `DryRunOperation`. Status is `IAM_EFFECTIVE_ALLOW_VERIFIED /
+  LIVE_D2_UNAUTHORIZED`. No EC2 setting/profile association changed, and the
+  role is retained until the bounded D2 window rather than detached as a bypass.
   Evidence:
   [`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](./backend/EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
 - **EX-BE-02-LIVE D2 release-gate remediation (2026-08-24):** main CI exposed

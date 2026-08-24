@@ -398,13 +398,14 @@ authority.
   A later propagation retry also failed. The mode-0600 private policy has been
   narrowed to revision 2 with the exact two actions, instance ARN and region,
   but without request-parameter conditions that did not create an effective
-  Allow. After the owner reported attaching revision 2, the exact 2026-08-24
-  verifier still returned `UnauthorizedOperation`. Status is therefore
-  `REVISION_2_REPORTED_ATTACHED / EFFECTIVE_ALLOW_NOT_PROVEN /
-  LIVE_D2_UNAUTHORIZED`. The owner must verify the policy is attached under the
-  existing role's Permissions policies, is the managed-policy default version,
-  and is not denied by a permissions boundary/SCP. The role is retained until
-  the D2 change window; no detach/delete workaround is allowed. Evidence:
+  Allow. After the earlier rejected attachment, Bobby made revision 2 the
+  default permissions-policy version on the exact existing role and confirmed
+  there is no permissions boundary. The exact 2026-08-24 verifier then passed
+  with `D2_ISOLATION_AUTHORITY_VERIFIED`: EC2 returned the required
+  `DryRunOperation` for hop limit one. Status is now
+  `IAM_EFFECTIVE_ALLOW_VERIFIED / LIVE_D2_UNAUTHORIZED`. No EC2 setting or
+  association changed; the role is retained until the bounded D2 window and no
+  detach/delete workaround is allowed. Evidence:
   [`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](./EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
 - `EX-BE-02-LIVE` **D2 release candidate remediated / live unauthorized:** the
   first main publication caught floating Python patch drift and four CRITICAL
