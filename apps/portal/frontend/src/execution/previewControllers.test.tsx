@@ -79,7 +79,8 @@ describe("local UI interactions mirror into the URL", () => {
   });
   it("Paper: a hand-edited tab that does not exist falls back instead of selecting nothing", () => {
     mount(<PaperWorkbenchPreview deploymentId="dep_94" />, "/deployments/paper/dep_94?tab=Nope");
-    expect(screen.getByRole("tab", { name: "Orders" }).getAttribute("aria-selected")).toBe("true");
+    // EL-V2-04: Overview is the first tab (§10.1), so it is the fallback.
+    expect(screen.getByRole("tab", { name: "Overview" }).getAttribute("aria-selected")).toBe("true");
   });
   it("Alpha: changing the venue scope narrows the deployments table", () => {
     mount(<AlphaThreeSixtyPreview alphaId="av_2041" />, "/deployments/alphas/av_2041");
@@ -123,7 +124,7 @@ describe("safe simulated workflows are explicit", () => {
     const page = paperWorkbench().orders;
     if (!page) throw new Error("the Paper fixture must publish an orders page");
     const orders = { ...page, hasMore: true, nextCursor: "c_fixture_next" };
-    mount(<PaperWorkbenchPreview deploymentId="dep_94" initial={{ orders }} />, "/deployments/paper/dep_94");
+    mount(<PaperWorkbenchPreview deploymentId="dep_94" initial={{ orders }} />, "/deployments/paper/dep_94?tab=Orders");
     const older = screen.getAllByRole("button", { name: /load older/i });
     fireEvent.click(older[0]);
     expect(document.querySelector(".exec-sim-live")?.textContent).toMatch(/no older rows exist/);

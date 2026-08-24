@@ -2297,6 +2297,7 @@ const EXIT_PANELS = [
 function exitReview(over: Record<string, unknown> = {}) {
   return (
     <PaperExitReview
+        onCopyProvenance={vi.fn()}
       reviewId="EX-771"
       deploymentId="dep_94"
       subject="Grid v2.1 · dep_94 · DERIBIT"
@@ -2321,7 +2322,7 @@ describe("Paper Exit Review", () => {
     expect(screen.getByText("GATE UNMET")).toBeTruthy();
     // Full coverage is on screen and the gate is still unmet: the policy that
     // produced the verdict knows things the coverage numbers do not show.
-    expect(container.querySelector(".exec-exit-summary")?.textContent).toContain("30 / 30 days");
+    expect(container.querySelector(".exec-page-header, .exec-masthead, header")?.textContent).toContain("30 / 30 days");
     expect(screen.getByRole("button", { name: /Approve promotion/ })).toHaveProperty("disabled", true);
   });
 
@@ -2345,7 +2346,7 @@ describe("Paper Exit Review", () => {
     // `data-mark` rather than a label this screen invented.
     const { container } = render(exitReview());
     expect(container.querySelector('.exec-evidence-row[data-mark="insufficient"]')).not.toBeNull();
-    expect(screen.getByText(/carries into sandbox certification/)).toBeTruthy();
+    expect(screen.getAllByText(/carries into sandbox certification/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/Promotion does not resolve them/)).toBeTruthy();
   });
 

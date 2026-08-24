@@ -21,7 +21,7 @@ import { paperWorkbench } from "./paper.fixtures";
  * enabled-no-op this phase removes. Callers supply handlers — the preview
  * controllers on product routes, explicit spies in tests.
  */
-export type PaperWorkbenchData = Omit<PaperWorkbenchProps, "onRequestExit" | "onTabChange" | "onLoadOlder" | "onAdminActions">;
+export type PaperWorkbenchData = Omit<PaperWorkbenchProps, "onRequestExit" | "onTabChange" | "onLoadOlder" | "onAdminActions" | "onCopyProvenance">;
 
 
 const EQUITY: ChartEnvelope = {

@@ -159,7 +159,7 @@ export function PaperWorkbenchPreview({
   initial?: Partial<PaperWorkbenchData>;
 }) {
   const navigate = useNavigate();
-  const [tab, setTab] = useParamState<WorkbenchTab>("tab", WORKBENCH_TABS, "Orders");
+  const [tab, setTab] = useParamState<WorkbenchTab>("tab", WORKBENCH_TABS, "Overview");
   const { record, view } = useSimulationLedger();
   const base = useMemo(
     () => (variant === "vnm" ? vnmWorkbench({ deploymentId, ...initial }) : paperWorkbench({ ...GATE_MET, deploymentId, ...initial })),
@@ -174,6 +174,7 @@ export function PaperWorkbenchPreview({
         onLoadOlder={(which) => record(`load older · ${which}`, "fixture holds one page; no older rows exist")}
         onRequestExit={() => navigate(`${ROUTES.exitReview("EX-771")}?from=${encodeURIComponent(`${ROUTES.paper(deploymentId)}?tab=${tab}`)}`)}
         onAdminActions={() => navigate(ROUTES.adminActions())}
+        onCopyProvenance={(full) => record("copy provenance", `copied ${full.length} chars to clipboard (simulated)`)}
       />
       {view}
     </>

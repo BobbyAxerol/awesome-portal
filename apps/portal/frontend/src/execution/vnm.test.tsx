@@ -5,7 +5,7 @@
  * clock provably pauses outside 09:00–14:45 ICT"* — so the calendar gets its
  * own suite, held against the clock rather than against the rendering.
  */
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { PaperWorkbench } from "./screens/PaperWorkbench";
@@ -81,7 +81,7 @@ describe("Paper Workbench VNM — the session variant", () => {
 
   it("explains the closure in INFO tone and says it is not STALE", () => {
     const { container } = render(<PaperWorkbench {...paperHandlers()} {...vnmWorkbench()} />);
-    expect(screen.getByText(/paused against the venue calendar/)).toBeTruthy();
+    expect(screen.getAllByText(/paused against the venue calendar/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/this is not STALE/)).toBeTruthy();
     // And it is the calendar banner, not the stale banner.
     expect(container.querySelector(".exec-paper-calendar")).toBeTruthy();
@@ -114,18 +114,18 @@ describe("Paper Workbench VNM — the session variant", () => {
   it("counts the gate in sessions and says closures do not consume it", () => {
     render(<PaperWorkbench {...paperHandlers()} {...vnmWorkbench()} />);
     expect(screen.getByText(/counts TRADING days/)).toBeTruthy();
-    expect(screen.getByText(/21 more trading sessions/)).toBeTruthy();
+    expect(screen.getAllByText(/21 more trading sessions/).length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows credential status without offering a control that does nothing", () => {
     // Renewal is Execution-side. A button here would be a promise the Portal
     // cannot keep.
-    const { container } = render(<PaperWorkbench {...paperHandlers()} {...vnmWorkbench()} />);
-    const strip = container.querySelector(".exec-paper-credential") as HTMLElement;
-    expect(within(strip).getByText("DNSE-01")).toBeTruthy();
-    expect(within(strip).getByText("EXPIRING")).toBeTruthy();
-    expect(within(strip).getByText(/renewal is Execution-side/)).toBeTruthy();
-    expect(within(strip).queryByRole("button")).toBeNull();
+    // EL-V2-04: credential status sits in the provenance drawer. Still no
+    // renew control anywhere on the page.
+    render(<PaperWorkbench {...paperHandlers()} {...vnmWorkbench()} />);
+    expect(screen.getByText(/DNSE-01 · EXPIRING/)).toBeTruthy();
+    expect(screen.getByText(/session expires/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /renew/i })).toBeNull();
   });
 
   it("keeps every figure in VND and never mixes a second currency", () => {
@@ -135,7 +135,7 @@ describe("Paper Workbench VNM — the session variant", () => {
   });
 
   it("names the settlement convention the venue actually uses", () => {
-    render(<PaperWorkbench {...paperHandlers()} {...vnmWorkbench()} />);
+    render(<PaperWorkbench {...paperHandlers()} {...vnmWorkbench({ tab: "Accounting" })} />);
     expect(screen.getByText(/T\+2\.5/)).toBeTruthy();
     expect(screen.getByText(/lot size/)).toBeTruthy();
   });

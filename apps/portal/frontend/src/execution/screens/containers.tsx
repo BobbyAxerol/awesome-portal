@@ -833,6 +833,7 @@ export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi;
   return (
     <>
       <PaperExitReview
+        onCopyProvenance={(full) => void navigator.clipboard?.writeText(full)}
         eligibility={d?.eligibility}
         reviewId={d?.reviewId ?? reviewId}
         deploymentId={d?.deploymentId ?? "unknown"}

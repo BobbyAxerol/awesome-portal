@@ -949,3 +949,16 @@ bật chip, không phải hỏng.
   (BR-EX-33)"; journey #6 đi vào incident qua Command Center (href server) thay vì từ Queue.
 - **Đề xuất schema:** thêm `incident_id` nullable vào `execution-operations.v1` row; null khi operation
   không thuộc incident nào.
+
+### BR-EX-34 — equity projection series for Paper/Canary/Live/Alpha charts (2026-08-24, EL-V2-04)
+
+- **Endpoint/field cần:** `GET /deployments/{deployment_id}/equity-projection?window=30d&bucket=1h`
+  trả `execution-analytics.equity-projection.v1`: `points[{bucket_start, equity, drawdown}]` (decimal
+  string), `approved_band[{bucket_start, lower, upper}]` từ research evidence (joined by artifact
+  digest + run id), `gaps[{from,to,reason}]`, envelope (authority, as_of, formula_version
+  `equity_projection.v1`, `buckets_returned/expected`, `joined_run_id`).
+- **Lý do UI:** HiFi 1c/1e/1f/2a/2b "Equity vs approved research evidence" — chart trung tâm của mọi
+  workbench. Hiện **không contract nào publish series** (insight-batch chỉ scalar), nên product route
+  chỉ có thể hiện trạng thái honest; cơ chế chart đã dựng và test trên fixtures.
+- **Ảnh hưởng hiện tại:** Paper/Canary/Live/Alpha render "Equity series not published (BR-EX-34)".
+- **Đề xuất schema:** như trên; gap là gap (không nội suy); band từ run đã duyệt; số là chuỗi decimal.

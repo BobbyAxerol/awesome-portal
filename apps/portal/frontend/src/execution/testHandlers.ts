@@ -9,7 +9,7 @@
 import { vi } from "vitest";
 
 export function paperHandlers() {
-  return { onRequestExit: vi.fn(), onTabChange: vi.fn(), onLoadOlder: vi.fn(), onAdminActions: vi.fn() };
+  return { onRequestExit: vi.fn(), onTabChange: vi.fn(), onLoadOlder: vi.fn(), onAdminActions: vi.fn(), onCopyProvenance: vi.fn() };
 }
 export function alphaHandlers() {
   return { onScopeChange: vi.fn(), onTabChange: vi.fn(), onLoadOlder: vi.fn(), onOpenDeployment: vi.fn(), onOpenAccount: vi.fn() };

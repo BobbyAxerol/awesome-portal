@@ -20,12 +20,13 @@ async function open(page: Page, route: string) {
 test.describe("§8.2 journeys", () => {
   test("1 · Paper: every tab → request exit → Paper Exit Review → back with context", async ({ page }) => {
     await open(page, "/deployments/paper/dep_94");
-    for (const tab of ["Fills", "Positions", "Sessions", "Orders"]) {
+    for (const tab of ["Fills", "Positions", "Sessions", "Orders", "Accounting", "Evidence", "Overview"]) {
       await page.getByRole("tab", { name: tab }).click();
       await expect(page.getByRole("tab", { name: tab })).toHaveAttribute("aria-selected", "true");
-      // The default tab (Orders) is represented by the ABSENCE of the param —
+      // The default tab is represented by the ABSENCE of the param —
       // a clean URL for the clean state; every other tab is mirrored.
-      if (tab === "Orders") await expect(page).not.toHaveURL(/tab=/);
+      // EL-V2-04: Overview is the first tab, so it is the clean-URL default.
+      if (tab === "Overview") await expect(page).not.toHaveURL(/tab=/);
       else await expect(page).toHaveURL(new RegExp(`tab=${tab}`));
     }
     await page.getByRole("tab", { name: "Fills" }).click();
@@ -300,4 +301,69 @@ test("structural: no enabled control on any preview route is a no-op", async ({ 
   const noops = records.filter((r) => r.verdict === "NO-OP");
   expect(records.length).toBeGreaterThan(100);
   expect(noops.map((r) => `${r.route} #${r.index} ${r.tag} "${r.text}" ${r.detail ?? ""}`)).toEqual([]);
+});
+
+// ── EL-V2-04 · reference vertical slice: fold + shell-visible baselines ──────
+// The decision must be on the first screen at 1440×900 (handoff §10.1, §14.5):
+// masthead, the "Next" rail with its CTA, and the chart tile all within the fold.
+test.describe("EL-V2-04 · Paper reference slice", () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test("Paper: masthead, Next rail, CTA and chart tile sit above the fold at 1440×900", async ({ page }) => {
+    await open(page, "/deployments/paper/dep_94");
+    const within = async (locator: ReturnType<typeof page.locator>) => {
+      const box = await locator.first().boundingBox();
+      expect(box, await locator.first().evaluate((n) => n.outerHTML.slice(0, 80))).not.toBeNull();
+      expect(box!.y + box!.height, "bottom edge inside 900px fold").toBeLessThanOrEqual(900);
+    };
+    await within(page.getByRole("heading", { name: /Carry v3\.2|Grid v2\.1|dep_94/ }).or(page.locator("h1")));
+    await within(page.getByText("Next: Paper Exit Review"));
+    await within(page.getByRole("button", { name: /Request Paper Exit Review/ }));
+    await within(page.getByLabel("Equity vs approved research evidence"));
+    // Document never scrolls sideways at this width.
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+
+  test("Exit Review: decision rail and its reasons sit above the fold at 1440×900", async ({ page }) => {
+    await open(page, "/governance/exit-reviews/EX-771");
+    const rail = page.getByText(/Decide: promote to|^Decided$/);
+    const box = await rail.first().boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.y + box!.height).toBeLessThanOrEqual(900);
+    const approve = await page.getByRole("button", { name: /Approve promotion/ }).boundingBox();
+    expect(approve).not.toBeNull();
+    expect(approve!.y + approve!.height).toBeLessThanOrEqual(900);
+  });
+
+  test("Paper → request exit → decide → back keeps the tab context", async ({ page }) => {
+    await open(page, "/deployments/paper/dep_94");
+    await page.getByRole("tab", { name: "Evidence" }).click();
+    await expect(page).toHaveURL(/tab=Evidence/);
+    await expect(page.getByText(/Drift vs approved evidence/)).toBeVisible();
+    const cta = page.getByRole("button", { name: /Request Paper Exit Review/ });
+    if (await cta.isEnabled()) {
+      await cta.click();
+      await expect(page).toHaveURL(/\/governance\/exit-reviews\/EX-771/);
+      await page.getByRole("tab", { name: /Conditions/ }).click();
+      await expect(page.getByText(/Conditions & recommendation/)).toBeVisible();
+      await page.goBack();
+      await expect(page).toHaveURL(/\/deployments\/paper\/dep_94\?tab=Evidence/);
+    } else {
+      // Unmet gate: the CTA names what blocks it and the Blockers rail lists each criterion.
+      await expect(cta).toHaveAttribute("title", /Blocked — \d+ criteri/);
+      await expect(page.getByText(/18 more days of observation/).first()).toBeVisible();
+    }
+  });
+
+  for (const [name, route] of [
+    ["paper-dep_94", "/deployments/paper/dep_94"],
+    ["paper-vnm", "/deployments/paper/dep_vnm/vn-market"],
+    ["exit-review-EX-771", "/governance/exit-reviews/EX-771"],
+  ] as const) {
+    test(`shell-visible baseline · ${name} · 1440×900`, async ({ page }) => {
+      await open(page, route);
+      await expect(page).toHaveScreenshot(`el-v2-04-${name}.png`, { fullPage: true, animations: "disabled" });
+    });
+  }
 });

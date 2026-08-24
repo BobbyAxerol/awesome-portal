@@ -20,7 +20,6 @@
  *      disabling them. A button somebody may never press is a question they
  *      will keep asking.
  */
-import { useId } from "react";
 import type { ReactNode } from "react";
 
 import type {
@@ -33,20 +32,32 @@ import type {
   PromotionStage,
   Readiness,
 } from "../contracts";
-import { AuthorityBadge, EnvironmentBadge, StatusChip } from "../components/badges";
-import { ChartTile } from "../components/chart";
+import { AuthorityBadge, StatusChip } from "../components/badges";
 import { LifecycleRail, ObservationProgress, stageRail } from "../components/lifecycle";
 import { KeysetTable, type Column } from "../components/table";
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
 import { formatUntil, sessionState, type VenueCalendar } from "../vnCalendar";
 import { ExecutionSurface } from "../ExecutionSurface";
+import { ExecutionSectionTitle } from "../components/typography";
+import { EquityChart, type EquitySeries } from "../components/EquityChart";
+import {
+  ExecutionContextRail,
+  ExecutionDecisionStrip,
+  ExecutionPageHeader,
+  ExecutionProvenanceDrawer,
+  ExecutionTabs,
+  ExecutionWorkspace,
+  shortDigest,
+  type HeaderBadge,
+  type RailBlocker,
+} from "../components/workspace";
 
 /** Session and drift rows are bounded per deployment; orders and fills are not. */
 const SESSION_BUDGET = 20;
 const DRIFT_BUDGET = 24;
 
-export const WORKBENCH_TABS = ["Orders", "Fills", "Positions", "Sessions"] as const;
+export const WORKBENCH_TABS = ["Overview", "Positions", "Orders", "Fills", "Sessions", "Accounting", "Evidence"] as const;
 export type WorkbenchTab = (typeof WORKBENCH_TABS)[number];
 
 export interface WorkbenchOrder {
@@ -125,7 +136,12 @@ export interface PaperWorkbenchProps {
   /** `12/30 days · 184/300 trades` — the current stage's detail on the rail. */
   railDetail?: string;
   kpis: readonly { label: string; value: string | null; unit?: string | null }[];
-  equity: { envelope: ChartEnvelope; body?: ReactNode } | null;
+  equity: {
+    envelope: ChartEnvelope;
+    /** null/absent = contract publishes no series (BR-EX-34) → honest compact state */
+    series?: EquitySeries | null;
+    body?: ReactNode;
+  } | null;
   /** The observation gate. Beside the chart, never below it. */
   observation: {
     items: readonly (Progress & { label: string })[];
@@ -171,6 +187,8 @@ export interface PaperWorkbenchProps {
   /** False hides every mutation control. Not disables — hides. */
   operatorAdmin?: boolean;
   onAdminActions: () => void;
+  /** provenance drawer Copy — simulated control, goes through the ledger */
+  onCopyProvenance: (full: string) => void;
   status?: PanelStatus;
   reason?: string;
 }
@@ -224,6 +242,7 @@ export function PaperWorkbench({
   credential = null,
   operatorAdmin = false,
   onAdminActions,
+  onCopyProvenance,
   status = "ok",
   reason,
 }: PaperWorkbenchProps) {
@@ -234,10 +253,6 @@ export function PaperWorkbench({
       </ExecutionSurface>
     );
   }
-
-  // A venue calendar changes what "not moving" means. Outside the session the
-  // data is exactly as fresh as the market allows, and calling that STALE
-  // sends an operator hunting a fault in a system working correctly.
   const session = calendar && venueLocalTime ? sessionState(venueLocalTime, calendar) : null;
   const closed = session?.phase === "CLOSED_BY_CALENDAR";
   const stale = envelope.freshness === "STALE" && !closed;
@@ -245,301 +260,261 @@ export function PaperWorkbench({
   const shownSessions = capPreserving(
     sessions,
     SESSION_BUDGET,
-    // A session that did not close cleanly is the row worth keeping.
     (row) => row.state !== "CLOSED" || Boolean(row.detail && !row.detail.includes("clean")),
   );
   const sessionNotice = capNotice(shownSessions, "sessions");
   const shownDrift = capPreserving(drift, DRIFT_BUDGET, (row) => row.verdict !== "WITHIN_BAND");
   const driftNotice = capNotice(shownDrift, "drift rows");
 
-  // `useId`, not a literal. The tab ids and the panel id were hardcoded, so any
-  // page holding two of this screen emits duplicate DOM ids — and an
-  // `aria-controls` that resolves to the first match means the second screen's
-  // tabs point at the FIRST screen's panel. The fixtures surface renders five
-  // of one of these, so this was live on a real page, not hypothetical.
-  const uid = useId();
+  // Masthead badges on separate axes (§6.1): session state is not runtime
+  // state — the venue is shut and the deployment is still ACTIVE.
+  const badges: HeaderBadge[] = [
+    { label: stage, axis: "stage" },
+    ...(closed ? [{ label: "SUSPENDED_BY_CALENDAR", axis: "runtime", tone: "mute" } as HeaderBadge] : []),
+    {
+      label: readiness,
+      axis: "readiness",
+      tone: readiness === "READY" ? "good" : readiness === "BLOCKED" ? "bad" : "warn",
+    },
+    {
+      label: `${envelope.authority} · ${closed ? "PAUSED" : envelope.freshness}`,
+      axis: "broker-sync",
+      tone: closed ? "mute" : envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn",
+    },
+  ];
+  const blockers: RailBlocker[] = [
+    ...unmetCriteria.map((c) => ({ label: c, detail: "observation gate", severity: "blocking" as const })),
+    ...drift
+      .filter((row) => row.verdict !== "WITHIN_BAND")
+      .map((row) => ({
+        label: `${row.label} ${row.verdict}`,
+        detail: row.note ?? "drift vs approved evidence",
+        severity: row.verdict === "FAIL" ? ("blocking" as const) : ("watch" as const),
+      })),
+  ];
+  const provenanceItems = [
+    ...lineage.map((entry) => {
+      const isDigest = entry.chip.label.startsWith("sha256:");
+      return {
+        label: entry.label,
+        short: isDigest ? shortDigest(entry.chip.label) : entry.chip.label,
+        full: isDigest ? entry.chip.label : entry.chip.title ?? null,
+        href: entry.chip.href ?? null,
+      };
+    }),
+    ...(credential
+      ? [
+          {
+            label: "credential",
+            short: `${credential.alias} · ${credential.status}${credential.expiresAt ? ` · session expires ${credential.expiresAt}` : ""}`,
+            full: null,
+          },
+        ]
+      : []),
+  ];
+  const exitTitle = exitBlocked
+    ? `Blocked — ${unmetCriteria.length} ${unmetCriteria.length === 1 ? "criterion" : "criteria"} unmet: ${unmetCriteria.join("; ") || "observation gate not met"}`
+    : undefined;
+  const exitCta = (
+    <button
+      type="button"
+      className="exec-role-control exec-btn-apply"
+      disabled={exitBlocked}
+      title={exitTitle}
+      onClick={onRequestExit}
+    >
+      Request Paper Exit Review
+    </button>
+  );
+  const rail = (
+    <ExecutionContextRail
+      next={{
+        title: "Next: Paper Exit Review",
+        detail: (
+          <>
+            <ObservationProgress items={observation.items} rule={observation.rule} met={observation.met} />
 
+          </>
+        ),
+      }}
+      blockers={blockers}
+      freshness={
+        <span className="exec-role-meta">
+          {envelope.authority} · as_of {envelope.asOf ?? "—"} ·{" "}
+          {closed ? "PAUSED (venue calendar)" : envelope.freshness}
+        </span>
+      }
+      provenance={<ExecutionProvenanceDrawer items={provenanceItems} onCopy={onCopyProvenance} />}
+    />
+  );
+  const tabs = WORKBENCH_TABS.map((key) => ({ key, label: key }));
   return (
     <ExecutionSurface kind="deployments" className="exec-paper">
-      <header className="exec-inbox-head">
-        <div className="exec-tile-title">
-          {alphaLabel} · {deploymentId}
-        </div>
-        <div className="exec-blotter-note">
-          {accountId} · {venue}
-        </div>
-        <div className="exec-alpha-identity">
-          <EnvironmentBadge stage={stage} />
-          {/* Two chips, deliberately together. Session state is not runtime
-              state: the venue is shut and the deployment is still ACTIVE, and
-              collapsing them would report a healthy deployment as stopped. */}
-          {closed ? <StatusChip label="SUSPENDED_BY_CALENDAR" tone="mute" /> : null}
-          <StatusChip
-            label={readiness}
-            tone={readiness === "READY" ? "good" : readiness === "BLOCKED" ? "bad" : "warn"}
-          />
-          <AuthorityBadge envelope={envelope} />
-          {/* Hidden, not disabled: a control an actor may never use is a
-              question they will keep asking. */}
-          {operatorAdmin ? (
-            <button type="button" className="exec-btn-ghost" onClick={onAdminActions}>
-              Admin actions
-            </button>
-          ) : null}
-        </div>
-      </header>
-
-      {/* Every id a chip, because each is a thing a reviewer may need to open.
-          A lineage printed as prose is a lineage nobody follows. */}
-      <div className="exec-paper-lineage">
-        {lineage.map((entry) => (
-          <span key={entry.label} className="exec-paper-lineageitem">
-            <span className="exec-blotter-note">{entry.label}</span>
-            {entry.chip.href ? (
-              <a className="exec-evidence-link" href={entry.chip.href} title={entry.chip.title}>
-                {entry.chip.label}
-              </a>
-            ) : (
-              <span className="exec-num" title={entry.chip.title}>
-                {entry.chip.label}
+      <ExecutionWorkspace layout="balanced" rail={rail}>
+        <ExecutionPageHeader
+          title={alphaLabel}
+          id={deploymentId}
+          badges={badges}
+          purpose="Is this deployment tracking approved evidence, and is it ready to leave Paper?"
+          primaryAction={exitCta}
+          secondary={
+            <>
+              <span className="exec-role-meta">
+                {accountId} · {venue}
               </span>
-            )}
-          </span>
-        ))}
-      </div>
-
-      {credential ? (
-        <div className="exec-paper-credential">
-          <span className="exec-blotter-note">credential</span>
-          <span className="exec-num">{credential.alias}</span>
-          <StatusChip
-            label={credential.status}
-            tone={credential.status === "VALID" ? "good" : "warn"}
-          />
-          {credential.expiresAt ? (
-            <span className="exec-blotter-note">
-              session expires {credential.expiresAt} · renewal is Execution-side, this is status
-              only
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-
-      {closed && session ? (
-        // INFO, not warning. Nothing is wrong: the market is shut.
-        <div className="exec-paper-calendar" role="status">
-          <strong>
-            Market closed — reopens {calendar?.window ? "09:00" : "at open"}
-            {session.reopensInMinutes !== null
-              ? ` (in ${formatUntil(session.reopensInMinutes)})`
-              : null}
-            .
-          </strong>{" "}
-          Data is shown as of the last close and freshness ageing is{" "}
-          <strong>paused against the venue calendar</strong> — this is not STALE. Signals
-          generated off-hours queue as at-open intents and are re-validated by risk at session
-          open. Session state is not runtime state: the deployment stays active.
-        </div>
-      ) : null}
-
-      {stale ? (
-        // The last good values stay, marked. A blank would be worse: an
-        // operator can act on a number they know is old.
-        <div className="exec-paper-stale" role="status">
-          <strong>Projection stale.</strong> Values below are the last good ones
-          {envelope.asOf ? ` as of ${envelope.asOf}` : null} — no continuity is assumed across the
-          gap. Orders remain authoritative in the Execution cell, and risk fails closed there.
-        </div>
-      ) : null}
-
-      <LifecycleRail steps={stageRail({ stage, r1, r2, detail: railDetail })} />
-
-      <div className="exec-alpha-kpis">
-        {kpis.map((kpi) => (
-          <div key={kpi.label} className="exec-alpha-kpi">
-            <div className="exec-blotter-note">{kpi.label}</div>
-            <div>
-              <Num value={kpi.value} />
-              {kpi.value !== null && kpi.unit ? (
-                <span className="exec-blotter-note"> {kpi.unit}</span>
+              <AuthorityBadge envelope={envelope} />
+              {/* Hidden, not disabled: a control an actor may never use is a
+                  question they will keep asking. */}
+              {operatorAdmin ? (
+                <button type="button" className="exec-btn-ghost" onClick={onAdminActions}>
+                  Admin actions
+                </button>
               ) : null}
-            </div>
+            </>
+          }
+        />
+        {closed && session ? (
+          <div className="exec-paper-calendar exec-role-body" role="status">
+            <strong>
+              Market closed — reopens {calendar?.window ? "09:00" : "at open"}
+              {session.reopensInMinutes !== null ? ` (in ${formatUntil(session.reopensInMinutes)})` : null}
+              .
+            </strong>{" "}
+            Shown as of last close; freshness ageing is{" "}
+            <strong>paused against the venue calendar</strong> — this is not STALE.
+            <details>
+              <summary>Why the deployment stays active</summary>
+              <p className="exec-evidence-caption">
+                Signals generated off-hours queue as at-open intents and are re-validated by risk at
+                session open. Session state is not runtime state.
+              </p>
+            </details>
           </div>
-        ))}
-      </div>
-
-      {/* Chart and gate side by side. The wireframe puts the gate beside the
-          equity curve and not under it, and the reason is in the screen's
-          purpose: Paper exists to exit Paper. */}
-      <div className="exec-grid-2" data-ratio="1.35">
+        ) : null}
+        {stale ? (
+          <div className="exec-paper-stale exec-role-body" role="status">
+            <strong>Projection stale.</strong> Values are the last good ones
+            {envelope.asOf ? ` as of ${envelope.asOf}` : null} — no continuity is assumed across
+            the gap.
+            <details>
+              <summary>Where authority sits while stale</summary>
+              <p className="exec-evidence-caption">
+                Orders remain authoritative in the Execution cell, and risk fails closed there.
+              </p>
+            </details>
+          </div>
+        ) : null}
+        <LifecycleRail steps={stageRail({ stage, r1, r2, detail: railDetail })} />
+        <ExecutionDecisionStrip
+          metrics={kpis.map((kpi) => ({ label: kpi.label, value: kpi.value, unit: kpi.unit ?? null }))}
+        />
         {equity ? (
-          <ChartTile title="Equity vs approved research evidence" envelope={equity.envelope}>
-            {equity.body}
-          </ChartTile>
+          <EquityChart
+            title="Equity vs approved research evidence"
+            envelope={equity.envelope}
+            series={equity.series ?? null}
+          />
         ) : (
           <PanelState status="unavailable" reason="No equity series was published for this window." />
         )}
-
-        <section className="exec-gate-panel">
-          <div className="exec-tile-title">Observation gate → Paper Exit</div>
-          <ObservationProgress
-            items={observation.items}
-            rule={observation.rule}
-            met={observation.met}
-          />
-          <div className="exec-paper-exit">
-            <button
-              type="button"
-              className="exec-btn-apply"
-              disabled={exitBlocked}
-              onClick={onRequestExit}
-            >
-              Request Paper Exit Review
-            </button>
-            {exitBlocked ? (
-              // Named, not counted. "3 criteria unmet" tells a reader how much
-              // is wrong; the list tells them what to do about it.
-              <div className="exec-disabled-reason">
-                Blocked — {unmetCriteria.length}{" "}
-                {unmetCriteria.length === 1 ? "criterion is" : "criteria are"} unmet:
-                <ul>
-                  {unmetCriteria.map((c) => (
-                    <li key={c}>{c}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </div>
-        </section>
-      </div>
-
-      <div className="exec-grid-2">
-        <FactPanel title="Runtime health" rows={runtime} />
-        <FactPanel title="Accounting" rows={accounting} />
-      </div>
-
-      <div className="exec-grid-2">
-        <FactPanel title="Portfolio contribution · rolling correlation" rows={contribution} />
-
-        <section className="exec-gate-panel">
-          <div className="exec-tile-title">Drift vs approved evidence</div>
-          <div className="exec-scroll-x">
-          <table className="exec-360-sync">
-            <caption className="exec-blotter-note">
-              {/* The fallback used to assert the linkage: with no note
-                  published the caption read "Linked to the approved run by
-                  artifact digest," which is a provenance claim invented out of
-                  silence — on the one panel whose job is to report divergence.
-                  `driftNote` carries the server's own sentence; absence of it
-                  is absence of the statement, not confirmation. */}
-              {driftNote ?? "No linkage to the approved run is stated. Absence is not a match."}
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">measure</th>
-                <th scope="col">approved</th>
-                <th scope="col">observed</th>
-                <th scope="col">verdict</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shownDrift.shown.map((row) => (
-                <tr key={row.label} data-verdict={row.verdict}>
-                  <th scope="row">{row.label}</th>
-                  <td>
-                    <Num value={row.expected} />
-                  </td>
-                  <td>
-                    <Num value={row.observed} />
-                  </td>
-                  <td>
-                    {/* The server's verdict. What "within band" means is a
-                        policy the approval was granted against, not a
-                        comparison the browser is entitled to make. */}
-                    <StatusChip label={row.verdict} tone={DRIFT_TONE[row.verdict]} />
-                    {row.note ? <span className="exec-blotter-note"> {row.note}</span> : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
-          {driftNotice ? <p className="exec-blotter-note">{driftNotice}</p> : null}
-          <p className="exec-blotter-note">
-            These gates feed Paper Exit Review — a WATCH item blocks nothing, a FAIL item blocks
-            the exit.
-          </p>
-        </section>
-      </div>
-
-      <div className="exec-alpha-tabs" role="tablist" aria-label="Deployment activity">
-        {WORKBENCH_TABS.map((option) => (
-          <button
-            key={option}
-            type="button"
-            role="tab"
-            id={`${uid}-tab-${option}`}
-            aria-controls={`${uid}-tabpanel`}
-            className="exec-inbox-filter"
-            data-active={tab === option ? "true" : undefined}
-            aria-selected={tab === option}
-            onClick={() => onTabChange(option)}
-          >
-            {option}
-          </button>
-        ))}
-      </div>
-
-      <div
-        className="exec-alpha-body"
-        role="tabpanel"
-        id={`${uid}-tabpanel`}
-        aria-labelledby={`${uid}-tab-${tab}`}
-      >
-        {tab === "Orders" ? <Orders orders={orders} onLoadOlder={onLoadOlder} /> : null}
-        {tab === "Fills" ? <Fills fills={fills} onLoadOlder={onLoadOlder} /> : null}
-        {tab === "Positions" ? <Positions positions={positions} onLoadOlder={onLoadOlder} /> : null}
-        {tab === "Sessions" ? (
-          <section className="exec-gate-panel">
-            <div className="exec-tile-title">Sessions</div>
-            <div className="exec-scroll-x">
-            <table className="exec-360-sync">
-              <caption className="exec-blotter-note">Runtime sessions and their recovery</caption>
-              <thead>
-                <tr>
-                  <th scope="col">session</th>
-                  <th scope="col">started (UTC)</th>
-                  <th scope="col">state</th>
-                  <th scope="col">orders</th>
-                  <th scope="col">fills</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shownSessions.shown.map((row) => (
-                  <tr key={row.sessionId}>
-                    <th scope="row">{row.sessionId}</th>
-                    <td>
-                      <span className="exec-num">{row.startedAt}</span>
-                    </td>
-                    <td>
-                      {row.state}
-                      {row.detail ? <span className="exec-blotter-note"> · {row.detail}</span> : null}
-                    </td>
-                    <td>
-                      <Num value={row.orders !== null ? String(row.orders) : null} absent="not counted" />
-                    </td>
-                    <td>
-                      <Num value={row.fills !== null ? String(row.fills) : null} absent="not counted" />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <ExecutionTabs tabs={tabs} active={tab} onChange={(key) => onTabChange(key as WorkbenchTab)} label="Deployment activity">
+          {tab === "Overview" ? <FactPanel title="Runtime health" rows={runtime} /> : null}
+          {tab === "Orders" ? <Orders orders={orders} onLoadOlder={onLoadOlder} /> : null}
+          {tab === "Fills" ? <Fills fills={fills} onLoadOlder={onLoadOlder} /> : null}
+          {tab === "Positions" ? <Positions positions={positions} onLoadOlder={onLoadOlder} /> : null}
+          {tab === "Accounting" ? <FactPanel title="Accounting" rows={accounting} /> : null}
+          {tab === "Evidence" ? (
+            <div className="exec-fixtures-stack">
+              <section className="exec-gate-panel">
+                <ExecutionSectionTitle>Drift vs approved evidence</ExecutionSectionTitle>
+                <div className="exec-scroll-x">
+                  <table className="exec-360-sync">
+                    <caption className="exec-blotter-note">
+                      {/* `driftNote` carries the server's own sentence; absence
+                          of it is absence of the statement, not confirmation. */}
+                      {driftNote ?? "No linkage to the approved run is stated. Absence is not a match."}
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">measure</th>
+                        <th scope="col">approved</th>
+                        <th scope="col">observed</th>
+                        <th scope="col">verdict</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {shownDrift.shown.map((row) => (
+                        <tr key={row.label} data-verdict={row.verdict}>
+                          <th scope="row">{row.label}</th>
+                          <td>
+                            <Num value={row.expected} />
+                          </td>
+                          <td>
+                            <Num value={row.observed} />
+                          </td>
+                          <td>
+                            {/* The server's verdict — "within band" is policy, not a browser comparison. */}
+                            <StatusChip label={row.verdict} tone={DRIFT_TONE[row.verdict]} />
+                            {row.note ? <span className="exec-blotter-note"> {row.note}</span> : null}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {driftNotice ? <p className="exec-blotter-note">{driftNotice}</p> : null}
+                <details>
+                  <summary>How drift feeds Paper Exit Review</summary>
+                  <p className="exec-evidence-caption">
+                    A WATCH item blocks nothing; a FAIL item blocks the exit.
+                  </p>
+                </details>
+              </section>
+              <FactPanel title="Portfolio contribution · rolling correlation" rows={contribution} />
             </div>
-            {sessionNotice ? <p className="exec-blotter-note">{sessionNotice}</p> : null}
-          </section>
-        ) : null}
-      </div>
+          ) : null}
+          {tab === "Sessions" ? (
+            <section className="exec-gate-panel">
+              <ExecutionSectionTitle>Sessions</ExecutionSectionTitle>
+              <div className="exec-scroll-x">
+                <table className="exec-360-sync">
+                  <caption className="exec-blotter-note">Runtime sessions and their recovery</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">session</th>
+                      <th scope="col">started (UTC)</th>
+                      <th scope="col">state</th>
+                      <th scope="col">orders</th>
+                      <th scope="col">fills</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shownSessions.shown.map((row) => (
+                      <tr key={row.sessionId}>
+                        <th scope="row">{row.sessionId}</th>
+                        <td>
+                          <span className="exec-num">{row.startedAt}</span>
+                        </td>
+                        <td>
+                          {row.state}
+                          {row.detail ? <span className="exec-blotter-note"> · {row.detail}</span> : null}
+                        </td>
+                        <td>
+                          <Num value={row.orders !== null ? String(row.orders) : null} absent="not counted" />
+                        </td>
+                        <td>
+                          <Num value={row.fills !== null ? String(row.fills) : null} absent="not counted" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {sessionNotice ? <p className="exec-blotter-note">{sessionNotice}</p> : null}
+            </section>
+          ) : null}
+        </ExecutionTabs>
+      </ExecutionWorkspace>
     </ExecutionSurface>
   );
 }

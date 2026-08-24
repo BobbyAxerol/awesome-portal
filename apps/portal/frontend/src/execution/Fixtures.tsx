@@ -16,6 +16,8 @@ import { ExecutionSurface, type ExecutionSurfaceKind } from "./ExecutionSurface"
 import { AuthorityBadge, BrokerSyncChip, CapabilityChip, EnvironmentBadge, FreshnessIndicator, OperationStatusChip, OrderStatusChip, ProfileBadge, RuntimeStateChip, StatusChip, VerificationChip } from "./components/badges";
 import { ChartTile } from "./components/chart";
 import { CommandPlanDrawer } from "./components/drawer";
+import { EquityChart } from "./components/EquityChart";
+import { evidenceEquitySeries } from "./equity.fixtures";
 import { AnatomyDemo } from "./components/anatomyDemo";
 import { AccountBroker360Preview, AlphaThreeSixtyPreview, FullBlotterPreview, PaperWorkbenchPreview, PortfolioThreeSixtyPreview } from "./previewControllers";
 import { EvidencePanel, SlaCell } from "./components/evidence";
@@ -64,7 +66,7 @@ import { readOrderFunnel } from "./analytics";
 import { alpha360AtScale } from "./alpha360.fixtures";
 import { CORRELATION_CEILING } from "./portfolio360.fixtures";
 import { HEADROOM_EXCEEDED, PARTIAL_EXPOSURE } from "./account360.fixtures";
-import { GATE_MET, STALE } from "./paper.fixtures";
+import { GATE_MET, STALE, paperWorkbench } from "./paper.fixtures";
 import { VNM_OPEN } from "./vnm.fixtures";
 import { PROFILE_ORDER, profileNeedsLabel, reconcilePanelProfile, screenDeliveryPolicy } from "./profile";
 import type { CapabilityState, DeliveryProfile, Envelope, FreshnessState, OperationStatus, OrderStatus, PanelStatus, PromotionStage, VenueCode, VerificationResult } from "./contracts";
@@ -1389,6 +1391,7 @@ export default function ExecutionFixtures() {
           <div className="exec-fixtures-stack">
             <Case caption="gate met — one watch item, one unanswered question carried forward">
               <PaperExitReview
+        onCopyProvenance={() => undefined}
                 reviewId="EX-771"
                 deploymentId="dep_94"
                 subject="Grid v2.1 · dep_94 · DERIBIT"
@@ -1409,6 +1412,7 @@ export default function ExecutionFixtures() {
             </Case>
             <Case caption="gate unmet — promotion locked, extend and reject still available">
               <PaperExitReview
+        onCopyProvenance={() => undefined}
                 reviewId="EX-772"
                 deploymentId="dep_88"
                 subject="MeanRev v0.3 · dep_88 · BINANCE"
@@ -1425,6 +1429,7 @@ export default function ExecutionFixtures() {
             </Case>
             <Case caption="one evidence panel down — promotion stops, because an unread panel produces no findings and no findings reads as nothing blocking">
               <PaperExitReview
+        onCopyProvenance={() => undefined}
                 reviewId="EX-771"
                 deploymentId="dep_94"
                 subject="Grid v2.1 · dep_94 · DERIBIT"
@@ -1442,6 +1447,7 @@ export default function ExecutionFixtures() {
             </Case>
             <Case caption="separation of duties — the requester may not decide their own review, and all three branches say so once">
               <PaperExitReview
+        onCopyProvenance={() => undefined}
                 reviewId="EX-773"
                 deploymentId="dep_94"
                 subject="Grid v2.1 · dep_94 · DERIBIT"
@@ -1462,6 +1468,7 @@ export default function ExecutionFixtures() {
             </Case>
             <Case caption="authority withheld for one branch only — extending is refused, rejecting is not">
               <PaperExitReview
+        onCopyProvenance={() => undefined}
                 reviewId="EX-774"
                 deploymentId="dep_88"
                 subject="MeanRev v0.3 · dep_88 · BINANCE"
@@ -1652,6 +1659,26 @@ export default function ExecutionFixtures() {
           note="EL-V2-02 reference: workspace · masthead · decision strip · tabs · context rail · provenance · bounded terminal. Sparse/balanced/dense are layouts, not font sizes — the type ramp is identical in all three."
         >
           <AnatomyDemo />
+        </Group>
+
+        <Group
+          id="v2-equity-chart-demo"
+          title="V2 equity chart — evidence fixture (not a published projection)"
+          note="EL-V2-04: no contract publishes an equity series yet (BR-EX-34). This group proves the chart machinery — axes, tooltip with envelope, approved band, gaps as gaps, drag zoom + double-click reset, expand, table view — on a deterministic evidence-only series. Product routes render the honest compact state until the series is published."
+        >
+          <div className="exec-fixtures-stack">
+            <EquityChart
+              id="equity-evidence"
+              title="Equity vs approved research evidence"
+              envelope={paperWorkbench().equity!.envelope}
+              series={evidenceEquitySeries()}
+            />
+            <EquityChart
+              title="Equity vs approved research evidence"
+              envelope={paperWorkbench().equity!.envelope}
+              series={null}
+            />
+          </div>
         </Group>
 
         <Group

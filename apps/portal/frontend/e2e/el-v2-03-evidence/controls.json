@@ -264,26 +264,23 @@
  {
   "route": "/governance/exit-reviews/EX-771",
   "index": 2,
-  "tag": "A",
-  "text": "AP-118",
-  "verdict": "navigated",
-  "detail": "/governance/approvals/AP-118/r1"
+  "tag": "BUTTON",
+  "text": "Evidence 4",
+  "verdict": "skipped:selected"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
   "index": 3,
-  "tag": "A",
-  "text": "AP-152",
-  "verdict": "navigated",
-  "detail": "/governance/approvals/AP-152/r2"
+  "tag": "BUTTON",
+  "text": "Activation plan",
+  "verdict": "changed"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
   "index": 4,
-  "tag": "A",
-  "text": "sessions",
-  "verdict": "navigated",
-  "detail": "/deployments/paper/dep_94#sessions"
+  "tag": "BUTTON",
+  "text": "Conditions 0",
+  "verdict": "changed"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
@@ -297,17 +294,17 @@
   "route": "/governance/exit-reviews/EX-771",
   "index": 6,
   "tag": "A",
-  "text": "run 5498",
+  "text": "sessions",
   "verdict": "navigated",
-  "detail": "/research/quantbt/runs/run_5498"
+  "detail": "/deployments/paper/dep_94#sessions"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
   "index": 7,
   "tag": "A",
-  "text": "blotter",
+  "text": "run 5498",
   "verdict": "navigated",
-  "detail": "/deployments/blotter?deployment=dep_94"
+  "detail": "/research/quantbt/runs/run_5498"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
@@ -321,25 +318,25 @@
   "route": "/governance/exit-reviews/EX-771",
   "index": 9,
   "tag": "A",
+  "text": "blotter",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?deployment=dep_94"
+ },
+ {
+  "route": "/governance/exit-reviews/EX-771",
+  "index": 10,
+  "tag": "A",
   "text": "workbench",
   "verdict": "navigated",
   "detail": "/deployments/paper/dep_94"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
-  "index": 10,
+  "index": 11,
   "tag": "A",
   "text": "operations",
   "verdict": "navigated",
   "detail": "/execution/operations?deployment=dep_94"
- },
- {
-  "route": "/governance/exit-reviews/EX-771",
-  "index": 11,
-  "tag": "A",
-  "text": "portfolio",
-  "verdict": "navigated",
-  "detail": "/deployments/portfolios/pf_main"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
@@ -352,67 +349,72 @@
  {
   "route": "/governance/exit-reviews/EX-771",
   "index": 13,
+  "tag": "A",
+  "text": "portfolio",
+  "verdict": "navigated",
+  "detail": "/deployments/portfolios/pf_main"
+ },
+ {
+  "route": "/governance/exit-reviews/EX-771",
+  "index": 14,
   "tag": "BUTTON",
   "text": "Approve promotion",
   "verdict": "changed"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
-  "index": 14,
+  "index": 15,
   "tag": "BUTTON",
   "text": "Extend observation +14d",
   "verdict": "changed"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
-  "index": 15,
+  "index": 16,
   "tag": "BUTTON",
   "text": "Reject — back to Paper HELD",
   "verdict": "changed"
  },
  {
+  "route": "/governance/exit-reviews/EX-771",
+  "index": 17,
+  "tag": "BUTTON",
+  "text": "Copy full artifact",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/governance/exit-reviews/EX-771",
+  "index": 18,
+  "tag": "A",
+  "text": "AP-118",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/governance/exit-reviews/EX-771",
+  "index": 19,
+  "tag": "A",
+  "text": "AP-152",
+  "verdict": "skipped:hidden"
+ },
+ {
   "route": "/deployments/paper/dep_94",
   "index": 0,
-  "tag": "A",
-  "text": "AP-101",
+  "tag": "BUTTON",
+  "text": "Request Paper Exit Review",
   "verdict": "navigated",
-  "detail": "/deployments/paper/dep_94#ap-101"
+  "detail": "/governance/exit-reviews/EX-771?from=%2Fdeployments%2Fpaper%2Fdep_94%3Ftab%3DOverview"
  },
  {
   "route": "/deployments/paper/dep_94",
   "index": 1,
   "tag": "A",
-  "text": "AP-207",
-  "verdict": "navigated",
-  "detail": "/deployments/paper/dep_94#ap-207"
- },
- {
-  "route": "/deployments/paper/dep_94",
-  "index": 2,
-  "tag": "A",
-  "text": "PF-MAIN",
-  "verdict": "navigated",
-  "detail": "/deployments/paper/dep_94#pf-main"
- },
- {
-  "route": "/deployments/paper/dep_94",
-  "index": 3,
-  "tag": "A",
-  "text": "paper-binance-carry-v32",
-  "verdict": "navigated",
-  "detail": "/deployments/paper/dep_94#acct"
- },
- {
-  "route": "/deployments/paper/dep_94",
-  "index": 4,
-  "tag": "A",
   "text": "AP-101",
   "verdict": "navigated",
   "detail": "/deployments/paper/dep_94#ap-101"
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 5,
+  "index": 2,
   "tag": "A",
   "text": "AP-207",
   "verdict": "navigated",
@@ -420,30 +422,14 @@
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 6,
+  "index": 3,
   "tag": "BUTTON",
-  "text": "Request Paper Exit Review",
-  "verdict": "navigated",
-  "detail": "/governance/exit-reviews/EX-771?from=%2Fdeployments%2Fpaper%2Fdep_94%3Ftab%3DOrders"
- },
- {
-  "route": "/deployments/paper/dep_94",
-  "index": 7,
-  "tag": "BUTTON",
-  "text": "Orders",
+  "text": "Overview",
   "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 8,
-  "tag": "BUTTON",
-  "text": "Fills",
-  "verdict": "navigated",
-  "detail": "/deployments/paper/dep_94?tab=Fills"
- },
- {
-  "route": "/deployments/paper/dep_94",
-  "index": 9,
+  "index": 4,
   "tag": "BUTTON",
   "text": "Positions",
   "verdict": "navigated",
@@ -451,11 +437,78 @@
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 10,
+  "index": 5,
+  "tag": "BUTTON",
+  "text": "Orders",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_94?tab=Orders"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 6,
+  "tag": "BUTTON",
+  "text": "Fills",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_94?tab=Fills"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 7,
   "tag": "BUTTON",
   "text": "Sessions",
   "verdict": "navigated",
   "detail": "/deployments/paper/dep_94?tab=Sessions"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 8,
+  "tag": "BUTTON",
+  "text": "Accounting",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_94?tab=Accounting"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 9,
+  "tag": "BUTTON",
+  "text": "Evidence",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_94?tab=Evidence"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 10,
+  "tag": "BUTTON",
+  "text": "Copy full artifact",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 11,
+  "tag": "A",
+  "text": "AP-101",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 12,
+  "tag": "A",
+  "text": "AP-207",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 13,
+  "tag": "A",
+  "text": "PF-MAIN",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 14,
+  "tag": "A",
+  "text": "paper-binance-carry-v32",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
@@ -476,53 +529,13 @@
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
   "index": 2,
-  "tag": "A",
-  "text": "PF-VN",
-  "verdict": "navigated",
-  "detail": "/deployments/paper/dep_vnm/vn-market#pf-vn"
- },
- {
-  "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 3,
-  "tag": "A",
-  "text": "paper-dnse-vnmomo",
-  "verdict": "navigated",
-  "detail": "/deployments/paper/dep_vnm/vn-market#acct-vn"
- },
- {
-  "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 4,
-  "tag": "A",
-  "text": "AP-322",
-  "verdict": "navigated",
-  "detail": "/deployments/paper/dep_vnm/vn-market#ap-322"
- },
- {
-  "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 5,
-  "tag": "A",
-  "text": "AP-338",
-  "verdict": "navigated",
-  "detail": "/deployments/paper/dep_vnm/vn-market#ap-338"
- },
- {
-  "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 6,
   "tag": "BUTTON",
-  "text": "Orders",
+  "text": "Overview",
   "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 7,
-  "tag": "BUTTON",
-  "text": "Fills",
-  "verdict": "navigated",
-  "detail": "/deployments/paper/dep_vnm/vn-market?tab=Fills"
- },
- {
-  "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 8,
+  "index": 3,
   "tag": "BUTTON",
   "text": "Positions",
   "verdict": "navigated",
@@ -530,11 +543,78 @@
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 9,
+  "index": 4,
+  "tag": "BUTTON",
+  "text": "Orders",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_vnm/vn-market?tab=Orders"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 5,
+  "tag": "BUTTON",
+  "text": "Fills",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_vnm/vn-market?tab=Fills"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 6,
   "tag": "BUTTON",
   "text": "Sessions",
   "verdict": "navigated",
   "detail": "/deployments/paper/dep_vnm/vn-market?tab=Sessions"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 7,
+  "tag": "BUTTON",
+  "text": "Accounting",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_vnm/vn-market?tab=Accounting"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 8,
+  "tag": "BUTTON",
+  "text": "Evidence",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_vnm/vn-market?tab=Evidence"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 9,
+  "tag": "BUTTON",
+  "text": "Copy full artifact",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 10,
+  "tag": "A",
+  "text": "AP-322",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 11,
+  "tag": "A",
+  "text": "AP-338",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 12,
+  "tag": "A",
+  "text": "PF-VN",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 13,
+  "tag": "A",
+  "text": "paper-dnse-vnmomo",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/blotter",

@@ -137,9 +137,11 @@ export function ExecutionDecisionStrip({ metrics }: { metrics: DecisionMetric[] 
           {m.value === null ? (
             <span className="exec-role-meta exec-strip-absent">not published</span>
           ) : (
-            <span className="exec-role-kpi">
-              {m.value}
-              {m.unit ? <span className="exec-role-meta exec-value-unit"> {m.unit}</span> : null}
+            <span className="exec-role-kpi exec-strip-value">
+              {/* Number and unit are separate boxes so the unit may wrap under a
+                  long figure; the figure itself never wraps or abbreviates. */}
+              <span className="exec-strip-figure">{m.value}</span>
+              {m.unit ? <span className="exec-role-meta exec-value-unit">{m.unit}</span> : null}
             </span>
           )}
           {m.note ? <span className="exec-role-meta exec-strip-note">{m.note}</span> : null}
@@ -281,7 +283,7 @@ export function ExecutionContextRail({
   provenance?: ReactNode;
 }) {
   return (
-    <div className="exec-rail">
+    <div className="exec-context-rail">
       <section className="exec-rail-section" data-section="next">
         <h2 className="exec-role-section">{next.title}</h2>
         {next.detail ? <div className="exec-role-body">{next.detail}</div> : null}

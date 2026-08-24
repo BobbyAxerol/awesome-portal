@@ -1136,6 +1136,32 @@ thể hiện đậm nhất ở Paper: 12 khối đúng từng cái, xếp chồn
 | Journey exit | Paper → request exit → Exit Review → back còn context: một test Playwright trọn |
 | 5 freshness × 3 evidence states | ma trận it.each đủ 15 tổ hợp không bịa eligibility |
 
+
+#### Claude close-out — EL-V2-04 (2026-08-24, chỉ thêm; gate = Bobby duyệt hình ảnh)
+
+**Đã làm (đối chiếu từng gate bổ sung ở trên):**
+
+| Gate | Kết quả | Bằng chứng |
+|---|---|---|
+| Layout proposal px trước JSX (§14.5) | ✓ | `PAPER_LAYOUT_PROPOSAL_2026-08-24.md` — 1440×900 và 1728×1000, vùng/vai chữ/rail/ma trận tương tác |
+| Chart thật | ✓ cơ chế · **product route = trạng thái honest** | `components/EquityChart.tsx` (ECharts qua `charts/EChart`): trục, tooltip in nguyên chuỗi server + envelope, band approved từ lower/upper server, gap = điểm null + vùng đánh dấu (`connectNulls:false`), dataZoom inside+slider, double-click/Reset zoom, Expand, Table view (chuỗi thô, gap ghi "gap"). **Không contract nào publish series equity** (insight-batch chỉ scalar) → route Paper hiện hộp gọn "Equity series not published — equity_projection.v1 requested (BR-EX-34)", không khung trống; series evidence-only (deterministic, 720 bucket, gap 4 bucket, có nhãn "not a published projection") chỉ ở `/execution/_fixtures` nhóm `v2-equity-chart-demo`. `equityChart.test.tsx` 11 test |
+| Masthead §10.1 + KPI strip + rail + tabs | ✓ | `PaperWorkbench.tsx` dựng lại trên `ExecutionWorkspace/PageHeader/DecisionStrip/Tabs/ContextRail/ProvenanceDrawer`; badge stage · runtime(calendar) · readiness · broker-sync tách trục; một CTA; 5 KPI; tab **Overview · Positions · Orders · Fills · Sessions · Accounting · Evidence**; lineage+credential+digest (head-6/tail-2 + Copy) → provenance; runtime → Overview; accounting → tab; drift + contribution + policy → Evidence; blocker **có tên** (unmet criteria + drift WATCH/FAIL) ở rail |
+| Paper Exit Review cùng anatomy | ✓ | `PaperExitReview.tsx`: masthead (GATE MET/UNMET, STALE/PARTIAL trục riêng), strip 5 số (blocking · carried · quorum · conditions · panels read), rail = quyết định 3 nút + lý do + blockers + quorum/SLA + provenance; tab Evidence · Activation plan · Conditions. `paperExit.test.tsx` +5 |
+| Above-the-fold 1440×900 | ✓ | `execution-journeys.spec.ts` "EL-V2-04": masthead, "Next: Paper Exit Review", CTA, chart tile đều có cạnh dưới ≤ 900px; Exit: rail quyết định + Approve ≤ 900px; không tràn ngang |
+| Journey exit | ✓ | Paper → tab Evidence → request exit → Exit Review tab Conditions → back còn `?tab=Evidence` (nhánh gate unmet: CTA `title` nêu tiêu chí, rail Blockers liệt kê) |
+| 5 freshness × 3 gate | ✓ 15/15 + PAUSED-từ-calendar | `paperMatrix.test.tsx`: OK/AGING/STALE/PAUSED/UNKNOWN × MET/UNMET/INSUFFICIENT; INSUFFICIENT (server chưa phán, không tiêu chí) không bao giờ hiện như MET; STALE banner chỉ khi STALE và venue không đóng; VNM đóng ⇒ badge PAUSED, không banner stale dù projection STALE |
+| Chữ giảm ≥50% | **✗ chưa đạt theo thước đo từ đo đếm, ✓ theo đoạn policy** | đo bằng test tạm (old vs new, cùng fixture, chỉ phần tử prose hiển thị): default(unmet) **84 → 72 từ (−14%)**, gate-met **59 → 44 (−25%)**, stale **120 → 106 (−12%)**; tổng ký tự −9…−15%. Phần còn lại phần lớn là **chuỗi server publish** (rule của observation, note KPI/fact, drift note, lý do BR-EX-34, envelope caption) mà tôi không được cắt. Đoạn prose *policy* do frontend viết trên canvas: 5 đoạn → 2 dòng một câu (calendar, stale), phần giải thích vào `<details>`. Tôi báo số thật thay vì đổi thước đo; nếu Bobby muốn đạt 50% theo từ, phần cắt tiếp phải là chuỗi server (quyết định của Bobby/codex) |
+| Baseline route shell-visible | ✓ | `el-v2-04-paper-dep_94.png`, `el-v2-04-paper-vnm.png`, `el-v2-04-exit-review-EX-771.png` (project `chromium-preview`, 1440×900, full page) |
+| Fixtures baselines | ✓ tái sinh | nhóm Paper/VNM/Exit đổi + nhóm mới `v2-equity-chart-demo` (85 crop) |
+
+**Cổng kỹ thuật:** tsc sạch · vitest **1,589 passed / 1 skipped (74 file)** · vite build sạch · Playwright **248 passed · 0 failed · 16 skipped** (chromium: 101 QuantBT visual không tái sinh + 85 fixtures crop + surface audit 40 + interaction audit; chromium-preview: preview + 13 journey/fold/baseline + structural sweep).
+
+**Backend request mới:** BR-EX-34 (`GET /deployments/{id}/equity-projection` — points/approved_band/gaps/envelope, decimal string) trong `EXECUTION_SCALE_AND_REFINE.md`.
+
+**Lỗi V2-02 lộ ra và sửa trong phase này:** (1) root của `ExecutionContextRail` dùng class `.exec-rail` trùng với `LifecycleRail` cũ → rail lifecycle bị ép dọc (280px) trên Paper/Exit; đổi thành `.exec-context-rail`. (2) `ExecutionDecisionStrip` grid `minmax(160px,1fr)` clip số VND 10 chữ số ở 390/834 và tràn cột chính ở laptop → chuyển flex, sàn mỗi ô = chính con số (`min-width:max-content`, số `nowrap`, đơn vị được xuống dòng), ≤480px một cột. (3) `ExecutionEvidenceCaption` không có children in caption 10px ngoài `<details>` (vi phạm §5.2) → chart dùng vai meta 11px.
+
+**Chưa làm / ngoài phạm vi:** Alpha 360 vẫn dùng `ChartTile` frame cũ (`equity.body`) — sẽ chuyển sang `EquityChart` ở EL-V2-06 (workbench family) để không đụng màn ngoài slice này; `equity.body` giữ lại (additive) tới lúc đó.
+
 ### EL-V2-05 — Governance decision chain
 
 **Goal:** deliver a continuous reviewer experience across Approval Inbox, Gate R1, Gate R2 and Exit

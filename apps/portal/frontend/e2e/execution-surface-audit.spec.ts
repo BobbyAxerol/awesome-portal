@@ -59,7 +59,7 @@ for (const bp of SHOT_BREAKPOINTS) {
       // Every assertion below is a "no offenders" test, and an empty page has
       // no offenders. This is what stops the rest passing on a blank screen.
       await openFixtures(page, bp.width, bp.height);
-      expect(await page.locator("[data-group]").count()).toBe(41);
+      expect(await page.locator("[data-group]").count()).toBe(42);
       expect(await page.locator("[data-group] *").count()).toBeGreaterThan(2000);
     });
 

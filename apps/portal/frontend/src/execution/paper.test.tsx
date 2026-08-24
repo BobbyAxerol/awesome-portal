@@ -19,10 +19,12 @@ describe("Paper Workbench — the screen exists to exit Paper", () => {
     // The wireframe is explicit, and the reason is the screen's purpose: a
     // reader who has to scroll to find how far along they are will read the
     // chart instead and guess.
-    const { container } = render(<PaperWorkbench {...paperHandlers()} {...paperWorkbench()} />);
-    const grid = container.querySelector('.exec-grid-2[data-ratio="1.35"]')!;
-    expect(within(grid as HTMLElement).getByText(/Observation gate/)).toBeTruthy();
-    expect(within(grid as HTMLElement).getByText(/Equity vs approved research evidence/)).toBeTruthy();
+    // EL-V2-04: the gate lives in the context rail ("Next: Paper Exit Review")
+    // beside the chart canvas, and both are on the first screen at 1440×900
+    // (asserted in e2e/execution-journeys.spec.ts).
+    render(<PaperWorkbench {...paperHandlers()} {...paperWorkbench()} />);
+    expect(screen.getByText(/Next: Paper Exit Review/)).toBeTruthy();
+    expect(screen.getByLabelText("Equity vs approved research evidence")).toBeTruthy();
   });
 
   it("names every unmet criterion rather than counting them", () => {
@@ -33,9 +35,10 @@ describe("Paper Workbench — the screen exists to exit Paper", () => {
       "disabled",
       true,
     );
-    expect(screen.getByText(/18 more days of observation/)).toBeTruthy();
-    expect(screen.getByText(/116 more trades/)).toBeTruthy();
-    expect(screen.getByText(/1 more clean restart cycle/)).toBeTruthy();
+    // Named twice on purpose: the observation progress and the Blockers rail.
+    expect(screen.getAllByText(/18 more days of observation/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/116 more trades/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/1 more clean restart cycle/).length).toBeGreaterThanOrEqual(1);
   });
 
   it("opens the exit once the gate is met", () => {
@@ -95,11 +98,12 @@ describe("Paper Workbench — a stale projection cannot pass for a live one", ()
 
 describe("Paper Workbench — lineage, drift and mutation controls", () => {
   it("renders every lineage id as its own chip", () => {
-    const { container } = render(<PaperWorkbench {...paperHandlers()} {...paperWorkbench()} />);
-    const strip = container.querySelector(".exec-paper-lineage")!;
-    for (const id of ["AP-101", "AP-207", "PF-MAIN", "dep_74"]) {
-      expect(within(strip as HTMLElement).getByText(id), id).toBeTruthy();
+    // EL-V2-04: lineage moved into the provenance drawer (context rail).
+    render(<PaperWorkbench {...paperHandlers()} {...paperWorkbench()} />);
+    for (const id of ["AP-101", "AP-207", "PF-MAIN"]) {
+      expect(screen.getAllByText(id).length, id).toBeGreaterThanOrEqual(1);
     }
+    expect(screen.getByRole("button", { name: /Copy/ })).toBeTruthy();
   });
 
   it("carries the R1 and R2 decisions on the lifecycle rail as links", () => {
@@ -111,15 +115,16 @@ describe("Paper Workbench — lineage, drift and mutation controls", () => {
   it("takes each drift verdict from the server rather than comparing the two figures", () => {
     // What "within band" means is a policy the approval was granted against.
     // 52.7 against 54.1 is inside one band and outside another.
-    render(<PaperWorkbench {...paperHandlers()} {...paperWorkbench()} />);
-    expect(screen.getAllByText("WITHIN_BAND")).toHaveLength(2);
-    expect(screen.getAllByText("WATCH")).toHaveLength(2);
-    expect(screen.getByText("INSUFFICIENT_DATA")).toBeTruthy();
+    const { container } = render(<PaperWorkbench {...paperHandlers()} {...paperWorkbench({ tab: "Evidence" })} />);
+    const table = within(container.querySelector("table.exec-360-sync") as HTMLElement);
+    expect(table.getAllByText("WITHIN_BAND")).toHaveLength(2);
+    expect(table.getAllByText("WATCH")).toHaveLength(2);
+    expect(table.getByText("INSUFFICIENT_DATA")).toBeTruthy();
   });
 
   it("says a WATCH blocks nothing and a FAIL blocks the exit", () => {
-    render(<PaperWorkbench {...paperHandlers()} {...paperWorkbench()} />);
-    expect(screen.getByText(/WATCH item blocks nothing, a FAIL item blocks/)).toBeTruthy();
+    render(<PaperWorkbench {...paperHandlers()} {...paperWorkbench({ tab: "Evidence" })} />);
+    expect(screen.getByText(/WATCH item blocks nothing; a FAIL item blocks/)).toBeTruthy();
   });
 
   it("hides mutation controls entirely rather than disabling them", () => {
@@ -156,10 +161,10 @@ describe("Paper Workbench — at the volume the Trading System holds", () => {
     expect(screen.getByText(/recovery incomplete/)).toBeTruthy();
   });
 
-  it("offers all four tabs and renders one", () => {
+  it("offers all seven tabs and renders one", () => {
     render(<PaperWorkbench {...paperHandlers()} {...paperWorkbench()} />);
     for (const tab of WORKBENCH_TABS) expect(screen.getByRole("tab", { name: tab })).toBeTruthy();
-    expect(WORKBENCH_TABS).toHaveLength(4);
+    expect(WORKBENCH_TABS).toHaveLength(7);
     expect(screen.getByRole("tabpanel", { name: "Orders" })).toBeTruthy();
   });
 
@@ -176,7 +181,7 @@ describe("Paper Workbench — at the volume the Trading System holds", () => {
 
 describe("the drift caption never invents a linkage", () => {
   it("states the linkage the server stated", () => {
-    render(<PaperWorkbench {...paperHandlers()} {...paperWorkbench()} />);
+    render(<PaperWorkbench {...paperHandlers()} {...paperWorkbench({ tab: "Evidence" })} />);
     expect(screen.getByText(/linked by run_5512/)).toBeTruthy();
   });
 
@@ -186,7 +191,7 @@ describe("the drift caption never invents a linkage", () => {
     // caption of the one table whose purpose is to report divergence from the
     // approved run. An operator reading it would believe the digest had been
     // checked.
-    render(<PaperWorkbench {...paperHandlers()} {...paperWorkbench({ driftNote: null })} />);
+    render(<PaperWorkbench {...paperHandlers()} {...paperWorkbench({ driftNote: null, tab: "Evidence" })} />);
     expect(screen.getByText(/No linkage to the approved run is stated/)).toBeTruthy();
     expect(screen.queryByText(/Linked to the approved run by artifact digest/)).toBeNull();
   });

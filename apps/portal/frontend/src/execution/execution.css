@@ -4222,8 +4222,12 @@
 
 /* Decision strip: auto-fit minmax(160px,1fr), no orphan cell row (WF 4f). */
 .exec-strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  /* Flex, not grid auto-fit: a cell's floor is its own figure (a ten-digit VND
+     equity at kpi 24 mono is ~135px), so the row holds as many cells as fit
+     and wraps the rest. Nothing is clipped and no figure is abbreviated. Five
+     USDT cells share a 780px main column (§10.1); wider figures wrap 4+1. */
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
 }
 .exec-strip-cell {
@@ -4233,8 +4237,12 @@
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--line);
   background: var(--surface-3);
-  min-width: 0;
+  flex: 1 1 140px;
+  min-width: max-content;
+  max-width: 100%;
 }
+.exec-strip-value { display: inline-flex; flex-wrap: wrap; align-items: baseline; column-gap: 0.3em; }
+.exec-strip-figure { white-space: nowrap; }
 .exec-strip-label { color: var(--ink-mute); }
 .exec-strip-cell[data-tone="warn"] .exec-role-kpi { color: var(--warn); }
 .exec-strip-cell[data-tone="bad"] .exec-role-kpi { color: var(--bad); }
@@ -4269,7 +4277,9 @@
 .exec-tabs-panel { padding-top: var(--space-3); min-width: 0; }
 
 /* Context rail (§6.3) */
-.exec-rail { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+/* Context rail root. Was `.exec-rail`, which collided with the promotion
+   LifecycleRail's `.exec-rail` (line ~383) and forced it vertical — EL-V2-04 fix. */
+.exec-context-rail { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
 .exec-rail-section { border: 1px solid var(--line); background: var(--surface-3); padding: var(--space-2) var(--space-3); display: flex; flex-direction: column; gap: var(--space-1); }
 .exec-rail-section h2, .exec-rail-section h3 { margin: 0; }
 .exec-rail-section[data-section="next"] { border-left: 3px solid var(--accent); }
@@ -4290,7 +4300,7 @@
 .exec-provenance-row dt { color: var(--ink-mute); margin: 0; }
 .exec-provenance-row dd { margin: 0; display: flex; gap: var(--space-2); align-items: baseline; flex-wrap: wrap; overflow-wrap: anywhere; }
 .exec-provenance-copy { padding: 0 var(--space-1); }
-.exec-provenance a:focus-visible, .exec-rail a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.exec-provenance a:focus-visible, .exec-context-rail a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Evidence caption (§5.2): the one 10px, and only because it expands. */
 .exec-evidence-caption summary { cursor: pointer; color: var(--ink-mute); list-style: none; }
@@ -4347,3 +4357,30 @@
 .exec-link { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font: inherit; text-decoration: underline dotted; }
 .exec-link:hover { color: var(--accent-strong); }
 .exec-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── EL-V2-04 · equity chart ─────────────────────────────────────────── */
+.exec-chart-tile.exec-equity .exec-chart-head,
+.exec-chart-unavailable .exec-chart-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.exec-chart-tools { display: flex; gap: 6px; }
+.exec-chart-body { min-width: 0; }
+.exec-chart-expanded { grid-column: 1 / -1; }
+.exec-chart-table { overflow: auto; }
+.exec-chart-evidence-note { font: var(--exec-font-meta); color: var(--exec-warn); margin: 4px 0 0; }
+.exec-chart-unavailable { min-height: 0; }
+.exec-chart-unavailable-body { font: var(--exec-font-body); color: var(--exec-text-muted); margin: 8px 0; }
+.exec-chart-tip-t { font: var(--exec-font-meta); opacity: .8; }
+.exec-chart-tip-k { font: var(--exec-font-th); text-transform: uppercase; letter-spacing: .02em; opacity: .8; }
+.exec-chart-tip-v { font: var(--exec-font-num); }
+.exec-chart-tip-env { font: var(--exec-font-meta); opacity: .7; margin-top: 4px; }
+
+/* ── EL-V2-04 · decision strip at phone widths ───────────────────────────
+   A ten-digit VND equity at kpi 24px mono is ~190px; two 160px cells cannot
+   hold it and numbers never wrap or abbreviate, so ≤480px is one column. */
+@media (max-width: 480px) {
+  .exec-strip-cell { flex-basis: 100%; }
+}
+@media (max-width: 640px) {
+  .exec-masthead { flex-direction: column; align-items: stretch; }
+  .exec-masthead-actions { justify-content: flex-start; }
+  .exec-page-title { overflow-wrap: anywhere; }
+}

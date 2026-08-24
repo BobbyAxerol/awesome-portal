@@ -22,12 +22,26 @@ import type { ReactNode } from "react";
 
 import type { Eligibility } from "../api/rows";
 import type { ApprovalId, DeploymentId, EvidenceMark, PanelStatus, Sla } from "../contracts";
-import { StatusChip } from "../components/badges";
 import { ConditionList, type TypedCondition } from "../components/conditions";
 import { EvidencePanel, SlaCell, type EvidenceRow } from "../components/evidence";
 import { LifecycleRail, type RailStep } from "../components/lifecycle";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
+import { useState } from "react";
+import { ExecutionSectionTitle } from "../components/typography";
+import {
+  ExecutionContextRail,
+  ExecutionDecisionStrip,
+  ExecutionPageHeader,
+  ExecutionProvenanceDrawer,
+  ExecutionTabs,
+  ExecutionWorkspace,
+  shortDigest,
+  type HeaderBadge,
+  type RailBlocker,
+} from "../components/workspace";
+
+type ExitTab = "evidence" | "plan" | "conditions";
 
 export interface ExitFinding {
   label: string;
@@ -130,7 +144,7 @@ export function PaperExitReview({
   gateSummary,
   policyId,
   lineage,
-  rail,
+  rail: rail_,
   activationPlanDark = true,
   conditions,
   quorumMet,
@@ -145,6 +159,7 @@ export function PaperExitReview({
   partialReason,
   decided,
   onDecide,
+  onCopyProvenance,
 }: {
   reviewId: ApprovalId;
   deploymentId: DeploymentId;
@@ -193,7 +208,10 @@ export function PaperExitReview({
   /** What the server says this actor may do. Absent is not permission. */
   eligibility?: Eligibility | null;
   onDecide?: (outcome: ExitOutcome) => void;
+  /** provenance drawer Copy — simulated control, through the ledger */
+  onCopyProvenance: (full: string) => void;
 }) {
+  const [tab, setTab] = useState<ExitTab>("evidence");
   if (status !== "ok" && status !== "partial" && status !== "stale") {
     return (
       <section className="exec-exit" aria-label={`Paper exit review ${reviewId}`}>
@@ -250,163 +268,206 @@ export function PaperExitReview({
       ? "Separation of duties — you may not decide a review you requested."
       : null;
 
+  const decisionReasons: string[] = [];
+  if (authorityNote) decisionReasons.push(authorityNote);
+  if (!gateMet) decisionReasons.push("Promotion blocked — the observation gate is not met.");
+  if (blocking > 0)
+    decisionReasons.push(`Promotion blocked — ${blocking} blocking ${blocking === 1 ? "finding" : "findings"}.`);
+  if (unread.length > 0)
+    decisionReasons.push(
+      `Promotion blocked — ${unread.length === 1 ? "this panel" : "these panels"} could not be read: ${unread
+        .map((p) => p.title)
+        .join(", ")}. Extending or rejecting stays available.`,
+    );
+  if (status === "partial" && unread.length === 0)
+    decisionReasons.push("Promotion blocked — part of this evidence could not be read.");
+  if (status === "stale")
+    decisionReasons.push("Promotion blocked — this evidence is stale. Reload before deciding a promotion.");
+  if (gateMet && blocking === 0 && !evidenceIncomplete && !serverAllowsPromote && !authorityNote)
+    decisionReasons.push("Promotion blocked — you do not hold authority to approve this promotion.");
+  if (extendBlocked && !authorityNote)
+    decisionReasons.push("Extending the observation window is not available to you.");
+  if (rejectBlocked && !authorityNote) decisionReasons.push("Rejecting to PAPER_HELD is not available to you.");
+  const badges: HeaderBadge[] = [
+    { label: "PAPER_EXIT", axis: "stage" },
+    { label: gateMet ? "GATE MET" : "GATE UNMET", axis: "readiness", tone: gateMet ? "good" : "warn" },
+    ...(status === "stale" ? [{ label: "STALE", axis: "broker-sync", tone: "bad" } as HeaderBadge] : []),
+    ...(status === "partial" ? [{ label: "PARTIAL", axis: "broker-sync", tone: "warn" } as HeaderBadge] : []),
+  ];
+  const blockers: RailBlocker[] = [
+    ...panels
+      .flatMap((p) => p.findings)
+      .filter((f) => f.outcome === "fail")
+      .map((f) => ({ label: f.label, detail: f.sourceLabel ?? null, severity: "blocking" as const })),
+    ...carried.map((f) => ({ label: f.label, detail: `follows the deployment into ${f.carriesTo}`, severity: "watch" as const })),
+    ...unread.map((p) => ({ label: `${p.title} not read`, detail: p.status ?? null, severity: "blocking" as const })),
+  ];
+  const decision = decided ? (
+    <div className="exec-gate-banner exec-gate-decided" role="status">
+      {EXIT_OUTCOME[decided.outcome].label} by {decided.by} at {decided.at}.{" "}
+      {EXIT_OUTCOME[decided.outcome].writes}.
+    </div>
+  ) : (
+    <div className="exec-gate-decision">
+      <button
+        type="button"
+        className="exec-role-control exec-btn-apply"
+        disabled={promoteBlocked}
+        onClick={() => onDecide?.("PROMOTE")}
+      >
+        {EXIT_OUTCOME.PROMOTE.label}
+      </button>
+      {/* Not blocked by the gate — blocked only by authority. */}
+      <button
+        type="button"
+        className="exec-role-control exec-btn-ghost"
+        disabled={extendBlocked}
+        onClick={() => onDecide?.("EXTEND_OBSERVATION")}
+      >
+        {EXIT_OUTCOME.EXTEND_OBSERVATION.label}
+      </button>
+      <button
+        type="button"
+        className="exec-role-control exec-btn-ghost"
+        disabled={rejectBlocked}
+        onClick={() => onDecide?.("REJECT")}
+      >
+        {EXIT_OUTCOME.REJECT.label}
+      </button>
+    </div>
+  );
+  const contextRail = (
+    <ExecutionContextRail
+      next={{
+        title: decided ? "Decided" : `Decide: promote to ${promoteTo}?`,
+        detail: (
+          <>
+            {recommendation ? (
+              <div className="exec-exit-recommendation">Recommended next action: {recommendation}</div>
+            ) : null}
+            {!decided && decisionReasons.length ? (
+              <div className="exec-disabled-reason">
+                {decisionReasons.map((r) => (
+                  <div key={r}>{r}</div>
+                ))}
+              </div>
+            ) : null}
+          </>
+        ),
+        action: decision,
+      }}
+      blockers={blockers}
+      freshness={
+        <span className="exec-role-meta">
+          quorum {quorumMet}/{quorumRequired}
+          {approverRole ? ` · needs you (${approverRole})` : ""}
+          {sla ? (
+            <>
+              {" · "}
+              <SlaCell sla={sla} />
+            </>
+          ) : null}
+        </span>
+      }
+      provenance={
+        lineage?.length ? (
+          <ExecutionProvenanceDrawer
+            items={lineage.map((l) => ({
+              label: l.label,
+              short: l.value.startsWith("sha256:") ? shortDigest(l.value) : l.value,
+              full: l.value.startsWith("sha256:") ? l.value : null,
+              href: l.href ?? null,
+            }))}
+            onCopy={onCopyProvenance}
+          />
+        ) : undefined
+      }
+    />
+  );
   return (
     <section className="exec-exit" aria-label={`Paper exit review ${reviewId}`}>
-      <header className="exec-gate-head">
-        <div className="exec-gate-kicker">PAPER_EXIT · {reviewId}</div>
-        <div className="exec-tile-title">
-          {subject} <span className="exec-gate-rc">→ promote to {promoteTo}?</span>
-        </div>
-        <div className="exec-gate-meta">
-          <StatusChip label={gateMet ? "GATE MET" : "GATE UNMET"} tone={gateMet ? "good" : "warn"} />
-          <span>{deploymentId}</span>
-          {policyId ? <span>observation policy {policyId}</span> : null}
-          <span>
-            quorum {quorumMet}/{quorumRequired}
-          </span>
-          {approverRole ? <span>needs you ({approverRole})</span> : null}
-          {sla ? <SlaCell sla={sla} /> : null}
-        </div>
-        {gateSummary ? <div className="exec-exit-summary">{gateSummary}</div> : null}
-        {lineage?.length ? (
-          <div className="exec-exit-lineage">
-            {lineage.map((l) => (
-              <span key={l.label}>
-                <span className="exec-exit-lineage-label">{l.label}</span>{" "}
-                {l.href ? <a href={l.href}>{l.value}</a> : l.value}
-              </span>
-            ))}
+      <ExecutionWorkspace layout="balanced" rail={contextRail}>
+        <ExecutionPageHeader
+          title={subject}
+          id={reviewId}
+          badges={badges}
+          purpose={`Promote ${deploymentId} to ${promoteTo}? ${gateSummary ?? ""}`.trim()}
+          secondary={policyId ? <span className="exec-role-meta">observation policy {policyId}</span> : undefined}
+        />
+        {status === "partial" ? (
+          <div className="exec-gate-banner" role="status">
+            {partialReason ?? "Part of this evidence could not be read. Absence of a finding is not a pass."}
           </div>
         ) : null}
-      </header>
-
-      {status === "partial" ? (
-        <div className="exec-gate-banner">
-          {partialReason ?? "Part of this evidence could not be read. Absence of a finding is not a pass."}
-        </div>
-      ) : null}
-      {status === "stale" ? (
-        <div className="exec-gate-banner">
-          {reason ?? "This evidence is older than its freshness budget. Refresh before deciding."}
-        </div>
-      ) : null}
-
-      {decided ? (
-        <div className="exec-gate-banner exec-gate-decided">
-          {EXIT_OUTCOME[decided.outcome].label} by {decided.by} at {decided.at}.{" "}
-          {EXIT_OUTCOME[decided.outcome].writes}.
-        </div>
-      ) : null}
-
-      {rail?.length ? <LifecycleRail steps={rail} /> : null}
-
-      <div className="exec-grid-auto">
-        {panels.map((panel) => (
-          <div className="exec-gate-panel" key={panel.title}>
-            <div className="exec-tile-title">
-              {panel.title}
-              {panel.source ? <span className="exec-gate-rc"> · {panel.source}</span> : null}
-            </div>
-            <Findings panel={panel} />
+        {status === "stale" ? (
+          <div className="exec-gate-banner" role="status">
+            {reason ?? "This evidence is older than its freshness budget. Refresh before deciding."}
           </div>
-        ))}
-      </div>
-
-      {/* The hi-fi's second grid: the dark activation-plan preview beside the
-          conditions card. Same inversion as Gate R2's capital strip, and for
-          the same reason — the plan is execution vocabulary. */}
-      <div className="exec-grid-2">
-        {activationPlan ? (
-          activationPlanDark ? (
-            <ExecutionSurface kind="deployments" className="exec-inverted exec-gate-panel">
-              {activationPlan}
-            </ExecutionSurface>
-          ) : (
-            <div className="exec-gate-panel">{activationPlan}</div>
-          )
         ) : null}
-        <div className="exec-gate-panel">
-          <div className="exec-tile-title">Conditions &amp; recommendation</div>
-          <ConditionList
-            conditions={conditions ?? []}
-            emptyNote="No conditions carried into this review."
-          />
-          {recommendation ? (
-            <div className="exec-exit-recommendation">Recommended next action: {recommendation}</div>
-          ) : null}
-        </div>
-      </div>
-
-      {carried.length > 0 ? (
-        <div className="exec-exit-carry-note">
-          {carried.length} unanswered {carried.length === 1 ? "question" : "questions"} will follow
-          this deployment into {carried[0].carriesTo}. Promotion does not resolve them.
-        </div>
-      ) : null}
-
-      {decided ? null : (
-        <div className="exec-gate-decision">
-          <button
-            type="button"
-            className="exec-btn-apply"
-            disabled={promoteBlocked}
-            onClick={() => onDecide?.("PROMOTE")}
-          >
-            {EXIT_OUTCOME.PROMOTE.label}
-          </button>
-          {/* Not blocked by the gate — blocked only by authority. */}
-          <button
-            type="button"
-            className="exec-btn-ghost"
-            disabled={extendBlocked}
-            onClick={() => onDecide?.("EXTEND_OBSERVATION")}
-          >
-            {EXIT_OUTCOME.EXTEND_OBSERVATION.label}
-          </button>
-          <button
-            type="button"
-            className="exec-btn-ghost"
-            disabled={rejectBlocked}
-            onClick={() => onDecide?.("REJECT")}
-          >
-            {EXIT_OUTCOME.REJECT.label}
-          </button>
-        </div>
-      )}
-
-      {!decided && (promoteBlocked || extendBlocked || rejectBlocked) ? (
-        <div className="exec-disabled-reason">
-          {authorityNote ? <div>{authorityNote}</div> : null}
-          {!gateMet ? <div>Promotion blocked — the observation gate is not met.</div> : null}
-          {blocking > 0 ? (
-            <div>
-              Promotion blocked — {blocking} blocking {blocking === 1 ? "finding" : "findings"}.
+        {rail_?.length ? <LifecycleRail steps={rail_} /> : null}
+        <ExecutionDecisionStrip
+          metrics={[
+            { label: "Blocking findings", value: String(blocking), tone: blocking > 0 ? "bad" : "good" },
+            { label: "Carried questions", value: String(carried.length), tone: carried.length > 0 ? "warn" : undefined },
+            { label: "Quorum", value: `${quorumMet}/${quorumRequired}` },
+            { label: "Conditions", value: String(conditions?.length ?? 0) },
+            {
+              label: "Panels read",
+              value: `${panels.length - unread.length}/${panels.length}`,
+              note: unread.length ? "not all read" : null,
+            },
+          ]}
+        />
+        {carried.length > 0 ? (
+          <p className="exec-exit-carry-note exec-role-body">
+            {carried.length} unanswered {carried.length === 1 ? "question" : "questions"} will follow this
+            deployment into {carried[0].carriesTo}. Promotion does not resolve them.
+          </p>
+        ) : null}
+        <ExecutionTabs
+          tabs={[
+            { key: "evidence", label: "Evidence", count: panels.length },
+            { key: "plan", label: "Activation plan" },
+            { key: "conditions", label: "Conditions", count: conditions?.length ?? 0 },
+          ]}
+          active={tab}
+          onChange={(key) => setTab(key as ExitTab)}
+          label="Exit review sections"
+        >
+          {tab === "evidence" ? (
+            <div className="exec-grid-auto">
+              {panels.map((panel) => (
+                <div className="exec-gate-panel" key={panel.title}>
+                  <ExecutionSectionTitle>
+                    {panel.title}
+                    {panel.source ? <span className="exec-gate-rc"> · {panel.source}</span> : null}
+                  </ExecutionSectionTitle>
+                  <Findings panel={panel} />
+                </div>
+              ))}
             </div>
           ) : null}
-          {unread.length > 0 ? (
-            <div>
-              Promotion blocked — {unread.length === 1 ? "this panel" : "these panels"} could not be
-              read: {unread.map((p) => p.title).join(", ")}. Extending or rejecting stays available.
+          {tab === "plan" ? (
+            activationPlan ? (
+              activationPlanDark ? (
+                <ExecutionSurface kind="deployments" className="exec-inverted exec-gate-panel">
+                  {activationPlan}
+                </ExecutionSurface>
+              ) : (
+                <div className="exec-gate-panel">{activationPlan}</div>
+              )
+            ) : (
+              <PanelState status="empty" reason="No activation plan was published for this review." />
+            )
+          ) : null}
+          {tab === "conditions" ? (
+            <div className="exec-gate-panel">
+              <ExecutionSectionTitle>Conditions &amp; recommendation</ExecutionSectionTitle>
+              <ConditionList conditions={conditions ?? []} emptyNote="No conditions carried into this review." />
             </div>
           ) : null}
-          {status === "partial" && unread.length === 0 ? (
-            <div>Promotion blocked — part of this evidence could not be read.</div>
-          ) : null}
-          {status === "stale" ? (
-            <div>Promotion blocked — this evidence is stale. Reload before deciding a promotion.</div>
-          ) : null}
-          {gateMet && blocking === 0 && !evidenceIncomplete && !serverAllowsPromote && !authorityNote ? (
-            <div>Promotion blocked — you do not hold authority to approve this promotion.</div>
-          ) : null}
-          {extendBlocked && !authorityNote ? (
-            <div>Extending the observation window is not available to you.</div>
-          ) : null}
-          {rejectBlocked && !authorityNote ? (
-            <div>Rejecting to PAPER_HELD is not available to you.</div>
-          ) : null}
-        </div>
-      ) : null}
-
+        </ExecutionTabs>
+      </ExecutionWorkspace>
     </section>
   );
 }

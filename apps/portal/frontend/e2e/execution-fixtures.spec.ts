@@ -66,6 +66,7 @@ const GROUPS = [
   "profile-reconciliation-fail-closed",
   "keysettable-mechanism-m1",
   "v2-anatomy-paper-demo",
+  "v2-equity-chart-demo",
   "live-full-operations-1f",
   "sandbox-certification-1d",
   "canary-control-room-1e",
