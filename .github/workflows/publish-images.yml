@@ -146,7 +146,7 @@ jobs:
 
       - name: Build and publish API image
         if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: deploy/images/portal-api.Dockerfile
@@ -160,7 +160,7 @@ jobs:
 
       - name: Build and publish web image
         if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: deploy/images/portal-web.Dockerfile
@@ -173,7 +173,7 @@ jobs:
       - name: Build and publish Control API image
         id: control-api-build
         if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all' || inputs.scope == 'execution-d3'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: deploy/images/control-api.Dockerfile
@@ -187,7 +187,7 @@ jobs:
 
       - name: Build and publish Roadmap & Task Board API image
         if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: deploy/images/roadmap-task-board-api.Dockerfile
@@ -199,7 +199,7 @@ jobs:
 
       - name: Build and publish execution edge image
         id: execution-edge-build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: deploy/images/execution-edge.Dockerfile
@@ -213,7 +213,7 @@ jobs:
 
       - name: Build and publish source proxy image
         id: source-proxy-build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: deploy/images/source-proxy.Dockerfile
