@@ -15,7 +15,7 @@ import type { PortalEnvironment } from "../portal/contracts";
 import type { Breadcrumb } from "../portal/navigation";
 import { ADMIN_USERS_ROUTE } from "./PortalRoutes";
 import { usePreferences } from "./preferences";
-import { usePresentationMode } from "./presentation";
+import { usePresentation } from "./presentation";
 
 export function TopBar({
   breadcrumbs,
@@ -29,7 +29,7 @@ export function TopBar({
   onToggleMobileNav: () => void;
 }) {
   const preferences = usePreferences();
-  const presentationMode = usePresentationMode();
+  const { mode: presentationMode, entityLabel } = usePresentation();
   const { isAdmin } = useSession();
 
   return (
@@ -70,6 +70,16 @@ export function TopBar({
             {crumb.route ? <Link to={crumb.route}>{crumb.label}</Link> : <span>{crumb.label}</span>}
           </span>
         ))}
+        {/* §4.3 product locator tail: `Deployments / Paper / Carry v3.2`. The
+            entity name comes from the screen that resolved it (via the
+            presentation context) — the shell cannot know fixture display
+            names, and would otherwise print ids or nothing. */}
+        {entityLabel ? (
+          <span className="portal-crumb">
+            <span aria-hidden="true" className="portal-crumb-sep">/</span>
+            <span>{entityLabel}</span>
+          </span>
+        ) : null}
       </nav>
 
       <button type="button" className="portal-search-btn" onClick={onOpenPalette}>

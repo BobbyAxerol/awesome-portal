@@ -10,6 +10,10 @@ import { test } from "@playwright/test";
  */
 test.skip(() => process.env.EL_V2_SHOTS !== "1", "evidence shots run only with EL_V2_SHOTS=1");
 
+// Output directory is switchable so the "after" record of a later phase never
+// overwrites the committed "before" evidence: EL_V2_DIR=el-v2-01-after.
+const OUT = process.env.EL_V2_DIR ?? "el-v2-00-before";
+
 import { freezeClock, settle, stubPortalApi, usePreferences } from "./fixtures";
 const ROUTES: [string, string][] = [
   ["inbox", "/governance/approvals"],
@@ -29,7 +33,7 @@ for (const [rname, route] of ROUTES) {
     await page.goto(route);
     await settle(page);
     await page.waitForTimeout(400);
-    await page.screenshot({ path: `e2e/el-v2-00-before/seam-${rname}-1440x900.png`, fullPage: false });
+    await page.screenshot({ path: `e2e/${OUT}/seam-${rname}-1440x900.png`, fullPage: false });
   });
 }
 for (const [wname, w, h] of WIDTHS) {
@@ -44,7 +48,7 @@ for (const [wname, w, h] of WIDTHS) {
       await settle(page);
       await page.waitForTimeout(400);
       // KHÔNG ẩn topbar — cái seam là chính thứ cần ghi lại
-      await page.screenshot({ path: `e2e/el-v2-00-before/${rname}-${wname}.png`, fullPage: false });
+      await page.screenshot({ path: `e2e/${OUT}/${rname}-${wname}.png`, fullPage: false });
     });
   }
 }

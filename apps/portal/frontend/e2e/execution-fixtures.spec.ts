@@ -144,17 +144,18 @@ test.describe("the fixture page is the shape the baseline expects", () => {
   });
 });
 
-/**
- * The surface is chosen by the wrapper, not by the reader's theme.
- *
- * This is what lets the shots below run under one theme instead of two. It is
- * checked rather than assumed: if the portal theme leaked into the Carbon
- * surface, every image here would be a baseline of one accidental half of the
- * behaviour.
- */
-test.describe("Carbon surfaces ignore the portal theme", () => {
+test.describe("one Carbon workspace regardless of the portal preference", () => {
+  /**
+   * Rewritten by EL-V2-01b. The previous test here asserted that governance
+   * surfaces stay LIGHT — it implemented the superseded two-surface design and
+   * guarded the exact seam the owner rejected. Under override §0.1 the whole
+   * Execution Loop is one Carbon canvas; a governance screen is distinguished
+   * by `data-surface` semantics (hierarchy, density), never by a second page
+   * theme. Both preferences are still exercised so a preference can never leak
+   * into the Carbon surface in either direction.
+   */
   for (const theme of ["research", "operations"] as const) {
-    test(`governance stays light and deployments stays dark under ${theme}`, async ({ page }) => {
+    test(`every execution surface is Carbon-dark under ${theme}`, async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 900 });
       await freezeClock(page);
       await usePreferences(page, theme);
@@ -171,11 +172,13 @@ test.describe("Carbon surfaces ignore the portal theme", () => {
         return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
       };
 
-      // The surface is carried on `data-theme`, not a class name — see
-      // `ExecutionSurface`, where the kind maps to a theme attribute so the
-      // token layer can key off it.
-      expect(await luminance('[data-theme="operations-carbon-light"]')).toBeGreaterThan(0.5);
-      expect(await luminance('[data-theme="operations-carbon"]')).toBeLessThan(0.5);
+      expect(await luminance('[data-surface="governance"]')).toBeLessThan(0.5);
+      expect(await luminance('[data-surface="deployments"]')).toBeLessThan(0.5);
+      // The semantic distinction survives the single theme: both kinds are on
+      // the page and still declare what they ARE.
+      expect(await page.locator('[data-surface="governance"]').count()).toBeGreaterThan(0);
+      // And nothing on this surface still asks for the deleted light variant.
+      expect(await page.locator('[data-theme="operations-carbon-light"]').count()).toBe(0);
     });
   }
 });

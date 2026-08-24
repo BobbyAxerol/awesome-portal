@@ -18,6 +18,7 @@ import { __resetPortalClientCaches } from "../portal/client";
 import { PortalShell } from "./PortalShell";
 import { PreferencesProvider } from "./preferences";
 import { presentationModeFor } from "./presentation";
+import { __resetThemeWriter } from "../styles/themeWriter";
 
 const FIXTURES = join(process.cwd(), "../registry/fixtures");
 const registry: PortalRegistryDocument = JSON.parse(
@@ -57,6 +58,7 @@ beforeEach(() => {
   __resetPortalClientCaches();
   localStorage.clear();
   document.documentElement.removeAttribute("data-theme");
+  __resetThemeWriter();
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -116,19 +118,18 @@ describe("the workspace flips atomically at the route boundary", () => {
 
   it("keeps Research routes on the stored preference, untouched", async () => {
     mount("/");
-    await waitFor(() =>
-      expect(document.documentElement.getAttribute("data-theme")).toBe("research"),
-    );
-    const selector = screen.getByLabelText("Theme") as HTMLSelectElement;
+    // `data-theme` alone no longer proves the shell is up: the preference
+    // writer sets it during the registry loading screen. Wait for the chrome.
+    const selector = (await screen.findByLabelText("Theme")) as HTMLSelectElement;
+    expect(document.documentElement.getAttribute("data-theme")).toBe("research");
     expect(selector.disabled).toBe(false);
     expect(selector.value).toBe("research");
   });
 
   it("flips chrome and canvas in one navigation, and restores preference on the way back", async () => {
     mount("/");
-    await waitFor(() =>
-      expect(document.documentElement.getAttribute("data-theme")).toBe("research"),
-    );
+    await screen.findByLabelText("Theme");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("research");
 
     // Into Execution via the sidebar the user actually clicks.
     const inbox = await screen.findAllByRole("link", { name: /Approval Inbox/ });

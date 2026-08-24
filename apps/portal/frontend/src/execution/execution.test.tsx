@@ -167,7 +167,7 @@ describe("Carbon surface isolation", () => {
       </ExecutionSurface>,
     );
     const surface = container.querySelector(".exec-surface");
-    expect(surface?.getAttribute("data-theme")).toBe("operations-carbon-light");
+    expect(surface?.getAttribute("data-theme")).toBe("operations-carbon");
     // Governance is a page you read and decide on, not a console you scan.
     expect(surface?.getAttribute("data-density")).toBe("comfortable");
   });
@@ -183,7 +183,9 @@ describe("Carbon surface isolation", () => {
     const surfaces = [...container.querySelectorAll(".exec-surface")].map((s) =>
       s.getAttribute("data-theme"),
     );
-    expect(surfaces).toEqual(["operations-carbon", "operations-carbon-light"]);
+    // One Carbon for the whole loop (owner override §0.1); the surfaces
+    // differ by data-surface semantics, not by theme.
+    expect(surfaces).toEqual(["operations-carbon", "operations-carbon"]);
   });
 });
 

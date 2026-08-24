@@ -30,7 +30,7 @@ import {
   EXECUTION_PREVIEW_FEATURE_DEFAULTS,
   hasExecutionPreview,
 } from "../execution/previewRegistry";
-import { usePreferences } from "./preferences";
+import { setThemeOverride } from "../styles/themeWriter";
 
 export type PortalPresentationMode = "research-light" | "execution-carbon";
 
@@ -97,7 +97,6 @@ export function PortalPresentationProvider({
   children: ReactNode;
 }) {
   const location = useLocation();
-  const preferences = usePreferences();
   const [entityLabel, setEntityLabel] = useState<string | null>(null);
 
   const mode = useMemo(
@@ -105,26 +104,22 @@ export function PortalPresentationProvider({
     [registry, location.pathname],
   );
 
-  // The single writer of the root theme attribute. It lived in
-  // `PreferencesProvider` when preference WAS the whole answer; with a
-  // route-derived override, two writers would race on every preference change
-  // and the loser would paint half the workspace. Everything the mode covers —
-  // topbar, sidebar, canvas, rail, overlays, palette, screen — flips through
-  // this one attribute in the same commit of the same effect: atomic by
-  // construction, not by coordination.
+  // The route override half of the theme (styles/themeWriter.ts holds the
+  // pair and writes the attribute — see the ordering lesson documented there).
+  // Everything the mode covers — topbar, sidebar, canvas, rail, overlays,
+  // palette, screen — flips through one attribute recomputed in one place:
+  // atomic by construction. Cleanup clears the override so unmounting the
+  // shell can never leave Carbon smeared over an auth screen.
   useEffect(() => {
-    const root = document.documentElement;
-    root.setAttribute(
-      "data-theme",
-      mode === "execution-carbon" ? "execution-carbon" : preferences.theme,
-    );
-  }, [mode, preferences.theme]);
+    setThemeOverride(mode);
+    return () => setThemeOverride(null);
+  }, [mode]);
 
-  // Entity labels do not survive route changes: a stale "Carry v3.2" on the
-  // Blotter would be the breadcrumb lying about where the reader is.
-  useEffect(() => {
-    setEntityLabel(null);
-  }, [location.pathname]);
+  // Entity labels are cleared by their PRODUCER's unmount cleanup, not by a
+  // pathname effect here. A parent effect clearing on route change runs AFTER
+  // the newly mounted screen's set — child effects fire first — so the first
+  // cut of this cleared every label the moment it was written. The producer
+  // owning both ends has no ordering to lose.
 
   const value = useMemo(
     () => ({ mode, entityLabel, setEntityLabel }),

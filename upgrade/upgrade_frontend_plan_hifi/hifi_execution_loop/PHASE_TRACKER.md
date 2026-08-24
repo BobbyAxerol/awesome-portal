@@ -18,7 +18,7 @@ Kế hoạch chi tiết từng phase: các khối **Claude supplement** trong ch
 | Phase | Tên | FE | Gate thoát | Evidence |
 |---|---|---|---|---|
 | EL-V2-00 | Re-baseline + ledger 18 HiFi + truth in tracking | **hoàn tất 2026-08-24, chờ Bobby duyệt gate** | ledger 0 unknown ✓; "screen built" reframed ✓ | ledger 118 dòng + 16 before-shots + danh sách 8 assertion lỗi thời (cuối file) |
-| EL-V2-01 | Một workspace Carbon theo route | `QUEUED` | zero seam sáng/tối; zero assertion Governance-Light | — |
+| EL-V2-01 | Một workspace Carbon theo route | **hoàn tất 2026-08-24, chờ Bobby duyệt gate** | seam probe đo trên route thật ✓ · 0 assertion Governance-Light ✓ · QuantBT 101 pass **không sinh lại** ✓ | `presentation.tsx` + themeWriter + 2 commit (276dd5a + teardown); 16 after-shots `el-v2-01-after/`; leak check: đúng 5 nhóm governance × 2 khổ đổi baseline, 70 ảnh khác byte-identical |
 | EL-V2-02 | Typography ngữ nghĩa + primitive workspace | `QUEUED` | 2 font; thang vai trò khoá; anatomy tái dùng | — |
 | EL-V2-03 | Preview có state, zero no-op | `QUEUED` | mọi control enabled có hậu quả quan sát được | — |
 | EL-V2-04 | Paper + Paper Exit lát cắt dọc chuẩn | `QUEUED` | **Bobby duyệt hình ảnh** — bắt buộc | — |
@@ -2368,3 +2368,23 @@ D2→D4 evidence and later delivery-profile promotion.
 - **Ảnh trước đã bắt được một lỗi ledger** (dòng filter Inbox) — sửa ngay trong V2-00, ghi chú tại dòng.
 - **Preview branch merged** (`d74a51b`) — route sản phẩm giờ nằm trong cây làm việc để V2-01..03 rework.
 - Patch responsive giữ nhãn subtask (`1da7f7a`), không tính là V2.
+
+### EL-V2-01 — ghi chú đóng phase (2026-08-24)
+
+- **Kiến trúc:** `PortalPresentationMode` suy từ classification route (17 screen + feature root +
+  `/execution/*`), không từ `delivery_profile`. Attribute `data-theme` ghi qua **coordinator**
+  (`styles/themeWriter.ts`) nhận cặp (preference, override) và tự tính giá trị cuối — vì hai writer
+  trực tiếp phụ thuộc thứ tự effect của React: bản đầu làm **vỡ 8 màn auth** (render ngoài shell,
+  không ai ghi theme). Bài học ghi trong doc-comment của writer.
+- **Shell Carbon = cùng một rule CSS** với screen Carbon (thêm một dòng selector) — không thể drift.
+- **Tháo governance-light ba lớp** (map trong `ExecutionSurface`, 183 dòng token block, 3 assert unit
+  + 1 describe e2e) — commit riêng revert được. Fixtures baseline: đúng 5 nhóm governance đổi
+  (leak check 70 ảnh còn lại byte-identical).
+- **F2 của review preview đóng luôn**: hai webServer/hai project Playwright — QuantBT baseline chạy
+  build **cờ tắt** (đúng production), preview + evidence chạy build cờ bật. Chính va chạm 36 ảnh đỏ
+  chứng minh F2 là lỗ thật.
+- **Một lần suýt tự lừa**: run gộp `tail -3` nuốt dòng "36 failed" — đã đổi cách đọc kết quả sang
+  đếm từng spec. Ghi lại vì "182 passed" từng được đọc là xanh.
+- Banner một dòng EN + PREVIEW badge + selector effective + breadcrumb entity (producer-owns-cleanup).
+- Còn theo dõi sang phase sau: screenId trong banner → inspector (V2-03); breadcrumb grammar đầy đủ
+  `<Cluster>/<Module>/<Entity>` khi màn thật thay preview (V2-04+).

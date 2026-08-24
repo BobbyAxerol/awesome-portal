@@ -9,6 +9,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import type { ThemeName } from "../styles/tokens";
+import { setThemePreference } from "../styles/themeWriter";
 
 export type Density = "comfortable" | "compact" | "operational";
 
@@ -64,15 +65,16 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [preferences, setPreferences] = useState<Preferences>(readStored);
 
   // Density is an attribute on <html> so the token cascade sees one source of
-  // truth. The THEME attribute is deliberately not written here any more: the
-  // route-aware presentation provider owns it (app/presentation.tsx), because
-  // on an Execution route the workspace is Carbon regardless of preference,
-  // and two writers of one attribute race on every preference change — the
-  // loser painting half the workspace. This provider still owns the stored
-  // preference; presentation reads it and applies it wherever no override is
-  // active.
+  // truth. The THEME goes through the shared writer instead of a direct
+  // attribute write: the route-aware presentation provider may hold an
+  // Execution override, and with two direct writers the outcome depended on
+  // React effect ordering — the first cut of EL-V2-01 broke every auth screen
+  // (rendered outside the shell, so no provider, so no theme at all) and
+  // would have let this effect overwrite the override on mount. The writer
+  // recomputes from both halves, so order stops mattering.
   useEffect(() => {
     const root = document.documentElement;
+    setThemePreference(preferences.theme);
     root.setAttribute("data-density", preferences.density);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
