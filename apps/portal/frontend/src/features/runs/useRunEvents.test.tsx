@@ -165,3 +165,66 @@ describe("poll floor", () => {
     expect(runPollInterval(false, 1200)).toBe(1200);
   });
 });
+
+/**
+ * U10 façade cutover — `FRONTEND_HANDOFF.md` §8.17 (2026-08-24).
+ *
+ * `/api/runs/{run_id}/events` moved behind the session-guarded Control API. The
+ * URL and the frame semantics are unchanged, so nothing above this hook needed
+ * a redesign — but the transport gained a failure class it could not have
+ * before. The old route was an unauthenticated Nginx→Python exception, where a
+ * 401 was impossible. The façade returns 401 on a missing or invalid session,
+ * and fails closed on an invalid upstream content type rather than presenting
+ * it as SSE.
+ *
+ * The honest limit on what can be asserted here: **`EventSource` cannot read an
+ * HTTP status.** `onerror` carries no code, so this hook cannot tell a 401 from
+ * dropped WiFi, and a test claiming to distinguish them would be theatre.
+ * Separating them needs either a preflight `fetch` or a typed `event: error`
+ * frame from the façade — a change to the transport, not to this assertion.
+ *
+ * What IS observable, and what actually protects the reader, is the composition
+ * the two existing tests only cover in halves: after a failure the screen must
+ * stop claiming to stream AND the caller's poll interval must return to the
+ * fast cadence. Either half alone still passes while the user watches a stale
+ * screen refresh every eight seconds.
+ */
+describe("U10 façade — the fallback is complete, not half", () => {
+  it("returns to the fast poll cadence after a transport failure", () => {
+    mount();
+    source().open();
+    // The slowed floor is correct only while a stream is actually delivering.
+    expect(runPollInterval(streaming, 1200)).toBe(8000);
+
+    source().fail();
+    // This is the assertion the cutover makes worth having: an authentication
+    // failure is a transport failure like any other here, and the screen must
+    // land back on its normal refresh rather than on the streaming floor.
+    expect(streaming).toBe(false);
+    expect(runPollInterval(streaming, 1200)).toBe(1200);
+  });
+
+  it("stays honest and fast when the failure repeats, as an expired session does", () => {
+    mount();
+    source().open();
+    // A 401 is not transient: every retry the browser makes returns it again.
+    // Nothing may latch — not a stale `streaming: true`, not the slow floor.
+    for (let i = 0; i < 5; i += 1) {
+      source().fail();
+      expect(streaming).toBe(false);
+      expect(runPollInterval(streaming, 1200)).toBe(1200);
+    }
+  });
+
+  it("does not announce a stream again until the connection actually reopens", () => {
+    mount();
+    source().open();
+    source().fail();
+    expect(streaming).toBe(false);
+    // `onopen`, not the absence of a further error. A recovered session is the
+    // only thing that may put the badge back.
+    source().open();
+    expect(streaming).toBe(true);
+    expect(runPollInterval(streaming, 1200)).toBe(8000);
+  });
+});
