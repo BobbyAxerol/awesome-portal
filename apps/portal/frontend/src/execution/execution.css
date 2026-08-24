@@ -30,7 +30,14 @@
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
   line-height: 1.4;
-  white-space: nowrap;
+  /* `nowrap` was here and pushed a full ISO timestamp plus a digest out to
+     431px inside a 321px column, which scrolled the whole page sideways.
+     Wrapping is safe precisely because of how the meta line is built: the
+     parts are joined with " · ", and no part contains a space, so a break can
+     only ever land BETWEEN parts. A timestamp is never split down the middle,
+     which is the thing `nowrap` was protecting. */
+  flex-wrap: wrap;
+  white-space: normal;
 }
 
 .exec-authority-name {
@@ -2337,6 +2344,15 @@
   margin-top: var(--space-2);
 }
 
+/* Wide content scrolls inside its own box; the page never scrolls sideways.
+   The drift table pushed its panel 11px over at laptop, and 11px of body
+   scroll is the same defect as 300px — the horizontal scrollbar appears and
+   every screen below it shifts. */
+.exec-scroll-x {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
 .exec-360-linked caption,
 .exec-360-sync caption {
   text-align: left;
@@ -3641,6 +3657,13 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  /* Belt to the `overflow-wrap` braces below, and labelled honestly: putting
+     this back to `auto` does NOT reproduce the overflow, because once the
+     blocker text can break there is no long unbreakable word left to inflate
+     the track. Kept for the case text wrapping cannot solve — a wide child
+     ELEMENT, which a grid item with `min-width: auto` would still refuse to
+     shrink around. */
+  min-width: 0;
   padding: var(--space-2);
   border: 1px solid var(--line);
   border-left: 2px solid var(--line);
@@ -3667,6 +3690,14 @@
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
   color: var(--ink-mute);
+  /* This is the fix, proved by putting it back: with `normal` the audit turns
+     four tests red and the page scrolls sideways again. These are machine
+     tokens with no space to break at — SANDBOX_STEP_RECONCILIATION_UNAVAILABLE
+     is 234px in a 172px track — so without an explicit break opportunity the
+     track inflates and the certification strip pushes past its own surface.
+     Wrapped, never ellipsised: M6 wants every character on screen, and half a
+     blocker code is worse than a taller box. */
+  overflow-wrap: anywhere;
 }
 
 .exec-cert-label { font-size: var(--text-xs); color: var(--ink); }

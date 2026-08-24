@@ -21,6 +21,7 @@
  * Venues come from the registry (hi-fi: *"venue list from registry, never
  * hardcoded"*), so a new venue appears here without a frontend release.
  */
+import { useId } from "react";
 import type { ReactNode } from "react";
 
 import type {
@@ -412,6 +413,13 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
     );
   }
 
+  // `useId`, not a literal. The tab ids and the panel id were hardcoded, so any
+  // page holding two of this screen emits duplicate DOM ids — and an
+  // `aria-controls` that resolves to the first match means the second screen's
+  // tabs point at the FIRST screen's panel. The fixtures surface renders five
+  // of one of these, so this was live on a real page, not hypothetical.
+  const uid = useId();
+
   return (
     <ExecutionSurface kind="deployments" className="exec-alpha">
       <header className="exec-inbox-head">
@@ -443,8 +451,8 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
             key={option}
             type="button"
             role="tab"
-            id={`alpha-tab-${option.replace(/\W+/g, "-")}`}
-            aria-controls="alpha-tabpanel"
+            id={`${uid}-tab-${option.replace(/\W+/g, "-")}`}
+            aria-controls={`${uid}-tabpanel`}
             className="exec-inbox-filter"
             data-active={tab === option ? "true" : undefined}
             aria-selected={tab === option}
@@ -458,11 +466,11 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
       <div
         className="exec-alpha-body"
         role="tabpanel"
-        id="alpha-tabpanel"
+        id={`${uid}-tabpanel`}
         // Named by its tab rather than by a duplicate label: a screen reader
         // reading "Positions, tab panel, Positions" twice is the label doing
         // the tab's job.
-        aria-labelledby={`alpha-tab-${tab.replace(/\W+/g, "-")}`}
+        aria-labelledby={`${uid}-tab-${tab.replace(/\W+/g, "-")}`}
       >
         {tab === "Overview" ? (
           <>

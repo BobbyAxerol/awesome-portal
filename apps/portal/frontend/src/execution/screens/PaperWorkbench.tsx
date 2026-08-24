@@ -20,6 +20,7 @@
  *      disabling them. A button somebody may never press is a question they
  *      will keep asking.
  */
+import { useId } from "react";
 import type { ReactNode } from "react";
 
 import type {
@@ -251,6 +252,13 @@ export function PaperWorkbench({
   const shownDrift = capPreserving(drift, DRIFT_BUDGET, (row) => row.verdict !== "WITHIN_BAND");
   const driftNotice = capNotice(shownDrift, "drift rows");
 
+  // `useId`, not a literal. The tab ids and the panel id were hardcoded, so any
+  // page holding two of this screen emits duplicate DOM ids — and an
+  // `aria-controls` that resolves to the first match means the second screen's
+  // tabs point at the FIRST screen's panel. The fixtures surface renders five
+  // of one of these, so this was live on a real page, not hypothetical.
+  const uid = useId();
+
   return (
     <ExecutionSurface kind="deployments" className="exec-paper">
       <header className="exec-inbox-head">
@@ -415,6 +423,7 @@ export function PaperWorkbench({
 
         <section className="exec-gate-panel">
           <div className="exec-tile-title">Drift vs approved evidence</div>
+          <div className="exec-scroll-x">
           <table className="exec-360-sync">
             <caption className="exec-blotter-note">
               {/* The fallback used to assert the linkage: with no note
@@ -454,6 +463,7 @@ export function PaperWorkbench({
               ))}
             </tbody>
           </table>
+          </div>
           {driftNotice ? <p className="exec-blotter-note">{driftNotice}</p> : null}
           <p className="exec-blotter-note">
             These gates feed Paper Exit Review — a WATCH item blocks nothing, a FAIL item blocks
@@ -468,8 +478,8 @@ export function PaperWorkbench({
             key={option}
             type="button"
             role="tab"
-            id={`paper-tab-${option}`}
-            aria-controls="paper-tabpanel"
+            id={`${uid}-tab-${option}`}
+            aria-controls={`${uid}-tabpanel`}
             className="exec-inbox-filter"
             data-active={tab === option ? "true" : undefined}
             aria-selected={tab === option}
@@ -483,8 +493,8 @@ export function PaperWorkbench({
       <div
         className="exec-alpha-body"
         role="tabpanel"
-        id="paper-tabpanel"
-        aria-labelledby={`paper-tab-${tab}`}
+        id={`${uid}-tabpanel`}
+        aria-labelledby={`${uid}-tab-${tab}`}
       >
         {tab === "Orders" ? <Orders orders={orders} onLoadOlder={onLoadOlder} /> : null}
         {tab === "Fills" ? <Fills fills={fills} onLoadOlder={onLoadOlder} /> : null}

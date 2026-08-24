@@ -494,7 +494,8 @@ export function GateR2Review({
             />
           )}
           {capitalEnvelope ? (
-            <table className="exec-gate-capital">
+            <div className="exec-scroll-x">
+              <table className="exec-gate-capital">
               <thead>
                 <tr>
                   <th scope="col" />
@@ -526,6 +527,7 @@ export function GateR2Review({
                 ))}
               </tbody>
             </table>
+              </div>
           ) : null}
           {capitalEnvelope && capitalBlockers.length > 0 ? (
             // Directly under the figures, not up with the lock banner. The lock

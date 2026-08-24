@@ -20,7 +20,7 @@
  * affordance the design already has. Three representations, one rule choosing
  * between them, and the choice is always stated on screen.
  */
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import {
   compareAbsDecimal,
@@ -679,6 +679,13 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
   const shownHoldings = capPreserving(holdings, 40, (row) => row.readiness !== "READY");
   const holdingsNotice = capNotice(shownHoldings, "holdings");
 
+  // `useId`, not a literal. The tab ids and the panel id were hardcoded, so any
+  // page holding two of this screen emits duplicate DOM ids — and an
+  // `aria-controls` that resolves to the first match means the second screen's
+  // tabs point at the FIRST screen's panel. The fixtures surface renders five
+  // of one of these, so this was live on a real page, not hypothetical.
+  const uid = useId();
+
   return (
     <ExecutionSurface kind="deployments" className="exec-pf">
       <header className="exec-inbox-head">
@@ -699,8 +706,8 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
             key={option}
             type="button"
             role="tab"
-            id={`pf-tab-${option.replace(/\W+/g, "-")}`}
-            aria-controls="pf-tabpanel"
+            id={`${uid}-tab-${option.replace(/\W+/g, "-")}`}
+            aria-controls={`${uid}-tabpanel`}
             className="exec-inbox-filter"
             data-active={tab === option ? "true" : undefined}
             aria-selected={tab === option}
@@ -714,11 +721,11 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
       <div
         className="exec-alpha-body"
         role="tabpanel"
-        id="pf-tabpanel"
+        id={`${uid}-tabpanel`}
         // Named by its tab rather than by a duplicate label: a screen reader
         // reading "Positions, tab panel, Positions" twice is the label doing
         // the tab's job.
-        aria-labelledby={`pf-tab-${tab.replace(/\W+/g, "-")}`}
+        aria-labelledby={`${uid}-tab-${tab.replace(/\W+/g, "-")}`}
       >
         {tab === "Overview" ? (
           <>
