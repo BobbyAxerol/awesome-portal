@@ -291,7 +291,7 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 | **Command Center 2 CTA** | §8.6 mục 3, v0.4 §21.3 | `[New run]` `[Import alpha]` trong header → `/research/quantbt/new`, `/research/quantbt/imports`. |
 | **Portal Map — nốt §P0.15** | §8.6 mục 4 | Filter status (độc lập với persona filter — dim theo `personaDimmed \|\| maturityDimmed`), click stage mở `StageBrief` (feature + maturity/data-mode badge, concern kèm `activation_gate`, link concern + roadmap epic). Feature stage khai mà registry không định nghĩa → nói "không có trong registry", không ẩn. |
 | **Users & Access (ADMIN)** | §8.6 mục 5 | List/đổi role/reset credential/revoke sessions/disable. Mọi write mang `x-portal-csrf`, **fail closed** khi thiếu cookie CSRF. Role change nói trước là sẽ thu hồi session. One-time credential hiện **một lần**, không lưu, không log. Row của chính mình được đánh dấu. Non-ADMIN thấy `denied` và **không** gọi list (`enabled: isAdmin`) — biên vẫn là gateway, 403 báo nguyên văn. Route xem §8.4 điểm 4. 9 test + 2 snapshot. |
-| **SSE cho run events** | §8.6 mục 6 (tuỳ chọn — đã làm) | `useRunEvents` mở `/api/runs/{id}/events`; frame chỉ mang state nên **invalidate query**, không patch bản sao run vào cache. Từ U10 2026-08-24, route đi qua session-guarded TypeScript façade và signed internal principal, không còn unauthenticated Nginx→Python exception. Không có `EventSource` hoặc mất kết nối → `streaming:false` và polling giữ nhịp cũ. Khi đang stream, polling **chậm lại (8s floor) chứ không tắt**. Đóng ở frame terminal và khi unmount. |
+| **SSE cho run events** | §8.6 mục 6 (tuỳ chọn — đã làm) | `useRunEvents` mở `/api/runs/{id}/events`; frame chỉ mang state nên **invalidate query**, không patch bản sao run vào cache. Từ U10 2026-08-24, route đi qua session-guarded TypeScript façade và signed internal principal, không còn unauthenticated Nginx→Python exception. Không có `EventSource` hoặc mất kết nối → đóng source, `streaming:false` và polling giữ nhịp cũ; native EventSource không được retry vô hạn một 401/403 mà nó không cho client đọc status. Khi đang stream, polling **chậm lại (8s floor) chứ không tắt**. Đóng ở mọi error, frame terminal và khi unmount. |
 | **Alpha 360° (version detail)** | §8.6 mục 7 | `/research/quantbt/alphas/:alphaId/:version`. Lifecycle là **track chung** DRAFT→LIVE (khoảng cách tới live là thông tin, không chỉ tên stage); certification/evidence trống nói rõ là trống; quarantine trích nguyên văn lý do của service; verify digest hiện cả hai digest. **Không có nút promote** — chuyển stage thuộc certification. ALPHA_POOL vẫn `COMMISSIONED` nên màn nằm dưới quantbt. 9 test + 2 snapshot. |
 | **Sửa 3 lỗi nghĩa (audit toàn màn)** | v0.5 §12.3, §13; rule §3.5 | (1) `metricTone` tô xanh mọi metric `direction:"higher"` ≥ 0 → Sharpe 13.20, Calmar 7231 đều "good" dù engine không phán xét; equity xanh vĩnh viễn (màu không bao giờ đổi = không mang tin). Giờ tone theo `toneBasis`: `sign` (return/CAGR), chỉ-mặt-xấu (Sharpe<0, profit factor<1 — đúng định nghĩa của nó), drawdown về **neutral** vì mọi run đều có drawdown và engine chưa công bố threshold. (2) Step rail tick `✓` các bước **chưa mở** (validation rỗng thì trivially valid) → tick giờ cần `visited && !error`, screen-reader nói "chưa mở"/"đã mở, không có lỗi". (3) Danh tính run in **hai lần** (header chip + passport strip cách nhau 40px) → header nhường passport trên run route; nút copy trước đây label là chính run id, giờ có động từ. Kèm: `fmtPct` in `24837.88%` không group → mọi formatter qua một helper. |
 | **Typography: vai trò font + scale** | v0.4 §25, v0.5 §10.2 | `table td, table th` là JetBrains Mono → **mọi** nhãn và câu trong bảng đều mono (tệ nhất với dấu tiếng Việt ở 12px). Mono giờ chỉ thuộc về **số** (`.mono`, `td.num`); column header và row-scope header là micro-label chữ prose; `.label` cũng chuyển sang prose. Scale 10/11/12/13/14/16/20/26 (4 bậc trong 3px) → 10/11/12/13/15/18/23/30. Hai file token đổi cùng nhau + gate parity mới cho type scale (đã negative-test). |
@@ -1005,9 +1005,16 @@ buffering. Missing/invalid sessions return 401; an invalid upstream content
 type fails closed rather than being presented as SSE. The 3-second default is a
 connect/header deadline only, not a stream lifetime.
 
-Claude should retain the current polling floor and query invalidation model.
-It may add a transport-level 401/502 fallback assertion, but it must not patch
-run state from partial frames or confuse this Research stream with the still-
-dark EX-BE-06 Execution realtime stream. No Execution delivery profile or
-registry flag changed. Backend evidence:
+Lifecycle hardening is fail-closed at the existing client boundary: every
+`EventSource.onerror` closes that source before returning to fast polling.
+This covers an initial 401/403 handshake, a transient drop and a server
+`event: error`; native EventSource therefore cannot retry the protected URL
+every few seconds for the lifetime of a dead-session tab. No preflight fetch,
+facade-specific SSE error envelope or HTTP/SSE contract change was introduced.
+
+Claude should retain the current polling floor and query invalidation model and
+may assert that both pre-open and post-open errors close the source. It must not
+patch run state from partial frames or confuse this Research stream with the
+still-dark EX-BE-06 Execution realtime stream. No Execution delivery profile
+or registry flag changed. Backend evidence:
 `upgrade/backend/U10_QUANTBT_RUN_SSE_FACADE_CUTOVER.md`.

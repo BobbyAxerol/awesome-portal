@@ -9,8 +9,10 @@
  * The stream is an accelerator, never the only path:
  *
  *  - if `EventSource` does not exist (jsdom, an old browser) or the connection
- *    fails, the hook reports `streaming: false` and the caller keeps its normal
- *    poll cadence — the screen degrades in speed, not in truth;
+ *    fails, the hook closes that source, reports `streaming: false` and the
+ *    caller keeps its normal poll cadence — the screen degrades in speed, not
+ *    in truth. Closing is required because native EventSource otherwise retries
+ *    a session-guarded 401 forever without exposing the HTTP status;
  *  - while streaming, the caller is expected to *slow* polling rather than stop
  *    it. A connection that opens and then goes quiet is indistinguishable from a
  *    run that is simply not progressing, so a slow floor poll is what keeps the
@@ -82,9 +84,11 @@ export function useRunEvents(runId: string, options: { enabled?: boolean } = {})
       }
     };
 
-    // `error` covers both a dropped connection and the server's own
-    // `event: error` frame. Either way the screen goes back to polling only.
-    source.onerror = () => setStreaming(false);
+    // `error` covers an initial 401/403 handshake, a dropped connection and the
+    // server's own `event: error` frame. EventSource does not expose the HTTP
+    // status and would retry the same protected URL forever, so this instance
+    // is terminal on every error. Polling remains the authoritative fallback.
+    source.onerror = close;
 
     return close;
   }, [enabled, queryClient, runId]);
