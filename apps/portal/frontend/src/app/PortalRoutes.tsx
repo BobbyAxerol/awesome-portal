@@ -18,6 +18,11 @@ import { PortalMap } from "../features/portal-map/PortalMap";
 import { FeaturePreview } from "../features/preview/FeaturePreview";
 import { QUANTBT_ROOT, canonicalQuantBTPath } from "../features/quantbt/routes";
 import type { PortalFeatureDefinition, PortalRegistryDocument } from "../portal/contracts";
+import {
+  EXECUTION_PREVIEW_ENABLED,
+  EXECUTION_PREVIEW_FEATURE_DEFAULTS,
+  hasExecutionPreview,
+} from "../execution/previewRegistry";
 
 /**
  * Heavy modules are loaded when their route is entered, not before.
@@ -41,6 +46,11 @@ const UsersAccess = lazy(() =>
   import("../features/admin/UsersAccess").then((m) => ({ default: m.UsersAccess })),
 );
 const ExecutionFixtures = lazy(() => import("../execution/Fixtures"));
+const ExecutionPreviewRoute = lazy(() =>
+  import("../execution/ExecutionPreviewRoute").then((m) => ({
+    default: m.ExecutionPreviewRoute,
+  })),
+);
 
 /**
  * Registry feature id -> implemented module.
@@ -117,49 +127,71 @@ function NotFound() {
 }
 
 export function PortalRoutes({ registry }: { registry: PortalRegistryDocument }) {
+  const previewScreens = EXECUTION_PREVIEW_ENABLED
+    ? registry.screens.filter((screen) => hasExecutionPreview(screen.screen_id))
+    : [];
+  const previewByExactRoute = new Map(previewScreens.map((screen) => [screen.route, screen]));
+
   return (
     // The fallback reserves a screen-shaped footprint, so entering a split route
     // does not collapse the layout for the frame it takes to arrive.
     <Suspense fallback={<ResultsSkeleton message="Loading module…" />}>
       <Routes>
-      {registry.features.map((feature) => {
-        const module = MODULES[feature.id];
-        const element =
-          feature.canonical_route === "/"
-            ? <RootRoute />
-            : module
-              ? <module.component />
-              : <FeaturePreview feature={feature} />;
-        const path =
-          feature.canonical_route === "/"
-            ? "/"
-            : `${feature.canonical_route}${module?.wildcard ? "/*" : ""}`;
-        return <Route key={feature.id} path={path} element={element} />;
-      })}
-
-      {/* Account administration: session-scoped, not a registry feature. The
-          screen itself renders `denied` for a non-ADMIN, so a guessed URL does
-          not leak the table. */}
-      <Route path={ADMIN_USERS_ROUTE} element={<UsersAccess />} />
-
-      {/* Execution Loop Phase 0 fixtures: components, not a screen. */}
-      <Route path={EXECUTION_FIXTURES_ROUTE} element={<ExecutionFixtures />} />
-
-      {/* Legacy compatibility. The set of paths comes from the registry; the
-          owning module decides how each one translates. */}
-      {registry.features.flatMap((feature) =>
-        feature.legacy_routes
-          // `/roadmap-task-board/` is served by the gateway as its own app and
-          // must keep working untouched during the compatibility window.
-          .filter((route) => !route.startsWith("/roadmap-task-board"))
-          .map((route) => (
+        {previewScreens
+          .filter((screen) => {
+            const owner = registry.features.find((feature) => feature.id === screen.feature_id);
+            return owner?.canonical_route !== screen.route;
+          })
+          .map((screen) => (
             <Route
-              key={`legacy:${route}`}
-              path={route}
-              element={<LegacyRedirect feature={feature} />}
+              key={`execution-preview:${screen.screen_id}`}
+              path={screen.route}
+              element={<ExecutionPreviewRoute screenId={screen.screen_id} />}
             />
-          )),
-      )}
+          ))}
+        {registry.features.map((feature) => {
+          const module = MODULES[feature.id];
+          const previewScreen = previewByExactRoute.get(feature.canonical_route);
+          const previewScreenId =
+            previewScreen?.screen_id ?? EXECUTION_PREVIEW_FEATURE_DEFAULTS[feature.id];
+          const element =
+            feature.canonical_route === "/"
+              ? <RootRoute />
+              : EXECUTION_PREVIEW_ENABLED && previewScreenId
+                ? <ExecutionPreviewRoute screenId={previewScreenId} />
+                : module
+                  ? <module.component />
+                  : <FeaturePreview feature={feature} />;
+          const path =
+            feature.canonical_route === "/"
+              ? "/"
+              : `${feature.canonical_route}${module?.wildcard ? "/*" : ""}`;
+          return <Route key={feature.id} path={path} element={element} />;
+        })}
+
+        {/* Account administration: session-scoped, not a registry feature. The
+            screen itself renders `denied` for a non-ADMIN, so a guessed URL does
+            not leak the table. */}
+        <Route path={ADMIN_USERS_ROUTE} element={<UsersAccess />} />
+
+        {/* Execution Loop Phase 0 fixtures: components, not a screen. */}
+        <Route path={EXECUTION_FIXTURES_ROUTE} element={<ExecutionFixtures />} />
+
+        {/* Legacy compatibility. The set of paths comes from the registry; the
+            owning module decides how each one translates. */}
+        {registry.features.flatMap((feature) =>
+          feature.legacy_routes
+            // `/roadmap-task-board/` is served by the gateway as its own app and
+            // must keep working untouched during the compatibility window.
+            .filter((route) => !route.startsWith("/roadmap-task-board"))
+            .map((route) => (
+              <Route
+                key={`legacy:${route}`}
+                path={route}
+                element={<LegacyRedirect feature={feature} />}
+              />
+            )),
+        )}
 
         <Route path="*" element={<NotFound />} />
       </Routes>

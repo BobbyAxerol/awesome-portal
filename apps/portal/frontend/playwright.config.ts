@@ -38,6 +38,9 @@ export default defineConfig({
     url: "http://127.0.0.1:4174",
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
-    env: { VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY: "true" },
+    env: {
+      VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY: "true",
+      VITE_EXECUTION_PREVIEW_ENABLED: "true",
+    },
   },
 });
