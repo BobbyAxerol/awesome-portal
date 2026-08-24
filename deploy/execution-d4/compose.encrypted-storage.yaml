@@ -1,0 +1,11 @@
+# D4-only storage overlay. It changes no source/query/realtime/command flag.
+# The host preflight must accept the dedicated encrypted mount before Compose
+# may create or reuse this bind-backed local volume.
+volumes:
+  projection-postgres-data:
+    name: ${D4_PROJECTION_DB_VOLUME_NAME:?set the D4 versioned volume name}
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${D4_PROJECTION_DATA_DIRECTORY:?set the approved encrypted data directory}

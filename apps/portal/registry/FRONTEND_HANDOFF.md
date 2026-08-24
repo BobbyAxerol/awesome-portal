@@ -943,6 +943,14 @@ non-fixture delivery profile only after separate D4 live qualification and
 activation decisions. Backend evidence:
 `upgrade/backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md`.
 
+The D4 storage preparation status is
+`D4_ENCRYPTED_STORAGE_BOUNDARY_PREPARED / LIVE_VOLUME_NOT_PROVISIONED /
+NO_SOURCE_READ`. This is backend infrastructure preparation only: no EBS
+volume, mount, business projection or delivery-profile promotion exists.
+Claude receives no live UI unlock and must continue to render fixture or typed
+unavailable states until separate D4 live qualification is accepted. Detail:
+`upgrade/backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md`.
+
 ### 8.12 EX-BE-05b/F1a Operations Queue — Lane A can integrate (2026-08-23)
 
 Backend status is `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`. The same-origin

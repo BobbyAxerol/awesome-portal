@@ -15,6 +15,20 @@ commands, a non-fixture registry profile or any Trading System mutation.
 - D4 business projection storage must be encrypted and separately approved. It
   must not silently use the unencrypted host root volume used by dark D2.
 
+## Encrypted-storage assets
+
+- `storage-input.env.example`: credential-free storage decision and evidence
+  schema;
+- `compose.encrypted-storage.yaml`: D4-only bind-backed volume overlay; and
+- `../../scripts/execution-d4-storage-preflight.sh`: template/offline/readiness
+  gate that never creates, formats or mounts a device.
+
+Before any Compose handoff, the live storage input must pass `readiness` and
+the D4 data path must resolve to a dedicated filesystem UUID different from
+`/`. The guest-side gate also requires private AWS `DescribeVolumes` and KMS
+identity digests because Linux mount metadata alone cannot prove EBS
+encryption.
+
 ## Hard stop gates
 
 `owner-input.env.example` records decisions and SHA-256 evidence references,
@@ -45,6 +59,7 @@ python3 scripts/execution-d4-authorization.py \
   --input deploy/execution-d4/owner-input.env.example \
   --mode template
 python3 scripts/test_execution_d4_authorization.py
+./scripts/test-execution-d4-storage.sh
 ```
 
 For a future private owner input, use mode `readiness` before any source read and
@@ -60,3 +75,9 @@ request are recorded in
 [`../../upgrade/backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md`](../../upgrade/backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md).
 D2/D3 predecessors are accepted; identity/contract and encrypted-storage inputs
 remain blocked.
+
+The storage deployment boundary itself is
+`D4_ENCRYPTED_STORAGE_BOUNDARY_PREPARED / LIVE_VOLUME_NOT_PROVISIONED /
+NO_SOURCE_READ`. No separate block device currently exists on AWS-HK, so the
+overlay remains render-only. Evidence:
+[`../../upgrade/backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md`](../../upgrade/backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md).

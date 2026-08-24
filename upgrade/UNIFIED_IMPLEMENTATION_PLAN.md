@@ -1820,6 +1820,15 @@ không phải 17 màn.
 > next D4 gates. Detail:
 > [`EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md`](./backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md).
 
+> **Backend checkpoint 2026-08-24 — D4 encrypted projection storage:** status is `D4_ENCRYPTED_STORAGE_BOUNDARY_PREPARED / LIVE_VOLUME_NOT_PROVISIONED / NO_SOURCE_READ`.
+> The offline schema, read-only preflight and D4 Compose
+> overlay now prevent root-filesystem/D2-volume reuse and require independent
+> encrypted-EBS/KMS evidence plus exact mount UUID/options/ownership. No paid
+> AWS resource, mount, Docker volume or source read was created. Live D4 still
+> waits for owner approval/provisioning, the dedicated Paper read identity and
+> the stable cursor/completeness/resync contract. Detail:
+> [`EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md`](./backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md).
+
 > **Backend checkpoint 2026-08-23 — EX-BE-05b/F2 Phase 10:** Portal-owned
 > Sandbox Certification trên SGP đạt
 > `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`: DRAFT→IN_REVIEW→APPROVED|DENIED,

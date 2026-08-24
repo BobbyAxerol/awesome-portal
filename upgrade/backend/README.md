@@ -477,6 +477,15 @@ authority.
   database from reporting D4 ready. No live source call/runtime integration or
   profile activation exists. Status: `D4_MAPPER_CORE_OFFLINE_COMPLETE /
   RUNTIME_FAIL_CLOSED / LIVE_INPUTS_BLOCKED`.
+- [EX-BE-02-LIVE D4 encrypted projection-storage boundary](./EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md)
+  — **storage boundary prepared / live volume absent / no source read:** a
+  credential-free owner schema, read-only template/offline/readiness validator
+  and D4-only bind-backed Compose overlay prohibit root-filesystem and D2-volume
+  reuse. The gate requires independent encrypted-EBS/KMS evidence, a distinct
+  filesystem UUID and hardened mount ownership/options. It creates no AWS,
+  filesystem, Docker or Trading System state. Status:
+  `D4_ENCRYPTED_STORAGE_BOUNDARY_PREPARED / LIVE_VOLUME_NOT_PROVISIONED /
+  NO_SOURCE_READ`.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

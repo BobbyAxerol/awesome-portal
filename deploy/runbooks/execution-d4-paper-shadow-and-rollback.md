@@ -32,6 +32,35 @@ identities, healthy WireGuard and exact host-admission baseline. The projection
 store must use owner-approved encryption with a tested backup and restore path.
 The dark D2 root-volume database is not an acceptable D4 business store.
 
+Copy `deploy/execution-d4/storage-input.env.example` outside Git, keep it mode
+0600 and fill only the owner decision, resource identity and evidence digests.
+The AWS control-plane evidence must independently prove `Encrypted=true` and
+the KMS identity; guest `lsblk` output is not encryption evidence.
+
+Run the read-only storage gate before Compose is allowed to create or reuse the
+D4 volume:
+
+```bash
+sudo ./scripts/execution-d4-storage-preflight.sh \
+  --env-file /PRIVATE/PATH/execution-d4-storage.env \
+  --mode readiness
+```
+
+Use the D4 overlay only after this passes:
+
+```bash
+sudo docker compose \
+  --env-file /PRIVATE/PATH/execution-runtime.env \
+  -f deploy/compose.execution-edge.yaml \
+  -f deploy/execution-d1/compose.dark.yaml \
+  -f deploy/execution-d4/compose.encrypted-storage.yaml \
+  config --quiet
+```
+
+The overlay must render a new `portal-execution-projection-pgdata-v2+`
+bind-backed local volume targeting the dedicated D4 data directory. It must
+never target `/`, the D2 volume or a directory on the root filesystem.
+
 Copy `deploy/execution-d4/owner-input.env.example` outside Git, set mode 0600
 and fill only identifiers/digests. Never put a source key, JWT, certificate,
 password, account ID, alpha ID, order, fill, position or event payload in the

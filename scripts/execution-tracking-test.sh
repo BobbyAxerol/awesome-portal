@@ -244,6 +244,18 @@ for label, text in (
 for label, text in (
     ("master", m),
     ("tracker", t),
+    ("backend README", b),
+    ("architecture guide", a),
+    ("frontend handoff", h),
+    ("unified plan", u),
+):
+    normalized = re.sub(r"\s+", " ", text)
+    if "D4_ENCRYPTED_STORAGE_BOUNDARY_PREPARED / LIVE_VOLUME_NOT_PROVISIONED / NO_SOURCE_READ" not in normalized:
+        raise SystemExit(f"{label} lost the D4 encrypted-storage stop-gate")
+
+for label, text in (
+    ("master", m),
+    ("tracker", t),
     ("request ledger", l),
     ("backend README", b),
     ("architecture guide", a),

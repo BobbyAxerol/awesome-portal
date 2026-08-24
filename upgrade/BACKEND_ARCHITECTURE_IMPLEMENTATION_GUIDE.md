@@ -1107,6 +1107,15 @@ deep-dive → ADR → slice → evidence discipline documented above.
   LIVE_INPUTS_BLOCKED`; live pagination/resync, dedicated identity and
   encrypted storage remain owner-gated. Evidence:
   [`EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md`](./backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md).
+- **EX-BE-02-LIVE D4 encrypted-storage boundary (2026-08-24):** the Portal now
+  has a credential-free storage decision schema, read-only host preflight and
+  a D4-only Compose overlay that can bind PostgreSQL only to a separately
+  mounted, encrypted and owner-approved filesystem. It rejects the AWS-HK root
+  filesystem, the D2 `v1` volume, missing EBS/KMS evidence, filesystem-UUID
+  drift and weak mount ownership/options. No volume was provisioned and no
+  source call occurred. Status: `D4_ENCRYPTED_STORAGE_BOUNDARY_PREPARED /
+  LIVE_VOLUME_NOT_PROVISIONED / NO_SOURCE_READ`. Evidence:
+  [`EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md`](./backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

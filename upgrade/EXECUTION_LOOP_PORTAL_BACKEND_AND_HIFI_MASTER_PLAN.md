@@ -30,6 +30,7 @@ Read these sources before implementing a slice:
 13. [D3 live transport acceptance](backend/EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md) — protected-main image identities, real H2/TLS1.3 mTLS/JWT matrix, source loss/recovery, rollback and the remaining D4 stop gates.
 14. [D4 readiness audit and owner request](backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md) — current source/storage blockers and the exact sanitized contract response required before the first Paper read.
 15. [D4 mapper core and readiness hardening](backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md) — typed four-resource normalization, BUILDING-only replay evidence and the split store/ingestor readiness invariant.
+16. [D4 encrypted projection-storage boundary](backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md) — fail-closed EBS/KMS evidence, dedicated mount identity and render-only D4 Compose overlay without provisioning or source reads.
 
 The wireframes remain the visual authority. This plan is authoritative for data
 ownership, endpoint shape, compatibility, security, freshness, sequencing, and
@@ -801,7 +802,7 @@ so one slice may unlock several screens without inventing a second product roadm
 | EX-BE-04a | P0 / delivered | TypeScript bidirectional keyset/filter/sort/exact-count primitives over control-plane PostgreSQL | phases 1, 2 and Portal-owned portions of 5/7/8 |
 | EX-BE-05a | P0 / fresh-PG gate green | TypeScript governance/evidence/approval workflow and audit, with external panels allowed unavailable | phases 1–2 on real Portal data without AWS |
 | EX-BE-01 | P0 / contract complete | Rust workspace, canonical contracts, `ts-contract-v1`, vocabulary reconciliation and golden corpus | all real-source screen contracts |
-| EX-BE-02 | P0 / D3 transport accepted; runtime restored to D2 source-dark | mTLS/delegated-auth boundary, capability negotiation, bounded read-only transport, exact-GET Source Proxy, preflight and rollback; D1/D2 plus real H2/TLS1.3/JWT/loss/recovery evidence accepted; all business-source flags remain false pending D4 | safe AWS integration |
+| EX-BE-02 | P0 / D3 transport accepted; D4 mapper and encrypted-storage boundary prepared offline | mTLS/delegated-auth boundary, capability negotiation, bounded read-only transport, exact-GET Source Proxy, preflight and rollback; D1/D2 plus real H2/TLS1.3/JWT/loss/recovery evidence accepted; D4 rejects root/D2 storage reuse and all business-source flags remain false pending owner identity/contract, encrypted volume and live qualification | safe AWS integration |
 | EX-BE-03 | P0 / foundation complete; source ingestion integration pending | projection schema, reducer, cursor/epoch/replay/snapshot and freshness evaluator; production ingestion flag remains false | phases 4, 9–17 |
 | EX-BE-04b | P1 / foundation complete; screen API/source integration pending | Rust projection query primitives: bidirectional keyset, filter/sort/count, adaptive series ladder, exact decimals and typed cold retention | phases 4, 9, 11–17 |
 | EX-BE-05b | P1 / F0 foundation complete; live relay inactive | Canonical catalogue + typed conditions + blocked TypeScript plan/apply/verify and deny-by-default Rust relay journal; authenticated live relay remains owner/source gated | phases 6–12 mutation/operation paths |
@@ -809,6 +810,13 @@ so one slice may unlock several screens without inventing a second product roadm
 | EX-BE-07a | P2 / foundation complete | pure correlation, exposure, funnel, capital-ledger and batched preview analytics | phases 3, 14–17 contracts |
 | EX-BE-07b | P2 / integration complete; source activation evidence pending | active-epoch source repositories and six narrow authenticated screen APIs | phases 3, 14–17 integration |
 | EX-BE-08 | P2 / offline qualification foundation complete; live evidence pending | security/load/soak/DR/rollback evidence and production profiles | phase 18 and production activation |
+
+The D4 encrypted projection-storage checkpoint is
+`D4_ENCRYPTED_STORAGE_BOUNDARY_PREPARED / LIVE_VOLUME_NOT_PROVISIONED /
+NO_SOURCE_READ`. Its schema, read-only preflight and Compose overlay are
+offline-only: they prohibit AWS-HK root/D2-volume reuse but neither provision
+storage nor enable a Paper source. Dedicated identity/contract, explicit
+volume approval/provisioning and live qualification remain separate gates.
 
 ### 12.1.1 Six-phase pre-IAM SGP runway
 

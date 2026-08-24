@@ -77,6 +77,12 @@ the remaining mapper blocker is specifically the owner-published pagination/
 watermark/resync orchestrator and its live runtime binding. Detail:
 [`EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md`](./EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md).
 
+The encrypted projection-storage deployment boundary is also prepared offline
+under status `D4_ENCRYPTED_STORAGE_BOUNDARY_PREPARED /
+LIVE_VOLUME_NOT_PROVISIONED / NO_SOURCE_READ`. It rejects the unencrypted root
+filesystem and D2 volume and creates no resource. See
+[`EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md`](./EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md).
+
 The next executable action is the D4 input audit. It must prove these inputs
 without modifying Trading System. Source read and `BUILDING` epoch creation may
 start only after the validator's `readiness` mode accepts the private owner

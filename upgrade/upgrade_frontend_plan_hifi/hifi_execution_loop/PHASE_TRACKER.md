@@ -2028,6 +2028,14 @@ runtime ingestor can report ready until the owner contract and encrypted store
 arrive. Detail:
 [`EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md`](../../backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md).
 
+The storage-only checkpoint is
+`D4_ENCRYPTED_STORAGE_BOUNDARY_PREPARED / LIVE_VOLUME_NOT_PROVISIONED /
+NO_SOURCE_READ`. It adds a fail-closed encrypted-EBS/KMS evidence schema,
+dedicated-mount readiness checks and a render-only D4 Compose overlay; it has
+not created a volume or enabled a source. Claude must keep every live-source,
+Query, analytics, SSE and command consumer unavailable/fixture. Evidence:
+[`EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md`](../../backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md).
+
 ## 28. Dev integration preview — 17/17 screens wired, production inactive (2026-08-24)
 
 Status: `DEV_PREVIEW_READY / FIXTURE_ONLY / PRODUCTION_INACTIVE`.
