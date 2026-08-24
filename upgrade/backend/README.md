@@ -493,6 +493,16 @@ authority.
   request for the mandatory Paper read identity plus stable four-resource
   cursor/completeness/resync contract. Status:
   `D4_OWNER_ACTION_PACKET_PREPARED / OWNER_ACTIONS_PENDING / NO_SOURCE_READ`.
+- [EX-BE-02-LIVE D4 source and storage reconciliation](./EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md)
+  — **owner inputs reconciled / contract import pending / no Portal source
+  traffic:** the dedicated loopback-only facade, mandatory read identity,
+  revoked-key evidence, exact snapshot/event protocol and encrypted gp3 host
+  storage are now pinned without exposing secrets or business payloads. The v2
+  Portal authorization manifest additionally gates exact source commits/image,
+  frozen scope/bounds and Source Proxy delivery. Rust artifact import,
+  production ingestor and the live BUILDING-epoch drills remain pending.
+  Status: `D4_SOURCE_AND_STORAGE_INPUTS_RECONCILED /
+  CONTRACT_ARTIFACT_IMPORT_PENDING / NO_PORTAL_SOURCE_TRAFFIC`.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

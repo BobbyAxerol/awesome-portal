@@ -32,6 +32,7 @@ Read these sources before implementing a slice:
 15. [D4 mapper core and readiness hardening](backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md) — typed four-resource normalization, BUILDING-only replay evidence and the split store/ingestor readiness invariant.
 16. [D4 encrypted projection-storage boundary](backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md) — fail-closed EBS/KMS evidence, dedicated mount identity and render-only D4 Compose overlay without provisioning or source reads.
 17. [D4 owner action packet](backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md) — exact encrypted-gp3 setup/evidence handoff and the bounded implementation request for the Trading System Paper read identity/contract.
+18. [D4 source and storage reconciliation](backend/EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md) — accepted dedicated facade/runtime and encrypted-host evidence, v2 fail-closed authorization, and the remaining artifact-import/ingestor/qualification gates.
 
 The wireframes remain the visual authority. This plan is authoritative for data
 ownership, endpoint shape, compatibility, security, freshness, sequencing, and

@@ -2043,6 +2043,18 @@ has no implementation dependency on those private inputs and receives no
 source/query/realtime/command unlock. Detail:
 [`EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md`](../../backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md).
 
+Current superseding backend status is
+`D4_SOURCE_AND_STORAGE_INPUTS_RECONCILED /
+CONTRACT_ARTIFACT_IMPORT_PENDING / NO_PORTAL_SOURCE_TRAFFIC`. The source owner
+has locally accepted the dedicated loopback-only mandatory-auth facade and the
+encrypted gp3 projection filesystem is host-ready. Portal manifest v2 now
+locks the facade/source identities, exact frozen scope/bounds, revoked-key
+evidence and future Source Proxy delivery. Claude receives **no live-source
+unlock**: registry remains fixture and Query, analytics, SSE and commands stay
+off until the exact artifacts, Rust BUILDING ingestor and D4 qualification are
+accepted. Detail:
+[`EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md`](../../backend/EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md).
+
 ## 28. Dev integration preview — 17/17 screens wired, production inactive (2026-08-24)
 
 Status: `DEV_PREVIEW_READY / FIXTURE_ONLY / PRODUCTION_INACTIVE`.

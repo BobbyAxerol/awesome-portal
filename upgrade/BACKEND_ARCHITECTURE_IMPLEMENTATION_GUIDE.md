@@ -1123,6 +1123,17 @@ deep-dive → ADR → slice → evidence discipline documented above.
   returns only digests/metadata. Status: `D4_OWNER_ACTION_PACKET_PREPARED /
   OWNER_ACTIONS_PENDING / NO_SOURCE_READ`. Evidence:
   [`EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md`](./backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md).
+- **EX-BE-02-LIVE D4 source/storage reconciliation (2026-08-24):** the owner-
+  published dedicated facade and encrypted gp3 host preparation are now pinned
+  as sanitized evidence. Authorization schema v2 replaces the unrelated
+  Gateway digest with the exact facade image, binds source implementation and
+  runtime-acceptance commits, freezes scope/runtime bounds, requires revoked-
+  key and loopback evidence, and makes Source Proxy delivery an explicit
+  pre-read stop gate. Artifact import, the production Rust ingestor and live
+  BUILDING-epoch qualification remain pending. Status:
+  `D4_SOURCE_AND_STORAGE_INPUTS_RECONCILED /
+  CONTRACT_ARTIFACT_IMPORT_PENDING / NO_PORTAL_SOURCE_TRAFFIC`. Detail:
+  [`EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md`](./backend/EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

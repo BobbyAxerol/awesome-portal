@@ -1836,6 +1836,16 @@ không phải 17 màn.
 > neither direct database access nor runtime activation. Detail:
 > [`EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md`](./backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md).
 
+> **Backend checkpoint 2026-08-24 — D4 source/storage reconciliation:** status
+> is `D4_SOURCE_AND_STORAGE_INPUTS_RECONCILED /
+> CONTRACT_ARTIFACT_IMPORT_PENDING / NO_PORTAL_SOURCE_TRAFFIC`. The owner has
+> locally accepted a dedicated loopback-only, mandatory-auth Paper facade and
+> prepared a separate encrypted gp3 projection filesystem. Portal authorization
+> v2 now locks source commits/image, scope/bounds, revoked-key evidence and
+> Source Proxy delivery. No source request, epoch, Query/SSE/analytics/command
+> or registry activation occurred. Detail:
+> [`EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md`](./backend/EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md).
+
 > **Backend checkpoint 2026-08-23 — EX-BE-05b/F2 Phase 10:** Portal-owned
 > Sandbox Certification trên SGP đạt
 > `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`: DRAFT→IN_REVIEW→APPROVED|DENIED,
