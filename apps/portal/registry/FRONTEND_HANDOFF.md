@@ -905,13 +905,27 @@ mTLS/JWT/fault evidence passes. Full backend detail:
 ### 8.11 D4 offline authorization — no live frontend unlock (2026-08-23)
 
 Backend status is `D4_OFFLINE_AUTHORIZATION_PREPARED /
-LIVE_D4_PREDECESSOR_BLOCKED`. This adds no frontend availability. Claude may
+D3_PREDECESSOR_ACCEPTED / LIVE_D4_INPUTS_BLOCKED`. This adds no frontend
+availability. Claude may
 align fixtures with the published typed freshness/gap/error states, but must
 keep profile labelling `fixture`, EventSource closed and Paper source panels
 explicitly unavailable. The full Portal remains on SGP; only a future minimal
 Source Proxy/Rust Edge/projection boundary runs on AWS-HK. The current optional-
 key source reads and incomplete cursor/event semantics are deliberately
 rejected instead of hidden by a UI fallback.
+
+### 8.11A D3 live transport accepted — frontend remains source-dark (2026-08-24)
+
+Backend status is `D3_TRANSPORT_ACCEPTED / BUSINESS_SOURCE_DARK /
+D2_RUNTIME_RESTORED`. Real SGP→AWS-HK HTTP/2, TLS 1.3 mTLS, delegated JWT,
+bounded latency, source loss/recovery and rollback passed. Only public contract,
+health and capability paths were observed; no orders/fills/positions/events or
+projection state was read.
+
+This does not activate a frontend profile. Claude keeps `fixture`, explicit
+unavailable/degraded states and EventSource off. A source-backed Paper panel
+still requires an owner-approved D4 `BUILDING` epoch plus a later, separate
+registry activation decision.
 
 ### 8.12 EX-BE-05b/F1a Operations Queue — Lane A can integrate (2026-08-23)
 

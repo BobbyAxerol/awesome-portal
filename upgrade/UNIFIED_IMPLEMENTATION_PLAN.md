@@ -1795,6 +1795,15 @@ không phải 17 màn.
 > typed unavailable chờ Trading System contract và D2→D4. Chi tiết:
 > [`EX_BE_05B_F1B_INCIDENT_DETAIL.md`](./backend/EX_BE_05B_F1B_INCIDENT_DETAIL.md).
 
+> **Backend checkpoint 2026-08-24 — EX-BE-02-LIVE D3:** real SGP→AWS-HK
+> transport is `D3_TRANSPORT_ACCEPTED / BUSINESS_SOURCE_DARK / D2_RUNTIME_RESTORED`.
+> HTTP/2, TLS 1.3 mTLS, the delegated-JWT matrix, bounded
+> latency, Source Proxy loss/recovery and unchanged-D2 rollback passed. D4 is
+> `D4_OFFLINE_AUTHORIZATION_PREPARED / D3_PREDECESSOR_ACCEPTED / LIVE_D4_INPUTS_BLOCKED`;
+> registry stays `fixture`, and Query/analytics/SSE/
+> commands/activation remain off. Detail:
+> [`EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md`](./backend/EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md).
+
 > **Backend checkpoint 2026-08-23 — EX-BE-05b/F2 Phase 10:** Portal-owned
 > Sandbox Certification trên SGP đạt
 > `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`: DRAFT→IN_REVIEW→APPROVED|DENIED,

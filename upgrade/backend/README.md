@@ -428,9 +428,8 @@ authority.
   remains false/`fixture`. The Control API canonical issuer creates the
   short-lived positive/negative assertion corpus, while the live harness forces
   H2/TLS1.3 mTLS and emits status/timing/snapshot-only evidence. Offline gates
-  cover 19 probe outcomes and preserve D2 rollback. Actual cross-cell transport,
-  latency and source-loss evidence still wait for accepted D2 plus a D3 window.
-  Detail:
+  cover 19 probe outcomes and preserve D2 rollback. This historical offline
+  milestone was superseded by the accepted live D3 evidence below. Detail:
   [`EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md`](./EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md).
 - `EX-BE-02-LIVE` **D3 gateway identity remediation (2026-08-24):** the first
   live D3 window rejected fail-closed before JWT probes because the signed Edge
@@ -439,19 +438,28 @@ authority.
   exact public `200/200/200` and guarded business `503/503/503/503` matrix;
   projection rows stayed zero and D2 rollback passed with zero restart/OOM.
   The lock and preflight are updated in source so future drift stops before
-  Compose mutation, but D3 remains closed until full gates and a protected-main
-  signed Edge republish complete. Status:
+  Compose mutation. At that checkpoint D3 remained closed pending full gates
+  and a protected-main signed Edge republish. Historical status:
   `D3_ATTEMPT_REJECTED_FAIL_CLOSED / D2_RESTORED / SIGNED_EDGE_REPUBLISH_REQUIRED`.
   Evidence:
   [`EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md`](./EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md).
+- `EX-BE-02-LIVE` **D3 transport accepted (2026-08-24):** protected-main signed
+  images passed real SGP→AWS-HK HTTP/2 + TLS 1.3 mTLS, the complete delegated-
+  JWT positive/negative matrix, bounded latency, Source Proxy loss/recovery and
+  unchanged-D2 rollback. Safe logs contained only the three public routes;
+  business reads and projection state stayed zero. Runtime exited on D2
+  source-dark. Status: `D3_TRANSPORT_ACCEPTED / BUSINESS_SOURCE_DARK /
+  D2_RUNTIME_RESTORED`. Evidence:
+  [`EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md`](./EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md).
 - [EX-BE-02-LIVE D4 offline Paper-shadow authorization](./EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md)
-  — **offline authorization prepared / live predecessors blocked:** credential-
+  — **offline authorization prepared / D3 accepted / live inputs blocked:** credential-
   free owner/evidence schema, fail-closed readiness/qualification validator and
   BUILDING-epoch-only rollback runbook. The current optional-key source reads,
   incomplete paging/event semantics and unapproved projection storage are hard
   blockers. D4 cannot enable Query, analytics, SSE, commands, activation or a
   non-fixture registry profile. Status:
-  `D4_OFFLINE_AUTHORIZATION_PREPARED / LIVE_D4_PREDECESSOR_BLOCKED`.
+  `D4_OFFLINE_AUTHORIZATION_PREPARED / D3_PREDECESSOR_ACCEPTED /
+  LIVE_D4_INPUTS_BLOCKED`.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

@@ -199,10 +199,23 @@ for label, text in (
     ("backend README", b),
     ("architecture guide", a),
     ("frontend handoff", h),
+    ("unified plan", u),
 ):
     normalized = re.sub(r"\s+", " ", text)
-    if "D4_OFFLINE_AUTHORIZATION_PREPARED / LIVE_D4_PREDECESSOR_BLOCKED" not in normalized:
+    if "D4_OFFLINE_AUTHORIZATION_PREPARED / D3_PREDECESSOR_ACCEPTED / LIVE_D4_INPUTS_BLOCKED" not in normalized:
         raise SystemExit(f"{label} lost the D4 offline/live stop-gate")
+
+for label, text in (
+    ("master", m),
+    ("tracker", t),
+    ("backend README", b),
+    ("architecture guide", a),
+    ("frontend handoff", h),
+    ("unified plan", u),
+):
+    normalized = re.sub(r"\s+", " ", text)
+    if "D3_TRANSPORT_ACCEPTED / BUSINESS_SOURCE_DARK / D2_RUNTIME_RESTORED" not in normalized:
+        raise SystemExit(f"{label} lost the accepted D3/source-dark boundary")
 
 for label, text in (
     ("master", m),

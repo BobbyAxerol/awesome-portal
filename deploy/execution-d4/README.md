@@ -1,6 +1,6 @@
 # Execution D4 — Paper Read Shadow Authorization
 
-Status: `D4_OFFLINE_AUTHORIZATION_PREPARED / LIVE_D4_PREDECESSOR_BLOCKED`
+Status: `D4_OFFLINE_AUTHORIZATION_PREPARED / D3_PREDECESSOR_ACCEPTED / LIVE_D4_INPUTS_BLOCKED`
 
 D4 is the first phase allowed to observe bounded Paper business data. It is not
 an activation phase. A passing D4 qualification may create and validate only a
@@ -20,8 +20,9 @@ commands, a non-fixture registry profile or any Trading System mutation.
 `owner-input.env.example` records decisions and SHA-256 evidence references,
 never credentials or source payloads. Readiness is rejected unless:
 
-1. D2 is `D2_DARK_ACCEPTED` and D3 is `D3_TRANSPORT_ACCEPTED` at one exact
-   deployment commit.
+1. D2 is `D2_DARK_ACCEPTED` and D3 is `D3_TRANSPORT_ACCEPTED` at the accepted
+   deployment commit. This predecessor gate passed on 2026-08-24 at
+   `5ec282ec8c00c60696f66a70186ffd80b051d8a0`.
 2. The Trading System owner has published a dedicated Paper read identity that
    rejects missing and wrong credentials and denies all mutation methods.
 3. Exact GET routes, OpenAPI/gateway/capability identity, cursor completeness

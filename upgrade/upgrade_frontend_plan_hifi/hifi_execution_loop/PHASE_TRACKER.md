@@ -427,6 +427,9 @@ made. This unlocks no frontend profile. Claude continues fixture, dark,
 auth-denied and recovery UX only; no EventSource/Lane B/AWS polling. Evidence:
 [`EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md`](../../backend/EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md).
 
+This is retained as the historical offline checkpoint; the accepted live state
+is recorded after the attempt history below.
+
 D3 live attempt 1 is
 `D3_ATTEMPT_REJECTED_FAIL_CLOSED / D2_RESTORED / SIGNED_EDGE_REPUBLISH_REQUIRED`.
 The public-route Source Proxy mTLS matrix was exact, but Edge correctly refused
@@ -436,6 +439,15 @@ and must publish a new signed Edge image from protected `main` before a fresh
 D3 window. Claude must keep source/query/SSE profiles off; this changes no UI
 consumer contract. Evidence:
 [`EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md`](../../backend/EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md).
+
+D3 live transport is now `D3_TRANSPORT_ACCEPTED / BUSINESS_SOURCE_DARK /
+D2_RUNTIME_RESTORED` at protected-main commit `5ec282e`. HTTP/2, TLS 1.3 mTLS,
+the complete JWT matrix, bounded latency, source loss/recovery and rollback all
+passed; only three public source routes were observed and projection state
+remained empty. This still unlocks no frontend live profile. Claude keeps
+fixture/dark consumers until D4 produces an owner-approved Paper `BUILDING`
+epoch and a later activation decision changes delivery policy. Evidence:
+[`EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md`](../../backend/EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md).
 
 ### 6.2 BR-EX decisions
 
@@ -1986,14 +1998,14 @@ contract owner, không chờ một Portal escape hatch. Request lịch sử ở
 ## 27. D4 Paper-shadow offline authorization checkpoint — 2026-08-23
 
 Backend status: `D4_OFFLINE_AUTHORIZATION_PREPARED /
-LIVE_D4_PREDECESSOR_BLOCKED`.
+D3_PREDECESSOR_ACCEPTED / LIVE_D4_INPUTS_BLOCKED`.
 
 - Full Portal/Control API/browser ingress remains on SGP; AWS-HK receives only
   the minimal Source Proxy + Rust Edge + private projection boundary.
-- D4 cannot begin until D2 dark and D3 transport are accepted, dedicated Paper
-  read identity rejects missing/wrong credentials, exact GET/cursor/
-  completeness/resync contracts are published and encrypted projection storage
-  is approved.
+- D2 dark and D3 transport are accepted. D4 source read still cannot begin
+  until a dedicated Paper read identity rejects missing/wrong credentials,
+  exact GET/cursor/completeness/resync contracts are published and encrypted
+  projection storage is approved.
 - Any future D4 epoch remains `BUILDING`; registry stays `fixture`; Query,
   analytics, SSE, commands and activation remain off.
 - Claude may consume typed offline fixtures and error/gap codes only. It must

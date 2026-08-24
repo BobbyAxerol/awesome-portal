@@ -1,7 +1,7 @@
 # EX-BE-02-LIVE D4 — Offline Paper Shadow Authorization Preparation
 
 Date: 2026-08-23  
-Status: `D4_OFFLINE_AUTHORIZATION_PREPARED / LIVE_D4_PREDECESSOR_BLOCKED`
+Status: `D4_OFFLINE_AUTHORIZATION_PREPARED / D3_PREDECESSOR_ACCEPTED / LIVE_D4_INPUTS_BLOCKED`
 
 ## Goal
 
@@ -59,11 +59,14 @@ cursor digests and encrypted approved storage. D4 qualification always holds:
 
 ## Evidence and remaining blockers
 
-Local validator evidence: 8/8 tests pass. No runtime or network mutation was
-performed. Live D4 remains blocked by accepted live D2 and D3, signed published
-images, workload identities, dedicated Paper read contract, production mapper,
-encrypted storage and an owner-approved change window.
+Local validator evidence: 8/8 tests pass. D2 dark and D3 transport were accepted
+on 2026-08-24; see
+[`EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md`](./EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md).
+Live D4 remains blocked by the dedicated Paper read identity and exact bounded
+source contract, production mapper/sealed corpus, encrypted approved projection
+storage with backup/restore, and a new owner-approved change window.
 
-The next executable infrastructure action is still D2 isolation after the exact
-IAM policy is effective on `PrimusPortalExecutionD1Operator-v1`, followed by
-reviewed promotion/publish, D2 dark deployment and D3 transport acceptance.
+The next executable action is the D4 input audit. It must prove these inputs
+without modifying Trading System. Source read and `BUILDING` epoch creation may
+start only after the validator's `readiness` mode accepts the private owner
+input.

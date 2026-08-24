@@ -1065,7 +1065,8 @@ deep-dive → ADR → slice → evidence discipline documented above.
   explicitly incompatible with D4. Qualification is BUILDING-epoch-only and
   keeps registry `fixture`, activation, Query, analytics, SSE, commands and
   Trading System changes false. Status is
-  `D4_OFFLINE_AUTHORIZATION_PREPARED / LIVE_D4_PREDECESSOR_BLOCKED`; no source
+  `D4_OFFLINE_AUTHORIZATION_PREPARED / D3_PREDECESSOR_ACCEPTED /
+  LIVE_D4_INPUTS_BLOCKED`; no business source
   route, service or network was touched. Evidence:
   [`EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md`](./backend/EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md).
 - **EX-BE-02-LIVE D3 identity-drift rejection (2026-08-24):** the first live
@@ -1078,6 +1079,15 @@ deep-dive → ADR → slice → evidence discipline documented above.
   Compose mutation, but D3 remains closed until a protected-main
   build/scan/sign/verify cycle publishes a new immutable Edge image. Detail:
   [`EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md`](./backend/EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md).
+- **EX-BE-02-LIVE D3 transport acceptance (2026-08-24):** protected-main
+  images passed real SGP→AWS-HK HTTP/2, TLS 1.3 mTLS, delegated-JWT positive/
+  negative cases, bounded latency and Source Proxy loss/recovery. Safe logs
+  contained only the three public source paths, projection business state
+  stayed empty and unchanged-D2 rollback passed with zero restart/OOM. Status
+  is `D3_TRANSPORT_ACCEPTED / BUSINESS_SOURCE_DARK / D2_RUNTIME_RESTORED`.
+  This accepts the transport predecessor only; D4 inputs and all frontend live
+  profiles remain closed. Evidence:
+  [`EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md`](./backend/EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING
