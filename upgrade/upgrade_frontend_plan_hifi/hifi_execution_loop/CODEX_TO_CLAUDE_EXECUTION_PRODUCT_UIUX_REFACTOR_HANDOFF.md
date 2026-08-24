@@ -133,6 +133,162 @@ by the owner: the seam between shell, content, tabs and surrounding navigation.
 
 The refactor needs a second baseline class: **canonical product routes with the real shell visible**.
 
+### 2.7 Current Claude implementation audit — 2026-08-24
+
+This is an audit of the implementation state currently present in the shared worktree, not a judgment
+of the contributor. It separates useful engineering hardening from the product refactor requested by
+the owner. Do not report the former as completion of the latter.
+
+#### 2.7.1 Executive verdict
+
+| Area | What the current pass actually does | Verdict |
+|---|---|---|
+| Responsive containment | Adds `min-width: 0`, wrapping, horizontal table scrollers and narrow-grid collapse | **KEEP — 7/10** |
+| Integrated product composition | Leaves the light Portal shell around an independently themed Execution subtree | **REWORK — 2/10** |
+| Carbon continuity | Preserves the Governance Light / Deployments Carbon split | **P0 BLOCKER** |
+| Typography | Keeps pervasive uppercase/mono styling and does not introduce semantic type roles | **P0 BLOCKER** |
+| Product-route interaction | Preview mounts controls without the callbacks/state required to make them work | **P0 BLOCKER — 2/10** |
+| HiFi nested coverage | Top-level components and fixture states exist, but no complete route-level ledger proves every nested screen/state/action | **P0 BLOCKER** |
+| Charts and analytical affordances | Large `ChartTile` frames still have no plot body on important routes | **P0 BLOCKER** |
+| Visual and journey tests | Fixture groups test isolation/overflow but do not test the integrated shell, hierarchy or complete user journeys | **P0 BLOCKER** |
+| Merge readiness | The useful responsive patch may be retained, but the product UI/UX is not ready for owner approval | **BLOCKED** |
+
+The current work is therefore a **responsive-hardening subtask**, not the promised product refactor.
+Its CSS and table containment fixes should be carried forward rather than discarded, but they do not
+close UX-R0 through UX-R6.
+
+#### 2.7.2 Concrete omissions and contradictory implementation
+
+1. **The shell/theme architecture still produces the exact visual seam in the owner screenshot.**
+   `ExecutionSurface.tsx` explicitly says “two surfaces, not one” and maps `governance` to
+   `operations-carbon-light`. `PortalShell.tsx` has no route-aware presentation context, while
+   `TopBar.tsx` continues to expose `Research Light` and `Operations Dark` from a user preference.
+   This contradicts the owner override in §0.1: from Approval Inbox/Gate R1 through Live, the whole
+   shell and workspace must be one Carbon system.
+
+2. **The current pass fixes overflow, not information architecture.** The dirty screen changes mainly
+   add scroll wrappers, split identity lines and collapse grids. They do not establish a shared page
+   header, primary decision summary, contextual right rail, disclosure hierarchy or continuous tab
+   model. Sparse screens remain stretched; dense screens remain stacked terminal-like panels.
+
+3. **Typography remains structurally inconsistent.** `execution.css` currently declares
+   `font-family: var(--font-mono)` 144 times. The repository bundles Inter, JetBrains Mono and
+   Newsreader, while the token story also refers to IBM Plex without bundling it. Page identity,
+   section labels, buttons, captions, values and diagnostics still frequently share the same small
+   uppercase mono voice. The responsive patch does not introduce the locked semantic role scale in
+   §5.2.
+
+4. **Product-preview controls are knowingly rendered as no-ops.** The preview route mounts screens
+   without their optional callbacks. Confirmed examples include Paper/Alpha/Portfolio tab changes;
+   Paper exit and history actions; Blotter filters, reset, expand and load-older; and Account sync and
+   dry-run actions. The screen components call callbacks through optional chaining, so enabled-looking
+   controls silently do nothing. Every such control needs a stateful preview adapter, an explicit
+   disabled reason, or truthful navigation—never a silent click.
+
+5. **The preview exposes implementation identity instead of product context.** The raw `screenId` is
+   printed in the preview banner, while hashes, revisions, internal ids and lineage dominate several
+   headers. These remain accessible evidence, but full digests and internal routing names belong in a
+   provenance/inspector disclosure, not the primary scan path.
+
+6. **Important charts are still empty frames by design.** `components/chart.tsx` says Phase 0 renders
+   only the frame/caption and defers ECharts. Paper and Alpha fixtures often provide an envelope with
+   no plot body. This creates the large blank block visible in the screenshot and omits tooltip,
+   approved-envelope comparison, zoom/reset, expand, table/export and cross-filter behavior described
+   by the implementation plan and HiFi.
+
+7. **A top-level route count is being mistaken for complete HiFi coverage.** The preview can select
+   the main screen components, but that does not prove the nested tabs, drawers, alternate state
+   families, role-specific modes or confirmation ceremonies inside all eighteen `.dc.html` sources.
+   Product routes currently default to a narrow happy-path state; `QUIET`, `STALE`, `UNMET`,
+   `CRITICAL`, `MISMATCH`, denied/degraded and role variants largely remain fixture-only evidence.
+
+8. **No product-level equivalent is demonstrated for several explicit HiFi capabilities.** The
+   coverage ledger must locate or mark missing at least: Break-glass ceremony (WF 5b), role lens (WF
+   5c), real Manager/Quant density behavior (WF 4g), full-journal drill-down, condition editing,
+   request-changes flow, approval/smoke-plan drill-through and the required chart interactions. A
+   differently named equivalent is acceptable only when the ledger links to the exact component,
+   route, interaction and test.
+
+9. **There is no shared contextual right rail or provenance drawer.** Individual panels are arranged
+   side by side, but scope, blockers, evidence and actions do not follow the active tab consistently.
+   The screenshot therefore feels like unrelated boxes rather than one decision workspace.
+
+10. **Terminal styling has escaped its proper boundary.** A terminal is appropriate for bounded raw
+    event/command/audit evidence. It is not the default grammar for page titles, primary action copy,
+    cards, charts and explanatory prose. The current surface makes the whole application feel like a
+    debug console without delivering the precision of an actual terminal.
+
+11. **The status language can overstate progress.** `PHASE_TRACKER.md` can say a “screen” is built when
+    the actual state is a component/fixture contract. From now on every item must report four separate
+    states: `component contract built`, `product route mounted`, `nested interactions complete`, and
+    `integrated visual approved`. The current composition is `REWORK_REQUIRED` even where backend and
+    component contracts remain complete.
+
+#### 2.7.3 Why the existing green tests do not approve this UI
+
+- `execution-fixtures.spec.ts` hides `.portal-topbar` before screenshots, so it cannot detect the
+  light-shell/dark-island seam shown by the owner.
+- The same suite explicitly asserts that Governance remains light. That expectation implements the
+  superseded design and must be rewritten for the Carbon-only owner override.
+- Fixture screenshots crop isolated `[data-group]` sections instead of canonical product routes with
+  the real shell, tab row, context rail and overlays visible.
+- `execution-surface-audit.spec.ts` exercises `/execution/_fixtures` and primarily measures overflow,
+  focus, IDs and contrast. It does not prove decision hierarchy, typography roles, right-rail
+  continuity, nested-screen coverage or journey completion.
+- The current responsive audit tolerates known clipped elements at mobile/tablet widths. A temporary
+  diagnostic allowance may help locate debt, but it is not an acceptance gate; the merge gate is zero
+  unexplained clipping.
+- The preview smoke test proves route mounting and source isolation. It does not click the controls or
+  assert that state, URLs, drawers, tabs and contextual content change.
+
+Retain these tests for their narrow purpose, but add product-route visual baselines and journey tests.
+Do not update screenshots merely to make the current composition green before owner sign-off.
+
+#### 2.7.4 Mandatory correction list for Claude
+
+1. Rewrite `ExecutionSurface.tsx` and its obsolete “two surfaces” rationale; introduce the
+   route-aware Carbon workspace contract above `PortalShell` as defined in §4.
+2. Make `TopBar`, sidebar, canvas, overlays and right rail consume the effective Execution presentation
+   mode atomically. Do not leave the theme selector claiming `Research Light` on an Execution route.
+3. Implement the semantic typography tokens/components and fixed role scale before restyling screens.
+4. Build `ExecutionWorkspace`, `ExecutionPageHeader`, `ExecutionTabs`, `ExecutionContextRail`,
+   `ExecutionProvenanceDrawer` and a bounded `ExecutionTerminal` (names may differ; responsibilities may
+   not disappear).
+5. Replace direct stateless preview mounting with per-screen stateful preview containers and test the
+   transition caused by every visible enabled control.
+6. Remove `screenId` and full digests from default chrome; keep them copyable in an inspector or
+   provenance disclosure.
+7. Replace blank analytical frames in the Paper reference slice with a real legible visualization and
+   its required inspect/reset/expand/table behavior before migrating the remaining screens.
+8. Complete the §11.6 ledger for every source HTML, including nested views and demo-prop variants;
+   attach a route, state owner, interaction disposition and test to every row.
+9. Replace the Governance-Light assertions and add shell-visible screenshots at canonical desktop and
+   laptop sizes plus keyboard-driven journey tests.
+10. Preserve the current responsive containment fixes, then tighten the final gate to zero unexplained
+    clipping, zero duplicate ids and zero enabled no-op controls.
+
+#### 2.7.5 What must not happen in the next pass
+
+- Do not call scroll wrappers, line wrapping or mobile grid collapse “the UI/UX refactor”.
+- Do not reduce the scope by deleting HiFi sub-screens, states or actions.
+- Do not duplicate every HiFi word literally; preserve capability and improve hierarchy/content.
+- Do not mass-apply more mono/uppercase styling to achieve visual consistency.
+- Do not update visual baselines until the integrated Paper vertical slice is approved.
+- Do not merge a preview whose buttons appear enabled but have no observable result.
+- Do not wait for new backend work to fix shell continuity, typography, hierarchy or preview state;
+  those are frontend architecture responsibilities.
+
+#### 2.7.6 Required immediate sequence
+
+1. Reconcile the current branch with this owner override and classify the responsive patch as a kept
+   subtask, not a finished refactor.
+2. Finish and publish the full §11.6 coverage ledger; mark unknowns instead of assuming coverage.
+3. Complete UX-R1 (route-aware Carbon shell) and UX-R2 (semantic typography/anatomy).
+4. Rebuild Paper Workbench as the measured vertical slice, including real chart, working tabs,
+   context rail, provenance disclosure and Paper Exit journey.
+5. Obtain owner review of that single integrated route with the real shell visible.
+6. Only then migrate Governance, Operations, 360° and Tools archetypes using the proven system.
+
 ## 3. Target mental model
 
 Execution is not “a terminal page”. It is an **institutional operations workspace** with a terminal
@@ -702,8 +858,10 @@ retained, replaced and deleted.
 
 ## 14. What Claude should do next
 
-1. Read this file, then read all eighteen `.dc.html` files completely—not only their initial render—
-   together with the owner screenshot and the current uncommitted review/fixes.
+1. Read this file, especially the implementation audit in §2.7, then read all eighteen `.dc.html`
+   files completely—not only their initial render—together with the owner screenshot and the current
+   uncommitted review/fixes. Do not report the current responsive containment patch as the requested
+   product refactor.
 2. Build the §11.6 coverage ledger, including demo-prop variants, tabs, drawers, links and actions.
 3. Update `ROADMAP_FRONTEND.md` and `PHASE_TRACKER.md`: record UX-R0…UX-R6, reconcile the Carbon-only
    owner override, and mark the integrated
