@@ -1053,3 +1053,33 @@ either the façade emits a typed `event: error` frame before closing so the
 client can stop on a non-retryable status, or the client preflights with `fetch`
 to read the status. Claude did not pick one, and did not change Research
 behaviour to work around it.
+### 8.18 Execution Loop dev integration preview — fixture-only (2026-08-24)
+
+The 17 reviewed Execution Loop screens are now mounted on their canonical
+product routes when the Portal web image is built with
+`VITE_EXECUTION_PREVIEW_ENABLED=true`. The Docker/Compose operator input is
+`PORTAL_EXECUTION_PREVIEW_ENABLED`; its repository and stable-publication
+default is `false`.
+
+This is an integration-review surface, not a delivery-profile promotion. Every
+screen still consumes `createFixtureApi()` or a reviewed local fixture, the
+registry remains revision 4 with `delivery_profile=fixture`, and all source,
+query, analytics, SSE and command capability flags remain false. A persistent
+banner labels the screen `DEV INTEGRATION PREVIEW` and states that AWS-HK,
+Trading System, broker and realtime are disconnected. Interactive UI actions
+are browser-local simulations and grant no authority.
+
+Claude may review the complete navigation, density, responsive flow and
+cross-screen visual consistency at `dev.portal.primusspark.com`. Do not remove
+the banner, infer source availability, enable EventSource, or replace fixture
+adapters until the corresponding backend delivery profile is explicitly
+promoted. Stable/main images must continue to build with the flag false.
+
+Acceptance evidence on the integration branch:
+
+- production Vite build passed;
+- Vitest passed `67/67` files and `1,486` tests (`1` skipped);
+- Playwright visited all 17 canonical screen routes plus seven feature-root
+  routes and observed zero `/api/v1/execution` requests;
+- registry contract tests prove exact 17-screen coverage, `fixture` profiles
+  and false capability flags.

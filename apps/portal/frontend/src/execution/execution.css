@@ -26,6 +26,55 @@
 }
 
 /* ---------------------------------------------------------------------------
+ * Dev integration preview boundary.
+ *
+ * The banner is inside the same Carbon surface as the mounted screen so it
+ * cannot be mistaken for a production environment badge. It states all four
+ * absent authorities in text; colour carries no safety meaning.
+ * ------------------------------------------------------------------------ */
+
+.exec-preview-shell {
+  min-height: 100%;
+}
+
+.exec-preview-banner {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--warn);
+  background: var(--warn-bg);
+  color: var(--ink);
+  font-size: var(--text-xs);
+}
+
+.exec-preview-banner strong,
+.exec-preview-banner code {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.04em;
+}
+
+.exec-preview-banner strong {
+  color: var(--warn);
+}
+
+.exec-preview-banner code {
+  color: var(--ink-faint);
+}
+
+@media (max-width: 900px) {
+  .exec-preview-banner {
+    position: static;
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------------------------------------------------------------------------
  * AuthorityBadge — on every data panel (guide §6).
  * ------------------------------------------------------------------------ */
 
