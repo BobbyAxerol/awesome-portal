@@ -38,6 +38,15 @@ jobs:
         uses: actions/checkout@v7
         with:
           persist-credentials: false
+          fetch-depth: 0
+
+      - name: Require main for manual publication
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [[ "${GITHUB_REF}" != "refs/heads/main" ]]; then
+            printf 'Manual production image publication must run from main, found: %s\n' "${GITHUB_REF}" >&2
+            exit 1
+          fi
 
       - name: Derive lowercase image prefix
         id: image-prefix

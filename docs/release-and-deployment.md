@@ -1,5 +1,36 @@
 # Release and Deployment
 
+## Branch, runtime and data authority
+
+Each release channel has one source authority and one isolated runtime:
+
+| Channel | Source authority | Public hostname | Compose/DB namespace |
+|---|---|---|---|
+| Feature preview | reviewed `feat/*`, `fix/*`, `chore/*` or `docs/*` branch | `dev-portal.primusspark.com` | disposable `portal` stack |
+| Canonical development | exact `origin/dev` commit | `dev-portal.primusspark.com` | `portal` stack, rebuilt after merge |
+| Stable production | exact `origin/main` commit and `sha-<40-hex>` images | `portal.primusspark.com` | stable-only stack and volumes |
+
+`dev-portal` may temporarily serve a feature preview for owner review. Once its
+pull request is merged, rebuild that same hostname from the isolated `dev`
+worktree so the runtime again matches `origin/dev`. Stable is never built from
+the feature or `dev` worktree. Run `scripts/verify-release-channel.sh` before a
+source-managed build to fail closed on branch, commit, origin, port or stack
+namespace drift.
+
+Git promotes source and migration files; it never promotes database contents.
+Do not copy the dev database into stable. A main deployment keeps the existing
+stable volumes, creates consistent PostgreSQL and Roadmap SQLite backups, then
+runs only pending forward migrations from the immutable main image. Existing
+migration files are append-only and CI enforces that with
+`scripts/verify-migration-history.sh`; schema changes require a new migration.
+
+The AWS-HK Execution Edge projection PostgreSQL is a fourth, independent data
+boundary. It is not the SGP control-plane database, not a dev/stable Portal
+volume and not the Trading System database. Its D2/D4 admission, backup, replay
+and rollback runbooks govern it; no Portal branch merge copies or rewrites its
+rows. Trading System remains source authority and Portal consumes only the
+published compatibility contract.
+
 ## Release a Portal version
 
 1. Complete source changes in one or more focused feature branches from `dev`.
@@ -10,6 +41,12 @@
 4. Promote reviewed, stable `dev` to `main`. The image-publish workflow builds
    immutable `sha-<parent-commit>` images for Portal API, Portal web and Roadmap
    API from that exact commit. A `v*` tag additionally receives a release tag.
+
+Pull requests also reject deletion or modification of migrations already
+present in their base branch. Manual image publication and production deploys
+must be dispatched from `main`. Production accepts only `sha-<40-hex>` image
+tags whose commit is reachable from main, allowing a reviewed older-main image
+for rollback without permitting a feature/dev image.
 
 There is no child source lock or separate source promotion step. The Portal
 commit is the reproducible release definition. Roadmap's UI is compiled into the
@@ -80,7 +117,12 @@ SHA-256 before building and fails if the wheel is absent or different. Do not
 store the wheel, Historical Market Data source or storage in Portal Git.
 
 The host must already contain `.env.production` and be authenticated to pull
-the registry. The workflow transfers only the non-secret Compose definition,
-passes an immutable image tag at runtime, validates the rendered stack, pulls
-images and starts the services. Configure environment-protection reviewers
-before enabling real production use.
+the registry. The workflow transfers only the non-secret Compose definition.
+Before pulling or migrating it writes a timestamped, mode-`0700` backup under
+`<deployment_path>/backups/`: a PostgreSQL custom-format dump and, when the
+Roadmap service is running, an SQLite online backup. It records SHA-256 checks,
+runs the Compose migration/bootstrap gates, waits for health, probes each API
+and atomically records `deployed-release.env` with branch, commit, image tag and
+deployment time. Configure environment-protection reviewers before enabling
+real production use, retain backups according to the operational policy and
+regularly prove restore in an isolated database.
