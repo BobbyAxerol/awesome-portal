@@ -113,7 +113,7 @@ must remain `NO_PORTAL_SOURCE_TRAFFIC`.
 
 ## Local verification
 
-- D4 authorization unit tests: `14/14` passed;
+- D4 authorization unit tests: `15/15` passed;
 - v2 inactive template validation: passed; and
 - v2 private owner-input reconciliation: passed without live authority; and
 - whitespace/diff gate: passed.

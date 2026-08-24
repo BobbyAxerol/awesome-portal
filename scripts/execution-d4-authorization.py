@@ -231,6 +231,9 @@ def validate(values: dict[str, str], *, mode: str, now: datetime | None = None) 
         raise AuthorizationError("D4 qualification cannot activate a registry profile")
     if values["BUILDING_EPOCH_STATUS"] != "BUILDING":
         raise AuthorizationError("D4 is limited to a BUILDING projection epoch")
+    for key, expected in LOCKED_SOURCE_VALUES.items():
+        if values[key] != expected:
+            raise AuthorizationError(f"{key} differs from the locked source contract")
 
     if mode == "template":
         if values["D4_AUTHORIZED"] != "false":
@@ -250,9 +253,6 @@ def validate(values: dict[str, str], *, mode: str, now: datetime | None = None) 
             raise AuthorizationError("source runtime acceptance commit is malformed")
         if not REVISION.fullmatch(values["SOURCE_AUTH_CONTRACT_REVISION"]):
             raise AuthorizationError("source auth contract revision is malformed")
-        for key, expected in LOCKED_SOURCE_VALUES.items():
-            if values[key] != expected:
-                raise AuthorizationError(f"{key} differs from the locked source contract")
         for key in SOURCE_SECURITY_TRUE_KEYS - {
             "SOURCE_PROXY_SECRET_DELIVERED",
             "SOURCE_PROXY_EXACT_ROUTES_CONFIGURED",
@@ -313,9 +313,6 @@ def validate(values: dict[str, str], *, mode: str, now: datetime | None = None) 
         raise AuthorizationError("mapper source commit differs from deployment commit")
     if not REVISION.fullmatch(values["SOURCE_AUTH_CONTRACT_REVISION"]):
         raise AuthorizationError("source auth contract revision is malformed")
-    for key, expected in LOCKED_SOURCE_VALUES.items():
-        if values[key] != expected:
-            raise AuthorizationError(f"{key} differs from the locked source contract")
     if not UUID.fullmatch(values["BUILDING_EPOCH_ID"]):
         raise AuthorizationError("BUILDING epoch ID is malformed")
     for key in SOURCE_SECURITY_TRUE_KEYS:

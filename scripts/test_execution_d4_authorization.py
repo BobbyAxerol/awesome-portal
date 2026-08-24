@@ -64,6 +64,13 @@ class D4AuthorizationTest(unittest.TestCase):
         values["D4_AUTHORIZED"] = "false"
         MODULE.validate(values, mode="template", now=NOW)
 
+    def test_template_cannot_drift_from_locked_source_contract(self) -> None:
+        values = valid_values()
+        values["D4_AUTHORIZED"] = "false"
+        values["SOURCE_PAGE_SIZE"] = "1000"
+        with self.assertRaisesRegex(MODULE.AuthorizationError, "locked source"):
+            MODULE.validate(values, mode="template", now=NOW)
+
     def test_readiness_accepts_hardened_source_and_encrypted_store(self) -> None:
         MODULE.validate(valid_values(), mode="readiness", now=NOW)
 
