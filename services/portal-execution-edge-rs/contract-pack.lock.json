@@ -1,8 +1,8 @@
 {
   "schema_version": "portal-ts-contract-pack-lock.v1",
-  "captured_utc": "2026-08-21",
-  "trading_system_commit": "9081397de9e981c43b4e0f67fabe747e7ed964c7",
-  "runtime_gateway_digest_prefix": "sha256:4f63dc9949f8",
+  "captured_utc": "2026-08-24",
+  "trading_system_commit": "b39349dce09adaaa36e31d0bd3b98c19266ed5f4",
+  "runtime_gateway_digest_prefix": "sha256:8a81f121f068",
   "api_version": "v1",
   "contract_revision": "v1",
   "schema_revision": "v1",

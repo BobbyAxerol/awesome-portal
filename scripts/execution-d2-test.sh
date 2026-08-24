@@ -95,7 +95,7 @@ chgrp "${runtime_gid}" "${projection_init}"
 cp "${env_example}" "${tmp_dir}/candidate.env"
 sed -i \
   -e 's/sha256:0000000000000000000000000000000000000000000000000000000000000000/sha256:1111111111111111111111111111111111111111111111111111111111111111/' \
-  -e 's/^EDGE_SOURCE_GATEWAY_DIGEST=.*/EDGE_SOURCE_GATEWAY_DIGEST=sha256:3333333333333333333333333333333333333333333333333333333333333333/' \
+  -e 's/^EDGE_SOURCE_GATEWAY_DIGEST=.*/EDGE_SOURCE_GATEWAY_DIGEST=sha256:8a81f121f068bec80821c5f3be38c8865682e248147f1ca808800a18ea8c1fde/' \
   -e "s/^PORTAL_RUNTIME_GID=.*/PORTAL_RUNTIME_GID=${runtime_gid}/" \
   -e "s/^PROJECTION_DB_CONTAINER_GID=.*/PROJECTION_DB_CONTAINER_GID=${runtime_gid}/" \
   -e "s#^EDGE_SECRET_DIRECTORY=.*#EDGE_SECRET_DIRECTORY=${edge_secrets}#" \
@@ -225,6 +225,25 @@ for file in projection-postgres.key postgres-bootstrap-password \
   chgrp "${runtime_gid}" "${projection_secrets}/${file}"
 done
 
+"${preflight}" --env-file "${tmp_dir}/candidate.env" --mode offline >/dev/null
+cp "${tmp_dir}/candidate.env" "${tmp_dir}/stale-gateway-lock.env"
+sed -i \
+  's/^EDGE_SOURCE_GATEWAY_DIGEST=.*/EDGE_SOURCE_GATEWAY_DIGEST=sha256:4f63dc9949f8102714ab0ee9391757dee3a704135be6680cc2a96d89f54a1db9/' \
+  "${tmp_dir}/stale-gateway-lock.env"
+if "${preflight}" --env-file "${tmp_dir}/stale-gateway-lock.env" --mode offline \
+    >/dev/null 2>&1; then
+  printf 'Execution preflight unexpectedly accepted a stale source gateway lock.\n' >&2
+  exit 1
+fi
+sed -i 's/listen 172\.23\.0\.1:8444 ssl;/listen 172.23.0.1:8444 quic;/' \
+  "${proxy_config}"
+if "${preflight}" --env-file "${tmp_dir}/candidate.env" --mode offline \
+    >/dev/null 2>&1; then
+  printf 'D2 preflight accepted a forbidden Source Proxy QUIC listener.\n' >&2
+  exit 1
+fi
+sed -i 's/listen 172\.23\.0\.1:8444 quic;/listen 172.23.0.1:8444 ssl;/' \
+  "${proxy_config}"
 "${preflight}" --env-file "${tmp_dir}/candidate.env" --mode offline >/dev/null
 [[ "$(grep -c 'return 503;' "${proxy_config}")" -eq 7 ]]
 if grep -Fq 'X-API-Key' "${proxy_config}"; then
@@ -493,7 +512,7 @@ if [[ "${build_images}" == true ]]; then
     --env EDGE_SOURCE_CA_FILE=/run/secrets/source-proxy-ca.crt \
     --env EDGE_SOURCE_CLIENT_IDENTITY_FILE=/run/secrets/source-proxy-client.pem \
     --env EDGE_SOURCE_API_KEY_FILE=/run/secrets/source-proxy-admission-token \
-    --env EDGE_SOURCE_GATEWAY_DIGEST=sha256:3333333333333333333333333333333333333333333333333333333333333333 \
+    --env EDGE_SOURCE_GATEWAY_DIGEST=sha256:8a81f121f068bec80821c5f3be38c8865682e248147f1ca808800a18ea8c1fde \
     --env EDGE_SOURCE_PROBES_ENABLED=false \
     --env EDGE_PROJECTION_INGESTION_ENABLED=false \
     --env EDGE_REALTIME_SSE_ENABLED=false \
