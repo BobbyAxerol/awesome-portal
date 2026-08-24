@@ -1,8 +1,11 @@
 # Execution D2 — dark deploy and rollback runbook
 
-> Status: `PREPARED_ONLY / DO_NOT_EXECUTE`  
+> Status: `EXECUTED_AND_ACCEPTED / SOURCE_INACTIVE`  
 > Required authority: accepted D1 evidence, explicit Bobby D2 authorization,
 > named AWS operator/change window/rollback owner and admitted resource budget.
+
+Live acceptance evidence is recorded in
+[`EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md`](../../upgrade/backend/EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md).
 
 ## 1. Dark-only outcome
 
@@ -165,6 +168,8 @@ Only inside the approved window:
       --mode observation \
       --baseline-report /secure/path/d2-preflight.json \
       --expected-portal-containers 3 \
+      --expected-private-listener EDGE_WIREGUARD_IP:8443 \
+      --expected-private-listener PORTAL_BRIDGE_GATEWAY_IP:8444 \
       --acknowledge-historical-oom D2_NON_PORTAL_OOM_REVIEWED
     ```
 

@@ -38,6 +38,7 @@ def healthy(**overrides: object):
         "prohibited_listener_ports": (),
         "runtime_group_gid": 987,
         "invalid_runtime_paths": (),
+        "protected_listener_endpoints": (),
     }
     values.update(overrides)
     return MODULE.HostFacts(**values)
@@ -82,6 +83,7 @@ class AdmissionTest(unittest.TestCase):
                 ntp_synchronized=False,
                 execution_portal_container_count=1,
                 prohibited_listener_ports=(8443,),
+                protected_listener_endpoints=("0.0.0.0:8443",),
                 runtime_group_gid=None,
                 invalid_runtime_paths=("/etc/portal",),
             ),
@@ -106,15 +108,47 @@ class AdmissionTest(unittest.TestCase):
             io_full_avg10=9.0,
             io_full_avg60=8.4,
             execution_portal_container_count=3,
+            prohibited_listener_ports=(8443, 8444),
+            protected_listener_endpoints=("10.70.0.2:8443", "172.23.0.1:8444"),
         )
         report = MODULE.assess_host(
             observed,
             historical_oom_reviewed=True,
             mode="observation",
             baseline=baseline,
+            expected_listener_endpoints=("10.70.0.2:8443", "172.23.0.1:8444"),
         )
         self.assertEqual(report["status"], "D2_HOST_ADMISSION_ACCEPTED")
         self.assertEqual(report["pressure_deltas"]["io_full_avg60"], 0.5)
+
+    def test_observation_rejects_wildcard_or_missing_private_listener(self) -> None:
+        report = MODULE.assess_host(
+            healthy(
+                execution_portal_container_count=3,
+                prohibited_listener_ports=(8443, 8444),
+                protected_listener_endpoints=("0.0.0.0:8443", "172.23.0.1:8444"),
+            ),
+            historical_oom_reviewed=True,
+            mode="observation",
+            baseline=healthy(),
+            expected_listener_endpoints=("10.70.0.2:8443", "172.23.0.1:8444"),
+        )
+        self.assertIn("PRIVATE_SERVICE_LISTENER_SET_UNEXPECTED", report["blockers"])
+
+    def test_expected_listener_parser_requires_exact_private_d2_ports(self) -> None:
+        self.assertEqual(
+            MODULE.validate_expected_listener_endpoints(
+                ["10.70.0.2:8443", "172.23.0.1:8444"]
+            ),
+            ("10.70.0.2:8443", "172.23.0.1:8444"),
+        )
+        for endpoints in (
+            ["0.0.0.0:8443", "172.23.0.1:8444"],
+            ["10.70.0.2:8443"],
+            ["10.70.0.2:8443", "172.23.0.1:5432"],
+        ):
+            with self.assertRaises(ValueError):
+                MODULE.validate_expected_listener_endpoints(endpoints)
 
     def test_observation_rejects_below_four_gib_even_when_deltas_are_bounded(self) -> None:
         report = MODULE.assess_host(

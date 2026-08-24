@@ -1,8 +1,8 @@
 # EX-BE-02-LIVE — D2 CVE-2026-14456 applicability checkpoint
 
-> Status: `TRIGGER_NOT_REACHABLE / OWNER_DISPOSITION_PENDING / LIVE_D2_UNAUTHORIZED`  
+> Status: `TRIGGER_NOT_REACHABLE / OWNER_ACCEPTED_D2_DARK_NO_QUIC`  
 > Evidence time: 2026-08-24T10:24:18Z  
-> Runtime impact: none
+> Runtime impact: accepted D2 dark configuration only
 
 ## Outcome
 
@@ -65,15 +65,26 @@ Primary references:
 - [Nginx HTTP/3 activation contract](https://nginx.org/en/docs/http/ngx_http_v3_module.html)
 - [Alpine 3.24 libssl3 package](https://pkgs.alpinelinux.org/package/v3.24/main/x86_64/libssl3)
 
-## Remaining owner decision
+## Owner decision options
 
-The repository must not silently convert this analysis into owner acceptance.
-Before a new D2 window, Bobby must choose one of two paths:
+The repository did not silently convert this analysis into owner acceptance.
+Before the D2 window, Bobby had to choose one of two paths:
 
 1. accept the temporary non-reachability mitigation for dark D2, record the
    HIGH disposition, retain the QUIC-denial gate and repin/rebuild when Alpine
    publishes OpenSSL 3.5.8; or
 2. keep D2 closed until a patched upstream Source Proxy base is available.
 
-Regardless of that choice, D2 remains source-dark and command-dark. D3 and D4
-remain ordered after accepted D2 and require separate windows and evidence.
+The following live record captures the selected first option. D2 remains
+source-dark and command-dark. D3 and D4 retain separate windows and evidence.
+
+## 2026-08-24 owner disposition and live proof
+
+Bobby accepted the temporary no-QUIC mitigation for the bounded D2 dark
+window. The live renderer/preflight proved one exact TCP/TLS listener, seven
+dark 503 guards and no QUIC, HTTP3, Alt-Svc or protected UDP listener. The
+15-minute soak plus rollback/redeploy completed with zero Source Proxy access
+lines. D2 is therefore accepted for this exact dark configuration; any QUIC/
+HTTP3 drift remains a stop condition, and the image must be repinned when a
+patched upstream base is available. This disposition does not authorize D3,
+D4, a source credential or any business route.

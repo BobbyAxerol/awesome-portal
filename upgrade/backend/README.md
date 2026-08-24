@@ -444,6 +444,16 @@ authority.
   latency and source-loss evidence still wait for accepted D2 plus a D3 window.
   Detail:
   [`EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md`](./EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md).
+- `EX-BE-02-LIVE` **D2 dark accepted / source inactive (2026-08-24):** the
+  exact IAM isolation sequence hardened IMDS to hop limit one, detached the
+  temporary operator profile and proved workload credentials absent before
+  startup. Three private services passed a 15-minute four-sample admission
+  soak, zero restart/OOM/source-access evidence, PostgreSQL TLS/SCRAM and role
+  checks, WireGuard/mTLS/public-denial checks and a volume-preserving full
+  rollback/redeploy rehearsal while Trading System health stayed HTTP 200.
+  Every source/query/analytics/SSE/command/profile flag remains false/fixture.
+  Status: `D2_DARK_ACCEPTED / SOURCE_INACTIVE`. Evidence:
+  [`EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md`](./EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md).
 - [EX-BE-02-LIVE D4 offline Paper-shadow authorization](./EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md)
   — **offline authorization prepared / live predecessors blocked:** credential-
   free owner/evidence schema, fail-closed readiness/qualification validator and

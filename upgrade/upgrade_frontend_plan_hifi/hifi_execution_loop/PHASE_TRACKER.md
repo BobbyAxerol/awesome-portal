@@ -466,6 +466,17 @@ made. This unlocks no frontend profile. Claude continues fixture, dark,
 auth-denied and recovery UX only; no EventSource/Lane B/AWS polling. Evidence:
 [`EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md`](../../backend/EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md).
 
+D2 live is now `D2_DARK_ACCEPTED / SOURCE_INACTIVE` (2026-08-24). The minimal
+AWS-HK Edge/Proxy/schema-only PostgreSQL stack passed exact IAM isolation,
+private listener/mTLS/public-denial checks, a four-sample 15-minute pressure
+soak and volume-preserving rollback/redeploy with zero restart, OOM or Source
+Proxy access. Trading System health stayed HTTP 200. This closes D2 operations
+only; every frontend delivery profile and source/query/analytics/SSE/command
+flag remains fixture/false. Claude may represent accepted dark runtime health,
+but must not consume business data or open EventSource. Next backend gate is a
+new-window D3 H2/TLS1.3/mTLS/JWT/latency/source-loss matrix. Evidence:
+[`EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md`](../../backend/EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md).
+
 ### 6.2 BR-EX decisions
 
 The binding contract is

@@ -1083,3 +1083,22 @@ Acceptance evidence on the integration branch:
   routes and observed zero `/api/v1/execution` requests;
 - registry contract tests prove exact 17-screen coverage, `fixture` profiles
   and false capability flags.
+
+### 8.19 D2 live accepted — runtime dark, no business-data unlock (2026-08-24)
+
+Backend has accepted the minimal AWS-HK runtime as
+`D2_DARK_ACCEPTED / SOURCE_INACTIVE`. Rust Edge, Source Proxy and schema-only
+PostgreSQL passed exact IAM isolation, private listeners, mTLS/public denial, a
+four-sample 15-minute pressure soak and a volume-preserving rollback/redeploy.
+There were zero Portal restart/OOM events, zero Source Proxy access lines and
+Trading System health stayed HTTP 200.
+
+This is an operational dark milestone, not a frontend delivery-profile
+promotion. Claude must keep every screen on fixture data, all source/query/
+analytics/SSE/command flags false and Lane B/EventSource closed. It may render
+an honest `runtime reachable, business source inactive` state without inventing
+orders, fills, positions, events or broker facts. Codex's next backend gate is
+D3 live transport acceptance under a new owner window; D3 will open only public
+contracts/health/capabilities for H2/TLS1.3/mTLS/JWT/latency/fault evidence.
+Full evidence:
+`upgrade/backend/EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md`.
