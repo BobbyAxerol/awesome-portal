@@ -256,6 +256,18 @@ for label, text in (
 for label, text in (
     ("master", m),
     ("tracker", t),
+    ("backend README", b),
+    ("architecture guide", a),
+    ("frontend handoff", h),
+    ("unified plan", u),
+):
+    normalized = re.sub(r"\s+", " ", text)
+    if "D4_OWNER_ACTION_PACKET_PREPARED / OWNER_ACTIONS_PENDING / NO_SOURCE_READ" not in normalized:
+        raise SystemExit(f"{label} lost the D4 owner-action stop-gate")
+
+for label, text in (
+    ("master", m),
+    ("tracker", t),
     ("request ledger", l),
     ("backend README", b),
     ("architecture guide", a),

@@ -31,6 +31,7 @@ Read these sources before implementing a slice:
 14. [D4 readiness audit and owner request](backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md) — current source/storage blockers and the exact sanitized contract response required before the first Paper read.
 15. [D4 mapper core and readiness hardening](backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md) — typed four-resource normalization, BUILDING-only replay evidence and the split store/ingestor readiness invariant.
 16. [D4 encrypted projection-storage boundary](backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md) — fail-closed EBS/KMS evidence, dedicated mount identity and render-only D4 Compose overlay without provisioning or source reads.
+17. [D4 owner action packet](backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md) — exact encrypted-gp3 setup/evidence handoff and the bounded implementation request for the Trading System Paper read identity/contract.
 
 The wireframes remain the visual authority. This plan is authoritative for data
 ownership, endpoint shape, compatibility, security, freshness, sequencing, and
@@ -817,6 +818,12 @@ NO_SOURCE_READ`. Its schema, read-only preflight and Compose overlay are
 offline-only: they prohibit AWS-HK root/D2-volume reuse but neither provision
 storage nor enable a Paper source. Dedicated identity/contract, explicit
 volume approval/provisioning and live qualification remain separate gates.
+
+The corresponding owner handoff is
+`D4_OWNER_ACTION_PACKET_PREPARED / OWNER_ACTIONS_PENDING / NO_SOURCE_READ`.
+It fixes the initial gp3 capacity/performance/mount envelope and the sanitized
+Trading System agent response contract; it does not authorize either owner
+action or unlock any runtime profile.
 
 ### 12.1.1 Six-phase pre-IAM SGP runway
 

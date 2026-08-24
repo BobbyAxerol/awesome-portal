@@ -1829,6 +1829,13 @@ không phải 17 màn.
 > the stable cursor/completeness/resync contract. Detail:
 > [`EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md`](./backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md).
 
+> **Owner handoff 2026-08-24 — D4 inputs:** `D4_OWNER_ACTION_PACKET_PREPARED / OWNER_ACTIONS_PENDING / NO_SOURCE_READ`.
+> The packet gives Bobby the exact encrypted gp3 creation/mount/evidence path
+> and gives the Trading System owner agent a bounded implementation/test/
+> sanitized-response contract for the dedicated Paper read identity. It grants
+> neither direct database access nor runtime activation. Detail:
+> [`EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md`](./backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md).
+
 > **Backend checkpoint 2026-08-23 — EX-BE-05b/F2 Phase 10:** Portal-owned
 > Sandbox Certification trên SGP đạt
 > `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`: DRAFT→IN_REVIEW→APPROVED|DENIED,

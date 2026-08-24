@@ -1116,6 +1116,13 @@ deep-dive → ADR → slice → evidence discipline documented above.
   source call occurred. Status: `D4_ENCRYPTED_STORAGE_BOUNDARY_PREPARED /
   LIVE_VOLUME_NOT_PROVISIONED / NO_SOURCE_READ`. Evidence:
   [`EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md`](./backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md).
+- **EX-BE-02-LIVE D4 owner action packet (2026-08-24):** the exact encrypted
+  gp3 owner procedure and a bounded Trading System-agent implementation request
+  now exist. The packet keeps storage writer authority separate from the
+  source API read identity, forbids direct DB/Redis/CLI/broker access and
+  returns only digests/metadata. Status: `D4_OWNER_ACTION_PACKET_PREPARED /
+  OWNER_ACTIONS_PENDING / NO_SOURCE_READ`. Evidence:
+  [`EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md`](./backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

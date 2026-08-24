@@ -2036,6 +2036,13 @@ not created a volume or enabled a source. Claude must keep every live-source,
 Query, analytics, SSE and command consumer unavailable/fixture. Evidence:
 [`EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md`](../../backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md).
 
+Owner handoff status is
+`D4_OWNER_ACTION_PACKET_PREPARED / OWNER_ACTIONS_PENDING / NO_SOURCE_READ`.
+It contains infrastructure and Trading System owner instructions only. Claude
+has no implementation dependency on those private inputs and receives no
+source/query/realtime/command unlock. Detail:
+[`EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md`](../../backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md).
+
 ## 28. Dev integration preview — 17/17 screens wired, production inactive (2026-08-24)
 
 Status: `DEV_PREVIEW_READY / FIXTURE_ONLY / PRODUCTION_INACTIVE`.

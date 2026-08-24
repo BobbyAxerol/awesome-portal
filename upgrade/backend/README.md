@@ -486,6 +486,13 @@ authority.
   filesystem, Docker or Trading System state. Status:
   `D4_ENCRYPTED_STORAGE_BOUNDARY_PREPARED / LIVE_VOLUME_NOT_PROVISIONED /
   NO_SOURCE_READ`.
+- [EX-BE-02-LIVE D4 owner action packet](./EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md)
+  — **owner instructions prepared / actions pending / no source read:** exact
+  40-GiB encrypted gp3 configuration, safe Nitro device/mount procedure,
+  credential-free evidence return fields and a copy-paste Trading System agent
+  request for the mandatory Paper read identity plus stable four-resource
+  cursor/completeness/resync contract. Status:
+  `D4_OWNER_ACTION_PACKET_PREPARED / OWNER_ACTIONS_PENDING / NO_SOURCE_READ`.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

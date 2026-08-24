@@ -345,6 +345,7 @@ for required in \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md" \
@@ -731,6 +732,7 @@ for tracked_source in \
   upgrade/backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md \
   upgrade/backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md \
   upgrade/backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md \
+  upgrade/backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md \
   upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md \
   upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md \
   upgrade/backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md \

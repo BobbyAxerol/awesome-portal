@@ -951,6 +951,12 @@ Claude receives no live UI unlock and must continue to render fixture or typed
 unavailable states until separate D4 live qualification is accepted. Detail:
 `upgrade/backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md`.
 
+The Bobby/Trading System owner instructions are now
+`D4_OWNER_ACTION_PACKET_PREPARED / OWNER_ACTIONS_PENDING / NO_SOURCE_READ`.
+This changes no frontend contract: Claude continues fixture/unavailable states
+and does not wait for, display or ingest private owner evidence. Detail:
+`upgrade/backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md`.
+
 ### 8.12 EX-BE-05b/F1a Operations Queue — Lane A can integrate (2026-08-23)
 
 Backend status is `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`. The same-origin

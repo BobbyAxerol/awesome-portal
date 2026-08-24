@@ -81,3 +81,9 @@ The storage deployment boundary itself is
 NO_SOURCE_READ`. No separate block device currently exists on AWS-HK, so the
 overlay remains render-only. Evidence:
 [`../../upgrade/backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md`](../../upgrade/backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md).
+
+The exact owner-side gp3 procedure, return fields and copy-paste Trading System
+agent request are in
+[`../../upgrade/backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md`](../../upgrade/backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md).
+Its status is `D4_OWNER_ACTION_PACKET_PREPARED / OWNER_ACTIONS_PENDING /
+NO_SOURCE_READ`; it is guidance, not authorization or runtime evidence.
