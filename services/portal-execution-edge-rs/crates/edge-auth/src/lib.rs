@@ -108,6 +108,10 @@ impl DelegationVerifier {
         validation.set_issuer(&[self.issuer.as_str()]);
         validation.set_audience(&[self.audience.as_str()]);
         validation.leeway = self.clock_skew_seconds;
+        // `jsonwebtoken` does not validate `nbf` by default. Requiring the
+        // claim without enabling this check would accept a correctly signed
+        // assertion before its delegated authorization window begins.
+        validation.validate_nbf = true;
         validation.set_required_spec_claims(&["exp", "nbf", "iss", "aud", "sub"]);
         let claims = decode::<DelegatedClaims>(token, key, &validation)
             .map_err(|_| AuthError::InvalidAssertion)?
@@ -319,6 +323,34 @@ mod tests {
                 }
             ),
             Err(AuthError::ResourceDenied)
+        );
+    }
+
+    #[test]
+    fn future_not_before_fails_closed_outside_clock_skew() {
+        let signer = signer();
+        let verifier = DelegationVerifier::from_jwks_json(
+            &signer.jwks,
+            "portal-control-api",
+            "portal-execution-edge",
+            60,
+            3,
+        )
+        .unwrap();
+        let now = Utc::now().timestamp();
+        let mut future = claims(now);
+        future.nbf = now + 30;
+        future.exp = now + 45;
+
+        assert_eq!(
+            verifier.verify_read(
+                &token(&signer, &future),
+                &RequiredRead {
+                    environment: "paper",
+                    resource: Some("alpha:alpha-paper-1"),
+                },
+            ),
+            Err(AuthError::InvalidAssertion)
         );
     }
 }
