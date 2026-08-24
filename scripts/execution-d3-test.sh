@@ -21,10 +21,16 @@ trap cleanup EXIT
 # Template render proves the exact D3 route delta before any credential/file
 # readiness is considered.
 cp "${env_example}" "${tmp_dir}/probe.env"
+runtime_gid="$(id -g)"
+# `portal verify` may run through sudo solely for Docker access.  Preserve the
+# non-root workload contract in the offline fixture instead of injecting GID 0.
+if [[ "${runtime_gid}" == 0 ]]; then
+  runtime_gid=987
+fi
 sed -i \
   -e 's/^SOURCE_PROXY_SOURCE_MODE=dark$/SOURCE_PROXY_SOURCE_MODE=contract-probe/' \
   -e 's/^EDGE_SOURCE_PROBES_ENABLED=false$/EDGE_SOURCE_PROBES_ENABLED=true/' \
-  -e "s/^PORTAL_RUNTIME_GID=.*/PORTAL_RUNTIME_GID=$(id -g)/" \
+  -e "s/^PORTAL_RUNTIME_GID=.*/PORTAL_RUNTIME_GID=${runtime_gid}/" \
   "${tmp_dir}/probe.env"
 "${preflight}" --env-file "${tmp_dir}/probe.env" --mode template >/dev/null
 "${renderer}" --env-file "${tmp_dir}/probe.env" \

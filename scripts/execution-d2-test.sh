@@ -73,6 +73,12 @@ cleanup() {
 }
 trap cleanup EXIT
 runtime_gid="$(id -g)"
+# The workspace verifier is commonly invoked through sudo so it can reach the
+# Docker daemon.  Keep the offline fixture representative of the production
+# contract in that case: Portal workloads must never inherit root's GID 0.
+if [[ "${runtime_gid}" == 0 ]]; then
+  runtime_gid=987
+fi
 edge_secrets="${tmp_dir}/srv/primus/portal/execution-edge/secrets"
 proxy_secrets="${tmp_dir}/srv/primus/portal/source-proxy/secrets"
 proxy_config="${tmp_dir}/srv/primus/portal/source-proxy/nginx.conf"
