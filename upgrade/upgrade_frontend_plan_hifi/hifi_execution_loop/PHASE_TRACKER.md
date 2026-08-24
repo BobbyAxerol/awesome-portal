@@ -17,7 +17,7 @@ Kế hoạch chi tiết từng phase: các khối **Claude supplement** trong ch
 
 | Phase | Tên | FE | Gate thoát | Evidence |
 |---|---|---|---|---|
-| EL-V2-00 | Re-baseline + ledger 18 HiFi + truth in tracking | `URGENT — NEXT` | ledger không còn ô unknown; hết "screen built" mơ hồ | — |
+| EL-V2-00 | Re-baseline + ledger 18 HiFi + truth in tracking | **hoàn tất 2026-08-24, chờ Bobby duyệt gate** | ledger 0 unknown ✓; "screen built" reframed ✓ | ledger 118 dòng + 16 before-shots + danh sách 8 assertion lỗi thời (cuối file) |
 | EL-V2-01 | Một workspace Carbon theo route | `QUEUED` | zero seam sáng/tối; zero assertion Governance-Light | — |
 | EL-V2-02 | Typography ngữ nghĩa + primitive workspace | `QUEUED` | 2 font; thang vai trò khoá; anatomy tái dùng | — |
 | EL-V2-03 | Preview có state, zero no-op | `QUEUED` | mọi control enabled có hậu quả quan sát được | — |
@@ -2073,7 +2073,7 @@ nav trỏ 404.
 
 | Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
 |---|---|---|---|---|---|
-| Filter Mine(n)/All/Research·R1/Ops·R2/Exit/Live/Overdue | N | INBOX/ALL/OVERDUE có; Mine disabled (BR-EX-32); R1/R2/Exit/Live **chưa** | BE+impr | C | server `view` enum thiếu 4 giá trị — BR mới |
+| Filter Mine(n)/All/Research·R1/Ops·R2/Exit/Live/Overdue | N | chip đủ (INBOX/ALL/R1/R2/Paper/Sandbox/Live/Exit/Overdue render — kiểm bằng before-shot); Mine disabled (BR-EX-32) | impl | C | sửa 2026-08-24: dòng đầu ghi 'chưa' là tôi nhớ sai — ảnh seam-inbox chứng minh ngược; server-side view coverage kiểm lại ở V2-05 |
 | Bảng: request·gate·subject·target·blockers·age/SLA·quorum | N | có đủ cột, blockers named | impl | C | |
 | SLA aging + OVERDUE nổi bật | N | rowEmphasis + border | impl | C | V2-05 thêm thanh SLA compact |
 | SoD: dòng không quyết được → dim, không ẩn | N | có (`inert`, dimmed + tooltip) | impl | C | |
@@ -2333,3 +2333,27 @@ Claude can now review all 17 screens together on the dev host and record only
 frontend integration/UX findings. Backend activation, live-source claims and
 removal of fixture labelling remain blocked on the independently tracked
 D2→D4 evidence and later delivery-profile promotion.
+
+### EL-V2-00 — assertion & tài liệu lỗi thời phải viết lại (danh sách bắt buộc)
+
+| # | Chỗ | Nội dung lỗi thời | Viết lại ở |
+|---|---|---|---|
+| 1 | `e2e/execution-fixtures.spec.ts` — test "Carbon surfaces ignore the portal theme" | assert governance **sáng** (`luminance > 0.5`) — thi hành thiết kế đã bị owner override §0.1 huỷ | V2-01, cùng commit tháo `governance → operations-carbon-light` |
+| 2 | `src/execution/ExecutionSurface.tsx` doc-comment "two surfaces, not one" + map `governance: operations-carbon-light` | triết lý hai surface đã bị huỷ | V2-01 |
+| 3 | `execution.test.tsx` các assert `data-theme === "operations-carbon-light"` (3 chỗ ~dòng 156/170/186) | như trên | V2-01 |
+| 4 | `e2e/execution-fixtures.spec.ts` ẩn `.portal-topbar` + chốt visibility | đúng cho fixture-crop, nhưng phải có baseline class 2 (shell visible) bổ sung — đã có `el-v2-evidence-shots.spec.ts`, nâng thành gate so sánh ở V2-01 | V2-01 |
+| 5 | `DESIGN_SYSTEM_EXECUTION.md` mọi chỗ nói Governance Light / IBM Plex là fallback chưa bundle | override §0.1 + quyết định font V2-02 | V2-02 (đề xuất Inter+JetBrains; **lưu ý: HiFi canvas dùng IBM Plex thật** — Bobby chốt ở goal V2-02) |
+| 6 | `PHASE_TRACKER.md` các dòng "screen built" cũ (bảng 19 phase) | nói quá — đã reframe bằng chú thích đầu file + cột Nấc trong ledger | xong (V2-00) |
+| 7 | Preview banner tiếng Việt + `screenId` trong chrome + "SOON" cạnh route đang xem + `execution-preview.spec.ts` ghim câu tiếng Việt | vi phạm §3.8 + §4.3 handoff | V2-01 (banner+SOON) · V2-03 (screenId→inspector) |
+| 8 | `ROADMAP_FRONTEND.md` thứ tự việc tiền-V2 | đã có ghi chú nhường override từ 2026-08-24 | xong (V2-00) |
+
+### EL-V2-00 — evidence đóng phase
+
+- **18/18 `.dc.html` đọc trọn** (văn bản + demo-prop script; 4 file có script biến thể).
+- **Ledger §11.6**: 118 dòng / 441 năng lực / 0 unknown / cột voice đủ — mục "V2 §11.6" phía trên.
+- **Before-shots 16 ảnh** `apps/portal/frontend/e2e/el-v2-00-before/`: 12 = 3 khổ × 4 route (pref
+  operations), 4 = `seam-*` pref research 1440×900 ghi đúng trạng thái owner từ chối. Chụp bằng
+  `el-v2-evidence-shots.spec.ts` (chạy khi `EL_V2_SHOTS=1`).
+- **Ảnh trước đã bắt được một lỗi ledger** (dòng filter Inbox) — sửa ngay trong V2-00, ghi chú tại dòng.
+- **Preview branch merged** (`d74a51b`) — route sản phẩm giờ nằm trong cây làm việc để V2-01..03 rework.
+- Patch responsive giữ nhãn subtask (`1da7f7a`), không tính là V2.
