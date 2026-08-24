@@ -1,26 +1,14 @@
 /**
- * Phase 3 — Gate R2 Review (hi-fi 1b), UI states only.
+ * Gate R2 — Portfolio & Operational Readiness (HiFi 1b), on the V2 anatomy.
  *
- * R2 asks a different question from R1. R1 asked whether the research is sound;
- * R2 asks whether this deployment is operationally ready — account, risk
- * profile, matcher config, capital, portfolio fit. So the screen is built around
- * two things R1 does not have:
- *
- *   1. **A dependency on R1.** R2 cannot stand on an R1 that has expired or been
- *      denied. The hi-fi prints "Blocked — R1 approval expired" and that is the
- *      whole point: approving operational readiness for research nobody currently
- *      vouches for produces a live deployment resting on a lapsed claim.
- *   2. **A capital preview.** A before/after table is the most dangerous panel on
- *      this surface, because it looks exactly like a record of something that
- *      happened. It carries DERIVED authority, a `PLAN PREVIEW` marker and the
- *      words "derived, not applied", and the component will not render it
- *      without them.
- *
- * Approving grants an authorization. It does not execute: the Execution cell
- * re-validates everything when the authorization is used.
+ * The question: is it safe to authorize Paper activation? R2 rests on a valid
+ * R1; every lock is named, the capital preview is a preview (one PREVIEW
+ * chip, elevation — never a theme change), and the decision sits in the sticky
+ * bar. Approve grants an authorization only; activation is a separate admin
+ * plan/apply — that sentence stays in the bar because it prevents a dangerous
+ * misreading.
  */
 import { useState, type ReactNode } from "react";
-
 import type { ApprovalId, Envelope, PanelStatus, Sla } from "../contracts";
 import { AuthorityBadge, StatusChip } from "../components/badges";
 import {
@@ -30,38 +18,29 @@ import {
   type ConditionDraft,
   type TypedCondition,
 } from "../components/conditions";
+import { ExecutionDecisionBar } from "../components/decisionBar";
 import { SlaCell } from "../components/evidence";
-import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
+import { ExecutionSectionTitle } from "../components/typography";
+import {
+  ExecutionContextRail,
+  ExecutionDecisionStrip,
+  ExecutionPageHeader,
+  ExecutionProvenanceDrawer,
+  ExecutionTabs,
+  ExecutionWorkspace,
+  shortDigest,
+  type HeaderBadge,
+  type RailBlocker,
+} from "../components/workspace";
+import { REQUEST_CHANGES_REASON } from "./GateR1Review";
 
-/** State of the R1 this R2 rests on. Only `APPROVED` lets R2 proceed. */
 export type R1State = "APPROVED" | "APPROVED_WITH_CONDITION" | "EXPIRED" | "DENIED" | "PENDING" | "MISSING";
 
-/**
- * Why an R1 blocks, in the words the hi-fi uses.
- *
- * Each takes the reference so the banner can name it, and the expired one takes
- * the date. "Expired" without a date is an assertion; "expired 2026-08-18" is
- * something a reviewer can check, and checking is the whole activity this
- * screen exists for.
- *
- * Each also ends with the remedy. The hi-fi's banner is the only place on the
- * screen that tells a reviewer what to do next, and a blocker with no way
- * forward turns into a support ticket.
- */
-function r1Block(
-  state: R1State,
-  id: string | null,
-  expiredAt: string | null,
-  lineagePublished = true,
-): string | null {
+function r1Block(state: R1State, id: string | null, expiredAt: string | null, lineagePublished = true): string | null {
   const ref = id ?? "the linked R1";
-  // A response that never carried the field is not a response that said "none".
-  // Approve stays blocked either way — an R2 decided without visible R1
-  // authority is decided blind — but the reviewer is told which of the two it
-  // is, so they do not go looking for an approval that may well exist.
   if (!lineagePublished) {
-    return "This response does not carry the R1 lineage, so the authority this R2 rests on cannot be shown. Approve is disabled until the source publishes it.";
+    return "This response does not carry the R1 lineage, so the authority this R2 rests on cannot be shown. Approve is disabled until the source publishes it (BR-EX-30).";
   }
   switch (state) {
     case "APPROVED":
@@ -77,7 +56,6 @@ function r1Block(
       return `No R1 approval is linked to this request. There is nothing for this R2 to rest on; link one or re-run Gate R1. Approve is disabled.`;
   }
 }
-
 const R1_TONE: Record<R1State, "good" | "warn" | "bad" | "mute"> = {
   APPROVED: "good",
   APPROVED_WITH_CONDITION: "warn",
@@ -86,66 +64,35 @@ const R1_TONE: Record<R1State, "good" | "warn" | "bad" | "mute"> = {
   PENDING: "mute",
   MISSING: "bad",
 };
-
-/**
- * One `before → after` row of the capital preview.
- *
- * `currency` is its own field, and the screen refuses to render a row without
- * one. Scale-refine note I-4: the capital diff is **per currency**, so a strip
- * that implies a single number is wrong the moment a portfolio holds two —
- * a USDT figure stacked above a VND figure reads as though they add up, and
- * nothing about the layout says otherwise. A percentage row is the exception
- * and declares itself with `currency: "%"`.
- */
 export interface CapitalDelta {
   label: string;
   before: string;
   after: string;
-  /** Currency code, or `%` for a ratio. `null` renders as a stated gap. */
   currency?: string | null;
-  /** `within policy ceiling 55%` — the rule the after value was checked against. */
   note?: string | null;
-  /** True when `after` breaches a policy ceiling. Blocks approval. */
   breach?: boolean;
 }
-
 export interface ReadinessGroup {
   title: string;
-  /** `account policy rev 7` → `MARGIN · CROSS · 2x · settle USDT` */
   entries: readonly { label: string; value: string; revision?: string | null }[];
 }
-
-export type R2Lock =
-  | "SELF_APPROVAL"
-  | "R1_NOT_VALID"
-  | "CAPITAL_BREACH"
-  /** The engine returned the preview with `decision_eligible=false` (EX-BE-07a §2.2). */
-  | "PREVIEW_NOT_DECIDABLE"
-  | "EXPIRED"
-  | "NOT_ELIGIBLE";
-
-/**
- * Which locks stop a denial. Same rule as Gate R1: the plan author may refuse
- * their own plan, an invalid R1 is a reason to deny rather than an obstacle to
- * it, and a capital breach is the clearest reason of all. Only a request that
- * has stopped being decidable blocks a refusal.
- */
+export type R2Lock = "SELF_APPROVAL" | "R1_NOT_VALID" | "CAPITAL_BREACH" | "PREVIEW_NOT_DECIDABLE" | "EXPIRED" | "NOT_ELIGIBLE";
 const DENY_BLOCKING_LOCKS: readonly R2Lock[] = ["EXPIRED", "NOT_ELIGIBLE"];
-
 const DENY_LOCK_REASON: Record<"EXPIRED" | "NOT_ELIGIBLE", string> = {
   EXPIRED: "Deny blocked — this request expired. There is nothing live to refuse.",
   NOT_ELIGIBLE: "Deny blocked — you do not hold a role that can decide this gate.",
 };
-
 const LOCK_REASON: Record<R2Lock, string> = {
   SELF_APPROVAL: "Approve blocked — the plan author cannot be the sole approver.",
   R1_NOT_VALID: "Approve blocked — see the R1 status above.",
   CAPITAL_BREACH: "Approve blocked — the capital preview breaches a policy ceiling.",
   PREVIEW_NOT_DECIDABLE:
-    "Approve blocked — the capital preview is not current enough to decide against. It stays visible below so the gap can be diagnosed.",
+    "Approve blocked — the capital preview is not current enough to decide against. It stays visible so the gap can be diagnosed.",
   EXPIRED: "This request expired and must be resubmitted.",
   NOT_ELIGIBLE: "You do not hold a role that can decide this gate.",
 };
+const R2_TABS = ["Capital preview", "Readiness", "Observation policy", "R1 reference", "Conditions"] as const;
+type R2Tab = (typeof R2_TABS)[number];
 
 export function GateR2Review({
   approvalId,
@@ -181,30 +128,23 @@ export function GateR2Review({
   reason,
   partialReason,
   locks = [],
+  note,
+  onNoteChange,
+  trail,
   onAttachCondition,
   onApprove,
   onDeny,
   onRequestCondition,
+  onCopyProvenance,
 }: {
   approvalId: ApprovalId;
-  /** `Carry v3.2 → PF-MAIN · Paper · BINANCE` */
   subject: string;
   r1Id: ApprovalId | null;
   r1State: R1State;
-  /** `false` when the response carried no R1 lineage field at all (BR-EX-30). */
   r1LineagePublished?: boolean;
-  /** Where the R1 decision can be read. A reference nobody can open is a claim. */
   r1Href?: string | null;
-  /**
-   * When the R1 evidence lapses, or lapsed. §3 lists it among the R1 reference
-   * panel's three fields for a reason: without it a reviewer cannot see how
-   * stale the R1 is until it has already gone, and an R2 approved the day
-   * before expiry is a different risk from one approved a month before.
-   */
   r1Expiry?: string | null;
-  /** Digest of the evidence the R1 was decided against. */
   r1Digest?: string | null;
-  /** Who decided the R1, and when. */
   r1DecidedBy?: string | null;
   r1DecidedAt?: string | null;
   deploymentCandidate?: string;
@@ -218,68 +158,29 @@ export function GateR2Review({
   sla?: Sla;
   readiness: readonly ReadinessGroup[];
   capital: readonly CapitalDelta[];
-  /**
-   * Required whenever `capital` is non-empty. The preview is a computation, and
-   * a computation without its authority and as_of is an unattributed number.
-   */
   capitalEnvelope?: Envelope;
-  /**
-   * The engine's `decision_eligible` verdict on the capital preview.
-   *
-   * Tri-state on purpose. `undefined` means no preview was requested and the
-   * lock does not apply; `false` is an explicit refusal from the engine. A
-   * boolean defaulting to `true` would turn "we never asked" into "the engine
-   * said yes", which is the one reading that must never happen by omission.
-   */
-  /**
-   * What the server says this actor may do.
-   *
-   * Absent is not permission. R2 previously had no such prop at all and derived
-   * its separation-of-duty lock from `planAuthor === actor` — a comparison of
-   * two display names, which two people can share and which the server's own
-   * eligibility already answers correctly.
-   */
   eligibility?: { canApprove: boolean; canApproveWithCondition: boolean; canDeny: boolean };
-  /**
-   * Why no preview is shown, when none is.
-   *
-   * The panel's default sentence covers a missing envelope. It does not cover
-   * a preview that was never requested because the review did not scope one,
-   * and a reviewer told "arrived without an authority envelope" for that would
-   * go looking in the wrong place.
-   */
   capitalReason?: string | null;
   capitalDecidable?: boolean;
-  /**
-   * Why the engine will not stand behind the preview, in its words.
-   *
-   * The lock's own sentence says a decision is blocked; these say what is wrong
-   * with the numbers. Without them the panel shows figures and a refusal with
-   * nothing connecting the two, and the reviewer has no way to tell a stale
-   * feed from a breached ceiling.
-   */
   capitalBlockers?: readonly string[];
   observationPolicy?: ReactNode;
-  /**
-   * Typed conditions attached to this decision (DS §4). §3's exit criterion is
-   * "R2 approval creates typed conditions", so the list is part of the screen
-   * rather than something the drawer invents afterwards.
-   */
   conditions?: readonly TypedCondition[];
-  /** `paper_activation_authorization` — what approving actually grants. */
   grantName?: string;
   status?: PanelStatus;
   reason?: string;
   partialReason?: string;
   locks?: readonly R2Lock[];
-  /** Attaching a condition is what makes "approve with condition" mean
-   *  something (§2 "Must work": conditions attach to the decision object). */
+  note?: string;
+  onNoteChange?: (next: string) => void;
+  trail?: ReactNode;
   onAttachCondition?: (condition: TypedCondition) => void;
   onApprove?: () => void;
   onDeny?: () => void;
-  /** Required. Enabled only once a condition is attached — the decision's whole meaning is the condition. */
   onRequestCondition: () => void;
+  onCopyProvenance: (full: string) => void;
 }) {
+  const [draft, setDraft] = useState<ConditionDraft>(EMPTY_DRAFT);
+  const [tab, setTab] = useState<R2Tab>("Capital preview");
   if (status !== "ok" && status !== "partial" && status !== "stale") {
     return (
       <section className="exec-gate" aria-label={`Gate R2 review ${approvalId}`}>
@@ -288,26 +189,11 @@ export function GateR2Review({
       </section>
     );
   }
-
-  const [draft, setDraft] = useState<ConditionDraft>(EMPTY_DRAFT);
-
   const selfApproval = planAuthor === actor;
-  const blockedReason = r1Block(
-    r1State,
-    r1Id,
-    r1State === "EXPIRED" ? (r1Expiry ?? null) : null,
-    r1LineagePublished,
-  );
+  const blockedReason = r1Block(r1State, r1Id, r1State === "EXPIRED" ? (r1Expiry ?? null) : null, r1LineagePublished);
   const breach = capital.some((c) => c.breach);
-  // §2.2: an ineligible preview blocks approval and nothing else. It is not
-  // hidden — the numbers are how an operator works out what went stale — and it
-  // does not block a denial, because refusing to approve against figures nobody
-  // stands behind is exactly the decision this state should make easy.
+  const breaches = capital.filter((c) => c.breach).length;
   const previewNotDecidable = capitalDecidable === false;
-
-  // Derived, in the same way Gate R1 derives its separation-of-duty lock. The
-  // three conditions that must never depend on a caller remembering to pass a
-  // lock are the three that would let an unsound approval through.
   const effectiveLocks = Array.from(
     new Set<R2Lock>([
       ...(selfApproval ? (["SELF_APPROVAL"] as R2Lock[]) : []),
@@ -320,311 +206,317 @@ export function GateR2Review({
   const serverAllowsApprove = eligibility?.canApprove === true;
   const serverAllowsCondition = eligibility?.canApproveWithCondition === true;
   const serverAllowsDeny = eligibility?.canDeny === true;
-  // Local locks AND server eligibility. Either one refusing is a refusal.
   const locked = effectiveLocks.length > 0 || !serverAllowsApprove;
   const conditionLocked = effectiveLocks.length > 0 || !serverAllowsCondition;
   const denyLocks = effectiveLocks.filter((lock): lock is "EXPIRED" | "NOT_ELIGIBLE" =>
     (DENY_BLOCKING_LOCKS as readonly string[]).includes(lock),
   );
   const denyLocked = denyLocks.length > 0 || !serverAllowsDeny;
+  // The R1 sentence is printed once, in the banner; the bar points at it.
+  const reasons: string[] = [
+    ...effectiveLocks.map((lock) => LOCK_REASON[lock]),
+    ...denyLocks.map((lock) => DENY_LOCK_REASON[lock]),
+  ];
+  if (!serverAllowsApprove && effectiveLocks.length === 0) reasons.push("Approve blocked — the server did not grant it for this actor.");
+  if (!serverAllowsDeny && denyLocks.length === 0) reasons.push("Deny blocked — the server did not grant it for this actor.");
+
+  const r1Label = r1Id ? `R1 ${r1State} · ${r1Id}` : `R1 ${r1State}`;
+  const badges: HeaderBadge[] = [
+    { label: "GATE R2", axis: "stage" },
+    { label: r1Label, axis: "other", tone: R1_TONE[r1State] },
+    { label: `PENDING ${quorumMet}/${quorumRequired}`, axis: "readiness", tone: quorumMet >= quorumRequired ? "good" : "mute" },
+    { label: selfApproval ? "SoD VIOLATION" : "SoD OK", axis: "other", tone: selfApproval ? "bad" : "good" },
+    ...(status === "stale" ? [{ label: "STALE", axis: "broker-sync", tone: "bad" } as HeaderBadge] : []),
+    ...(status === "partial" ? [{ label: "PARTIAL", axis: "broker-sync", tone: "warn" } as HeaderBadge] : []),
+  ];
+  const blockers: RailBlocker[] = [
+    ...effectiveLocks.map((lock) => ({ label: `lock · ${lock.replace(/_/g, " ")}`, detail: null, severity: "blocking" as const })),
+    ...capital.filter((c) => c.breach).map((c) => ({ label: `${c.label} BREACH`, detail: c.note ?? `${c.before} → ${c.after}`, severity: "blocking" as const })),
+  ];
+  const provenanceItems = [
+    ...(artifactDigest ? [{ label: "artifact", short: shortDigest(artifactDigest), full: artifactDigest }] : []),
+    ...(r1Id ? [{ label: "R1", short: r1Id, href: r1Href ?? null, full: null }] : []),
+    ...(r1Digest ? [{ label: "R1 evidence digest", short: shortDigest(r1Digest), full: r1Digest }] : []),
+    ...(deploymentCandidate ? [{ label: "deployment candidate", short: deploymentCandidate, full: null }] : []),
+    ...(releaseCandidate ? [{ label: "release candidate", short: releaseCandidate, full: null }] : []),
+    { label: "policy", short: policyVersion, full: null },
+  ];
+  const verdict = locked && conditionLocked ? "BLOCKED" : `PENDING ${quorumMet}/${quorumRequired}`;
+  const sodLine = selfApproval
+    ? `separation-of-duty VIOLATION — plan author (${planAuthor}) cannot be the sole approver, and that is you`
+    : `separation-of-duty: plan author (${planAuthor}) cannot be sole approver — OK, you are ${actor}`;
+
+  const rail = (
+    <ExecutionContextRail
+      next={{
+        title: locked && conditionLocked ? "Approve blocked" : "Ready to decide",
+        detail: (
+          <span className="exec-role-body" data-violation={selfApproval ? "true" : undefined}>
+            {sodLine}
+          </span>
+        ),
+      }}
+      blockers={blockers}
+      freshness={
+        <span className="exec-role-meta">
+          {sla ? <SlaCell sla={sla} /> : "SLA not published"}
+          {` · R1 ${r1State === "EXPIRED" ? "expired" : "expires"} ${r1Expiry ?? "— not published"}`}
+          {capitalEnvelope?.asOf ? ` · preview as_of ${capitalEnvelope.asOf}` : null}
+        </span>
+      }
+      provenance={<ExecutionProvenanceDrawer items={provenanceItems} onCopy={onCopyProvenance} />}
+    />
+  );
 
   return (
     <section className="exec-gate" aria-label={`Gate R2 review ${approvalId}`}>
-      <header className="exec-gate-head">
-        <div className="exec-gate-kicker">GATE R2 · Operational Readiness</div>
-        <div className="exec-tile-title">{subject}</div>
-        <div className="exec-gate-meta">
-          {/* §3 "Must work": the R1 reference links to the R1 decision. A
-              reviewer asked to rely on a prior approval has to be able to open
-              it, and a reference that cannot be opened is only a claim. */}
-          {r1Href ? (
-            <a href={r1Href} className="exec-gate-r1link">
-              <StatusChip
-                label={r1Id ? `R1 ${r1State} · ${r1Id}` : `R1 ${r1State}`}
-                tone={R1_TONE[r1State]}
-              />
-            </a>
-          ) : (
-            <StatusChip
-              label={r1Id ? `R1 ${r1State} · ${r1Id}` : `R1 ${r1State}`}
-              tone={R1_TONE[r1State]}
-              title={r1Id ? "No link to the R1 decision was published." : undefined}
-            />
-          )}
-          <StatusChip
-            label={`PENDING ${quorumMet}/${quorumRequired}`}
-            tone={quorumMet >= quorumRequired ? "good" : "mute"}
-          />
-          <span>{approvalId}</span>
-          {deploymentCandidate ? <span>deployment candidate {deploymentCandidate}</span> : null}
-          {releaseCandidate ? <span>release candidate {releaseCandidate}</span> : null}
-          {artifactDigest ? <span>digest {artifactDigest}</span> : null}
-          <span>policy {policyVersion}</span>
-          {sla ? <SlaCell sla={sla} /> : null}
-        </div>
-
-        <div className="exec-gate-sod" data-violation={selfApproval ? "true" : undefined}>
-          {selfApproval
-            ? `separation-of-duty VIOLATION — plan author (${planAuthor}) cannot be the sole approver, and that is you`
-            : `separation-of-duty: plan author (${planAuthor}) cannot be sole approver — OK, you are ${actor}`}
-        </div>
-
-        {/* The R1 block is a band rather than a footnote. It is the one condition
-            on this screen that no amount of operational evidence can satisfy. */}
+      <ExecutionWorkspace layout="balanced" rail={rail}>
+        <ExecutionPageHeader
+          title={subject}
+          id={approvalId}
+          badges={badges}
+          purpose="Is it safe to authorize Paper activation for this deployment candidate?"
+          secondary={
+            r1Href ? (
+              <a href={r1Href} className="exec-gate-r1link exec-role-meta">
+                open {r1Id ?? "R1"}
+              </a>
+            ) : r1Id ? (
+              <span className="exec-role-meta" title="No link to the R1 decision was published.">
+                {r1Id} · no link published
+              </span>
+            ) : undefined
+          }
+        />
         {blockedReason ? (
-          <div className="exec-gate-banner exec-gate-blocking">
-            <strong className="exec-gate-blocking-lead">Blocked — R1 approval {r1State.toLowerCase().replace(/_/g, " ")}</strong>
+          <div className="exec-gate-banner exec-gate-blocking" role="status">
+            <strong className="exec-gate-blocking-lead">Blocked — R1 approval {r1State.toLowerCase().replace(/_/g, " ")}</strong>{" "}
             <span>{blockedReason}</span>
           </div>
         ) : null}
-      </header>
-
-      {status === "partial" ? (
-        <div className="exec-gate-banner">
-          {partialReason ?? "Part of this review could not be read. Absence of a finding is not a pass."}
-        </div>
-      ) : null}
-      {status === "stale" ? (
-        <div className="exec-gate-banner">
-          {reason ?? "This review is older than its freshness budget. Refresh before deciding."}
-        </div>
-      ) : null}
-
-      <div className="exec-grid-2">
-      {/* §3: "right: R1 reference panel (decision, digest, expiry)". It was a
-          chip in the meta strip, which carries the decision and nothing else —
-          and the two fields it dropped are the two a reviewer needs to judge
-          how much the R1 is still worth. */}
-      <div className="exec-gate-panel">
-        <div className="exec-tile-title">R1 reference</div>
-        <dl className="exec-gate-passport">
-          <div>
-            <dt>decision</dt>
-            <dd>
-              <span className="exec-gate-value">{r1State.replace(/_/g, " ")}</span>
-              {r1Id ? (
-                r1Href ? (
-                  <>
-                    {" "}
-                    <a href={r1Href}>{r1Id}</a>
-                  </>
+        {status === "partial" ? (
+          <div className="exec-gate-banner" role="status">
+            {partialReason ?? "Part of this review could not be read. Absence of a finding is not a pass."}
+          </div>
+        ) : null}
+        {status === "stale" ? (
+          <div className="exec-gate-banner" role="status">
+            {reason ?? "This review is older than its freshness budget. Refresh before deciding."}
+          </div>
+        ) : null}
+        <ExecutionDecisionStrip
+          metrics={[
+            { label: "Locks", value: String(effectiveLocks.length), tone: effectiveLocks.length ? "bad" : "good" },
+            { label: "Capital breaches", value: String(breaches), tone: breaches ? "bad" : "good" },
+            { label: "Quorum", value: `${quorumMet}/${quorumRequired}` },
+            { label: "Conditions", value: String(conditions?.length ?? 0) },
+          ]}
+        />
+        <ExecutionTabs
+          tabs={[
+            { key: "Capital preview", label: "Capital preview", count: capital.length },
+            { key: "Readiness", label: "Readiness", count: readiness.length },
+            { key: "Observation policy", label: "Observation policy" },
+            { key: "R1 reference", label: "R1 reference" },
+            { key: "Conditions", label: "Conditions", count: conditions?.length ?? 0 },
+          ]}
+          active={tab}
+          onChange={(key) => setTab(key as R2Tab)}
+          label="Gate R2 sections"
+        >
+          {tab === "Capital preview" ? (
+            capital.length > 0 ? (
+              <div className="exec-preview-panel">
+                <div className="exec-preview-head">
+                  <ExecutionSectionTitle>Capital change preview — execution vocabulary</ExecutionSectionTitle>
+                  <StatusChip label="PLAN PREVIEW" tone="warn" />
+                  {capitalEnvelope ? <AuthorityBadge envelope={capitalEnvelope} /> : null}
+                  <span className="exec-role-meta">derived, not applied</span>
+                </div>
+                {capitalEnvelope ? (
+                  <div className="exec-scroll-x">
+                    <table className="exec-gate-capital">
+                      <thead>
+                        <tr>
+                          <th scope="col" />
+                          <th scope="col">currency</th>
+                          <th scope="col">before</th>
+                          <th scope="col">after approval</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {capital.map((row) => (
+                          <tr key={row.label} data-breach={row.breach ? "true" : undefined}>
+                            <th scope="row">
+                              {row.label} {row.breach ? <StatusChip label="BREACH" tone="bad" /> : null}
+                            </th>
+                            <td>{row.currency ?? <span className="exec-gate-unverified">not stated</span>}</td>
+                            <td className="exec-num">{row.before}</td>
+                            <td className="exec-num">
+                              {row.after}
+                              {row.note ? <span className="exec-gate-note"> — {row.note}</span> : null}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 ) : (
-                  <span className="exec-gate-note"> {r1Id}</span>
-                )
-              ) : null}
-              {r1DecidedBy ? (
-                <span className="exec-gate-note">
-                  {" "}
-                  · {r1DecidedBy}
-                  {r1DecidedAt ? ` ${r1DecidedAt}` : ""}
-                </span>
-              ) : null}
-            </dd>
-          </div>
-          <div>
-            <dt>evidence digest</dt>
-            <dd>
-              {r1Digest ? (
-                <span className="exec-gate-value">{r1Digest}</span>
-              ) : (
-                // An R1 whose evidence cannot be identified is an R1 nobody can
-                // re-check, which is most of what a reference is for.
-                <span className="exec-gate-unverified">not published</span>
-              )}
-            </dd>
-          </div>
-          <div>
-            <dt>expiry</dt>
-            <dd>
-              {r1Expiry ? (
-                <span className={r1State === "EXPIRED" ? "exec-gate-unverified" : "exec-gate-value"}>
-                  {r1Expiry}
-                </span>
-              ) : (
-                <span className="exec-gate-unverified">not published</span>
-              )}
-            </dd>
-          </div>
-        </dl>
-      </div>
-
-      {readiness.map((group) => (
-        <div className="exec-gate-panel" key={group.title}>
-          <div className="exec-tile-title">{group.title}</div>
-          <dl className="exec-gate-passport">
-            {group.entries.map((e) => (
-              <div key={e.label}>
-                <dt>{e.label}</dt>
-                <dd>
-                  <span className="exec-gate-value">{e.value}</span>
-                  {/* A config without its revision cannot be audited later. */}
-                  {e.revision ? (
-                    <span className="exec-gate-note"> · {e.revision}</span>
-                  ) : (
-                    <span className="exec-gate-unverified"> · revision not stated</span>
-                  )}
-                </dd>
+                  <PanelState
+                    status="unavailable"
+                    reason={capitalReason ?? "The capital preview arrived without an authority envelope and cannot be shown."}
+                  />
+                )}
+                {capitalEnvelope && capitalBlockers.length > 0 ? (
+                  <div className="exec-gate-blockers">
+                    <ExecutionSectionTitle>Why this preview cannot be decided against</ExecutionSectionTitle>
+                    <ul>
+                      {capitalBlockers.map((blocker) => (
+                        <li key={blocker}>{blocker}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </div>
-            ))}
-          </dl>
-        </div>
-      ))}
-      </div>
-
-      {/* Grid B. The hi-fi gives the dark preview the wider half (1.35fr): it
-          holds a four-row numeric table and the policy panel holds prose. */}
-      <div className="exec-grid-2" data-ratio="1.35">
-      {capital.length > 0 ? (
-        <ExecutionSurface kind="deployments" className="exec-inverted exec-gate-panel">
-          <div className="exec-tile-title">Capital change preview — execution vocabulary</div>
-          {capitalEnvelope ? (
-            <div className="exec-gate-meta">
-              <AuthorityBadge envelope={capitalEnvelope} />
-              <StatusChip label="PLAN PREVIEW" tone="warn" />
-              <span>derived, not applied</span>
+            ) : (
+              <PanelState status="unavailable" reason={capitalReason ?? "No capital preview was published for this request."} />
+            )
+          ) : null}
+          {tab === "Readiness" ? (
+            <div className="exec-grid-2">
+              {readiness.map((group) => (
+                <div className="exec-gate-panel" key={group.title}>
+                  <ExecutionSectionTitle>{group.title}</ExecutionSectionTitle>
+                  <div className="exec-scroll-x">
+                    <table className="exec-360-sync exec-gate-passport-table">
+                      <tbody>
+                        {group.entries.map((e) => (
+                          <tr key={e.label}>
+                            <th scope="row">{e.label}</th>
+                            <td className="exec-num">{e.value}</td>
+                            <td>
+                              {e.revision ? <span className="exec-gate-note">{e.revision}</span> : <span className="exec-gate-unverified">revision not stated</span>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+              {readiness.length === 0 ? <PanelState status="empty" reason="No readiness groups were published." /> : null}
             </div>
-          ) : (
-            // Without an envelope this table is an unattributed claim about
-            // money. It is refused rather than rendered bare.
-            <PanelState
-              status="unavailable"
-              reason={
-                capitalReason ??
-                "The capital preview arrived without an authority envelope and cannot be shown."
-              }
-            />
-          )}
-          {capitalEnvelope ? (
-            <div className="exec-scroll-x">
-              <table className="exec-gate-capital">
-              <thead>
-                <tr>
-                  <th scope="col" />
-                  <th scope="col">currency</th>
-                  <th scope="col">before</th>
-                  <th scope="col">after approval</th>
-                </tr>
-              </thead>
-              <tbody>
-                {capital.map((row) => (
-                  <tr key={row.label} data-breach={row.breach ? "true" : undefined}>
-                    <th scope="row">
-                      {row.label}
-                      {/* A word, not only a red row. Colour alone fails 1.4.1
-                          and fails anyone reading a printout or a screenshot. */}
-                      {row.breach ? <StatusChip label="BREACH" tone="bad" /> : null}
-                    </th>
+          ) : null}
+          {tab === "Observation policy" ? (
+            observationPolicy ? (
+              <div className="exec-gate-panel">{observationPolicy}</div>
+            ) : (
+              <PanelState status="empty" reason="No observation policy was published for this request." />
+            )
+          ) : null}
+          {tab === "R1 reference" ? (
+            <div className="exec-gate-panel">
+              <ExecutionSectionTitle>R1 reference</ExecutionSectionTitle>
+              <table className="exec-360-sync exec-gate-passport-table">
+                <tbody>
+                  <tr>
+                    <th scope="row">decision</th>
                     <td>
-                      {row.currency ?? (
-                        <span className="exec-gate-unverified">not stated</span>
-                      )}
-                    </td>
-                    <td>{row.before}</td>
-                    <td>
-                      {row.after}
-                      {row.note ? <span className="exec-gate-note"> — {row.note}</span> : null}
+                      <StatusChip label={r1Label} tone={R1_TONE[r1State]} />
+                      {r1Href && r1Id ? (
+                        <>
+                          {" "}
+                          <a href={r1Href}>{r1Id}</a>
+                        </>
+                      ) : null}
+                      {r1DecidedBy ? (
+                        <span className="exec-gate-note">
+                          {" "}
+                          · {r1DecidedBy}
+                          {r1DecidedAt ? ` ${r1DecidedAt}` : ""}
+                        </span>
+                      ) : null}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-              </div>
-          ) : null}
-          {capitalEnvelope && capitalBlockers.length > 0 ? (
-            // Directly under the figures, not up with the lock banner. The lock
-            // says a decision is blocked; these say what is wrong with these
-            // numbers, and a reviewer reading the table needs the second
-            // sentence where the table is.
-            <div className="exec-gate-blockers">
-              <div className="exec-tile-title">Why this preview cannot be decided against</div>
-              <ul>
-                {capitalBlockers.map((blocker) => (
-                  <li key={blocker}>{blocker}</li>
-                ))}
-              </ul>
+                  <tr>
+                    <th scope="row">evidence digest</th>
+                    <td className="exec-num">{r1Digest ?? <span className="exec-gate-unverified">not published</span>}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">expiry</th>
+                    <td className="exec-num">
+                      {r1Expiry ? (
+                        <span className={r1State === "EXPIRED" ? "exec-gate-unverified" : undefined}>{r1Expiry}</span>
+                      ) : (
+                        <span className="exec-gate-unverified">not published</span>
+                      )}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           ) : null}
-        </ExecutionSurface>
-      ) : null}
-
-      {observationPolicy ? <div className="exec-gate-panel">{observationPolicy}</div> : null}
-      </div>
-
-      {/* Full width, below both grids — the hi-fi's Decision card. */}
-      <div className="exec-gate-panel">
-        <div className="exec-tile-title">Decision</div>
-        <ConditionList
-          conditions={conditions ?? []}
-          emptyNote="No conditions attached yet."
+          {tab === "Conditions" ? (
+            <div className="exec-gate-panel">
+              <ExecutionSectionTitle>Conditions</ExecutionSectionTitle>
+              <ConditionList conditions={conditions ?? []} emptyNote="No conditions attached yet." />
+              {onAttachCondition ? (
+                <ConditionComposer
+                  draft={draft}
+                  onChange={setDraft}
+                  onAttach={(condition) => {
+                    onAttachCondition(condition);
+                    setDraft(EMPTY_DRAFT);
+                  }}
+                  disabled={conditionLocked}
+                  disabledReason="You cannot attach a condition to this decision."
+                />
+              ) : null}
+            </div>
+          ) : null}
+        </ExecutionTabs>
+        <ExecutionDecisionBar
+          label={`Gate R2 decision ${approvalId}`}
+          verdict={verdict}
+          tone={locked && conditionLocked ? "bad" : "warn"}
+          reasons={reasons}
+          note={onNoteChange ? { value: note ?? "", onChange: onNoteChange, disabled: locked && conditionLocked && denyLocked } : undefined}
+          footnote={
+            <>
+              {grantName ? (
+                <>
+                  Approve grants <strong>{grantName}</strong> only — it does not execute; the Execution cell re-validates everything when the authorization is used.{" "}
+                </>
+              ) : null}
+              {artifactDigest ? <>evidence digest {shortDigest(artifactDigest)} · </> : null}
+              decision is recorded against policy {policyVersion} · conditions are typed objects with owner, deadline and expiry, never free text
+            </>
+          }
+          trail={trail}
+          actions={
+            <>
+              <button type="button" className="exec-role-control exec-btn-ghost" disabled title={REQUEST_CHANGES_REASON}>
+                Request changes
+              </button>
+              <button type="button" className="exec-role-control exec-btn-ghost" disabled={denyLocked} onClick={onDeny}>
+                Deny
+              </button>
+              <button
+                type="button"
+                className="exec-role-control exec-btn-ghost"
+                disabled={conditionLocked || (conditions?.length ?? 0) === 0}
+                title={(conditions?.length ?? 0) === 0 ? "Attach at least one condition first — this decision carries nothing without one" : undefined}
+                onClick={onRequestCondition}
+              >
+                Approve with condition
+              </button>
+              <button type="button" className="exec-role-control exec-btn-apply" disabled={locked} onClick={onApprove}>
+                Approve
+              </button>
+            </>
+          }
         />
-        {/* The hi-fi prints this under the decision card, and the last clause is
-            the screen explaining its own model. It is the sentence that stops
-            the next person asking for a free-text box. */}
-        <div className="exec-gate-footnote">
-          {artifactDigest ? <>evidence digest {artifactDigest} · </> : null}
-          decision is recorded against policy {policyVersion} · conditions are typed objects with
-          owner, deadline and expiry, never free text
-        </div>
-        {onAttachCondition ? (
-          <ConditionComposer
-            draft={draft}
-            onChange={setDraft}
-            onAttach={(condition) => {
-              onAttachCondition(condition);
-              setDraft(EMPTY_DRAFT);
-            }}
-            // A composer for a decision this actor cannot make is a form that
-            // wastes their time, so it follows the condition control exactly.
-            disabled={conditionLocked}
-            disabledReason="You cannot attach a condition to this decision."
-          />
-        ) : null}
-      </div>
-
-      {grantName ? (
-        <div className="exec-gate-grant">
-          Approve grants <strong>{grantName}</strong>. It does not execute — the Execution cell
-          re-validates everything when the authorization is used.
-        </div>
-      ) : null}
-
-      <div className="exec-gate-decision">
-        <button type="button" className="exec-btn-apply" disabled={locked} onClick={onApprove}>
-          Approve
-        </button>
-        {/* Locked by the same rule as Approve, because it grants the same
-            authorization. Gate R1 has always disabled its equivalent; R2 did
-            not, so an expired R1 disabled Approve and left a second door open
-            that produced an identical grant. */}
-        <button
-          type="button"
-          className="exec-btn-ghost"
-          disabled={conditionLocked || (conditions?.length ?? 0) === 0}
-            title={(conditions?.length ?? 0) === 0 ? "Attach at least one condition first — this decision carries nothing without one" : undefined}
-          onClick={onRequestCondition}
-        >
-          Approve with condition
-        </button>
-        <button type="button" className="exec-btn-ghost" disabled={denyLocked} onClick={onDeny}>
-          Deny
-        </button>
-      </div>
-
-      {locked || denyLocked ? (
-        <div className="exec-disabled-reason">
-          {effectiveLocks.map((lock) => LOCK_REASON[lock]).join(" ")}
-          {denyLocks.length ? ` ${denyLocks.map((lock) => DENY_LOCK_REASON[lock]).join(" ")}` : null}
-          {/* Eligibility is not a lock code — it is the server's answer — so it
-              needs its own sentence. Without it a reviewer sees three dead
-              buttons and no reason, which is a support ticket. */}
-          {!serverAllowsApprove && effectiveLocks.length === 0
-            ? " Approve blocked — the server did not grant it for this actor."
-            : null}
-          {!serverAllowsDeny && denyLocks.length === 0
-            ? " Deny blocked — the server did not grant it for this actor."
-            : null}
-        </div>
-      ) : null}
+      </ExecutionWorkspace>
     </section>
   );
 }

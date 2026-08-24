@@ -367,3 +367,64 @@ test.describe("EL-V2-04 · Paper reference slice", () => {
     });
   }
 });
+
+// ── EL-V2-05 · governance decision chain ─────────────────────────────────────
+test.describe("EL-V2-05 · governance chain", () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test("Inbox → R1 → back → Inbox → R2 → R1 reference → back → Exit Review keeps its context", async ({ page }) => {
+    await open(page, "/governance/approvals");
+    await page.getByRole("button", { name: /AP-201/ }).first().click();
+    await expect(page).toHaveURL(/\/governance\/approvals\/AP-201\/r1/);
+    await expect(page.getByRole("region", { name: /Gate R1 decision/ })).toBeVisible();
+    await page.goBack();
+    await expect(page).toHaveURL(/\/governance\/approvals$/);
+    await page.getByRole("button", { name: /AP-352/ }).first().click();
+    await expect(page).toHaveURL(/\/governance\/approvals\/AP-352\/r2/);
+    await page.getByRole("tab", { name: /R1 reference/ }).click();
+    await page.getByRole("link", { name: /^AP-/ }).first().click();
+    await expect(page).toHaveURL(/\/governance\/approvals\/AP-\d+\/r1/);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/governance\/approvals\/AP-352\/r2/);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/governance\/approvals$/);
+    await page.getByRole("button", { name: "Exit reviews" }).click();
+    await expect(page.getByRole("button", { name: "Exit reviews" })).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("button", { name: /EX-771/ }).first().click();
+    await expect(page).toHaveURL(/\/governance\/exit-reviews\/EX-771/);
+    await expect(page.getByRole("region", { name: /Paper exit decision/ })).toBeVisible();
+  });
+
+  for (const [name, route, region] of [
+    ["r1-AP-201", "/governance/approvals/AP-201/r1", /Gate R1 decision/],
+    ["r2-AP-352", "/governance/approvals/AP-352/r2", /Gate R2 decision/],
+    ["exit-EX-771", "/governance/exit-reviews/EX-771", /Paper exit decision/],
+  ] as const) {
+    test(`decision bar stays in the viewport while scrolling · ${name}`, async ({ page }) => {
+      await open(page, route);
+      const bar = page.getByRole("region", { name: region });
+      const inView = async () => {
+        const box = await bar.boundingBox();
+        expect(box).not.toBeNull();
+        expect(box!.y).toBeGreaterThanOrEqual(0);
+        expect(box!.y + box!.height).toBeLessThanOrEqual(900 + 1);
+      };
+      await inView();
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await inView();
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await inView();
+    });
+  }
+
+  for (const [name, route] of [
+    ["inbox", "/governance/approvals"],
+    ["r1-AP-201", "/governance/approvals/AP-201/r1"],
+    ["r2-AP-352", "/governance/approvals/AP-352/r2"],
+  ] as const) {
+    test(`shell-visible baseline · ${name} · 1440×900`, async ({ page }) => {
+      await open(page, route);
+      await expect(page).toHaveScreenshot(`el-v2-05-${name}.png`, { fullPage: true, animations: "disabled" });
+    });
+  }
+});

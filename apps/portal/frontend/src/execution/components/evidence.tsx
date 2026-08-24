@@ -75,6 +75,15 @@ export function SlaCell({ sla }: { sla: Sla }) {
 
   return (
     <span className="exec-sla" data-overdue={overdue}>
+      {/* EL-V2-05: a compact bar carries the ratio; the number stays. Width is
+          the age over its budget, capped at full — an overdue bar is full and
+          red, not longer than its box. */}
+      <span className="exec-sla-bar" aria-hidden="true">
+        <span
+          className="exec-sla-fill"
+          style={{ width: `${Math.min(100, Math.round((sla.ageMinutes / Math.max(1, sla.budgetMinutes)) * 100))}%` }}
+        />
+      </span>
       {format(sla.ageMinutes)} / {format(sla.budgetMinutes)}
       {overdue ? (
         <span className="exec-sla-flag"> · {sla.state ?? "OVERDUE"}</span>

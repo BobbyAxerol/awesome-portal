@@ -75,7 +75,7 @@ type CapitalPreviewState =
   | { preview: CapitalPreview; envelope: AnalyticsEnvelope };
 import { stageRail } from "../components/lifecycle";
 import type { TypedCondition } from "../components/conditions";
-import { ApprovalInbox, type ApprovalRow, type InboxCounts, type InboxFilter } from "./ApprovalInbox";
+import { ApprovalInbox, type ApprovalRow, type InboxCounts, type InboxFilter, type ApprovalGate } from "./ApprovalInbox";
 import { GateR1Review } from "./GateR1Review";
 import { GateR2Review } from "./GateR2Review";
 import { PaperExitReview, type ExitOutcome } from "./PaperExitReview";
@@ -174,7 +174,7 @@ export function ApprovalInboxContainer({
   onOpenRequest,
 }: {
   api: ExecutionApi;
-  onOpenRequest?: (id: string) => void;
+  onOpenRequest?: (id: string, gate: ApprovalGate) => void;
 }) {
   const [filter, setFilter] = useState<InboxFilter>("INBOX");
   /**
@@ -275,6 +275,7 @@ export function ApprovalInboxContainer({
 
   return (
     <ApprovalInbox
+      onCopyProvenance={(full) => void navigator.clipboard?.writeText(full)}
       page={state.value?.page ?? EMPTY_PAGE}
       counts={state.value?.counts ?? null}
       inertCount={state.value?.inertCount ?? null}
@@ -288,7 +289,7 @@ export function ApprovalInboxContainer({
           ? `${state.warnings.length} row ${state.warnings.length === 1 ? "field" : "fields"} could not be read: ${state.warnings.join("; ")}.`
           : undefined
       }
-      onOpenRequest={onOpenRequest ? (id) => onOpenRequest(id) : undefined}
+      onOpenRequest={onOpenRequest ? (id, gate) => onOpenRequest(id, gate) : undefined}
       cursorNotice={cursorReset}
       onDismissCursorNotice={() => setCursorReset(null)}
       onLoadOlder={
@@ -321,6 +322,7 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
   // a condition that never reaches the server is the decision failing to mean
   // the one thing it exists to mean.
   const [conditions, setConditions] = useState<readonly TypedCondition[]>([]);
+  const [note, setNote] = useState("");
   const [decision, dispatch] = useReducer(decisionReducer, undefined, () =>
     initialDecision(newRequestKey()),
   );
@@ -458,6 +460,10 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
   return (
     <>
       <GateR1Review
+        trail={decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : undefined}
+        note={note}
+        onNoteChange={setNote}
+        onCopyProvenance={(full) => void navigator.clipboard?.writeText(full)}
         approvalId={detail?.approvalId ?? approvalId}
         alphaLabel={detail?.alphaLabel ?? approvalId}
         releaseCandidate={detail?.releaseCandidate ?? undefined}
@@ -477,8 +483,8 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
         status={state.status}
         reason={state.reason}
         partialReason={state.warnings.length ? state.warnings.join("; ") : undefined}
-        onApprove={() => void decide("APPROVE", "Evidence reviewed and accepted.")}
-        onDeny={() => void decide("DENY", "Evidence rejected.")}
+        onApprove={() => void decide("APPROVE", note.trim() || "Evidence reviewed and accepted.")}
+        onDeny={() => void decide("DENY", note.trim() || "Evidence rejected.")}
         conditions={conditions}
         onAttachCondition={(condition) => setConditions((prior) => [...prior, condition])}
         onRequestCondition={() => {
@@ -489,10 +495,9 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
           if (!latest) return;
           // Every condition the reviewer composed travels, not just the last
           // one flattened into a sentence. `latest` only gates the click.
-          void decide("APPROVE_WITH_CONDITION", "Approved with a condition.", { conditions });
+          void decide("APPROVE_WITH_CONDITION", note.trim() || "Approved with a condition.", { conditions });
         }}
       />
-      {decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : null}
     </>
   );
 }
@@ -674,6 +679,7 @@ export function GateR2ReviewContainer({
 }) {
   const [state, setState] = useState<LoadState<GateR2Detail>>(loading);
   const [conditions, setConditions] = useState<readonly TypedCondition[]>([]);
+  const [note, setNote] = useState("");
   const [preview, setPreview] = useState<CapitalPreviewState>(null);
   const { decision, decide } = useDecision(api);
 
@@ -745,6 +751,10 @@ export function GateR2ReviewContainer({
   return (
     <>
       <GateR2Review
+        trail={decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : undefined}
+        note={note}
+        onNoteChange={setNote}
+        onCopyProvenance={(full) => void navigator.clipboard?.writeText(full)}
         approvalId={d?.approvalId ?? approvalId}
         subject={d?.subject ?? approvalId}
         r1Id={d?.r1Id ?? null}
@@ -793,17 +803,16 @@ export function GateR2ReviewContainer({
         status={state.status}
         reason={state.reason}
         partialReason={state.warnings.length ? state.warnings.join("; ") : undefined}
-        onApprove={() => run("APPROVE", "Operational readiness accepted.")}
-        onDeny={() => run("DENY", "Operational readiness rejected.")}
+        onApprove={() => run("APPROVE", note.trim() || "Operational readiness accepted.")}
+        onDeny={() => run("DENY", note.trim() || "Operational readiness rejected.")}
         conditions={conditions}
         onAttachCondition={(condition) => setConditions((prior) => [...prior, condition])}
         onRequestCondition={() => {
           const latest = conditions.at(-1);
           if (!latest) return;
-          run("APPROVE_WITH_CONDITION", "Approved with a condition.", conditions);
+          run("APPROVE_WITH_CONDITION", note.trim() || "Approved with a condition.", conditions);
         }}
       />
-      {decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : null}
     </>
   );
 }
@@ -834,6 +843,7 @@ export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi;
     <>
       <PaperExitReview
         onCopyProvenance={(full) => void navigator.clipboard?.writeText(full)}
+        trail={decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : undefined}
         eligibility={d?.eligibility}
         reviewId={d?.reviewId ?? reviewId}
         deploymentId={d?.deploymentId ?? "unknown"}
@@ -873,7 +883,6 @@ export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi;
           void decide(reviewId, outcome, `Exit review decision: ${outcome}.`, d?.expectedVersion ?? null)
         }
       />
-      {decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : null}
     </>
   );
 }

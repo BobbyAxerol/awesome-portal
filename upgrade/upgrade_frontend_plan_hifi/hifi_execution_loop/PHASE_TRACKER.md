@@ -22,7 +22,7 @@ Kế hoạch chi tiết từng phase: các khối **Claude supplement** trong ch
 | EL-V2-02 | Typography ngữ nghĩa + primitive workspace | **hoàn tất 2026-08-24, chờ Bobby duyệt gate** | 2 font (Inter+JetBrains, Plex claim gỡ) ✓ · thang §5.2 khoá bằng test đọc stylesheet + probe render 5 khổ ✓ · 7 primitive có fixture+test ✓ · **0 clip** mọi khổ (kể cả 390, allowance cũ bỏ) ✓ · sparse không phóng chữ ✓ | `typeRoles.test.ts` + `workspace.test.tsx` (25 test); `execution.css` 151+201 literal → 0; audit 5 khổ; QuantBT 101 không sinh lại; fixtures 82 ảnh sinh lại (thay đổi chữ mandated) + rerun byte-identical; reuse report cuối file |
 | EL-V2-03 | Preview có state, zero no-op | **hoàn tất 2026-08-24, chờ Bobby duyệt gate** | handler bắt buộc trong type ✓ · 6/6 journey §8.2 ✓ · sweep cô lập 17 route: **183 control → 95 đổi state · 80 điều hướng · 8 đã chọn · 0 NO-OP** ✓ · screenId → inspector ✓ | `previewControllers.tsx` (5 controller + ledger role=status), `testHandlers.ts`, `execution-journeys.spec.ts`, `e2e/el-v2-03-evidence/controls.json`; 2 NO-OP thật tìm thấy và sửa (Approve-with-condition không có điều kiện; hop Queue→Incident thiếu contract → BR-EX-33) |
 | EL-V2-04 | Paper + Paper Exit lát cắt dọc chuẩn | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | layout proposal px ✓ · EquityChart thật (ECharts) ✓ — product route = honest state vì chưa có series (BR-EX-34) · Paper + Exit trên 7 primitive ✓ · fold 1440×900 ✓ · journey exit ✓ · ma trận 15+1 ✓ · chữ: −14…−25% từ (policy prose 5→2), **không đạt 50%** — báo thật | `EquityChart.tsx`, `equity.fixtures.ts`, `PaperWorkbench.tsx`, `PaperExitReview.tsx`, `paperMatrix.test.tsx`, `equityChart.test.tsx`, `PAPER_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-04-*.png`; close-out trong handoff |
-| EL-V2-05 | Chuỗi Governance | `QUEUED` | mọi capability có disposition; zero write bịa | — |
+| EL-V2-05 | Governance decision chain | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | sticky decision bar ✓ (R1/R2/Exit) · Inbox SLA bar + strip + rail ✓ · R1 5 tab (limitations bảng, evidence honest) ✓ · R2 PLAN PREVIEW 1 chip + elevation ✓ · role matrix 4×2 ✓ · zero-write test ✓ · journey Inbox→R1→R2→Exit ✓ · BR-EX-35/36/37 | `decisionBar.tsx`, `ApprovalInbox.tsx`, `GateR1Review.tsx`, `GateR2Review.tsx`, `PaperExitReview.tsx`, `evidence.tsx`, `governanceChain.test.tsx`, `GOVERNANCE_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-05-*.png`; close-out trong handoff |
 | EL-V2-06 | Workbench VNM→Sandbox→Canary→Live | `QUEUED` | ledger stage đóng; anatomy chung, safety khác biệt giữ | — |
 | EL-V2-07 | Ops + Incident + Command + Terminal | `QUEUED` | read path đủ; terminal thật; không vượt plan/apply/verify | — |
 | EL-V2-08 | 360° + Blotter analytical | `QUEUED` | ledger analytical đóng; zero recompute; budget đạt | — |
@@ -2096,12 +2096,12 @@ nav trỏ 404.
 |---|---|---|---|---|---|
 | Filter Mine(n)/All/Research·R1/Ops·R2/Exit/Live/Overdue | N | chip đủ (INBOX/ALL/R1/R2/Paper/Sandbox/Live/Exit/Overdue render — kiểm bằng before-shot); Mine disabled (BR-EX-32) | impl | C | sửa 2026-08-24: dòng đầu ghi 'chưa' là tôi nhớ sai — ảnh seam-inbox chứng minh ngược; server-side view coverage kiểm lại ở V2-05 |
 | Bảng: request·gate·subject·target·blockers·age/SLA·quorum | N | có đủ cột, blockers named | impl | C | |
-| SLA aging + OVERDUE nổi bật | N | rowEmphasis + border | impl | C | V2-05 thêm thanh SLA compact |
+| SLA aging + OVERDUE nổi bật | N | rowEmphasis + border + **thanh SLA compact + số** | impl | C | V2-05 ✓ |
 | SoD: dòng không quyết được → dim, không ẩn | N | có (`inert`, dimmed + tooltip) | impl | C | |
 | Blocked-before-review (AP-360 audit replay failed) | N | có (blockers red) | impl | C | |
 | Row → gate review screen | N | onOpenRequest có; route thật ở preview | impl | C+R | context giữ — test V2-03 |
 | Inbox zero ≠ filtered empty | T | có, câu tách hai nghĩa | impl | C | |
-| Recently decided + full history → | N | `decided` list có; full history route **chưa** | impr+BE | C | history phân trang cần endpoint |
+| Recently decided + full history → | N | tab Recently decided; *Full history* disabled + lý do | dis+BE | C | BR-EX-35 |
 | Footer: policy version + sort rule + visibility≠authority | T | có | impl | C | giữ đúng chữ — T hợp lệ (guide) |
 
 ### L2 · HiFi Gate R1 Review (WF 1a)
@@ -2111,11 +2111,11 @@ nav trỏ 404.
 | Artifact passport 8 dòng immutable | N | có (passport panel) | impl | C | digest rút gọn + copy → V2-02 provenance |
 | SoD OK **và** VIOLATION (self-approval blocked banner) | N | cả hai biến thể có fixture | impl | C | |
 | Decision checklist ✓/! + blocking count | N | có | impl | C | |
-| Evidence equity IS/OOS/holdout, window roles, no smoothing | C | **khung trống** | MISS | — | V2-04 cơ chế chart → V2-05 áp; dữ liệu fixture có |
-| WFO stability per-fold + threshold + fold min | C | **khung trống** | MISS | — | như trên |
-| Known limitations & restrictions & waiver | T→D | có, đang dạng đoạn | impr | C | V2-05: bảng + disclosure |
+| Evidence equity IS/OOS/holdout, window roles, no smoothing | C | trạng thái honest "not published" (không khung trống); cơ chế chart có (`EquityChart`) | dis+BE | C | BR-EX-34 §R1 — series chưa publish |
+| WFO stability per-fold + threshold + fold min | C | trạng thái honest cùng panel Evidence | dis+BE | C | BR-EX-34 §R1 |
+| Known limitations & restrictions & waiver | T→D | **bảng 4 loại + expiry** (fixture); route product "not published" | impl+BE | C | BR-EX-37 |
 | Structured condition (typed, owner/expiry/blocking) | N | conditionWire 5 trường | impl | C | |
-| Request changes | N | **verb chưa có backend** | dis+BE | C | disabled + lý do đúng chữ (đã treo từ trước, Bobby biết) |
+| Request changes | N | **verb chưa có backend** | dis+BE | C | disabled + title trỏ BR-EX-36 |
 | Reject / Approve / Approve-with-conditions + quorum 1/2 | N | có, CSRF + immutable | impl | C | |
 | Evidence digest + decision immutable | N | có | impl | C | |
 
@@ -2127,7 +2127,7 @@ nav trỏ 404.
 | Biến thể **R1 expired ⇒ Approve disabled** | N | có (blocked banner + disabled) | impl | C | |
 | Portfolio fit (est. từ research) | N | có | impl | C | ghi rõ "research est." — giữ |
 | Account & risk plan (4 rev rows) | N | có | impl | C | |
-| Capital change preview before/after mono | N | có (bảng delta) | impl | C | V2-05: nhãn PREVIEW + elevation, không đổi theme |
+| Capital change preview before/after mono | N | bảng delta + **1 chip PLAN PREVIEW + elevation** | impl | C | V2-05 ✓ — không còn inverted surface |
 | Observation policy + no auto-promote | T | có | impl | C | |
 | approve = grants authorization only | T | có đúng chữ | impl | C | T hợp lệ — đây là câu ngăn hiểu lầm nguy hiểm |
 | Request changes / conditions / quorum | N | như R1 | dis+BE / impl | C | |

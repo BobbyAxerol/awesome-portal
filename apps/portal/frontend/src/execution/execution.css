@@ -4386,3 +4386,41 @@
   .exec-masthead-actions { justify-content: flex-start; }
   .exec-page-title { overflow-wrap: anywhere; }
 }
+
+/* ── EL-V2-05 · governance chain ─────────────────────────────────────── */
+.exec-decision-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--accent);
+  /* Elevation by border, not shadow: the token gate allows no colour literal here. */
+  border-top: 3px solid var(--line-strong);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.exec-decision-bar[data-tone="bad"] { border-left-color: var(--bad); }
+.exec-decision-bar[data-tone="good"] { border-left-color: var(--good); }
+.exec-decision-bar-row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.exec-decision-bar-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-left: auto; }
+.exec-decision-note-field { display: flex; flex-direction: column; gap: 2px; flex: 1 1 240px; min-width: 0; }
+.exec-decision-note-field input { width: 100%; background: var(--surface-3); color: var(--ink); border: 1px solid var(--line); padding: 4px 8px; }
+.exec-decision-bar-reasons { color: var(--ink-soft); margin: 0; }
+.exec-decision-bar-reasons details { display: inline-block; margin-left: var(--space-2); }
+.exec-decision-bar-reasons ul { margin: 4px 0 0; padding-left: 18px; }
+.exec-decision-bar-foot { color: var(--ink-mute); }
+.exec-sla { display: inline-flex; align-items: center; gap: 6px; }
+.exec-sla-bar { display: inline-block; width: 48px; height: 6px; background: var(--surface-4, var(--line-soft)); border: 1px solid var(--line); overflow: hidden; }
+.exec-sla-fill { display: block; height: 100%; background: var(--good); }
+.exec-sla[data-overdue="true"] .exec-sla-fill { background: var(--bad); }
+.exec-sla-flag[data-tone="warn"] { color: var(--warn); }
+.exec-preview-panel { border: 2px solid var(--accent); outline: 4px solid var(--surface-3); outline-offset: 0; padding: var(--space-3); }
+.exec-preview-panel .exec-chart-head, .exec-preview-head { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.exec-gate-passport-table td.exec-num { white-space: nowrap; }
+@media (max-width: 640px) {
+  .exec-decision-bar-actions { margin-left: 0; width: 100%; }
+}

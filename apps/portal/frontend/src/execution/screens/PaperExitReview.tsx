@@ -28,6 +28,7 @@ import { LifecycleRail, type RailStep } from "../components/lifecycle";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 import { useState } from "react";
+import { ExecutionDecisionBar } from "../components/decisionBar";
 import { ExecutionSectionTitle } from "../components/typography";
 import {
   ExecutionContextRail,
@@ -160,6 +161,7 @@ export function PaperExitReview({
   decided,
   onDecide,
   onCopyProvenance,
+  trail,
 }: {
   reviewId: ApprovalId;
   deploymentId: DeploymentId;
@@ -210,6 +212,8 @@ export function PaperExitReview({
   onDecide?: (outcome: ExitOutcome) => void;
   /** provenance drawer Copy — simulated control, through the ledger */
   onCopyProvenance: (full: string) => void;
+  /** DecisionTrail from the container while a decision is in flight. */
+  trail?: ReactNode;
 }) {
   const [tab, setTab] = useState<ExitTab>("evidence");
   if (status !== "ok" && status !== "partial" && status !== "stale") {
@@ -345,16 +349,10 @@ export function PaperExitReview({
             {recommendation ? (
               <div className="exec-exit-recommendation">Recommended next action: {recommendation}</div>
             ) : null}
-            {!decided && decisionReasons.length ? (
-              <div className="exec-disabled-reason">
-                {decisionReasons.map((r) => (
-                  <div key={r}>{r}</div>
-                ))}
-              </div>
-            ) : null}
+
           </>
         ),
-        action: decision,
+        action: decided ? decision : undefined,
       }}
       blockers={blockers}
       freshness={
@@ -467,6 +465,15 @@ export function PaperExitReview({
             </div>
           ) : null}
         </ExecutionTabs>
+        <ExecutionDecisionBar
+          label={`Paper exit decision ${reviewId}`}
+          verdict={decided ? EXIT_OUTCOME[decided.outcome].label : promoteBlocked && extendBlocked && rejectBlocked ? "BLOCKED" : promoteBlocked ? "PROMOTE BLOCKED" : "READY"}
+          tone={decided ? "good" : promoteBlocked && extendBlocked && rejectBlocked ? "bad" : promoteBlocked ? "warn" : "good"}
+          reasons={decided ? [] : decisionReasons}
+          footnote={<>promote → {promoteTo} · {EXIT_OUTCOME.EXTEND_OBSERVATION.label} · reject → PAPER_HELD · decision writes an immutable record</>}
+          trail={trail}
+          actions={decided ? null : decision}
+        />
       </ExecutionWorkspace>
     </section>
   );

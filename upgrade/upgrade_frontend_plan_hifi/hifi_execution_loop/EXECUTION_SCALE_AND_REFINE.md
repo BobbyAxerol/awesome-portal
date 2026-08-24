@@ -962,3 +962,24 @@ bật chip, không phải hỏng.
   chỉ có thể hiện trạng thái honest; cơ chế chart đã dựng và test trên fixtures.
 - **Ảnh hưởng hiện tại:** Paper/Canary/Live/Alpha render "Equity series not published (BR-EX-34)".
 - **Đề xuất schema:** như trên; gap là gap (không nội suy); band từ run đã duyệt; số là chuỗi decimal.
+
+### BR-EX-35 — approval history endpoint (2026-08-24, EL-V2-05)
+
+- **Endpoint cần:** `GET /approvals/history?cursor&limit&gate&subject` — keyset page của quyết định đã
+  chốt (id, gate, subject, outcome, decided_by, decided_at, policy_version, evidence_digest).
+- **Lý do UI:** HiFi Inbox "Recently decided → full history"; hiện Inbox chỉ có `decided` cửa sổ 30 ngày.
+- **Ảnh hưởng:** nút *Full history* disabled + lý do đúng chữ.
+
+### BR-EX-36 — decision verb `REQUEST_CHANGES` (2026-08-24, EL-V2-05)
+
+- **Verb cần:** `planDecision.decision = "REQUEST_CHANGES"` + `reason` + `conditions[]` (yêu cầu sửa
+  cụ thể), trả về approval ở trạng thái `CHANGES_REQUESTED`, không đóng gate.
+- **Lý do UI:** HiFi R1/R2 có nút *Request changes*; không publish verb ⇒ Portal không bịa write.
+- **Ảnh hưởng:** nút disabled với lý do trỏ BR này trên R1, R2 (và Exit không có nút này theo HiFi).
+
+### BR-EX-37 — R1 detail: `known_limitations[]` có kiểu (2026-08-24, EL-V2-05)
+
+- **Field cần:** `known_limitations[{kind: lineage|warning|restriction|waiver, label, statement, expires_at?}]`
+  trong R1 detail (đi cùng passport/checklist).
+- **Lý do UI:** HiFi 1a "Selection & Known Limitations" — bảng 4 loại có expiry; hiện chỉ fixture có,
+  route product hiện "not published" (không bịa).

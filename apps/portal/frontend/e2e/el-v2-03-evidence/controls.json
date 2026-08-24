@@ -188,62 +188,160 @@
   "verdict": "changed"
  },
  {
+  "route": "/governance/approvals",
+  "index": 9,
+  "tag": "BUTTON",
+  "text": "Pending 5",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/governance/approvals",
+  "index": 10,
+  "tag": "BUTTON",
+  "text": "Recently decided · last 30 days 2",
+  "verdict": "changed"
+ },
+ {
+  "route": "/governance/approvals",
+  "index": 11,
+  "tag": "BUTTON",
+  "text": "Open AP-352",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-352/r2"
+ },
+ {
   "route": "/governance/approvals/AP-201/r1",
   "index": 0,
-  "tag": "INPUT",
-  "text": "",
-  "verdict": "changed"
+  "tag": "BUTTON",
+  "text": "Checklist 6",
+  "verdict": "skipped:selected"
  },
  {
   "route": "/governance/approvals/AP-201/r1",
   "index": 1,
+  "tag": "BUTTON",
+  "text": "Passport 6",
+  "verdict": "changed"
+ },
+ {
+  "route": "/governance/approvals/AP-201/r1",
+  "index": 2,
+  "tag": "BUTTON",
+  "text": "Evidence",
+  "verdict": "changed"
+ },
+ {
+  "route": "/governance/approvals/AP-201/r1",
+  "index": 3,
+  "tag": "BUTTON",
+  "text": "Limitations",
+  "verdict": "changed"
+ },
+ {
+  "route": "/governance/approvals/AP-201/r1",
+  "index": 4,
+  "tag": "BUTTON",
+  "text": "Conditions 0",
+  "verdict": "changed"
+ },
+ {
+  "route": "/governance/approvals/AP-201/r1",
+  "index": 5,
+  "tag": "BUTTON",
+  "text": "Deny",
+  "verdict": "changed"
+ },
+ {
+  "route": "/governance/approvals/AP-201/r1",
+  "index": 6,
   "tag": "BUTTON",
   "text": "Approve",
   "verdict": "changed"
  },
  {
   "route": "/governance/approvals/AP-201/r1",
-  "index": 2,
+  "index": 7,
   "tag": "BUTTON",
-  "text": "Deny",
-  "verdict": "changed"
+  "text": "Copy full artifact digest",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/governance/approvals/AP-352/r2",
   "index": 0,
   "tag": "A",
-  "text": "R1 APPROVED · AP-101",
+  "text": "open AP-101",
   "verdict": "navigated",
   "detail": "/governance/approvals/AP-101/r1"
  },
  {
   "route": "/governance/approvals/AP-352/r2",
   "index": 1,
-  "tag": "A",
-  "text": "AP-101",
-  "verdict": "navigated",
-  "detail": "/governance/approvals/AP-101/r1"
+  "tag": "BUTTON",
+  "text": "Capital preview 5",
+  "verdict": "skipped:selected"
  },
  {
   "route": "/governance/approvals/AP-352/r2",
   "index": 2,
-  "tag": "INPUT",
-  "text": "",
+  "tag": "BUTTON",
+  "text": "Readiness 1",
   "verdict": "changed"
  },
  {
   "route": "/governance/approvals/AP-352/r2",
   "index": 3,
   "tag": "BUTTON",
-  "text": "Approve",
+  "text": "Observation policy",
   "verdict": "changed"
  },
  {
   "route": "/governance/approvals/AP-352/r2",
   "index": 4,
   "tag": "BUTTON",
+  "text": "R1 reference",
+  "verdict": "changed"
+ },
+ {
+  "route": "/governance/approvals/AP-352/r2",
+  "index": 5,
+  "tag": "BUTTON",
+  "text": "Conditions 0",
+  "verdict": "changed"
+ },
+ {
+  "route": "/governance/approvals/AP-352/r2",
+  "index": 6,
+  "tag": "BUTTON",
   "text": "Deny",
   "verdict": "changed"
+ },
+ {
+  "route": "/governance/approvals/AP-352/r2",
+  "index": 7,
+  "tag": "BUTTON",
+  "text": "Approve",
+  "verdict": "changed"
+ },
+ {
+  "route": "/governance/approvals/AP-352/r2",
+  "index": 8,
+  "tag": "BUTTON",
+  "text": "Copy full artifact",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/governance/approvals/AP-352/r2",
+  "index": 9,
+  "tag": "A",
+  "text": "AP-101",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/governance/approvals/AP-352/r2",
+  "index": 10,
+  "tag": "BUTTON",
+  "text": "Copy full R1 evidence digest",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/governance/exit-reviews/EX-771",

@@ -1738,7 +1738,7 @@ describe("Approval Inbox", () => {
     // Hiding it would make the queue lie about its own size and leave a request
     // stuck with nobody seeing it.
     render(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={inboxPage([inboxRow({ inert: "SELF", needsYou: false })])}
         counts={{ pending: 5, overdue: 1, dueSoon: 1 }}
         filter="INBOX"
@@ -1750,7 +1750,7 @@ describe("Approval Inbox", () => {
 
   it("distinguishes the three reasons a row is inert", () => {
     const { rerender } = render(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={inboxPage([inboxRow({ inert: "QUORUM" })])}
         counts={{ pending: 5, overdue: 0, dueSoon: 0 }}
         filter="INBOX"
@@ -1758,7 +1758,7 @@ describe("Approval Inbox", () => {
     );
     expect(screen.getByText(/awaiting another approver/)).toBeTruthy();
     rerender(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={inboxPage([inboxRow({ inert: "BLOCKED" })])}
         counts={{ pending: 5, overdue: 0, dueSoon: 0 }}
         filter="INBOX"
@@ -1769,7 +1769,7 @@ describe("Approval Inbox", () => {
 
   it("counts the whole queue, not the loaded page", () => {
     const { container } = render(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={inboxPage([inboxRow()])}
         counts={{ pending: 5, overdue: 1, dueSoon: 1 }}
         filter="INBOX"
@@ -1784,7 +1784,7 @@ describe("Approval Inbox", () => {
 
   it("says inbox zero rather than showing a blank table", () => {
     const { container } = render(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={inboxPage([])}
         counts={{ pending: 0, overdue: 0, dueSoon: 0 }}
         filter="INBOX"
@@ -1797,7 +1797,7 @@ describe("Approval Inbox", () => {
   it("keeps decided requests out of the pending table", () => {
     // A decided request in the pending list is an action item that is not one.
     render(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={inboxPage([inboxRow()])}
         decided={inboxPage([inboxRow({ id: "AP-201", inert: null, needsYou: false })])}
         counts={{ pending: 5, overdue: 0, dueSoon: 0 }}
@@ -1805,12 +1805,16 @@ describe("Approval Inbox", () => {
       />,
     );
     expect(screen.getByRole("table", { name: "Pending approvals" })).toBeTruthy();
+    // EL-V2-05: decided requests live on their own tab, never in the pending table.
+    expect(screen.queryByRole("table", { name: "Recently decided" })).toBeNull();
+    fireEvent.click(screen.getByRole("tab", { name: /Recently decided/ }));
     expect(screen.getByRole("table", { name: "Recently decided" })).toBeTruthy();
+    expect(screen.queryByRole("table", { name: "Pending approvals" })).toBeNull();
   });
 
   it("names the policy and the actor's roles so a blocked Approve is explicable", () => {
     render(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={inboxPage([inboxRow()])}
         counts={{ pending: 1, overdue: 0, dueSoon: 0 }}
         filter="INBOX"
@@ -1824,7 +1828,7 @@ describe("Approval Inbox", () => {
 
   it("offers the hi-fi's filters and marks the active one", () => {
     render(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={inboxPage([inboxRow()])}
         counts={{ pending: 1, overdue: 0, dueSoon: 0 }}
         filter="OVERDUE"
@@ -1840,7 +1844,7 @@ describe("Approval Inbox", () => {
 
   it("states a cleared blocker rather than leaving the cell blank", () => {
     render(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={inboxPage([inboxRow({ blockerCount: 0, blockerSummary: "observation gate met" })])}
         counts={{ pending: 1, overdue: 0, dueSoon: 0 }}
         filter="INBOX"
@@ -1886,7 +1890,7 @@ function gate(over: Record<string, unknown> = {}) {
   const creator = (over.creator as string) ?? "Minh";
   const actor = (over.actor as string) ?? "Lan";
   return (
-    <GateR1Review onRequestCondition={() => undefined}
+    <GateR1Review onCopyProvenance={vi.fn()} onRequestCondition={() => undefined}
       approvalId="AP-201"
       alphaLabel="RSI v1.7"
       releaseCandidate="RC-41"
@@ -1963,20 +1967,24 @@ describe("Gate R1 Review", () => {
 
   it("reports every lock, not only the first", () => {
     render(gate({ actor: "Minh", locks: ["EXPIRED"] }));
-    const reason = screen.getByText(/self-approval prohibited/);
-    expect(reason.textContent).toContain("expired");
+    // EL-V2-05: one sentence per lock in the decision bar (first inline, the
+    // rest behind "n more reasons") — every lock is still printed.
+    expect(screen.getByText(/self-approval prohibited/)).toBeTruthy();
+    expect(screen.getByText(/This request expired/)).toBeTruthy();
   });
 
   it("counts blocking findings separately from warnings", () => {
     // A warning counted as a blocker stops a legitimate approval; a blocker
     // counted as a warning waves a real one through.
     render(gate());
-    expect(screen.getByText(/blocking items:/).textContent).toContain("0");
-    expect(screen.getByText(/warnings:/).textContent).toContain("1");
+    // EL-V2-05: the tally is the decision strip.
+    expect(screen.getByText("Blocking items").parentElement?.textContent).toContain("0");
+    expect(screen.getByText("Warnings").parentElement?.textContent).toContain("1");
   });
 
   it("states a passport claim nobody verified rather than leaving it blank", () => {
     render(gate());
+    fireEvent.click(screen.getByRole("tab", { name: /Passport/ }));
     expect(screen.getByText("not verified")).toBeTruthy();
     expect(screen.getByText("✓ verified")).toBeTruthy();
   });
@@ -1996,7 +2004,7 @@ describe("Approval Inbox — the full state set", () => {
     // the server answered tells an operator their queue is clear when nobody
     // knows yet (rule §3.3).
     const { container } = render(
-      <ApprovalInbox page={inboxPage([])} counts={null} filter="INBOX" status="loading" />,
+      <ApprovalInbox onCopyProvenance={vi.fn()} page={inboxPage([])} counts={null} filter="INBOX" status="loading" />,
     );
     expect(container.querySelector(".exec-inbox-counts")?.textContent).toBe("counting…");
     expect(container.querySelector(".exec-inbox-counts")?.textContent).not.toContain("0");
@@ -2004,16 +2012,16 @@ describe("Approval Inbox — the full state set", () => {
 
   it("distinguishes a withheld count from an unreadable one", () => {
     const { container, rerender } = render(
-      <ApprovalInbox page={inboxPage([])} counts={null} filter="INBOX" status="denied" />,
+      <ApprovalInbox onCopyProvenance={vi.fn()} page={inboxPage([])} counts={null} filter="INBOX" status="denied" />,
     );
     expect(container.querySelector(".exec-inbox-counts")?.textContent).toBe("queue size withheld");
-    rerender(<ApprovalInbox page={inboxPage([])} counts={null} filter="INBOX" status="unavailable" />);
+    rerender(<ApprovalInbox onCopyProvenance={vi.fn()} page={inboxPage([])} counts={null} filter="INBOX" status="unavailable" />);
     expect(container.querySelector(".exec-inbox-counts")?.textContent).toBe("queue size unavailable");
   });
 
   it("renders a skeleton while loading, not an empty queue", () => {
     const { container } = render(
-      <ApprovalInbox page={inboxPage([])} counts={null} filter="INBOX" status="loading" />,
+      <ApprovalInbox onCopyProvenance={vi.fn()} page={inboxPage([])} counts={null} filter="INBOX" status="loading" />,
     );
     // The skeleton is deliberately not an `.exec-state` box — it is aria-hidden
     // scaffolding with one spoken announcement beside it.
@@ -2025,7 +2033,7 @@ describe("Approval Inbox — the full state set", () => {
     // Blanking the screen because one linked fact timed out withholds work that
     // can be done.
     render(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={inboxPage([inboxRow()])}
         counts={counts}
         filter="INBOX"
@@ -2039,20 +2047,20 @@ describe("Approval Inbox — the full state set", () => {
 
   it("warns rather than blanks when the queue is stale", () => {
     render(
-      <ApprovalInbox page={inboxPage([inboxRow()])} counts={counts} filter="INBOX" status="stale" />,
+      <ApprovalInbox onCopyProvenance={vi.fn()} page={inboxPage([inboxRow()])} counts={counts} filter="INBOX" status="stale" />,
     );
     expect(screen.getByText("AP-352")).toBeTruthy();
     expect(screen.getByText(/older than its freshness budget/)).toBeTruthy();
   });
 
   it("makes the filters inert when a query is already known to fail", () => {
-    render(<ApprovalInbox page={inboxPage([])} counts={null} filter="INBOX" status="denied" />);
+    render(<ApprovalInbox onCopyProvenance={vi.fn()} page={inboxPage([])} counts={null} filter="INBOX" status="denied" />);
     expect(screen.getByRole("button", { name: "Overdue" })).toHaveProperty("disabled", true);
   });
 
   it("leaves the filters usable on a partial read", () => {
     render(
-      <ApprovalInbox page={inboxPage([inboxRow()])} counts={counts} filter="INBOX" status="partial" />,
+      <ApprovalInbox onCopyProvenance={vi.fn()} page={inboxPage([inboxRow()])} counts={counts} filter="INBOX" status="partial" />,
     );
     expect(screen.getByRole("button", { name: "Overdue" })).toHaveProperty("disabled", false);
   });
@@ -2061,7 +2069,7 @@ describe("Approval Inbox — the full state set", () => {
 describe("Gate R1 — the full state set", () => {
   it("still renders the review when part of it could not be read", () => {
     render(gate({ status: "partial", partialReason: "The equity evidence chart timed out." }));
-    expect(screen.getByText(/Artifact passport/)).toBeTruthy();
+    expect(screen.getByText(/Decision checklist/)).toBeTruthy();
     expect(screen.getByText("The equity evidence chart timed out.")).toBeTruthy();
     // And the decision is still reachable: a reviewer can read a passport whose
     // evidence chart failed to load.
@@ -2139,7 +2147,7 @@ const CAP_ENVELOPE: Envelope = {
 
 function r2(over: Record<string, unknown> = {}) {
   return (
-    <GateR2Review onRequestCondition={() => undefined}
+    <GateR2Review onCopyProvenance={vi.fn()} onRequestCondition={() => undefined}
       approvalId="AP-207"
       subject="Carry v3.2 → PF-MAIN · Paper · BINANCE"
       r1Id="AP-201"
@@ -2254,6 +2262,7 @@ describe("Gate R2 Review", () => {
   it("says a config revision is missing rather than leaving it blank", () => {
     // A config without its revision cannot be audited after the fact.
     render(r2());
+    fireEvent.click(screen.getByRole("tab", { name: /Readiness/ }));
     expect(screen.getByText(/revision not stated/)).toBeTruthy();
   });
 
@@ -3025,7 +3034,7 @@ describe("containers — the port meets the screens", () => {
 
   it("loads a gate review through the port", async () => {
     render(<GateR1ReviewContainer api={createFixtureApi()} approvalId="AP-201" />);
-    expect(await screen.findByText(/Artifact passport/)).toBeTruthy();
+    expect(await screen.findByText(/Decision checklist/)).toBeTruthy();
     expect(screen.getByText(/creator \(Minh\) ≠ you \(Lan\)/)).toBeTruthy();
   });
 
@@ -3205,14 +3214,14 @@ describe("Approval Inbox — row treatments copied from the hi-fi", () => {
   it("marks an overdue row with a border as well as a tint", () => {
     // A tint alone would put an SLA breach behind one hue.
     const { container } = render(
-      <ApprovalInbox page={inboxPage([inboxRow()])} counts={counts} filter="INBOX" />,
+      <ApprovalInbox onCopyProvenance={vi.fn()} page={inboxPage([inboxRow()])} counts={counts} filter="INBOX" />,
     );
     expect(container.querySelector('tbody tr[data-emphasis="overdue"]')).not.toBeNull();
   });
 
   it("marks an inert row dimmed and never as overdue", () => {
     const { container } = render(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={inboxPage([inboxRow({ inert: "SELF", sla: { ageMinutes: 60, budgetMinutes: 1440 } })])}
         counts={counts}
         filter="INBOX"
@@ -3223,11 +3232,11 @@ describe("Approval Inbox — row treatments copied from the hi-fi", () => {
 
   it("renders blockers red only when there are any", () => {
     const { container, rerender } = render(
-      <ApprovalInbox page={inboxPage([inboxRow({ blockerCount: 2 })])} counts={counts} filter="INBOX" />,
+      <ApprovalInbox onCopyProvenance={vi.fn()} page={inboxPage([inboxRow({ blockerCount: 2 })])} counts={counts} filter="INBOX" />,
     );
     expect(container.querySelector('[data-blocking="true"]')).not.toBeNull();
     rerender(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={inboxPage([inboxRow({ blockerCount: 0, blockerSummary: "observation gate met" })])}
         counts={counts}
         filter="INBOX"
@@ -3238,7 +3247,7 @@ describe("Approval Inbox — row treatments copied from the hi-fi", () => {
 
   it("states an unpublished blocker count instead of showing zero", () => {
     render(
-      <ApprovalInbox page={inboxPage([inboxRow({ blockerCount: -1 })])} counts={counts} filter="INBOX" />,
+      <ApprovalInbox onCopyProvenance={vi.fn()} page={inboxPage([inboxRow({ blockerCount: -1 })])} counts={counts} filter="INBOX" />,
     );
     expect(screen.getByText(/blocker count not published/)).toBeTruthy();
   });
@@ -3248,7 +3257,7 @@ describe("Approval Inbox — the footer strip explains the dimmed rows", () => {
   it("prints visibility ≠ authority", () => {
     // Without this sentence the dimming reads as a rendering bug.
     render(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={inboxPage([inboxRow()])}
         counts={{ pending: 5, overdue: 1, dueSoon: 1 }}
         filter="INBOX"
@@ -3263,7 +3272,7 @@ describe("Approval Inbox — the footer strip explains the dimmed rows", () => {
     // separation-of-duty rows, which is the one filtering bug this screen must
     // not be able to hide.
     render(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={inboxPage([inboxRow()])}
         counts={{ pending: 5, overdue: 1, dueSoon: 0 }}
         inertCount={2}
@@ -3277,7 +3286,7 @@ describe("Approval Inbox — the footer strip explains the dimmed rows", () => {
     // Decided history is unbounded; a list with no window silently claims to be
     // all of it.
     render(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={inboxPage([inboxRow()])}
         decided={inboxPage([inboxRow({ id: "AP-201" })])}
         counts={{ pending: 1, overdue: 0, dueSoon: 0 }}
@@ -3295,7 +3304,7 @@ describe("Approval Inbox — the pending queue is never virtualized", () => {
     // A work queue past 200 rows is an operational problem, not a rendering
     // one. Paginating it away hides exactly the thing somebody must act on.
     const { container } = render(
-      <ApprovalInbox page={inboxPage(many)} counts={{ pending: 260, overdue: 5, dueSoon: 3 }} filter="INBOX" />,
+      <ApprovalInbox onCopyProvenance={vi.fn()} page={inboxPage(many)} counts={{ pending: 260, overdue: 5, dueSoon: 3 }} filter="INBOX" />,
     );
     expect(container.querySelector(".exec-table")?.getAttribute("data-virtualized")).toBe("false");
     expect(container.querySelectorAll("tbody tr:not(.exec-table-pad)").length).toBe(260);
@@ -3303,7 +3312,7 @@ describe("Approval Inbox — the pending queue is never virtualized", () => {
 
   it("says the queue is over its threshold rather than hiding it", () => {
     render(
-      <ApprovalInbox page={inboxPage(many)} counts={{ pending: 260, overdue: 5, dueSoon: 3 }} filter="INBOX" />,
+      <ApprovalInbox onCopyProvenance={vi.fn()} page={inboxPage(many)} counts={{ pending: 260, overdue: 5, dueSoon: 3 }} filter="INBOX" />,
     );
     expect(screen.getByText(/operational condition, not a display limit/)).toBeTruthy();
   });
@@ -3465,15 +3474,19 @@ describe("Gate R2 — the R1 reference is openable", () => {
     // §3 names three fields. A chip carries the decision and drops the two a
     // reviewer needs to judge how much the R1 is still worth.
     render(r2({ r1Digest: "sha256:c81f…", r1Expiry: "2026-11-01", r1DecidedBy: "Minh" }));
-    expect(screen.getByText("R1 reference")).toBeTruthy();
-    expect(screen.getByText("sha256:c81f…")).toBeTruthy();
-    expect(screen.getByText("2026-11-01")).toBeTruthy();
+    // EL-V2-05: the reference is its own tab; the rail freshness line names the expiry too.
+    fireEvent.click(screen.getByRole("tab", { name: /R1 reference/ }));
+    expect(screen.getAllByText("R1 reference").length).toBeGreaterThanOrEqual(1);
+    // Digest and expiry also sit in the provenance drawer / rail — at least once each.
+    expect(screen.getAllByText("sha256:c81f…").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("2026-11-01").length).toBeGreaterThanOrEqual(1);
   });
 
   it("states a missing digest or expiry rather than leaving the field blank", () => {
     // An R1 whose evidence cannot be identified is an R1 nobody can re-check,
     // which is most of what a reference is for.
     const { container } = render(r2());
+    fireEvent.click(screen.getByRole("tab", { name: /R1 reference/ }));
     const unpublished = [...container.querySelectorAll(".exec-gate-unverified")].map(
       (n) => n.textContent,
     );
@@ -3621,7 +3634,7 @@ describe("Gate R2 and Paper Exit on the port", () => {
     render(
       <GateR2ReviewContainer api={createFixtureApi({ stalePreview: true })} approvalId="AP-207" />,
     );
-    expect(await screen.findByText(/not current enough to decide against/)).toBeTruthy();
+    expect((await screen.findAllByText(/not current enough to decide against/)).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
     // Visible, diagnosable, and refusable.
     expect(screen.getByText(/source balance snapshot is 3h 28m old/)).toBeTruthy();
@@ -3717,6 +3730,7 @@ describe("typed conditions composer (§2 — conditions attach to the decision)"
   it("attaches a condition from Gate R1 and clears the draft", () => {
     const attached: unknown[] = [];
     const { container } = render(gate({ onAttachCondition: (c: unknown) => attached.push(c) }));
+    fireEvent.click(screen.getByRole("tab", { name: /Conditions/ }));
     const text = container.querySelector<HTMLInputElement>(".exec-composer-wide input")!;
     const owner = container.querySelectorAll<HTMLInputElement>(".exec-composer-field input")[1];
 
@@ -3732,6 +3746,7 @@ describe("typed conditions composer (§2 — conditions attach to the decision)"
 
   it("blocks Attach until the draft is valid", () => {
     render(gate({ onAttachCondition: () => {} }));
+    fireEvent.click(screen.getByRole("tab", { name: /Conditions/ }));
     expect(screen.getByRole("button", { name: "Attach condition" })).toHaveProperty("disabled", true);
     expect(screen.getByText(/a condition needs text/)).toBeTruthy();
   });
@@ -3740,6 +3755,7 @@ describe("typed conditions composer (§2 — conditions attach to the decision)"
     // A composer for a decision you cannot make is a form that wastes your
     // time, so it follows the condition control exactly.
     render(gate({ actor: "Minh", onAttachCondition: () => {} }));
+    fireEvent.click(screen.getByRole("tab", { name: /Conditions/ }));
     expect(screen.getByRole("button", { name: "Attach condition" })).toHaveProperty("disabled", true);
     expect(screen.getByText(/cannot attach a condition/)).toBeTruthy();
   });
@@ -3979,7 +3995,7 @@ describe("the filter chips filter (EX-BE-05a §3's eight views)", () => {
     // Selecting Overdue with five pending requests would otherwise say the
     // queue is clear.
     render(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={{ rows: [], totalCount: 5, filteredCount: 0 }}
         counts={{ pending: 5, overdue: 1, dueSoon: 1 }}
         filter="OVERDUE"
@@ -3992,7 +4008,7 @@ describe("the filter chips filter (EX-BE-05a §3's eight views)", () => {
 
   it("still says inbox zero when the queue really is clear", () => {
     render(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={{ rows: [], totalCount: 0, filteredCount: 0 }}
         counts={{ pending: 0, overdue: 0, dueSoon: 0 }}
         filter="INBOX"
@@ -4181,7 +4197,7 @@ describe("a cursor is only valid inside the query that issued it", () => {
     // From the reader's side the list jumps back to the start; a reader who
     // does not know that happened assumes their rows were deleted.
     render(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={inboxPage([inboxRow()])}
         counts={{ pending: 5, overdue: 1, dueSoon: 0 }}
         filter="INBOX"
@@ -4426,12 +4442,12 @@ describe("permission is never inferred — deny by default", () => {
   it("says why, rather than leaving a dead button unexplained", () => {
     // A locked control with no sentence beside it is a support ticket.
     render(gate({ eligibility: undefined }));
-    expect(screen.getByText(/the server did not grant it for this actor/)).toBeTruthy();
+    expect(screen.getAllByText(/the server did not grant it for this actor/).length).toBeGreaterThanOrEqual(1);
   });
 
   it("says why on Gate R2 too", () => {
     render(r2({ eligibility: undefined }));
-    expect(screen.getByText(/the server did not grant it for this actor/)).toBeTruthy();
+    expect(screen.getAllByText(/the server did not grant it for this actor/).length).toBeGreaterThanOrEqual(1);
   });
 
   it("reads eligibility out of the R2 and exit-review payloads, which it never used to", () => {
@@ -4664,7 +4680,7 @@ describe("figures nobody published are stated, not substituted", () => {
     // "0/2" is a claim about a decision: two approvals needed, none arrived.
     // The truth was that the server published neither number.
     render(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={
           {
             rows: [
@@ -4799,7 +4815,7 @@ describe("echoes and counts say only what the server said", () => {
     // "0 overdue" is the claim an operator most wants to trust, so it must
     // never come from an absent field.
     render(
-      <ApprovalInbox
+      <ApprovalInbox onCopyProvenance={vi.fn()}
         page={{ rows: [], totalCount: 0, filteredCount: 0 } as never}
         filter="INBOX"
         counts={{ pending: 4, overdue: null, dueSoon: null }}

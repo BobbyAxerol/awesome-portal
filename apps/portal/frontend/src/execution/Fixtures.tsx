@@ -1144,7 +1144,7 @@ export default function ExecutionFixtures() {
         >
           <div className="exec-fixtures-stack">
             <Case caption="populated — one overdue, one awaiting quorum, one blocked by separation of duty">
-              <ApprovalInbox
+              <ApprovalInbox onCopyProvenance={() => undefined}
                 page={{ rows: INBOX_ROWS, totalCount: 5, filteredCount: 4 }}
                 counts={{ pending: 5, overdue: 1, dueSoon: 1 }}
                 filter="INBOX"
@@ -1156,7 +1156,7 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="inbox zero — an empty queue is a result, not a failure">
-              <ApprovalInbox
+              <ApprovalInbox onCopyProvenance={() => undefined}
                 page={{ rows: [], totalCount: 0 }}
                 counts={{ pending: 0, overdue: 0, dueSoon: 0 }}
                 filter="INBOX"
@@ -1165,10 +1165,10 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="loading — no counts yet, and none invented">
-              <ApprovalInbox page={{ rows: [], totalCount: 0 }} counts={null} filter="INBOX" status="loading" />
+              <ApprovalInbox onCopyProvenance={() => undefined} page={{ rows: [], totalCount: 0 }} counts={null} filter="INBOX" status="loading" />
             </Case>
             <Case caption="partial — rows are real, the queue may be incomplete">
-              <ApprovalInbox
+              <ApprovalInbox onCopyProvenance={() => undefined}
                 page={{ rows: INBOX_ROWS.slice(0, 2), totalCount: 5, filteredCount: 2 }}
                 counts={{ pending: 5, overdue: 1, dueSoon: 1 }}
                 filter="INBOX"
@@ -1177,7 +1177,7 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="denied — the viewer lacks the scope, which is not an empty queue">
-              <ApprovalInbox
+              <ApprovalInbox onCopyProvenance={() => undefined}
                 page={{ rows: [], totalCount: 0 }}
                 counts={null}
                 filter="INBOX"
@@ -1196,8 +1196,14 @@ export default function ExecutionFixtures() {
         >
           <div className="exec-fixtures-stack">
             <Case caption="separation of duty OK — one warning, no blockers, Approve available, condition composable">
-              <GateR1Review onRequestCondition={() => undefined}
+              <GateR1Review onCopyProvenance={() => undefined} onRequestCondition={() => undefined}
                 onAttachCondition={() => {}}
+                limitations={[
+                  { kind: "lineage", label: "param lineage", value: "study st_77 → trial 141 → frozen" },
+                  { kind: "warning", label: "fee model", value: "assumes taker-only" },
+                  { kind: "restriction", label: "scope", value: "crypto perp · BINANCE · paper first" },
+                  { kind: "waiver", label: "capacity", value: "capacity evidence limited", expires: "2026-11-01" },
+                ]}
                 approvalId="AP-201"
                 alphaLabel="RSI v1.7"
                 releaseCandidate="RC-41"
@@ -1212,7 +1218,7 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="you wrote it — Approve locked, Deny still available">
-              <GateR1Review onRequestCondition={() => undefined}
+              <GateR1Review onCopyProvenance={() => undefined} onRequestCondition={() => undefined}
                 approvalId="AP-201"
                 alphaLabel="RSI v1.7"
                 releaseCandidate="RC-41"
@@ -1226,7 +1232,7 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="blocking finding plus an expired request — every lock reported, not just the first">
-              <GateR1Review onRequestCondition={() => undefined}
+              <GateR1Review onCopyProvenance={() => undefined} onRequestCondition={() => undefined}
                 approvalId="AP-201"
                 alphaLabel="RSI v1.7"
                 quorumMet={0}
@@ -1244,7 +1250,7 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="already decided — a record, not a form; the controls are gone">
-              <GateR1Review onRequestCondition={() => undefined}
+              <GateR1Review onCopyProvenance={() => undefined} onRequestCondition={() => undefined}
                 approvalId="AP-201"
                 alphaLabel="RSI v1.7"
                 quorumMet={2}
@@ -1258,7 +1264,7 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="unavailable — still says which gate failed to load">
-              <GateR1Review onRequestCondition={() => undefined}
+              <GateR1Review onCopyProvenance={() => undefined} onRequestCondition={() => undefined}
                 approvalId="AP-201"
                 alphaLabel="RSI v1.7"
                 quorumMet={0}
@@ -1311,7 +1317,7 @@ export default function ExecutionFixtures() {
         >
           <div className="exec-fixtures-stack">
             <Case caption="R1 approved — preview marked derived, not applied">
-              <GateR2Review onRequestCondition={() => undefined}
+              <GateR2Review onCopyProvenance={() => undefined} onRequestCondition={() => undefined}
                 approvalId="AP-352"
                 subject="Carry v3.2 → PF-MAIN · Sandbox · OKX TESTNET"
                 r1Id="AP-101"
@@ -1346,7 +1352,7 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="R1 expired — every operational panel still readable, Approve locked">
-              <GateR2Review onRequestCondition={() => undefined}
+              <GateR2Review onCopyProvenance={() => undefined} onRequestCondition={() => undefined}
                 approvalId="AP-352"
                 subject="Carry v3.2 → PF-MAIN · Sandbox · OKX TESTNET"
                 r1Id="AP-101"
@@ -1365,7 +1371,7 @@ export default function ExecutionFixtures() {
               />
             </Case>
             <Case caption="preview without an authority envelope — refused rather than rendered bare">
-              <GateR2Review onRequestCondition={() => undefined}
+              <GateR2Review onCopyProvenance={() => undefined} onRequestCondition={() => undefined}
                 approvalId="AP-352"
                 subject="Carry v3.2 → PF-MAIN"
                 r1Id="AP-101"

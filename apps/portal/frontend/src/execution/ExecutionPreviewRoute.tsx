@@ -7,7 +7,8 @@
  * fixture response whose source-side-effect flag is false.
  */
 import { useEffect, useMemo, type ReactNode } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { reviewRouteFor } from "./screens/ApprovalInbox";
 
 import { usePresentation } from "../app/presentation";
 
@@ -86,6 +87,7 @@ function PreviewFrame({ screenId, children }: { screenId: string; children: Reac
 
 export function ExecutionPreviewRoute({ screenId }: { screenId: string }) {
   const params = useParams();
+  const navigate = useNavigate();
   const api = useMemo(() => createFixtureApi(), []);
   const commandCenter = useMemo(() => readCommandCenter(CC_FIXTURES.busy), []);
 
@@ -134,7 +136,8 @@ export function ExecutionPreviewRoute({ screenId }: { screenId: string }) {
       content = <IncidentDetailContainer api={api} incidentId={incidentId} />;
       break;
     case "EXECUTION_APPROVAL_INBOX_SCREEN":
-      content = <ApprovalInboxContainer api={api} />;
+      // EL-V2-05: a row (and the rail's Open) navigates to the review its gate owns.
+      content = <ApprovalInboxContainer api={api} onOpenRequest={(id, gate) => navigate(reviewRouteFor({ id, gate }))} />;
       break;
     case "EXECUTION_GATE_R1_REVIEW_SCREEN":
       content = <GateR1ReviewContainer api={api} approvalId={approvalId} />;

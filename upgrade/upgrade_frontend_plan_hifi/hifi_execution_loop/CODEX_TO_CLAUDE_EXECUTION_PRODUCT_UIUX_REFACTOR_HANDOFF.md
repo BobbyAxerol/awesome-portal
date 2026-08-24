@@ -1215,6 +1215,32 @@ là thứ được dựng từ đầu; SoD/role/denied/expired/conflict viết t
 | Journey liền mạch | Inbox→R1→R2→Exit→back giữ entity/scope — một test trọn |
 | Ma trận role | creator-cannot-approve, reviewer, denied, expired, conflict — đủ và xanh |
 
+
+#### Claude close-out — EL-V2-05 (2026-08-24, chỉ thêm; gate = Bobby duyệt hình ảnh)
+
+| Gate (supplement + §exit gate) | Kết quả | Bằng chứng |
+|---|---|---|
+| Layout proposal px trước JSX | ✓ | `GOVERNANCE_LAYOUT_PROPOSAL_2026-08-24.md` — khung chung 3 màn, bar sticky 64→96px, ma trận tương tác |
+| Sticky decision bar (verdict + reason + nút, elevation, không đổi nền) | ✓ | `components/decisionBar.tsx` `ExecutionDecisionBar` (`position: sticky; bottom: 0`): chip verdict · reviewer note = reason của decision · lý do khoá 1 dòng + `<details>` "n more reasons" · nút · DecisionTrail của container nằm trong bar. Dùng ở R1, R2, Exit. e2e: bar trong viewport ở đỉnh và đáy trang cho 3 route |
+| Inbox: SLA thanh compact + số | ✓ | `SlaCell` thêm `.exec-sla-bar` (age/budget, cap 100%, đỏ khi overdue); strip 5 số (pending · overdue · due soon · needs you · not yours); rail Next = request đầu tiên `needsYou` + Open; Blockers = OVERDUE/BLOCKED có tên; tab Pending · Recently decided (+ *Full history* disabled — BR-EX-35) |
+| R1: checklist/passport/limitations thành bảng | ✓ | tab Checklist (EvidencePanel 1 dòng/mục) · Passport (bảng field/value/verification) · **Limitations** (bảng kind/item/statement/expires — prop mới `limitations`, fixture có; route product "not published" → BR-EX-37) · Evidence (chưa có series ⇒ trạng thái honest, BR-EX-34 §R1) · Conditions (list 5 trường + composer) |
+| R2: capital preview = **một** nhãn `PLAN PREVIEW` + elevation, không đổi theme | ✓ | `.exec-preview-panel` thay `ExecutionSurface exec-inverted`; test khẳng định không còn `.exec-inverted` và đúng 1 chip |
+| Request-changes: chỉ qua verb publish | ✓ disabled + lý do | nút *Request changes* disabled, `title` = "no decision verb is published for it (BR-EX-36)"; test static: containers chỉ gọi `planDecision`/`applyPlan`; không chuỗi `REQUEST_CHANGES` nào trong containers |
+| Mọi capability có disposition | ✓ | ledger L1–L4 cập nhật: 0 ô trống; 3 ô `MISS` cũ (evidence chart R1 ×2, limitations) → `honest state + BR` / `impl (fixture) + BR-EX-37` |
+| Zero write bịa | ✓ | `governanceChain.test.tsx` "zero fabricated write path": màn không `fetch/EventSource/api.`; containers ⊆ {planDecision, applyPlan} |
+| Journey liền mạch | ✓ | e2e: Inbox → row AP-201 → R1 → back → AP-352 → R2 → tab R1 reference → link R1 → back ×2 → filter Exit reviews → EX-771 (bar visible) |
+| Ma trận role | ✓ 4 role × 2 gate | `describe.each` creator (SoD VIOLATION: Approve khoá, Deny mở) · reviewer · denied (không eligibility: cả hai khoá + "server did not grant") · expired (cả hai khoá); conflict 409 đã có sẵn ở container tests (`REQUEST_KEY_CONFLICT` → `PLAN_CONFLICT`) |
+| Baseline 4 route governance | ✓ | `el-v2-05-inbox/r1-AP-201/r2-AP-352.png` + `el-v2-04-exit-review-EX-771.png` (chromium-preview, 1440×900) |
+| Bind SGP Control API thật | **không làm** | codex stop gate: không kích hoạt registry `query_enabled` — delivery profile giữ fixture (Bobby: "Giữ delivery profile là fixture") |
+
+**Cổng kỹ thuật:** tsc sạch · vitest **1,608 passed / 1 skipped (75 file)** (+27 test mới `governanceChain.test.tsx`) · vite build sạch · Playwright **255 passed · 0 failed · 16 skipped** (chromium: 101 QuantBT không tái sinh + 85 fixtures crop + surface audit 40 + interaction audit; chromium-preview: preview + journeys 20 gồm chain governance, 3 sticky-bar scroll, 3 baseline route + structural sweep 0 NO-OP).
+
+**NO-OP thật tìm thấy và sửa:** route preview `/governance/approvals` không truyền `onOpenRequest` ⇒ hàng Inbox và nút Open ở rail không điều hướng (sweep V2-03 bỏ sót vì `<tr>` chỉ thành control khi có handler). Sửa: gate đi cùng id (`onOpenRequest(id, gate)`) → `reviewRouteFor` trong `ExecutionPreviewRoute`.
+
+**Backend request mới:** BR-EX-35 (approval history), BR-EX-36 (`REQUEST_CHANGES` verb), BR-EX-37 (`known_limitations[]`). BR-EX-30/31 vẫn treo, đã gắn vào phase này.
+
+**Chưa làm / ngoài phạm vi:** Exit Review có bar sticky nhưng chưa có reviewer note (HiFi 4b không có ô note — giữ đúng HiFi); Waivers & Conditions / Promotion Timeline route vẫn chưa có màn (sidebar 4 route thiếu — treo từ V2-00).
+
 ### EL-V2-06 — Stage workbenches from Paper VNM through Live
 
 **Goal:** reuse the approved Paper anatomy while preserving the distinct safety model of every stage.
