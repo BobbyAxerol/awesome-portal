@@ -26,6 +26,33 @@ The owner screenshot on 2026-08-24 is the rejection evidence. Existing green uni
 baselines do not overrule that decision: they prove stability and selected invariants, not that the
 frozen composition was good.
 
+### 0.1 Owner override — 2026-08-24
+
+This section overrides any older HiFi note, design-system discussion or implementation phase that
+describes Governance as light, calls a screen “exact”, or treats the top-level route as the whole
+scope.
+
+1. **HiFi is a functional floor and a design reference, not pixel authority.** The implementation may
+   improve layout, wording, navigation and add decision-useful content. It may not omit a capability,
+   sub-view, state or interaction demonstrated by the HiFi corpus.
+2. **Read every `.dc.html` completely.** A main route existing is not completion. Tabs, filters,
+   drawers, disclosures, role lenses, alternate states, chart interactions, row drill-downs,
+   PLAN/APPLY/VERIFY steps and responsive behavior inside that file are all part of its minimum
+   acceptance contract.
+3. **Execution Loop is one Carbon workspace from Approval Inbox/Gate R1 onward.** Governance, exit
+   review, workbench, operations, 360°, blotter and action surfaces share the same Carbon base canvas,
+   shell and typography. There is no `governance-light` exception and no dark rectangle embedded in a
+   light Execution page.
+4. **“One Carbon theme” does not mean one literal hue.** Keep restrained semantic colors for status,
+   severity, stage guards, focus and safety actions. Color must carry meaning and must never be the
+   only signal. Do not introduce a second page theme.
+5. **Typography roles are locked across the cluster.** A page title does not become smaller because a
+   screen is dense, and a sparse page does not inflate its type. Density changes spacing, disclosure,
+   columns and row height—not the type hierarchy.
+
+Any active frontend guide or tracker that still says Governance Light or “rebuild exactly” must be
+reconciled to this owner override before implementation continues.
+
 ## 1. Why the existing review was insufficient
 
 `REVIEW_CODEX_PREVIEW_INTEGRATION_2026-08-23.md` correctly assessed routing, stop gates, fixture-only
@@ -149,10 +176,14 @@ When a Deployments/Operations screen is active, apply Execution Carbon to:
 There must be no supported state where the selector says `Research Light` while the product canvas is
 Carbon black. The selector must show the **effective** workspace appearance.
 
-Governance screens may retain their locked light default, including R2's dark operational preview, but
-the transition must still be coherent: the shell and page belong to the same effective mode. If an
-explicit user override is supported, it changes the entire workspace atomically; it never creates a
-light chrome/dark island combination.
+Approval Inbox, Gate R1, Gate R2 and every Exit Review are part of Execution Loop and therefore use
+the same Carbon base as Paper/Sandbox/Canary/Live. Distinguish a governance decision from an
+operational workbench through hierarchy, density and component anatomy—not by switching the entire
+canvas to white or inserting a dark preview island.
+
+If an explicit appearance override is ever supported, it changes the entire workspace atomically; it
+never creates a light chrome/dark island combination. That override is outside the current refactor:
+the required and tested Execution appearance is Carbon.
 
 ### 4.2 Implementation direction
 
@@ -161,7 +192,6 @@ Create one route-level presentation context owned by the mother shell, for examp
 ```ts
 type PortalPresentationMode =
   | "research-light"
-  | "governance-light"
   | "execution-carbon";
 ```
 
@@ -198,20 +228,24 @@ Choose one of these paths and make it true end-to-end:
 Do not declare IBM Plex as a fallback while never loading it. Do not let `base.css` hard-code families
 that bypass contextual tokens. Shared selectors should read semantic font tokens.
 
-### 5.2 Two-family maximum
+### 5.2 Two-family maximum, one locked role scale
 
-| Role | Family | Suggested size/line | Notes |
+These are shared defaults, not per-screen suggestions. A component may respond at a documented narrow
+breakpoint, but an individual screen may not invent a new size because it has more or less content.
+
+| Role | Family | Locked size/line | Notes |
 |---|---|---|---|
-| Page title | Sans | 24–28 / 30–34 | weight 400; never uppercase mono |
-| Entity subtitle | Sans + short mono id | 13–15 / 20 | human name first, immutable id second |
-| Section title | Sans | 14–16 / 20–22 | sentence/title case, weight 500–600 |
-| Body/action explanation | Sans | 13–14 / 19–21 | maximum readable line length around 72 characters |
-| Button/tab | Sans | 12–13 / 16 | mono only when the label itself is a command token |
-| Table header | Sans | 11–12 / 16 | uppercase optional, moderate tracking |
-| Numeric value | Mono | 13–15 / 20 | tabular, right aligned |
-| KPI value | Mono | 22–28 / 30–34 | one consistent level per screen |
-| Meta/status/id | Mono | 11–12 / 16 | never the only text explaining a decision |
-| Terminal/log | Mono | 12–13 / 18–20 | exact, selectable, scrollable |
+| Page title | Sans | 24 / 32 | weight 400; never uppercase mono |
+| Entity subtitle | Sans + short mono id | 14 / 20 | human name first, immutable id second |
+| Section title | Sans | 15 / 22 | sentence/title case, weight 600 |
+| Body/action explanation | Sans | 13 / 20 | maximum readable line length around 72 characters |
+| Button/tab/control | Sans | 13 / 18 | mono only when the label itself is a command token |
+| Table header | Sans | 11 / 16 | uppercase optional, moderate tracking |
+| Table/body data | Sans or Mono by meaning | 12 / 18 | identity in sans; exact values in mono |
+| Numeric value | Mono | 14 / 20 | tabular, right aligned |
+| KPI value | Mono | 24 / 32 | the same level across all Execution screens |
+| Meta/status/id | Mono | 11 / 16 | never the only text explaining a decision |
+| Terminal/log | Mono | 12 / 18 | exact, selectable, scrollable |
 
 Load-bearing text must not be 10px. Ten pixels is reserved for a secondary envelope caption that the
 user can expand, not for a page's primary identity or required action reason.
@@ -476,10 +510,11 @@ Overview | Positions | Orders | Fills | Sessions | Accounting | Evidence
 
 ### 11.1 Governance: Inbox, R1, R2, Exit Review
 
-- Keep governance light as locked, but theme the whole shell coherently.
+- Use the same Carbon workspace, shell, canvas and type roles as the rest of Execution Loop.
 - Sticky decision bar is the primary action region.
 - Evidence uses sections/tabs; checklist and blockers stay in right rail.
-- R2's dark preview is a deliberate embedded operations object, not an accidental theme seam.
+- R2 capital/activation preview is distinguished by border, surface elevation and a clear `PREVIEW`
+  label; it is not a different page theme.
 - Long evidence digests move to provenance.
 
 ### 11.2 Workbenches: Paper, VNM, Sandbox, Canary, Live
@@ -508,6 +543,54 @@ Overview | Positions | Orders | Fills | Sessions | Accounting | Evidence
 - Action Drawer uses catalogue + focused drawer and terminal verification; it is the one place where a
   dense command-oriented visual voice is appropriate.
 
+### 11.6 HiFi functional coverage ledger — mandatory before refactor
+
+Claude must create and maintain a row-level coverage ledger in `PHASE_TRACKER.md` before changing the
+screen composition. For each item below, record the production component/route, supported fixture
+variants, interaction test and visual evidence. `route renders` is not a valid completion claim.
+
+| HiFi source | Minimum nested coverage that must survive the refactor |
+|---|---|
+| `Execution Wireframes.dc.html` | all WF 1a–1i, 2a/2b, 3a, 4a–4h and 5a–5c behavior; canonical nav/lifecycle rail; break-glass ceremony; role lens; seven-state matrix; density and responsive rules; chart tooltip/zoom/expand/export/cross-filter/reset contract |
+| `HiFi Approval Inbox.dc.html` | Mine/All/R1/R2/Exit/Live/Overdue filters; SLA ordering; separation-of-duty visibility; row navigation; empty inbox; recently decided and full history |
+| `HiFi Gate R1 Review.dc.html` | artifact passport; evidence/checklist/limitations; WFO evidence; structured conditions; request changes/reject/approve; creator vs reviewer denial and immutable decision semantics |
+| `HiFi Gate R2 Review.dc.html` | R1-valid and R1-expired variants; portfolio fit; account/risk plan; capital change preview; observation/rollback policy; structured conditions and disabled approval when blocked |
+| `HiFi Paper Exit Review.dc.html` | MET/UNMET observation gate; coverage, drift, limits/accounting and portfolio fit; unresolved conditions; recommendation; extend/reject/promote outcomes and carry-forward evidence |
+| `HiFi Paper Workbench.dc.html` | FRESH/STALE variants; lifecycle; observation eligibility; analytics/accounting/runtime evidence; Orders/Fills/Positions/Sessions tabs; report/approvals/admin/exit paths |
+| `HiFi Paper Workbench VNM.dc.html` | OPEN/CLOSED session behavior; venue-calendar-paused freshness; runtime vs session state; DNSE OTP status; VND isolation; lot size, LO/ATO/ATC and settlement semantics |
+| `HiFi Sandbox Certification.dc.html` | seven certification steps; HALTED fail-closed start; internal/broker/difference triptych; NONE/CRITICAL reconciliation variants; order-type certification; bounded smoke plan; cleanup and exit gates; admin/viewer authority |
+| `HiFi Canary Control Room.dc.html` | OK/STALE broker variants; canary envelope; live/paper/backtest evidence; positions/orders; incidents/reconciliation; scale blocker; protective action vs risk-increasing action; operator/viewer authority |
+| `HiFi Live Full Operations.dc.html` | OK/MISMATCH broker variants; broker truth replacing normal presentation when unsafe; exposure/orders; risk envelope; incidents; halt/reduce/emergency-close ladder; contribution drill-down; operator/viewer authority |
+| `HiFi Command Center.dc.html` | BUSY/QUIET states; ranked triage; truthful empty state; fleet health drill-down; pinned watchlist; Today/deadlines/recent operations |
+| `HiFi Operations Queue.dc.html` | Attention/Mine/All filters; operation ordering; typed states including PARTIAL; operation target/action navigation; alert-rail open/close; typed alert ownership; ack ≠ resolve |
+| `HiFi Incident Detail.dc.html` | OPEN/RESOLVED states; forward-only state rail; finding/snapshot/blast-radius evidence; operations and timeline; apply-plan handoff; resolution prerequisites; closing never auto-resumes |
+| `HiFi Admin Action Drawer.dc.html` | the complete action catalogue, not only allocation; READ/BLOCKED/MUTATION/DANGER treatment; selection; reason; step-up; PLAN/APPLY/VERIFY; VERIFIED/PARTIAL; residue re-plan; Equivalent CLI read-only; no forbidden lab-reset action |
+| `HiFi Full Blotter.dc.html` | canonical scope; All/Filled/Partial/Rejected/Open filters; columns/export contract; cross-filter chip/reset; row expand/collapse; full signal→intent→risk→order→fill funnel; keyset/load-older and virtualization |
+| `HiFi Alpha 360.dc.html` | venue scope propagating to every panel; Overview plus all 9 tabs (Insight, Positions, Orders/Fills, Risk, Sessions, Accounting, Reconciliation, Audit); twelve analytical tiles; insufficient-data handling; expand/export/cross-filter; entity drill-downs |
+| `HiFi Portfolio 360.dc.html` | Overview/Structure & Correlation/Capital Ledger/Approvals/Incidents/Audit tabs; scope controls; structure and correlation; leader lens; contribution/edge; capital and authority paths; role-cut DENIED behavior |
+| `HiFi Account Broker 360.dc.html` | internal/physical/difference triptych; aggregate headroom OK/EXCEEDED; broker binding and all linked virtual accounts; sync history; findings/history; Sync now and Dry-run reconcile; admin/viewer authority |
+
+The ledger must also include every visible control discovered in the HTML, with one disposition:
+`implemented`, `improved equivalent`, `disabled with reason`, `hidden by policy`, or `backend request`.
+No item may be silently dropped because it was below the fold, behind a demo prop, or not shown in the
+owner screenshot.
+
+### 11.7 Content may be added, but only under a product rule
+
+HiFi content is the minimum. Additional content or sub-views are welcome when they satisfy all of the
+following:
+
+- they shorten or improve a real operator/reviewer decision;
+- their value is contract-backed or has a narrow backend request—never a frontend-invented financial
+  fact;
+- they respect authority, seven states, freshness and provenance;
+- they use progressive disclosure instead of making the default canvas noisier;
+- their control behavior, empty/error/denied state and visual evidence are tested;
+- they do not duplicate information already available through a better drill-down.
+
+Decorative prose, raw hashes, internal ids and repeated explanations do not count as useful added
+content.
+
 ## 12. Implementation phases
 
 ### UX-R0 — Re-baseline the merge gate
@@ -517,13 +600,16 @@ Overview | Positions | Orders | Fills | Sessions | Accounting | Evidence
 - Mark current product-route preview visual composition `REWORK_REQUIRED` in tracking.
 - Keep backend/runtime feature flags unchanged.
 - Add owner screenshot findings to the review evidence.
+- Build the §11.6 HTML coverage ledger from a complete read of all eighteen source files.
+- Reconcile active frontend docs that still prescribe Governance Light or literal HiFi copying.
 - Do not merge the preview as a finished product surface.
 
-**Exit:** tracker and PR description clearly distinguish contract integration from product UI approval.
+**Exit:** tracker and PR description clearly distinguish contract integration from product UI approval;
+every HiFi source and nested feature has an accountable ledger row.
 
 ### UX-R1 — Shell presentation context + real typography
 
-**Goal:** one coherent workspace and two truthful font families.
+**Goal:** one Carbon Execution workspace and two truthful font families.
 
 - route-aware effective theme/density on the entire shell;
 - topbar/sidebar/overlay alignment;
@@ -531,8 +617,8 @@ Overview | Positions | Orders | Fills | Sessions | Accounting | Evidence
 - semantic type roles and scale;
 - compact preview strip.
 
-**Exit:** Research/Planning baselines unchanged; Execution route shows no light/dark seam at 1280,
-1440 and 1728 widths.
+**Exit:** Research/Planning baselines unchanged; all Execution routes from Approval Inbox/R1 onward are
+Carbon and show no light/dark seam at 1280, 1440 and 1728 widths.
 
 ### UX-R2 — Shared workspace primitives
 
@@ -599,8 +685,9 @@ retained, replaced and deleted.
 | Area | Blocking acceptance |
 |---|---|
 | Workspace | Execution route changes topbar/sidebar/content/right rail together |
-| Theme control | UI shows effective mode; no `Research Light` label around a Carbon route |
-| Typography | two families maximum; page title, section, body, data and terminal roles measurable |
+| Theme control | Carbon from Approval Inbox/Gate R1 onward; no Governance Light or embedded theme island |
+| Typography | two families maximum; the same locked title/section/body/data/terminal roles on every screen |
+| HiFi coverage | every HTML and all nested tabs/states/actions have a ledger row, implementation and test disposition |
 | Hierarchy | primary decision, blocker and action visible above fold |
 | Density | sparse pages do not stretch; dense pages use tabs/tables/virtualization |
 | Tabs | every visible tab changes its panel and preserves accessible state |
@@ -615,14 +702,17 @@ retained, replaced and deleted.
 
 ## 14. What Claude should do next
 
-1. Read this file together with the owner screenshot and the current uncommitted review/fixes.
-2. Update `ROADMAP_FRONTEND.md` and `PHASE_TRACKER.md`: record UX-R0…UX-R6 and mark the integrated
+1. Read this file, then read all eighteen `.dc.html` files completely—not only their initial render—
+   together with the owner screenshot and the current uncommitted review/fixes.
+2. Build the §11.6 coverage ledger, including demo-prop variants, tabs, drawers, links and actions.
+3. Update `ROADMAP_FRONTEND.md` and `PHASE_TRACKER.md`: record UX-R0…UX-R6, reconcile the Carbon-only
+   owner override, and mark the integrated
    product composition as `REWORK_REQUIRED`, while keeping completed backend/contract work completed.
-3. Produce a short measured layout proposal for **Paper Workbench only** at 1440×900 and 1728×1000:
+4. Produce a short measured layout proposal for **Paper Workbench only** at 1440×900 and 1728×1000:
    bounding regions, type roles, right-rail behavior, disclosure moves and interaction matrix.
-4. Ask Antigravity for an independent critique of hierarchy, type scale and state/action semantics.
-5. Implement UX-R1 then UX-R2; do not mass-refactor all screens before Paper proves the system.
-6. If any required UI behavior needs a new backend field/endpoint, send a narrow Backend Request to
+5. Ask Antigravity for an independent critique of hierarchy, type scale and state/action semantics.
+6. Implement UX-R1 then UX-R2; do not mass-refactor all screens before Paper proves the system.
+7. If any required UI behavior needs a new backend field/endpoint, send a narrow Backend Request to
    Codex. The shell/theme/type/no-op-preview fixes themselves do not require Trading System changes.
 
 ## 15. Non-regression boundary for Codex/Claude coordination
@@ -633,4 +723,3 @@ retained, replaced and deleted.
 - Do not merge “visual refactor” with backend activation.
 - Preserve exact values and evidence access; change default prominence, not truth.
 - Bobby remains the merge authority and owner visual sign-off is an explicit exit gate.
-
