@@ -1077,6 +1077,16 @@ deep-dive → ADR → slice → evidence discipline documented above.
   `D4_OFFLINE_AUTHORIZATION_PREPARED / LIVE_D4_PREDECESSOR_BLOCKED`; no source
   route, service or network was touched. Evidence:
   [`EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md`](./backend/EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md).
+- **EX-BE-02-LIVE D3 identity-drift rejection (2026-08-24):** the first live
+  D3 candidate was rejected before delegated-auth probes because the immutable
+  Edge lock named gateway digest `sha256:4f63...`, while the compatible runtime
+  gateway is `sha256:8a81...`. Source Proxy mTLS and exact public/business route
+  guards passed, all projection counts remained zero, and rollback restored
+  accepted D2 without restart/OOM or source traffic. The lock now names the
+  observed runtime revision and preflight rejects stale identity before
+  Compose mutation, but D3 remains closed until a protected-main
+  build/scan/sign/verify cycle publishes a new immutable Edge image. Detail:
+  [`EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md`](./backend/EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

@@ -19,6 +19,8 @@ while [[ $# -gt 0 ]]; do
 done
 [[ -n "${env_file}" && -f "${env_file}" ]] || usage
 [[ "${mode}" =~ ^(template|offline|readiness|probe-offline|probe-readiness|source-readiness)$ ]] || usage
+root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+contract_lock="${root_dir}/services/portal-execution-edge-rs/contract-pack.lock.json"
 if [[ "${mode}" != template ]]; then
   [[ ! -L "${env_file}" && "$(stat -c '%a' "${env_file}")" == 600 ]] || {
     printf 'Execution preflight requires a non-symlink mode-0600 env file.\n' >&2
@@ -84,6 +86,29 @@ done
   printf 'D2 preflight requires the full observed source gateway digest.\n' >&2
   exit 1
 }
+if [[ "${mode}" != template ]]; then
+  locked_gateway_prefix="$(python3 - "${contract_lock}" <<'PY'
+import json
+import pathlib
+import re
+import sys
+
+path = pathlib.Path(sys.argv[1])
+try:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+except (OSError, ValueError) as exc:
+    raise SystemExit("Execution preflight rejected an unreadable contract lock.") from exc
+value = payload.get("runtime_gateway_digest_prefix")
+if not isinstance(value, str) or not re.fullmatch(r"sha256:[a-f0-9]{12,64}", value):
+    raise SystemExit("Execution preflight rejected an invalid gateway digest lock.")
+print(value)
+PY
+)"
+  [[ "${values[EDGE_SOURCE_GATEWAY_DIGEST]}" == "${locked_gateway_prefix}"* ]] || {
+    printf 'Execution preflight rejected source gateway identity drift.\n' >&2
+    exit 1
+  }
+fi
 [[ "${values[PORTAL_RUNTIME_GID]}" =~ ^[1-9][0-9]{1,8}$ ]] || {
   printf 'D2 preflight requires a positive numeric portal-runtime GID.\n' >&2
   exit 1

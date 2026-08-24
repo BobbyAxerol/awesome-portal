@@ -454,6 +454,18 @@ authority.
   Every source/query/analytics/SSE/command/profile flag remains false/fixture.
   Status: `D2_DARK_ACCEPTED / SOURCE_INACTIVE`. Evidence:
   [`EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md`](./EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md).
+- `EX-BE-02-LIVE` **D3 gateway identity remediation (2026-08-24):** the first
+  live D3 window rejected fail-closed before JWT probes because the signed Edge
+  image locked gateway digest `sha256:4f63...` while the compatible current
+  Trading System gateway is `sha256:8a81...`. Workload mTLS proved only the
+  exact public `200/200/200` and guarded business `503/503/503/503` matrix;
+  projection rows stayed zero and D2 rollback passed with zero restart/OOM.
+  The lock and preflight are updated in source so future drift stops before
+  Compose mutation, but D3 remains closed until full gates and a protected-main
+  signed Edge republish complete. Status:
+  `D3_ATTEMPT_REJECTED_FAIL_CLOSED / D2_RESTORED / SIGNED_EDGE_REPUBLISH_REQUIRED`.
+  Evidence:
+  [`EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md`](./EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md).
 - [EX-BE-02-LIVE D4 offline Paper-shadow authorization](./EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md)
   — **offline authorization prepared / live predecessors blocked:** credential-
   free owner/evidence schema, fail-closed readiness/qualification validator and

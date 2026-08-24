@@ -1332,6 +1332,16 @@ fault probes. This preparation is not cross-cell evidence and unlocks no
 frontend profile. Detail:
 [`EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md`](backend/EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md).
 
+The first D3 live window on 2026-08-24 then rejected fail-closed because the
+immutable Edge image retained the prior gateway digest lock
+`sha256:4f63...`, while the D0-compatible current gateway is
+`sha256:8a81...`. Internal Source Proxy mTLS and the exact three-public/four-503
+guard matrix passed; no JWT, business read or projection occurred, and D2 was
+restored cleanly. The versioned lock is remediated in source, but a new
+protected-main signed Edge image is a hard predecessor to a fresh D3 window.
+Evidence:
+[`EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md`](backend/EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md).
+
 The detailed evidence, recommended defaults, decision sheet and rollback are in
 [`EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md`](backend/EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md).
 

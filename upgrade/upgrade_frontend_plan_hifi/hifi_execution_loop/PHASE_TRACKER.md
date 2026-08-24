@@ -477,6 +477,16 @@ but must not consume business data or open EventSource. Next backend gate is a
 new-window D3 H2/TLS1.3/mTLS/JWT/latency/source-loss matrix. Evidence:
 [`EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md`](../../backend/EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md).
 
+D3 live attempt 1 is
+`D3_ATTEMPT_REJECTED_FAIL_CLOSED / D2_RESTORED / SIGNED_EDGE_REPUBLISH_REQUIRED`.
+The public-route Source Proxy mTLS matrix was exact, but Edge correctly refused
+the old `sha256:4f63...` gateway lock against current compatible runtime
+`sha256:8a81...`; no JWT/business/projection step ran. Backend updated the lock
+and must publish a new signed Edge image from protected `main` before a fresh
+D3 window. Claude must keep source/query/SSE profiles off; this changes no UI
+consumer contract. Evidence:
+[`EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md`](../../backend/EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md).
+
 ### 6.2 BR-EX decisions
 
 The binding contract is
