@@ -25,6 +25,13 @@ jobs:
         uses: actions/checkout@v7
         with:
           persist-credentials: false
+          fetch-depth: 0
+
+      - name: Protect append-only migration history
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: ./scripts/verify-migration-history.sh "${BASE_SHA}"
 
       - name: Validate Portal contracts
         run: ./scripts/portal verify

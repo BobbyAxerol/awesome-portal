@@ -193,6 +193,11 @@ for required in \
   "${ROOT_DIR}/deploy/cloudflared/config.example.yml" \
   "${ROOT_DIR}/deploy/nginx/portal-loopback.conf" \
   "${ROOT_DIR}/deploy/edge/README.md" \
+  "${ROOT_DIR}/docs/release-and-deployment.md" \
+  "${ROOT_DIR}/.github/workflows/ci.yml" \
+  "${ROOT_DIR}/.github/workflows/deploy.yml" \
+  "${ROOT_DIR}/scripts/verify-migration-history.sh" \
+  "${ROOT_DIR}/scripts/verify-release-channel.sh" \
   "${ROOT_DIR}/deploy/nginx/portal.conf" \
   "${ROOT_DIR}/apps/control-api/package.json" \
   "${ROOT_DIR}/apps/control-api/package-lock.json" \
@@ -569,6 +574,11 @@ for tracked_source in \
   deploy/cloudflared/config.example.yml \
   deploy/nginx/portal-loopback.conf \
   deploy/edge/README.md \
+  docs/release-and-deployment.md \
+  .github/workflows/ci.yml \
+  .github/workflows/deploy.yml \
+  scripts/verify-migration-history.sh \
+  scripts/verify-release-channel.sh \
   deploy/nginx/portal.conf \
   apps/control-api/package.json \
   apps/control-api/package-lock.json \
@@ -815,6 +825,8 @@ done
 bash -n \
   "${ROOT_DIR}/scripts/portal" \
   "${ROOT_DIR}/scripts/verify-workspace.sh" \
+  "${ROOT_DIR}/scripts/verify-migration-history.sh" \
+  "${ROOT_DIR}/scripts/verify-release-channel.sh" \
   "${ROOT_DIR}/scripts/smoke-stack.sh" \
   "${ROOT_DIR}/scripts/control-api-provision-keyrings.sh" \
   "${ROOT_DIR}/scripts/stage-hmd-reader-wheel.sh" \
