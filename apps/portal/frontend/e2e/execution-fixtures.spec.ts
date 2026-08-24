@@ -67,6 +67,7 @@ const GROUPS = [
   "keysettable-mechanism-m1",
   "v2-anatomy-paper-demo",
   "v2-equity-chart-demo",
+  "v2-guard-asymmetry",
   "live-full-operations-1f",
   "sandbox-certification-1d",
   "canary-control-room-1e",

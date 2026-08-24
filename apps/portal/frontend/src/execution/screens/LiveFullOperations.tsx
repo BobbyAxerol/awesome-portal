@@ -1,101 +1,45 @@
 /**
- * Phase 12 — Live Full Operations (hi-fi 1f, WF 1f, ops dark).
+ * Live Full Operations (HiFi 1f) on the V2 Paper anatomy.
  *
- * The last screen in the promotion chain and the one where a wrong number costs
- * the most. Three things it does that the others do not:
- *
- * IT SHOWS NO BROKER FIGURE AT ALL. Not blanked, not dashed — the values never
- * reach this component, because `readLiveFullOperations` drops them while
- * `broker_values_visible` is false. A screen that merely omitted them would
- * still hold them, and a held value reaches the DOM eventually.
- *
- * IT SEPARATES SUPPRESSED FROM UNAVAILABLE. The broker panel is `suppressed`:
- * the Portal has something and policy forbids showing it. Rendering that as
- * "unavailable" would answer "why can't I see broker equity" with "it is
- * missing", when the truth is "a mismatch suppresses every broker-derived
- * value" — a different problem with a different fix.
- *
- * IT TREATS "WE DO NOT KNOW" AS BLOCKING. `gap_detected` is `null`, and R4 is
- * blocked on that basis. Not knowing whether a projection gap exists is not the
- * same as knowing there is none, and this is the one screen where the
- * difference is worth real money.
+ * Priority order: portfolio risk → broker truth → exposure → incidents →
+ * contribution; research via drill-down only. One guard band. Broker truth
+ * replaces presentation: while consistency is unverified every broker-derived
+ * value is withheld (suppressed, not blank) and the MISMATCH banner takes the
+ * chart slot. Protective ladder in the rail; risk-increasing actions under
+ * the guard rules, lighter — and both stay disabled unless the server's
+ * policy says otherwise.
  */
-import type { ReactNode } from "react";
-
+import { useState, type ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
-import { AuthorityWord, FreshnessIndicator } from "../components/badges";
-import type { PanelStatus } from "../contracts";
+import { EquityChart } from "../components/EquityChart";
+import { SourceTile, StageGuardBand } from "../components/stageWorkbench";
+import { ExecutionSectionTitle } from "../components/typography";
 import {
-  liveGuardRules,
-  type LiveActionPolicy,
-  type LiveFullOperations,
-  type LivePanel,
-} from "../liveFull";
+  ExecutionContextRail,
+  ExecutionDecisionStrip,
+  ExecutionPageHeader,
+  ExecutionProvenanceDrawer,
+  ExecutionTabs,
+  ExecutionWorkspace,
+  shortDigest,
+  type HeaderBadge,
+  type RailBlocker,
+} from "../components/workspace";
+import type { PanelStatus } from "../contracts";
+import { liveGuardRules, type LiveActionPolicy, type LiveFullOperations } from "../liveFull";
 
-function Panel({ panel, title }: { panel: LivePanel | undefined; title: string }) {
-  return (
-    <section className="exec-live-panel" aria-label={title} data-suppressed={panel?.suppressed}>
-      <h2>{title}</h2>
-      {!panel ? (
-        <PanelState status="unavailable" reason="This panel was not published in the response." />
-      ) : panel.suppressed ? (
-        // Its own state, and its own sentence. "Unavailable" would send an
-        // operator looking for a connection problem that does not exist.
-        <>
-          <PanelState
-            status="denied"
-            reason="Suppressed by policy: while broker consistency is unverified, no broker-derived value is shown anywhere on this screen."
-          />
-          <p className="exec-live-note">
-            The Portal is withholding this, not failing to read it.
-          </p>
-        </>
-      ) : panel.envelope.panelState === "ok" ? (
-        <p className="exec-live-note">
-          Readable · {panel.envelope.authority ?? "authority not stated"}
-        </p>
-      ) : (
-        <>
-          <PanelState status={panel.envelope.panelState} />
-          <p className="exec-live-note">
-            {panel.envelope.authority ? <AuthorityWord authority={panel.envelope.authority} /> : null}{" "}
-            {panel.envelope.freshness ? <FreshnessIndicator state={panel.envelope.freshness} /> : null}{" "}
-            profile {panel.envelope.deliveryProfile ?? "not stated"}
-          </p>
-        </>
-      )}
-      {panel && panel.warningCodes.length > 0 ? (
-        <p className="exec-live-note">{panel.warningCodes.join(" · ")}</p>
-      ) : null}
-    </section>
-  );
-}
-
-export function LiveActionGroup({
-  policy,
-  title,
-  gapDetected,
-}: {
-  policy: LiveActionPolicy;
-  title: string;
-  gapDetected: boolean | null;
-}) {
-  // `null` blocks: not knowing is not the same as knowing there is no gap.
+export function LiveActionGroup({ policy, title, gapDetected }: { policy: LiveActionPolicy; title: string; gapDetected: boolean | null }) {
   const blockedByGap = policy.sourceGapBlocks && gapDetected !== false;
   return (
     <section className="exec-live-actions" aria-label={title}>
-      <h3>
-        {title} <span className="exec-live-note">{policy.riskTier ?? "tier not stated"}</span>
+      <h3 className="exec-role-section">
+        {title} <span className="exec-live-note exec-role-meta">{policy.riskTier ?? "tier not stated"}</span>
       </h3>
-      <button type="button" disabled={!policy.enabled || blockedByGap}>
+      <button type="button" className="exec-role-control exec-btn-ghost" disabled={!policy.enabled || blockedByGap}>
         {title}
       </button>
-      {blockedByGap ? (
-        <p className="exec-disabled-reason">
-          Blocked while projection continuity is unverified.
-        </p>
-      ) : null}
+      {blockedByGap ? <p className="exec-disabled-reason">Blocked while projection continuity is unverified.</p> : null}
       {policy.blockerCodes.length > 0 ? (
         <div className="exec-disabled-reason">
           {policy.blockerCodes.map((code) => (
@@ -107,17 +51,23 @@ export function LiveActionGroup({
   );
 }
 
+const TABS = ["Exposure & orders", "Continuity", "Predecessor envelope", "Guard rules"] as const;
+type Tab = (typeof TABS)[number];
+
 export function LiveFullOperationsScreen({
   live,
   status = "ok",
   reason,
+  onCopyProvenance,
   children,
 }: {
   live: LiveFullOperations | null;
   status?: PanelStatus;
   reason?: string;
+  onCopyProvenance?: (full: string) => void;
   children?: ReactNode;
 }) {
+  const [tab, setTab] = useState<Tab>("Exposure & orders");
   if (status !== "ok" && status !== "partial") {
     return (
       <ExecutionSurface kind="deployments" className="exec-live">
@@ -132,175 +82,182 @@ export function LiveFullOperationsScreen({
       </ExecutionSurface>
     );
   }
-
   const rules = liveGuardRules(live);
   const policy = live.commandPolicy;
   const gap = live.projectionContinuity?.gapDetected ?? null;
-
+  const consistency = live.brokerConsistency;
+  const mismatch = consistency !== null && consistency.brokerValuesVisible === false;
+  const brokerPanel = live.panels.broker;
+  const badges: HeaderBadge[] = [
+    { label: "LIVE · FULL", axis: "stage", tone: "bad" },
+    { label: live.runtimeState ?? "runtime not stated", axis: "runtime", tone: live.runtimeState === "ACTIVE" ? "good" : "mute" },
+    { label: mismatch ? "MISMATCH" : gap ? "GAP" : "READY", axis: "readiness", tone: mismatch || gap ? "bad" : "good" },
+    { label: `broker ${consistency?.state ?? "consistency not stated"}`, axis: "broker-sync", tone: mismatch ? "bad" : consistency?.state ? "good" : "warn" },
+  ];
+  const blockers: RailBlocker[] = [
+    ...live.lifecycleBlockers.map((c) => ({ label: c, detail: "lifecycle", severity: "blocking" as const })),
+    ...(consistency?.blockerCodes ?? []).map((c) => ({ label: c, detail: "broker consistency", severity: "blocking" as const })),
+    ...(live.projectionContinuity?.blockerCodes ?? []).map((c) => ({ label: c, detail: "projection continuity", severity: "blocking" as const })),
+    ...live.realtimeBlockers.map((c) => ({ label: c, detail: "realtime", severity: "watch" as const })),
+    ...(live.suppressedBrokerFields.length ? [{ label: `${live.suppressedBrokerFields.length} broker figure(s) withheld`, detail: live.suppressedBrokerFields.join(", "), severity: "watch" as const }] : []),
+  ];
+  const provenanceItems = [
+    ...live.lineage.map((l) => ({ label: l.kind, short: l.value.startsWith("sha256:") ? shortDigest(l.value) : l.value, full: l.value.startsWith("sha256:") ? l.value : null, href: l.href })),
+    { label: "profile", short: live.deliveryProfile ?? "not stated", full: null },
+    ...(live.activatedAt ? [{ label: "activated", short: live.activatedAt, full: null }] : []),
+  ];
+  const rail = (
+    <ExecutionContextRail
+      next={{
+        title: "Protective ladder — halt → reduce → emergency close",
+        detail: <span className="exec-role-body">admin · step-up · plan / apply / verify. {rules.gapRule}</span>,
+        action: policy?.protective?.visible ? (
+          <div className="exec-stage-actions" data-weight="protective">
+            <LiveActionGroup policy={policy.protective} title="Protective action" gapDetected={gap} />
+          </div>
+        ) : (
+          <p className="exec-live-note exec-role-meta">
+            No command controls are shown: production command authority is inactive for this profile. A protective action being unblocked by the gap rule is not the same as it being executable.
+          </p>
+        ),
+      }}
+      blockers={blockers}
+      freshness={
+        <span className="exec-role-meta">
+          {live.deliveryProfile ?? "profile not stated"} · {live.productionCommandActive ? "PRODUCTION COMMAND ACTIVE" : "PRODUCTION INACTIVE"} · realtime {live.realtimeActive ? "active" : "inactive"}
+          {brokerPanel?.envelope.asOf ? ` · broker as_of ${brokerPanel.envelope.asOf}` : ""}
+        </span>
+      }
+      provenance={<ExecutionProvenanceDrawer items={provenanceItems} onCopy={onCopyProvenance ?? (() => undefined)} />}
+    />
+  );
   return (
     <ExecutionSurface kind="deployments" className="exec-live">
-      <div className="exec-live-guard" role="note" aria-label="Stage guard">
-        <span className="exec-live-shield" aria-hidden="true">
-          ⛨
-        </span>
-        <strong>LIVE · FULL</strong>
-        <span className="exec-live-guardnote">
-          full production capital when active · every action needs step-up auth and dual approval
-        </span>
-      </div>
-
-      <p className="exec-live-inactive">
-        {live.deliveryProfile ?? "profile not stated"} ·{" "}
-        {live.productionCommandActive ? "PRODUCTION COMMAND ACTIVE" : "PRODUCTION INACTIVE"} · realtime{" "}
-        {live.realtimeActive ? "active" : "inactive"} — nothing is running and no command can be
-        issued from this screen.
-      </p>
-
-      <header className="exec-live-head">
-        <h1>
-          {live.deploymentId ?? "deployment not stated"}
-          <span className="exec-live-note">
-            {" "}
-            · {live.portfolioId ?? "portfolio not stated"} · {live.venue ?? "venue not stated"}
-          </span>
-        </h1>
-        <p className="exec-live-note">
-          stage {live.declaredStage ?? "not stated"} · runtime{" "}
-          {/* null, and never HALTED. */}
-          {live.runtimeState ?? "not stated"} · activated{" "}
-          {live.activatedAt ?? "not stated"}
-        </p>
-      </header>
-
-      {live.lineage.length > 0 ? (
-        <ul className="exec-live-lineage" aria-label="Lineage">
-          {live.lineage.map((item) => (
-            <li key={`${item.kind}:${item.value}`}>
-              <span className="exec-live-note">{item.kind}</span> {item.value}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      {live.predecessorEnvelope ? (
-        <section className="exec-live-predecessor" aria-label="Predecessor canary envelope">
-          <h2 className="exec-live-h2">Canary envelope (predecessor)</h2>
-          <p className="exec-live-note">
-            rev {live.predecessorEnvelope.revision ?? "not stated"} ·{" "}
-            {live.predecessorEnvelope.status ?? "status not stated"} ·{" "}
-            {/* The label the handoff asks for: this envelope does not govern
-                Live Full, and showing its caps without saying so would read as
-                the limits in force. */}
-            <strong>
-              {live.predecessorEnvelope.activeForLiveFull
-                ? "active for Live Full"
-                : "NOT active for Live Full"}
-            </strong>
-          </p>
-          <dl className="exec-live-limits">
-            {[
-              ["capital cap", live.predecessorEnvelope.capitalCap],
-              ["gross notional cap", live.predecessorEnvelope.grossNotionalCap],
-              ["daily loss cap", live.predecessorEnvelope.dailyLossCap],
-            ].map(([label, value]) => (
-              <div key={label as string}>
-                <dt>{label}</dt>
-                <dd className="exec-num">
-                  {value ?? "—"}{" "}
-                  {value && live.predecessorEnvelope?.currency
-                    ? live.predecessorEnvelope.currency
-                    : null}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      ) : (
-        <PanelState
-          status="unavailable"
-          reason="No predecessor canary envelope was published for this deployment. Live Full rests on a canary exit, so its absence is a gap rather than a default."
+      <StageGuardBand stage="LIVE · FULL" note="full production capital when active · every action needs step-up auth and dual approval" />
+      <ExecutionWorkspace layout="balanced" rail={rail}>
+        <div className="exec-live-head">
+          <ExecutionPageHeader
+            title={live.deploymentId ?? "deployment not stated"}
+            id={`${live.portfolioId ?? "portfolio not stated"} · ${live.venue ?? "venue not stated"}`}
+            badges={badges}
+            purpose="Portfolio risk → broker truth → exposure → incidents → contribution. Research by drill-down only."
+            secondary={<span className="exec-role-meta">stage {live.declaredStage ?? "not stated"} · activated {live.activatedAt ?? "not stated"}</span>}
+          />
+        </div>
+        <ExecutionDecisionStrip
+          metrics={live.kpis.map((kpi) => ({ label: kpi.label, value: kpi.value, unit: kpi.unit, note: kpi.value === null ? (kpi.suppressed ? "suppressed" : null) : kpi.authority }))}
         />
-      )}
-
-      <section aria-label="KPIs">
-        <h2 className="exec-live-h2">Live KPIs</h2>
-        <div className="exec-live-kpis">
-          {live.kpis.map((kpi) => (
-            <div className="exec-live-kpi" key={kpi.key} data-suppressed={kpi.suppressed}>
-              <span className="exec-live-kpilabel">{kpi.label}</span>
-              {kpi.value === null ? (
-                <span className="exec-live-kpiunavailable">
-                  {kpi.suppressed ? "suppressed" : "unavailable"}
-                </span>
-              ) : (
-                <span className="exec-live-kpivalue exec-num">
-                  {kpi.value}
-                  {kpi.unit ? ` ${kpi.unit}` : null}
-                </span>
-              )}
-              <span className="exec-live-note">{kpi.authority ?? "authority not stated"}</span>
+        {mismatch ? (
+          <section className="exec-mismatch-slot" role="alert" aria-label="Broker mismatch">
+            <ExecutionSectionTitle>MISMATCH — broker truth replaces presentation</ExecutionSectionTitle>
+            <p className="exec-role-body">{rules.suppression}</p>
+            <p className="exec-role-meta">
+              state {consistency?.state ?? "not stated"} · behaviour {consistency?.mismatchBehavior ?? "not stated"}
+              {consistency?.findingHref ? (
+                <>
+                  {" · "}
+                  <a href={consistency.findingHref}>open finding</a>
+                </>
+              ) : null}
+              {consistency?.dryRunReconcileHref ? (
+                <>
+                  {" · "}
+                  <a href={consistency.dryRunReconcileHref}>dry-run reconcile</a>
+                </>
+              ) : null}
+            </p>
+          </section>
+        ) : (
+          <EquityChart
+            title="Contribution / edge evidence — 30d contribution vs portfolio"
+            envelope={{ window: "30d", interval: "1d", currency: null, asOf: brokerPanel?.envelope.asOf ?? "", authority: "ANALYTICS" as never, formulaVersion: null, sourceRows: null, returnedRows: null, coverage: null }}
+            series={null}
+            unavailableReason="Contribution series not published for this profile — BR-EX-34. Research lineage stays in the provenance drawer; it does not occupy live safety space."
+          />
+        )}
+        <ExecutionTabs
+          tabs={[
+            { key: "Exposure & orders", label: "Exposure & orders" },
+            { key: "Continuity", label: "Continuity" },
+            { key: "Predecessor envelope", label: "Predecessor envelope" },
+            { key: "Guard rules", label: "Guard rules" },
+          ]}
+          active={tab}
+          onChange={(key) => setTab(key as Tab)}
+          label="Live sections"
+        >
+          {tab === "Exposure & orders" ? (
+            <div className="exec-source-grid exec-live-panels">
+              {(["internal", "broker", "difference"] as const).map((id) => (
+                <SourceTile key={id} title={id === "internal" ? "Internal" : id === "broker" ? "Broker" : "Difference"} envelope={live.panels[id]?.envelope} suppressed={live.panels[id]?.suppressed} warnings={live.panels[id]?.warningCodes} />
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="exec-live-guardrule" aria-label="Guard rules">
-        <h2 className="exec-live-h2">Guard rules</h2>
-        <p className="exec-live-note">{policy?.guardSemantics ?? "guard semantics not stated"}</p>
-        {/* Two rules in one token, said as two sentences. */}
-        <p>{rules.suppression}</p>
-        <p>{rules.gapRule}</p>
-        {live.suppressedBrokerFields.length > 0 ? (
-          <p className="exec-live-note">
-            {live.suppressedBrokerFields.length} broker figure(s) were withheld before reaching this
-            screen.
-          </p>
-        ) : null}
-      </section>
-
-      <section className="exec-live-continuity" aria-label="Projection continuity">
-        <h2 className="exec-live-h2">Projection continuity</h2>
-        <p className="exec-live-note">
-          state {live.projectionContinuity?.state ?? "not stated"} · gap{" "}
-          {/* `null` says "not stated", never "no". */}
-          {gap === null ? "not stated" : gap ? "detected" : "none"}
-        </p>
-        {live.projectionContinuity?.blockerCodes.length ? (
-          <div className="exec-disabled-reason">
-            {live.projectionContinuity.blockerCodes.map((code) => (
-              <div key={code}>{code}</div>
-            ))}
-          </div>
-        ) : null}
-      </section>
-
-      <div className="exec-live-panels">
-        <Panel panel={live.panels.internal} title="Internal" />
-        <Panel panel={live.panels.broker} title="Broker" />
-        <Panel panel={live.panels.difference} title="Difference" />
-      </div>
-
-      {policy?.protective?.visible ? (
-        <LiveActionGroup policy={policy.protective} title="Protective action" gapDetected={gap} />
-      ) : null}
-      {policy?.riskIncreasing?.visible ? (
-        <LiveActionGroup policy={policy.riskIncreasing} title="Risk-increasing action" gapDetected={gap} />
-      ) : null}
-      {!policy?.protective?.visible && !policy?.riskIncreasing?.visible ? (
-        <p className="exec-live-note">
-          No command controls are shown: production command authority is inactive for this profile.
-          A protective action being unblocked by the gap rule is not the same as it being executable.
-        </p>
-      ) : null}
-
-      {live.lifecycleBlockers.length > 0 ? (
-        <div className="exec-disabled-reason">
-          {live.lifecycleBlockers.map((code) => (
-            <div key={code}>{code}</div>
-          ))}
-        </div>
-      ) : null}
-      {children}
+          ) : null}
+          {tab === "Continuity" ? (
+            <section className="exec-live-continuity" aria-label="Projection continuity">
+              <ExecutionSectionTitle>Projection continuity</ExecutionSectionTitle>
+              <p className="exec-live-note exec-role-meta">
+                state {live.projectionContinuity?.state ?? "not stated"} · gap {gap === null ? "not stated" : gap ? "detected" : "none"}
+              </p>
+              <table className="exec-360-sync">
+                <tbody>
+                  <tr><th scope="row">state</th><td>{live.projectionContinuity?.state ?? "not stated"}</td></tr>
+                  <tr><th scope="row">gap</th><td>{gap === null ? "not stated" : gap ? "detected" : "none"}</td></tr>
+                  <tr><th scope="row">epoch · sequence</th><td className="exec-num">{live.projectionContinuity?.epoch ?? "—"} · {live.projectionContinuity?.sequence ?? "—"}</td></tr>
+                  <tr><th scope="row">affected authorities</th><td>{live.projectionContinuity?.affectedAuthorities.join(", ") || "—"}</td></tr>
+                </tbody>
+              </table>
+              {live.projectionContinuity?.blockerCodes.length ? (
+                <div className="exec-disabled-reason">
+                  {live.projectionContinuity.blockerCodes.map((code) => (
+                    <div key={code}>{code}</div>
+                  ))}
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+          {tab === "Predecessor envelope" ? (
+            live.predecessorEnvelope ? (
+              <section className="exec-live-predecessor" aria-label="Predecessor canary envelope">
+                <ExecutionSectionTitle>
+                  Canary envelope (predecessor) <span className="exec-role-meta">rev {live.predecessorEnvelope.revision ?? "not stated"} · {live.predecessorEnvelope.status ?? "status not stated"}</span>
+                </ExecutionSectionTitle>
+                <p className="exec-role-body">
+                  <strong>{live.predecessorEnvelope.activeForLiveFull ? "active for Live Full" : "NOT active for Live Full"}</strong>
+                </p>
+                <table className="exec-360-sync exec-live-limits">
+                  <tbody>
+                    {([["capital cap", live.predecessorEnvelope.capitalCap], ["gross notional cap", live.predecessorEnvelope.grossNotionalCap], ["daily loss cap", live.predecessorEnvelope.dailyLossCap]] as const).map(([label, value]) => (
+                      <tr key={label}>
+                        <th scope="row">{label}</th>
+                        <td className="exec-num">{value ?? "—"}{value && live.predecessorEnvelope?.currency ? ` ${live.predecessorEnvelope.currency}` : ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </section>
+            ) : (
+              <PanelState status="unavailable" reason="No predecessor canary envelope was published for this deployment. Live Full rests on a canary exit, so its absence is a gap rather than a default." />
+            )
+          ) : null}
+          {tab === "Guard rules" ? (
+            <section className="exec-live-guardrule" aria-label="Guard rules">
+              <ExecutionSectionTitle>Guard rules</ExecutionSectionTitle>
+              <p className="exec-live-note exec-role-meta">{policy?.guardSemantics ?? "guard semantics not stated"}</p>
+              <p className="exec-role-body">{rules.suppression}</p>
+              <p className="exec-role-body">{rules.gapRule}</p>
+              {live.suppressedBrokerFields.length > 0 ? <p className="exec-live-note exec-role-meta">{live.suppressedBrokerFields.length} broker figure(s) were withheld before reaching this screen.</p> : null}
+              {/* Risk-increasing actions live here, lighter and away from the protective ladder. */}
+              {policy?.riskIncreasing?.visible ? (
+                <div className="exec-stage-actions" data-weight="risk">
+                  <LiveActionGroup policy={policy.riskIncreasing} title="Risk-increasing action" gapDetected={gap} />
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+        </ExecutionTabs>
+        {children}
+      </ExecutionWorkspace>
     </ExecutionSurface>
   );
 }

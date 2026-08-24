@@ -32,6 +32,8 @@ export interface VenueCalendar {
   tradingDays: readonly number[];
   /** `2026-09-02` — dates the venue is shut regardless of weekday. */
   holidays?: readonly string[];
+  /** Named phases inside the window (ATO/ATC auctions, lunch break) — venue facts, drawn on the timeline. */
+  phases?: readonly { label: string; kind: "auction" | "continuous" | "break"; openMinute: number; closeMinute: number }[];
 }
 
 export type SessionPhase =
@@ -166,4 +168,12 @@ export const VN_MARKET: VenueCalendar = {
   label: "VN MARKET",
   window: { openMinute: 9 * 60, closeMinute: 14 * 60 + 45 },
   tradingDays: [1, 2, 3, 4, 5],
+  // HOSE session structure: ATO auction, continuous, lunch break, continuous, ATC auction.
+  phases: [
+    { label: "ATO", kind: "auction", openMinute: 9 * 60, closeMinute: 9 * 60 + 15 },
+    { label: "continuous", kind: "continuous", openMinute: 9 * 60 + 15, closeMinute: 11 * 60 + 30 },
+    { label: "break", kind: "break", openMinute: 11 * 60 + 30, closeMinute: 13 * 60 },
+    { label: "continuous", kind: "continuous", openMinute: 13 * 60, closeMinute: 14 * 60 + 30 },
+    { label: "ATC", kind: "auction", openMinute: 14 * 60 + 30, closeMinute: 14 * 60 + 45 },
+  ],
 };

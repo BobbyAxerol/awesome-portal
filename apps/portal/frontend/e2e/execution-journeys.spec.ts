@@ -428,3 +428,66 @@ test.describe("EL-V2-05 · governance chain", () => {
     });
   }
 });
+
+// ── EL-V2-06 · stage workbenches ─────────────────────────────────────────────
+test.describe("EL-V2-06 · stage workbenches", () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  const STAGES = [
+    ["paper-vnm", "/deployments/paper/dep_vnm/vn-market", 0],
+    ["sandbox-dep_77", "/deployments/sandbox/dep_77", 0],
+    ["canary-dep_88", "/deployments/live/dep_88/canary", 1],
+    ["live-dep_live", "/deployments/live/dep_live", 1],
+  ] as const;
+
+  for (const [name, route, bands] of STAGES) {
+    test(`guard budget · ${name}: at most one solid guard band, panels on ordinary Carbon`, async ({ page }) => {
+      await open(page, route);
+      const count = await page.locator(".exec-guard-band").count();
+      expect(count).toBe(bands);
+      // Count every element painted with the band's solid background: it must be the band alone.
+      const solid = await page.evaluate(() => {
+        const band = document.querySelector(".exec-guard-band");
+        const bad = getComputedStyle(document.documentElement).getPropertyValue("--bad").trim();
+        const probe = document.createElement("div");
+        probe.style.background = bad;
+        document.body.appendChild(probe);
+        const badRgb = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        const painted = Array.from(document.querySelectorAll("body *")).filter((n) => {
+          const cs = getComputedStyle(n);
+          return cs.backgroundColor === badRgb && cs.opacity !== "0" && (n as HTMLElement).offsetHeight > 20 && (n as HTMLElement).offsetWidth > 200;
+        });
+        return { painted: painted.length, bandPainted: band ? getComputedStyle(band).backgroundColor === badRgb : false };
+      });
+      expect(solid.painted).toBeLessThanOrEqual(bands === 1 ? 1 : 0);
+      if (bands === 1) expect(solid.bandPainted).toBe(true);
+      // Shared anatomy on every stage.
+      await expect(page.locator(".exec-masthead").first()).toBeVisible();
+      await expect(page.locator(".exec-context-rail").first()).toBeVisible();
+      await expect(page.locator(".exec-strip").first()).toBeVisible();
+    });
+
+    test(`shell-visible baseline · ${name} · 1440×900`, async ({ page }) => {
+      await open(page, route);
+      await expect(page).toHaveScreenshot(`el-v2-06-${name}.png`, { fullPage: true, animations: "disabled" });
+    });
+  }
+
+  test("Canary: protective action in the rail, scale-up under the guard rule — never side by side", async ({ page }) => {
+    await open(page, "/deployments/live/dep_88/canary");
+    const rail = page.locator(".exec-context-rail");
+    await expect(rail.getByText(/Promotion decision/)).toBeVisible();
+    expect(await rail.locator('[data-weight="risk"]').count()).toBe(0);
+    await page.getByRole("tab", { name: /Guard rule/ }).click();
+    await expect(page.getByText(/Scale-up is blocked|Scale-up is not blocked/)).toBeVisible();
+  });
+
+  test("VNM: the session timeline draws ATO · continuous · break · ATC with a venue-time marker", async ({ page }) => {
+    await open(page, "/deployments/paper/dep_vnm/vn-market");
+    const blocks = page.locator(".exec-session-block");
+    expect(await blocks.count()).toBe(5);
+    await expect(page.locator(".exec-session-now")).toHaveCount(1);
+    await expect(page.locator(".exec-session-caption")).toContainText("VN MARKET");
+  });
+});

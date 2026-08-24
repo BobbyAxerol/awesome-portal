@@ -23,7 +23,7 @@ Kế hoạch chi tiết từng phase: các khối **Claude supplement** trong ch
 | EL-V2-03 | Preview có state, zero no-op | **hoàn tất 2026-08-24, chờ Bobby duyệt gate** | handler bắt buộc trong type ✓ · 6/6 journey §8.2 ✓ · sweep cô lập 17 route: **183 control → 95 đổi state · 80 điều hướng · 8 đã chọn · 0 NO-OP** ✓ · screenId → inspector ✓ | `previewControllers.tsx` (5 controller + ledger role=status), `testHandlers.ts`, `execution-journeys.spec.ts`, `e2e/el-v2-03-evidence/controls.json`; 2 NO-OP thật tìm thấy và sửa (Approve-with-condition không có điều kiện; hop Queue→Incident thiếu contract → BR-EX-33) |
 | EL-V2-04 | Paper + Paper Exit lát cắt dọc chuẩn | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | layout proposal px ✓ · EquityChart thật (ECharts) ✓ — product route = honest state vì chưa có series (BR-EX-34) · Paper + Exit trên 7 primitive ✓ · fold 1440×900 ✓ · journey exit ✓ · ma trận 15+1 ✓ · chữ: −14…−25% từ (policy prose 5→2), **không đạt 50%** — báo thật | `EquityChart.tsx`, `equity.fixtures.ts`, `PaperWorkbench.tsx`, `PaperExitReview.tsx`, `paperMatrix.test.tsx`, `equityChart.test.tsx`, `PAPER_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-04-*.png`; close-out trong handoff |
 | EL-V2-05 | Governance decision chain | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | sticky decision bar ✓ (R1/R2/Exit) · Inbox SLA bar + strip + rail ✓ · R1 5 tab (limitations bảng, evidence honest) ✓ · R2 PLAN PREVIEW 1 chip + elevation ✓ · role matrix 4×2 ✓ · zero-write test ✓ · journey Inbox→R1→R2→Exit ✓ · BR-EX-35/36/37 | `decisionBar.tsx`, `ApprovalInbox.tsx`, `GateR1Review.tsx`, `GateR2Review.tsx`, `PaperExitReview.tsx`, `evidence.tsx`, `governanceChain.test.tsx`, `GOVERNANCE_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-05-*.png`; close-out trong handoff |
-| EL-V2-06 | Workbench VNM→Sandbox→Canary→Live | `QUEUED` | ledger stage đóng; anatomy chung, safety khác biệt giữ | — |
+| EL-V2-06 | Stage workbench VNM→Live | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | anatomy chung 4 màn ✓ (clone=0) · guard budget 1 band ✓ · VNM timeline ✓ · Sandbox 4 tab ✓ · Canary/Live bất đối xứng + suppression ✓ · commands dark ✓ · ma trận 4 stage ✓ · chart = honest state (BR-EX-34) · BR-EX-38 | `stageWorkbench.tsx`, `sessionTimeline.tsx`, `SandboxCertification.tsx`, `CanaryControlRoom.tsx`, `LiveFullOperations.tsx`, `PaperWorkbench.tsx` (timeline), `AlphaThreeSixty.tsx` (EquityChart), `vnCalendar.ts` (phases), `stageWorkbench.test.tsx`, `STAGE_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-06-*.png` |
 | EL-V2-07 | Ops + Incident + Command + Terminal | `QUEUED` | read path đủ; terminal thật; không vượt plan/apply/verify | — |
 | EL-V2-08 | 360° + Blotter analytical | `QUEUED` | ledger analytical đóng; zero recompute; budget đạt | — |
 | EL-V2-09 | Lane B Paper + hardening + nghiệm thu | `QUEUED` | mười phase accepted; owner sign-off; rollback chứng minh | — |
@@ -2165,7 +2165,7 @@ nav trỏ 404.
 |---|---|---|---|---|---|
 | SESSION OPEN **và** SUSPENDED_BY_CALENDAR | N | có cả hai | impl | C | |
 | Calendar banner info-tone (không phải warning) + aging PAUSED | T | có đúng ngữ nghĩa PAUSED | impl | C | |
-| Session-aware equity (shading giờ đóng cửa) | C | **khung trống** | MISS | — | V2-06 dùng cơ chế V2-04 + markArea calendar |
+| Session-aware equity (shading giờ đóng cửa) | C | **timeline phiên** (ATO/continuous/break/ATC + marker) + equity honest state | impl+BE | C | series chờ BR-EX-34; markArea calendar áp khi có series |
 | KPI VND, không trộn USDT | N | có | impl | C | |
 | Gate đếm TRADING days | N | có | impl | C | |
 | Accounting T+2.5 pending settlement | N | có | impl | C | |
@@ -2182,7 +2182,7 @@ nav trỏ 404.
 | Findings bảng (CRITICAL resolve-path + INFO accept) | N | có | impl | C | |
 | Order-type cert per-type + strategy-scope note | N | có | impl | C | |
 | Execution quality + INSUFFICIENT_DATA (≥30 fills) | N | có | impl | C | |
-| Smoke plan bounded (qty/cap/timebox/approver) | N | có | impl | C | |
+| Smoke plan bounded (qty/cap/timebox/approver) | N | **model không có field** — không render | dis+BE | C | BR-EX-38 (V2-06 phát hiện ledger cũ ghi sai "có") |
 | Cleanup checklist exit-precondition | N | có | impl | C | |
 | CTA: Sync/Dry-run/Smoke/Exit — blocked có lý do | N | có | impl | C+I(fixtures) | preview chưa nối — V2-03 |
 
@@ -2190,10 +2190,10 @@ nav trỏ 404.
 
 | Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
 |---|---|---|---|---|---|
-| GUARDED band + shield (không color-only) | N | có | impl | C | V2-06 guard budget: đúng 1 band |
+| GUARDED band + shield (không color-only) | N | `StageGuardBand` — đúng 1 band, e2e probe | impl | C | V2-06 ✓ |
 | READINESS DEGRADED variant (sync stale ⇒ scale blocked, protective còn) | N | có — bất đối xứng đúng | impl | C | |
 | Envelope 4 hàng + breach⇒auto-halt + stage limits | N | có | impl | C | |
-| **Live vs Paper vs Backtest chart** (line style, digest join) | C | **khung trống** | MISS | — | V2-06 |
+| **Live vs Paper vs Backtest chart** (line style, digest join) | C | `EquityChart` honest state (không khung trống) | dis+BE | C | BR-EX-34 |
 | Positions/orders BROKER + latency | N | có | impl | C | |
 | Incidents/recon + scale blockers | N | có | impl | C | |
 | Contribution grade C + INSUFFICIENT_DATA rule | N | có | impl | C | |
@@ -2210,7 +2210,7 @@ nav trỏ 404.
 | MISMATCH banner thay chart slot | N | có | impl | C | |
 | Exposure & orders + pending exposure | N | có | impl | C | |
 | Protective ladder halt→reduce→emergency-close + rb tested | N | có; step-up ghi rõ | impl | C | |
-| **Contribution/edge chart 30d** | C | **khung trống** | MISS | — | V2-06 |
+| **Contribution/edge chart 30d** | C | `EquityChart` honest state; MISMATCH banner thay slot | dis+BE | C | BR-EX-34 |
 | Research lineage drill-down-only | D | có | impl | C | |
 
 ### L10 · HiFi Command Center (WF 5a)

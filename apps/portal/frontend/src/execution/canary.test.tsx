@@ -8,7 +8,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within, fireEvent } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { guardAsymmetry, readCanaryControlRoom } from "./certification";
@@ -73,12 +73,13 @@ describe("five KPI slots never render zero", () => {
     expect(r.kpis).toHaveLength(5);
     expect(r.kpis.every((k) => k.value === null)).toBe(true);
     const { container } = render(<CanaryControlRoomScreen room={r} />);
-    const kpis = container.querySelectorAll(".exec-canary-kpi");
+    // EL-V2-06: KPIs are the shared decision strip.
+    const kpis = container.querySelectorAll(".exec-strip-cell");
     expect(kpis).toHaveLength(5);
     for (const kpi of kpis) {
-      expect(kpi.querySelector(".exec-canary-kpiunavailable")).toBeTruthy();
+      expect(kpi.querySelector(".exec-strip-absent")).toBeTruthy();
       // A zero here is a measurement; the absence of one is not.
-      expect(kpi.querySelector(".exec-canary-kpivalue")).toBeNull();
+      expect(kpi.querySelector(".exec-role-kpi")).toBeNull();
     }
   });
 
@@ -154,6 +155,7 @@ describe("the broker-stale asymmetry is stated as two facts", () => {
 
   it("renders the two statements separately on screen", () => {
     render(<CanaryControlRoomScreen room={room()} />);
+    fireEvent.click(screen.getByRole("tab", { name: /Guard rule/ }));
     const rule = screen.getByLabelText("Guard rule");
     expect(within(rule).getByText(/Protective actions are not blocked/)).toBeTruthy();
     expect(within(rule).getByText(/Scale-up is blocked/)).toBeTruthy();
@@ -195,6 +197,8 @@ describe("both action groups stay absent while invisible", () => {
     });
     render(<CanaryControlRoomScreen room={visible} />);
     expect(screen.getByRole("button", { name: "Protective action" })).toBeTruthy();
+    // Scale-up sits under the guard rule — a different place from the protective group.
+    fireEvent.click(screen.getByRole("tab", { name: /Guard rule/ }));
     expect(screen.getByRole("button", { name: "Request scale" })).toBeTruthy();
   });
 
@@ -207,6 +211,7 @@ describe("both action groups stay absent while invisible", () => {
       policy.scale_up.enabled = true;
     });
     render(<CanaryControlRoomScreen room={visible} brokerStale />);
+    fireEvent.click(screen.getByRole("tab", { name: /Guard rule/ }));
     // The whole point of the screen.
     expect(screen.getByRole("button", { name: "Protective action" }).hasAttribute("disabled")).toBe(false);
     expect(screen.getByRole("button", { name: "Request scale" }).hasAttribute("disabled")).toBe(true);
@@ -224,11 +229,15 @@ describe("both action groups stay absent while invisible", () => {
 describe("the source panels degrade independently", () => {
   it("renders each of the eight frames", () => {
     render(<CanaryControlRoomScreen room={room()} />);
-    for (const title of [
-      "Internal", "Broker", "Difference", "Positions",
-      "Blotter", "Series", "Envelope compliance", "Rollback readiness",
-    ]) {
-      expect(screen.getByLabelText(title), title).toBeTruthy();
+    // EL-V2-06: the eight frames are spread over three tabs.
+    const groups: [string, string[]][] = [
+      ["Envelope", ["Envelope compliance", "Rollback readiness"]],
+      ["Positions & orders", ["Positions", "Blotter", "Series"]],
+      ["Reconciliation", ["Internal", "Broker", "Difference"]],
+    ];
+    for (const [tabName, titles] of groups) {
+      fireEvent.click(screen.getByRole("tab", { name: new RegExp(tabName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }));
+      for (const title of titles) expect(screen.getByLabelText(title), title).toBeTruthy();
     }
   });
 

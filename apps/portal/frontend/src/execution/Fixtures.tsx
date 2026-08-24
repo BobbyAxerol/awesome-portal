@@ -1688,6 +1688,18 @@ export default function ExecutionFixtures() {
         </Group>
 
         <Group
+          id="v2-guard-asymmetry"
+          title="V2 guard asymmetry — Canary (broker STALE) beside Live"
+          note="EL-V2-06: one solid guard band per page; protective actions sit in the rail (heavier), scale-up / risk-increasing sit under the guard rule (lighter). A stale broker snapshot or a projection gap blocks only the risk-increasing side."
+          surface="deployments"
+        >
+          <div className="exec-guard-pair">
+            <CanaryControlRoomContainer api={WIRED_API} deploymentId="dep_88" brokerStale />
+            <LiveFullOperationsContainer api={WIRED_API} deploymentId="dep_88" />
+          </div>
+        </Group>
+
+        <Group
           id="live-full-operations-1f"
           title="Live Full Operations (1f)"
           note="No broker figure reaches this screen while consistency is unverified — the reader drops them, so they never become props. Suppressed is rendered apart from unavailable, and R4 is blocked because nobody can say whether a projection gap exists."

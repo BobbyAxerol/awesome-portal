@@ -4424,3 +4424,44 @@
 @media (max-width: 640px) {
   .exec-decision-bar-actions { margin-left: 0; width: 100%; }
 }
+
+/* ── EL-V2-06 · stage workbenches ────────────────────────────────────── */
+/* Guard band budget: one solid band per page. Text + shield + double border. */
+.exec-guard-band {
+  display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;
+  padding: 6px var(--space-3);
+  background: var(--bad);
+  color: var(--paper);
+  border: 2px solid var(--paper);
+  outline: 2px solid var(--bad);
+  margin-bottom: var(--space-2);
+}
+.exec-guard-band strong { font: var(--exec-font-control); letter-spacing: .04em; }
+.exec-guard-band .exec-guard-note { color: inherit; opacity: .9; }
+.exec-guard-shield { font: var(--exec-font-section); line-height: 1; }
+.exec-source-tile { border: 1px solid var(--line); background: var(--surface-3); padding: var(--space-2) var(--space-3); min-width: 0; }
+.exec-source-tile[data-suppressed] { border-style: dashed; }
+.exec-source-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-2); }
+.exec-stage-actions { display: flex; flex-direction: column; gap: var(--space-2); }
+.exec-stage-actions .exec-canary-actions, .exec-stage-actions .exec-live-actions { border: 1px solid var(--line); padding: var(--space-2); }
+.exec-stage-actions[data-weight="protective"] .exec-canary-actions button,
+.exec-stage-actions[data-weight="protective"] .exec-live-actions button { font-weight: 600; }
+.exec-stage-actions[data-weight="risk"] { opacity: .92; }
+.exec-mismatch-slot { border: 2px solid var(--bad); padding: var(--space-3); }
+/* Session timeline */
+.exec-session-timeline { margin: 0 0 var(--space-2); }
+.exec-session-track { position: relative; height: 28px; background: var(--surface-3); border: 1px solid var(--line); overflow: hidden; }
+.exec-session-block { position: absolute; top: 0; bottom: 0; border-right: 1px solid var(--line); }
+.exec-session-block[data-kind="continuous"] { background: var(--good); opacity: .55; }
+.exec-session-block[data-kind="auction"] { background: var(--accent); opacity: .75; }
+.exec-session-block[data-kind="break"] { background: var(--line-soft); }
+.exec-session-labels { position: relative; height: 16px; }
+.exec-session-label { position: absolute; top: 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: clip; }
+.exec-session-now { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--bad); }
+.exec-session-timeline[data-phase="CLOSED_BY_CALENDAR"] .exec-session-now { background: var(--warn); }
+.exec-session-caption { margin: 2px 0 0; }
+.exec-cert-strip { margin: 0; }
+/* Blocker codes and panel ids are tokens; in a 340px rail they wrap anywhere rather than clip. */
+.exec-context-rail, .exec-source-tile, .exec-cert dt, .exec-canary dt, .exec-live dt, .exec-state { overflow-wrap: anywhere; }
+.exec-guard-pair { display: grid; grid-template-columns: 1fr; gap: var(--space-3); }
+@media (min-width: 1600px) { .exec-guard-pair { grid-template-columns: 1fr 1fr; } }

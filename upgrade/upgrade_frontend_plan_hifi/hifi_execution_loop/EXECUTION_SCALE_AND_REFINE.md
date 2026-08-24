@@ -983,3 +983,8 @@ bật chip, không phải hỏng.
   trong R1 detail (đi cùng passport/checklist).
 - **Lý do UI:** HiFi 1a "Selection & Known Limitations" — bảng 4 loại có expiry; hiện chỉ fixture có,
   route product hiện "not published" (không bịa).
+
+### BR-EX-38 — Sandbox smoke plan bounded (2026-08-24, EL-V2-06)
+
+- **Field cần:** `smoke_plan {plan_id, qty, cap, currency, timebox_minutes, operator, status, approved_by}` trong Sandbox certification.
+- **Lý do UI:** HiFi 1d "Smoke plan (bounded)" là bảng; model hiện không có ⇒ không render (không bịa).

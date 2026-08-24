@@ -41,6 +41,7 @@ import { formatUntil, sessionState, type VenueCalendar } from "../vnCalendar";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { ExecutionSectionTitle } from "../components/typography";
 import { EquityChart, type EquitySeries } from "../components/EquityChart";
+import { SessionTimeline } from "../components/sessionTimeline";
 import {
   ExecutionContextRail,
   ExecutionDecisionStrip,
@@ -373,6 +374,9 @@ export function PaperWorkbench({
             </>
           }
         />
+        {calendar ? (
+          <SessionTimeline calendar={calendar} venueLocalTime={venueLocalTime} phase={session?.phase ?? null} />
+        ) : null}
         {closed && session ? (
           <div className="exec-paper-calendar exec-role-body" role="status">
             <strong>

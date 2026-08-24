@@ -715,6 +715,195 @@
   "verdict": "skipped:hidden"
  },
  {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 0,
+  "tag": "BUTTON",
+  "text": "Reconciliation 0",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 1,
+  "tag": "BUTTON",
+  "text": "Steps 7",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 2,
+  "tag": "BUTTON",
+  "text": "Promotion plans 0",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 3,
+  "tag": "BUTTON",
+  "text": "Timeline 1",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 4,
+  "tag": "BUTTON",
+  "text": "Copy full ARTIFACT",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 5,
+  "tag": "A",
+  "text": "AP-101",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 6,
+  "tag": "A",
+  "text": "AP-207",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 7,
+  "tag": "A",
+  "text": "PX-29",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 8,
+  "tag": "BUTTON",
+  "text": "Copy full evidence set",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 0,
+  "tag": "BUTTON",
+  "text": "Envelope",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 1,
+  "tag": "BUTTON",
+  "text": "Positions & orders",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 2,
+  "tag": "BUTTON",
+  "text": "Reconciliation",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 3,
+  "tag": "BUTTON",
+  "text": "Guard rule",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 4,
+  "tag": "BUTTON",
+  "text": "Copy full ARTIFACT",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 5,
+  "tag": "A",
+  "text": "AP-118",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 6,
+  "tag": "A",
+  "text": "AP-152",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 7,
+  "tag": "A",
+  "text": "SX-14",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 8,
+  "tag": "BUTTON",
+  "text": "Copy full evidence set",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 0,
+  "tag": "BUTTON",
+  "text": "Exposure & orders",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 1,
+  "tag": "BUTTON",
+  "text": "Continuity",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 2,
+  "tag": "BUTTON",
+  "text": "Predecessor envelope",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 3,
+  "tag": "BUTTON",
+  "text": "Guard rules",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 4,
+  "tag": "BUTTON",
+  "text": "Copy full ARTIFACT",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 5,
+  "tag": "A",
+  "text": "AP-118",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 6,
+  "tag": "A",
+  "text": "AP-152",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 7,
+  "tag": "A",
+  "text": "scert_fixture",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 8,
+  "tag": "A",
+  "text": "cenv_01K3D8R64WYH5M8MQM5H96J7BF",
+  "verdict": "skipped:hidden"
+ },
+ {
   "route": "/deployments/blotter",
   "index": 0,
   "tag": "BUTTON",

@@ -39,6 +39,7 @@ import { KeysetTable, type Column } from "../components/table";
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
 import { ExecutionSurface } from "../ExecutionSurface";
+import { EquityChart, type EquitySeries } from "../components/EquityChart";
 
 /**
  * Row budgets for the bounded panels.
@@ -158,7 +159,7 @@ export interface AlphaThreeSixtyProps {
    * because they run the same artifact, and two alphas are not comparable at
    * all. `null` renders as unavailable rather than an empty frame.
    */
-  equity?: { envelope: ChartEnvelope; body?: ReactNode } | null;
+  equity?: { envelope: ChartEnvelope; series?: EquitySeries | null; body?: ReactNode } | null;
   deployments: readonly DeploymentRow[];
   tiles: readonly InsightTile[];
   /** Unbounded. Paged by cursor, never capped. */
@@ -504,9 +505,7 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
                 not. */}
             <div className="exec-grid-2" data-ratio="1.35">
               {equity ? (
-                <ChartTile title="Equity by stage" envelope={equity.envelope}>
-                  {equity.body}
-                </ChartTile>
+                <EquityChart title="Equity by stage" envelope={equity.envelope} series={equity.series ?? null} />
               ) : (
                 <PanelState
                   status="unavailable"

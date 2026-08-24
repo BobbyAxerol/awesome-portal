@@ -1293,6 +1293,26 @@ trước); mỗi màn một reuse report (§11.3 guide v0.5).
 | Command vẫn tối | mọi nút command disabled + lý do; zero đường enable từ UI |
 | Ledger stage đóng | mọi dòng VNM/Sandbox/Canary/Live có disposition + test |
 
+
+#### Claude close-out — EL-V2-06 (2026-08-24, chỉ thêm; gate = Bobby duyệt hình ảnh)
+
+| Gate | Kết quả | Bằng chứng |
+|---|---|---|
+| Layout proposal + reuse report | ✓ | `STAGE_LAYOUT_PROPOSAL_2026-08-24.md` — bảng stage × guard × Next × chart × tabs; reuse report §11.3 |
+| Anatomy chung thật (grep clone = 0) | ✓ | 4 màn import `components/workspace`; test tĩnh: không `<h1>`, không `exec-*-kpis` cục bộ; `stageWorkbench.test.tsx` "one anatomy, four stages" |
+| Guard budget ≤1 band đỏ đặc | ✓ | `StageGuardBand` (text + ⛨ + double border) đúng 1 trên Canary/Live, 0 trên Paper VNM/Sandbox; e2e probe đếm phần tử nền `--bad` đặc (>200×20px) ≤1 mỗi route |
+| VNM calendar/session/order/settlement | ✓ | `SessionTimeline` (ATO · continuous · break · ATC + marker giờ venue) thay câu mô tả phiên; `VN_MARKET.phases` là fact lịch HOSE; OPEN/CLOSED có badge PAUSED + banner 1 dòng; T+2.5 / lot 100 / LO-ATO-ATC / DNSE credential giữ (tab Accounting/Orders/Provenance) |
+| Sandbox 7 step | ✓ | stepper `exec-cert-strip` giữ nguyên trên canvas; tabs Reconciliation (triptych `SourceTile` + findings) · Steps (bảng 7 bước có evidence digest/expiry) · Promotion plans · Timeline; CRITICAL ⇒ banner fail-closed + blocker có tên + strip "Critical open" |
+| Canary/Live guard, suppression, bất đối xứng | ✓ | protective ở rail Next (`data-weight="protective"`, đậm) · scale-up / risk-increasing dưới tab Guard (`data-weight="risk"`, nhạt); broker STALE / projection gap chỉ chặn phía risk; Live MISMATCH: banner thay chart slot, KPI `suppressed`, tile `data-suppressed="true"` (withheld ≠ unavailable); visual case `v2-guard-asymmetry` (Canary STALE cạnh Live) |
+| Dense content → tabs | ✓ | Canary 4 tab (8 frame chia 3 tab) · Live 4 tab · Sandbox 4 tab · không chồng dọc |
+| Command vẫn tối | ✓ | mọi nút `ActionGroup`/`LiveActionGroup` disabled trừ khi policy server `enabled`; test "commands stay dark"; Sandbox non-admin không thấy nút |
+| Ma trận stage states | ✓ | VNM OPEN/CLOSED · Sandbox NONE/CRITICAL · Canary OK/STALE · Live OK/MISMATCH — `stageWorkbench.test.tsx` + baselines route `el-v2-06-*.png` |
+| Chart thật | honest state | Canary "Live vs Paper vs Backtest", Live "Contribution 30d", Alpha 360 "Equity by stage" nay dùng `EquityChart` với trạng thái "not published (BR-EX-34)" — không còn khung trống; series chưa có contract |
+
+**Cổng kỹ thuật:** tsc sạch · vitest **1,621 passed / 1 skipped (76 file)** (+13 test `stageWorkbench.test.tsx`; 84 test cũ của Sandbox/Canary/Live/VNM cập nhật theo tab, không xoá) · vite build sạch · Playwright **267 passed · 0 failed · 16 skipped** (surface audit 40 ở 5 breakpoint — audit đã bắt 3 lỗi thật của tôi và tôi sửa: nhãn timeline 10px/contrast, code blocker không wrap trong rail, nhóm fixture ép hai workbench vào 136px; fixtures 87 crop; journeys 32 gồm guard probe ×4, baseline ×4, bất đối xứng, timeline).
+
+**Chưa làm / ngoài phạm vi:** chart có dữ liệu thật chờ BR-EX-34; Sandbox smoke plan bounded (qty/cap/timebox/approver) không có trong model `SandboxCertification` hiện tại — HiFi có, contract chưa publish ⇒ không render (ghi BR-EX-38 dưới); Exit Review cho Sandbox/Canary chưa có màn riêng (dùng Paper Exit anatomy khi contract có).
+
 ### EL-V2-07 — Operations, incident and command workflow
 
 **Goal:** turn Command Center, Queue, Incident Detail and Admin Action Drawer into one coherent triage
