@@ -4238,7 +4238,9 @@
   border: 1px solid var(--line);
   background: var(--surface-3);
   flex: 1 1 140px;
-  min-width: max-content;
+  /* `auto` = min-content = the figure alone (the unit may wrap under it), so
+     five USDT cells fit a 780px column; ten-digit VND wraps 4+1 honestly. */
+  min-width: auto;
   max-width: 100%;
 }
 .exec-strip-value { display: inline-flex; flex-wrap: wrap; align-items: baseline; column-gap: 0.3em; }
