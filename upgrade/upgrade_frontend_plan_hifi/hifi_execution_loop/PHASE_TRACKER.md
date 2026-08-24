@@ -2017,3 +2017,13 @@ auth remains optional, list paging/event completeness/resync are insufficient,
 and the only AWS-HK projection volume is on the unencrypted D2 root filesystem.
 The exact owner request is
 [`EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md`](../../backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md).
+
+Offline mapper hardening is now
+`D4_MAPPER_CORE_OFFLINE_COMPLETE / RUNTIME_FAIL_CLOSED /
+LIVE_INPUTS_BLOCKED`: exact-decimal order/fill/position/event normalization,
+alpha-scope rejection, composite event cursor, sealed synthetic replay and
+fresh-PostgreSQL BUILDING-only evidence exist. This still unlocks no frontend
+source profile; individual response pages remain explicitly partial and no
+runtime ingestor can report ready until the owner contract and encrypted store
+arrive. Detail:
+[`EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md`](../../backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md).

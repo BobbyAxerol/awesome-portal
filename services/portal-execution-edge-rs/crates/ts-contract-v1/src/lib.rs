@@ -122,9 +122,13 @@ pub struct WireOrder {
 pub struct WireFill {
     pub fill_id: WireIdentifier,
     #[serde(default)]
+    pub trade_id: Option<String>,
+    #[serde(default)]
     pub client_order_id: Option<String>,
     #[serde(default, alias = "alpha_id")]
     pub strategy_id: Option<String>,
+    #[serde(default)]
+    pub account_id: Option<String>,
     pub symbol: String,
     pub side: String,
     pub quantity: DecimalString,
@@ -183,6 +187,10 @@ pub struct WireEvent {
     pub created_at: Option<String>,
     #[serde(default)]
     pub trace_id: Option<String>,
+    #[serde(default, alias = "alpha_id")]
+    pub strategy_id: Option<String>,
+    #[serde(default)]
+    pub client_order_id: Option<String>,
     #[serde(default)]
     pub payload: Value,
     #[serde(flatten)]

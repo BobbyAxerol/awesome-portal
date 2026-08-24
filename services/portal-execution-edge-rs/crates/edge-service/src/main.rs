@@ -91,8 +91,10 @@ struct AppState {
     verifier: DelegationVerifier,
     snapshot: Arc<RwLock<Option<CapabilitySnapshot>>>,
     source_probe_required: RuntimeGate,
-    projection_required: RuntimeGate,
-    projection_ready: Arc<RwLock<bool>>,
+    projection_store_required: RuntimeGate,
+    projection_store_ready: Arc<RwLock<bool>>,
+    projection_ingestion_required: RuntimeGate,
+    projection_ingestion_ready: Arc<RwLock<bool>>,
     realtime_required: RuntimeGate,
     realtime_poller_ready: Arc<RwLock<bool>>,
     projection_store: Option<PgProjectionStore>,
@@ -143,6 +145,14 @@ struct EdgeConfig {
 }
 
 impl EdgeConfig {
+    fn projection_store_required(&self) -> RuntimeGate {
+        RuntimeGate::from(
+            self.projection_ingestion_enabled.is_enabled()
+                || self.realtime_sse_enabled.is_enabled()
+                || self.analytics_query_enabled.is_enabled(),
+        )
+    }
+
     fn from_environment() -> Result<Self, ConfigError> {
         let environment = required("EDGE_ENVIRONMENT")?;
         if !matches!(environment.as_str(), "paper" | "sandbox" | "live") {
@@ -362,7 +372,11 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         None
     };
     let snapshot = Arc::new(RwLock::new(initial_snapshot));
-    let projection_ready = Arc::new(RwLock::new(projection_store.is_some()));
+    let projection_store_ready = Arc::new(RwLock::new(projection_store.is_some()));
+    // Connecting to PostgreSQL is not proof that the source mapper is running.
+    // The D4 ingestor must explicitly publish readiness after it owns a locked
+    // BUILDING epoch; until then an enabled ingestion gate stays fail-closed.
+    let projection_ingestion_ready = Arc::new(RwLock::new(false));
     let realtime_poller_ready = Arc::new(RwLock::new(!config.realtime_sse_enabled.is_enabled()));
     let realtime_hub = if config.realtime_sse_enabled.is_enabled() {
         Some(RealtimeHub::new(config.realtime_queue_capacity)?)
@@ -374,12 +388,10 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         verifier,
         snapshot: Arc::clone(&snapshot),
         source_probe_required: config.source_probes_enabled,
-        projection_required: RuntimeGate::from(
-            config.projection_ingestion_enabled.is_enabled()
-                || config.realtime_sse_enabled.is_enabled()
-                || config.analytics_query_enabled.is_enabled(),
-        ),
-        projection_ready: Arc::clone(&projection_ready),
+        projection_store_required: config.projection_store_required(),
+        projection_store_ready: Arc::clone(&projection_store_ready),
+        projection_ingestion_required: config.projection_ingestion_enabled,
+        projection_ingestion_ready: Arc::clone(&projection_ingestion_ready),
         realtime_required: config.realtime_sse_enabled,
         realtime_poller_ready: Arc::clone(&realtime_poller_ready),
         projection_store: projection_store.clone(),
@@ -398,7 +410,7 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         negotiator,
         snapshot,
         projection_store,
-        projection_ready,
+        projection_store_ready,
         realtime_poller_ready,
         realtime_hub,
     );
@@ -450,7 +462,7 @@ fn spawn_background_tasks(
     negotiator: CapabilityNegotiator,
     snapshot: Arc<RwLock<Option<CapabilitySnapshot>>>,
     projection_store: Option<PgProjectionStore>,
-    projection_ready: Arc<RwLock<bool>>,
+    projection_store_ready: Arc<RwLock<bool>>,
     realtime_poller_ready: Arc<RwLock<bool>>,
     realtime_hub: Option<RealtimeHub>,
 ) {
@@ -473,7 +485,7 @@ fn spawn_background_tasks(
             interval.tick().await;
             loop {
                 interval.tick().await;
-                *projection_ready.write().await = store.ping().await.is_ok();
+                *projection_store_ready.write().await = store.ping().await.is_ok();
             }
         });
     }
@@ -1409,11 +1421,21 @@ async fn livez() -> impl IntoResponse {
 async fn readyz(State(state): State<AppState>) -> Response {
     let snapshot = state.snapshot.read().await;
     let dependencies = RequiredDependencyReadiness {
-        source: !state.source_probe_required.is_enabled()
-            || snapshot.as_ref().is_some_and(snapshot_ready),
-        projection: !state.projection_required.is_enabled() || *state.projection_ready.read().await,
-        realtime: !state.realtime_required.is_enabled()
-            || *state.realtime_poller_ready.read().await,
+        source: DependencyReadiness::from_bool(
+            !state.source_probe_required.is_enabled()
+                || snapshot.as_ref().is_some_and(snapshot_ready),
+        ),
+        projection_store: DependencyReadiness::from_bool(
+            !state.projection_store_required.is_enabled()
+                || *state.projection_store_ready.read().await,
+        ),
+        projection_ingestion: DependencyReadiness::from_bool(
+            !state.projection_ingestion_required.is_enabled()
+                || *state.projection_ingestion_ready.read().await,
+        ),
+        realtime: DependencyReadiness::from_bool(
+            !state.realtime_required.is_enabled() || *state.realtime_poller_ready.read().await,
+        ),
     };
     let ready = service_ready(dependencies);
     let status = if ready {
@@ -1432,13 +1454,30 @@ async fn readyz(State(state): State<AppState>) -> Response {
 
 #[derive(Clone, Copy)]
 struct RequiredDependencyReadiness {
-    source: bool,
-    projection: bool,
-    realtime: bool,
+    source: DependencyReadiness,
+    projection_store: DependencyReadiness,
+    projection_ingestion: DependencyReadiness,
+    realtime: DependencyReadiness,
+}
+
+#[derive(Clone, Copy)]
+struct DependencyReadiness(bool);
+
+impl DependencyReadiness {
+    const fn from_bool(value: bool) -> Self {
+        Self(value)
+    }
+
+    const fn is_ready(self) -> bool {
+        self.0
+    }
 }
 
 fn service_ready(dependencies: RequiredDependencyReadiness) -> bool {
-    dependencies.source && dependencies.projection && dependencies.realtime
+    dependencies.source.is_ready()
+        && dependencies.projection_store.is_ready()
+        && dependencies.projection_ingestion.is_ready()
+        && dependencies.realtime.is_ready()
 }
 
 fn snapshot_ready(snapshot: &CapabilitySnapshot) -> bool {
@@ -1886,24 +1925,34 @@ mod tests {
         assert!(!snapshot_ready(&snapshot("DISABLED")));
         assert!(!snapshot_ready(&snapshot("INCOMPATIBLE")));
         assert!(service_ready(RequiredDependencyReadiness {
-            source: true,
-            projection: true,
-            realtime: true,
+            source: DependencyReadiness::from_bool(true),
+            projection_store: DependencyReadiness::from_bool(true),
+            projection_ingestion: DependencyReadiness::from_bool(true),
+            realtime: DependencyReadiness::from_bool(true),
         }));
         assert!(!service_ready(RequiredDependencyReadiness {
-            source: false,
-            projection: true,
-            realtime: true,
+            source: DependencyReadiness::from_bool(false),
+            projection_store: DependencyReadiness::from_bool(true),
+            projection_ingestion: DependencyReadiness::from_bool(true),
+            realtime: DependencyReadiness::from_bool(true),
         }));
         assert!(!service_ready(RequiredDependencyReadiness {
-            source: true,
-            projection: false,
-            realtime: true,
+            source: DependencyReadiness::from_bool(true),
+            projection_store: DependencyReadiness::from_bool(false),
+            projection_ingestion: DependencyReadiness::from_bool(true),
+            realtime: DependencyReadiness::from_bool(true),
         }));
         assert!(!service_ready(RequiredDependencyReadiness {
-            source: true,
-            projection: true,
-            realtime: false,
+            source: DependencyReadiness::from_bool(true),
+            projection_store: DependencyReadiness::from_bool(true),
+            projection_ingestion: DependencyReadiness::from_bool(false),
+            realtime: DependencyReadiness::from_bool(true),
+        }));
+        assert!(!service_ready(RequiredDependencyReadiness {
+            source: DependencyReadiness::from_bool(true),
+            projection_store: DependencyReadiness::from_bool(true),
+            projection_ingestion: DependencyReadiness::from_bool(true),
+            realtime: DependencyReadiness::from_bool(false),
         }));
     }
 

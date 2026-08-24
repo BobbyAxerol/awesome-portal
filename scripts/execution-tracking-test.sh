@@ -232,6 +232,18 @@ for label, text in (
 for label, text in (
     ("master", m),
     ("tracker", t),
+    ("backend README", b),
+    ("architecture guide", a),
+    ("frontend handoff", h),
+    ("unified plan", u),
+):
+    normalized = re.sub(r"\s+", " ", text)
+    if "D4_MAPPER_CORE_OFFLINE_COMPLETE / RUNTIME_FAIL_CLOSED / LIVE_INPUTS_BLOCKED" not in normalized:
+        raise SystemExit(f"{label} lost the D4 mapper/runtime stop-gate")
+
+for label, text in (
+    ("master", m),
+    ("tracker", t),
     ("request ledger", l),
     ("backend README", b),
     ("architecture guide", a),

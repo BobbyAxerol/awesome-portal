@@ -67,6 +67,7 @@ impl RealtimeEnvelope {
             ProjectionEntityKind::Order => "order.updated",
             ProjectionEntityKind::Fill => "fill.recorded",
             ProjectionEntityKind::Position => "position.updated",
+            ProjectionEntityKind::Event => "source_event.observed",
             ProjectionEntityKind::Runtime => "runtime.updated",
             ProjectionEntityKind::Account => "account.updated",
             ProjectionEntityKind::BrokerBinding => "broker_binding.updated",

@@ -933,6 +933,16 @@ LIVE_D4_INPUTS_BLOCKED / NO_SOURCE_READ`; see
 does not wait on this for V2 fixture UX, but must not replace unavailable states
 with invented Paper data.
 
+The offline Rust mapper status is `D4_MAPPER_CORE_OFFLINE_COMPLETE /
+RUNTIME_FAIL_CLOSED / LIVE_INPUTS_BLOCKED`; this is not a UI availability
+signal. It proves typed exact-decimal normalization and BUILDING-only replay
+from a sealed synthetic corpus while the runtime stays fail-closed. Claude must
+continue to render source panels as fixture/unavailable and must not open
+EventSource or expose mapper rows. A later handoff will name an ACTIVE epoch and
+non-fixture delivery profile only after separate D4 live qualification and
+activation decisions. Backend evidence:
+`upgrade/backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md`.
+
 ### 8.12 EX-BE-05b/F1a Operations Queue — Lane A can integrate (2026-08-23)
 
 Backend status is `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`. The same-origin

@@ -275,9 +275,14 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/query.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/analytics_repository.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-shadow-mapper/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-shadow-mapper/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-shadow-mapper/src/tests.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/fixtures/d4-paper-shadow-corpus.manifest.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0001_projection_foundation.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0002_projection_query_foundation.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0003_analytics_source_projection.sql" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0005_projection_event_entity.sql" \
   "${ROOT_DIR}/deploy/images/execution-edge-ci.Dockerfile" \
   "${ROOT_DIR}/deploy/images/execution-edge.Dockerfile" \
   "${ROOT_DIR}/deploy/images/source-proxy.Dockerfile" \
@@ -333,6 +338,8 @@ for required in \
   "${ROOT_DIR}/deploy/execution-d4/owner-input.env.example" \
   "${ROOT_DIR}/deploy/runbooks/execution-d4-paper-shadow-and-rollback.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md" \
@@ -653,9 +660,14 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/projection-store-pg/src/lib.rs \
   services/portal-execution-edge-rs/crates/projection-store-pg/src/query.rs \
   services/portal-execution-edge-rs/crates/projection-store-pg/src/analytics_repository.rs \
+  services/portal-execution-edge-rs/crates/paper-shadow-mapper/Cargo.toml \
+  services/portal-execution-edge-rs/crates/paper-shadow-mapper/src/lib.rs \
+  services/portal-execution-edge-rs/crates/paper-shadow-mapper/src/tests.rs \
+  services/portal-execution-edge-rs/fixtures/d4-paper-shadow-corpus.manifest.json \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0001_projection_foundation.sql \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0002_projection_query_foundation.sql \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0003_analytics_source_projection.sql \
+  services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0005_projection_event_entity.sql \
   deploy/images/execution-edge-ci.Dockerfile \
   deploy/images/source-proxy.Dockerfile \
   scripts/execution-edge-test.sh \
@@ -707,6 +719,8 @@ for tracked_source in \
   deploy/execution-d4/owner-input.env.example \
   deploy/runbooks/execution-d4-paper-shadow-and-rollback.md \
   upgrade/backend/EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md \
+  upgrade/backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md \
+  upgrade/backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md \
   upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md \
   upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md \
   upgrade/backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md \

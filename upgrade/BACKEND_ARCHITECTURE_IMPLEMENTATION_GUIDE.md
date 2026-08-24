@@ -1096,6 +1096,17 @@ deep-dive → ADR → slice → evidence discipline documented above.
   request fixes the exact mandatory identity, four GET routes, cursor and
   encrypted-storage inputs required before mapper implementation. Evidence:
   [`EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md`](./backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md).
+- **EX-BE-02-LIVE D4 mapper-core hardening (2026-08-24):** Rust now has typed
+  exact-decimal normalization for orders/fills/positions/events, mandatory
+  alpha-scope reconciliation, cursor-bearing events, bounded partial-page
+  semantics and a digest-sealed synthetic corpus. Fresh PostgreSQL evidence
+  writes/replays the four resources in a `BUILDING` epoch that is absent from
+  ACTIVE realtime watermarks. Edge readiness now separates store health from
+  mapper health, so a database ping cannot claim ingestion readiness. Status is
+  `D4_MAPPER_CORE_OFFLINE_COMPLETE / RUNTIME_FAIL_CLOSED /
+  LIVE_INPUTS_BLOCKED`; live pagination/resync, dedicated identity and
+  encrypted storage remain owner-gated. Evidence:
+  [`EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md`](./backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

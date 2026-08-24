@@ -43,6 +43,11 @@ exact GET surface and cursor/completeness/resync semantics first.
   coverage.
 - `deploy/runbooks/execution-d4-paper-shadow-and-rollback.md`: future BUILDING-
   epoch-only qualification and rollback sequence.
+- Rust `paper-shadow-mapper`: typed exact-decimal normalization for the four
+  business resources, cross-alpha rejection, stable event cursor/idempotency,
+  partial-page semantics and a sealed synthetic corpus.
+- Split Edge readiness: PostgreSQL health and mapper-ingestion health are
+  independent, so an empty store can no longer report D4 ready.
 - Workspace verification now requires, tracks, compiles and tests the D4 assets.
 
 ## Invariants
@@ -63,8 +68,14 @@ Local validator evidence: 8/8 tests pass. D2 dark and D3 transport were accepted
 on 2026-08-24; see
 [`EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md`](./EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md).
 Live D4 remains blocked by the dedicated Paper read identity and exact bounded
-source contract, production mapper/sealed corpus, encrypted approved projection
-storage with backup/restore, and a new owner-approved change window.
+source contract, production pagination/resync ingestor and owner-aligned corpus
+qualification, encrypted approved projection storage with backup/restore, and
+a new owner-approved change window.
+
+The production-independent mapper core and synthetic corpus are now complete;
+the remaining mapper blocker is specifically the owner-published pagination/
+watermark/resync orchestrator and its live runtime binding. Detail:
+[`EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md`](./EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md).
 
 The next executable action is the D4 input audit. It must prove these inputs
 without modifying Trading System. Source read and `BUILDING` epoch creation may

@@ -29,6 +29,7 @@ Read these sources before implementing a slice:
 12. [Dual-cell D0 reconciliation and D1 decision plan](backend/EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md) — sanitized two-cell evidence, locked topology, separate identities and the smallest reversible owner-gated bootstrap.
 13. [D3 live transport acceptance](backend/EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md) — protected-main image identities, real H2/TLS1.3 mTLS/JWT matrix, source loss/recovery, rollback and the remaining D4 stop gates.
 14. [D4 readiness audit and owner request](backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md) — current source/storage blockers and the exact sanitized contract response required before the first Paper read.
+15. [D4 mapper core and readiness hardening](backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md) — typed four-resource normalization, BUILDING-only replay evidence and the split store/ingestor readiness invariant.
 
 The wireframes remain the visual authority. This plan is authoritative for data
 ownership, endpoint shape, compatibility, security, freshness, sequencing, and
@@ -1235,6 +1236,17 @@ unencrypted root filesystem and is prohibited for business data. Status is
 identity, four-route cursor/completeness/resync and runtime response requested
 from the Trading System owner is in
 [`EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md`](backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md).
+
+The offline mapper checkpoint is
+`D4_MAPPER_CORE_OFFLINE_COMPLETE / RUNTIME_FAIL_CLOSED /
+LIVE_INPUTS_BLOCKED`. Rust now normalizes the four D4 resources with exact
+decimals and alpha-scope enforcement, seals a synthetic corpus and proves
+BUILDING-only replay on fresh PostgreSQL. Store connectivity and mapper health
+are separate readiness dependencies, so no empty projection database can claim
+D4 readiness. The live pagination/resync loop still waits for the owner
+contract and encrypted store; this checkpoint performs no source read and
+unlocks no delivery profile. Evidence:
+[`EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md`](backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md).
 
 The 2026-08-23 IAM/D1 requalification is
 `IAM_VERIFIED / D1_REVALIDATED / APPLICATION_DARK`. The live instance role

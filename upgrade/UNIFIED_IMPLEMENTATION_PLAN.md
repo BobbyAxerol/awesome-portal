@@ -1810,6 +1810,16 @@ không phải 17 màn.
 > store on the existing AWS-HK host. Request:
 > [`EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md`](./backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md).
 
+> **Backend checkpoint 2026-08-24 — D4 mapper core:** status is `D4_MAPPER_CORE_OFFLINE_COMPLETE / RUNTIME_FAIL_CLOSED / LIVE_INPUTS_BLOCKED`.
+> Rust exact-decimal mapping for orders/fills/positions/
+> events, cross-alpha rejection, composite event cursor, sealed synthetic
+> replay and fresh-PostgreSQL BUILDING-only evidence are complete. Edge
+> readiness now separates store health from actual ingestion health. No live
+> source call, Query/SSE/analytics/command, ACTIVE epoch or non-fixture profile
+> exists. Owner identity/cursor/resync input and encrypted storage remain the
+> next D4 gates. Detail:
+> [`EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md`](./backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md).
+
 > **Backend checkpoint 2026-08-23 — EX-BE-05b/F2 Phase 10:** Portal-owned
 > Sandbox Certification trên SGP đạt
 > `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`: DRAFT→IN_REVIEW→APPROVED|DENIED,

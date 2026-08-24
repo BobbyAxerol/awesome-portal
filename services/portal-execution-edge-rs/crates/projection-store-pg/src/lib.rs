@@ -6,8 +6,8 @@ use chrono::{DateTime, TimeDelta, Utc};
 use execution_contracts::{CanonicalId, SourceAuthority, SourceCompleteness, SourceCursor};
 use projection_core::{
     canonical_digest, semantic_state_digest, ApplyDisposition, FreshnessPolicy, ProjectedEntity,
-    ProjectionEntityKey, ProjectionEntityKind, ProjectionError, ProjectionObservation,
-    ProjectionReducer, ProjectionScope, ReplayRecord, SnapshotCompleteness,
+    ProjectionEntityKey, ProjectionEntityKind, ProjectionEpochStatus, ProjectionError,
+    ProjectionObservation, ProjectionReducer, ProjectionScope, ReplayRecord, SnapshotCompleteness,
 };
 use sqlx::{postgres::PgPoolOptions, PgPool, Postgres, Row, Transaction};
 use thiserror::Error;
@@ -138,6 +138,36 @@ impl PgProjectionStore {
         .execute(&self.pool)
         .await?;
         Ok(epoch_id)
+    }
+
+    /// Loads the persisted lifecycle state for one explicit epoch.
+    ///
+    /// This is used by D4 qualification to prove that a shadow writer never
+    /// crossed the separate activation boundary.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for an unknown epoch, unsupported persisted vocabulary
+    /// or database failure.
+    pub async fn load_epoch_status(
+        &self,
+        epoch_id: Uuid,
+    ) -> Result<ProjectionEpochStatus, StoreError> {
+        let status = sqlx::query_scalar::<_, String>(
+            "SELECT status FROM portal_projection.epochs WHERE epoch_id = $1",
+        )
+        .bind(epoch_id)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or(StoreError::EpochNotFound)?;
+        match status.as_str() {
+            "BUILDING" => Ok(ProjectionEpochStatus::Building),
+            "ACTIVE" => Ok(ProjectionEpochStatus::Active),
+            "RETAINED" => Ok(ProjectionEpochStatus::Retained),
+            "RETIRED" => Ok(ProjectionEpochStatus::Retired),
+            "FAILED" => Ok(ProjectionEpochStatus::Failed),
+            _ => Err(StoreError::PersistedVocabulary),
+        }
     }
 
     /// Applies one source observation atomically with its idempotency key,

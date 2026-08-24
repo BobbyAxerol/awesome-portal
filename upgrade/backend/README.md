@@ -468,6 +468,15 @@ authority.
   cursor/completeness/resync and runtime evidence the Trading System owner must
   publish before Portal can build a source mapper. Status:
   `D4_READINESS_AUDITED / LIVE_D4_INPUTS_BLOCKED / NO_SOURCE_READ`.
+- [EX-BE-02-LIVE D4 mapper core and readiness hardening](./EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md)
+  — **offline mapper core complete / runtime fail-closed / live inputs
+  blocked:** Rust now normalizes exact-decimal order/fill/position/event facts,
+  rejects cross-alpha rows and ambiguous event cursors, seals a synthetic
+  replay corpus and proves BUILDING-only PostgreSQL replay. Edge readiness
+  distinguishes store health from a real ingestor, preventing an empty
+  database from reporting D4 ready. No live source call/runtime integration or
+  profile activation exists. Status: `D4_MAPPER_CORE_OFFLINE_COMPLETE /
+  RUNTIME_FAIL_CLOSED / LIVE_INPUTS_BLOCKED`.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã
