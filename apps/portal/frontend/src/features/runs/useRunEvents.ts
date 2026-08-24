@@ -22,10 +22,10 @@
  * that data and lets them re-read. Patching a run object from an event would put
  * a second, guessed copy of run state in the cache.
  *
- * Note the deployment shape (BAR-07): the gateway proxies this path straight to
- * portal-api because the façade answers SSE_NOT_MIGRATED by design. So the stream
- * exists behind the gateway but not on the façade — one more reason the polling
- * floor stays.
+ * The U10 gateway path now enters the authenticated TypeScript façade, which
+ * signs the internal principal and pipes the Python stream without buffering.
+ * The polling floor still stays: SSE accelerates observation but is not a
+ * second source of truth, and the gateway can be rolled back to portal-api.
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";

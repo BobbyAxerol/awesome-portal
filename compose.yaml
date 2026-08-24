@@ -15,6 +15,7 @@ x-control-api-environment: &control-api-environment
   PLANNING_API_BASE_URL: http://roadmap-task-board-api:8000
   FEATURE_PROXY_PORTAL: ${CONTROL_API_FEATURE_PROXY_PORTAL:-true}
   FEATURE_PROXY_PLANNING: ${CONTROL_API_FEATURE_PROXY_PLANNING:-true}
+  PORTAL_SSE_CONNECT_TIMEOUT_MS: ${CONTROL_API_PORTAL_SSE_CONNECT_TIMEOUT_MS:-3000}
   FEATURE_EXECUTION_EDGE: "false"
   FEATURE_EXECUTION_REALTIME_SSE: "false"
   FEATURE_EXECUTION_ANALYTICS_QUERY: "false"
@@ -140,8 +141,8 @@ services:
     ports:
       - "127.0.0.1:${PORTAL_HTTP_PORT:-8080}:80"
     environment:
-      # U10 façade wire: control-api:4000 routes every /api/ (except health,
-      # ready and SSE) through the auth/RBAC BFF. Rollback in one line:
+      # U10 façade wire: control-api:4000 routes every /api/ except health and
+      # ready through the auth/RBAC BFF. Rollback in one line:
       # PORTAL_WEB_UPSTREAM=portal-api:8000.
       PORTAL_WEB_UPSTREAM: ${PORTAL_WEB_UPSTREAM:-control-api:4000}
     depends_on:

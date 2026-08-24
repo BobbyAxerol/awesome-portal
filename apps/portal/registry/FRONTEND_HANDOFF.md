@@ -285,7 +285,7 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 | **Command Center 2 CTA** | §8.6 mục 3, v0.4 §21.3 | `[New run]` `[Import alpha]` trong header → `/research/quantbt/new`, `/research/quantbt/imports`. |
 | **Portal Map — nốt §P0.15** | §8.6 mục 4 | Filter status (độc lập với persona filter — dim theo `personaDimmed \|\| maturityDimmed`), click stage mở `StageBrief` (feature + maturity/data-mode badge, concern kèm `activation_gate`, link concern + roadmap epic). Feature stage khai mà registry không định nghĩa → nói "không có trong registry", không ẩn. |
 | **Users & Access (ADMIN)** | §8.6 mục 5 | List/đổi role/reset credential/revoke sessions/disable. Mọi write mang `x-portal-csrf`, **fail closed** khi thiếu cookie CSRF. Role change nói trước là sẽ thu hồi session. One-time credential hiện **một lần**, không lưu, không log. Row của chính mình được đánh dấu. Non-ADMIN thấy `denied` và **không** gọi list (`enabled: isAdmin`) — biên vẫn là gateway, 403 báo nguyên văn. Route xem §8.4 điểm 4. 9 test + 2 snapshot. |
-| **SSE cho run events** | §8.6 mục 6 (tuỳ chọn — đã làm) | `useRunEvents` mở `/api/runs/{id}/events`; frame chỉ mang state nên **invalidate query**, không patch bản sao run vào cache. Không có `EventSource` hoặc mất kết nối → `streaming:false` và polling giữ nhịp cũ. Khi đang stream, polling **chậm lại (8s floor) chứ không tắt**: stream mở rồi im lặng không được trông giống run đứng yên. Đóng ở frame terminal và khi unmount. 10 test (gồm no-EventSource + dropped connection). |
+| **SSE cho run events** | §8.6 mục 6 (tuỳ chọn — đã làm) | `useRunEvents` mở `/api/runs/{id}/events`; frame chỉ mang state nên **invalidate query**, không patch bản sao run vào cache. Từ U10 2026-08-24, route đi qua session-guarded TypeScript façade và signed internal principal, không còn unauthenticated Nginx→Python exception. Không có `EventSource` hoặc mất kết nối → `streaming:false` và polling giữ nhịp cũ. Khi đang stream, polling **chậm lại (8s floor) chứ không tắt**. Đóng ở frame terminal và khi unmount. |
 | **Alpha 360° (version detail)** | §8.6 mục 7 | `/research/quantbt/alphas/:alphaId/:version`. Lifecycle là **track chung** DRAFT→LIVE (khoảng cách tới live là thông tin, không chỉ tên stage); certification/evidence trống nói rõ là trống; quarantine trích nguyên văn lý do của service; verify digest hiện cả hai digest. **Không có nút promote** — chuyển stage thuộc certification. ALPHA_POOL vẫn `COMMISSIONED` nên màn nằm dưới quantbt. 9 test + 2 snapshot. |
 | **Sửa 3 lỗi nghĩa (audit toàn màn)** | v0.5 §12.3, §13; rule §3.5 | (1) `metricTone` tô xanh mọi metric `direction:"higher"` ≥ 0 → Sharpe 13.20, Calmar 7231 đều "good" dù engine không phán xét; equity xanh vĩnh viễn (màu không bao giờ đổi = không mang tin). Giờ tone theo `toneBasis`: `sign` (return/CAGR), chỉ-mặt-xấu (Sharpe<0, profit factor<1 — đúng định nghĩa của nó), drawdown về **neutral** vì mọi run đều có drawdown và engine chưa công bố threshold. (2) Step rail tick `✓` các bước **chưa mở** (validation rỗng thì trivially valid) → tick giờ cần `visited && !error`, screen-reader nói "chưa mở"/"đã mở, không có lỗi". (3) Danh tính run in **hai lần** (header chip + passport strip cách nhau 40px) → header nhường passport trên run route; nút copy trước đây label là chính run id, giờ có động từ. Kèm: `fmtPct` in `24837.88%` không group → mọi formatter qua một helper. |
 | **Typography: vai trò font + scale** | v0.4 §25, v0.5 §10.2 | `table td, table th` là JetBrains Mono → **mọi** nhãn và câu trong bảng đều mono (tệ nhất với dấu tiếng Việt ở 12px). Mono giờ chỉ thuộc về **số** (`.mono`, `td.num`); column header và row-scope header là micro-label chữ prose; `.label` cũng chuyển sang prose. Scale 10/11/12/13/14/16/20/26 (4 bậc trong 3px) → 10/11/12/13/15/18/23/30. Hai file token đổi cùng nhau + gate parity mới cho type scale (đã negative-test). |
@@ -622,7 +622,7 @@ pass sáng tạo login/overview. Danh sách gốc giữ lại bên dưới để
    (ADMIN-only). Gate: chỉ ADMIN thấy menu; USER không thấy. Dùng session cookie
    + CSRF như login.
 6. **SSE thay polling cho run progress (tuỳ chọn)** — backend `GET
-   /api/runs/{id}/events` (SSE, passthrough nginx) có sẵn; nếu chuyển từ
+   /api/runs/{id}/events` (SSE qua authenticated U10 façade) có sẵn; nếu chuyển từ
    `refetchInterval` (1–1.5s) sang `EventSource` thì thêm fallback polling + đóng
    kết nối ở terminal. Không bắt buộc — chỉ khi muốn giảm polling.
 7. **Alpha 360° (version detail)** — màn chi tiết alpha từ
@@ -988,3 +988,20 @@ fixture. Broker is schema-suppressed; render no broker number. Preserve
 `BROKER_MISMATCH_SUPPRESSES_VALUES_AND_SOURCE_GAP_BLOCKS_R4`, but keep both R3
 and R4 actions absent while `visible=false`. Exact read order and UI matrix:
 `upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F4_HANDOFF.md`.
+
+### 8.17 U10 QuantBT run SSE — no visual redesign required (2026-08-24)
+
+The existing `useRunEvents` URL and frame semantics do not change, but its
+transport boundary does: `/api/runs/{run_id}/events` now enters the
+session-guarded TypeScript Control API, receives a server-signed internal
+principal and is piped to the private Python compatibility stream without
+buffering. Missing/invalid sessions return 401; an invalid upstream content
+type fails closed rather than being presented as SSE. The 3-second default is a
+connect/header deadline only, not a stream lifetime.
+
+Claude should retain the current polling floor and query invalidation model.
+It may add a transport-level 401/502 fallback assertion, but it must not patch
+run state from partial frames or confuse this Research stream with the still-
+dark EX-BE-06 Execution realtime stream. No Execution delivery profile or
+registry flag changed. Backend evidence:
+`upgrade/backend/U10_QUANTBT_RUN_SSE_FACADE_CUTOVER.md`.

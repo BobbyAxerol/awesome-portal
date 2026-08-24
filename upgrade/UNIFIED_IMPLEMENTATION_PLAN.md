@@ -214,7 +214,7 @@ contract/schema → backend/domain tests → API/read model → UI states/wirefr
 | U07 | Identity, local login, session & RBAC | INTEGRATION_PENDING | Foundation (BAR-04) xong; chờ wire gateway + auth thật sau Cloudflare |
 | U08 | M0 reproducibility freeze | FOUNDATION_COMPLETE | Golden technical baseline (BAR-05) |
 | U09 | Contract foundation & monorepo platform tooling | FOUNDATION_COMPLETE | Contract/codegen/breaking CI (BAR-06) |
-| U10 | TypeScript Control API façade | FOUNDATION_COMPLETE — BROWSER CUTOVER PENDING | Browser đi qua TS authority; mở route có kiểm soát (BAR-07) |
+| U10 | TypeScript Control API façade | INTEGRATION_PARTIAL — RUN SSE CUTOVER COMPLETE | Product browser API đi qua TS authority; Command Center/workspace product slices còn lại (BAR-07) |
 | U11 | Durable quant worker & immutable artifacts | FOUNDATION_COMPLETE — PRODUCTION_INACTIVE | Compute tách, retry đúng; production adapter/outbox relay còn thiếu (BAR-08) |
 | U12 | Engine Capability Registry & full QuantBT UI | FOUNDATION_COMPLETE | Capability-driven platform; certify từng capability còn lại (BAR-09) |
 | U13 | Data Catalog, snapshots & query foundation | FOUNDATION_COMPLETE — OPERATIONAL_EVIDENCE_PENDING | Chưa family nào AVAILABLE tới khi có real digest/quality evidence (BAR-10) |
@@ -1017,8 +1017,15 @@ authoritative product/control boundary.
   envelope (replay kết quả cũ, payload khác conflict 409, upstream không
   double-fire), summary passthrough giữ nguyên freshness; feature flag
   `FEATURE_PROXY_PORTAL` rollback sạch. USER đọc runs qua workspace read
-  model, cross-workspace fail-closed 404. SSE/planning proxy và
-  organizations/projects là vertical slices sau.
+  model, cross-workspace fail-closed 404. Planning façade compatibility cũng
+  đã wire; organizations/projects và product tenancy UI là vertical slices sau.
+- U10 run-SSE cutover ngày 2026-08-24 đã bỏ exception Nginx→Python cho
+  `/api/runs/{run_id}/events`: browser đi qua session-guarded TypeScript façade,
+  internal principal được ký server-side, path/run ID fail-closed, header
+  connect timeout tách khỏi stream lifetime, Fastify pipe không buffer có
+  backpressure/cancel và non-SSE response bị từ chối. Gateway rollback một dòng
+  vẫn giữ nguyên. Evidence: TypeScript build, fresh PostgreSQL restore và
+  Control API 173/173; durable event authority vẫn thuộc U11.
 
 **Description / To-do**
 

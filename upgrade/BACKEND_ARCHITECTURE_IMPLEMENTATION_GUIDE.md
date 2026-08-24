@@ -1188,8 +1188,12 @@ activation or the phase):**
   engine (1.0.8 from PyPI) also ships event-driven, multi-symbol portfolio
   and options engines — expose them through the same manifest → preflight →
   runner → artifact pattern when prioritized.
-- **SSE migrate through the façade** (BAR-07): nginx still passthroughs
-  `/api/runs/*/events`; façade returns `SSE_NOT_MIGRATED` by design.
+- **QuantBT run SSE façade cutover** (BAR-07/U10) — delivered 2026-08-24:
+  Nginx routes `/api/runs/{run_id}/events` through the session-guarded
+  TypeScript façade, which signs the internal principal and pipes the fixed-
+  origin Python SSE without buffering. Connect timeout, canonical run-ID path,
+  downstream cancellation, non-SSE refusal and the one-line gateway rollback
+  are tested. U11 still owns the durable committed event source.
 - **Command Center authoritative read model** (U10) — replaces summary
   proxy passthrough; unlocks history/cross-filter.
 - **Workspace tenancy real UI** (U10) — `/api/workspaces` exists as a

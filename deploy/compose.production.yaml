@@ -12,6 +12,7 @@ x-control-api-environment: &control-api-environment
   PLANNING_API_BASE_URL: http://roadmap-task-board-api:8000
   FEATURE_PROXY_PORTAL: "true"
   FEATURE_PROXY_PLANNING: "true"
+  PORTAL_SSE_CONNECT_TIMEOUT_MS: ${CONTROL_API_PORTAL_SSE_CONNECT_TIMEOUT_MS:-3000}
   # EX-BE-06 stays dark unless the opt-in execution-realtime overlay is used.
   FEATURE_EXECUTION_EDGE: "false"
   FEATURE_EXECUTION_REALTIME_SSE: "false"

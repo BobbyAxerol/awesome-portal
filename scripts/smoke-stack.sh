@@ -43,13 +43,15 @@ mkdir -p "${ROOT_DIR}/runtime/control-api-secrets"
 COMPOSE=(docker compose --project-directory "${ROOT_DIR}" -f "${ROOT_DIR}/compose.yaml")
 health_file="$(mktemp /tmp/portal-smoke-health.XXXXXX)"
 cookie_file="$(mktemp /tmp/portal-smoke-cookie.XXXXXX)"
+sse_headers_file="$(mktemp /tmp/portal-smoke-sse-headers.XXXXXX)"
+sse_body_file="$(mktemp /tmp/portal-smoke-sse-body.XXXXXX)"
 
 cleanup() {
   # `compose up` may create only part of the project and then fail before it
   # returns. Always tear down the explicitly scoped smoke project so retries
   # cannot collide with containers left by a partial startup.
   "${COMPOSE[@]}" down --volumes --remove-orphans >/dev/null || true
-  rm -f -- "${health_file}" "${cookie_file}"
+  rm -f -- "${health_file}" "${cookie_file}" "${sse_headers_file}" "${sse_body_file}"
 }
 trap cleanup EXIT
 
@@ -148,6 +150,28 @@ if [[ -z "${csrf_token}" ]]; then
   printf 'Smoke re-login did not issue a CSRF cookie.\n' >&2
   exit 1
 fi
+
+printf 'Smoke: require session and preserve QuantBT run SSE through the U10 façade\n'
+sse_url="http://127.0.0.1:${PORTAL_HTTP_PORT}/api/runs/smoke_missing_run/events"
+unauthenticated_sse_status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
+  --max-time 5 "${sse_url}")"
+if [[ "${unauthenticated_sse_status}" != 401 ]]; then
+  printf 'Unauthenticated run SSE returned %s instead of 401.\n' "${unauthenticated_sse_status}" >&2
+  exit 1
+fi
+curl --fail-with-body --silent --show-error --max-time 5 \
+  --cookie "${cookie_file}" --dump-header "${sse_headers_file}" \
+  --output "${sse_body_file}" "${sse_url}"
+tr -d '\r' <"${sse_headers_file}" | grep -Eiq '^content-type: text/event-stream' || {
+  printf 'Authenticated run SSE did not preserve text/event-stream.\n' >&2
+  cat "${sse_headers_file}" >&2
+  exit 1
+}
+grep --quiet 'RUN_NOT_FOUND' "${sse_body_file}" || {
+  printf 'Authenticated run SSE did not reach the private compatibility stream.\n' >&2
+  cat "${sse_body_file}" >&2
+  exit 1
+}
 
 # Phase 1/2 operational path: seed one isolated Portal-owned R1 request through
 # PostgreSQL (the trusted intake endpoint is intentionally not browser-facing),

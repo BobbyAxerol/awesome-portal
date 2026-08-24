@@ -81,6 +81,7 @@ const EnvSchema = z.object({
     .default("true"),
   FEATURE_PROXY_PLANNING: z.enum(["true", "false"]).default("true"),
   FEATURE_NATIVE_WORKSPACES: z.enum(["true", "false"]).default("true"),
+  PORTAL_SSE_CONNECT_TIMEOUT_MS: z.coerce.number().int().min(250).max(10_000).default(3_000),
   FEATURE_EXECUTION_EDGE: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_REALTIME_SSE: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_ANALYTICS_QUERY: z.enum(["true", "false"]).default("false"),

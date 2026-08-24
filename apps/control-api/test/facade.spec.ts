@@ -8,6 +8,7 @@ import { Argon2CredentialService, sha256 } from "../src/auth/argon";
 import { AdminService } from "../src/admin/admin.service";
 import { PrincipalService } from "../src/auth/principal";
 import {
+  assertPortalRunSsePath,
   buildPortalUpstreamUrl,
   planningUpstreamPath,
 } from "../src/facade/proxy.service";
@@ -69,6 +70,19 @@ describe("Portal upstream URL boundary", () => {
     expect(() =>
       buildPortalUpstreamUrl(origin, "/api/runs", undefined),
     ).toThrowError(/configured Portal API origin is invalid/);
+  });
+
+  it("accepts only a canonical bounded run-event path", () => {
+    expect(() => assertPortalRunSsePath("/api/runs/run_01/events")).not.toThrow();
+    for (const path of [
+      "/api/runs/run.01/events",
+      "/api/runs/%2e%2e/events",
+      "/api/runs/run%2F01/events",
+      "/api/runs//events",
+      `/api/runs/${"r".repeat(129)}/events`,
+    ]) {
+      expect(() => assertPortalRunSsePath(path)).toThrowError(/run event path is invalid/);
+    }
   });
 });
 
@@ -408,6 +422,60 @@ describe("control api facade (proxy, workspaces, outbox)", () => {
     expect(response.json().overall_availability.as_of).toBe(
       "2026-08-15T17:59:30Z",
     );
+  });
+
+  it("authenticates and streams QuantBT run events without changing SSE headers", async () => {
+    let captured: Record<string, unknown> = {};
+    upstream
+      .intercept({ path: "/api/runs/run_01/events", method: "GET" })
+      .reply(
+        200,
+        (options) => {
+          captured = { ...options.headers };
+          return 'data: {"state":"RUNNING"}\n\ndata: {"final":true,"state":"COMPLETED"}\n\n';
+        },
+        {
+          headers: {
+            "content-type": "text/event-stream; charset=utf-8",
+            "cache-control": "no-cache",
+            "x-accel-buffering": "no",
+          },
+        },
+      );
+
+    const { cookie } = await seedUser("bobby", "ADMIN");
+    const response = await inject("/api/runs/run_01/events", {
+      headers: { cookie, "x-request-id": "req-u10-sse" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-type"]).toContain("text/event-stream");
+    expect(response.headers["cache-control"]).toBe("no-cache");
+    expect(response.headers["x-accel-buffering"]).toBe("no");
+    expect(response.headers["x-request-id"]).toBe("req-u10-sse");
+    expect(response.body).toContain('"state":"RUNNING"');
+    expect(response.body).toContain('"final":true');
+    expect(captured.accept).toBe("text/event-stream");
+    expect(captured["x-request-id"]).toBe("req-u10-sse");
+    const principal = new PrincipalService(
+      ctx.config.INTERNAL_PRINCIPAL_SECRET!,
+    ).verify(captured["x-portal-principal"] as string);
+    expect(principal?.username).toBe("bobby");
+  });
+
+  it("does not expose the run-event stream without a Portal session", async () => {
+    const response = await inject("/api/runs/run_01/events");
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("fails closed when the run-event upstream is not an SSE response", async () => {
+    upstream
+      .intercept({ path: "/api/runs/run_invalid/events", method: "GET" })
+      .reply(200, { state: "RUNNING" }, { headers: { "content-type": "application/json" } });
+    const { cookie } = await seedUser("bobby", "ADMIN");
+    const response = await inject("/api/runs/run_invalid/events", { headers: { cookie } });
+    expect(response.statusCode).toBe(502);
+    expect(response.json().error.code).toBe("SSE_UPSTREAM_INVALID_RESPONSE");
   });
 
   it("signs the downstream principal header on proxied requests", async () => {

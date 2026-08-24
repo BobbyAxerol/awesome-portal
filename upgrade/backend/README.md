@@ -612,3 +612,24 @@ runtime logic errors**. Please regenerate/update:
 
 Nothing else fails: portal backend 405 passed/1 skipped, control-api 173/173,
 FE 1423 passed/1 skipped, verify-workspace pass.
+
+## Backend state — 2026-08-24 (U10 QuantBT run-SSE façade cutover)
+
+The five stale-gate findings above were closed by `04de84d`: parity anchoring,
+M0/release manifests, contract snapshots and the hygiene false-positive were
+regenerated or corrected before this slice. They are no longer open blockers.
+
+`GET /api/runs/{run_id}/events` now follows the default U10 browser boundary:
+Nginx → authenticated TypeScript Control API → signed internal principal →
+private Python compatibility stream. The façade validates the canonical run ID,
+keeps the upstream origin fixed, applies a bounded header/connect deadline,
+rejects non-SSE responses, preserves no-buffer headers/backpressure and aborts
+the upstream when the browser disconnects. `PORTAL_WEB_UPSTREAM=portal-api:8000`
+remains the one-line gateway rollback.
+
+This is the QuantBT Research progress stream, not EX-BE-06 Execution realtime;
+no AWS-HK, source, projection, analytics or command flag changed. Fresh evidence:
+TypeScript build, 20 Control API suites / 173 tests and PostgreSQL restore passed.
+U11 still owns migration from the Python compatibility event source to committed
+durable run/attempt events. Detailed evidence:
+[`U10_QUANTBT_RUN_SSE_FACADE_CUTOVER.md`](./U10_QUANTBT_RUN_SSE_FACADE_CUTOVER.md).

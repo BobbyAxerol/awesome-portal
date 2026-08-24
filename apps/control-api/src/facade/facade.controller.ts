@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { FastifyReply, FastifyRequest } from "fastify";
+import { Readable } from "node:stream";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { ControlApiConfig } from "../config";
 import { PortalUser } from "../domain";
@@ -70,6 +71,107 @@ export class FacadeController {
     };
   }
 
+  @Get("/api/runs/:run_id/events")
+  async runEvents(
+    @Req() request: PortalRequest,
+    @Res() reply: FastifyReply,
+    @Param("run_id") runId: string,
+  ): Promise<void | FastifyReply> {
+    if (!this.proxyService.enabled()) {
+      throw new FacadeError(
+        "FAÇADE_PROXY_DISABLED",
+        "The Control API façade proxy is disabled; use the legacy gateway path.",
+        404,
+      );
+    }
+
+    const requestId =
+      (request.headers["x-request-id"] as string | undefined) ?? newUlid("req");
+    const traceparent =
+      (request.headers["traceparent"] as string | undefined) ??
+      "00-00000000000000000000000000000000-0000000000000000-01";
+    const abort = new AbortController();
+    let downstreamClosed = false;
+    const close = () => {
+      downstreamClosed = true;
+      abort.abort();
+    };
+    reply.raw.once("close", close);
+    const timeout = setTimeout(
+      () => abort.abort(),
+      this.config.PORTAL_SSE_CONNECT_TIMEOUT_MS,
+    );
+
+    let upstream: Response;
+    try {
+      upstream = await this.proxyService.openPortalRunEvents(
+        {
+          method: "GET",
+          path: `/api/runs/${runId}/events`,
+          query: undefined,
+          body: undefined,
+          contentType: undefined,
+          requestId,
+          traceparent,
+          user: request.portalUser,
+          workspaceId: request.portalWorkspaceId,
+          idempotencyKey: undefined,
+        },
+        abort.signal,
+      );
+    } catch {
+      clearTimeout(timeout);
+      reply.raw.off("close", close);
+      if (downstreamClosed) return;
+      if (abort.signal.aborted) {
+        throw new FacadeError(
+          "SSE_UPSTREAM_TIMEOUT",
+          "The run event stream did not respond in time.",
+          504,
+        );
+      }
+      throw new FacadeError(
+        "SSE_UPSTREAM_UNAVAILABLE",
+        "The run event stream is unavailable.",
+        502,
+      );
+    }
+    clearTimeout(timeout);
+
+    const contentType = upstream.headers.get("content-type") ?? "";
+    if (!contentType.toLowerCase().startsWith("text/event-stream")) {
+      reply.raw.off("close", close);
+      abort.abort();
+      throw new FacadeError(
+        "SSE_UPSTREAM_INVALID_RESPONSE",
+        "The run event upstream did not return an event stream.",
+        502,
+      );
+    }
+
+    reply.status(upstream.status);
+    reply.header("content-type", contentType);
+    reply.header("cache-control", upstream.headers.get("cache-control") ?? "no-cache");
+    reply.header("x-accel-buffering", "no");
+    reply.header("x-request-id", requestId);
+    if (upstream.body === null) {
+      reply.raw.off("close", close);
+      abort.abort();
+      return reply.send();
+    }
+
+    const stream = Readable.fromWeb(
+      upstream.body as import("node:stream/web").ReadableStream,
+    );
+    const cleanup = () => {
+      reply.raw.off("close", close);
+      abort.abort();
+    };
+    stream.once("end", cleanup);
+    stream.once("error", cleanup);
+    return reply.send(stream);
+  }
+
   @All([
     "/api/runs",
     "/api/runs/*",
@@ -108,14 +210,6 @@ export class FacadeController {
     if (write && user.role !== "ADMIN") {
       throw new FacadeError("PERMISSION_DENIED", "Access denied.", 403);
     }
-    if (!write && path.startsWith("/api/runs/") && path.endsWith("/events")) {
-      throw new FacadeError(
-        "SSE_NOT_MIGRATED",
-        "SSE is not migrated through the façade; use the legacy gateway path.",
-        404,
-      );
-    }
-
     const requestId =
       (request.headers["x-request-id"] as string | undefined) ?? newUlid("req");
     const traceparent =

@@ -28,7 +28,7 @@ const FORWARD_HEADERS = new Set([
   "if-none-match",
 ]);
 
-interface ProxyInput {
+export interface ProxyInput {
   method: string;
   path: string;
   query: string | undefined;
@@ -45,6 +45,20 @@ interface ProxyResult {
   status: number;
   headers: Record<string, string>;
   body: Buffer;
+}
+
+const RUN_SSE_PATH = /^\/api\/runs\/([A-Za-z0-9][A-Za-z0-9_-]{0,127})\/events$/;
+
+export function assertPortalRunSsePath(path: string): void {
+  let decodedPath: string;
+  try {
+    decodedPath = decodeURIComponent(path);
+  } catch {
+    throw new FacadeError("UPSTREAM_PATH_INVALID", "The run event path is invalid.", 400);
+  }
+  if (decodedPath !== path || !RUN_SSE_PATH.test(decodedPath)) {
+    throw new FacadeError("UPSTREAM_PATH_INVALID", "The run event path is invalid.", 400);
+  }
 }
 
 export interface WriteRecord {
@@ -166,12 +180,49 @@ export class PortalProxyService {
     );
   }
 
+  /**
+   * Open the legacy QuantBT run-event stream without buffering it in the
+   * Control API. The caller owns downstream cancellation and piping; this
+   * boundary only authenticates the principal and fixes the upstream origin.
+   */
+  async openPortalRunEvents(input: ProxyInput, signal: AbortSignal): Promise<Response> {
+    assertPortalRunSsePath(input.path);
+    const url = buildPortalUpstreamUrl(this.config.PORTAL_API_BASE_URL, input.path, undefined);
+    return fetch(url, {
+      method: "GET",
+      headers: this.principalHeaders(input, { accept: "text/event-stream" }),
+      redirect: "manual",
+      signal,
+    });
+  }
+
   private async proxyTo(
     configuredOrigin: string,
     input: ProxyInput,
     additionalHeaders: Record<string, string> = {},
   ): Promise<ProxyResult> {
     const url = buildPortalUpstreamUrl(configuredOrigin, input.path, input.query);
+    const headers = this.principalHeaders(input, additionalHeaders);
+
+    const response = await fetch(url, {
+      method: input.method,
+      headers,
+      body: input.body ?? null,
+      redirect: "manual",
+    });
+    const payload = Buffer.from(await response.arrayBuffer());
+    const passthrough: Record<string, string> = {};
+    for (const name of [...FORWARD_HEADERS, "cache-control", "etag", "vary"]) {
+      const value = response.headers.get(name);
+      if (value !== null) passthrough[name] = value;
+    }
+    return { status: response.status, headers: passthrough, body: payload };
+  }
+
+  private principalHeaders(
+    input: ProxyInput,
+    additionalHeaders: Record<string, string> = {},
+  ): Record<string, string> {
     const headers: Record<string, string> = {
       "x-request-id": input.requestId,
       traceparent: input.traceparent,
@@ -192,20 +243,7 @@ export class PortalProxyService {
       issuedAt: new Date().toISOString(),
     });
     headers["x-portal-principal"] = principal;
-
-    const response = await fetch(url, {
-      method: input.method,
-      headers,
-      body: input.body ?? null,
-      redirect: "manual",
-    });
-    const payload = Buffer.from(await response.arrayBuffer());
-    const passthrough: Record<string, string> = {};
-    for (const name of [...FORWARD_HEADERS, "cache-control", "etag", "vary"]) {
-      const value = response.headers.get(name);
-      if (value !== null) passthrough[name] = value;
-    }
-    return { status: response.status, headers: passthrough, body: payload };
+    return headers;
   }
 
   async handleWrite(input: ProxyInput): Promise<WriteRecord> {
