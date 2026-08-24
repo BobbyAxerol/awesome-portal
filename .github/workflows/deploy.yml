@@ -91,8 +91,6 @@ jobs:
           ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" "install -d -m 0750 '${DEPLOY_PATH}/deploy'"
           scp -P "${DEPLOY_PORT}" deploy/compose.production.yaml \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/deploy/compose.production.yaml.next"
-          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "mv '${DEPLOY_PATH}/deploy/compose.production.yaml.next' '${DEPLOY_PATH}/deploy/compose.production.yaml'"
 
       - name: Back up, migrate and start immutable images
         run: |
@@ -102,19 +100,32 @@ jobs:
           cd "${DEPLOY_PATH}"
           test -f .env.production
 
-          compose() {
+          active_compose="${DEPLOY_PATH}/deploy/compose.production.yaml"
+          next_compose="${active_compose}.next"
+          test -f "${next_compose}"
+
+          compose_next() {
             PORTAL_IMAGE_TAG="${IMAGE_TAG}" docker compose \
               --env-file .env.production \
-              -f deploy/compose.production.yaml "$@"
+              -f "${next_compose}" "$@"
           }
 
-          compose config -q
+          compose_next config -q
 
           timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
           backup_dir="${DEPLOY_PATH}/backups/${timestamp}-${IMAGE_TAG}"
-          if compose ps --services --status running | grep -qx portal-postgres; then
+          if [[ -f "${active_compose}" ]]; then
+            compose_active() {
+              PORTAL_IMAGE_TAG="${IMAGE_TAG}" docker compose \
+                --env-file .env.production \
+                -f "${active_compose}" "$@"
+            }
+          fi
+
+          if [[ -f "${active_compose}" ]] \
+              && compose_active ps --services --status running | grep -qx portal-postgres; then
             install -d -m 0700 "${backup_dir}"
-            compose exec -T portal-postgres sh -ec \
+            compose_active exec -T portal-postgres sh -ec \
               'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom' \
               > "${backup_dir}/portal-control.dump"
             test -s "${backup_dir}/portal-control.dump"
@@ -123,15 +134,15 @@ jobs:
               sha256sum portal-control.dump > SHA256SUMS
             )
 
-            if compose ps --services --status running | grep -qx roadmap-task-board-api; then
+            if compose_active ps --services --status running | grep -qx roadmap-task-board-api; then
               roadmap_tmp="/var/lib/roadmap-task-board/.predeploy-${timestamp}.db"
-              compose exec -T roadmap-task-board-api python -m backend.scripts.portal_db backup \
+              compose_active exec -T roadmap-task-board-api python -m backend.scripts.portal_db backup \
                 --database /var/lib/roadmap-task-board/portal.db \
                 --output "${roadmap_tmp}"
-              compose cp \
+              compose_active cp \
                 "roadmap-task-board-api:${roadmap_tmp}" \
                 "${backup_dir}/roadmap-task-board.db"
-              compose exec -T roadmap-task-board-api rm -f "${roadmap_tmp}"
+              compose_active exec -T roadmap-task-board-api rm -f "${roadmap_tmp}"
               test -s "${backup_dir}/roadmap-task-board.db"
               (
                 cd "${backup_dir}"
@@ -143,7 +154,15 @@ jobs:
             printf 'No running production PostgreSQL service; treating this as a first deployment.\n'
           fi
 
-          compose pull
+          compose_next pull
+          mv "${next_compose}" "${active_compose}"
+
+          compose() {
+            PORTAL_IMAGE_TAG="${IMAGE_TAG}" docker compose \
+              --env-file .env.production \
+              -f "${active_compose}" "$@"
+          }
+
           compose up -d --remove-orphans --wait --wait-timeout 180
           compose exec -T control-api node -e \
             "fetch('http://127.0.0.1:4000/api/control/readyz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
