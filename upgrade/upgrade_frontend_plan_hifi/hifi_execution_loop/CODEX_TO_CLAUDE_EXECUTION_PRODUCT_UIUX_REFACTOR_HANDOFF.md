@@ -1,0 +1,636 @@
+# Codex → Claude — Execution Loop product UI/UX refactor handoff
+
+> Status: **OWNER_REJECTED_CURRENT_PRODUCT COMPOSITION**  
+> Priority: **P0 before merging the Execution product-route preview into `dev`**  
+> Scope: frontend composition, visual system, interaction completeness and product-route integration.  
+> Non-goal: changing backend authority, financial meaning, safety states or Trading System contracts.
+
+## 0. The decision
+
+The current Execution screens contain a large amount of correct domain work, but the product-route
+render is not acceptable as a Portal experience. Matching individual hi-fi blocks was not enough.
+Once those blocks were mounted inside the real mother shell, the result became a split product:
+
+- a light Research shell surrounding a dark Execution rectangle;
+- an operations workstation whose typography reads like one long terminal dump;
+- pages with different information densities but almost the same stacking strategy;
+- tabs, filters and CTAs that look active while some are no-ops in the preview integration;
+- provenance details, raw screen ids and digest fragments competing with the user's actual decision;
+- no coherent relationship among page header, tab strip, main canvas and contextual right rail.
+
+This is **not** a request to discard the content or weaken the existing contracts. Preserve the same
+facts, safety semantics, seven states, exact decimal handling, authority envelopes, lifecycle model,
+fixtures and backend boundaries. Refactor **how the product reveals and arranges them**.
+
+The owner screenshot on 2026-08-24 is the rejection evidence. Existing green unit tests and visual
+baselines do not overrule that decision: they prove stability and selected invariants, not that the
+frozen composition was good.
+
+## 1. Why the existing review was insufficient
+
+`REVIEW_CODEX_PREVIEW_INTEGRATION_2026-08-23.md` correctly assessed routing, stop gates, fixture-only
+network behavior and merge safety. Those are necessary, but they answer a different question.
+
+| Previous question | New mandatory question |
+|---|---|
+| Does the route mount the intended fixture screen? | Does it look and behave like one continuous Portal workspace? |
+| Is AWS-HK/realtime still dark? | Can the operator distinguish live capability, local simulation and disabled authority without reading a paragraph? |
+| Are the component contracts preserved? | Is the information ordered by the decision the user is making? |
+| Are screenshots stable? | Is the baseline itself worth preserving? |
+| Does a button exist and have an accessible name? | Does every visible control produce a useful, testable result? |
+
+Therefore the previous “three non-blocking fixes” conclusion no longer represents the merge gate.
+The product composition is now blocking.
+
+## 2. Evidence from the current implementation
+
+### 2.1 The shell and the screen run different visual systems
+
+`ExecutionSurface.tsx` applies `operations-carbon` only to a nested screen wrapper. `PortalShell.tsx`
+keeps topbar, sidebar, page gutter and preferences outside that wrapper. In the rejected render the
+topbar selector still says `Research Light`, the sidebar is warm white, and the page is Carbon black.
+
+This is not a tasteful hybrid; it is an accidental seam. Theme is being used as a component-local skin
+when the user experiences it as a workspace mode.
+
+### 2.2 The declared typography is not the typography that is loaded
+
+The Carbon token block declares IBM Plex fallbacks, but `package.json` only bundles Inter, JetBrains
+Mono and Newsreader. `base.css` also hard-codes those families instead of consistently reading
+`var(--font-display|body|mono)`. As a result:
+
+- the Execution theme cannot reliably change typography through tokens;
+- `exec-tile-title`, panel labels, buttons, tabs, ids, captions and much explanatory text all compete
+  in small monospace;
+- the main entity title is often rendered with the same 11px uppercase style as a panel micro-label;
+- body prose sometimes looks like diagnostics, while shell prose uses a different visual voice.
+
+### 2.3 Some product-preview controls are active-looking no-ops
+
+`ExecutionPreviewRoute.tsx` mounts `PaperWorkbench`, `AlphaThreeSixty`, `PortfolioThreeSixty`,
+`AccountBroker360` and `FullBlotter` directly. Their interaction callbacks are optional and the route
+does not provide all of them. Examples include:
+
+- `onTabChange` for Paper, Alpha and Portfolio;
+- `onFilterChange`, `onResetCrossFilter`, `onExpand` and `onLoadOlder` for Full Blotter;
+- `onRequestExit`, `onSyncNow`, `onDryRun` and navigation actions.
+
+The controls render as buttons, but optional chaining turns the click into silence. This is worse than
+a disabled control: it trains the user to distrust the product.
+
+### 2.4 Engineering metadata occupies the primary reading path
+
+The preview banner prints the raw `screenId`. Page headers and lineage strips foreground artifact
+digests, source timestamps, revision tokens and internal ids. These fields are legitimate evidence,
+but most of them answer “can I audit this later?”, not “what needs my attention now?”.
+
+The current design treats “every rendered id must be navigable” as “render every id immediately”. The
+first rule does not imply the second. Progressive disclosure can keep every value accessible without
+putting all of them above the fold.
+
+### 2.5 The page stacks correct blocks without a coherent decision hierarchy
+
+Paper Workbench is meant to answer: **Can this deployment leave Paper, and if not, what blocks it?**
+The current render gives similar visual weight to title metadata, lineage, lifecycle, five KPIs, an
+empty-looking chart frame, observation progress, runtime health, accounting, contribution, drift and
+tabs. The reader must construct the decision hierarchy themselves.
+
+Sparse screens stretch a few values across large panels. Dense screens append more panels and tables
+vertically. That is responsive CSS, but not responsive information architecture.
+
+### 2.6 The current visual gate freezes local groups, not the integrated product experience
+
+The group-level Execution baseline is valuable for state correctness. It intentionally hides the
+sticky shell topbar and captures isolated groups. That means it cannot catch the exact failure shown
+by the owner: the seam between shell, content, tabs and surrounding navigation.
+
+The refactor needs a second baseline class: **canonical product routes with the real shell visible**.
+
+## 3. Target mental model
+
+Execution is not “a terminal page”. It is an **institutional operations workspace** with a terminal
+available where exact commands, events or audit evidence require it.
+
+The product should have three visual voices, not one:
+
+1. **Navigation and decisions — sans.** Page title, section headings, explanatory copy, button labels.
+2. **Numbers and compact identity — mono.** Prices, PnL, counts, timestamps, short ids and status codes.
+3. **Raw operations evidence — terminal surface.** Request/response, command plan, event stream, audit
+   payload and full digests, opened deliberately rather than painted across the whole page.
+
+Every screen must make its primary question visible within one scan:
+
+| Archetype | Primary question |
+|---|---|
+| Governance | What decision is waiting, and what evidence blocks it? |
+| Workbench | Is this stage healthy and eligible to exit? |
+| Control room | What is unsafe now, and what protective action remains available? |
+| Queue/incident | What needs attention first, who owns it, and what is the next operation? |
+| 360° entity | How is this entity composed, where is risk concentrated, and where should I drill down? |
+| Blotter | Which exact orders/fills match the scope, and what is the event funnel? |
+| Command drawer | What will change, under which authority, and how is completion verified? |
+
+Anything not helping that first question belongs in a lower tab, contextual rail, disclosure panel or
+provenance drawer.
+
+## 4. Route-aware shell: the whole workspace must transition together
+
+### 4.1 Required behavior
+
+When a Deployments/Operations screen is active, apply Execution Carbon to:
+
+- topbar;
+- sidebar and active navigation item;
+- content gutter/canvas;
+- contextual right rail;
+- overlays, command palette and drawers opened from that route;
+- the screen itself.
+
+There must be no supported state where the selector says `Research Light` while the product canvas is
+Carbon black. The selector must show the **effective** workspace appearance.
+
+Governance screens may retain their locked light default, including R2's dark operational preview, but
+the transition must still be coherent: the shell and page belong to the same effective mode. If an
+explicit user override is supported, it changes the entire workspace atomically; it never creates a
+light chrome/dark island combination.
+
+### 4.2 Implementation direction
+
+Create one route-level presentation context owned by the mother shell, for example:
+
+```ts
+type PortalPresentationMode =
+  | "research-light"
+  | "governance-light"
+  | "execution-carbon";
+```
+
+It is presentation metadata only, not a capability registry or a second feature model. Derive it from
+the canonical resolved `screen_id`/Execution screen classification already used by the route; do not
+infer it from `delivery_profile` because data delivery and visual mode are different concepts.
+
+The provider applies the mode above `PortalShell`, and `ExecutionSurface` becomes a semantic screen
+container rather than the only theme boundary. Keep the existing Research/Planning token values
+untouched.
+
+### 4.3 Shell integration details
+
+- Active Execution nav uses a 3px accent rail + surface change, not a pale Research pill.
+- Topbar breadcrumb becomes the compact product locator: `Execution / Paper / Carry v3.2`.
+- Replace generic environment prose with a concise stage/environment badge.
+- The preview warning belongs below the breadcrumb as a compact environment strip, not as a large
+  sticky paragraph competing with the screen header.
+- Remove raw `screen_id` from normal chrome. It may appear in an inspector accessible from the preview
+  badge.
+- Side navigation should not show `SOON` beside the route the user is currently viewing as an active
+  preview. Use one truthful state such as `PREVIEW`, and keep unrelated future routes subdued.
+
+## 5. Typography and scale contract
+
+### 5.1 Load the fonts the design system claims to use
+
+Choose one of these paths and make it true end-to-end:
+
+1. preferred: bundle IBM Plex Sans and IBM Plex Mono for Execution; or
+2. explicitly standardize Execution on the already bundled Inter + JetBrains Mono and update the
+   design-system claim.
+
+Do not declare IBM Plex as a fallback while never loading it. Do not let `base.css` hard-code families
+that bypass contextual tokens. Shared selectors should read semantic font tokens.
+
+### 5.2 Two-family maximum
+
+| Role | Family | Suggested size/line | Notes |
+|---|---|---|---|
+| Page title | Sans | 24–28 / 30–34 | weight 400; never uppercase mono |
+| Entity subtitle | Sans + short mono id | 13–15 / 20 | human name first, immutable id second |
+| Section title | Sans | 14–16 / 20–22 | sentence/title case, weight 500–600 |
+| Body/action explanation | Sans | 13–14 / 19–21 | maximum readable line length around 72 characters |
+| Button/tab | Sans | 12–13 / 16 | mono only when the label itself is a command token |
+| Table header | Sans | 11–12 / 16 | uppercase optional, moderate tracking |
+| Numeric value | Mono | 13–15 / 20 | tabular, right aligned |
+| KPI value | Mono | 22–28 / 30–34 | one consistent level per screen |
+| Meta/status/id | Mono | 11–12 / 16 | never the only text explaining a decision |
+| Terminal/log | Mono | 12–13 / 18–20 | exact, selectable, scrollable |
+
+Load-bearing text must not be 10px. Ten pixels is reserved for a secondary envelope caption that the
+user can expand, not for a page's primary identity or required action reason.
+
+### 5.3 Remove the universal “micro-mono” effect
+
+Audit at least these classes: `exec-tile-title`, `exec-blotter-note`, `exec-state-reason`,
+`exec-disabled-reason`, button classes, filters and tabs. A class named “tile title” cannot also serve
+as the main page title. Introduce explicit roles:
+
+- `ExecutionPageTitle`;
+- `ExecutionSectionTitle`;
+- `ExecutionMeta`;
+- `ExecutionDataValue`;
+- `ExecutionEvidenceCaption`.
+
+The role decides typography; individual screens should not choose arbitrary font-size utilities.
+
+## 6. One continuous page anatomy
+
+Every product route should use the same outer anatomy, even though inner composition changes:
+
+```text
+Portal topbar / breadcrumb / global controls
+┌───────────────────────────────────────────────────────────────────────────┐
+│ compact preview/environment strip (only when applicable)                  │
+├───────────────────────────────────────────────────────────────────────────┤
+│ page masthead: identity + stage/status                     primary action │
+│ short purpose / scope                                      secondary menu │
+├───────────────────────────────────────────────────────────────────────────┤
+│ lifecycle or scope rail (only when meaningful)                            │
+├──────────────────────────────────────────────────┬────────────────────────┤
+│ main decision canvas                             │ contextual right rail  │
+│ metrics / chart / table                          │ next decision          │
+│                                                  │ blockers / freshness  │
+│                                                  │ alerts / provenance   │
+├──────────────────────────────────────────────────┴────────────────────────┤
+│ detail tabs: positions / orders / sessions / accounting / evidence        │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
+### 6.1 Page masthead
+
+The masthead contains only:
+
+- human-readable entity name;
+- short immutable id;
+- stage, runtime, readiness and broker-sync badges as separate states;
+- one sentence of purpose/scope when needed;
+- one primary action and at most one overflow/secondary group.
+
+It does not contain full hashes, raw screen ids, long authority captions or every approval reference.
+
+### 6.2 Tabs
+
+Tabs are a stable navigation layer, not a row of filter-looking buttons appended near the bottom.
+
+- Put tabs immediately below masthead/scope, or immediately above the detail region they control.
+- Active tab must share an edge/surface with its panel.
+- Preserve selected tab in URL search/hash where deep linking matters.
+- A tab click must always switch visible content and update accessibility state.
+- On narrow widths, scroll only the tab strip, never the page.
+- Counts may be shown only when authoritative and useful, e.g. `Orders 12`; do not add decoration.
+
+### 6.3 Contextual right rail
+
+Build one shared `ExecutionContextRail`, not seventeen unrelated side panels.
+
+At ≥1280px it is a sticky 320–360px column below the topbar. Below that it becomes a drawer or an
+inline region after the main decision block. It contains, in this order:
+
+1. **Next decision/action** — what the current screen is for;
+2. **Blockers/conditions** — named, not merely counted;
+3. **Freshness/source health** — compact authority summary;
+4. **Alerts/incidents** relevant to the current entity;
+5. **Provenance** disclosure.
+
+The rail follows tab/scope selection. If the user switches from Overview to Sessions, its next action
+and source summary must not describe the old panel. The rail must not be a visually detached “right
+bar” with unrelated global text.
+
+### 6.4 Density by information shape
+
+Do not force all screens into the same number of cards or the same panel height.
+
+- Sparse content: use a narrower measure and grouped definition rows; do not stretch three facts over
+  a 1,500px canvas.
+- Dense content: use tables, virtualization, keyset navigation and sticky local toolbars; do not stack
+  ten cards before the table.
+- A chart gets height from its analytical job, not from available empty space.
+- Never show a large empty chart frame. Render the fixture series or a compact honest state.
+- Above the fold must contain the screen's primary decision, primary action and current blocker.
+
+## 7. Content hierarchy and progressive disclosure
+
+### 7.1 Preserve information, change its layer
+
+| Information | Default presentation |
+|---|---|
+| Human name, stage, health, decision readiness | Always visible |
+| Short entity/deployment/account id | Visible and navigable |
+| R1/R2 or exit approval refs | Lifecycle rail or provenance summary |
+| `as_of`, age, freshness | Compact source/freshness component; expand for full envelope |
+| Full SHA-256, image digest, payload hash | Provenance drawer with copy action |
+| Formula version, sample/coverage | Chart/table caption; expand for full method |
+| Raw request/response/event | Terminal or audit tab only |
+| Internal `screen_id`, fixture key | Preview inspector only |
+
+Hashes are not secrets, but that does not make them good primary UI. Default text should read
+`Artifact verified` or a short id such as `9f3c1a…e2`, with **Copy full digest** and **Open provenance**.
+Never show a full digest in a masthead, KPI strip or explanatory sentence.
+
+### 7.2 Copy budget
+
+Operational UI copy should be terse and actionable:
+
+- one-line state summary;
+- one-line consequence;
+- one next action.
+
+Move policy explanations, implementation caveats and educational prose into help/disclosure. Avoid
+paragraphs explaining invariants the component can demonstrate structurally.
+
+Preview banner target:
+
+```text
+FIXTURE PREVIEW · No live connection · Actions are simulated
+```
+
+An info disclosure may list AWS-HK, Trading System, broker and realtime details. The default banner
+must not occupy the same attention level as a production warning.
+
+## 8. Interaction completeness contract
+
+### 8.1 No visible no-op controls
+
+Every visible interactive element must be classified:
+
+| Class | Preview behavior |
+|---|---|
+| Local UI interaction | Must work: tabs, filters, expand/collapse, scope, rail open/close |
+| Canonical navigation | Must route to the declared screen and preserve entity/scope context |
+| Safe simulated workflow | Must show an explicit fixture plan/result and update local state |
+| Unavailable source mutation | Disabled with an inline reason; never active-looking |
+| Forbidden action | Hidden when policy requires hidden, otherwise denied state with required role |
+
+Optional callbacks must not silently become product behavior. Use stateful preview containers for
+direct-rendered screens or make the control require a handler before it renders as enabled.
+
+### 8.2 Required preview journey tests
+
+At minimum, prove these journeys on real product routes:
+
+1. Paper: switch every tab → request exit → open Paper Exit Review → return with context preserved.
+2. Alpha 360: change venue → all KPIs/tabs follow → open deployment/account.
+3. Portfolio 360: switch tabs → select correlation lens → open Alpha 360.
+4. Full Blotter: change filter → reset cross-filter → expand row funnel → load older.
+5. Account 360: open dry-run/sync action; fixture mode either simulates visibly or disables honestly.
+6. Queue → Incident → Action Drawer → Verify result → back to Queue.
+
+Add a structural test: within every Execution preview product route, an enabled button must either
+navigate, mutate visible state, open a surface or call a declared handler. A click that leaves route,
+DOM state and accessible announcement unchanged is a failure unless the button is explicitly a repeat
+action whose result is announced.
+
+## 9. What the terminal should be
+
+### 9.1 Terminal is a specialized evidence component
+
+Use a terminal only for:
+
+- command PLAN/APPLY/VERIFY transcript;
+- exact request preview;
+- event/audit stream;
+- broker/reconciliation diagnostic output;
+- raw payload or full provenance when explicitly opened.
+
+Do not style the whole Workbench as a terminal. A dark operations theme is not the same as a CLI.
+
+### 9.2 Terminal anatomy
+
+```text
+┌ Command verification ─ status ─ source ─ follow/pause ─ copy/export ┐
+│ 10:42:01.121  PLAN      cmd_9f12       verified                     │
+│ 10:42:02.008  APPLY     202 accepted   not terminal success         │
+│ 10:42:02.611  VERIFY    sub-intent 1   passed                       │
+│ 10:42:03.044  VERIFY    sub-intent 2   partial · residue remains    │
+├──────────────────────────────────────────────────────────────────────┤
+│ Details / raw request / provenance (explicit tab or disclosure)      │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+Requirements:
+
+- 12–13px mono, 18–20px line height, selectable text;
+- timestamp, phase, object id and message use stable columns;
+- severity/status has text and icon, never color alone;
+- one local scroll container with sticky toolbar;
+- follow/pause, copy selected, copy full, export and clear-local-view controls;
+- gap/reconnect/partial states appear as typed rows, not hidden console errors;
+- no fake shell prompt unless the user is actually viewing Equivalent CLI;
+- Equivalent CLI is read-only, labelled **Browser never executes this command**;
+- full hashes live in raw/provenance detail, with copy action;
+- command terminal cannot declare success on `202`; only terminal verification may do so.
+
+### 9.3 Terminal sizing
+
+Default height should be 220–320px, expandable to a focused full-height panel. It must not consume the
+entire page just because content is sparse. On a detail screen it belongs in a tab or drawer; on the
+Action Drawer it may be the primary lower panel because verification is the user's task.
+
+## 10. Paper Workbench — reference vertical slice
+
+Refactor Paper first and use it as the proof that the shared system works. Do not mass-apply new CSS to
+all seventeen screens before this vertical slice is owner-reviewed.
+
+### 10.1 Target layout at workstation width
+
+```text
+Masthead
+Carry v3.2                                  PAPER · READY
+BINANCE · dep_74 · acct-paper-carry-v32     [Request exit review]
+
+Lifecycle
+R1 complete → R2 complete → PAPER 30/30 days, 312/300 trades → Sandbox → Canary → Live
+
+Decision strip
+Equity | 30d PnL | Drawdown | Allocation | Projection freshness
+
+Main 9/3 or 8/4 grid
+┌ Equity vs approved evidence ────────────┬ Next: Paper Exit Review ┐
+│ real fixture series, readable axes       │ Gate met / blockers      │
+│ approved baseline and gaps visible       │ 30/30 · 312/300 · cycles │
+│ concise envelope caption                 │ primary CTA              │
+└──────────────────────────────────────────┴──────────────────────────┘
+
+Detail tabs
+Overview | Positions | Orders | Fills | Sessions | Accounting | Evidence
+```
+
+### 10.2 What moves out of the default canvas
+
+- full lineage and digests → Provenance in right rail;
+- runtime session table → Sessions tab;
+- full accounting rows → Accounting tab;
+- full drift table and approved comparison → Evidence tab;
+- long policy explanation → help/disclosure;
+- only blocker summary and the most decision-relevant drift remain above the fold.
+
+### 10.3 Paper acceptance
+
+- shell, page and right rail all use one coherent Execution mode;
+- title is immediately legible and larger than panel labels;
+- real chart content or compact unavailable state, never a blank giant box;
+- exit CTA works in the fixture journey or is disabled with the exact missing capability;
+- every tab switches content;
+- no full hash or raw screen id in default view;
+- primary decision + blocker visible without scrolling at 1440×900 and 1728×1000;
+- route baseline includes the real topbar/sidebar and right rail.
+
+## 11. Refactor the remaining screens by archetype
+
+### 11.1 Governance: Inbox, R1, R2, Exit Review
+
+- Keep governance light as locked, but theme the whole shell coherently.
+- Sticky decision bar is the primary action region.
+- Evidence uses sections/tabs; checklist and blockers stay in right rail.
+- R2's dark preview is a deliberate embedded operations object, not an accidental theme seam.
+- Long evidence digests move to provenance.
+
+### 11.2 Workbenches: Paper, VNM, Sandbox, Canary, Live
+
+- Reuse the Paper anatomy.
+- Stage-specific decision panel changes; the page skeleton does not.
+- Canary/Live guard bands stay unmistakable but must not turn every panel red.
+- Protective actions remain visible and distinct from risk-increasing actions.
+
+### 11.3 Operations: Command Center, Queue, Incident
+
+- Command Center is triage, not a data catalogue: ranked attention first, fleet summary second.
+- Queue uses table + contextual alert rail; rail selection follows the selected row.
+- Incident uses evidence/timeline/actions tabs with current containment and next action always visible.
+
+### 11.4 Entity 360: Alpha, Portfolio, Account
+
+- Scope and entity identity remain sticky.
+- Use tabs for data families; do not render all families vertically.
+- Cross-link rows/chips consistently.
+- Account/Broker difference is the default decision panel; binding details and sync history are tabs.
+
+### 11.5 Tools: Blotter and Action Drawer
+
+- Blotter gives the table most of the canvas; scope/filter toolbar stays sticky locally.
+- Action Drawer uses catalogue + focused drawer and terminal verification; it is the one place where a
+  dense command-oriented visual voice is appropriate.
+
+## 12. Implementation phases
+
+### UX-R0 — Re-baseline the merge gate
+
+**Goal:** stop treating isolated component fidelity as product acceptance.
+
+- Mark current product-route preview visual composition `REWORK_REQUIRED` in tracking.
+- Keep backend/runtime feature flags unchanged.
+- Add owner screenshot findings to the review evidence.
+- Do not merge the preview as a finished product surface.
+
+**Exit:** tracker and PR description clearly distinguish contract integration from product UI approval.
+
+### UX-R1 — Shell presentation context + real typography
+
+**Goal:** one coherent workspace and two truthful font families.
+
+- route-aware effective theme/density on the entire shell;
+- topbar/sidebar/overlay alignment;
+- load the selected font packages or correct the DS claim;
+- semantic type roles and scale;
+- compact preview strip.
+
+**Exit:** Research/Planning baselines unchanged; Execution route shows no light/dark seam at 1280,
+1440 and 1728 widths.
+
+### UX-R2 — Shared workspace primitives
+
+**Goal:** stop solving composition independently in seventeen files.
+
+- `ExecutionWorkspace`;
+- `ExecutionPageHeader`;
+- `ExecutionContextRail`;
+- `ExecutionTabs`;
+- `ExecutionProvenanceDrawer`;
+- `ExecutionTerminal`;
+- action-capability helper that prevents enabled no-op controls.
+
+**Exit:** component fixture covers visual and interaction states; reuse report lists old components
+retained, replaced and deleted.
+
+### UX-R3 — Paper Workbench vertical slice
+
+**Goal:** owner-reviewable reference route.
+
+- implement §10;
+- stateful fixture preview journey;
+- real shell route snapshots;
+- visual review at actual viewport, not only fixture group.
+
+**Exit:** owner/Claude/Antigravity review; all §10.3 checks pass.
+
+### UX-R4 — Archetype migration
+
+**Goal:** migrate by information architecture, not file order.
+
+1. remaining workbenches;
+2. governance;
+3. operations;
+4. entity 360;
+5. tools.
+
+**Exit:** every screen uses the shared anatomy or documents why its archetype requires an exception.
+
+### UX-R5 — Interaction completion
+
+**Goal:** zero active-looking no-op controls.
+
+- route journeys in §8.2;
+- canonical navigation/context preservation;
+- simulated vs disabled mutation behavior;
+- keyboard/focus/announcement checks.
+
+**Exit:** interaction completeness test and journeys pass.
+
+### UX-R6 — Product visual/performance gate
+
+**Goal:** approve the integrated product, not merely its parts.
+
+- product-route screenshots with shell visible;
+- fixture-group snapshots retained for state coverage;
+- contrast, overflow and duplicate-id audit;
+- render/DOM budgets for dense tabs;
+- verify no Research/Planning drift;
+- owner visual sign-off before merge.
+
+## 13. Acceptance matrix
+
+| Area | Blocking acceptance |
+|---|---|
+| Workspace | Execution route changes topbar/sidebar/content/right rail together |
+| Theme control | UI shows effective mode; no `Research Light` label around a Carbon route |
+| Typography | two families maximum; page title, section, body, data and terminal roles measurable |
+| Hierarchy | primary decision, blocker and action visible above fold |
+| Density | sparse pages do not stretch; dense pages use tabs/tables/virtualization |
+| Tabs | every visible tab changes its panel and preserves accessible state |
+| Right rail | contextual, sticky at wide widths, follows scope/tab, collapses cleanly |
+| Actions | zero enabled no-op controls |
+| Preview | simulation/disabled behavior is explicit; no source side effect |
+| Provenance | full digest/raw ids hidden by default but accessible and copyable |
+| Terminal | bounded specialized surface with typed rows and PLAN/APPLY/VERIFY semantics |
+| Visual evidence | real product-route baselines include shell; fixture baselines remain |
+| Isolation | Research and Planning snapshots do not drift |
+| Contracts | no financial recomputation, invented state or weakened fail-closed behavior |
+
+## 14. What Claude should do next
+
+1. Read this file together with the owner screenshot and the current uncommitted review/fixes.
+2. Update `ROADMAP_FRONTEND.md` and `PHASE_TRACKER.md`: record UX-R0…UX-R6 and mark the integrated
+   product composition as `REWORK_REQUIRED`, while keeping completed backend/contract work completed.
+3. Produce a short measured layout proposal for **Paper Workbench only** at 1440×900 and 1728×1000:
+   bounding regions, type roles, right-rail behavior, disclosure moves and interaction matrix.
+4. Ask Antigravity for an independent critique of hierarchy, type scale and state/action semantics.
+5. Implement UX-R1 then UX-R2; do not mass-refactor all screens before Paper proves the system.
+6. If any required UI behavior needs a new backend field/endpoint, send a narrow Backend Request to
+   Codex. The shell/theme/type/no-op-preview fixes themselves do not require Trading System changes.
+
+## 15. Non-regression boundary for Codex/Claude coordination
+
+- Rust/TypeScript backend contracts, D1–D4 safety gates and source flags remain unchanged.
+- `delivery_profile=fixture` remains visible and truthful.
+- No browser connection to AWS-HK, Trading System, broker or realtime is added by this refactor.
+- Do not merge “visual refactor” with backend activation.
+- Preserve exact values and evidence access; change default prominence, not truth.
+- Bobby remains the merge authority and owner visual sign-off is an explicit exit gate.
+
