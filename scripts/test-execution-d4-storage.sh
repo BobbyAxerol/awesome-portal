@@ -16,6 +16,7 @@ sed \
   -e 's/^OWNER=.*/OWNER=bobby/' \
   -e 's/^STORAGE_APPROVED=.*/STORAGE_APPROVED=true/' \
   -e 's/^AWS_INSTANCE_ID=.*/AWS_INSTANCE_ID=i-00a12daa5535dc225/' \
+  -e 's/^AWS_AVAILABILITY_ZONE=.*/AWS_AVAILABILITY_ZONE=ap-east-1a/' \
   -e 's/^AWS_VOLUME_ID=.*/AWS_VOLUME_ID=vol-0123456789abcdef0/' \
   -e 's/^AWS_EBS_ENCRYPTED=.*/AWS_EBS_ENCRYPTED=true/' \
   -e "s/^AWS_KMS_KEY_ID_SHA256=.*/AWS_KMS_KEY_ID_SHA256=sha256:$(printf 'a%.0s' {1..64})/" \
@@ -31,6 +32,12 @@ sed 's/^AWS_EBS_ENCRYPTED=true/AWS_EBS_ENCRYPTED=false/' "${filled}" > "${bad}"
 chmod 0600 "${bad}"
 if "${preflight}" --env-file "${bad}" --mode offline >/dev/null 2>&1; then
   printf 'D4 storage test expected unencrypted EBS rejection.\n' >&2
+  exit 1
+fi
+sed 's/^AWS_AVAILABILITY_ZONE=ap-east-1a/AWS_AVAILABILITY_ZONE=us-east-1a/' "${filled}" > "${bad}"
+chmod 0600 "${bad}"
+if "${preflight}" --env-file "${bad}" --mode offline >/dev/null 2>&1; then
+  printf 'D4 storage test expected availability-zone rejection.\n' >&2
   exit 1
 fi
 sed 's#^MOUNT_PATH=.*#MOUNT_PATH=/#' "${filled}" > "${bad}"

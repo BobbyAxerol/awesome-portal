@@ -48,7 +48,8 @@ dark-schema-only and prohibited for Paper business data.
 
 Readiness requires all of the following:
 
-1. an owner-approved private mode-0600, root-owned input;
+1. an owner-approved private mode-0600, root-owned input with the exact
+   `ap-east-1*` availability zone;
 2. an AWS `Encrypted=true` decision plus canonical digests for KMS identity and
    the independently captured `DescribeVolumes` evidence;
 3. a stable `/dev/disk/by-id/...` device whose filesystem UUID matches the exact
