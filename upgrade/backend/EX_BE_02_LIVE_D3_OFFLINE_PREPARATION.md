@@ -60,6 +60,12 @@ Control API probe image with maximum provenance and SBOM, produces HIGH/CRITICAL
 Trivy evidence, rejects CRITICAL findings, signs the digest through GitHub OIDC
 Cosign and verifies the workflow identity before uploading checksummed evidence.
 
+Publication hardening now pins the Control API runtime to Node 22.23.2 /
+Alpine 3.24 by digest and removes build-only npm/npx/Yarn/Corepack from the
+final image. The exact hardened image runs as `node`, reports Node 22.23.2 and
+has zero HIGH/CRITICAL Trivy findings; application dependencies and migration
+content are unchanged.
+
 This is repository preparation only. No image was published in this slice, and
 the workflow revision still must reach the default branch before dispatch.
 

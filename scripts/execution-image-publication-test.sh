@@ -6,7 +6,11 @@ set -euo pipefail
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 workflow="${root_dir}/.github/workflows/publish-images.yml"
 
-python3 - "${workflow}" <<'PY'
+python3 - \
+  "${workflow}" \
+  "${root_dir}/deploy/images/execution-edge.Dockerfile" \
+  "${root_dir}/deploy/images/source-proxy.Dockerfile" \
+  "${root_dir}/deploy/images/control-api.Dockerfile" <<'PY'
 import pathlib
 import sys
 
@@ -14,6 +18,9 @@ import yaml
 
 path = pathlib.Path(sys.argv[1])
 raw = path.read_text(encoding="utf-8")
+edge_dockerfile = pathlib.Path(sys.argv[2]).read_text(encoding="utf-8")
+proxy_dockerfile = pathlib.Path(sys.argv[3]).read_text(encoding="utf-8")
+control_dockerfile = pathlib.Path(sys.argv[4]).read_text(encoding="utf-8")
 document = yaml.safe_load(raw)
 if not isinstance(document, dict):
     raise SystemExit("Image publication workflow is not a YAML object.")
@@ -21,6 +28,32 @@ if "pull_request_target" in raw:
     raise SystemExit("Image publication must never run with pull_request_target authority.")
 if "COSIGN_PRIVATE_KEY" in raw:
     raise SystemExit("Execution publication must use workload OIDC, not a repository signing key.")
+
+expected_edge_runtime = (
+    "FROM gcr.io/distroless/cc-debian12:nonroot@sha256:"
+    "9dac0a79194e45a7da0158a9c6da57b217585af0786db3845d1f0ec1a0dd182f"
+)
+if expected_edge_runtime not in edge_dockerfile:
+    raise SystemExit("Execution Edge runtime must remain on the reviewed pinned Distroless digest.")
+expected_proxy_runtime = (
+    "FROM nginxinc/nginx-unprivileged:1.31.4-alpine3.24-slim@sha256:"
+    "021f32b23e2bfc8610ccdec499b709625dcee1369884d7a51bd8a23a3accb301"
+)
+if expected_proxy_runtime not in proxy_dockerfile:
+    raise SystemExit("Source Proxy runtime must remain on the reviewed pinned NGINX digest.")
+expected_control_runtime = (
+    "FROM node:22.23.2-alpine3.24@sha256:"
+    "c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32"
+)
+if control_dockerfile.count(expected_control_runtime) != 2:
+    raise SystemExit("Control API build and runtime must share the reviewed pinned Node digest.")
+for build_only_runtime_path in (
+    "/usr/local/lib/node_modules/npm",
+    "/usr/local/lib/node_modules/corepack",
+    "/opt/yarn-*",
+):
+    if build_only_runtime_path not in control_dockerfile:
+        raise SystemExit("Control API runtime package-manager removal boundary drifted.")
 
 permissions = document.get("permissions")
 expected_permissions = {

@@ -16,6 +16,9 @@ failures before any AWS-HK deployment:
    rejected four CRITICAL findings before signing.
 3. The first remediated main publication then exposed two fixed OpenSSL
    CRITICAL findings in the old Source Proxy base before signing.
+4. A proactive scan of the exact published D3 Control API image found one
+   CRITICAL `node-tar` dependency shipped only through the runtime copy of npm;
+   the application dependency tree itself was clean.
 
 The candidate now pins Python 3.12.14 in CI, the BAR-05 report and both Python
 runtime images. The Python image is also pinned by digest, and a regression test
@@ -33,6 +36,12 @@ slim by digest. Its exact base has 21 OS packages rather than 67 and the same
 offline Trivy CRITICAL rejection scan reports zero findings. The mTLS/TLS 1.3,
 GET-only route guards and non-root runtime contract remain unchanged.
 
+The D3 Control API now pins Node 22.23.2 / Alpine 3.24 by digest. npm, npx,
+Yarn and Corepack remain available in the build stage but are removed from the
+final image because runtime executes only `node dist/main.js`. This removes the
+unrelated package-manager dependency graph without changing application
+dependencies or migrations.
+
 ## Evidence
 
 - exact Python 3.12.14 BAR-05 tests: 10/10;
@@ -46,6 +55,13 @@ GET-only route guards and non-root runtime contract remain unchanged.
   UID/GID `101:101`, 5,768,982 bytes;
 - Trivy CRITICAL rejection scan over the exact fixed Source Proxy image: 0
   findings;
+- fixed Control API local image:
+  `sha256:817a0560c4ddcf6343f72779f5545358fdad8cf6ab7a3038a40654618c939b00`,
+  user `node`, Node 22.23.2, 64,533,028 bytes;
+- Trivy HIGH+CRITICAL scan over the exact fixed Control API image: 0 findings;
+- package-manager absence proof: `npm` is not executable in the final image;
+- publication regression gate locks the reviewed Edge, Proxy and Control API
+  base digests plus the Control API package-manager removal boundary;
 - full D2 image/PostgreSQL/migrator/source-dark integration gate: pass;
 - no AWS metadata, IAM association, network, service or Trading System state
   changed.

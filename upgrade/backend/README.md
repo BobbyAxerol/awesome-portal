@@ -415,8 +415,11 @@ authority.
   Edge scan reports zero CRITICAL findings. The first republish then caught two
   fixed OpenSSL CRITICAL findings in the old Source Proxy base; it now pins
   official NGINX 1.31.4 / Alpine 3.24 slim by digest and its exact offline scan
-  also reports zero CRITICAL findings. IAM DryRun is still unauthorized, so no
-  AWS/runtime state changed and D2 remains closed. Evidence:
+  also reports zero CRITICAL findings. The D3 Control API additionally pins
+  Node 22.23.2 / Alpine 3.24 and removes build-only package managers from its
+  runtime after an exact-image scan found npm's vulnerable `node-tar`; the
+  fixed image reports zero HIGH/CRITICAL findings. IAM DryRun is still
+  unauthorized, so no AWS/runtime state changed and D2 remains closed. Evidence:
   [`EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md`](./EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md).
 - `EX-BE-02-LIVE` **D3 offline preparation complete / live unauthorized**
   (`D3_OFFLINE_PREPARATION_COMPLETE / LIVE_D3_UNAUTHORIZED`): a

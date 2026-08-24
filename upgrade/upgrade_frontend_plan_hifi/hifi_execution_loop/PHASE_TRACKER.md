@@ -409,9 +409,11 @@ publication rejected four CRITICAL findings in unused Debian-slim packages.
 Backend pinned Python 3.12.14 across CI/runtime/BAR-05, moved the Rust Edge to
 pinned shell-less Distroless and pinned Source Proxy to official NGINX 1.31.4 /
 Alpine 3.24 slim after the first republish caught two fixed OpenSSL findings.
-Full Python and D2 runtime gates plus zero-CRITICAL scans now pass. IAM and
-signed-main evidence are still closed, so Claude must keep every live
-source/query/stream/command consumer off.
+An exact D3 Control API scan then found npm's build-only vulnerable `node-tar`;
+the final image now pins Node 22.23.2 / Alpine 3.24 and omits package managers.
+Full Python and D2 runtime gates, zero-CRITICAL D2 scans and a zero-HIGH/CRITICAL
+Control API scan now pass. IAM and signed-main evidence are still closed, so
+Claude must keep every live source/query/stream/command consumer off.
 Evidence:
 [`EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md`](../../backend/EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md).
 

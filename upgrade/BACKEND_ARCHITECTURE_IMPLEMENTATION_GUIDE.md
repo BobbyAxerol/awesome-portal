@@ -1036,8 +1036,11 @@ deep-dive → ADR → slice → evidence discipline documented above.
   subsequent republish rejected two fixed OpenSSL findings in the old Source
   Proxy base before any signature or deployment. CI/BAR-05/Python images now
   lock 3.12.14, the Rust Edge runtime is pinned shell-less Distroless and Source
-  Proxy pins official NGINX 1.31.4 / Alpine 3.24 slim. Full Python regression,
-  D2 database/source-dark integration and zero-CRITICAL fixed-image scans pass.
+  Proxy pins official NGINX 1.31.4 / Alpine 3.24 slim. An exact published D3
+  Control API scan also found npm's build-only vulnerable `node-tar`; the final
+  image now pins Node 22.23.2 / Alpine 3.24 and removes npm/npx/Yarn/Corepack.
+  Full Python regression, D2 database/source-dark integration, zero-CRITICAL
+  D2 scans and a zero-HIGH/CRITICAL Control API scan pass.
   Status is `D2_RELEASE_CANDIDATE_REMEDIATED / LIVE_D2_UNAUTHORIZED`; IAM,
   main CI/signing and the live change window remain predecessors. Evidence:
   [`EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md`](./backend/EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md).
