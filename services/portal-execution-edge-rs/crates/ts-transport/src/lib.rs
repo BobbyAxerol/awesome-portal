@@ -140,7 +140,7 @@ impl BoundedSourceClient {
                 root_ca_pem: &[],
                 client_identity_pem: None,
                 source_api_key,
-                observed_gateway_digest: "sha256:4f63dc9949f810-test",
+                observed_gateway_digest: "sha256:8a81f121f068-test",
                 limits,
             },
             false,

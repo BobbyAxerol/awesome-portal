@@ -19,6 +19,8 @@ while [[ $# -gt 0 ]]; do
 done
 [[ -n "${env_file}" && -f "${env_file}" ]] || usage
 [[ "${mode}" =~ ^(template|offline|readiness|probe-offline|probe-readiness|source-readiness)$ ]] || usage
+root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+contract_lock="${root_dir}/services/portal-execution-edge-rs/contract-pack.lock.json"
 if [[ "${mode}" != template ]]; then
   [[ ! -L "${env_file}" && "$(stat -c '%a' "${env_file}")" == 600 ]] || {
     printf 'Execution preflight requires a non-symlink mode-0600 env file.\n' >&2
@@ -84,6 +86,29 @@ done
   printf 'D2 preflight requires the full observed source gateway digest.\n' >&2
   exit 1
 }
+if [[ "${mode}" != template ]]; then
+  locked_gateway_prefix="$(python3 - "${contract_lock}" <<'PY'
+import json
+import pathlib
+import re
+import sys
+
+path = pathlib.Path(sys.argv[1])
+try:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+except (OSError, ValueError) as exc:
+    raise SystemExit("Execution preflight rejected an unreadable contract lock.") from exc
+value = payload.get("runtime_gateway_digest_prefix")
+if not isinstance(value, str) or not re.fullmatch(r"sha256:[a-f0-9]{12,64}", value):
+    raise SystemExit("Execution preflight rejected an invalid gateway digest lock.")
+print(value)
+PY
+)"
+  [[ "${values[EDGE_SOURCE_GATEWAY_DIGEST]}" == "${locked_gateway_prefix}"* ]] || {
+    printf 'Execution preflight rejected source gateway identity drift.\n' >&2
+    exit 1
+  }
+fi
 [[ "${values[PORTAL_RUNTIME_GID]}" =~ ^[1-9][0-9]{1,8}$ ]] || {
   printf 'D2 preflight requires a positive numeric portal-runtime GID.\n' >&2
   exit 1
@@ -259,6 +284,17 @@ if [[ "${mode}" != template ]]; then
   check_directory_group "${values[PROJECTION_DB_SECRET_DIRECTORY]}" \
     "${values[PROJECTION_DB_CONTAINER_GID]}"
   check_secret "${values[SOURCE_PROXY_CONFIG_FILE]}" 640
+  expected_proxy_listener="        listen ${values[PORTAL_BRIDGE_GATEWAY_IP]}:${values[SOURCE_PROXY_PRIVATE_PORT]} ssl;"
+  [[ "$(grep -Fxc "${expected_proxy_listener}" "${values[SOURCE_PROXY_CONFIG_FILE]}")" -eq 1 &&
+     "$(grep -Ec '^[[:space:]]*listen[[:space:]]' "${values[SOURCE_PROXY_CONFIG_FILE]}")" -eq 1 ]] || {
+    printf 'D2 preflight requires exactly one Source Proxy TLS/TCP listener.\n' >&2
+    exit 1
+  }
+  if grep -Eiq '(^|[[:space:]])(quic|http3)([[:space:];]|$)|alt-svc' \
+      "${values[SOURCE_PROXY_CONFIG_FILE]}"; then
+    printf 'D2 preflight forbids QUIC, HTTP/3 and Alt-Svc on the Source Proxy.\n' >&2
+    exit 1
+  fi
   for file in edge-server.crt edge-server.key sgp-client-ca.crt control-api.jwks.json \
     source-proxy-ca.crt source-proxy-client.pem source-proxy-admission-token; do
     case "${file}" in *.crt|*.json) expected=644 ;; *) expected=640 ;; esac
