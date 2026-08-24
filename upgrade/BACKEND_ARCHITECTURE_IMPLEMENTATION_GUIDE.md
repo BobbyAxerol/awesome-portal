@@ -1021,8 +1021,13 @@ deep-dive → ADR → slice → evidence discipline documented above.
   Two further exact retries remained unauthorized. The private policy is now
   revision 2: exact two actions, exact instance and region, without the request-
   parameter conditions that failed to yield an effective Allow. Status is
-  `IAM_POLICY_REVISION_2_REQUIRED / LIVE_D2_UNAUTHORIZED`; the attached managed
-  policy must use this document as its default version before another DryRun.
+  The owner then reported attaching revision 2, but the exact 2026-08-24
+  post-attachment DryRun still returned `UnauthorizedOperation`. Status is
+  `REVISION_2_REPORTED_ATTACHED / EFFECTIVE_ALLOW_NOT_PROVEN /
+  LIVE_D2_UNAUTHORIZED`; verify the policy under the existing role's Permissions
+  policies/default managed-policy version and inspect boundary/SCP denies before
+  retrying. The role is retained until the D2 window; it is not deleted or
+  detached as a bypass.
   Evidence:
   [`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](./backend/EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
 - **EX-BE-02-LIVE D3 offline preparation (2026-08-23):** a separate probe-only

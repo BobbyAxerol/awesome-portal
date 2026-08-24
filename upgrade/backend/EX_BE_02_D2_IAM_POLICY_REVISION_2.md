@@ -1,7 +1,7 @@
 # EX-BE-02-LIVE — D2 IAM policy revision 2
 
-> Status: `IAM_POLICY_REVISION_2_REQUIRED / LIVE_D2_UNAUTHORIZED`  
-> Evidence time: 2026-08-23T11:22:22Z  
+> Status: `REVISION_2_REPORTED_ATTACHED / EFFECTIVE_ALLOW_NOT_PROVEN / LIVE_D2_UNAUTHORIZED`  
+> Evidence time: 2026-08-24T01:54:16Z  
 > Runtime impact: none
 
 ## Result
@@ -52,3 +52,24 @@ role's permissions boundary and the account/Organization SCP before any live
 D2 work. Instance-profile detachment is still forbidden outside the bounded
 change window.
 
+## 2026-08-24 exact recheck
+
+After the owner reported attaching revision 2, Codex streamed the repository
+verifier to the existing AWS-HK instance session and repeated the exact
+`ModifyInstanceMetadataOptions(DryRun=true)` request against the bound instance,
+profile ARN and association ID. AWS again returned `UnauthorizedOperation`.
+
+No IMDS option, profile association, service, network or Trading System state
+changed. Revision 2 is therefore syntactically reviewed but still not proven
+effective. The owner-side check is now precise:
+
+1. confirm this policy is under the existing role's **Permissions policies**,
+   not only a permissions boundary and not on a similarly named replacement;
+2. if managed, confirm revision 2 is the **default** policy version;
+3. inspect the role permissions boundary and Organization SCP for an explicit
+   deny of `ec2:ModifyInstanceMetadataOptions`;
+4. do not delete the role or detach its profile merely to bypass this check.
+
+The next backend action remains the same read-only DryRun. Detachment is still
+reserved for the approved D2 change window after image, identity and fresh-host
+admission gates pass.

@@ -398,9 +398,13 @@ authority.
   A later propagation retry also failed. The mode-0600 private policy has been
   narrowed to revision 2 with the exact two actions, instance ARN and region,
   but without request-parameter conditions that did not create an effective
-  Allow. Status is `IAM_POLICY_REVISION_2_REQUIRED / LIVE_D2_UNAUTHORIZED`.
-  The owner must replace the attached document/default managed-policy version
-  before another DryRun. Evidence:
+  Allow. After the owner reported attaching revision 2, the exact 2026-08-24
+  verifier still returned `UnauthorizedOperation`. Status is therefore
+  `REVISION_2_REPORTED_ATTACHED / EFFECTIVE_ALLOW_NOT_PROVEN /
+  LIVE_D2_UNAUTHORIZED`. The owner must verify the policy is attached under the
+  existing role's Permissions policies, is the managed-policy default version,
+  and is not denied by a permissions boundary/SCP. The role is retained until
+  the D2 change window; no detach/delete workaround is allowed. Evidence:
   [`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](./EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
 - `EX-BE-02-LIVE` **D3 offline preparation complete / live unauthorized**
   (`D3_OFFLINE_PREPARATION_COMPLETE / LIVE_D3_UNAUTHORIZED`): a

@@ -23,6 +23,12 @@ projection service is running. The frontend contract does not change: keep
 EventSource and commands off, and do not poll AWS-HK. The attached temporary
 role/IMDS condition remains a backend-only D2 blocker.
 
+The owner reported attaching IAM isolation policy revision 2, but the exact
+2026-08-24 EC2 DryRun still returned `UnauthorizedOperation`. This is an
+owner-side effective-policy/default-version/boundary check only and changes no
+frontend contract. Claude keeps every Execution consumer and delivery profile
+dark; backend did not detach the role, start a service or change AWS runtime.
+
 D2 host admission is
 `D2_SHARED_HOST_REALIGNMENT_COMPLETE / LIVE_D2_UNAUTHORIZED`. Bobby accepted
 the non-Portal historical-OOM

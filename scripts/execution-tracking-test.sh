@@ -144,7 +144,10 @@ for label, text in (
     ("IAM revision report", iamr),
 ):
     normalized = re.sub(r"\s+", " ", text)
-    if "IAM_POLICY_REVISION_2_REQUIRED / LIVE_D2_UNAUTHORIZED" not in normalized:
+    if (
+        "REVISION_2_REPORTED_ATTACHED / EFFECTIVE_ALLOW_NOT_PROVEN / LIVE_D2_UNAUTHORIZED"
+        not in normalized
+    ):
         raise SystemExit(f"{label} lost the D2 IAM revision-2 stop-gate")
 if "bca3ee7d9aa7cc3d27318ce3e27d4e655becd9d7bea5a0b674768c62066fb476" not in iamr:
     raise SystemExit("IAM revision report lost the private policy digest")

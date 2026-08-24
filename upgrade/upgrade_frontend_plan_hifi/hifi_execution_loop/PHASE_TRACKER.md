@@ -390,9 +390,11 @@ profile: Claude keeps source/query/realtime/command consumers off. Evidence:
 
 The owner-reported IAM attachment and a propagation retry still returned
 `UnauthorizedOperation`. Backend prepared a narrower exact-instance revision-2
-document without request-parameter conditions; it must become the effective
-attached/default managed-policy version before the next DryRun. Status remains
-`IAM_POLICY_REVISION_2_REQUIRED / LIVE_D2_UNAUTHORIZED`. This unlocks no
+document without request-parameter conditions. The owner reported attaching it,
+but the exact 2026-08-24 DryRun remained `UnauthorizedOperation`; policy
+attachment/default version and any permissions-boundary/SCP deny still require
+owner verification. Status is `REVISION_2_REPORTED_ATTACHED /
+EFFECTIVE_ALLOW_NOT_PROVEN / LIVE_D2_UNAUTHORIZED`. This unlocks no
 frontend source, query, stream or command consumer. Evidence:
 [`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](../../backend/EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
 

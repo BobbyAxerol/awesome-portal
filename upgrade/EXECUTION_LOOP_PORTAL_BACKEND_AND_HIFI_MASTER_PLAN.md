@@ -1296,9 +1296,13 @@ Two later exact retries still failed after the owner-reported attachment. The
 private exact-instance policy was revised to remove request-parameter
 conditions that did not yield an effective Allow while retaining the region
 and two-action boundary. Current status is
-`IAM_POLICY_REVISION_2_REQUIRED / LIVE_D2_UNAUTHORIZED`; the owner must replace
-the attached document (and select it as the managed-policy default version)
-before another DryRun. Evidence:
+`REVISION_2_REPORTED_ATTACHED / EFFECTIVE_ALLOW_NOT_PROVEN /
+LIVE_D2_UNAUTHORIZED`: the 2026-08-24 post-attachment exact DryRun also returned
+`UnauthorizedOperation`. The owner must prove that revision 2 is attached under
+the existing role's Permissions policies and is the managed-policy default,
+then inspect any role boundary/SCP deny before another DryRun. The role remains
+the temporary D1 operator until the D2 window; no detach or delete is a valid
+workaround. Evidence:
 [`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](backend/EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
 
 The exact isolation sequence is now executable rather than prose-only. A
