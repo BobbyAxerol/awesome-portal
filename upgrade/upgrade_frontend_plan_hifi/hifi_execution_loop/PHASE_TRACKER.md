@@ -2475,3 +2475,13 @@ assert vắng mặt mặc định và có khi mở.
 **Bằng chứng sinh bằng máy:** `e2e/el-v2-03-evidence/controls.json` — mọi control enabled trên 17
 route, mỗi cái một verdict `changed | navigated | skipped:selected | skipped:hidden | NO-OP`; gate:
 **0 NO-OP**, kể cả `href="#"` (link tới hư không bị coi là no-op mặc áo link).
+
+### dev-portal preview build — 2026-08-24 (cho Bobby duyệt V2-01/02/03)
+
+`dev-portal.primusspark.com` (stack `portal`, :8080) đang phục vụ **feature preview** của
+`feat/execution_loop@6a323a4`, build với `PORTAL_EXECUTION_PREVIEW_ENABLED=true` — đúng kênh "Feature
+preview" trong `docs/release-and-deployment.md`. Chỉ `portal-web` được rebuild/recreate; `control-api`,
+`portal-api`, DB và toàn bộ stack **stable** (`:18081`, pinned sha) không đụng. Sau khi PR vào `dev`
+được merge, hostname này phải được rebuild lại từ worktree `dev` (quy trình §"Canonical development").
+Route để duyệt: `/governance/approvals`, `/governance/approvals/AP-201/r1`, `/deployments/paper/dep_94`,
+`/deployments/live/dep_live`, `/deployments/alphas/av_2041`, `/deployments/blotter`, `/execution/_fixtures`.
