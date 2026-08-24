@@ -1413,7 +1413,11 @@ possible. Current truth on 2026-08-24 is:
 
 - D1 private carrier is accepted;
 - D2/D3/D4 repository/offline preparation is complete;
-- live D2 is **not accepted** because the exact IAM DryRun still returns `UnauthorizedOperation`;
+- BE-V2-A IAM effective allow is accepted: the exact-instance DryRun now returns the required
+  `DryRunOperation`; live D2 itself remains unauthorized pending BE-V2-B/C;
+- BE-V2-B exact-image review found the Rust Edge unaffected and the Nginx Source Proxy's OpenSSL
+  QUIC trigger unreachable under the enforced TLS/TCP-only config; owner HIGH disposition and a
+  fresh admission/window are still pending, so no frontend live profile is unlocked;
 - D3 has no live mTLS/H2/delegated-JWT evidence;
 - D4 lacks its accepted predecessors, dedicated Paper read identity/contract, production mapper and
   approved encrypted projection storage;
@@ -1426,8 +1430,8 @@ Trading System loopback API. The browser never connects to AWS-HK directly.
 
 | Backend gate | Codex action | Owner/Trading System input | Frontend benefit |
 |---|---|---|---|
-| BE-V2-A — IAM effective allow | Re-run the exact-instance `ModifyInstanceMetadataOptions(DryRun=true)` verifier and accept only `DryRunOperation` | Ensure revision-2 policy is attached under the existing role's **Permissions policies**, is the managed policy default version, and no permissions boundary/SCP explicitly denies it | None yet; fixture work continues |
-| BE-V2-B — Signed D2 admission | Verify default-branch signed Edge/Proxy images, workload PKI/JWKS, shared-host delta budget, listeners, ownership, TS health and rollback inputs | Approve the bounded D2 change window after the gate is green | Deployable dark services, still no source data |
+| BE-V2-A — IAM effective allow — **ACCEPTED** | Exact-instance `ModifyInstanceMetadataOptions(DryRun=true)` returned the required `DryRunOperation`; no state changed | Revision 2 is the attached managed-policy default; Bobby confirmed no permissions boundary | None yet; fixture work continues |
+| BE-V2-B — Signed D2 admission — **IN PROGRESS** | Signed digests/signatures are verified. Exact-image CVE review and a fail-closed no-QUIC preflight are complete; refresh workload/host evidence after owner HIGH disposition | Choose temporary non-QUIC mitigation or wait for patched base, then approve a fresh bounded D2 window | No live frontend change yet; fixtures and unavailable states remain canonical |
 | BE-V2-C — D2 dark deployment | Harden IMDS/detach temporary operator profile in the approved order; deploy Edge/Proxy dark; prove health, resource delta and rollback without TS changes | Window/rollback operator approval | Real service topology for frontend contract tests, source remains off |
 | BE-V2-D — D3 transport acceptance | Run real WireGuard/private route, TLS 1.3 + mTLS, HTTP/2, delegated short-lived JWT, negative-auth and latency/source-loss probes | Provide/approve scoped identities and D3 window | Trusted SGP↔AWS transport and typed auth/availability errors |
 | BE-V2-E — D4 Paper read contract | Validate a dedicated read-only identity, exact GET routes, stable cursor/completeness/resync semantics and encrypted Portal projection storage | Trading System owner publishes the bounded Paper contract/identity; Bobby opens D4 window | A lawful source for Paper/Blotter/account projections |

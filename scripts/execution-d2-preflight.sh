@@ -259,6 +259,17 @@ if [[ "${mode}" != template ]]; then
   check_directory_group "${values[PROJECTION_DB_SECRET_DIRECTORY]}" \
     "${values[PROJECTION_DB_CONTAINER_GID]}"
   check_secret "${values[SOURCE_PROXY_CONFIG_FILE]}" 640
+  expected_proxy_listener="        listen ${values[PORTAL_BRIDGE_GATEWAY_IP]}:${values[SOURCE_PROXY_PRIVATE_PORT]} ssl;"
+  [[ "$(grep -Fxc "${expected_proxy_listener}" "${values[SOURCE_PROXY_CONFIG_FILE]}")" -eq 1 &&
+     "$(grep -Ec '^[[:space:]]*listen[[:space:]]' "${values[SOURCE_PROXY_CONFIG_FILE]}")" -eq 1 ]] || {
+    printf 'D2 preflight requires exactly one Source Proxy TLS/TCP listener.\n' >&2
+    exit 1
+  }
+  if grep -Eiq '(^|[[:space:]])(quic|http3)([[:space:];]|$)|alt-svc' \
+      "${values[SOURCE_PROXY_CONFIG_FILE]}"; then
+    printf 'D2 preflight forbids QUIC, HTTP/3 and Alt-Svc on the Source Proxy.\n' >&2
+    exit 1
+  fi
   for file in edge-server.crt edge-server.key sgp-client-ca.crt control-api.jwks.json \
     source-proxy-ca.crt source-proxy-client.pem source-proxy-admission-token; do
     case "${file}" in *.crt|*.json) expected=644 ;; *) expected=640 ;; esac

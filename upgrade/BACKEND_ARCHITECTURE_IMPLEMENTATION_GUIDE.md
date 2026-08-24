@@ -1029,6 +1029,16 @@ deep-dive → ADR → slice → evidence discipline documented above.
   role is retained until the bounded D2 window rather than detached as a bypass.
   Evidence:
   [`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](./backend/EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
+- **EX-BE-02-LIVE D2 CVE applicability checkpoint (2026-08-24):** immutable-
+  image inspection shows the Rust Edge does not link OpenSSL and uses `rustls`.
+  The Source Proxy links OpenSSL 3.5.7, but the CVE requires an OpenSSL QUIC
+  server listener while the D2 contract has exactly one bridge-only TLS/TCP
+  listener. Preflight now rejects QUIC, HTTP/3, Alt-Svc and extra listeners,
+  including a negative mutation test. Status is `TRIGGER_NOT_REACHABLE /
+  OWNER_DISPOSITION_PENDING / LIVE_D2_UNAUTHORIZED`; only Bobby may accept the
+  temporary mitigation or keep D2 closed until a patched base is published.
+  Evidence:
+  [`EX_BE_02_D2_CVE_2026_14456_APPLICABILITY.md`](./backend/EX_BE_02_D2_CVE_2026_14456_APPLICABILITY.md).
 - **EX-BE-02-LIVE D2 release-gate remediation (2026-08-24):** main CI exposed
   floating Python 3.12 patch drift, while the image publisher rejected four
   CRITICAL findings from unused Debian-slim `perl-base`/`zlib` packages and a

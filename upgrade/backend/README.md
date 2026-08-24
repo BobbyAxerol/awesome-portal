@@ -407,6 +407,16 @@ authority.
   association changed; the role is retained until the bounded D2 window and no
   detach/delete workaround is allowed. Evidence:
   [`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](./EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
+- `EX-BE-02-LIVE` **D2 image HIGH applicability checked / owner disposition
+  pending:** exact-image inspection proves the Rust Edge uses `rustls` and does
+  not dynamically link OpenSSL; its Distroless OpenSSL 3.0.20 is also outside
+  the affected branch. The Nginx Source Proxy does link affected OpenSSL 3.5.7,
+  but D2 config has no QUIC/HTTP3/UDP listener, so the required QUIC-server
+  trigger is not reachable. Preflight now fail-closes on any `quic`, `http3`,
+  `Alt-Svc` or extra listener and the negative integration test passes. This is
+  mitigation, not automatic owner acceptance; live D2 stays unauthorized until
+  Bobby records a disposition and opens a fresh bounded window. Evidence:
+  [`EX_BE_02_D2_CVE_2026_14456_APPLICABILITY.md`](./EX_BE_02_D2_CVE_2026_14456_APPLICABILITY.md).
 - `EX-BE-02-LIVE` **D2 release candidate remediated / live unauthorized:** the
   first main publication caught floating Python patch drift and four CRITICAL
   findings in unused Debian-slim runtime packages before signing. CI/runtime
@@ -419,8 +429,9 @@ authority.
   also reports zero CRITICAL findings. The D3 Control API additionally pins
   Node 22.23.2 / Alpine 3.24 and removes build-only package managers from its
   runtime after an exact-image scan found npm's vulnerable `node-tar`; the
-  fixed image reports zero HIGH/CRITICAL findings. IAM DryRun is still
-  unauthorized, so no AWS/runtime state changed and D2 remains closed. Evidence:
+  fixed image reports zero HIGH/CRITICAL findings. The later IAM DryRun is now
+  accepted, but the separate image-HIGH disposition, fresh admission and owner
+  window still keep D2 closed; no AWS/runtime state changed here. Evidence:
   [`EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md`](./EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md).
 - `EX-BE-02-LIVE` **D3 offline preparation complete / live unauthorized**
   (`D3_OFFLINE_PREPARATION_COMPLETE / LIVE_D3_UNAUTHORIZED`): a

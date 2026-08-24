@@ -417,15 +417,25 @@ IAM_ISOLATION_NOT_AUTHORIZED / LIVE_D2_UNAUTHORIZED`. This changes no frontend
 profile: Claude keeps source/query/realtime/command consumers off. Evidence:
 [`EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md`](../../backend/EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md).
 
-The owner-reported IAM attachment and a propagation retry still returned
-`UnauthorizedOperation`. Backend prepared a narrower exact-instance revision-2
-document without request-parameter conditions. The owner reported attaching it,
-but the exact 2026-08-24 DryRun remained `UnauthorizedOperation`; policy
-attachment/default version and any permissions-boundary/SCP deny still require
-owner verification. Status is `REVISION_2_REPORTED_ATTACHED /
-EFFECTIVE_ALLOW_NOT_PROVEN / LIVE_D2_UNAUTHORIZED`. This unlocks no
-frontend source, query, stream or command consumer. Evidence:
+The first IAM attachment and propagation retry returned `UnauthorizedOperation`.
+Backend prepared the narrower exact-instance revision-2 document without
+metadata request-parameter conditions. Bobby then made revision 2 the default
+permissions-policy version on the exact role and confirmed there is no
+permissions boundary. The exact 2026-08-24 verifier passed with
+`D2_ISOLATION_AUTHORITY_VERIFIED`; EC2 returned the required `DryRunOperation`.
+Status is `IAM_EFFECTIVE_ALLOW_VERIFIED / LIVE_D2_UNAUTHORIZED`. No EC2 setting
+or association changed, and this still unlocks no frontend source, query,
+stream or command consumer. Evidence:
 [`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](../../backend/EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
+
+BE-V2-B exact-image review is now
+`TRIGGER_NOT_REACHABLE / OWNER_DISPOSITION_PENDING / LIVE_D2_UNAUTHORIZED`.
+The Rust Edge does not link OpenSSL; the Source Proxy links OpenSSL 3.5.7 but
+has no QUIC/HTTP3/UDP listener, and D2 preflight now rejects any such drift.
+Bobby must still choose temporary mitigation acceptance versus waiting for a
+patched upstream base, followed by fresh host admission and a bounded window.
+Claude must keep all live source/query/SSE/command profiles off. Evidence:
+[`EX_BE_02_D2_CVE_2026_14456_APPLICABILITY.md`](../../backend/EX_BE_02_D2_CVE_2026_14456_APPLICABILITY.md).
 
 The backend isolation operation is now machine-ordered and fixture-tested:
 IMDS hop-limit one, exact profile detachment, then IMDS credential absence.
@@ -2017,3 +2027,286 @@ LIVE_D4_PREDECESSOR_BLOCKED`.
   analytics, SSE, commands and activation remain off.
 - Claude may consume typed offline fixtures and error/gap codes only. It must
   not label Paper data live or open EventSource based on this checkpoint.
+
+---
+
+## V2 §11.6 — HiFi coverage ledger (EL-V2-00, Claude, 2026-08-24)
+
+Nguồn: đọc trọn 18 file `.dc.html` (văn bản + demo-prop script). Máy quét đếm: 17 file có
+`data-screen-label`, 66 vùng `cursor:pointer`, 4 file có demo-prop script (Command Center
+BUSY/QUIET; Alpha 360 tab×scope với số liệu đổi theo venue; Blotter filter×cross-filter×expand;
+Admin Drawer catalogue 24 action / 6 nhóm). Wireframes tổng định nghĩa luật chung: sidebar 4 cụm
+(4f), LifecycleRail, breadcrumb `<Cluster> / <Module> / <Entity>`, density modes Operator/Manager/
+Quant (4g), chart contract (tooltip+envelope · dataZoom · double-click reset · expand+table+export ·
+cross-filter chip reset · không smoothing), break-glass (5b), role lens (5c), responsive (KPI
+minmax(160,1fr) · panel đôi →1 cột <1024 · drawer full-screen <720 · content max 1440 · font floor 11).
+
+**Cột.** `Voice`: C=chart · N=số/badge · T=text-guide (giữ) · D=disclosure. `Disp`(osition):
+`impl` (đã có, đúng) · `impr` (sẽ làm bản tốt hơn, khác chi tiết) · `dis` (disabled+lý do) ·
+`hid` (ẩn theo policy) · `BE` (cần backend request) · `MISS` (chưa có gì). Cột `Trạng thái 4 nấc`:
+C=component contract · R=product route · I=nested interactions · V=integrated visual approved —
+ghi nấc **đã đạt**; V chưa màn nào đạt (owner đã từ chối composition).
+
+### L0 · Luật chung từ Execution Wireframes (áp mọi màn)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| Sidebar 4 cụm Command/Governance/Deployments/Administration (4f) | N | shell render từ registry, thiếu mục | impr | C | thiếu route: Promotion Timeline, Waivers & Conditions, Reconciliation, Alerts (xem L0.2) |
+| Breadcrumb `<Cluster>/<Module>/<Entity>` | T | topbar có breadcrumb khác grammar | impr | C | V2-01 §4.3 product locator |
+| LifecycleRail mọi workbench + 360° | N | `LifecycleRail` component có, gắn thiếu chỗ | impr | C | HiFi: ✓ link decision, ● stage hiện tại; retrofit đủ 5 workbench + 3×360° |
+| Theme selector nói mode hiệu lực | N | topbar preference Research/Ops | impr | C | override §0.1: Carbon từ Inbox→Live; **HiFi ghi "Governance Light ▾" — superseded** |
+| Density modes Operator/Manager/Quant (4g) | N | **không có** | MISS | — | V2-02 dựng switcher topbar; Quant thêm cột formula/samples |
+| Chart contract: tooltip+envelope/zoom/reset/expand+table+export/cross-filter chip | C | **không có** — mọi chart là khung | MISS | — | V2-04 dựng một lần trong wrapper ECharts, mọi chart thừa hưởng |
+| Break-glass ceremony (5b) | T+N | **không có** | MISS | — | V2-07; chỉ risk-reducing; thiếu ceremony ⇒ không render nút |
+| Role lens DENIED-per-role (5c) | N | PanelStatus `denied` có per-panel | impr | C | thiếu: lens switch topbar + amounts-withheld-counts-shown + export kế thừa lens |
+| Responsive rules (4f) | — | subtask 2026-08-23 đã chứa phần lớn | impl | C | drawer full-screen <720 chưa có (drawer đang inline) |
+| StateView 7 trạng thái đồng nhất (3c-9) | N | `PanelState` 9 trạng thái | impl | C | vượt HiFi (thêm insufficient_data/terminal) — giữ |
+| Không dead-end: mọi ID render là chip điều hướng (3b) | N | một phần (row links có; chip digest không link) | impr | C | V2-03 chuẩn hoá chip → route |
+
+**L0.2 — Sidebar route chưa tồn tại ở mọi nhánh:** `Promotion Timeline`, `Waivers & Conditions`,
+`Reconciliation` (list), `Alerts` (trang riêng — rail đã có trong Queue). Disposition: **BE + plan** —
+cần Bobby xếp phase (đề xuất: Waivers vào V2-05 governance; Alerts-page = rail mở rộng V2-07;
+Promotion Timeline + Reconciliation list sau V2-08 vì cần contract danh sách mới). Không được render
+nav trỏ 404.
+
+### L1 · HiFi Approval Inbox (WF 4a)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| Filter Mine(n)/All/Research·R1/Ops·R2/Exit/Live/Overdue | N | INBOX/ALL/OVERDUE có; Mine disabled (BR-EX-32); R1/R2/Exit/Live **chưa** | BE+impr | C | server `view` enum thiếu 4 giá trị — BR mới |
+| Bảng: request·gate·subject·target·blockers·age/SLA·quorum | N | có đủ cột, blockers named | impl | C | |
+| SLA aging + OVERDUE nổi bật | N | rowEmphasis + border | impl | C | V2-05 thêm thanh SLA compact |
+| SoD: dòng không quyết được → dim, không ẩn | N | có (`inert`, dimmed + tooltip) | impl | C | |
+| Blocked-before-review (AP-360 audit replay failed) | N | có (blockers red) | impl | C | |
+| Row → gate review screen | N | onOpenRequest có; route thật ở preview | impl | C+R | context giữ — test V2-03 |
+| Inbox zero ≠ filtered empty | T | có, câu tách hai nghĩa | impl | C | |
+| Recently decided + full history → | N | `decided` list có; full history route **chưa** | impr+BE | C | history phân trang cần endpoint |
+| Footer: policy version + sort rule + visibility≠authority | T | có | impl | C | giữ đúng chữ — T hợp lệ (guide) |
+
+### L2 · HiFi Gate R1 Review (WF 1a)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| Artifact passport 8 dòng immutable | N | có (passport panel) | impl | C | digest rút gọn + copy → V2-02 provenance |
+| SoD OK **và** VIOLATION (self-approval blocked banner) | N | cả hai biến thể có fixture | impl | C | |
+| Decision checklist ✓/! + blocking count | N | có | impl | C | |
+| Evidence equity IS/OOS/holdout, window roles, no smoothing | C | **khung trống** | MISS | — | V2-04 cơ chế chart → V2-05 áp; dữ liệu fixture có |
+| WFO stability per-fold + threshold + fold min | C | **khung trống** | MISS | — | như trên |
+| Known limitations & restrictions & waiver | T→D | có, đang dạng đoạn | impr | C | V2-05: bảng + disclosure |
+| Structured condition (typed, owner/expiry/blocking) | N | conditionWire 5 trường | impl | C | |
+| Request changes | N | **verb chưa có backend** | dis+BE | C | disabled + lý do đúng chữ (đã treo từ trước, Bobby biết) |
+| Reject / Approve / Approve-with-conditions + quorum 1/2 | N | có, CSRF + immutable | impl | C | |
+| Evidence digest + decision immutable | N | có | impl | C | |
+
+### L3 · HiFi Gate R2 Review (WF 1b)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| R1 APPROVED context + DC id + digest match | N | có | impl | C | BR-EX-30: 7 trường lineage chưa publish — vẫn treo |
+| Biến thể **R1 expired ⇒ Approve disabled** | N | có (blocked banner + disabled) | impl | C | |
+| Portfolio fit (est. từ research) | N | có | impl | C | ghi rõ "research est." — giữ |
+| Account & risk plan (4 rev rows) | N | có | impl | C | |
+| Capital change preview before/after mono | N | có (bảng delta) | impl | C | V2-05: nhãn PREVIEW + elevation, không đổi theme |
+| Observation policy + no auto-promote | T | có | impl | C | |
+| approve = grants authorization only | T | có đúng chữ | impl | C | T hợp lệ — đây là câu ngăn hiểu lầm nguy hiểm |
+| Request changes / conditions / quorum | N | như R1 | dis+BE / impl | C | |
+
+### L4 · HiFi Paper Exit Review (WF 4b)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| GATE MET **và** GATE UNMET (approve blocked) | N | cả hai có | impl | C | |
+| Lifecycle strip có nhánh unmet (22/30) | N | có | impl | C | |
+| Observation coverage / drift / limits / portfolio fit | N | có 4 panel | impl | C | drift WATCH≠FAIL giữ |
+| Sandbox activation plan preview | N | có | impl | C | |
+| Condition carried + operator recommendation | N+T | có | impl | C | |
+| Extend +14d / Reject→PAPER_HELD / Approve promotion | N | có 3 outcome | impl | C | "extend" verb backend? — đã có (3 outcome CSRF từ phase 5) |
+| Evidence pack digest ep_/immutable record | N | có | impl | C | |
+
+### L5 · HiFi Paper Workbench (WF 1c)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| Masthead: tên + stage + ACTIVE/READY + 3 action | N | có nhưng giọng mono đều | impr | C | V2-04 masthead §10.1 |
+| FRESH **và** STALE variant (banner + age đổi) | N | có cả hai | impl | C | |
+| Lineage strip artifact/R1/R2/PF/dep/acct/venue/rev | N→D | có, đang chiếm scan path | impr | C | V2-04: vào provenance drawer |
+| KPI 5 ô (Equity/PnL/DD/Alloc/age) | N | có | impl | C | mono 24 theo §5.2 |
+| **Equity vs approved evidence chart** (band, DD annotation) | C | **khung trống** | MISS | — | V2-04 ECharts — trung tâm lát cắt |
+| **Candle + order/fill overlay + funnel drill-down/marker** | C | **khung trống** | MISS | — | V2-04; funnel drill đã có pattern ở blotter |
+| Observation gate 3 tiêu chí + CTA blocked-khi-unmet | N | có | impl | C | |
+| Runtime health / Accounting / Contribution / Drift | N | có 4 panel | impl | C | drift: bảng backtest-vs-paper đủ |
+| Tabs Orders/Fills/Positions/Sessions (cursor + virtual) | N | có, số liệu exact | impl | C+I(fixtures) | preview chưa nối onTabChange — V2-03 |
+| STOP order `persisted`, REJECTED kèm lý do risk | N | có | impl | C | |
+
+### L6 · HiFi Paper Workbench VNM (WF 4h)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| SESSION OPEN **và** SUSPENDED_BY_CALENDAR | N | có cả hai | impl | C | |
+| Calendar banner info-tone (không phải warning) + aging PAUSED | T | có đúng ngữ nghĩa PAUSED | impl | C | |
+| Session-aware equity (shading giờ đóng cửa) | C | **khung trống** | MISS | — | V2-06 dùng cơ chế V2-04 + markArea calendar |
+| KPI VND, không trộn USDT | N | có | impl | C | |
+| Gate đếm TRADING days | N | có | impl | C | |
+| Accounting T+2.5 pending settlement | N | có | impl | C | |
+| DNSE credential + OTP expiry strip | N | có | impl | C | |
+| LO/ATO/ATC verbatim + QUEUED_FOR_OPEN + lot 100 | N | có | impl | C | |
+
+### L7 · HiFi Sandbox Certification (WF 1d)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| 7-step stepper server-ordered | N | có (`exec-cert-strip`) | impl | C | |
+| READY **và** BLOCKED (critical finding, fail-closed banner) | N | có cả hai | impl | C | |
+| Triptych internal/broker/difference | N | có | impl | C | |
+| Findings bảng (CRITICAL resolve-path + INFO accept) | N | có | impl | C | |
+| Order-type cert per-type + strategy-scope note | N | có | impl | C | |
+| Execution quality + INSUFFICIENT_DATA (≥30 fills) | N | có | impl | C | |
+| Smoke plan bounded (qty/cap/timebox/approver) | N | có | impl | C | |
+| Cleanup checklist exit-precondition | N | có | impl | C | |
+| CTA: Sync/Dry-run/Smoke/Exit — blocked có lý do | N | có | impl | C+I(fixtures) | preview chưa nối — V2-03 |
+
+### L8 · HiFi Canary Control Room (WF 1e)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| GUARDED band + shield (không color-only) | N | có | impl | C | V2-06 guard budget: đúng 1 band |
+| READINESS DEGRADED variant (sync stale ⇒ scale blocked, protective còn) | N | có — bất đối xứng đúng | impl | C | |
+| Envelope 4 hàng + breach⇒auto-halt + stage limits | N | có | impl | C | |
+| **Live vs Paper vs Backtest chart** (line style, digest join) | C | **khung trống** | MISS | — | V2-06 |
+| Positions/orders BROKER + latency | N | có | impl | C | |
+| Incidents/recon + scale blockers | N | có | impl | C | |
+| Contribution grade C + INSUFFICIENT_DATA rule | N | có | impl | C | |
+| Promotion decision Hold/Reduce/Rollback/Request-scale + evidence pack | N | có; hidden-variant per role có | impl | C | |
+| Mutation hidden khi thiếu Operator Admin scope | N | có (hidden, không disabled) | impl | C | |
+
+### L9 · HiFi Live Full Operations (WF 1f)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| READY **và** BLOCKED/MISMATCH (broker truth thay presentation) | N | có — suppression ở reader | impl | C | mẫu fail-closed đã chốt |
+| KPI 5 + broker freshness | N | có | impl | C | |
+| Broker & recon truth panel (digest, MATCH counts, Δ0) | N | có | impl | C | |
+| MISMATCH banner thay chart slot | N | có | impl | C | |
+| Exposure & orders + pending exposure | N | có | impl | C | |
+| Protective ladder halt→reduce→emergency-close + rb tested | N | có; step-up ghi rõ | impl | C | |
+| **Contribution/edge chart 30d** | C | **khung trống** | MISS | — | V2-06 |
+| Research lineage drill-down-only | D | có | impl | C | |
+
+### L10 · HiFi Command Center (WF 5a)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| BUSY **và** QUIET (demo-prop; QUIET = câu thật + 0/0/0) | N | có cả hai | impl | C | |
+| Needs-you ranked severity→SLA→age, mọi row link owner screen | N | có (rank từ server) | impl | C | V2-07: visual hierarchy ranked-first |
+| Fleet health counts (7/8 sync đổi màu theo QUIET) | N | có | impl | C | demo-prop syncLabel đã phủ bằng 2 fixture |
+| Pinned watchlist max 5, user-owned, pin không mute alert | N | có render; **pin/unpin action chưa** | impr | C | cần persistence — BE nhỏ (user pref) |
+| Today (upcoming/recent + link journal) | N | có | impl | C | |
+| Stream gate 3 trạng thái | N | có (CommandCenterLive) | impl | C | |
+
+### L11 · HiFi Operations Queue (WF 4e)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| Filter Needs-attention/Mine/All(24h) | N | có; Mine disabled BR-EX-32 | impl/dis | C | |
+| Sort PARTIAL·FAILED→RUNNING→done + PARTIAL>15m escalates | N | có (server sort echo) | impl | C | |
+| Bảng op·command·target·state·age·actor·next-step | N | có | impl | C | |
+| next-step theo state (re-apply/review-incident/audit) | N | có | impl | C | |
+| Alert rail: typed object, CRITICAL-only badge, ack≠resolve | N | có | impl | C | V2-07: rail theo dòng đang chọn (chưa) |
+| Rail đóng/mở ✕ | N | có | impl | C+I(fixtures) | |
+
+### L12 · HiFi Incident Detail (WF 4d)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| OPEN·CRITICAL **và** RESOLVED variant | N | có cả hai | impl | C | |
+| State rail forward-only + audited transitions | N | có | impl | C | |
+| Evidence: finding/snapshots/blast-radius/probable-cause | N | có | impl | C | |
+| broker-is-truth statement | T | có | impl | C | T hợp lệ |
+| Operations taken + apply-plan handoff → Drawer | N | có link | impl | C+I(fixtures) | journey V2-07 |
+| Timeline 5 mốc (ack≠resolve rõ) | N | có | impl | C | |
+| Mark RESOLVED blocked: dry-run+reason | N | có | impl | C | |
+| Resolve **không** auto-resume (dep still HALTED note) | T | có — stop gate giữ | impl | C | |
+
+### L13 · HiFi Admin Action Drawer (WF 1i)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| Catalogue: HiFi 24 action/6 nhóm vs server 64 lệnh rev 2 | N | 64 server entries đã render, nhóm server | impl | C | ledger map: server catalogue là authority; HiFi grouping = trình bày |
+| READ không cần step-up (7 action g0, kể cả Redis inspect read-only) | N | có (`portal_reachable` + blocked_reason) | impl | C | Redis qua backend proxy — browser không chạm Redis (stop gate giữ) |
+| MUTATION: PLAN→APPLY(step-up)→VERIFY | N | drawer flow có; **áp thật disabled** (relay tắt) | impl/dis | C | đúng F0 |
+| DANGER: emergency + testnetReset — typed confirm CLOSE | N | có typed confirm | impl | C | |
+| `labReset` BLOCKED — NOT EXPOSED IN PORTAL | N | có (blocked_reason enum) | impl | C | không render nút — đúng handoff |
+| Operation timeline: 202-not-success, sub-intents, PARTIAL residue re-apply cùng idempotency key | N | có (decision walk + BLOCKED/NOT_STARTED mới) | impl | C | V2-07 nâng thành ExecutionTerminal anatomy |
+| Equivalent CLI read-only + "browser never runs a shell" | T | có | impl | C | |
+| Reason bắt buộc → audit log | N | có | impl | C | |
+
+### L14 · HiFi Full Blotter (WF 4c)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| Scope 4 chiều + filter All/Filled/Partial/Rejected/Open | N | có | impl | C+I(fixtures) | preview chưa nối — V2-03 |
+| Columns ▾ / Export | N | **chưa có** | MISS | — | V2-08; export = bảng dữ liệu client từ trang đã tải + nhãn bounded, không bịa full export |
+| Cross-filter chip + ✕ reset + counts theo selection | N | có chip+reset; nguồn chart-selection **chưa** (chưa có chart) | impr | C | V2-08 nối từ chart contract |
+| countLabel "showing 1–n of 412 in selection · 48,213 total" | N | có (selection/total tách) | impl | C | |
+| Row expand funnel signal→intent→risk→ACK→fill (+sd_/le_ id) | N | có | impl | C | |
+| Keyset load-older, virtualized, sticky header | N | có | impl | C | |
+| Fees venue ccy, exact, never abbreviated | N | có (M6 gate) | impl | C | |
+| Footer tổng theo tiền tệ (M7 `aggregates_by_currency`) | N | **reader chưa, UI chưa** | MISS | — | V2-08 — đã có kế hoạch 3 count + invalid_numeric |
+
+### L15 · HiFi Alpha 360 (WF 2a·2b)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| Scope bar PF/Mode/Venue/Window — **mọi panel đổi theo** (demo-prop K per venue) | N | scope render có; propagation một phần | impr | C | V2-08 test "đổi scope ⇒ đếm panel đổi = đếm panel" |
+| 9 tabs Overview…Audit | N | có đủ 9, useId mới | impl | C+I(fixtures) | |
+| Deployment map venue×stage (từ registry) | N | có | impl | C | |
+| KPI 6 theo scope | N | có | impl | C | |
+| **Equity by stage overlay chart** | C | khung | MISS | — | V2-08 |
+| **Per-venue contribution chart** (ccy riêng, không FX mix) | C | khung | MISS | — | V2-08 |
+| Deployments-in-scope bảng + row→workbench + acct→360 | N | có | impl | C | |
+| **12 insight tiles** (đủ 12 theo 2b, INSUFFICIENT_DATA per tile) | C | 12 khung + caption | MISS | — | V2-08 — món lớn nhất |
+| Positions/Orders/Risk/Sessions/Accounting/Recon/Audit tables | N | có đủ, exact values | impl | C | risk: stage envelope override hiển thị đúng |
+| Audit trail append-only + step-up actor | N | có | impl | C | |
+
+### L16 · HiFi Portfolio 360 (WF 3a)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| 6 tabs Overview/Structure&Corr/Capital/Approvals/Incidents/Audit | N | có | impl | C+I(fixtures) | |
+| KPI 5 + Report pack/Rebalance ▾ | N | KPI có; 2 action **chưa** (không contract) | impl / dis+BE | C | Rebalance = plan/apply — treo BE |
+| Holdings structure 4 tầng + FX flag USDC | N | có | impl | C | |
+| Correlation matrix + BM pinned + INSUFFICIENT + cell click drill | C | matrix render dạng bảng; heatmap+drill **chưa** | impr | C | V2-08 heatmap M4 |
+| **ρ(NAV,BM) timeline + threshold 0.6 + tail ρ** | C | khung | MISS | — | V2-08 |
+| Leader lens 3 ranked lists (không merge score) + INSIGHT claim | N | có | impl | C | |
+| Leader impact what-if (marginal.v1, labeled estimates) | N | có | impl | C | |
+| Symbol overlap / duplicate exposure | N | có | impl | C | |
+| **Influence map** (node=exposure, edge=|ρ|) | C | **không có** | MISS | — | V2-08 — SVG nhỏ, không cần lib mới |
+| **Drawdown overlap timeline** | C | khung | MISS | — | V2-08 |
+| Capital ledger append-only + before/after invariant | N | có (+bounded fix 2026-08-23) | impl | C | |
+| Approvals/Incidents/Audit tabs đủ bảng | N | có | impl | C | |
+| Role-cut DENIED (5c: amounts withheld, counts shown, masked ids) | N | denied per-panel có; **lens đủ màn chưa** | impr | C | V2-08 cùng L0 role lens |
+
+### L17 · HiFi Account Broker 360 (WF 1g)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| SYNC OK **và** HEADROOM BREACH variant (fail-closed all accounts) | N | có cả hai | impl | C | |
+| Triptych internal/physical/difference + INFO Δ giải thích | N | có | impl | C | |
+| Guard band LIVE trên account live (3c-4) | N | có | impl | C | |
+| Binding + credential VALID + secret-never-shown + NET mode | N | có | impl | C | |
+| Linked virtual accounts + Σ virtual vs physical headroom (cả 2 biến thể số) | N | có — aggregate là việc màn này | impl | C | |
+| Sync history (ws/REST, STALE row) | N | có | impl | C | |
+| Recon findings + resolved history | N | có | impl | C | |
+| Sync now / Dry-run reconcile CTA | N | có; fixture simulate | impl | C+I(fixtures) | preview nối V2-03 |
+
+### L-tổng — đếm disposition (441 dòng năng lực gộp thành 118 dòng ledger)
+
+| Disp | Số dòng | Ý nghĩa |
+|---|---|---|
+| `impl` | 78 | đã đúng ở component contract |
+| `impr` | 14 | có nhưng V2 phải nâng (đa số: trình bày/propagation/chip điều hướng) |
+| `dis`/`BE` | 9 | disabled có lý do hoặc chờ backend (Request-changes, Mine, view enum, history, Rebalance, pin persistence…) |
+| `MISS` | 17 | **chưa có gì** — tập trung ở: mọi chart plot (12), density modes, break-glass, chart contract, Columns/Export, aggregates footer, influence map |
+| `hid` | 0 dòng riêng | các hidden-by-policy đã nằm trong dòng liên quan (mutation Canary, labReset) |
+
+**Không dòng nào `unknown`.** Mỗi MISS đã có phase đích ghi trong cột Ghi chú.

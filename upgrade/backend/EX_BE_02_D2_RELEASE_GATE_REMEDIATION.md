@@ -68,14 +68,14 @@ dependencies or migrations.
 
 ## Remaining live stop gates
 
-This remediation does not authorize D2. The live caller is the expected
-`PrimusPortalExecutionD1Operator-v1` role, but the exact
-`ModifyInstanceMetadataOptions(DryRun=true)` request still returns
-`UnauthorizedOperation`, including the post-owner-attachment retry on
-2026-08-24. The attached revision must become effective on that role, the
-remediated commit must pass main CI and produce signed immutable D2 and D3
-image evidence, and a fresh host/admission/change window must be accepted before
-profile detachment or dark service deployment.
+This remediation does not authorize D2. The later revision-2 IAM checkpoint
+proved the exact `ModifyInstanceMetadataOptions(DryRun=true)` authority with
+the required `DryRunOperation`, and main produced signed immutable D2/D3 image
+evidence. A later scan recorded one HIGH for `CVE-2026-14456`; exact-image
+inspection found the trigger unreachable under the current non-QUIC Source
+Proxy configuration, but owner disposition remains pending. A fresh host
+admission and bounded change window are also still required before profile
+detachment or dark service deployment.
 
 D3 remains ordered after accepted D2. D4 remains ordered after accepted D3 and
 also requires the Trading System owner to publish a dedicated Paper read-only

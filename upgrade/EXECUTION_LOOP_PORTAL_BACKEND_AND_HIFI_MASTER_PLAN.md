@@ -1304,6 +1304,16 @@ the temporary D1 operator until the bounded D2 window; no detach or delete is a
 valid workaround. Evidence:
 [`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](backend/EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
 
+The signed D2 image HIGH checkpoint is
+`TRIGGER_NOT_REACHABLE / OWNER_DISPOSITION_PENDING / LIVE_D2_UNAUTHORIZED`.
+Exact-image inspection proves the Rust Edge is `rustls`-backed and does not
+link OpenSSL. The Source Proxy links affected OpenSSL 3.5.7, but its D2 runtime
+has exactly one TLS/TCP listener and no QUIC/HTTP3/UDP activation; preflight now
+rejects any drift that could expose that trigger. This mitigation is not an
+owner waiver. Bobby must accept the temporary disposition or wait for a patched
+upstream base before opening D2. Evidence:
+[`EX_BE_02_D2_CVE_2026_14456_APPLICABILITY.md`](backend/EX_BE_02_D2_CVE_2026_14456_APPLICABILITY.md).
+
 The exact isolation sequence is now executable rather than prose-only. A
 tested operator tool verifies the DryRun, binds the exact instance/profile/
 association and <=2-hour window, applies hop-limit one before detachment and

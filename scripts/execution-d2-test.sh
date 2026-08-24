@@ -226,6 +226,16 @@ for file in projection-postgres.key postgres-bootstrap-password \
 done
 
 "${preflight}" --env-file "${tmp_dir}/candidate.env" --mode offline >/dev/null
+sed -i 's/listen 172\.23\.0\.1:8444 ssl;/listen 172.23.0.1:8444 quic;/' \
+  "${proxy_config}"
+if "${preflight}" --env-file "${tmp_dir}/candidate.env" --mode offline \
+    >/dev/null 2>&1; then
+  printf 'D2 preflight accepted a forbidden Source Proxy QUIC listener.\n' >&2
+  exit 1
+fi
+sed -i 's/listen 172\.23\.0\.1:8444 quic;/listen 172.23.0.1:8444 ssl;/' \
+  "${proxy_config}"
+"${preflight}" --env-file "${tmp_dir}/candidate.env" --mode offline >/dev/null
 [[ "$(grep -c 'return 503;' "${proxy_config}")" -eq 7 ]]
 if grep -Fq 'X-API-Key' "${proxy_config}"; then
   printf 'D2 dark Source Proxy unexpectedly rendered a Trading System API key.\n' >&2
