@@ -9,6 +9,8 @@
  * prefix absolutely instead of relative to the current Portal route.
  */
 interface ImportMetaEnv {
+  /** Dev-only fixture product routes; never grants source, SSE or command authority. */
+  readonly VITE_EXECUTION_PREVIEW_ENABLED?: string;
   readonly VITE_ROADMAP_TASK_BOARD_API_BASE?: string;
   readonly VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY?: string;
   /** `legacy` is the safe default; `v1` only after backend workspace UAT. */

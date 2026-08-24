@@ -21,11 +21,13 @@ COPY apps/portal/frontend apps/portal/frontend
 ARG ROADMAP_TASK_BOARD_LOCAL_ONLY=false
 ARG ROADMAP_TASK_BOARD_PERSISTENCE=v1
 ARG ROADMAP_TASK_BOARD_API_BASE=/roadmap-task-board/api
+ARG EXECUTION_PREVIEW_ENABLED=false
 # The embedded Planning views address the gateway prefix absolutely, because
 # they render under /planning/* rather than under /roadmap-task-board/.
 ENV VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY=${ROADMAP_TASK_BOARD_LOCAL_ONLY} \
     VITE_ROADMAP_TASK_BOARD_PERSISTENCE=${ROADMAP_TASK_BOARD_PERSISTENCE} \
-    VITE_ROADMAP_TASK_BOARD_API_BASE=${ROADMAP_TASK_BOARD_API_BASE}
+    VITE_ROADMAP_TASK_BOARD_API_BASE=${ROADMAP_TASK_BOARD_API_BASE} \
+    VITE_EXECUTION_PREVIEW_ENABLED=${EXECUTION_PREVIEW_ENABLED}
 RUN cd apps/portal/frontend && npm run build
 
 FROM node:22-alpine AS roadmap-task-board-build

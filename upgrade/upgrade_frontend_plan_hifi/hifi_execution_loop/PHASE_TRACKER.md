@@ -1988,3 +1988,27 @@ LIVE_D4_PREDECESSOR_BLOCKED`.
   analytics, SSE, commands and activation remain off.
 - Claude may consume typed offline fixtures and error/gap codes only. It must
   not label Paper data live or open EventSource based on this checkpoint.
+
+## 28. Dev integration preview — 17/17 screens wired, production inactive (2026-08-24)
+
+Status: `DEV_PREVIEW_READY / FIXTURE_ONLY / PRODUCTION_INACTIVE`.
+
+- Codex wired every reviewed Execution screen from the revision-4 registry to
+  its canonical product route behind the build-time
+  `PORTAL_EXECUTION_PREVIEW_ENABLED` gate.
+- The repository and stable defaults remain false. Only the isolated dev image
+  may set the gate true; no database migration, source credential or runtime
+  authority is introduced.
+- The route boundary constructs only the in-memory fixture API. It does not
+  construct the HTTP adapter, EventSource, AWS connector or command relay.
+- Every mounted screen carries an explicit fixture-only banner. Registry
+  delivery profiles and all source/query/analytics/SSE/command flags remain
+  unchanged and false.
+- Evidence: production build passed; Vitest `67/67` files and `1,486` tests
+  passed (`1` skipped); Playwright covered 17 canonical routes plus seven
+  feature roots and observed zero `/api/v1/execution` requests.
+
+Claude can now review all 17 screens together on the dev host and record only
+frontend integration/UX findings. Backend activation, live-source claims and
+removal of fixture labelling remain blocked on the independently tracked
+D2→D4 evidence and later delivery-profile promotion.
