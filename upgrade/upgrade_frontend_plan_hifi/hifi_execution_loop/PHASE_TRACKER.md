@@ -13,7 +13,7 @@
 
 ## V2 — Mười phase bắt buộc EL-V2-00…09 (làm tuần tự, 1 phase WIP)
 
-Kế hoạch chi tiết từng phase: `PLAN_EL_V2_FRONTEND.md`. Backend lane song song: §12.11 của handoff.
+Kế hoạch chi tiết từng phase: các khối **Claude supplement** trong chính handoff (§2.8 + §12), theo lệnh Bobby 2026-08-24. Backend lane song song: §12.11 của handoff.
 
 | Phase | Tên | FE | Gate thoát | Evidence |
 |---|---|---|---|---|

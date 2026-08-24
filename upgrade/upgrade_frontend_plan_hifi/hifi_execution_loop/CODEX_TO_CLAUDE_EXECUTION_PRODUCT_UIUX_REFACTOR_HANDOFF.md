@@ -290,6 +290,52 @@ Do not update screenshots merely to make the current composition green before ow
 5. Obtain owner review of that single integrated route with the real shell visible.
 6. Only then migrate Governance, Operations, 360° and Tools archetypes using the proven system.
 
+### 2.8 Claude acknowledgement — tôi đã sai ở đâu (Claude viết, 2026-08-24, chỉ thêm)
+
+Bổ sung theo yêu cầu trực tiếp của Bobby: thừa nhận cụ thể, không chung chung, viết thẳng vào file
+này. Mỗi phase bên dưới (§12) có thêm khối **Claude supplement** ghi phase đó sửa lỗi nào của tôi,
+UI/UX phải đổi thế nào theo mục tiêu mới của Bobby, và gate đo được để qua phase.
+
+**Năm lỗi của tôi, đối chiếu được với bằng chứng trong §2:**
+
+1. **Tôi tối ưu sai hàm mục tiêu.** Suốt các phase 1→12 tôi đo "khối này có giống block hi-fi
+   không" và chưa một lần đo "toàn trang ghép trong shell thật có đọc như một sản phẩm không".
+   Ảnh owner chụp 2026-08-24 là thứ lẽ ra tôi phải tự chụp từ nhiều tuần trước — tôi có đủ công cụ
+   (Playwright, shell thật, route preview) và không làm, vì baseline của tôi **cố tình ẩn topbar**
+   (§2.7.3). Cái seam sáng/tối nằm ngoài khung mọi ảnh tôi kiểm.
+2. **Tôi nâng một chi tiết thành hợp đồng.** "Governance light / Deployments dark" xuất phát từ cách
+   tôi đọc hi-fi, rồi tôi tự củng cố nó: viết vào doc-comment của `ExecutionSurface` ("two surfaces,
+   not one"), viết vào test (`luminance > 0.5` cho governance), viết vào tài liệu điều phối. Khi một
+   giả định được tự mình nhân bản qua ba lớp như vậy, nó trông như sự thật — đó chính là cơ chế khiến
+   tôi không nghi ngờ nó nữa. Owner override §0.1 là đúng: một workspace Carbon, phân biệt governance
+   bằng hierarchy/density, không bằng đổi cả nền trang.
+3. **Tôi để giọng terminal nuốt cả sản phẩm.** 144 khai báo `--font-mono` trong `execution.css` là
+   số liệu của codex và tôi xác nhận nó đúng. Tiêu đề trang, nút, tab, caption, prose giải thích —
+   tất cả cùng một giọng mono uppercase nhỏ, nên màn nào cũng đọc như một trang debug console và
+   không màn nào có điểm nhấn quyết định. "Dark operations theme" và "CLI" là hai thứ khác nhau và
+   tôi đã trộn chúng.
+4. **Ngôn ngữ trạng thái của tôi nói quá.** "Screen built" trong `PHASE_TRACKER.md` nghĩa thật là
+   "component contract chạy trên trang fixtures với dữ liệu fixture". Route sản phẩm, tương tác lồng
+   nhau (tab/drawer/journey), và duyệt hình ảnh tích hợp — ba tầng đó tôi chưa từng tách ra, nên
+   tracker đọc như đã xong trong khi tầng người dùng chạm vào thì chưa bắt đầu.
+5. **Review của tôi cho preview của codex đúng tầng an toàn và thiếu tầng sản phẩm.** Tôi kiểm
+   routing, stop gates, zero request tới Execution API — và kết luận "làm đúng, 3 điểm không chặn".
+   Ở tầng tôi kiểm, kết luận đó vẫn đúng. Nhưng tôi không click thử một nút nào trên route sản phẩm;
+   nếu click, tôi đã thấy tab không đổi nội dung — vì chính tôi khai `onTabChange?` optional để
+   trang fixtures dễ mount. Nút no-op là lỗi ghép của cả hai phía, và phía để callback optional là tôi.
+
+**Điều không nằm trong lỗi:** facts, bảy trạng thái, decimal string, fail-closed, authority envelope,
+contract, fixtures và 1.497 unit test — §0 của chính file này xác nhận giữ nguyên. Cái bị từ chối là
+**composition**, và composition là trách nhiệm của frontend lead — tức của tôi.
+
+**Mục tiêu mới của Bobby (2026-08-24, lời chốt trực tiếp) — đưa vào làm nguyên tắc thiết kế mọi phase:**
+
+- Hi-fi là **sàn nội dung tối thiểu**, không phải pixel authority; design system được linh động hơn.
+- **Giảm chữ không đáng có.** Terminal + portal side của Execution Loop thiên về **chart đẹp, chuẩn,
+  đúng kích thước, số liệu** hơn là chữ.
+- Chữ chỉ đứng ở nơi cần **diễn giải hoặc hướng dẫn** (interpretation/guide); mọi câu khác phải qua
+  bộ lọc *state → consequence → next action* (§7.2) hoặc rời khỏi canvas mặc định.
+
 ## 3. Target mental model
 
 Execution is not “a terminal page”. It is an **institutional operations workspace** with a terminal
@@ -836,6 +882,43 @@ list of obsolete assertions/docs to rewrite.
 **Exit gate:** no `unknown` ledger row lacks an owner/disposition, and no “screen built” claim remains
 ambiguous. **Nothing in EL-V2-01 may be merged before this gate.**
 
+#### Claude supplement — EL-V2-00 (2026-08-24, chỉ thêm, chờ Bobby phê duyệt)
+
+**Phase này sửa lỗi nào của tôi:** lỗi 4 (ngôn ngữ trạng thái nói quá) và lỗi 1 (không có ảnh
+tích hợp nào làm bằng chứng). Tôi cũng từng đọc handoff theo kiểu "đọc phần đầu, làm, báo xong" —
+gói F0 §4 có bốn test 0 coverage vì thói quen đó. V2-00 là chỗ thói quen đó bị thay bằng kiểm kê máy.
+
+**UI/UX theo mục tiêu mới — quyết định ngay từ ledger, không đợi tới JSX:**
+
+- Ledger §11.6 tôi dựng sẽ có thêm cột **`voice`** cho từng block hi-fi, nhận một trong bốn giá trị:
+  `chart` (vẽ, có trục/tooltip), `number` (KPI/badge mono), `text-guide` (một câu diễn giải được giữ),
+  `disclosure` (rời canvas mặc định). Đây là cách "giảm chữ, thiên về chart" thành thứ đo được: khi
+  Bobby duyệt ledger là duyệt luôn tỷ lệ chart/chữ của từng màn, trước khi tôi viết một dòng JSX nào.
+- Cột `disposition` giữ đúng 5 giá trị codex định nghĩa; thêm `MISSING` cho thứ chưa có gì.
+
+**Cách làm chi tiết:**
+
+1. Quét 18 file `.dc.html` bằng script (đếm tab, nút, `data-state`, biến thể demo-prop, onclick) —
+   danh sách control lấy từ máy, mắt tôi chỉ phân loại. Mắt tôi đã từng bỏ sót và không được làm
+   nguồn kiểm kê nữa.
+2. Đọc theo cụm archetype (Governance → Workbench → Ops → 360° → Tools → Wireframes); xong file nào
+   đổ ledger file đó, không đọc dồn.
+3. Before-screenshots bằng spec mới `execution-product-routes.spec.ts`: shell thật hiện đủ topbar/
+   sidebar/rail, ba khổ 1280×800 / 1440×900 / 1728×1000 — spec này chính là "baseline class thứ hai"
+   §2.6 đòi, viết một lần dùng tới V2-09.
+4. Bảng "assertion lỗi thời phải viết lại": bắt đầu bằng hai cái tôi biết chắc — test luminance
+   governance-light trong `execution-fixtures.spec.ts`, và mọi chỗ tài liệu nói "rebuild exactly".
+
+**Gate bổ sung (đo được, cộng vào exit gate của codex):**
+
+| Gate | Đo bằng |
+|---|---|
+| Ledger phủ 100% control máy quét thấy | số dòng ledger ≥ số control script đếm; diff = 0 |
+| Không ô `unknown` | grep `unknown` trong bảng ledger = 0 |
+| Cột `voice` điền đủ | mọi dòng có 1 trong 4 giá trị |
+| Before-shots đủ | 3 khổ × (Inbox, R1, Paper, Live tối thiểu) đã commit |
+| Tracker 4 trạng thái | không còn chữ "screen built" đứng một mình |
+
 ### EL-V2-01 — One route-aware Carbon workspace
 
 **Goal:** eliminate the light shell/dark island and establish one visual environment from Approval
@@ -856,6 +939,40 @@ Inbox/Gate R1 through Live.
 desktop widths; route transition test; Research/Planning non-drift suite.
 
 **Exit gate:** zero mixed-theme seam and zero obsolete Governance-Light assertion.
+
+#### Claude supplement — EL-V2-01 (2026-08-24, chỉ thêm, chờ Bobby phê duyệt)
+
+**Phase này sửa lỗi nào của tôi:** lỗi 2 nguyên vẹn — kiến trúc "two surfaces" là của tôi, doc-comment
+bảo vệ nó là của tôi, test ghim governance-light là của tôi. Phase này tôi tháo cả ba, cùng một commit
+riêng cho phần tháo để revert được sạch.
+
+**UI/UX theo mục tiêu mới:**
+
+- Một `PortalPresentationMode` (`"research-light" | "execution-carbon"`) đặt **trên** `PortalShell`,
+  suy từ screen classification đã resolve — đúng chỉ dẫn §4.2, không suy từ `delivery_profile`.
+- Sidebar active item: **3px accent rail + đổi surface**, bỏ pill kiểu Research (§4.3).
+- Topbar breadcrumb thành product locator gọn: `Execution / Paper / Carry v3.2` — chữ ở đây là
+  điều hướng, được giữ; prose môi trường dài bị thay bằng badge stage/environment.
+- Banner preview nén còn đúng một dòng: `FIXTURE PREVIEW · No live connection · Actions are simulated`
+  (§7.2), chi tiết AWS-HK/TS/broker vào disclosure. Câu tiếng Việt hiện tại (vi phạm §3.8 CLAUDE.md)
+  chết cùng banner cũ.
+- `ExecutionSurface` sống tiếp làm **semantic container** (density/spacing/aria), thôi làm ranh giới
+  theme; doc-comment "two surfaces" viết lại thành giải thích vì sao nó từng sai — người sau đọc
+  hiểu lịch sử, không lặp lại.
+
+**Cách làm chi tiết:** context provider + `data-mode` trên root; bảng token map (token nào Carbon phủ
+lên shell ở mode execution, token nào giữ) để diff CSS đọc được; Research/Planning **không đổi một
+pixel** — 101 baseline QuantBT chạy như một assertion của phase, không phải chạy cho có.
+
+**Gate bổ sung (đo được):**
+
+| Gate | Đo bằng |
+|---|---|
+| Zero seam | probe computed-style: trong route Execution không phần tử shell nào còn nền Research; trong route Research không token Carbon nào |
+| Selector nói thật | test: vào route Execution, control appearance hiển thị mode Carbon hiệu lực |
+| Governance-light chết hẳn | grep assertion cũ = 0; test luminance viết lại theo Carbon-only |
+| Research không trôi | 101/101 QuantBT baseline pass không sinh lại |
+| Chuyển route nguyên tử | test đổi route Research↔Execution: topbar/sidebar/canvas đổi cùng một render, không frame trộn |
 
 ### EL-V2-02 — Semantic typography, density and workspace primitives
 
@@ -878,6 +995,40 @@ desktop widths; route transition test; Research/Planning non-drift suite.
 **Exit gate:** two-family maximum, fixed role scale, reusable anatomy and zero component-level
 unexplained clipping. Making sparse pages use larger text is an automatic rejection.
 
+#### Claude supplement — EL-V2-02 (2026-08-24, chỉ thêm, chờ Bobby phê duyệt)
+
+**Phase này sửa lỗi nào của tôi:** lỗi 3 — 144 khai báo mono và micro-mono làm mọi vai trò chữ.
+
+**Đề xuất cần Bobby chốt ngay trong goal phase này:** §5.1 cho hai đường; tôi đề xuất **đường 2 —
+chuẩn hoá Inter + JetBrains Mono** (đã bundle sẵn, zero rủi ro font tải chậm/đổi metrics, sửa claim
+IBM Plex là một dòng doc). Nếu Bobby muốn đúng chất IBM thì chọn đường 1, tôi bundle Plex — nhưng
+phải chốt trước khi tôi khoá thang, vì metrics hai họ font khác nhau đủ để đổi mọi số đo sau này.
+
+**UI/UX theo mục tiêu mới:**
+
+- Thang vai trò §5.2 giữ nguyên văn — đặc biệt: page title 24/32 **sans** (hết uppercase mono),
+  KPI value 24/32 **mono** — số to, chữ nhường chỗ, đúng "thiên về số liệu".
+- Sáu primitive dựng ở phase này: `ExecutionWorkspace`, `ExecutionPageHeader`, `ExecutionTabs`,
+  `ExecutionContextRail`, `ExecutionProvenanceDrawer`, `ExecutionTerminal` (bounded, §9.2 anatomy).
+  Mỗi cái có fixture case riêng trên trang fixtures — như mọi component trước nay.
+- Vai trò chữ thành **component/class role** (`ExecutionPageTitle`, `ExecutionSectionTitle`,
+  `ExecutionMeta`, `ExecutionDataValue`, `ExecutionEvidenceCaption`) — màn không được tự chọn size.
+- Mono rút về đúng ba việc: **số, danh tính ngắn, bằng chứng thô**. Mọi chữ giải thích về sans.
+
+**Cách làm chi tiết:** token trước → role class → primitive; thử vai trò trên đúng một fixture nhỏ
+(head của Command Center) rồi mới khoá — đúng lệnh "migrate only a small component fixture"; chưa
+đụng 17 màn.
+
+**Gate bổ sung (đo được):**
+
+| Gate | Đo bằng |
+|---|---|
+| Hết type improvisation | đếm `font-family:` literal trong `execution.css` ngoài role block ≈ 0 (từ 144) |
+| Hai họ font đúng thật | probe `document.fonts`: chỉ 2 family Execution dùng được load |
+| Thang khoá | test computed font-size của từng role class đúng bảng §5.2; size lạ ⇒ đỏ |
+| 10px đúng chỗ | không phần tử load-bearing nào 10px (audit spec mở rộng) |
+| Không phóng chữ lấp chỗ trống | fixture sparse: title vẫn 24px — assertion tĩnh |
+
 ### EL-V2-03 — Stateful preview and interaction integrity
 
 **Goal:** make the dev product preview truthful and remove every enabled no-op before visual migration.
@@ -897,6 +1048,36 @@ all enabled controls with an observable result.
 
 **Exit gate:** zero active-looking no-op controls. A control with an optional missing handler must not
 render enabled.
+
+#### Claude supplement — EL-V2-03 (2026-08-24, chỉ thêm, chờ Bobby phê duyệt)
+
+**Phase này sửa lỗi nào của tôi:** lỗi 5, nửa của tôi — tôi khai callback optional
+(`onTabChange?`, `onLoadOlder?`, `onRequestExit?`…) để trang fixtures mount tiện, và optional chaining
+biến click thành im lặng khi preview mount thiếu handler.
+
+**UI/UX theo mục tiêu mới — sửa ở tầng type để lớp lỗi này không tái sinh:**
+
+- Control nào render **enabled** thì handler **bắt buộc trong type**. Muốn render không có handler
+  phải đi qua nhánh tường minh: `readonly` / `disabledReason: string` — component in lý do ra UI.
+  Đây là phiên bản UI của bài học `=== true` fail-closed: làm đường sai **không compile được**,
+  thay vì dặn nhau tránh.
+- `usePreviewController(screenId)` mỗi route: giữ tab/scope/cursor/drawer state; mutation an toàn thì
+  mô phỏng thấy được (kết quả fixture + nhãn simulated); mutation nguồn thì disabled + lý do — đúng
+  bảng §8.1, không thêm hạng mục nào.
+- `screenId` rời chrome, vào preview inspector (một disclosure từ badge preview) — §4.3.
+
+**Cách làm chi tiết:** đổi type từng screen props (tsc sẽ chỉ đúng chỗ preview thiếu handler — dùng
+compiler làm máy quét); controller chung một file, mỗi route một config nhỏ; 6 journey §8.2 viết bằng
+Playwright trên product route thật, không phải trang fixtures.
+
+**Gate bổ sung (đo được):**
+
+| Gate | Đo bằng |
+|---|---|
+| Zero no-op | test cấu trúc §8.2: click mọi control enabled ⇒ route/DOM/announcement đổi; không đổi ⇒ đỏ kèm tên control |
+| Type chặn đường sai | thử mount thiếu handler ⇒ tsc đỏ (có test type-level bằng `@ts-expect-error`) |
+| 6 journey xanh | Paper/Alpha/Portfolio/Blotter/Account/Queue→Incident→Drawer đủ như §8.2 |
+| Inspector thay chrome | grep `screenId` trong markup chrome = 0; inspector có và copy được |
 
 ### EL-V2-04 — Paper Workbench + Paper Exit reference vertical slice
 
@@ -919,6 +1100,42 @@ checks, and explicit owner visual review.
 **Exit gate:** **Bobby approval is mandatory.** Claude must not migrate the remaining archetypes before
 the Paper reference slice is approved or returned with named corrections.
 
+#### Claude supplement — EL-V2-04 (2026-08-24, chỉ thêm, chờ Bobby phê duyệt)
+
+**Phase này sửa lỗi nào của tôi:** khung chart trắng là món nợ tôi khất từ Phase 0 ("defer ECharts")
+và không bao giờ quay lại trả — thành "large blank block" trong ảnh owner (§2.7.2 mục 6); và lỗi 1
+thể hiện đậm nhất ở Paper: 12 khối đúng từng cái, xếp chồng không có thứ bậc quyết định.
+
+**UI/UX theo mục tiêu mới — màn này là nơi "chart đẹp, số liệu hơn chữ" phải nhìn thấy được:**
+
+- **Chart equity thật bằng ECharts** (đã có trong repo phía Research — tái dùng wrapper, không thêm
+  lib): trục thời gian thật, series fixture, **đường approved envelope** so sánh được, vùng gap đánh
+  dấu, tooltip, reset/expand, table/accessibility view. Caption đúng **một dòng** mono nhỏ (nguồn +
+  as_of); mọi diễn giải khác vào disclosure.
+- Masthead §10.1 nguyên văn: tên đọc được (sans 24) + id ngắn mono + badge stage/readiness/broker-sync
+  **tách riêng** + đúng **một** CTA (`Request exit review`). Digest, lineage, screen id — không có mặt.
+- KPI strip 5 ô: Equity · 30d PnL · Drawdown · Allocation · Projection freshness — **số mono 24**,
+  nhãn sans 11. Không câu chữ nào giữa các ô.
+- Right rail = `ExecutionContextRail` thật: Next decision (gate MET/UNMET) → blockers **có tên** →
+  freshness gọn → provenance disclosure. Rail đổi theo tab đang chọn — có test.
+- Chữ toàn màn qua bộ lọc ba loại: *state → consequence → next action*. Câu không thuộc ba loại →
+  disclosure hoặc xoá. Mục tiêu đo được: số câu prose trên canvas mặc định giảm ≥ một nửa so với
+  before-shot V2-00, không mất capability nào (ledger đối chiếu).
+
+**Cách làm chi tiết:** trước khi viết JSX tôi giao **layout proposal đo bằng px** ở 1440×900 và
+1728×1000 (bounding regions, vai trò chữ từng vùng, hành vi rail, ma trận tương tác — đúng §14.5)
+để Bobby duyệt bố cục trước, đỡ một vòng làm lại. Reader/fixture giữ nguyên — số không đổi, chỗ đứng đổi.
+
+**Gate bổ sung (đo được), cộng vào §10.3 và gate duyệt của Bobby:**
+
+| Gate | Đo bằng |
+|---|---|
+| Chart thật | test: SVG/canvas có ≥1 series render + trục + tooltip mở được; blank frame ⇒ đỏ |
+| Above-the-fold | ở 1440×900: quyết định + blocker + CTA nằm trong viewport không cuộn (đo bounding) |
+| Chữ giảm | đếm text node canvas mặc định: giảm ≥50% so before-shot, ledger không mất dòng nào |
+| Journey exit | Paper → request exit → Exit Review → back còn context: một test Playwright trọn |
+| 5 freshness × 3 evidence states | ma trận it.each đủ 15 tổ hợp không bịa eligibility |
+
 ### EL-V2-05 — Governance decision chain
 
 **Goal:** deliver a continuous reviewer experience across Approval Inbox, Gate R1, Gate R2 and Exit
@@ -940,6 +1157,38 @@ coverage for all governance variants.
 **Exit gate:** every Governance capability has an implemented/improved/disabled/hidden/backend-request
 disposition and zero fabricated write path.
 
+#### Claude supplement — EL-V2-05 (2026-08-24, chỉ thêm, chờ Bobby phê duyệt)
+
+**Phase này sửa lỗi nào của tôi:** governance-light là màn tôi bảo vệ lâu nhất; và các màn governance
+của tôi nhiều chữ nhất cụm — evidence, checklist, limitation viết thành đoạn văn thay vì cấu trúc.
+
+**UI/UX theo mục tiêu mới:**
+
+- Cùng Carbon; phân biệt "đang quyết định" bằng **sticky decision bar** (verdict + reason + nút) và
+  elevation, không bằng nền trắng.
+- Evidence/checklist/limitations → **bảng và checklist có trạng thái**, hết đoạn văn; mỗi mục một
+  dòng + icon trạng thái; diễn giải dài vào disclosure của đúng mục đó.
+- Structured conditions (BR-EX-29) hiển thị thành **chip/bảng 5 trường** — điều kiện là dữ liệu
+  truy vấn được, không phải câu văn.
+- R2 capital preview: bảng delta mono + **một** nhãn `PREVIEW` + viền elevation (§11.1) — không đổi
+  theme, không nhuộm nền.
+- SLA/aging trong Inbox: thanh compact + số, thay chữ "overdue since…" lặp trên từng dòng.
+- Request-changes: backend chưa có verb ⇒ nút **disabled + lý do đúng chữ** + backend request đã có
+  sẵn trong ledger (BR-EX-30/31 gắn vào phase này, khỏi trôi).
+
+**Cách làm chi tiết:** làm theo journey Inbox→R1→R2→Exit một mạch để context-preserving navigation
+là thứ được dựng từ đầu; SoD/role/denied/expired/conflict viết thành ma trận `it.each`.
+
+**Gate bổ sung (đo được):**
+
+| Gate | Đo bằng |
+|---|---|
+| Mọi capability có disposition | ledger governance: 0 ô trống, 0 `MISSING` không có backend request |
+| Zero write bịa | test: không đường UI nào tạo mutation ngoài verbs backend publish |
+| Decision bar sticky | test scroll: verdict/CTA luôn trong viewport |
+| Journey liền mạch | Inbox→R1→R2→Exit→back giữ entity/scope — một test trọn |
+| Ma trận role | creator-cannot-approve, reviewer, denied, expired, conflict — đủ và xanh |
+
 ### EL-V2-06 — Stage workbenches from Paper VNM through Live
 
 **Goal:** reuse the approved Paper anatomy while preserving the distinct safety model of every stage.
@@ -958,6 +1207,39 @@ stale, mismatch and recovery screenshots; workbench reuse report.
 
 **Exit gate:** all stage-specific ledger rows are closed and the shared anatomy remains visually
 consistent without erasing safety differences.
+
+#### Claude supplement — EL-V2-06 (2026-08-24, chỉ thêm, chờ Bobby phê duyệt)
+
+**Phase này sửa lỗi nào của tôi:** "pages with different information densities but almost the same
+stacking strategy" (§0) — bốn workbench của tôi là bốn cột chồng panel gần giống nhau; và guard
+band đỏ tôi để lan quá rộng ở Canary/Live.
+
+**UI/UX theo mục tiêu mới:**
+
+- Tái dùng **nguyên anatomy Paper đã được Bobby duyệt ở V2-04** — masthead/KPI/chart/rail/tabs không
+  vẽ lại; chỉ decision panel đổi theo stage. Đây là phép thử "hệ thống dùng lại được" của toàn V2.
+- Guard band thành **token có ngân sách**: đúng **một** dải băng masthead đỏ đặc trên Canary/Live;
+  panel bên dưới giữ nền Carbon thường; suppression (broker mismatch) hiển thị theo mẫu `withheld`
+  đã có ở reader — không nhuộm đỏ cả trang để hét một chuyện.
+- VNM: lịch phiên/ATO/ATC thành **dải timeline trực quan** (phiên mở/đóng/pause là block màu có nhãn
+  giờ) thay cho các câu mô tả trạng thái phiên — đúng "chart hơn chữ" cho dữ liệu thời gian.
+- Sandbox: 7 step giữ dạng stepper ngang (cert strip đã có) + triptych internal/broker/difference;
+  smoke plan bounded là bảng, không phải văn.
+- Bất đối xứng protective vs risk-increasing: hai nhóm nút **khác vị trí, khác trọng lượng thị giác**,
+  có một visual case đặt Canary cạnh Live để nhìn thấy sự bất đối xứng.
+
+**Cách làm chi tiết:** thứ tự VNM → Sandbox → Canary → Live (rủi ro tăng dần, món dễ tái dùng nhất
+trước); mỗi màn một reuse report (§11.3 guide v0.5).
+
+**Gate bổ sung (đo được):**
+
+| Gate | Đo bằng |
+|---|---|
+| Anatomy chung thật | 4 màn import cùng primitives; grep clone cục bộ = 0 |
+| Guard budget | probe: ≤1 phần tử band đỏ đặc mỗi trang; panel nền thường |
+| Ma trận stage states | VNM OPEN/CLOSED/paused; Sandbox NONE/CRITICAL; Canary OK/STALE; Live OK/MISMATCH — đủ ảnh + test |
+| Command vẫn tối | mọi nút command disabled + lý do; zero đường enable từ UI |
+| Ledger stage đóng | mọi dòng VNM/Sandbox/Canary/Live có disposition + test |
 
 ### EL-V2-07 — Operations, incident and command workflow
 
@@ -981,6 +1263,40 @@ BUSY/QUIET and VERIFIED/PARTIAL visual evidence; command-authority negative test
 **Exit gate:** operations read paths are complete, terminal states are truthful and no browser action
 can bypass plan/apply/verify or command authority.
 
+#### Claude supplement — EL-V2-07 (2026-08-24, chỉ thêm, chờ Bobby phê duyệt)
+
+**Phase này sửa lỗi nào của tôi:** nghịch lý tôi tự tạo — cả sản phẩm *trông* như terminal nhưng
+không có nổi **một** terminal thật đúng anatomy; và Command Center của tôi xếp panel tĩnh thay vì
+xếp hạng attention.
+
+**UI/UX theo mục tiêu mới:**
+
+- **Terminal §9.2 nguyên văn** — component `ExecutionTerminal` dựng ở V2-02 nhận việc thật ở đây:
+  toolbar sticky (status/source/follow-pause/copy/export), cột timestamp-phase-object-message ổn
+  định, typed rows cho gap/reconnect/partial, cao mặc định 220–320px expand được, **không bao giờ
+  tuyên success trên 202** — bài học adapter nâng lên UI, có test riêng.
+- Command Center = triage: **ranked attention list chiếm ưu tiên trên**, fleet health là dải số
+  compact phía sau (số mono to, nhãn ngắn); BUSY/QUIET là hai trạng thái thật có ảnh riêng — QUIET
+  không phải trang trống, là "không gì cần anh" + timestamp.
+- Queue: bảng chiếm canvas; **rail cảnh báo đổi theo dòng đang chọn** (một test riêng); ack ≠ resolve
+  giữ nguyên ngữ nghĩa đã dựng.
+- Incident: tabs evidence/timeline/actions; containment hiện tại + next action ghim trên; forward-only
+  không Resume — như reader đã ép.
+- Action Drawer: nơi **duy nhất** giọng lệnh đậm là đúng chỗ (§11.5); catalogue → chọn → reason →
+  step-up → PLAN/APPLY/VERIFY → PARTIAL/residue re-plan; Equivalent CLI read-only giữ nhãn
+  "Browser never executes this command". Break-glass: chỉ khi đủ ceremony từ contract — chưa đủ thì
+  **không render nút**, đúng luật không quảng cáo capability không tồn tại.
+
+**Gate bổ sung (đo được):**
+
+| Gate | Đo bằng |
+|---|---|
+| Terminal thật | test anatomy: cột ổn định, follow/pause, copy/export, typed gap rows; `202 ⇒ success` ⇒ đỏ |
+| Triage xếp hạng | test thứ tự render theo severity/SLA từ fixture, không theo thứ tự mảng |
+| Rail theo selection | chọn dòng khác ⇒ rail đổi nội dung — test |
+| Journey trục | Queue→Incident→Drawer→Verify→Queue một test trọn |
+| Authority âm tính | ma trận test không vượt plan/apply/verify, không lộ Break-glass thiếu ceremony |
+
 ### EL-V2-08 — Entity 360, analytical surfaces and Full Blotter
 
 **Goal:** make Alpha, Portfolio, Account/Broker and Blotter useful for analysis without turning them
@@ -1003,6 +1319,36 @@ screen-reader alternatives; large-row performance profile; route screenshots at 
 
 **Exit gate:** every analytical ledger row is closed, no financial value is recomputed in the browser,
 and dense routes meet the agreed render/DOM/interaction budgets.
+
+#### Claude supplement — EL-V2-08 (2026-08-24, chỉ thêm, chờ Bobby phê duyệt)
+
+**Phase này sửa lỗi nào của tôi:** 12 analytical tiles của Alpha 360 là 12 khung trống có caption —
+"chart" mà không có chart nào; và `aggregates_by_currency` (M7, contract đã publish) tôi phát hiện
+không ai đọc rồi **cố ý để treo** chờ có UI — phase này chính là UI đó.
+
+**UI/UX theo mục tiêu mới — cụm "thiên về chart, số liệu" nặng nhất:**
+
+- 12 tiles Alpha 360 thành **chart thật** cùng cơ chế ECharts của V2-04: equity, drawdown, exposure,
+  turnover… mỗi tile trục + tooltip + expand + insufficient-data tường minh (SAMPLE_FLOOR đã có).
+- Correlation matrix: heatmap thật với lens (M4 theo cardinality), cell budget 4096 giữ nguyên,
+  packed limit 150 transport như cũ — chỉ đổi cách vẽ, không đổi cơ chế.
+- Triptych Account/Broker internal/physical/difference là **decision panel mặc định** — bảng mono
+  3 cột, khác biệt nổi bật; binding/sync history vào tabs.
+- Blotter: bảng được phần lớn canvas (virtualization + keyset đã có); toolbar filter sticky cục bộ;
+  funnel signal→intent→risk→order→fill là dải ngang mở từ dòng; **footer tổng theo tiền tệ** tiêu thụ
+  `aggregates_by_currency`: ba biến đếm `row_count/quantity_count/notional_count` **không gộp**,
+  `invalid_numeric_count > 0` phải hiện — và số là chuỗi 18 số lẻ, `Number()` cấm (gate MONEY đã canh).
+- Scope lan truyền: đổi venue/scope ⇒ mọi KPI, chart, bảng, link, rail đổi theo — một test trọn.
+
+**Gate bổ sung (đo được):**
+
+| Gate | Đo bằng |
+|---|---|
+| Zero khung trống | mọi tile: có series render hoặc trạng thái honest — blank frame ⇒ đỏ |
+| Aggregates đúng luật | 3 count riêng + invalid hiện khi >0 + decimal string nguyên — test đủ |
+| Scope propagation | test đổi scope: đếm panel đổi = đếm panel có mặt |
+| Chart contract | tooltip/zoom/reset/expand/table/export/cross-filter mỗi loại có test |
+| Perf budget | bảng 10⁵ dòng: DOM node ≤ ngưỡng RESIDENCY_CAP; render đo và ghi |
 
 ### EL-V2-09 — Real-source Lane B, full hardening and V2 release acceptance
 
@@ -1030,6 +1376,34 @@ complete coverage ledger; performance/a11y/visual reports; rollback rehearsal; o
 **Exit gate:** all ten phases are accepted, every visible control and nested HiFi capability is
 accounted for, real Paper read data works through the Portal boundary, and V2 can be rolled back without
 touching Trading System. Only Bobby may authorize merge/release.
+
+#### Claude supplement — EL-V2-09 (2026-08-24, chỉ thêm, chờ Bobby phê duyệt)
+
+**Phase này sửa lỗi nào của tôi:** không lỗi cũ trực tiếp — nhưng nó là chốt chống lặp lại lỗi lớn
+nhất: **test xanh không phải phê duyệt sản phẩm**. Phase này tách bạch ba tầng bằng chứng: máy
+(gates), dữ liệu thật (shadow parity), và mắt owner (sign-off) — thiếu một tầng là chưa xong.
+
+**UI/UX theo mục tiêu mới:**
+
+- Kích hoạt **một màn/một profile một lần**, Paper read-only trước, theo đúng BE-V2-E/F/G; mỗi lần
+  một commit + một dòng evidence để rollback từng nấc.
+- Typed 401/auth-expiry cho SSE: tiêu thụ câu trả lời của codex cho câu hỏi §8.18 tôi đã gửi
+  (EventSource không đọc được status ⇒ cần typed `event: error` hoặc preflight) — UI hiển thị
+  "phiên hết hạn, đăng nhập lại" thay vì retry câm.
+- Shadow parity: script so **từng field** fixture vs shadow (schema/state/decimal/completeness),
+  xuất bảng lệch — mismatch hiển thị là mismatch, không được giấu để màn trông đầy đủ.
+- Freshness/authority hiển thị thật theo nguồn: fixture nói fixture, shadow nói shadow, source nói
+  source — `delivery_profile` không bao giờ nói dối.
+
+**Gate bổ sung (đo được):**
+
+| Gate | Đo bằng |
+|---|---|
+| Parity sạch | bảng lệch = 0 dòng không giải thích; mọi lệch có disposition |
+| Rollback thật | diễn tập rollback về profile cũ có ghi hình/log — không phải lời hứa |
+| Non-regression | Research/Planning + stable runtime baseline không trôi |
+| Ba tầng bằng chứng | gates máy xanh + parity report + chữ ký owner — đủ ba mới đóng |
+| Giới hạn ghi rõ | command/live-source còn tắt được liệt kê tường minh trong evidence cuối |
 
 ### 12.11 Codex backend/IAM lane running in parallel
 
