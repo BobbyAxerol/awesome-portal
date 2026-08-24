@@ -1803,6 +1803,12 @@ không phải 17 màn.
 > registry stays `fixture`, and Query/analytics/SSE/
 > commands/activation remain off. Detail:
 > [`EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md`](./backend/EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md).
+>
+> D4 readiness is `D4_READINESS_AUDITED / LIVE_D4_INPUTS_BLOCKED / NO_SOURCE_READ`:
+> the next external input is the owner-published mandatory-auth Paper read
+> contract; the next infrastructure input is a separately encrypted projection
+> store on the existing AWS-HK host. Request:
+> [`EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md`](./backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md).
 
 > **Backend checkpoint 2026-08-23 — EX-BE-05b/F2 Phase 10:** Portal-owned
 > Sandbox Certification trên SGP đạt

@@ -927,6 +927,12 @@ unavailable/degraded states and EventSource off. A source-backed Paper panel
 still requires an owner-approved D4 `BUILDING` epoch plus a later, separate
 registry activation decision.
 
+The current prerequisite audit is `D4_READINESS_AUDITED /
+LIVE_D4_INPUTS_BLOCKED / NO_SOURCE_READ`; see
+`upgrade/backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md`. Claude
+does not wait on this for V2 fixture UX, but must not replace unavailable states
+with invented Paper data.
+
 ### 8.12 EX-BE-05b/F1a Operations Queue — Lane A can integrate (2026-08-23)
 
 Backend status is `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`. The same-origin

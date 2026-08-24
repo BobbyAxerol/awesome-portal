@@ -460,6 +460,14 @@ authority.
   non-fixture registry profile. Status:
   `D4_OFFLINE_AUTHORIZATION_PREPARED / D3_PREDECESSOR_ACCEPTED /
   LIVE_D4_INPUTS_BLOCKED`.
+- [EX-BE-02-LIVE D4 readiness audit and owner request](./EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md)
+  — **readiness audited / no source read:** the sanitized contract pack still
+  has optional alpha auth, unstable list paging and incomplete event/resync
+  semantics. AWS-HK has only the unencrypted root-backed D2 volume, so no D4
+  business store exists. The request locks the exact identity, four GET routes,
+  cursor/completeness/resync and runtime evidence the Trading System owner must
+  publish before Portal can build a source mapper. Status:
+  `D4_READINESS_AUDITED / LIVE_D4_INPUTS_BLOCKED / NO_SOURCE_READ`.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

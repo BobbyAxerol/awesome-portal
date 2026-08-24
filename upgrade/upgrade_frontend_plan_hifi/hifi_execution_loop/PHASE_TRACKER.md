@@ -2010,3 +2010,10 @@ D3_PREDECESSOR_ACCEPTED / LIVE_D4_INPUTS_BLOCKED`.
   analytics, SSE, commands and activation remain off.
 - Claude may consume typed offline fixtures and error/gap codes only. It must
   not label Paper data live or open EventSource based on this checkpoint.
+
+The 2026-08-24 read-only D4 audit is
+`D4_READINESS_AUDITED / LIVE_D4_INPUTS_BLOCKED / NO_SOURCE_READ`: current source
+auth remains optional, list paging/event completeness/resync are insufficient,
+and the only AWS-HK projection volume is on the unencrypted D2 root filesystem.
+The exact owner request is
+[`EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md`](../../backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md).

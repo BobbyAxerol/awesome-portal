@@ -1088,6 +1088,14 @@ deep-dive → ADR → slice → evidence discipline documented above.
   This accepts the transport predecessor only; D4 inputs and all frontend live
   profiles remain closed. Evidence:
   [`EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md`](./backend/EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md).
+- **EX-BE-02-LIVE D4 readiness audit (2026-08-24):** D2/D3 predecessors are
+  accepted, but current alpha auth is optional, list paging/event completeness/
+  resync are insufficient and the only AWS-HK Portal PostgreSQL volume is on
+  the unencrypted D2 root filesystem. No source read occurred. Status is
+  `D4_READINESS_AUDITED / LIVE_D4_INPUTS_BLOCKED / NO_SOURCE_READ`. The owner
+  request fixes the exact mandatory identity, four GET routes, cursor and
+  encrypted-storage inputs required before mapper implementation. Evidence:
+  [`EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md`](./backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

@@ -28,6 +28,7 @@ Read these sources before implementing a slice:
 11. [Backend architecture guide](BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md) and [backend index](backend/README.md) — existing Portal control-plane foundation and status vocabulary.
 12. [Dual-cell D0 reconciliation and D1 decision plan](backend/EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md) — sanitized two-cell evidence, locked topology, separate identities and the smallest reversible owner-gated bootstrap.
 13. [D3 live transport acceptance](backend/EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md) — protected-main image identities, real H2/TLS1.3 mTLS/JWT matrix, source loss/recovery, rollback and the remaining D4 stop gates.
+14. [D4 readiness audit and owner request](backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md) — current source/storage blockers and the exact sanitized contract response required before the first Paper read.
 
 The wireframes remain the visual authority. This plan is authoritative for data
 ownership, endpoint shape, compatibility, security, freshness, sequencing, and
@@ -1226,6 +1227,14 @@ storage is encrypted and approved. Qualification is limited to a `BUILDING`
 epoch and cannot open Query, analytics, SSE, commands, activation or the
 registry profile. The currently observed optional-key reads and incomplete
 source paging/event semantics fail this gate by design.
+
+The 2026-08-24 read-only D4 audit additionally confirms that AWS-HK has no
+separate encrypted projection mount: the D2 PostgreSQL volume remains on the
+unencrypted root filesystem and is prohibited for business data. Status is
+`D4_READINESS_AUDITED / LIVE_D4_INPUTS_BLOCKED / NO_SOURCE_READ`. The exact
+identity, four-route cursor/completeness/resync and runtime response requested
+from the Trading System owner is in
+[`EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md`](backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md).
 
 The 2026-08-23 IAM/D1 requalification is
 `IAM_VERIFIED / D1_REVALIDATED / APPLICATION_DARK`. The live instance role

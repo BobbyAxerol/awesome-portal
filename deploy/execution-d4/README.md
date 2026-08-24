@@ -54,3 +54,9 @@ restore evidence exists. Both modes print only a decision and change no state.
 The executable live sequence is in
 `../runbooks/execution-d4-paper-shadow-and-rollback.md`. It remains prohibited
 until all predecessors are accepted.
+
+The current read-only prerequisite audit and the exact Trading System owner
+request are recorded in
+[`../../upgrade/backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md`](../../upgrade/backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md).
+D2/D3 predecessors are accepted; identity/contract and encrypted-storage inputs
+remain blocked.
