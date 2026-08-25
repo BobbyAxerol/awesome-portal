@@ -770,7 +770,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
         title: insight ? `INSIGHT · ${insight.code}` : leaders[0] ? `Leader lens · ${leaders[0].title}` : "No leader claim published",
         detail: (
           <span className="exec-role-body">
-            {insight ? `${insight.text} (grade ${insight.grade} · ${insight.window})` : "Structure & Correlation holds the matrix, the influence map and the ranked leader lists — none of them merged into a score."}
+            {insight ? `${insight.text} (grade ${insight.grade} · ${insight.window})` : "Matrix, influence map and ranked leaders — never merged into a score."}
           </span>
         ),
       }}
@@ -802,7 +802,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
           { label: `${envelope.authority} · ${envelope.freshness}`, axis: "broker-sync", tone: envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn" },
           ...(incidents && incidents.open.length ? [{ label: `${incidents.open.length} OPEN INCIDENT${incidents.open.length === 1 ? "" : "S"}`, axis: "readiness", tone: "bad" } as HeaderBadge] : []),
         ]}
-        purpose="What the portfolio contains, how its alphas move together, who leads the book, and what changes if the leader changes."
+        purpose="What the book holds, how its alphas move together, who leads."
         secondary={<span className="exec-role-meta">window {scopeWindow} · benchmark {benchmark} ({benchmarkId})</span>}
       />
 
@@ -934,20 +934,22 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
             {correlation?.kind === "PACKED_MATRIX" ? (
               <InfluenceMap matrix={correlation} exposures={new Map(holdings.map((h) => [h.alpha, h.exposurePct]))} />
             ) : null}
-            <div className="exec-grid-2">
+            <div className="exec-alpha-tiles">
               <EquityChart
+                compact
                 title={`ρ(NAV, ${benchmark}) · 30d · threshold 0.6`}
                 envelope={{ window: scopeWindow, interval: "1d", currency: null, asOf: envelope.asOf ?? "", authority: "ANALYTICS" as never, formulaVersion: "rho_timeline", sourceRows: null, returnedRows: null, coverage: null }}
                 series={null}
-                height={200}
-                unavailableReason="ρ timeline and tail-ρ not published for this portfolio — BR-EX-34 §portfolio. The matrix above is the published correlation."
+                height={260}
+                unavailableReason="ρ timeline not published — BR-EX-34. The matrix above is the published correlation."
               />
               <EquityChart
+                compact
                 title="Drawdown overlap timeline"
                 envelope={{ window: scopeWindow, interval: "1d", currency: null, asOf: envelope.asOf ?? "", authority: "ANALYTICS" as never, formulaVersion: "drawdown_overlap", sourceRows: null, returnedRows: null, coverage: null }}
                 series={null}
-                height={200}
-                unavailableReason="Drawdown overlap series not published — BR-EX-34 §portfolio."
+                height={260}
+                unavailableReason="Drawdown overlap series not published — BR-EX-34."
               />
             </div>
             {insight ? (

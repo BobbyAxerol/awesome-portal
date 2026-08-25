@@ -22,6 +22,7 @@
  * hardcoded"*), so a new venue appears here without a frontend release.
  */
 import { useId } from "react";
+import { Hint } from "../components/hint";
 import type { ReactNode } from "react";
 
 import type {
@@ -38,8 +39,7 @@ import { KeysetTable, type Column } from "../components/table";
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
 import { ExecutionSurface } from "../ExecutionSurface";
-import { EquityChart, type EquitySeries } from "../components/EquityChart";
-import { envelopeCaption } from "../components/chart";
+import { EnvelopeCaption, EquityChart, type EquitySeries } from "../components/EquityChart";
 import { ContributionChart } from "../components/ContributionChart";
 import {
   ExecutionContextRail,
@@ -286,9 +286,6 @@ function ScopeBar({
           desk adds an exchange. */}
       <Select label="Venue" value={scope.venue} options={venueOptions} onChange={(v) => set({ venue: v })} />
       <Select label="Window" value={scope.window} options={windowOptions} onChange={(v) => set({ window: v })} />
-      <span className="exec-blotter-note">
-        every panel below obeys this scope · venue list from registry, never hardcoded
-      </span>
     </div>
   );
 }
@@ -485,7 +482,7 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
           { label: `${envelope.authority} · ${envelope.freshness}`, axis: "broker-sync", tone: envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn" },
           ...(status === "partial" ? [{ label: "PARTIAL", axis: "readiness", tone: "warn" } as HeaderBadge] : []),
         ]}
-        purpose="One alpha, all its deployments across venue × mode × stage — every panel below obeys the scope bar."
+        purpose="Deployments across venue × mode × stage."
         secondary={
           <>
             <span className="exec-role-meta">owner {owner}</span>
@@ -610,10 +607,7 @@ function Contribution({ rows }: { rows: readonly VenueContribution[] }) {
           </div>
         ))}
       </dl>
-      <p className="exec-blotter-note">
-        per-venue currency · converted only in portfolio totals via a named rate, never silently
-        summed here
-      </p>
+      <Hint>per-venue currency · converted only in portfolio totals via a named rate, never silently summed here</Hint>
     </section>
   );
 }
@@ -699,8 +693,9 @@ function Tiles({ tiles }: { tiles: readonly InsightTile[] }) {
             title={`${tile.index} · ${tile.title}`}
             envelope={tile.envelope}
             series={tile.series ?? null}
-            height={220}
-            unavailableReason={`${tile.title}: series not published for this scope — BR-EX-34 §alpha tiles.`}
+            height={260}
+            compact
+            unavailableReason="Series not published for this scope — BR-EX-34."
           />
         ) : (
           <section key={tile.index} className="exec-chart-tile exec-chart-unavailable" aria-label={`${tile.index} · ${tile.title}`} data-state={tile.state}>
@@ -708,7 +703,7 @@ function Tiles({ tiles }: { tiles: readonly InsightTile[] }) {
               <h3 className="exec-section-title">{tile.index} · {tile.title}</h3>
             </div>
             <PanelState status={tile.state === "insufficient_data" ? "insufficient_data" : "unavailable"} reason={tile.reason ?? undefined} />
-            <p className="exec-role-meta exec-chart-envelope">{envelopeCaption(tile.envelope)}</p>
+            <EnvelopeCaption envelope={tile.envelope} compact />
           </section>
         ),
       )}
@@ -890,10 +885,7 @@ function Accounting({ rows }: { rows: readonly AccountingRow[] }) {
       </table>
       </div>
       {notice ? <p className="exec-blotter-note">{notice}</p> : null}
-      <p className="exec-blotter-note">
-        canonical in the Execution cell · one row per account and currency, never one row per
-        account
-      </p>
+      <Hint>canonical in the Execution cell · one row per account and currency, never one row per account</Hint>
     </section>
   );
 }
@@ -932,7 +924,7 @@ function Reconciliation({ rows }: { rows: readonly ReconciliationRow[] }) {
         </tbody>
       </table>
       </div>
-      <p className="exec-blotter-note">paper deployments reconcile against nothing — N/A is correct there</p>
+      <Hint>paper deployments reconcile against nothing — N/A is correct there</Hint>
     </section>
   );
 }

@@ -851,7 +851,7 @@ or solve sparse content by making the text arbitrarily large.
 
 ## 12. Implementation phases
 
-The Execution Loop V2 upgrade has **exactly ten mandatory phases**. Claude must execute them in order,
+The Execution Loop V2 upgrade has **exactly ten mandatory phases** (plus **EL-V2-10**, owner-added 2026-08-25, before §7 sign-off). Claude must execute them in order,
 keep at most one frontend phase `WIP`, update `PHASE_TRACKER.md` at the beginning and end of each phase,
 and attach the named evidence. A later phase may be explored in a disposable spike, but its production
 code may not be called complete or merged ahead of its predecessors. Phases may not be combined to
@@ -1539,6 +1539,46 @@ nhất: **test xanh không phải phê duyệt sản phẩm**. Phase này tách 
 **Cổng kỹ thuật:** tsc sạch · vitest **1,660 passed / 1 skipped (81 file)** · vite build sạch · Playwright **300 passed · 0 failed · 16 skipped** (chromium flag-off = rollback build: 101 QuantBT không tái sinh; chromium-preview: journeys 65 gồm budgets 17 route, DOM max 861 node; sweep 0 NO-OP).
 
 **Kết luận phase:** phía frontend **không còn việc tự làm được**; V2-09 đóng khi (a) codex giao BE-V2-E/F/G và Bobby duyệt kích hoạt Paper read-only, (b) parity trên shadow thật = 0 dòng không giải thích, (c) Bobby ký §7. Tôi không tuyên bố V2 "accepted".
+
+### EL-V2-10 — Density, copy budget and analytical polish (owner-added 2026-08-25)
+
+> **Bobby thêm phase này 2026-08-25** sau khi xem dev-portal ở trạng thái sau EL-V2-09. Nó là
+> phase thứ mười một, chạy **sau** V2-09 frontend và **trước** khi Bobby ký §7 acceptance — vì
+> thứ Bobby ký là sản phẩm nhìn thấy, không phải test xanh. Không đổi contract, không kích hoạt
+> Lane B, không chạm Research/Planning; chỉ đổi cách 17 màn trình bày.
+
+**Goal:** mọi màn Execution đọc được ở mật độ vận hành — ít chữ giải thích, khoảng cách và
+khung khớp nhau, chart có kích thước theo việc phân tích — và Alpha/Portfolio/Account 360
+Insight là **chart thật nhìn thấy được**, không phải khung chữ.
+
+**Required work:**
+
+- audit đo được trước khi sửa (`AUDIT_DENSITY_AND_INSIGHT_2026-08-25.md`): chữ giải thích lặp,
+  khoảng cách dòng thừa, khung lệch, prose invariant — mỗi màn một dòng, có số;
+- copy budget §7.2 áp thật: một câu scope/một câu state/một hành động; prose invariant chuyển
+  vào disclosure; tile không lặp tiêu đề trong thân; mục tiêu ≤4 literal ≥60 ký tự mỗi màn
+  (đo bằng cùng lệnh của audit);
+- tile grid Insight: cột cố định theo breakpoint, `min-height` chung để hàng thẳng, chart
+  260–300px, caption envelope 1 dòng + disclosure đầy đủ (§16.2 giữ nguyên nội dung), gỡ CSS
+  `.exec-alpha-tiles` trùng; cùng grammar cho Portfolio 360 và Account 360;
+- **smoke data Alpha 360** (`alpha360.smoke.ts`, cờ `ALPHA_INSIGHT_SMOKE`): bật để nhìn và
+  baseline grid; mỗi series in *"Evidence fixture — not a published projection"* + warning
+  `SMOKE DATA` trong envelope; **xoá theo hợp đồng ở đầu file khi BR-EX-34 giao** — tracker
+  giữ dòng nợ cho tới lúc đó;
+- `EquityChart` in `envelope.warnings` (đã sửa trong lát audit — server flag không được rơi);
+- BR-EX-40 gửi codex: kiểu chart + schema series theo từng tile (histogram/funnel/waterfall/
+  heatmap không phải line);
+- rà 17 màn theo lô: (1) Alpha/Portfolio/Account 360 · (2) Paper/VNM/Sandbox/Canary/Live ·
+  (3) Inbox/R1/R2/Exit · (4) Command Center/Queue/Incident/Blotter/Drawer; mỗi lô một commit,
+  before/after 1440×900.
+
+**Evidence:** audit md có số trước/sau cho từng màn; baseline visual re-record **một lần có chủ
+đích** (`--update`) rồi verify xanh; a11y contrast/keyboard không giảm; DOM/heap budget không
+tăng; Antigravity critique (hierarchy, spacing, state semantics); ảnh before/after 17 màn.
+
+**Exit gate:** mọi màn ≤ ngưỡng copy; grid tile thẳng hàng ở 1440/1728/1920; 0 CSS trùng cho
+tile; smoke data còn bật thì tracker còn dòng nợ mở; Bobby duyệt hình ảnh. Phase này **không**
+được dùng để thay đổi giá trị hiển thị, state, hay fail-closed — chỉ prominence.
 
 ### 12.11 Codex backend/IAM lane running in parallel
 

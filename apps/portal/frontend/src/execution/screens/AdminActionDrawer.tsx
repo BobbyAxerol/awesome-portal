@@ -262,7 +262,7 @@ export function AdminActionDrawerScreen({
             {selected ? (
               <EntryDetail entry={selected} plan={plan} />
             ) : (
-              <p className="exec-admin-empty exec-role-body">Pick an action to see its risk tier, the steps it would require and why it is not available here.</p>
+              <p className="exec-admin-empty exec-role-body">Pick an action to see its risk tier and steps.</p>
             )}
             {children}
           </div>
@@ -294,7 +294,7 @@ export function AdminActionDrawerScreen({
           <ExecutionPageHeader
             title="Admin actions"
             badges={badges}
-            purpose="Plan → Apply → Verify. UI and CLI share ONE command authority — the browser never runs a shell."
+            purpose="Plan → Apply → Verify — one command authority."
             secondary={
               catalogue ? (
                 <span className="exec-admin-sub exec-role-meta">

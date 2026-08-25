@@ -994,3 +994,16 @@ bật chip, không phải hỏng.
 - **Cần:** với mỗi `event_type` edge publish (`order.updated`, `fill.recorded`, `position.updated`, …) một mẫu **envelope Portal + payload** đã qua D4 mapper; và chốt kiểu `schema_version` (fixture Portal: int `1`; extract TS: string `"v1"`).
 - **Lý do:** parity fixture ↔ extract (`SHADOW_PARITY_EXTRACT_2026-08-25.md`) chỉ so được envelope với payload body — khác tầng; lệch kiểu `schema_version` là lệch thật.
 - **Ảnh hưởng:** SSE mapper Portal đọc `projection_epoch/sequence` từ `id`; payload chưa được đọc — chưa lỗi, nhưng Lane B cần mẫu để test.
+
+### BR-EX-40 — kiểu chart + schema series theo từng tile Insight (2026-08-25, EL-V2-10)
+
+- **Cần:** với 12 tile Alpha 360 (và bộ tương ứng Portfolio/Account 360) một `tile_kind`
+  (`line | histogram | funnel | waterfall | heatmap | bar`) và schema series cho từng kind trong
+  `execution-analytics.*.v1`, kèm fixture canonical mỗi tile — mở rộng BR-EX-34 (hiện chỉ
+  equity line).
+- **Lý do:** frontend chỉ có `EquityChart` (line). "Trade return histogram", "Order funnel",
+  "Cost drag waterfall", "Execution density day × hour" vẽ bằng line là sai kiểu; smoke data
+  hiện tại (`alpha360.smoke.ts`) cố ý ghi rõ điều này và sẽ xoá khi BR-EX-34/40 giao.
+- **Ảnh hưởng:** 9/12 tile Alpha 360 đang là smoke; Portfolio 360 2 chart line; chưa màn nào
+  hiển thị sai số liệu (smoke có nhãn), nhưng review hình ảnh chưa thể ký cho tile khác line.
+

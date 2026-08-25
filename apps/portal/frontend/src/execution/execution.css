@@ -2585,11 +2585,6 @@
 
 /* Twelve tiles. Two up on a laptop, one on anything narrower — a chart at a
    third of a 1280 viewport is a chart nobody can read a value off. */
-.exec-alpha-tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
-  gap: var(--space-3);
-}
 
 /* ---------------------------------------------------------------------------
  * Portfolio 360° (hi-fi 1h→3a)
@@ -4368,6 +4363,7 @@
 .exec-chart-expanded { grid-column: 1 / -1; }
 .exec-chart-table { overflow: auto; }
 .exec-chart-evidence-note { font: var(--exec-font-meta); color: var(--exec-warn); margin: 4px 0 0; }
+.exec-chart-warning { font: var(--exec-font-meta); margin: 2px 0 0; }
 .exec-chart-unavailable { min-height: 0; }
 .exec-chart-unavailable-body { font: var(--exec-font-body); color: var(--exec-text-muted); margin: 8px 0; }
 .exec-chart-tip-t { font: var(--exec-font-meta); opacity: .8; }
@@ -4501,7 +4497,32 @@
 .exec-agg-absent { margin: 0; }
 .exec-contrib-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-2); margin-bottom: var(--space-2); }
 .exec-contrib-chart { margin: 0; }
-.exec-alpha-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: var(--space-2); }
+/* EL-V2-10 · Insight tile grid (audit F2/F3/F9). Fixed columns per breakpoint so
+   rows line up; every tile shares one min-height and stretches its plot, so a
+   chart tile and a state tile sit level. One definition — the earlier
+   auto-fit/22rem block was a dead duplicate. */
+.exec-alpha-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); align-items: stretch; }
+@media (min-width: 1728px) { .exec-alpha-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.exec-alpha-tiles > .exec-chart-tile { display: flex; flex-direction: column; min-height: 360px; min-width: 0; }
+.exec-alpha-tiles > .exec-chart-tile > .exec-chart-body,
+.exec-alpha-tiles > .exec-chart-tile > .exec-chart-table,
+.exec-alpha-tiles > .exec-chart-tile > .exec-state { flex: 1 1 auto; justify-content: center; }
+.exec-alpha-tiles .exec-chart-head { gap: var(--space-2); }
+.exec-alpha-tiles .exec-chart-tools .exec-btn-ghost { padding-block: 2px; }
+.exec-alpha-tiles .exec-chart-expanded { grid-column: 1 / -1; min-height: 0; }
+/* Hint (§7.2): mechanism notes fold behind one word; the text stays in the DOM. */
+.exec-hint { margin: var(--space-1) 0 0; }
+.exec-hint > summary { list-style: none; cursor: pointer; color: var(--ink-mute); text-decoration: underline dotted; display: inline; }
+.exec-hint > summary::-webkit-details-marker { display: none; }
+.exec-hint[open] > summary { color: var(--ink-soft); }
+.exec-hint-body { margin-top: 2px; color: var(--ink-mute); overflow-wrap: anywhere; }
+/* Compact caption: one scannable line, the full §16.2 envelope behind a disclosure. */
+.exec-chart-envelope-compact { margin: var(--space-1) 0 0; }
+.exec-envelope-more > summary { list-style: none; cursor: pointer; display: flex; gap: var(--space-2); align-items: baseline; }
+.exec-envelope-more > summary::-webkit-details-marker { display: none; }
+.exec-envelope-toggle { color: var(--accent); text-decoration: underline dotted; }
+.exec-envelope-more[open] .exec-envelope-toggle { text-decoration: none; }
+.exec-envelope-full { display: block; margin-top: 2px; overflow-wrap: anywhere; }
 /* Heatmap tint as an edge swatch, so the coefficient keeps its AA contrast on the surface. */
 .exec-pf-matrix td[data-abs="4"] { box-shadow: inset 8px 0 var(--bad); }
 .exec-pf-matrix td[data-abs="3"] { box-shadow: inset 6px 0 var(--warn); }

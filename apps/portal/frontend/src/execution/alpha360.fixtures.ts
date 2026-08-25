@@ -23,6 +23,7 @@ import type {
   VenueRow,
 } from "./screens/AlphaThreeSixty";
 import type { ChartEnvelope, KeysetPage } from "./contracts";
+import { ALPHA_INSIGHT_SMOKE, smokeEnvelope, smokeSeriesFor } from "./alpha360.smoke";
 /**
  * Fixture DATA, not behaviour (EL-V2-03): the screen's handlers are required
  * in its props, and a fixture factory that stubbed them would be the exact
@@ -97,7 +98,7 @@ const TILE_TITLES = [
  * missing and 21 are stale, so a screen that opened with twelve healthy charts
  * would be a screen nobody had run against this system.
  */
-export const TILES: InsightTile[] = TILE_TITLES.map((title, i) => ({
+const HONEST_TILES: InsightTile[] = TILE_TITLES.map((title, i) => ({
   index: i + 1,
   title,
   envelope: { ...CHART, formulaVersion: `${title.split(" ")[0].toLowerCase()}.v1` },
@@ -111,6 +112,22 @@ export const TILES: InsightTile[] = TILE_TITLES.map((title, i) => ({
           ? "The kline shard for this venue is publishing no data (734 of 1,468 feeds missing)."
           : null,
 }));
+
+/**
+ * SMOKE (temporary, see `alpha360.smoke.ts`): an ok tile with no published
+ * series gets a synthetic one so the grid can be reviewed. `false` returns
+ * the honest tiles untouched. Delete with BR-EX-34.
+ */
+export function withSmokeSeries(tiles: readonly InsightTile[], enabled: boolean): InsightTile[] {
+  if (!enabled) return [...tiles];
+  return tiles.map((tile) =>
+    tile.state === "ok" && !tile.series
+      ? { ...tile, series: smokeSeriesFor(tile.index, tile.title), envelope: smokeEnvelope(tile.envelope) }
+      : tile,
+  );
+}
+
+export const TILES: InsightTile[] = withSmokeSeries(HONEST_TILES, ALPHA_INSIGHT_SMOKE);
 
 function page<T>(rows: readonly T[], total: number, cursor: string | null): KeysetPage<T> {
   return {

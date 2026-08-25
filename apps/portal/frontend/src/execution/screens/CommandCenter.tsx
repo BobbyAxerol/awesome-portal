@@ -144,7 +144,7 @@ export function PinnedWatchlist({ panel }: { panel: PinnedPanel }) {
                   {pin.targetFreshness ? <FreshnessIndicator state={pin.targetFreshness} /> : null}
                 </>
               ) : (
-                <span className="exec-cc-pinunavailable exec-role-meta">target unavailable — this pin cannot be shown from the current sources</span>
+                <span className="exec-cc-pinunavailable exec-role-meta">target unavailable from current sources</span>
               )}
             </li>
           ))}
@@ -233,7 +233,7 @@ export function CommandCenterScreen({ snapshot, onOpen, live }: { snapshot: Comm
           <ExecutionPageHeader
             title={snapshot.actorName ? `Good morning, ${snapshot.actorName}` : "Command Center"}
             badges={badges}
-            purpose="What needs you now, ranked across loops — everything below links to its owning screen."
+            purpose="What needs you now, ranked across loops."
             secondary={
               !gate.allowed ? (
                 <span className="exec-cc-sub exec-role-meta">{gate.reason} Reload to re-read.</span>

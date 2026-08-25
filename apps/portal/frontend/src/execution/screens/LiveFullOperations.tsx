@@ -140,7 +140,7 @@ export function LiveFullOperationsScreen({
             title={live.deploymentId ?? "deployment not stated"}
             id={`${live.portfolioId ?? "portfolio not stated"} · ${live.venue ?? "venue not stated"}`}
             badges={badges}
-            purpose="Portfolio risk → broker truth → exposure → incidents → contribution. Research by drill-down only."
+            purpose="Portfolio risk → broker truth → exposure → incidents → contribution."
             secondary={<span className="exec-role-meta">stage {live.declaredStage ?? "not stated"} · activated {live.activatedAt ?? "not stated"}</span>}
           />
         </div>

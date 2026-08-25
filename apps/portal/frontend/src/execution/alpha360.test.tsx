@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ALPHA_TABS, AlphaThreeSixty } from "./screens/AlphaThreeSixty";
 import {
   accountingAtScale,
+  TILES,
   alpha360,
   alpha360AtScale,
   auditAtScale,
@@ -19,6 +20,7 @@ import {
   positionsAtScale,
   sessionsAtScale,
   venuesAtScale,
+  withSmokeSeries,
 } from "./alpha360.fixtures";
 import { alphaHandlers } from "./testHandlers";
 
@@ -116,8 +118,29 @@ describe("Alpha 360° — figures that are not known say so", () => {
     const { container } = render(<AlphaThreeSixty {...alphaHandlers()} {...alpha360({ tab: "Insight Charts" })} />);
     const captions = container.querySelectorAll(".exec-chart-envelope");
     expect(captions).toHaveLength(12);
-    // The caption is what separates a full series from an aggregated one.
-    expect(captions[0].textContent).toContain("43800 → 4368 samples");
+    // The caption is what separates a full series from an aggregated one. Tile 5
+    // is an honest state, so its envelope is the server's aggregated one.
+    expect(captions[4].textContent).toContain("43800 → 4368 samples");
+  });
+
+  // SMOKE — delete this block with `alpha360.smoke.ts` (BR-EX-34).
+  it("smoke: every ok tile draws a chart and says on its face that it is not a published projection", () => {
+    const { container } = render(<AlphaThreeSixty {...alphaHandlers()} {...alpha360({ tab: "Insight Charts" })} />);
+    const okTiles = TILES.filter((t) => t.state === "ok");
+    expect(okTiles).toHaveLength(9);
+    expect(container.querySelectorAll(".exec-equity")).toHaveLength(9);
+    expect(screen.getAllByText("Evidence fixture — not a published projection.")).toHaveLength(9);
+    expect(screen.getAllByText(/SMOKE DATA/)).toHaveLength(9);
+    // The honest states are untouched by the smoke switch.
+    expect(screen.getByText(/DERIBIT has 12 fills in this window/)).toBeTruthy();
+  });
+
+  it("smoke: the switch off restores the honest not-published frames", () => {
+    const honest = withSmokeSeries(TILES.map((t) => ({ ...t, series: undefined })), false);
+    expect(honest.every((t) => !t.series)).toBe(true);
+    const { container } = render(<AlphaThreeSixty {...alphaHandlers()} {...alpha360({ tab: "Insight Charts", tiles: honest })} />);
+    expect(container.querySelectorAll(".exec-equity")).toHaveLength(0);
+    expect(container.querySelectorAll(".exec-chart-unavailable-body")).toHaveLength(9);
   });
 
   it("marks the canary envelope so it is not read against the profile limit", () => {

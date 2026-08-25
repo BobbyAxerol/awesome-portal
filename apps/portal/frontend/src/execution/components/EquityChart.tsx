@@ -58,6 +58,11 @@ export interface EquityChartProps {
   id?: string;
   /** Cross-filter source: a bucket picked in the table view (chart clicks need no wrapper change). */
   onSelectBucket?: (t: string) => void;
+  /**
+   * Tile mode (Insight grids): two tools instead of four, no slider, no
+   * legend, caption folded to one line. Expand restores the full chart.
+   */
+  compact?: boolean;
 }
 
 const EXPANDED_HEIGHT = 560;
@@ -70,7 +75,12 @@ function num(v: string | null | undefined): number | null {
 }
 
 /** Build the ECharts option. Exported for tests: option shape is the contract. */
-export function equityOption(series: EquitySeries, envelope: ChartEnvelope, zoomEpoch: number): EChartsOption {
+export interface EquityOptionOpts {
+  /** Tile mode: no slider, no legend, tighter grid — the title already names the series. */
+  compact?: boolean;
+}
+
+export function equityOption(series: EquitySeries, envelope: ChartEnvelope, zoomEpoch: number, opts: EquityOptionOpts = {}): EChartsOption {
   const tokens = chartTokens(activeTheme());
   // Band colour comes from the execution token; the theme accent is the
   // fallback so no raw colour literal lives outside the token files (U02).
@@ -96,9 +106,14 @@ export function equityOption(series: EquitySeries, envelope: ChartEnvelope, zoom
     { xAxis: g.to },
   ]);
   const raw = new Map(series.points.map((p) => [p.t, p]));
+  const gaps = series.gaps ?? [];
+  const gapAt = (t: string) => gaps.find((g) => t >= g.from && t < g.to);
+  const compact = opts.compact === true;
   return baseOption({
     animation: false,
-    grid: { left: 64, right: 16, top: 28, bottom: 56, containLabel: false },
+    grid: compact
+      ? { left: 52, right: 12, top: 12, bottom: 28, containLabel: false }
+      : { left: 64, right: 16, top: 28, bottom: 56, containLabel: false },
     tooltip: {
       trigger: "axis",
       axisPointer: { type: "line" },
@@ -116,6 +131,10 @@ export function equityOption(series: EquitySeries, envelope: ChartEnvelope, zoom
         ];
         if (p?.drawdown) rows.push(`<div><span class="exec-chart-tip-k">drawdown</span> <span class="exec-chart-tip-v">${p.drawdown}</span></div>`);
         if (b) rows.push(`<div><span class="exec-chart-tip-k">${series.bandLabel ?? "approved band"}</span> <span class="exec-chart-tip-v">${b.lower} … ${b.upper}</span></div>`);
+        // The gap reason lives here, not painted over the plot: a markArea
+        // label at the top of a 220px tile sat on the legend (audit F8).
+        const g = gapAt(t);
+        if (g) rows.push(`<div><span class="exec-chart-tip-k">gap</span> <span class="exec-chart-tip-v">${g.reason}</span></div>`);
         rows.push(
           `<div class="exec-chart-tip-env">${envelope.authority} · as of ${envelope.asOf}${
             envelope.formulaVersion ? ` · ${envelope.formulaVersion}` : ""
@@ -132,16 +151,18 @@ export function equityOption(series: EquitySeries, envelope: ChartEnvelope, zoom
     },
     // Currency lives in the envelope caption; a y-axis name here collided
     // with the legend. The stacked helper series stays out of the legend.
-    legend: { data: [series.bandLabel ?? "approved band", series.label], top: 0, right: 0 },
+    legend: compact ? { show: false } : { data: [series.bandLabel ?? "approved band", series.label], top: 0, right: 0 },
     yAxis: {
       type: "value",
       scale: true,
       axisLabel: { formatter: (v: number) => String(v) },
     },
-    dataZoom: [
-      { type: "inside", start: 0, end: 100, zoomLock: false, id: `inside-${zoomEpoch}` },
-      { type: "slider", start: 0, end: 100, height: 18, bottom: 8, id: `slider-${zoomEpoch}` },
-    ],
+    dataZoom: compact
+      ? [{ type: "inside", start: 0, end: 100, zoomLock: false, id: `inside-${zoomEpoch}` }]
+      : [
+          { type: "inside", start: 0, end: 100, zoomLock: false, id: `inside-${zoomEpoch}` },
+          { type: "slider", start: 0, end: 100, height: 18, bottom: 8, id: `slider-${zoomEpoch}` },
+        ],
     series: ([
       {
         name: "band-lower",
@@ -172,7 +193,7 @@ export function equityOption(series: EquitySeries, envelope: ChartEnvelope, zoom
         connectNulls: false,
         lineStyle: { width: 1.5, color: colors.good },
         markArea: gapAreas.length
-          ? ({ silent: true, itemStyle: { color: colors.bad, opacity: 0.14 }, data: gapAreas } as LineSeriesOption["markArea"])
+          ? ({ silent: true, label: { show: false }, itemStyle: { color: colors.bad, opacity: 0.14 }, data: gapAreas } as LineSeriesOption["markArea"])
           : undefined,
       },
     ] as LineSeriesOption[]),
@@ -187,15 +208,17 @@ export function EquityChart({
   height = DEFAULT_HEIGHT,
   id,
   onSelectBucket,
+  compact = false,
 }: EquityChartProps) {
   const [exported, setExported] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [table, setTable] = useState(false);
   const [zoomEpoch, setZoomEpoch] = useState(0);
   const uid = useId();
+  const tile = compact && !expanded;
   const option = useMemo(
-    () => (series ? equityOption(series, envelope, zoomEpoch) : null),
-    [series, envelope, zoomEpoch],
+    () => (series ? equityOption(series, envelope, zoomEpoch, { compact: tile }) : null),
+    [series, envelope, zoomEpoch, tile],
   );
   if (!series || !option) {
     return (
@@ -206,7 +229,8 @@ export function EquityChart({
         <p className="exec-chart-unavailable-body" role="status">
           {unavailableReason}
         </p>
-        <p className="exec-role-meta exec-chart-envelope">{envelopeCaption(envelope)}</p>
+        <EnvelopeCaption envelope={envelope} compact={compact} />
+        <EnvelopeWarnings envelope={envelope} />
       </section>
     );
   }
@@ -219,15 +243,18 @@ export function EquityChart({
       <div className="exec-chart-head">
         <h3 className="exec-section-title">{title}</h3>
         <div className="exec-chart-tools" role="group" aria-label="Chart view">
-          <button type="button" className="exec-btn-ghost" onClick={() => setZoomEpoch((n) => n + 1)}>
-            Reset zoom
-          </button>
+          {tile ? null : (
+            <button type="button" className="exec-btn-ghost" onClick={() => setZoomEpoch((n) => n + 1)}>
+              Reset zoom
+            </button>
+          )}
           <button type="button" className="exec-btn-ghost" aria-pressed={table} onClick={() => setTable((v) => !v)}>
             {table ? "Chart" : "Table"}
           </button>
           <button type="button" className="exec-btn-ghost" aria-pressed={expanded} onClick={() => setExpanded((v) => !v)}>
             {expanded ? "Collapse" : "Expand"}
           </button>
+          {tile ? null : (
           <button
             type="button"
             className="exec-btn-ghost"
@@ -240,6 +267,7 @@ export function EquityChart({
           >
             Export
           </button>
+          )}
         </div>
       </div>
       {exported ? <p className="exec-role-meta" role="status">{exported}</p> : null}
@@ -293,7 +321,46 @@ export function EquityChart({
           <EChart id={id ?? `${uid}-equity`} option={option} height={expanded ? EXPANDED_HEIGHT : height} />
         </div>
       )}
-      <p className="exec-role-meta exec-chart-envelope">{envelopeCaption(envelope)}</p>
+      <EnvelopeCaption envelope={envelope} compact={tile} />
+      <EnvelopeWarnings envelope={envelope} />
     </section>
+  );
+}
+
+/**
+ * The mandatory §16.2 caption. In tile mode the four fields a reader scans
+ * (window · interval · currency · authority) stay on one line and the rest
+ * folds behind "envelope" — still in the DOM, still copyable, never truncated
+ * with an ellipsis (audit F7).
+ */
+export function EnvelopeCaption({ envelope, compact = false }: { envelope: ChartEnvelope; compact?: boolean }) {
+  const full = envelopeCaption(envelope);
+  if (!compact) return <p className="exec-role-meta exec-chart-envelope">{full}</p>;
+  const short = [envelope.window, envelope.interval, envelope.currency, envelope.authority].filter(Boolean).join(" · ");
+  return (
+    <div className="exec-role-meta exec-chart-envelope exec-chart-envelope-compact">
+      <details className="exec-envelope-more">
+        <summary>
+          <span className="exec-envelope-short">{short}</span>
+          <span className="exec-envelope-toggle">envelope</span>
+        </summary>
+        <span className="exec-envelope-full">{full}</span>
+      </details>
+    </div>
+  );
+}
+
+/**
+ * Server warnings travel with the envelope (§16.2). `ChartTile` printed them;
+ * this chart dropped them, so a series the server flagged read as clean.
+ */
+function EnvelopeWarnings({ envelope }: { envelope: ChartEnvelope }) {
+  if (!envelope.warnings?.length) return null;
+  return (
+    <div className="exec-tile-warning exec-chart-warning" role="note">
+      {envelope.warnings.map((warning) => (
+        <div key={warning}>! {warning}</div>
+      ))}
+    </div>
   );
 }

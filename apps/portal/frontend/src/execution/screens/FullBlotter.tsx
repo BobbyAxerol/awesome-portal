@@ -20,6 +20,7 @@
  * `FUNNEL_LABELS` for why, and BR-EX-25 for what would close the difference.
  */
 import type { ReactNode } from "react";
+import { Hint } from "../components/hint";
 
 import {
   BLOTTER_BUCKET,
@@ -448,7 +449,7 @@ export function FullBlotter({
         title: expandedOrderId ? `Funnel · ${expandedOrderId}` : "Pick an order for its funnel",
         detail: (
           <span className="exec-role-body">
-            {expandedOrderId ? "signal → intent → risk → ACK → fill, from the server's funnel — shown under the table." : "Click a row: its signal → intent → risk → ACK → fill funnel opens under the table."}
+            {expandedOrderId ? "Funnel from the server — shown under the table." : "Click a row to open its signal → fill funnel."}
           </span>
         ),
       }}
@@ -475,7 +476,7 @@ export function FullBlotter({
           { label: `${envelope.authority} · ${envelope.freshness}`, axis: "broker-sync", tone: envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn" },
           ...(crossFilter ? [{ label: "CROSS-FILTERED", axis: "other", tone: "warn" } as HeaderBadge] : []),
         ]}
-        purpose="Every order and fill in scope — keyset pagination, virtualized rows, exact values, never abbreviated."
+        purpose="Every order and fill in scope — exact values, never abbreviated."
       />
 
       {scope ? <div className="exec-blotter-scope">{scope}</div> : null}
@@ -494,9 +495,7 @@ export function FullBlotter({
             {FILTER_LABEL[option]}
           </button>
         ))}
-        <span className="exec-blotter-note">
-          applied by the server — the chips re-query, they do not hide loaded rows
-        </span>
+        <Hint>applied by the server — the chips re-query, they do not hide loaded rows</Hint>
       </div>
       <div className="exec-blotter-tools" role="group" aria-label="Table tools">
         <details className="exec-blotter-columns">
@@ -552,9 +551,7 @@ export function FullBlotter({
                   ✕ reset
                 </button>
               </span>
-              <span className="exec-blotter-note">
-                set by clicking a series in any chart — the table and its counts follow the selection
-              </span>
+              <Hint>set by clicking a series in any chart — the table and its counts follow the selection</Hint>
             </div>
           ) : undefined
         }

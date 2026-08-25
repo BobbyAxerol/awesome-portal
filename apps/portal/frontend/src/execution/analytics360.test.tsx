@@ -88,7 +88,7 @@ describe("Portfolio 360 — heatmap, lens and influence from the published matri
   });
   it("ρ timeline and drawdown overlap are honest states, not blank frames", () => {
     const { container } = render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360({ tab: "Structure & Correlation" })} />);
-    expect(screen.getByText(/ρ timeline and tail-ρ not published/)).toBeTruthy();
+    expect(screen.getByText(/ρ timeline not published/)).toBeTruthy();
     expect(screen.getByText(/Drawdown overlap series not published/)).toBeTruthy();
     expect(container.querySelectorAll(".exec-chart-unavailable").length).toBeGreaterThanOrEqual(2);
   });
