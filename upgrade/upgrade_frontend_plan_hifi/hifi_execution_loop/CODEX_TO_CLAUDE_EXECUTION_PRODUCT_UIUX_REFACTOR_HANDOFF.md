@@ -1369,6 +1369,27 @@ xếp hạng attention.
 | Journey trục | Queue→Incident→Drawer→Verify→Queue một test trọn |
 | Authority âm tính | ma trận test không vượt plan/apply/verify, không lộ Break-glass thiếu ceremony |
 
+
+#### Claude close-out — EL-V2-07 (2026-08-24, chỉ thêm; gate = Bobby duyệt hình ảnh)
+
+| Gate | Kết quả | Bằng chứng |
+|---|---|---|
+| Layout proposal | ✓ | `OPERATIONS_LAYOUT_PROPOSAL_2026-08-24.md` — bảng 4 màn × masthead/strip/canvas/tabs/rail |
+| Terminal §9.2 thật | ✓ | `CommandPlanDrawer` render `ExecutionTerminal`: rows typed PLAN (plan + từng check) · APPLY "202 accepted — not terminal success" · VERIFY (mỗi sub-intent) · residue/ERROR; verdict `terminalVerdict()` = **ACCEPTED** khi chỉ có 202, VERIFIED/PARTIAL/FAILED chỉ từ outcome server, UNCERTAIN từ verification; toolbar follow/pause · copy · export · clear · expand. Test: 202 ⇒ không bao giờ "VERIFIED — terminal state confirmed" |
+| Triage xếp hạng | ✓ | `rankTriage()` — rank server thắng; fallback severity→SLA→age; test đưa mảng xáo trộn → thứ tự đúng; danh sách ranked đứng trước fleet strip (test DOM order + e2e bounding box) |
+| BUSY/QUIET thật | ✓ | badge `BUSY · n` / `QUIET`; QUIET = "Nothing needs you." + "Quiet as of {readAt}" trong rail; fleet strip vẫn hiện |
+| Rail theo selection | ✓ | Queue: `triage` prop vào rail Next ("Triage · op_x"), `selectedId` highlight hàng; test container (chọn → rail đổi, đổi filter → reset) + test screen (rerender A→B) + e2e |
+| ack ≠ resolve | ✓ | giữ `triageAffordance`; Resolve khoá tới khi Acknowledge (test) |
+| Incident | ✓ | rail Next = containment hiện tại + next action (op đầu → Action Drawer); state rail forward-only; tabs Evidence · Timeline · Operations; decision bar sticky (Acknowledge / Mark RESOLVED) + gate codes in words; không có nút Resume (test + e2e) |
+| Action Drawer | ✓ | catalogue theo nhóm server trên canvas; rail "Command detail" (tier/steps/route/blocked reason + terminal khi có plan); Equivalent CLI read-only "The browser never runs a shell" giữ; Apply liệt kê **mọi** lý do khoá |
+| Break-glass | ✓ không render | contract không publish ceremony ⇒ không có control; test âm tính trên Drawer + Incident (không "break-glass", không "resume") |
+| Journey trục | ✓ | journey 6 (Queue→Incident→Drawer→Verify→Queue) giữ xanh + e2e rail-theo-selection, ranked-first, incident containment |
+| Zero bypass | ✓ | test tĩnh: 4 màn + drawer không `fetch/EventSource`; Apply chỉ qua `onApply` của container (plan→apply→poll đã có) |
+
+**Cổng kỹ thuật:** tsc sạch · vitest **1,634 passed / 1 skipped (77 file)** (+13 test `operationsWorkflow.test.tsx`; 118 test cũ của 4 màn cập nhật theo tab/rail, không xoá) · vite build sạch · Playwright **274 passed · 0 failed · 16 skipped** (audit 40 — bắt 2 lỗi thật: aside drawer 490px tràn rail, hàng triage grid cứng ở 390px; fixtures 87 crop; journeys 39 gồm journey 6 + rail-theo-selection + ranked-first + incident containment + 4 baseline route).
+
+**Chưa làm / ngoài phạm vi:** pin/unpin watchlist vẫn chưa có action (cần user-pref endpoint — treo từ ledger L10); alert rail vẫn "no alerts route" (BR-EX-33 mở rộng: alerts route); thanh terminal trên route product chỉ hiện khi có plan — với relay disabled route chỉ có catalogue, terminal có ảnh ở nhóm fixtures `commandplandrawer`.
+
 ### EL-V2-08 — Entity 360, analytical surfaces and Full Blotter
 
 **Goal:** make Alpha, Portfolio, Account/Broker and Blotter useful for analysis without turning them

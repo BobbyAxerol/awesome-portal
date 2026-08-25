@@ -27,61 +27,13 @@
   "route": "/execution",
   "index": 3,
   "tag": "A",
-  "text": "42Live",
-  "verdict": "navigated",
-  "detail": "/deployments/live"
- },
- {
-  "route": "/execution",
-  "index": 4,
-  "tag": "A",
-  "text": "8Canary",
-  "verdict": "navigated",
-  "detail": "/deployments/live?stage=canary"
- },
- {
-  "route": "/execution",
-  "index": 5,
-  "tag": "A",
-  "text": "24Sandbox",
-  "verdict": "navigated",
-  "detail": "/deployments/sandbox"
- },
- {
-  "route": "/execution",
-  "index": 6,
-  "tag": "A",
-  "text": "108Paper",
-  "verdict": "navigated",
-  "detail": "/deployments/paper"
- },
- {
-  "route": "/execution",
-  "index": 7,
-  "tag": "A",
-  "text": "1Broker sync",
-  "verdict": "navigated",
-  "detail": "/execution/operations?filter=broker_sync"
- },
- {
-  "route": "/execution",
-  "index": 8,
-  "tag": "A",
-  "text": "3Findings",
-  "verdict": "navigated",
-  "detail": "/execution/operations?filter=findings"
- },
- {
-  "route": "/execution",
-  "index": 9,
-  "tag": "A",
   "text": "R1 review · Momentum v4",
   "verdict": "navigated",
   "detail": "/governance/approvals/AP-201/r1"
  },
  {
   "route": "/execution",
-  "index": 10,
+  "index": 4,
   "tag": "A",
   "text": "Capital condition expires",
   "verdict": "navigated",
@@ -89,11 +41,19 @@
  },
  {
   "route": "/execution",
-  "index": 11,
+  "index": 5,
   "tag": "A",
   "text": "Last verified protective action",
   "verdict": "navigated",
   "detail": "/execution/operations/op_1249"
+ },
+ {
+  "route": "/execution",
+  "index": 6,
+  "tag": "BUTTON",
+  "text": "Investigate",
+  "verdict": "navigated",
+  "detail": "/execution/operations/incidents/inc_44"
  },
  {
   "route": "/execution/operations",
@@ -120,7 +80,28 @@
   "route": "/execution/operations/incidents/inc_fixture_44",
   "index": 0,
   "tag": "BUTTON",
-  "text": "op_fixture_1253",
+  "text": "Evidence 0",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/execution/operations/incidents/inc_fixture_44",
+  "index": 1,
+  "tag": "BUTTON",
+  "text": "Timeline 2",
+  "verdict": "changed"
+ },
+ {
+  "route": "/execution/operations/incidents/inc_fixture_44",
+  "index": 2,
+  "tag": "BUTTON",
+  "text": "Operations 1",
+  "verdict": "changed"
+ },
+ {
+  "route": "/execution/operations/incidents/inc_fixture_44",
+  "index": 3,
+  "tag": "BUTTON",
+  "text": "op_fixture_1253 → Action Drawer",
   "verdict": "navigated",
   "detail": "/administration/actions?operation=op_fixture_1253"
  },
@@ -1726,5 +1707,12 @@
   "tag": "BUTTON",
   "text": "sizing summaryR0 · readOBSERVEDGET /v1/admin/siz",
   "verdict": "changed"
+ },
+ {
+  "route": "/administration/actions",
+  "index": 70,
+  "tag": "BUTTON",
+  "text": "Copy full source commit",
+  "verdict": "skipped:hidden"
  }
 ]

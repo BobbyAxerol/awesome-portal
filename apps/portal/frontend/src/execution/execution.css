@@ -4465,3 +4465,29 @@
 .exec-context-rail, .exec-source-tile, .exec-cert dt, .exec-canary dt, .exec-live dt, .exec-state { overflow-wrap: anywhere; }
 .exec-guard-pair { display: grid; grid-template-columns: 1fr; gap: var(--space-3); }
 @media (min-width: 1600px) { .exec-guard-pair { grid-template-columns: 1fr 1fr; } }
+
+/* ── EL-V2-07 · operations workflow ─────────────────────────────────── */
+.exec-cc-rows { display: flex; flex-direction: column; gap: 4px; }
+.exec-cc-row { display: grid; grid-template-columns: 28px 96px 1fr auto auto; align-items: center; gap: var(--space-2); width: 100%; text-align: left; padding: 6px var(--space-2); background: var(--surface-3); border: 1px solid var(--line); color: inherit; }
+.exec-cc-row[data-severity="CRITICAL"] { border-left: 3px solid var(--bad); }
+.exec-cc-row[data-severity="HIGH"] { border-left: 3px solid var(--warn); }
+.exec-cc-row:disabled { opacity: .6; }
+.exec-cc-title { display: flex; flex-direction: column; min-width: 0; }
+.exec-cc-panel { display: flex; flex-direction: column; gap: var(--space-2); }
+.exec-cc-panelhead { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
+.exec-queue-table tr[data-selected="true"] { outline: 2px solid var(--accent); outline-offset: -2px; }
+.exec-queue-rail .exec-state { margin: 0; }
+.exec-admin-drawer { display: flex; flex-direction: column; gap: var(--space-2); }
+.exec-drawer-copied { color: var(--ink-mute); }
+/* Rail content is narrow: code, preformatted plans and facts wrap instead of widening the page. */
+.exec-context-rail pre, .exec-admin-drawer pre { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 100%; margin: 0; }
+.exec-admin-drawer, .exec-admin-facts, .exec-admin-facts dd, .exec-admin-facts dt { min-width: 0; overflow-wrap: anywhere; }
+.exec-admin-panes { display: block; }
+.exec-cc-title, .exec-cc-summary { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .exec-cc-row { grid-template-columns: 28px 1fr; }
+  .exec-cc-kind, .exec-cc-sla, .exec-cc-action { grid-column: 2; }
+}
+/* The V1 drawer aside sized itself; inside the context rail it takes the rail's width. */
+.exec-context-rail .exec-admin-drawer { width: auto; min-width: 0; max-width: 100%; flex: none; position: static; }
+.exec-context-rail .exec-admin-empty, .exec-context-rail .exec-admin-blocked, .exec-context-rail .exec-admin-plan { min-width: 0; max-width: 100%; }

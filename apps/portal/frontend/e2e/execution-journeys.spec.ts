@@ -491,3 +491,58 @@ test.describe("EL-V2-06 · stage workbenches", () => {
     await expect(page.locator(".exec-session-caption")).toContainText("VN MARKET");
   });
 });
+
+// ── EL-V2-07 · operations, incident and command workflow ─────────────────────
+test.describe("EL-V2-07 · operations workflow", () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test("Queue: the rail follows the selected row", async ({ page }) => {
+    await open(page, "/execution/operations");
+    await page.getByRole("button", { name: /All \(24h\)/ }).click();
+    const links = page.locator("tbody .exec-linkbtn");
+    const first = (await links.nth(0).textContent())!.trim();
+    await expect(page.locator(".exec-context-rail")).toContainText("Select an operation");
+    await links.nth(0).click();
+    await expect(page.locator(".exec-context-rail")).toContainText(`Triage · ${first}`);
+    if ((await links.count()) > 1) {
+      const second = (await links.nth(1).textContent())!.trim();
+      await links.nth(1).click();
+      await expect(page.locator(".exec-context-rail")).toContainText(`Triage · ${second}`);
+      await expect(page.locator(".exec-context-rail")).not.toContainText(`Triage · ${first}`);
+    } else {
+      // One row in the fixture: changing the filter clears the selection and the rail follows.
+      await page.getByRole("button", { name: /Needs attention/ }).click();
+      await expect(page.locator(".exec-context-rail")).toContainText("Select an operation");
+    }
+  });
+
+  test("Command Center: ranked list precedes the fleet strip and the rail names #1", async ({ page }) => {
+    await open(page, "/execution");
+    const list = page.getByLabel("Needs you now");
+    const fleet = page.getByLabel("Fleet health");
+    const a = await list.boundingBox();
+    const b = await fleet.boundingBox();
+    expect(a!.y).toBeLessThan(b!.y);
+    await expect(page.locator(".exec-context-rail")).toContainText("#1");
+  });
+
+  test("Incident: containment pinned in the rail, forward-only, no Resume", async ({ page }) => {
+    await open(page, "/execution/operations/incidents/inc_fixture_44");
+    await expect(page.locator(".exec-context-rail")).toContainText(/Containment:|Resolved/);
+    await expect(page.locator(".exec-inc-rail")).toBeVisible();
+    expect(await page.getByRole("button", { name: /resume/i }).count()).toBe(0);
+    await expect(page.getByRole("region", { name: /Incident decision/ })).toBeVisible();
+  });
+
+  for (const [name, route] of [
+    ["command-center", "/execution"],
+    ["operations-queue", "/execution/operations"],
+    ["incident-inc_fixture_44", "/execution/operations/incidents/inc_fixture_44"],
+    ["admin-actions", "/administration/actions"],
+  ] as const) {
+    test(`shell-visible baseline · ${name} · 1440×900`, async ({ page }) => {
+      await open(page, route);
+      await expect(page).toHaveScreenshot(`el-v2-07-${name}.png`, { fullPage: true, animations: "disabled" });
+    });
+  }
+});

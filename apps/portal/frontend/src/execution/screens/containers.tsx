@@ -1164,6 +1164,7 @@ export function OperationsQueueContainer({
           setFilter(next);
         }}
         onOpen={setSelected}
+        selectedId={selected?.operationId ?? null}
         onLoadNext={
           queue?.page.hasMore && queue.page.nextCursor
             ? () => setCursor({ after: queue.page.nextCursor ?? undefined })
@@ -1174,8 +1175,7 @@ export function OperationsQueueContainer({
             ? () => setCursor({ before: queue.page.prevCursor ?? undefined })
             : undefined
         }
-      />
-      {selected ? (
+        triage={selected ? (
         <TriagePanel
           row={selected}
           roles={roles}
@@ -1205,6 +1205,7 @@ export function OperationsQueueContainer({
           }
         />
       ) : null}
+      />
     </>
   );
 }

@@ -24,7 +24,7 @@ Kế hoạch chi tiết từng phase: các khối **Claude supplement** trong ch
 | EL-V2-04 | Paper + Paper Exit lát cắt dọc chuẩn | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | layout proposal px ✓ · EquityChart thật (ECharts) ✓ — product route = honest state vì chưa có series (BR-EX-34) · Paper + Exit trên 7 primitive ✓ · fold 1440×900 ✓ · journey exit ✓ · ma trận 15+1 ✓ · chữ: −14…−25% từ (policy prose 5→2), **không đạt 50%** — báo thật | `EquityChart.tsx`, `equity.fixtures.ts`, `PaperWorkbench.tsx`, `PaperExitReview.tsx`, `paperMatrix.test.tsx`, `equityChart.test.tsx`, `PAPER_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-04-*.png`; close-out trong handoff |
 | EL-V2-05 | Governance decision chain | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | sticky decision bar ✓ (R1/R2/Exit) · Inbox SLA bar + strip + rail ✓ · R1 5 tab (limitations bảng, evidence honest) ✓ · R2 PLAN PREVIEW 1 chip + elevation ✓ · role matrix 4×2 ✓ · zero-write test ✓ · journey Inbox→R1→R2→Exit ✓ · BR-EX-35/36/37 | `decisionBar.tsx`, `ApprovalInbox.tsx`, `GateR1Review.tsx`, `GateR2Review.tsx`, `PaperExitReview.tsx`, `evidence.tsx`, `governanceChain.test.tsx`, `GOVERNANCE_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-05-*.png`; close-out trong handoff |
 | EL-V2-06 | Stage workbench VNM→Live | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | anatomy chung 4 màn ✓ (clone=0) · guard budget 1 band ✓ · VNM timeline ✓ · Sandbox 4 tab ✓ · Canary/Live bất đối xứng + suppression ✓ · commands dark ✓ · ma trận 4 stage ✓ · chart = honest state (BR-EX-34) · BR-EX-38 | `stageWorkbench.tsx`, `sessionTimeline.tsx`, `SandboxCertification.tsx`, `CanaryControlRoom.tsx`, `LiveFullOperations.tsx`, `PaperWorkbench.tsx` (timeline), `AlphaThreeSixty.tsx` (EquityChart), `vnCalendar.ts` (phases), `stageWorkbench.test.tsx`, `STAGE_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-06-*.png` |
-| EL-V2-07 | Ops + Incident + Command + Terminal | `QUEUED` | read path đủ; terminal thật; không vượt plan/apply/verify | — |
+| EL-V2-07 | Operations · incident · command | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | terminal §9.2 trong drawer (202 ⇒ ACCEPTED) ✓ · triage ranked-first + BUSY/QUIET ✓ · rail theo selection ✓ · incident containment + forward-only ✓ · break-glass không render ✓ · journey 6 + 3 e2e mới ✓ | `components/drawer.tsx` (terminal), `CommandCenter.tsx`, `OperationsQueue.tsx`, `IncidentDetail.tsx`, `AdminActionDrawer.tsx`, `containers.tsx`, `operationsWorkflow.test.tsx`, `OPERATIONS_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-07-*.png` |
 | EL-V2-08 | 360° + Blotter analytical | `QUEUED` | ledger analytical đóng; zero recompute; budget đạt | — |
 | EL-V2-09 | Lane B Paper + hardening + nghiệm thu | `QUEUED` | mười phase accepted; owner sign-off; rollback chứng minh | — |
 
@@ -2218,7 +2218,7 @@ nav trỏ 404.
 | Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
 |---|---|---|---|---|---|
 | BUSY **và** QUIET (demo-prop; QUIET = câu thật + 0/0/0) | N | có cả hai | impl | C | |
-| Needs-you ranked severity→SLA→age, mọi row link owner screen | N | có (rank từ server) | impl | C | V2-07: visual hierarchy ranked-first |
+| Needs-you ranked severity→SLA→age, mọi row link owner screen | N | `rankTriage` (server rank thắng, fallback 3 khoá); ranked list đứng trước fleet | impl | C | V2-07 ✓ |
 | Fleet health counts (7/8 sync đổi màu theo QUIET) | N | có | impl | C | demo-prop syncLabel đã phủ bằng 2 fixture |
 | Pinned watchlist max 5, user-owned, pin không mute alert | N | có render; **pin/unpin action chưa** | impr | C | cần persistence — BE nhỏ (user pref) |
 | Today (upcoming/recent + link journal) | N | có | impl | C | |
@@ -2232,7 +2232,7 @@ nav trỏ 404.
 | Sort PARTIAL·FAILED→RUNNING→done + PARTIAL>15m escalates | N | có (server sort echo) | impl | C | |
 | Bảng op·command·target·state·age·actor·next-step | N | có | impl | C | |
 | next-step theo state (re-apply/review-incident/audit) | N | có | impl | C | |
-| Alert rail: typed object, CRITICAL-only badge, ack≠resolve | N | có | impl | C | V2-07: rail theo dòng đang chọn (chưa) |
+| Alert rail: typed object, CRITICAL-only badge, ack≠resolve | N | rail = ContextRail: Next = triage dòng đang chọn; Alerts = "no alerts route" | impl+BE | C | V2-07 ✓ — alerts route chưa publish |
 | Rail đóng/mở ✕ | N | có | impl | C+I(fixtures) | |
 
 ### L12 · HiFi Incident Detail (WF 4d)
@@ -2257,7 +2257,7 @@ nav trỏ 404.
 | MUTATION: PLAN→APPLY(step-up)→VERIFY | N | drawer flow có; **áp thật disabled** (relay tắt) | impl/dis | C | đúng F0 |
 | DANGER: emergency + testnetReset — typed confirm CLOSE | N | có typed confirm | impl | C | |
 | `labReset` BLOCKED — NOT EXPOSED IN PORTAL | N | có (blocked_reason enum) | impl | C | không render nút — đúng handoff |
-| Operation timeline: 202-not-success, sub-intents, PARTIAL residue re-apply cùng idempotency key | N | có (decision walk + BLOCKED/NOT_STARTED mới) | impl | C | V2-07 nâng thành ExecutionTerminal anatomy |
+| Operation timeline: 202-not-success, sub-intents, PARTIAL residue re-apply cùng idempotency key | N | có (decision walk + BLOCKED/NOT_STARTED mới) | impl | C | V2-07 ✓ ExecutionTerminal §9.2 (202 ⇒ ACCEPTED) — nâng thành ExecutionTerminal anatomy |
 | Equivalent CLI read-only + "browser never runs a shell" | T | có | impl | C | |
 | Reason bắt buộc → audit log | N | có | impl | C | |
 

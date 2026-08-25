@@ -8,7 +8,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within, fireEvent } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { IncidentDetailScreen } from "./screens/IncidentDetail";
@@ -97,8 +97,11 @@ describe("#2 — four source panels, unavailable rather than empty", () => {
 describe("#3 — exact and truncated collection counts", () => {
   it("states each collection's own total", () => {
     render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={open()} />);
-    expect(screen.getByText("1 operations")).toBeTruthy();
+    // EL-V2-07: each collection lives on its own tab.
     expect(screen.getByText("0 references")).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: /Operations/ }));
+    expect(screen.getByText("1 operations")).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: /Timeline/ }));
     expect(screen.getByText("2 events")).toBeTruthy();
   });
 
@@ -108,6 +111,7 @@ describe("#3 — exact and truncated collection counts", () => {
     raw.timeline.returned_count = 2;
     raw.timeline.truncated = true;
     render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={readIncidentDetail(raw)!} />);
+    fireEvent.click(screen.getByRole("tab", { name: /Timeline/ }));
     expect(screen.getByText(/showing 2 of 4180 events — the rest were not sent/)).toBeTruthy();
   });
 
@@ -229,13 +233,16 @@ describe("#9 — an annotation renders without echoing anything unsafe", () => {
 describe("#11 — keyboard and structure", () => {
   it("labels every panel so each can be reached directly", () => {
     render(<IncidentDetailScreen onOpenOperation={() => undefined} incident={open()} />);
-    for (const label of ["Operations taken", "Evidence", "Annotations", "Timeline", "Incident state"]) {
-      expect(screen.getByLabelText(label), label).toBeTruthy();
-    }
+    for (const label of ["Evidence", "Annotations", "Incident state"]) expect(screen.getByLabelText(label), label).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: /Timeline/ }));
+    expect(screen.getByLabelText("Timeline")).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: /Operations/ }));
+    expect(screen.getByLabelText("Operations taken")).toBeTruthy();
   });
 
   it("makes a correlated operation a real button", () => {
     render(<IncidentDetailScreen incident={open()} onOpenOperation={() => {}} />);
+    fireEvent.click(screen.getByRole("tab", { name: /Operations/ }));
     expect(screen.getByRole("button", { name: "op_fixture_1253" }).tagName).toBe("BUTTON");
   });
 });

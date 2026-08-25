@@ -1,21 +1,12 @@
 /**
- * Phase 9 — Command Center (hi-fi 5a, WF 5a, ops dark).
+ * Command Center (HiFi 5a) — triage first, fleet second, on the V2 anatomy.
  *
- * "Becomes the default landing route after this phase", which is why its
- * honesty rules matter more than any other screen's: this is the page an
- * operator reads before they know what is wrong, and the page they trust to
- * tell them nothing is.
- *
- * Four panels, four independent verdicts. A panel that cannot be read says so
- * in its own frame and the other three carry on — there is no page-level
- * "healthy" badge, because a green flag over a failed fleet query is precisely
- * the lie this cluster is built to prevent.
- *
- * The triage list arrives ranked by the server (`command-center.triage-rank.v1`)
- * and is rendered in the order it arrives. Nothing here sorts.
+ * ONE ranked queue merges incidents, overdue approvals and stuck operations.
+ * Rank = severity, then SLA, then age — never screen order and never array
+ * order: the server's `rank` wins; when it is absent the same three keys are
+ * applied here. BUSY and QUIET are two real states: QUIET is "nothing needs
+ * you" with the read timestamp, not an empty page.
  */
-import type { ReactNode } from "react";
-
 import {
   countLabel,
   streamGate,
@@ -29,45 +20,50 @@ import {
 import { AuthorityWord, FreshnessIndicator } from "../components/badges";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
+import { ExecutionSectionTitle } from "../components/typography";
+import {
+  ExecutionContextRail,
+  ExecutionDecisionStrip,
+  ExecutionPageHeader,
+  ExecutionProvenanceDrawer,
+  ExecutionWorkspace,
+  type HeaderBadge,
+  type RailBlocker,
+} from "../components/workspace";
 import type { SubscriptionState } from "../subscription";
 
-/**
- * One panel frame.
- *
- * Authority and freshness sit in the header of each panel rather than the page,
- * so a stale Fleet cell cannot borrow the Needs-you panel's freshness.
- */
-function Panel({
-  title,
-  state,
-  authority,
-  freshness,
-  meta,
-  reason,
-  children,
-}: {
-  title: string;
-  state: NeedsYouPanel["state"];
-  authority: NeedsYouPanel["authority"];
-  freshness: NeedsYouPanel["freshness"];
-  meta?: ReactNode;
-  reason?: string;
-  children: ReactNode;
-}) {
+const SEVERITY_ORDER = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
+const SLA_ORDER = ["OVERDUE", "DUE_SOON", "ON_TRACK"] as const;
+function idx(list: readonly string[], v: string | null): number {
+  const i = v ? list.indexOf(v) : -1;
+  return i === -1 ? list.length : i;
+}
+/** severity → SLA → age (older first); server rank wins when published. */
+export function rankTriage(items: readonly TriageItem[]): TriageItem[] {
+  return [...items].sort((a, b) => {
+    if (a.rank !== null && b.rank !== null && a.rank !== b.rank) return a.rank - b.rank;
+    if (a.rank !== null && b.rank === null) return -1;
+    if (a.rank === null && b.rank !== null) return 1;
+    const s = idx(SEVERITY_ORDER, a.severity) - idx(SEVERITY_ORDER, b.severity);
+    if (s !== 0) return s;
+    const l = idx(SLA_ORDER, a.slaState) - idx(SLA_ORDER, b.slaState);
+    if (l !== 0) return l;
+    return (b.ageSeconds ?? -1) - (a.ageSeconds ?? -1);
+  });
+}
+
+function PanelHead({ title, authority, freshness, meta }: { title: string; authority: NeedsYouPanel["authority"]; freshness: NeedsYouPanel["freshness"]; meta?: string }) {
   return (
-    <section className="exec-cc-panel" aria-label={title}>
-      <header className="exec-cc-panelhead">
-        <h2>{title}</h2>
-        {authority ? <AuthorityWord authority={authority} /> : null}
-        {freshness ? <FreshnessIndicator state={freshness} /> : null}
-        {meta ? <span className="exec-cc-meta">{meta}</span> : null}
-      </header>
-      {state === "ok" ? children : <PanelState status={state} reason={reason} />}
-    </section>
+    <header className="exec-cc-panelhead">
+      <ExecutionSectionTitle>{title}</ExecutionSectionTitle>
+      {authority ? <AuthorityWord authority={authority} /> : null}
+      {freshness ? <FreshnessIndicator state={freshness} /> : null}
+      {meta ? <span className="exec-cc-meta exec-role-meta">{meta}</span> : null}
+    </header>
   );
 }
 
-function TriageRow({ item, onOpen }: { item: TriageItem; onOpen: (item: TriageItem) => void }) {
+function TriageRow({ item, position, onOpen }: { item: TriageItem; position: number; onOpen: (item: TriageItem) => void }) {
   return (
     <button
       type="button"
@@ -78,100 +74,64 @@ function TriageRow({ item, onOpen }: { item: TriageItem; onOpen: (item: TriageIt
       disabled={!item.href}
       title={item.href ? undefined : "The owning screen for this item was not published"}
     >
-      {/* The server's rank, shown as given. The screen does not renumber. */}
-      <span className="exec-cc-rank">{item.rank ?? "—"}</span>
-      <span className="exec-cc-kind">{item.kind ?? "UNKNOWN"}</span>
+      <span className="exec-cc-rank exec-role-num">{position}</span>
+      <span className="exec-cc-kind exec-role-th">{item.kind ?? "UNKNOWN"}</span>
       <span className="exec-cc-title">
         {item.title}
-        <span className="exec-cc-summary">{item.summary}</span>
+        <span className="exec-cc-summary exec-role-meta">{item.summary}</span>
       </span>
-      <span className="exec-cc-sla">{item.slaState ?? "—"}</span>
-      <span className="exec-cc-action">{item.actionLabel ?? "Open"}</span>
+      <span className="exec-cc-sla exec-role-meta">{item.slaState ?? "—"}</span>
+      <span className="exec-cc-action exec-role-control">{item.actionLabel ?? "Open"}</span>
     </button>
   );
 }
 
-export function NeedsYou({
-  panel,
-  onOpen,
-}: {
-  panel: NeedsYouPanel;
-  onOpen: (item: TriageItem) => void;
-}) {
+export function NeedsYou({ panel, onOpen }: { panel: NeedsYouPanel; onOpen: (item: TriageItem) => void }) {
+  const ranked = rankTriage(panel.items);
   return (
-    <Panel
-      title="Needs you now"
-      state={panel.state}
-      authority={panel.authority}
-      freshness={panel.freshness}
-      meta={
-        <>
-          {countLabel(panel.counts)}
-          {panel.formulaVersion ? ` · ${panel.formulaVersion}` : null}
-        </>
-      }
-    >
-      {panel.items.length === 0 ? (
-        <p className="exec-cc-quiet">Nothing needs you.</p>
+    <section className="exec-cc-panel" aria-label="Needs you now">
+      <PanelHead title="Needs you now — ranked, cross-loop" authority={panel.authority} freshness={panel.freshness} meta={`${countLabel(panel.counts)}${panel.formulaVersion ? ` · ${panel.formulaVersion}` : ""}`} />
+      {panel.state !== "ok" ? (
+        <PanelState status={panel.state} />
+      ) : ranked.length === 0 ? (
+        <p className="exec-cc-quiet exec-role-body">Nothing needs you.</p>
       ) : (
         <div className="exec-cc-rows">
-          {panel.items.map((item) => (
-            <TriageRow key={item.id} item={item} onOpen={onOpen} />
+          {ranked.map((item, i) => (
+            <TriageRow key={item.id} item={item} position={i + 1} onOpen={onOpen} />
           ))}
         </div>
       )}
-      {/* Truncation is stated, not implied by a short list. */}
       {panel.counts.truncated ? (
-        <p className="exec-cc-note">
-          Showing {panel.counts.returned ?? panel.items.length} of {countLabel(panel.counts)}. The
-          rest are ranked behind these and open in the queue.
+        <p className="exec-cc-note exec-role-meta">
+          {countLabel(panel.counts)} shown — the rest are ranked behind these and open in the queue.
         </p>
       ) : null}
-    </Panel>
+    </section>
   );
 }
 
 export function FleetHealth({ panel }: { panel: FleetPanel }) {
   return (
-    <Panel
-      title="Fleet health"
-      state={panel.state}
-      authority={panel.authority}
-      freshness={panel.freshness}
-      meta={
-        panel.totalDeployments != null
-          ? `${panel.exactTotal ? "" : "~"}${panel.totalDeployments} deployments`
-          : "deployment count unavailable"
-      }
-    >
-      <div className="exec-cc-cells">
-        {panel.cells.map((cell) => (
-          <a className="exec-cc-cell" key={cell.code ?? cell.label} href={cell.href ?? undefined}>
-            <span className="exec-cc-cellvalue exec-num">
-              {/* `—`, never 0. An unknown count and an empty stage are not the
-                  same thing, and on this screen the difference is whether you
-                  go and look. */}
-              {cell.value ?? "—"}
-            </span>
-            <span className="exec-cc-celllabel">{cell.label}</span>
-          </a>
-        ))}
-      </div>
-    </Panel>
+    <section className="exec-cc-panel" aria-label="Fleet health">
+      <PanelHead title="Fleet health" authority={panel.authority} freshness={panel.freshness} meta={panel.totalDeployments != null ? `${panel.exactTotal ? "" : "~"}${panel.totalDeployments} deployments` : "deployment count unavailable"} />
+      {panel.state !== "ok" ? (
+        <PanelState status={panel.state} />
+      ) : (
+        <ExecutionDecisionStrip metrics={panel.cells.map((cell) => ({ label: cell.label, value: cell.value === null ? null : String(cell.value) }))} />
+      )}
+    </section>
   );
 }
 
 export function PinnedWatchlist({ panel }: { panel: PinnedPanel }) {
   return (
-    <Panel
-      title="Pinned watchlist"
-      state={panel.state}
-      authority={panel.authority}
-      freshness={panel.freshness}
-      meta={panel.limit != null ? `${panel.total ?? panel.items.length} of max ${panel.limit}` : undefined}
-    >
-      {panel.items.length === 0 ? (
-        <p className="exec-cc-quiet">Nothing pinned. Pin from any workbench.</p>
+    <section className="exec-cc-panel" aria-label="Pinned watchlist">
+      <PanelHead title="Pinned watchlist" authority={panel.authority} freshness={panel.freshness} meta={panel.limit != null ? `${panel.total ?? panel.items.length} of max ${panel.limit}` : undefined} />
+      {panel.state !== "ok" ? (
+        <PanelState status={panel.state} />
+      ) : panel.items.length === 0 ? (
+        <p className="exec-cc-quiet exec-role-body">Nothing pinned. Pin from any workbench.</p>
       ) : (
         <ul className="exec-cc-pins">
           {panel.items.map((pin) => (
@@ -179,117 +139,128 @@ export function PinnedWatchlist({ panel }: { panel: PinnedPanel }) {
               <span className="exec-cc-pinlabel">{pin.label}</span>
               {pin.targetAvailable ? (
                 <>
-                  <span className="exec-cc-pintarget">{pin.targetLabel ?? "—"}</span>
+                  <span className="exec-cc-pintarget exec-role-num">{pin.targetLabel ?? "—"}</span>
                   {pin.targetAuthority ? <AuthorityWord authority={pin.targetAuthority} /> : null}
                   {pin.targetFreshness ? <FreshnessIndicator state={pin.targetFreshness} /> : null}
                 </>
               ) : (
-                // Kept visible on purpose. A pin whose target cannot be read is
-                // information — silently dropping it tells the operator they
-                // never pinned it.
-                <span className="exec-cc-pinunavailable">
-                  target unavailable — this pin cannot be shown from the current sources
-                </span>
+                <span className="exec-cc-pinunavailable exec-role-meta">target unavailable — this pin cannot be shown from the current sources</span>
               )}
             </li>
           ))}
         </ul>
       )}
-      <p className="exec-cc-note">A pin never mutes an alert.</p>
-    </Panel>
+      <p className="exec-cc-note exec-role-meta">A pin never mutes an alert.</p>
+    </section>
   );
 }
 
 export function Today({ panel }: { panel: TodayPanel }) {
   return (
-    <Panel
-      title="Today"
-      state={panel.state}
-      authority={panel.authority}
-      freshness={panel.freshness}
-      meta={countLabel(panel.counts)}
-    >
-      <ul className="exec-cc-today">
-        {panel.items.map((item) => (
-          <li key={item.id}>
-            <span className="exec-cc-todaykind">{item.kind ?? "—"}</span>
-            <a href={item.href ?? undefined}>{item.label}</a>
-          </li>
-        ))}
-      </ul>
-    </Panel>
-  );
-}
-
-export function CommandCenterScreen({
-  snapshot,
-  onOpen,
-  live,
-}: {
-  snapshot: CommandCenterSnapshot;
-  onOpen: (item: TriageItem) => void;
-  /**
-   * Subscription state, when a stream was opened. Absent while dark, and the
-   * screen must read the same as it does today when it is.
-   */
-  live?: SubscriptionState | null;
-}) {
-  const gate = streamGate(snapshot);
-  const critical =
-    snapshot.needsYou?.items.filter((i) => i.severity === "CRITICAL").length ?? 0;
-
-  return (
-    <ExecutionSurface kind="deployments" className="exec-cc">
-      <header className="exec-cc-head">
-        {/* EL-V2-02 pilot: the one screen migrated to a type role before the
-            anatomy migration in EL-V2-04. Page identity is sans 24/32 — the
-            first thing on the surface that is not 10px monospace. */}
-        <h1 className="exec-role-title exec-page-title">
-          {snapshot.actorName ? `Good morning, ${snapshot.actorName}` : "Command Center"}
-          {critical > 0 ? <span className="exec-cc-critical">{critical} CRITICAL</span> : null}
-        </h1>
-        {/* No EventSource control while the stream is dark. A disabled live
-            toggle would advertise a capability that does not exist yet, and an
-            operator who sees one assumes the page updates itself.
-            The sentence comes from `streamGate` rather than being written here,
-            so the words the operator reads and the decision the transport makes
-            are the same fact and cannot drift apart. */}
-        {!gate.allowed ? (
-          <p className="exec-cc-sub">{gate.reason} Reload to re-read.</p>
-        ) : live ? (
-          <p className="exec-cc-sub" data-live="true">
-            Live — {live.freshness}
-            {live.phase ? ` · ${live.phase}` : null}
-            {live.note ? ` · ${live.note}` : null}
-          </p>
-        ) : (
-          /* Published is not connected. This branch read `live?.freshness ??
-             "UNKNOWN"` and printed `Live — UNKNOWN` under a `data-live="true"`
-             marker while holding no subscription at all, which is the page
-             claiming to be updating itself and naming its own ignorance as the
-             freshness. A stream can be published and not yet open — the flag
-             is the server's, the socket is ours — so the two are separate
-             sentences and only the second one is `data-live`. */
-          <p className="exec-cc-sub">Stream published — not connected. Values are as read.</p>
-        )}
-      </header>
-
-      {snapshot.warnings.length > 0 ? (
-        <ul className="exec-cc-warnings">
-          {snapshot.warnings.map((w) => (
-            <li key={w.code}>
-              <b>{w.code}</b> {w.message}
+    <section className="exec-cc-panel" aria-label="Today">
+      <PanelHead title="Today" authority={panel.authority} freshness={panel.freshness} meta={countLabel(panel.counts)} />
+      {panel.state !== "ok" ? (
+        <PanelState status={panel.state} />
+      ) : (
+        <ul className="exec-cc-today">
+          {panel.items.map((item) => (
+            <li key={item.id}>
+              <span className="exec-cc-todaykind exec-role-th">{item.kind ?? "—"}</span>
+              <a href={item.href ?? undefined}>{item.label}</a>
             </li>
           ))}
         </ul>
-      ) : null}
+      )}
+    </section>
+  );
+}
 
-      {snapshot.needsYou ? <NeedsYou panel={snapshot.needsYou} onOpen={onOpen} /> : null}
-      <div className="exec-cc-twoup">
+export function CommandCenterScreen({ snapshot, onOpen, live }: { snapshot: CommandCenterSnapshot; onOpen: (item: TriageItem) => void; live?: SubscriptionState | null }) {
+  const gate = streamGate(snapshot);
+  const ranked = rankTriage(snapshot.needsYou?.items ?? []);
+  const critical = ranked.filter((i) => i.severity === "CRITICAL").length;
+  const busy = ranked.length > 0;
+  const badges: HeaderBadge[] = [
+    { label: busy ? `BUSY · ${ranked.length}` : "QUIET", axis: "readiness", tone: busy ? "warn" : "good" },
+    ...(critical > 0 ? [{ label: `${critical} CRITICAL`, axis: "other", tone: "bad" } as HeaderBadge] : []),
+    { label: !gate.allowed ? "STREAM NOT PUBLISHED" : live ? `LIVE · ${live.freshness}` : "STREAM PUBLISHED · NOT CONNECTED", axis: "broker-sync", tone: live ? "good" : "mute" },
+  ];
+  const first = ranked[0] ?? null;
+  const blockers: RailBlocker[] = ranked.filter((i) => i.severity === "CRITICAL").map((i) => ({ label: i.title, detail: `${i.kind ?? "UNKNOWN"} · ${i.slaState ?? "—"}`, severity: "blocking" as const }));
+  const rail = (
+    <ExecutionContextRail
+      next={{
+        title: first ? `#1 · ${first.kind ?? "UNKNOWN"}` : "Nothing needs you",
+        detail: first ? (
+          <span className="exec-role-body">
+            {first.title} — {first.summary}
+          </span>
+        ) : (
+          <span className="exec-role-body">Quiet as of {snapshot.readAt ?? "time not published"}. This is a real state, not hidden work.</span>
+        ),
+        action:
+          first && first.href ? (
+            <button type="button" className="exec-role-control exec-btn-apply" onClick={() => onOpen(first)}>
+              {first.actionLabel ?? "Open"}
+            </button>
+          ) : undefined,
+      }}
+      blockers={blockers}
+      freshness={
+        <span className="exec-role-meta">as_of {snapshot.readAt ?? "not published"} · values are as read</span>
+      }
+      provenance={
+        <ExecutionProvenanceDrawer
+          items={[
+            ...(snapshot.workspaceId ? [{ label: "workspace", short: snapshot.workspaceId, full: null }] : []),
+            { label: "profile", short: snapshot.deliveryProfile ?? "not stated", full: null },
+            ...(snapshot.projectionEpoch ? [{ label: "projection", short: `${snapshot.projectionEpoch} · seq ${snapshot.projectionSequence ?? "—"}`, full: null }] : []),
+            ...(snapshot.mode ? [{ label: "mode", short: snapshot.mode, full: null }] : []),
+          ]}
+          onCopy={(full) => void navigator.clipboard?.writeText(full)}
+        />
+      }
+    />
+  );
+  return (
+    <ExecutionSurface kind="deployments" className="exec-cc">
+      <ExecutionWorkspace layout="balanced" rail={rail}>
+        <div className="exec-cc-head">
+          <ExecutionPageHeader
+            title={snapshot.actorName ? `Good morning, ${snapshot.actorName}` : "Command Center"}
+            badges={badges}
+            purpose="What needs you now, ranked across loops — everything below links to its owning screen."
+            secondary={
+              !gate.allowed ? (
+                <span className="exec-cc-sub exec-role-meta">{gate.reason} Reload to re-read.</span>
+              ) : live ? (
+                <span className="exec-cc-sub exec-role-meta" data-live="true">
+                  Live — {live.freshness}
+                  {live.phase ? ` · ${live.phase}` : null}
+                  {live.note ? ` · ${live.note}` : null}
+                </span>
+              ) : (
+                <span className="exec-cc-sub exec-role-meta">Stream published — not connected. Values are as read.</span>
+              )
+            }
+          />
+        </div>
+        {snapshot.warnings.length > 0 ? (
+          <ul className="exec-cc-warnings exec-role-body" role="status">
+            {snapshot.warnings.map((w) => (
+              <li key={w.code}>
+                <b>{w.code}</b> {w.message}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {snapshot.needsYou ? <NeedsYou panel={snapshot.needsYou} onOpen={onOpen} /> : null}
         {snapshot.fleet ? <FleetHealth panel={snapshot.fleet} /> : null}
-        {snapshot.pinned ? <PinnedWatchlist panel={snapshot.pinned} /> : null}
-      </div>
-      {snapshot.today ? <Today panel={snapshot.today} /> : null}
+        <div className="exec-cc-twoup exec-grid-2">
+          {snapshot.pinned ? <PinnedWatchlist panel={snapshot.pinned} /> : null}
+          {snapshot.today ? <Today panel={snapshot.today} /> : null}
+        </div>
+      </ExecutionWorkspace>
     </ExecutionSurface>
   );
 }

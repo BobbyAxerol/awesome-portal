@@ -31,6 +31,15 @@ import { PanelState } from "../components/states";
 import { formatAge } from "../components/badges";
 import type { PanelStatus } from "../contracts";
 import type { OperationsQueue, QueueRow, TriageState } from "../operations";
+import {
+  ExecutionContextRail,
+  ExecutionDecisionStrip,
+  ExecutionPageHeader,
+  ExecutionProvenanceDrawer,
+  ExecutionWorkspace,
+  type HeaderBadge,
+  type RailBlocker,
+} from "../components/workspace";
 
 /** The hi-fi's three chips. Applied server-side; they never filter loaded rows. */
 export const QUEUE_FILTERS = ["NEEDS_ATTENTION", "MINE", "ALL_24H"] as const;
@@ -90,14 +99,15 @@ function QueueTableRow({
   row,
   now,
   onOpen,
+  selected = false,
 }: {
   row: QueueRow;
   now: Date;
-  /** Required: a row opens its plan/verify surface (Action Drawer) — never an inert row. */
   onOpen: (row: QueueRow) => void;
+  selected?: boolean;
 }) {
   return (
-    <tr data-attention={needsAttention(row) ? "true" : undefined}>
+    <tr data-attention={needsAttention(row) ? "true" : undefined} data-selected={selected ? "true" : undefined} aria-selected={selected || undefined}>
       <th scope="row">
         <button type="button" className="exec-linkbtn" onClick={() => onOpen(row)}>
           {row.operationId}
@@ -129,6 +139,8 @@ export function OperationsQueueScreen({
   onLoadPrevious,
   now = new Date(),
   alertRail,
+  triage,
+  selectedId = null,
   children,
 }: {
   queue: OperationsQueue | null;
@@ -136,163 +148,166 @@ export function OperationsQueueScreen({
   reason?: string;
   filter?: QueueFilter;
   onFilterChange?: (filter: QueueFilter) => void;
-  /** Required: a row opens its plan/verify surface (Action Drawer) — never an inert row. */
   onOpen: (row: QueueRow) => void;
   onLoadNext?: () => void;
   onLoadPrevious?: () => void;
-  /** Injected so tests and the fixtures page control the clock. */
   now?: Date;
-  /** The rail is a separate source; today it has none. */
   alertRail?: ReactNode;
+  /** Triage of the selected row — the rail follows the selection (EL-V2-07). */
+  triage?: ReactNode;
+  selectedId?: string | null;
   children?: ReactNode;
 }) {
   const page = queue?.page;
-  const attention = page ? page.rows.filter(needsAttention).length : 0;
-
-  return (
-    <ExecutionSurface kind="deployments" className="exec-queue">
-      <header className="exec-queue-head">
-        <h1>
-          Operations Queue
-          {attention > 0 ? (
-            <span className="exec-queue-attention">{attention} NEED ATTENTION</span>
-          ) : null}
-        </h1>
-        {queue ? (
-          <p className="exec-queue-sub">
-            {/* Both counts are the server's. `filtered` describes this view and
-                `total` describes the queue; a screen that showed one number
-                would be describing two populations as one. */}
-            {page?.filteredCount ?? "—"} in this view · {page?.totalCount ?? "—"} total ·
-            source {queue.sourceIntegrationState ?? "not stated"} · profile{" "}
-            {queue.deliveryProfile ?? "not stated"}
-          </p>
-        ) : null}
-        <p className="exec-queue-note">
-          sort: PARTIAL · FAILED → RUNNING → done · a PARTIAL older than 15m escalates to an alert
-          automatically
-        </p>
-      </header>
-
-      {onFilterChange ? (
-        <div className="exec-queue-filters" role="group" aria-label="Filter the queue">
-          {QUEUE_FILTERS.map((option) => (
-            <button
-              key={option}
-              type="button"
-              data-queue-filter={option}
-              aria-pressed={option === filter}
-              disabled={UNSUPPORTED_FILTERS[option] !== null}
-              title={UNSUPPORTED_FILTERS[option] ?? undefined}
-              onClick={() => onFilterChange(option)}
-            >
-              {FILTER_LABEL[option]}
-              {option === "NEEDS_ATTENTION" && attention > 0 ? ` (${attention})` : null}
-            </button>
-          ))}
-          {Object.entries(UNSUPPORTED_FILTERS)
-            .filter(([, reason]) => reason !== null)
-            .map(([option, reason]) => (
-              <p className="exec-disabled-reason" key={option}>
-                {FILTER_LABEL[option as QueueFilter]}: {reason}
-              </p>
-            ))}
-        </div>
-      ) : null}
-
-      <div className="exec-queue-body">
-        <div className="exec-queue-main">
-          {status !== "ok" && status !== "partial" ? (
-            <PanelState status={status} reason={reason} />
-          ) : !page || page.rows.length === 0 ? (
-            <PanelState
-              status="empty"
-              reason="No operations match this view. The queue is empty, which is different from a queue that could not be read."
-            />
-          ) : (
-            <>
-              <div className="exec-scroll-x">
-              <table className="exec-queue-table">
-                <caption>
-                  one row = one operation_id from plan → apply → verify · nothing ages silently
-                </caption>
-                <thead>
-                  <tr>
-                    <th scope="col">operation</th>
-                    <th scope="col">command</th>
-                    <th scope="col">target</th>
-                    <th scope="col">source</th>
-                    <th scope="col">verify</th>
-                    <th scope="col">triage</th>
-                    <th scope="col">age</th>
-                    <th scope="col">actor</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {page.rows.map((row) => (
-                    <QueueTableRow key={row.operationId} row={row} now={now} onOpen={onOpen} />
-                  ))}
-                </tbody>
-              </table>
-              </div>
-
-              {/* Keyset only. There are no page numbers because the server
-                  publishes opaque cursors and an offset drawn over them would
-                  be a number the client invented. */}
-              <div className="exec-queue-nav">
-                <button
-                  type="button"
-                  disabled={!page.hasPrevious || !onLoadPrevious}
-                  onClick={onLoadPrevious}
-                >
-                  ▲ newer
-                </button>
-                <button type="button" disabled={!page.hasMore || !onLoadNext} onClick={onLoadNext}>
-                  ▼ older
-                </button>
-                <span className="exec-queue-dim">
-                  {page.appliedSort.map((s) => `${s.field}:${s.direction}`).join(" · ") ||
-                    "sort not stated"}
-                </span>
-              </div>
-              <p className="exec-queue-note">every row links its audit evidence</p>
-            </>
-          )}
-        </div>
-
-        <aside className="exec-queue-rail" aria-label="Alerts">
-          <h2>Alerts</h2>
+  const rows = page?.rows ?? [];
+  const attentionRows = rows.filter(needsAttention);
+  const attention = attentionRows.length;
+  const partial = rows.filter((r) => r.verificationResult === "PARTIAL").length;
+  const unacked = rows.filter((r) => r.triageState === "UNACKNOWLEDGED").length;
+  const badges: HeaderBadge[] = [
+    ...(attention > 0 ? [{ label: `${attention} NEED ATTENTION`, axis: "readiness", tone: "bad" } as HeaderBadge] : [{ label: "NOTHING STUCK", axis: "readiness", tone: "good" } as HeaderBadge]),
+    { label: queue?.sourceIntegrationState ?? "SOURCE NOT STATED", axis: "broker-sync", tone: queue?.sourceIntegrationState === "UNAVAILABLE" ? "warn" : queue?.sourceIntegrationState ? "good" : "mute" },
+  ];
+  const blockers: RailBlocker[] = attentionRows.map((r) => ({
+    label: `${r.operationId} ${r.verificationResult ?? r.sourceStatus ?? ""}`.trim(),
+    detail: `${r.commandKey || "—"} · ${r.target.id ?? "—"} · ${ageFrom(r.createdAt, now)}`,
+    severity: r.verificationResult === "PARTIAL" || r.sourceStatus === "FAILED" ? ("blocking" as const) : ("watch" as const),
+  }));
+  const rail = (
+    <ExecutionContextRail
+      next={{
+        title: selectedId ? `Triage · ${selectedId}` : "Select an operation",
+        detail: triage ?? (
+          <span className="exec-role-body">Pick a row to acknowledge or resolve it. Acknowledging and resolving are Portal records — ack ≠ resolve.</span>
+        ),
+      }}
+      blockers={blockers}
+      freshness={
+        <span className="exec-role-meta">
+          read {queue?.readAt ?? "not stated"} · sort {page?.appliedSort.map((s) => `${s.field}:${s.direction}`).join(" · ") || "not stated"} · a PARTIAL older than 15m escalates automatically
+        </span>
+      }
+      alerts={
+        <div aria-label="Alerts" className="exec-queue-rail">
           {alertRail ?? (
             <PanelState
               status="unavailable"
-              reason="The Trading System publishes no alerts route, so this rail has no source. It is shown empty rather than removed, because an operator who cannot see the rail assumes there is nothing in it."
+              reason="The Trading System publishes no alerts route, so this rail has no source. It is shown empty rather than removed, because an absent rail reads as 'no alerts'."
             />
           )}
-          <p className="exec-queue-note">
-            alert = state change of a typed object (finding · sync · operation · condition), never
-            free text · badge counts CRITICAL only · ack ≠ resolve
-          </p>
-        </aside>
-      </div>
-      {children}
+          <p className="exec-queue-note exec-role-meta">alert = state change of a typed object (finding · sync · operation · condition), never free text · badge counts CRITICAL only · ack ≠ resolve</p>
+        </div>
+      }
+      provenance={
+        <ExecutionProvenanceDrawer
+          items={[
+            { label: "profile", short: queue?.deliveryProfile ?? "not stated", full: null },
+            { label: "source", short: queue?.sourceIntegrationState ?? "not stated", full: null },
+          ]}
+          onCopy={(full) => void navigator.clipboard?.writeText(full)}
+        />
+      }
+    />
+  );
+  return (
+    <ExecutionSurface kind="deployments" className="exec-queue">
+      <ExecutionWorkspace layout="balanced" rail={rail}>
+        <div className="exec-queue-head">
+          <ExecutionPageHeader
+            title="Operations Queue"
+            badges={badges}
+            purpose="What is running, what is stuck — one row per operation_id from plan → apply → verify; nothing ages silently."
+            secondary={
+              queue ? (
+                <span className="exec-queue-sub exec-role-meta">
+                  {page?.filteredCount ?? "—"} in this view · {page?.totalCount ?? "—"} total · source {queue.sourceIntegrationState ?? "not stated"} · profile {queue.deliveryProfile ?? "not stated"}
+                </span>
+              ) : undefined
+            }
+          />
+        </div>
+        <ExecutionDecisionStrip
+          metrics={[
+            { label: "In this view", value: page?.filteredCount === null || page?.filteredCount === undefined ? null : String(page.filteredCount) },
+            { label: "Total", value: page?.totalCount === null || page?.totalCount === undefined ? null : String(page.totalCount) },
+            { label: "Need attention", value: String(attention), tone: attention ? "bad" : "good" },
+            { label: "PARTIAL", value: String(partial), tone: partial ? "warn" : undefined },
+            { label: "Unacknowledged", value: String(unacked), tone: unacked ? "warn" : undefined },
+          ]}
+        />
+        {onFilterChange ? (
+          <div className="exec-queue-filters" role="group" aria-label="Filter the queue">
+            {QUEUE_FILTERS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className="exec-inbox-filter"
+                data-queue-filter={option}
+                aria-pressed={option === filter}
+                disabled={UNSUPPORTED_FILTERS[option] !== null}
+                title={UNSUPPORTED_FILTERS[option] ?? undefined}
+                onClick={() => onFilterChange(option)}
+              >
+                {FILTER_LABEL[option]}
+                {option === "NEEDS_ATTENTION" && attention > 0 ? ` (${attention})` : null}
+              </button>
+            ))}
+            {Object.entries(UNSUPPORTED_FILTERS)
+              .filter(([, r]) => r !== null)
+              .map(([option, r]) => (
+                <p className="exec-disabled-reason" key={option}>
+                  {FILTER_LABEL[option as QueueFilter]}: {r}
+                </p>
+              ))}
+          </div>
+        ) : null}
+        <div className="exec-queue-body">
+          <div className="exec-queue-main">
+            {status !== "ok" && status !== "partial" ? (
+              <PanelState status={status} reason={reason} />
+            ) : !page || page.rows.length === 0 ? (
+              <PanelState status="empty" reason="No operations match this view. The queue is empty, which is different from a queue that could not be read." />
+            ) : (
+              <>
+                <div className="exec-scroll-x">
+                  <table className="exec-queue-table">
+                    <caption className="exec-role-meta">sort: PARTIAL · FAILED → RUNNING → done · every row links its audit evidence</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">operation</th>
+                        <th scope="col">command</th>
+                        <th scope="col">target</th>
+                        <th scope="col">source</th>
+                        <th scope="col">verify</th>
+                        <th scope="col">triage</th>
+                        <th scope="col">age</th>
+                        <th scope="col">actor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {page.rows.map((row) => (
+                        <QueueTableRow key={row.operationId} row={row} now={now} onOpen={onOpen} selected={row.operationId === selectedId} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="exec-queue-nav">
+                  <button type="button" className="exec-btn-ghost" disabled={!page.hasPrevious || !onLoadPrevious} onClick={onLoadPrevious}>
+                    ▲ newer
+                  </button>
+                  <button type="button" className="exec-btn-ghost" disabled={!page.hasMore || !onLoadNext} onClick={onLoadNext}>
+                    ▼ older
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+        {children}
+      </ExecutionWorkspace>
     </ExecutionSurface>
   );
 }
-
-/* ---------------------------------------------------------------------------
- * Triage — acknowledge, then resolve. Never the other way round.
- * ------------------------------------------------------------------------ */
-
-/**
- * What the operator may do to this row, and why not.
- *
- * `ack ≠ resolve` is the hi-fi's own rule and the reason resolve is gated on
- * acknowledgement rather than merely ordered after it: acknowledging says a
- * person has seen it, resolving says a person has finished with it, and letting
- * the second stand in for the first loses the only record that anybody looked.
- *
- * ADMIN-only, and absent roles are not permission.
- */
 export function triageAffordance(
   row: QueueRow,
   roles: readonly string[],
