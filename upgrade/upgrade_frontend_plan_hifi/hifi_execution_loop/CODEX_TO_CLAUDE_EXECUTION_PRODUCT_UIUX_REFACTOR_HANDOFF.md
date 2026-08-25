@@ -1667,6 +1667,7 @@ accepted gate. Until then Claude must render fixture, shadow, unavailable or dis
 
 - Rust/TypeScript backend contracts, D1–D4 safety gates and source flags remain unchanged.
 - `delivery_profile=fixture` remains visible and truthful.
+  **Owner override 2026-08-25 (Bobby):** dòng `FIXTURE PREVIEW` **không còn trong UI** — hi-fi là bức tranh. Marker `data-execution-preview` vẫn ở DOM (ẩn) để gate e2e chứng minh profile đang mount và không gọi Execution API; smoke data trên mỗi màn được khai báo trong file `*.smoke.ts` của màn đó và **gỡ theo từng màn** khi dữ liệu thật về (bảng `DESIGN_GRAMMAR_V3.md` §8).
 - No browser connection to AWS-HK, Trading System, broker or realtime is added by this refactor.
 - Do not merge “visual refactor” with backend activation.
 - Preserve exact values and evidence access; change default prominence, not truth.

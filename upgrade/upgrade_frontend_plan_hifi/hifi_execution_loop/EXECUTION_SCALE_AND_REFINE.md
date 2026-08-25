@@ -1007,3 +1007,103 @@ bật chip, không phải hỏng.
 - **Ảnh hưởng:** 9/12 tile Alpha 360 đang là smoke; Portfolio 360 2 chart line; chưa màn nào
   hiển thị sai số liệu (smoke có nhãn), nhưng review hình ảnh chưa thể ký cho tile khác line.
 
+### BR-EX-41 — stage telemetry cho Paper/Sandbox/Canary/Live (2026-08-25, EL-V2-10) — **spec cho codex**
+
+Bobby duyệt 2026-08-25: các màn stage phải có chart + chỉ số trực quan (hi-fi 1c/1d/1e/1f). Frontend
+đã dựng đủ component và đang chạy bằng **smoke data có nhãn** (`apps/portal/frontend/src/execution/stage.smoke.ts`,
+cờ `STAGE_SMOKE`). Gói này định nghĩa contract để thay smoke bằng dữ liệu thật; mỗi mục ghi rõ
+component nào tiêu thụ.
+
+| # | Cần | Shape (đề xuất — codex quyết) | Component |
+|---|---|---|---|
+| 41.1 | **Equity by stage** — cùng artifact digest, chuẩn hoá 100 | `GET /deployments/{id}/stage-equity?window=30d&bucket=1h` → `execution-analytics.stage-equity.v1`: `lines[{stage: paper\|sandbox\|live\|backtest, points[{bucket_start, value}]}]`, envelope §16.2, `joined_by: artifact_digest` | `StageLinesChart` (Canary/Live/Paper) |
+| 41.2 | **Envelope consumption** | `GET /deployments/{id}/envelope-consumption` → `caps[{key, label, used, cap, unit, kind: cap\|target, as_of}]` — `kind=target` (30/30 days) không phải breach | `CapGauges` |
+| 41.3 | **Execution quality** | `GET /deployments/{id}/execution-quality?window=30d` → `ack_latency{buckets[{from_ms,to_ms,count}], p50, p95}`, `fill_latency_p50[]`, `slippage_bp[{day, value}]`, `reject_rate[{day,value}]`, `ceilings{slippage_bp, reject_rate}` | `HistogramChart`, `SparkTile` |
+| 41.4 | **Positions snapshot** (BROKER authority) | `GET /deployments/{id}/positions` → `rows[{symbol, side, qty, entry, upnl, leverage, ack_latency_p50_ms}]` decimal string, `as_of`, `digest` | `PositionsTable` |
+| 41.5 | **Daily contribution** (Live) | `GET /deployments/{id}/contribution?window=30d` → `bars[{day, value, currency}]`, `formula_version contrib.v1` | `DailyBarsChart` |
+| 41.6 | **Order-type certification** (Sandbox) | trong `sandbox-certification.v1`: `order_types[{type, state: certified\|pending\|untested, note}]` | `OrderTypeMatrix` |
+| 41.7 | **KPI null-fill** | các KPI đang `null` ở fixture (capital_consumed, gross_notional, daily_pnl, open_orders, broker_equity) publish giá trị thật; `suppressed` giữ nguyên ngữ nghĩa | `ExecutionDecisionStrip` |
+
+- **Lý do UI:** không có 41.x, 4 màn stage là 100% chữ "not published"; owner không duyệt được.
+- **Invariant:** frontend không tính gì — mọi số đến dưới dạng chuỗi/decimal; gauge chỉ vẽ tỉ lệ;
+  histogram nhận bucket sẵn; downsample/coverage nằm trong envelope caption.
+- **Xoá smoke:** khi 41.1–41.7 có fixture canonical trong `packages/contracts/fixtures` → xoá
+  `stage.smoke.ts` theo hợp đồng ghi ở đầu file (một commit).
+
+### BR-EX-42 — Pinned watchlist: stage + status + figure theo hi-fi 5a (2026-08-25, Command Center) — **spec cho codex**
+
+- **Endpoint/field cần:** trong `command-center.v1` panel `pinned.items[]` thêm
+  `stage` (`PAPER | SANDBOX | LIVE_CANARY | LIVE_FULL`), `status` (`READY | HALTED | BLOCKED | DEGRADED`),
+  `figure` (chuỗi đã format, ví dụ `"+112"`, `"12/30d"`, `"cert 5/7"`) và `figure_tone` (`good | warn | bad | mute`),
+  `venue`, `deployment_id`. Giữ nguyên `label`, `target_label`, `target_authority`, `target_freshness`.
+- **Lý do UI:** hi-fi 5a hàng pinned = *chip stage* (CANARY viền đôi đỏ / PAPER tím / SANDBOX vàng) ·
+  `Grid v2.1 · BINANCE · dep_88` · *figure* (+112 xanh) · *chip status* (READY/HALTED). Model hiện chỉ có
+  `label`/`target_label` nên hàng đang in "Carry v3.2 · Carry v3.2 EXECUTION fresh" — trùng và không có stage.
+- **Ảnh hưởng:** `/execution` Pinned — panel render nhưng thiếu 3 cột hi-fi; frontend **không** tự suy
+  stage từ id (rule §3.5). Frontend đã có chip/tone sẵn; giao là hiện.
+- **Đề xuất fixture:** `packages/contracts/fixtures/execution-command-center.pinned.valid.json` với 3 dòng
+  đúng hi-fi (dep_88 CANARY READY +112 · dep_74 PAPER READY 12/30d · dep_77 SANDBOX HALTED cert 5/7).
+
+### BR-EX-43 — Alerts summary cho topbar `⚑ Alerts · n critical` (2026-08-25, Command Center) — **spec cho codex**
+
+- **Endpoint/field cần:** `GET /api/v1/execution/alerts/summary` → `{critical, high, as_of, href}` (đếm
+  alert đang mở theo severity, `href` tới Operations Queue/Alerts), ETag + `no-cache, must-revalidate`
+  như registry; hoặc thêm `alerts_summary` vào `command-center.v1` root.
+- **Lý do UI:** hi-fi 5a topbar có chip đỏ `⚑ Alerts · 1 critical` (viền `#fa4d56`, mono 11/600) khi có
+  critical; chip là **shell** (hiện trên mọi route Execution), nên cần một nguồn độc lập với màn đang mở.
+- **Ảnh hưởng:** chưa có endpoint → shell không render chip (không bịa số). Poll 30s hoặc SSE `alerts.summary`
+  nếu realtime bật.
+
+### BR-EX-44 — Fleet health cells: chú thích phụ + link stage (2026-08-25) — **spec cho codex**
+
+- **Cần:** `fleet.cells[]` thêm `sub` (chuỗi phụ, ví dụ `"d9/14"`, `"1 HALTED"`), `sub_tone`, `tone` cho
+  giá trị chính (`bad` khi Live có deployment DEGRADED), `href` tới danh sách stage.
+- **Lý do UI:** hi-fi 5a cell `CANARY 1 d9/14`, `SANDBOX 2 1 HALTED`, `LIVE 2` màu đỏ; cells là link.
+
+### BR-EX-45 — Promotion pipeline: funnel + ma trận alpha × stage (2026-08-25, Command Center hi-fi 5a) — **spec cho codex**
+
+- **Endpoint/field cần:** `GET /api/v1/execution/promotion-pipeline?window=90d` (hoặc panel `pipeline` trong
+  `command-center.v1`) →
+  `stages[{key: PAPER|SANDBOX|CANARY|LIVE, entered, in_stage_now, halted, conversion{num,den}, notes[]}]`,
+  `rows[{alpha_version_id, alpha_label, cells{PAPER|SANDBOX|CANARY|LIVE: {kind: done|current|none, decision_id
+  ("PX-22"/"SX-14"/"CX-08"), progress_label ("30/30 gate met"/"d9/14"/"cert 5/7"), venue, paused, href}}}]`,
+  envelope `{authority: EXECUTION, as_of, window, source: registry}`.
+- **Lý do UI:** hi-fi 5a panel "Promotion pipeline — alpha versions, all modes": funnel 4 cột (số vào stage,
+  tỉ lệ chuyển, thanh, ghi chú "in stage now") + ma trận một hàng = một alpha version, ô = deployment ở
+  stage đó (✓ = link quyết định exit, ● = đang ở stage). Frontend đã dựng (`PromotionPipeline`) và đang
+  chạy bằng smoke `commandCenter.smoke.ts`.
+- **Invariant:** funnel đếm **version**, không đếm deployment (một version trên 2 venue vẫn là 1) —
+  server tính, frontend chỉ vẽ tỉ lệ.
+- **Xoá smoke:** khi BR-EX-42/44/45 có fixture canonical → xoá `commandCenter.smoke.ts` theo hợp đồng đầu file.
+
+### BR-EX-46 — Incident Detail v2 (hi-fi WF 4d): market band, evidence facts, resolve budget, gate rows (2026-08-25) — **spec cho codex**
+
+- **Cần trong `incident-detail.v1` (hoặc panel phụ):**
+  - `subject` (chuỗi "position MISMATCH · acct-live-grid-v21 · BINANCE"), `opened_at`, `owner`, `origin` (`alert|manual`), `sla_ack{minutes, met}`;
+  - `resolve_budget{seconds, started_at}` → frontend vẽ đồng hồ "open for" và thanh budget;
+  - `market{symbol, last_price, prev_price, spark[48], unreconciled{qty, unit}}` — stream (SSE `market.tick`, BR-EX-43) hoặc poll 1.4s; Δ re-price = qty × last_price tính **server-side** hoặc ghi rõ là dẫn xuất hiển thị;
+  - `evidence_facts[{label: finding|sync_snapshots|blast_radius|probable_cause, text, link{label,href}, emphasis}]`;
+  - `operations_taken[{at, operation_id, command, status: VERIFIED|AWAITING_APPLY, note, href}]`, `apply_plan{label, href}`;
+  - `resolution_gates[{key, state: done|open|waiting, text, link}]` — bản "lời" của `resolution_gate.blocker_codes`, server-enforced;
+  - `timeline_lines[{at, text}]`, `waiting_line`, `resolved{resolved_in, resolved_at, timeline_tail, footer_note}`.
+- **Lý do UI:** hi-fi 4d là màn "sửa trong lúc thị trường chạy": dải Market live, Evidence 4 dòng, Operations taken có chip trạng thái, 5 gate bằng lời, Timeline. Contract hiện chỉ có state/gate code/hash/op id → màn toàn "not stated". Frontend đã dựng và chạy bằng smoke `incident.smoke.ts` (cờ `INCIDENT_SMOKE`), motion đúng hi-fi (clock 1s, price 1.4s).
+- **Invariant:** giá và Δ không tính ở browser trừ khi contract ghi `derived_display`; gate list chỉ là gương của server.
+- **Xoá smoke:** khi 46 có fixture canonical → xoá `incident.smoke.ts` theo hợp đồng đầu file.
+
+### BR-EX-47 — Operations Queue v2 (hi-fi WF 4e): priority, phase, detail, next step, KPI strip, throughput, countdowns, alerts rail (2026-08-25) — **spec cho codex**
+
+- **Cần trong `operations-queue.v1` (list) — mỗi row thêm:** `priority` (`P1|P2|P3`, **server tính** = severity × age × blast radius),
+  `phases[{phase: plan|apply|verify, mark: done|active|pending|failed}]`, `state_chip{label, tone: warn|accent|good|mute, pulse}`
+  (`"PARTIAL 1/2"`, `"AWAITING_APPLY"`, `"RUNNING · 2/3"`), `age_seconds`, `age_tone`, `next_step{label, href|null}`
+  (`"plan residue re-apply →"`, `"review in incident inc_44 →"`, `"watch — 202 ≠ success"`), `detail_parts[{text, tone, href, live: escalate|plan_expiry|null}]`,
+  `sub_intents{done, total, progress_pct}`, `escalate_at` (ISO, PARTIAL >15m auto-escalates), `plan_expires_at` (ISO), `incident_id` (BR-EX-33).
+- **Root:** `kpis[{key: partial|awaiting_apply|running|verified_24h, value:int, sub, tone}]`, `throughput_verified_per_hour[24]`,
+  `source{authority: EXECUTION, journal: "command journal", live: bool, as_of}`, `attention_count`.
+- **Alerts rail:** `GET /api/v1/execution/alerts?limit=20` → `[{level: CRITICAL|WARN|INFO, age_seconds, title, meta, href, object{type: finding|sync|operation|condition, id}, escalate_at?}]`
+  — alert = state change of a typed object, never free text; badge đếm CRITICAL (BR-EX-43 summary).
+- **Lý do UI:** hi-fi 4e là bảng triage một liếc: pri chip, phase trail, chip trạng thái (PARTIAL nhấp nháy), dòng chi tiết với đếm ngược, KPI strip, throughput sparkline, rail alert 4 thẻ. Contract hiện chỉ có 3 state thô + page.
+- **Ảnh hưởng hiện tại:** `/execution/operations` chạy `operationsQueue.smoke.ts` (`QUEUE_SMOKE`), hàng contract thật (`op_fixture_queue_1`) in mờ dưới hàng smoke; motion: age +1s, escalate/plan-expiry đếm ngược, sub-intent bar loop 66→96%.
+- **Invariant:** priority/escalation là **server rule**; frontend chỉ vẽ; "Mine" vẫn disabled tới khi có actor filter (BR-EX-32).
+- **Fixture:** `execution-operations-queue.attention.valid.json` (3 hàng hi-fi + 3 done) và `execution-alerts.valid.json` (4 thẻ).
+- **Xoá smoke:** khi 47 + 43 giao → xoá `operationsQueue.smoke.ts` theo hợp đồng đầu file.
+
