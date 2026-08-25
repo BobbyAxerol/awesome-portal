@@ -988,3 +988,9 @@ bật chip, không phải hỏng.
 
 - **Field cần:** `smoke_plan {plan_id, qty, cap, currency, timebox_minutes, operator, status, approved_by}` trong Sandbox certification.
 - **Lý do UI:** HiFi 1d "Smoke plan (bounded)" là bảng; model hiện không có ⇒ không render (không bịa).
+
+### BR-EX-39 — envelope + payload mẫu cho từng `event_type` Execution, và kiểu `schema_version` (2026-08-25, EL-V2-09)
+
+- **Cần:** với mỗi `event_type` edge publish (`order.updated`, `fill.recorded`, `position.updated`, …) một mẫu **envelope Portal + payload** đã qua D4 mapper; và chốt kiểu `schema_version` (fixture Portal: int `1`; extract TS: string `"v1"`).
+- **Lý do:** parity fixture ↔ extract (`SHADOW_PARITY_EXTRACT_2026-08-25.md`) chỉ so được envelope với payload body — khác tầng; lệch kiểu `schema_version` là lệch thật.
+- **Ảnh hưởng:** SSE mapper Portal đọc `projection_epoch/sequence` từ `id`; payload chưa được đọc — chưa lỗi, nhưng Lane B cần mẫu để test.

@@ -46,7 +46,57 @@ const GOVERNANCE_SCREENS = new Set([
   "EXECUTION_PAPER_EXIT_REVIEW_SCREEN",
 ]);
 
-function PreviewFrame({ screenId, children }: { screenId: string; children: ReactNode }) {
+/**
+ * The banner says which source is behind the screen — from the registry's
+ * `delivery_profile`, never from a hard-coded word. fixture says fixture,
+ * shadow says shadow, source says source (EL-V2-09: the profile never lies).
+ */
+export const PROFILE_BANNER: Record<string, { title: string; line: string; detail: string }> = {
+  fixture: {
+    title: "FIXTURE PREVIEW",
+    line: "No live connection · Actions are simulated",
+    detail: "Local fixture data only. No connection to AWS-HK, the Trading System, any broker or any realtime stream. Every action is simulated inside the browser and nothing is sent anywhere.",
+  },
+  shadow: {
+    title: "SHADOW PROJECTION",
+    line: "Read-only replay of a BUILDING epoch · not the live source · actions are simulated",
+    detail: "Values come from a shadow projection the Portal ingested for parity checks. They are real-shaped but not the promoted epoch; nothing here is live, and no action is sent anywhere.",
+  },
+  source: {
+    title: "SOURCE · READ-ONLY",
+    line: "Promoted projection through the Portal boundary · commands remain disabled",
+    detail: "Values are read from the promoted projection served by the Portal boundary (SGP). The browser never contacts AWS-HK or the Trading System; command relay stays disabled unless a later authority contract enables it.",
+  },
+};
+export function PreviewBanner({ profile, screenId }: { profile: string | null | undefined; screenId?: string }) {
+  const key = profile && PROFILE_BANNER[profile] ? profile : profile ? "unknown" : "fixture";
+  const copy = PROFILE_BANNER[key] ?? {
+    title: `PROFILE ${String(profile).toUpperCase()}`,
+    line: "Unrecognised delivery profile — treated as not live",
+    detail: `The registry publishes delivery_profile "${profile}", which this build does not know. It is rendered as not live and nothing is sent anywhere.`,
+  };
+  return (
+    <aside className="exec-preview-banner" role="status" data-execution-preview={key}>
+      <strong>{copy.title}</strong>
+      <span>{copy.line}</span>
+      <details className="exec-preview-details">
+        <summary>Details</summary>
+        <p>{copy.detail}</p>
+      </details>
+      {/* EL-V2-03 §4.3: implementation identity lives in an inspector the
+          operator opens on purpose, never in the default scan path. */}
+      <details className="exec-preview-inspector">
+        <summary>Inspector</summary>
+        <dl className="exec-preview-inspector-list">
+          <div><dt>screen</dt><dd><code data-preview-screen-id>{screenId ?? "—"}</code></dd></div>
+          <div><dt>delivery</dt><dd><code>{key}</code></dd></div>
+          <div><dt>build flag</dt><dd><code>VITE_EXECUTION_PREVIEW_ENABLED=true</code></dd></div>
+        </dl>
+      </details>
+    </aside>
+  );
+}
+function PreviewFrame({ screenId, profile, children }: { screenId: string; profile?: string | null; children: ReactNode }) {
   const kind: ExecutionSurfaceKind = GOVERNANCE_SCREENS.has(screenId)
     ? "governance"
     : "deployments";
@@ -58,34 +108,13 @@ function PreviewFrame({ screenId, children }: { screenId: string; children: Reac
           rule §3.8) at production-warning volume; the detail it carried now
           lives in the disclosure so the default reading cost is one glance.
           `screenId` moved into the inspector in EL-V2-03. */}
-      <aside className="exec-preview-banner" role="status" data-execution-preview="fixture">
-        <strong>FIXTURE PREVIEW</strong>
-        <span>No live connection · Actions are simulated</span>
-        <details className="exec-preview-details">
-          <summary>Details</summary>
-          <p>
-            Local fixture data only. No connection to AWS-HK, the Trading System, any broker or any
-            realtime stream. Every action is simulated inside the browser and nothing is sent
-            anywhere.
-          </p>
-        </details>
-        {/* EL-V2-03 §4.3: implementation identity lives in an inspector the
-            operator opens on purpose, never in the default scan path. */}
-        <details className="exec-preview-inspector">
-          <summary>Inspector</summary>
-          <dl className="exec-preview-inspector-list">
-            <div><dt>screen</dt><dd><code data-preview-screen-id>{screenId}</code></dd></div>
-            <div><dt>delivery</dt><dd><code>fixture</code></dd></div>
-            <div><dt>build flag</dt><dd><code>VITE_EXECUTION_PREVIEW_ENABLED=true</code></dd></div>
-          </dl>
-        </details>
-      </aside>
+      <PreviewBanner profile={profile} screenId={screenId} />
       {children}
     </ExecutionSurface>
   );
 }
 
-export function ExecutionPreviewRoute({ screenId }: { screenId: string }) {
+export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: string; profile?: string | null }) {
   const params = useParams();
   const navigate = useNavigate();
   const api = useMemo(() => createFixtureApi(), []);
@@ -182,5 +211,5 @@ export function ExecutionPreviewRoute({ screenId }: { screenId: string }) {
       content = null;
   }
 
-  return <PreviewFrame screenId={screenId}>{content}</PreviewFrame>;
+  return <PreviewFrame screenId={screenId} profile={profile}>{content}</PreviewFrame>;
 }

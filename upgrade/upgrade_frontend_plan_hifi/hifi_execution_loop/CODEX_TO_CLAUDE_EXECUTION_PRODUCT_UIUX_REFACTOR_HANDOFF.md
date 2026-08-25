@@ -1524,8 +1524,10 @@ nhất: **test xanh không phải phê duyệt sản phẩm**. Phase này tách 
 | Gate | Kết quả | Bằng chứng |
 |---|---|---|
 | Consume only activated capabilities | ✓ (không có gì để consume) | registry `query_enabled`/`realtime_enabled` = 0, `delivery_profile` null; mọi màn fixture; SSE không mở |
+| `delivery_profile` không bao giờ nói dối | ✓ | banner preview đọc `delivery_profile` từ registry (`PreviewBanner`): fixture / shadow / source / unknown mỗi loại một câu; test 5 case. Kích hoạt Lane B **không cần đổi code frontend** — runbook §3b acceptance |
+| Review guide 10 phase + form ký | ✓ | `REVIEW_GUIDE_V2_ALL_2026-08-25.md`, §7 acceptance |
 | Activate one screen/profile | **không thực hiện** — BE-V2-B…G chưa accepted; Bobby chưa duyệt | activation record §2 `V2_RELEASE_ACCEPTANCE_2026-08-24.md` |
-| Shadow parity | harness ✓ · dữ liệu **chưa có** | `scripts/shadow-parity.mjs` + `shadowParity.test.ts` |
+| Shadow parity | harness ✓ · **đã chạy trên extract thật trong repo** (5 event-samples + problems.v1): 0 dòng không giải thích, 1 lệch thật `schema_version` int vs string → BR-EX-39 · parity trên shadow epoch chờ BE-V2-F | `scripts/shadow-parity.mjs`, `shadowParity.test.ts`, `SHADOW_PARITY_EXTRACT_2026-08-25.md` |
 | Typed 401 / gap / reconnect / backpressure / source-loss | ✓ | `subscription.ts` (+`auth_expired`/`source_lost`/`BACKPRESSURE`), `sse.ts` (preflight, deadline-derived AUTH_EXPIRED, coalesce notifications), Command Center badges/alerts; `streamHardening.test.tsx` 9 test; sse.test vẫn khoá danh sách sự kiện edge |
 | Gates across all routes | ✓ | visual 26 route baseline + 87 crop · a11y (contrast/ids/labels/keyboard audits) · responsive 5 breakpoint · DOM/heap budget e2e mọi route · perf 10⁵ · journeys · sweep 0 NO-OP |
 | Research/Planning + stable non-regression | ✓ | 101 baseline QuantBT không tái sinh ở project flag-off; stable :18081 không đụng |
