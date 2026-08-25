@@ -1306,6 +1306,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "paper-source-runner"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "execution-contracts",
+ "paper-source-contract",
+ "paper-source-ingestor",
+ "paper-source-transport",
+ "projection-core",
+ "projection-store-pg",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "paper-source-transport"
 version = "0.1.0"
 dependencies = [

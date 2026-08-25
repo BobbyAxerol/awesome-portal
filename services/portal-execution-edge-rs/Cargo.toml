@@ -10,6 +10,7 @@ members = [
   "crates/paper-shadow-mapper",
   "crates/paper-source-contract",
   "crates/paper-source-ingestor",
+  "crates/paper-source-runner",
   "crates/paper-source-transport",
   "crates/realtime-sse",
   "crates/source-qualification",

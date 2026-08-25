@@ -448,7 +448,7 @@ fn leased_snapshot_resume_restarts_bounded_paging_without_exposing_tokens() {
     assert!(blueprint
         .query
         .iter()
-        .any(|(key, value)| key == "snapshot" && value == "raw-sensitive-snapshot-token"));
+        .any(|(key, value)| *key == "snapshot" && value == "raw-sensitive-snapshot-token"));
     assert!(!format!("{coordinator:?}").contains("raw-sensitive-snapshot-token"));
 }
 
@@ -460,9 +460,8 @@ fn streaming_resume_uses_exact_durable_cursor_and_rejects_snapshot_drift() {
         phase: D4ResumeCheckpointPhase::Streaming,
         snapshot: None,
         event_cursor: OpaqueToken::parse("raw-sensitive-event-cursor-next").unwrap(),
-        snapshot_digest:
-            "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-                .to_owned(),
+        snapshot_digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            .to_owned(),
         snapshot_created_at: at(1),
         snapshot_expires_at: at(301),
         expected_counts: SnapshotResourceCounts {

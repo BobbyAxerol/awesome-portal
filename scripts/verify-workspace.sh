@@ -287,6 +287,19 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0005_projection_event_entity.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0006_projection_operation_and_sequence_semantics.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0007_d4_source_checkpoint.sql" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-contract/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-contract/build.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-contract/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-contract/src/tests.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-ingestor/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-ingestor/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-ingestor/src/tests.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-runner/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-runner/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-runner/src/tests.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-transport/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-transport/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-transport/src/tests.rs" \
   "${ROOT_DIR}/deploy/images/execution-edge-ci.Dockerfile" \
   "${ROOT_DIR}/deploy/images/execution-edge.Dockerfile" \
   "${ROOT_DIR}/deploy/images/source-proxy.Dockerfile" \
@@ -682,6 +695,19 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0005_projection_event_entity.sql \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0006_projection_operation_and_sequence_semantics.sql \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0007_d4_source_checkpoint.sql \
+  services/portal-execution-edge-rs/crates/paper-source-contract/Cargo.toml \
+  services/portal-execution-edge-rs/crates/paper-source-contract/build.rs \
+  services/portal-execution-edge-rs/crates/paper-source-contract/src/lib.rs \
+  services/portal-execution-edge-rs/crates/paper-source-contract/src/tests.rs \
+  services/portal-execution-edge-rs/crates/paper-source-ingestor/Cargo.toml \
+  services/portal-execution-edge-rs/crates/paper-source-ingestor/src/lib.rs \
+  services/portal-execution-edge-rs/crates/paper-source-ingestor/src/tests.rs \
+  services/portal-execution-edge-rs/crates/paper-source-runner/Cargo.toml \
+  services/portal-execution-edge-rs/crates/paper-source-runner/src/lib.rs \
+  services/portal-execution-edge-rs/crates/paper-source-runner/src/tests.rs \
+  services/portal-execution-edge-rs/crates/paper-source-transport/Cargo.toml \
+  services/portal-execution-edge-rs/crates/paper-source-transport/src/lib.rs \
+  services/portal-execution-edge-rs/crates/paper-source-transport/src/tests.rs \
   deploy/images/execution-edge-ci.Dockerfile \
   deploy/images/source-proxy.Dockerfile \
   scripts/execution-edge-test.sh \

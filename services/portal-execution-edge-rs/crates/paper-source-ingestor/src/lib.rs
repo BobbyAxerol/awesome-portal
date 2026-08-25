@@ -226,7 +226,7 @@ impl PaperIngestionCoordinator {
     /// A partially paged snapshot restarts paging from the first resource
     /// against the same immutable lease. Baseline rows are not written until
     /// all three resources are complete, so this replay is deterministic and
-    /// does not require persisting source payloads outside PostgreSQL.
+    /// does not require persisting source payloads outside `PostgreSQL`.
     ///
     /// # Errors
     ///
