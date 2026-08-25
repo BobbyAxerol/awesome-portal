@@ -278,6 +278,67 @@ pub struct OrderFact {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
+/// D4 Paper shadow extension that preserves the frozen `OrderFact` payload
+/// while carrying the source account binding required by Portal projections.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PaperOrderFact {
+    #[serde(flatten)]
+    pub order: OrderFact,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub account_id: Option<CanonicalId>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FillFact {
+    pub fill_id: CanonicalId,
+    pub trade_id: Option<CanonicalId>,
+    pub client_order_id: Option<CanonicalId>,
+    pub alpha_id: CanonicalId,
+    pub account_id: Option<CanonicalId>,
+    pub symbol: String,
+    pub side: ExternalVocabularyValue,
+    pub quantity: DecimalString,
+    pub price: DecimalString,
+    pub commission: Option<DecimalString>,
+    pub trade_time: Option<DateTime<Utc>>,
+    pub mode: ExternalVocabularyValue,
+    pub venue: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PositionFact {
+    pub position_id: CanonicalId,
+    pub alpha_id: CanonicalId,
+    pub account_id: CanonicalId,
+    pub mode: ExternalVocabularyValue,
+    pub venue: String,
+    pub instrument_id: Option<String>,
+    pub symbol: String,
+    pub side: ExternalVocabularyValue,
+    pub signed_quantity: DecimalString,
+    pub quantity: DecimalString,
+    pub average_open_price: Option<DecimalString>,
+    pub average_close_price: Option<DecimalString>,
+    pub realized_pnl: Option<DecimalString>,
+    pub unrealized_pnl: Option<DecimalString>,
+    pub peak_quantity: Option<DecimalString>,
+    pub opened_at: Option<DateTime<Utc>>,
+    pub closed_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ExecutionEventFact {
+    pub event_id: CanonicalId,
+    pub event_type: String,
+    pub event_ts: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub trace_id: Option<CanonicalId>,
+    pub alpha_id: CanonicalId,
+    pub client_order_id: Option<CanonicalId>,
+    pub payload: serde_json::Map<String, serde_json::Value>,
+}
+
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum ContractError {
     #[error("identifier must be non-empty and must not contain surrounding whitespace")]

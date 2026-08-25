@@ -267,17 +267,40 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/command-relay/Cargo.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/command-relay/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/edge-service/src/main.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/edge-service/src/d4_command.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-core/Cargo.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-core/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/query-api/Cargo.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/query-api/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/Cargo.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/d4_writer.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/query.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/analytics_repository.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-shadow-mapper/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-shadow-mapper/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-shadow-mapper/src/tests.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/fixtures/d4-paper-shadow-corpus.manifest.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0001_projection_foundation.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0002_projection_query_foundation.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0003_analytics_source_projection.sql" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0004_analytics_integrity_hardening.sql" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0005_projection_event_entity.sql" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0006_projection_operation_and_sequence_semantics.sql" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0007_d4_source_checkpoint.sql" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-contract/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-contract/build.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-contract/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-contract/src/tests.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-ingestor/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-ingestor/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-ingestor/src/tests.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-runner/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-runner/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-runner/src/tests.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-transport/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-transport/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-transport/src/tests.rs" \
   "${ROOT_DIR}/deploy/images/execution-edge-ci.Dockerfile" \
   "${ROOT_DIR}/deploy/images/execution-edge.Dockerfile" \
   "${ROOT_DIR}/deploy/images/source-proxy.Dockerfile" \
@@ -331,8 +354,27 @@ for required in \
   "${ROOT_DIR}/deploy/runbooks/execution-d3-contract-auth-probes-and-rollback.md" \
   "${ROOT_DIR}/deploy/execution-d4/README.md" \
   "${ROOT_DIR}/deploy/execution-d4/owner-input.env.example" \
+  "${ROOT_DIR}/deploy/execution-d4/qualification-runtime.env.example" \
+  "${ROOT_DIR}/deploy/execution-d4/storage-input.env.example" \
+  "${ROOT_DIR}/deploy/execution-d4/compose.encrypted-storage.yaml" \
+  "${ROOT_DIR}/deploy/execution-d4/compose.paper-read-shadow.yaml" \
+  "${ROOT_DIR}/deploy/execution-d4/source-proxy/nginx.conf.template" \
+  "${ROOT_DIR}/deploy/execution-d4/source-proxy/trading-system-read-header.conf.example" \
   "${ROOT_DIR}/deploy/runbooks/execution-d4-paper-shadow-and-rollback.md" \
+  "${ROOT_DIR}/scripts/execution-d4-storage-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-render-source-proxy.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-source-proxy-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-qualification-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-qualification-preflight-test.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh" \
+  "${ROOT_DIR}/scripts/test-execution-d4-storage.sh" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_SOURCE_PROXY_OFFLINE.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_QUALIFICATION_RUNTIME_ENTRYPOINT.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md" \
@@ -645,17 +687,40 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/ts-adapter-v1/src/lib.rs \
   services/portal-execution-edge-rs/crates/command-relay/Cargo.toml \
   services/portal-execution-edge-rs/crates/command-relay/src/lib.rs \
+  services/portal-execution-edge-rs/crates/edge-service/src/d4_command.rs \
   services/portal-execution-edge-rs/crates/projection-core/Cargo.toml \
   services/portal-execution-edge-rs/crates/projection-core/src/lib.rs \
   services/portal-execution-edge-rs/crates/query-api/Cargo.toml \
   services/portal-execution-edge-rs/crates/query-api/src/lib.rs \
   services/portal-execution-edge-rs/crates/projection-store-pg/Cargo.toml \
   services/portal-execution-edge-rs/crates/projection-store-pg/src/lib.rs \
+  services/portal-execution-edge-rs/crates/projection-store-pg/src/d4_writer.rs \
   services/portal-execution-edge-rs/crates/projection-store-pg/src/query.rs \
   services/portal-execution-edge-rs/crates/projection-store-pg/src/analytics_repository.rs \
+  services/portal-execution-edge-rs/crates/paper-shadow-mapper/Cargo.toml \
+  services/portal-execution-edge-rs/crates/paper-shadow-mapper/src/lib.rs \
+  services/portal-execution-edge-rs/crates/paper-shadow-mapper/src/tests.rs \
+  services/portal-execution-edge-rs/fixtures/d4-paper-shadow-corpus.manifest.json \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0001_projection_foundation.sql \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0002_projection_query_foundation.sql \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0003_analytics_source_projection.sql \
+  services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0004_analytics_integrity_hardening.sql \
+  services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0005_projection_event_entity.sql \
+  services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0006_projection_operation_and_sequence_semantics.sql \
+  services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0007_d4_source_checkpoint.sql \
+  services/portal-execution-edge-rs/crates/paper-source-contract/Cargo.toml \
+  services/portal-execution-edge-rs/crates/paper-source-contract/build.rs \
+  services/portal-execution-edge-rs/crates/paper-source-contract/src/lib.rs \
+  services/portal-execution-edge-rs/crates/paper-source-contract/src/tests.rs \
+  services/portal-execution-edge-rs/crates/paper-source-ingestor/Cargo.toml \
+  services/portal-execution-edge-rs/crates/paper-source-ingestor/src/lib.rs \
+  services/portal-execution-edge-rs/crates/paper-source-ingestor/src/tests.rs \
+  services/portal-execution-edge-rs/crates/paper-source-runner/Cargo.toml \
+  services/portal-execution-edge-rs/crates/paper-source-runner/src/lib.rs \
+  services/portal-execution-edge-rs/crates/paper-source-runner/src/tests.rs \
+  services/portal-execution-edge-rs/crates/paper-source-transport/Cargo.toml \
+  services/portal-execution-edge-rs/crates/paper-source-transport/src/lib.rs \
+  services/portal-execution-edge-rs/crates/paper-source-transport/src/tests.rs \
   deploy/images/execution-edge-ci.Dockerfile \
   deploy/images/source-proxy.Dockerfile \
   scripts/execution-edge-test.sh \
@@ -705,8 +770,27 @@ for tracked_source in \
   deploy/runbooks/execution-d3-contract-auth-probes-and-rollback.md \
   deploy/execution-d4/README.md \
   deploy/execution-d4/owner-input.env.example \
+  deploy/execution-d4/qualification-runtime.env.example \
+  deploy/execution-d4/storage-input.env.example \
+  deploy/execution-d4/compose.encrypted-storage.yaml \
+  deploy/execution-d4/compose.paper-read-shadow.yaml \
+  deploy/execution-d4/source-proxy/nginx.conf.template \
+  deploy/execution-d4/source-proxy/trading-system-read-header.conf.example \
   deploy/runbooks/execution-d4-paper-shadow-and-rollback.md \
+  scripts/execution-d4-storage-preflight.sh \
+  scripts/execution-d4-render-source-proxy.sh \
+  scripts/execution-d4-source-proxy-preflight.sh \
+  scripts/execution-d4-qualification-preflight.sh \
+  scripts/execution-d4-qualification-preflight-test.sh \
+  scripts/execution-d4-source-proxy-test.sh \
+  scripts/test-execution-d4-storage.sh \
+  upgrade/backend/EX_BE_02_LIVE_D4_SOURCE_PROXY_OFFLINE.md \
+  upgrade/backend/EX_BE_02_LIVE_D4_QUALIFICATION_RUNTIME_ENTRYPOINT.md \
   upgrade/backend/EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md \
+  upgrade/backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md \
+  upgrade/backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md \
+  upgrade/backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md \
+  upgrade/backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md \
   upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md \
   upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md \
   upgrade/backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md \
@@ -856,6 +940,13 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-d3-render-probe-env.sh" \
   "${ROOT_DIR}/scripts/execution-d3-live-probe.sh" \
   "${ROOT_DIR}/scripts/execution-d3-test.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-storage-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-render-source-proxy.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-source-proxy-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-qualification-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-qualification-preflight-test.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh" \
+  "${ROOT_DIR}/scripts/test-execution-d4-storage.sh" \
   "${ROOT_DIR}/scripts/execution-image-publication-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
@@ -880,6 +971,9 @@ python3 "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_authorization.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_isolation.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d4_authorization.py"
+"${ROOT_DIR}/scripts/test-execution-d4-storage.sh"
+"${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh"
+"${ROOT_DIR}/scripts/execution-d4-qualification-preflight-test.sh"
 
 while IFS= read -r tracked_path; do
   case "${tracked_path}" in

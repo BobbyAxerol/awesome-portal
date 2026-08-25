@@ -32,6 +32,35 @@ identities, healthy WireGuard and exact host-admission baseline. The projection
 store must use owner-approved encryption with a tested backup and restore path.
 The dark D2 root-volume database is not an acceptable D4 business store.
 
+Copy `deploy/execution-d4/storage-input.env.example` outside Git, keep it mode
+0600 and fill only the owner decision, resource identity and evidence digests.
+The AWS control-plane evidence must independently prove `Encrypted=true` and
+the KMS identity; guest `lsblk` output is not encryption evidence.
+
+Run the read-only storage gate before Compose is allowed to create or reuse the
+D4 volume:
+
+```bash
+sudo ./scripts/execution-d4-storage-preflight.sh \
+  --env-file /PRIVATE/PATH/execution-d4-storage.env \
+  --mode readiness
+```
+
+Use the D4 overlay only after this passes:
+
+```bash
+sudo docker compose \
+  --env-file /PRIVATE/PATH/execution-runtime.env \
+  -f deploy/compose.execution-edge.yaml \
+  -f deploy/execution-d1/compose.dark.yaml \
+  -f deploy/execution-d4/compose.encrypted-storage.yaml \
+  config --quiet
+```
+
+The overlay must render a new `portal-execution-projection-pgdata-v2+`
+bind-backed local volume targeting the dedicated D4 data directory. It must
+never target `/`, the D2 volume or a directory on the root filesystem.
+
 Copy `deploy/execution-d4/owner-input.env.example` outside Git, set mode 0600
 and fill only identifiers/digests. Never put a source key, JWT, certificate,
 password, account ID, alpha ID, order, fill, position or event payload in the
@@ -45,6 +74,51 @@ python3 scripts/execution-d4-authorization.py \
 
 The validator must pass inside the approved <=2-hour window. Passing changes no
 runtime state.
+
+Render and validate only the D4-specific proxy profile; do not use the legacy
+D1/D3 `paper-read` renderer:
+
+```bash
+sudo ./scripts/execution-d4-render-source-proxy.sh \
+  --env-file /PRIVATE/PATH/execution-runtime.env \
+  --output /srv/primus/portal/source-proxy/nginx-d4.conf
+
+sudo ./scripts/execution-d4-source-proxy-preflight.sh \
+  --runtime-env /PRIVATE/PATH/execution-runtime.env \
+  --owner-input /PRIVATE/PATH/execution-d4-owner-input.env \
+  --config /srv/primus/portal/source-proxy/nginx-d4.conf \
+  --contract /srv/primus/portal/releases/RELEASE/d4-paper-read-locations.conf \
+  --mode readiness
+```
+
+Create a separate, root-owned mode-0600 qualifier env from
+`deploy/execution-d4/qualification-runtime.env.example`. Set
+`D4_AUTHORIZATION_EVIDENCE_SHA256` to the SHA-256 of the exact validated owner
+input bytes, then run the no-network qualifier gate:
+
+```bash
+sudo ./scripts/execution-d4-qualification-preflight.sh \
+  --edge-env /PRIVATE/PATH/execution-runtime.env \
+  --qualifier-env /PRIVATE/PATH/execution-d4-qualifier.env \
+  --owner-input /PRIVATE/PATH/execution-d4-owner-input.env \
+  --mode readiness
+```
+
+Compose must add both D4 overlays, with
+`SOURCE_PROXY_D4_CONTRACT_FILE` pointing to the exact installed include:
+
+```bash
+sudo docker compose \
+  --env-file /PRIVATE/PATH/execution-runtime.env \
+  --env-file /PRIVATE/PATH/execution-d4-storage.env \
+  --env-file /PRIVATE/PATH/execution-d4-qualifier.env \
+  -f deploy/compose.execution-edge.yaml \
+  -f deploy/execution-d1/compose.dark.yaml \
+  -f deploy/execution-d4/compose.encrypted-storage.yaml \
+  -f deploy/execution-d4/compose.paper-read-shadow.yaml \
+  --profile d4-paper-read-shadow \
+  config --quiet
+```
 
 ## 3. Create a BUILDING epoch only
 
@@ -61,9 +135,35 @@ ALLOW_TRADING_SYSTEM_CHANGES=false
 REGISTRY_DELIVERY_PROFILE=fixture
 ```
 
-The mapper may call only the locked GET allowlist through Source Proxy. It may
-write only Portal-owned journal/snapshot/projection tables. No ACTIVE epoch may
-be created or replaced.
+Start the database and migration first; the qualifier itself never migrates or
+selects an epoch implicitly:
+
+```bash
+d4_compose=(sudo docker compose \
+  --env-file /PRIVATE/PATH/execution-runtime.env \
+  --env-file /PRIVATE/PATH/execution-d4-storage.env \
+  --env-file /PRIVATE/PATH/execution-d4-qualifier.env \
+  -f deploy/compose.execution-edge.yaml \
+  -f deploy/execution-d1/compose.dark.yaml \
+  -f deploy/execution-d4/compose.encrypted-storage.yaml \
+  -f deploy/execution-d4/compose.paper-read-shadow.yaml \
+  --profile d4-paper-read-shadow)
+
+"${d4_compose[@]}" up -d projection-postgres
+
+# Run the migration owner, then idempotently prepare exactly BUILDING_EPOCH_ID.
+"${d4_compose[@]}" run --rm projection-migrator
+"${d4_compose[@]}" run --rm --no-deps \
+  paper-read-qualifier d4-prepare-building
+
+# Only now start the exact-route proxy and run one finite qualification.
+"${d4_compose[@]}" up -d source-proxy
+"${d4_compose[@]}" run --rm --no-deps paper-read-qualifier
+```
+
+The qualifier may call only the locked GET allowlist through Source Proxy. It
+may write only Portal-owned journal/snapshot/projection tables. No ACTIVE epoch
+may be created or replaced.
 
 ## 4. Qualification drills
 

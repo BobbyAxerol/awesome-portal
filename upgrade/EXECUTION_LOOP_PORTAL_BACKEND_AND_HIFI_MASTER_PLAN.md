@@ -27,6 +27,12 @@ Read these sources before implementing a slice:
 10. [Frontend review](upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_PLAN_REVIEW.md) — F-1–F-9 and BR-EX-16–22; dispositions are recorded in §15.4.
 11. [Backend architecture guide](BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md) and [backend index](backend/README.md) — existing Portal control-plane foundation and status vocabulary.
 12. [Dual-cell D0 reconciliation and D1 decision plan](backend/EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md) — sanitized two-cell evidence, locked topology, separate identities and the smallest reversible owner-gated bootstrap.
+13. [D3 live transport acceptance](backend/EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md) — protected-main image identities, real H2/TLS1.3 mTLS/JWT matrix, source loss/recovery, rollback and the remaining D4 stop gates.
+14. [D4 readiness audit and owner request](backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md) — current source/storage blockers and the exact sanitized contract response required before the first Paper read.
+15. [D4 mapper core and readiness hardening](backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md) — typed four-resource normalization, BUILDING-only replay evidence and the split store/ingestor readiness invariant.
+16. [D4 encrypted projection-storage boundary](backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md) — fail-closed EBS/KMS evidence, dedicated mount identity and render-only D4 Compose overlay without provisioning or source reads.
+17. [D4 owner action packet](backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md) — exact encrypted-gp3 setup/evidence handoff and the bounded implementation request for the Trading System Paper read identity/contract.
+18. [D4 source and storage reconciliation](backend/EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md) — accepted dedicated facade/runtime and encrypted-host evidence, v2 fail-closed authorization, and the remaining artifact-import/ingestor/qualification gates.
 
 The wireframes remain the visual authority. This plan is authoritative for data
 ownership, endpoint shape, compatibility, security, freshness, sequencing, and
@@ -798,7 +804,7 @@ so one slice may unlock several screens without inventing a second product roadm
 | EX-BE-04a | P0 / delivered | TypeScript bidirectional keyset/filter/sort/exact-count primitives over control-plane PostgreSQL | phases 1, 2 and Portal-owned portions of 5/7/8 |
 | EX-BE-05a | P0 / fresh-PG gate green | TypeScript governance/evidence/approval workflow and audit, with external panels allowed unavailable | phases 1–2 on real Portal data without AWS |
 | EX-BE-01 | P0 / contract complete | Rust workspace, canonical contracts, `ts-contract-v1`, vocabulary reconciliation and golden corpus | all real-source screen contracts |
-| EX-BE-02 | P0 / foundation complete; D1 network accepted, application dark | mTLS/delegated-auth boundary, capability negotiation, bounded read-only transport, exact-GET Source Proxy, preflight and rollback; scoped IAM, exact SG rule, handshake, public denial and link-loss evidence accepted; all application/source flags remain false and D2 has separate gates | safe AWS integration |
+| EX-BE-02 | P0 / D3 transport accepted; D4 mapper and encrypted-storage boundary prepared offline | mTLS/delegated-auth boundary, capability negotiation, bounded read-only transport, exact-GET Source Proxy, preflight and rollback; D1/D2 plus real H2/TLS1.3/JWT/loss/recovery evidence accepted; D4 rejects root/D2 storage reuse and all business-source flags remain false pending owner identity/contract, encrypted volume and live qualification | safe AWS integration |
 | EX-BE-03 | P0 / foundation complete; source ingestion integration pending | projection schema, reducer, cursor/epoch/replay/snapshot and freshness evaluator; production ingestion flag remains false | phases 4, 9–17 |
 | EX-BE-04b | P1 / foundation complete; screen API/source integration pending | Rust projection query primitives: bidirectional keyset, filter/sort/count, adaptive series ladder, exact decimals and typed cold retention | phases 4, 9, 11–17 |
 | EX-BE-05b | P1 / F0 foundation complete; live relay inactive | Canonical catalogue + typed conditions + blocked TypeScript plan/apply/verify and deny-by-default Rust relay journal; authenticated live relay remains owner/source gated | phases 6–12 mutation/operation paths |
@@ -806,6 +812,19 @@ so one slice may unlock several screens without inventing a second product roadm
 | EX-BE-07a | P2 / foundation complete | pure correlation, exposure, funnel, capital-ledger and batched preview analytics | phases 3, 14–17 contracts |
 | EX-BE-07b | P2 / integration complete; source activation evidence pending | active-epoch source repositories and six narrow authenticated screen APIs | phases 3, 14–17 integration |
 | EX-BE-08 | P2 / offline qualification foundation complete; live evidence pending | security/load/soak/DR/rollback evidence and production profiles | phase 18 and production activation |
+
+The D4 encrypted projection-storage checkpoint is
+`D4_ENCRYPTED_STORAGE_BOUNDARY_PREPARED / LIVE_VOLUME_NOT_PROVISIONED /
+NO_SOURCE_READ`. Its schema, read-only preflight and Compose overlay are
+offline-only: they prohibit AWS-HK root/D2-volume reuse but neither provision
+storage nor enable a Paper source. Dedicated identity/contract, explicit
+volume approval/provisioning and live qualification remain separate gates.
+
+The corresponding owner handoff is
+`D4_OWNER_ACTION_PACKET_PREPARED / OWNER_ACTIONS_PENDING / NO_SOURCE_READ`.
+It fixes the initial gp3 capacity/performance/mount envelope and the sanitized
+Trading System agent response contract; it does not authorize either owner
+action or unlock any runtime profile.
 
 ### 12.1.1 Six-phase pre-IAM SGP runway
 
@@ -1214,7 +1233,8 @@ Delivery therefore advances through separate stop gates:
 
 ### D4 offline authorization checkpoint — 2026-08-23
 
-Status: `D4_OFFLINE_AUTHORIZATION_PREPARED / LIVE_D4_PREDECESSOR_BLOCKED`.
+Status: `D4_OFFLINE_AUTHORIZATION_PREPARED / D3_PREDECESSOR_ACCEPTED /
+LIVE_D4_INPUTS_BLOCKED`.
 The full Portal remains on SGP; AWS-HK remains limited to Source Proxy, Rust
 Execution Edge and private projection storage on the existing shared host. A
 tested owner/evidence validator rejects D4 unless D2/D3 are accepted, the source
@@ -1224,6 +1244,25 @@ storage is encrypted and approved. Qualification is limited to a `BUILDING`
 epoch and cannot open Query, analytics, SSE, commands, activation or the
 registry profile. The currently observed optional-key reads and incomplete
 source paging/event semantics fail this gate by design.
+
+The 2026-08-24 read-only D4 audit additionally confirms that AWS-HK has no
+separate encrypted projection mount: the D2 PostgreSQL volume remains on the
+unencrypted root filesystem and is prohibited for business data. Status is
+`D4_READINESS_AUDITED / LIVE_D4_INPUTS_BLOCKED / NO_SOURCE_READ`. The exact
+identity, four-route cursor/completeness/resync and runtime response requested
+from the Trading System owner is in
+[`EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md`](backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md).
+
+The offline mapper checkpoint is
+`D4_MAPPER_CORE_OFFLINE_COMPLETE / RUNTIME_FAIL_CLOSED /
+LIVE_INPUTS_BLOCKED`. Rust now normalizes the four D4 resources with exact
+decimals and alpha-scope enforcement, seals a synthetic corpus and proves
+BUILDING-only replay on fresh PostgreSQL. Store connectivity and mapper health
+are separate readiness dependencies, so no empty projection database can claim
+D4 readiness. The live pagination/resync loop still waits for the owner
+contract and encrypted store; this checkpoint performs no source read and
+unlocks no delivery profile. Evidence:
+[`EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md`](backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md).
 
 The 2026-08-23 IAM/D1 requalification is
 `IAM_VERIFIED / D1_REVALIDATED / APPLICATION_DARK`. The live instance role
@@ -1322,6 +1361,28 @@ the <=60-second RS256 positive/negative matrix, bounded latency and fail-closed
 fault probes. This preparation is not cross-cell evidence and unlocks no
 frontend profile. Detail:
 [`EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md`](backend/EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md).
+
+This paragraph records the historical offline checkpoint; the accepted live
+state is recorded after the remediation history below.
+
+The first D3 live window on 2026-08-24 rejected fail-closed because the
+immutable Edge image retained the prior gateway digest lock
+`sha256:4f63...`, while the D0-compatible current gateway is
+`sha256:8a81...`. Internal Source Proxy mTLS and the exact three-public/four-503
+guard matrix passed; no JWT, business read or projection occurred, and D2 was
+restored cleanly. The versioned lock is remediated in source, but a new
+protected-main signed Edge image is a hard predecessor to a fresh D3 window.
+Evidence:
+[`EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md`](backend/EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md).
+
+The final protected-main D3 candidate at commit `5ec282e` is now
+`D3_TRANSPORT_ACCEPTED / BUSINESS_SOURCE_DARK / D2_RUNTIME_RESTORED`.
+It passed real SGP→AWS-HK HTTP/2, TLS 1.3 mTLS, the complete delegated-JWT
+positive/negative matrix, bounded latency and Source Proxy loss/recovery. Safe
+logs contained only the three public source routes, projection business state
+remained empty, and unchanged-D2 rollback passed with no restart/OOM. D4 is not
+implicitly authorized. Evidence:
+[`EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md`](backend/EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md).
 
 The detailed evidence, recommended defaults, decision sheet and rollback are in
 [`EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md`](backend/EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md).
@@ -1435,19 +1496,21 @@ Any granted request becomes a new contract-pack revision, adapter fixture, threa
 update, compatibility test, and owner activation decision. It does not silently
 change Portal behavior.
 
-### 15.3 Owner decisions still required before production integration
+### 15.3 Owner decisions still required before D4 and production integration
 
-D0 evidence is complete. Before D1, the owner must resolve the exact values and
-named owners in the [D1 decision sheet](backend/EX_BE_02_LIVE_D0_RECONCILIATION_AND_D1_DECISION_PLAN.md#6-owner-decisions-required-before-d1); endpoint and credential values are delivered privately and never committed.
+D1 network, D2 dark runtime and D3 transport are accepted. The remaining owner
+decisions do not reopen those layers and are delivered privately, never in Git.
 
-1. Approve stable SGP/AWS endpoints, candidate WireGuard `/30` and UDP port,
-   AWS SG/UFW ownership, private DNS/SAN and the D1 change/rollback window.
-2. Approve separate WireGuard, workload mTLS, delegated RS256/JWKS, dedicated
-   Trading System read and PostgreSQL identities plus their delivery/rotation owners.
-3. Approve private PostgreSQL 16 RDS placement, retention, PITR/restore test,
-   RPO/RTO and cost. Local AWS PostgreSQL is only an explicit bounded-Paper exception.
-4. Resolve AWS-HK OOM/I/O admission and assign CPU/memory/disk limits before D2.
-5. Confirm Paper/BINANCE USD_M as the first real integration scope.
+1. Ask the Trading System owner to publish a dedicated Paper read-only identity
+   and exact GET/cursor/completeness/resync contract. Missing/wrong credentials
+   and every mutation method must be denied.
+2. Approve the D4 PostgreSQL identity, secret delivery/rotation owner and a
+   separately encrypted projection store on the existing AWS-HK host or another
+   explicitly approved store; no new EC2/RDS is implied.
+3. Approve retention, encrypted backup/restore test, RPO/RTO and storage budget.
+4. Confirm `PAPER_BINANCE_USDM` as the first bounded real integration scope.
+5. Approve the D4 source, rollback, backup and observability owners plus one
+   change window no longer than two hours.
 6. Confirm risk-tier/SoD/WebAuthn policy, especially emergency protection versus
    risk-increasing live actions.
 7. Decide VNM authoritative calendar source and ATO/ATC scope.

@@ -3,7 +3,10 @@
 use std::collections::BTreeMap;
 
 use chrono::{DateTime, Utc};
-use execution_contracts::{CanonicalId, ExternalVocabularyValue, OrderFact, SourceAuthority};
+use execution_contracts::{
+    CanonicalId, ExecutionEventFact, ExternalVocabularyValue, FillFact, OrderFact, PaperOrderFact,
+    PositionFact, SourceAuthority,
+};
 use serde::Deserialize;
 use serde_json::Value;
 use thiserror::Error;
@@ -343,15 +346,11 @@ fn validate_success_headers(headers: &BTreeMap<String, String>) -> Result<(), Ad
 /// Returns an error when a canonical identifier or RFC 3339 timestamp is
 /// invalid. Unknown enum tokens are preserved as unsupported values instead.
 pub fn map_order(wire: WireOrder, scoped_alpha_id: &str) -> Result<OrderFact, AdapterError> {
-    let alpha_id = wire
-        .strategy_id
-        .as_deref()
-        .unwrap_or(scoped_alpha_id)
-        .to_owned();
+    let alpha_id = canonical_scoped_alpha(wire.strategy_id.as_deref(), scoped_alpha_id)?;
     Ok(OrderFact {
         client_order_id: CanonicalId::parse(wire.client_order_id)?,
         venue_order_id: wire.venue_order_id,
-        alpha_id: CanonicalId::parse(alpha_id)?,
+        alpha_id,
         symbol: wire.symbol,
         side: external_value("OrderSide", wire.side),
         order_type: external_value("OrderType", wire.order_type),
@@ -361,9 +360,132 @@ pub fn map_order(wire: WireOrder, scoped_alpha_id: &str) -> Result<OrderFact, Ad
         status: external_value("OrderStatus", wire.status),
         mode: external_value("TradingMode", wire.mode),
         venue: wire.venue,
-        created_at: parse_optional_timestamp(wire.created_at)?,
-        updated_at: parse_optional_timestamp(wire.updated_at)?,
+        created_at: parse_optional_timestamp(wire.created_at.as_deref())?,
+        updated_at: parse_optional_timestamp(wire.updated_at.as_deref())?,
     })
+}
+
+/// Maps one v1 order into the D4 Paper-scoped extension without changing the
+/// frozen `OrderFact` serialization used by the existing qualification corpus.
+///
+/// # Errors
+///
+/// Returns an error when either the base order or optional account identity is
+/// not canonical for the requested alpha scope.
+pub fn map_paper_order(
+    mut wire: WireOrder,
+    scoped_alpha_id: &str,
+) -> Result<PaperOrderFact, AdapterError> {
+    let account_id = optional_id(wire.account_id.take())?;
+    Ok(PaperOrderFact {
+        order: map_order(wire, scoped_alpha_id)?,
+        account_id,
+    })
+}
+
+/// Maps one v1 fill into an exact-decimal Portal execution fact.
+///
+/// # Errors
+///
+/// Rejects invalid identifiers/timestamps and any row whose source alpha does
+/// not equal the alpha scope used for the bounded request.
+pub fn map_fill(wire: WireFill, scoped_alpha_id: &str) -> Result<FillFact, AdapterError> {
+    Ok(FillFact {
+        fill_id: CanonicalId::parse(wire.fill_id.canonical_text())?,
+        trade_id: optional_id(wire.trade_id)?,
+        client_order_id: optional_id(wire.client_order_id)?,
+        alpha_id: canonical_scoped_alpha(wire.strategy_id.as_deref(), scoped_alpha_id)?,
+        account_id: optional_id(wire.account_id)?,
+        symbol: wire.symbol,
+        side: external_value("OrderSide", wire.side),
+        quantity: wire.quantity,
+        price: wire.price,
+        commission: wire.commission,
+        trade_time: parse_optional_timestamp(wire.trade_time.as_deref())?,
+        mode: external_value("TradingMode", wire.mode),
+        venue: wire.venue,
+    })
+}
+
+/// Maps one v1 position into an exact-decimal Portal execution fact.
+///
+/// # Errors
+///
+/// Rejects invalid identifiers/timestamps and cross-alpha rows.
+pub fn map_position(
+    wire: WirePosition,
+    scoped_alpha_id: &str,
+) -> Result<PositionFact, AdapterError> {
+    Ok(PositionFact {
+        position_id: CanonicalId::parse(wire.position_id)?,
+        alpha_id: canonical_scoped_alpha(Some(&wire.strategy_id), scoped_alpha_id)?,
+        account_id: CanonicalId::parse(wire.account_id)?,
+        mode: external_value("TradingMode", wire.mode),
+        venue: wire.venue,
+        instrument_id: wire.instrument_id,
+        symbol: wire.symbol,
+        side: external_value("PositionSide", wire.side),
+        signed_quantity: wire.signed_qty,
+        quantity: wire.quantity,
+        average_open_price: wire.avg_px_open,
+        average_close_price: wire.avg_px_close,
+        realized_pnl: wire.realized_pnl,
+        unrealized_pnl: wire.unrealized_pnl,
+        peak_quantity: wire.peak_qty,
+        opened_at: parse_optional_timestamp(wire.opened_at.as_deref())?,
+        closed_at: parse_optional_timestamp(wire.closed_at.as_deref())?,
+        updated_at: parse_optional_timestamp(wire.updated_at.as_deref())?,
+    })
+}
+
+/// Maps one v1 event into a cursor-bearing Portal execution fact.
+///
+/// # Errors
+///
+/// Events without the stable identity/created timestamp required by the
+/// composite cursor are rejected. Payloads must remain JSON objects and rows
+/// cannot escape the requested alpha scope.
+pub fn map_event(
+    wire: WireEvent,
+    scoped_alpha_id: &str,
+) -> Result<ExecutionEventFact, AdapterError> {
+    let event_ts = parse_timestamp(&wire.event_ts)?;
+    let created_at = wire
+        .created_at
+        .as_deref()
+        .ok_or(AdapterError::MissingEventCreatedAt)
+        .and_then(parse_timestamp)?;
+    let payload = wire
+        .payload
+        .as_object()
+        .cloned()
+        .ok_or(AdapterError::EventPayloadMustBeObject)?;
+    Ok(ExecutionEventFact {
+        event_id: CanonicalId::parse(wire.event_id.ok_or(AdapterError::MissingEventIdentity)?)?,
+        event_type: wire.event_type,
+        event_ts,
+        created_at,
+        trace_id: optional_id(wire.trace_id)?,
+        alpha_id: canonical_scoped_alpha(wire.strategy_id.as_deref(), scoped_alpha_id)?,
+        client_order_id: optional_id(wire.client_order_id)?,
+        payload,
+    })
+}
+
+fn canonical_scoped_alpha(
+    observed: Option<&str>,
+    scoped_alpha_id: &str,
+) -> Result<CanonicalId, AdapterError> {
+    if observed.is_some_and(|value| value != scoped_alpha_id) {
+        return Err(AdapterError::SourceScopeMismatch);
+    }
+    CanonicalId::parse(scoped_alpha_id).map_err(AdapterError::from)
+}
+
+fn optional_id(raw: Option<String>) -> Result<Option<CanonicalId>, AdapterError> {
+    raw.map(CanonicalId::parse)
+        .transpose()
+        .map_err(AdapterError::from)
 }
 
 fn external_value(vocabulary: &str, raw: String) -> ExternalVocabularyValue {
@@ -378,13 +500,14 @@ fn external_value(vocabulary: &str, raw: String) -> ExternalVocabularyValue {
     }
 }
 
-fn parse_optional_timestamp(raw: Option<String>) -> Result<Option<DateTime<Utc>>, AdapterError> {
-    raw.map(|value| {
-        DateTime::parse_from_rfc3339(&value)
-            .map(|timestamp| timestamp.with_timezone(&Utc))
-            .map_err(|_| AdapterError::InvalidTimestamp)
-    })
-    .transpose()
+fn parse_optional_timestamp(raw: Option<&str>) -> Result<Option<DateTime<Utc>>, AdapterError> {
+    raw.map(parse_timestamp).transpose()
+}
+
+fn parse_timestamp(raw: &str) -> Result<DateTime<Utc>, AdapterError> {
+    DateTime::parse_from_rfc3339(raw)
+        .map(|timestamp| timestamp.with_timezone(&Utc))
+        .map_err(|_| AdapterError::InvalidTimestamp)
 }
 
 #[must_use]
@@ -451,6 +574,14 @@ pub enum AdapterError {
     UnexpectedHttpStatus(u16),
     #[error("wire timestamp is not RFC 3339")]
     InvalidTimestamp,
+    #[error("source row escaped the requested alpha scope")]
+    SourceScopeMismatch,
+    #[error("event is missing the identity required for a stable cursor")]
+    MissingEventIdentity,
+    #[error("event is missing created_at required for a stable composite cursor")]
+    MissingEventCreatedAt,
+    #[error("event payload must be a JSON object")]
+    EventPayloadMustBeObject,
     #[error(transparent)]
     CanonicalContract(#[from] execution_contracts::ContractError),
 }
@@ -647,6 +778,127 @@ mod tests {
         assert_eq!(order.price.unwrap().to_string(), "50000.00");
         assert!(order.status.supported);
         assert_eq!(source_authority(), SourceAuthority::Execution);
+    }
+
+    #[test]
+    fn all_four_business_resources_map_to_scoped_canonical_facts() {
+        let headers = v1_headers();
+        let cases = [
+            (
+                ReadOperation::Fills {
+                    alpha_id: "alpha-paper-1".to_owned(),
+                    filters: ReadFilters::default(),
+                    limit: 100,
+                },
+                FILLS,
+            ),
+            (
+                ReadOperation::Positions {
+                    alpha_id: "alpha-paper-1".to_owned(),
+                    filters: ReadFilters::default(),
+                    include_flat: false,
+                    limit: 100,
+                },
+                POSITIONS,
+            ),
+            (
+                ReadOperation::Events {
+                    alpha_id: "alpha-paper-1".to_owned(),
+                    from: None,
+                    to: None,
+                    limit: 100,
+                },
+                EVENTS,
+            ),
+        ];
+        let payloads = cases
+            .into_iter()
+            .map(|(operation, body)| {
+                let ReadOutcome::Success(payload) = parse_read_response(
+                    &operation,
+                    &ResponseInput {
+                        http_status: 200,
+                        headers: &headers,
+                        body,
+                    },
+                )
+                .unwrap() else {
+                    panic!("expected typed payload");
+                };
+                payload
+            })
+            .collect::<Vec<_>>();
+
+        let AdapterPayload::Fills { mut rows, .. } = payloads[0].clone() else {
+            panic!("expected fill payload");
+        };
+        let fill = map_fill(rows.remove(0), "alpha-paper-1").unwrap();
+        assert_eq!(fill.fill_id.as_str(), "1001");
+        assert_eq!(fill.quantity.to_string(), "0.00100000");
+        assert_eq!(fill.account_id.unwrap().as_str(), "paper-account-1");
+
+        let AdapterPayload::Positions { mut rows, .. } = payloads[1].clone() else {
+            panic!("expected position payload");
+        };
+        let position = map_position(rows.remove(0), "alpha-paper-1").unwrap();
+        assert_eq!(position.position_id.as_str(), "synth-position-0001");
+        assert_eq!(position.unrealized_pnl.unwrap().to_string(), "1.25");
+        assert!(position.side.supported);
+
+        let AdapterPayload::Events { mut rows, .. } = payloads[2].clone() else {
+            panic!("expected event payload");
+        };
+        let event = map_event(rows.remove(0), "alpha-paper-1").unwrap();
+        assert_eq!(
+            event.event_id.as_str(),
+            "018f3f00-0000-7000-8000-000000000001"
+        );
+        assert_eq!(event.event_type, "ORDER_STATUS");
+        assert_eq!(event.payload["status"], "FILLED");
+    }
+
+    #[test]
+    fn cross_alpha_rows_and_ambiguous_event_cursors_fail_closed() {
+        let headers = v1_headers();
+        let ReadOutcome::Success(AdapterPayload::Orders { mut rows, .. }) = parse_read_response(
+            &orders_operation(),
+            &ResponseInput {
+                http_status: 200,
+                headers: &headers,
+                body: ORDERS,
+            },
+        )
+        .unwrap() else {
+            panic!("expected order payload");
+        };
+        rows[0].strategy_id = Some("another-alpha".to_owned());
+        assert_eq!(
+            map_order(rows.remove(0), "alpha-paper-1"),
+            Err(AdapterError::SourceScopeMismatch)
+        );
+
+        let event_operation = ReadOperation::Events {
+            alpha_id: "alpha-paper-1".to_owned(),
+            from: None,
+            to: None,
+            limit: 100,
+        };
+        let ReadOutcome::Success(AdapterPayload::Events { mut rows, .. }) = parse_read_response(
+            &event_operation,
+            &ResponseInput {
+                http_status: 200,
+                headers: &headers,
+                body: EVENTS,
+            },
+        )
+        .unwrap() else {
+            panic!("expected event payload");
+        };
+        rows[0].created_at = None;
+        assert_eq!(
+            map_event(rows.remove(0), "alpha-paper-1"),
+            Err(AdapterError::MissingEventCreatedAt)
+        );
     }
 
     #[test]
