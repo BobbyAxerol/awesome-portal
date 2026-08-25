@@ -25,6 +25,7 @@
  * be hidden or filled with something else.
  */
 import type { ReactNode } from "react";
+import { Hint } from "../components/hint";
 
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
@@ -178,7 +179,7 @@ export function OperationsQueueScreen({
       next={{
         title: selectedId ? `Triage · ${selectedId}` : "Select an operation",
         detail: triage ?? (
-          <span className="exec-role-body">Pick a row to acknowledge or resolve it. Acknowledging and resolving are Portal records — ack ≠ resolve.</span>
+          <span className="exec-role-body">Pick a row to acknowledge or resolve it.</span>
         ),
       }}
       blockers={blockers}
@@ -195,7 +196,7 @@ export function OperationsQueueScreen({
               reason="The Trading System publishes no alerts route, so this rail has no source. It is shown empty rather than removed, because an absent rail reads as 'no alerts'."
             />
           )}
-          <p className="exec-queue-note exec-role-meta">alert = state change of a typed object (finding · sync · operation · condition), never free text · badge counts CRITICAL only · ack ≠ resolve</p>
+          <Hint className="exec-queue-note">alert = state change of a typed object (finding · sync · operation · condition), never free text · badge counts CRITICAL only · ack ≠ resolve</Hint>
         </div>
       }
       provenance={
@@ -216,7 +217,7 @@ export function OperationsQueueScreen({
           <ExecutionPageHeader
             title="Operations Queue"
             badges={badges}
-            purpose="What is running, what is stuck — one row per operation_id from plan → apply → verify; nothing ages silently."
+            purpose="What is running, what is stuck — one row per operation."
             secondary={
               queue ? (
                 <span className="exec-queue-sub exec-role-meta">
@@ -271,7 +272,7 @@ export function OperationsQueueScreen({
               <>
                 <div className="exec-scroll-x">
                   <table className="exec-queue-table">
-                    <caption className="exec-role-meta">sort: PARTIAL · FAILED → RUNNING → done · every row links its audit evidence</caption>
+                    <caption className="exec-role-meta">sort: PARTIAL · FAILED → RUNNING → done</caption>
                     <thead>
                       <tr>
                         <th scope="col">operation</th>

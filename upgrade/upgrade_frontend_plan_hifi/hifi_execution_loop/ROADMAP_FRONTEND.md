@@ -220,6 +220,13 @@ codex (EX-BE-05b cho phase 7/8/10/11/12) và ở chủ Trading System (§A′).
 
 ---
 
+### B.EL-V2-10 · Density & Insight polish (Bobby thêm 2026-08-25)
+
+- **Claude làm, không chờ ai:** grid tile + copy budget + CSS trùng, theo 4 lô trong handoff
+  §12 · EL-V2-10; smoke Alpha 360 đã bật để nhìn grid.
+- **Bobby quyết:** duyệt hình before/after từng lô; chốt ngưỡng copy (đề xuất ≤4 literal/màn).
+- **Chờ codex:** BR-EX-34 (series) → xoá smoke; BR-EX-40 (kiểu chart theo tile).
+
 ## C. 17 màn — ai đang chặn
 
 | Phase | Màn | UI | Chặn bởi |

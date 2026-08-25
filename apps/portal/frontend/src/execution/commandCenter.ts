@@ -428,7 +428,7 @@ export function streamGate(snapshot: CommandCenter | null): StreamGate {
       // The stream is not published for this profile, and no control here
       // changes that.
       reason:
-        "This profile publishes no live stream, so the page shows a snapshot and does not update itself.",
+        "This profile publishes no live stream — snapshot only; reload to re-read.",
     };
   }
   return { allowed: true, reason: "The stream is published for this profile." };

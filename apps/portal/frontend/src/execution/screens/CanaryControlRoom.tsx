@@ -9,6 +9,7 @@
  * the server's policy enables them — nothing here can enable itself.
  */
 import { useState, type ReactNode } from "react";
+import { Hint } from "../components/hint";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 import { EquityChart } from "../components/EquityChart";
@@ -252,7 +253,7 @@ export function CanaryControlRoomScreen({
                   <ActionGroup policy={policy.scaleUp} title="Request scale" brokerStale={brokerStale} />
                 </div>
               ) : null}
-              <p className="exec-canary-note exec-role-meta">promotion to LIVE_FULL requires Canary Exit Review and dual approval — elapsed time alone never promotes</p>
+              <Hint className="exec-canary-note" label="Promotion rule">promotion to LIVE_FULL requires Canary Exit Review and dual approval — elapsed time alone never promotes</Hint>
             </section>
           ) : null}
         </ExecutionTabs>

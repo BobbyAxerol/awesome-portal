@@ -54,9 +54,13 @@
   --exec-font-data: 400 12px/18px var(--font-body);
   --exec-font-num: 400 14px/20px var(--font-mono);
   --exec-font-kpi: 400 24px/32px var(--font-mono);
-  --exec-font-meta: 400 11px/16px var(--font-mono);
+  /* Owner override 2026-08-25 (EL-V2-10): meta and caption are prose, not
+     evidence — they read in the sans. Mono is reserved for numbers, ids and
+     terminal rows (`num`, `kpi`, `id`, `term`). */
+  --exec-font-meta: 400 12px/16px var(--font-body);
+  --exec-font-id: 400 12px/16px var(--font-mono);
   --exec-font-term: 400 12px/18px var(--font-mono);
-  --exec-font-caption: 400 10px/14px var(--font-mono);
+  --exec-font-caption: 400 11px/14px var(--font-body);
   /* Prose measure (§5.2): a readable line is about 72 characters. */
   --exec-measure: 72ch;
 }
@@ -73,6 +77,7 @@
 .exec-role-num { font: var(--exec-font-num); font-variant-numeric: tabular-nums; }
 .exec-role-kpi { font: var(--exec-font-kpi); font-variant-numeric: tabular-nums; }
 .exec-role-meta { font: var(--exec-font-meta); }
+.exec-role-id, .exec-role-meta code, .exec-page-title-id, .exec-chart-envelope, .exec-provenance-row dd { font: var(--exec-font-id); font-variant-numeric: tabular-nums; }
 .exec-role-term { font: var(--exec-font-term); }
 .exec-role-caption { font: var(--exec-font-caption); }
 
@@ -2585,11 +2590,6 @@
 
 /* Twelve tiles. Two up on a laptop, one on anything narrower — a chart at a
    third of a 1280 viewport is a chart nobody can read a value off. */
-.exec-alpha-tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
-  gap: var(--space-3);
-}
 
 /* ---------------------------------------------------------------------------
  * Portfolio 360° (hi-fi 1h→3a)
@@ -4368,6 +4368,7 @@
 .exec-chart-expanded { grid-column: 1 / -1; }
 .exec-chart-table { overflow: auto; }
 .exec-chart-evidence-note { font: var(--exec-font-meta); color: var(--exec-warn); margin: 4px 0 0; }
+.exec-chart-warning { font: var(--exec-font-meta); margin: 2px 0 0; }
 .exec-chart-unavailable { min-height: 0; }
 .exec-chart-unavailable-body { font: var(--exec-font-body); color: var(--exec-text-muted); margin: 8px 0; }
 .exec-chart-tip-t { font: var(--exec-font-meta); opacity: .8; }
@@ -4501,7 +4502,32 @@
 .exec-agg-absent { margin: 0; }
 .exec-contrib-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-2); margin-bottom: var(--space-2); }
 .exec-contrib-chart { margin: 0; }
-.exec-alpha-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: var(--space-2); }
+/* EL-V2-10 · Insight tile grid (audit F2/F3/F9). Fixed columns per breakpoint so
+   rows line up; every tile shares one min-height and stretches its plot, so a
+   chart tile and a state tile sit level. One definition — the earlier
+   auto-fit/22rem block was a dead duplicate. */
+.exec-alpha-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); align-items: stretch; }
+@media (min-width: 1728px) { .exec-alpha-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.exec-alpha-tiles > .exec-chart-tile { display: flex; flex-direction: column; min-height: 360px; min-width: 0; }
+.exec-alpha-tiles > .exec-chart-tile > .exec-chart-body,
+.exec-alpha-tiles > .exec-chart-tile > .exec-chart-table,
+.exec-alpha-tiles > .exec-chart-tile > .exec-state { flex: 1 1 auto; justify-content: center; }
+.exec-alpha-tiles .exec-chart-head { gap: var(--space-2); }
+.exec-alpha-tiles .exec-chart-tools .exec-btn-ghost { padding-block: 2px; }
+.exec-alpha-tiles .exec-chart-expanded { grid-column: 1 / -1; min-height: 0; }
+/* Hint (§7.2): mechanism notes fold behind one word; the text stays in the DOM. */
+.exec-hint { margin: var(--space-1) 0 0; }
+.exec-hint > summary { list-style: none; cursor: pointer; color: var(--ink-mute); text-decoration: underline dotted; display: inline; }
+.exec-hint > summary::-webkit-details-marker { display: none; }
+.exec-hint[open] > summary { color: var(--ink-soft); }
+.exec-hint-body { margin-top: 2px; color: var(--ink-mute); overflow-wrap: anywhere; }
+/* Compact caption: one scannable line, the full §16.2 envelope behind a disclosure. */
+.exec-chart-envelope-compact { margin: var(--space-1) 0 0; }
+.exec-envelope-more > summary { list-style: none; cursor: pointer; display: flex; gap: var(--space-2); align-items: baseline; }
+.exec-envelope-more > summary::-webkit-details-marker { display: none; }
+.exec-envelope-toggle { color: var(--accent); text-decoration: underline dotted; }
+.exec-envelope-more[open] .exec-envelope-toggle { text-decoration: none; }
+.exec-envelope-full { display: block; margin-top: 2px; overflow-wrap: anywhere; }
 /* Heatmap tint as an edge swatch, so the coefficient keeps its AA contrast on the surface. */
 .exec-pf-matrix td[data-abs="4"] { box-shadow: inset 8px 0 var(--bad); }
 .exec-pf-matrix td[data-abs="3"] { box-shadow: inset 6px 0 var(--warn); }
@@ -4514,3 +4540,102 @@
 .exec-influence text { font: var(--exec-font-meta); fill: var(--ink); }
 .exec-influence line { stroke: var(--accent); }
 .exec-influence circle { fill: var(--surface-2); stroke: var(--ink-soft); }
+
+
+/* ===========================================================================
+ * EL-V2-10 · Grammar v3 (owner override 2026-08-25 — hi-fi is no longer the
+ * pixel authority; DS §7 "flat geometry" is retired for this surface).
+ *
+ * Four moves, all scoped to the Execution surface so Research/Planning keep
+ * their baselines: soft radius instead of square corners · raised surfaces
+ * instead of 1px boxes · a 24px rhythm instead of 12px · the rail as one
+ * column of text instead of four stacked boxes. Later rules win on equal
+ * specificity, which is why this block lives at the end of the file.
+ * ========================================================================== */
+.exec-surface, .exec-preview-shell {
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+  --exec-gap: var(--space-5);      /* 24px between blocks */
+  --exec-pad: var(--space-4);      /* 16px inside a panel */
+}
+
+/* Rhythm */
+.exec-ws { gap: var(--exec-gap); }
+.exec-ws-canvas { gap: var(--exec-gap); }
+.exec-masthead { padding-bottom: var(--space-3); border-bottom: 0; gap: var(--space-4); }
+.exec-masthead-identity { gap: var(--space-2); }
+.exec-masthead-purpose { color: var(--ink-faint); }
+.exec-tabs-panel { padding-top: var(--space-4); }
+.exec-tab { padding: var(--space-2) var(--space-4); }
+.exec-tabs-strip { border-bottom-color: var(--line-soft); }
+
+/* Panels: raised, radius, no hairline. */
+.exec-strip { gap: var(--space-3); }
+.exec-strip-cell,
+.exec-gate-panel,
+.exec-chart-tile,
+.exec-tile,
+.exec-state,
+.exec-rail-section[data-section="next"] {
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-3);
+}
+.exec-strip-cell { padding: var(--space-3) var(--space-4); gap: var(--space-1); }
+.exec-gate-panel, .exec-chart-tile { padding: var(--exec-pad); }
+.exec-tile-head, .exec-tile-caption { border-color: var(--line-soft); }
+.exec-chip { border-radius: var(--radius-pill); padding: 2px var(--space-2); letter-spacing: 0.02em; }
+.exec-btn-apply, .exec-btn-ghost, .exec-role-control, .exec-tab, button.exec-link { border-radius: var(--radius-sm); }
+.exec-tab { border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+.exec-scroll-x, .exec-term { border-radius: var(--radius-md); }
+
+/* Rail: one column, sections separated by space, not boxes. The "next"
+   section stays a card because it carries the screen's one primary action;
+   an empty blockers section is not information and does not render. */
+.exec-context-rail { gap: var(--exec-gap); }
+.exec-rail-section { border: 0; background: transparent; padding: 0; gap: var(--space-2); }
+.exec-rail-section[data-section="next"] { padding: var(--exec-pad); border-left: 0; }
+.exec-rail-section[data-section="next"] .exec-rail-action { margin-top: var(--space-2); }
+.exec-rail-section h3.exec-role-th { color: var(--ink-faint); letter-spacing: 0.06em; text-transform: uppercase; font: var(--exec-font-th); }
+.exec-rail-section[data-section="blockers"]:has(.exec-rail-none) { display: none; }
+.exec-rail-blockers { gap: var(--space-2); }
+.exec-rail-blockers li { padding-left: var(--space-3); }
+.exec-ws-rail { top: calc(var(--topbar-h, 48px) + var(--space-5)); }
+
+/* Preview banner: one 32px line, no border, radius; details + inspector fold to the right. */
+.exec-preview-banner {
+  position: static;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  margin: 0 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--warn-bg);
+}
+.exec-preview-banner strong { font: var(--exec-font-th); letter-spacing: 0.08em; text-transform: uppercase; }
+.exec-preview-banner > span { color: var(--ink-soft); }
+.exec-preview-details summary, .exec-preview-inspector summary { font: var(--exec-font-meta); }
+.exec-preview-details[open], .exec-preview-inspector[open] { grid-column: 1 / -1; }
+
+/* Governance canvases were one big bordered box on a raised paper; on that
+   paper the raised KPI cells vanished. The workspace is the frame now. */
+.exec-inbox, .exec-gate, .exec-exit { border: 0; background: transparent; padding: 0; gap: var(--exec-gap); }
+.exec-strip-cell { flex-basis: 120px; }
+.exec-rail-step { border-radius: var(--radius-sm); }
+.exec-rail-step:first-child { border-radius: var(--radius-md) var(--radius-sm) var(--radius-sm) var(--radius-md); }
+.exec-rail-step:last-child { border-radius: var(--radius-sm) var(--radius-md) var(--radius-md) var(--radius-sm); }
+.exec-gate-banner, .exec-inbox-partial, .exec-inbox-cursor-notice { border-radius: var(--radius-md); }
+.exec-exit-carry-note { margin: 0; padding: var(--space-2) var(--space-3); border-left: 3px solid var(--warn); border-radius: var(--radius-md); background: var(--warn-bg); color: var(--ink-soft); max-width: none; }
+/* A cell inside a panel needs one more step of contrast than the panel. */
+.exec-gate-panel .exec-strip-cell, .exec-gate-panel .exec-cc-cell, .exec-cc-cells > *, .exec-gate-panel .exec-tile { background: var(--surface-2); }
+.exec-state { border: 0; border-radius: var(--radius-md); background: var(--surface-2); }
+/* A figure with spaces ("125,000 / 200,000") may break at a space; a figure without spaces never breaks. */
+.exec-strip-figure { white-space: normal; }
+/* KPI figure + unit: the unit wraps under a wide figure instead of overflowing the cell (audit: "125,000 / 200,000 USDT"). */
+.exec-alpha-kpi > div:last-child { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0.3em; min-width: 0; }
+.exec-alpha-kpi .exec-num { white-space: normal; }
+.exec-alpha-kpi { border: 0; border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); }
+.exec-alpha-kpis { gap: var(--space-3); }

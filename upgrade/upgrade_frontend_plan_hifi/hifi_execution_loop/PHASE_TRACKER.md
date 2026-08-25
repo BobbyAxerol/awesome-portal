@@ -10,6 +10,10 @@
 > `nested interactions` ❌ · `integrated visual approved` ❌.
 > "Screen built" trong các dòng cũ nghĩa là **component contract built**, không hơn.
 > Patch responsive 2026-08-23 được giữ như **subtask đặt tên** (KEEP 7/10), không phải V2.
+>
+> **OWNER OVERRIDE 2026-08-25 (Bobby):** hi-fi không còn là pixel authority — *"không cần tuân thủ
+> hi-fi nữa, cứ thoải mái sáng tạo"*. Grammar thay thế: `DESIGN_GRAMMAR_V3.md` (radius, bề mặt thay
+> viền, nhịp 24, Inter cho prose). Tính năng mới → viết spec cho codex, không chờ hi-fi.
 
 ## V2 — Mười phase bắt buộc EL-V2-00…09 (làm tuần tự, 1 phase WIP)
 
@@ -28,6 +32,8 @@ Kế hoạch chi tiết từng phase: các khối **Claude supplement** trong ch
 | EL-V2-08 | Entity 360 · analytics · Blotter | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | 12 tile = chart/honest ✓ · M7 aggregates footer từ fixture canonical ✓ · scope propagation 4/4 ✓ · heatmap + lens + influence map ✓ · Account triptych + tabs + rail ✓ · Blotter Columns/Export ✓ · chart export/cross-filter ✓ · perf 10⁵ = 41 tr ✓ | `blotterAggregates.ts`, `AggregatesFooter.tsx`, `ContributionChart.tsx`, `EquityChart.tsx`, `AlphaThreeSixty.tsx`, `PortfolioThreeSixty.tsx`, `AccountBroker360.tsx`, `FullBlotter.tsx`, `analytics360.test.tsx`, `blotterAggregates.test.ts`, `ANALYTICS_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-08-*.png` |
 | EL-V2-09 | Lane B thật · hardening · acceptance | **frontend xong 2026-08-24 — phase mở, chờ codex BE-V2-E/F/G + parity shadow + Bobby ký** | hardening SSE typed 401/backpressure/source-loss ✓ · parity harness ✓ (chưa có dữ liệu) · rollback rehearsal ✓ · budgets e2e ✓ · ledger MISS 0 ✓ · Alpha/Portfolio/Blotter lên anatomy ✓ · **activation: 0 màn** | `V2_RELEASE_ACCEPTANCE_2026-08-24.md`, `subscription.ts`, `sse.ts`, `streamHardening.test.tsx`, `scripts/shadow-parity.mjs`, `shadowParity.test.ts`, `execution-journeys.spec.ts` (budgets) |
 | — | Codex D4 Paper-read qualification | `D4_PAPER_READ_SHADOW_ACCEPTED / BUILDING_ONLY / D2_DARK_RESTORED / BUSINESS_READER_STILL_DARK` — signed-main fresh window đã pass baseline/replay/freshness/loss-recovery/restart/load/restore; D4 evidence retained, D2 dark restored | Claude may prepare/test Lane B against sanitized contracts, but **must not select live source** until EX-BE-08a + explicit registry delivery-profile promotion; current reader stays fixture/honest unavailable | `EX_BE_02_LIVE_D4_PAPER_READ_SHADOW_ACCEPTANCE.md`, `EX_BE_02_LIVE_D4_ACCEPTANCE_EVIDENCE.json` |
+| EL-V2-10 | Density · copy budget · Insight polish (Bobby thêm 2026-08-25) | **F1–F9 sửa xong 2026-08-25, chờ Bobby duyệt hình ảnh** | audit md có số trước/sau ✓ · smoke 9 tile chart + nhãn SMOKE ✓ · `EquityChart` warnings + gap→tooltip + `compact` ✓ · tile grid cố định/level ✓ · `Hint` gấp 9 note cơ chế, 7 `purpose` rút ✓ · baseline re-record 1 lần (26 png, chỉ Execution) ✓ · **NỢ: xoá `alpha360.smoke.ts` khi BR-EX-34 giao** · BR-EX-40 treo | `AUDIT_DENSITY_AND_INSIGHT_2026-08-25.md`, `alpha360.smoke.ts`, `alpha360.fixtures.ts` (`withSmokeSeries`), `alpha360.test.tsx` (2 case smoke), `EquityChart.tsx` (`EnvelopeWarnings`), baseline `el-v2-08-alpha-tiles.png` re-record |
+| — | Codex D4 Source Facade runtime audit | `D4_SOURCE_RUNTIME_AUDITED / LOOPBACK_ONLY / PROXY_DISABLED` — facade `127.0.0.1:8011`, 4 GET allowlist (`/v1/orders,fills,positions,events`), contract `d4.paper-read.v1`; bounded retention/resource profile đã được ghi nhận, không mở traffic Portal | Frontend vẫn giữ Lane B inactive; chỉ chuyển reader sau EX-BE-08a và registry delivery-profile promotion riêng | `D4_PORTAL_SOURCE_HANDOFF.md`, `EX_BE_02_D4_SOURCE_FACADE_RUNTIME_OPTIMIZATION.md` |
 
 
 > **The shared board for the Execution Loop.** Claude (frontend) and codex

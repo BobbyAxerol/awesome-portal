@@ -8,6 +8,7 @@
  * gate's blocker codes as its reasons.
  */
 import { useState, type ReactNode } from "react";
+import { Hint } from "../components/hint";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 import { ExecutionDecisionBar } from "../components/decisionBar";
@@ -219,7 +220,7 @@ export function IncidentDetailScreen({
                     ))}
                   </tbody>
                 </table>
-                <p className="exec-inc-note exec-role-meta">References only — this API stores a SHA-256 and metadata, never an artifact body.</p>
+                <Hint className="exec-inc-note">References only — this API stores a SHA-256 and metadata, never an artifact body.</Hint>
               </section>
               <section className="exec-inc-annotations" aria-label="Annotations">
                 <ExecutionSectionTitle>Annotations</ExecutionSectionTitle>
@@ -278,7 +279,7 @@ export function IncidentDetailScreen({
                   </li>
                 ))}
               </ul>
-              <p className="exec-inc-note exec-role-meta">all mutations run plan → apply → verify in the Action Drawer · this panel only links them</p>
+              <Hint className="exec-inc-note">all mutations run plan → apply → verify in the Action Drawer · this panel only links them</Hint>
             </section>
           ) : null}
         </ExecutionTabs>

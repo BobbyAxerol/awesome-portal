@@ -400,7 +400,7 @@ export function AccountBroker360({
         title: aggregate ? `Headroom ${aggregate.verdict} — ${aggregate.headroom} ${aggregate.currency}` : "Headroom not published",
         detail: (
           <span className="exec-role-body">
-            {aggregate ? "Read from the binding's aggregate — the figures are in the headroom banner; nothing here is summed." : "The aggregate virtual-vs-physical check has no published figure for this binding."}
+            {aggregate ? "Figures are in the headroom banner; nothing here is summed." : "The aggregate virtual-vs-physical check has no published figure for this binding."}
           </span>
         ),
         action: operatorAdmin ? (
@@ -453,7 +453,7 @@ export function AccountBroker360({
           { label: credentialValid ? "CREDENTIAL VALID" : "CREDENTIAL INVALID", axis: "other", tone: credentialValid ? "good" : "bad" },
           ...(aggregate ? [{ label: `headroom ${aggregate.verdict}`, axis: "readiness", tone: aggregate.verdict === "OK" ? "good" : aggregate.verdict === "EXCEEDED" ? "bad" : "warn" } as HeaderBadge] : []),
         ]}
-        purpose="Internal virtual state against the physical broker — the accounting and risk boundary. The aggregate virtual-vs-physical check lives here, not per alpha."
+        purpose="Virtual state against the physical broker — the risk boundary."
         secondary={
           <span className="exec-360-identity exec-role-meta">
             <span className="exec-num">{alpha}</span> · <span className="exec-num">{deployment}</span> · <span className="exec-num">{portfolio}</span> · <span className="exec-num">{venue}</span> · <span className="exec-num">{marginMode}</span> · settle <span className="exec-num">{settleCurrency}</span> · <span className="exec-num">{accountRevision}</span>

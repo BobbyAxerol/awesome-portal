@@ -2356,7 +2356,7 @@ describe("Paper Exit Review", () => {
     const { container } = render(exitReview());
     expect(container.querySelector('.exec-evidence-row[data-mark="insufficient"]')).not.toBeNull();
     expect(screen.getAllByText(/carries into sandbox certification/).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/Promotion does not resolve them/)).toBeTruthy();
+    expect(screen.getByText(/promotion does not resolve/i)).toBeTruthy();
   });
 
   it("does not treat a watch item as blocking", () => {
