@@ -582,6 +582,16 @@ authority.
   gates pass and D2 is healthy/dark again. D4 acceptance still requires signed
   protected-main images and one fresh finite owner window; no frontend Lane B,
   Query, analytics, SSE, command or activation authority is unlocked.
+- [EX-BE-02-LIVE D4 Paper read-shadow acceptance](./EX_BE_02_LIVE_D4_PAPER_READ_SHADOW_ACCEPTANCE.md)
+  — **Paper read shadow accepted / BUILDING only / D2 dark restored / business
+  reader still dark:** protected-main signed images completed one fresh finite
+  mandatory-auth qualification into separately encrypted storage. Baseline,
+  replay parity, freshness, source-loss/recovery, PostgreSQL restart,
+  idempotency, bounded load and encrypted dump/restore passed; the full offline
+  gate is 143 Rust/PostgreSQL tests plus strict Clippy/rustfmt. The epoch remains
+  BUILDING, registry remains `fixture`, and Query/analytics/SSE/commands/
+  activation remain disabled. Sanitized machine-readable evidence is
+  [`EX_BE_02_LIVE_D4_ACCEPTANCE_EVIDENCE.json`](./EX_BE_02_LIVE_D4_ACCEPTANCE_EVIDENCE.json).
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

@@ -27,7 +27,7 @@ Kế hoạch chi tiết từng phase: các khối **Claude supplement** trong ch
 | EL-V2-07 | Operations · incident · command | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | terminal §9.2 trong drawer (202 ⇒ ACCEPTED) ✓ · triage ranked-first + BUSY/QUIET ✓ · rail theo selection ✓ · incident containment + forward-only ✓ · break-glass không render ✓ · journey 6 + 3 e2e mới ✓ | `components/drawer.tsx` (terminal), `CommandCenter.tsx`, `OperationsQueue.tsx`, `IncidentDetail.tsx`, `AdminActionDrawer.tsx`, `containers.tsx`, `operationsWorkflow.test.tsx`, `OPERATIONS_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-07-*.png` |
 | EL-V2-08 | Entity 360 · analytics · Blotter | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | 12 tile = chart/honest ✓ · M7 aggregates footer từ fixture canonical ✓ · scope propagation 4/4 ✓ · heatmap + lens + influence map ✓ · Account triptych + tabs + rail ✓ · Blotter Columns/Export ✓ · chart export/cross-filter ✓ · perf 10⁵ = 41 tr ✓ | `blotterAggregates.ts`, `AggregatesFooter.tsx`, `ContributionChart.tsx`, `EquityChart.tsx`, `AlphaThreeSixty.tsx`, `PortfolioThreeSixty.tsx`, `AccountBroker360.tsx`, `FullBlotter.tsx`, `analytics360.test.tsx`, `blotterAggregates.test.ts`, `ANALYTICS_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-08-*.png` |
 | EL-V2-09 | Lane B thật · hardening · acceptance | **frontend xong 2026-08-24 — phase mở, chờ codex BE-V2-E/F/G + parity shadow + Bobby ký** | hardening SSE typed 401/backpressure/source-loss ✓ · parity harness ✓ (chưa có dữ liệu) · rollback rehearsal ✓ · budgets e2e ✓ · ledger MISS 0 ✓ · Alpha/Portfolio/Blotter lên anatomy ✓ · **activation: 0 màn** | `V2_RELEASE_ACCEPTANCE_2026-08-24.md`, `subscription.ts`, `sse.ts`, `streamHardening.test.tsx`, `scripts/shadow-parity.mjs`, `shadowParity.test.ts`, `execution-journeys.spec.ts` (budgets) |
-| — | Codex D4 Paper-read qualification | `D4_LIVE_ATTEMPT_FAIL_CLOSED / PORTAL_COMPATIBILITY_REMEDIATED / SIGNED_REPUBLISH_REQUIRED / D2_DARK_RESTORED` — mandatory-auth Source Proxy và encrypted BUILDING epoch đã được exercise; pagination burst + scientific decimal bị chặn trước baseline commit, đã vá và test; D2 dark đã phục hồi | Claude: **không bật Lane B** và không đổi reader; tiếp tục fixture/honest unavailable cho tới signed-main rerun đạt `D4_PAPER_READ_ACCEPTED` | `EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md` |
+| — | Codex D4 Paper-read qualification | `D4_PAPER_READ_SHADOW_ACCEPTED / BUILDING_ONLY / D2_DARK_RESTORED / BUSINESS_READER_STILL_DARK` — signed-main fresh window đã pass baseline/replay/freshness/loss-recovery/restart/load/restore; D4 evidence retained, D2 dark restored | Claude may prepare/test Lane B against sanitized contracts, but **must not select live source** until EX-BE-08a + explicit registry delivery-profile promotion; current reader stays fixture/honest unavailable | `EX_BE_02_LIVE_D4_PAPER_READ_SHADOW_ACCEPTANCE.md`, `EX_BE_02_LIVE_D4_ACCEPTANCE_EVIDENCE.json` |
 
 
 > **The shared board for the Execution Loop.** Claude (frontend) and codex
@@ -2411,6 +2411,17 @@ again. Claude must keep Lane B inactive. The only remaining D4 close path is a
 protected-main signed image publication and one fresh finite owner window;
 there is no new frontend task before acceptance. Evidence:
 [`EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md`](../../backend/EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md).
+
+The signed-main rerun is now
+`D4_PAPER_READ_SHADOW_ACCEPTED / BUILDING_ONLY / D2_DARK_RESTORED /
+BUSINESS_READER_STILL_DARK`. One fresh finite owner window completed the exact
+four-route mandatory-auth baseline, replay/freshness, source-loss/recovery,
+PostgreSQL restart, idempotency, bounded-load and encrypted restore gates. The
+epoch remains BUILDING and accepted D2 dark is running again. Claude may now
+prepare Lane B contract consumption, but the actual source reader remains
+unavailable until EX-BE-08a plus a separate registry delivery-profile
+promotion. Evidence:
+[`EX_BE_02_LIVE_D4_PAPER_READ_SHADOW_ACCEPTANCE.md`](../../backend/EX_BE_02_LIVE_D4_PAPER_READ_SHADOW_ACCEPTANCE.md).
 
 ## 28. Dev integration preview — 17/17 screens wired, production inactive (2026-08-24)
 
