@@ -27,8 +27,10 @@ The profile is locked to:
 - `deploy/execution-d4/source-proxy/nginx.conf.template`
 - `deploy/execution-d4/source-proxy/trading-system-read-header.conf.example`
 - `deploy/execution-d4/compose.paper-read-shadow.yaml`
+- `deploy/execution-d4/qualification-runtime.env.example`
 - `scripts/execution-d4-render-source-proxy.sh`
 - `scripts/execution-d4-source-proxy-preflight.sh`
+- `scripts/execution-d4-qualification-preflight.sh`
 - `scripts/execution-d4-source-proxy-test.sh`
 
 The renderer reads only non-secret listener metadata. The readiness preflight
@@ -49,7 +51,8 @@ The offline test proves:
 
 ## Remaining live gate
 
-This evidence does not authorize a D4 read. A new owner window, installed
-runtime files, immutable deployment image, BUILDING-only qualifier command and
-readiness pass are still required. Query, analytics, SSE, command relay,
-activation and registry delivery remain disabled.
+This evidence does not authorize a D4 read. The BUILDING-only qualifier command
+and its offline preflight now exist, but a new owner window, installed runtime
+files, immutable deployment image and live readiness pass are still required.
+Query, analytics, SSE, command relay, activation and registry delivery remain
+disabled.

@@ -1188,6 +1188,19 @@ deep-dive → ADR → slice → evidence discipline documented above.
   registry change occurred. Status: `D4_BUILDING_WRITER_OFFLINE_COMPLETE /
   LIVE_QUALIFICATION_PENDING / NO_SOURCE_CALL`. Detail:
   [`EX_BE_02_LIVE_D4_POSTGRES_BUILDING_WRITER.md`](./backend/EX_BE_02_LIVE_D4_POSTGRES_BUILDING_WRITER.md).
+- **EX-BE-02-LIVE D4 qualification runtime entrypoint (2026-08-25):** the
+  interrupted store patch was completed as an idempotent explicit-UUID
+  BUILDING preparation transaction plus two separate one-shot Edge commands.
+  Runtime admission revalidates the <=2-hour owner window, immutable
+  deployment/mapper identity, accepted D2/D3, dedicated read/source/storage
+  digests and all permanent false authority flags. The profile-gated qualifier
+  has no listener, cannot hold the Trading System read key and caps transport,
+  request, retry, elapsed and owner-window budgets. Evidence is 142 Rust tests,
+  strict Clippy/rustfmt, fresh PostgreSQL replay/restart/gap/load and
+  dump/restore plus exact-route Nginx/Compose gates. No live source call or
+  projection epoch occurred. Status: `D4_RUNTIME_ENTRYPOINT_OFFLINE_ACCEPTED /
+  LIVE_WINDOW_PENDING / NO_SOURCE_CALL`. Detail:
+  [`EX_BE_02_LIVE_D4_QUALIFICATION_RUNTIME_ENTRYPOINT.md`](./backend/EX_BE_02_LIVE_D4_QUALIFICATION_RUNTIME_ENTRYPOINT.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

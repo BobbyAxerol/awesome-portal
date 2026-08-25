@@ -267,6 +267,7 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/command-relay/Cargo.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/command-relay/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/edge-service/src/main.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/edge-service/src/d4_command.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-core/Cargo.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-core/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/query-api/Cargo.toml" \
@@ -353,6 +354,7 @@ for required in \
   "${ROOT_DIR}/deploy/runbooks/execution-d3-contract-auth-probes-and-rollback.md" \
   "${ROOT_DIR}/deploy/execution-d4/README.md" \
   "${ROOT_DIR}/deploy/execution-d4/owner-input.env.example" \
+  "${ROOT_DIR}/deploy/execution-d4/qualification-runtime.env.example" \
   "${ROOT_DIR}/deploy/execution-d4/storage-input.env.example" \
   "${ROOT_DIR}/deploy/execution-d4/compose.encrypted-storage.yaml" \
   "${ROOT_DIR}/deploy/execution-d4/compose.paper-read-shadow.yaml" \
@@ -362,9 +364,12 @@ for required in \
   "${ROOT_DIR}/scripts/execution-d4-storage-preflight.sh" \
   "${ROOT_DIR}/scripts/execution-d4-render-source-proxy.sh" \
   "${ROOT_DIR}/scripts/execution-d4-source-proxy-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-qualification-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-qualification-preflight-test.sh" \
   "${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh" \
   "${ROOT_DIR}/scripts/test-execution-d4-storage.sh" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_SOURCE_PROXY_OFFLINE.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_QUALIFICATION_RUNTIME_ENTRYPOINT.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md" \
@@ -682,6 +687,7 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/ts-adapter-v1/src/lib.rs \
   services/portal-execution-edge-rs/crates/command-relay/Cargo.toml \
   services/portal-execution-edge-rs/crates/command-relay/src/lib.rs \
+  services/portal-execution-edge-rs/crates/edge-service/src/d4_command.rs \
   services/portal-execution-edge-rs/crates/projection-core/Cargo.toml \
   services/portal-execution-edge-rs/crates/projection-core/src/lib.rs \
   services/portal-execution-edge-rs/crates/query-api/Cargo.toml \
@@ -764,6 +770,7 @@ for tracked_source in \
   deploy/runbooks/execution-d3-contract-auth-probes-and-rollback.md \
   deploy/execution-d4/README.md \
   deploy/execution-d4/owner-input.env.example \
+  deploy/execution-d4/qualification-runtime.env.example \
   deploy/execution-d4/storage-input.env.example \
   deploy/execution-d4/compose.encrypted-storage.yaml \
   deploy/execution-d4/compose.paper-read-shadow.yaml \
@@ -773,9 +780,12 @@ for tracked_source in \
   scripts/execution-d4-storage-preflight.sh \
   scripts/execution-d4-render-source-proxy.sh \
   scripts/execution-d4-source-proxy-preflight.sh \
+  scripts/execution-d4-qualification-preflight.sh \
+  scripts/execution-d4-qualification-preflight-test.sh \
   scripts/execution-d4-source-proxy-test.sh \
   scripts/test-execution-d4-storage.sh \
   upgrade/backend/EX_BE_02_LIVE_D4_SOURCE_PROXY_OFFLINE.md \
+  upgrade/backend/EX_BE_02_LIVE_D4_QUALIFICATION_RUNTIME_ENTRYPOINT.md \
   upgrade/backend/EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md \
   upgrade/backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md \
   upgrade/backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md \
@@ -933,6 +943,8 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-d4-storage-preflight.sh" \
   "${ROOT_DIR}/scripts/execution-d4-render-source-proxy.sh" \
   "${ROOT_DIR}/scripts/execution-d4-source-proxy-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-qualification-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-qualification-preflight-test.sh" \
   "${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh" \
   "${ROOT_DIR}/scripts/test-execution-d4-storage.sh" \
   "${ROOT_DIR}/scripts/execution-image-publication-test.sh" \
@@ -961,6 +973,7 @@ python3 "${ROOT_DIR}/scripts/test_execution_d2_isolation.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d4_authorization.py"
 "${ROOT_DIR}/scripts/test-execution-d4-storage.sh"
 "${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh"
+"${ROOT_DIR}/scripts/execution-d4-qualification-preflight-test.sh"
 
 while IFS= read -r tracked_path; do
   case "${tracked_path}" in

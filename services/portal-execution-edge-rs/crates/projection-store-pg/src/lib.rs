@@ -153,6 +153,87 @@ impl PgProjectionStore {
         Ok(epoch_id)
     }
 
+    /// Idempotently prepares one caller-declared D4 BUILDING epoch.
+    ///
+    /// This entrypoint exists for an owner-approved one-shot qualification
+    /// job. Reusing the UUID with different scope, metadata or lifecycle state
+    /// fails closed instead of selecting or creating another epoch.
+    ///
+    /// # Errors
+    ///
+    /// Rejects non-Paper scope, invalid metadata, UUID collisions with drift
+    /// and database failures.
+    pub async fn prepare_d4_building_epoch(
+        &self,
+        scope: &ProjectionScope,
+        epoch_id: Uuid,
+        metadata: &EpochMetadata,
+        created_at: DateTime<Utc>,
+    ) -> Result<D4CommitOutcome, StoreError> {
+        if scope.environment != "paper" {
+            return Err(StoreError::D4PaperScopeRequired);
+        }
+        metadata.validate()?;
+        let mut transaction = self.pool.begin().await?;
+        let inserted = sqlx::query(
+            "INSERT INTO portal_projection.epochs
+             (epoch_id, workspace_id, environment, status, adapter_version,
+              source_gateway_digest, capability_snapshot_id, created_at)
+             VALUES ($1, $2, $3, 'BUILDING', $4, $5, $6, $7)
+             ON CONFLICT (epoch_id) DO NOTHING",
+        )
+        .bind(epoch_id)
+        .bind(scope.workspace_id.as_str())
+        .bind(&scope.environment)
+        .bind(&metadata.adapter_version)
+        .bind(&metadata.source_gateway_digest)
+        .bind(&metadata.capability_snapshot_id)
+        .bind(created_at)
+        .execute(&mut *transaction)
+        .await?
+        .rows_affected()
+            == 1;
+        let row = sqlx::query(
+            "SELECT workspace_id, environment, status, adapter_version,
+                    source_gateway_digest, capability_snapshot_id,
+                    created_at, activated_at, overlap_until, retired_at
+             FROM portal_projection.epochs
+             WHERE epoch_id = $1 FOR UPDATE",
+        )
+        .bind(epoch_id)
+        .fetch_one(&mut *transaction)
+        .await?;
+        let exact = row.try_get::<String, _>("workspace_id")? == scope.workspace_id.as_str()
+            && row.try_get::<String, _>("environment")? == scope.environment
+            && row.try_get::<String, _>("status")? == "BUILDING"
+            && row.try_get::<String, _>("adapter_version")? == metadata.adapter_version
+            && row.try_get::<String, _>("source_gateway_digest")? == metadata.source_gateway_digest
+            && row.try_get::<String, _>("capability_snapshot_id")?
+                == metadata.capability_snapshot_id
+            && row
+                .try_get::<DateTime<Utc>, _>("created_at")?
+                .timestamp_micros()
+                == created_at.timestamp_micros()
+            && row
+                .try_get::<Option<DateTime<Utc>>, _>("activated_at")?
+                .is_none()
+            && row
+                .try_get::<Option<DateTime<Utc>>, _>("overlap_until")?
+                .is_none()
+            && row
+                .try_get::<Option<DateTime<Utc>>, _>("retired_at")?
+                .is_none();
+        if !exact {
+            return Err(StoreError::D4EpochIdentityCollision);
+        }
+        transaction.commit().await?;
+        Ok(if inserted {
+            D4CommitOutcome::Written
+        } else {
+            D4CommitOutcome::AlreadyDurable
+        })
+    }
+
     /// Loads the persisted lifecycle state for one explicit epoch.
     ///
     /// This is used by D4 qualification to prove that a shadow writer never
@@ -1179,6 +1260,8 @@ pub enum StoreError {
     D4CompatibilityIdentityMismatch,
     #[error("D4 writer requires the Paper projection scope")]
     D4PaperScopeRequired,
+    #[error("D4 BUILDING epoch identity collides with different durable state")]
+    D4EpochIdentityCollision,
 }
 
 #[cfg(test)]
@@ -1343,6 +1426,64 @@ mod tests {
         .execute(&store.pool)
         .await
         .unwrap();
+    }
+
+    #[tokio::test]
+    async fn d4_declared_epoch_prepare_is_idempotent_and_rejects_identity_drift() {
+        let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
+            return;
+        };
+        let _guard = postgres_test_lock().lock().await;
+        let store = PgProjectionStore::connect(&database_url).await.unwrap();
+        store.migrate().await.unwrap();
+        reset(&store, &database_url).await;
+
+        let scope = scope();
+        let epoch_id = Uuid::now_v7();
+        let metadata = d4_metadata();
+        assert_eq!(
+            store
+                .prepare_d4_building_epoch(&scope, epoch_id, &metadata, at(0))
+                .await
+                .unwrap(),
+            D4CommitOutcome::Written
+        );
+        assert_eq!(
+            store
+                .prepare_d4_building_epoch(&scope, epoch_id, &metadata, at(0))
+                .await
+                .unwrap(),
+            D4CommitOutcome::AlreadyDurable
+        );
+        assert_eq!(
+            store.load_epoch_status(epoch_id).await.unwrap(),
+            ProjectionEpochStatus::Building
+        );
+
+        let mut drifted_metadata = metadata.clone();
+        drifted_metadata.capability_snapshot_id = "cap_d4_drifted".to_owned();
+        assert!(matches!(
+            store
+                .prepare_d4_building_epoch(&scope, epoch_id, &drifted_metadata, at(0))
+                .await,
+            Err(StoreError::D4EpochIdentityCollision)
+        ));
+        assert!(matches!(
+            store
+                .prepare_d4_building_epoch(&scope, epoch_id, &metadata, at(1))
+                .await,
+            Err(StoreError::D4EpochIdentityCollision)
+        ));
+
+        let non_paper =
+            ProjectionScope::new(CanonicalId::parse("workspace_pg_test").unwrap(), "sandbox")
+                .unwrap();
+        assert!(matches!(
+            store
+                .prepare_d4_building_epoch(&non_paper, Uuid::now_v7(), &metadata, at(0),)
+                .await,
+            Err(StoreError::D4PaperScopeRequired)
+        ));
     }
 
     #[tokio::test]

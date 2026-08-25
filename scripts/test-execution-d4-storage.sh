@@ -84,8 +84,8 @@ fi
 compose_env="${tmp_dir}/compose.env"
 cp "${root_dir}/deploy/execution-d1/edge-source-proxy.env.example" "${compose_env}"
 {
-  printf 'D4_PROJECTION_DB_VOLUME_NAME=portal-execution-projection-pgdata-v2\n'
-  printf 'D4_PROJECTION_DATA_DIRECTORY=/srv/primus/portal/projection-d4/postgres\n'
+  printf 'PROJECTION_DB_VOLUME_NAME=portal-execution-projection-pgdata-v2\n'
+  printf 'DATA_DIRECTORY=/srv/primus/portal/projection-d4/postgres\n'
 } >> "${compose_env}"
 
 docker_cli=(docker)

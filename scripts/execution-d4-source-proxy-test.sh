@@ -9,8 +9,9 @@ owner_template="${root_dir}/deploy/execution-d4/owner-input.env.example"
 contract_source="${root_dir}/services/portal-execution-edge-rs/contracts/d4-paper-read-v1/source-proxy-d4-read-locations.conf.template"
 renderer="${root_dir}/scripts/execution-d4-render-source-proxy.sh"
 preflight="${root_dir}/scripts/execution-d4-source-proxy-preflight.sh"
+qualifier_preflight="${root_dir}/scripts/execution-d4-qualification-preflight.sh"
 
-bash -n "${renderer}" "${preflight}" "$0"
+bash -n "${renderer}" "${preflight}" "${qualifier_preflight}" "$0"
 tmp_dir="$(mktemp -d)"
 cleanup() { rm -rf -- "${tmp_dir}"; }
 trap cleanup EXIT
@@ -33,6 +34,11 @@ cp "${contract_source}" "${tmp_dir}/d4-paper-read-locations.conf"
   --owner-input "${owner_template}" \
   --config "${tmp_dir}/nginx.conf" \
   --contract "${tmp_dir}/d4-paper-read-locations.conf" \
+  --mode template >/dev/null
+"${qualifier_preflight}" \
+  --edge-env "${tmp_dir}/runtime.env" \
+  --qualifier-env "${root_dir}/deploy/execution-d4/qualification-runtime.env.example" \
+  --owner-input "${owner_template}" \
   --mode template >/dev/null
 
 # Syntax-check the complete Nginx config using synthetic material only.
@@ -72,24 +78,34 @@ if ! docker info >/dev/null 2>&1; then
 fi
 cp "${tmp_dir}/runtime.env" "${tmp_dir}/compose.env"
 cat >> "${tmp_dir}/compose.env" <<EOF
-D4_PROJECTION_DB_VOLUME_NAME=portal-execution-projection-pgdata-v2
-D4_PROJECTION_DATA_DIRECTORY=/srv/primus/portal/projection-d4/postgres
+PROJECTION_DB_VOLUME_NAME=portal-execution-projection-pgdata-v2
+DATA_DIRECTORY=/srv/primus/portal/projection-d4/postgres
 SOURCE_PROXY_D4_CONTRACT_FILE=${tmp_dir}/d4-paper-read-locations.conf
+D4_OWNER_INPUT_FILE=${owner_template}
+D4_AUTHORIZATION_EVIDENCE_SHA256=sha256:$(sha256sum "${owner_template}" | cut -d' ' -f1)
+D4_WORKSPACE_ID=workspace_d4_offline
+D4_SOURCE_PROXY_ORIGIN=https://172.23.0.1:8444
 EOF
 compose=("${docker_cli[@]}" compose --project-directory "${root_dir}" \
   -f "${root_dir}/deploy/compose.execution-edge.yaml" \
   -f "${root_dir}/deploy/execution-d1/compose.dark.yaml" \
   -f "${root_dir}/deploy/execution-d4/compose.encrypted-storage.yaml" \
-  -f "${root_dir}/deploy/execution-d4/compose.paper-read-shadow.yaml")
+  -f "${root_dir}/deploy/execution-d4/compose.paper-read-shadow.yaml" \
+  --profile d4-paper-read-shadow)
 "${compose[@]}" --env-file "${tmp_dir}/compose.env" config --quiet
 "${compose[@]}" --env-file "${tmp_dir}/compose.env" config > "${tmp_dir}/compose.yaml"
 grep -Fq 'target: /etc/nginx/d4-paper-read-locations.conf' "${tmp_dir}/compose.yaml"
 grep -Fq 'com.primusspark.portal.source-contract: d4.paper-read.v1' "${tmp_dir}/compose.yaml"
+grep -Fq 'paper-read-qualifier:' "${tmp_dir}/compose.yaml"
+grep -Fq 'command:' "${tmp_dir}/compose.yaml"
+grep -Fq -- '- d4-qualify' "${tmp_dir}/compose.yaml"
+grep -Fq 'EDGE_D4_PROJECTION_DATABASE_URL_FILE: /run/secrets/projection-runtime-database-url' "${tmp_dir}/compose.yaml"
+grep -Fq 'EDGE_D4_SOURCE_CLIENT_IDENTITY_FILE: /run/secrets/d4-source-proxy-client.pem' "${tmp_dir}/compose.yaml"
 grep -Fq 'EDGE_PROJECTION_INGESTION_ENABLED: "false"' "${tmp_dir}/compose.yaml"
 grep -Fq 'EDGE_REALTIME_SSE_ENABLED: "false"' "${tmp_dir}/compose.yaml"
 grep -Fq 'EDGE_ANALYTICS_QUERY_ENABLED: "false"' "${tmp_dir}/compose.yaml"
 grep -Fq 'EDGE_COMMAND_RELAY_ENABLED: "false"' "${tmp_dir}/compose.yaml"
-if grep -Eq 'published: "(5432|8011|8444)"' "${tmp_dir}/compose.yaml"; then
+if grep -Eq 'published: "(5432|8011|8444)"|EDGE_D4_SOURCE_API_KEY|X-Portal-Paper-Read-Key' "${tmp_dir}/compose.yaml"; then
   printf 'D4 Compose unexpectedly published a source or database port.\n' >&2
   exit 1
 fi

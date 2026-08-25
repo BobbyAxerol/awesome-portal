@@ -91,16 +91,32 @@ sudo ./scripts/execution-d4-source-proxy-preflight.sh \
   --mode readiness
 ```
 
+Create a separate, root-owned mode-0600 qualifier env from
+`deploy/execution-d4/qualification-runtime.env.example`. Set
+`D4_AUTHORIZATION_EVIDENCE_SHA256` to the SHA-256 of the exact validated owner
+input bytes, then run the no-network qualifier gate:
+
+```bash
+sudo ./scripts/execution-d4-qualification-preflight.sh \
+  --edge-env /PRIVATE/PATH/execution-runtime.env \
+  --qualifier-env /PRIVATE/PATH/execution-d4-qualifier.env \
+  --owner-input /PRIVATE/PATH/execution-d4-owner-input.env \
+  --mode readiness
+```
+
 Compose must add both D4 overlays, with
 `SOURCE_PROXY_D4_CONTRACT_FILE` pointing to the exact installed include:
 
 ```bash
 sudo docker compose \
   --env-file /PRIVATE/PATH/execution-runtime.env \
+  --env-file /PRIVATE/PATH/execution-d4-storage.env \
+  --env-file /PRIVATE/PATH/execution-d4-qualifier.env \
   -f deploy/compose.execution-edge.yaml \
   -f deploy/execution-d1/compose.dark.yaml \
   -f deploy/execution-d4/compose.encrypted-storage.yaml \
   -f deploy/execution-d4/compose.paper-read-shadow.yaml \
+  --profile d4-paper-read-shadow \
   config --quiet
 ```
 
@@ -119,9 +135,35 @@ ALLOW_TRADING_SYSTEM_CHANGES=false
 REGISTRY_DELIVERY_PROFILE=fixture
 ```
 
-The mapper may call only the locked GET allowlist through Source Proxy. It may
-write only Portal-owned journal/snapshot/projection tables. No ACTIVE epoch may
-be created or replaced.
+Start the database and migration first; the qualifier itself never migrates or
+selects an epoch implicitly:
+
+```bash
+d4_compose=(sudo docker compose \
+  --env-file /PRIVATE/PATH/execution-runtime.env \
+  --env-file /PRIVATE/PATH/execution-d4-storage.env \
+  --env-file /PRIVATE/PATH/execution-d4-qualifier.env \
+  -f deploy/compose.execution-edge.yaml \
+  -f deploy/execution-d1/compose.dark.yaml \
+  -f deploy/execution-d4/compose.encrypted-storage.yaml \
+  -f deploy/execution-d4/compose.paper-read-shadow.yaml \
+  --profile d4-paper-read-shadow)
+
+"${d4_compose[@]}" up -d projection-postgres
+
+# Run the migration owner, then idempotently prepare exactly BUILDING_EPOCH_ID.
+"${d4_compose[@]}" run --rm projection-migrator
+"${d4_compose[@]}" run --rm --no-deps \
+  paper-read-qualifier d4-prepare-building
+
+# Only now start the exact-route proxy and run one finite qualification.
+"${d4_compose[@]}" up -d source-proxy
+"${d4_compose[@]}" run --rm --no-deps paper-read-qualifier
+```
+
+The qualifier may call only the locked GET allowlist through Source Proxy. It
+may write only Portal-owned journal/snapshot/projection tables. No ACTIVE epoch
+may be created or replaced.
 
 ## 4. Qualification drills
 

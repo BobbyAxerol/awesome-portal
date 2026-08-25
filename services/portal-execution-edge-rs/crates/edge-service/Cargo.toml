@@ -14,6 +14,9 @@ chrono.workspace = true
 edge-auth = { path = "../edge-auth" }
 execution-contracts = { path = "../execution-contracts" }
 futures-util.workspace = true
+paper-source-ingestor = { path = "../paper-source-ingestor" }
+paper-source-runner = { path = "../paper-source-runner" }
+paper-source-transport = { path = "../paper-source-transport" }
 projection-core = { path = "../projection-core" }
 projection-store-pg = { path = "../projection-store-pg" }
 realtime-sse = { path = "../realtime-sse" }

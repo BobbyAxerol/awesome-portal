@@ -540,6 +540,15 @@ authority.
   Fresh-PG restart/replay/idempotency/gap tests, strict Clippy and the D4-aware
   dump/restore signature are green. Source Proxy, credentials, Query/SSE,
   activation and registry profiles remain untouched.
+- [EX-BE-02-LIVE D4 qualification runtime entrypoint](./EX_BE_02_LIVE_D4_QUALIFICATION_RUNTIME_ENTRYPOINT.md)
+  — **offline runtime entrypoint accepted / live window pending / no source
+  call:** the Edge image now has separate `d4-prepare-building` and finite
+  `d4-qualify` commands. A profile-gated no-port container revalidates the
+  <=2-hour owner window, exact D2/D3/source/storage evidence and permanent
+  false authority flags before creating/resuming only the declared BUILDING
+  epoch. Evidence is 142 Rust tests, strict Clippy/rustfmt, fresh PostgreSQL,
+  replay/restart/gap/load, dump/restore and exact-route Compose/Nginx gates.
+  Live source traffic and qualification evidence remain pending.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

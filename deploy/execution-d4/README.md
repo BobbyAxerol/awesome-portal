@@ -1,6 +1,6 @@
 # Execution D4 — Paper Read Shadow Authorization
 
-Status: `D4_SOURCE_PROXY_OFFLINE_ACCEPTED / LIVE_SOURCE_DARK / NO_PORTAL_SOURCE_TRAFFIC`
+Status: `D4_RUNTIME_ENTRYPOINT_OFFLINE_ACCEPTED / LIVE_SOURCE_DARK / NO_PORTAL_SOURCE_TRAFFIC`
 
 D4 is the first phase allowed to observe bounded Paper business data. It is not
 an activation phase. A passing D4 qualification may create and validate only a
@@ -44,6 +44,22 @@ The D4 proxy is deliberately separate from the legacy D1/D3 Gateway renderer:
 
 Never render D4 through `execution-d2-render-source-proxy.sh paper-read`: that
 legacy compatibility path targets port 8000 and is not the D4 contract.
+
+## D4 one-shot qualifier assets
+
+- `qualification-runtime.env.example` holds only non-secret, bounded runtime
+  metadata and the digest of the validated owner input;
+- `compose.paper-read-shadow.yaml` profile-gates a no-port
+  `paper-read-qualifier` job;
+- `../../scripts/execution-d4-qualification-preflight.sh` validates the
+  separate qualifier config, owner-input byte identity, mTLS client bundle and
+  runtime-role TLS DSN without opening a socket; and
+- the Edge image commands `d4-prepare-building` and `d4-qualify` can only
+  create/resume one declared Paper `BUILDING` epoch.
+
+The D4 values intentionally do not extend the D1 env schema. Compose receives
+the already-validated D1 env and D4 qualifier env as separate `--env-file`
+inputs so predecessor preflights keep rejecting unknown keys.
 
 ## Hard stop gates
 
@@ -97,9 +113,9 @@ The current read-only prerequisite audit and the exact Trading System owner
 request are recorded in
 [`../../upgrade/backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md`](../../upgrade/backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md).
 D2/D3 predecessors are accepted. The dedicated source runtime and encrypted
-host storage are owner-prepared; contract import and the offline D4 Source
-Proxy profile are complete. Live secret/route delivery, the BUILDING-only
-runner entrypoint and a fresh owner window remain gated.
+host storage are owner-prepared; contract import, the offline D4 Source Proxy
+profile and the BUILDING-only one-shot runtime entrypoint are complete. Live
+secret/route delivery and a fresh owner qualification window remain gated.
 
 The historical storage deployment boundary was
 `D4_ENCRYPTED_STORAGE_BOUNDARY_PREPARED / LIVE_VOLUME_NOT_PROVISIONED /

@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+mod d4_command;
+
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     convert::Infallible,
@@ -327,6 +329,8 @@ async fn main() -> Result<(), ServiceError> {
         Some("healthcheck") => healthcheck().await,
         Some("projection-check") => projection_check(false).await,
         Some("projection-migrate") => projection_check(true).await,
+        Some("d4-prepare-building") => d4_command::prepare_building().await.map_err(Into::into),
+        Some("d4-qualify") => d4_command::qualify().await.map_err(Into::into),
         Some("serve") | None => serve(EdgeConfig::from_environment()?).await,
         Some(_) => Err(ServiceError::UnsupportedCommand),
     }
@@ -1711,6 +1715,8 @@ enum ServiceError {
     Transport(#[from] ts_transport::TransportError),
     #[error(transparent)]
     ProjectionStore(#[from] projection_store_pg::StoreError),
+    #[error(transparent)]
+    D4Command(#[from] d4_command::D4CommandError),
     #[error(transparent)]
     Realtime(#[from] realtime_sse::RealtimeError),
     #[error("TLS material is invalid")]
