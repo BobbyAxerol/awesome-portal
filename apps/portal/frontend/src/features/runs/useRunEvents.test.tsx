@@ -133,12 +133,20 @@ describe("subscription", () => {
 });
 
 describe("degrading", () => {
-  it("falls back to polling when the connection drops", () => {
+  it("closes and falls back to polling when an open connection drops", () => {
     mount();
     source().open();
     expect(streaming).toBe(true);
     source().fail();
     expect(streaming).toBe(false);
+    expect(source().closed).toBe(true);
+  });
+
+  it("closes an initial handshake error so native EventSource cannot retry forever", () => {
+    mount();
+    source().fail();
+    expect(streaming).toBe(false);
+    expect(source().closed).toBe(true);
   });
 
   it("opens nothing when the environment has no EventSource", () => {

@@ -807,6 +807,11 @@ rejects non-SSE responses, preserves no-buffer headers/backpressure and aborts
 the upstream when the browser disconnects. `PORTAL_WEB_UPSTREAM=portal-api:8000`
 remains the one-line gateway rollback.
 
+The browser lifecycle now closes the EventSource on every error, including a
+pre-open session rejection. This prevents native retry loops against the
+session guard while retaining fast polling as the authoritative fallback. It
+does not add a preflight request or change the façade/SSE wire contract.
+
 This is the QuantBT Research progress stream, not EX-BE-06 Execution realtime;
 no AWS-HK, source, projection, analytics or command flag changed. Fresh evidence:
 TypeScript build, 20 Control API suites / 173 tests and PostgreSQL restore passed.

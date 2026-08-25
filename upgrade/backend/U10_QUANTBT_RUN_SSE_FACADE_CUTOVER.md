@@ -49,6 +49,15 @@ gateway rollback and returns the SSE route to the legacy direct path.
 - SSE remains an accelerator. The React hook keeps the slower polling floor
   and invalidates authoritative queries instead of inventing run state from a
   partial event frame.
+- Native EventSource does not expose an initial HTTP 401/403 to the hook and
+  otherwise retries it indefinitely. The hook therefore treats every
+  `onerror` as terminal for that source: it calls `close()` and returns to fast
+  polling. This applies before `open`, after `open`, and to a server
+  `event: error` frame.
+- This lifecycle fix does not add a preflight fetch, translate authentication
+  failures into HTTP 200 SSE frames, or change URL/frame/facade semantics. A
+  later component remount may create a new source after session recovery; the
+  dead source itself never reconnects.
 
 ## 3. Evidence
 
@@ -84,6 +93,14 @@ Additional accepted evidence on 2026-08-24:
   audit/delete flows passed.
 - the isolated smoke project removed its containers, network and named
   volumes after completion.
+
+Client lifecycle regression evidence adds two cases: an initial handshake
+error closes before native retry, and an established stream drop closes before
+polling resumes. Both preserve the existing polling floor and query ownership.
+The complete frontend gate passed 66 test files / 1,482 tests with three
+intentional skips, and the production TypeScript/Vite image target built
+successfully. The full Control API gate remained green at 20 suites / 173 tests
+including the authenticated SSE facade cases and PostgreSQL restore drill.
 
 ## 4. Rollback and residual work
 

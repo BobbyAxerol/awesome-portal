@@ -1024,8 +1024,11 @@ authoritative product/control boundary.
   internal principal được ký server-side, path/run ID fail-closed, header
   connect timeout tách khỏi stream lifetime, Fastify pipe không buffer có
   backpressure/cancel và non-SSE response bị từ chối. Gateway rollback một dòng
-  vẫn giữ nguyên. Evidence: TypeScript build, fresh PostgreSQL restore và
-  Control API 173/173; durable event authority vẫn thuộc U11.
+  vẫn giữ nguyên. Client đóng EventSource trên mọi error trước/sau `open`, nên
+  session 401/403 không bị native retry vô hạn; polling authoritative tiếp tục
+  ở nhịp nhanh mà không cần preflight hay đổi SSE envelope. Evidence:
+  TypeScript build, fresh PostgreSQL restore và Control API 173/173; durable
+  event authority vẫn thuộc U11.
 
 **Description / To-do**
 
