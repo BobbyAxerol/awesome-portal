@@ -2423,6 +2423,16 @@ unavailable until EX-BE-08a plus a separate registry delivery-profile
 promotion. Evidence:
 [`EX_BE_02_LIVE_D4_PAPER_READ_SHADOW_ACCEPTANCE.md`](../../backend/EX_BE_02_LIVE_D4_PAPER_READ_SHADOW_ACCEPTANCE.md).
 
+The 2026-08-25 source-facade runtime audit adds a non-frontend blocker:
+`QUALIFICATION_BRIDGE_ONLY / STEADY_STATE_NOT_ACCEPTED /
+OWNER_WINDOW_REQUIRED`. The finite D4 evidence above remains accepted, but the
+Trading System-owned facade must be dormant outside a window and later move
+from unconditional full-scope refresh to an owner-published incremental,
+lease-aware, retention/backpressure-bounded feed before registry delivery-
+profile promotion. Claude keeps Lane B fixture/typed-unavailable and does not
+work around this boundary. Detail:
+[`EX_BE_02_D4_SOURCE_FACADE_RUNTIME_OPTIMIZATION.md`](../../backend/EX_BE_02_D4_SOURCE_FACADE_RUNTIME_OPTIMIZATION.md).
+
 ## 28. Dev integration preview — 17/17 screens wired, production inactive (2026-08-24)
 
 Status: `DEV_PREVIEW_READY / FIXTURE_ONLY / PRODUCTION_INACTIVE`.

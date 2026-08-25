@@ -1868,6 +1868,17 @@ không phải 17 màn.
 > Detail:
 > [`EX_BE_02_LIVE_D4_PAPER_READ_SHADOW_ACCEPTANCE.md`](./backend/EX_BE_02_LIVE_D4_PAPER_READ_SHADOW_ACCEPTANCE.md).
 
+> **Backend follow-up 2026-08-25 — D4 source-facade steady-state audit:** the
+> finite shadow acceptance remains evidence-valid, but the current Trading
+> System-owned facade is only a qualification bridge. Its unconditional 500 ms
+> full-scope capture continues without a consumer and is not accepted for
+> continuous runtime. Before any read delivery-profile promotion it must become
+> dormant/lease-aware, use an owner-published incremental cursor, enforce
+> time+size retention and backpressure, and pass a separate 24-hour soak. No
+> source service, Portal runtime or registry flag was changed by this audit.
+> Detail:
+> [`EX_BE_02_D4_SOURCE_FACADE_RUNTIME_OPTIMIZATION.md`](./backend/EX_BE_02_D4_SOURCE_FACADE_RUNTIME_OPTIMIZATION.md).
+
 > **Backend checkpoint 2026-08-23 — EX-BE-05b/F2 Phase 10:** Portal-owned
 > Sandbox Certification trên SGP đạt
 > `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`: DRAFT→IN_REVIEW→APPROVED|DENIED,
