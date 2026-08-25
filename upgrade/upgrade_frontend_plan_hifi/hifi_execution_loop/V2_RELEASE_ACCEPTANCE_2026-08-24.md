@@ -37,6 +37,8 @@ Research/Planning không tái sinh + toàn bộ audit — build rollback đượ
 | Sandbox · Canary · Live | fixture | off | off | chờ; commands tối |
 | Alpha 360 · Portfolio 360 · Account 360 · Blotter | fixture | off | — | chờ BE-V2-E (projection page) |
 
+Handoff nguồn duy nhất tới nay — `D4_PORTAL_SOURCE_HANDOFF.md` (codex, 2026-08-24): `D4_SOURCE_RUNTIME_PARTIAL_PASS / LOOPBACK_ONLY / D4_SOURCE_PROXY_DISABLED` — **không phải authorization** (không container, không route proxy, không traffic, không epoch); facade loopback `127.0.0.1:8011`, 4 GET allowlist, contract `d4.paper-read.v1`, secret identity chưa cài và Portal không được chạm.
+
 Không màn nào được kích hoạt trong V2-09: registry `query_enabled`/`realtime_enabled` = 0 (kiểm 2026-08-24),
 `delivery_profile` = null trong registry. Frontend không suy diễn gate backend nào là xong.
 
