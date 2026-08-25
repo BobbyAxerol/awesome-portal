@@ -85,6 +85,19 @@ interface PresentationContextValue {
    */
   entityLabel: string | null;
   setEntityLabel: (label: string | null) => void;
+  /**
+   * Chrome a screen may light up (hi-fi 4e/4d): the topbar `⚑ Alerts · n
+   * critical` chip and a count badge on a sidebar item. Producers own both
+   * ends — set on mount, clear on unmount. Nothing here invents a number: a
+   * screen sets it only from data it holds (today: declared smoke; BR-EX-43).
+   */
+  chrome: PresentationChrome;
+  setChrome: (chrome: PresentationChrome) => void;
+}
+
+export interface PresentationChrome {
+  alerts?: { critical: number; href: string; onToggle?: () => void } | null;
+  navBadge?: { route: string; count: number; tone: "warn" | "bad" } | null;
 }
 
 const PresentationContext = createContext<PresentationContextValue | null>(null);
@@ -98,6 +111,7 @@ export function PortalPresentationProvider({
 }) {
   const location = useLocation();
   const [entityLabel, setEntityLabel] = useState<string | null>(null);
+  const [chrome, setChrome] = useState<PresentationChrome>({});
 
   const mode = useMemo(
     () => presentationModeFor(registry, location.pathname),
@@ -122,8 +136,8 @@ export function PortalPresentationProvider({
   // owning both ends has no ordering to lose.
 
   const value = useMemo(
-    () => ({ mode, entityLabel, setEntityLabel }),
-    [mode, entityLabel],
+    () => ({ mode, entityLabel, setEntityLabel, chrome, setChrome }),
+    [mode, entityLabel, chrome],
   );
 
   return <PresentationContext.Provider value={value}>{children}</PresentationContext.Provider>;
@@ -140,6 +154,12 @@ export function usePresentation(): PresentationContextValue {
  * provider is not mounted yet (registry loading/failed). Those states carry no
  * Execution route content, so research-light is the honest answer.
  */
+/** Null-safe: screens render in unit tests without the shell provider. */
+export function usePresentationChrome(): { chrome: PresentationChrome; setChrome: (c: PresentationChrome) => void } | null {
+  const v = useContext(PresentationContext);
+  return v ? { chrome: v.chrome, setChrome: v.setChrome } : null;
+}
+
 export function usePresentationMode(): PortalPresentationMode {
   return useContext(PresentationContext)?.mode ?? "research-light";
 }

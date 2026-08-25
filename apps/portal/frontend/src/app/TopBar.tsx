@@ -29,7 +29,7 @@ export function TopBar({
   onToggleMobileNav: () => void;
 }) {
   const preferences = usePreferences();
-  const { mode: presentationMode, entityLabel } = usePresentation();
+  const { mode: presentationMode, entityLabel, chrome } = usePresentation();
   const { isAdmin } = useSession();
 
   return (
@@ -82,6 +82,11 @@ export function TopBar({
         ) : null}
       </nav>
 
+      {chrome.alerts && chrome.alerts.critical > 0 ? (
+        <a className="portal-alerts-chip" href={chrome.alerts.href} onClick={chrome.alerts.onToggle ? (e) => { e.preventDefault(); chrome.alerts?.onToggle?.(); } : undefined} aria-label={`Alerts · ${chrome.alerts.critical} critical`}>
+          ⚑ Alerts · {chrome.alerts.critical} critical
+        </a>
+      ) : null}
       <button type="button" className="portal-search-btn" onClick={onOpenPalette}>
         <Search size={13} aria-hidden="true" />
         <span>Search</span>
