@@ -355,9 +355,16 @@ for required in \
   "${ROOT_DIR}/deploy/execution-d4/owner-input.env.example" \
   "${ROOT_DIR}/deploy/execution-d4/storage-input.env.example" \
   "${ROOT_DIR}/deploy/execution-d4/compose.encrypted-storage.yaml" \
+  "${ROOT_DIR}/deploy/execution-d4/compose.paper-read-shadow.yaml" \
+  "${ROOT_DIR}/deploy/execution-d4/source-proxy/nginx.conf.template" \
+  "${ROOT_DIR}/deploy/execution-d4/source-proxy/trading-system-read-header.conf.example" \
   "${ROOT_DIR}/deploy/runbooks/execution-d4-paper-shadow-and-rollback.md" \
   "${ROOT_DIR}/scripts/execution-d4-storage-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-render-source-proxy.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-source-proxy-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh" \
   "${ROOT_DIR}/scripts/test-execution-d4-storage.sh" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_SOURCE_PROXY_OFFLINE.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md" \
@@ -759,9 +766,16 @@ for tracked_source in \
   deploy/execution-d4/owner-input.env.example \
   deploy/execution-d4/storage-input.env.example \
   deploy/execution-d4/compose.encrypted-storage.yaml \
+  deploy/execution-d4/compose.paper-read-shadow.yaml \
+  deploy/execution-d4/source-proxy/nginx.conf.template \
+  deploy/execution-d4/source-proxy/trading-system-read-header.conf.example \
   deploy/runbooks/execution-d4-paper-shadow-and-rollback.md \
   scripts/execution-d4-storage-preflight.sh \
+  scripts/execution-d4-render-source-proxy.sh \
+  scripts/execution-d4-source-proxy-preflight.sh \
+  scripts/execution-d4-source-proxy-test.sh \
   scripts/test-execution-d4-storage.sh \
+  upgrade/backend/EX_BE_02_LIVE_D4_SOURCE_PROXY_OFFLINE.md \
   upgrade/backend/EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md \
   upgrade/backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md \
   upgrade/backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md \
@@ -917,6 +931,9 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-d3-live-probe.sh" \
   "${ROOT_DIR}/scripts/execution-d3-test.sh" \
   "${ROOT_DIR}/scripts/execution-d4-storage-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-render-source-proxy.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-source-proxy-preflight.sh" \
+  "${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh" \
   "${ROOT_DIR}/scripts/test-execution-d4-storage.sh" \
   "${ROOT_DIR}/scripts/execution-image-publication-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
@@ -943,6 +960,7 @@ python3 "${ROOT_DIR}/scripts/test_execution_d2_authorization.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_isolation.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d4_authorization.py"
 "${ROOT_DIR}/scripts/test-execution-d4-storage.sh"
+"${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh"
 
 while IFS= read -r tracked_path; do
   case "${tracked_path}" in

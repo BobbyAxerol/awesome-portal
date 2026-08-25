@@ -75,6 +75,35 @@ python3 scripts/execution-d4-authorization.py \
 The validator must pass inside the approved <=2-hour window. Passing changes no
 runtime state.
 
+Render and validate only the D4-specific proxy profile; do not use the legacy
+D1/D3 `paper-read` renderer:
+
+```bash
+sudo ./scripts/execution-d4-render-source-proxy.sh \
+  --env-file /PRIVATE/PATH/execution-runtime.env \
+  --output /srv/primus/portal/source-proxy/nginx-d4.conf
+
+sudo ./scripts/execution-d4-source-proxy-preflight.sh \
+  --runtime-env /PRIVATE/PATH/execution-runtime.env \
+  --owner-input /PRIVATE/PATH/execution-d4-owner-input.env \
+  --config /srv/primus/portal/source-proxy/nginx-d4.conf \
+  --contract /srv/primus/portal/releases/RELEASE/d4-paper-read-locations.conf \
+  --mode readiness
+```
+
+Compose must add both D4 overlays, with
+`SOURCE_PROXY_D4_CONTRACT_FILE` pointing to the exact installed include:
+
+```bash
+sudo docker compose \
+  --env-file /PRIVATE/PATH/execution-runtime.env \
+  -f deploy/compose.execution-edge.yaml \
+  -f deploy/execution-d1/compose.dark.yaml \
+  -f deploy/execution-d4/compose.encrypted-storage.yaml \
+  -f deploy/execution-d4/compose.paper-read-shadow.yaml \
+  config --quiet
+```
+
 ## 3. Create a BUILDING epoch only
 
 When the production mapper exists at the locked commit, start it in read-only

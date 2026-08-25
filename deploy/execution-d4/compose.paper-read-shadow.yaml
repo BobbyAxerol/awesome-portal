@@ -1,0 +1,12 @@
+# D4 exact-route Source Proxy overlay. This file alone does not start a mapper,
+# activate an epoch, publish Query/SSE or grant any command authority.
+services:
+  source-proxy:
+    volumes:
+      - type: bind
+        source: ${SOURCE_PROXY_D4_CONTRACT_FILE:?set the installed digest-verified D4 location include}
+        target: /etc/nginx/d4-paper-read-locations.conf
+        read_only: true
+    labels:
+      com.primusspark.portal.execution-phase: d4-paper-read-shadow
+      com.primusspark.portal.source-contract: d4.paper-read.v1
