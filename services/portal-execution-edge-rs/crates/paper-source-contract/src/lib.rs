@@ -213,14 +213,14 @@ pub enum StateDeltaRecord {
     Tombstone,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum DeltaOperation {
     Upsert,
     Delete,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum OrderSide {
     #[serde(rename = "BUY")]
     Buy,
@@ -228,7 +228,7 @@ pub enum OrderSide {
     Sell,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PositionSide {
     #[serde(rename = "FLAT")]
     Flat,
@@ -238,19 +238,19 @@ pub enum PositionSide {
     Short,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 enum PaperMode {
     #[serde(rename = "paper")]
     Paper,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 enum BinanceVenue {
     #[serde(rename = "BINANCE")]
     Binance,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct OrderRecord {
     pub client_order_id: String,
@@ -277,7 +277,7 @@ pub struct OrderRecord {
     pub error_code: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FillRecord {
     pub fill_id: i64,
@@ -300,7 +300,7 @@ pub struct FillRecord {
     pub realized_pnl: DecimalString,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PositionRecord {
     pub position_id: String,

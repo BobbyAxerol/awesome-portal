@@ -1161,6 +1161,16 @@ deep-dive → ADR → slice → evidence discipline documented above.
   Proxy/runtime change, writer, epoch or registry flag exists. Status:
   `BOUNDED_TRANSPORT_COMPLETE / INGESTOR_PENDING / NO_SOURCE_CALL`. Detail:
   [`EX_BE_02_LIVE_D4_BOUNDED_SOURCE_TRANSPORT.md`](./backend/EX_BE_02_LIVE_D4_BOUNDED_SOURCE_TRANSPORT.md).
+- **EX-BE-02-LIVE D4 BUILDING-only ingestion state machine (2026-08-25):** the
+  new Rust coordinator persists the snapshot/watermark lease before paging,
+  verifies all three immutable populations, gates baseline/event cursor
+  movement behind explicit durable ACKs and makes `410` require a fresh
+  BUILDING epoch. Exact-decimal records and typed tombstones map into bounded
+  projection writes without reusing Gateway-v1 semantics. Evidence is 8/8
+  tests plus rustfmt/strict Clippy. PostgreSQL writer, source call, runtime and
+  activation remain absent. Status: `INGESTION_STATE_MACHINE_COMPLETE /
+  PG_WRITER_PENDING / NO_SOURCE_CALL`. Detail:
+  [`EX_BE_02_LIVE_D4_BUILDING_INGESTION_STATE_MACHINE.md`](./backend/EX_BE_02_LIVE_D4_BUILDING_INGESTION_STATE_MACHINE.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

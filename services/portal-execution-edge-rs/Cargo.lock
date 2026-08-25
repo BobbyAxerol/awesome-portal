@@ -1292,6 +1292,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "paper-source-ingestor"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "execution-contracts",
+ "paper-source-contract",
+ "projection-core",
+ "serde_json",
+ "sha2",
+ "thiserror",
+ "uuid",
+]
+
+[[package]]
 name = "paper-source-transport"
 version = "0.1.0"
 dependencies = [

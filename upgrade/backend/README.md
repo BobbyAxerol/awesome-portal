@@ -524,6 +524,12 @@ authority.
   client cannot possess the Trading System read key. Five tests plus
   rustfmt/strict Clippy pass; no Source Proxy/runtime/storage/epoch state
   changed.
+- [EX-BE-02-LIVE D4 BUILDING-only ingestion state machine](./EX_BE_02_LIVE_D4_BUILDING_INGESTION_STATE_MACHINE.md)
+  — **state machine complete / PostgreSQL writer pending / no source call:**
+  durable snapshot-lease, baseline and event-page ACK barriers prevent cursor
+  advancement before commit; exact descriptor counts and `410` rebuild are
+  fail-closed. Eight tests plus rustfmt/strict Clippy pass. No network,
+  PostgreSQL, runtime or delivery-profile state changed.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã
