@@ -609,14 +609,13 @@ test.describe("EL-V2-09 · budgets", () => {
   for (const route of ROUTES) {
     test(`DOM/memory budget · ${route}`, async ({ page }) => {
       await open(page, route);
-      const m = await page.evaluate(() => ({
-        nodes: document.querySelectorAll("*").length,
-        heapMB: (() => {
-          const mem = (performance as unknown as { memory?: { usedJSHeapSize?: number } }).memory;
-          const bytes = mem?.usedJSHeapSize;
-          return typeof bytes === "number" && Number.isFinite(bytes) ? Math.round(bytes / 1048576) : null;
-        })(),
-      }));
+      // Heap via CDP: `performance.memory` is not exposed in new headless Chromium.
+      const nodes = await page.evaluate(() => document.querySelectorAll("*").length);
+      const cdp = await page.context().newCDPSession(page);
+      await cdp.send("Performance.enable");
+      const { metrics } = await cdp.send("Performance.getMetrics");
+      const heap = metrics.find((x) => x.name === "JSHeapUsedSize")?.value;
+      const m = { nodes, heapMB: typeof heap === "number" ? Math.round(heap / 1048576) : null };
       console.log(`BUDGET ${route} nodes=${m.nodes} heapMB=${m.heapMB}`);
       expect(m.nodes, "DOM nodes ≤ 8000").toBeLessThanOrEqual(8000);
       if (m.heapMB !== null) expect(m.heapMB, "JS heap ≤ 200MB").toBeLessThanOrEqual(200);
