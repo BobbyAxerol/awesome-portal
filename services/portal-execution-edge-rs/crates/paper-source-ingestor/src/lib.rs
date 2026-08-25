@@ -97,6 +97,30 @@ pub struct PendingEventCommit {
     pub caught_up: bool,
 }
 
+/// Store-agnostic durable state required to resume one D4 BUILDING epoch.
+///
+/// Opaque values deliberately keep the contract type whose `Debug` output is
+/// redacted. The ingestor crate does not depend on a concrete database.
+#[derive(Debug, Clone)]
+pub struct D4ResumeCheckpoint {
+    pub epoch_id: Uuid,
+    pub phase: D4ResumeCheckpointPhase,
+    pub snapshot: Option<OpaqueToken>,
+    pub event_cursor: OpaqueToken,
+    pub snapshot_digest: String,
+    pub snapshot_created_at: DateTime<Utc>,
+    pub snapshot_expires_at: DateTime<Utc>,
+    pub expected_counts: SnapshotResourceCounts,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum D4ResumeCheckpointPhase {
+    SnapshotLeased,
+    BaselineCommitted,
+    Streaming,
+    RebuildRequired,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IngestionEffect {
     SnapshotLeaseReady {
@@ -195,6 +219,73 @@ impl PaperIngestionCoordinator {
             config,
             state: IngestionState::AwaitingSnapshot,
         })
+    }
+
+    /// Restores only the minimum coordinator state from a durable checkpoint.
+    ///
+    /// A partially paged snapshot restarts paging from the first resource
+    /// against the same immutable lease. Baseline rows are not written until
+    /// all three resources are complete, so this replay is deterministic and
+    /// does not require persisting source payloads outside PostgreSQL.
+    ///
+    /// # Errors
+    ///
+    /// Rejects scope/epoch drift, malformed checkpoint vocabulary, a missing
+    /// or expired snapshot lease and any digest/count mismatch.
+    pub fn resume(
+        config: D4IngestionConfig,
+        checkpoint: D4ResumeCheckpoint,
+        resumed_at: DateTime<Utc>,
+    ) -> Result<Self, IngestorError> {
+        config.validate()?;
+        if checkpoint.epoch_id != config.epoch_id {
+            return Err(IngestorError::ResumeEpochMismatch);
+        }
+        let total = checkpoint
+            .expected_counts
+            .orders
+            .checked_add(checkpoint.expected_counts.fills)
+            .and_then(|value| value.checked_add(checkpoint.expected_counts.positions))
+            .ok_or(IngestorError::SnapshotCountOverflow)?;
+        if total > MAXIMUM_SNAPSHOT_ROWS {
+            return Err(IngestorError::SnapshotCountMismatch);
+        }
+        let state = match checkpoint.phase {
+            D4ResumeCheckpointPhase::SnapshotLeased => {
+                let snapshot = checkpoint
+                    .snapshot
+                    .ok_or(IngestorError::MissingResumeSnapshot)?;
+                if checkpoint.snapshot_created_at >= checkpoint.snapshot_expires_at
+                    || resumed_at >= checkpoint.snapshot_expires_at
+                    || opaque_digest(&snapshot) != checkpoint.snapshot_digest
+                {
+                    return Err(IngestorError::ExpiredOrInvalidResumeSnapshot);
+                }
+                IngestionState::PagingSnapshot {
+                    descriptor: SnapshotDescriptor {
+                        snapshot,
+                        created_at: checkpoint.snapshot_created_at,
+                        expires_at: checkpoint.snapshot_expires_at,
+                        resource_counts: checkpoint.expected_counts,
+                        event_cursor: checkpoint.event_cursor,
+                    },
+                    resource: BootstrapResource::Orders,
+                    cursor: None,
+                    resource_observed: 0,
+                    observations: Vec::new(),
+                }
+            }
+            D4ResumeCheckpointPhase::BaselineCommitted | D4ResumeCheckpointPhase::Streaming => {
+                if checkpoint.snapshot.is_some() {
+                    return Err(IngestorError::UnexpectedResumeSnapshot);
+                }
+                IngestionState::PollingEvents {
+                    cursor: checkpoint.event_cursor,
+                }
+            }
+            D4ResumeCheckpointPhase::RebuildRequired => IngestionState::RebuildRequired,
+        };
+        Ok(Self { config, state })
     }
 
     #[must_use]
@@ -776,6 +867,14 @@ pub enum IngestorError {
     SequenceOverflow,
     #[error("D4 durable commit acknowledgement is out of order")]
     CommitAcknowledgementOutOfOrder,
+    #[error("D4 resume checkpoint belongs to another epoch")]
+    ResumeEpochMismatch,
+    #[error("D4 leased resume checkpoint is missing its opaque snapshot")]
+    MissingResumeSnapshot,
+    #[error("D4 resume snapshot lease is expired or does not match its digest")]
+    ExpiredOrInvalidResumeSnapshot,
+    #[error("D4 post-baseline checkpoint unexpectedly retained a snapshot token")]
+    UnexpectedResumeSnapshot,
     #[error(transparent)]
     Contract(#[from] execution_contracts::ContractError),
     #[error(transparent)]

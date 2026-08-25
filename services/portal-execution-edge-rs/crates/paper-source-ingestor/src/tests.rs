@@ -421,3 +421,90 @@ fn snapshot_mapping_preserves_exact_decimal_scale() {
     assert_eq!(order.source_completeness, SourceCompleteness::PollBounded);
     assert_eq!(order.poll_interval_ms, Some(1_000));
 }
+
+#[test]
+fn leased_snapshot_resume_restarts_bounded_paging_without_exposing_tokens() {
+    let config = config(ProjectionEpochStatus::Building);
+    let checkpoint = D4ResumeCheckpoint {
+        epoch_id: config.epoch_id,
+        phase: D4ResumeCheckpointPhase::SnapshotLeased,
+        snapshot: Some(OpaqueToken::parse("raw-sensitive-snapshot-token").unwrap()),
+        event_cursor: OpaqueToken::parse("raw-sensitive-event-cursor").unwrap(),
+        snapshot_digest: opaque_digest(
+            &OpaqueToken::parse("raw-sensitive-snapshot-token").unwrap(),
+        ),
+        snapshot_created_at: at(1),
+        snapshot_expires_at: at(301),
+        expected_counts: SnapshotResourceCounts {
+            orders: 1,
+            fills: 1,
+            positions: 1,
+        },
+    };
+    let coordinator = PaperIngestionCoordinator::resume(config, checkpoint, at(2)).unwrap();
+    let request = coordinator.next_request().unwrap();
+    let blueprint = request.blueprint().unwrap();
+    assert_eq!(blueprint.path, "/v1/orders");
+    assert!(blueprint
+        .query
+        .iter()
+        .any(|(key, value)| key == "snapshot" && value == "raw-sensitive-snapshot-token"));
+    assert!(!format!("{coordinator:?}").contains("raw-sensitive-snapshot-token"));
+}
+
+#[test]
+fn streaming_resume_uses_exact_durable_cursor_and_rejects_snapshot_drift() {
+    let config = config(ProjectionEpochStatus::Building);
+    let checkpoint = D4ResumeCheckpoint {
+        epoch_id: config.epoch_id,
+        phase: D4ResumeCheckpointPhase::Streaming,
+        snapshot: None,
+        event_cursor: OpaqueToken::parse("raw-sensitive-event-cursor-next").unwrap(),
+        snapshot_digest:
+            "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                .to_owned(),
+        snapshot_created_at: at(1),
+        snapshot_expires_at: at(301),
+        expected_counts: SnapshotResourceCounts {
+            orders: 1,
+            fills: 1,
+            positions: 1,
+        },
+    };
+    let coordinator =
+        PaperIngestionCoordinator::resume(config.clone(), checkpoint.clone(), at(500)).unwrap();
+    let blueprint = coordinator.next_request().unwrap().blueprint().unwrap();
+    assert_eq!(blueprint.path, "/v1/events");
+    assert_eq!(blueprint.query[0].1, "raw-sensitive-event-cursor-next");
+
+    let mut invalid = checkpoint;
+    invalid.snapshot = Some(OpaqueToken::parse("must-not-survive-baseline").unwrap());
+    assert!(matches!(
+        PaperIngestionCoordinator::resume(config, invalid, at(2)),
+        Err(IngestorError::UnexpectedResumeSnapshot)
+    ));
+}
+
+#[test]
+fn expired_snapshot_resume_fails_before_a_source_request() {
+    let config = config(ProjectionEpochStatus::Building);
+    let snapshot = OpaqueToken::parse("raw-sensitive-snapshot-token").unwrap();
+    let checkpoint = D4ResumeCheckpoint {
+        epoch_id: config.epoch_id,
+        phase: D4ResumeCheckpointPhase::SnapshotLeased,
+        snapshot: Some(snapshot.clone()),
+        event_cursor: OpaqueToken::parse("raw-sensitive-event-cursor").unwrap(),
+        snapshot_digest: opaque_digest(&snapshot),
+        snapshot_created_at: at(1),
+        snapshot_expires_at: at(301),
+        expected_counts: SnapshotResourceCounts {
+            orders: 0,
+            fills: 0,
+            positions: 0,
+        },
+    };
+    assert!(matches!(
+        PaperIngestionCoordinator::resume(config, checkpoint, at(301)),
+        Err(IngestorError::ExpiredOrInvalidResumeSnapshot)
+    ));
+}
