@@ -3,8 +3,9 @@ use std::{collections::BTreeSet, fmt};
 use chrono::{DateTime, Utc};
 use execution_contracts::SourceCompleteness;
 use projection_core::{
-    canonical_digest, ProjectionEntityKind, ProjectionObservation, ProjectionOperation,
-    ProjectionScope, SourceSequenceSemantics,
+    canonical_digest, replay, semantic_state_digest, ProjectionEntityKind, ProjectionEpochStatus,
+    ProjectionObservation, ProjectionOperation, ProjectionScope, ReplayRecord,
+    SourceSequenceSemantics,
 };
 use serde::Serialize;
 use sha2::{Digest as _, Sha256};
@@ -12,8 +13,8 @@ use sqlx::{Postgres, Row, Transaction};
 use uuid::Uuid;
 
 use super::{
-    i64_from_u64, required_u64, EpochWriteAuthority, PgProjectionStore, StoreApplyOutcome,
-    StoreError,
+    i64_from_u64, required_u64, row_to_entity, EpochWriteAuthority, PgProjectionStore,
+    StoreApplyOutcome, StoreError,
 };
 
 pub const D4_CONTRACT_REVISION: &str = "d4.paper-read.v1";
@@ -137,7 +138,7 @@ pub enum D4CommitOutcome {
     RebuildRequired,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum D4ResumePhase {
     SnapshotLeased,
     BaselineCommitted,
@@ -158,6 +159,27 @@ pub struct D4ResumeState {
     pub last_source_sequence: Option<u64>,
     pub source_head_sequence: Option<u64>,
     pub caught_up: bool,
+}
+
+/// Payload-free, repeatable-read evidence for one D4 shadow epoch.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct D4QualificationSnapshot {
+    pub epoch_id: Uuid,
+    pub epoch_status: ProjectionEpochStatus,
+    pub phase: D4ResumePhase,
+    pub expected_counts: D4ResourceCounts,
+    pub baseline_applied_counts: Option<D4ResourceCounts>,
+    pub current_counts: D4ResourceCounts,
+    pub journal_count: u64,
+    pub blocker_count: u64,
+    pub caught_up: bool,
+    pub last_source_sequence: Option<u64>,
+    pub source_head_sequence: Option<u64>,
+    pub last_source_read_at: DateTime<Utc>,
+    pub state_digest: String,
+    pub replay_state_digest: String,
+    pub replay_parity: bool,
+    pub activation_authorized: bool,
 }
 
 impl PgProjectionStore {
@@ -570,6 +592,177 @@ impl PgProjectionStore {
         };
         transaction.commit().await?;
         Ok(state)
+    }
+
+    /// Captures a repeatable-read, payload-free D4 qualification snapshot.
+    ///
+    /// The method recomputes both visible-state and immutable-journal replay
+    /// digests in the same transaction. It never queries an ACTIVE epoch and
+    /// never changes lifecycle or delivery authority.
+    ///
+    /// # Errors
+    ///
+    /// Rejects scope drift, a non-BUILDING epoch, malformed persisted state,
+    /// replay divergence or database failures.
+    #[allow(clippy::too_many_lines)] // one repeatable-read transaction owns the evidence boundary
+    pub async fn load_d4_qualification_snapshot(
+        &self,
+        scope: &ProjectionScope,
+        epoch_id: Uuid,
+    ) -> Result<D4QualificationSnapshot, StoreError> {
+        validate_paper_scope(scope)?;
+        let mut transaction = self.pool.begin().await?;
+        sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+            .execute(&mut *transaction)
+            .await?;
+        let checkpoint = sqlx::query(
+            "SELECT checkpoint.*, epoch.workspace_id, epoch.environment,
+                    epoch.status AS epoch_status
+             FROM portal_projection.d4_source_checkpoints AS checkpoint
+             JOIN portal_projection.epochs AS epoch USING (epoch_id)
+             WHERE checkpoint.epoch_id = $1",
+        )
+        .bind(epoch_id)
+        .fetch_optional(&mut *transaction)
+        .await?
+        .ok_or(StoreError::D4SnapshotLeaseNotFound)?;
+        if checkpoint.try_get::<String, _>("workspace_id")? != scope.workspace_id.as_str()
+            || checkpoint.try_get::<String, _>("environment")? != scope.environment
+            || checkpoint.try_get::<String, _>("contract_revision")? != D4_CONTRACT_REVISION
+            || checkpoint.try_get::<String, _>("scope_id")? != D4_SCOPE_ID
+        {
+            return Err(StoreError::ScopeMismatch);
+        }
+        let epoch_status = match checkpoint.try_get::<String, _>("epoch_status")?.as_str() {
+            "BUILDING" => ProjectionEpochStatus::Building,
+            "FAILED" => ProjectionEpochStatus::Failed,
+            _ => return Err(StoreError::EpochNotBuilding),
+        };
+        let phase = match checkpoint.try_get::<String, _>("phase")?.as_str() {
+            "SNAPSHOT_LEASED" => D4ResumePhase::SnapshotLeased,
+            "BASELINE_COMMITTED" => D4ResumePhase::BaselineCommitted,
+            "STREAMING" => D4ResumePhase::Streaming,
+            "REBUILD_REQUIRED" => D4ResumePhase::RebuildRequired,
+            _ => return Err(StoreError::PersistedVocabulary),
+        };
+        if epoch_status != ProjectionEpochStatus::Building {
+            return Err(StoreError::EpochNotBuilding);
+        }
+
+        let expected_counts = D4ResourceCounts {
+            orders: row_count(&checkpoint, "expected_order_count")?,
+            fills: row_count(&checkpoint, "expected_fill_count")?,
+            positions: row_count(&checkpoint, "expected_position_count")?,
+        };
+        let baseline_applied_counts = match (
+            checkpoint.try_get::<Option<i64>, _>("applied_order_count")?,
+            checkpoint.try_get::<Option<i64>, _>("applied_fill_count")?,
+            checkpoint.try_get::<Option<i64>, _>("applied_position_count")?,
+        ) {
+            (Some(orders), Some(fills), Some(positions)) => Some(D4ResourceCounts {
+                orders: usize::try_from(orders).map_err(|_| StoreError::NumericOverflow)?,
+                fills: usize::try_from(fills).map_err(|_| StoreError::NumericOverflow)?,
+                positions: usize::try_from(positions).map_err(|_| StoreError::NumericOverflow)?,
+            }),
+            (None, None, None) => None,
+            _ => return Err(StoreError::PersistedD4CheckpointInvariant),
+        };
+        let count_row = sqlx::query(
+            "SELECT
+               count(*) FILTER (WHERE entity_kind = 'ORDER') AS orders,
+               count(*) FILTER (WHERE entity_kind = 'FILL') AS fills,
+               count(*) FILTER (WHERE entity_kind = 'POSITION') AS positions
+             FROM portal_projection.entities WHERE epoch_id = $1",
+        )
+        .bind(epoch_id)
+        .fetch_one(&mut *transaction)
+        .await?;
+        let current_counts = D4ResourceCounts {
+            orders: row_count(&count_row, "orders")?,
+            fills: row_count(&count_row, "fills")?,
+            positions: row_count(&count_row, "positions")?,
+        };
+        let entity_rows = sqlx::query(
+            "SELECT * FROM portal_projection.entities
+             WHERE epoch_id = $1 ORDER BY entity_kind, entity_id",
+        )
+        .bind(epoch_id)
+        .fetch_all(&mut *transaction)
+        .await?;
+        let entities = entity_rows
+            .iter()
+            .map(row_to_entity)
+            .collect::<Result<Vec<_>, _>>()?;
+        let state_digest = semantic_state_digest(&entities)?;
+
+        let journal_rows = sqlx::query(
+            "SELECT journal_ordinal, observation, projected_at
+             FROM portal_projection.event_journal
+             WHERE epoch_id = $1 ORDER BY journal_ordinal",
+        )
+        .bind(epoch_id)
+        .fetch_all(&mut *transaction)
+        .await?;
+        let replay_records = journal_rows
+            .iter()
+            .map(|row| {
+                let observation =
+                    serde_json::from_value(row.try_get::<serde_json::Value, _>("observation")?)
+                        .map_err(|_| StoreError::Serialization)?;
+                Ok(ReplayRecord {
+                    journal_ordinal: required_u64(row.try_get("journal_ordinal")?)?,
+                    observation,
+                    projected_at: row.try_get("projected_at")?,
+                })
+            })
+            .collect::<Result<Vec<_>, StoreError>>()?;
+        let journal_count =
+            u64::try_from(replay_records.len()).map_err(|_| StoreError::NumericOverflow)?;
+        let replay_state_digest = replay(scope.clone(), epoch_id, replay_records)?.state_digest;
+        let blocker_count: i64 = sqlx::query_scalar(
+            "SELECT
+               (SELECT count(*) FROM portal_projection.dead_letters
+                WHERE epoch_id = $1 AND status IN ('OPEN','REPLAYING'))
+               +
+               (SELECT count(*) FROM portal_projection.gaps
+                WHERE epoch_id = $1 AND resolved_at IS NULL)
+               +
+               (SELECT count(*) FROM portal_projection.d4_source_failures
+                WHERE epoch_id = $1)",
+        )
+        .bind(epoch_id)
+        .fetch_one(&mut *transaction)
+        .await?;
+        let last_source_read_at = checkpoint
+            .try_get::<Option<DateTime<Utc>>, _>("last_event_source_read_at")?
+            .or(checkpoint.try_get("baseline_source_read_at")?)
+            .unwrap_or(checkpoint.try_get("snapshot_accepted_at")?);
+        let snapshot = D4QualificationSnapshot {
+            epoch_id,
+            epoch_status,
+            phase,
+            expected_counts,
+            baseline_applied_counts,
+            current_counts,
+            journal_count,
+            blocker_count: required_u64(blocker_count)?,
+            caught_up: checkpoint.try_get("caught_up")?,
+            last_source_sequence: checkpoint
+                .try_get::<Option<i64>, _>("last_source_sequence")?
+                .map(required_u64)
+                .transpose()?,
+            source_head_sequence: checkpoint
+                .try_get::<Option<i64>, _>("source_head_sequence")?
+                .map(required_u64)
+                .transpose()?,
+            last_source_read_at,
+            replay_parity: state_digest == replay_state_digest,
+            state_digest,
+            replay_state_digest,
+            activation_authorized: false,
+        };
+        transaction.commit().await?;
+        Ok(snapshot)
     }
 }
 

@@ -24,8 +24,8 @@ pub use analytics_repository::{
 };
 pub use d4_writer::{
     D4BaselineCommitInput, D4CommitOutcome, D4EventPageCommitInput, D4ProjectionWrite,
-    D4ResourceCounts, D4ResumePhase, D4ResumeState, D4SensitiveValue, D4SnapshotLeaseInput,
-    D4_CONTRACT_REVISION, D4_SCOPE_ID,
+    D4QualificationSnapshot, D4ResourceCounts, D4ResumePhase, D4ResumeState, D4SensitiveValue,
+    D4SnapshotLeaseInput, D4_CONTRACT_REVISION, D4_SCOPE_ID,
 };
 pub use query::{RetentionPolicySnapshot, SeriesPointWrite};
 pub use realtime::{
@@ -1583,6 +1583,30 @@ mod tests {
             replayed.state_digest,
             semantic_state_digest(&visible).unwrap()
         );
+        let qualification = restarted
+            .load_d4_qualification_snapshot(&scope, epoch_id)
+            .await
+            .unwrap();
+        assert_eq!(qualification.epoch_status, ProjectionEpochStatus::Building);
+        assert_eq!(qualification.phase, D4ResumePhase::Streaming);
+        assert_eq!(qualification.expected_counts, lease.expected_counts);
+        assert_eq!(
+            qualification.baseline_applied_counts,
+            Some(lease.expected_counts)
+        );
+        assert_eq!(
+            qualification.current_counts,
+            D4ResourceCounts {
+                orders: 1,
+                fills: 1,
+                positions: 0,
+            }
+        );
+        assert_eq!(qualification.journal_count, 7);
+        assert_eq!(qualification.blocker_count, 0);
+        assert!(qualification.caught_up);
+        assert!(qualification.replay_parity);
+        assert!(!qualification.activation_authorized);
 
         let gap_page = D4EventPageCommitInput {
             scope: scope.clone(),
