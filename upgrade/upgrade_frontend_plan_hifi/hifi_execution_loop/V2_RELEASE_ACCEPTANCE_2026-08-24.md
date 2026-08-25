@@ -19,7 +19,7 @@ Ba tầng bằng chứng, thiếu một tầng là chưa đóng (supplement V2-0
 | Playwright `chromium-preview` (flag on) | preview + journeys 65 (6 §8.2 + fold + sticky bar + guard probe + scope + budgets 17 route) + structural sweep **0 NO-OP** | 26 baseline route `el-v2-0N-*.png` |
 | Tổng Playwright | **300 passed · 0 failed · 16 skipped** | chuỗi gate cuối 2026-08-25 |
 | DOM budget | max **861** node / route (ngưỡng 8000) | 17 route preview |
-| JS heap | **không đo được** trong Chromium headless (`performance.memory` không publish) — ghi null, không bịa | cần đo tay trên Chrome desktop khi Bobby review |
+| JS heap | **7–11 MB / route** qua CDP `Performance.getMetrics` (ngưỡng 200 MB); max Alpha 360 11 MB | 17 route preview |
 | Perf 10⁵ dòng | 41 `<tr>` resident (cap 2000) | jsdom |
 | Keyboard / focus / motion / ids / contrast | audit specs xanh | `execution-interaction-audit`, `execution-surface-audit` |
 
