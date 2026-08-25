@@ -30,7 +30,7 @@ import {
   type PanelStatus,
 } from "../contracts";
 import type { FunnelStageName, OrderFunnel } from "../analytics";
-import { AuthorityBadge, OrderStatusChip } from "../components/badges";
+import { OrderStatusChip } from "../components/badges";
 import { KeysetTable, type Column } from "../components/table";
 import { AggregatesFooter } from "../components/AggregatesFooter";
 import type { CurrencyAggregate } from "../blotterAggregates";
@@ -38,6 +38,13 @@ import { useState } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
+import {
+  ExecutionContextRail,
+  ExecutionPageHeader,
+  ExecutionProvenanceDrawer,
+  ExecutionWorkspace,
+  type HeaderBadge,
+} from "../components/workspace";
 
 /**
  * Fills shown per funnel stage before capping.
@@ -434,15 +441,42 @@ export function FullBlotter({
     setExported(`${page.rows.length} loaded rows copied as CSV — bounded to this page, not the ${page.totalCount ?? "unpublished"} total`);
   };
   const [exported, setExported] = useState<string | null>(null);
+  const rejected = page.rows.filter((r) => r.status === "REJECTED" || r.status === "DENIED");
+  const blotterRail = (
+    <ExecutionContextRail
+      next={{
+        title: expandedOrderId ? `Funnel · ${expandedOrderId}` : "Pick an order for its funnel",
+        detail: (
+          <span className="exec-role-body">
+            {expandedOrderId ? "signal → intent → risk → ACK → fill, from the server's funnel — shown under the table." : "Click a row: its signal → intent → risk → ACK → fill funnel opens under the table."}
+          </span>
+        ),
+      }}
+      blockers={rejected.map((r) => ({ label: `${r.orderId} ${r.status}`, detail: null, severity: "watch" as const }))}
+      freshness={<span className="exec-role-meta">{envelope.authority} · as_of {envelope.asOf ?? "not stated"} · {envelope.freshness} · {page.rows.length} loaded of {page.totalCount ?? "an unpublished"} total</span>}
+      provenance={
+        <ExecutionProvenanceDrawer
+          items={[
+            { label: "filter", short: filter, full: null },
+            ...(crossFilter ? [{ label: "cross-filter", short: crossFilter, full: null }] : []),
+          ]}
+          onCopy={(full) => void navigator.clipboard?.writeText(full)}
+        />
+      }
+    />
+  );
   return (
     <ExecutionSurface kind="deployments" className="exec-blotter">
       {/* Reuses the inbox/gate header pair rather than adding a third. */}
-      <header className="exec-inbox-head">
-        <div className="exec-tile-title">Orders &amp; fills — full blotter</div>
-        <div className="exec-inbox-counts">
-          <AuthorityBadge envelope={envelope} />
-        </div>
-      </header>
+      <ExecutionWorkspace layout="balanced" rail={blotterRail}>
+      <ExecutionPageHeader
+        title="Orders & fills — full blotter"
+        badges={[
+          { label: `${envelope.authority} · ${envelope.freshness}`, axis: "broker-sync", tone: envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn" },
+          ...(crossFilter ? [{ label: "CROSS-FILTERED", axis: "other", tone: "warn" } as HeaderBadge] : []),
+        ]}
+        purpose="Every order and fill in scope — keyset pagination, virtualized rows, exact values, never abbreviated."
+      />
 
       {scope ? <div className="exec-blotter-scope">{scope}</div> : null}
 
@@ -542,6 +576,7 @@ export function FullBlotter({
           <OrderFunnelStrip funnel={funnel} status={funnelStatus} reason={funnelReason} />
         </section>
       ) : null}
+      </ExecutionWorkspace>
     </ExecutionSurface>
   );
 }

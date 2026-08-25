@@ -602,3 +602,24 @@ test.describe("EL-V2-08 · analytical surfaces", () => {
     });
   }
 });
+
+// ── EL-V2-09 · hardening budgets across every preview route ──────────────────
+test.describe("EL-V2-09 · budgets", () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+  for (const route of ROUTES) {
+    test(`DOM/memory budget · ${route}`, async ({ page }) => {
+      await open(page, route);
+      const m = await page.evaluate(() => ({
+        nodes: document.querySelectorAll("*").length,
+        heapMB: (() => {
+          const mem = (performance as unknown as { memory?: { usedJSHeapSize?: number } }).memory;
+          const bytes = mem?.usedJSHeapSize;
+          return typeof bytes === "number" && Number.isFinite(bytes) ? Math.round(bytes / 1048576) : null;
+        })(),
+      }));
+      console.log(`BUDGET ${route} nodes=${m.nodes} heapMB=${m.heapMB}`);
+      expect(m.nodes, "DOM nodes ≤ 8000").toBeLessThanOrEqual(8000);
+      if (m.heapMB !== null) expect(m.heapMB, "JS heap ≤ 200MB").toBeLessThanOrEqual(200);
+    });
+  }
+});

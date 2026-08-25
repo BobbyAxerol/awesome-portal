@@ -183,7 +183,11 @@ export function CommandCenterScreen({ snapshot, onOpen, live }: { snapshot: Comm
   const badges: HeaderBadge[] = [
     { label: busy ? `BUSY · ${ranked.length}` : "QUIET", axis: "readiness", tone: busy ? "warn" : "good" },
     ...(critical > 0 ? [{ label: `${critical} CRITICAL`, axis: "other", tone: "bad" } as HeaderBadge] : []),
-    { label: !gate.allowed ? "STREAM NOT PUBLISHED" : live ? `LIVE · ${live.freshness}` : "STREAM PUBLISHED · NOT CONNECTED", axis: "broker-sync", tone: live ? "good" : "mute" },
+    {
+      label: !gate.allowed ? "STREAM NOT PUBLISHED" : live?.phase === "auth_expired" ? "SESSION EXPIRED" : live?.phase === "source_lost" ? "SOURCE LOST" : live ? `LIVE · ${live.freshness}${live.coalescedEvents ? ` · ${live.coalescedEvents} coalesced` : ""}` : "STREAM PUBLISHED · NOT CONNECTED",
+      axis: "broker-sync",
+      tone: live?.phase === "auth_expired" || live?.phase === "source_lost" ? "bad" : live ? "good" : "mute",
+    },
   ];
   const first = ranked[0] ?? null;
   const blockers: RailBlocker[] = ranked.filter((i) => i.severity === "CRITICAL").map((i) => ({ label: i.title, detail: `${i.kind ?? "UNKNOWN"} · ${i.slaState ?? "—"}`, severity: "blocking" as const }));
@@ -233,6 +237,10 @@ export function CommandCenterScreen({ snapshot, onOpen, live }: { snapshot: Comm
             secondary={
               !gate.allowed ? (
                 <span className="exec-cc-sub exec-role-meta">{gate.reason} Reload to re-read.</span>
+              ) : live?.phase === "auth_expired" ? (
+                <span className="exec-cc-sub exec-role-body" role="alert" data-stream="auth_expired">{live.note ?? "Session expired. Sign in again to resume the live stream; values below are as read."}</span>
+              ) : live?.phase === "source_lost" ? (
+                <span className="exec-cc-sub exec-role-body" role="alert" data-stream="source_lost">{live.note ?? "Source lost. Values are as last read."}{live.lastGoodAsOf ? ` Last good as_of ${live.lastGoodAsOf}.` : ""}</span>
               ) : live ? (
                 <span className="exec-cc-sub exec-role-meta" data-live="true">
                   Live — {live.freshness}

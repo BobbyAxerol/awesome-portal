@@ -26,7 +26,7 @@ Kế hoạch chi tiết từng phase: các khối **Claude supplement** trong ch
 | EL-V2-06 | Stage workbench VNM→Live | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | anatomy chung 4 màn ✓ (clone=0) · guard budget 1 band ✓ · VNM timeline ✓ · Sandbox 4 tab ✓ · Canary/Live bất đối xứng + suppression ✓ · commands dark ✓ · ma trận 4 stage ✓ · chart = honest state (BR-EX-34) · BR-EX-38 | `stageWorkbench.tsx`, `sessionTimeline.tsx`, `SandboxCertification.tsx`, `CanaryControlRoom.tsx`, `LiveFullOperations.tsx`, `PaperWorkbench.tsx` (timeline), `AlphaThreeSixty.tsx` (EquityChart), `vnCalendar.ts` (phases), `stageWorkbench.test.tsx`, `STAGE_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-06-*.png` |
 | EL-V2-07 | Operations · incident · command | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | terminal §9.2 trong drawer (202 ⇒ ACCEPTED) ✓ · triage ranked-first + BUSY/QUIET ✓ · rail theo selection ✓ · incident containment + forward-only ✓ · break-glass không render ✓ · journey 6 + 3 e2e mới ✓ | `components/drawer.tsx` (terminal), `CommandCenter.tsx`, `OperationsQueue.tsx`, `IncidentDetail.tsx`, `AdminActionDrawer.tsx`, `containers.tsx`, `operationsWorkflow.test.tsx`, `OPERATIONS_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-07-*.png` |
 | EL-V2-08 | Entity 360 · analytics · Blotter | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | 12 tile = chart/honest ✓ · M7 aggregates footer từ fixture canonical ✓ · scope propagation 4/4 ✓ · heatmap + lens + influence map ✓ · Account triptych + tabs + rail ✓ · Blotter Columns/Export ✓ · chart export/cross-filter ✓ · perf 10⁵ = 41 tr ✓ | `blotterAggregates.ts`, `AggregatesFooter.tsx`, `ContributionChart.tsx`, `EquityChart.tsx`, `AlphaThreeSixty.tsx`, `PortfolioThreeSixty.tsx`, `AccountBroker360.tsx`, `FullBlotter.tsx`, `analytics360.test.tsx`, `blotterAggregates.test.ts`, `ANALYTICS_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-08-*.png` |
-| EL-V2-09 | Lane B Paper + hardening + nghiệm thu | `QUEUED` | mười phase accepted; owner sign-off; rollback chứng minh | — |
+| EL-V2-09 | Lane B thật · hardening · acceptance | **frontend xong 2026-08-24 — phase mở, chờ codex BE-V2-E/F/G + parity shadow + Bobby ký** | hardening SSE typed 401/backpressure/source-loss ✓ · parity harness ✓ (chưa có dữ liệu) · rollback rehearsal ✓ · budgets e2e ✓ · ledger MISS 0 ✓ · Alpha/Portfolio/Blotter lên anatomy ✓ · **activation: 0 màn** | `V2_RELEASE_ACCEPTANCE_2026-08-24.md`, `subscription.ts`, `sse.ts`, `streamHardening.test.tsx`, `scripts/shadow-parity.mjs`, `shadowParity.test.ts`, `execution-journeys.spec.ts` (budgets) |
 
 
 > **The shared board for the Execution Loop.** Claude (frontend) and codex
@@ -2076,9 +2076,9 @@ ghi nấc **đã đạt**; V chưa màn nào đạt (owner đã từ chối comp
 | Breadcrumb `<Cluster>/<Module>/<Entity>` | T | topbar có breadcrumb khác grammar | impr | C | V2-01 §4.3 product locator |
 | LifecycleRail mọi workbench + 360° | N | `LifecycleRail` component có, gắn thiếu chỗ | impr | C | HiFi: ✓ link decision, ● stage hiện tại; retrofit đủ 5 workbench + 3×360° |
 | Theme selector nói mode hiệu lực | N | topbar preference Research/Ops | impr | C | override §0.1: Carbon từ Inbox→Live; **HiFi ghi "Governance Light ▾" — superseded** |
-| Density modes Operator/Manager/Quant (4g) | N | **không có** | MISS | — | V2-02 dựng switcher topbar; Quant thêm cột formula/samples |
-| Chart contract: tooltip+envelope/zoom/reset/expand+table+export/cross-filter chip | C | **không có** — mọi chart là khung | MISS | — | V2-04 dựng một lần trong wrapper ECharts, mọi chart thừa hưởng |
-| Break-glass ceremony (5b) | T+N | **không có** | MISS | — | V2-07; chỉ risk-reducing; thiếu ceremony ⇒ không render nút |
+| Density modes Operator/Manager/Quant (4g) | N | switcher topbar Comfortable/Compact (V2-02); Quant cột formula/samples chưa | impr | C | V2-02 dựng switcher topbar; Quant thêm cột formula/samples |
+| Chart contract: tooltip+envelope/zoom/reset/expand+table+export/cross-filter chip | C | `EquityChart`: đủ tooltip/zoom/reset/expand/table/export/cross-filter (V2-04, V2-08) | impl | C | V2-04 dựng một lần trong wrapper ECharts, mọi chart thừa hưởng |
+| Break-glass ceremony (5b) | T+N | không render — contract chưa publish ceremony; test âm tính (V2-07) | dis+BE | C | V2-07; chỉ risk-reducing; thiếu ceremony ⇒ không render nút |
 | Role lens DENIED-per-role (5c) | N | PanelStatus `denied` có per-panel | impr | C | thiếu: lens switch topbar + amounts-withheld-counts-shown + export kế thừa lens |
 | Responsive rules (4f) | — | subtask 2026-08-23 đã chứa phần lớn | impl | C | drawer full-screen <720 chưa có (drawer đang inline) |
 | StateView 7 trạng thái đồng nhất (3c-9) | N | `PanelState` 9 trạng thái | impl | C | vượt HiFi (thêm insufficient_data/terminal) — giữ |
@@ -2152,8 +2152,8 @@ nav trỏ 404.
 | FRESH **và** STALE variant (banner + age đổi) | N | có cả hai | impl | C | |
 | Lineage strip artifact/R1/R2/PF/dep/acct/venue/rev | N→D | có, đang chiếm scan path | impr | C | V2-04: vào provenance drawer |
 | KPI 5 ô (Equity/PnL/DD/Alloc/age) | N | có | impl | C | mono 24 theo §5.2 |
-| **Equity vs approved evidence chart** (band, DD annotation) | C | **khung trống** | MISS | — | V2-04 ECharts — trung tâm lát cắt |
-| **Candle + order/fill overlay + funnel drill-down/marker** | C | **khung trống** | MISS | — | V2-04; funnel drill đã có pattern ở blotter |
+| **Equity vs approved evidence chart** (band, DD annotation) | C | `EquityChart` honest state trên route; cơ chế (band, gap, zoom…) chứng minh ở fixtures (V2-04) | dis+BE | C | V2-04 ECharts — trung tâm lát cắt |
+| **Candle + order/fill overlay + funnel drill-down/marker** | C | không có contract kline/overlay — không render khung; funnel drill có ở Blotter/Paper tabs | dis+BE | C | V2-04; funnel drill đã có pattern ở blotter |
 | Observation gate 3 tiêu chí + CTA blocked-khi-unmet | N | có | impl | C | |
 | Runtime health / Accounting / Contribution / Drift | N | có 4 panel | impl | C | drift: bảng backtest-vs-paper đủ |
 | Tabs Orders/Fills/Positions/Sessions (cursor + virtual) | N | có, số liệu exact | impl | C+I(fixtures) | preview chưa nối onTabChange — V2-03 |
@@ -2327,7 +2327,7 @@ nav trỏ 404.
 | `impl` | 78 | đã đúng ở component contract |
 | `impr` | 14 | có nhưng V2 phải nâng (đa số: trình bày/propagation/chip điều hướng) |
 | `dis`/`BE` | 9 | disabled có lý do hoặc chờ backend (Request-changes, Mine, view enum, history, Rebalance, pin persistence…) |
-| `MISS` | 17 | **chưa có gì** — tập trung ở: mọi chart plot (12), density modes, break-glass, chart contract, Columns/Export, aggregates footer, influence map |
+| `MISS` | 0 (2026-08-24, sau V2-08: 17 → 0 — mọi dòng có disposition; 5 dòng cuối chuyển `impl`/`impr`/`dis+BE`) | **chưa có gì** — tập trung ở: mọi chart plot (12), density modes, break-glass, chart contract, Columns/Export, aggregates footer, influence map |
 | `hid` | 0 dòng riêng | các hidden-by-policy đã nằm trong dòng liên quan (mutation Canary, labReset) |
 
 **Không dòng nào `unknown`.** Mỗi MISS đã có phase đích ghi trong cột Ghi chú.

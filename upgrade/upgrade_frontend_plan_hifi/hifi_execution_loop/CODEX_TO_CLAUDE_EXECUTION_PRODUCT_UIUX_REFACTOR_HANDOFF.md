@@ -1518,6 +1518,26 @@ nhất: **test xanh không phải phê duyệt sản phẩm**. Phase này tách 
 | Ba tầng bằng chứng | gates máy xanh + parity report + chữ ký owner — đủ ba mới đóng |
 | Giới hạn ghi rõ | command/live-source còn tắt được liệt kê tường minh trong evidence cuối |
 
+
+#### Claude close-out — EL-V2-09 (2026-08-24, chỉ thêm; gate = ba tầng bằng chứng, hai tầng còn chờ)
+
+| Gate | Kết quả | Bằng chứng |
+|---|---|---|
+| Consume only activated capabilities | ✓ (không có gì để consume) | registry `query_enabled`/`realtime_enabled` = 0, `delivery_profile` null; mọi màn fixture; SSE không mở |
+| Activate one screen/profile | **không thực hiện** — BE-V2-B…G chưa accepted; Bobby chưa duyệt | activation record §2 `V2_RELEASE_ACCEPTANCE_2026-08-24.md` |
+| Shadow parity | harness ✓ · dữ liệu **chưa có** | `scripts/shadow-parity.mjs` + `shadowParity.test.ts` |
+| Typed 401 / gap / reconnect / backpressure / source-loss | ✓ | `subscription.ts` (+`auth_expired`/`source_lost`/`BACKPRESSURE`), `sse.ts` (preflight, deadline-derived AUTH_EXPIRED, coalesce notifications), Command Center badges/alerts; `streamHardening.test.tsx` 9 test; sse.test vẫn khoá danh sách sự kiện edge |
+| Gates across all routes | ✓ | visual 26 route baseline + 87 crop · a11y (contrast/ids/labels/keyboard audits) · responsive 5 breakpoint · DOM/heap budget e2e mọi route · perf 10⁵ · journeys · sweep 0 NO-OP |
+| Research/Planning + stable non-regression | ✓ | 101 baseline QuantBT không tái sinh ở project flag-off; stable :18081 không đụng |
+| Frontend rollback | ✓ diễn tập có log | §5 acceptance — compose build arg → bundle literal đổi, force-recreate, health 200 hai chiều |
+| Owner approval | **chờ Bobby** | §7 acceptance |
+| Limitations ghi tường minh | ✓ | §6 acceptance |
+| Nợ V2-08 (Alpha/Portfolio/Blotter chưa rail) | ✓ đóng | 3 màn lên `ExecutionWorkspace` |
+
+**Cổng kỹ thuật:** tsc sạch · vitest **1,660 passed / 1 skipped (81 file)** · vite build sạch · Playwright **300 passed · 0 failed · 16 skipped** (chromium flag-off = rollback build: 101 QuantBT không tái sinh; chromium-preview: journeys 65 gồm budgets 17 route, DOM max 861 node; sweep 0 NO-OP).
+
+**Kết luận phase:** phía frontend **không còn việc tự làm được**; V2-09 đóng khi (a) codex giao BE-V2-E/F/G và Bobby duyệt kích hoạt Paper read-only, (b) parity trên shadow thật = 0 dòng không giải thích, (c) Bobby ký §7. Tôi không tuyên bố V2 "accepted".
+
 ### 12.11 Codex backend/IAM lane running in parallel
 
 The frontend sequence above is independent of live infrastructure until EL-V2-09, but Codex will use

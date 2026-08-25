@@ -37,6 +37,13 @@ import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { EquityChart } from "../components/EquityChart";
+import {
+  ExecutionContextRail,
+  ExecutionPageHeader,
+  ExecutionProvenanceDrawer,
+  ExecutionWorkspace,
+  type HeaderBadge,
+} from "../components/workspace";
 
 /**
  * Cells the matrix may lay out before the representation changes.
@@ -757,19 +764,47 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
   // of one of these, so this was live on a real page, not hypothetical.
   const uid = useId();
 
+  const pfRail = (
+    <ExecutionContextRail
+      next={{
+        title: insight ? `INSIGHT · ${insight.code}` : leaders[0] ? `Leader lens · ${leaders[0].title}` : "No leader claim published",
+        detail: (
+          <span className="exec-role-body">
+            {insight ? `${insight.text} (grade ${insight.grade} · ${insight.window})` : "Structure & Correlation holds the matrix, the influence map and the ranked leader lists — none of them merged into a score."}
+          </span>
+        ),
+      }}
+      blockers={[
+        ...(incidents?.open ?? []).map((i) => ({ label: `${i.id} ${i.severity}`, detail: i.summary, severity: (i.severity === "CRITICAL" ? "blocking" : "watch") as "blocking" | "watch" })),
+        ...holdings.filter((h) => h.readiness !== "READY").map((h) => ({ label: `${h.deploymentId} ${h.readiness}`, detail: `${h.alpha} · ${h.venue} ${h.mode}`, severity: "watch" as const })),
+      ]}
+      freshness={<span className="exec-role-meta">{envelope.authority} · as_of {envelope.asOf ?? "not stated"} · {envelope.freshness}{correlationEnvelope ? ` · correlation ${correlationEnvelope.freshness}` : ""}</span>}
+      provenance={
+        <ExecutionProvenanceDrawer
+          items={[
+            { label: "benchmark", short: `${benchmark} (${benchmarkId})`, full: null },
+            { label: "window", short: scopeWindow, full: null },
+            ...(ledgerTotals ? [{ label: "capital", short: `${ledgerTotals.allocated} / ${ledgerTotals.max} ${ledgerTotals.currency}`, full: null }] : []),
+          ]}
+          onCopy={(full) => void navigator.clipboard?.writeText(full)}
+        />
+      }
+    />
+  );
   return (
     <ExecutionSurface kind="deployments" className="exec-pf">
-      <header className="exec-inbox-head">
-        <div className="exec-tile-title">
-          {portfolioName} · <span className="exec-num">{portfolioId}</span>
-        </div>
-        <div className="exec-alpha-identity">
-          <AuthorityBadge envelope={envelope} />
-          <span className="exec-blotter-note">
-            window {scopeWindow} · benchmark {benchmark} ({benchmarkId})
-          </span>
-        </div>
-      </header>
+      <ExecutionWorkspace layout="balanced" rail={pfRail}>
+      <ExecutionPageHeader
+        title={portfolioName}
+        id={portfolioId}
+        badges={[
+          { label: `${holdings.length} holding${holdings.length === 1 ? "" : "s"}`, axis: "other" },
+          { label: `${envelope.authority} · ${envelope.freshness}`, axis: "broker-sync", tone: envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn" },
+          ...(incidents && incidents.open.length ? [{ label: `${incidents.open.length} OPEN INCIDENT${incidents.open.length === 1 ? "" : "S"}`, axis: "readiness", tone: "bad" } as HeaderBadge] : []),
+        ]}
+        purpose="What the portfolio contains, how its alphas move together, who leads the book, and what changes if the leader changes."
+        secondary={<span className="exec-role-meta">window {scopeWindow} · benchmark {benchmark} ({benchmarkId})</span>}
+      />
 
       <div className="exec-alpha-tabs" role="tablist" aria-label="Portfolio detail">
         {PORTFOLIO_TABS.map((option) => (
@@ -1052,6 +1087,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
           />
         ) : null}
       </div>
+      </ExecutionWorkspace>
     </ExecutionSurface>
   );
 }

@@ -33,7 +33,7 @@ import type {
   PromotionStage,
   Readiness,
 } from "../contracts";
-import { AuthorityBadge, BrokerSyncChip, EnvironmentBadge, StatusChip } from "../components/badges";
+import { BrokerSyncChip, EnvironmentBadge, StatusChip } from "../components/badges";
 import { KeysetTable, type Column } from "../components/table";
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
@@ -41,6 +41,14 @@ import { ExecutionSurface } from "../ExecutionSurface";
 import { EquityChart, type EquitySeries } from "../components/EquityChart";
 import { envelopeCaption } from "../components/chart";
 import { ContributionChart } from "../components/ContributionChart";
+import {
+  ExecutionContextRail,
+  ExecutionPageHeader,
+  ExecutionProvenanceDrawer,
+  ExecutionWorkspace,
+  shortDigest,
+  type HeaderBadge,
+} from "../components/workspace";
 
 /**
  * Row budgets for the bounded panels.
@@ -432,25 +440,63 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
   // of one of these, so this was live on a real page, not hypothetical.
   const uid = useId();
 
+  const absentKpis = kpis.filter((k) => k.value === null);
+  const alphaRail = (
+    <ExecutionContextRail
+      next={{
+        title: `Scope · ${scope.portfolio} · ${scope.mode} · ${scope.venue} · ${scope.window}`,
+        detail: (
+          <span className="exec-role-body">
+            {deployments.length} deployment{deployments.length === 1 ? "" : "s"} in scope · {contributions.length} venue contribution{contributions.length === 1 ? "" : "s"}. Change the scope bar and every panel follows.
+          </span>
+        ),
+        action: deployments[0] ? (
+          <button type="button" className="exec-role-control exec-btn-apply" onClick={() => onOpenDeployment(deployments[0])}>
+            Open first deployment in scope
+          </button>
+        ) : undefined,
+      }}
+      blockers={[
+        ...absentKpis.map((k) => ({ label: `${k.label} not published`, detail: null, severity: "watch" as const })),
+        ...tiles.filter((t) => t.state !== "ok").map((t) => ({ label: `${t.index} · ${t.title} ${t.state === "insufficient_data" ? "INSUFFICIENT_DATA" : "UNAVAILABLE"}`, detail: null, severity: "watch" as const })),
+      ]}
+      freshness={<span className="exec-role-meta">{envelope.authority} · as_of {envelope.asOf ?? "not stated"} · {envelope.freshness}</span>}
+      provenance={
+        <ExecutionProvenanceDrawer
+          items={[
+            { label: "artifact", short: artifactDigest.length > 20 ? shortDigest(artifactDigest) : artifactDigest, full: artifactDigest },
+            ...(r1Id ? [{ label: "R1", short: r1Id, full: null }] : []),
+            ...(r2Id ? [{ label: "R2", short: r2Id, full: null }] : []),
+            { label: "owner", short: owner, full: null },
+          ]}
+          onCopy={(full) => void navigator.clipboard?.writeText(full)}
+        />
+      }
+    />
+  );
   return (
     <ExecutionSurface kind="deployments" className="exec-alpha">
-      <header className="exec-inbox-head">
-        <div className="exec-tile-title">
-          {alphaName} · {alphaId}
-        </div>
-        <div className="exec-alpha-identity">
-          <AuthorityBadge envelope={envelope} />
-          <span className="exec-num">artifact {artifactDigest}</span>
-          <span className="exec-blotter-note">owner {owner}</span>
-          {r1Id ? <StatusChip label={`R1 ${r1Id}`} tone="mute" /> : null}
-          {r2Id ? <StatusChip label={`R2 ${r2Id}`} tone="mute" /> : null}
-          {passportHref ? (
-            <a className="exec-evidence-link" href={passportHref}>
-              Artifact passport →
-            </a>
-          ) : null}
-        </div>
-      </header>
+      <ExecutionWorkspace layout="balanced" rail={alphaRail}>
+      <ExecutionPageHeader
+        title={alphaName}
+        id={alphaId}
+        badges={[
+          { label: `${venues.length} venue${venues.length === 1 ? "" : "s"}`, axis: "other" },
+          { label: `${envelope.authority} · ${envelope.freshness}`, axis: "broker-sync", tone: envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn" },
+          ...(status === "partial" ? [{ label: "PARTIAL", axis: "readiness", tone: "warn" } as HeaderBadge] : []),
+        ]}
+        purpose="One alpha, all its deployments across venue × mode × stage — every panel below obeys the scope bar."
+        secondary={
+          <>
+            <span className="exec-role-meta">owner {owner}</span>
+            {passportHref ? (
+              <a className="exec-evidence-link" href={passportHref}>
+                Artifact passport →
+              </a>
+            ) : null}
+          </>
+        }
+      />
 
       <ScopeBar {...props} />
 
@@ -533,6 +579,7 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
         {tab === "Reconciliation" ? <Reconciliation rows={props.reconciliation ?? []} /> : null}
         {tab === "Audit" ? <Audit {...props} /> : null}
       </div>
+      </ExecutionWorkspace>
     </ExecutionSurface>
   );
 }

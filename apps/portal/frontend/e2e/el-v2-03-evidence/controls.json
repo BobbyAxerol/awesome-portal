@@ -1157,6 +1157,21 @@
   "detail": "/deployments/accounts/acct-paper-grid-drb"
  },
  {
+  "route": "/deployments/alphas/av_2041",
+  "index": 20,
+  "tag": "BUTTON",
+  "text": "Open first deployment in scope",
+  "verdict": "navigated",
+  "detail": "/deployments/live/dep_88/canary"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 21,
+  "tag": "BUTTON",
+  "text": "Copy full artifact",
+  "verdict": "skipped:hidden"
+ },
+ {
   "route": "/deployments/portfolios/PF-CRYPTO",
   "index": 0,
   "tag": "BUTTON",
