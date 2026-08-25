@@ -31,6 +31,7 @@ const ALL = {
 function exit(over: Record<string, unknown> = {}) {
   return render(
     <PaperExitReview
+        onCopyProvenance={vi.fn()}
       reviewId="EX-771"
       deploymentId="dep_94"
       subject="Grid v2.1 · dep_94 · DERIBIT"
@@ -296,5 +297,38 @@ describe("B5/B6 — the transport the decision actually travels on", () => {
     expect(csrfToken("other=1; __Host-portal_csrf=; x=2")).toBeNull();
     expect(csrfToken("__Host-portal_csrf=abc")).toBe("abc");
     expect(csrfToken("nothing=here")).toBeNull();
+  });
+});
+
+describe("EL-V2-04 — Paper Exit Review on the workspace anatomy", () => {
+  it("offers Evidence, Activation plan and Conditions as tabs and renders Evidence first", () => {
+    exit();
+    for (const name of [/Evidence/, /Activation plan/, /Conditions/]) expect(screen.getByRole("tab", { name })).toBeTruthy();
+    expect(screen.getByText("Observation coverage")).toBeTruthy();
+  });
+  it("switches to the activation plan and says when none was published", async () => {
+    exit();
+    screen.getByRole("tab", { name: /Activation plan/ }).click();
+    expect(await screen.findByText(/No activation plan was published/)).toBeTruthy();
+  });
+  it("keeps the decision in the context rail with the reasons beside it", () => {
+    exit({ gateMet: false });
+    expect(screen.getByText(/Decide: promote to SANDBOX_VALIDATION\?/)).toBeTruthy();
+    expect(screen.getByText(/Promotion blocked — the observation gate is not met/)).toBeTruthy();
+    expect(promote()).toHaveProperty("disabled", true);
+  });
+  it("counts blocking findings on the decision strip from the server's marks", () => {
+    exit({ panels: [{ title: "Risk", findings: [{ label: "breach", outcome: "fail" }] }] });
+    expect(screen.getByText("Blocking findings").parentElement?.textContent).toContain("1");
+    expect(screen.getByText("breach", { selector: ".exec-rail-blocker *, .exec-blocker *, [class*=blocker] *" })).toBeTruthy();
+  });
+  it("shows a full digest as head-6/tail-2 in provenance with a Copy control", () => {
+    const digest = "sha256:9f3c1a7b2e4d5c6f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1e2";
+    const onCopy = vi.fn();
+    exit({ lineage: [{ label: "artifact", value: digest }], onCopyProvenance: onCopy });
+    expect(screen.queryByText(digest)).toBeNull();
+    expect(screen.getByText(/9f3c1a…e2/)).toBeTruthy();
+    screen.getByRole("button", { name: /Copy/ }).click();
+    expect(onCopy).toHaveBeenCalledWith(digest);
   });
 });

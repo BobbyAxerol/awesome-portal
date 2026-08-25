@@ -1,5 +1,35 @@
 # PHASE_TRACKER.md
 
+> **⛔ V2 OWNER OVERRIDE — 2026-08-24.** Bobby đã từ chối composition sản phẩm hiện tại
+> (`OWNER_REJECTED_CURRENT_PRODUCT_COMPOSITION`, xem
+> `CODEX_TO_CLAUDE_EXECUTION_PRODUCT_UIUX_REFACTOR_HANDOFF.md`). Toàn bộ **integrated product
+> composition** của 17 màn là `REWORK_REQUIRED`. Backend, contract, reader, fixture, 7 states,
+> fail-closed và unit test **giữ nguyên giá trị** — thứ bị rework là cách sản phẩm trình bày.
+> Bảng 19 phase bên dưới từ nay đọc theo bốn trạng thái tách biệt:
+> `component contract` ✅ (phần lớn đã có) · `product route` (preview, chưa duyệt) ·
+> `nested interactions` ❌ · `integrated visual approved` ❌.
+> "Screen built" trong các dòng cũ nghĩa là **component contract built**, không hơn.
+> Patch responsive 2026-08-23 được giữ như **subtask đặt tên** (KEEP 7/10), không phải V2.
+
+## V2 — Mười phase bắt buộc EL-V2-00…09 (làm tuần tự, 1 phase WIP)
+
+Kế hoạch chi tiết từng phase: các khối **Claude supplement** trong chính handoff (§2.8 + §12), theo lệnh Bobby 2026-08-24. Backend lane song song: §12.11 của handoff.
+
+| Phase | Tên | FE | Gate thoát | Evidence |
+|---|---|---|---|---|
+| EL-V2-00 | Re-baseline + ledger 18 HiFi + truth in tracking | **hoàn tất 2026-08-24, chờ Bobby duyệt gate** | ledger 0 unknown ✓; "screen built" reframed ✓ | ledger 118 dòng + 16 before-shots + danh sách 8 assertion lỗi thời (cuối file) |
+| EL-V2-01 | Một workspace Carbon theo route | **hoàn tất 2026-08-24, chờ Bobby duyệt gate** | seam probe đo trên route thật ✓ · 0 assertion Governance-Light ✓ · QuantBT 101 pass **không sinh lại** ✓ | `presentation.tsx` + themeWriter + 2 commit (276dd5a + teardown); 16 after-shots `el-v2-01-after/`; leak check: đúng 5 nhóm governance × 2 khổ đổi baseline, 70 ảnh khác byte-identical |
+| EL-V2-02 | Typography ngữ nghĩa + primitive workspace | **hoàn tất 2026-08-24, chờ Bobby duyệt gate** | 2 font (Inter+JetBrains, Plex claim gỡ) ✓ · thang §5.2 khoá bằng test đọc stylesheet + probe render 5 khổ ✓ · 7 primitive có fixture+test ✓ · **0 clip** mọi khổ (kể cả 390, allowance cũ bỏ) ✓ · sparse không phóng chữ ✓ | `typeRoles.test.ts` + `workspace.test.tsx` (25 test); `execution.css` 151+201 literal → 0; audit 5 khổ; QuantBT 101 không sinh lại; fixtures 82 ảnh sinh lại (thay đổi chữ mandated) + rerun byte-identical; reuse report cuối file |
+| EL-V2-03 | Preview có state, zero no-op | **hoàn tất 2026-08-24, chờ Bobby duyệt gate** | handler bắt buộc trong type ✓ · 6/6 journey §8.2 ✓ · sweep cô lập 17 route: **183 control → 95 đổi state · 80 điều hướng · 8 đã chọn · 0 NO-OP** ✓ · screenId → inspector ✓ | `previewControllers.tsx` (5 controller + ledger role=status), `testHandlers.ts`, `execution-journeys.spec.ts`, `e2e/el-v2-03-evidence/controls.json`; 2 NO-OP thật tìm thấy và sửa (Approve-with-condition không có điều kiện; hop Queue→Incident thiếu contract → BR-EX-33) |
+| EL-V2-04 | Paper + Paper Exit lát cắt dọc chuẩn | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | layout proposal px ✓ · EquityChart thật (ECharts) ✓ — product route = honest state vì chưa có series (BR-EX-34) · Paper + Exit trên 7 primitive ✓ · fold 1440×900 ✓ · journey exit ✓ · ma trận 15+1 ✓ · chữ: −14…−25% từ (policy prose 5→2), **không đạt 50%** — báo thật | `EquityChart.tsx`, `equity.fixtures.ts`, `PaperWorkbench.tsx`, `PaperExitReview.tsx`, `paperMatrix.test.tsx`, `equityChart.test.tsx`, `PAPER_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-04-*.png`; close-out trong handoff |
+| EL-V2-05 | Governance decision chain | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | sticky decision bar ✓ (R1/R2/Exit) · Inbox SLA bar + strip + rail ✓ · R1 5 tab (limitations bảng, evidence honest) ✓ · R2 PLAN PREVIEW 1 chip + elevation ✓ · role matrix 4×2 ✓ · zero-write test ✓ · journey Inbox→R1→R2→Exit ✓ · BR-EX-35/36/37 | `decisionBar.tsx`, `ApprovalInbox.tsx`, `GateR1Review.tsx`, `GateR2Review.tsx`, `PaperExitReview.tsx`, `evidence.tsx`, `governanceChain.test.tsx`, `GOVERNANCE_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-05-*.png`; close-out trong handoff |
+| EL-V2-06 | Stage workbench VNM→Live | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | anatomy chung 4 màn ✓ (clone=0) · guard budget 1 band ✓ · VNM timeline ✓ · Sandbox 4 tab ✓ · Canary/Live bất đối xứng + suppression ✓ · commands dark ✓ · ma trận 4 stage ✓ · chart = honest state (BR-EX-34) · BR-EX-38 | `stageWorkbench.tsx`, `sessionTimeline.tsx`, `SandboxCertification.tsx`, `CanaryControlRoom.tsx`, `LiveFullOperations.tsx`, `PaperWorkbench.tsx` (timeline), `AlphaThreeSixty.tsx` (EquityChart), `vnCalendar.ts` (phases), `stageWorkbench.test.tsx`, `STAGE_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-06-*.png` |
+| EL-V2-07 | Operations · incident · command | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | terminal §9.2 trong drawer (202 ⇒ ACCEPTED) ✓ · triage ranked-first + BUSY/QUIET ✓ · rail theo selection ✓ · incident containment + forward-only ✓ · break-glass không render ✓ · journey 6 + 3 e2e mới ✓ | `components/drawer.tsx` (terminal), `CommandCenter.tsx`, `OperationsQueue.tsx`, `IncidentDetail.tsx`, `AdminActionDrawer.tsx`, `containers.tsx`, `operationsWorkflow.test.tsx`, `OPERATIONS_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-07-*.png` |
+| EL-V2-08 | Entity 360 · analytics · Blotter | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | 12 tile = chart/honest ✓ · M7 aggregates footer từ fixture canonical ✓ · scope propagation 4/4 ✓ · heatmap + lens + influence map ✓ · Account triptych + tabs + rail ✓ · Blotter Columns/Export ✓ · chart export/cross-filter ✓ · perf 10⁵ = 41 tr ✓ | `blotterAggregates.ts`, `AggregatesFooter.tsx`, `ContributionChart.tsx`, `EquityChart.tsx`, `AlphaThreeSixty.tsx`, `PortfolioThreeSixty.tsx`, `AccountBroker360.tsx`, `FullBlotter.tsx`, `analytics360.test.tsx`, `blotterAggregates.test.ts`, `ANALYTICS_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-08-*.png` |
+| EL-V2-09 | Lane B thật · hardening · acceptance | **frontend xong 2026-08-24 — phase mở, chờ codex BE-V2-E/F/G + parity shadow + Bobby ký** | hardening SSE typed 401/backpressure/source-loss ✓ · parity harness ✓ (chưa có dữ liệu) · rollback rehearsal ✓ · budgets e2e ✓ · ledger MISS 0 ✓ · Alpha/Portfolio/Blotter lên anatomy ✓ · **activation: 0 màn** | `V2_RELEASE_ACCEPTANCE_2026-08-24.md`, `subscription.ts`, `sse.ts`, `streamHardening.test.tsx`, `scripts/shadow-parity.mjs`, `shadowParity.test.ts`, `execution-journeys.spec.ts` (budgets) |
+| — | Codex D4 Paper-read qualification | `D4_LIVE_ATTEMPT_FAIL_CLOSED / PORTAL_COMPATIBILITY_REMEDIATED / SIGNED_REPUBLISH_REQUIRED / D2_DARK_RESTORED` — mandatory-auth Source Proxy và encrypted BUILDING epoch đã được exercise; pagination burst + scientific decimal bị chặn trước baseline commit, đã vá và test; D2 dark đã phục hồi | Claude: **không bật Lane B** và không đổi reader; tiếp tục fixture/honest unavailable cho tới signed-main rerun đạt `D4_PAPER_READ_ACCEPTED` | `EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md` |
+
+
 > **The shared board for the Execution Loop.** Claude (frontend) and codex
 > (backend) both read and write it, one row per phase, one row per hi-fi screen.
 > Opened 2026-08-21.
@@ -388,15 +418,25 @@ IAM_ISOLATION_NOT_AUTHORIZED / LIVE_D2_UNAUTHORIZED`. This changes no frontend
 profile: Claude keeps source/query/realtime/command consumers off. Evidence:
 [`EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md`](../../backend/EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md).
 
-The owner-reported IAM attachment and a propagation retry still returned
-`UnauthorizedOperation`. Backend prepared a narrower exact-instance revision-2
-document without request-parameter conditions. The owner reported attaching it,
-but the exact 2026-08-24 DryRun remained `UnauthorizedOperation`; policy
-attachment/default version and any permissions-boundary/SCP deny still require
-owner verification. Status is `REVISION_2_REPORTED_ATTACHED /
-EFFECTIVE_ALLOW_NOT_PROVEN / LIVE_D2_UNAUTHORIZED`. This unlocks no
-frontend source, query, stream or command consumer. Evidence:
+The first IAM attachment and propagation retry returned `UnauthorizedOperation`.
+Backend prepared the narrower exact-instance revision-2 document without
+metadata request-parameter conditions. Bobby then made revision 2 the default
+permissions-policy version on the exact role and confirmed there is no
+permissions boundary. The exact 2026-08-24 verifier passed with
+`D2_ISOLATION_AUTHORITY_VERIFIED`; EC2 returned the required `DryRunOperation`.
+Status is `IAM_EFFECTIVE_ALLOW_VERIFIED / LIVE_D2_UNAUTHORIZED`. No EC2 setting
+or association changed, and this still unlocks no frontend source, query,
+stream or command consumer. Evidence:
 [`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](../../backend/EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
+
+BE-V2-B exact-image review is now
+`TRIGGER_NOT_REACHABLE / OWNER_DISPOSITION_PENDING / LIVE_D2_UNAUTHORIZED`.
+The Rust Edge does not link OpenSSL; the Source Proxy links OpenSSL 3.5.7 but
+has no QUIC/HTTP3/UDP listener, and D2 preflight now rejects any such drift.
+Bobby must still choose temporary mitigation acceptance versus waiting for a
+patched upstream base, followed by fresh host admission and a bounded window.
+Claude must keep all live source/query/SSE/command profiles off. Evidence:
+[`EX_BE_02_D2_CVE_2026_14456_APPLICABILITY.md`](../../backend/EX_BE_02_D2_CVE_2026_14456_APPLICABILITY.md).
 
 The backend isolation operation is now machine-ordered and fixture-tested:
 IMDS hop-limit one, exact profile detachment, then IMDS credential absence.
@@ -427,8 +467,17 @@ made. This unlocks no frontend profile. Claude continues fixture, dark,
 auth-denied and recovery UX only; no EventSource/Lane B/AWS polling. Evidence:
 [`EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md`](../../backend/EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md).
 
-This is retained as the historical offline checkpoint; the accepted live state
-is recorded after the attempt history below.
+D2 live is now `D2_DARK_ACCEPTED / SOURCE_INACTIVE` (2026-08-24). The minimal
+AWS-HK Edge/Proxy/schema-only PostgreSQL stack passed exact IAM isolation,
+private listener/mTLS/public-denial checks, a four-sample 15-minute pressure
+soak and volume-preserving rollback/redeploy with zero restart, OOM or Source
+Proxy access. Trading System health stayed HTTP 200. This closes D2 operations
+only; every frontend delivery profile and source/query/analytics/SSE/command
+flag remains fixture/false. Claude may represent accepted dark runtime health,
+but must not consume business data or open EventSource. This is retained as the
+historical D2 checkpoint; the accepted D3 state is recorded after the attempt
+history below. Evidence:
+[`EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md`](../../backend/EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md).
 
 D3 live attempt 1 is
 `D3_ATTEMPT_REJECTED_FAIL_CLOSED / D2_RESTORED / SIGNED_EDGE_REPUBLISH_REQUIRED`.
@@ -2011,6 +2060,291 @@ D3_PREDECESSOR_ACCEPTED / LIVE_D4_INPUTS_BLOCKED`.
 - Claude may consume typed offline fixtures and error/gap codes only. It must
   not label Paper data live or open EventSource based on this checkpoint.
 
+---
+
+## V2 §11.6 — HiFi coverage ledger (EL-V2-00, Claude, 2026-08-24)
+
+Nguồn: đọc trọn 18 file `.dc.html` (văn bản + demo-prop script). Máy quét đếm: 17 file có
+`data-screen-label`, 66 vùng `cursor:pointer`, 4 file có demo-prop script (Command Center
+BUSY/QUIET; Alpha 360 tab×scope với số liệu đổi theo venue; Blotter filter×cross-filter×expand;
+Admin Drawer catalogue 24 action / 6 nhóm). Wireframes tổng định nghĩa luật chung: sidebar 4 cụm
+(4f), LifecycleRail, breadcrumb `<Cluster> / <Module> / <Entity>`, density modes Operator/Manager/
+Quant (4g), chart contract (tooltip+envelope · dataZoom · double-click reset · expand+table+export ·
+cross-filter chip reset · không smoothing), break-glass (5b), role lens (5c), responsive (KPI
+minmax(160,1fr) · panel đôi →1 cột <1024 · drawer full-screen <720 · content max 1440 · font floor 11).
+
+**Cột.** `Voice`: C=chart · N=số/badge · T=text-guide (giữ) · D=disclosure. `Disp`(osition):
+`impl` (đã có, đúng) · `impr` (sẽ làm bản tốt hơn, khác chi tiết) · `dis` (disabled+lý do) ·
+`hid` (ẩn theo policy) · `BE` (cần backend request) · `MISS` (chưa có gì). Cột `Trạng thái 4 nấc`:
+C=component contract · R=product route · I=nested interactions · V=integrated visual approved —
+ghi nấc **đã đạt**; V chưa màn nào đạt (owner đã từ chối composition).
+
+### L0 · Luật chung từ Execution Wireframes (áp mọi màn)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| Sidebar 4 cụm Command/Governance/Deployments/Administration (4f) | N | shell render từ registry, thiếu mục | impr | C | thiếu route: Promotion Timeline, Waivers & Conditions, Reconciliation, Alerts (xem L0.2) |
+| Breadcrumb `<Cluster>/<Module>/<Entity>` | T | topbar có breadcrumb khác grammar | impr | C | V2-01 §4.3 product locator |
+| LifecycleRail mọi workbench + 360° | N | `LifecycleRail` component có, gắn thiếu chỗ | impr | C | HiFi: ✓ link decision, ● stage hiện tại; retrofit đủ 5 workbench + 3×360° |
+| Theme selector nói mode hiệu lực | N | topbar preference Research/Ops | impr | C | override §0.1: Carbon từ Inbox→Live; **HiFi ghi "Governance Light ▾" — superseded** |
+| Density modes Operator/Manager/Quant (4g) | N | switcher topbar Comfortable/Compact (V2-02); Quant cột formula/samples chưa | impr | C | V2-02 dựng switcher topbar; Quant thêm cột formula/samples |
+| Chart contract: tooltip+envelope/zoom/reset/expand+table+export/cross-filter chip | C | `EquityChart`: đủ tooltip/zoom/reset/expand/table/export/cross-filter (V2-04, V2-08) | impl | C | V2-04 dựng một lần trong wrapper ECharts, mọi chart thừa hưởng |
+| Break-glass ceremony (5b) | T+N | không render — contract chưa publish ceremony; test âm tính (V2-07) | dis+BE | C | V2-07; chỉ risk-reducing; thiếu ceremony ⇒ không render nút |
+| Role lens DENIED-per-role (5c) | N | PanelStatus `denied` có per-panel | impr | C | thiếu: lens switch topbar + amounts-withheld-counts-shown + export kế thừa lens |
+| Responsive rules (4f) | — | subtask 2026-08-23 đã chứa phần lớn | impl | C | drawer full-screen <720 chưa có (drawer đang inline) |
+| StateView 7 trạng thái đồng nhất (3c-9) | N | `PanelState` 9 trạng thái | impl | C | vượt HiFi (thêm insufficient_data/terminal) — giữ |
+| Không dead-end: mọi ID render là chip điều hướng (3b) | N | một phần (row links có; chip digest không link) | impr | C | V2-03 chuẩn hoá chip → route |
+
+**L0.2 — Sidebar route chưa tồn tại ở mọi nhánh:** `Promotion Timeline`, `Waivers & Conditions`,
+`Reconciliation` (list), `Alerts` (trang riêng — rail đã có trong Queue). Disposition: **BE + plan** —
+cần Bobby xếp phase (đề xuất: Waivers vào V2-05 governance; Alerts-page = rail mở rộng V2-07;
+Promotion Timeline + Reconciliation list sau V2-08 vì cần contract danh sách mới). Không được render
+nav trỏ 404.
+
+### L1 · HiFi Approval Inbox (WF 4a)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| Filter Mine(n)/All/Research·R1/Ops·R2/Exit/Live/Overdue | N | chip đủ (INBOX/ALL/R1/R2/Paper/Sandbox/Live/Exit/Overdue render — kiểm bằng before-shot); Mine disabled (BR-EX-32) | impl | C | sửa 2026-08-24: dòng đầu ghi 'chưa' là tôi nhớ sai — ảnh seam-inbox chứng minh ngược; server-side view coverage kiểm lại ở V2-05 |
+| Bảng: request·gate·subject·target·blockers·age/SLA·quorum | N | có đủ cột, blockers named | impl | C | |
+| SLA aging + OVERDUE nổi bật | N | rowEmphasis + border + **thanh SLA compact + số** | impl | C | V2-05 ✓ |
+| SoD: dòng không quyết được → dim, không ẩn | N | có (`inert`, dimmed + tooltip) | impl | C | |
+| Blocked-before-review (AP-360 audit replay failed) | N | có (blockers red) | impl | C | |
+| Row → gate review screen | N | onOpenRequest có; route thật ở preview | impl | C+R | context giữ — test V2-03 |
+| Inbox zero ≠ filtered empty | T | có, câu tách hai nghĩa | impl | C | |
+| Recently decided + full history → | N | tab Recently decided; *Full history* disabled + lý do | dis+BE | C | BR-EX-35 |
+| Footer: policy version + sort rule + visibility≠authority | T | có | impl | C | giữ đúng chữ — T hợp lệ (guide) |
+
+### L2 · HiFi Gate R1 Review (WF 1a)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| Artifact passport 8 dòng immutable | N | có (passport panel) | impl | C | digest rút gọn + copy → V2-02 provenance |
+| SoD OK **và** VIOLATION (self-approval blocked banner) | N | cả hai biến thể có fixture | impl | C | |
+| Decision checklist ✓/! + blocking count | N | có | impl | C | |
+| Evidence equity IS/OOS/holdout, window roles, no smoothing | C | trạng thái honest "not published" (không khung trống); cơ chế chart có (`EquityChart`) | dis+BE | C | BR-EX-34 §R1 — series chưa publish |
+| WFO stability per-fold + threshold + fold min | C | trạng thái honest cùng panel Evidence | dis+BE | C | BR-EX-34 §R1 |
+| Known limitations & restrictions & waiver | T→D | **bảng 4 loại + expiry** (fixture); route product "not published" | impl+BE | C | BR-EX-37 |
+| Structured condition (typed, owner/expiry/blocking) | N | conditionWire 5 trường | impl | C | |
+| Request changes | N | **verb chưa có backend** | dis+BE | C | disabled + title trỏ BR-EX-36 |
+| Reject / Approve / Approve-with-conditions + quorum 1/2 | N | có, CSRF + immutable | impl | C | |
+| Evidence digest + decision immutable | N | có | impl | C | |
+
+### L3 · HiFi Gate R2 Review (WF 1b)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| R1 APPROVED context + DC id + digest match | N | có | impl | C | BR-EX-30: 7 trường lineage chưa publish — vẫn treo |
+| Biến thể **R1 expired ⇒ Approve disabled** | N | có (blocked banner + disabled) | impl | C | |
+| Portfolio fit (est. từ research) | N | có | impl | C | ghi rõ "research est." — giữ |
+| Account & risk plan (4 rev rows) | N | có | impl | C | |
+| Capital change preview before/after mono | N | bảng delta + **1 chip PLAN PREVIEW + elevation** | impl | C | V2-05 ✓ — không còn inverted surface |
+| Observation policy + no auto-promote | T | có | impl | C | |
+| approve = grants authorization only | T | có đúng chữ | impl | C | T hợp lệ — đây là câu ngăn hiểu lầm nguy hiểm |
+| Request changes / conditions / quorum | N | như R1 | dis+BE / impl | C | |
+
+### L4 · HiFi Paper Exit Review (WF 4b)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| GATE MET **và** GATE UNMET (approve blocked) | N | cả hai có | impl | C | |
+| Lifecycle strip có nhánh unmet (22/30) | N | có | impl | C | |
+| Observation coverage / drift / limits / portfolio fit | N | có 4 panel | impl | C | drift WATCH≠FAIL giữ |
+| Sandbox activation plan preview | N | có | impl | C | |
+| Condition carried + operator recommendation | N+T | có | impl | C | |
+| Extend +14d / Reject→PAPER_HELD / Approve promotion | N | có 3 outcome | impl | C | "extend" verb backend? — đã có (3 outcome CSRF từ phase 5) |
+| Evidence pack digest ep_/immutable record | N | có | impl | C | |
+
+### L5 · HiFi Paper Workbench (WF 1c)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| Masthead: tên + stage + ACTIVE/READY + 3 action | N | có nhưng giọng mono đều | impr | C | V2-04 masthead §10.1 |
+| FRESH **và** STALE variant (banner + age đổi) | N | có cả hai | impl | C | |
+| Lineage strip artifact/R1/R2/PF/dep/acct/venue/rev | N→D | có, đang chiếm scan path | impr | C | V2-04: vào provenance drawer |
+| KPI 5 ô (Equity/PnL/DD/Alloc/age) | N | có | impl | C | mono 24 theo §5.2 |
+| **Equity vs approved evidence chart** (band, DD annotation) | C | `EquityChart` honest state trên route; cơ chế (band, gap, zoom…) chứng minh ở fixtures (V2-04) | dis+BE | C | V2-04 ECharts — trung tâm lát cắt |
+| **Candle + order/fill overlay + funnel drill-down/marker** | C | không có contract kline/overlay — không render khung; funnel drill có ở Blotter/Paper tabs | dis+BE | C | V2-04; funnel drill đã có pattern ở blotter |
+| Observation gate 3 tiêu chí + CTA blocked-khi-unmet | N | có | impl | C | |
+| Runtime health / Accounting / Contribution / Drift | N | có 4 panel | impl | C | drift: bảng backtest-vs-paper đủ |
+| Tabs Orders/Fills/Positions/Sessions (cursor + virtual) | N | có, số liệu exact | impl | C+I(fixtures) | preview chưa nối onTabChange — V2-03 |
+| STOP order `persisted`, REJECTED kèm lý do risk | N | có | impl | C | |
+
+### L6 · HiFi Paper Workbench VNM (WF 4h)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| SESSION OPEN **và** SUSPENDED_BY_CALENDAR | N | có cả hai | impl | C | |
+| Calendar banner info-tone (không phải warning) + aging PAUSED | T | có đúng ngữ nghĩa PAUSED | impl | C | |
+| Session-aware equity (shading giờ đóng cửa) | C | **timeline phiên** (ATO/continuous/break/ATC + marker) + equity honest state | impl+BE | C | series chờ BR-EX-34; markArea calendar áp khi có series |
+| KPI VND, không trộn USDT | N | có | impl | C | |
+| Gate đếm TRADING days | N | có | impl | C | |
+| Accounting T+2.5 pending settlement | N | có | impl | C | |
+| DNSE credential + OTP expiry strip | N | có | impl | C | |
+| LO/ATO/ATC verbatim + QUEUED_FOR_OPEN + lot 100 | N | có | impl | C | |
+
+### L7 · HiFi Sandbox Certification (WF 1d)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| 7-step stepper server-ordered | N | có (`exec-cert-strip`) | impl | C | |
+| READY **và** BLOCKED (critical finding, fail-closed banner) | N | có cả hai | impl | C | |
+| Triptych internal/broker/difference | N | có | impl | C | |
+| Findings bảng (CRITICAL resolve-path + INFO accept) | N | có | impl | C | |
+| Order-type cert per-type + strategy-scope note | N | có | impl | C | |
+| Execution quality + INSUFFICIENT_DATA (≥30 fills) | N | có | impl | C | |
+| Smoke plan bounded (qty/cap/timebox/approver) | N | **model không có field** — không render | dis+BE | C | BR-EX-38 (V2-06 phát hiện ledger cũ ghi sai "có") |
+| Cleanup checklist exit-precondition | N | có | impl | C | |
+| CTA: Sync/Dry-run/Smoke/Exit — blocked có lý do | N | có | impl | C+I(fixtures) | preview chưa nối — V2-03 |
+
+### L8 · HiFi Canary Control Room (WF 1e)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| GUARDED band + shield (không color-only) | N | `StageGuardBand` — đúng 1 band, e2e probe | impl | C | V2-06 ✓ |
+| READINESS DEGRADED variant (sync stale ⇒ scale blocked, protective còn) | N | có — bất đối xứng đúng | impl | C | |
+| Envelope 4 hàng + breach⇒auto-halt + stage limits | N | có | impl | C | |
+| **Live vs Paper vs Backtest chart** (line style, digest join) | C | `EquityChart` honest state (không khung trống) | dis+BE | C | BR-EX-34 |
+| Positions/orders BROKER + latency | N | có | impl | C | |
+| Incidents/recon + scale blockers | N | có | impl | C | |
+| Contribution grade C + INSUFFICIENT_DATA rule | N | có | impl | C | |
+| Promotion decision Hold/Reduce/Rollback/Request-scale + evidence pack | N | có; hidden-variant per role có | impl | C | |
+| Mutation hidden khi thiếu Operator Admin scope | N | có (hidden, không disabled) | impl | C | |
+
+### L9 · HiFi Live Full Operations (WF 1f)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| READY **và** BLOCKED/MISMATCH (broker truth thay presentation) | N | có — suppression ở reader | impl | C | mẫu fail-closed đã chốt |
+| KPI 5 + broker freshness | N | có | impl | C | |
+| Broker & recon truth panel (digest, MATCH counts, Δ0) | N | có | impl | C | |
+| MISMATCH banner thay chart slot | N | có | impl | C | |
+| Exposure & orders + pending exposure | N | có | impl | C | |
+| Protective ladder halt→reduce→emergency-close + rb tested | N | có; step-up ghi rõ | impl | C | |
+| **Contribution/edge chart 30d** | C | `EquityChart` honest state; MISMATCH banner thay slot | dis+BE | C | BR-EX-34 |
+| Research lineage drill-down-only | D | có | impl | C | |
+
+### L10 · HiFi Command Center (WF 5a)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| BUSY **và** QUIET (demo-prop; QUIET = câu thật + 0/0/0) | N | có cả hai | impl | C | |
+| Needs-you ranked severity→SLA→age, mọi row link owner screen | N | `rankTriage` (server rank thắng, fallback 3 khoá); ranked list đứng trước fleet | impl | C | V2-07 ✓ |
+| Fleet health counts (7/8 sync đổi màu theo QUIET) | N | có | impl | C | demo-prop syncLabel đã phủ bằng 2 fixture |
+| Pinned watchlist max 5, user-owned, pin không mute alert | N | có render; **pin/unpin action chưa** | impr | C | cần persistence — BE nhỏ (user pref) |
+| Today (upcoming/recent + link journal) | N | có | impl | C | |
+| Stream gate 3 trạng thái | N | có (CommandCenterLive) | impl | C | |
+
+### L11 · HiFi Operations Queue (WF 4e)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| Filter Needs-attention/Mine/All(24h) | N | có; Mine disabled BR-EX-32 | impl/dis | C | |
+| Sort PARTIAL·FAILED→RUNNING→done + PARTIAL>15m escalates | N | có (server sort echo) | impl | C | |
+| Bảng op·command·target·state·age·actor·next-step | N | có | impl | C | |
+| next-step theo state (re-apply/review-incident/audit) | N | có | impl | C | |
+| Alert rail: typed object, CRITICAL-only badge, ack≠resolve | N | rail = ContextRail: Next = triage dòng đang chọn; Alerts = "no alerts route" | impl+BE | C | V2-07 ✓ — alerts route chưa publish |
+| Rail đóng/mở ✕ | N | có | impl | C+I(fixtures) | |
+
+### L12 · HiFi Incident Detail (WF 4d)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| OPEN·CRITICAL **và** RESOLVED variant | N | có cả hai | impl | C | |
+| State rail forward-only + audited transitions | N | có | impl | C | |
+| Evidence: finding/snapshots/blast-radius/probable-cause | N | có | impl | C | |
+| broker-is-truth statement | T | có | impl | C | T hợp lệ |
+| Operations taken + apply-plan handoff → Drawer | N | có link | impl | C+I(fixtures) | journey V2-07 |
+| Timeline 5 mốc (ack≠resolve rõ) | N | có | impl | C | |
+| Mark RESOLVED blocked: dry-run+reason | N | có | impl | C | |
+| Resolve **không** auto-resume (dep still HALTED note) | T | có — stop gate giữ | impl | C | |
+
+### L13 · HiFi Admin Action Drawer (WF 1i)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| Catalogue: HiFi 24 action/6 nhóm vs server 64 lệnh rev 2 | N | 64 server entries đã render, nhóm server | impl | C | ledger map: server catalogue là authority; HiFi grouping = trình bày |
+| READ không cần step-up (7 action g0, kể cả Redis inspect read-only) | N | có (`portal_reachable` + blocked_reason) | impl | C | Redis qua backend proxy — browser không chạm Redis (stop gate giữ) |
+| MUTATION: PLAN→APPLY(step-up)→VERIFY | N | drawer flow có; **áp thật disabled** (relay tắt) | impl/dis | C | đúng F0 |
+| DANGER: emergency + testnetReset — typed confirm CLOSE | N | có typed confirm | impl | C | |
+| `labReset` BLOCKED — NOT EXPOSED IN PORTAL | N | có (blocked_reason enum) | impl | C | không render nút — đúng handoff |
+| Operation timeline: 202-not-success, sub-intents, PARTIAL residue re-apply cùng idempotency key | N | có (decision walk + BLOCKED/NOT_STARTED mới) | impl | C | V2-07 ✓ ExecutionTerminal §9.2 (202 ⇒ ACCEPTED) — nâng thành ExecutionTerminal anatomy |
+| Equivalent CLI read-only + "browser never runs a shell" | T | có | impl | C | |
+| Reason bắt buộc → audit log | N | có | impl | C | |
+
+### L14 · HiFi Full Blotter (WF 4c)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| Scope 4 chiều + filter All/Filled/Partial/Rejected/Open | N | có | impl | C+I(fixtures) | preview chưa nối — V2-03 |
+| Columns ▾ / Export | N | Columns ▾ (ẩn cột client) · Export loaded rows (CSV clipboard, nhãn bounded) | impl | C | V2-08 ✓ |
+| Cross-filter chip + ✕ reset + counts theo selection | N | có chip+reset; nguồn chart-selection **chưa** (chưa có chart) | impr | C | V2-08 nối từ chart contract |
+| countLabel "showing 1–n of 412 in selection · 48,213 total" | N | có (selection/total tách) | impl | C | |
+| Row expand funnel signal→intent→risk→ACK→fill (+sd_/le_ id) | N | có | impl | C | |
+| Keyset load-older, virtualized, sticky header | N | có | impl | C | |
+| Fees venue ccy, exact, never abbreviated | N | có (M6 gate) | impl | C | |
+| Footer tổng theo tiền tệ (M7 `aggregates_by_currency`) | N | reader + footer; 3 count tách, decimal nguyên, invalid đỏ | impl | C | V2-08 ✓ — đọc fixture contract canonical |
+
+### L15 · HiFi Alpha 360 (WF 2a·2b)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| Scope bar PF/Mode/Venue/Window — **mọi panel đổi theo** (demo-prop K per venue) | N | scope render có; propagation một phần | impr | C | V2-08 test "đổi scope ⇒ đếm panel đổi = đếm panel" |
+| 9 tabs Overview…Audit | N | có đủ 9, useId mới | impl | C+I(fixtures) | |
+| Deployment map venue×stage (từ registry) | N | có | impl | C | |
+| KPI 6 theo scope | N | có | impl | C | |
+| **Equity by stage overlay chart** | C | `EquityChart` honest state, tiêu đề theo scope | dis+BE | C | BR-EX-34 |
+| **Per-venue contribution chart** (ccy riêng, không FX mix) | C | `ContributionChart` — một chart/tiền tệ từ giá trị publish | impl | C | V2-08 ✓ |
+| Deployments-in-scope bảng + row→workbench + acct→360 | N | có | impl | C | |
+| **12 insight tiles** (đủ 12 theo 2b, INSUFFICIENT_DATA per tile) | C | 12 tile `EquityChart`/state + caption; series chờ contract | dis+BE | C | V2-08 ✓ cơ chế — BR-EX-34 §alpha tiles |
+| Positions/Orders/Risk/Sessions/Accounting/Recon/Audit tables | N | có đủ, exact values | impl | C | risk: stage envelope override hiển thị đúng |
+| Audit trail append-only + step-up actor | N | có | impl | C | |
+
+### L16 · HiFi Portfolio 360 (WF 3a)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| 6 tabs Overview/Structure&Corr/Capital/Approvals/Incidents/Audit | N | có | impl | C+I(fixtures) | |
+| KPI 5 + Report pack/Rebalance ▾ | N | KPI có; 2 action **chưa** (không contract) | impl / dis+BE | C | Rebalance = plan/apply — treo BE |
+| Holdings structure 4 tầng + FX flag USDC | N | có | impl | C | |
+| Correlation matrix + BM pinned + INSUFFICIENT + cell click drill | C | heatmap swatch theo \|ρ\| + click ô → lens | impl | C | V2-08 ✓ |
+| **ρ(NAV,BM) timeline + threshold 0.6 + tail ρ** | C | honest state (không khung trống) | dis+BE | C | BR-EX-34 §portfolio |
+| Leader lens 3 ranked lists (không merge score) + INSIGHT claim | N | có | impl | C | |
+| Leader impact what-if (marginal.v1, labeled estimates) | N | có | impl | C | |
+| Symbol overlap / duplicate exposure | N | có | impl | C | |
+| **Influence map** (node=exposure, edge=|ρ|) | C | `InfluenceMap` SVG từ ma trận packed | impl | C | V2-08 ✓ |
+| **Drawdown overlap timeline** | C | honest state | dis+BE | C | BR-EX-34 §portfolio |
+| Capital ledger append-only + before/after invariant | N | có (+bounded fix 2026-08-23) | impl | C | |
+| Approvals/Incidents/Audit tabs đủ bảng | N | có | impl | C | |
+| Role-cut DENIED (5c: amounts withheld, counts shown, masked ids) | N | denied per-panel có; **lens đủ màn chưa** | impr | C | V2-08 cùng L0 role lens |
+
+### L17 · HiFi Account Broker 360 (WF 1g)
+
+| Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
+|---|---|---|---|---|---|
+| SYNC OK **và** HEADROOM BREACH variant (fail-closed all accounts) | N | có cả hai | impl | C | |
+| Triptych internal/physical/difference + INFO Δ giải thích | N | có | impl | C | |
+| Guard band LIVE trên account live (3c-4) | N | có | impl | C | |
+| Binding + credential VALID + secret-never-shown + NET mode | N | có | impl | C | |
+| Linked virtual accounts + Σ virtual vs physical headroom (cả 2 biến thể số) | N | có — aggregate là việc màn này | impl | C | |
+| Sync history (ws/REST, STALE row) | N | có | impl | C | |
+| Recon findings + resolved history | N | có | impl | C | |
+| Sync now / Dry-run reconcile CTA | N | có; fixture simulate | impl | C+I(fixtures) | preview nối V2-03 |
+
+### L-tổng — đếm disposition (441 dòng năng lực gộp thành 118 dòng ledger)
+
+| Disp | Số dòng | Ý nghĩa |
+|---|---|---|
+| `impl` | 78 | đã đúng ở component contract |
+| `impr` | 14 | có nhưng V2 phải nâng (đa số: trình bày/propagation/chip điều hướng) |
+| `dis`/`BE` | 9 | disabled có lý do hoặc chờ backend (Request-changes, Mine, view enum, history, Rebalance, pin persistence…) |
+| `MISS` | 0 (2026-08-24, sau V2-08: 17 → 0 — mọi dòng có disposition; 5 dòng cuối chuyển `impl`/`impr`/`dis+BE`) | **chưa có gì** — tập trung ở: mọi chart plot (12), density modes, break-glass, chart contract, Columns/Export, aggregates footer, influence map |
+| `hid` | 0 dòng riêng | các hidden-by-policy đã nằm trong dòng liên quan (mutation Canary, labReset) |
+
+**Không dòng nào `unknown`.** Mỗi MISS đã có phase đích ghi trong cột Ghi chú.
+
+---
+
 The 2026-08-24 read-only D4 audit is
 `D4_READINESS_AUDITED / LIVE_D4_INPUTS_BLOCKED / NO_SOURCE_READ`: current source
 auth remains optional, list paging/event completeness/resync are insufficient,
@@ -2067,6 +2401,17 @@ ACTIVE Query, analytics, SSE, commands and registry promotion remain off.
 Evidence:
 [`EX_BE_02_LIVE_D4_POSTGRES_BUILDING_WRITER.md`](../../backend/EX_BE_02_LIVE_D4_POSTGRES_BUILDING_WRITER.md).
 
+The first finite live qualification is now
+`D4_LIVE_ATTEMPT_FAIL_CLOSED / PORTAL_COMPATIBILITY_REMEDIATED /
+SIGNED_REPUBLISH_REQUIRED / D2_DARK_RESTORED`. It proved the mandatory-auth
+Source Proxy path and encrypted BUILDING-only storage, then rejected an
+undersized pagination burst and exact scientific decimal notation before a
+baseline commit. Both Portal defects have regression tests; D2 dark is healthy
+again. Claude must keep Lane B inactive. The only remaining D4 close path is a
+protected-main signed image publication and one fresh finite owner window;
+there is no new frontend task before acceptance. Evidence:
+[`EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md`](../../backend/EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md).
+
 ## 28. Dev integration preview — 17/17 screens wired, production inactive (2026-08-24)
 
 Status: `DEV_PREVIEW_READY / FIXTURE_ONLY / PRODUCTION_INACTIVE`.
@@ -2090,3 +2435,134 @@ Claude can now review all 17 screens together on the dev host and record only
 frontend integration/UX findings. Backend activation, live-source claims and
 removal of fixture labelling remain blocked on the independently tracked
 D2→D4 evidence and later delivery-profile promotion.
+
+### EL-V2-00 — assertion & tài liệu lỗi thời phải viết lại (danh sách bắt buộc)
+
+| # | Chỗ | Nội dung lỗi thời | Viết lại ở |
+|---|---|---|---|
+| 1 | `e2e/execution-fixtures.spec.ts` — test "Carbon surfaces ignore the portal theme" | assert governance **sáng** (`luminance > 0.5`) — thi hành thiết kế đã bị owner override §0.1 huỷ | V2-01, cùng commit tháo `governance → operations-carbon-light` |
+| 2 | `src/execution/ExecutionSurface.tsx` doc-comment "two surfaces, not one" + map `governance: operations-carbon-light` | triết lý hai surface đã bị huỷ | V2-01 |
+| 3 | `execution.test.tsx` các assert `data-theme === "operations-carbon-light"` (3 chỗ ~dòng 156/170/186) | như trên | V2-01 |
+| 4 | `e2e/execution-fixtures.spec.ts` ẩn `.portal-topbar` + chốt visibility | đúng cho fixture-crop, nhưng phải có baseline class 2 (shell visible) bổ sung — đã có `el-v2-evidence-shots.spec.ts`, nâng thành gate so sánh ở V2-01 | V2-01 |
+| 5 | `DESIGN_SYSTEM_EXECUTION.md` mọi chỗ nói Governance Light / IBM Plex là fallback chưa bundle | override §0.1 + quyết định font V2-02 | V2-02 (đề xuất Inter+JetBrains; **lưu ý: HiFi canvas dùng IBM Plex thật** — Bobby chốt ở goal V2-02) |
+| 6 | `PHASE_TRACKER.md` các dòng "screen built" cũ (bảng 19 phase) | nói quá — đã reframe bằng chú thích đầu file + cột Nấc trong ledger | xong (V2-00) |
+| 7 | Preview banner tiếng Việt + `screenId` trong chrome + "SOON" cạnh route đang xem + `execution-preview.spec.ts` ghim câu tiếng Việt | vi phạm §3.8 + §4.3 handoff | V2-01 (banner+SOON) · V2-03 (screenId→inspector) |
+| 8 | `ROADMAP_FRONTEND.md` thứ tự việc tiền-V2 | đã có ghi chú nhường override từ 2026-08-24 | xong (V2-00) |
+
+### EL-V2-00 — evidence đóng phase
+
+- **18/18 `.dc.html` đọc trọn** (văn bản + demo-prop script; 4 file có script biến thể).
+- **Ledger §11.6**: 118 dòng / 441 năng lực / 0 unknown / cột voice đủ — mục "V2 §11.6" phía trên.
+- **Before-shots 16 ảnh** `apps/portal/frontend/e2e/el-v2-00-before/`: 12 = 3 khổ × 4 route (pref
+  operations), 4 = `seam-*` pref research 1440×900 ghi đúng trạng thái owner từ chối. Chụp bằng
+  `el-v2-evidence-shots.spec.ts` (chạy khi `EL_V2_SHOTS=1`).
+- **Ảnh trước đã bắt được một lỗi ledger** (dòng filter Inbox) — sửa ngay trong V2-00, ghi chú tại dòng.
+- **Preview branch merged** (`d74a51b`) — route sản phẩm giờ nằm trong cây làm việc để V2-01..03 rework.
+- Patch responsive giữ nhãn subtask (`1da7f7a`), không tính là V2.
+
+### EL-V2-01 — ghi chú đóng phase (2026-08-24)
+
+- **Kiến trúc:** `PortalPresentationMode` suy từ classification route (17 screen + feature root +
+  `/execution/*`), không từ `delivery_profile`. Attribute `data-theme` ghi qua **coordinator**
+  (`styles/themeWriter.ts`) nhận cặp (preference, override) và tự tính giá trị cuối — vì hai writer
+  trực tiếp phụ thuộc thứ tự effect của React: bản đầu làm **vỡ 8 màn auth** (render ngoài shell,
+  không ai ghi theme). Bài học ghi trong doc-comment của writer.
+- **Shell Carbon = cùng một rule CSS** với screen Carbon (thêm một dòng selector) — không thể drift.
+- **Tháo governance-light ba lớp** (map trong `ExecutionSurface`, 183 dòng token block, 3 assert unit
+  + 1 describe e2e) — commit riêng revert được. Fixtures baseline: đúng 5 nhóm governance đổi
+  (leak check 70 ảnh còn lại byte-identical).
+- **F2 của review preview đóng luôn**: hai webServer/hai project Playwright — QuantBT baseline chạy
+  build **cờ tắt** (đúng production), preview + evidence chạy build cờ bật. Chính va chạm 36 ảnh đỏ
+  chứng minh F2 là lỗ thật.
+- **Một lần suýt tự lừa**: run gộp `tail -3` nuốt dòng "36 failed" — đã đổi cách đọc kết quả sang
+  đếm từng spec. Ghi lại vì "182 passed" từng được đọc là xanh.
+- Banner một dòng EN + PREVIEW badge + selector effective + breadcrumb entity (producer-owns-cleanup).
+- Còn theo dõi sang phase sau: screenId trong banner → inspector (V2-03); breadcrumb grammar đầy đủ
+  `<Cluster>/<Module>/<Entity>` khi màn thật thay preview (V2-04+).
+
+### EL-V2-02 — component responsibility & reuse report (2026-08-24)
+
+**Quyết định font (§5.1):** đường 2 — **Inter + JetBrains Mono**, hai họ đã bundle. IBM Plex từng
+được khai làm fallback và **chưa bao giờ được load**; claim đã gỡ khỏi `tokens.css`, gate cấm quay
+lại trong khai báo. Bobby chưa chốt nên tôi chọn đường zero-rủi-ro; đổi sang Plex sau = đổi 3 token
++ bundle, không đụng thang.
+
+**Thang vai trò §5.2 — nguyên văn, khoá bằng test đọc stylesheet** (`typeRoles.test.ts`):
+
+| Trước | Sau |
+|---|---|
+| 151 `font-family` + 201 `font-size` literal; **127/213 rule = mono 10px** | **0 literal** — mọi rule đi qua `font: var(--exec-font-<role>)`; 12 vai |
+| uppercase rải khắp | chỉ vai `th` được uppercase |
+| `--text-2xs` = 10px cho chữ load-bearing | 10px chỉ còn ở `caption` **trong `<details>`** — probe e2e ép ở 5 khổ |
+
+Phân vai tự động 209 rule bằng bộ phân loại theo tên class + bảng ghi đè tay 20 mục; kết quả:
+meta 82 · body 48 · th 15 · section 14 · num 13 · data 10 · control 10 · title 8 · kpi 7 · term 2.
+
+**Bảy primitive (§6) — `components/workspace.tsx`, mỗi cái có fixture + test:**
+
+| Primitive | Trách nhiệm | Tái dùng từ | Test |
+|---|---|---|---|
+| `ExecutionWorkspace` | khung: max 1440 centered; canvas+rail grid ≥1280; layout sparse/balanced/dense | grid rules WF 4f | fixture 3 layout |
+| `ExecutionPageHeader` | masthead §6.1: tên + id ngắn + **4 badge tách trục** + 1 câu purpose + 1 CTA | `exec-chip` | axes tách, vai title |
+| `ExecutionDecisionStrip` | KPI strip auto-fit minmax(160,1fr); null → "not published", không bao giờ 0 | quy tắc `not-published` sẵn có | null không thành số |
+| `ExecutionTabs` | tablist/tab/tabpanel; hash `#key=tab`; phím mũi tên wrap; count chỉ khi có | `useId` (V2-01 fix) | switch+aria+hash+deep-link+keyboard |
+| `ExecutionContextRail` | thứ tự cố định next→blockers→freshness→alerts→provenance; blocker **có tên** | — | thứ tự + tên |
+| `ExecutionProvenanceDrawer` | digest head-6/tail-2, full chỉ khi Copy | — | không in full mặc định; copy đúng full |
+| `ExecutionTerminal` | §9.2: toolbar sticky, 4 cột ổn định, follow/pause, copy selected/full, export, clear-local, typed GAP/RECONNECT rows, 220–320px expand, **202 ≠ success** | `decision.ts` verdict vocab | 202 không thành VERIFIED; severity text+icon; handlers |
+
+**Nguyên tắc V2-03 áp sớm:** `onChange`/`onCopy`/… là prop **bắt buộc** — có test `@ts-expect-error`
+chứng minh tab strip thiếu handler không compile.
+
+**Typography primitives (§5.3) — `components/typography.tsx`:** `ExecutionPageTitle`,
+`ExecutionSectionTitle`, `ExecutionMeta`, `ExecutionDataValue`, `ExecutionEvidenceCaption` (10px duy
+nhất, và chỉ vì nó expand). Doc-comment ghi phương pháp §11.8 (4 bước) — đúng yêu cầu "formalize as
+component documentation".
+
+**Pilot màn thật:** đúng một chỗ — head Command Center dùng vai `title`. 17 màn còn lại **chưa** đổi
+anatomy (theo lệnh "do not mass-restyle"); riêng **lớp chữ** của chúng đổi vì rule CSS đi qua vai —
+đó là việc V2-02 tự khai ("remove screen-local type improvisation"), không phải tôi lấn phase.
+
+**Fixture bằng chứng:** group `v2-anatomy-paper-demo` — bảy primitive ghép trên cast Paper ở **ba
+layout**, cùng một thang chữ (title 24px ở cả sparse lẫn dense — assert được).
+
+**Gate bổ sung đã dựng:** audit e2e thêm khổ **1440** (đủ 390/834/1280/1440/1728) + probe "mọi phần
+tử chữ ∈ thang §5.2, 10px chỉ trong details, không load-bearing <11px" — đo trên trang render, không
+phải trên stylesheet.
+
+### EL-V2-03 — control ledger theo §8.1 (2026-08-24)
+
+Nguyên tắc thi hành: **handler là prop bắt buộc trong type**. 13 callback optional trên 5 màn
+(`PaperWorkbench` 4, `AlphaThreeSixty` 3, `PortfolioThreeSixty` 2+4 sub-component, `AccountBroker360`
+2, `FullBlotter` 4) đã bỏ dấu `?`; `AccountBroker360` thôi dùng *sự có mặt của handler* làm tín hiệu
+quyền (`operatorAdmin` quyết một mình). Fixture factories trả **Data** (`Omit<Props, handlers>`) —
+dữ liệu và hành vi tách hẳn: controller cấp hành vi trên route sản phẩm, spy tường minh trong test
+(`testHandlers.ts`). tsc là máy quét: mọi chỗ mount thiếu handler đều không compile.
+
+| Lớp §8.1 | Control | Thi hành | Quan sát được bằng |
+|---|---|---|---|
+| Local UI | tab (Paper/Alpha/Portfolio), filter (Blotter), venue scope (Alpha), lens (Portfolio), expand row (Blotter) | `useParamState` → **URL search** (`?tab=`, `?filter=`, `?venue=`); giá trị lạ rơi về mặc định | `aria-selected`, URL đổi, DOM đổi |
+| Canonical navigation | deployment row → workbench theo stage; account cell → Account 360°; holdings alpha → Alpha 360°; Request exit → Exit Review; Admin actions → drawer | `useNavigate` tới route registry, entity trong path, `?from=` giữ context quay về | URL đổi; `goBack` phục hồi tab/scope |
+| Safe simulated | sync now, dry-run reconcile, load older, reset cross-filter, scope window/mode | `useSimulationLedger`: `role=status` + danh sách hành động; kết quả fixture nói rõ ("no older rows exist", "0 findings", "nothing was sent to a broker") | live region đổi, `data-simulation-ledger` tăng |
+| Unavailable mutation | plan/apply thật, command relay | disabled + lý do (giữ từ F0) | không đổi khi click — **và không render enabled** |
+| Forbidden | mutation Canary/Live cho viewer, `labReset` | hidden theo policy | không có trong DOM |
+
+**Scope Alpha không bịa số:** đổi venue lọc bảng deployment/venue; KPI alpha-wide thành `null` +
+`absentReason` ("not published for scope X") — cần query scoped từ backend (ghi vào BR) thay vì cộng
+trong browser.
+
+**`screenId` rời chrome** → `details.exec-preview-inspector` (screen / delivery / build flag), test e2e
+assert vắng mặt mặc định và có khi mở.
+
+**Bằng chứng sinh bằng máy:** `e2e/el-v2-03-evidence/controls.json` — mọi control enabled trên 17
+route, mỗi cái một verdict `changed | navigated | skipped:selected | skipped:hidden | NO-OP`; gate:
+**0 NO-OP**, kể cả `href="#"` (link tới hư không bị coi là no-op mặc áo link).
+
+### dev-portal preview build — 2026-08-24 (cho Bobby duyệt V2-01/02/03)
+
+`dev-portal.primusspark.com` (stack `portal`, :8080) đang phục vụ **feature preview** của
+`feat/execution_loop@6a323a4`, build với `PORTAL_EXECUTION_PREVIEW_ENABLED=true` — đúng kênh "Feature
+preview" trong `docs/release-and-deployment.md`. Chỉ `portal-web` được rebuild/recreate; `control-api`,
+`portal-api`, DB và toàn bộ stack **stable** (`:18081`, pinned sha) không đụng. Sau khi PR vào `dev`
+được merge, hostname này phải được rebuild lại từ worktree `dev` (quy trình §"Canonical development").
+Route để duyệt: `/governance/approvals`, `/governance/approvals/AP-201/r1`, `/deployments/paper/dep_94`,
+`/deployments/live/dep_live`, `/deployments/alphas/av_2041`, `/deployments/blotter`, `/execution/_fixtures`.

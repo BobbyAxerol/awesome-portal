@@ -185,7 +185,8 @@ export function withAlpha(hex: string, alpha: number): string {
 /** Reads the theme currently applied to <html>; falls back to research. */
 export function activeTheme(): ThemeName {
   if (typeof document === "undefined") return "research";
-  return document.documentElement.getAttribute("data-theme") === "operations"
-    ? "operations"
-    : "research";
+  const attr = document.documentElement.getAttribute("data-theme");
+  // `execution-carbon` is the route-forced workspace mode (EL-V2-01); for
+  // canvas renderers it is a dark theme, so they read the operations ramp.
+  return attr === "operations" || attr === "execution-carbon" ? "operations" : "research";
 }

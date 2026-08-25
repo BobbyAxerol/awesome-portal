@@ -23,6 +23,8 @@ const PHASE_LABEL: Record<SubscriptionState["phase"], string> = {
   epoch_changed: "PROJECTION REBUILT",
   reconnecting: "RECONNECTING",
   failed: "SUBSCRIPTION FAILED",
+  auth_expired: "session expired — sign in again",
+  source_lost: "source lost — values as read",
 };
 
 /** Tone per phase. `live` is the only one that is not a caution or worse. */
@@ -36,6 +38,8 @@ const PHASE_TONE: Record<SubscriptionState["phase"], "good" | "warn" | "bad" | "
   epoch_changed: "warn",
   reconnecting: "warn",
   failed: "bad",
+  auth_expired: "bad",
+  source_lost: "bad",
 };
 
 /**

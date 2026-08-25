@@ -398,14 +398,25 @@ authority.
   A later propagation retry also failed. The mode-0600 private policy has been
   narrowed to revision 2 with the exact two actions, instance ARN and region,
   but without request-parameter conditions that did not create an effective
-  Allow. After the owner reported attaching revision 2, the exact 2026-08-24
-  verifier still returned `UnauthorizedOperation`. Status is therefore
-  `REVISION_2_REPORTED_ATTACHED / EFFECTIVE_ALLOW_NOT_PROVEN /
-  LIVE_D2_UNAUTHORIZED`. The owner must verify the policy is attached under the
-  existing role's Permissions policies, is the managed-policy default version,
-  and is not denied by a permissions boundary/SCP. The role is retained until
-  the D2 change window; no detach/delete workaround is allowed. Evidence:
+  Allow. After the earlier rejected attachment, Bobby made revision 2 the
+  default permissions-policy version on the exact existing role and confirmed
+  there is no permissions boundary. The exact 2026-08-24 verifier then passed
+  with `D2_ISOLATION_AUTHORITY_VERIFIED`: EC2 returned the required
+  `DryRunOperation` for hop limit one. Status is now
+  `IAM_EFFECTIVE_ALLOW_VERIFIED / LIVE_D2_UNAUTHORIZED`. No EC2 setting or
+  association changed; the role is retained until the bounded D2 window and no
+  detach/delete workaround is allowed. Evidence:
   [`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](./EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
+- `EX-BE-02-LIVE` **D2 image HIGH applicability checked / owner disposition
+  pending:** exact-image inspection proves the Rust Edge uses `rustls` and does
+  not dynamically link OpenSSL; its Distroless OpenSSL 3.0.20 is also outside
+  the affected branch. The Nginx Source Proxy does link affected OpenSSL 3.5.7,
+  but D2 config has no QUIC/HTTP3/UDP listener, so the required QUIC-server
+  trigger is not reachable. Preflight now fail-closes on any `quic`, `http3`,
+  `Alt-Svc` or extra listener and the negative integration test passes. This is
+  mitigation, not automatic owner acceptance; live D2 stays unauthorized until
+  Bobby records a disposition and opens a fresh bounded window. Evidence:
+  [`EX_BE_02_D2_CVE_2026_14456_APPLICABILITY.md`](./EX_BE_02_D2_CVE_2026_14456_APPLICABILITY.md).
 - `EX-BE-02-LIVE` **D2 release candidate remediated / live unauthorized:** the
   first main publication caught floating Python patch drift and four CRITICAL
   findings in unused Debian-slim runtime packages before signing. CI/runtime
@@ -418,8 +429,9 @@ authority.
   also reports zero CRITICAL findings. The D3 Control API additionally pins
   Node 22.23.2 / Alpine 3.24 and removes build-only package managers from its
   runtime after an exact-image scan found npm's vulnerable `node-tar`; the
-  fixed image reports zero HIGH/CRITICAL findings. IAM DryRun is still
-  unauthorized, so no AWS/runtime state changed and D2 remains closed. Evidence:
+  fixed image reports zero HIGH/CRITICAL findings. The later IAM DryRun is now
+  accepted, but the separate image-HIGH disposition, fresh admission and owner
+  window still keep D2 closed; no AWS/runtime state changed here. Evidence:
   [`EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md`](./EX_BE_02_D2_RELEASE_GATE_REMEDIATION.md).
 - `EX-BE-02-LIVE` **D3 offline preparation complete / live unauthorized**
   (`D3_OFFLINE_PREPARATION_COMPLETE / LIVE_D3_UNAUTHORIZED`): a
@@ -431,6 +443,16 @@ authority.
   cover 19 probe outcomes and preserve D2 rollback. This historical offline
   milestone was superseded by the accepted live D3 evidence below. Detail:
   [`EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md`](./EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md).
+- `EX-BE-02-LIVE` **D2 dark accepted / source inactive (2026-08-24):** the
+  exact IAM isolation sequence hardened IMDS to hop limit one, detached the
+  temporary operator profile and proved workload credentials absent before
+  startup. Three private services passed a 15-minute four-sample admission
+  soak, zero restart/OOM/source-access evidence, PostgreSQL TLS/SCRAM and role
+  checks, WireGuard/mTLS/public-denial checks and a volume-preserving full
+  rollback/redeploy rehearsal while Trading System health stayed HTTP 200.
+  Every source/query/analytics/SSE/command/profile flag remains false/fixture.
+  Status: `D2_DARK_ACCEPTED / SOURCE_INACTIVE`. Evidence:
+  [`EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md`](./EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md).
 - `EX-BE-02-LIVE` **D3 gateway identity remediation (2026-08-24):** the first
   live D3 window rejected fail-closed before JWT probes because the signed Edge
   image locked gateway digest `sha256:4f63...` while the compatible current
@@ -549,6 +571,17 @@ authority.
   epoch. Evidence is 142 Rust tests, strict Clippy/rustfmt, fresh PostgreSQL,
   replay/restart/gap/load, dump/restore and exact-route Compose/Nginx gates.
   Live source traffic and qualification evidence remain pending.
+- [EX-BE-02-LIVE D4 qualification attempt and compatibility remediation](./EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md)
+  — **live attempt failed closed / Portal compatibility remediated / signed
+  republish required / D2 dark restored:** D4 reached the mandatory-auth source
+  through Source Proxy and created one encrypted, non-queryable BUILDING epoch.
+  The qualifier then rejected an Nginx pagination `429` and exact scientific
+  decimal notation before committing a baseline. The sustained request limit
+  remains 120/minute with a bounded one-minute burst; the Rust source adapter
+  now normalizes exact scientific strings without float conversion. Offline
+  gates pass and D2 is healthy/dark again. D4 acceptance still requires signed
+  protected-main images and one fresh finite owner window; no frontend Lane B,
+  Query, analytics, SSE, command or activation authority is unlocked.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

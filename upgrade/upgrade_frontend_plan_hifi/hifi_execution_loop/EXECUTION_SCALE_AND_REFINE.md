@@ -937,3 +937,60 @@ Chip vẫn **hiện** và bị **disable**, kèm lý do — chứ không xoá. C
 `operations.test.tsx` có gate khẳng định endpoint **vẫn chưa** có tham số nào
 khớp `actor|assignee|owner|user`. Ngày codex publish, test đỏ — đó là tín hiệu
 bật chip, không phải hỏng.
+
+### BR-EX-33 — operation ↔ incident reference on Operations Queue rows (2026-08-24, EL-V2-03)
+
+- **Endpoint/field cần:** `GET /operations` row: `incident_id: string | null` (và/hoặc `target.type =
+  "incident"` với `target.id`).
+- **Lý do UI:** HiFi 4e next-step "review in incident inc_44 →" và journey §8.2 #6 (Queue → Incident).
+  Không có trường này, hop Queue→Incident chỉ có thể render **disabled kèm lý do** (đang làm vậy) —
+  frontend không đoán incident từ tên account/deployment.
+- **Ảnh hưởng hiện tại:** `/execution/operations` triage panel hiện "Open incident — not published
+  (BR-EX-33)"; journey #6 đi vào incident qua Command Center (href server) thay vì từ Queue.
+- **Đề xuất schema:** thêm `incident_id` nullable vào `execution-operations.v1` row; null khi operation
+  không thuộc incident nào.
+
+### BR-EX-34 — equity projection series for Paper/Canary/Live/Alpha charts (2026-08-24, EL-V2-04)
+
+- **Endpoint/field cần:** `GET /deployments/{deployment_id}/equity-projection?window=30d&bucket=1h`
+  trả `execution-analytics.equity-projection.v1`: `points[{bucket_start, equity, drawdown}]` (decimal
+  string), `approved_band[{bucket_start, lower, upper}]` từ research evidence (joined by artifact
+  digest + run id), `gaps[{from,to,reason}]`, envelope (authority, as_of, formula_version
+  `equity_projection.v1`, `buckets_returned/expected`, `joined_run_id`).
+- **Lý do UI:** HiFi 1c/1e/1f/2a/2b "Equity vs approved research evidence" — chart trung tâm của mọi
+  workbench. Hiện **không contract nào publish series** (insight-batch chỉ scalar), nên product route
+  chỉ có thể hiện trạng thái honest; cơ chế chart đã dựng và test trên fixtures.
+- **Ảnh hưởng hiện tại:** Paper/Canary/Live/Alpha render "Equity series not published (BR-EX-34)".
+- **Đề xuất schema:** như trên; gap là gap (không nội suy); band từ run đã duyệt; số là chuỗi decimal.
+
+### BR-EX-35 — approval history endpoint (2026-08-24, EL-V2-05)
+
+- **Endpoint cần:** `GET /approvals/history?cursor&limit&gate&subject` — keyset page của quyết định đã
+  chốt (id, gate, subject, outcome, decided_by, decided_at, policy_version, evidence_digest).
+- **Lý do UI:** HiFi Inbox "Recently decided → full history"; hiện Inbox chỉ có `decided` cửa sổ 30 ngày.
+- **Ảnh hưởng:** nút *Full history* disabled + lý do đúng chữ.
+
+### BR-EX-36 — decision verb `REQUEST_CHANGES` (2026-08-24, EL-V2-05)
+
+- **Verb cần:** `planDecision.decision = "REQUEST_CHANGES"` + `reason` + `conditions[]` (yêu cầu sửa
+  cụ thể), trả về approval ở trạng thái `CHANGES_REQUESTED`, không đóng gate.
+- **Lý do UI:** HiFi R1/R2 có nút *Request changes*; không publish verb ⇒ Portal không bịa write.
+- **Ảnh hưởng:** nút disabled với lý do trỏ BR này trên R1, R2 (và Exit không có nút này theo HiFi).
+
+### BR-EX-37 — R1 detail: `known_limitations[]` có kiểu (2026-08-24, EL-V2-05)
+
+- **Field cần:** `known_limitations[{kind: lineage|warning|restriction|waiver, label, statement, expires_at?}]`
+  trong R1 detail (đi cùng passport/checklist).
+- **Lý do UI:** HiFi 1a "Selection & Known Limitations" — bảng 4 loại có expiry; hiện chỉ fixture có,
+  route product hiện "not published" (không bịa).
+
+### BR-EX-38 — Sandbox smoke plan bounded (2026-08-24, EL-V2-06)
+
+- **Field cần:** `smoke_plan {plan_id, qty, cap, currency, timebox_minutes, operator, status, approved_by}` trong Sandbox certification.
+- **Lý do UI:** HiFi 1d "Smoke plan (bounded)" là bảng; model hiện không có ⇒ không render (không bịa).
+
+### BR-EX-39 — envelope + payload mẫu cho từng `event_type` Execution, và kiểu `schema_version` (2026-08-25, EL-V2-09)
+
+- **Cần:** với mỗi `event_type` edge publish (`order.updated`, `fill.recorded`, `position.updated`, …) một mẫu **envelope Portal + payload** đã qua D4 mapper; và chốt kiểu `schema_version` (fixture Portal: int `1`; extract TS: string `"v1"`).
+- **Lý do:** parity fixture ↔ extract (`SHADOW_PARITY_EXTRACT_2026-08-25.md`) chỉ so được envelope với payload body — khác tầng; lệch kiểu `schema_version` là lệch thật.
+- **Ảnh hưởng:** SSE mapper Portal đọc `projection_epoch/sequence` từ `id`; payload chưa được đọc — chưa lỗi, nhưng Lane B cần mẫu để test.

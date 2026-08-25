@@ -8,7 +8,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within, fireEvent } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { liveGuardRules, readLiveFullOperations } from "./liveFull";
@@ -56,9 +56,9 @@ describe("#1 — no fabricated zero or runtime state", () => {
     const r = live();
     expect(r.kpis).toHaveLength(5);
     const { container } = render(<LiveFullOperationsScreen live={r} />);
-    const kpis = container.querySelectorAll(".exec-live-kpi");
+    const kpis = container.querySelectorAll(".exec-strip-cell");
     expect(kpis).toHaveLength(5);
-    for (const kpi of kpis) expect(kpi.querySelector(".exec-live-kpivalue")).toBeNull();
+    for (const kpi of kpis) expect(kpi.querySelector(".exec-role-kpi")).toBeNull();
   });
 
   it("states fixture and PRODUCTION INACTIVE", () => {
@@ -174,6 +174,7 @@ describe("#5 — the two guard rules, stated separately", () => {
 
   it("renders gap null as not stated, never as none", () => {
     render(<LiveFullOperationsScreen live={live()} />);
+    fireEvent.click(screen.getByRole("tab", { name: /Continuity/ }));
     const continuity = screen.getByLabelText("Projection continuity");
     expect(within(continuity).getByText(/gap not stated/)).toBeTruthy();
   });
@@ -183,7 +184,8 @@ describe("#6 — actions absent while invisible", () => {
   it("draws neither group", () => {
     const { container } = render(<LiveFullOperationsScreen live={live()} />);
     expect(container.querySelector(".exec-live-actions")).toBeNull();
-    expect(screen.queryByRole("button")).toBeNull();
+    // Tabs and the provenance Copy are the only buttons — none of them is a command.
+    expect(container.querySelectorAll(".exec-live-actions button, .exec-stage-actions button")).toHaveLength(0);
   });
 
   it("says an unblocked protective action is still not executable", () => {
@@ -202,6 +204,7 @@ describe("#6 — actions absent while invisible", () => {
       policy.risk_increasing.enabled = true;
     });
     render(<LiveFullOperationsScreen live={visible} />);
+    fireEvent.click(screen.getByRole("tab", { name: /Guard rules/ }));
     expect(screen.getByRole("button", { name: "Protective action" }).hasAttribute("disabled")).toBe(false);
     expect(
       screen.getByRole("button", { name: "Risk-increasing action" }).hasAttribute("disabled"),
@@ -220,6 +223,7 @@ describe("the predecessor canary envelope is labelled inactive", () => {
   it("says it does not govern Live Full", () => {
     expect(live().predecessorEnvelope!.activeForLiveFull).toBe(false);
     render(<LiveFullOperationsScreen live={live()} />);
+    fireEvent.click(screen.getByRole("tab", { name: /Predecessor envelope/ }));
     const pred = screen.getByLabelText("Predecessor canary envelope");
     expect(within(pred).getByText(/NOT active for Live Full/)).toBeTruthy();
   });
@@ -234,6 +238,7 @@ describe("the predecessor canary envelope is labelled inactive", () => {
     const raw = JSON.parse(JSON.stringify(LIVE_FULL_FIXTURE));
     delete raw.predecessor_canary_envelope;
     render(<LiveFullOperationsScreen live={readLiveFullOperations(raw)!} />);
+    fireEvent.click(screen.getByRole("tab", { name: /Predecessor envelope/ }));
     expect(screen.getByText(/absence is a gap rather than a default/)).toBeTruthy();
   });
 

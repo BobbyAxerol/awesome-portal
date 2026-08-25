@@ -27,20 +27,59 @@ export default defineConfig({
   // between those two failures.
   expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.002, animations: "disabled" } },
   use: {
-    baseURL: "http://127.0.0.1:4174",
     trace: "retain-on-failure",
     // The suite sets its own viewport per breakpoint.
     ...devices["Desktop Chrome"],
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: {
-    command: "npm run build && npm run preview -- --host 127.0.0.1 --port 4174",
-    url: "http://127.0.0.1:4174",
-    reuseExistingServer: !process.env.CI,
-    timeout: 180_000,
-    env: {
-      VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY: "true",
-      VITE_EXECUTION_PREVIEW_ENABLED: "true",
+  /**
+   * Two servers, two builds — EL-V2-01, retiring review finding F2.
+   *
+   * `VITE_EXECUTION_PREVIEW_ENABLED` is a BUILD-time flag. The config used to
+   * set it for the single webServer, which meant the 101 QuantBT baselines —
+   * the U02 exit gate, whose whole point is to freeze what SHIPS — were being
+   * photographed against a dev-flagged build. That stayed invisible until a
+   * sidebar change made the flag's presence visible in Research shots and 36
+   * baselines went red at once.
+   *
+   * Port 4174 serves the production-true build (flag off): QuantBT visual
+   * baselines, the execution fixtures suite and the surface audit run there.
+   * Port 4175 serves the preview build (flag on): the preview smoke spec and
+   * the EL-V2 evidence shots run there, because the preview UX is exactly
+   * what they exist to photograph.
+   */
+  webServer: [
+    {
+      command: "npm run build && npm run preview -- --host 127.0.0.1 --port 4174",
+      url: "http://127.0.0.1:4174",
+      reuseExistingServer: !process.env.CI,
+      timeout: 180_000,
+      env: {
+        VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY: "true",
+        VITE_EXECUTION_PREVIEW_ENABLED: "false",
+      },
     },
-  },
+    {
+      command:
+        "npx vite build --outDir dist-preview && npx vite preview --outDir dist-preview --host 127.0.0.1 --port 4175",
+      url: "http://127.0.0.1:4175",
+      reuseExistingServer: !process.env.CI,
+      timeout: 180_000,
+      env: {
+        VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY: "true",
+        VITE_EXECUTION_PREVIEW_ENABLED: "true",
+      },
+    },
+  ],
+  projects: [
+    {
+      name: "chromium",
+      testIgnore: ["**/execution-preview.spec.ts", "**/el-v2-evidence-shots.spec.ts", "**/execution-journeys.spec.ts", "**/_probe*.spec.ts"],
+      use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:4174" },
+    },
+    {
+      name: "chromium-preview",
+      testMatch: ["**/execution-preview.spec.ts", "**/el-v2-evidence-shots.spec.ts", "**/execution-journeys.spec.ts", "**/_probe*.spec.ts"],
+      use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:4175" },
+    },
+  ],
 });

@@ -1846,6 +1846,17 @@ không phải 17 màn.
 > or registry activation occurred. Detail:
 > [`EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md`](./backend/EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md).
 
+> **Backend checkpoint 2026-08-25 — D4 first live qualification:** status is
+> `D4_LIVE_ATTEMPT_FAIL_CLOSED / PORTAL_COMPATIBILITY_REMEDIATED /
+> SIGNED_REPUBLISH_REQUIRED / D2_DARK_RESTORED`. Mandatory-auth Source Proxy
+> and the separate encrypted BUILDING epoch were exercised without enabling
+> Query, analytics, SSE, command or activation authority. Qualification found
+> an undersized pagination burst and exact scientific-decimal compatibility;
+> both are patched and regression-tested, and accepted D2 dark is healthy
+> again. D4 is not accepted until protected-main signed images and one fresh
+> finite owner window pass. Detail:
+> [`EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md`](./backend/EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md).
+
 > **Backend checkpoint 2026-08-23 — EX-BE-05b/F2 Phase 10:** Portal-owned
 > Sandbox Certification trên SGP đạt
 > `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`: DRAFT→IN_REVIEW→APPROVED|DENIED,
@@ -1893,6 +1904,16 @@ không phải 17 màn.
 > xanh. Chi tiết: [`EX_BE_02_D2_PLACEMENT_DECISION.md`](./backend/EX_BE_02_D2_PLACEMENT_DECISION.md).
 > Canonical placement: full Portal stays on SGP; AWS-HK hosts only the minimal
 > Execution Edge boundary.
+
+> **D2 live checkpoint 2026-08-24:** minimal AWS-HK Rust Edge + Source Proxy +
+> schema-only PostgreSQL đã đạt `D2_DARK_ACCEPTED / SOURCE_INACTIVE`. IMDS hop
+> limit 1 và temporary instance profile detachment được verify trước startup;
+> ba service healthy qua soak hơn 15 phút, zero restart/OOM/source request, và
+> full rollback/redeploy giữ nguyên volume/migration 4/4 trong khi Trading
+> System luôn HTTP 200. Tất cả business/source/query/analytics/SSE/command flag
+> vẫn false/fixture. Phase backend kế tiếp là D3 live transport acceptance với
+> một owner window mới; chưa phải D4 hoặc source activation. Chi tiết:
+> [`EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md`](./backend/EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md).
 
 ## 12.4 Thứ tự slice của frontend
 

@@ -23,6 +23,14 @@ import type {
   VenueRow,
 } from "./screens/AlphaThreeSixty";
 import type { ChartEnvelope, KeysetPage } from "./contracts";
+/**
+ * Fixture DATA, not behaviour (EL-V2-03): the screen's handlers are required
+ * in its props, and a fixture factory that stubbed them would be the exact
+ * enabled-no-op this phase removes. Callers supply handlers — the preview
+ * controllers on product routes, explicit spies in tests.
+ */
+export type AlphaThreeSixtyData = Omit<AlphaThreeSixtyProps, "onScopeChange" | "onTabChange" | "onLoadOlder" | "onOpenDeployment" | "onOpenAccount">;
+
 
 const CHART: ChartEnvelope = {
   window: "30d",
@@ -131,7 +139,7 @@ const POSITIONS: PositionRow[] = [
   },
 ];
 
-export function alpha360(over: Partial<AlphaThreeSixtyProps> = {}): AlphaThreeSixtyProps {
+export function alpha360(over: Partial<AlphaThreeSixtyData> = {}): AlphaThreeSixtyData {
   return {
     alphaId: "av_2041",
     alphaName: "Grid v2.1",
@@ -290,7 +298,7 @@ export function auditAtScale(n = 500, total = 1_284_991): KeysetPage<AuditRow> {
   );
 }
 
-export function alpha360AtScale(over: Partial<AlphaThreeSixtyProps> = {}): AlphaThreeSixtyProps {
+export function alpha360AtScale(over: Partial<AlphaThreeSixtyData> = {}): AlphaThreeSixtyData {
   return alpha360({
     venues: venuesAtScale(),
     deployments: deploymentsAtScale(),

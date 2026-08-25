@@ -170,3 +170,20 @@ export const BLOTTER_TOTAL = 48_213;
 /** What a chart selection narrowed it to. */
 export const BLOTTER_SELECTION = 412;
 export const BLOTTER_CROSS_FILTER = "chart selection · Aug 12 10:00–14:00";
+
+/**
+ * `aggregates_by_currency` exactly as the canonical contract fixture
+ * (packages/contracts/fixtures/execution-projection-page.valid.json) publishes
+ * it — copied, not re-typed, so the strings stay the server's strings.
+ */
+export const AGGREGATES_BY_CURRENCY_RAW = [
+  {
+    "currency": "USDT",
+    "row_count": 45500,
+    "quantity_count": 45500,
+    "quantity": "125000.250000000000000001",
+    "notional_count": 45500,
+    "notional": "4875000.750000000000000001",
+    "invalid_numeric_count": 0
+  }
+] as const;

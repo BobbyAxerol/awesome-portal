@@ -1,25 +1,18 @@
 /**
- * Phase 2 — Gate R1 Review (hi-fi 1a), UI states only.
+ * Gate R1 — Research Evidence Review (HiFi 1a), on the V2 workspace anatomy.
  *
- * Lane A, same as the inbox: props and fixtures, real integration on
- * `EX-BE-05a`. The decision itself is a Portal-owned workflow record, so this
- * screen never needs the Trading System.
+ * The question of the screen: is this artifact defensible enough to become a
+ * Release Candidate? Everything that answers it is on the first screen; the
+ * decision lives in a sticky bar that never leaves the viewport (EL-V2-05).
  *
- * The screen exists to make one refusal impossible to work around: an approver
- * cannot approve their own artifact. Separation of duties is not a warning here,
- * it is a locked decision bar with the reason printed next to it — spec §5.1
- * treats a bypass as an explicit audited owner-only action, never something a
- * reviewer can talk themselves into.
- *
- * The second thing it gets right is the difference between a blocking finding
- * and a warning. The hi-fi's checklist has both, and "capacity evidence limited"
- * is deliberately not a blocker. Collapsing them into one list of problems would
- * either stop a legitimate approval or wave through a real one.
+ * Nothing here computes a verdict. Locks come from the checklist marks, the
+ * separation-of-duty ids and the server's eligibility; the buttons only call
+ * the verbs the backend publishes (approve / approve-with-condition / deny).
+ * "Request changes" has no published verb and is therefore disabled with
+ * its reason — BR-EX-36.
  */
 import { useState, type ReactNode } from "react";
-
 import type { ApprovalId, EvidenceMark, PanelStatus, Sla } from "../contracts";
-import { StatusChip } from "../components/badges";
 import {
   ConditionComposer,
   ConditionList,
@@ -27,34 +20,41 @@ import {
   type ConditionDraft,
   type TypedCondition,
 } from "../components/conditions";
+import { ExecutionDecisionBar } from "../components/decisionBar";
 import { EvidencePanel, SlaCell, type EvidenceRow } from "../components/evidence";
 import { PanelState } from "../components/states";
+import { ExecutionSectionTitle } from "../components/typography";
+import {
+  ExecutionContextRail,
+  ExecutionDecisionStrip,
+  ExecutionPageHeader,
+  ExecutionProvenanceDrawer,
+  ExecutionTabs,
+  ExecutionWorkspace,
+  shortDigest,
+  type HeaderBadge,
+  type RailBlocker,
+} from "../components/workspace";
 
-/** One line of the artifact passport. Immutable, hash-addressed where possible. */
 export interface PassportEntry {
   label: string;
   value: string;
-  /** `✓ verified`, `✓ reproduced`, `PASS` — a claim the server checked. */
   verification?: string | null;
-  /** Extra identity: `· supersedes av_1988`. */
   note?: string | null;
 }
-
 export interface ChecklistItem {
   label: string;
   outcome: EvidenceMark;
-  /** Shown under a `watch` item: what a reviewer could do about it. */
   suggestion?: string | null;
-  /** What produced the finding. DS §9 puts EvidencePanel on this screen, and
-   *  its whole rule is that a verdict without a link is an opinion. */
   evidence?: { label: string; href?: string };
 }
-
-/**
- * Why a decision control is locked, in the order a reviewer should hear it.
- *
- * `SELF_APPROVAL` first because it is the one no amount of evidence fixes.
- */
+/** HiFi "Selection & Known Limitations" — one row per statement, typed. */
+export interface LimitationRow {
+  kind: "lineage" | "warning" | "restriction" | "waiver";
+  label: string;
+  value: string;
+  expires?: string | null;
+}
 export type DecisionLock = "SELF_APPROVAL" | "BLOCKING_FINDINGS" | "EXPIRED" | "NOT_ELIGIBLE";
 
 const LOCK_REASON: Record<DecisionLock, string> = {
@@ -63,40 +63,17 @@ const LOCK_REASON: Record<DecisionLock, string> = {
   EXPIRED: "This request expired. It must be resubmitted rather than decided now.",
   NOT_ELIGIBLE: "You do not hold a role that can decide this gate.",
 };
-
-/**
- * Which locks stop a **denial**, as opposed to an approval.
- *
- * Approve and Deny are not two buttons behind one condition, and the earlier
- * version of this screen was wrong to treat Deny as never locked.
- *
- * Self-denial is allowed. Refusing your own artifact is not the conflict of
- * interest that separation of duties exists to prevent — it is the safe
- * direction, and the person who knows the work best is often the one who should
- * withdraw it. Blocking findings do not stop a denial either; they are a reason
- * to deny, not a reason to be unable to.
- *
- * What does stop a denial is the request no longer being a decidable thing.
- * `EXPIRED` means there is nothing live to refuse and a denial recorded against
- * it would be a decision on a request that already lapsed. `NOT_ELIGIBLE` means
- * this actor cannot decide the gate in either direction. A closed gate is
- * handled separately: its controls are removed rather than disabled.
- */
 const DENY_BLOCKING_LOCKS: readonly DecisionLock[] = ["EXPIRED", "NOT_ELIGIBLE"];
-
 const DENY_LOCK_REASON: Record<"EXPIRED" | "NOT_ELIGIBLE", string> = {
   EXPIRED: "Deny blocked — this request expired. There is nothing live to refuse.",
   NOT_ELIGIBLE: "Deny blocked — you do not hold a role that can decide this gate.",
 };
+export const REQUEST_CHANGES_REASON =
+  "Request changes — no decision verb is published for it (BR-EX-36).";
 
-/**
- * The checklist is an `EvidencePanel`, not a bespoke list.
- *
- * DS §9 assigns EvidencePanel to R1, R2, exit reviews and Sandbox Cert. An
- * earlier build had the component and then wrote a private list here anyway,
- * which is how one rule — a verdict without a link is an opinion — ends up
- * enforced on one screen and forgotten on the next three.
- */
+const R1_TABS = ["Checklist", "Passport", "Evidence", "Limitations", "Conditions"] as const;
+type R1Tab = (typeof R1_TABS)[number];
+
 function asEvidenceRows(checklist: readonly ChecklistItem[]): EvidenceRow[] {
   return checklist.map((item) => ({
     label: item.label,
@@ -120,6 +97,7 @@ export function GateR1Review({
   sla,
   passport,
   checklist,
+  limitations,
   locks = [],
   status = "ok",
   reason,
@@ -128,67 +106,51 @@ export function GateR1Review({
   eligibility,
   conditions,
   evidence,
+  note,
+  onNoteChange,
+  trail,
   onAttachCondition,
   onApprove,
   onDeny,
   onRequestCondition,
+  onCopyProvenance,
 }: {
   approvalId: ApprovalId;
-  /** `RSI v1.7` */
   alphaLabel: string;
-  /** `RC-41` */
   releaseCandidate?: string;
   quorumMet: number;
   quorumRequired: number;
   policyVersion: string;
-  /** Display names for the separation-of-duty line. */
   creator: string;
   actor: string;
-  /**
-   * Stable identities, when the payload publishes them.
-   *
-   * The SoD lock is derived from these and never from the display names: two
-   * people can share a display name, and two absent names look identical.
-   */
   creatorId?: string | null;
   actorId?: string | null;
   sla?: Sla;
   passport: readonly PassportEntry[];
   checklist: readonly ChecklistItem[];
-  /** Every reason the decision bar is locked, not only the first. */
+  limitations?: readonly LimitationRow[] | null;
   locks?: readonly DecisionLock[];
-  /**
-   * The server's verdict on each control (`EX_BE_05A` §5). Authoritative in one
-   * direction: it can withhold a control this screen would have allowed, but it
-   * cannot grant one the screen's own checks refuse. A client whose derived
-   * floor could be overridden from the wire would be a client whose safety
-   * rules are advisory.
-   */
   eligibility?: { canApprove: boolean; canApproveWithCondition: boolean; canDeny: boolean };
   status?: PanelStatus;
   reason?: string;
-  /** What is missing when `partial`. The review still renders. */
   partialReason?: string;
-  /**
-   * Set once the gate has been decided. The screen becomes a record rather than
-   * a form: every decision control goes, because offering Approve on something
-   * already approved invites a second operation nobody asked for.
-   */
   decided?: { outcome: "APPROVED" | "DENIED" | "APPROVED_WITH_CONDITION"; by: string; at: string } | null;
-  /** Typed conditions attached to the decision (DS §4). */
   conditions?: readonly TypedCondition[];
-  /** The equity-across-window-roles panel, or its state when absent. */
+  /** Research evidence body (IS/OOS/holdout, WFO). Absent = not published. */
   evidence?: ReactNode;
-  /** Attaching a condition is what makes "approve with condition" mean
-   *  something (§2 "Must work": conditions attach to the decision object). */
+  /** Reviewer note — becomes the decision reason. */
+  note?: string;
+  onNoteChange?: (next: string) => void;
+  /** DecisionTrail from the container while a decision is in flight. */
+  trail?: ReactNode;
   onAttachCondition?: (condition: TypedCondition) => void;
   onApprove?: () => void;
   onDeny?: () => void;
-  onRequestCondition?: () => void;
+  onRequestCondition: () => void;
+  onCopyProvenance: (full: string) => void;
 }) {
-  // `partial` and `stale` still render the review — a reviewer can read a
-  // passport whose evidence chart timed out. The rest cannot be reasoned about
-  // at all, so they replace the screen.
+  const [draft, setDraft] = useState<ConditionDraft>(EMPTY_DRAFT);
+  const [tab, setTab] = useState<R1Tab>("Checklist");
   if (status !== "ok" && status !== "partial" && status !== "stale") {
     return (
       <section className="exec-gate" aria-label={`Gate R1 review ${approvalId}`}>
@@ -197,31 +159,10 @@ export function GateR1Review({
       </section>
     );
   }
-
-  const [draft, setDraft] = useState<ConditionDraft>(EMPTY_DRAFT);
-
-  // Two people, compared by identity — and only when both identities are
-  // actually known. The previous `creator === actor` compared display strings
-  // that both fell back to "unknown" against the real payload, where `creator`
-  // is an object and `actor` is not published at all: every approval on the
-  // surface was locked as a self-approval. Two unknowns are not the same
-  // person, and they are not different people either — they are unknown, and an
-  // unknown must not fire a lock derived from equality. The server's
-  // `eligibility` is the authority; this stays as a second, narrower check.
   const selfApproval = Boolean(creatorId && actorId && creatorId === actorId);
-  // Derived rather than trusted from the caller: a screen that renders a clean
-  // SoD line because a prop said so would be one bad prop away from permitting
-  // the thing this screen exists to refuse.
   const blocking = checklist.filter((c) => c.outcome === "fail").length;
   const warnings = checklist.filter((c) => c.outcome === "watch").length;
   const insufficient = checklist.filter((c) => c.outcome === "insufficient").length;
-
-  // Both derived, for the same reason. §2's "Must work" is "decision buttons
-  // enabled only when checklist complete", and a condition that depends on the
-  // caller remembering to pass a lock is a condition that will eventually not
-  // be passed. The count was previously computed, printed in the tally, and
-  // never fed into the lock set — so a checklist with a failing item left
-  // Approve enabled unless somebody also passed BLOCKING_FINDINGS by hand.
   const effectiveLocks = Array.from(
     new Set<DecisionLock>([
       ...(selfApproval ? (["SELF_APPROVAL"] as DecisionLock[]) : []),
@@ -229,24 +170,11 @@ export function GateR1Review({
       ...locks,
     ]),
   );
-
-  // A decided gate is a record. Every control goes rather than being disabled:
-  // a greyed Approve on an approved request reads as "not yet", which is the
-  // opposite of what happened.
   const isDecided = Boolean(decided);
   const locked = effectiveLocks.length > 0;
-
-  // Deny is gated by a strictly smaller set. Self-approval and blocking
-  // findings are reasons to refuse, not reasons to be unable to.
   const denyLocks = effectiveLocks.filter((lock): lock is "EXPIRED" | "NOT_ELIGIBLE" =>
     (DENY_BLOCKING_LOCKS as readonly string[]).includes(lock),
   );
-  // Server first, local floor second. Both must allow it.
-  // Deny-by-default, as `NO_ELIGIBILITY` in the row reader already says: an
-  // absent eligibility has told us nothing, and nothing is not permission. The
-  // first version read `eligibility ? … : true`, so a detail that failed to
-  // parse — or any caller that simply did not pass the prop — granted approve,
-  // approve-with-condition and deny at once.
   const serverAllowsApprove = eligibility?.canApprove === true;
   const serverAllowsCondition = eligibility?.canApproveWithCondition === true;
   const serverAllowsDeny = eligibility?.canDeny === true;
@@ -254,149 +182,256 @@ export function GateR1Review({
   const conditionLocked = locked || !serverAllowsCondition;
   const denyLocked = denyLocks.length > 0 || !serverAllowsDeny;
 
+  const reasons: string[] = [
+    ...effectiveLocks.map((lock) => LOCK_REASON[lock]),
+    ...denyLocks.map((lock) => DENY_LOCK_REASON[lock]),
+  ];
+  if (!serverAllowsApprove && !locked) reasons.push("Approve blocked — the server did not grant it for this actor.");
+  if (!serverAllowsDeny && !denyLocks.length) reasons.push("Deny blocked — the server did not grant it for this actor.");
+
+  const badges: HeaderBadge[] = [
+    { label: "GATE R1", axis: "stage" },
+    { label: `PENDING ${quorumMet}/${quorumRequired}`, axis: "readiness", tone: quorumMet >= quorumRequired ? "good" : "mute" },
+    { label: selfApproval ? "SoD VIOLATION" : "SoD OK", axis: "other", tone: selfApproval ? "bad" : "good" },
+    ...(status === "stale" ? [{ label: "STALE", axis: "broker-sync", tone: "bad" } as HeaderBadge] : []),
+    ...(status === "partial" ? [{ label: "PARTIAL", axis: "broker-sync", tone: "warn" } as HeaderBadge] : []),
+  ];
+  const blockers: RailBlocker[] = [
+    ...checklist
+      .filter((c) => c.outcome !== "pass")
+      .map((c) => ({
+        label: c.label,
+        detail: c.suggestion ?? (c.outcome === "fail" ? "blocking finding" : c.outcome === "watch" ? "warning · non-blocking" : "insufficient evidence"),
+        severity: c.outcome === "fail" ? ("blocking" as const) : ("watch" as const),
+      })),
+    // Lock names only — the sentence lives once, in the decision bar.
+    ...effectiveLocks.map((lock) => ({ label: `lock · ${lock.replace(/_/g, " ")}`, detail: null, severity: "blocking" as const })),
+  ];
+  const provenanceItems = [
+    ...passport.map((entry) => {
+      const isDigest = entry.value.startsWith("sha256:");
+      return { label: entry.label, short: isDigest ? shortDigest(entry.value) : entry.value, full: isDigest ? entry.value : null };
+    }),
+    { label: "policy", short: policyVersion, full: null },
+  ];
+  const verdict = decided
+    ? decided.outcome.replace(/_/g, " ")
+    : approveLocked && conditionLocked
+      ? "BLOCKED"
+      : `PENDING ${quorumMet}/${quorumRequired}`;
+  const verdictTone: "good" | "warn" | "bad" | "mute" = decided
+    ? decided.outcome === "DENIED" ? "bad" : "good"
+    : approveLocked && conditionLocked ? "bad" : "warn";
+  const sodLine = selfApproval
+    ? `separation-of-duty VIOLATION — you created this artifact (${actor})`
+    : `separation-of-duty OK — creator (${creator}) ≠ you (${actor})`;
+
+  const rail = (
+    <ExecutionContextRail
+      next={{
+        title: decided ? "Decided" : approveLocked && conditionLocked ? "Approve blocked" : "Ready to decide",
+        detail: (
+          <span className="exec-role-body" data-violation={selfApproval ? "true" : undefined}>
+            {sodLine}
+          </span>
+        ),
+      }}
+      blockers={blockers}
+      freshness={
+        <span className="exec-role-meta">
+          {sla ? <SlaCell sla={sla} /> : "SLA not published"} · policy {policyVersion}
+        </span>
+      }
+      provenance={<ExecutionProvenanceDrawer items={provenanceItems} onCopy={onCopyProvenance} />}
+    />
+  );
+
   return (
     <section className="exec-gate" aria-label={`Gate R1 review ${approvalId}`}>
-      <header className="exec-gate-head">
-        <div className="exec-gate-kicker">GATE R1 · Research Evidence Approval</div>
-        <div className="exec-tile-title">
-          {alphaLabel}
-          {releaseCandidate ? <span className="exec-gate-rc"> · {releaseCandidate}</span> : null}
-        </div>
-        <div className="exec-gate-meta">
-          <StatusChip
-            label={`PENDING ${quorumMet}/${quorumRequired}`}
-            tone={quorumMet >= quorumRequired ? "good" : "mute"}
-          />
-          <span>{approvalId}</span>
-          <span>policy {policyVersion}</span>
-          {sla ? <SlaCell sla={sla} /> : null}
-        </div>
-
-        <div className="exec-gate-sod" data-violation={selfApproval ? "true" : undefined}>
-          {selfApproval
-            ? `separation-of-duty VIOLATION — you created this artifact (${actor})`
-            : `separation-of-duty OK — creator (${creator}) ≠ you (${actor})`}
-        </div>
-      </header>
-
-      {status === "partial" ? (
-        <div className="exec-gate-banner">
-          {partialReason ?? "Part of this review could not be read. What is shown below is real; do not treat the absence of a finding as a pass."}
-        </div>
-      ) : null}
-
-      {status === "stale" ? (
-        <div className="exec-gate-banner">
-          {reason ?? "This review is older than its freshness budget. Refresh before deciding."}
-        </div>
-      ) : null}
-
-      {decided ? (
-        <div className="exec-gate-banner exec-gate-decided">
-          {decided.outcome.replace(/_/g, " ")} by {decided.by} at {decided.at}. This gate is closed.
-        </div>
-      ) : null}
-
-      <div className="exec-grid-2" data-ratio="1.15">
-      <div className="exec-gate-panel">
-        <div className="exec-tile-title">Artifact passport — immutable</div>
-        <dl className="exec-gate-passport">
-          {passport.map((entry) => (
-            <div key={entry.label}>
-              <dt>{entry.label}</dt>
-              <dd>
-                <span className="exec-gate-value">{entry.value}</span>
-                {entry.note ? <span className="exec-gate-note"> {entry.note}</span> : null}
-                {entry.verification ? (
-                  <span className="exec-gate-verified"> {entry.verification}</span>
-                ) : (
-                  // A passport line whose claim was not checked is a stated gap.
-                  // Leaving it blank would read as checked-and-fine.
-                  <span className="exec-gate-unverified"> not verified</span>
-                )}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-
-      <div className="exec-gate-panel">
-        <div className="exec-tile-title">Decision checklist — policy {policyVersion}</div>
-        <EvidencePanel rows={asEvidenceRows(checklist)} />
-        {/* Counted separately because they mean different things. A warning that
-            gets counted as a blocker stops a legitimate approval; a blocker
-            counted as a warning waves a real one through. */}
-        <div className="exec-gate-tally">
-          blocking items: <strong>{blocking}</strong> · warnings: <strong>{warnings}</strong>
-          {insufficient > 0 ? (
+      <ExecutionWorkspace layout="balanced" rail={rail}>
+        <ExecutionPageHeader
+          title={
             <>
-              {" "}
-              · insufficient evidence: <strong>{insufficient}</strong>
+              {alphaLabel}
+              {releaseCandidate ? <span className="exec-gate-rc"> · {releaseCandidate}</span> : null}
             </>
-          ) : null}
-        </div>
-      </div>
-      </div>
-
-      {evidence ? <div className="exec-gate-panel">{evidence}</div> : null}
-
-      <div className="exec-gate-panel">
-        <div className="exec-tile-title">Conditions</div>
-        <ConditionList
-          conditions={conditions ?? []}
-          emptyNote="No conditions attached yet."
+          }
+          id={approvalId}
+          badges={badges}
+          purpose="Is this artifact defensible enough to become a Release Candidate?"
+          secondary={sla ? <SlaCell sla={sla} /> : undefined}
         />
-        {onAttachCondition ? (
-          <ConditionComposer
-            draft={draft}
-            onChange={setDraft}
-            onAttach={(condition) => {
-              onAttachCondition(condition);
-              setDraft(EMPTY_DRAFT);
-            }}
-            // A composer for a decision this actor cannot make is a form that
-            // wastes their time, so it follows the condition control exactly.
-            disabled={conditionLocked}
-            disabledReason="You cannot attach a condition to this decision."
-          />
+        {status === "partial" ? (
+          <div className="exec-gate-banner" role="status">
+            {partialReason ?? "Part of this review could not be read. What is shown below is real; do not treat the absence of a finding as a pass."}
+          </div>
         ) : null}
-      </div>
-
-      {isDecided ? null : (
-        <div className="exec-gate-decision">
-          <button type="button" className="exec-btn-apply" disabled={approveLocked} onClick={onApprove}>
-            Approve
-          </button>
-          <button
-            type="button"
-            className="exec-btn-ghost"
-            disabled={conditionLocked}
-            onClick={onRequestCondition}
-          >
-            Approve with condition
-          </button>
-          {/* Deny survives the locks that stop Approve — including
-              self-approval, because withdrawing your own artifact is the safe
-              direction. It does not survive the request ceasing to be
-              decidable. */}
-          <button type="button" className="exec-btn-ghost" disabled={denyLocked} onClick={onDeny}>
-            Deny
-          </button>
-        </div>
-      )}
-
-      {(locked || !serverAllowsApprove || !serverAllowsDeny) && !isDecided ? (
-        <div className="exec-disabled-reason">
-          {effectiveLocks.map((lock) => LOCK_REASON[lock]).join(" ")}
-          {denyLocks.length ? ` ${denyLocks.map((lock) => DENY_LOCK_REASON[lock]).join(" ")}` : null}
-          {!serverAllowsApprove && !locked
-            ? " Approve blocked — the server did not grant it for this actor."
-            : null}
-          {!serverAllowsDeny && !denyLocks.length
-            ? " Deny blocked — the server did not grant it for this actor."
-            : null}
-        </div>
-      ) : null}
+        {status === "stale" ? (
+          <div className="exec-gate-banner" role="status">
+            {reason ?? "This review is older than its freshness budget. Refresh before deciding."}
+          </div>
+        ) : null}
+        {decided ? (
+          <div className="exec-gate-banner exec-gate-decided" role="status">
+            {decided.outcome.replace(/_/g, " ")} by {decided.by} at {decided.at}. This gate is closed.
+          </div>
+        ) : null}
+        <ExecutionDecisionStrip
+          metrics={[
+            { label: "Blocking items", value: String(blocking), tone: blocking > 0 ? "bad" : "good" },
+            { label: "Warnings", value: String(warnings), tone: warnings > 0 ? "warn" : undefined },
+            { label: "Insufficient evidence", value: String(insufficient), tone: insufficient > 0 ? "warn" : undefined },
+            { label: "Quorum", value: `${quorumMet}/${quorumRequired}` },
+            { label: "Conditions", value: String(conditions?.length ?? 0) },
+          ]}
+        />
+        <ExecutionTabs
+          tabs={[
+            { key: "Checklist", label: "Checklist", count: checklist.length },
+            { key: "Passport", label: "Passport", count: passport.length },
+            { key: "Evidence", label: "Evidence" },
+            { key: "Limitations", label: "Limitations", count: limitations?.length ?? null },
+            { key: "Conditions", label: "Conditions", count: conditions?.length ?? 0 },
+          ]}
+          active={tab}
+          onChange={(key) => setTab(key as R1Tab)}
+          label="Gate R1 sections"
+        >
+          {tab === "Checklist" ? (
+            <div className="exec-gate-panel">
+              <ExecutionSectionTitle>Decision checklist — policy {policyVersion}</ExecutionSectionTitle>
+              <EvidencePanel rows={asEvidenceRows(checklist)} />
+            </div>
+          ) : null}
+          {tab === "Passport" ? (
+            <div className="exec-gate-panel">
+              <ExecutionSectionTitle>Artifact passport — immutable</ExecutionSectionTitle>
+              <div className="exec-scroll-x">
+                <table className="exec-360-sync exec-gate-passport-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">field</th>
+                      <th scope="col">value</th>
+                      <th scope="col">verification</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {passport.map((entry) => (
+                      <tr key={entry.label}>
+                        <th scope="row">{entry.label}</th>
+                        <td className="exec-num">
+                          {entry.value}
+                          {entry.note ? <span className="exec-gate-note"> {entry.note}</span> : null}
+                        </td>
+                        <td>
+                          {entry.verification ? (
+                            <span className="exec-gate-verified">{entry.verification}</span>
+                          ) : (
+                            <span className="exec-gate-unverified">not verified</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
+          {tab === "Evidence" ? (
+            <div className="exec-gate-panel">
+              <ExecutionSectionTitle>Evidence — IS / OOS / holdout equity · WFO stability</ExecutionSectionTitle>
+              {evidence ?? (
+                <PanelState
+                  status="unavailable"
+                  reason="Research evidence series (IS/OOS/holdout equity, WFO folds) not published for this approval — BR-EX-34 §R1. The checklist marks above are the server's; the chart is not a precondition for them."
+                />
+              )}
+            </div>
+          ) : null}
+          {tab === "Limitations" ? (
+            <div className="exec-gate-panel">
+              <ExecutionSectionTitle>Selection &amp; known limitations</ExecutionSectionTitle>
+              {limitations?.length ? (
+                <div className="exec-scroll-x">
+                  <table className="exec-360-sync exec-limitations">
+                    <thead>
+                      <tr>
+                        <th scope="col">kind</th>
+                        <th scope="col">item</th>
+                        <th scope="col">statement</th>
+                        <th scope="col">expires</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {limitations.map((row) => (
+                        <tr key={`${row.kind}:${row.label}`} data-kind={row.kind}>
+                          <th scope="row">{row.kind}</th>
+                          <td>{row.label}</td>
+                          <td>{row.value}</td>
+                          <td className="exec-num">{row.expires ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <PanelState status="empty" reason="No limitations, restrictions or waivers were published for this artifact. Absence is not a clean bill." />
+              )}
+            </div>
+          ) : null}
+          {tab === "Conditions" ? (
+            <div className="exec-gate-panel">
+              <ExecutionSectionTitle>Conditions</ExecutionSectionTitle>
+              <ConditionList conditions={conditions ?? []} emptyNote="No conditions attached yet." />
+              {onAttachCondition ? (
+                <ConditionComposer
+                  draft={draft}
+                  onChange={setDraft}
+                  onAttach={(condition) => {
+                    onAttachCondition(condition);
+                    setDraft(EMPTY_DRAFT);
+                  }}
+                  disabled={conditionLocked}
+                  disabledReason="You cannot attach a condition to this decision."
+                />
+              ) : null}
+            </div>
+          ) : null}
+        </ExecutionTabs>
+        <ExecutionDecisionBar
+          label={`Gate R1 decision ${approvalId}`}
+          verdict={verdict}
+          tone={verdictTone}
+          reasons={isDecided ? [] : reasons}
+          note={onNoteChange && !isDecided ? { value: note ?? "", onChange: onNoteChange, disabled: approveLocked && conditionLocked && denyLocked } : undefined}
+          footnote={<>decision is recorded against policy {policyVersion} · conditions are typed objects with owner, deadline and expiry, never free text</>}
+          trail={trail}
+          actions={
+            isDecided ? null : (
+              <>
+                <button type="button" className="exec-role-control exec-btn-ghost" disabled title={REQUEST_CHANGES_REASON}>
+                  Request changes
+                </button>
+                <button type="button" className="exec-role-control exec-btn-ghost" disabled={denyLocked} onClick={onDeny}>
+                  Deny
+                </button>
+                <button
+                  type="button"
+                  className="exec-role-control exec-btn-ghost"
+                  disabled={conditionLocked || (conditions?.length ?? 0) === 0}
+                  title={(conditions?.length ?? 0) === 0 ? "Attach at least one condition first — this decision carries nothing without one" : undefined}
+                  onClick={onRequestCondition}
+                >
+                  Approve with condition
+                </button>
+                <button type="button" className="exec-role-control exec-btn-apply" disabled={approveLocked} onClick={onApprove}>
+                  Approve
+                </button>
+              </>
+            )
+          }
+        />
+      </ExecutionWorkspace>
     </section>
   );
 }

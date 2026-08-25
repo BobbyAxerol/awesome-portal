@@ -4,14 +4,14 @@
     "object_store": "mc mirror portal-minio/quant-platform backup/quant-platform",
     "planning_sqlite": "cp $PLANNING_DB_PATH planning-backup.sqlite"
   },
-  "generated_at": "2026-08-24T01:45:51.329675+00:00",
-  "git_commit": "0de98108b9c0a15336356e4b5520b5dd308ae522",
+  "generated_at": "2026-08-25T06:36:39.984286+00:00",
+  "git_commit": "aa0e5ba43462edf804692d2109d69b5b59614e68",
   "hygiene": {
     "clean": true,
     "findings": [],
     "tracked_files_scanned_note": "sources only; lockfiles excluded"
   },
-  "m0_freeze_manifest_digest": "sha256:e761b722a6083296a094e1797ba728cab580f885e44f85a00f3a4fa3cad4e109",
+  "m0_freeze_manifest_digest": "sha256:5d0ed161134fea0eaa0d94f195537f7a62ad19945d2de14a8fe39681e65011c2",
   "openapi_digest": "sha256:3db643491b32f2aaf0a8490dcb5d457529185b0c35daab420a5e4fe295bcb2ee",
   "protected_strategy_sha256": "sha256:34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
   "restore_checklist": [

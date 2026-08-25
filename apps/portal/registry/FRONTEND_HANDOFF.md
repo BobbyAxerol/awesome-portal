@@ -1056,6 +1056,47 @@ dark EX-BE-06 Execution realtime stream. No Execution delivery profile or
 registry flag changed. Backend evidence:
 `upgrade/backend/U10_QUANTBT_RUN_SSE_FACADE_CUTOVER.md`.
 
+### 8.18 U10 run SSE — assertion added, and one question back to codex (2026-08-23)
+
+Claude's side of §8.17 is done, test-only: three assertions in
+`useRunEvents.test.tsx`. No behaviour in `useRunEvents.ts` changed — the file is
+byte-identical to codex's version, verified after the mutation runs below.
+
+**What was asserted, and why that shape.** The two existing tests cover the
+fallback in halves — one that `streaming` goes false, one that the floor is
+8000ms while streaming. Neither joins them, and the composition is the part that
+protects a reader: after a failure the screen must stop claiming to stream **and**
+the caller's poll interval must return to the fast cadence. Either half alone
+still passes while someone watches a stale screen refresh every eight seconds.
+Added: the cadence returns to fast after a failure; nothing latches when the
+failure repeats five times, as an expired session's retries do; and the badge
+comes back only on a real `onopen`, never on the mere absence of a further error.
+
+Mutation-proven: neutering `onerror` turns 4 red, and making `runPollInterval`
+always return the floor turns 3 red.
+
+**What could not be asserted, honestly.** `EventSource` cannot read an HTTP
+status — `onerror` carries no code — so this hook cannot tell a 401 from dropped
+WiFi, and a test claiming to distinguish them would be theatre. The 401/502
+assertion §8.17 invites is not implementable at this layer as written.
+
+**Question back to codex — a retry loop the cutover introduces.**
+`useRunEvents.ts` handles every error with `setStreaming(false)` and does **not**
+call `close()`; `close` runs only on unmount or a terminal frame. `EventSource`
+therefore auto-reconnects roughly every 3s for as long as the tab is open. Before
+the cutover a 401 was impossible on this route, so a permanently-failing error
+class did not exist. After it, every tab whose session expired reconnects
+forever against the newly session-guarded Control API — the traffic the façade
+exists to control.
+
+Data is not affected: polling returns to the fast cadence, so the run keeps
+updating. The cost is the loop alone.
+
+Two ways to close it, both codex's call because both are transport changes:
+either the façade emits a typed `event: error` frame before closing so the
+client can stop on a non-retryable status, or the client preflights with `fetch`
+to read the status. Claude did not pick one, and did not change Research
+behaviour to work around it.
 ### 8.18 Execution Loop dev integration preview — fixture-only (2026-08-24)
 
 The 17 reviewed Execution Loop screens are now mounted on their canonical
@@ -1086,3 +1127,35 @@ Acceptance evidence on the integration branch:
   routes and observed zero `/api/v1/execution` requests;
 - registry contract tests prove exact 17-screen coverage, `fixture` profiles
   and false capability flags.
+
+### 8.19 D2 live accepted — runtime dark, no business-data unlock (2026-08-24)
+
+Backend has accepted the minimal AWS-HK runtime as
+`D2_DARK_ACCEPTED / SOURCE_INACTIVE`. Rust Edge, Source Proxy and schema-only
+PostgreSQL passed exact IAM isolation, private listeners, mTLS/public denial, a
+four-sample 15-minute pressure soak and a volume-preserving rollback/redeploy.
+There were zero Portal restart/OOM events, zero Source Proxy access lines and
+Trading System health stayed HTTP 200.
+
+This is an operational dark milestone, not a frontend delivery-profile
+promotion. Claude must keep every screen on fixture data, all source/query/
+analytics/SSE/command flags false and Lane B/EventSource closed. It may render
+an honest `runtime reachable, business source inactive` state without inventing
+orders, fills, positions, events or broker facts. Codex's next backend gate is
+D3 live transport acceptance under a new owner window; D3 will open only public
+contracts/health/capabilities for H2/TLS1.3/mTLS/JWT/latency/fault evidence.
+Full evidence:
+`upgrade/backend/EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md`.
+
+### 8.19 Execution screens: handlers are required props; fixtures are data (2026-08-24, EL-V2-03)
+
+Design decision recorded per §7.3. Every interaction handler on the five
+directly-mounted Execution screens (`PaperWorkbench`, `AlphaThreeSixty`,
+`PortfolioThreeSixty`, `AccountBroker360`, `FullBlotter`) is **required** in
+its props type. A screen cannot be mounted enabled-but-inert: optional chaining
+had turned clicks into silence on the product preview (handoff §2.3), and a
+type error is cheaper than a distrustful operator. Fixture factories therefore
+return `<Screen>Data = Omit<Props, handlers>`; behaviour comes from
+`src/execution/previewControllers.tsx` on product routes and from
+`testHandlers.ts` spies in tests. Capability is never inferred from handler
+presence (`AccountBroker360.operatorAdmin` decides visibility alone).

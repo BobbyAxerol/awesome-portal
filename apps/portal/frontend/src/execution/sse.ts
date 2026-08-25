@@ -67,6 +67,7 @@ export const PROJECTION_EVENTS = [
   "order.updated",
   "fill.recorded",
   "position.updated",
+  "source_event.observed",
   "runtime.updated",
   "account.updated",
   "broker_binding.updated",
@@ -77,7 +78,13 @@ export const PROJECTION_EVENTS = [
 
 export const CONTROL_EVENTS = ["projection.gap", "projection.heartbeat", "auth.expiring"] as const;
 
-export const SSE_EVENTS = [...PROJECTION_EVENTS, ...CONTROL_EVENTS] as const;
+// Only names the edge publishes are subscribed (sse.test pins the list). The
+// mapper below also understands `auth.expired` / `source.lost` so the day the
+// edge publishes them nothing else changes — until then AUTH_EXPIRED is derived
+// (preflight 401/403, or a transport error after the published `auth.expiring`
+// deadline) and SOURCE_LOST has no wire source (§8.18 question to codex).
+export const SSE_EVENTS = [...PROJECTION_EVENTS, ...CONTROL_EVENTS,
+] as const;
 
 export type ResumePoint =
   /** First connect. The cursor the bounded snapshot ended at. */
@@ -187,6 +194,12 @@ export function toSubscriptionEvent(
       // The payload is `{reconnect_required: true}` — no expiry time is sent
       // (audit A-6). Absent stays absent rather than becoming a guess.
       return { type: "AUTH_EXPIRING", expiresAt: str(body.expires_at) };
+    case "auth.expired":
+    case "error.auth":
+      return { type: "AUTH_EXPIRED", reason: str(body.reason) ?? str(body.message) };
+    case "source.lost":
+    case "projection.source_lost":
+      return { type: "SOURCE_LOST", reason: str(body.reason) ?? str(body.message), lastGoodAsOf: str(body.last_good_as_of) };
     default:
       // Every projection event is a delta. There is no `delta` event name: the
       // stream carries one name per entity kind.
@@ -207,6 +220,8 @@ export function toSubscriptionEvent(
 }
 
 export interface StreamOptions {
+  /** Optional typed-401 probe of the stream route; returns the HTTP status. */
+  preflight?: () => Promise<number>;
   /** Path or absolute URL of the stream endpoint. */
   path: string;
   /**
@@ -237,6 +252,10 @@ export interface StreamHandle {
  * state, and a hook would have baked one of those choices in; a handle lets
  * each screen own its own effect while sharing every rule.
  */
+/** Deltas arriving faster than this collapse into the latest one (backpressure). */
+export const COALESCE_WINDOW_MS = 250;
+export const COALESCE_THRESHOLD = 8;
+
 export function openStream(options: StreamOptions): StreamHandle {
   let state = INITIAL_SUBSCRIPTION;
   let source: SseLike | null = null;
@@ -271,20 +290,84 @@ export function openStream(options: StreamOptions): StreamHandle {
     }
   };
 
-  const connect = (at: ResumePoint) => {
+  // Backpressure: every delta still reaches the reducer (dropping one would
+  // fabricate a sequence gap); what is coalesced is the *notification* to the
+  // screen. Inside a burst the screen is told once per window, and the count
+  // of collapsed notifications is recorded on the state.
+  let burst: number[] = [];
+  let notifyTimer: ReturnType<typeof setTimeout> | null = null;
+  let pendingNotify = 0;
+  const flushNotify = () => {
+    notifyTimer = null;
+    if (pendingNotify > 1) {
+      state = subscriptionReducer(state, { type: "BACKPRESSURE", coalesced: pendingNotify - 1 });
+    }
+    pendingNotify = 0;
+    burst = [];
+    options.onState(state);
+  };
+  const admit = (mapped: SubscriptionEvent, nowMs: number) => {
+    if (mapped.type !== "DELTA") {
+      if (notifyTimer) {
+        clearTimeout(notifyTimer);
+        flushNotify();
+      }
+      dispatch(mapped);
+      return;
+    }
+    burst = burst.filter((t) => nowMs - t < COALESCE_WINDOW_MS);
+    burst.push(nowMs);
+    if (burst.length <= COALESCE_THRESHOLD) {
+      dispatch(mapped);
+      return;
+    }
+    const next = subscriptionReducer(state, mapped);
+    if (next === state) return;
+    state = next;
+    pendingNotify += 1;
+    if (!notifyTimer) notifyTimer = setTimeout(flushNotify, COALESCE_WINDOW_MS);
+  };
+  const connect = async (at: ResumePoint) => {
     if (closed) return;
+    // Typed 401 before EventSource: the native object cannot read a status, so
+    // a cheap preflight asks the same route first and turns 401/403 into a
+    // typed AUTH_EXPIRED instead of an anonymous `error` retried for ever.
+    if (options.preflight) {
+      try {
+        const status = await options.preflight();
+        if (closed) return;
+        if (status === 401 || status === 403) {
+          dispatch({ type: "AUTH_EXPIRED", reason: status === 401 ? "Session expired (401). Sign in again to resume the live stream." : "Access refused (403). This session may not read the stream." });
+          return;
+        }
+      } catch {
+        // A failed preflight is not an auth answer; fall through and let the
+        // stream report its own condition.
+      }
+    }
     url = streamUrl(options.path, at);
     const opened = options.factory(url);
+    if (!opened) {
+      dispatch({ type: "SNAPSHOT_FAILED", reason: "The stream factory returned nothing." });
+      return;
+    }
     source = opened;
     for (const name of SSE_EVENTS) {
       opened.addEventListener(name, (event) => {
         if (closed || source !== opened) return;
         const mapped = toSubscriptionEvent(name, event);
-        if (mapped) dispatch(mapped);
+        if (mapped) admit(mapped, Date.now());
       });
     }
     opened.addEventListener("error", () => {
       if (closed || source !== opened) return;
+      // A transport error after the published auth deadline is an expired
+      // session, typed — not an anonymous reconnect loop.
+      const deadline = state.authExpiresAt ? Date.parse(state.authExpiresAt) : NaN;
+      if (Number.isFinite(deadline) && Date.now() >= deadline) {
+        dispatch({ type: "AUTH_EXPIRED", reason: "Session expired: the stream closed after its published auth deadline. Sign in again." });
+        return;
+      }
       dispatch({ type: "DISCONNECTED" });
     });
   };
@@ -300,7 +383,7 @@ export function openStream(options: StreamOptions): StreamHandle {
       dispatch({ type: "SNAPSHOT", epoch, sequence, asOf: asOf ?? null });
       // Only then the connection: a delta against no baseline is an unanchored
       // diff.
-      connect({ kind: "snapshot", cursor });
+      void connect({ kind: "snapshot", cursor });
     })
     .catch((error: unknown) => {
       dispatch({
@@ -314,6 +397,7 @@ export function openStream(options: StreamOptions): StreamHandle {
     url: () => url,
     close: () => {
       closed = true;
+      if (notifyTimer) clearTimeout(notifyTimer);
       source?.close();
       source = null;
     },

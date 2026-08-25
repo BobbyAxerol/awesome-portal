@@ -1,5 +1,11 @@
 # Roadmap frontend — Execution Loop
 
+> **⛔ 2026-08-24 — V2 override.** Roadmap dưới đây được viết trước khi Bobby từ chối composition
+> sản phẩm (`OWNER_REJECTED_CURRENT_PRODUCT_COMPOSITION`). Thứ tự việc hiện hành là **mười phase
+> EL-V2-00…09** trong `PLAN_EL_V2_FRONTEND.md` (nguồn:
+> `CODEX_TO_CLAUDE_EXECUTION_PRODUCT_UIUX_REFACTOR_HANDOFF.md`). Nội dung cũ giữ để tra cứu; chỗ nào
+> mâu thuẫn với owner override §0.1 (vd "governance light", "rebuild exactly") thì override thắng.
+
 **Cập nhật:** 2026-08-22 · **Giữ bởi:** Claude · **Đọc cùng:** `PHASE_TRACKER.md`
 (trạng thái sống, chi tiết từng slice) và `EXECUTION_SCALE_AND_REFINE.md` (BR-EX-*)
 

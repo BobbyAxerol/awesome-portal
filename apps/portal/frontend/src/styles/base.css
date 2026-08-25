@@ -4,7 +4,7 @@
 
 @layer base {
   html {
-    font-family: "Inter", system-ui, sans-serif;
+    font-family: var(--font-body);
     letter-spacing: 0;
   }
   body {
@@ -12,7 +12,7 @@
     font-feature-settings: "cv11", "cv02";
   }
   h1, h2, h3, h4 {
-    font-family: "Newsreader", Georgia, serif;
+    font-family: var(--font-display);
     font-weight: 500;
   }
   /* Numbers wear mono; words wear the body face.
@@ -26,7 +26,7 @@
   .mono,
   td.num,
   th.num {
-    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-feature-settings: "tnum" 1;
     font-variant-numeric: tabular-nums;
   }
@@ -116,7 +116,7 @@
     @apply text-[24px] leading-8 text-ink;
   }
   .dek {
-    font-family: "Newsreader", Georgia, serif;
+    font-family: var(--font-display);
     font-style: italic;
     @apply text-[15px] leading-6 text-ink-faint;
   }
@@ -143,6 +143,12 @@
   }
   .badge-maturity-dashed {
     border-style: dashed;
+  }
+  /* EL-V2-01: a route the user can open right now as a fixture preview. Solid
+   * accent border where SOON is dashed mute — one truthful state per §4.3. */
+  .badge-maturity-preview {
+    color: var(--accent);
+    border-color: var(--accent);
   }
 
   .badge-env {

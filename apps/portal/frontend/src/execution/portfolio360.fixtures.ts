@@ -14,6 +14,14 @@
 import { readCapitalLedger, readCorrelation, type Correlation } from "./analytics";
 import { CAPITAL_LEDGER } from "./analytics.presentation.fixtures";
 import type { ApprovalRow, HoldingRow, LeaderList, PortfolioThreeSixtyProps } from "./screens/PortfolioThreeSixty";
+/**
+ * Fixture DATA, not behaviour (EL-V2-03): the screen's handlers are required
+ * in its props, and a fixture factory that stubbed them would be the exact
+ * enabled-no-op this phase removes. Callers supply handlers — the preview
+ * controllers on product routes, explicit spies in tests.
+ */
+export type PortfolioThreeSixtyData = Omit<PortfolioThreeSixtyProps, "onTabChange" | "onLensChange" | "onOpenAlpha" | "onOpenAccount">;
+
 
 /**
  * Build a packed correlation for `n` entities.
@@ -164,9 +172,7 @@ const APPROVALS: ApprovalRow[] = [
   { id: "PX-31", gate: "PAPER_EXIT", subject: "MM v1.1 paper observation", decision: "APPROVED", approvers: "Lan", decidedAt: "2026-07-15", conditions: "0" },
 ];
 
-export function portfolio360(
-  over: Partial<PortfolioThreeSixtyProps> = {},
-): PortfolioThreeSixtyProps {
+export function portfolio360(over: Partial<PortfolioThreeSixtyData> = {}): PortfolioThreeSixtyData {
   return {
     portfolioId: "PF-CRYPTO",
     portfolioName: "Crypto book",

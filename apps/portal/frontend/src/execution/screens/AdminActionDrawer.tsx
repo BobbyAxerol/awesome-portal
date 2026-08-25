@@ -35,6 +35,15 @@ import {
 } from "../adminCatalog";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
+import { ExecutionSectionTitle } from "../components/typography";
+import {
+  ExecutionContextRail,
+  ExecutionDecisionStrip,
+  ExecutionPageHeader,
+  ExecutionProvenanceDrawer,
+  ExecutionWorkspace,
+  type HeaderBadge,
+} from "../components/workspace";
 import { planApplicable, planOutcomeText, type CommandPlan } from "../commandPlan";
 import type { PanelStatus } from "../contracts";
 
@@ -102,10 +111,7 @@ function EntryRow({
 function EntryDetail({ entry, plan }: { entry: CatalogEntry; plan?: CommandPlan | null }) {
   return (
     <>
-      <h2 className="exec-admin-seltitle">
-        {entry.command} {entry.action}
-      </h2>
-      <p className="exec-admin-selmeta">{entry.key}</p>
+      <p className="exec-admin-selmeta exec-role-meta">{entry.key}</p>
 
       <div className="exec-admin-blocked" role="note">
         <b>NOT EXPOSED IN PORTAL</b>
@@ -230,100 +236,119 @@ export function AdminActionDrawerScreen({
   children,
 }: {
   catalogue: CommandCatalogue | null;
-  /** `denied` when the actor is not ADMIN; the catalogue is not fetched at all. */
   status?: PanelStatus;
   reason?: string;
   selected: CatalogEntry | null;
   onSelect: (entry: CatalogEntry) => void;
-  /** Reported to the caller, which re-queries. Never applied to `catalogue`. */
   tier?: TierFilter;
   onTierChange?: (tier: TierFilter) => void;
-  /** A plan that came back for the selected entry, when one was made. */
   plan?: CommandPlan | null;
   children?: ReactNode;
 }) {
   const groups = catalogue ? groupEntries(catalogue.entries) : [];
-
+  const reachable = catalogue ? catalogue.entries.filter((e) => e.portalReachable).length : 0;
+  const relayDisabled = catalogue?.capabilityState === "DISABLED";
+  const badges: HeaderBadge[] = [
+    { label: "OPERATOR ADMIN", axis: "stage" },
+    { label: relayDisabled ? "RELAY DISABLED" : `relay ${catalogue?.capabilityState ?? "not stated"}`, axis: "readiness", tone: relayDisabled ? "mute" : "warn" },
+    ...(catalogue?.revision ? [{ label: `catalogue rev ${catalogue.revision}`, axis: "other" } as HeaderBadge] : []),
+  ];
+  const rail = (
+    <ExecutionContextRail
+      next={{
+        title: selected ? `${selected.command} ${selected.action}` : "Pick an action",
+        detail: (
+          <div aria-label="Command detail" className="exec-admin-drawer">
+            {selected ? (
+              <EntryDetail entry={selected} plan={plan} />
+            ) : (
+              <p className="exec-admin-empty exec-role-body">Pick an action to see its risk tier, the steps it would require and why it is not available here.</p>
+            )}
+            {children}
+          </div>
+        ),
+      }}
+      blockers={selected && !selected.portalReachable ? [{ label: `${selected.key} not reachable`, detail: null, severity: "blocking" as const }] : []}
+      freshness={
+        <span className="exec-role-meta">
+          {relayDisabled ? "relay disabled — see the notice above" : "relay state as published"}
+          {catalogue?.sourceCommit ? ` · source ${catalogue.sourceCommit.slice(0, 12)}` : ""}
+        </span>
+      }
+      provenance={
+        <ExecutionProvenanceDrawer
+          items={[
+            { label: "catalogue", short: `rev ${catalogue?.revision ?? "not stated"}`, full: null },
+            ...(catalogue?.sourceCommit ? [{ label: "source commit", short: catalogue.sourceCommit.slice(0, 12), full: catalogue.sourceCommit }] : []),
+            ...(selected?.sourceReference ? [{ label: "observed at", short: selected.sourceReference, full: null }] : []),
+          ]}
+          onCopy={(full) => void navigator.clipboard?.writeText(full)}
+        />
+      }
+    />
+  );
   return (
     <ExecutionSurface kind="deployments" className="exec-admin">
-      <header className="exec-admin-head">
-        <h1>Admin actions</h1>
-        <p className="exec-admin-sub">
-          Operator Admin scope · UI and CLI share ONE command authority — the browser never runs a
-          shell
-        </p>
-        {catalogue ? (
-          <p className="exec-admin-sub">
-            catalogue revision {catalogue.revision ?? "not stated"} ·{" "}
-            {catalogue.returnedEntries ?? catalogue.entries.length} of{" "}
-            {catalogue.totalEntries ?? "an unpublished number of"} actions
-            {catalogue.sourceCommit ? ` · source ${catalogue.sourceCommit.slice(0, 12)}` : null}
-          </p>
-        ) : null}
-      </header>
-
-      {status !== "ok" ? (
-        <PanelState status={status} reason={reason} />
-      ) : (
-        <>
-          {/* Stated once, at the top, because it is true of every row below and
-              repeating it sixty-four times would turn it into wallpaper. */}
-          {catalogue?.capabilityState === "DISABLED" ? (
-            <p className="exec-admin-capability">
-              The Portal&apos;s command relay is <b>disabled</b> for this catalogue
-              {catalogue.capabilityReason ? ` (${catalogue.capabilityReason})` : null}. Every action
-              below is listed so you know it exists — none of them can be run from here.
-            </p>
-          ) : null}
-
-          {onTierChange ? (
-            <div className="exec-admin-tiers" role="group" aria-label="Filter by risk tier">
-              {TIER_FILTERS.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  data-tier-filter={option}
-                  aria-pressed={option === tier}
-                  onClick={() => onTierChange(option)}
-                >
-                  {TIER_FILTER_LABEL[option]}
-                </button>
-              ))}
+      <ExecutionWorkspace layout="balanced" rail={rail}>
+        <div className="exec-admin-head">
+          <ExecutionPageHeader
+            title="Admin actions"
+            badges={badges}
+            purpose="Plan → Apply → Verify. UI and CLI share ONE command authority — the browser never runs a shell."
+            secondary={
+              catalogue ? (
+                <span className="exec-admin-sub exec-role-meta">
+                  {catalogue.returnedEntries ?? catalogue.entries.length} of {catalogue.totalEntries ?? "an unpublished number of"} actions
+                </span>
+              ) : undefined
+            }
+          />
+        </div>
+        {status !== "ok" ? (
+          <PanelState status={status} reason={reason} />
+        ) : (
+          <>
+            {relayDisabled ? (
+              <p className="exec-admin-capability exec-role-body" role="status">
+                The Portal&apos;s command relay is <b>disabled</b> for this catalogue
+                {catalogue?.capabilityReason ? ` (${catalogue.capabilityReason})` : null}. Every action below is listed so you know it exists — none of them can be run from here.
+              </p>
+            ) : null}
+            <ExecutionDecisionStrip
+              metrics={[
+                { label: "Actions", value: catalogue ? String(catalogue.entries.length) : null },
+                { label: "Reachable", value: catalogue ? String(reachable) : null, tone: reachable ? "good" : undefined },
+                { label: "Not exposed", value: catalogue ? String(catalogue.entries.length - reachable) : null },
+                { label: "Groups", value: String(groups.length) },
+                { label: "Relay", value: catalogue?.capabilityState ?? null, tone: relayDisabled ? "bad" : "good" },
+              ]}
+            />
+            {onTierChange ? (
+              <div className="exec-admin-tiers" role="group" aria-label="Filter by risk tier">
+                {TIER_FILTERS.map((option) => (
+                  <button key={option} type="button" className="exec-inbox-filter" data-tier-filter={option} aria-pressed={option === tier} onClick={() => onTierChange(option)}>
+                    {TIER_FILTER_LABEL[option]}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            <div className="exec-admin-panes">
+              <div className="exec-admin-catalog">
+                {groups.map((group) => (
+                  <section className="exec-admin-group" key={group.code ?? "ungrouped"}>
+                    <ExecutionSectionTitle>
+                      {group.label} <span className="exec-role-meta">{group.items.length}</span>
+                    </ExecutionSectionTitle>
+                    {group.items.map((entry) => (
+                      <EntryRow key={entry.key} entry={entry} selected={entry.key === selected?.key} onSelect={onSelect} />
+                    ))}
+                  </section>
+                ))}
+              </div>
             </div>
-          ) : null}
-
-          <div className="exec-admin-panes">
-            <div className="exec-admin-catalog">
-              {groups.map((group) => (
-                <section className="exec-admin-group" key={group.code ?? "ungrouped"}>
-                  <h2 className="exec-admin-groupname">
-                    {group.label} <span>{group.items.length}</span>
-                  </h2>
-                  {group.items.map((entry) => (
-                    <EntryRow
-                      key={entry.key}
-                      entry={entry}
-                      selected={entry.key === selected?.key}
-                      onSelect={onSelect}
-                    />
-                  ))}
-                </section>
-              ))}
-            </div>
-            <aside className="exec-admin-drawer" aria-label="Command detail">
-              {selected ? (
-                <EntryDetail entry={selected} plan={plan} />
-              ) : (
-                <p className="exec-admin-empty">
-                  Pick an action to see its risk tier, the steps it would require and why it is not
-                  available here.
-                </p>
-              )}
-              {children}
-            </aside>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </ExecutionWorkspace>
     </ExecutionSurface>
   );
 }

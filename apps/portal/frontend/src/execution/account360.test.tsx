@@ -7,7 +7,7 @@
  * from the browser, and that a population it could not complete is never
  * presented as a total.
  */
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within, fireEvent } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AccountBroker360, HeadroomBanner } from "./screens/AccountBroker360";
@@ -18,12 +18,13 @@ import {
   PARTIAL_EXPOSURE,
   account360,
 } from "./account360.fixtures";
+import { accountHandlers } from "./testHandlers";
 
 afterEach(cleanup);
 
 describe("Account 360° — three authorities, never merged", () => {
   it("attributes each column to the source that vouches for it", () => {
-    const { container } = render(<AccountBroker360 {...account360()} />);
+    const { container } = render(<AccountBroker360 {...accountHandlers()} {...account360()} />);
     const columns = [...container.querySelectorAll(".exec-360-col")];
     expect(columns).toHaveLength(3);
     expect(columns[0].textContent).toContain("EXECUTION");
@@ -32,7 +33,7 @@ describe("Account 360° — three authorities, never merged", () => {
   });
 
   it("names the formula behind the difference rather than showing a bare delta", () => {
-    render(<AccountBroker360 {...account360()} />);
+    render(<AccountBroker360 {...accountHandlers()} {...account360()} />);
     expect(screen.getByText(/diff\.v1/)).toBeTruthy();
     expect(screen.getByText(/Δ 186\.00/)).toBeTruthy();
     expect(screen.getByText(/funding accrual pending/)).toBeTruthy();
@@ -40,7 +41,7 @@ describe("Account 360° — three authorities, never merged", () => {
 
   it("distinguishes a match from a comparison that could not be made", () => {
     render(
-      <AccountBroker360
+      <AccountBroker360 {...accountHandlers()}
         {...account360({
           difference: {
             envelope: { authority: "DERIVED", asOf: null, freshness: "UNKNOWN" },
@@ -59,7 +60,7 @@ describe("Account 360° — three authorities, never merged", () => {
 
   it("states an unreported figure as unreported, never as zero", () => {
     const { container } = render(
-      <AccountBroker360
+      <AccountBroker360 {...accountHandlers()}
         {...account360({
           broker: {
             positions: null,
@@ -108,7 +109,7 @@ describe("Account 360° — the headroom verdict is read, never computed", () =>
     // but only because the fixture was told to. Change the verdict alone and
     // the banner must follow the verdict, not the arithmetic.
     render(
-      <AccountBroker360 {...account360({ aggregate: HEADROOM_EXCEEDED })} />,
+      <AccountBroker360 {...accountHandlers()} {...account360({ aggregate: HEADROOM_EXCEEDED })} />,
     );
     expect(screen.getByText(/Σ virtual 46,800\.00/)).toBeTruthy();
     // The rows still add to 41,000 and the screen still says 46,800, because
@@ -130,13 +131,13 @@ describe("Account 360° — a partial population is never a total", () => {
   });
 
   it("leaves a complete population unqualified", () => {
-    render(<AccountBroker360 {...account360()} />);
+    render(<AccountBroker360 {...accountHandlers()} {...account360()} />);
     expect(screen.queryByText(/partial aggregate/)).toBeNull();
   });
 
   it("says how many accounts were expected when the list is short", () => {
     const { container } = render(
-      <AccountBroker360 {...account360({ exposure: PARTIAL_EXPOSURE })} />,
+      <AccountBroker360 {...accountHandlers()} {...account360({ exposure: PARTIAL_EXPOSURE })} />,
     );
     const table = container.querySelector(".exec-360-linked")!;
     expect(table.querySelector("caption")!.textContent).toMatch(/of 24 expected/);
@@ -144,7 +145,7 @@ describe("Account 360° — a partial population is never a total", () => {
 
   it("keeps the viewed account in the list, marked", () => {
     // Filtering it out would leave a sum whose parts do not add up on screen.
-    const { container } = render(<AccountBroker360 {...account360()} />);
+    const { container } = render(<AccountBroker360 {...accountHandlers()} {...account360()} />);
     const table = container.querySelector(".exec-360-linked") as HTMLElement;
     expect(within(table).getByText("acct-live-grid-v21")).toBeTruthy();
     expect(table.querySelector('tr[data-current="true"]')).toBeTruthy();
@@ -153,7 +154,7 @@ describe("Account 360° — a partial population is never a total", () => {
 
 describe("Account 360° — the secret, the guard band and the buttons", () => {
   it("shows the credential alias and says the secret is withheld on purpose", () => {
-    render(<AccountBroker360 {...account360()} />);
+    render(<AccountBroker360 {...accountHandlers()} {...account360()} />);
     expect(screen.getByText(/credential alias BIN-01/)).toBeTruthy();
     expect(screen.getByText("VALID")).toBeTruthy();
     // A reader who cannot see the secret should know that is deliberate
@@ -162,43 +163,45 @@ describe("Account 360° — the secret, the guard band and the buttons", () => {
   });
 
   it("bands a live account, and does not band a paper one", () => {
-    const { container, rerender } = render(<AccountBroker360 {...account360()} />);
+    const { container, rerender } = render(<AccountBroker360 {...accountHandlers()} {...account360()} />);
     expect(container.querySelector(".exec-360-guard")).toBeTruthy();
-    rerender(<AccountBroker360 {...account360({ stage: "PAPER_OBSERVATION" })} />);
+    rerender(<AccountBroker360 {...accountHandlers()} {...account360({ stage: "PAPER_OBSERVATION" })} />);
     expect(container.querySelector(".exec-360-guard")).toBeNull();
   });
 
   it("bands a canary account too, because it is also live capital", () => {
-    const { container } = render(<AccountBroker360 {...account360({ stage: "LIVE_CANARY" })} />);
+    const { container } = render(<AccountBroker360 {...accountHandlers()} {...account360({ stage: "LIVE_CANARY" })} />);
     expect(container.querySelector(".exec-360-guard")).toBeTruthy();
   });
 
   it("hides mutation buttons entirely rather than disabling them", () => {
     // A button an actor may never press is a question they will keep asking.
-    render(<AccountBroker360 {...account360()} />);
+    render(<AccountBroker360 {...accountHandlers()} {...account360()} />);
     expect(screen.queryByRole("button", { name: "Sync now" })).toBeNull();
     expect(screen.queryByRole("button", { name: /dry-run/i })).toBeNull();
   });
 
   it("offers them to an operator admin", () => {
     const onSyncNow = vi.fn();
-    render(<AccountBroker360 {...account360({ operatorAdmin: true, onSyncNow })} />);
+    render(<AccountBroker360 {...accountHandlers()} {...account360({ operatorAdmin: true })} onSyncNow={onSyncNow} />);
     screen.getByRole("button", { name: "Sync now" }).click();
     expect(onSyncNow).toHaveBeenCalledOnce();
   });
 
   it("keeps the stale sync row visible rather than showing only successes", () => {
-    render(<AccountBroker360 {...account360()} />);
+    render(<AccountBroker360 {...accountHandlers()} {...account360()} />);
+    fireEvent.click(screen.getByRole("tab", { name: /Sync history/ }));
     expect(screen.getByText("STALE 6.2s")).toBeTruthy();
   });
 
   it("says apply-from-broker goes through plan, apply and verify", () => {
-    render(<AccountBroker360 {...account360()} />);
+    render(<AccountBroker360 {...accountHandlers()} {...account360()} />);
+    fireEvent.click(screen.getByRole("tab", { name: /Findings/ }));
     expect(screen.getByText(/plan → apply → verify/)).toBeTruthy();
   });
 
   it("renders a panel state rather than a half-populated screen when the read fails", () => {
-    render(<AccountBroker360 {...account360({ status: "denied", reason: "Not your binding." })} />);
+    render(<AccountBroker360 {...accountHandlers()} {...account360({ status: "denied", reason: "Not your binding." })} />);
     expect(screen.getByText("Not your binding.")).toBeTruthy();
     expect(screen.queryByText(/Broker binding/)).toBeNull();
   });
@@ -217,7 +220,7 @@ describe("Account 360° — at the volume the backend actually returns", () => {
 
   it("caps a 214-account binding instead of rendering 214 rows in a panel", () => {
     const { container } = render(
-      <AccountBroker360 {...account360({ linked: manyLinked(214) })} />,
+      <AccountBroker360 {...accountHandlers()} {...account360({ linked: manyLinked(214) })} />,
     );
     const body = container.querySelector(".exec-360-linked tbody")!;
     expect(body.querySelectorAll("tr").length).toBeLessThanOrEqual(12);
@@ -228,7 +231,7 @@ describe("Account 360° — at the volume the backend actually returns", () => {
     // A list of siblings that dropped the one you are looking at is worse than
     // no list.
     const { container } = render(
-      <AccountBroker360 {...account360({ linked: manyLinked(214) })} />,
+      <AccountBroker360 {...accountHandlers()} {...account360({ linked: manyLinked(214) })} />,
     );
     const table = container.querySelector(".exec-360-linked") as HTMLElement;
     expect(within(table).getByText("acct-180")).toBeTruthy();
@@ -237,7 +240,7 @@ describe("Account 360° — at the volume the backend actually returns", () => {
 
   it("keeps a canary buried at row 199, because that is the row being checked", () => {
     const { container } = render(
-      <AccountBroker360 {...account360({ linked: manyLinked(214) })} />,
+      <AccountBroker360 {...accountHandlers()} {...account360({ linked: manyLinked(214) })} />,
     );
     const table = container.querySelector(".exec-360-linked") as HTMLElement;
     expect(within(table).getByText("acct-199")).toBeTruthy();
@@ -246,7 +249,7 @@ describe("Account 360° — at the volume the backend actually returns", () => {
 
   it("renders the hi-fi's three accounts exactly as drawn, with no cap notice", () => {
     // Adapting to real volume must not change how the drawn case looks.
-    const { container } = render(<AccountBroker360 {...account360()} />);
+    const { container } = render(<AccountBroker360 {...accountHandlers()} {...account360()} />);
     expect(container.querySelectorAll(".exec-360-linked tbody tr")).toHaveLength(3);
     expect(screen.queryByText(/showing 3 of/)).toBeNull();
   });
@@ -261,8 +264,9 @@ describe("Account 360° — at the volume the backend actually returns", () => {
       detail: i === 9_000 ? "6.2s" : null,
       digest: "4f2a91…7c",
     }));
-    const { container } = render(<AccountBroker360 {...account360({ syncHistory: history })} />);
+    const { container } = render(<AccountBroker360 {...accountHandlers()} {...account360({ syncHistory: history })} />);
     expect(container.querySelectorAll(".exec-360-sync tbody tr").length).toBeLessThanOrEqual(10);
+    fireEvent.click(screen.getByRole("tab", { name: /Sync history/ }));
     expect(screen.getByText("STALE 6.2s")).toBeTruthy();
     expect(screen.getByText(/showing 10 of 17,280 syncs/)).toBeTruthy();
   });
@@ -274,15 +278,16 @@ describe("Account 360° — at the volume the backend actually returns", () => {
       status: (i % 10 === 0 ? "FAILED" : "OK") as "OK" | "FAILED",
       digest: null,
     }));
-    render(<AccountBroker360 {...account360({ syncHistory: history })} />);
+    render(<AccountBroker360 {...accountHandlers()} {...account360({ syncHistory: history })} />);
     // Fifty failures and room for ten is a finding about the binding, not a
     // rendering detail, and a plain "showing 10 of 500" would hide it.
+    fireEvent.click(screen.getByRole("tab", { name: /Sync history/ }));
     expect(screen.getByText(/more non-routine rows exist/)).toBeTruthy();
   });
 
   it("describes the population the server reported, not the rows it was handed", () => {
     // 3 rows arrived; the binding has 24 accounts. The notice must say 24.
-    render(<AccountBroker360 {...account360({ exposure: PARTIAL_EXPOSURE })} />);
+    render(<AccountBroker360 {...accountHandlers()} {...account360({ exposure: PARTIAL_EXPOSURE })} />);
     expect(screen.getByText(/of 24 linked accounts/)).toBeTruthy();
   });
 });
@@ -292,7 +297,8 @@ describe("Account 360° — an unbounded history is a window, and says so", () =
     // broker_sync_state_history is a hypertable: 17,280 rows a day at the
     // five-second policy this screen itself prints. Ten rows with no caveat
     // read as the history.
-    render(<AccountBroker360 {...account360()} />);
+    render(<AccountBroker360 {...accountHandlers()} {...account360()} />);
+    fireEvent.click(screen.getByRole("tab", { name: /Sync history/ }));
     expect(screen.getByText(/window over an unbounded history/)).toBeTruthy();
   });
 
@@ -303,9 +309,11 @@ describe("Account 360° — an unbounded history is a window, and says so", () =
       status: "OK" as const,
       digest: null,
     }));
-    render(<AccountBroker360 {...account360({ syncHistory: history, syncTotal: 1_204_991 })} />);
+    render(<AccountBroker360 {...accountHandlers()} {...account360({ syncHistory: history, syncTotal: 1_204_991 })} />);
+    fireEvent.click(screen.getByRole("tab", { name: /Sync history/ }));
     expect(screen.getByText(/showing 10 of 1,204,991 syncs/)).toBeTruthy();
     // And with a real total the caveat is unnecessary.
+    fireEvent.click(screen.getByRole("tab", { name: /Sync history/ }));
     expect(screen.queryByText(/window over an unbounded history/)).toBeNull();
   });
 });

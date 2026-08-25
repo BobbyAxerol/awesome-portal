@@ -23,6 +23,7 @@ import {
   EXECUTION_PREVIEW_FEATURE_DEFAULTS,
   hasExecutionPreview,
 } from "../execution/previewRegistry";
+import { screenDeliveryProfile } from "../execution/profile";
 
 /**
  * Heavy modules are loaded when their route is entered, not before.
@@ -146,7 +147,7 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
             <Route
               key={`execution-preview:${screen.screen_id}`}
               path={screen.route}
-              element={<ExecutionPreviewRoute screenId={screen.screen_id} />}
+              element={<ExecutionPreviewRoute screenId={screen.screen_id} profile={screenDeliveryProfile(screen)} />}
             />
           ))}
         {registry.features.map((feature) => {
@@ -158,7 +159,7 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
             feature.canonical_route === "/"
               ? <RootRoute />
               : EXECUTION_PREVIEW_ENABLED && previewScreenId
-                ? <ExecutionPreviewRoute screenId={previewScreenId} />
+                ? <ExecutionPreviewRoute screenId={previewScreenId} profile={screenDeliveryProfile(registry.screens.find((s) => s.screen_id === previewScreenId) ?? null)} />
                 : module
                   ? <module.component />
                   : <FeaturePreview feature={feature} />;

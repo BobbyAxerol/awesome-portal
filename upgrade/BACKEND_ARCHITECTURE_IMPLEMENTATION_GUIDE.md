@@ -1018,18 +1018,27 @@ deep-dive → ADR → slice → evidence discipline documented above.
   that no identity-based policy permits the action. Caller identity and profile
   association are correct, so IAM console attachment/boundary placement remains
   the stop-gate and no detach was attempted.
-  Two further exact retries remained unauthorized. The private policy is now
-  revision 2: exact two actions, exact instance and region, without the request-
-  parameter conditions that failed to yield an effective Allow. The owner then
-  reported attaching revision 2, but the exact 2026-08-24
-  post-attachment DryRun still returned `UnauthorizedOperation`. Status is
-  `REVISION_2_REPORTED_ATTACHED / EFFECTIVE_ALLOW_NOT_PROVEN /
-  LIVE_D2_UNAUTHORIZED`; verify the policy under the existing role's Permissions
-  policies/default managed-policy version and inspect boundary/SCP denies before
-  retrying. The role is retained until the D2 window; it is not deleted or
-  detached as a bypass.
+  Two further exact retries remained unauthorized after the first reported
+  attachment. The private policy was revised to exact two actions, exact
+  instance and region, without the metadata request-parameter conditions. Bobby
+  then made revision 2 the default permissions-policy version on the exact role
+  and confirmed there is no permissions boundary. The 2026-08-24 exact verifier
+  passed with `D2_ISOLATION_AUTHORITY_VERIFIED`; EC2 returned the required
+  `DryRunOperation`. Status is `IAM_EFFECTIVE_ALLOW_VERIFIED /
+  LIVE_D2_UNAUTHORIZED`. No EC2 setting/profile association changed, and the
+  role is retained until the bounded D2 window rather than detached as a bypass.
   Evidence:
   [`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](./backend/EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
+- **EX-BE-02-LIVE D2 CVE applicability checkpoint (2026-08-24):** immutable-
+  image inspection shows the Rust Edge does not link OpenSSL and uses `rustls`.
+  The Source Proxy links OpenSSL 3.5.7, but the CVE requires an OpenSSL QUIC
+  server listener while the D2 contract has exactly one bridge-only TLS/TCP
+  listener. Preflight now rejects QUIC, HTTP/3, Alt-Svc and extra listeners,
+  including a negative mutation test. Status is `TRIGGER_NOT_REACHABLE /
+  OWNER_DISPOSITION_PENDING / LIVE_D2_UNAUTHORIZED`; only Bobby may accept the
+  temporary mitigation or keep D2 closed until a patched base is published.
+  Evidence:
+  [`EX_BE_02_D2_CVE_2026_14456_APPLICABILITY.md`](./backend/EX_BE_02_D2_CVE_2026_14456_APPLICABILITY.md).
 - **EX-BE-02-LIVE D2 release-gate remediation (2026-08-24):** main CI exposed
   floating Python 3.12 patch drift, while the image publisher rejected four
   CRITICAL findings from unused Debian-slim `perl-base`/`zlib` packages and a
@@ -1201,6 +1210,21 @@ deep-dive → ADR → slice → evidence discipline documented above.
   projection epoch occurred. Status: `D4_RUNTIME_ENTRYPOINT_OFFLINE_ACCEPTED /
   LIVE_WINDOW_PENDING / NO_SOURCE_CALL`. Detail:
   [`EX_BE_02_LIVE_D4_QUALIFICATION_RUNTIME_ENTRYPOINT.md`](./backend/EX_BE_02_LIVE_D4_QUALIFICATION_RUNTIME_ENTRYPOINT.md).
+- **EX-BE-02-LIVE D4 first qualification attempt (2026-08-25):** the accepted
+  D3 predecessor admitted a finite mandatory-auth Paper read attempt into a
+  separately encrypted PostgreSQL BUILDING epoch. It failed closed first on
+  an undersized Nginx pagination burst and then on exact scientific decimal
+  strings at the Portal compatibility boundary; neither attempt committed a
+  complete baseline or enabled Query/analytics/SSE/commands/activation. The
+  proxy now retains the 120/minute sustained bound with a one-minute bounded
+  burst, the Rust adapter normalizes exact scientific notation without float
+  conversion, and the PostgreSQL bootstrap executable boundary is preflighted.
+  Offline gates are green and accepted D2 dark is restored. Status:
+  `D4_LIVE_ATTEMPT_FAIL_CLOSED / PORTAL_COMPATIBILITY_REMEDIATED /
+  SIGNED_REPUBLISH_REQUIRED / D2_DARK_RESTORED`. D4 closes only after the
+  remediated artifacts are signed from protected main and a fresh finite
+  BUILDING-only window passes. Detail:
+  [`EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md`](./backend/EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

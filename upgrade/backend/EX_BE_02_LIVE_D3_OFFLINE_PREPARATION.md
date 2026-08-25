@@ -3,7 +3,7 @@
 Date: 2026-08-23  
 Branch: `feat/execution_loop`  
 Repository state: `D3_OFFLINE_PREPARATION_COMPLETE / LIVE_D3_UNAUTHORIZED`  
-Runtime state: `D1_NETWORK_ACCEPTED / D2_LIVE_PENDING / APPLICATION_DARK`
+Runtime state: `D2_DARK_ACCEPTED / D3_LIVE_UNAUTHORIZED / BUSINESS_SOURCE_DARK`
 
 ## 1. Decision
 
@@ -115,8 +115,9 @@ independent later gates.
 
 ## 7. Next sequence
 
-1. Promote and run the signed `execution-d2` publication; isolate the temporary
-   operator role; stage real workload PKI/JWKS; open and accept D2 live.
-2. Publish the signed D3 Control API image and execute this D3 matrix from SGP.
+1. D2 is accepted and source-dark; retain its exact digests/config and private
+   rollback evidence.
+2. Publish/verify the signed D3 Control API image, open a new bounded D3 window
+   and execute the H2/TLS1.3/mTLS/JWT/fault matrix from SGP.
 3. Only after D3 acceptance request a dedicated Paper read identity for D4
    BUILDING-epoch qualification.

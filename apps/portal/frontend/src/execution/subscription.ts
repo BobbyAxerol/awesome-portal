@@ -119,6 +119,8 @@ export type SubscriptionPhase =
   | "epoch_changed"
   /** Transport dropped. The last good data stays on screen, marked. */
   | "reconnecting"
+  | "auth_expired"
+  | "source_lost"
   /** Unrecoverable without operator action. */
   | "failed";
 
@@ -178,6 +180,12 @@ export interface SubscriptionState {
   continuityLost: boolean;
   /** Human-readable reason for the current phase. */
   note: string | null;
+  /** Typed 401/auth-expiry: never retried silently; the operator signs in again. */
+  authExpired: boolean;
+  /** The source behind the projection is gone; values stay as read. */
+  sourceLost: boolean;
+  /** Backpressure: deltas collapsed into the latest one inside the coalescing window. */
+  coalescedEvents: number;
 }
 
 export const INITIAL_SUBSCRIPTION: SubscriptionState = {
@@ -197,6 +205,9 @@ export const INITIAL_SUBSCRIPTION: SubscriptionState = {
   activeEpochId: null,
   continuityLost: false,
   note: null,
+  authExpired: false,
+  sourceLost: false,
+  coalescedEvents: 0,
 };
 
 export type SubscriptionEvent =
@@ -245,6 +256,9 @@ export type SubscriptionEvent =
     }
   | { type: "EPOCH_CHANGED"; epoch: string; resnapshotNotBefore?: string | null }
   | { type: "DISCONNECTED"; reason?: string }
+  | { type: "AUTH_EXPIRED"; reason?: string | null }
+  | { type: "SOURCE_LOST"; reason?: string | null; lastGoodAsOf?: string | null }
+  | { type: "BACKPRESSURE"; coalesced: number }
   | { type: "SNAPSHOT_FAILED"; reason: string };
 
 /** `Last-Event-ID`, exactly as §7.4 specifies it. */
@@ -309,6 +323,9 @@ export function subscriptionReducer(
         // A completed snapshot is the ONLY thing that repairs continuity. Every
         // other transition may narrow the damage; none of them closes the hole.
         continuityLost: false,
+        authExpired: false,
+        sourceLost: false,
+        coalescedEvents: 0,
         latestAvailableSequence: null,
         earliestAvailableSequence: null,
         activeEpochId: null,
@@ -462,6 +479,27 @@ export function subscriptionReducer(
           : "The projection was rebuilt. Re-snapshotting.",
       };
 
+    case "AUTH_EXPIRED":
+      // Typed 401: nothing reconnects on its own. The screen says "sign in again".
+      return {
+        ...state,
+        phase: "auth_expired",
+        authExpired: true,
+        freshness: state.lastGoodAsOf ? "STALE" : state.freshness,
+        note: event.reason ?? "Your session expired. Sign in again to resume the live stream; values below are as read.",
+      };
+    case "SOURCE_LOST":
+      return {
+        ...state,
+        phase: "source_lost",
+        sourceLost: true,
+        continuityLost: true,
+        freshness: "STALE",
+        lastGoodAsOf: event.lastGoodAsOf ?? state.lastGoodAsOf,
+        note: event.reason ?? "The source behind this projection is gone. Values are as last read; nothing here is being updated.",
+      };
+    case "BACKPRESSURE":
+      return { ...state, coalescedEvents: state.coalescedEvents + event.coalesced };
     case "DISCONNECTED":
       // A dropped transport must never grant more permission than the phase it
       // interrupted already had.

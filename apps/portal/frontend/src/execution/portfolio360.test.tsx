@@ -26,6 +26,7 @@ import {
 } from "./portfolio360.fixtures";
 import { CAPITAL_LEDGER } from "./analytics.presentation.fixtures";
 import { readCapitalLedger } from "./analytics";
+import { portfolioHandlers } from "./testHandlers";
 
 afterEach(cleanup);
 
@@ -63,7 +64,7 @@ describe("Portfolio 360° — the transport limit is not the render limit", () =
     // 47 rows and 47 columns of real DOM. The mode decision and the render must
     // agree, and a pure function that says "matrix" while the panel draws a
     // lens would pass every other test here.
-    const { container } = render(<CorrelationPanel correlation={CORRELATION_FLEET} />);
+    const { container } = render(<CorrelationPanel onLensChange={() => undefined} correlation={CORRELATION_FLEET} />);
     const rows = container.querySelectorAll(".exec-pf-matrix tbody tr");
     expect(rows).toHaveLength(47);
     expect(rows[0].querySelectorAll("td")).toHaveLength(47);
@@ -77,14 +78,14 @@ describe("Portfolio 360° — the transport limit is not the render limit", () =
 
   it("renders no more DOM cells than the budget allows, at the ceiling", () => {
     const { container } = render(
-      <CorrelationPanel correlation={CORRELATION_CEILING} lensIndex={0} />,
+      <CorrelationPanel onLensChange={() => undefined} correlation={CORRELATION_CEILING} lensIndex={0} />,
     );
     expect(container.querySelectorAll("td").length).toBeLessThan(MATRIX_CELL_BUDGET);
     expect(container.querySelector(".exec-pf-matrix")).toBeNull();
   });
 
   it("says on screen which representation it chose and why", () => {
-    render(<CorrelationPanel correlation={CORRELATION_CEILING} lensIndex={0} />);
+    render(<CorrelationPanel onLensChange={() => undefined} correlation={CORRELATION_CEILING} lensIndex={0} />);
     // A reader who cannot tell whether they see everything or a selection
     // cannot use either honestly.
     expect(screen.getByText("LENS")).toBeTruthy();
@@ -96,7 +97,7 @@ describe("Portfolio 360° — insufficient is not zero, and unknown is not insuf
   it("gives a thin entity a whole row of dashes, as the wireframe draws it", () => {
     // MM has nine days of history, so every pair involving it is insufficient —
     // that is what the cause actually looks like, rather than scattered cells.
-    const { container } = render(<CorrelationPanel correlation={correlationFixture(4)} />);
+    const { container } = render(<CorrelationPanel onLensChange={() => undefined} correlation={correlationFixture(4)} />);
     const mmRow = [...container.querySelectorAll(".exec-pf-matrix tbody tr")].find((tr) =>
       tr.querySelector("th")?.textContent?.includes("MM"),
     )!;
@@ -105,7 +106,7 @@ describe("Portfolio 360° — insufficient is not zero, and unknown is not insuf
   });
 
   it("renders an em dash instead of a number below the sample floor", () => {
-    const { container } = render(<CorrelationPanel correlation={correlationFixture(4)} />);
+    const { container } = render(<CorrelationPanel onLensChange={() => undefined} correlation={correlationFixture(4)} />);
     const dashes = container.querySelectorAll('td[data-insufficient="true"]');
     expect(dashes.length).toBeGreaterThan(0);
     for (const cell of dashes) expect(cell.textContent).toBe("—");
@@ -113,7 +114,7 @@ describe("Portfolio 360° — insufficient is not zero, and unknown is not insuf
   });
 
   it("keeps the diagonal at 1 even beside insufficient neighbours", () => {
-    const { container } = render(<CorrelationPanel correlation={correlationFixture(4)} />);
+    const { container } = render(<CorrelationPanel onLensChange={() => undefined} correlation={correlationFixture(4)} />);
     const firstRow = container.querySelectorAll(".exec-pf-matrix tbody tr")[0];
     expect(firstRow.querySelectorAll("td")[0].textContent).toBe("1");
   });
@@ -121,19 +122,19 @@ describe("Portfolio 360° — insufficient is not zero, and unknown is not insuf
   it("says plainly that the floor could not be applied when counts are unpublished", () => {
     // Today's contract publishes no per-cell counts. Silence here would let the
     // numbers read as having passed a check that never ran.
-    render(<CorrelationPanel correlation={CORRELATION_NO_SAMPLES} />);
+    render(<CorrelationPanel onLensChange={() => undefined} correlation={CORRELATION_NO_SAMPLES} />);
     expect(screen.getByText(/per-pair sample counts are not published/)).toBeTruthy();
     expect(screen.getByText(new RegExp(`${SAMPLE_FLOOR}`))).toBeTruthy();
   });
 
   it("does not mark cells insufficient merely because counts are missing", () => {
     // "cannot judge" and "judged and failed" are different claims.
-    const { container } = render(<CorrelationPanel correlation={CORRELATION_NO_SAMPLES} />);
+    const { container } = render(<CorrelationPanel onLensChange={() => undefined} correlation={CORRELATION_NO_SAMPLES} />);
     expect(container.querySelectorAll('td[data-insufficient="true"]')).toHaveLength(0);
   });
 
   it("marks a ranked pair below the floor without dropping it", () => {
-    render(<CorrelationPanel correlation={rankedFixture()} />);
+    render(<CorrelationPanel onLensChange={() => undefined} correlation={rankedFixture()} />);
     // Pair 499 has 41 samples and sits at the very bottom of the ranking; a
     // head-cap would have removed the only one worth flagging.
     expect(screen.getByText("41")).toBeTruthy();
@@ -141,7 +142,7 @@ describe("Portfolio 360° — insufficient is not zero, and unknown is not insuf
   });
 
   it("leaves a leader figure absent rather than calling it zero", () => {
-    render(<PortfolioThreeSixty {...portfolio360({ tab: "Structure & Correlation" })} />);
+    render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360({ tab: "Structure & Correlation" })} />);
     // A halted alpha with nine days of history has no variance contribution
     // anyone can stand behind. Zero would claim it contributes nothing.
     expect(screen.getAllByText("not available").length).toBeGreaterThanOrEqual(2);
@@ -151,7 +152,7 @@ describe("Portfolio 360° — insufficient is not zero, and unknown is not insuf
 describe("Portfolio 360° — the leader lens", () => {
   it("shows one row of n cells rather than n squared", () => {
     const { container } = render(
-      <CorrelationPanel correlation={CORRELATION_CEILING} lensIndex={3} />,
+      <CorrelationPanel onLensChange={() => undefined} correlation={CORRELATION_CEILING} lensIndex={3} />,
     );
     const rows = container.querySelectorAll("tbody tr");
     // 150 entities, capped to 40 pairs — not 22,500 cells.
@@ -170,7 +171,7 @@ describe("Portfolio 360° — the leader lens", () => {
 
   it("highlights rather than filters, so the comparison stays visible", () => {
     const { container } = render(
-      <CorrelationPanel correlation={correlationFixture(4)} lensIndex={1} />,
+      <CorrelationPanel onLensChange={() => undefined} correlation={correlationFixture(4)} lensIndex={1} />,
     );
     // Every row is still rendered; one is marked.
     expect(container.querySelectorAll(".exec-pf-matrix tbody tr")).toHaveLength(4);
@@ -179,7 +180,7 @@ describe("Portfolio 360° — the leader lens", () => {
 
   it("keeps the three leader lists apart instead of merging a score", () => {
     const { container } = render(
-      <PortfolioThreeSixty {...portfolio360({ tab: "Structure & Correlation" })} />,
+      <PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360({ tab: "Structure & Correlation" })} />,
     );
     const lists = container.querySelectorAll(".exec-pf-leaders > section");
     expect(lists).toHaveLength(3);
@@ -191,20 +192,20 @@ describe("Portfolio 360° — the leader lens", () => {
 
 describe("Portfolio 360° — ledger and structure", () => {
   it("offers all six tabs and renders one", () => {
-    render(<PortfolioThreeSixty {...portfolio360()} />);
+    render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360()} />);
     for (const tab of PORTFOLIO_TABS) expect(screen.getByRole("tab", { name: tab })).toBeTruthy();
     expect(PORTFOLIO_TABS).toHaveLength(6);
   });
 
   it("buckets the ledger by currency and never runs one total across them", () => {
-    const { container } = render(<PortfolioThreeSixty {...portfolio360({ tab: "Capital Ledger" })} />);
+    const { container } = render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360({ tab: "Capital Ledger" })} />);
     const captions = [...container.querySelectorAll("caption")].map((c) => c.textContent);
     expect(captions.some((c) => c?.includes("USDT"))).toBe(true);
     expect(captions.some((c) => c?.includes("VND"))).toBe(true);
   });
 
   it("takes each entry's direction from the server, not from the amount's sign", () => {
-    render(<PortfolioThreeSixty {...portfolio360({ tab: "Capital Ledger" })} />);
+    render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360({ tab: "Capital Ledger" })} />);
     // The zero-amount rebalance is UNCHANGED, and a client reading the sign
     // would call it nothing at all.
     expect(screen.getByText("UNCHANGED")).toBeTruthy();
@@ -212,19 +213,19 @@ describe("Portfolio 360° — ledger and structure", () => {
   });
 
   it("shows before and after on every ledger row", () => {
-    render(<PortfolioThreeSixty {...portfolio360({ tab: "Capital Ledger" })} />);
+    render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360({ tab: "Capital Ledger" })} />);
     expect(screen.getByText("0 → 500")).toBeTruthy();
     expect(screen.getByText(/ledger's own invariant/)).toBeTruthy();
   });
 
   it("names the FX policy wherever a total crosses currencies", () => {
-    render(<PortfolioThreeSixty {...portfolio360()} />);
+    render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360()} />);
     expect(screen.getByText(/fx_usdc_usdt\.v1/)).toBeTruthy();
     expect(screen.getByText(/VND.*would require an FX policy/)).toBeTruthy();
   });
 
   it("keeps a halted holding visible and marked", () => {
-    const { container } = render(<PortfolioThreeSixty {...portfolio360()} />);
+    const { container } = render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360()} />);
     const row = screen.getByText("acct-canary-mm-v11").closest("tr") as HTMLElement;
     expect(within(row).getByText("BLOCKED")).toBeTruthy();
     expect(container.querySelector('tr[data-emphasis="warn"]')).toBeTruthy();
@@ -233,13 +234,13 @@ describe("Portfolio 360° — ledger and structure", () => {
   it("says incidents are unpublished rather than claiming none are open", () => {
     // The tab used to render "No open incidents" unconditionally — a claim
     // about safety from a component that had never been given incident data.
-    render(<PortfolioThreeSixty {...portfolio360({ tab: "Incidents" })} />);
+    render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360({ tab: "Incidents" })} />);
     expect(screen.getByText(/have not been published/)).toBeTruthy();
   });
 
   it("reports zero open only when the server said zero", () => {
     render(
-      <PortfolioThreeSixty
+      <PortfolioThreeSixty {...portfolioHandlers()}
         {...portfolio360({
           tab: "Incidents",
           incidents: {
@@ -255,7 +256,7 @@ describe("Portfolio 360° — ledger and structure", () => {
   });
 
   it("says the correlation is unavailable rather than drawing an empty grid", () => {
-    render(<CorrelationPanel correlation={null} />);
+    render(<CorrelationPanel onLensChange={() => undefined} correlation={null} />);
     expect(screen.getByText(/No correlation result was published/)).toBeTruthy();
   });
 });
@@ -269,7 +270,7 @@ describe("the bounded-window sentence states neither count it was not given", ()
 
   it("prints both counts when the source published both", () => {
     render(
-      <PortfolioThreeSixty
+      <PortfolioThreeSixty {...portfolioHandlers()}
         {...portfolio360({ tab: "Capital Ledger", ledger: ledgerWith({ entry_count: 4180, returned_entry_count: 4 }) })}
       />,
     );
@@ -283,7 +284,7 @@ describe("the bounded-window sentence states neither count it was not given", ()
     // numbers. `total` on the same line already refused to guess; this half
     // did not.
     const { container } = render(
-      <PortfolioThreeSixty
+      <PortfolioThreeSixty {...portfolioHandlers()}
         {...portfolio360({ tab: "Capital Ledger", ledger: ledgerWith({ entry_count: 4180, returned_entry_count: null }) })}
       />,
     );

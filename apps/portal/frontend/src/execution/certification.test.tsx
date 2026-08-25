@@ -7,7 +7,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within, fireEvent } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
@@ -218,6 +218,7 @@ describe("the three source panels degrade independently", () => {
 describe("a promotion plan is a record of refusal", () => {
   it("says so rather than letting plan_id read as an activation", () => {
     const raw = JSON.parse(JSON.stringify(SANDBOX_CERTIFICATION_FIXTURE));
+    // EL-V2-06: promotion plans have their own tab.
     raw.promotion_plans = [
       {
         plan_id: "pp_1",
@@ -230,6 +231,7 @@ describe("a promotion plan is a record of refusal", () => {
       },
     ];
     render(<SandboxCertificationScreen certification={readSandboxCertification(raw)!} />);
+    fireEvent.click(screen.getByRole("tab", { name: /Promotion plans/ }));
     expect(screen.getByText(/refused, not an activation attempt/)).toBeTruthy();
   });
 });
