@@ -8,6 +8,7 @@ members = [
   "crates/query-api",
   "crates/projection-store-pg",
   "crates/paper-shadow-mapper",
+  "crates/paper-source-contract",
   "crates/realtime-sse",
   "crates/source-qualification",
   "crates/ts-contract-v1",

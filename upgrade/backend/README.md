@@ -510,6 +510,13 @@ authority.
   Manifest, JSON and exact-file-set checks pass. No Rust adapter/ingestor,
   Source Proxy activation, credential, source request, projection epoch or
   registry change is included.
+- [EX-BE-02-LIVE D4 Rust source-contract adapter](./EX_BE_02_LIVE_D4_SOURCE_CONTRACT_ADAPTER.md)
+  — **adapter complete / transport pending / no source call:** build-time
+  hashes and authority checks bind the exact four-route facade pack. Strict
+  request/response types enforce fixed scope, decimal strings, bounded opaque
+  cursors, snapshot completeness, ordered idempotent deltas and typed resync.
+  Eleven tests plus rustfmt/strict Clippy pass; Source Proxy, credentials,
+  storage, epochs and runtime flags remain untouched.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

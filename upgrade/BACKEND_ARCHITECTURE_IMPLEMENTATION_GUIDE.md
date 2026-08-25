@@ -1142,6 +1142,16 @@ deep-dive → ADR → slice → evidence discipline documented above.
   credential, source call, epoch or registry change exists. Status:
   `CONTRACT_IMPORT_COMPLETE / ADAPTER_PENDING / NO_SOURCE_CALL`. Detail:
   [`EX_BE_02_LIVE_D4_CONTRACT_IMPORT.md`](./backend/EX_BE_02_LIVE_D4_CONTRACT_IMPORT.md).
+- **EX-BE-02-LIVE D4 Rust source-contract adapter (2026-08-25):** a dedicated
+  crate now build-locks all five source artifacts and rejects route, method,
+  scope, identity, authority or proxy-template widening. Enum-only requests,
+  strict unknown-field denial, exact decimals, snapshot echo/completeness,
+  bounded opaque tokens and ordered full-record delta/tombstone validation form
+  the offline D4 adapter. Evidence is 11/11 tests plus rustfmt and strict
+  Clippy. No HTTP transport, credential, Source Proxy change, source call,
+  epoch or registry flag exists. Status: `SOURCE_CONTRACT_ADAPTER_COMPLETE /
+  TRANSPORT_PENDING / NO_SOURCE_CALL`. Detail:
+  [`EX_BE_02_LIVE_D4_SOURCE_CONTRACT_ADAPTER.md`](./backend/EX_BE_02_LIVE_D4_SOURCE_CONTRACT_ADAPTER.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

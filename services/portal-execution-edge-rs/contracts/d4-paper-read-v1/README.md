@@ -25,9 +25,12 @@ digest `478eae...0ee7` is retained only as historical metadata in
 
 Run `sha256sum -c MANIFEST.sha256` from this directory before using the pack.
 The machine-readable provenance and per-file locks are in
-`contract-pack.lock.json`.
+`contract-pack.lock.json`. The `paper-source-contract` Rust crate repeats
+these checks at build time and refuses a widened route, method, authority or
+Source Proxy template.
 
-This commit imports contracts only. It does not contain a Rust adapter,
+The dedicated import commit contains contracts only. The adapter lives in the
+separate `paper-source-contract` crate; this contract directory contains no
 ingestor, source credential, proxy activation or projection epoch.
 
 Do not add identity values, DSNs, runtime scope files, cursor keys, market/

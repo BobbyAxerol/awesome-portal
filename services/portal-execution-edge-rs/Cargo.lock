@@ -1279,6 +1279,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "paper-source-contract"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "execution-contracts",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
+ "uuid",
+]
+
+[[package]]
 name = "parking"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
