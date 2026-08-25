@@ -7,18 +7,25 @@ use execution_contracts::{CanonicalId, SourceAuthority, SourceCompleteness, Sour
 use projection_core::{
     canonical_digest, semantic_state_digest, ApplyDisposition, FreshnessPolicy, ProjectedEntity,
     ProjectionEntityKey, ProjectionEntityKind, ProjectionEpochStatus, ProjectionError,
-    ProjectionObservation, ProjectionReducer, ProjectionScope, ReplayRecord, SnapshotCompleteness,
+    ProjectionObservation, ProjectionOperation, ProjectionReducer, ProjectionScope, ReplayRecord,
+    SnapshotCompleteness, SourceSequenceSemantics,
 };
 use sqlx::{postgres::PgPoolOptions, PgPool, Postgres, Row, Transaction};
 use thiserror::Error;
 use uuid::Uuid;
 
 mod analytics_repository;
+mod d4_writer;
 mod query;
 mod realtime;
 
 pub use analytics_repository::{
     analytics_facts_digest, AnalyticsFactDigestInput, AnalyticsReadRequirement, AnalyticsSourceRead,
+};
+pub use d4_writer::{
+    D4BaselineCommitInput, D4CommitOutcome, D4EventPageCommitInput, D4ProjectionWrite,
+    D4ResourceCounts, D4ResumePhase, D4ResumeState, D4SensitiveValue, D4SnapshotLeaseInput,
+    D4_CONTRACT_REVISION, D4_SCOPE_ID,
 };
 pub use query::{RetentionPolicySnapshot, SeriesPointWrite};
 pub use realtime::{
@@ -68,6 +75,12 @@ pub struct ActivatedEpoch {
 #[derive(Clone)]
 pub struct PgProjectionStore {
     pool: PgPool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum EpochWriteAuthority {
+    BuildingOnly,
+    BuildingOrActive,
 }
 
 impl PgProjectionStore {
@@ -178,7 +191,6 @@ impl PgProjectionStore {
     /// Returns an error for an unknown epoch, wrong scope or database failure.
     /// Ambiguous reducer input is committed as a redacted dead letter and
     /// returned as [`StoreApplyOutcome::DeadLettered`].
-    #[allow(clippy::too_many_lines)] // one database transaction keeps all six writes atomic
     pub async fn apply_observation(
         &self,
         scope: &ProjectionScope,
@@ -191,38 +203,37 @@ impl PgProjectionStore {
             return Err(StoreError::InvalidStreamKey);
         }
         observation.validate()?;
-        let input_digest = canonical_digest(observation)?;
         let mut transaction = self.pool.begin().await?;
-
-        if let Some(row) = sqlx::query(
-            "SELECT input_digest, projection_sequence
-             FROM portal_projection.ingestion_keys
-             WHERE epoch_id = $1 AND ingestion_id = $2",
-        )
-        .bind(epoch_id)
-        .bind(observation.ingestion_id.as_str())
-        .fetch_optional(&mut *transaction)
-        .await?
-        {
-            let previous_digest: String = row.try_get("input_digest")?;
-            if previous_digest == input_digest {
-                let sequence = optional_u64(row.try_get::<Option<i64>, _>("projection_sequence")?)?;
-                transaction.commit().await?;
-                return Ok(StoreApplyOutcome::Duplicate { sequence });
-            }
-            let outcome = dead_letter(
+        let mut current_sequence = self
+            .lock_epoch_tx(
                 &mut transaction,
+                scope,
                 epoch_id,
+                EpochWriteAuthority::BuildingOrActive,
+            )
+            .await?;
+        let outcome = self
+            .apply_observation_locked_tx(
+                &mut transaction,
+                scope,
+                epoch_id,
+                &mut current_sequence,
+                stream_key,
                 observation,
-                &input_digest,
-                "IDEMPOTENCY_COLLISION",
                 projected_at,
             )
             .await?;
-            transaction.commit().await?;
-            return Ok(outcome);
-        }
+        transaction.commit().await?;
+        Ok(outcome)
+    }
 
+    async fn lock_epoch_tx(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        scope: &ProjectionScope,
+        epoch_id: Uuid,
+        authority: EpochWriteAuthority,
+    ) -> Result<u64, StoreError> {
         let epoch = sqlx::query(
             "SELECT workspace_id, environment, status, next_projection_sequence
              FROM portal_projection.epochs
@@ -230,7 +241,7 @@ impl PgProjectionStore {
              FOR UPDATE",
         )
         .bind(epoch_id)
-        .fetch_optional(&mut *transaction)
+        .fetch_optional(&mut **transaction)
         .await?
         .ok_or(StoreError::EpochNotFound)?;
         if epoch.try_get::<String, _>("workspace_id")? != scope.workspace_id.as_str()
@@ -239,21 +250,74 @@ impl PgProjectionStore {
             return Err(StoreError::ScopeMismatch);
         }
         let status: String = epoch.try_get("status")?;
-        if !matches!(status.as_str(), "BUILDING" | "ACTIVE") {
-            return Err(StoreError::EpochNotWritable);
+        let writable = match authority {
+            EpochWriteAuthority::BuildingOnly => status == "BUILDING",
+            EpochWriteAuthority::BuildingOrActive => {
+                matches!(status.as_str(), "BUILDING" | "ACTIVE")
+            }
+        };
+        if !writable {
+            return Err(match authority {
+                EpochWriteAuthority::BuildingOnly => StoreError::EpochNotBuilding,
+                EpochWriteAuthority::BuildingOrActive => StoreError::EpochNotWritable,
+            });
         }
-        let current_sequence = required_u64(epoch.try_get("next_projection_sequence")?)?;
+        required_u64(epoch.try_get("next_projection_sequence")?)
+    }
+
+    #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+    async fn apply_observation_locked_tx(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        scope: &ProjectionScope,
+        epoch_id: Uuid,
+        current_sequence: &mut u64,
+        stream_key: &str,
+        observation: &ProjectionObservation,
+        projected_at: DateTime<Utc>,
+    ) -> Result<StoreApplyOutcome, StoreError> {
+        if stream_key.trim().is_empty() {
+            return Err(StoreError::InvalidStreamKey);
+        }
+        observation.validate()?;
+        let input_digest = canonical_digest(observation)?;
+        if let Some(row) = sqlx::query(
+            "SELECT input_digest, projection_sequence
+             FROM portal_projection.ingestion_keys
+             WHERE epoch_id = $1 AND ingestion_id = $2",
+        )
+        .bind(epoch_id)
+        .bind(observation.ingestion_id.as_str())
+        .fetch_optional(&mut **transaction)
+        .await?
+        {
+            let previous_digest: String = row.try_get("input_digest")?;
+            if previous_digest == input_digest {
+                let sequence = optional_u64(row.try_get::<Option<i64>, _>("projection_sequence")?)?;
+                return Ok(StoreApplyOutcome::Duplicate { sequence });
+            }
+            return dead_letter(
+                transaction,
+                epoch_id,
+                observation,
+                &input_digest,
+                "IDEMPOTENCY_COLLISION",
+                projected_at,
+            )
+            .await;
+        }
+
         let current = self
-            .load_entity_tx(&mut transaction, epoch_id, &observation.entity, true)
+            .load_entity_tx(transaction, epoch_id, &observation.entity, true)
             .await?;
         let mut reducer =
-            ProjectionReducer::from_current(scope.clone(), epoch_id, current_sequence, current)?;
+            ProjectionReducer::from_current(scope.clone(), epoch_id, *current_sequence, current)?;
         let disposition = match reducer.apply(observation.clone(), projected_at) {
             Ok(disposition) => disposition,
             Err(error) => {
                 let reason = reducer_reason_code(&error);
                 let outcome = dead_letter(
-                    &mut transaction,
+                    transaction,
                     epoch_id,
                     observation,
                     &input_digest,
@@ -262,7 +326,7 @@ impl PgProjectionStore {
                 )
                 .await?;
                 insert_ingestion(
-                    &mut transaction,
+                    transaction,
                     epoch_id,
                     observation.ingestion_id.as_str(),
                     &input_digest,
@@ -271,7 +335,6 @@ impl PgProjectionStore {
                     projected_at,
                 )
                 .await?;
-                transaction.commit().await?;
                 return Ok(outcome);
             }
         };
@@ -281,12 +344,10 @@ impl PgProjectionStore {
             ApplyDisposition::Refreshed { sequence } => ("REFRESHED", Some(sequence)),
             ApplyDisposition::GapApplied { sequence } => ("GAP_APPLIED", Some(sequence)),
             ApplyDisposition::OutOfOrder => ("OUT_OF_ORDER", None),
-            ApplyDisposition::Duplicate => {
-                return Err(StoreError::ReducerDatabaseInvariant);
-            }
+            ApplyDisposition::Duplicate => return Err(StoreError::ReducerDatabaseInvariant),
         };
         insert_ingestion(
-            &mut transaction,
+            transaction,
             epoch_id,
             observation.ingestion_id.as_str(),
             &input_digest,
@@ -296,7 +357,7 @@ impl PgProjectionStore {
         )
         .await?;
         insert_journal(
-            &mut transaction,
+            transaction,
             epoch_id,
             observation,
             &input_digest,
@@ -307,11 +368,18 @@ impl PgProjectionStore {
         .await?;
 
         if let Some(sequence) = projection_sequence {
-            let entity = reducer
-                .entities()
-                .get(&observation.entity)
-                .ok_or(StoreError::ReducerDatabaseInvariant)?;
-            upsert_entity(&mut transaction, entity).await?;
+            match observation.operation {
+                ProjectionOperation::Upsert => {
+                    let entity = reducer
+                        .entities()
+                        .get(&observation.entity)
+                        .ok_or(StoreError::ReducerDatabaseInvariant)?;
+                    upsert_entity(transaction, entity).await?;
+                }
+                ProjectionOperation::Delete => {
+                    delete_entity(transaction, epoch_id, &observation.entity).await?;
+                }
+            }
             sqlx::query(
                 "UPDATE portal_projection.epochs
                  SET next_projection_sequence = $2
@@ -319,10 +387,10 @@ impl PgProjectionStore {
             )
             .bind(epoch_id)
             .bind(i64_from_u64(sequence)?)
-            .execute(&mut *transaction)
+            .execute(&mut **transaction)
             .await?;
             upsert_checkpoint(
-                &mut transaction,
+                transaction,
                 epoch_id,
                 stream_key,
                 observation,
@@ -331,10 +399,10 @@ impl PgProjectionStore {
             )
             .await?;
             if let Some(gap) = reducer.gaps().last() {
-                insert_gap(&mut transaction, epoch_id, gap, projected_at).await?;
+                insert_gap(transaction, epoch_id, gap, projected_at).await?;
             }
+            *current_sequence = sequence;
         }
-        transaction.commit().await?;
         Ok(match disposition {
             ApplyDisposition::Applied { sequence } => StoreApplyOutcome::Applied { sequence },
             ApplyDisposition::Refreshed { sequence } => StoreApplyOutcome::Refreshed { sequence },
@@ -673,8 +741,9 @@ async fn insert_journal(
         "INSERT INTO portal_projection.event_journal
          (event_id, projected_at, epoch_id, ingestion_id, projection_sequence,
           entity_kind, entity_id, outcome, source_event_ts, source_created_at,
-          source_event_id, source_sequence, source_read_at, as_of, input_digest, observation)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)",
+          source_event_id, source_sequence, source_read_at, as_of, input_digest, observation,
+          projection_operation, source_sequence_semantics)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)",
     )
     .bind(Uuid::now_v7())
     .bind(projected_at)
@@ -692,6 +761,10 @@ async fn insert_journal(
     .bind(observation.as_of)
     .bind(input_digest)
     .bind(serde_json::to_value(observation).map_err(|_| StoreError::Serialization)?)
+    .bind(operation_str(observation.operation))
+    .bind(sequence_semantics_str(
+        observation.source_sequence_semantics,
+    ))
     .execute(&mut **transaction)
     .await?;
     Ok(())
@@ -707,8 +780,9 @@ async fn upsert_entity(
          (epoch_id, entity_kind, entity_id, projection_sequence, source_authority,
           as_of, source_read_at, projected_at, source_event_ts, source_created_at,
           source_event_id, source_sequence, source_completeness, poll_interval_ms,
-          adapter_version, capability_snapshot_id, payload_digest, payload)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+          adapter_version, capability_snapshot_id, payload_digest, payload,
+          source_sequence_semantics)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
          ON CONFLICT (epoch_id, entity_kind, entity_id) DO UPDATE SET
            projection_sequence = EXCLUDED.projection_sequence,
            source_authority = EXCLUDED.source_authority,
@@ -719,6 +793,7 @@ async fn upsert_entity(
            source_created_at = EXCLUDED.source_created_at,
            source_event_id = EXCLUDED.source_event_id,
            source_sequence = EXCLUDED.source_sequence,
+           source_sequence_semantics = EXCLUDED.source_sequence_semantics,
            source_completeness = EXCLUDED.source_completeness,
            poll_interval_ms = EXCLUDED.poll_interval_ms,
            adapter_version = EXCLUDED.adapter_version,
@@ -744,6 +819,24 @@ async fn upsert_entity(
     .bind(&entity.capability_snapshot_id)
     .bind(&entity.payload_digest)
     .bind(&entity.payload)
+    .bind(sequence_semantics_str(entity.source_sequence_semantics))
+    .execute(&mut **transaction)
+    .await?;
+    Ok(())
+}
+
+async fn delete_entity(
+    transaction: &mut Transaction<'_, Postgres>,
+    epoch_id: Uuid,
+    entity: &ProjectionEntityKey,
+) -> Result<(), StoreError> {
+    sqlx::query(
+        "DELETE FROM portal_projection.entities
+         WHERE epoch_id = $1 AND entity_kind = $2 AND entity_id = $3",
+    )
+    .bind(epoch_id)
+    .bind(entity.kind.as_str())
+    .bind(entity.entity_id.as_str())
     .execute(&mut **transaction)
     .await?;
     Ok(())
@@ -761,13 +854,14 @@ async fn upsert_checkpoint(
     sqlx::query(
         "INSERT INTO portal_projection.checkpoints
          (epoch_id, stream_key, source_event_ts, source_created_at, source_event_id,
-          source_sequence, last_projection_sequence, updated_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+          source_sequence, last_projection_sequence, updated_at, source_sequence_semantics)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
          ON CONFLICT (epoch_id, stream_key) DO UPDATE SET
            source_event_ts = EXCLUDED.source_event_ts,
            source_created_at = EXCLUDED.source_created_at,
            source_event_id = EXCLUDED.source_event_id,
            source_sequence = EXCLUDED.source_sequence,
+           source_sequence_semantics = EXCLUDED.source_sequence_semantics,
            last_projection_sequence = EXCLUDED.last_projection_sequence,
            updated_at = EXCLUDED.updated_at",
     )
@@ -779,6 +873,9 @@ async fn upsert_checkpoint(
     .bind(observation.source_sequence)
     .bind(i64_from_u64(sequence)?)
     .bind(updated_at)
+    .bind(sequence_semantics_str(
+        observation.source_sequence_semantics,
+    ))
     .execute(&mut **transaction)
     .await?;
     Ok(())
@@ -827,6 +924,8 @@ async fn dead_letter(
         "source_read_at": observation.source_read_at,
         "source_cursor": observation.source_cursor.clone(),
         "source_sequence": observation.source_sequence,
+        "source_sequence_semantics": sequence_semantics_str(observation.source_sequence_semantics),
+        "operation": operation_str(observation.operation),
         "adapter_version": &observation.adapter_version,
         "capability_snapshot_id": &observation.capability_snapshot_id,
         "payload_digest": projection_core::canonical_value_digest(&observation.payload),
@@ -876,6 +975,9 @@ fn row_to_entity(row: &sqlx::postgres::PgRow) -> Result<ProjectedEntity, StoreEr
         projected_at: row.try_get("projected_at")?,
         source_cursor,
         source_sequence: row.try_get("source_sequence")?,
+        source_sequence_semantics: parse_sequence_semantics(
+            &row.try_get::<String, _>("source_sequence_semantics")?,
+        )?,
         source_completeness: parse_completeness(&row.try_get::<String, _>("source_completeness")?)?,
         poll_interval_ms: row.try_get("poll_interval_ms")?,
         adapter_version: row.try_get("adapter_version")?,
@@ -933,6 +1035,28 @@ fn parse_completeness(value: &str) -> Result<SourceCompleteness, StoreError> {
     }
 }
 
+const fn operation_str(operation: ProjectionOperation) -> &'static str {
+    match operation {
+        ProjectionOperation::Upsert => "UPSERT",
+        ProjectionOperation::Delete => "DELETE",
+    }
+}
+
+const fn sequence_semantics_str(semantics: SourceSequenceSemantics) -> &'static str {
+    match semantics {
+        SourceSequenceSemantics::PerEntityContiguous => "PER_ENTITY_CONTIGUOUS",
+        SourceSequenceSemantics::GlobalStreamMonotonic => "GLOBAL_STREAM_MONOTONIC",
+    }
+}
+
+fn parse_sequence_semantics(value: &str) -> Result<SourceSequenceSemantics, StoreError> {
+    match value {
+        "PER_ENTITY_CONTIGUOUS" => Ok(SourceSequenceSemantics::PerEntityContiguous),
+        "GLOBAL_STREAM_MONOTONIC" => Ok(SourceSequenceSemantics::GlobalStreamMonotonic),
+        _ => Err(StoreError::PersistedVocabulary),
+    }
+}
+
 fn reducer_reason_code(error: &ProjectionError) -> &'static str {
     match error {
         ProjectionError::SourceCursorCollision => "SOURCE_CURSOR_COLLISION",
@@ -941,6 +1065,8 @@ fn reducer_reason_code(error: &ProjectionError) -> &'static str {
         ProjectionError::MissingPollInterval | ProjectionError::UnexpectedPollInterval => {
             "INVALID_COMPLETENESS"
         }
+        ProjectionError::InvalidGlobalSourceSequence
+        | ProjectionError::SourceSequenceSemanticsMismatch => "INVALID_SEQUENCE_SEMANTICS",
         _ => "INVALID_OBSERVATION",
     }
 }
@@ -1019,6 +1145,40 @@ pub enum StoreError {
     AnalyticsSourceLimitExceeded,
     #[error("analytics source payload exceeds the bounded repository byte limit")]
     AnalyticsSourcePayloadLimitExceeded,
+    #[error("D4 opaque source token or cursor is invalid")]
+    InvalidD4OpaqueValue,
+    #[error("persisted D4 source token or cursor is internally inconsistent")]
+    PersistedD4CursorInvariant,
+    #[error("persisted D4 checkpoint lifecycle is internally inconsistent")]
+    PersistedD4CheckpointInvariant,
+    #[error("D4 source population exceeds the bounded shadow limit")]
+    D4PopulationBoundExceeded,
+    #[error("D4 snapshot lease is invalid")]
+    InvalidD4SnapshotLease,
+    #[error("D4 integrity digest is invalid")]
+    InvalidD4Digest,
+    #[error("D4 snapshot lease collides with durable state")]
+    D4SnapshotLeaseCollision,
+    #[error("D4 snapshot lease does not exist")]
+    D4SnapshotLeaseNotFound,
+    #[error("D4 baseline is invalid")]
+    InvalidD4Baseline,
+    #[error("D4 baseline collides with durable state")]
+    D4BaselineCollision,
+    #[error("D4 source population does not match the leased snapshot")]
+    D4PopulationMismatch,
+    #[error("D4 baseline epoch already contains projection state")]
+    D4BaselineEpochNotEmpty,
+    #[error("D4 atomic source batch was rejected")]
+    D4AtomicBatchRejected,
+    #[error("D4 event page is invalid")]
+    InvalidD4EventPage,
+    #[error("D4 event cursor does not match the durable checkpoint")]
+    D4CursorMismatch,
+    #[error("D4 observation compatibility identity does not match the epoch")]
+    D4CompatibilityIdentityMismatch,
+    #[error("D4 writer requires the Paper projection scope")]
+    D4PaperScopeRequired,
 }
 
 #[cfg(test)]
@@ -1030,6 +1190,7 @@ mod tests {
         CursorCodec, EntityQueryRequest, FilterField, FilterOperator, QueryFilter,
         RetentionAvailability, RetentionPolicy, SeriesIntent,
     };
+    use sha2::{Digest as _, Sha256};
 
     use super::*;
 
@@ -1055,6 +1216,97 @@ mod tests {
         }
     }
 
+    fn d4_metadata() -> EpochMetadata {
+        EpochMetadata {
+            adapter_version: "paper-source-ingestor.d4.v1".to_owned(),
+            source_gateway_digest: format!("sha256:{}", "a".repeat(64)),
+            capability_snapshot_id: "cap_d4_paper_read_v1".to_owned(),
+        }
+    }
+
+    fn d4_sensitive(value: &str) -> D4SensitiveValue {
+        D4SensitiveValue::parse(value).unwrap()
+    }
+
+    fn d4_token_digest(value: &str) -> String {
+        format!("sha256:{:x}", Sha256::digest(value.as_bytes()))
+    }
+
+    fn d4_stream(kind: ProjectionEntityKind) -> &'static str {
+        match kind {
+            ProjectionEntityKind::Order => "d4:paper_binance_usdm:orders",
+            ProjectionEntityKind::Fill => "d4:paper_binance_usdm:fills",
+            ProjectionEntityKind::Position => "d4:paper_binance_usdm:positions",
+            _ => panic!("unsupported D4 test kind"),
+        }
+    }
+
+    fn d4_baseline_write(
+        ingestion_id: &str,
+        entity_id: &str,
+        kind: ProjectionEntityKind,
+        second: i64,
+    ) -> D4ProjectionWrite {
+        D4ProjectionWrite {
+            stream_key: d4_stream(kind).to_owned(),
+            observation: ProjectionObservation {
+                ingestion_id: CanonicalId::parse(ingestion_id).unwrap(),
+                entity: ProjectionEntityKey {
+                    kind,
+                    entity_id: CanonicalId::parse(entity_id).unwrap(),
+                },
+                source_authority: SourceAuthority::Execution,
+                as_of: Some(at(second)),
+                source_read_at: at(second),
+                source_cursor: None,
+                source_sequence: None,
+                source_sequence_semantics: SourceSequenceSemantics::PerEntityContiguous,
+                operation: ProjectionOperation::Upsert,
+                source_completeness: SourceCompleteness::PollBounded,
+                poll_interval_ms: Some(1_000),
+                adapter_version: "paper-source-ingestor.d4.v1".to_owned(),
+                capability_snapshot_id: "cap_d4_paper_read_v1".to_owned(),
+                payload: serde_json::json!({"entity_id": entity_id, "version": "baseline"}),
+            },
+        }
+    }
+
+    fn d4_event_write(
+        event_id: &str,
+        entity_id: &str,
+        kind: ProjectionEntityKind,
+        source_sequence: i64,
+        operation: ProjectionOperation,
+        second: i64,
+    ) -> D4ProjectionWrite {
+        D4ProjectionWrite {
+            stream_key: d4_stream(kind).to_owned(),
+            observation: ProjectionObservation {
+                ingestion_id: CanonicalId::parse(event_id).unwrap(),
+                entity: ProjectionEntityKey {
+                    kind,
+                    entity_id: CanonicalId::parse(entity_id).unwrap(),
+                },
+                source_authority: SourceAuthority::Execution,
+                as_of: Some(at(second)),
+                source_read_at: at(second),
+                source_cursor: Some(SourceCursor {
+                    event_ts: at(second),
+                    created_at: at(second),
+                    event_id: CanonicalId::parse(event_id).unwrap(),
+                }),
+                source_sequence: Some(source_sequence),
+                source_sequence_semantics: SourceSequenceSemantics::GlobalStreamMonotonic,
+                operation,
+                source_completeness: SourceCompleteness::EventSourced,
+                poll_interval_ms: None,
+                adapter_version: "paper-source-ingestor.d4.v1".to_owned(),
+                capability_snapshot_id: "cap_d4_paper_read_v1".to_owned(),
+                payload: serde_json::json!({"entity_id": entity_id, "version": source_sequence}),
+            },
+        }
+    }
+
     fn observation(id: &str, second: i64, sequence: i64, status: &str) -> ProjectionObservation {
         ProjectionObservation {
             ingestion_id: CanonicalId::parse(id).unwrap(),
@@ -1071,6 +1323,8 @@ mod tests {
                 event_id: CanonicalId::parse(id).unwrap(),
             }),
             source_sequence: Some(sequence),
+            source_sequence_semantics: SourceSequenceSemantics::PerEntityContiguous,
+            operation: ProjectionOperation::Upsert,
             source_completeness: SourceCompleteness::EventSourced,
             poll_interval_ms: None,
             adapter_version: "ts-adapter-v1".to_owned(),
@@ -1089,6 +1343,294 @@ mod tests {
         .execute(&store.pool)
         .await
         .unwrap();
+    }
+
+    #[tokio::test]
+    #[allow(clippy::too_many_lines)]
+    async fn d4_writer_is_atomic_resumable_global_sequence_safe_and_building_only() {
+        let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
+            return;
+        };
+        let _guard = postgres_test_lock().lock().await;
+        let store = PgProjectionStore::connect(&database_url).await.unwrap();
+        store.migrate().await.unwrap();
+        reset(&store, &database_url).await;
+
+        let scope = scope();
+        let epoch_id = store
+            .create_building_epoch(&scope, &d4_metadata(), at(0))
+            .await
+            .unwrap();
+        let snapshot_raw = "opaque-snapshot-d4";
+        let initial_cursor = "opaque-event-cursor-0";
+        let lease = D4SnapshotLeaseInput {
+            scope: scope.clone(),
+            epoch_id,
+            snapshot: d4_sensitive(snapshot_raw),
+            initial_event_cursor: d4_sensitive(initial_cursor),
+            snapshot_digest: d4_token_digest(snapshot_raw),
+            snapshot_created_at: at(1),
+            snapshot_expires_at: at(100),
+            snapshot_accepted_at: at(2),
+            expected_counts: D4ResourceCounts {
+                orders: 1,
+                fills: 1,
+                positions: 1,
+            },
+        };
+        assert_eq!(
+            store.persist_d4_snapshot_lease(&lease).await.unwrap(),
+            D4CommitOutcome::Written
+        );
+        assert_eq!(
+            store.persist_d4_snapshot_lease(&lease).await.unwrap(),
+            D4CommitOutcome::AlreadyDurable
+        );
+        let leased = store.load_d4_resume_state(&scope, epoch_id).await.unwrap();
+        assert_eq!(leased.phase, D4ResumePhase::SnapshotLeased);
+        assert_eq!(leased.snapshot.as_ref().unwrap().as_str(), snapshot_raw);
+        assert_eq!(leased.event_cursor.as_str(), initial_cursor);
+        assert!(!format!("{leased:?}").contains(snapshot_raw));
+        assert!(!format!("{leased:?}").contains(initial_cursor));
+
+        let baseline = D4BaselineCommitInput {
+            scope: scope.clone(),
+            epoch_id,
+            snapshot_digest: lease.snapshot_digest.clone(),
+            observations: vec![
+                d4_baseline_write(
+                    "d4_base_order",
+                    "order_d4_1",
+                    ProjectionEntityKind::Order,
+                    3,
+                ),
+                d4_baseline_write("d4_base_fill", "fill_d4_1", ProjectionEntityKind::Fill, 3),
+                d4_baseline_write(
+                    "d4_base_position",
+                    "position_d4_1",
+                    ProjectionEntityKind::Position,
+                    3,
+                ),
+            ],
+            source_read_at: at(3),
+            committed_at: at(4),
+        };
+        assert_eq!(
+            store.commit_d4_baseline(&baseline).await.unwrap(),
+            D4CommitOutcome::Written
+        );
+        assert_eq!(
+            store.commit_d4_baseline(&baseline).await.unwrap(),
+            D4CommitOutcome::AlreadyDurable
+        );
+        let baseline_state = store.load_d4_resume_state(&scope, epoch_id).await.unwrap();
+        assert_eq!(baseline_state.phase, D4ResumePhase::BaselineCommitted);
+        assert!(baseline_state.snapshot.is_none());
+        assert_eq!(
+            store.load_epoch_status(epoch_id).await.unwrap(),
+            ProjectionEpochStatus::Building
+        );
+        let active_count: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM portal_projection.epochs
+             WHERE epoch_id = $1 AND status = 'ACTIVE'",
+        )
+        .bind(epoch_id)
+        .fetch_one(&store.pool)
+        .await
+        .unwrap();
+        assert_eq!(active_count, 0);
+
+        let empty_watermark_page = D4EventPageCommitInput {
+            scope: scope.clone(),
+            epoch_id,
+            previous_cursor: d4_sensitive(initial_cursor),
+            next_cursor: d4_sensitive("opaque-event-cursor-empty"),
+            observations: Vec::new(),
+            first_source_sequence: None,
+            last_source_sequence: None,
+            source_head_sequence: 100,
+            caught_up: true,
+            source_read_at: at(5),
+            committed_at: at(6),
+        };
+        assert_eq!(
+            store
+                .commit_d4_event_page(&empty_watermark_page)
+                .await
+                .unwrap(),
+            D4CommitOutcome::Written
+        );
+
+        let first_page = D4EventPageCommitInput {
+            scope: scope.clone(),
+            epoch_id,
+            previous_cursor: d4_sensitive("opaque-event-cursor-empty"),
+            next_cursor: d4_sensitive("opaque-event-cursor-1"),
+            observations: vec![
+                d4_event_write(
+                    "d4_evt_101",
+                    "order_d4_1",
+                    ProjectionEntityKind::Order,
+                    101,
+                    ProjectionOperation::Upsert,
+                    5,
+                ),
+                d4_event_write(
+                    "d4_evt_102",
+                    "position_d4_1",
+                    ProjectionEntityKind::Position,
+                    102,
+                    ProjectionOperation::Delete,
+                    5,
+                ),
+            ],
+            first_source_sequence: Some(101),
+            last_source_sequence: Some(102),
+            source_head_sequence: 102,
+            caught_up: true,
+            source_read_at: at(7),
+            committed_at: at(8),
+        };
+        assert_eq!(
+            store.commit_d4_event_page(&first_page).await.unwrap(),
+            D4CommitOutcome::Written
+        );
+        assert_eq!(
+            store.commit_d4_event_page(&first_page).await.unwrap(),
+            D4CommitOutcome::AlreadyDurable
+        );
+        assert!(store
+            .load_entity(
+                epoch_id,
+                &ProjectionEntityKey {
+                    kind: ProjectionEntityKind::Position,
+                    entity_id: CanonicalId::parse("position_d4_1").unwrap(),
+                },
+            )
+            .await
+            .unwrap()
+            .is_none());
+
+        let restarted = PgProjectionStore::connect(&database_url).await.unwrap();
+        let resumed = restarted
+            .load_d4_resume_state(&scope, epoch_id)
+            .await
+            .unwrap();
+        assert_eq!(resumed.phase, D4ResumePhase::Streaming);
+        assert_eq!(resumed.event_cursor.as_str(), "opaque-event-cursor-1");
+        assert_eq!(resumed.last_source_sequence, Some(102));
+
+        let second_page = D4EventPageCommitInput {
+            scope: scope.clone(),
+            epoch_id,
+            previous_cursor: d4_sensitive("opaque-event-cursor-1"),
+            next_cursor: d4_sensitive("opaque-event-cursor-2"),
+            observations: vec![
+                d4_event_write(
+                    "d4_evt_103",
+                    "fill_d4_1",
+                    ProjectionEntityKind::Fill,
+                    103,
+                    ProjectionOperation::Upsert,
+                    7,
+                ),
+                d4_event_write(
+                    "d4_evt_104",
+                    "order_d4_1",
+                    ProjectionEntityKind::Order,
+                    104,
+                    ProjectionOperation::Upsert,
+                    7,
+                ),
+            ],
+            first_source_sequence: Some(103),
+            last_source_sequence: Some(104),
+            source_head_sequence: 104,
+            caught_up: true,
+            source_read_at: at(9),
+            committed_at: at(10),
+        };
+        assert_eq!(
+            restarted.commit_d4_event_page(&second_page).await.unwrap(),
+            D4CommitOutcome::Written
+        );
+        let gap_count: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM portal_projection.gaps WHERE epoch_id = $1")
+                .bind(epoch_id)
+                .fetch_one(&restarted.pool)
+                .await
+                .unwrap();
+        assert_eq!(gap_count, 0);
+        let replayed = projection_core::replay(
+            scope.clone(),
+            epoch_id,
+            restarted.load_replay_records(epoch_id).await.unwrap(),
+        )
+        .unwrap();
+        let visible = sqlx::query(
+            "SELECT * FROM portal_projection.entities WHERE epoch_id = $1
+             ORDER BY entity_kind, entity_id",
+        )
+        .bind(epoch_id)
+        .fetch_all(&restarted.pool)
+        .await
+        .unwrap()
+        .iter()
+        .map(row_to_entity)
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+        assert_eq!(
+            replayed.state_digest,
+            semantic_state_digest(&visible).unwrap()
+        );
+
+        let gap_page = D4EventPageCommitInput {
+            scope: scope.clone(),
+            epoch_id,
+            previous_cursor: d4_sensitive("opaque-event-cursor-2"),
+            next_cursor: d4_sensitive("opaque-event-cursor-gap"),
+            observations: vec![d4_event_write(
+                "d4_evt_106",
+                "order_d4_1",
+                ProjectionEntityKind::Order,
+                106,
+                ProjectionOperation::Upsert,
+                9,
+            )],
+            first_source_sequence: Some(106),
+            last_source_sequence: Some(106),
+            source_head_sequence: 106,
+            caught_up: true,
+            source_read_at: at(11),
+            committed_at: at(12),
+        };
+        assert_eq!(
+            restarted.commit_d4_event_page(&gap_page).await.unwrap(),
+            D4CommitOutcome::RebuildRequired
+        );
+        assert_eq!(
+            restarted.load_epoch_status(epoch_id).await.unwrap(),
+            ProjectionEpochStatus::Failed
+        );
+        let failed = restarted
+            .load_d4_resume_state(&scope, epoch_id)
+            .await
+            .unwrap();
+        assert_eq!(failed.phase, D4ResumePhase::RebuildRequired);
+        assert_eq!(failed.event_cursor.as_str(), "opaque-event-cursor-2");
+        let failed_event_count: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM portal_projection.event_journal
+             WHERE epoch_id = $1 AND ingestion_id = 'd4_evt_106'",
+        )
+        .bind(epoch_id)
+        .fetch_one(&restarted.pool)
+        .await
+        .unwrap();
+        assert_eq!(failed_event_count, 0);
+        assert!(matches!(
+            restarted.commit_d4_event_page(&gap_page).await,
+            Err(StoreError::EpochNotBuilding)
+        ));
     }
 
     #[tokio::test]

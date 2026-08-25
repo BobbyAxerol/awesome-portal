@@ -1171,6 +1171,19 @@ deep-dive → ADR → slice → evidence discipline documented above.
   activation remain absent. Status: `INGESTION_STATE_MACHINE_COMPLETE /
   PG_WRITER_PENDING / NO_SOURCE_CALL`. Detail:
   [`EX_BE_02_LIVE_D4_BUILDING_INGESTION_STATE_MACHINE.md`](./backend/EX_BE_02_LIVE_D4_BUILDING_INGESTION_STATE_MACHINE.md).
+- **EX-BE-02-LIVE D4 PostgreSQL BUILDING writer (2026-08-25):** the durable
+  writer now locks BUILDING authority and atomically persists snapshot lease,
+  exact baseline, complete event page and next cursor. Projection semantics
+  distinguish the source's global sequence from per-entity ordering and make
+  DELETE journalled/replayable while removing visible state. Opaque tokens are
+  redacted, exact retries are idempotent and a proven cross-page gap preserves
+  the previous cursor while failing the epoch into `REBUILD_REQUIRED`.
+  Fresh-PostgreSQL restart/replay/gap evidence, 131 Rust tests and strict
+  Clippy are green; the restore signature now includes D4 checkpoint/failure
+  state. No Source Proxy, credential, source call, ACTIVE epoch, Query/SSE or
+  registry change occurred. Status: `D4_BUILDING_WRITER_OFFLINE_COMPLETE /
+  LIVE_QUALIFICATION_PENDING / NO_SOURCE_CALL`. Detail:
+  [`EX_BE_02_LIVE_D4_POSTGRES_BUILDING_WRITER.md`](./backend/EX_BE_02_LIVE_D4_POSTGRES_BUILDING_WRITER.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

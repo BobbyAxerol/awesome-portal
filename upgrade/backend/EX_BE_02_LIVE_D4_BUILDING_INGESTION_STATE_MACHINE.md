@@ -54,7 +54,8 @@ bounded retry hint; they never move a snapshot or event cursor.
 
 ## Next backend slice
 
-Add a D4-specific PostgreSQL migration and writer that stores opaque cursor
-state without logs, locks the epoch as `BUILDING`, commits snapshot lease,
-atomic baseline and event page/cursor transactions, and rejects ACTIVE or
-unknown epochs even if the process started with a stale BUILDING observation.
+The D4-specific PostgreSQL writer is now complete in
+[`EX_BE_02_LIVE_D4_POSTGRES_BUILDING_WRITER.md`](./EX_BE_02_LIVE_D4_POSTGRES_BUILDING_WRITER.md).
+The next slice is a bounded qualification runner that connects this coordinator
+to that writer. It remains source-dark until a fresh owner-authorized preflight
+and change window.

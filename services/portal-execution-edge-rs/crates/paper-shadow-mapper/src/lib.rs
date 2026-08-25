@@ -6,7 +6,8 @@ use execution_contracts::{
     SourceCursor,
 };
 use projection_core::{
-    ProjectionEntityKey, ProjectionEntityKind, ProjectionObservation, SnapshotCompleteness,
+    ProjectionEntityKey, ProjectionEntityKind, ProjectionObservation, ProjectionOperation,
+    SnapshotCompleteness, SourceSequenceSemantics,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -268,6 +269,8 @@ fn event_observation(
         source_read_at: context.source_read_at,
         source_cursor: Some(cursor),
         source_sequence: None,
+        source_sequence_semantics: SourceSequenceSemantics::PerEntityContiguous,
+        operation: ProjectionOperation::Upsert,
         source_completeness: SourceCompleteness::EventSourced,
         poll_interval_ms: None,
         adapter_version: MAPPER_VERSION.to_owned(),
@@ -293,6 +296,8 @@ fn snapshot_observation<T: Serialize>(
         source_read_at: context.source_read_at,
         source_cursor: None,
         source_sequence: None,
+        source_sequence_semantics: SourceSequenceSemantics::PerEntityContiguous,
+        operation: ProjectionOperation::Upsert,
         source_completeness: SourceCompleteness::PollBounded,
         poll_interval_ms: Some(context.source.snapshot_poll_interval_ms),
         adapter_version: MAPPER_VERSION.to_owned(),

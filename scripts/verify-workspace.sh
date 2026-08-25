@@ -273,6 +273,7 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/query-api/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/Cargo.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/d4_writer.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/query.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/analytics_repository.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-shadow-mapper/Cargo.toml" \
@@ -282,7 +283,10 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0001_projection_foundation.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0002_projection_query_foundation.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0003_analytics_source_projection.sql" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0004_analytics_integrity_hardening.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0005_projection_event_entity.sql" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0006_projection_operation_and_sequence_semantics.sql" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0007_d4_source_checkpoint.sql" \
   "${ROOT_DIR}/deploy/images/execution-edge-ci.Dockerfile" \
   "${ROOT_DIR}/deploy/images/execution-edge.Dockerfile" \
   "${ROOT_DIR}/deploy/images/source-proxy.Dockerfile" \
@@ -664,6 +668,7 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/query-api/src/lib.rs \
   services/portal-execution-edge-rs/crates/projection-store-pg/Cargo.toml \
   services/portal-execution-edge-rs/crates/projection-store-pg/src/lib.rs \
+  services/portal-execution-edge-rs/crates/projection-store-pg/src/d4_writer.rs \
   services/portal-execution-edge-rs/crates/projection-store-pg/src/query.rs \
   services/portal-execution-edge-rs/crates/projection-store-pg/src/analytics_repository.rs \
   services/portal-execution-edge-rs/crates/paper-shadow-mapper/Cargo.toml \
@@ -673,7 +678,10 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0001_projection_foundation.sql \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0002_projection_query_foundation.sql \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0003_analytics_source_projection.sql \
+  services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0004_analytics_integrity_hardening.sql \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0005_projection_event_entity.sql \
+  services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0006_projection_operation_and_sequence_semantics.sql \
+  services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0007_d4_source_checkpoint.sql \
   deploy/images/execution-edge-ci.Dockerfile \
   deploy/images/source-proxy.Dockerfile \
   scripts/execution-edge-test.sh \

@@ -2055,6 +2055,18 @@ off until the exact artifacts, Rust BUILDING ingestor and D4 qualification are
 accepted. Detail:
 [`EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md`](../../backend/EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md).
 
+The 2026-08-25 offline backend implementation now supersedes the writer
+blocker: `D4_BUILDING_WRITER_OFFLINE_COMPLETE / LIVE_QUALIFICATION_PENDING /
+NO_SOURCE_CALL`. The imported five-file contract remains byte-locked; Rust now
+has the strict source adapter, bounded transport, BUILDING-only coordinator and
+atomic PostgreSQL lease/baseline/event-page writer. Global source sequence and
+DELETE/replay semantics are explicit, opaque cursor values remain redacted and
+a proven gap fails the epoch without advancing its durable cursor. This does
+**not** unlock Claude's live profile: Source Proxy, credentials, business reads,
+ACTIVE Query, analytics, SSE, commands and registry promotion remain off.
+Evidence:
+[`EX_BE_02_LIVE_D4_POSTGRES_BUILDING_WRITER.md`](../../backend/EX_BE_02_LIVE_D4_POSTGRES_BUILDING_WRITER.md).
+
 ## 28. Dev integration preview — 17/17 screens wired, production inactive (2026-08-24)
 
 Status: `DEV_PREVIEW_READY / FIXTURE_ONLY / PRODUCTION_INACTIVE`.

@@ -530,6 +530,15 @@ authority.
   advancement before commit; exact descriptor counts and `410` rebuild are
   fail-closed. Eight tests plus rustfmt/strict Clippy pass. No network,
   PostgreSQL, runtime or delivery-profile state changed.
+- [EX-BE-02-LIVE D4 PostgreSQL BUILDING writer](./EX_BE_02_LIVE_D4_POSTGRES_BUILDING_WRITER.md)
+  — **offline writer complete / live qualification pending / no source call:**
+  first-class global-stream sequence and DELETE semantics now feed an atomic,
+  BUILDING-only PostgreSQL lease/baseline/event-page writer. Opaque tokens stay
+  redacted and cursor advancement shares the data transaction; proven gaps
+  preserve the prior cursor and mark the epoch `FAILED/REBUILD_REQUIRED`.
+  Fresh-PG restart/replay/idempotency/gap tests, strict Clippy and the D4-aware
+  dump/restore signature are green. Source Proxy, credentials, Query/SSE,
+  activation and registry profiles remain untouched.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

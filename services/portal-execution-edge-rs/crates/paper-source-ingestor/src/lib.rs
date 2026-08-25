@@ -4,12 +4,12 @@ use chrono::{DateTime, Utc};
 use execution_contracts::{CanonicalId, SourceAuthority, SourceCompleteness, SourceCursor};
 use paper_source_contract::{
     DeltaOperation, EventsPage, OpaqueToken, PaperReadPayload, PaperReadRequest, PositionRecord,
-    ReadOutcome, SnapshotDescriptor, SnapshotPage, SnapshotResource, SourceFailureKind,
-    StateDeltaEvent, StateDeltaRecord, MAXIMUM_PAGE_SIZE, MAXIMUM_SNAPSHOT_ROWS,
+    ReadOutcome, SnapshotDescriptor, SnapshotPage, SnapshotResource, SnapshotResourceCounts,
+    SourceFailureKind, StateDeltaEvent, StateDeltaRecord, MAXIMUM_PAGE_SIZE, MAXIMUM_SNAPSHOT_ROWS,
 };
 use projection_core::{
     ProjectionEntityKey, ProjectionEntityKind, ProjectionEpochStatus, ProjectionObservation,
-    ProjectionScope,
+    ProjectionOperation, ProjectionScope, SourceSequenceSemantics,
 };
 use serde_json::{json, Value};
 use sha2::{Digest as _, Sha256};
@@ -65,6 +65,7 @@ pub struct PendingBaselineCommit {
     pub snapshot: OpaqueToken,
     pub initial_event_cursor: OpaqueToken,
     pub snapshot_digest: String,
+    pub expected_counts: SnapshotResourceCounts,
     pub observations: Vec<MappedObservation>,
     pub source_read_at: DateTime<Utc>,
 }
@@ -76,7 +77,9 @@ pub struct PendingSnapshotLease {
     pub snapshot: OpaqueToken,
     pub initial_event_cursor: OpaqueToken,
     pub snapshot_digest: String,
+    pub snapshot_created_at: DateTime<Utc>,
     pub expires_at: DateTime<Utc>,
+    pub expected_counts: SnapshotResourceCounts,
     pub accepted_at: DateTime<Utc>,
 }
 
@@ -87,6 +90,9 @@ pub struct PendingEventCommit {
     pub previous_cursor: OpaqueToken,
     pub next_cursor: OpaqueToken,
     pub observations: Vec<MappedObservation>,
+    pub first_source_sequence: Option<u64>,
+    pub last_source_sequence: Option<u64>,
+    pub source_head_sequence: u64,
     pub source_read_at: DateTime<Utc>,
     pub caught_up: bool,
 }
@@ -229,7 +235,9 @@ impl PaperIngestionCoordinator {
                 snapshot: descriptor.snapshot.clone(),
                 initial_event_cursor: descriptor.event_cursor.clone(),
                 snapshot_digest: opaque_digest(&descriptor.snapshot),
+                snapshot_created_at: descriptor.created_at,
                 expires_at: descriptor.expires_at,
+                expected_counts: descriptor.resource_counts.clone(),
                 accepted_at: *accepted_at,
             }),
             _ => None,
@@ -420,6 +428,8 @@ impl PaperIngestionCoordinator {
                 source_read_at,
             ),
             (IngestionState::PollingEvents { cursor }, PaperReadPayload::Events(page)) => {
+                let first_source_sequence = page.events.first().map(|event| event.sequence);
+                let last_source_sequence = page.events.last().map(|event| event.sequence);
                 let observations = map_event_page(&page, &self.config, source_read_at)?;
                 let effect = IngestionEffect::EventPageReady {
                     observation_count: observations.len(),
@@ -432,6 +442,9 @@ impl PaperIngestionCoordinator {
                         previous_cursor: cursor,
                         next_cursor: page.next_cursor,
                         observations,
+                        first_source_sequence,
+                        last_source_sequence,
+                        source_head_sequence: page.head_sequence,
                         source_read_at,
                         caught_up: page.complete,
                     },
@@ -515,6 +528,7 @@ impl PaperIngestionCoordinator {
                 snapshot: descriptor.snapshot,
                 initial_event_cursor: descriptor.event_cursor,
                 snapshot_digest: snapshot_digest.clone(),
+                expected_counts: descriptor.resource_counts,
                 observations,
                 source_read_at,
             },
@@ -561,6 +575,8 @@ macro_rules! snapshot_mapper {
                         source_read_at,
                         None,
                         None,
+                        SourceSequenceSemantics::PerEntityContiguous,
+                        ProjectionOperation::Upsert,
                         SourceCompleteness::PollBounded,
                         Some(config.poll_interval_ms),
                         payload,
@@ -659,6 +675,11 @@ fn map_event(
             source_read_at,
             Some(cursor),
             Some(source_sequence),
+            SourceSequenceSemantics::GlobalStreamMonotonic,
+            match event.operation {
+                DeltaOperation::Upsert => ProjectionOperation::Upsert,
+                DeltaOperation::Delete => ProjectionOperation::Delete,
+            },
             SourceCompleteness::EventSourced,
             None,
             payload,
@@ -684,6 +705,8 @@ fn observation(
     source_read_at: DateTime<Utc>,
     source_cursor: Option<SourceCursor>,
     source_sequence: Option<i64>,
+    source_sequence_semantics: SourceSequenceSemantics,
+    operation: ProjectionOperation,
     source_completeness: SourceCompleteness,
     poll_interval_ms: Option<i64>,
     payload: Value,
@@ -697,6 +720,8 @@ fn observation(
         source_read_at,
         source_cursor,
         source_sequence,
+        source_sequence_semantics,
+        operation,
         source_completeness,
         poll_interval_ms,
         adapter_version: D4_MAPPER_VERSION.to_owned(),
