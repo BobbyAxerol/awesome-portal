@@ -238,8 +238,13 @@ describe("cloudflare access security matrix", () => {
     // The verifier honors a small JWKS refetch cooldown before resolving the
     // unknown kid; production behaves the same with the configured TTL.
     await new Promise((resolve) => setTimeout(resolve, 1100));
+    // Context is called WITH the portal session: an authenticated session
+    // surfaces PASSWORD_CHANGE_REQUIRED while the password change is pending.
     const context = await inject("/api/auth/context", {
-      headers: { "cf-access-jwt-assertion": await mock.sign({ email: "bobby@azdag.com" }) },
+      headers: {
+        "cf-access-jwt-assertion": await mock.sign({ email: "bobby@azdag.com" }),
+        cookie: cookies(first),
+      },
     });
     expect(context.json().state).toBe("PASSWORD_CHANGE_REQUIRED");
   });
