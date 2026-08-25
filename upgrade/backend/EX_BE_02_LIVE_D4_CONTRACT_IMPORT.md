@@ -46,6 +46,22 @@ The older pre-acceptance guide hash is metadata only and is not imported.
   manifest metadata;
 - Git diff is limited to the contract import and canonical backend tracking.
 
+## Post-import source re-verification
+
+On 2026-08-25 the Trading System worktree was checked again read-only at HEAD
+`6049a73e1674eb6da93ba78ad9b19b4a995a23c9` on branch
+`feat/d4-paper-read-facade`. For the same five explicit paths:
+
+- `git diff --name-status 99e912f..6049a73 -- <five-paths>` returned no
+  output;
+- SHA-256 from the runtime-acceptance tree matched the current worktree for
+  every file; and
+- those hashes still match `MANIFEST.sha256` in the Portal import.
+
+This is a post-import provenance check only. It does not amend or rewrite the
+dedicated import commit `fdd1f34`, and it did not open Source Proxy, read a
+credential, call a source route or touch Trading System runtime state.
+
 ## Next backend slice
 
 Implement a pure Rust D4 source-contract adapter against this locked pack,

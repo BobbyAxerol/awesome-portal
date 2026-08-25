@@ -507,9 +507,10 @@ authority.
   — **contract import complete / adapter pending / no source call:** the five
   non-secret source artifacts are byte-locked to Trading System
   runtime-acceptance commit `99e912f` and unchanged observed HEAD `4ad8f87`.
-  Manifest, JSON and exact-file-set checks pass. No Rust adapter/ingestor,
-  Source Proxy activation, credential, source request, projection epoch or
-  registry change is included.
+  A later read-only audit at source HEAD `6049a73` again found an empty
+  five-path diff and matching acceptance/current/Portal hashes. The import
+  remains the separate earlier commit `fdd1f34`; no Source Proxy activation,
+  credential, source request, projection epoch or registry change is included.
 - [EX-BE-02-LIVE D4 Rust source-contract adapter](./EX_BE_02_LIVE_D4_SOURCE_CONTRACT_ADAPTER.md)
   — **adapter complete / transport pending / no source call:** build-time
   hashes and authority checks bind the exact four-route facade pack. Strict

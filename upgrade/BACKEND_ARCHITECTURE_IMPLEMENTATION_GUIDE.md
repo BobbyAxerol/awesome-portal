@@ -1138,8 +1138,12 @@ deep-dive → ADR → slice → evidence discipline documented above.
   Paper-read artifacts are imported as exact bytes and locked to Trading System
   runtime-acceptance commit `99e912f` plus observed HEAD `4ad8f87`. A bounded
   source diff was empty and every acceptance/HEAD/Portal SHA-256 matched. This
-  is contract metadata only: no Rust adapter/ingestor, Source Proxy activation,
-  credential, source call, epoch or registry change exists. Status:
+  was re-verified read-only against current source HEAD `6049a73`: the same
+  five-path diff remains empty and every acceptance/current/Portal SHA-256
+  still matches. The dedicated import commit `fdd1f34` remains earlier than
+  all Rust adapter/transport/ingestor/writer commits. This is contract metadata
+  only: no Source Proxy activation, credential, source call, epoch or registry
+  change occurred during import or re-verification. Status:
   `CONTRACT_IMPORT_COMPLETE / ADAPTER_PENDING / NO_SOURCE_CALL`. Detail:
   [`EX_BE_02_LIVE_D4_CONTRACT_IMPORT.md`](./backend/EX_BE_02_LIVE_D4_CONTRACT_IMPORT.md).
 - **EX-BE-02-LIVE D4 Rust source-contract adapter (2026-08-25):** a dedicated
