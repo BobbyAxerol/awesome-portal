@@ -1292,6 +1292,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "paper-source-transport"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "paper-source-contract",
+ "reqwest",
+ "thiserror",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "parking"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

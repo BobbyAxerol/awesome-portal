@@ -517,6 +517,13 @@ authority.
   cursors, snapshot completeness, ordered idempotent deltas and typed resync.
   Eleven tests plus rustfmt/strict Clippy pass; Source Proxy, credentials,
   storage, epochs and runtime flags remain untouched.
+- [EX-BE-02-LIVE D4 bounded Source Proxy transport](./EX_BE_02_LIVE_D4_BOUNDED_SOURCE_TRANSPORT.md)
+  — **transport complete / ingestor pending / no source call:** enum-derived
+  GETs only, TLS 1.3 workload mTLS, HTTP/2, pathless origin, no redirects or
+  environment proxy, bounded resource use and no implicit cursor retry. The
+  client cannot possess the Trading System read key. Five tests plus
+  rustfmt/strict Clippy pass; no Source Proxy/runtime/storage/epoch state
+  changed.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

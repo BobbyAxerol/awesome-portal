@@ -9,6 +9,7 @@ members = [
   "crates/projection-store-pg",
   "crates/paper-shadow-mapper",
   "crates/paper-source-contract",
+  "crates/paper-source-transport",
   "crates/realtime-sse",
   "crates/source-qualification",
   "crates/ts-contract-v1",

@@ -1152,6 +1152,15 @@ deep-dive → ADR → slice → evidence discipline documented above.
   epoch or registry flag exists. Status: `SOURCE_CONTRACT_ADAPTER_COMPLETE /
   TRANSPORT_PENDING / NO_SOURCE_CALL`. Detail:
   [`EX_BE_02_LIVE_D4_SOURCE_CONTRACT_ADAPTER.md`](./backend/EX_BE_02_LIVE_D4_SOURCE_CONTRACT_ADAPTER.md).
+- **EX-BE-02-LIVE D4 bounded Source Proxy transport (2026-08-25):** a separate
+  Rust client now accepts only enum-derived D4 requests and pins a pathless
+  HTTPS origin, TLS 1.3, workload mTLS, HTTP/2, no redirect/system proxy,
+  bounded queue/time/concurrency/body and contract-owned response parsing. It
+  has no Trading System read-key field and never retries a cursor implicitly.
+  Evidence is 5/5 tests plus rustfmt and strict Clippy. No source call, Source
+  Proxy/runtime change, writer, epoch or registry flag exists. Status:
+  `BOUNDED_TRANSPORT_COMPLETE / INGESTOR_PENDING / NO_SOURCE_CALL`. Detail:
+  [`EX_BE_02_LIVE_D4_BOUNDED_SOURCE_TRANSPORT.md`](./backend/EX_BE_02_LIVE_D4_BOUNDED_SOURCE_TRANSPORT.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING
