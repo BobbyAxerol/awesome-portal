@@ -5,7 +5,7 @@ Ba tầng bằng chứng, thiếu một tầng là chưa đóng (supplement V2-0
 | Tầng | Trạng thái | Nguồn |
 |---|---|---|
 | 1 · Máy (gates) | **xanh** — số ở §1 | chuỗi gate cuối cùng trên `feat/execution_loop` |
-| 2 · Dữ liệu thật (shadow parity) | **chưa có dữ liệu** — BE-V2-F chưa giao epoch shadow; harness sẵn (§3) | `scripts/shadow-parity.mjs` + test |
+| 2 · Dữ liệu thật (shadow parity) | **một phần**: parity fixture ↔ extract thật trong repo đã chạy (`SHADOW_PARITY_EXTRACT_2026-08-25.md`: 0 dòng không giải thích, 1 lệch thật → BR-EX-39); parity trên **shadow epoch** chờ BE-V2-F | `scripts/shadow-parity.mjs` + test |
 | 3 · Mắt owner (sign-off) | **chờ Bobby** — 10 phase, 26 route baseline, 87 crop fixtures trên dev-portal :8080 | §5 |
 
 ## 1. Gates máy (chạy thật, commit cuối)
@@ -48,6 +48,15 @@ Không màn nào được kích hoạt trong V2-09: registry `query_enabled`/`re
 - Test: mọi fixture contract canonical parity với chính nó = 0 dòng; 5 loại lệch được đặt tên riêng.
 - **Chưa chạy trên shadow thật** — chờ BE-V2-F publish epoch BUILDING + redacted export.
 
+## 3b. Runbook kích hoạt Lane B — một màn / một profile / một commit
+
+1. Codex giao handoff BE-V2-G cho **một** màn (endpoint, field, `delivery_profile`, mã lỗi/freshness, activation status) → ghi nhận trong `PHASE_TRACKER.md` (rule 8).
+2. Chạy parity: `node scripts/shadow-parity.mjs packages/contracts/fixtures/<contract>.valid.json <shadow-export>.json` → 0 dòng không giải thích, dispositions vào `SHADOW_PARITY_*.md`.
+3. Bobby duyệt đổi registry (`delivery_profile: "shadow"` trước, rồi `"source"`; `query_enabled` sau; `realtime_enabled` sau cùng) — **codex sửa registry**, frontend không.
+4. Frontend: không đổi code — banner preview đọc `delivery_profile` từ registry và nói đúng nguồn (fixture / shadow / source); envelope authority/freshness hiển thị theo response.
+5. Gate: chuỗi đầy đủ (tsc · vitest · build · audit · baselines route liên quan · full) + baseline route mới ghi `el-v2-09-<screen>-<profile>.png`.
+6. Một commit `feat(execution): Lane B <screen> <profile>` + một dòng evidence; rollback = revert registry (codex) hoặc rebuild flag (frontend), diễn tập §5.
+
 ## 4. Hardening đã giao trong V2-09
 
 | Hạng mục | Kết quả |
@@ -56,7 +65,7 @@ Không màn nào được kích hoạt trong V2-09: registry `query_enabled`/`re
 | Gap / cursor / epoch / reconnect | giữ M3 (đã có); `DISCONNECTED` → reconnecting/failed typed |
 | Backpressure | coalesce **thông báo** trong cửa sổ 250ms khi >8 delta (reducer vẫn nhận mọi delta — không bịa gap); `coalescedEvents` hiện trên badge |
 | Source-loss | reducer + UI `SOURCE LOST` (values as read, last good as_of) — **chưa có tên sự kiện wire** từ edge |
-| DOM / memory budget | e2e mỗi route preview: DOM ≤ 8000 node, heap ≤ 200MB (log `BUDGET route nodes= heapMB=`) |
+| DOM / memory budget | e2e mỗi route preview: DOM ≤ 8000 node, JS heap ≤ 200MB — đo CDP: 7–11 MB/route (log `BUDGET route nodes= heapMB=`) |
 | Perf 10⁵ dòng | 41 `<tr>` resident (cap 2000) |
 | Anatomy đồng bộ | Alpha 360 · Portfolio 360 · Blotter lên `ExecutionWorkspace` (masthead + rail) — hết nợ V2-08 |
 | Ledger | 17 `MISS` → **0**; 118 dòng đều có disposition |
