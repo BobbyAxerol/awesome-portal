@@ -1,0 +1,126 @@
+{
+  "schema_version": "portal.execution.shared-consumer-fixtures.v1",
+  "synthetic_non_business_data": true,
+  "scenarios": [
+    {
+      "name": "source_dark",
+      "snapshot": {
+        "schema_version": "portal.execution.shared-consumer.v1",
+        "state": "DORMANT",
+        "demand_count": 0,
+        "lease_state": "INACTIVE",
+        "source_lease_state": "INACTIVE",
+        "cursor_state": "INACTIVE",
+        "pending_commit_state": "INACTIVE",
+        "metrics": {
+          "requests_started": 0,
+          "source_pages_received": 0,
+          "observations_received": 0,
+          "observations_committed": 0,
+          "duplicate_pages": 0,
+          "retries_scheduled": 0,
+          "source_failures": 0,
+          "gaps_detected": 0,
+          "lease_losses": 0,
+          "queue_high_watermark": 0
+        }
+      }
+    },
+    {
+      "name": "demand_idle",
+      "snapshot": {
+        "schema_version": "portal.execution.shared-consumer.v1",
+        "state": "DEMAND_IDLE",
+        "demand_count": 0,
+        "lease_state": "ACTIVE",
+        "source_lease_state": "ACTIVE",
+        "cursor_state": "ACTIVE",
+        "pending_commit_state": "INACTIVE",
+        "metrics": {
+          "requests_started": 0,
+          "source_pages_received": 0,
+          "observations_received": 0,
+          "observations_committed": 0,
+          "duplicate_pages": 0,
+          "retries_scheduled": 0,
+          "source_failures": 0,
+          "gaps_detected": 0,
+          "lease_losses": 0,
+          "queue_high_watermark": 0
+        }
+      }
+    },
+    {
+      "name": "awaiting_atomic_commit",
+      "snapshot": {
+        "schema_version": "portal.execution.shared-consumer.v1",
+        "state": "AWAITING_ATOMIC_COMMIT",
+        "demand_count": 1,
+        "lease_state": "ACTIVE",
+        "source_lease_state": "ACTIVE",
+        "cursor_state": "ACTIVE",
+        "pending_commit_state": "ACTIVE",
+        "metrics": {
+          "requests_started": 1,
+          "source_pages_received": 1,
+          "observations_received": 2,
+          "observations_committed": 0,
+          "duplicate_pages": 0,
+          "retries_scheduled": 0,
+          "source_failures": 0,
+          "gaps_detected": 0,
+          "lease_losses": 0,
+          "queue_high_watermark": 1
+        }
+      }
+    },
+    {
+      "name": "circuit_open",
+      "snapshot": {
+        "schema_version": "portal.execution.shared-consumer.v1",
+        "state": "CIRCUIT_OPEN",
+        "demand_count": 1,
+        "lease_state": "ACTIVE",
+        "source_lease_state": "ACTIVE",
+        "cursor_state": "ACTIVE",
+        "pending_commit_state": "INACTIVE",
+        "metrics": {
+          "requests_started": 4,
+          "source_pages_received": 0,
+          "observations_received": 0,
+          "observations_committed": 0,
+          "duplicate_pages": 0,
+          "retries_scheduled": 3,
+          "source_failures": 4,
+          "gaps_detected": 0,
+          "lease_losses": 0,
+          "queue_high_watermark": 0
+        }
+      }
+    },
+    {
+      "name": "rebuild_required",
+      "snapshot": {
+        "schema_version": "portal.execution.shared-consumer.v1",
+        "state": "REBUILD_REQUIRED",
+        "demand_count": 1,
+        "lease_state": "ACTIVE",
+        "source_lease_state": "ACTIVE",
+        "cursor_state": "ACTIVE",
+        "pending_commit_state": "INACTIVE",
+        "metrics": {
+          "requests_started": 1,
+          "source_pages_received": 0,
+          "observations_received": 0,
+          "observations_committed": 0,
+          "duplicate_pages": 0,
+          "retries_scheduled": 0,
+          "source_failures": 1,
+          "gaps_detected": 1,
+          "lease_losses": 0,
+          "queue_high_watermark": 0
+        }
+      }
+    }
+  ]
+}

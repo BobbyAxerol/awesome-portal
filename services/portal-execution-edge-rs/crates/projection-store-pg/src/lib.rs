@@ -18,6 +18,7 @@ mod analytics_repository;
 mod d4_writer;
 mod query;
 mod realtime;
+mod shared_consumer;
 
 pub use analytics_repository::{
     analytics_facts_digest, AnalyticsFactDigestInput, AnalyticsReadRequirement, AnalyticsSourceRead,
@@ -32,6 +33,7 @@ pub use realtime::{
     RealtimeActiveEpochWatermark, RealtimeEpochAvailability, RealtimeJournalPage,
     RealtimeJournalRecord, RealtimeScopeAvailability,
 };
+pub use shared_consumer::SharedConsumerLeaseAcquireOutcome;
 
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!();
 
@@ -1262,6 +1264,12 @@ pub enum StoreError {
     D4PaperScopeRequired,
     #[error("D4 BUILDING epoch identity collides with different durable state")]
     D4EpochIdentityCollision,
+    #[error("shared consumer lease request is invalid")]
+    InvalidSharedConsumerLease,
+    #[error("another shared consumer owns the active scope lease")]
+    SharedConsumerLeaseBusy,
+    #[error("shared consumer lease is absent, expired or fenced out")]
+    SharedConsumerLeaseLost,
 }
 
 #[cfg(test)]
@@ -1274,6 +1282,7 @@ mod tests {
         RetentionAvailability, RetentionPolicy, SeriesIntent,
     };
     use sha2::{Digest as _, Sha256};
+    use shared_consumer_core::{ConsumerLeaseProof, LeaseOwnerDigest};
 
     use super::*;
 
@@ -1483,6 +1492,233 @@ mod tests {
                 .prepare_d4_building_epoch(&non_paper, Uuid::now_v7(), &metadata, at(0),)
                 .await,
             Err(StoreError::D4PaperScopeRequired)
+        ));
+    }
+
+    #[tokio::test]
+    #[allow(clippy::too_many_lines)]
+    async fn n04_shared_consumer_lease_fences_stale_writers_and_survives_restart() {
+        let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
+            return;
+        };
+        let _guard = postgres_test_lock().lock().await;
+        let store = PgProjectionStore::connect(&database_url).await.unwrap();
+        store.migrate().await.unwrap();
+        reset(&store, &database_url).await;
+
+        let scope = scope();
+        let epoch_id = store
+            .create_building_epoch(&scope, &d4_metadata(), Utc::now())
+            .await
+            .unwrap();
+        let snapshot_raw = "opaque-n04-snapshot";
+        let initial_cursor = "opaque-n04-cursor-0";
+        let now = Utc::now();
+        let snapshot_lease = D4SnapshotLeaseInput {
+            scope: scope.clone(),
+            epoch_id,
+            snapshot: d4_sensitive(snapshot_raw),
+            initial_event_cursor: d4_sensitive(initial_cursor),
+            snapshot_digest: d4_token_digest(snapshot_raw),
+            snapshot_created_at: now - TimeDelta::seconds(2),
+            snapshot_expires_at: now + TimeDelta::minutes(5),
+            snapshot_accepted_at: now - TimeDelta::seconds(1),
+            expected_counts: D4ResourceCounts {
+                orders: 1,
+                fills: 1,
+                positions: 1,
+            },
+        };
+        store
+            .persist_d4_snapshot_lease(&snapshot_lease)
+            .await
+            .unwrap();
+        store
+            .commit_d4_baseline(&D4BaselineCommitInput {
+                scope: scope.clone(),
+                epoch_id,
+                snapshot_digest: snapshot_lease.snapshot_digest.clone(),
+                observations: vec![
+                    d4_baseline_write(
+                        "n04_base_order",
+                        "order_n04_1",
+                        ProjectionEntityKind::Order,
+                        1,
+                    ),
+                    d4_baseline_write("n04_base_fill", "fill_n04_1", ProjectionEntityKind::Fill, 1),
+                    d4_baseline_write(
+                        "n04_base_position",
+                        "position_n04_1",
+                        ProjectionEntityKind::Position,
+                        1,
+                    ),
+                ],
+                source_read_at: now,
+                committed_at: now,
+            })
+            .await
+            .unwrap();
+
+        let owner = LeaseOwnerDigest::parse(format!("sha256:{}", "1".repeat(64))).unwrap();
+        let other_owner = LeaseOwnerDigest::parse(format!("sha256:{}", "2".repeat(64))).unwrap();
+        let lease_id = Uuid::now_v7();
+        let acquired = store
+            .acquire_shared_consumer_lease(
+                &scope,
+                epoch_id,
+                lease_id,
+                &owner,
+                Duration::from_secs(30),
+            )
+            .await
+            .unwrap();
+        let SharedConsumerLeaseAcquireOutcome::Acquired(first_grant) = acquired else {
+            panic!("first acquisition must create a lease");
+        };
+        assert_eq!(first_grant.fencing_token, 1);
+
+        let restarted = PgProjectionStore::connect(&database_url).await.unwrap();
+        assert!(matches!(
+            restarted
+                .acquire_shared_consumer_lease(
+                    &scope,
+                    epoch_id,
+                    lease_id,
+                    &owner,
+                    Duration::from_secs(30),
+                )
+                .await
+                .unwrap(),
+            SharedConsumerLeaseAcquireOutcome::AlreadyHeld(grant)
+                if grant.proof() == first_grant.proof()
+        ));
+        assert!(matches!(
+            store
+                .acquire_shared_consumer_lease(
+                    &scope,
+                    epoch_id,
+                    Uuid::now_v7(),
+                    &other_owner,
+                    Duration::from_secs(30),
+                )
+                .await,
+            Err(StoreError::SharedConsumerLeaseBusy)
+        ));
+
+        let first_page = D4EventPageCommitInput {
+            scope: scope.clone(),
+            epoch_id,
+            previous_cursor: d4_sensitive(initial_cursor),
+            next_cursor: d4_sensitive("opaque-n04-cursor-1"),
+            observations: vec![d4_event_write(
+                "n04_event_1",
+                "order_n04_1",
+                ProjectionEntityKind::Order,
+                1,
+                ProjectionOperation::Upsert,
+                2,
+            )],
+            first_source_sequence: Some(1),
+            last_source_sequence: Some(1),
+            source_head_sequence: 1,
+            caught_up: true,
+            source_read_at: now,
+            committed_at: now,
+        };
+        assert_eq!(
+            restarted
+                .commit_lease_fenced_d4_event_page(&first_page, first_grant.proof())
+                .await
+                .unwrap(),
+            D4CommitOutcome::Written
+        );
+
+        restarted
+            .release_shared_consumer_lease(&scope, epoch_id, first_grant.proof(), &owner)
+            .await
+            .unwrap();
+        let second_page = D4EventPageCommitInput {
+            scope: scope.clone(),
+            epoch_id,
+            previous_cursor: d4_sensitive("opaque-n04-cursor-1"),
+            next_cursor: d4_sensitive("opaque-n04-cursor-2"),
+            observations: vec![d4_event_write(
+                "n04_event_2",
+                "position_n04_1",
+                ProjectionEntityKind::Position,
+                2,
+                ProjectionOperation::Delete,
+                3,
+            )],
+            first_source_sequence: Some(2),
+            last_source_sequence: Some(2),
+            source_head_sequence: 2,
+            caught_up: true,
+            source_read_at: now,
+            committed_at: now,
+        };
+        assert!(matches!(
+            restarted
+                .commit_lease_fenced_d4_event_page(&second_page, first_grant.proof())
+                .await,
+            Err(StoreError::SharedConsumerLeaseLost)
+        ));
+        assert_eq!(
+            restarted
+                .load_d4_resume_state(&scope, epoch_id)
+                .await
+                .unwrap()
+                .event_cursor
+                .as_str(),
+            "opaque-n04-cursor-1"
+        );
+
+        let second_lease_id = Uuid::now_v7();
+        let SharedConsumerLeaseAcquireOutcome::Acquired(second_grant) = restarted
+            .acquire_shared_consumer_lease(
+                &scope,
+                epoch_id,
+                second_lease_id,
+                &other_owner,
+                Duration::from_secs(30),
+            )
+            .await
+            .unwrap()
+        else {
+            panic!("released lease must be replaceable");
+        };
+        assert_eq!(second_grant.fencing_token, 2);
+        let renewed = restarted
+            .renew_shared_consumer_lease(
+                &scope,
+                epoch_id,
+                second_grant.proof(),
+                &other_owner,
+                Duration::from_secs(30),
+            )
+            .await
+            .unwrap();
+        assert_eq!(renewed.proof(), second_grant.proof());
+        assert_eq!(
+            restarted
+                .commit_lease_fenced_d4_event_page(&second_page, renewed.proof())
+                .await
+                .unwrap(),
+            D4CommitOutcome::Written
+        );
+        assert!(matches!(
+            restarted
+                .release_shared_consumer_lease(
+                    &scope,
+                    epoch_id,
+                    ConsumerLeaseProof {
+                        lease_id: first_grant.lease_id,
+                        fencing_token: first_grant.fencing_token,
+                    },
+                    &owner,
+                )
+                .await,
+            Err(StoreError::SharedConsumerLeaseLost)
         ));
     }
 

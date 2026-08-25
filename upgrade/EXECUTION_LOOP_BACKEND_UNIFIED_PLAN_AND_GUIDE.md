@@ -434,7 +434,8 @@ Detail:
 ### N04 — Lease-aware Rust shared consumer
 
 **Mapping:** D4-OPT-03; EX-BE-03 source adapter continuation.  
-**Status:** `PLANNED / N02_N03_BLOCKED`.  
+**Status:** `SOURCE_DARK_CORE_COMPLETE / POSTGRESQL_FENCING_COMPLETE /
+N02_N03_WIRE_INTEGRATION_PENDING / LIVE_SOURCE_OFF`.  
 **Priority:** P0.
 
 **Goal**
@@ -457,12 +458,26 @@ System independently.
 Offline corpus, fresh PostgreSQL, restart, duplicate, gap, lease-loss and source-loss tests pass.
 Live source remains off until N06.
 
+**Delivered on Portal side**
+
+- pure Rust singleton shared-consumer state machine with demand idle, one in-flight read,
+  bounded response/queue/timeout/retry and explicit circuit-open behavior;
+- redacted opaque source lease/cursor boundary and typed operational envelope;
+- PostgreSQL singleton lease with DB-time expiry and monotonic fencing token;
+- facts + DELETE + cursor commit under the exact active fence in one transaction;
+- duplicate, out-of-order, gap, source-loss, lease-loss, restart and restore corpus;
+- canonical synthetic snapshots for Claude, with no source/business identifiers.
+
+N02/N03 owner bytes are still absent, so the thin wire adapter and all live source traffic remain
+blocked. Detail:
+[`EX_BE_03_N04_LEASE_AWARE_RUST_SHARED_CONSUMER.md`](./backend/EX_BE_03_N04_LEASE_AWARE_RUST_SHARED_CONSUMER.md).
+
 **Claude parallel lane:** consume canonical snapshot/delta fixtures and exact envelope types.
 
 ### N05 — Retention, recovery and cleanup
 
 **Mapping:** D4-OPT-04; EX-BE-03/04b recovery continuation.  
-**Status:** `PLANNED / N04_BLOCKED`.  
+**Status:** `READY / SOURCE_DARK / N06_LIVE_BLOCKED`.  
 **Priority:** P0.
 
 **Goal**
@@ -1055,7 +1070,8 @@ The immediate backend order after Bobby accepts this plan is:
 3. **N10 contract design** for BR-EX-34/39/40, source-dark and fixture-backed.
 4. Send the completed **N02** request/verifier pack to the Trading System owner; Codex waits for
    the exact four-file publication and acceptance result rather than editing Trading System.
-5. After N02/N03, implement **N04 → N05 → N06**.
+5. N04's source-dark core and PostgreSQL fencing are complete. Implement **N05** offline
+   retention/recovery now; import N02/N03 owner bytes before the N04 wire adapter or **N06**.
 6. Activate read surfaces through **N07**, realtime through **N08**, and commands through **N12**.
 7. Promote environments only through **N13**, then close formal release/production runway
    **N14 → N17**.

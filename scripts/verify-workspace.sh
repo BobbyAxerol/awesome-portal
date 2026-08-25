@@ -277,6 +277,11 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/d4_writer.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/query.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/analytics_repository.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/shared_consumer.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/shared-consumer-core/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/shared-consumer-core/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/shared-consumer-core/src/tests.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/shared-consumer-core/fixtures/redacted-snapshots.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-shadow-mapper/Cargo.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-shadow-mapper/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-shadow-mapper/src/tests.rs" \
@@ -288,6 +293,7 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0005_projection_event_entity.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0006_projection_operation_and_sequence_semantics.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0007_d4_source_checkpoint.sql" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0008_shared_consumer_lease.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-contract/Cargo.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-contract/build.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-contract/src/lib.rs" \
@@ -401,6 +407,8 @@ for required in \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N02_INCREMENTAL_SOURCE_CONTRACT_HANDOFF.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N03_OWNER_IMPLEMENTATION_HANDOFF.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_03_N04_LEASE_AWARE_RUST_SHARED_CONSUMER.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N04_LEASE_AWARE_CONSUMER_HANDOFF.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md" \
@@ -723,6 +731,11 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/projection-store-pg/src/d4_writer.rs \
   services/portal-execution-edge-rs/crates/projection-store-pg/src/query.rs \
   services/portal-execution-edge-rs/crates/projection-store-pg/src/analytics_repository.rs \
+  services/portal-execution-edge-rs/crates/projection-store-pg/src/shared_consumer.rs \
+  services/portal-execution-edge-rs/crates/shared-consumer-core/Cargo.toml \
+  services/portal-execution-edge-rs/crates/shared-consumer-core/src/lib.rs \
+  services/portal-execution-edge-rs/crates/shared-consumer-core/src/tests.rs \
+  services/portal-execution-edge-rs/crates/shared-consumer-core/fixtures/redacted-snapshots.json \
   services/portal-execution-edge-rs/crates/paper-shadow-mapper/Cargo.toml \
   services/portal-execution-edge-rs/crates/paper-shadow-mapper/src/lib.rs \
   services/portal-execution-edge-rs/crates/paper-shadow-mapper/src/tests.rs \
@@ -734,6 +747,7 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0005_projection_event_entity.sql \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0006_projection_operation_and_sequence_semantics.sql \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0007_d4_source_checkpoint.sql \
+  services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0008_shared_consumer_lease.sql \
   services/portal-execution-edge-rs/crates/paper-source-contract/Cargo.toml \
   services/portal-execution-edge-rs/crates/paper-source-contract/build.rs \
   services/portal-execution-edge-rs/crates/paper-source-contract/src/lib.rs \
@@ -843,6 +857,8 @@ for tracked_source in \
   upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N02_INCREMENTAL_SOURCE_CONTRACT_HANDOFF.md \
   upgrade/backend/EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md \
   upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N03_OWNER_IMPLEMENTATION_HANDOFF.md \
+  upgrade/backend/EX_BE_03_N04_LEASE_AWARE_RUST_SHARED_CONSUMER.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N04_LEASE_AWARE_CONSUMER_HANDOFF.md \
   upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md \
   upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md \
   upgrade/backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md \

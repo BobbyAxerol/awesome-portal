@@ -624,6 +624,14 @@ authority.
   ordinary-delta full scan, query-plan/resource bounds and 14 recovery/security
   scenarios. The current AWS-HK v1 facade remains dormant; Portal did not edit,
   deploy or call Trading System.
+- [EX-BE-03 / N04 Lease-aware Rust Shared Consumer](./EX_BE_03_N04_LEASE_AWARE_RUST_SHARED_CONSUMER.md)
+  — **source-dark core + PostgreSQL fencing complete / N02-N03 wire integration
+  pending / live source off:** one Rust shared-consumer state machine now owns
+  demand idle, bounded request/queue/retry, typed circuit/rebuild states and
+  redacted metrics. PostgreSQL supplies a singleton DB-time lease with monotonic
+  fencing; stale workers cannot atomically commit facts/DELETE/cursor after lease
+  loss. Synthetic fixtures and fresh-PG/restart/restore tests are green. No v2
+  request example became runtime and no AWS-HK traffic was opened.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã
