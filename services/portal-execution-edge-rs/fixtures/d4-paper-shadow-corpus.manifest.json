@@ -1,0 +1,11 @@
+{
+  "schema_version": "portal.execution.d4.synthetic-corpus.v1",
+  "contains_real_business_data": false,
+  "contract_pack_manifest_sha256": "sha256:9e4430fcb27cce87158376a53888dc80515673d32dbfe3b53d08e164de67e85d",
+  "fixtures": {
+    "events.v1.json": "sha256:ba8a4d0ac7cd6cfa36fa176d606e0caed0da283619a971988060e4b308628790",
+    "fills.v1.json": "sha256:6681023680bae13638deb9ee489fefb1b73c6a96760dd1e1c4f4fccf73ae45c3",
+    "orders.v1.json": "sha256:8e1b6a2771efc2d34fff0bc36a31512fccfe81b68e0f7aabd36821b517e30e0d",
+    "positions.v1.json": "sha256:c49a9ec78379b2182c93fdde33ad456f0dcdfd2f4037b9e3d7c0c635689a2d1a"
+  }
+}

@@ -428,9 +428,8 @@ authority.
   remains false/`fixture`. The Control API canonical issuer creates the
   short-lived positive/negative assertion corpus, while the live harness forces
   H2/TLS1.3 mTLS and emits status/timing/snapshot-only evidence. Offline gates
-  cover 19 probe outcomes and preserve D2 rollback. Actual cross-cell transport,
-  latency and source-loss evidence still wait for accepted D2 plus a D3 window.
-  Detail:
+  cover 19 probe outcomes and preserve D2 rollback. This historical offline
+  milestone was superseded by the accepted live D3 evidence below. Detail:
   [`EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md`](./EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md).
 - `EX-BE-02-LIVE` **D3 gateway identity remediation (2026-08-24):** the first
   live D3 window rejected fail-closed before JWT probes because the signed Edge
@@ -439,19 +438,117 @@ authority.
   exact public `200/200/200` and guarded business `503/503/503/503` matrix;
   projection rows stayed zero and D2 rollback passed with zero restart/OOM.
   The lock and preflight are updated in source so future drift stops before
-  Compose mutation, but D3 remains closed until full gates and a protected-main
-  signed Edge republish complete. Status:
+  Compose mutation. At that checkpoint D3 remained closed pending full gates
+  and a protected-main signed Edge republish. Historical status:
   `D3_ATTEMPT_REJECTED_FAIL_CLOSED / D2_RESTORED / SIGNED_EDGE_REPUBLISH_REQUIRED`.
   Evidence:
   [`EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md`](./EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md).
+- `EX-BE-02-LIVE` **D3 transport accepted (2026-08-24):** protected-main signed
+  images passed real SGP→AWS-HK HTTP/2 + TLS 1.3 mTLS, the complete delegated-
+  JWT positive/negative matrix, bounded latency, Source Proxy loss/recovery and
+  unchanged-D2 rollback. Safe logs contained only the three public routes;
+  business reads and projection state stayed zero. Runtime exited on D2
+  source-dark. Status: `D3_TRANSPORT_ACCEPTED / BUSINESS_SOURCE_DARK /
+  D2_RUNTIME_RESTORED`. Evidence:
+  [`EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md`](./EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md).
 - [EX-BE-02-LIVE D4 offline Paper-shadow authorization](./EX_BE_02_LIVE_D4_OFFLINE_AUTHORIZATION_PREPARATION.md)
-  — **offline authorization prepared / live predecessors blocked:** credential-
+  — **offline authorization prepared / D3 accepted / live inputs blocked:** credential-
   free owner/evidence schema, fail-closed readiness/qualification validator and
   BUILDING-epoch-only rollback runbook. The current optional-key source reads,
   incomplete paging/event semantics and unapproved projection storage are hard
   blockers. D4 cannot enable Query, analytics, SSE, commands, activation or a
   non-fixture registry profile. Status:
-  `D4_OFFLINE_AUTHORIZATION_PREPARED / LIVE_D4_PREDECESSOR_BLOCKED`.
+  `D4_OFFLINE_AUTHORIZATION_PREPARED / D3_PREDECESSOR_ACCEPTED /
+  LIVE_D4_INPUTS_BLOCKED`.
+- [EX-BE-02-LIVE D4 readiness audit and owner request](./EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md)
+  — **readiness audited / no source read:** the sanitized contract pack still
+  has optional alpha auth, unstable list paging and incomplete event/resync
+  semantics. AWS-HK has only the unencrypted root-backed D2 volume, so no D4
+  business store exists. The request locks the exact identity, four GET routes,
+  cursor/completeness/resync and runtime evidence the Trading System owner must
+  publish before Portal can build a source mapper. Status:
+  `D4_READINESS_AUDITED / LIVE_D4_INPUTS_BLOCKED / NO_SOURCE_READ`.
+- [EX-BE-02-LIVE D4 mapper core and readiness hardening](./EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md)
+  — **offline mapper core complete / runtime fail-closed / live inputs
+  blocked:** Rust now normalizes exact-decimal order/fill/position/event facts,
+  rejects cross-alpha rows and ambiguous event cursors, seals a synthetic
+  replay corpus and proves BUILDING-only PostgreSQL replay. Edge readiness
+  distinguishes store health from a real ingestor, preventing an empty
+  database from reporting D4 ready. No live source call/runtime integration or
+  profile activation exists. Status: `D4_MAPPER_CORE_OFFLINE_COMPLETE /
+  RUNTIME_FAIL_CLOSED / LIVE_INPUTS_BLOCKED`.
+- [EX-BE-02-LIVE D4 encrypted projection-storage boundary](./EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md)
+  — **storage boundary prepared / live volume absent / no source read:** a
+  credential-free owner schema, read-only template/offline/readiness validator
+  and D4-only bind-backed Compose overlay prohibit root-filesystem and D2-volume
+  reuse. The gate requires independent encrypted-EBS/KMS evidence, a distinct
+  filesystem UUID and hardened mount ownership/options. It creates no AWS,
+  filesystem, Docker or Trading System state. Status:
+  `D4_ENCRYPTED_STORAGE_BOUNDARY_PREPARED / LIVE_VOLUME_NOT_PROVISIONED /
+  NO_SOURCE_READ`.
+- [EX-BE-02-LIVE D4 owner action packet](./EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md)
+  — **owner instructions prepared / actions pending / no source read:** exact
+  40-GiB encrypted gp3 configuration, safe Nitro device/mount procedure,
+  credential-free evidence return fields and a copy-paste Trading System agent
+  request for the mandatory Paper read identity plus stable four-resource
+  cursor/completeness/resync contract. Status:
+  `D4_OWNER_ACTION_PACKET_PREPARED / OWNER_ACTIONS_PENDING / NO_SOURCE_READ`.
+- [EX-BE-02-LIVE D4 source and storage reconciliation](./EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md)
+  — **owner inputs reconciled / contract import pending / no Portal source
+  traffic:** the dedicated loopback-only facade, mandatory read identity,
+  revoked-key evidence, exact snapshot/event protocol and encrypted gp3 host
+  storage are now pinned without exposing secrets or business payloads. The v2
+  Portal authorization manifest additionally gates exact source commits/image,
+  frozen scope/bounds and Source Proxy delivery. Rust artifact import,
+  production ingestor and the live BUILDING-epoch drills remain pending.
+  Status: `D4_SOURCE_AND_STORAGE_INPUTS_RECONCILED /
+  CONTRACT_ARTIFACT_IMPORT_PENDING / NO_PORTAL_SOURCE_TRAFFIC`.
+- [EX-BE-02-LIVE D4 contract import](./EX_BE_02_LIVE_D4_CONTRACT_IMPORT.md)
+  — **contract import complete / adapter pending / no source call:** the five
+  non-secret source artifacts are byte-locked to Trading System
+  runtime-acceptance commit `99e912f` and unchanged observed HEAD `4ad8f87`.
+  A later read-only audit at source HEAD `6049a73` again found an empty
+  five-path diff and matching acceptance/current/Portal hashes. The import
+  remains the separate earlier commit `fdd1f34`; no Source Proxy activation,
+  credential, source request, projection epoch or registry change is included.
+- [EX-BE-02-LIVE D4 Rust source-contract adapter](./EX_BE_02_LIVE_D4_SOURCE_CONTRACT_ADAPTER.md)
+  — **adapter complete / transport pending / no source call:** build-time
+  hashes and authority checks bind the exact four-route facade pack. Strict
+  request/response types enforce fixed scope, decimal strings, bounded opaque
+  cursors, snapshot completeness, ordered idempotent deltas and typed resync.
+  Eleven tests plus rustfmt/strict Clippy pass; Source Proxy, credentials,
+  storage, epochs and runtime flags remain untouched.
+- [EX-BE-02-LIVE D4 bounded Source Proxy transport](./EX_BE_02_LIVE_D4_BOUNDED_SOURCE_TRANSPORT.md)
+  — **transport complete / ingestor pending / no source call:** enum-derived
+  GETs only, TLS 1.3 workload mTLS, HTTP/2, pathless origin, no redirects or
+  environment proxy, bounded resource use and no implicit cursor retry. The
+  client cannot possess the Trading System read key. Five tests plus
+  rustfmt/strict Clippy pass; no Source Proxy/runtime/storage/epoch state
+  changed.
+- [EX-BE-02-LIVE D4 BUILDING-only ingestion state machine](./EX_BE_02_LIVE_D4_BUILDING_INGESTION_STATE_MACHINE.md)
+  — **state machine complete / PostgreSQL writer pending / no source call:**
+  durable snapshot-lease, baseline and event-page ACK barriers prevent cursor
+  advancement before commit; exact descriptor counts and `410` rebuild are
+  fail-closed. Eight tests plus rustfmt/strict Clippy pass. No network,
+  PostgreSQL, runtime or delivery-profile state changed.
+- [EX-BE-02-LIVE D4 PostgreSQL BUILDING writer](./EX_BE_02_LIVE_D4_POSTGRES_BUILDING_WRITER.md)
+  — **offline writer complete / live qualification pending / no source call:**
+  first-class global-stream sequence and DELETE semantics now feed an atomic,
+  BUILDING-only PostgreSQL lease/baseline/event-page writer. Opaque tokens stay
+  redacted and cursor advancement shares the data transaction; proven gaps
+  preserve the prior cursor and mark the epoch `FAILED/REBUILD_REQUIRED`.
+  Fresh-PG restart/replay/idempotency/gap tests, strict Clippy and the D4-aware
+  dump/restore signature are green. Source Proxy, credentials, Query/SSE,
+  activation and registry profiles remain untouched.
+- [EX-BE-02-LIVE D4 qualification runtime entrypoint](./EX_BE_02_LIVE_D4_QUALIFICATION_RUNTIME_ENTRYPOINT.md)
+  — **offline runtime entrypoint accepted / live window pending / no source
+  call:** the Edge image now has separate `d4-prepare-building` and finite
+  `d4-qualify` commands. A profile-gated no-port container revalidates the
+  <=2-hour owner window, exact D2/D3/source/storage evidence and permanent
+  false authority flags before creating/resuming only the declared BUILDING
+  epoch. Evidence is 142 Rust tests, strict Clippy/rustfmt, fresh PostgreSQL,
+  replay/restart/gap/load, dump/restore and exact-route Compose/Nginx gates.
+  Live source traffic and qualification evidence remain pending.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

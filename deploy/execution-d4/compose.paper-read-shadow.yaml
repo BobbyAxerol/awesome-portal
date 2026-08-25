@@ -1,0 +1,73 @@
+# D4 exact-route Source Proxy overlay. This file alone does not start a mapper,
+# activate an epoch, publish Query/SSE or grant any command authority.
+services:
+  source-proxy:
+    volumes:
+      - type: bind
+        source: ${SOURCE_PROXY_D4_CONTRACT_FILE:?set the installed digest-verified D4 location include}
+        target: /etc/nginx/d4-paper-read-locations.conf
+        read_only: true
+    labels:
+      com.primusspark.portal.execution-phase: d4-paper-read-shadow
+      com.primusspark.portal.source-contract: d4.paper-read.v1
+
+  # One-shot BUILDING-only qualification job. It is profile-gated and has no
+  # listener, restart policy, source credential or API authority. Prepare the
+  # declared epoch with the same image by overriding the command to
+  # `d4-prepare-building`, then run this default finite command in-window.
+  paper-read-qualifier:
+    image: ${PORTAL_EXECUTION_EDGE_IMAGE:?set PORTAL_EXECUTION_EDGE_IMAGE to an immutable digest}
+    pull_policy: always
+    profiles:
+      - d4-paper-read-shadow
+    restart: "no"
+    init: true
+    user: "65532:65532"
+    group_add:
+      - "${PORTAL_RUNTIME_GID:?set the numeric portal-runtime group ID}"
+    read_only: true
+    pids_limit: 96
+    cpus: "1.5"
+    mem_limit: 1536m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - ${D4_OWNER_INPUT_FILE:?set the root-owned, readiness-validated D4 owner input}
+    environment:
+      RUST_LOG: ${EDGE_RUST_LOG:-info}
+      EDGE_D4_AUTHORIZATION_EVIDENCE_SHA256: ${D4_AUTHORIZATION_EVIDENCE_SHA256:?set sha256 of the validated owner input bytes}
+      EDGE_D4_WORKSPACE_ID: ${D4_WORKSPACE_ID:?set the canonical Paper workspace ID}
+      EDGE_D4_PROJECTION_DATABASE_URL_FILE: /run/secrets/projection-runtime-database-url
+      EDGE_D4_SOURCE_ORIGIN: ${D4_SOURCE_PROXY_ORIGIN:?set the private D4 Source Proxy HTTPS origin}
+      EDGE_D4_SOURCE_CA_FILE: /run/secrets/source-proxy-ca.crt
+      EDGE_D4_SOURCE_CLIENT_IDENTITY_FILE: /run/secrets/d4-source-proxy-client.pem
+      EDGE_D4_MAXIMUM_REQUESTS: ${D4_MAXIMUM_REQUESTS:-10000}
+      EDGE_D4_MAXIMUM_ELAPSED_SECONDS: ${D4_MAXIMUM_ELAPSED_SECONDS:-1800}
+      EDGE_D4_POLL_INTERVAL_MS: ${D4_POLL_INTERVAL_MS:-1000}
+    command:
+      - d4-qualify
+    volumes:
+      - type: bind
+        source: ${EDGE_SECRET_DIRECTORY:?set the root-owned edge secret directory}
+        target: /run/secrets
+        read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
+    depends_on:
+      projection-migrator:
+        condition: service_completed_successfully
+      source-proxy:
+        condition: service_healthy
+    networks:
+      - execution-private
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    labels:
+      com.primusspark.portal.execution-phase: d4-paper-read-shadow
+      com.primusspark.portal.source-contract: d4.paper-read.v1
+      com.primusspark.portal.authority: building-only

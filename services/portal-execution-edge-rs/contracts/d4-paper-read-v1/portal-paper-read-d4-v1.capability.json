@@ -1,0 +1,70 @@
+{
+  "contract_revision": "d4.paper-read.v1",
+  "scope": {
+    "scope_id": "PAPER_BINANCE_USDM",
+    "mode": "paper",
+    "venue": "BINANCE",
+    "strategy_account_pairs": "runtime-root-owned-fixed-allowlist",
+    "instrument_ids": "runtime-root-owned-fixed-allowlist"
+  },
+  "transport": {
+    "listener": "127.0.0.1-only",
+    "source_proxy": "owner-approved-mTLS-only",
+    "public_listener": false
+  },
+  "identity": {
+    "header": "X-Portal-Paper-Read-Key",
+    "contract_header": "X-Portal-Read-Contract",
+    "mandatory": true,
+    "rotation_slots": 2,
+    "constant_time_secret_compare": true
+  },
+  "allowlist": [
+    "GET /v1/events",
+    "GET /v1/fills",
+    "GET /v1/orders",
+    "GET /v1/positions"
+  ],
+  "denials": {
+    "unknown_or_repeated_query": "400",
+    "missing_or_wrong_or_revoked_identity": "401",
+    "non_get_or_head_or_options": "405",
+    "unknown_or_admin_or_command_route": "404",
+    "response_bound": "413",
+    "cursor_ahead": "409",
+    "cursor_epoch_or_retention_expiry": "410",
+    "rate_limited": "429"
+  },
+  "snapshot": {
+    "source_transaction": "REPEATABLE_READ_READ_ONLY",
+    "pages": "immutable-ttl-bound-signed-snapshot",
+    "completeness": "COMPLETE_WITHIN_FIXED_SCOPE",
+    "order_total_order": ["updated_at", "account_id", "client_order_id"],
+    "fill_total_order": ["trade_time", "fill_id"],
+    "position_total_order": ["updated_at", "account_id", "position_id"]
+  },
+  "events": {
+    "delivery": "IDEMPOTENT_STATE_DELTAS",
+    "record_model": "full-record-upsert-or-tombstone-delete",
+    "authority": "facade-derived-state-not-immutable-execution-audit",
+    "resync": "FULL_BUILDING_EPOCH_ON_CURSOR_EPOCH_OR_RETENTION_EXPIRY"
+  },
+  "limits": {
+    "default_page_size": 250,
+    "maximum_page_size": 1000,
+    "maximum_response_bytes": 8388608,
+    "maximum_snapshot_rows": 100000,
+    "maximum_event_retention": 100000,
+    "maximum_rate_per_minute": 10000
+  },
+  "authority": {
+    "portal_database": false,
+    "redis": false,
+    "cli": false,
+    "broker": false,
+    "command": false,
+    "mutation": false,
+    "live": false,
+    "canary": false
+  }
+}

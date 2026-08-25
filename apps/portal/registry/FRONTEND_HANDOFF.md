@@ -905,13 +905,57 @@ mTLS/JWT/fault evidence passes. Full backend detail:
 ### 8.11 D4 offline authorization — no live frontend unlock (2026-08-23)
 
 Backend status is `D4_OFFLINE_AUTHORIZATION_PREPARED /
-LIVE_D4_PREDECESSOR_BLOCKED`. This adds no frontend availability. Claude may
+D3_PREDECESSOR_ACCEPTED / LIVE_D4_INPUTS_BLOCKED`. This adds no frontend
+availability. Claude may
 align fixtures with the published typed freshness/gap/error states, but must
 keep profile labelling `fixture`, EventSource closed and Paper source panels
 explicitly unavailable. The full Portal remains on SGP; only a future minimal
 Source Proxy/Rust Edge/projection boundary runs on AWS-HK. The current optional-
 key source reads and incomplete cursor/event semantics are deliberately
 rejected instead of hidden by a UI fallback.
+
+### 8.11A D3 live transport accepted — frontend remains source-dark (2026-08-24)
+
+Backend status is `D3_TRANSPORT_ACCEPTED / BUSINESS_SOURCE_DARK /
+D2_RUNTIME_RESTORED`. Real SGP→AWS-HK HTTP/2, TLS 1.3 mTLS, delegated JWT,
+bounded latency, source loss/recovery and rollback passed. Only public contract,
+health and capability paths were observed; no orders/fills/positions/events or
+projection state was read.
+
+This does not activate a frontend profile. Claude keeps `fixture`, explicit
+unavailable/degraded states and EventSource off. A source-backed Paper panel
+still requires an owner-approved D4 `BUILDING` epoch plus a later, separate
+registry activation decision.
+
+The current prerequisite audit is `D4_READINESS_AUDITED /
+LIVE_D4_INPUTS_BLOCKED / NO_SOURCE_READ`; see
+`upgrade/backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md`. Claude
+does not wait on this for V2 fixture UX, but must not replace unavailable states
+with invented Paper data.
+
+The offline Rust mapper status is `D4_MAPPER_CORE_OFFLINE_COMPLETE /
+RUNTIME_FAIL_CLOSED / LIVE_INPUTS_BLOCKED`; this is not a UI availability
+signal. It proves typed exact-decimal normalization and BUILDING-only replay
+from a sealed synthetic corpus while the runtime stays fail-closed. Claude must
+continue to render source panels as fixture/unavailable and must not open
+EventSource or expose mapper rows. A later handoff will name an ACTIVE epoch and
+non-fixture delivery profile only after separate D4 live qualification and
+activation decisions. Backend evidence:
+`upgrade/backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md`.
+
+The D4 storage preparation status is
+`D4_ENCRYPTED_STORAGE_BOUNDARY_PREPARED / LIVE_VOLUME_NOT_PROVISIONED /
+NO_SOURCE_READ`. This is backend infrastructure preparation only: no EBS
+volume, mount, business projection or delivery-profile promotion exists.
+Claude receives no live UI unlock and must continue to render fixture or typed
+unavailable states until separate D4 live qualification is accepted. Detail:
+`upgrade/backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md`.
+
+The Bobby/Trading System owner instructions are now
+`D4_OWNER_ACTION_PACKET_PREPARED / OWNER_ACTIONS_PENDING / NO_SOURCE_READ`.
+This changes no frontend contract: Claude continues fixture/unavailable states
+and does not wait for, display or ingest private owner evidence. Detail:
+`upgrade/backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md`.
 
 ### 8.12 EX-BE-05b/F1a Operations Queue — Lane A can integrate (2026-08-23)
 
@@ -1011,3 +1055,34 @@ run state from partial frames or confuse this Research stream with the still-
 dark EX-BE-06 Execution realtime stream. No Execution delivery profile or
 registry flag changed. Backend evidence:
 `upgrade/backend/U10_QUANTBT_RUN_SSE_FACADE_CUTOVER.md`.
+
+### 8.18 Execution Loop dev integration preview — fixture-only (2026-08-24)
+
+The 17 reviewed Execution Loop screens are now mounted on their canonical
+product routes when the Portal web image is built with
+`VITE_EXECUTION_PREVIEW_ENABLED=true`. The Docker/Compose operator input is
+`PORTAL_EXECUTION_PREVIEW_ENABLED`; its repository and stable-publication
+default is `false`.
+
+This is an integration-review surface, not a delivery-profile promotion. Every
+screen still consumes `createFixtureApi()` or a reviewed local fixture, the
+registry remains revision 4 with `delivery_profile=fixture`, and all source,
+query, analytics, SSE and command capability flags remain false. A persistent
+banner labels the screen `DEV INTEGRATION PREVIEW` and states that AWS-HK,
+Trading System, broker and realtime are disconnected. Interactive UI actions
+are browser-local simulations and grant no authority.
+
+Claude may review the complete navigation, density, responsive flow and
+cross-screen visual consistency at `dev.portal.primusspark.com`. Do not remove
+the banner, infer source availability, enable EventSource, or replace fixture
+adapters until the corresponding backend delivery profile is explicitly
+promoted. Stable/main images must continue to build with the flag false.
+
+Acceptance evidence on the integration branch:
+
+- production Vite build passed;
+- Vitest passed `67/67` files and `1,486` tests (`1` skipped);
+- Playwright visited all 17 canonical screen routes plus seven feature-root
+  routes and observed zero `/api/v1/execution` requests;
+- registry contract tests prove exact 17-screen coverage, `fixture` profiles
+  and false capability flags.

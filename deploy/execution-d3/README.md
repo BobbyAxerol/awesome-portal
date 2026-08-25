@@ -1,6 +1,6 @@
 # Execution D3 — Contract and Authentication Probes
 
-Status: `OFFLINE_PREPARATION_COMPLETE / LIVE_D3_UNAUTHORIZED`
+Status: `D3_TRANSPORT_ACCEPTED / BUSINESS_SOURCE_DARK / D2_RUNTIME_RESTORED`
 
 D3 is a reversible probe-only delta on top of an accepted D2 dark deployment.
 It proves the SGP→AWS-HK application boundary without reading account/alpha
@@ -49,6 +49,12 @@ the exact Control API image used to issue the assertion corpus.
 ```
 
 The D3 gate renders Compose and exercises a redacted 19-case probe harness with
-a fake curl. It opens no socket and starts no Portal service. This is not live
-evidence; the real matrix must run from SGP over the accepted WireGuard route
-inside a separately authorized D3 change window.
+a fake curl. The real SGP→AWS-HK matrix was then accepted on 2026-08-24 at
+commit `5ec282ec8c00c60696f66a70186ffd80b051d8a0`: HTTP/2, TLS 1.3 mTLS, all JWT
+positive/negative cases, bounded latency, source loss/recovery and D2 rollback
+passed. Only the three public source paths were observed, business reads and
+projection ingestion stayed off, and runtime exited on D2 source-dark.
+
+See
+[`../../upgrade/backend/EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md`](../../upgrade/backend/EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md)
+for the redacted evidence index and the still-closed D4 gates.

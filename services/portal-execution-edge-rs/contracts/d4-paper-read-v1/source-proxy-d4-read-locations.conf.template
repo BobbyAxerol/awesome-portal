@@ -1,0 +1,41 @@
+# Include only inside the already mTLS-authenticated D4 Source Proxy server.
+# The facade itself binds host loopback only. The proxy must keep
+# proxy_pass_request_headers off so browser/caller credentials never cross this
+# boundary. There is intentionally no health, admin, command, SSE, or catch-all
+# upstream location in this D4 include.
+
+location = /v1/orders {
+    limit_except GET { deny all; }
+    proxy_pass_request_headers off;
+    proxy_set_header Host 127.0.0.1:8011;
+    proxy_set_header Accept application/json;
+    include /run/secrets/trading-system-read-header.conf;
+    proxy_pass http://127.0.0.1:8011/v1/orders$is_args$args;
+}
+
+location = /v1/fills {
+    limit_except GET { deny all; }
+    proxy_pass_request_headers off;
+    proxy_set_header Host 127.0.0.1:8011;
+    proxy_set_header Accept application/json;
+    include /run/secrets/trading-system-read-header.conf;
+    proxy_pass http://127.0.0.1:8011/v1/fills$is_args$args;
+}
+
+location = /v1/positions {
+    limit_except GET { deny all; }
+    proxy_pass_request_headers off;
+    proxy_set_header Host 127.0.0.1:8011;
+    proxy_set_header Accept application/json;
+    include /run/secrets/trading-system-read-header.conf;
+    proxy_pass http://127.0.0.1:8011/v1/positions$is_args$args;
+}
+
+location = /v1/events {
+    limit_except GET { deny all; }
+    proxy_pass_request_headers off;
+    proxy_set_header Host 127.0.0.1:8011;
+    proxy_set_header Accept application/json;
+    include /run/secrets/trading-system-read-header.conf;
+    proxy_pass http://127.0.0.1:8011/v1/events$is_args$args;
+}

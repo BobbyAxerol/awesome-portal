@@ -427,6 +427,9 @@ made. This unlocks no frontend profile. Claude continues fixture, dark,
 auth-denied and recovery UX only; no EventSource/Lane B/AWS polling. Evidence:
 [`EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md`](../../backend/EX_BE_02_LIVE_D3_OFFLINE_PREPARATION.md).
 
+This is retained as the historical offline checkpoint; the accepted live state
+is recorded after the attempt history below.
+
 D3 live attempt 1 is
 `D3_ATTEMPT_REJECTED_FAIL_CLOSED / D2_RESTORED / SIGNED_EDGE_REPUBLISH_REQUIRED`.
 The public-route Source Proxy mTLS matrix was exact, but Edge correctly refused
@@ -436,6 +439,15 @@ and must publish a new signed Edge image from protected `main` before a fresh
 D3 window. Claude must keep source/query/SSE profiles off; this changes no UI
 consumer contract. Evidence:
 [`EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md`](../../backend/EX_BE_02_LIVE_D3_GATEWAY_IDENTITY_REMEDIATION.md).
+
+D3 live transport is now `D3_TRANSPORT_ACCEPTED / BUSINESS_SOURCE_DARK /
+D2_RUNTIME_RESTORED` at protected-main commit `5ec282e`. HTTP/2, TLS 1.3 mTLS,
+the complete JWT matrix, bounded latency, source loss/recovery and rollback all
+passed; only three public source routes were observed and projection state
+remained empty. This still unlocks no frontend live profile. Claude keeps
+fixture/dark consumers until D4 produces an owner-approved Paper `BUILDING`
+epoch and a later activation decision changes delivery policy. Evidence:
+[`EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md`](../../backend/EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md).
 
 ### 6.2 BR-EX decisions
 
@@ -1986,15 +1998,95 @@ contract owner, không chờ một Portal escape hatch. Request lịch sử ở
 ## 27. D4 Paper-shadow offline authorization checkpoint — 2026-08-23
 
 Backend status: `D4_OFFLINE_AUTHORIZATION_PREPARED /
-LIVE_D4_PREDECESSOR_BLOCKED`.
+D3_PREDECESSOR_ACCEPTED / LIVE_D4_INPUTS_BLOCKED`.
 
 - Full Portal/Control API/browser ingress remains on SGP; AWS-HK receives only
   the minimal Source Proxy + Rust Edge + private projection boundary.
-- D4 cannot begin until D2 dark and D3 transport are accepted, dedicated Paper
-  read identity rejects missing/wrong credentials, exact GET/cursor/
-  completeness/resync contracts are published and encrypted projection storage
-  is approved.
+- D2 dark and D3 transport are accepted. D4 source read still cannot begin
+  until a dedicated Paper read identity rejects missing/wrong credentials,
+  exact GET/cursor/completeness/resync contracts are published and encrypted
+  projection storage is approved.
 - Any future D4 epoch remains `BUILDING`; registry stays `fixture`; Query,
   analytics, SSE, commands and activation remain off.
 - Claude may consume typed offline fixtures and error/gap codes only. It must
   not label Paper data live or open EventSource based on this checkpoint.
+
+The 2026-08-24 read-only D4 audit is
+`D4_READINESS_AUDITED / LIVE_D4_INPUTS_BLOCKED / NO_SOURCE_READ`: current source
+auth remains optional, list paging/event completeness/resync are insufficient,
+and the only AWS-HK projection volume is on the unencrypted D2 root filesystem.
+The exact owner request is
+[`EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md`](../../backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md).
+
+Offline mapper hardening is now
+`D4_MAPPER_CORE_OFFLINE_COMPLETE / RUNTIME_FAIL_CLOSED /
+LIVE_INPUTS_BLOCKED`: exact-decimal order/fill/position/event normalization,
+alpha-scope rejection, composite event cursor, sealed synthetic replay and
+fresh-PostgreSQL BUILDING-only evidence exist. This still unlocks no frontend
+source profile; individual response pages remain explicitly partial and no
+runtime ingestor can report ready until the owner contract and encrypted store
+arrive. Detail:
+[`EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md`](../../backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md).
+
+The storage-only checkpoint is
+`D4_ENCRYPTED_STORAGE_BOUNDARY_PREPARED / LIVE_VOLUME_NOT_PROVISIONED /
+NO_SOURCE_READ`. It adds a fail-closed encrypted-EBS/KMS evidence schema,
+dedicated-mount readiness checks and a render-only D4 Compose overlay; it has
+not created a volume or enabled a source. Claude must keep every live-source,
+Query, analytics, SSE and command consumer unavailable/fixture. Evidence:
+[`EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md`](../../backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md).
+
+Owner handoff status is
+`D4_OWNER_ACTION_PACKET_PREPARED / OWNER_ACTIONS_PENDING / NO_SOURCE_READ`.
+It contains infrastructure and Trading System owner instructions only. Claude
+has no implementation dependency on those private inputs and receives no
+source/query/realtime/command unlock. Detail:
+[`EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md`](../../backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md).
+
+Current superseding backend status is
+`D4_SOURCE_AND_STORAGE_INPUTS_RECONCILED /
+CONTRACT_ARTIFACT_IMPORT_PENDING / NO_PORTAL_SOURCE_TRAFFIC`. The source owner
+has locally accepted the dedicated loopback-only mandatory-auth facade and the
+encrypted gp3 projection filesystem is host-ready. Portal manifest v2 now
+locks the facade/source identities, exact frozen scope/bounds, revoked-key
+evidence and future Source Proxy delivery. Claude receives **no live-source
+unlock**: registry remains fixture and Query, analytics, SSE and commands stay
+off until the exact artifacts, Rust BUILDING ingestor and D4 qualification are
+accepted. Detail:
+[`EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md`](../../backend/EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md).
+
+The 2026-08-25 offline backend implementation now supersedes the writer
+blocker: `D4_BUILDING_WRITER_OFFLINE_COMPLETE / LIVE_QUALIFICATION_PENDING /
+NO_SOURCE_CALL`. The imported five-file contract remains byte-locked; Rust now
+has the strict source adapter, bounded transport, BUILDING-only coordinator and
+atomic PostgreSQL lease/baseline/event-page writer. Global source sequence and
+DELETE/replay semantics are explicit, opaque cursor values remain redacted and
+a proven gap fails the epoch without advancing its durable cursor. This does
+**not** unlock Claude's live profile: Source Proxy, credentials, business reads,
+ACTIVE Query, analytics, SSE, commands and registry promotion remain off.
+Evidence:
+[`EX_BE_02_LIVE_D4_POSTGRES_BUILDING_WRITER.md`](../../backend/EX_BE_02_LIVE_D4_POSTGRES_BUILDING_WRITER.md).
+
+## 28. Dev integration preview — 17/17 screens wired, production inactive (2026-08-24)
+
+Status: `DEV_PREVIEW_READY / FIXTURE_ONLY / PRODUCTION_INACTIVE`.
+
+- Codex wired every reviewed Execution screen from the revision-4 registry to
+  its canonical product route behind the build-time
+  `PORTAL_EXECUTION_PREVIEW_ENABLED` gate.
+- The repository and stable defaults remain false. Only the isolated dev image
+  may set the gate true; no database migration, source credential or runtime
+  authority is introduced.
+- The route boundary constructs only the in-memory fixture API. It does not
+  construct the HTTP adapter, EventSource, AWS connector or command relay.
+- Every mounted screen carries an explicit fixture-only banner. Registry
+  delivery profiles and all source/query/analytics/SSE/command flags remain
+  unchanged and false.
+- Evidence: production build passed; Vitest `67/67` files and `1,486` tests
+  passed (`1` skipped); Playwright covered 17 canonical routes plus seven
+  feature roots and observed zero `/api/v1/execution` requests.
+
+Claude can now review all 17 screens together on the dev host and record only
+frontend integration/UX findings. Backend activation, live-source claims and
+removal of fixture labelling remain blocked on the independently tracked
+D2→D4 evidence and later delivery-profile promotion.

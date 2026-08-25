@@ -1,0 +1,26 @@
+[package]
+name = "paper-source-runner"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+chrono.workspace = true
+paper-source-contract = { path = "../paper-source-contract" }
+paper-source-ingestor = { path = "../paper-source-ingestor" }
+paper-source-transport = { path = "../paper-source-transport" }
+projection-core = { path = "../projection-core" }
+projection-store-pg = { path = "../projection-store-pg" }
+serde.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+execution-contracts = { path = "../execution-contracts" }
+serde_json.workspace = true
+
+[lints]
+workspace = true

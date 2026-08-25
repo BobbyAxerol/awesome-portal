@@ -23,7 +23,7 @@ def valid_values() -> dict[str, str]:
     values = {key: "" for key in MODULE.ALLOWED_KEYS}
     values.update(
         {
-            "INPUT_VERSION": "portal.execution-d4.owner-input.v1",
+            "INPUT_VERSION": "portal.execution-d4.owner-input.v2",
             "OWNER": "bobby",
             "OWNER_CONFIRMED_AT_UTC": "2026-08-23T11:55:00Z",
             "D4_AUTHORIZED": "true",
@@ -37,7 +37,8 @@ def valid_values() -> dict[str, str]:
             "D2_STATUS": "D2_DARK_ACCEPTED",
             "D3_STATUS": "D3_TRANSPORT_ACCEPTED",
             "DEPLOYMENT_COMMIT": "a" * 40,
-            "SOURCE_AUTH_CONTRACT_REVISION": "paper-read.v1",
+            "SOURCE_IMPLEMENTATION_COMMIT": "c" * 40,
+            "SOURCE_RUNTIME_ACCEPTANCE_COMMIT": "d" * 40,
             "MAPPER_SOURCE_COMMIT": "a" * 40,
             "BUILDING_EPOCH_ID": "018f8f3e-7b4c-7cc1-8a4f-123456789abc",
             "BUILDING_EPOCH_STATUS": "BUILDING",
@@ -46,6 +47,7 @@ def valid_values() -> dict[str, str]:
     )
     for key in MODULE.BOOLEAN_KEYS:
         values[key] = "false"
+    values.update(MODULE.LOCKED_SOURCE_VALUES)
     values["D4_AUTHORIZED"] = "true"
     for key in MODULE.SOURCE_SECURITY_TRUE_KEYS:
         values[key] = "true"
@@ -62,14 +64,94 @@ class D4AuthorizationTest(unittest.TestCase):
         values["D4_AUTHORIZED"] = "false"
         MODULE.validate(values, mode="template", now=NOW)
 
+    def test_template_cannot_drift_from_locked_source_contract(self) -> None:
+        values = valid_values()
+        values["D4_AUTHORIZED"] = "false"
+        values["SOURCE_PAGE_SIZE"] = "1000"
+        with self.assertRaisesRegex(MODULE.AuthorizationError, "locked source"):
+            MODULE.validate(values, mode="template", now=NOW)
+
     def test_readiness_accepts_hardened_source_and_encrypted_store(self) -> None:
         MODULE.validate(valid_values(), mode="readiness", now=NOW)
+
+    def test_reconciliation_accepts_owner_inputs_without_live_authority(self) -> None:
+        values = valid_values()
+        values["D4_AUTHORIZED"] = "false"
+        values["SOURCE_OWNER"] = ""
+        values["ROLLBACK_OWNER"] = ""
+        values["BACKUP_OWNER"] = ""
+        values["OBSERVABILITY_OWNER"] = ""
+        values["SOURCE_PROXY_SECRET_DELIVERED"] = "false"
+        values["SOURCE_PROXY_EXACT_ROUTES_CONFIGURED"] = "false"
+        values["SOURCE_RUNTIME_ACCEPTANCE_SHA256"] = ""
+        values["MAPPER_ARTIFACT_SHA256"] = ""
+        values["SEALED_CORPUS_SHA256"] = ""
+        values["PROJECTION_BACKUP_RESTORE_EVIDENCE_SHA256"] = ""
+        MODULE.validate(values, mode="reconciliation", now=NOW)
+
+    def test_reconciliation_cannot_deliver_source_proxy_or_accept_evidence(self) -> None:
+        for key in (
+            "SOURCE_PROXY_SECRET_DELIVERED",
+            "SOURCE_PROXY_EXACT_ROUTES_CONFIGURED",
+            "D4_EVIDENCE_ACCEPTED",
+        ):
+            values = valid_values()
+            values["D4_AUTHORIZED"] = "false"
+            values["SOURCE_PROXY_SECRET_DELIVERED"] = "false"
+            values["SOURCE_PROXY_EXACT_ROUTES_CONFIGURED"] = "false"
+            values["D4_EVIDENCE_ACCEPTED"] = "false"
+            values[key] = "true"
+            with self.assertRaises(MODULE.AuthorizationError):
+                MODULE.validate(values, mode="reconciliation", now=NOW)
 
     def test_current_optional_source_credential_contract_is_rejected(self) -> None:
         values = valid_values()
         values["SOURCE_MISSING_CREDENTIAL_REJECTED"] = "false"
         with self.assertRaisesRegex(MODULE.AuthorizationError, "not proven"):
             MODULE.validate(values, mode="readiness", now=NOW)
+
+    def test_revoked_credential_and_loopback_runtime_are_mandatory(self) -> None:
+        for key in (
+            "SOURCE_REVOKED_CREDENTIAL_REJECTED",
+            "SOURCE_RUNTIME_LOOPBACK_ONLY",
+        ):
+            values = valid_values()
+            values[key] = "false"
+            with self.assertRaisesRegex(MODULE.AuthorizationError, "not proven"):
+                MODULE.validate(values, mode="readiness", now=NOW)
+
+    def test_source_proxy_delivery_is_a_pre_read_stop_gate(self) -> None:
+        for key in (
+            "SOURCE_PROXY_SECRET_DELIVERED",
+            "SOURCE_PROXY_EXACT_ROUTES_CONFIGURED",
+        ):
+            values = valid_values()
+            values[key] = "false"
+            with self.assertRaisesRegex(MODULE.AuthorizationError, "not proven"):
+                MODULE.validate(values, mode="readiness", now=NOW)
+
+    def test_locked_source_scope_and_bounds_cannot_drift(self) -> None:
+        for key, value in (
+            ("SOURCE_AUTH_CONTRACT_REVISION", "d4.paper-read.v2"),
+            ("SOURCE_SCOPE", "ALL_PAPER"),
+            ("SOURCE_PAGE_SIZE", "1000"),
+            ("SOURCE_RESPONSE_MAX_BYTES", "8388608"),
+            ("SOURCE_RATE_LIMIT_RPM", "10000"),
+        ):
+            values = valid_values()
+            values[key] = value
+            with self.assertRaisesRegex(MODULE.AuthorizationError, "locked source"):
+                MODULE.validate(values, mode="readiness", now=NOW)
+
+    def test_source_and_runtime_acceptance_commits_are_pinned(self) -> None:
+        for key in (
+            "SOURCE_IMPLEMENTATION_COMMIT",
+            "SOURCE_RUNTIME_ACCEPTANCE_COMMIT",
+        ):
+            values = valid_values()
+            values[key] = "not-a-commit"
+            with self.assertRaisesRegex(MODULE.AuthorizationError, "commit is malformed"):
+                MODULE.validate(values, mode="readiness", now=NOW)
 
     def test_unencrypted_projection_store_is_rejected(self) -> None:
         values = valid_values()
