@@ -1,0 +1,13 @@
+{
+  "schema_version": "portal.execution-d4.source-idle-evidence.v1",
+  "change_window_id": "d4-replace-window-id",
+  "observed_at_utc": "2026-01-01T00:00:00Z",
+  "source_facade_container": "ts_d4_source_read-portal_paper_read-1",
+  "source_facade_running": false,
+  "source_db_sessions": 0,
+  "source_selects_delta": 0,
+  "source_bytes_delta": 0,
+  "observation_seconds": 60,
+  "sanitized": true,
+  "producer": "trading-system-owner"
+}

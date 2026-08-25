@@ -131,3 +131,24 @@ NO_SOURCE_READ`; it is guidance, not authorization or runtime evidence.
 
 The current reconciliation and v2 authorization stop gates are recorded in
 [`../../upgrade/backend/EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md`](../../upgrade/backend/EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md).
+
+## N01 dormant closeout
+
+The accepted D4 qualification does not authorize the dedicated source facade
+to remain active. Every future owner window must use the host-side controller:
+
+- `dormant-closeout.env.example` defines the exact Portal/facade identities,
+  deadline and bounded observation inputs;
+- `../../scripts/execution-d4-dormant-closeout.py` audits, guards, closes and
+  verifies the finite lifecycle;
+- `source-idle-evidence.json.example` is the exact sanitized evidence the
+  Trading System owner returns after closeout; and
+- `systemd/portal-execution-d4-window-guard.service.example` is deliberately
+  not enabled. It is started explicitly for one approved window only.
+
+The controller stops only allowlisted D4 services, restores the accepted D2
+dark Source Proxy without pulling an image, and requires zero source sessions,
+SELECT deltas and byte deltas before declaring `D4_DORMANT_VERIFIED`. It never
+starts or edits Trading System, removes storage, or unlocks a reader. Detailed
+design and test evidence:
+[`../../upgrade/backend/EX_BE_02_D4_DORMANT_CLOSEOUT_DISCIPLINE.md`](../../upgrade/backend/EX_BE_02_D4_DORMANT_CLOSEOUT_DISCIPLINE.md).

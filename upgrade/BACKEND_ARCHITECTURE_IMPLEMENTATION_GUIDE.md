@@ -1248,6 +1248,15 @@ deep-dive → ADR → slice → evidence discipline documented above.
   backpressure and 24-hour soak before read-profile promotion. No Trading
   System edit or runtime change is authorized by this finding. Detail:
   [`EX_BE_02_D4_SOURCE_FACADE_RUNTIME_OPTIMIZATION.md`](./backend/EX_BE_02_D4_SOURCE_FACADE_RUNTIME_OPTIMIZATION.md).
+- **EX-BE-02 / N01 D4 dormant closeout (2026-08-25):** offline lifecycle
+  implementation is accepted. A host-side exact-label guard enforces the
+  finite owner window, closes on qualifier completion/missed start/revocation/
+  expiry, stops only the dedicated D4 path and restores the accepted D2 dark
+  Source Proxy without pulling an image. Production acceptance still requires
+  one future owner-window drill and sanitized proof of zero source sessions,
+  SELECT delta and byte delta. Registry remains `fixture`; all reader,
+  analytics, SSE, command and activation authority stays dark. Detail:
+  [`EX_BE_02_D4_DORMANT_CLOSEOUT_DISCIPLINE.md`](./backend/EX_BE_02_D4_DORMANT_CLOSEOUT_DISCIPLINE.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

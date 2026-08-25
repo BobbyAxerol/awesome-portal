@@ -312,8 +312,8 @@ Create one current roadmap that supersedes stale status prose without deleting e
 ### N01 — D4 dormant closeout discipline
 
 **Mapping:** D4-OPT-00.  
-**Status:** `PLANNED`.  
-**Priority:** P0, next safe backend slice.
+**Status:** `OFFLINE_IMPLEMENTATION_ACCEPTED / LIVE_CLOSEOUT_EVIDENCE_PENDING`.  
+**Priority:** P0 lifecycle implementation complete; next live owner window must collect evidence.
 
 **Goal**
 
@@ -329,7 +329,23 @@ Make it impossible for the qualification-only source facade to remain unintentio
 
 **Exit gate**
 
-Finite start/abort/expiry/cleanup/rollback drills pass. No registry flag or epoch becomes active.
+Offline start/abort/expiry/cleanup/rollback drills pass. The production exit
+still requires one future owner-window closeout plus sanitized zero-session,
+zero-SELECT-delta and zero-byte-delta evidence. No registry flag or epoch
+became active.
+
+**Delivered**
+
+- strict host-side controller with exact Portal/facade Compose-label allowlist;
+- missed-start, qualifier-finished, revoked-owner and expired-window automatic
+  closeout;
+- accepted D2 dark Source Proxy restoration with `--pull never`;
+- mode-0600 redacted closeout and source-owner idle evidence contracts;
+- non-enabled finite systemd guard template, operator runbook and offline test
+  matrix.
+
+**Evidence index:**
+[`EX_BE_02_D4_DORMANT_CLOSEOUT_DISCIPLINE.md`](./backend/EX_BE_02_D4_DORMANT_CLOSEOUT_DISCIPLINE.md).
 
 **Claude parallel lane:** keep all Lane B readers disabled; use only typed fixtures/unavailable states.
 

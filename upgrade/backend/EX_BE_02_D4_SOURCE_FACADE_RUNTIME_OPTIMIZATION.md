@@ -179,9 +179,23 @@ Required bounds:
 
 ### D4-OPT-00 — Dormant closeout discipline
 
-- Add the container to the D4 window closeout checklist.
-- Prove no source DB session remains after closeout.
-- Alert if the facade runs without a valid consumer lease.
+Status: `OFFLINE_IMPLEMENTATION_ACCEPTED / LIVE_CLOSEOUT_EVIDENCE_PENDING`.
+
+- The exact container and Compose identity are now part of an executable D4
+  closeout allowlist.
+- A host-side guard enforces start deadline, qualifier completion,
+  authorization revocation and owner-window expiry.
+- Closeout restores the accepted D2 dark Source Proxy without pulling an image
+  and records redacted evidence.
+- Verification requires a sanitized Trading System owner observation proving
+  zero source sessions, SELECT delta and byte delta.
+- Audit returns `D4_DORMANT_VIOLATION` if the facade or D4 Portal reader is
+  running outside the owner window.
+
+Implementation and evidence contract:
+[`EX_BE_02_D4_DORMANT_CLOSEOUT_DISCIPLINE.md`](./EX_BE_02_D4_DORMANT_CLOSEOUT_DISCIPLINE.md).
+No live owner window was opened by this implementation, so the production idle
+observation remains pending.
 
 ### D4-OPT-01 — Contract revision
 
@@ -235,12 +249,12 @@ The steady-state facade is not accepted until evidence proves:
 
 For the next setup window:
 
-- Trading System owner owns `D4-OPT-00` through the source-side part of
-  `D4-OPT-02`.
+- Portal owns the D4-OPT-00 guard/closeout controller; Trading System owner owns
+  the source-side zero-session/zero-traffic observation and D4-OPT-01 through
+  the source-side part of D4-OPT-02.
 - Codex owns the Portal contract import, Rust Edge changes, retention gates and
   backend evidence.
 - Claude may consume sanitized fixtures and typed unavailable/gap states only;
   this backlog does not unlock a real frontend source.
 - Bobby approves every source window, service lifecycle change and delivery-
   profile promotion.
-

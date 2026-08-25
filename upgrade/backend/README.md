@@ -601,6 +601,15 @@ authority.
   later replace full rescans with a lease-aware incremental cursor, bounded
   retention/backpressure and a separate 24-hour soak. This changes no current
   Trading System or Portal runtime and unlocks no frontend delivery profile.
+- [EX-BE-02 / N01 D4 Dormant Closeout Discipline](./EX_BE_02_D4_DORMANT_CLOSEOUT_DISCIPLINE.md)
+  — **offline implementation accepted / live closeout evidence pending / D4
+  reader dark:** an exact-label host guard now closes on missed start,
+  qualifier completion, revoked authorization or owner-window expiry; it stops
+  only the qualifier, D4 Source Proxy and the dedicated facade, then restores
+  the accepted D2 dark proxy with no image pull. Exact-schema mode-0600 owner
+  evidence must prove zero source sessions, SELECT delta and byte delta before
+  `D4_DORMANT_VERIFIED`. No live window, registry profile, epoch activation or
+  Trading System change was made.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã
