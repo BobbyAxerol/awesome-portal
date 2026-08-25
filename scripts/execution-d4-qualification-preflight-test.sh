@@ -17,13 +17,16 @@ owner_input="${tmp_dir}/owner-input.env"
 qualifier_env="${tmp_dir}/qualifier.env"
 bad_qualifier_env="${tmp_dir}/qualifier-bad.env"
 secret_dir="${tmp_dir}/edge-secrets"
+projection_init="${tmp_dir}/init-projection-database.sh"
 cp "${root_dir}/deploy/execution-d1/edge-source-proxy.env.example" "${edge_env}"
 sed -i \
   -e "s#^PORTAL_RUNTIME_GID=.*#PORTAL_RUNTIME_GID=${runtime_gid}#" \
   -e "s#^EDGE_SECRET_DIRECTORY=.*#EDGE_SECRET_DIRECTORY=${secret_dir}#" \
+  -e "s#^PROJECTION_DB_INIT_SCRIPT=.*#PROJECTION_DB_INIT_SCRIPT=${projection_init}#" \
   -e 's/^SOURCE_PROXY_SOURCE_MODE=dark$/SOURCE_PROXY_SOURCE_MODE=paper-read/' \
   -e 's/^EDGE_SOURCE_PROBES_ENABLED=false$/EDGE_SOURCE_PROBES_ENABLED=true/' \
   "${edge_env}"
+printf '%s\n' '#!/usr/bin/env bash' 'set -euo pipefail' > "${projection_init}"
 
 python3 - "${root_dir}/deploy/execution-d4/owner-input.env.example" \
   "${owner_input}" <<'PY'
@@ -116,6 +119,8 @@ sudo -n chown root:root "${edge_env}" "${owner_input}" \
   "${qualifier_env}" "${bad_qualifier_env}"
 sudo -n chmod 0600 "${edge_env}" "${owner_input}" \
   "${qualifier_env}" "${bad_qualifier_env}"
+sudo -n chown root:70 "${projection_init}"
+sudo -n chmod 0550 "${projection_init}"
 sudo -n chown root:"${runtime_gid}" "${secret_dir}"
 sudo -n chmod 0750 "${secret_dir}"
 sudo -n chown root:"${runtime_gid}" "${secret_dir}/"*

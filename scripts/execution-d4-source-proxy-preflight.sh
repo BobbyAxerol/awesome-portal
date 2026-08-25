@@ -76,6 +76,7 @@ expected_listener="        listen ${bridge_ip}:${private_port} ssl;"
    "$(grep -Fxc '        ssl_protocols TLSv1.3;' "${config_file}")" -eq 1 &&
    "$(grep -Fxc '        ssl_verify_client on;' "${config_file}")" -eq 1 &&
    "$(grep -Fxc '    proxy_pass_request_body off;' "${config_file}")" -eq 1 &&
+   "$(grep -Fxc '        limit_req zone=d4_paper_read burst=120 nodelay;' "${config_file}")" -eq 1 &&
    "$(grep -Fxc '        limit_req_status 429;' "${config_file}")" -eq 1 &&
    "$(grep -Fxc '        include /etc/nginx/d4-paper-read-locations.conf;' "${config_file}")" -eq 1 &&
    "$(grep -Fxc '    limit_req_zone $binary_remote_addr zone=d4_paper_read:1m rate=120r/m;' "${config_file}")" -eq 1 ]] || {

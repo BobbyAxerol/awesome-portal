@@ -1846,6 +1846,17 @@ không phải 17 màn.
 > or registry activation occurred. Detail:
 > [`EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md`](./backend/EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md).
 
+> **Backend checkpoint 2026-08-25 — D4 first live qualification:** status is
+> `D4_LIVE_ATTEMPT_FAIL_CLOSED / PORTAL_COMPATIBILITY_REMEDIATED /
+> SIGNED_REPUBLISH_REQUIRED / D2_DARK_RESTORED`. Mandatory-auth Source Proxy
+> and the separate encrypted BUILDING epoch were exercised without enabling
+> Query, analytics, SSE, command or activation authority. Qualification found
+> an undersized pagination burst and exact scientific-decimal compatibility;
+> both are patched and regression-tested, and accepted D2 dark is healthy
+> again. D4 is not accepted until protected-main signed images and one fresh
+> finite owner window pass. Detail:
+> [`EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md`](./backend/EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md).
+
 > **Backend checkpoint 2026-08-23 — EX-BE-05b/F2 Phase 10:** Portal-owned
 > Sandbox Certification trên SGP đạt
 > `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`: DRAFT→IN_REVIEW→APPROVED|DENIED,

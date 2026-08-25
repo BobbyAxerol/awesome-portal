@@ -116,6 +116,21 @@ impl DecimalString {
             .map_err(|_| ContractError::InvalidDecimal(raw.to_owned()))
     }
 
+    /// Parses an exact base-10 value from either plain or scientific string
+    /// notation. This exists for compatibility adapters whose published wire
+    /// schema permits exact decimal strings in scientific form; canonical
+    /// Portal serialization remains a non-floating JSON string.
+    ///
+    /// # Errors
+    ///
+    /// Rejects non-finite, imprecise or out-of-range values.
+    pub fn parse_source_exact(raw: &str) -> Result<Self, ContractError> {
+        Decimal::from_str_exact(raw)
+            .or_else(|_| Decimal::from_scientific(raw))
+            .map(Self)
+            .map_err(|_| ContractError::InvalidDecimal(raw.to_owned()))
+    }
+
     #[must_use]
     pub const fn value(self) -> Decimal {
         self.0
