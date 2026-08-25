@@ -68,6 +68,8 @@ bridge_ip="$(read_edge PORTAL_BRIDGE_GATEWAY_IP)"
 private_port="$(read_edge SOURCE_PROXY_PRIVATE_PORT)"
 db_name="$(read_edge PROJECTION_DB_NAME)"
 db_runtime_user="$(read_edge PROJECTION_DB_RUNTIME_USER)"
+db_container_gid="$(read_edge PROJECTION_DB_CONTAINER_GID)"
+db_init_script="$(read_edge PROJECTION_DB_INIT_SCRIPT)"
 
 [[ "${qualifier[D4_OWNER_INPUT_FILE]}" == /* &&
    "${qualifier[D4_OWNER_INPUT_FILE]}" != *'/../'* &&
@@ -107,6 +109,13 @@ for path in "${edge_env}" "${qualifier_env}" "${owner_input}"; do
     exit 1
   }
 done
+[[ -f "${db_init_script}" && ! -L "${db_init_script}" &&
+   -x "${db_init_script}" &&
+   "$(stat -c '%u:%g:%a' "${db_init_script}")" == "0:${db_container_gid}:550" ]] || {
+  printf 'D4 qualifier rejected the projection bootstrap executable boundary.\n' >&2
+  exit 1
+}
+bash -n "${db_init_script}"
 [[ "${qualifier[D4_OWNER_INPUT_FILE]}" == "${owner_input}" ]] || {
   printf 'D4 qualifier rejected the installed owner-input path.\n' >&2
   exit 1

@@ -41,7 +41,10 @@ http {
         ssl_verify_depth 2;
         ssl_session_tickets off;
 
-        limit_req zone=d4_paper_read burst=4 nodelay;
+        # One complete bounded snapshot may require tens of sequential pages.
+        # Keep the sustained contract at 120 requests/minute while allowing a
+        # single qualifier to consume at most one minute of capacity up front.
+        limit_req zone=d4_paper_read burst=120 nodelay;
         limit_req_status 429;
 
         if ($request_method != GET) {

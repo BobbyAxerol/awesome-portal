@@ -139,6 +139,11 @@ sed -i '/http2 on;/d' "${tmp_dir}/no-h2.conf"
 expect_rejection 'HTTP/2, TLS, mTLS, rate or include drift' \
   "${tmp_dir}/no-h2.conf" "${tmp_dir}/d4-paper-read-locations.conf"
 
+cp "${tmp_dir}/nginx.conf" "${tmp_dir}/unsafe-burst.conf"
+sed -i 's/burst=120/burst=4/' "${tmp_dir}/unsafe-burst.conf"
+expect_rejection 'HTTP/2, TLS, mTLS, rate or include drift' \
+  "${tmp_dir}/unsafe-burst.conf" "${tmp_dir}/d4-paper-read-locations.conf"
+
 cp "${tmp_dir}/d4-paper-read-locations.conf" "${tmp_dir}/legacy-origin.conf"
 sed -i 's/127\.0\.0\.1:8011/127.0.0.1:8000/g' "${tmp_dir}/legacy-origin.conf"
 expect_rejection 'contract-include drift' \

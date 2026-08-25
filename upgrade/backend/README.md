@@ -571,6 +571,17 @@ authority.
   epoch. Evidence is 142 Rust tests, strict Clippy/rustfmt, fresh PostgreSQL,
   replay/restart/gap/load, dump/restore and exact-route Compose/Nginx gates.
   Live source traffic and qualification evidence remain pending.
+- [EX-BE-02-LIVE D4 qualification attempt and compatibility remediation](./EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md)
+  — **live attempt failed closed / Portal compatibility remediated / signed
+  republish required / D2 dark restored:** D4 reached the mandatory-auth source
+  through Source Proxy and created one encrypted, non-queryable BUILDING epoch.
+  The qualifier then rejected an Nginx pagination `429` and exact scientific
+  decimal notation before committing a baseline. The sustained request limit
+  remains 120/minute with a bounded one-minute burst; the Rust source adapter
+  now normalizes exact scientific strings without float conversion. Offline
+  gates pass and D2 is healthy/dark again. D4 acceptance still requires signed
+  protected-main images and one fresh finite owner window; no frontend Lane B,
+  Query, analytics, SSE, command or activation authority is unlocked.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

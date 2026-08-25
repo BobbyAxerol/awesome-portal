@@ -231,6 +231,34 @@ fn three_snapshot_resources_parse_exact_decimals_and_completion() {
 }
 
 #[test]
+fn source_scientific_decimals_normalize_without_float_conversion() {
+    let mut scientific_fill = fill();
+    scientific_fill["realized_pnl"] = json!("-1.25E-7");
+    let PaperReadPayload::Fills(parsed_page) = parse_success(
+        &snapshot_request(SnapshotResource::Fills),
+        &page(SnapshotResource::Fills, &[scientific_fill], true),
+    ) else {
+        panic!("expected fills page");
+    };
+    assert_eq!(parsed_page.rows[0].realized_pnl.to_string(), "-0.000000125");
+
+    for invalid in ["NaN", "Infinity", "1e999", " 1e-7"] {
+        let mut invalid_fill = fill();
+        invalid_fill["realized_pnl"] = json!(invalid);
+        assert!(matches!(
+            parse_response(
+                &snapshot_request(SnapshotResource::Fills),
+                200,
+                None,
+                &serde_json::to_vec(&page(SnapshotResource::Fills, &[invalid_fill], true,))
+                    .unwrap()
+            ),
+            Err(ContractError::InvalidJsonSchema)
+        ));
+    }
+}
+
+#[test]
 fn page_count_cursor_snapshot_and_unknown_fields_fail_closed() {
     let request = snapshot_request(SnapshotResource::Orders);
     let mut wrong_count = page(SnapshotResource::Orders, &[order()], true);

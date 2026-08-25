@@ -4,7 +4,7 @@ use std::{collections::BTreeSet, fmt};
 
 use chrono::{DateTime, Utc};
 use execution_contracts::DecimalString;
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use thiserror::Error;
 use uuid::Uuid;
@@ -265,8 +265,11 @@ pub struct OrderRecord {
     pub position_side: String,
     pub order_type: String,
     pub time_in_force: String,
+    #[serde(deserialize_with = "deserialize_source_decimal")]
     pub quantity: DecimalString,
+    #[serde(deserialize_with = "deserialize_optional_source_decimal")]
     pub price: Option<DecimalString>,
+    #[serde(deserialize_with = "deserialize_optional_source_decimal")]
     pub trigger_price: Option<DecimalString>,
     pub status: String,
     pub reduce_only: bool,
@@ -292,11 +295,15 @@ pub struct FillRecord {
     venue: BinanceVenue,
     pub instrument_id: String,
     pub side: OrderSide,
+    #[serde(deserialize_with = "deserialize_source_decimal")]
     pub price: DecimalString,
+    #[serde(deserialize_with = "deserialize_source_decimal")]
     pub quantity: DecimalString,
+    #[serde(deserialize_with = "deserialize_source_decimal")]
     pub commission: DecimalString,
     pub commission_currency: Option<String>,
     pub liquidity_side: Option<String>,
+    #[serde(deserialize_with = "deserialize_source_decimal")]
     pub realized_pnl: DecimalString,
 }
 
@@ -310,19 +317,47 @@ pub struct PositionRecord {
     venue: BinanceVenue,
     pub instrument_id: String,
     pub side: PositionSide,
+    #[serde(deserialize_with = "deserialize_source_decimal")]
     pub signed_qty: DecimalString,
+    #[serde(deserialize_with = "deserialize_source_decimal")]
     pub quantity: DecimalString,
+    #[serde(deserialize_with = "deserialize_source_decimal")]
     pub avg_px_open: DecimalString,
+    #[serde(deserialize_with = "deserialize_source_decimal")]
     pub avg_px_close: DecimalString,
+    #[serde(deserialize_with = "deserialize_source_decimal")]
     pub realized_pnl: DecimalString,
+    #[serde(deserialize_with = "deserialize_source_decimal")]
     pub unrealized_pnl: DecimalString,
+    #[serde(deserialize_with = "deserialize_optional_source_decimal")]
     pub mark_price: Option<DecimalString>,
     pub mark_price_at: Option<DateTime<Utc>>,
+    #[serde(deserialize_with = "deserialize_source_decimal")]
     pub notional: DecimalString,
+    #[serde(deserialize_with = "deserialize_source_decimal")]
     pub peak_qty: DecimalString,
     pub opened_at: Option<DateTime<Utc>>,
     pub closed_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
+}
+
+fn deserialize_source_decimal<'de, D>(deserializer: D) -> Result<DecimalString, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let raw = String::deserialize(deserializer)?;
+    DecimalString::parse_source_exact(&raw).map_err(de::Error::custom)
+}
+
+fn deserialize_optional_source_decimal<'de, D>(
+    deserializer: D,
+) -> Result<Option<DecimalString>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Option::<String>::deserialize(deserializer)?
+        .map(|raw| DecimalString::parse_source_exact(&raw).map_err(de::Error::custom))
+        .transpose()
 }
 
 /// Parses a bounded facade response according to the initiating request.

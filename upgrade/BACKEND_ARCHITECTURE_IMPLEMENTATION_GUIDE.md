@@ -1210,6 +1210,21 @@ deep-dive → ADR → slice → evidence discipline documented above.
   projection epoch occurred. Status: `D4_RUNTIME_ENTRYPOINT_OFFLINE_ACCEPTED /
   LIVE_WINDOW_PENDING / NO_SOURCE_CALL`. Detail:
   [`EX_BE_02_LIVE_D4_QUALIFICATION_RUNTIME_ENTRYPOINT.md`](./backend/EX_BE_02_LIVE_D4_QUALIFICATION_RUNTIME_ENTRYPOINT.md).
+- **EX-BE-02-LIVE D4 first qualification attempt (2026-08-25):** the accepted
+  D3 predecessor admitted a finite mandatory-auth Paper read attempt into a
+  separately encrypted PostgreSQL BUILDING epoch. It failed closed first on
+  an undersized Nginx pagination burst and then on exact scientific decimal
+  strings at the Portal compatibility boundary; neither attempt committed a
+  complete baseline or enabled Query/analytics/SSE/commands/activation. The
+  proxy now retains the 120/minute sustained bound with a one-minute bounded
+  burst, the Rust adapter normalizes exact scientific notation without float
+  conversion, and the PostgreSQL bootstrap executable boundary is preflighted.
+  Offline gates are green and accepted D2 dark is restored. Status:
+  `D4_LIVE_ATTEMPT_FAIL_CLOSED / PORTAL_COMPATIBILITY_REMEDIATED /
+  SIGNED_REPUBLISH_REQUIRED / D2_DARK_RESTORED`. D4 closes only after the
+  remediated artifacts are signed from protected main and a fresh finite
+  BUILDING-only window passes. Detail:
+  [`EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md`](./backend/EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING
