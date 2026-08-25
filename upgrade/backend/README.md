@@ -503,6 +503,13 @@ authority.
   production ingestor and the live BUILDING-epoch drills remain pending.
   Status: `D4_SOURCE_AND_STORAGE_INPUTS_RECONCILED /
   CONTRACT_ARTIFACT_IMPORT_PENDING / NO_PORTAL_SOURCE_TRAFFIC`.
+- [EX-BE-02-LIVE D4 contract import](./EX_BE_02_LIVE_D4_CONTRACT_IMPORT.md)
+  — **contract import complete / adapter pending / no source call:** the five
+  non-secret source artifacts are byte-locked to Trading System
+  runtime-acceptance commit `99e912f` and unchanged observed HEAD `4ad8f87`.
+  Manifest, JSON and exact-file-set checks pass. No Rust adapter/ingestor,
+  Source Proxy activation, credential, source request, projection epoch or
+  registry change is included.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

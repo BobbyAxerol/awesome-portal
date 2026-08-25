@@ -1,0 +1,417 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Trading System D4 Portal Paper Read Facade",
+    "version": "d4.paper-read.v1",
+    "description": "Static contract only. The listener is loopback-only and is reachable solely through the approved mTLS Source Proxy. This API has no mutation, admin, command, health, discovery, or live/canary capability."
+  },
+  "paths": {
+    "/v1/orders": {
+      "get": {
+        "operationId": "getPaperOrdersSnapshotPage",
+        "summary": "Read one deterministic Paper order snapshot page",
+        "security": [{ "PortalPaperRead": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ContractRevision" },
+          { "$ref": "#/components/parameters/Snapshot" },
+          { "$ref": "#/components/parameters/PageCursor" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/OrdersPage" },
+          "400": { "$ref": "#/components/responses/Denied" },
+          "401": { "$ref": "#/components/responses/Denied" },
+          "413": { "$ref": "#/components/responses/Denied" },
+          "429": { "$ref": "#/components/responses/Denied" },
+          "503": { "$ref": "#/components/responses/SourceUnavailable" }
+        }
+      }
+    },
+    "/v1/fills": {
+      "get": {
+        "operationId": "getPaperFillsSnapshotPage",
+        "summary": "Read one deterministic Paper fill snapshot page",
+        "security": [{ "PortalPaperRead": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ContractRevision" },
+          { "$ref": "#/components/parameters/Snapshot" },
+          { "$ref": "#/components/parameters/PageCursor" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/FillsPage" },
+          "400": { "$ref": "#/components/responses/Denied" },
+          "401": { "$ref": "#/components/responses/Denied" },
+          "413": { "$ref": "#/components/responses/Denied" },
+          "429": { "$ref": "#/components/responses/Denied" },
+          "503": { "$ref": "#/components/responses/SourceUnavailable" }
+        }
+      }
+    },
+    "/v1/positions": {
+      "get": {
+        "operationId": "getPaperPositionsSnapshotPage",
+        "summary": "Read one deterministic Paper position snapshot page",
+        "security": [{ "PortalPaperRead": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ContractRevision" },
+          { "$ref": "#/components/parameters/Snapshot" },
+          { "$ref": "#/components/parameters/PageCursor" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/PositionsPage" },
+          "400": { "$ref": "#/components/responses/Denied" },
+          "401": { "$ref": "#/components/responses/Denied" },
+          "413": { "$ref": "#/components/responses/Denied" },
+          "429": { "$ref": "#/components/responses/Denied" },
+          "503": { "$ref": "#/components/responses/SourceUnavailable" }
+        }
+      }
+    },
+    "/v1/events": {
+      "get": {
+        "operationId": "getPaperSnapshotOrStateDeltas",
+        "summary": "Create a snapshot or poll idempotent Paper state deltas",
+        "description": "Use only `snapshot=begin` to create a snapshot. Otherwise supply exactly one previously returned event cursor. `snapshot` and `cursor` cannot be combined. The event feed contains derived full-record state upserts/deletes, not an immutable execution audit stream.",
+        "security": [{ "PortalPaperRead": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ContractRevision" },
+          { "$ref": "#/components/parameters/SnapshotBegin" },
+          { "$ref": "#/components/parameters/EventCursor" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": {
+            "description": "A new snapshot descriptor or an event page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/SnapshotCreated" },
+                    { "$ref": "#/components/schemas/EventsPage" }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Denied" },
+          "401": { "$ref": "#/components/responses/Denied" },
+          "409": { "$ref": "#/components/responses/Denied" },
+          "410": { "$ref": "#/components/responses/Denied" },
+          "413": { "$ref": "#/components/responses/Denied" },
+          "429": { "$ref": "#/components/responses/Denied" },
+          "503": { "$ref": "#/components/responses/SourceUnavailable" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "PortalPaperRead": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Portal-Paper-Read-Key",
+        "description": "Mandatory dedicated D4 identity. Its value is injected only by the Source Proxy and is never sent to callers."
+      }
+    },
+    "parameters": {
+      "ContractRevision": {
+        "name": "X-Portal-Read-Contract",
+        "in": "header",
+        "required": true,
+        "schema": { "type": "string", "const": "d4.paper-read.v1" }
+      },
+      "Snapshot": {
+        "name": "snapshot",
+        "in": "query",
+        "required": true,
+        "schema": { "type": "string", "minLength": 1, "maxLength": 4096 },
+        "description": "Opaque signed token returned by snapshot=begin."
+      },
+      "SnapshotBegin": {
+        "name": "snapshot",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "string", "const": "begin" }
+      },
+      "PageCursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "string", "minLength": 1, "maxLength": 4096 }
+      },
+      "EventCursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "string", "minLength": 1, "maxLength": 4096 },
+        "description": "Required unless snapshot=begin is present."
+      },
+      "PageSize": {
+        "name": "page_size",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "description": "Omitted means the configured maximum. The installed maximum is at most 1000."
+      }
+    },
+    "responses": {
+      "OrdersPage": {
+        "description": "One bounded order page from an immutable snapshot session",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrdersPage" } } }
+      },
+      "FillsPage": {
+        "description": "One bounded fill page from an immutable snapshot session",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FillsPage" } } }
+      },
+      "PositionsPage": {
+        "description": "One bounded position page from an immutable snapshot session",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PositionsPage" } } }
+      },
+      "Denied": {
+        "description": "A safe terminal or retryable protocol denial; response has no source record or secret",
+        "headers": {
+          "X-Request-ID": { "schema": { "type": "string" } },
+          "X-Portal-Read-Contract": { "schema": { "type": "string", "const": "d4.paper-read.v1" } },
+          "Retry-After": { "schema": { "type": "integer", "minimum": 1 }, "required": false }
+        },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Denied" } } }
+      },
+      "SourceUnavailable": {
+        "description": "The facade could not safely obtain its fixed-scope source",
+        "headers": { "Retry-After": { "schema": { "type": "integer", "minimum": 1 }, "required": true } },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SourceUnavailable" } } }
+      }
+    },
+    "schemas": {
+      "Envelope": {
+        "type": "object",
+        "required": ["contract_revision", "status", "scope_id"],
+        "properties": {
+          "contract_revision": { "type": "string", "const": "d4.paper-read.v1" },
+          "status": { "type": "string", "enum": ["OK", "SNAPSHOT_CREATED"] },
+          "scope_id": { "type": "string", "const": "PAPER_BINANCE_USDM" }
+        }
+      },
+      "OrderRecord": {
+        "type": "object",
+        "required": ["client_order_id", "strategy_id", "account_id", "mode", "venue", "instrument_id", "symbol", "side", "position_side", "order_type", "time_in_force", "quantity", "status", "reduce_only", "post_only", "intent", "submitted_at", "updated_at"],
+        "properties": {
+          "client_order_id": { "type": "string" },
+          "venue_order_id": { "type": ["string", "null"] },
+          "strategy_id": { "type": "string" },
+          "account_id": { "type": "string" },
+          "mode": { "type": "string", "const": "paper" },
+          "venue": { "type": "string", "const": "BINANCE" },
+          "instrument_id": { "type": "string" },
+          "symbol": { "type": "string" },
+          "side": { "type": "string", "enum": ["BUY", "SELL"] },
+          "position_side": { "type": "string" },
+          "order_type": { "type": "string" },
+          "time_in_force": { "type": "string" },
+          "quantity": { "type": "string" },
+          "price": { "type": ["string", "null"] },
+          "trigger_price": { "type": ["string", "null"] },
+          "status": { "type": "string" },
+          "reduce_only": { "type": "boolean" },
+          "post_only": { "type": "boolean" },
+          "intent": { "type": "string" },
+          "submitted_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "error_code": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      },
+      "FillRecord": {
+        "type": "object",
+        "required": ["fill_id", "trade_time", "client_order_id", "strategy_id", "account_id", "mode", "venue", "instrument_id", "side", "price", "quantity", "commission", "realized_pnl"],
+        "properties": {
+          "fill_id": { "type": "integer" },
+          "event_id": { "type": ["string", "null"], "format": "uuid" },
+          "trade_time": { "type": "string", "format": "date-time" },
+          "trade_id": { "type": ["string", "null"] },
+          "client_order_id": { "type": "string" },
+          "venue_order_id": { "type": ["string", "null"] },
+          "strategy_id": { "type": "string" },
+          "account_id": { "type": "string" },
+          "mode": { "type": "string", "const": "paper" },
+          "venue": { "type": "string", "const": "BINANCE" },
+          "instrument_id": { "type": "string" },
+          "side": { "type": "string", "enum": ["BUY", "SELL"] },
+          "price": { "type": "string" },
+          "quantity": { "type": "string" },
+          "commission": { "type": "string" },
+          "commission_currency": { "type": ["string", "null"] },
+          "liquidity_side": { "type": ["string", "null"] },
+          "realized_pnl": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "PositionRecord": {
+        "type": "object",
+        "required": ["position_id", "strategy_id", "account_id", "mode", "venue", "instrument_id", "side", "signed_qty", "quantity", "avg_px_open", "avg_px_close", "realized_pnl", "unrealized_pnl", "notional", "peak_qty", "updated_at"],
+        "properties": {
+          "position_id": { "type": "string" },
+          "strategy_id": { "type": "string" },
+          "account_id": { "type": "string" },
+          "mode": { "type": "string", "const": "paper" },
+          "venue": { "type": "string", "const": "BINANCE" },
+          "instrument_id": { "type": "string" },
+          "side": { "type": "string", "enum": ["FLAT", "LONG", "SHORT"] },
+          "signed_qty": { "type": "string" },
+          "quantity": { "type": "string" },
+          "avg_px_open": { "type": "string" },
+          "avg_px_close": { "type": "string" },
+          "realized_pnl": { "type": "string" },
+          "unrealized_pnl": { "type": "string" },
+          "mark_price": { "type": ["string", "null"] },
+          "mark_price_at": { "type": ["string", "null"], "format": "date-time" },
+          "notional": { "type": "string" },
+          "peak_qty": { "type": "string" },
+          "opened_at": { "type": ["string", "null"], "format": "date-time" },
+          "closed_at": { "type": ["string", "null"], "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "additionalProperties": false
+      },
+      "OrdersPage": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Envelope" },
+          {
+            "type": "object",
+            "required": ["orders", "count", "snapshot", "next_cursor", "complete", "completeness"],
+            "properties": {
+              "orders": { "type": "array", "items": { "$ref": "#/components/schemas/OrderRecord" } },
+              "count": { "type": "integer", "minimum": 0 },
+              "snapshot": { "type": "string" },
+              "next_cursor": { "type": ["string", "null"] },
+              "complete": { "type": "boolean" },
+              "completeness": { "type": "string", "enum": ["PAGE_CONTINUES", "COMPLETE_WITHIN_FIXED_SCOPE"] }
+            }
+          }
+        ]
+      },
+      "FillsPage": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Envelope" },
+          {
+            "type": "object",
+            "required": ["fills", "count", "snapshot", "next_cursor", "complete", "completeness"],
+            "properties": {
+              "fills": { "type": "array", "items": { "$ref": "#/components/schemas/FillRecord" } },
+              "count": { "type": "integer", "minimum": 0 },
+              "snapshot": { "type": "string" },
+              "next_cursor": { "type": ["string", "null"] },
+              "complete": { "type": "boolean" },
+              "completeness": { "type": "string", "enum": ["PAGE_CONTINUES", "COMPLETE_WITHIN_FIXED_SCOPE"] }
+            }
+          }
+        ]
+      },
+      "PositionsPage": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Envelope" },
+          {
+            "type": "object",
+            "required": ["positions", "count", "snapshot", "next_cursor", "complete", "completeness"],
+            "properties": {
+              "positions": { "type": "array", "items": { "$ref": "#/components/schemas/PositionRecord" } },
+              "count": { "type": "integer", "minimum": 0 },
+              "snapshot": { "type": "string" },
+              "next_cursor": { "type": ["string", "null"] },
+              "complete": { "type": "boolean" },
+              "completeness": { "type": "string", "enum": ["PAGE_CONTINUES", "COMPLETE_WITHIN_FIXED_SCOPE"] }
+            }
+          }
+        ]
+      },
+      "SnapshotCreated": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Envelope" },
+          {
+            "type": "object",
+            "required": ["snapshot", "created_at", "expires_at", "resource_counts", "event_cursor", "completeness", "resync"],
+            "properties": {
+              "snapshot": { "type": "string" },
+              "created_at": { "type": "string", "format": "date-time" },
+              "expires_at": { "type": "string", "format": "date-time" },
+              "resource_counts": {
+                "type": "object",
+                "required": ["orders", "fills", "positions"],
+                "properties": {
+                  "orders": { "type": "integer", "minimum": 0 },
+                  "fills": { "type": "integer", "minimum": 0 },
+                  "positions": { "type": "integer", "minimum": 0 }
+                },
+                "additionalProperties": false
+              },
+              "event_cursor": { "type": "string" },
+              "completeness": { "type": "string", "const": "COMPLETE_WITHIN_FIXED_SCOPE" },
+              "resync": { "type": "string", "const": "FULL_BUILDING_EPOCH_ON_SNAPSHOT_OR_CURSOR_EXPIRY" }
+            }
+          }
+        ]
+      },
+      "EventsPage": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Envelope" },
+          {
+            "type": "object",
+            "required": ["events", "count", "next_cursor", "complete", "head_sequence", "delivery", "resync"],
+            "properties": {
+              "events": { "type": "array", "items": { "$ref": "#/components/schemas/StateDeltaEvent" } },
+              "count": { "type": "integer", "minimum": 0 },
+              "next_cursor": { "type": "string" },
+              "complete": { "type": "boolean" },
+              "head_sequence": { "type": "integer", "minimum": 0 },
+              "delivery": { "type": "string", "const": "IDEMPOTENT_STATE_DELTAS" },
+              "resync": { "type": "string", "const": "FULL_BUILDING_EPOCH_ON_CURSOR_EPOCH_OR_RETENTION_EXPIRY" }
+            }
+          }
+        ]
+      },
+      "StateDeltaEvent": {
+        "type": "object",
+        "required": ["event_id", "sequence", "scope_id", "resource", "operation", "entity_id", "entity_version", "observed_at", "record"],
+        "properties": {
+          "event_id": { "type": "string" },
+          "sequence": { "type": "integer", "minimum": 1 },
+          "scope_id": { "type": "string", "const": "PAPER_BINANCE_USDM" },
+          "resource": { "type": "string", "enum": ["orders", "fills", "positions"] },
+          "operation": { "type": "string", "enum": ["UPSERT", "DELETE"] },
+          "entity_id": { "type": "string" },
+          "entity_version": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "observed_at": { "type": "string", "format": "date-time" },
+          "record": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/OrderRecord" },
+              { "$ref": "#/components/schemas/FillRecord" },
+              { "$ref": "#/components/schemas/PositionRecord" },
+              { "type": "null" }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "Denied": {
+        "type": "object",
+        "required": ["status", "reason"],
+        "properties": {
+          "status": { "type": "string", "const": "DENIED" },
+          "reason": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "SourceUnavailable": {
+        "type": "object",
+        "required": ["status", "reason"],
+        "properties": {
+          "status": { "type": "string", "const": "ERROR" },
+          "reason": { "type": "string", "const": "SOURCE_READ_UNAVAILABLE" }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

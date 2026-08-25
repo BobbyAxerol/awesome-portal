@@ -1134,6 +1134,14 @@ deep-dive → ADR → slice → evidence discipline documented above.
   `D4_SOURCE_AND_STORAGE_INPUTS_RECONCILED /
   CONTRACT_ARTIFACT_IMPORT_PENDING / NO_PORTAL_SOURCE_TRAFFIC`. Detail:
   [`EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md`](./backend/EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md).
+- **EX-BE-02-LIVE D4 contract import (2026-08-25):** five non-secret
+  Paper-read artifacts are imported as exact bytes and locked to Trading System
+  runtime-acceptance commit `99e912f` plus observed HEAD `4ad8f87`. A bounded
+  source diff was empty and every acceptance/HEAD/Portal SHA-256 matched. This
+  is contract metadata only: no Rust adapter/ingestor, Source Proxy activation,
+  credential, source call, epoch or registry change exists. Status:
+  `CONTRACT_IMPORT_COMPLETE / ADAPTER_PENDING / NO_SOURCE_CALL`. Detail:
+  [`EX_BE_02_LIVE_D4_CONTRACT_IMPORT.md`](./backend/EX_BE_02_LIVE_D4_CONTRACT_IMPORT.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING
