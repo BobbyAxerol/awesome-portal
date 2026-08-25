@@ -1,4 +1,4 @@
-FROM node:22-alpine AS portal-build
+FROM node:26-alpine AS portal-build
 
 # The Portal frontend embeds the Planning feature from source (U05), so its
 # build stage needs the monorepo layout its Vite alias resolves through:
@@ -30,7 +30,7 @@ ENV VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY=${ROADMAP_TASK_BOARD_LOCAL_ONLY} \
     VITE_EXECUTION_PREVIEW_ENABLED=${EXECUTION_PREVIEW_ENABLED}
 RUN cd apps/portal/frontend && npm run build
 
-FROM node:22-alpine AS roadmap-task-board-build
+FROM node:26-alpine AS roadmap-task-board-build
 
 WORKDIR /opt/roadmap-task-board/frontend
 ARG ROADMAP_TASK_BOARD_LOCAL_ONLY=false
