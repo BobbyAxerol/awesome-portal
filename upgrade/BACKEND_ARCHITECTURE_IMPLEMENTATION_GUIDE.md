@@ -1237,6 +1237,17 @@ deep-dive → ADR → slice → evidence discipline documented above.
   disabled. Status: `D4_PAPER_READ_SHADOW_ACCEPTED / BUILDING_ONLY /
   D2_DARK_RESTORED / BUSINESS_READER_STILL_DARK`. Detail:
   [`EX_BE_02_LIVE_D4_PAPER_READ_SHADOW_ACCEPTANCE.md`](./backend/EX_BE_02_LIVE_D4_PAPER_READ_SHADOW_ACCEPTANCE.md).
+- **EX-BE-02-LIVE D4 source-facade runtime audit (2026-08-25):** the finite
+  acceptance above remains valid, but it does not qualify the Trading
+  System-owned compatibility facade for continuous operation. Read-only
+  inspection found a 500 ms unconditional full-scope capture and approximately
+  2.4–3.3 MiB/s idle database traffic with no Portal consumer. The facade is
+  therefore `QUALIFICATION_BRIDGE_ONLY / STEADY_STATE_NOT_ACCEPTED /
+  OWNER_WINDOW_REQUIRED`; it must be dormant outside approved windows and
+  requires a published incremental cursor, consumer lease, bounded retention,
+  backpressure and 24-hour soak before read-profile promotion. No Trading
+  System edit or runtime change is authorized by this finding. Detail:
+  [`EX_BE_02_D4_SOURCE_FACADE_RUNTIME_OPTIMIZATION.md`](./backend/EX_BE_02_D4_SOURCE_FACADE_RUNTIME_OPTIMIZATION.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

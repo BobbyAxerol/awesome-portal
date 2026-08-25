@@ -592,6 +592,15 @@ authority.
   BUILDING, registry remains `fixture`, and Query/analytics/SSE/commands/
   activation remain disabled. Sanitized machine-readable evidence is
   [`EX_BE_02_LIVE_D4_ACCEPTANCE_EVIDENCE.json`](./EX_BE_02_LIVE_D4_ACCEPTANCE_EVIDENCE.json).
+- [EX-BE-02-LIVE D4 Source Facade Runtime Optimization Backlog](./EX_BE_02_D4_SOURCE_FACADE_RUNTIME_OPTIMIZATION.md)
+  — **qualification bridge only / steady state not accepted:** the accepted
+  D4 finite shadow does not authorize the Trading System-owned Python facade
+  to remain always on. Read-only inspection found an unconditional 500 ms
+  full-scope refresh with about 2.4–3.3 MiB/s idle database traffic and no
+  consumer demand. The next owner window must make the facade dormant and
+  later replace full rescans with a lease-aware incremental cursor, bounded
+  retention/backpressure and a separate 24-hour soak. This changes no current
+  Trading System or Portal runtime and unlocks no frontend delivery profile.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã
