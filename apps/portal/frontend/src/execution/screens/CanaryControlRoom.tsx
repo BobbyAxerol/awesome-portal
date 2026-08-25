@@ -13,6 +13,8 @@ import { Hint } from "../components/hint";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 import { EquityChart } from "../components/EquityChart";
+import { CapGauges, HistogramChart, PositionsTable, SparkTile, StageLinesChart } from "../components/visuals";
+import type { StageVisuals } from "../stage.smoke";
 import { SourceTile, StageGuardBand } from "../components/stageWorkbench";
 import { ExecutionSectionTitle } from "../components/typography";
 import {
@@ -60,12 +62,15 @@ export function CanaryControlRoomScreen({
   reason,
   brokerStale = false,
   onCopyProvenance,
+  visuals,
   children,
 }: {
   room: CanaryControlRoom | null;
   status?: PanelStatus;
   reason?: string;
   brokerStale?: boolean;
+  /** Stage visuals (smoke until BR-EX-41). Absent = honest states only. */
+  visuals?: StageVisuals;
   onCopyProvenance?: (full: string) => void;
   children?: ReactNode;
 }) {
@@ -163,8 +168,23 @@ export function CanaryControlRoomScreen({
           />
         </div>
         <ExecutionDecisionStrip
-          metrics={room.kpis.map((kpi) => ({ label: kpi.label, value: kpi.value, unit: kpi.unit, note: kpi.value === null ? null : kpi.envelope.authority }))}
+          metrics={room.kpis.map((kpi) => {
+            const smoke = kpi.value === null ? visuals?.kpis[kpi.key] : undefined;
+            return { label: kpi.label, value: smoke?.value ?? kpi.value, unit: smoke ? (smoke.unit || null) : kpi.unit, note: smoke ? "smoke" : kpi.value === null ? null : kpi.envelope.authority };
+          })}
         />
+        {visuals ? (
+          <>
+            <div className="exec-visual-grid">
+              <StageLinesChart title={visuals.equity.label} lines={visuals.equity.lines} envelope={visuals.envelope} warning={visuals.warning} />
+              <CapGauges title="Canary envelope · consumed" items={visuals.caps} warning={visuals.warning} />
+            </div>
+            <div className="exec-visual-row">
+              <HistogramChart hist={visuals.latency} warning={visuals.warning} />
+              {visuals.sparks.map((s) => <SparkTile key={s.label} spark={s} warning={visuals.warning} />)}
+            </div>
+          </>
+        ) : (
         <EquityChart
           title="Live vs Paper vs Backtest"
           envelope={{ window: "30d", interval: "1h", currency: room.envelope?.currency ?? null, asOf: room.series?.asOf ?? "", authority: (room.series?.authority ?? "EXECUTION") as never, formulaVersion: null, sourceRows: null, returnedRows: null, coverage: null }}
@@ -175,6 +195,7 @@ export function CanaryControlRoomScreen({
               : `Series ${room.series?.panelState ?? "not published"} in this profile — nothing to draw (BR-EX-34).`
           }
         />
+        )}
         <ExecutionTabs
           tabs={[
             { key: "Envelope", label: "Envelope" },
@@ -225,10 +246,13 @@ export function CanaryControlRoomScreen({
             )
           ) : null}
           {tab === "Positions & orders" ? (
+            <div className="exec-fixtures-stack">
+            {visuals ? <PositionsTable rows={visuals.positions} caption="Live positions & open orders · BROKER" warning={visuals.warning} /> : null}
             <div className="exec-source-grid">
               <SourceTile title="Positions" envelope={room.positions} />
               <SourceTile title="Blotter" envelope={room.blotter} />
               <SourceTile title="Series" envelope={room.series} />
+            </div>
             </div>
           ) : null}
           {tab === "Reconciliation" ? (

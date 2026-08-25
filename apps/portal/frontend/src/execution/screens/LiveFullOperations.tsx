@@ -13,6 +13,8 @@ import { useState, type ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 import { EquityChart } from "../components/EquityChart";
+import { CapGauges, DailyBarsChart, HistogramChart, PositionsTable, SparkTile } from "../components/visuals";
+import type { StageVisuals } from "../stage.smoke";
 import { SourceTile, StageGuardBand } from "../components/stageWorkbench";
 import { ExecutionSectionTitle } from "../components/typography";
 import {
@@ -59,11 +61,14 @@ export function LiveFullOperationsScreen({
   status = "ok",
   reason,
   onCopyProvenance,
+  visuals,
   children,
 }: {
   live: LiveFullOperations | null;
   status?: PanelStatus;
   reason?: string;
+  /** Stage visuals (smoke until BR-EX-41). Absent = honest states only. */
+  visuals?: StageVisuals;
   onCopyProvenance?: (full: string) => void;
   children?: ReactNode;
 }) {
@@ -145,8 +150,23 @@ export function LiveFullOperationsScreen({
           />
         </div>
         <ExecutionDecisionStrip
-          metrics={live.kpis.map((kpi) => ({ label: kpi.label, value: kpi.value, unit: kpi.unit, note: kpi.value === null ? (kpi.suppressed ? "suppressed" : null) : kpi.authority }))}
+          metrics={live.kpis.map((kpi) => {
+            const smoke = kpi.value === null && !kpi.suppressed ? visuals?.kpis[kpi.key] : undefined;
+            return { label: kpi.label, value: smoke?.value ?? kpi.value, unit: smoke ? (smoke.unit || null) : kpi.unit, note: smoke ? "smoke" : kpi.value === null ? (kpi.suppressed ? "suppressed" : null) : kpi.authority };
+          })}
         />
+        {visuals ? (
+          <>
+            <div className="exec-visual-grid">
+              {visuals.contribution ? <DailyBarsChart title="Contribution & edge evidence · 30d" bars={visuals.contribution} unit="USDT" height={240} warning={visuals.warning} /> : null}
+              <CapGauges title="Risk envelope · consumed" items={visuals.caps} warning={visuals.warning} />
+            </div>
+            <div className="exec-visual-row">
+              <HistogramChart hist={visuals.latency} warning={visuals.warning} />
+              {visuals.sparks.map((s) => <SparkTile key={s.label} spark={s} warning={visuals.warning} />)}
+            </div>
+          </>
+        ) : null}
         {mismatch ? (
           <section className="exec-mismatch-slot" role="alert" aria-label="Broker mismatch">
             <ExecutionSectionTitle>MISMATCH — broker truth replaces presentation</ExecutionSectionTitle>
@@ -167,7 +187,7 @@ export function LiveFullOperationsScreen({
               ) : null}
             </p>
           </section>
-        ) : (
+        ) : visuals ? null : (
           <EquityChart
             title="Contribution / edge evidence — 30d contribution vs portfolio"
             envelope={{ window: "30d", interval: "1d", currency: null, asOf: brokerPanel?.envelope.asOf ?? "", authority: "ANALYTICS" as never, formulaVersion: null, sourceRows: null, returnedRows: null, coverage: null }}
@@ -187,10 +207,13 @@ export function LiveFullOperationsScreen({
           label="Live sections"
         >
           {tab === "Exposure & orders" ? (
+            <div className="exec-fixtures-stack">
+            {visuals ? <PositionsTable rows={visuals.positions} caption="Open exposure & orders · BROKER" warning={visuals.warning} /> : null}
             <div className="exec-source-grid exec-live-panels">
               {(["internal", "broker", "difference"] as const).map((id) => (
                 <SourceTile key={id} title={id === "internal" ? "Internal" : id === "broker" ? "Broker" : "Difference"} envelope={live.panels[id]?.envelope} suppressed={live.panels[id]?.suppressed} warnings={live.panels[id]?.warningCodes} />
               ))}
+            </div>
             </div>
           ) : null}
           {tab === "Continuity" ? (

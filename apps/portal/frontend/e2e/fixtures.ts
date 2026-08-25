@@ -270,4 +270,15 @@ export async function settle(page: Page): Promise<void> {
   await page.evaluate(
     () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
   );
+  // Charts size themselves from the layout they were born into; a column that
+  // widened after a sibling mounted leaves a narrower canvas behind. One resize
+  // event after everything settled puts every canvas at its final width, and
+  // two frames let the repaint land before the shutter opens.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        window.dispatchEvent(new Event("resize"));
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
 }

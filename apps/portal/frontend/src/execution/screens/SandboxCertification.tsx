@@ -9,6 +9,8 @@
  * disabled with their reasons unless the server's gate says otherwise.
  */
 import { useState, type ReactNode } from "react";
+import { CapGauges, HistogramChart, OrderTypeMatrix, PositionsTable, SparkTile } from "../components/visuals";
+import type { StageVisuals } from "../stage.smoke";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 import { AuthorityWord } from "../components/badges";
@@ -41,16 +43,42 @@ const TRIPTYCH: readonly { id: string; title: string }[] = [
 const TABS = ["Reconciliation", "Steps", "Promotion plans", "Timeline"] as const;
 type Tab = (typeof TABS)[number];
 
+/** Seven `SANDBOX_STEP_*_UNAVAILABLE` codes are one fact — the profile publishes no step evidence — and the rail says it once. */
+function groupStepReasons(reasons: readonly string[]): RailBlocker[] {
+  const steps = reasons.filter((c) => /^SANDBOX_STEP_.*_UNAVAILABLE$/.test(c));
+  const rest = reasons.filter((c) => !steps.includes(c));
+  const grouped: RailBlocker[] = steps.length > 2
+    ? [{ label: `${steps.length} certification steps unavailable in this profile`, detail: steps.map((c) => c.replace(/^SANDBOX_STEP_|_UNAVAILABLE$/g, "").toLowerCase().replace(/_/g, " ")).join(" · "), severity: "blocking" }]
+    : steps.map((code) => ({ label: code, detail: "certification gate", severity: "blocking" as const }));
+  return [...grouped, ...rest.map((code) => ({ label: code, detail: "certification gate", severity: "blocking" as const }))];
+}
+
+const EVAL_GLYPH: Record<string, string> = { PASS: "✓", FAIL: "✕", STALE: "!", UNAVAILABLE: "—" };
+
+/**
+ * One step of the seven-step stepper (hi-fi 1d): ordinal · name · state on
+ * one line; the authority, summary, expiry and blocker code fold behind
+ * "why" so seven steps read as a strip, not as seven paragraphs (EL-V2-10).
+ */
 function StepCell({ step, index }: { step: CertificationStep; index: number }) {
+  const state = step.evaluationState ?? "UNAVAILABLE";
+  const hasWhy = Boolean(step.summary || step.expiresAt || step.blockerCode || step.authority);
   return (
-    <li className="exec-cert-step" data-strip={step.stripState ?? "PENDING"} data-evaluation={step.evaluationState ?? "UNAVAILABLE"}>
+    <li className="exec-cert-step" data-strip={step.stripState ?? "PENDING"} data-evaluation={state}>
       <span className="exec-cert-ordinal">{(step.ordinal ?? index) + 1}</span>
       <span className="exec-cert-label">{step.label}</span>
-      <span className="exec-cert-eval">{step.evaluationState ?? "not stated"}</span>
-      {step.authority ? <AuthorityWord authority={step.authority} /> : null}
-      {step.summary ? <span className="exec-cert-summary">{step.summary}</span> : null}
-      {step.expiresAt ? <span className="exec-cert-summary">evidence expires {step.expiresAt}</span> : null}
-      {step.blockerCode ? <span className="exec-cert-blocker">{step.blockerCode}</span> : null}
+      <span className="exec-cert-eval" title={state}>{EVAL_GLYPH[state] ?? "·"} {state.toLowerCase()}</span>
+      {hasWhy ? (
+        <details className="exec-cert-more exec-hint">
+          <summary>why</summary>
+          <div className="exec-hint-body">
+            {step.authority ? <AuthorityWord authority={step.authority} /> : null}
+            {step.summary ? <span className="exec-cert-summary"> {step.summary}</span> : null}
+            {step.expiresAt ? <span className="exec-cert-summary"> · evidence expires {step.expiresAt}</span> : null}
+            {step.blockerCode ? <span className="exec-cert-blocker"> · {step.blockerCode}</span> : null}
+          </div>
+        </details>
+      ) : null}
     </li>
   );
 }
@@ -62,11 +90,14 @@ export function SandboxCertificationScreen({
   onSubmit,
   onRequestExit,
   onCopyProvenance,
+  visuals,
   children,
 }: {
   certification: SandboxCertification | null;
   status?: PanelStatus;
   reason?: string;
+  /** Stage visuals (smoke until BR-EX-41). Absent = honest states only. */
+  visuals?: StageVisuals;
   onSubmit?: () => void;
   onRequestExit?: () => void;
   onCopyProvenance?: (full: string) => void;
@@ -102,7 +133,7 @@ export function SandboxCertificationScreen({
   ];
   const blockers: RailBlocker[] = [
     ...criticalOpen.map((f) => ({ label: `CRITICAL ${f.identity ?? f.findingId}`, detail: `local ${f.localValue ?? "—"} · broker ${f.brokerValue ?? "—"} · ${f.status ?? "open"}`, severity: "blocking" as const })),
-    ...gate.reasons.map((code) => ({ label: code, detail: "certification gate", severity: "blocking" as const })),
+    ...groupStepReasons(gate.reasons),
     ...certification.steps.filter((s) => s.evaluationState === "FAIL" || s.evaluationState === "STALE").map((s) => ({ label: `${s.label} ${s.evaluationState}`, detail: s.blockerCode ?? s.summary ?? null, severity: (s.evaluationState === "FAIL" ? "blocking" : "watch") as "blocking" | "watch" })),
   ];
   const provenanceItems = [
@@ -186,6 +217,15 @@ export function SandboxCertificationScreen({
             { label: "Gate", value: gate.blocked ? "BLOCKED" : "OPEN", tone: gate.blocked ? "bad" : "good" },
           ]}
         />
+        {visuals ? (
+          <div className="exec-visual-grid">
+            <div className="exec-visual-row">
+              <HistogramChart hist={visuals.latency} warning={visuals.warning} />
+              {visuals.sparks.map((s) => <SparkTile key={s.label} spark={s} warning={visuals.warning} />)}
+            </div>
+            <CapGauges title="Certification progress" items={visuals.caps} warning={visuals.warning} />
+          </div>
+        ) : null}
         <ExecutionTabs
           tabs={[
             { key: "Reconciliation", label: "Reconciliation", count: certification.findings.rows.length },
@@ -199,6 +239,7 @@ export function SandboxCertificationScreen({
         >
           {tab === "Reconciliation" ? (
             <div className="exec-fixtures-stack">
+              {visuals ? <PositionsTable rows={visuals.positions} caption="Physical broker state · testnet" warning={visuals.warning} /> : null}
               <div className="exec-cert-triptych exec-source-grid">
                 {TRIPTYCH.map((panel) => (
                   <SourceTile
@@ -247,6 +288,8 @@ export function SandboxCertificationScreen({
             </div>
           ) : null}
           {tab === "Steps" ? (
+            <div className="exec-fixtures-stack">
+            {visuals?.orderTypes ? <OrderTypeMatrix rows={visuals.orderTypes} warning={visuals.warning} /> : null}
             <div className="exec-scroll-x">
               <table className="exec-360-sync">
                 <thead>
@@ -272,6 +315,7 @@ export function SandboxCertificationScreen({
                   ))}
                 </tbody>
               </table>
+            </div>
             </div>
           ) : null}
           {tab === "Promotion plans" ? (

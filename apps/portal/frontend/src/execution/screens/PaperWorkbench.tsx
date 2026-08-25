@@ -21,6 +21,8 @@
  *      will keep asking.
  */
 import type { ReactNode } from "react";
+import { CapGauges, HistogramChart, SparkTile } from "../components/visuals";
+import type { StageVisuals } from "../stage.smoke";
 
 import type {
   ChartEnvelope,
@@ -137,6 +139,8 @@ export interface PaperWorkbenchProps {
   /** `12/30 days · 184/300 trades` — the current stage's detail on the rail. */
   railDetail?: string;
   kpis: readonly { label: string; value: string | null; unit?: string | null }[];
+  /** Stage visuals (smoke until BR-EX-41). Absent = honest states only. */
+  visuals?: StageVisuals;
   equity: {
     envelope: ChartEnvelope;
     /** null/absent = contract publishes no series (BR-EX-34) → honest compact state */
@@ -210,6 +214,7 @@ const DRIFT_TONE: Record<DriftRow["verdict"], "good" | "warn" | "bad" | "mute"> 
 };
 
 export function PaperWorkbench({
+  visuals,
   alphaLabel,
   deploymentId,
   accountId,
@@ -417,10 +422,20 @@ export function PaperWorkbench({
             title="Equity vs approved research evidence"
             envelope={equity.envelope}
             series={equity.series ?? null}
+            height={220}
           />
         ) : (
           <PanelState status="unavailable" reason="No equity series was published for this window." />
         )}
+        {visuals ? (
+          <div className="exec-visual-grid">
+            <div className="exec-visual-row">
+              <HistogramChart hist={visuals.latency} warning={visuals.warning} />
+              {visuals.sparks.map((s) => <SparkTile key={s.label} spark={s} warning={visuals.warning} />)}
+            </div>
+            <CapGauges title="Observation policy · consumed" items={visuals.caps} warning={visuals.warning} />
+          </div>
+        ) : null}
         <ExecutionTabs tabs={tabs} active={tab} onChange={(key) => onTabChange(key as WorkbenchTab)} label="Deployment activity">
           {tab === "Overview" ? <FactPanel title="Runtime health" rows={runtime} /> : null}
           {tab === "Orders" ? <Orders orders={orders} onLoadOlder={onLoadOlder} /> : null}

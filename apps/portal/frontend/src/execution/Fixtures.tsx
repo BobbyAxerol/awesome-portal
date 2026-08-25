@@ -10,7 +10,7 @@
  * here would put a second cast into circulation, which is exactly what that
  * document exists to prevent.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ExecutionSurface, type ExecutionSurfaceKind } from "./ExecutionSurface";
 import { AuthorityBadge, BrokerSyncChip, CapabilityChip, EnvironmentBadge, FreshnessIndicator, OperationStatusChip, OrderStatusChip, ProfileBadge, RuntimeStateChip, StatusChip, VerificationChip } from "./components/badges";
@@ -672,6 +672,17 @@ function Case({ caption, children }: { caption: string; children: React.ReactNod
 }
 
 export default function ExecutionFixtures() {
+  // The evidence page grows as groups mount; the vertical scrollbar appearing
+  // mid-mount shrank every chart initialised before it by 15px and made the
+  // baselines bimodal. Reserve the gutter for this route only.
+  useEffect(() => {
+    const root = document.documentElement;
+    const prev = root.style.scrollbarGutter;
+    root.style.scrollbarGutter = "stable";
+    return () => {
+      root.style.scrollbarGutter = prev;
+    };
+  }, []);
   const [venues, setVenues] = useState<VenueCode[]>([]);
 
   return (

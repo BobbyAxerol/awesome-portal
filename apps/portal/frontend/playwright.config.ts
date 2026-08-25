@@ -17,6 +17,9 @@ import { defineConfig, devices } from "@playwright/test";
  *    and an aging label would rewrite the baseline on every run.
  */
 export default defineConfig({
+  // Execution fixture groups now carry dozens of charts that wait for fonts;
+  // the default 30s per test was the flake, not the page.
+  timeout: 60_000,
   testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),

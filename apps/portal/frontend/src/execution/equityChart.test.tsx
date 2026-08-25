@@ -104,7 +104,7 @@ describe("EquityChart — states and controls", () => {
     expect(body.getAttribute("data-zoom-epoch")).toBe("0");
     fireEvent.doubleClick(body);
     expect(body.getAttribute("data-zoom-epoch")).toBe("1");
-    fireEvent.click(screen.getByRole("button", { name: "Reset zoom" }));
+    fireEvent.doubleClick(screen.getByRole("img", { name: /Double-click resets zoom/ }));
     expect(body.getAttribute("data-zoom-epoch")).toBe("2");
   });
 });
