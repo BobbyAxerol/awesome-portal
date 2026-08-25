@@ -67,6 +67,7 @@ impl RealtimeEnvelope {
             ProjectionEntityKind::Order => "order.updated",
             ProjectionEntityKind::Fill => "fill.recorded",
             ProjectionEntityKind::Position => "position.updated",
+            ProjectionEntityKind::Event => "source_event.observed",
             ProjectionEntityKind::Runtime => "runtime.updated",
             ProjectionEntityKind::Account => "account.updated",
             ProjectionEntityKind::BrokerBinding => "broker_binding.updated",
@@ -344,7 +345,9 @@ pub enum RealtimeError {
 mod tests {
     use chrono::TimeZone as _;
     use execution_contracts::CanonicalId;
-    use projection_core::{ProjectionEntityKey, ProjectionObservation};
+    use projection_core::{
+        ProjectionEntityKey, ProjectionObservation, ProjectionOperation, SourceSequenceSemantics,
+    };
 
     use super::*;
 
@@ -366,6 +369,8 @@ mod tests {
                 source_read_at: Utc.timestamp_opt(source_sequence, 0).unwrap(),
                 source_cursor: None,
                 source_sequence: Some(source_sequence),
+                source_sequence_semantics: SourceSequenceSemantics::PerEntityContiguous,
+                operation: ProjectionOperation::Upsert,
                 source_completeness: SourceCompleteness::EventSourced,
                 poll_interval_ms: None,
                 adapter_version: "v1".to_owned(),

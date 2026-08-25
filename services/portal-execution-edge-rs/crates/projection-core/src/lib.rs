@@ -53,6 +53,7 @@ pub enum ProjectionEntityKind {
     Order,
     Fill,
     Position,
+    Event,
     Runtime,
     Account,
     BrokerBinding,
@@ -68,6 +69,7 @@ impl ProjectionEntityKind {
             Self::Order => "ORDER",
             Self::Fill => "FILL",
             Self::Position => "POSITION",
+            Self::Event => "EVENT",
             Self::Runtime => "RUNTIME",
             Self::Account => "ACCOUNT",
             Self::BrokerBinding => "BROKER_BINDING",
@@ -86,6 +88,7 @@ impl FromStr for ProjectionEntityKind {
             "ORDER" => Ok(Self::Order),
             "FILL" => Ok(Self::Fill),
             "POSITION" => Ok(Self::Position),
+            "EVENT" => Ok(Self::Event),
             "RUNTIME" => Ok(Self::Runtime),
             "ACCOUNT" => Ok(Self::Account),
             "BROKER_BINDING" => Ok(Self::BrokerBinding),
@@ -103,6 +106,22 @@ pub struct ProjectionEntityKey {
     pub entity_id: CanonicalId,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ProjectionOperation {
+    #[default]
+    Upsert,
+    Delete,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum SourceSequenceSemantics {
+    #[default]
+    PerEntityContiguous,
+    GlobalStreamMonotonic,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProjectionObservation {
     pub ingestion_id: CanonicalId,
@@ -112,6 +131,10 @@ pub struct ProjectionObservation {
     pub source_read_at: DateTime<Utc>,
     pub source_cursor: Option<SourceCursor>,
     pub source_sequence: Option<i64>,
+    #[serde(default)]
+    pub source_sequence_semantics: SourceSequenceSemantics,
+    #[serde(default)]
+    pub operation: ProjectionOperation,
     pub source_completeness: SourceCompleteness,
     pub poll_interval_ms: Option<i64>,
     pub adapter_version: String,
@@ -135,6 +158,12 @@ impl ProjectionObservation {
         if self.source_sequence.is_some_and(|sequence| sequence < 0) {
             return Err(ProjectionError::InvalidSourceSequence);
         }
+        if self.source_sequence_semantics == SourceSequenceSemantics::GlobalStreamMonotonic
+            && (self.source_sequence.is_none()
+                || self.source_completeness != SourceCompleteness::EventSourced)
+        {
+            return Err(ProjectionError::InvalidGlobalSourceSequence);
+        }
         match (self.source_completeness, self.poll_interval_ms) {
             (SourceCompleteness::PollBounded, Some(interval)) if interval > 0 => Ok(()),
             (SourceCompleteness::PollBounded, _) => Err(ProjectionError::MissingPollInterval),
@@ -155,6 +184,8 @@ pub struct ProjectedEntity {
     pub projected_at: DateTime<Utc>,
     pub source_cursor: Option<SourceCursor>,
     pub source_sequence: Option<i64>,
+    #[serde(default)]
+    pub source_sequence_semantics: SourceSequenceSemantics,
     pub source_completeness: SourceCompleteness,
     pub poll_interval_ms: Option<i64>,
     pub adapter_version: String,
@@ -279,7 +310,7 @@ impl ProjectionReducer {
 
         let current = self.entities.get(&observation.entity);
         if let Some(current) = current {
-            match compare_source_position(current, &observation) {
+            match compare_source_position(current, &observation)? {
                 SourceOrder::Older => {
                     self.applied_ingestions
                         .insert(observation.ingestion_id, input_digest);
@@ -291,9 +322,10 @@ impl ProjectionReducer {
         }
 
         let gap_code = current.and_then(|entity| source_gap_code(entity, &observation));
-        let same_payload = current.is_some_and(|entity| {
-            entity.payload_digest == canonical_value_digest(&observation.payload)
-        });
+        let same_payload = observation.operation == ProjectionOperation::Upsert
+            && current.is_some_and(|entity| {
+                entity.payload_digest == canonical_value_digest(&observation.payload)
+            });
         let next_sequence = self
             .sequence
             .checked_add(1)
@@ -309,7 +341,14 @@ impl ProjectionReducer {
             });
         }
         self.sequence = next_sequence;
-        self.entities.insert(observation.entity.clone(), projected);
+        match observation.operation {
+            ProjectionOperation::Upsert => {
+                self.entities.insert(observation.entity.clone(), projected);
+            }
+            ProjectionOperation::Delete => {
+                self.entities.remove(&observation.entity);
+            }
+        }
         self.applied_ingestions
             .insert(observation.ingestion_id, input_digest);
         Ok(if gap_code.is_some() {
@@ -457,6 +496,7 @@ fn projected_entity(
         projected_at,
         source_cursor: observation.source_cursor.clone(),
         source_sequence: observation.source_sequence,
+        source_sequence_semantics: observation.source_sequence_semantics,
         source_completeness: observation.source_completeness,
         poll_interval_ms: observation.poll_interval_ms,
         adapter_version: observation.adapter_version.clone(),
@@ -475,19 +515,38 @@ enum SourceOrder {
 fn compare_source_position(
     current: &ProjectedEntity,
     observation: &ProjectionObservation,
-) -> SourceOrder {
+) -> Result<SourceOrder, ProjectionError> {
+    if observation.source_sequence_semantics == SourceSequenceSemantics::GlobalStreamMonotonic {
+        if current.source_sequence_semantics == SourceSequenceSemantics::GlobalStreamMonotonic {
+            return match (current.source_sequence, observation.source_sequence) {
+                (Some(previous), Some(incoming)) => Ok(match incoming.cmp(&previous) {
+                    std::cmp::Ordering::Less => SourceOrder::Older,
+                    std::cmp::Ordering::Equal => SourceOrder::Same,
+                    std::cmp::Ordering::Greater => SourceOrder::Newer,
+                }),
+                _ => Err(ProjectionError::SourceSequenceSemanticsMismatch),
+            };
+        }
+        if current.source_sequence.is_some() {
+            return Err(ProjectionError::SourceSequenceSemanticsMismatch);
+        }
+        return Ok(SourceOrder::Newer);
+    }
+    if current.source_sequence_semantics == SourceSequenceSemantics::GlobalStreamMonotonic {
+        return Err(ProjectionError::SourceSequenceSemanticsMismatch);
+    }
     match (&current.source_cursor, &observation.source_cursor) {
         (Some(previous), Some(incoming)) => match incoming.cmp(previous) {
-            std::cmp::Ordering::Less => SourceOrder::Older,
-            std::cmp::Ordering::Equal => SourceOrder::Same,
-            std::cmp::Ordering::Greater => SourceOrder::Newer,
+            std::cmp::Ordering::Less => Ok(SourceOrder::Older),
+            std::cmp::Ordering::Equal => Ok(SourceOrder::Same),
+            std::cmp::Ordering::Greater => Ok(SourceOrder::Newer),
         },
-        (Some(_), None) => SourceOrder::Older,
-        (None, Some(_)) => SourceOrder::Newer,
+        (Some(_), None) => Ok(SourceOrder::Older),
+        (None, Some(_)) => Ok(SourceOrder::Newer),
         (None, None) => match observation.source_read_at.cmp(&current.source_read_at) {
-            std::cmp::Ordering::Less => SourceOrder::Older,
-            std::cmp::Ordering::Equal => SourceOrder::Same,
-            std::cmp::Ordering::Greater => SourceOrder::Newer,
+            std::cmp::Ordering::Less => Ok(SourceOrder::Older),
+            std::cmp::Ordering::Equal => Ok(SourceOrder::Same),
+            std::cmp::Ordering::Greater => Ok(SourceOrder::Newer),
         },
     }
 }
@@ -496,8 +555,13 @@ fn source_gap_code(
     current: &ProjectedEntity,
     observation: &ProjectionObservation,
 ) -> Option<&'static str> {
+    if observation.source_sequence_semantics == SourceSequenceSemantics::GlobalStreamMonotonic {
+        return None;
+    }
     match (current.source_sequence, observation.source_sequence) {
-        (Some(previous), Some(incoming)) if incoming > previous + 1 => Some("SOURCE_SEQUENCE_GAP"),
+        (Some(previous), Some(incoming)) if incoming > previous.saturating_add(1) => {
+            Some("SOURCE_SEQUENCE_GAP")
+        }
         (Some(previous), Some(incoming)) if incoming <= previous => {
             Some("SOURCE_SEQUENCE_REGRESSION")
         }
@@ -538,6 +602,9 @@ impl ProjectionSnapshot {
         let mut entity_ids = BTreeSet::new();
         for observation in &observations {
             observation.validate()?;
+            if observation.operation != ProjectionOperation::Upsert {
+                return Err(ProjectionError::SnapshotDeleteNotAllowed);
+            }
             if observation.entity.kind != entity_kind {
                 return Err(ProjectionError::MixedSnapshotKinds);
             }
@@ -1022,6 +1089,10 @@ pub enum ProjectionError {
     MissingCompatibilityIdentity,
     #[error("source sequence must be non-negative")]
     InvalidSourceSequence,
+    #[error("global-stream sequence semantics require an event-sourced sequence")]
+    InvalidGlobalSourceSequence,
+    #[error("source sequence semantics changed for an existing entity")]
+    SourceSequenceSemanticsMismatch,
     #[error("POLL_BOUNDED observations require a positive poll interval")]
     MissingPollInterval,
     #[error("poll interval is only valid for POLL_BOUNDED observations")]
@@ -1038,6 +1109,8 @@ pub enum ProjectionError {
     MixedSnapshotKinds,
     #[error("snapshot contains a duplicate entity key")]
     DuplicateSnapshotEntity,
+    #[error("snapshot reconciliation cannot contain delete observations")]
+    SnapshotDeleteNotAllowed,
     #[error("replay journal contains a duplicate ordinal")]
     DuplicateReplayOrdinal,
     #[error("candidate projection epoch is not BUILDING")]
@@ -1096,6 +1169,8 @@ mod tests {
             source_read_at: at(second) + TimeDelta::milliseconds(10),
             source_cursor: Some(cursor(second, ingestion_id)),
             source_sequence,
+            source_sequence_semantics: SourceSequenceSemantics::PerEntityContiguous,
+            operation: ProjectionOperation::Upsert,
             source_completeness: SourceCompleteness::EventSourced,
             poll_interval_ms: None,
             adapter_version: "ts-adapter-v1".to_owned(),
@@ -1188,6 +1263,56 @@ mod tests {
             ApplyDisposition::GapApplied { sequence: 2 }
         );
         assert_eq!(reducer.gaps()[0].code, "SOURCE_SEQUENCE_GAP");
+    }
+
+    #[test]
+    fn global_stream_sequences_order_entities_without_false_per_entity_gaps() {
+        let mut reducer = ProjectionReducer::new(scope(), Uuid::now_v7());
+        let mut first = observation("evt_global_10", "order_1", 10, Some(10), "OPEN");
+        first.source_sequence_semantics = SourceSequenceSemantics::GlobalStreamMonotonic;
+        reducer.apply(first, at(11)).unwrap();
+
+        let mut later = observation("evt_global_14", "order_1", 9, Some(14), "FILLED");
+        later.source_sequence_semantics = SourceSequenceSemantics::GlobalStreamMonotonic;
+        assert_eq!(
+            reducer.apply(later, at(15)).unwrap(),
+            ApplyDisposition::Applied { sequence: 2 }
+        );
+        assert!(reducer.gaps().is_empty());
+        assert_eq!(
+            reducer.entities().values().next().unwrap().payload["status"],
+            "FILLED"
+        );
+    }
+
+    #[test]
+    fn delete_is_replayable_and_removes_visible_state() {
+        let epoch_id = Uuid::now_v7();
+        let mut upsert = observation("evt_upsert", "order_1", 1, Some(1), "OPEN");
+        upsert.source_sequence_semantics = SourceSequenceSemantics::GlobalStreamMonotonic;
+        let mut delete = observation("evt_delete", "order_1", 2, Some(2), "DELETED");
+        delete.source_sequence_semantics = SourceSequenceSemantics::GlobalStreamMonotonic;
+        delete.operation = ProjectionOperation::Delete;
+
+        let replayed = replay(
+            scope(),
+            epoch_id,
+            vec![
+                ReplayRecord {
+                    journal_ordinal: 1,
+                    observation: upsert,
+                    projected_at: at(3),
+                },
+                ReplayRecord {
+                    journal_ordinal: 2,
+                    observation: delete,
+                    projected_at: at(4),
+                },
+            ],
+        )
+        .unwrap();
+        assert_eq!(replayed.reducer.sequence(), 2);
+        assert!(replayed.reducer.entities().is_empty());
     }
 
     #[test]

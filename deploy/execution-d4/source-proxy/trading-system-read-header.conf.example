@@ -1,0 +1,4 @@
+# Runtime file must contain only the two proxy_set_header directives below,
+# with REPLACE_WITH_DEDICATED_PAPER_READ_KEY replaced outside Git.
+proxy_set_header X-Portal-Paper-Read-Key "REPLACE_WITH_DEDICATED_PAPER_READ_KEY";
+proxy_set_header X-Portal-Read-Contract "d4.paper-read.v1";

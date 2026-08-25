@@ -1795,6 +1795,57 @@ không phải 17 màn.
 > typed unavailable chờ Trading System contract và D2→D4. Chi tiết:
 > [`EX_BE_05B_F1B_INCIDENT_DETAIL.md`](./backend/EX_BE_05B_F1B_INCIDENT_DETAIL.md).
 
+> **Backend checkpoint 2026-08-24 — EX-BE-02-LIVE D3:** real SGP→AWS-HK
+> transport is `D3_TRANSPORT_ACCEPTED / BUSINESS_SOURCE_DARK / D2_RUNTIME_RESTORED`.
+> HTTP/2, TLS 1.3 mTLS, the delegated-JWT matrix, bounded
+> latency, Source Proxy loss/recovery and unchanged-D2 rollback passed. D4 is
+> `D4_OFFLINE_AUTHORIZATION_PREPARED / D3_PREDECESSOR_ACCEPTED / LIVE_D4_INPUTS_BLOCKED`;
+> registry stays `fixture`, and Query/analytics/SSE/
+> commands/activation remain off. Detail:
+> [`EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md`](./backend/EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md).
+>
+> D4 readiness is `D4_READINESS_AUDITED / LIVE_D4_INPUTS_BLOCKED / NO_SOURCE_READ`:
+> the next external input is the owner-published mandatory-auth Paper read
+> contract; the next infrastructure input is a separately encrypted projection
+> store on the existing AWS-HK host. Request:
+> [`EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md`](./backend/EX_BE_02_LIVE_D4_READINESS_AUDIT_AND_OWNER_REQUEST.md).
+
+> **Backend checkpoint 2026-08-24 — D4 mapper core:** status is `D4_MAPPER_CORE_OFFLINE_COMPLETE / RUNTIME_FAIL_CLOSED / LIVE_INPUTS_BLOCKED`.
+> Rust exact-decimal mapping for orders/fills/positions/
+> events, cross-alpha rejection, composite event cursor, sealed synthetic
+> replay and fresh-PostgreSQL BUILDING-only evidence are complete. Edge
+> readiness now separates store health from actual ingestion health. No live
+> source call, Query/SSE/analytics/command, ACTIVE epoch or non-fixture profile
+> exists. Owner identity/cursor/resync input and encrypted storage remain the
+> next D4 gates. Detail:
+> [`EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md`](./backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md).
+
+> **Backend checkpoint 2026-08-24 — D4 encrypted projection storage:** status is `D4_ENCRYPTED_STORAGE_BOUNDARY_PREPARED / LIVE_VOLUME_NOT_PROVISIONED / NO_SOURCE_READ`.
+> The offline schema, read-only preflight and D4 Compose
+> overlay now prevent root-filesystem/D2-volume reuse and require independent
+> encrypted-EBS/KMS evidence plus exact mount UUID/options/ownership. No paid
+> AWS resource, mount, Docker volume or source read was created. Live D4 still
+> waits for owner approval/provisioning, the dedicated Paper read identity and
+> the stable cursor/completeness/resync contract. Detail:
+> [`EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md`](./backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md).
+
+> **Owner handoff 2026-08-24 — D4 inputs:** `D4_OWNER_ACTION_PACKET_PREPARED / OWNER_ACTIONS_PENDING / NO_SOURCE_READ`.
+> The packet gives Bobby the exact encrypted gp3 creation/mount/evidence path
+> and gives the Trading System owner agent a bounded implementation/test/
+> sanitized-response contract for the dedicated Paper read identity. It grants
+> neither direct database access nor runtime activation. Detail:
+> [`EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md`](./backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md).
+
+> **Backend checkpoint 2026-08-24 — D4 source/storage reconciliation:** status
+> is `D4_SOURCE_AND_STORAGE_INPUTS_RECONCILED /
+> CONTRACT_ARTIFACT_IMPORT_PENDING / NO_PORTAL_SOURCE_TRAFFIC`. The owner has
+> locally accepted a dedicated loopback-only, mandatory-auth Paper facade and
+> prepared a separate encrypted gp3 projection filesystem. Portal authorization
+> v2 now locks source commits/image, scope/bounds, revoked-key evidence and
+> Source Proxy delivery. No source request, epoch, Query/SSE/analytics/command
+> or registry activation occurred. Detail:
+> [`EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md`](./backend/EX_BE_02_LIVE_D4_SOURCE_AND_STORAGE_RECONCILIATION.md).
+
 > **Backend checkpoint 2026-08-23 — EX-BE-05b/F2 Phase 10:** Portal-owned
 > Sandbox Certification trên SGP đạt
 > `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`: DRAFT→IN_REVIEW→APPROVED|DENIED,

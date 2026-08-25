@@ -1,0 +1,40 @@
+{
+  "schema_version": "portal.execution.d4.source-contract-lock.v1",
+  "contract_revision": "d4.paper-read.v1",
+  "imported_utc": "2026-08-25",
+  "source_implementation_commit": "4ad5d49322ce2e90e95148d36c5aa535c98b4935",
+  "source_runtime_acceptance_commit": "99e912f4de9d23b51a3c2b9bc68eacd0841e9dfc",
+  "source_head_observed_at_import": "4ad8f87825733f7f4c0be1f3ac785f7702478d38",
+  "source_branch_observed_at_import": "feat/d4-paper-read-facade",
+  "provenance": {
+    "git_diff_name_status_from_runtime_acceptance_to_observed_head": "",
+    "all_five_files_byte_identical_from_runtime_acceptance_to_observed_head": true,
+    "portal_import_matches_observed_head": true
+  },
+  "published_handoff": {
+    "original_source_guide_sha256": "478eaec1f51f849170cc8170ed1224dd08931f293c1d124f75a6996919110ee7",
+    "source_test_evidence_sha256": "a1cd28d785dfff1697ed9527474c649fc6288b0839e080f64aae45fa5cea8922"
+  },
+  "files": {
+    "PORTAL_PAPER_READ_FACADE_GUIDE.md": "d3fe1c26446cc7874572c251b462e87bc3a3111820cd2736cc5a27381aabdefd",
+    "portal-paper-read-d4-v1.allowlist.txt": "c45c3f3f4f8f0aecc5ef4bdac3dcdf1250af1057454d8c3a0312bf803ec6e9d9",
+    "portal-paper-read-d4-v1.capability.json": "284caf2e299fbc71d924219d0f5312553a2c60c81a70adad716fb78cf093b11b",
+    "portal-paper-read-d4-v1.json": "620fc88821c44a4019079b48055fa709b932ebf28c243a3122c6cb217fd3121d",
+    "source-proxy-d4-read-locations.conf.template": "87131db5b314f4756bc2cea088ce9ed8ca6066171dcaf74485467090b9b0f751"
+  },
+  "authority": {
+    "contract_import_only": true,
+    "runtime_active": false,
+    "source_call": false,
+    "projection_epoch": false,
+    "source_proxy_mtls_only": true,
+    "database": false,
+    "redis": false,
+    "cli": false,
+    "broker": false,
+    "command": false,
+    "mutation": false,
+    "live": false,
+    "canary": false
+  }
+}

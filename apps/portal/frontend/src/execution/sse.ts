@@ -67,6 +67,7 @@ export const PROJECTION_EVENTS = [
   "order.updated",
   "fill.recorded",
   "position.updated",
+  "source_event.observed",
   "runtime.updated",
   "account.updated",
   "broker_binding.updated",

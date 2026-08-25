@@ -3,8 +3,8 @@ use std::collections::BTreeMap;
 use chrono::{DateTime, TimeDelta, Utc};
 use execution_contracts::{CanonicalId, SourceAuthority, SourceCompleteness};
 use projection_core::{
-    replay, ProjectionEntityKey, ProjectionEntityKind, ProjectionObservation, ProjectionScope,
-    ReplayRecord,
+    replay, ProjectionEntityKey, ProjectionEntityKind, ProjectionObservation, ProjectionOperation,
+    ProjectionScope, ReplayRecord, SourceSequenceSemantics,
 };
 use serde_json::json;
 use ts_adapter_v1::{
@@ -72,6 +72,8 @@ fn observation(
         source_read_at,
         source_cursor: None,
         source_sequence: Some(source_sequence),
+        source_sequence_semantics: SourceSequenceSemantics::PerEntityContiguous,
+        operation: ProjectionOperation::Upsert,
         source_completeness: SourceCompleteness::PollBounded,
         poll_interval_ms: Some(1_000),
         adapter_version: SUPPORTED_ADAPTER_VERSION.to_owned(),
