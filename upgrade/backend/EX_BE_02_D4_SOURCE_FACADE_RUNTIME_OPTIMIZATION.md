@@ -199,10 +199,17 @@ observation remains pending.
 
 ### D4-OPT-01 — Contract revision
 
+Status: `PORTAL_REQUEST_VERIFIER_COMPLETE / OWNER_PACK_PENDING`.
+
 - Trading System owner publishes incremental cursor/watermark, gap, tombstone
   or reconciliation semantics and precise retention floor.
 - Portal imports the revised machine-readable contract by digest.
 - Revision remains additive or ships through an explicit compatibility mapper.
+
+Portal's request schema, exact publication envelope, fail-closed verifier and
+15-case synthetic corpus are complete. The current reader remains locked to v1
+until the owner returns a byte-identical accepted pack. Evidence and owner workflow:
+[`EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md`](./EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md).
 
 ### D4-OPT-02 — Source implementation
 

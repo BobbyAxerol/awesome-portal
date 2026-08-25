@@ -610,6 +610,13 @@ authority.
   evidence must prove zero source sessions, SELECT delta and byte delta before
   `D4_DORMANT_VERIFIED`. No live window, registry profile, epoch activation or
   Trading System change was made.
+- [EX-BE-02 / N02 Incremental Source Contract Revision](./EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md)
+  — **Portal request/verifier complete / owner pack pending / runtime v1
+  locked:** a request-only v2 schema now locks consumer lease, cursor/delta,
+  tombstone, retention, resync, completeness and bounded authority. An exact
+  four-file digest envelope and 15-case fail-closed verifier are green. No v2
+  owner publication was found, so no contract import, Rust reader change,
+  source traffic, registry promotion or Trading System edit was made.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

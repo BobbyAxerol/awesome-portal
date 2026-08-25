@@ -1,0 +1,15 @@
+{
+  "schema_version": "portal.execution.d4.incremental-errors.v1",
+  "contract_revision": "d4.paper-read.v2",
+  "synthetic_non_business_data": true,
+  "cases": [
+    {"code": "CONTRACT_REVISION_UNSUPPORTED", "http_status": 400, "retryable": false, "requires_resync": false},
+    {"code": "CURSOR_AHEAD", "http_status": 409, "retryable": false, "requires_resync": false},
+    {"code": "CURSOR_EXPIRED", "http_status": 410, "retryable": false, "requires_resync": true},
+    {"code": "GAP_DETECTED", "http_status": 409, "retryable": false, "requires_resync": true},
+    {"code": "LEASE_EXPIRED", "http_status": 401, "retryable": false, "requires_resync": false},
+    {"code": "RESPONSE_TOO_LARGE", "http_status": 413, "retryable": false, "requires_resync": false},
+    {"code": "RATE_LIMITED", "http_status": 429, "retryable": true, "requires_resync": false},
+    {"code": "SOURCE_UNAVAILABLE", "http_status": 503, "retryable": true, "requires_resync": false}
+  ]
+}

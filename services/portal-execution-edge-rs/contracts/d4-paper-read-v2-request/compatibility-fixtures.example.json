@@ -1,0 +1,14 @@
+{
+  "schema_version": "portal.execution.d4.incremental-fixtures.v1",
+  "contract_revision": "d4.paper-read.v2",
+  "synthetic_non_business_data": true,
+  "scenarios": [
+    {"name": "baseline_watermark_counts", "fixture_id": "synthetic-baseline-v2"},
+    {"name": "ordered_upsert_page", "fixture_id": "synthetic-upsert-v2"},
+    {"name": "delete_tombstone", "fixture_id": "synthetic-tombstone-v2"},
+    {"name": "duplicate_replay", "fixture_id": "synthetic-duplicate-v2"},
+    {"name": "gap_requires_new_building_epoch", "fixture_id": "synthetic-gap-v2"},
+    {"name": "lease_expiry_zero_source_selects", "fixture_id": "synthetic-lease-v2"},
+    {"name": "entity_completeness_matrix", "fixture_id": "synthetic-completeness-v2"}
+  ]
+}

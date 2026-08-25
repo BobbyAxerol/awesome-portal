@@ -352,7 +352,7 @@ became active.
 ### N02 — Incremental source contract revision
 
 **Mapping:** D4-OPT-01; Trading System compatibility request.  
-**Status:** `EXTERNAL_CONTRACT_PENDING`.  
+**Status:** `PORTAL_REQUEST_VERIFIER_COMPLETE / OWNER_PACK_PENDING / RUNTIME_V1_LOCKED`.  
 **Priority:** P0.
 
 **Goal**
@@ -376,6 +376,18 @@ consume without changing Trading System authority.
 
 Trading System owner publishes machine-readable contract, fixtures, error corpus, compatibility
 revision and owner acceptance. Portal does not edit Trading System code to obtain it.
+
+**Delivered on Portal side**
+
+- request-only machine contract for lease, cursor, delta, tombstone, retention, resync,
+  completeness, limits and authority;
+- exact four-file owner publication envelope with byte digests;
+- fail-closed candidate/acceptance verifier and 15-case synthetic security/semantic corpus;
+- read-only discovery proving the currently published source contract is still v1;
+- Claude handoff for typed UI composition while Lane B remains dark.
+
+The external exit gate is intentionally still open. Detail:
+[`EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md`](./backend/EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md).
 
 **Claude parallel lane:** prepare UI for typed gap/resync/retention/completeness only; no live source.
 
@@ -1029,8 +1041,8 @@ The immediate backend order after Bobby accepts this plan is:
 1. **N01 — D4 dormant closeout**: smallest high-value safety change; no source activation.
 2. **N09 design rulings + source-independent contracts** for BR-EX-30/31/32/33/35/36/37/38.
 3. **N10 contract design** for BR-EX-34/39/40, source-dark and fixture-backed.
-4. In parallel, send **N02** to the Trading System owner; Codex waits for the published revision
-   rather than editing Trading System.
+4. Send the completed **N02** request/verifier pack to the Trading System owner; Codex waits for
+   the exact four-file publication and acceptance result rather than editing Trading System.
 5. After N02/N03, implement **N04 → N05 → N06**.
 6. Activate read surfaces through **N07**, realtime through **N08**, and commands through **N12**.
 7. Promote environments only through **N13**, then close formal release/production runway
