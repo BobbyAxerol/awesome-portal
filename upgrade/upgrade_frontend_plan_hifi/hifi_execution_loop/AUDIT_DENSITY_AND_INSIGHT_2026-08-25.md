@@ -76,3 +76,20 @@ quyết định/guard band/state. Ngưỡng ≤4 đạt ở 16/17 màn; Canary v
 
 **Không đổi:** giá trị, state, fail-closed, contract. Text gấp vào `Hint`/disclosure vẫn nằm trong
 DOM nên test theo text không phải sửa; chỉ 2 assertion khớp chuỗi rút gọn được cập nhật.
+
+## 6. Vòng 3 — grammar v3 sau khi Bobby xem dev-portal (cùng ngày)
+
+Bobby xem trực tiếp và chỉ 4 điểm: quá nhiều chữ/khung, góc vuông, chữ không cùng kiểu, ô khít.
+Nguyên nhân gốc tìm được bằng cách "duyệt web" headless (harness chụp 18 route ở 1440×900):
+
+| Gốc | Ở đâu | Sửa |
+|---|---|---|
+| theme `operations-carbon` ép **radius 0** toàn bộ (DS §7 flat) | `tokens.css` | override radius 4/8/12 trong `.exec-surface` — token gốc không đổi, Research/Planning giữ baseline |
+| `--exec-font-meta`/`caption` là **mono** → mọi state/caption/meta thành log | `execution.css` + `typeRoles.test.ts` | meta/caption → Inter 12/16, 11/14; thêm role `id` mono cho mã; test EL-V2-02 cập nhật (owner override) |
+| panel nào cũng `border: 1px` + rail 4 hộp chồng + governance có **hộp bao ngoài** khiến KPI nổi mất nền (`surface-3` = `paper-raised`) | `.exec-strip-cell`, `.exec-rail-section`, `.exec-inbox/.exec-gate/.exec-exit` | panel = nền nổi không viền; rail = một cột chữ, chỉ Next là card, khối rỗng ẩn; bỏ hộp bao governance; ô trong panel dùng `surface-2` |
+| gap 12px khắp nơi | `.exec-ws`, canvas, tabs | nhịp 24/16/12 |
+| banner preview 2 tầng sticky | `.exec-preview-banner` | 1 dòng 32px, radius, Details + Inspector gấp phải |
+| Exit Review lặp "Promote X to Y?" 3 lần; note carried-question 2 dòng | `PaperExitReview.tsx` | purpose = gateSummary; note 1 dòng |
+
+Tài liệu: `DESIGN_GRAMMAR_V3.md`; override ghi ở đầu `PHASE_TRACKER.md` và trong EL-V2-10 của handoff.
+Harness chụp: `e2e/_probe-shots.spec.ts` (không commit — khớp `testMatch _probe*` nên sẽ chạy trong gate).

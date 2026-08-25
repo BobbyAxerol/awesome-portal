@@ -153,7 +153,7 @@ describe("B17 — no live control while the stream is dark", () => {
     const s = snapshot("busy");
     expect(s.streamAvailable).toBe(false);
     render(<CommandCenterScreen onOpen={() => undefined} snapshot={s} />);
-    expect(screen.getByText(/does not update itself/)).toBeTruthy();
+    expect(screen.getByText(/snapshot only/)).toBeTruthy();
   });
 
   it("offers no live or profile control at all, rather than a disabled one", () => {
@@ -165,7 +165,7 @@ describe("B17 — no live control while the stream is dark", () => {
     const raw = fixture("busy");
     raw.snapshot.stream_available = true;
     render(<CommandCenterScreen onOpen={() => undefined} snapshot={readCommandCenter(raw)!} />);
-    expect(screen.queryByText(/does not update itself/)).toBeNull();
+    expect(screen.queryByText(/snapshot only/)).toBeNull();
   });
 });
 

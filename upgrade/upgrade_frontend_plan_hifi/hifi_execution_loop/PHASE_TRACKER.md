@@ -10,6 +10,10 @@
 > `nested interactions` ❌ · `integrated visual approved` ❌.
 > "Screen built" trong các dòng cũ nghĩa là **component contract built**, không hơn.
 > Patch responsive 2026-08-23 được giữ như **subtask đặt tên** (KEEP 7/10), không phải V2.
+>
+> **OWNER OVERRIDE 2026-08-25 (Bobby):** hi-fi không còn là pixel authority — *"không cần tuân thủ
+> hi-fi nữa, cứ thoải mái sáng tạo"*. Grammar thay thế: `DESIGN_GRAMMAR_V3.md` (radius, bề mặt thay
+> viền, nhịp 24, Inter cho prose). Tính năng mới → viết spec cho codex, không chờ hi-fi.
 
 ## V2 — Mười phase bắt buộc EL-V2-00…09 (làm tuần tự, 1 phase WIP)
 

@@ -1547,6 +1547,10 @@ nhất: **test xanh không phải phê duyệt sản phẩm**. Phase này tách 
 > thứ Bobby ký là sản phẩm nhìn thấy, không phải test xanh. Không đổi contract, không kích hoạt
 > Lane B, không chạm Research/Planning; chỉ đổi cách 17 màn trình bày.
 
+**Owner override 2026-08-25 (trong phase này):** hi-fi `.dc.html` thôi là pixel authority; DS §7 flat
+geometry nghỉ. Grammar thay thế ở `DESIGN_GRAMMAR_V3.md`; typography lock EL-V2-02 cập nhật (meta/
+caption → Inter, thêm role `id` mono).
+
 **Goal:** mọi màn Execution đọc được ở mật độ vận hành — ít chữ giải thích, khoảng cách và
 khung khớp nhau, chart có kích thước theo việc phân tích — và Alpha/Portfolio/Account 360
 Insight là **chart thật nhìn thấy được**, không phải khung chữ.

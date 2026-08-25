@@ -26,9 +26,13 @@ const SCALE: Record<string, { size: number; line: number; family: "body" | "mono
   data: { size: 12, line: 18, family: "body", weight: 400 },
   num: { size: 14, line: 20, family: "mono", weight: 400 },
   kpi: { size: 24, line: 32, family: "mono", weight: 400 },
-  meta: { size: 11, line: 16, family: "mono", weight: 400 },
+  // Owner override 2026-08-25 (EL-V2-10, "chữ ở đâu cũng không phải một kiểu"):
+  // meta and caption are prose and read in the sans; `id` is the mono role
+  // for identifiers. Mono is evidence only: num · kpi · id · term.
+  meta: { size: 12, line: 16, family: "body", weight: 400 },
+  id: { size: 12, line: 16, family: "mono", weight: 400 },
   term: { size: 12, line: 18, family: "mono", weight: 400 },
-  caption: { size: 10, line: 14, family: "mono", weight: 400 },
+  caption: { size: 11, line: 14, family: "body", weight: 400 },
 };
 
 describe("the locked role scale", () => {

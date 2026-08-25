@@ -138,7 +138,6 @@ function Findings({ panel }: { panel: EvidencePanelSpec }) {
 export function PaperExitReview({
   eligibility,
   reviewId,
-  deploymentId,
   subject,
   promoteTo,
   gateMet,
@@ -389,7 +388,7 @@ export function PaperExitReview({
           title={subject}
           id={reviewId}
           badges={badges}
-          purpose={`Promote ${deploymentId} to ${promoteTo}? ${gateSummary ?? ""}`.trim()}
+          purpose={gateSummary ?? undefined}
           secondary={policyId ? <span className="exec-role-meta">observation policy {policyId}</span> : undefined}
         />
         {status === "partial" ? (
@@ -418,8 +417,7 @@ export function PaperExitReview({
         />
         {carried.length > 0 ? (
           <p className="exec-exit-carry-note exec-role-body">
-            {carried.length} unanswered {carried.length === 1 ? "question" : "questions"} will follow this
-            deployment into {carried[0].carriesTo}. Promotion does not resolve them.
+            {carried.length} carried {carried.length === 1 ? "question follows" : "questions follow"} into {carried[0].carriesTo} — promotion does not resolve {carried.length === 1 ? "it" : "them"}.
           </p>
         ) : null}
         <ExecutionTabs
