@@ -1,0 +1,23 @@
+{
+  "schema_version": "portal.execution.d4.incremental-source-metrics.v1",
+  "contract_revision": "d4.paper-read.v2",
+  "synthetic_example": true,
+  "observation": {
+    "idle_after_lease_expiry_seconds": 1800,
+    "idle_source_select_delta": 0,
+    "idle_source_bytes_read_delta": 0,
+    "active_request_count": 1000,
+    "p50_freshness_ms": 100,
+    "p95_freshness_ms": 250,
+    "p99_freshness_ms": 500,
+    "peak_rss_bytes": 134217728,
+    "peak_in_flight_requests": 1,
+    "peak_queue_depth": 4,
+    "maximum_rows_scanned_per_returned_row": 3,
+    "full_baseline_count": 1,
+    "ordinary_delta_full_scan_count": 0,
+    "source_error_count": 0
+  },
+  "within_declared_bounds": true,
+  "contains_business_data": false
+}

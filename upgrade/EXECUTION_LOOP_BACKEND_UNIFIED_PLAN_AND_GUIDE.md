@@ -394,7 +394,7 @@ The external exit gate is intentionally still open. Detail:
 ### N03 — Trading-System-owned incremental source implementation
 
 **Mapping:** D4-OPT-02.  
-**Status:** `EXTERNAL_IMPLEMENTATION_PENDING`.  
+**Status:** `PORTAL_ACCEPTANCE_HARNESS_COMPLETE / N02_OWNER_PACK_PENDING / EXTERNAL_IMPLEMENTATION_PENDING`.  
 **Owner:** Trading System owner, not Codex.  
 **Priority:** P0 after N02.
 
@@ -416,6 +416,18 @@ implements N02 without unconditional idle full scans.
 
 Published implementation commit/image and sanitized evidence match N02. Portal only imports
 non-secret contract artifacts.
+
+**Delivered on Portal side**
+
+- exact five-file owner implementation/evidence envelope chained to accepted N02 bytes;
+- immutable commit/image and fixed scope/GET-only/read-identity checks;
+- zero-idle-source, no-delta-full-scan, query-plan, bounds and recovery evidence model;
+- 14-scenario owner acceptance matrix and 15-case fail-closed verifier tests;
+- read-only discovery proving the current v1 facade still performs unconditional full refreshes.
+
+The Trading System owner implementation and N02 owner publication remain external dependencies.
+Detail:
+[`EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md`](./backend/EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md).
 
 **Claude parallel lane:** none beyond fixture/parity work.
 

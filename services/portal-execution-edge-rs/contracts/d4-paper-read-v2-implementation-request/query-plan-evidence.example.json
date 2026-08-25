@@ -1,0 +1,11 @@
+{
+  "schema_version": "portal.execution.d4.incremental-query-plan-evidence.v1",
+  "contract_revision": "d4.paper-read.v2",
+  "synthetic_example": true,
+  "contains_sql_or_business_values": false,
+  "entities": [
+    {"entity": "orders", "plan_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "incremental_key_reviewed": true, "ordinary_delta_seq_scan": false, "within_declared_amplification": true},
+    {"entity": "fills", "plan_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "incremental_key_reviewed": true, "ordinary_delta_seq_scan": false, "within_declared_amplification": true},
+    {"entity": "positions", "plan_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "incremental_key_reviewed": true, "ordinary_delta_seq_scan": false, "within_declared_amplification": true}
+  ]
+}

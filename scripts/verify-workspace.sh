@@ -339,6 +339,14 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/incremental-contract.schema.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/compatibility-fixtures.example.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/error-corpus.example.json" \
+  "${ROOT_DIR}/scripts/execution-n03-implementation-verify.py" \
+  "${ROOT_DIR}/scripts/test_execution_n03_implementation_verify.py" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/README.md" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/owner-implementation.manifest.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/implementation-profile.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/source-metrics.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/query-plan-evidence.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/acceptance-results.example.json" \
   "${ROOT_DIR}/scripts/execution-image-publication-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/.github/workflows/publish-images.yml" \
@@ -391,6 +399,8 @@ for required in \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_D4_DORMANT_CLOSEOUT_DISCIPLINE.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N02_INCREMENTAL_SOURCE_CONTRACT_HANDOFF.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N03_OWNER_IMPLEMENTATION_HANDOFF.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md" \
@@ -771,6 +781,14 @@ for tracked_source in \
   services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/incremental-contract.schema.json \
   services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/compatibility-fixtures.example.json \
   services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/error-corpus.example.json \
+  scripts/execution-n03-implementation-verify.py \
+  scripts/test_execution_n03_implementation_verify.py \
+  services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/README.md \
+  services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/owner-implementation.manifest.example.json \
+  services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/implementation-profile.example.json \
+  services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/source-metrics.example.json \
+  services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/query-plan-evidence.example.json \
+  services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/acceptance-results.example.json \
   scripts/execution-image-publication-test.sh \
   scripts/execution-tracking-test.sh \
   .github/workflows/publish-images.yml \
@@ -823,6 +841,8 @@ for tracked_source in \
   upgrade/backend/EX_BE_02_D4_DORMANT_CLOSEOUT_DISCIPLINE.md \
   upgrade/backend/EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md \
   upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N02_INCREMENTAL_SOURCE_CONTRACT_HANDOFF.md \
+  upgrade/backend/EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N03_OWNER_IMPLEMENTATION_HANDOFF.md \
   upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md \
   upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md \
   upgrade/backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md \
@@ -902,6 +922,11 @@ for json_contract in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/incremental-contract.schema.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/compatibility-fixtures.example.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/error-corpus.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/owner-implementation.manifest.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/implementation-profile.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/source-metrics.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/query-plan-evidence.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/acceptance-results.example.json" \
   "${ROOT_DIR}/apps/portal/registry/links.v1.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry-source.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry.v1.schema.json" \
@@ -1007,7 +1032,9 @@ python3 -m py_compile \
   "${ROOT_DIR}/scripts/execution-d4-dormant-closeout.py" \
   "${ROOT_DIR}/scripts/test_execution_d4_dormant_closeout.py" \
   "${ROOT_DIR}/scripts/execution-n02-contract-verify.py" \
-  "${ROOT_DIR}/scripts/test_execution_n02_contract_verify.py"
+  "${ROOT_DIR}/scripts/test_execution_n02_contract_verify.py" \
+  "${ROOT_DIR}/scripts/execution-n03-implementation-verify.py" \
+  "${ROOT_DIR}/scripts/test_execution_n03_implementation_verify.py"
 python3 "${ROOT_DIR}/scripts/test_execution_iam_verify.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_authorization.py"
@@ -1016,6 +1043,8 @@ python3 "${ROOT_DIR}/scripts/test_execution_d4_authorization.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d4_dormant_closeout.py"
 python3 "${ROOT_DIR}/scripts/execution-n02-contract-verify.py" --mode template
 python3 "${ROOT_DIR}/scripts/test_execution_n02_contract_verify.py"
+python3 "${ROOT_DIR}/scripts/execution-n03-implementation-verify.py" --mode template
+python3 "${ROOT_DIR}/scripts/test_execution_n03_implementation_verify.py"
 "${ROOT_DIR}/scripts/test-execution-d4-storage.sh"
 "${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh"
 "${ROOT_DIR}/scripts/execution-d4-qualification-preflight-test.sh"

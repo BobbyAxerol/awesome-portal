@@ -213,10 +213,19 @@ until the owner returns a byte-identical accepted pack. Evidence and owner workf
 
 ### D4-OPT-02 — Source implementation
 
+Status: `PORTAL_ACCEPTANCE_HARNESS_COMPLETE / N02_OWNER_PACK_PENDING /
+OWNER_IMPLEMENTATION_PENDING`.
+
 - Trading System owner implements the incremental/demand-driven facade or
   publishes an existing suitable outbox.
 - Add owner-approved source indexes only after query-plan evidence.
 - Preserve loopback-only binding, dedicated read identity and exact scope.
+
+Portal now has an exact owner evidence envelope and verifier for immutable
+commit/image, zero-idle-source behavior, no ordinary-delta full scan, query-plan
+bounds and the full recovery corpus. No source implementation was synthesized in
+Portal. Detail:
+[`EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md`](./EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md).
 
 ### D4-OPT-03 — Rust Edge consumption
 

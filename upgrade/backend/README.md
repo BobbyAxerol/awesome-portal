@@ -617,6 +617,13 @@ authority.
   four-file digest envelope and 15-case fail-closed verifier are green. No v2
   owner publication was found, so no contract import, Rust reader change,
   source traffic, registry promotion or Trading System edit was made.
+- [EX-BE-02 / N03 Trading-System-owned Incremental Source Implementation](./EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md)
+  — **Portal acceptance harness complete / N02 and owner implementation
+  pending:** an exact five-file evidence envelope chains immutable source
+  commit/image to accepted N02 bytes and proves zero idle SELECT/bytes, no
+  ordinary-delta full scan, query-plan/resource bounds and 14 recovery/security
+  scenarios. The current AWS-HK v1 facade remains dormant; Portal did not edit,
+  deploy or call Trading System.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

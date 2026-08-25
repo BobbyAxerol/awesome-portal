@@ -1264,6 +1264,13 @@ deep-dive → ADR → slice → evidence discipline documented above.
   locked to `d4.paper-read.v1`, Lane B remains dark and the external owner gate
   is still pending. Detail:
   [`EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md`](./backend/EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md).
+- **EX-BE-02 / N03 owner incremental implementation gate (2026-08-25):**
+  Portal's acceptance boundary now chains an immutable Trading-System-owned
+  commit/image and five sanitized evidence files to accepted N02 bytes. Fifteen
+  verifier tests lock zero idle source activity, no delta full scan, fixed
+  scope/read identity, query/resource bounds and recovery. The owner has not
+  published N02/N03, so runtime stays v1/dormant and N04 remains blocked. Detail:
+  [`EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md`](./backend/EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING
