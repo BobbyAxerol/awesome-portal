@@ -1225,6 +1225,18 @@ deep-dive → ADR → slice → evidence discipline documented above.
   remediated artifacts are signed from protected main and a fresh finite
   BUILDING-only window passes. Detail:
   [`EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md`](./backend/EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md).
+- **EX-BE-02-LIVE D4 Paper read-shadow acceptance (2026-08-25):** protected-
+  main signed Edge and Source Proxy images completed one fresh finite owner
+  window against the dedicated mandatory-auth Paper facade. The exact four GET
+  resources reached a separately encrypted BUILDING-only PostgreSQL epoch;
+  replay parity, freshness, source-loss/recovery, PostgreSQL restart,
+  idempotency, bounded load and encrypted dump/restore passed. The accepted D2
+  dark runtime was restored with zero OOM/restarts, while the D4 volume, backup
+  and BUILDING evidence were retained. Registry remains `fixture`; Query,
+  analytics, SSE, commands, activation and Trading System changes remain
+  disabled. Status: `D4_PAPER_READ_SHADOW_ACCEPTED / BUILDING_ONLY /
+  D2_DARK_RESTORED / BUSINESS_READER_STILL_DARK`. Detail:
+  [`EX_BE_02_LIVE_D4_PAPER_READ_SHADOW_ACCEPTANCE.md`](./backend/EX_BE_02_LIVE_D4_PAPER_READ_SHADOW_ACCEPTANCE.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

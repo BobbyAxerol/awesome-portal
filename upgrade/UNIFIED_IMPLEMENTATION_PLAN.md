@@ -1857,6 +1857,17 @@ không phải 17 màn.
 > finite owner window pass. Detail:
 > [`EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md`](./backend/EX_BE_02_LIVE_D4_QUALIFICATION_ATTEMPT_AND_REMEDIATION.md).
 
+> **Backend checkpoint 2026-08-25 — D4 Paper read shadow accepted:** status is
+> `D4_PAPER_READ_SHADOW_ACCEPTED / BUILDING_ONLY / D2_DARK_RESTORED /
+> BUSINESS_READER_STILL_DARK`. Protected-main signed artifacts completed a
+> fresh finite mandatory-auth qualification into separately encrypted
+> PostgreSQL. Replay/freshness, source and database recovery, idempotency,
+> bounded load and encrypted dump/restore passed; D2 dark was restored with
+> zero OOM/restarts. The D4 epoch remains BUILDING and registry remains
+> `fixture`; Query, analytics, SSE, commands and activation are still off.
+> Detail:
+> [`EX_BE_02_LIVE_D4_PAPER_READ_SHADOW_ACCEPTANCE.md`](./backend/EX_BE_02_LIVE_D4_PAPER_READ_SHADOW_ACCEPTANCE.md).
+
 > **Backend checkpoint 2026-08-23 — EX-BE-05b/F2 Phase 10:** Portal-owned
 > Sandbox Certification trên SGP đạt
 > `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`: DRAFT→IN_REVIEW→APPROVED|DENIED,

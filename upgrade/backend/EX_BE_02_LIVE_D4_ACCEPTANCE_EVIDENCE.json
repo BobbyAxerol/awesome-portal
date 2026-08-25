@@ -1,0 +1,67 @@
+{
+  "schema_version": "portal.execution.d4.acceptance-evidence.v1",
+  "accepted_at_utc": "2026-08-25T07:41:00Z",
+  "change_window": "d4-paper-read-qualification-20260825-03",
+  "deployment_commit": "c98385538ebad509d3506dc5bb165dccf54631e1",
+  "building_epoch_id": "69b255ba-a1de-406c-92f5-88199397adf7",
+  "source_scope": "PAPER_BINANCE_USDM",
+  "signed_images": {
+    "execution_edge": "sha256:49efa91a46d8610e8c45062cd7c3bb86f02322984ecb0ce48d2cbb1d270eae75",
+    "source_proxy": "sha256:08806c9a5d10f3f84ff786a5931a5b352c2ba07198739e3dd2443d4b65e33ad8"
+  },
+  "live_manifest": {
+    "sha256": "4b8c15cffba27e23ca41c416bc7506e219e3632a49393c960d6cdfe3183e5e9a",
+    "requests_total": 33,
+    "retries_total": 0,
+    "baseline_observations": 7273,
+    "event_observations": 0,
+    "elapsed_ms": 17456,
+    "freshness_age_ms": 619,
+    "replay_parity": true,
+    "blocker_count": 0
+  },
+  "live_drills": {
+    "source_loss_failed_closed": true,
+    "source_recovery_passed": true,
+    "postgres_restart_recovery_passed": true,
+    "bounded_load_runs": 12,
+    "bounded_load_requests": 12,
+    "bounded_load_retries": 0,
+    "maximum_elapsed_ms": 599,
+    "maximum_freshness_age_ms": 671,
+    "backup_restore_parity": true,
+    "backup_sha256": "4d3a5fa5b9ccdf982afd3bbf268c321ca13e4b6ab6996dca8de80c7d409ad865",
+    "restore_signature_sha256": "4c9eaa28ea48c06beb029b2ca5620b36ee7386e02987059f2a0ff71d00faf9d5"
+  },
+  "offline_gates": {
+    "rust_postgres_tests_passed": 143,
+    "strict_clippy_passed": true,
+    "rustfmt_passed": true,
+    "cursor_expiry_requires_fresh_building_epoch": true,
+    "global_gap_marks_epoch_failed_without_advancing_cursor": true,
+    "source_proxy_exact_route_and_negative_gate_passed": true,
+    "qualification_preflight_and_evidence_drift_gate_passed": true,
+    "tracking_reconciliation_passed": true
+  },
+  "rollback": {
+    "sha256": "cdd62e818dfa98f98b37b0dd95ce8cf86096399f710e0b3dea76e1d0494771d2",
+    "runtime": "D2_DARK_ACCEPTED",
+    "projection_volume": "portal-execution-projection-pgdata-v1",
+    "d4_projection_volume_retained": "portal-execution-projection-pgdata-v2",
+    "all_portal_services_healthy": true,
+    "trading_system_facade_healthy": true,
+    "oom_killed": false,
+    "restart_count": 0
+  },
+  "authority": {
+    "registry_delivery_profile": "fixture",
+    "query": "DISABLED",
+    "analytics": "DISABLED",
+    "sse": "DISABLED",
+    "commands": "DISABLED",
+    "activation": "DISABLED",
+    "trading_system_changes": "DISABLED"
+  },
+  "contains_business_rows": false,
+  "contains_credentials": false
+}
