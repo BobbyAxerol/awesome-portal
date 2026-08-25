@@ -546,3 +546,59 @@ test.describe("EL-V2-07 · operations workflow", () => {
     });
   }
 });
+
+// ── EL-V2-08 · entity 360, analytical surfaces and Full Blotter ──────────────
+test.describe("EL-V2-08 · analytical surfaces", () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test("Alpha 360: changing the venue scope changes every scoped panel", async ({ page }) => {
+    await open(page, "/deployments/alphas/av_2041");
+    const before = await page.locator("[data-scope-panel]").evaluateAll((nodes) => nodes.map((n) => [n.getAttribute("data-scope-panel"), n.textContent]));
+    await page.getByLabel(/Venue/).selectOption("BINANCE");
+    await expect(page).toHaveURL(/venue=BINANCE/);
+    const after = await page.locator("[data-scope-panel]").evaluateAll((nodes) => nodes.map((n) => [n.getAttribute("data-scope-panel"), n.textContent]));
+    expect(after.length).toBe(before.length);
+    const changed = after.filter((a, i) => a[1] !== before[i][1]).length;
+    expect(changed).toBe(after.length);
+  });
+
+  test("Alpha 360: every insight tile is a chart or an explicit state — no blank frame", async ({ page }) => {
+    await open(page, "/deployments/alphas/av_2041?tab=Insight+Charts");
+    const tiles = page.locator(".exec-alpha-tiles > *");
+    expect(await tiles.count()).toBe(12);
+    for (let i = 0; i < 12; i += 1) {
+      const t = tiles.nth(i);
+      const ok = (await t.locator("canvas, .exec-state, .exec-chart-unavailable-body").count()) > 0;
+      expect(ok, `tile ${i + 1}`).toBe(true);
+    }
+  });
+
+  test("Blotter: footer totals per currency come from the contract fixture, unsummed and unrounded", async ({ page }) => {
+    await open(page, "/deployments/blotter");
+    const footer = page.getByLabel("Totals by currency");
+    await expect(footer).toContainText("125000.250000000000000001");
+    await expect(footer).toContainText("4875000.750000000000000001");
+    await expect(footer).toContainText("USDT");
+  });
+
+  test("Portfolio 360: heatmap cell click drills into the lens", async ({ page }) => {
+    await open(page, "/deployments/portfolios/PF-CRYPTO?tab=Structure+%26+Correlation");
+    const cell = page.locator(".exec-pf-matrix tbody tr").first().locator("td button").nth(1);
+    await cell.click();
+    await expect(page.locator('.exec-pf-matrix [data-lens="true"]').first()).toBeVisible();
+    await expect(page.locator("svg.exec-influence")).toBeVisible();
+  });
+
+  for (const [name, route] of [
+    ["alpha-av_2041", "/deployments/alphas/av_2041"],
+    ["alpha-tiles", "/deployments/alphas/av_2041?tab=Insight+Charts"],
+    ["portfolio-PF-CRYPTO", "/deployments/portfolios/PF-CRYPTO?tab=Structure+%26+Correlation"],
+    ["account-acct-live-grid-v21", "/deployments/accounts/acct-live-grid-v21"],
+    ["blotter", "/deployments/blotter"],
+  ] as const) {
+    test(`shell-visible baseline · ${name} · 1440×900`, async ({ page }) => {
+      await open(page, route);
+      await expect(page).toHaveScreenshot(`el-v2-08-${name}.png`, { fullPage: true, animations: "disabled" });
+    });
+  }
+});

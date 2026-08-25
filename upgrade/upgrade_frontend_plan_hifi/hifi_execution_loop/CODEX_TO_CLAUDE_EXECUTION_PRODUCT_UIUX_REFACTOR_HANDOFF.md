@@ -1443,6 +1443,26 @@ không ai đọc rồi **cố ý để treo** chờ có UI — phase này chính
 | Chart contract | tooltip/zoom/reset/expand/table/export/cross-filter mỗi loại có test |
 | Perf budget | bảng 10⁵ dòng: DOM node ≤ ngưỡng RESIDENCY_CAP; render đo và ghi |
 
+
+#### Claude close-out — EL-V2-08 (2026-08-24, chỉ thêm; gate = Bobby duyệt hình ảnh)
+
+| Gate | Kết quả | Bằng chứng |
+|---|---|---|
+| Layout proposal | ✓ | `ANALYTICS_LAYOUT_PROPOSAL_2026-08-24.md` |
+| Zero khung trống | ✓ | 12 tile Alpha 360 = `EquityChart` (honest "not published — BR-EX-34 §alpha tiles") hoặc trạng thái INSUFFICIENT/UNAVAILABLE có lý do + envelope caption; ρ timeline / drawdown overlap (Portfolio) = honest state; test "no blank frames" (unit) + e2e 12 tile canvas-or-state |
+| Aggregates đúng luật (M7) | ✓ | `blotterAggregates.ts` `readAggregatesByCurrency` — đọc **fixture contract canonical** `execution-projection-page.valid.json` (test khẳng định fixture blotter là bản sao nguyên văn); `AggregatesFooter`: rows · qty rows · notional rows **tách**, decimal 18 số lẻ nguyên chuỗi, `invalid_numeric_count > 0` ⇒ chip đỏ + hàng đánh dấu; null ⇒ "not published", không số 0 |
+| Scope propagation | ✓ | `data-scope-panel` trên KPI · equity (tiêu đề mang venue/window) · contribution · deployments; test đổi venue: changed = present (4/4) — unit + e2e; deployment map là registry-wide nên **không** gắn scope (đúng HiFi "from registry") |
+| Chart contract | ✓ | `EquityChart` thêm **Export** (JSON điểm publish, bounded) + **cross-filter** (`onSelectBucket` từ table view — không sửa wrapper `charts/EChart` dùng chung với Research); tooltip/zoom/reset/expand/table đã có test từ V2-04 |
+| Correlation heatmap + lens + influence map | ✓ | `absBucket(\|ρ\|)` → swatch cạnh ô (giữ AA — token gate bắt lỗi tint nền, đã sửa), số giữ chuỗi server; click ô → lens cột; `InfluenceMap` SVG: node = alpha (bán kính = exposure % publish), cạnh = \|ρ\| ≥ 0.5 từ ma trận packed — không tính hệ số nào |
+| Triptych Account = decision panel | ✓ | internal / physical / difference trên canvas, headroom banner; tabs Binding & linked · Sync history · Findings; rail Next = headroom verdict + Sync now / Dry-run; blockers Δ ≠ MATCH, findings, credential |
+| Blotter | ✓ | Columns ▾ (ẩn cột client, không re-query) · **Export loaded rows** (CSV clipboard, nhãn "bounded to this page, not the N total") · footer M7 · funnel/keyset/virtualization/cross-filter giữ |
+| Perf budget | ✓ | test 10⁵ dòng: **41 `<tr>` resident** (RESIDENCY_CAP 2000), render 8ms jsdom — ghi log trong test |
+| Role lens DENIED đủ màn (L16) | **không làm** | cần dữ liệu role-cut per panel từ contract; giữ denied per-panel hiện có — ghi rõ, không bịa lens |
+
+**Cổng kỹ thuật:** tsc sạch · vitest **1,649 passed / 1 skipped (79 file)** (+15 test `analytics360.test.tsx`, +3 `blotterAggregates.test.ts`; test cũ Account/Alpha cập nhật theo tab, không xoá) · vite build sạch · Playwright **283 passed · 0 failed · 16 skipped** (audit 40 — bắt 2 lỗi thật: id chart contribution trùng giữa các fixture group, hàng tool chart tràn 390px; fixtures 87; journeys 48 gồm scope propagation, 12 tile no-blank, footer M7 từ fixture, heatmap→lens, 5 baseline route).
+
+**Chưa làm / ngoài phạm vi:** Alpha/Portfolio/Account/Blotter chưa lên `ExecutionWorkspace` rail đầy đủ (Alpha/Portfolio/Blotter giữ khung cũ + tabs; Account đã lên) — V2-09 đồng bộ; Rebalance/Report pack (Portfolio) vẫn `dis+BE`; series cho tiles/ρ/drawdown chờ BR-EX-34.
+
 ### EL-V2-09 — Real-source Lane B, full hardening and V2 release acceptance
 
 **Goal:** validate the finished product against approved real Paper projections, then close the V2

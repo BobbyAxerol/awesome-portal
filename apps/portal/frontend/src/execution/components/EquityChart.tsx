@@ -56,6 +56,8 @@ export interface EquityChartProps {
   unavailableReason?: string;
   height?: number;
   id?: string;
+  /** Cross-filter source: a bucket picked in the table view (chart clicks need no wrapper change). */
+  onSelectBucket?: (t: string) => void;
 }
 
 const EXPANDED_HEIGHT = 560;
@@ -184,7 +186,9 @@ export function EquityChart({
   unavailableReason = "Equity series not published — equity_projection.v1 requested (BR-EX-34).",
   height = DEFAULT_HEIGHT,
   id,
+  onSelectBucket,
 }: EquityChartProps) {
+  const [exported, setExported] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [table, setTable] = useState(false);
   const [zoomEpoch, setZoomEpoch] = useState(0);
@@ -224,8 +228,21 @@ export function EquityChart({
           <button type="button" className="exec-btn-ghost" aria-pressed={expanded} onClick={() => setExpanded((v) => !v)}>
             {expanded ? "Collapse" : "Expand"}
           </button>
+          <button
+            type="button"
+            className="exec-btn-ghost"
+            onClick={() => {
+              // Export = the published points as JSON strings, bounded to this window; never a derived figure.
+              const text = JSON.stringify({ label: series.label, envelope, points: series.points, band: series.band ?? null }, null, 2);
+              void navigator.clipboard?.writeText(text);
+              setExported(`${series.points.length} buckets copied as JSON`);
+            }}
+          >
+            Export
+          </button>
         </div>
       </div>
+      {exported ? <p className="exec-role-meta" role="status">{exported}</p> : null}
       {series.evidenceOnly ? (
         <p className="exec-chart-evidence-note" role="note">
           Evidence fixture — not a published projection.
@@ -248,7 +265,14 @@ export function EquityChart({
               {series.points.map((p) => {
                 const b = series.band?.find((x) => x.t === p.t);
                 return (
-                  <tr key={p.t} data-gap={p.equity === null ? "true" : undefined}>
+                  <tr
+                    key={p.t}
+                    data-gap={p.equity === null ? "true" : undefined}
+                    onClick={onSelectBucket ? () => onSelectBucket(p.t) : undefined}
+                    role={onSelectBucket ? "button" : undefined}
+                    tabIndex={onSelectBucket ? 0 : undefined}
+                    onKeyDown={onSelectBucket ? (e) => { if (e.key === "Enter" || e.key === " ") onSelectBucket(p.t); } : undefined}
+                  >
                     <th scope="row"><span className="exec-num">{p.t}</span></th>
                     <td><span className="exec-num">{p.equity ?? "gap"}</span></td>
                     {series.band ? <td><span className="exec-num">{b ? `${b.lower} … ${b.upper}` : "—"}</span></td> : null}

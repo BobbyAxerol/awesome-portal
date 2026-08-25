@@ -34,12 +34,13 @@ import type {
   Readiness,
 } from "../contracts";
 import { AuthorityBadge, BrokerSyncChip, EnvironmentBadge, StatusChip } from "../components/badges";
-import { ChartTile } from "../components/chart";
 import { KeysetTable, type Column } from "../components/table";
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { EquityChart, type EquitySeries } from "../components/EquityChart";
+import { envelopeCaption } from "../components/chart";
+import { ContributionChart } from "../components/ContributionChart";
 
 /**
  * Row budgets for the bounded panels.
@@ -129,6 +130,8 @@ export interface InsightTile {
   /** Why there is not enough, in the server's words. */
   reason?: string | null;
   body?: ReactNode;
+  /** series when the contract publishes one; absent = honest state */
+  series?: EquitySeries | null;
 }
 
 export interface AlphaThreeSixtyProps {
@@ -484,7 +487,7 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
         {tab === "Overview" ? (
           <>
             <DeploymentMap venues={venues} />
-            <div className="exec-alpha-kpis">
+            <div className="exec-alpha-kpis" data-scope-panel="kpis">
               {kpis.map((kpi) => (
                 <div key={kpi.label} className="exec-alpha-kpi">
                   <div className="exec-blotter-note">{kpi.label}</div>
@@ -505,16 +508,19 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
                 not. */}
             <div className="exec-grid-2" data-ratio="1.35">
               {equity ? (
-                <EquityChart title="Equity by stage" envelope={equity.envelope} series={equity.series ?? null} />
+                <div data-scope-panel="equity"><EquityChart title={`Equity by stage · ${scope.venue} · ${scope.window}`} envelope={equity.envelope} series={equity.series ?? null} /></div>
               ) : (
                 <PanelState
                   status="unavailable"
                   reason="No equity series was published for this alpha and window."
                 />
               )}
-              <Contribution rows={contributions} />
+              <div data-scope-panel="contribution">
+                <ContributionChart rows={contributions} />
+                <Contribution rows={contributions} />
+              </div>
             </div>
-            <Deployments onOpenDeployment={onOpenDeployment} onOpenAccount={onOpenAccount} rows={deployments} scope={scope} />
+            <div data-scope-panel="deployments"><Deployments onOpenDeployment={onOpenDeployment} onOpenAccount={onOpenAccount} rows={deployments} scope={scope} /></div>
           </>
         ) : null}
 
@@ -636,23 +642,29 @@ function Deployments({ onOpenDeployment, onOpenAccount, rows, scope }: { rows: r
 }
 
 function Tiles({ tiles }: { tiles: readonly InsightTile[] }) {
+  // Twelve tiles, each a real chart or an explicit state — never a frame with a caption.
   return (
-    <div className="exec-alpha-tiles">
-      {tiles.map((tile) => (
-        <ChartTile key={tile.index} title={`${tile.index} · ${tile.title}`} envelope={tile.envelope}>
-          {tile.state === "ok" ? (
-            tile.body
-          ) : (
-            // A real state with its own reason, not a blank frame. Tile 5 shows
-            // one venue with enough fills beside one without; blanking the
-            // second would imply it was fine.
-            <PanelState
-              status={tile.state === "insufficient_data" ? "insufficient_data" : "unavailable"}
-              reason={tile.reason ?? "Not enough evidence in this window to draw this tile."}
-            />
-          )}
-        </ChartTile>
-      ))}
+    <div className="exec-alpha-tiles" data-scope-panel="tiles">
+      {tiles.map((tile) =>
+        tile.state === "ok" ? (
+          <EquityChart
+            key={tile.index}
+            title={`${tile.index} · ${tile.title}`}
+            envelope={tile.envelope}
+            series={tile.series ?? null}
+            height={220}
+            unavailableReason={`${tile.title}: series not published for this scope — BR-EX-34 §alpha tiles.`}
+          />
+        ) : (
+          <section key={tile.index} className="exec-chart-tile exec-chart-unavailable" aria-label={`${tile.index} · ${tile.title}`} data-state={tile.state}>
+            <div className="exec-chart-head">
+              <h3 className="exec-section-title">{tile.index} · {tile.title}</h3>
+            </div>
+            <PanelState status={tile.state === "insufficient_data" ? "insufficient_data" : "unavailable"} reason={tile.reason ?? undefined} />
+            <p className="exec-role-meta exec-chart-envelope">{envelopeCaption(tile.envelope)}</p>
+          </section>
+        ),
+      )}
     </div>
   );
 }

@@ -4921,7 +4921,7 @@ describe("Alpha 360° Overview shows the equity overlay it was drawn with", () =
     // comparing paper against canary should not have to open a tab for it.
     const { container } = render(<AlphaThreeSixty {...alphaHandlers()} {...alpha360()} />);
     const grid = container.querySelector('.exec-grid-2[data-ratio="1.35"]') as HTMLElement;
-    expect(within(grid).getByText("Equity by stage")).toBeTruthy();
+    expect(within(grid).getByText(/Equity by stage/)).toBeTruthy();
     expect(within(grid).getByText(/Per-venue contribution/)).toBeTruthy();
   });
 

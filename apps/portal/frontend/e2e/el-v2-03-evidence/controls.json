@@ -926,6 +926,76 @@
  {
   "route": "/deployments/blotter",
   "index": 5,
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 6,
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 7,
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 8,
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 9,
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 10,
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 11,
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 12,
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 13,
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 14,
+  "tag": "BUTTON",
+  "text": "Export loaded rows",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 15,
   "tag": "BUTTON",
   "text": "Reset the cross-filter chart selection · Aug 12 ",
   "verdict": "changed"
@@ -1208,15 +1278,43 @@
   "route": "/deployments/accounts/acct-live-grid-v21",
   "index": 1,
   "tag": "BUTTON",
-  "text": "Sync now",
-  "verdict": "changed"
+  "text": "Binding & linked 3",
+  "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/accounts/acct-live-grid-v21",
   "index": 2,
   "tag": "BUTTON",
+  "text": "Sync history 3",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 3,
+  "tag": "BUTTON",
+  "text": "Findings 0",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 4,
+  "tag": "BUTTON",
+  "text": "Sync now",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 5,
+  "tag": "BUTTON",
   "text": "Dry-run reconcile",
   "verdict": "changed"
+ },
+ {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 6,
+  "tag": "BUTTON",
+  "text": "Copy full broker digest",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",

@@ -36,6 +36,7 @@ import { AuthorityBadge, EnvironmentBadge, StatusChip } from "../components/badg
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
 import { ExecutionSurface } from "../ExecutionSurface";
+import { EquityChart } from "../components/EquityChart";
 
 /**
  * Cells the matrix may lay out before the representation changes.
@@ -218,6 +219,57 @@ function cellText(
   return { text: value, insufficient: false, samples };
 }
 
+/** |ρ| → 0..4 for the heatmap tint. Colour is presentation; the coefficient itself is never rewritten. */
+export function absBucket(coefficient: string): "0" | "1" | "2" | "3" | "4" {
+  const n = Math.abs(Number(coefficient));
+  if (!Number.isFinite(n)) return "0";
+  if (n >= 0.8) return "4";
+  if (n >= 0.6) return "3";
+  if (n >= 0.4) return "2";
+  if (n >= 0.2) return "1";
+  return "0";
+}
+
+/**
+ * Influence map (HiFi 3a): node = alpha, edge = |ρ| at or above the
+ * threshold, both read straight off the published packed matrix. Radius
+ * follows the holding's exposure share when published; otherwise nodes are
+ * equal — the map never computes an exposure of its own.
+ */
+export function InfluenceMap({ matrix, exposures, threshold = "0.5" }: { matrix: PackedCorrelation; exposures: ReadonlyMap<string, string | null>; threshold?: string }) {
+  const n = matrix.labels.length;
+  const cx = 160, cy = 120, R = 90;
+  const nodes = matrix.labels.map((l, i) => ({ ...l, x: cx + R * Math.cos((2 * Math.PI * i) / n - Math.PI / 2), y: cy + R * Math.sin((2 * Math.PI * i) / n - Math.PI / 2) }));
+  const edges: { a: number; b: number; rho: string }[] = [];
+  for (let a = 0; a < n; a += 1) for (let b = a + 1; b < n; b += 1) {
+    const rho = correlationAt(matrix, a, b);
+    if (rho !== null && compareAbsDecimal(rho, threshold) >= 0) edges.push({ a, b, rho });
+  }
+  const radius = (id: string) => {
+    const pct = exposures.get(id);
+    const v = pct === null || pct === undefined ? NaN : Number(pct.replace("%", ""));
+    return Number.isFinite(v) ? 6 + Math.min(18, v / 4) : 10;
+  };
+  return (
+    <figure className="exec-influence-wrap">
+      <svg className="exec-influence" viewBox="0 0 320 240" role="img" aria-label={`Influence map: ${n} alphas, ${edges.length} edges with |ρ| ≥ ${threshold}`}>
+        {edges.map((e) => (
+          <line key={`${e.a}-${e.b}`} x1={nodes[e.a].x} y1={nodes[e.a].y} x2={nodes[e.b].x} y2={nodes[e.b].y} strokeWidth={1 + 3 * Math.abs(Number(e.rho))} opacity={0.35 + 0.6 * Math.abs(Number(e.rho))}>
+            <title>{`${nodes[e.a].displayName} — ${nodes[e.b].displayName}: ρ ${e.rho}`}</title>
+          </line>
+        ))}
+        {nodes.map((node) => (
+          <g key={node.entityId}>
+            <circle cx={node.x} cy={node.y} r={radius(node.entityId)} />
+            <text x={node.x} y={node.y + radius(node.entityId) + 12} textAnchor="middle">{node.displayName}</text>
+          </g>
+        ))}
+      </svg>
+      <figcaption className="exec-role-meta">node = alpha (radius = published exposure share) · edge = |ρ| ≥ {threshold} from the published matrix · {edges.length} edges</figcaption>
+    </figure>
+  );
+}
+
 function CorrelationMatrix({
   matrix,
   lensIndex,
@@ -261,11 +313,16 @@ function CorrelationMatrix({
                     key={column}
                     data-insufficient={cell.insufficient ? "true" : undefined}
                     data-lens={row === lensIndex || column === lensIndex ? "true" : undefined}
+                    data-self={row === column ? "true" : undefined}
+                    data-abs={cell.insufficient || row === column ? undefined : absBucket(cell.text)}
                     title={
                       cell.samples !== null ? `${cell.samples} samples` : "sample count not published"
                     }
                   >
-                    <span className="exec-num">{cell.text}</span>
+                    {/* Heatmap: the tint is |ρ| bucketed for colour only; the number stays the server's string. Click drills into the column's lens. */}
+                    <button type="button" className="exec-pf-cellbtn" onClick={() => onLensChange(column === lensIndex ? null : column)} aria-label={`${rowLabel.displayName} × ${labels[column].displayName}: ${cell.text}`}>
+                      <span className="exec-num">{cell.text}</span>
+                    </button>
                   </td>
                 );
               })}
@@ -839,6 +896,25 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
               lensIndex={lens}
               onLensChange={setLens}
             />
+            {correlation?.kind === "PACKED_MATRIX" ? (
+              <InfluenceMap matrix={correlation} exposures={new Map(holdings.map((h) => [h.alpha, h.exposurePct]))} />
+            ) : null}
+            <div className="exec-grid-2">
+              <EquityChart
+                title={`ρ(NAV, ${benchmark}) · 30d · threshold 0.6`}
+                envelope={{ window: scopeWindow, interval: "1d", currency: null, asOf: envelope.asOf ?? "", authority: "ANALYTICS" as never, formulaVersion: "rho_timeline", sourceRows: null, returnedRows: null, coverage: null }}
+                series={null}
+                height={200}
+                unavailableReason="ρ timeline and tail-ρ not published for this portfolio — BR-EX-34 §portfolio. The matrix above is the published correlation."
+              />
+              <EquityChart
+                title="Drawdown overlap timeline"
+                envelope={{ window: scopeWindow, interval: "1d", currency: null, asOf: envelope.asOf ?? "", authority: "ANALYTICS" as never, formulaVersion: "drawdown_overlap", sourceRows: null, returnedRows: null, coverage: null }}
+                series={null}
+                height={200}
+                unavailableReason="Drawdown overlap series not published — BR-EX-34 §portfolio."
+              />
+            </div>
             {insight ? (
               <section className="exec-gate-panel">
                 <div className="exec-360-colmeta">

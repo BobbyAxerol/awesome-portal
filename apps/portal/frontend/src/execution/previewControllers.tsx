@@ -41,6 +41,8 @@ import type { PortfolioThreeSixtyData } from "./portfolio360.fixtures";
 import type { AccountBroker360Data } from "./account360.fixtures";
 import type { PaperWorkbenchData } from "./paper.fixtures";
 import { BLOTTER_FILTERS, FullBlotter, type BlotterRow } from "./screens/FullBlotter";
+import { AGGREGATES_BY_CURRENCY_RAW } from "./blotter.fixtures";
+import { readAggregatesByCurrency } from "./blotterAggregates";
 import type { BlotterFilter } from "./contracts";
 import { PaperWorkbench, WORKBENCH_TABS, type WorkbenchTab } from "./screens/PaperWorkbench";
 import { PORTFOLIO_TABS, PortfolioThreeSixty, type PortfolioTab } from "./screens/PortfolioThreeSixty";
@@ -198,6 +200,7 @@ export function scopeAlpha(props: AlphaThreeSixtyData, venue: string): AlphaThre
   if (venue === "All") return props;
   return {
     ...props,
+    contributions: props.contributions.filter((c) => c.venue === venue),
     scope: { ...props.scope, venue },
     venues: props.venues.filter((v) => v.venue === venue),
     deployments: props.deployments.filter((d) => d.venue === venue),
@@ -297,6 +300,7 @@ export function FullBlotterPreview({ initialFilter = "ALL" }: { initialFilter?: 
   return (
     <>
       <FullBlotter
+        aggregates={readAggregatesByCurrency(AGGREGATES_BY_CURRENCY_RAW)}
         envelope={{ authority: "EXECUTION", asOf: "2026-08-22T10:42:01Z", freshness: "OK" }}
         page={page}
         filter={filter}

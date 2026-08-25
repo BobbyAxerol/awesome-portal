@@ -25,7 +25,7 @@ Kế hoạch chi tiết từng phase: các khối **Claude supplement** trong ch
 | EL-V2-05 | Governance decision chain | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | sticky decision bar ✓ (R1/R2/Exit) · Inbox SLA bar + strip + rail ✓ · R1 5 tab (limitations bảng, evidence honest) ✓ · R2 PLAN PREVIEW 1 chip + elevation ✓ · role matrix 4×2 ✓ · zero-write test ✓ · journey Inbox→R1→R2→Exit ✓ · BR-EX-35/36/37 | `decisionBar.tsx`, `ApprovalInbox.tsx`, `GateR1Review.tsx`, `GateR2Review.tsx`, `PaperExitReview.tsx`, `evidence.tsx`, `governanceChain.test.tsx`, `GOVERNANCE_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-05-*.png`; close-out trong handoff |
 | EL-V2-06 | Stage workbench VNM→Live | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | anatomy chung 4 màn ✓ (clone=0) · guard budget 1 band ✓ · VNM timeline ✓ · Sandbox 4 tab ✓ · Canary/Live bất đối xứng + suppression ✓ · commands dark ✓ · ma trận 4 stage ✓ · chart = honest state (BR-EX-34) · BR-EX-38 | `stageWorkbench.tsx`, `sessionTimeline.tsx`, `SandboxCertification.tsx`, `CanaryControlRoom.tsx`, `LiveFullOperations.tsx`, `PaperWorkbench.tsx` (timeline), `AlphaThreeSixty.tsx` (EquityChart), `vnCalendar.ts` (phases), `stageWorkbench.test.tsx`, `STAGE_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-06-*.png` |
 | EL-V2-07 | Operations · incident · command | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | terminal §9.2 trong drawer (202 ⇒ ACCEPTED) ✓ · triage ranked-first + BUSY/QUIET ✓ · rail theo selection ✓ · incident containment + forward-only ✓ · break-glass không render ✓ · journey 6 + 3 e2e mới ✓ | `components/drawer.tsx` (terminal), `CommandCenter.tsx`, `OperationsQueue.tsx`, `IncidentDetail.tsx`, `AdminActionDrawer.tsx`, `containers.tsx`, `operationsWorkflow.test.tsx`, `OPERATIONS_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-07-*.png` |
-| EL-V2-08 | 360° + Blotter analytical | `QUEUED` | ledger analytical đóng; zero recompute; budget đạt | — |
+| EL-V2-08 | Entity 360 · analytics · Blotter | **hoàn tất 2026-08-24, chờ Bobby duyệt hình ảnh** | 12 tile = chart/honest ✓ · M7 aggregates footer từ fixture canonical ✓ · scope propagation 4/4 ✓ · heatmap + lens + influence map ✓ · Account triptych + tabs + rail ✓ · Blotter Columns/Export ✓ · chart export/cross-filter ✓ · perf 10⁵ = 41 tr ✓ | `blotterAggregates.ts`, `AggregatesFooter.tsx`, `ContributionChart.tsx`, `EquityChart.tsx`, `AlphaThreeSixty.tsx`, `PortfolioThreeSixty.tsx`, `AccountBroker360.tsx`, `FullBlotter.tsx`, `analytics360.test.tsx`, `blotterAggregates.test.ts`, `ANALYTICS_LAYOUT_PROPOSAL_2026-08-24.md`, baselines `el-v2-08-*.png` |
 | EL-V2-09 | Lane B Paper + hardening + nghiệm thu | `QUEUED` | mười phase accepted; owner sign-off; rollback chứng minh | — |
 
 
@@ -2266,13 +2266,13 @@ nav trỏ 404.
 | Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
 |---|---|---|---|---|---|
 | Scope 4 chiều + filter All/Filled/Partial/Rejected/Open | N | có | impl | C+I(fixtures) | preview chưa nối — V2-03 |
-| Columns ▾ / Export | N | **chưa có** | MISS | — | V2-08; export = bảng dữ liệu client từ trang đã tải + nhãn bounded, không bịa full export |
+| Columns ▾ / Export | N | Columns ▾ (ẩn cột client) · Export loaded rows (CSV clipboard, nhãn bounded) | impl | C | V2-08 ✓ |
 | Cross-filter chip + ✕ reset + counts theo selection | N | có chip+reset; nguồn chart-selection **chưa** (chưa có chart) | impr | C | V2-08 nối từ chart contract |
 | countLabel "showing 1–n of 412 in selection · 48,213 total" | N | có (selection/total tách) | impl | C | |
 | Row expand funnel signal→intent→risk→ACK→fill (+sd_/le_ id) | N | có | impl | C | |
 | Keyset load-older, virtualized, sticky header | N | có | impl | C | |
 | Fees venue ccy, exact, never abbreviated | N | có (M6 gate) | impl | C | |
-| Footer tổng theo tiền tệ (M7 `aggregates_by_currency`) | N | **reader chưa, UI chưa** | MISS | — | V2-08 — đã có kế hoạch 3 count + invalid_numeric |
+| Footer tổng theo tiền tệ (M7 `aggregates_by_currency`) | N | reader + footer; 3 count tách, decimal nguyên, invalid đỏ | impl | C | V2-08 ✓ — đọc fixture contract canonical |
 
 ### L15 · HiFi Alpha 360 (WF 2a·2b)
 
@@ -2282,10 +2282,10 @@ nav trỏ 404.
 | 9 tabs Overview…Audit | N | có đủ 9, useId mới | impl | C+I(fixtures) | |
 | Deployment map venue×stage (từ registry) | N | có | impl | C | |
 | KPI 6 theo scope | N | có | impl | C | |
-| **Equity by stage overlay chart** | C | khung | MISS | — | V2-08 |
-| **Per-venue contribution chart** (ccy riêng, không FX mix) | C | khung | MISS | — | V2-08 |
+| **Equity by stage overlay chart** | C | `EquityChart` honest state, tiêu đề theo scope | dis+BE | C | BR-EX-34 |
+| **Per-venue contribution chart** (ccy riêng, không FX mix) | C | `ContributionChart` — một chart/tiền tệ từ giá trị publish | impl | C | V2-08 ✓ |
 | Deployments-in-scope bảng + row→workbench + acct→360 | N | có | impl | C | |
-| **12 insight tiles** (đủ 12 theo 2b, INSUFFICIENT_DATA per tile) | C | 12 khung + caption | MISS | — | V2-08 — món lớn nhất |
+| **12 insight tiles** (đủ 12 theo 2b, INSUFFICIENT_DATA per tile) | C | 12 tile `EquityChart`/state + caption; series chờ contract | dis+BE | C | V2-08 ✓ cơ chế — BR-EX-34 §alpha tiles |
 | Positions/Orders/Risk/Sessions/Accounting/Recon/Audit tables | N | có đủ, exact values | impl | C | risk: stage envelope override hiển thị đúng |
 | Audit trail append-only + step-up actor | N | có | impl | C | |
 
@@ -2296,13 +2296,13 @@ nav trỏ 404.
 | 6 tabs Overview/Structure&Corr/Capital/Approvals/Incidents/Audit | N | có | impl | C+I(fixtures) | |
 | KPI 5 + Report pack/Rebalance ▾ | N | KPI có; 2 action **chưa** (không contract) | impl / dis+BE | C | Rebalance = plan/apply — treo BE |
 | Holdings structure 4 tầng + FX flag USDC | N | có | impl | C | |
-| Correlation matrix + BM pinned + INSUFFICIENT + cell click drill | C | matrix render dạng bảng; heatmap+drill **chưa** | impr | C | V2-08 heatmap M4 |
-| **ρ(NAV,BM) timeline + threshold 0.6 + tail ρ** | C | khung | MISS | — | V2-08 |
+| Correlation matrix + BM pinned + INSUFFICIENT + cell click drill | C | heatmap swatch theo \|ρ\| + click ô → lens | impl | C | V2-08 ✓ |
+| **ρ(NAV,BM) timeline + threshold 0.6 + tail ρ** | C | honest state (không khung trống) | dis+BE | C | BR-EX-34 §portfolio |
 | Leader lens 3 ranked lists (không merge score) + INSIGHT claim | N | có | impl | C | |
 | Leader impact what-if (marginal.v1, labeled estimates) | N | có | impl | C | |
 | Symbol overlap / duplicate exposure | N | có | impl | C | |
-| **Influence map** (node=exposure, edge=|ρ|) | C | **không có** | MISS | — | V2-08 — SVG nhỏ, không cần lib mới |
-| **Drawdown overlap timeline** | C | khung | MISS | — | V2-08 |
+| **Influence map** (node=exposure, edge=|ρ|) | C | `InfluenceMap` SVG từ ma trận packed | impl | C | V2-08 ✓ |
+| **Drawdown overlap timeline** | C | honest state | dis+BE | C | BR-EX-34 §portfolio |
 | Capital ledger append-only + before/after invariant | N | có (+bounded fix 2026-08-23) | impl | C | |
 | Approvals/Incidents/Audit tabs đủ bảng | N | có | impl | C | |
 | Role-cut DENIED (5c: amounts withheld, counts shown, masked ids) | N | denied per-panel có; **lens đủ màn chưa** | impr | C | V2-08 cùng L0 role lens |

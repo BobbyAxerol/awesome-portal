@@ -32,6 +32,9 @@ import {
 import type { FunnelStageName, OrderFunnel } from "../analytics";
 import { AuthorityBadge, OrderStatusChip } from "../components/badges";
 import { KeysetTable, type Column } from "../components/table";
+import { AggregatesFooter } from "../components/AggregatesFooter";
+import type { CurrencyAggregate } from "../blotterAggregates";
+import { useState } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
@@ -316,6 +319,8 @@ export interface FullBlotterProps {
   funnelStatus?: PanelStatus;
   funnelReason?: string;
   onExpand: (row: BlotterRow) => void;
+  /** M7 totals per currency — server-published, three counts kept apart. */
+  aggregates?: readonly CurrencyAggregate[] | null;
 }
 
 export function FullBlotter({
@@ -335,6 +340,7 @@ export function FullBlotter({
   funnelStatus,
   funnelReason,
   onExpand,
+  aggregates,
 }: FullBlotterProps) {
   const columns: readonly Column<BlotterRow>[] = [
     {
@@ -416,6 +422,18 @@ export function FullBlotter({
     { key: "orderId", header: "order_id", width: "9rem", render: (row) => row.orderId },
   ];
 
+  const [hidden, setHidden] = useState<readonly string[]>([]);
+  const visibleColumns = columns.filter((c) => !hidden.includes(c.key));
+  const exportRows = () => {
+    // Bounded on purpose: the rows this page has loaded, never a "full export"
+    // the server did not publish. Values are the strings as rendered.
+    const header = visibleColumns.map((c) => c.key).join(",");
+    const lines = page.rows.map((row) => visibleColumns.map((c) => JSON.stringify(String((row as unknown as Record<string, unknown>)[c.key] ?? ""))).join(","));
+    const text = [header, ...lines].join("\n");
+    void navigator.clipboard?.writeText(text);
+    setExported(`${page.rows.length} loaded rows copied as CSV — bounded to this page, not the ${page.totalCount ?? "unpublished"} total`);
+  };
+  const [exported, setExported] = useState<string | null>(null);
   return (
     <ExecutionSurface kind="deployments" className="exec-blotter">
       {/* Reuses the inbox/gate header pair rather than adding a third. */}
@@ -446,10 +464,31 @@ export function FullBlotter({
           applied by the server — the chips re-query, they do not hide loaded rows
         </span>
       </div>
+      <div className="exec-blotter-tools" role="group" aria-label="Table tools">
+        <details className="exec-blotter-columns">
+          <summary className="exec-role-control">Columns ▾</summary>
+          <div className="exec-blotter-columnlist">
+            {columns.map((c) => (
+              <label key={c.key} className="exec-role-meta">
+                <input
+                  type="checkbox"
+                  checked={!hidden.includes(c.key)}
+                  onChange={(e) => setHidden((h) => (e.target.checked ? h.filter((k) => k !== c.key) : [...h, c.key]))}
+                />{" "}
+                {c.header}
+              </label>
+            ))}
+          </div>
+        </details>
+        <button type="button" className="exec-role-control exec-btn-ghost" onClick={exportRows} title="Copies the loaded rows as CSV — bounded to this page">
+          Export loaded rows
+        </button>
+        {exported ? <span className="exec-role-meta" role="status">{exported}</span> : null}
+      </div>
 
       <KeysetTable
         label="Orders and fills"
-        columns={columns}
+        columns={visibleColumns}
         page={page}
         rowKey={(row) => row.orderId}
         status={status}
@@ -491,6 +530,7 @@ export function FullBlotter({
           not this screen's. Restating them here would be a second source for
           one number. */}
       <footer className="exec-blotter-foot">
+        <AggregatesFooter aggregates={aggregates} />
         <span className="exec-blotter-note">
           click a row for its funnel · fees in venue currency, exact values, never abbreviated
         </span>

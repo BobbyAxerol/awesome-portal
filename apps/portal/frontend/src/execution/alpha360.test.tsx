@@ -114,7 +114,7 @@ describe("Alpha 360° — figures that are not known say so", () => {
 
   it("gives all twelve tiles a mandatory envelope caption", () => {
     const { container } = render(<AlphaThreeSixty {...alphaHandlers()} {...alpha360({ tab: "Insight Charts" })} />);
-    const captions = container.querySelectorAll(".exec-tile-caption");
+    const captions = container.querySelectorAll(".exec-chart-envelope");
     expect(captions).toHaveLength(12);
     // The caption is what separates a full series from an aggregated one.
     expect(captions[0].textContent).toContain("43800 → 4368 samples");
