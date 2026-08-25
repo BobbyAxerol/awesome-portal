@@ -7,25 +7,13 @@
  * decision (Acknowledge / Mark RESOLVED) lives in the sticky bar with the
  * gate's blocker codes as its reasons.
  */
-import { useState, type ReactNode } from "react";
-import { Hint } from "../components/hint";
+import type { ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
-import { ExecutionDecisionBar } from "../components/decisionBar";
-import { ExecutionSectionTitle } from "../components/typography";
-import {
-  ExecutionContextRail,
-  ExecutionDecisionStrip,
-  ExecutionPageHeader,
-  ExecutionProvenanceDrawer,
-  ExecutionTabs,
-  ExecutionWorkspace,
-  shortDigest,
-  type HeaderBadge,
-  type RailBlocker,
-} from "../components/workspace";
+import { ExecutionWorkspace, shortDigest } from "../components/workspace";
 import type { PanelStatus } from "../contracts";
 import { blockerText, incidentRail, type IncidentCollection, type IncidentDetail as Incident } from "../operations";
+import { hhmm, incidentSmoke, mmss, sparkPoints, useIncidentLive, type GateRow, type OpRow } from "../incident.smoke";
 
 const PANEL_TITLE: Record<string, string> = {
   findings: "Findings",
@@ -33,8 +21,6 @@ const PANEL_TITLE: Record<string, string> = {
   dead_letters: "Dead letters",
   trace_order: "Order trace",
 };
-const TABS = ["Evidence", "Timeline", "Operations"] as const;
-type Tab = (typeof TABS)[number];
 
 function CountNote({ collection, noun }: { collection: IncidentCollection<unknown>; noun: string }) {
   const { totalCount, returnedCount, truncated } = collection;
@@ -43,6 +29,39 @@ function CountNote({ collection, noun }: { collection: IncidentCollection<unknow
     <p className="exec-inc-note exec-role-meta">
       {truncated ? `showing ${returnedCount ?? collection.rows.length} of ${totalCount} ${noun} — the rest were not sent` : `${totalCount} ${noun}`}
     </p>
+  );
+}
+
+/** Hi-fi WF 4d panel: hairline on raised paper, 10/14 header (mono 11 uppercase), optional footer note. */
+function Panel({ title, label, meta, footer, children, className }: { title: string; label: string; meta?: ReactNode; footer?: ReactNode; children: ReactNode; className?: string }) {
+  return (
+    <section className={`exec-inc2-panel${className ? ` ${className}` : ""}`} aria-label={label}>
+      <header className="exec-inc2-panelhead">
+        <span className="exec-inc2-paneltitle">{title}</span>
+        {meta ? <><span className="exec-inc2-spacer" /><span className="exec-inc2-panelmeta">{meta}</span></> : null}
+      </header>
+      <div className="exec-inc2-panelbody">{children}</div>
+      {footer ? <footer className="exec-inc2-panelfoot">{footer}</footer> : null}
+    </section>
+  );
+}
+
+function OpLine({ op }: { op: OpRow }) {
+  return (
+    <span className="exec-inc2-op">
+      <span className="exec-inc2-dim">{op.at}</span> <a href={`/administration/actions?operation=${encodeURIComponent(op.id)}`}>{op.id}</a> {op.command}{" "}
+      <span className="exec-inc2-status" data-status={op.status}>{op.status}</span>
+      {op.note ? <> — {op.note}</> : null}
+    </span>
+  );
+}
+
+function GateLine({ g }: { g: GateRow }) {
+  const glyph = g.state === "done" ? "✓" : g.state === "open" ? "✗" : "—";
+  return (
+    <span className="exec-inc2-gate" data-state={g.state}>
+      {glyph} {g.text}{g.link ? <> <a href={g.link.href}>{g.link.label}</a></> : null}
+    </span>
   );
 }
 
@@ -67,7 +86,9 @@ export function IncidentDetailScreen({
   trail?: ReactNode;
   children?: ReactNode;
 }) {
-  const [tab, setTab] = useState<Tab>("Evidence");
+  const smoke = incidentSmoke();
+  const resolved = incident?.workflowState === "RESOLVED";
+  const live = useIncidentLive(smoke, resolved);
   if (status !== "ok" && status !== "partial") {
     return (
       <ExecutionSurface kind="deployments" className="exec-inc">
@@ -85,240 +106,211 @@ export function IncidentDetailScreen({
   const rail = incidentRail(incident.workflowState);
   const gate = incident.resolutionGate;
   const isAdmin = incident.actorRoles.includes("ADMIN");
-  const resolved = incident.workflowState === "RESOLVED";
-  const current = rail.find((s) => s.current)?.state ?? incident.workflowState ?? "state not stated";
-  const nextOp = incident.correlatedOperations.rows[0] ?? null;
-  const badges: HeaderBadge[] = [
-    { label: incident.workflowState ?? "STATE NOT STATED", axis: "stage", tone: resolved ? "good" : incident.workflowState === "MITIGATED" ? "warn" : "bad" },
-    { label: incident.severity ?? "severity not stated", axis: "other", tone: incident.severity === "CRITICAL" ? "bad" : incident.severity === "ERROR" || incident.severity === "WARNING" ? "warn" : "mute" },
-    { label: incident.environment ?? "env not stated", axis: "runtime" },
-    ...(conflict ? [{ label: "CHANGED — reload", axis: "broker-sync", tone: "bad" } as HeaderBadge] : []),
-  ];
-  const blockers: RailBlocker[] = [
-    ...(gate && !gate.eligible ? gate.blockerCodes.map((code) => ({ label: code, detail: blockerText(code), severity: "blocking" as const })) : []),
-    ...incident.sourcePanels.filter((p) => p.panelState !== "ok").map((p) => ({ label: `${PANEL_TITLE[p.panelId] ?? p.panelId} ${p.panelState}`, detail: "source panel", severity: "watch" as const })),
-  ];
+  const gatesRows = smoke ? (resolved ? smoke.resolved.gates : smoke.gates) : [];
+  const gatesDone = gatesRows.filter((g) => g.state === "done").length;
+  const gateCount = smoke ? `${gatesDone}/${gatesRows.length}` : gate ? (gate.eligible ? "OPEN" : `${gate.blockerCodes.length} blocked`) : "—";
+  const opsRows = smoke ? (resolved ? smoke.resolved.ops : smoke.ops) : [];
+  const budget = smoke?.resolveBudgetSeconds ?? 0;
+  const left = Math.max(0, budget - live.openSeconds);
+  const up = live.price >= live.prev;
+  const priceText = live.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const deltaValue = smoke ? (Number(smoke.deltaQty) * live.price).toLocaleString("en-US", { style: "currency", currency: "USD" }) : null;
   const decisionReasons: string[] = [];
   if (!isAdmin) decisionReasons.push("Incident actions are available to Admin operators only.");
   if (conflict) decisionReasons.push("This incident changed while you were looking at it. Reload and review before deciding.");
-  const contextRail = (
-    <ExecutionContextRail
-      next={{
-        title: resolved ? "Resolved — deployment stays halted" : `Containment: ${current}`,
-        detail: (
-          <span className="exec-role-body">
-            {incident.mitigatedAt ? `exposure frozen ${incident.mitigatedAt}. ` : ""}
-            {resolved
-              ? "Resume is its own plan → apply → verify with a fresh sync."
-              : nextOp
-                ? `Next: ${nextOp.commandKey ?? nextOp.operationId} — plan / apply / verify in the Action Drawer.`
-                : "No operation is linked yet; the next action starts in the Action Drawer."}
-          </span>
-        ),
-        action: nextOp ? (
-          <button type="button" className="exec-role-control exec-btn-apply exec-linkbtn" onClick={() => onOpenOperation(nextOp.operationId)}>
-            {nextOp.operationId} → Action Drawer
-          </button>
-        ) : undefined,
-      }}
-      blockers={blockers}
-      freshness={
-        <span className="exec-role-meta">
-          {incident.acknowledgedAt ? `acked ${incident.acknowledgedAt} by ${incident.acknowledgedBy ?? "—"}` : "not acknowledged"} · source {incident.sourceIntegrationState ?? "not stated"} · profile {incident.deliveryProfile ?? "not stated"}
-        </span>
-      }
-      provenance={
-        <ExecutionProvenanceDrawer
-          items={[
-            ...incident.evidence.rows.map((e) => ({ label: e.label ?? e.evidenceId, short: e.hash ? shortDigest(e.hash) : "hash not stated", full: e.hash })),
-            ...(incident.mitigationEvidenceHash ? [{ label: "mitigation", short: shortDigest(incident.mitigationEvidenceHash), full: incident.mitigationEvidenceHash }] : []),
-            ...(incident.cleanDryRunEvidenceHash ? [{ label: "clean dry-run", short: shortDigest(incident.cleanDryRunEvidenceHash), full: incident.cleanDryRunEvidenceHash }] : []),
-            { label: "target", short: `${incident.target.type ?? "—"} ${incident.target.id ?? "—"}`, full: null },
-          ]}
-          onCopy={(full) => void navigator.clipboard?.writeText(full)}
-        />
-      }
-    />
-  );
   return (
-    <ExecutionSurface kind="deployments" className="exec-inc">
-      <ExecutionWorkspace layout="balanced" rail={contextRail}>
-        <div className="exec-inc-head">
-          <ExecutionPageHeader
-            title={
-              <>
-                {incident.incidentId} <span className="exec-inc-subject">— {incident.title}</span>
-              </>
-            }
-            badges={badges}
-            purpose={incident.summary}
-            secondary={<span className="exec-inc-meta exec-role-meta">{incident.target.id ?? "target not stated"}{incident.assignedTo ? ` · owner ${incident.assignedTo}` : " · no assignee"}</span>}
-          />
-        </div>
-        {rail.length > 0 ? (
-          <ol className="exec-inc-rail" aria-label="Incident state">
-            {rail.map((step) => (
-              <li key={step.state} data-done={step.done} data-current={step.current}>
-                {step.state}
-                {step.state === "MITIGATED" && incident.mitigatedAt ? " — exposure frozen" : null}
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <PanelState status="unavailable" reason="This incident's workflow state is not one this screen recognises, so no rail is drawn. A plausible-looking rail over an unknown state would be a fabrication." />
-        )}
-        <p className="exec-inc-note exec-role-meta">forward-only · each transition audited</p>
-        {conflict ? (
-          <p className="exec-inc-conflict exec-role-body" role="alert">
-            This incident changed while you were looking at it. Reload and review before deciding.
-          </p>
-        ) : null}
-        <ExecutionDecisionStrip
-          metrics={[
-            { label: "Severity", value: incident.severity, tone: incident.severity === "CRITICAL" ? "bad" : undefined },
-            { label: "Operations", value: incident.correlatedOperations.totalCount === null ? null : String(incident.correlatedOperations.totalCount) },
-            { label: "Evidence refs", value: incident.evidence.totalCount === null ? null : String(incident.evidence.totalCount) },
-            { label: "Events", value: incident.timeline.totalCount === null ? null : String(incident.timeline.totalCount) },
-            { label: "Resolution gate", value: gate ? (gate.eligible ? "OPEN" : "BLOCKED") : null, tone: gate ? (gate.eligible ? "good" : "bad") : undefined },
-          ]}
-        />
-        <ExecutionTabs
-          tabs={[
-            { key: "Evidence", label: "Evidence", count: incident.evidence.rows.length },
-            { key: "Timeline", label: "Timeline", count: incident.timeline.rows.length },
-            { key: "Operations", label: "Operations", count: incident.correlatedOperations.rows.length },
-          ]}
-          active={tab}
-          onChange={(key) => setTab(key as Tab)}
-          label="Incident sections"
-        >
-          {tab === "Evidence" ? (
-            <div className="exec-fixtures-stack">
-              <div className="exec-inc-panels exec-source-grid">
-                {incident.sourcePanels.map((panel) => (
-                  <section className="exec-inc-source exec-source-tile" key={panel.panelId} aria-label={PANEL_TITLE[panel.panelId] ?? panel.panelId}>
-                    <h3 className="exec-role-section">{PANEL_TITLE[panel.panelId] ?? panel.panelId}</h3>
-                    {panel.panelState === "ok" ? (
-                      <p className="exec-inc-note exec-role-meta">Readable · {panel.authority ?? "authority not stated"} · {panel.freshness ?? "freshness not stated"}</p>
-                    ) : (
-                      <PanelState status={panel.panelState} reason={panel.panelState === "unavailable" ? "The Trading System publishes no route for this source, so the Portal has nothing to show. This is missing evidence, not an absence of findings." : undefined} />
-                    )}
-                  </section>
-                ))}
-              </div>
-              <section className="exec-inc-evidence" aria-label="Evidence">
-                <ExecutionSectionTitle>Evidence</ExecutionSectionTitle>
-                <CountNote collection={incident.evidence} noun="references" />
-                <table className="exec-360-sync">
-                  <tbody>
-                    {incident.evidence.rows.map((e) => (
-                      <tr key={e.evidenceId}>
-                        <th scope="row">{e.label ?? e.evidenceId}</th>
-                        <td className="exec-num"><code>{e.hash ?? "hash not stated"}</code></td>
-                        <td className="exec-num">{e.addedAt ?? "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <Hint className="exec-inc-note">References only — this API stores a SHA-256 and metadata, never an artifact body.</Hint>
-              </section>
-              <section className="exec-inc-annotations" aria-label="Annotations">
-                <ExecutionSectionTitle>Annotations</ExecutionSectionTitle>
-                <CountNote collection={incident.annotations} noun="notes" />
-                <ul>
-                  {incident.annotations.rows.map((a) => (
-                    <li key={a.annotationId}>
-                      <p className="exec-role-body">{a.body}</p>
-                      <span className="exec-inc-note exec-role-meta">
-                        {a.author ?? "author not stated"} · {a.createdAt ?? "time not stated"}
-                        {a.redactionState && a.redactionState !== "CLEAR" ? ` · ${a.redactionState}` : null}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            </div>
-          ) : null}
-          {tab === "Timeline" ? (
-            <section className="exec-inc-timeline" aria-label="Timeline">
-              <CountNote collection={incident.timeline} noun="events" />
-              <table className="exec-360-sync">
-                <thead>
-                  <tr>
-                    <th scope="col">at</th>
-                    <th scope="col">action</th>
-                    <th scope="col">actor</th>
-                    <th scope="col">version</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {incident.timeline.rows.map((event) => (
-                    <tr key={event.eventId}>
-                      <td className="exec-num">{event.createdAt ?? "time not stated"}</td>
-                      <td>{event.action ?? "action not stated"}</td>
-                      <td>{event.actor ?? "actor not stated"}</td>
-                      <td className="exec-num">v{event.versionBefore ?? "—"}→v{event.versionAfter ?? "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          ) : null}
-          {tab === "Operations" ? (
-            <section className="exec-inc-ops" aria-label="Operations taken">
-              <CountNote collection={incident.correlatedOperations} noun="operations" />
-              <ul>
-                {incident.correlatedOperations.rows.map((op) => (
-                  <li key={op.operationId}>
-                    <button type="button" className="exec-linkbtn" onClick={() => onOpenOperation(op.operationId)}>
-                      {op.operationId}
-                    </button>
-                    <span className="exec-inc-note exec-role-meta">
-                      {op.relationship ?? "link not stated"} · {op.commandKey ?? "—"} · source {op.sourceStatus ?? "not stated"} · verify {op.verificationResult ?? "not stated"}
+    <ExecutionSurface kind="deployments" className="exec-inc exec-inc2" data-hifi-exact="incident-4d">
+      <ExecutionWorkspace layout="dense">
+        <div className="exec-inc2-page">
+          {/* Masthead — hi-fi: chip · h1 300/22 with grey subject · state chip · opened meta */}
+          <header className="exec-inc2-masthead">
+            <span className="exec-inc2-kind">INCIDENT</span>
+            <h1 className="exec-inc2-h1">
+              {incident.incidentId} <span className="exec-inc2-subject">— {smoke?.subject ?? incident.title}</span>
+            </h1>
+            {resolved ? (
+              <span className="exec-inc2-state" data-tone="good">RESOLVED</span>
+            ) : (
+              <span className="exec-inc2-state" data-tone="bad">{incident.workflowState ?? "STATE NOT STATED"} · {incident.severity ?? "severity not stated"}</span>
+            )}
+            {conflict ? <span className="exec-inc2-state" data-tone="bad">CHANGED — reload</span> : null}
+            <span className="exec-inc2-spacer" />
+            <span className="exec-inc2-meta">
+              {smoke ? `opened ${smoke.openedAt} · owner ${smoke.owner} · ${smoke.origin} · ${smoke.slaAck}` : `${incident.target.id ?? "target not stated"}${incident.assignedTo ? ` · owner ${incident.assignedTo}` : " · no assignee"}`}
+            </span>
+          </header>
+
+          {/* State strip — forward-only; clock + resolve budget */}
+          {rail.length > 0 ? (
+            <div className="exec-inc2-strip">
+              <ol className="exec-inc-rail" aria-label="Incident state">
+                {rail.map((step, i) => (
+                  <li key={step.state} data-done={step.done} data-current={step.current}>
+                    {i > 0 ? <span className="exec-inc2-arrow" aria-hidden="true">→</span> : null}
+                    <span className="exec-inc2-step">
+                      {step.state}
+                      {step.state === "MITIGATED" && (incident.mitigatedAt || smoke) ? " — exposure frozen ✓" : null}
+                      {resolved && step.state === "RESOLVED" && smoke ? ` — ${smoke.resolved.resolvedAt}` : null}
                     </span>
                   </li>
                 ))}
-              </ul>
-              <Hint className="exec-inc-note">all mutations run plan → apply → verify in the Action Drawer · this panel only links them</Hint>
-            </section>
-          ) : null}
-        </ExecutionTabs>
-        <footer className="exec-inc-footer">
-          <ExecutionDecisionBar
-            label={`Incident decision ${incident.incidentId}`}
-            verdict={resolved ? "RESOLVED" : gate?.eligible ? "READY TO RESOLVE" : incident.acknowledgedAt ? "ACKNOWLEDGED" : "OPEN"}
-            tone={resolved ? "good" : gate?.eligible ? "good" : "warn"}
-            reasons={decisionReasons}
-            footnote={
-              <>
-                Resolving closes the Portal incident only. It never resumes a deployment and never changes Trading System state — resume is its own plan → apply → verify with a fresh sync.
-                {resolved && !incident.deploymentResumeRequested ? <span className="exec-inc-halted"> The deployment remains halted. Resume is deliberately left to the operator.</span> : null}
-              </>
-            }
-            trail={trail}
-            actions={
-              isAdmin ? (
-                <div className="exec-inc-actions">
-                  <button type="button" className="exec-role-control exec-btn-ghost" disabled={!onAcknowledge || incident.acknowledgedAt !== null} onClick={onAcknowledge}>
-                    Acknowledge
-                  </button>
-                  <button type="button" className="exec-role-control exec-btn-apply" disabled={!gate?.eligible || !onResolve} onClick={onResolve}>
-                    Mark RESOLVED
-                  </button>
-                </div>
-              ) : null
-            }
-          />
-          {/* The gate's own codes, in the operator's words — the bar carries authority/conflict, this list carries the gate. */}
-          {gate && !gate.eligible ? (
-            <div className="exec-disabled-reason">
-              {gate.blockerCodes.map((code) => (
-                <div key={code}>{blockerText(code)}</div>
-              ))}
+              </ol>
+              {smoke ? (
+                <>
+                  <span className="exec-inc2-clock">
+                    open for <b data-tone={resolved ? "good" : "bad"}>{resolved ? `${smoke.resolved.resolvedIn} (final)` : mmss(live.openSeconds)}</b>
+                  </span>
+                  <span className="exec-inc2-dim">· resolve budget 4h — <span className="exec-inc2-tab">{resolved ? "closed in budget" : `${hhmm(left)} left`}</span></span>
+                  <span className="exec-inc2-budget" role="meter" aria-valuemin={0} aria-valuemax={budget} aria-valuenow={left} aria-label="resolve budget left">
+                    <span className="exec-inc2-budgetfill" data-tone={resolved ? "good" : "warn"} style={{ width: `${resolved ? 100 : Math.round((left / Math.max(budget, 1)) * 100)}%` }} />
+                  </span>
+                </>
+              ) : null}
+              <span className="exec-inc2-spacer" />
+              <span className="exec-inc2-dim">forward-only · each transition audited</span>
+            </div>
+          ) : (
+            <PanelState status="unavailable" reason="This incident's workflow state is not one this screen recognises, so no rail is drawn. A plausible-looking rail over an unknown state would be a fabrication." />
+          )}
+
+          {/* Market band — live while you fix */}
+          {smoke ? (
+            <div className="exec-inc2-market" data-tone={resolved ? "good" : "bad"} aria-label="Market — live while you fix">
+              <span className="exec-inc2-marketlabel"><span className="exec-inc2-livedot" aria-hidden="true" />Market — live while you fix</span>
+              <span className="exec-inc2-price">
+                {smoke.symbol} <b data-tone={resolved ? "mute" : up ? "good" : "bad"}>{priceText}</b> <span data-tone={resolved ? "mute" : up ? "good" : "bad"}>{up ? "▲" : "▼"}</span>
+              </span>
+              <svg className="exec-inc2-spark" viewBox="0 0 260 36" preserveAspectRatio="none" aria-hidden="true">
+                <polyline points={sparkPoints(live.spark)} fill="none" strokeWidth="1.5" />
+              </svg>
+              <span className="exec-inc2-delta">unreconciled Δ {smoke.deltaQty} {smoke.deltaUnit} ≈ <b>{deltaValue}</b></span>
+              <span className="exec-inc2-marketnote" data-tone={resolved ? "good" : undefined}>
+                {resolved ? `resolved in ${smoke.resolved.resolvedIn} — Δ converged to broker before re-pricing exceeded tolerance` : "the market does not wait — the unreconciled Δ re-prices every tick while orders stay fail-closed"}
+              </span>
             </div>
           ) : null}
-        </footer>
-        {children}
+          {conflict ? <p className="exec-inc-conflict exec-inc2-dim" role="alert">This incident changed while you were looking at it. Reload and review before deciding.</p> : null}
+
+          <div className="exec-inc2-grid">
+            <Panel title="Evidence" label="Evidence" footer={smoke?.evidenceFooter}>
+              {smoke ? (
+                <dl className="exec-inc2-facts">
+                  {smoke.evidence.map((e) => (
+                    <div key={e.label}>
+                      <dt>{e.label}</dt>
+                      <dd data-emphasis={e.emphasis}>
+                        {e.link ? <><a href={e.link.href}>{e.link.label}</a> </> : null}
+                        {e.emphasis === "bad" ? (
+                          <>{e.value.split("MISMATCH")[0]}<b className="exec-inc2-bad">MISMATCH</b>{e.value.split("MISMATCH")[1]}</>
+                        ) : e.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : null}
+              <dl className="exec-inc2-facts exec-inc2-refs">
+                {incident.evidence.rows.map((e) => (
+                  <div key={e.evidenceId}>
+                    <dt>{e.label ?? e.evidenceId}</dt>
+                    <dd><code>{e.hash ? shortDigest(e.hash) : "hash not stated"}</code> <span className="exec-inc2-dim">{e.addedAt ?? ""}</span></dd>
+                  </div>
+                ))}
+              </dl>
+              <CountNote collection={incident.evidence} noun="references" />
+              <div className="exec-inc2-sources" aria-label="Source panels" title="The Trading System publishes no route for these sources, so the Portal has nothing to show. This is missing evidence, not an absence of findings.">
+                {incident.sourcePanels.map((panel) => (
+                  <span className="exec-inc2-source" key={panel.panelId} aria-label={PANEL_TITLE[panel.panelId] ?? panel.panelId} data-state={panel.panelState}>
+                    {PANEL_TITLE[panel.panelId] ?? panel.panelId} <b>{panel.panelState}</b>
+                    {panel.panelState !== "ok" ? <span className="sr-only"> — the Trading System publishes no route for this source; this is missing evidence, not an absence of findings</span> : null}
+                  </span>
+                ))}
+                {incident.sourcePanels.some((p) => p.panelState !== "ok") ? <span className="exec-inc2-dim">sources unavailable — missing evidence, not an absence of findings</span> : null}
+              </div>
+              <span className="exec-inc2-dim exec-inc2-refnote">references only — a SHA-256 and metadata, never an artifact body</span>
+            </Panel>
+            <Panel title="Operations taken" label="Operations taken" footer={smoke?.opsFooter ?? "all mutations run plan → apply → verify in the Action Drawer · this panel only links them"}>
+              <div className="exec-inc2-ops">
+                {opsRows.map((op) => <OpLine key={op.id} op={op} />)}
+                {smoke && !resolved ? (
+                  <span className="exec-inc2-applywrap"><a className="exec-inc2-apply" href={smoke.applyPlan.href}>{smoke.applyPlan.label}</a></span>
+                ) : null}
+                {incident.correlatedOperations.rows.filter((op) => !opsRows.some((o) => o.id === op.operationId)).map((op) => (
+                  <span className="exec-inc2-op" key={op.operationId}>
+                    <button type="button" className="exec-linkbtn" onClick={() => onOpenOperation(op.operationId)}>{op.operationId}</button>{" "}
+                    <span className="exec-inc2-dim">{op.relationship ?? "link not stated"} · {op.commandKey ?? "—"} · verify {op.verificationResult ?? "not stated"}</span>
+                  </span>
+                ))}
+                <CountNote collection={incident.correlatedOperations} noun="operations" />
+              </div>
+            </Panel>
+          </div>
+          <div className="exec-inc2-grid">
+            <Panel title="Resolution gates" label="Resolution gates" meta={<b data-tone={resolved ? "good" : "warn"}>{gateCount}</b>} footer={smoke?.gatesFooter ?? "Mark RESOLVED unlocks only when every gate is met — gates are server-enforced, this list is their mirror"}>
+              <div className="exec-inc2-gates">
+                {gatesRows.map((g) => <GateLine key={g.text} g={g} />)}
+                {!smoke && gate ? gate.blockerCodes.map((code) => <span className="exec-inc2-gate" data-state="open" key={code}>✗ {blockerText(code)}</span>) : null}
+              </div>
+            </Panel>
+            <Panel title="Timeline" label="Timeline">
+              <div className="exec-inc2-timeline">
+                {smoke ? smoke.timeline.map((t) => (
+                  <span key={t.at + t.text}><span className="exec-inc2-dim">{t.at}</span> {t.text}</span>
+                )) : null}
+                {smoke && resolved ? <span>{smoke.resolved.timelineTail}</span> : null}
+                {smoke && !resolved ? <span className="exec-inc2-waiting">{smoke.waitingLine}</span> : null}
+                {incident.timeline.rows.map((event) => (
+                  <span key={event.eventId} className="exec-inc2-dim">
+                    {event.createdAt ?? "time not stated"} · {event.action ?? "action not stated"} · {event.actor ?? "actor not stated"} · v{event.versionBefore ?? "—"}→v{event.versionAfter ?? "—"}
+                  </span>
+                ))}
+                <CountNote collection={incident.timeline} noun="events" />
+              </div>
+            </Panel>
+          </div>
+          <div className="exec-inc2-grid">
+            {incident.annotations.rows.length > 0 ? (
+              <Panel title="Annotations" label="Annotations">
+                <div className="exec-inc2-timeline">
+                  {incident.annotations.rows.map((a) => (
+                    <span key={a.annotationId}>{a.body} <span className="exec-inc2-dim">— {a.author ?? "author not stated"} · {a.createdAt ?? "time not stated"}{a.redactionState && a.redactionState !== "CLEAR" ? ` · ${a.redactionState}` : ""}</span></span>
+                  ))}
+                </div>
+              </Panel>
+            ) : (
+              <section aria-label="Annotations" className="exec-inc2-hidden" />
+            )}
+          </div>
+
+          <footer className="exec-inc-footer exec-inc2-footer">
+            {isAdmin ? (
+              <div className="exec-inc-actions exec-inc2-actions">
+                {!resolved ? (
+                  <button type="button" className="exec-inc2-btn" disabled={!onAcknowledge || incident.acknowledgedAt !== null} onClick={onAcknowledge}>
+                    Acknowledge
+                  </button>
+                ) : null}
+                <button type="button" className="exec-inc2-btn" data-blocked={!gate?.eligible || resolved ? "true" : undefined} disabled={!gate?.eligible || !onResolve || resolved} onClick={onResolve}>
+                  {resolved ? "View resolution audit" : gate?.eligible ? "Mark RESOLVED" : `Mark RESOLVED — blocked: ${gateCount} gates`}
+                </button>
+              </div>
+            ) : null}
+            <span className="exec-inc2-spacer" />
+            <span className="exec-inc2-footnote" data-tone={resolved ? "warn" : undefined}>
+              {resolved
+                ? `${smoke?.resolved.footerNote ?? "dep_88 still HALTED"} · the deployment remains halted, resume is deliberately left to the operator`
+                : `resolving closes the Portal incident only — it never resumes a deployment · ${smoke?.footerNote ?? "resolving never auto-resumes the deployment — resume is its own plan/apply/verify with fresh sync"}`}
+            </span>
+            {decisionReasons.length > 0 || (gate && !gate.eligible) ? (
+              <div className="exec-disabled-reason exec-inc2-reasons">
+                {decisionReasons.map((r) => <div key={r}>{r}</div>)}
+                {gate && !gate.eligible ? gate.blockerCodes.map((code) => <div key={code}>{blockerText(code)}</div>) : null}
+              </div>
+            ) : null}
+            {trail}
+            {smoke ? <span className="exec-inc2-smoke">! {smoke.warning}</span> : null}
+          </footer>
+          {children}
+        </div>
       </ExecutionWorkspace>
     </ExecutionSurface>
   );
