@@ -3,7 +3,7 @@
   "route": "/execution",
   "index": 0,
   "tag": "BUTTON",
-  "text": "1INCIDENTBroker sync divergedPaper Binance USDMO",
+  "text": "1INCIDENTBroker sync diverged — Paper Binance US",
   "verdict": "navigated",
   "detail": "/execution/operations/incidents/inc_44"
  },
@@ -11,7 +11,7 @@
   "route": "/execution",
   "index": 1,
   "tag": "BUTTON",
-  "text": "2OPERATIONProtective action partialdep_88 · 2/3 ",
+  "text": "2OPERATIONProtective action partial — dep_88 · 2",
   "verdict": "navigated",
   "detail": "/execution/operations/op_1251"
  },
@@ -19,7 +19,7 @@
   "route": "/execution",
   "index": 2,
   "tag": "BUTTON",
-  "text": "3APPROVALCarry v3.2R2 · capital reviewDUE_SOONRe",
+  "text": "3APPROVALCarry v3.2 — R2 · capital reviewDUE SOO",
   "verdict": "navigated",
   "detail": "/governance/approvals/AP-352/r2"
  },
@@ -27,13 +27,45 @@
   "route": "/execution",
   "index": 3,
   "tag": "A",
+  "text": "Grid v2.1",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2041"
+ },
+ {
+  "route": "/execution",
+  "index": 4,
+  "tag": "A",
+  "text": "Carry v3.2",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas"
+ },
+ {
+  "route": "/execution",
+  "index": 5,
+  "tag": "A",
+  "text": "MM v1.1",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas"
+ },
+ {
+  "route": "/execution",
+  "index": 6,
+  "tag": "A",
+  "text": "VnMomo v0.9",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas"
+ },
+ {
+  "route": "/execution",
+  "index": 7,
+  "tag": "A",
   "text": "R1 review · Momentum v4",
   "verdict": "navigated",
   "detail": "/governance/approvals/AP-201/r1"
  },
  {
   "route": "/execution",
-  "index": 4,
+  "index": 8,
   "tag": "A",
   "text": "Capital condition expires",
   "verdict": "navigated",
@@ -41,25 +73,17 @@
  },
  {
   "route": "/execution",
-  "index": 5,
+  "index": 9,
   "tag": "A",
   "text": "Last verified protective action",
   "verdict": "navigated",
   "detail": "/execution/operations/op_1249"
  },
  {
-  "route": "/execution",
-  "index": 6,
-  "tag": "BUTTON",
-  "text": "Investigate",
-  "verdict": "navigated",
-  "detail": "/execution/operations/incidents/inc_44"
- },
- {
   "route": "/execution/operations",
   "index": 0,
   "tag": "BUTTON",
-  "text": "Needs attention",
+  "text": "Needs attention (2)",
   "verdict": "skipped:selected"
  },
  {
@@ -73,37 +97,155 @@
   "route": "/execution/operations",
   "index": 2,
   "tag": "BUTTON",
+  "text": "op_1251",
+  "verdict": "changed"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 3,
+  "tag": "A",
+  "text": "plan residue re-apply →",
+  "verdict": "navigated",
+  "detail": "/administration/actions?operation=op_1251"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 4,
+  "tag": "BUTTON",
+  "text": "op_1253",
+  "verdict": "changed"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 5,
+  "tag": "A",
+  "text": "review in incident inc_44 →",
+  "verdict": "navigated",
+  "detail": "/execution/operations/incidents/inc_44"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 6,
+  "tag": "A",
+  "text": "cmd_9f12",
+  "verdict": "navigated",
+  "detail": "/administration/actions?operation=op_1253"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 7,
+  "tag": "BUTTON",
+  "text": "op_1255",
+  "verdict": "changed"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 8,
+  "tag": "BUTTON",
   "text": "op_fixture_queue_1",
   "verdict": "changed"
  },
  {
+  "route": "/execution/operations",
+  "index": 9,
+  "tag": "BUTTON",
+  "text": "Close alerts",
+  "verdict": "changed"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 10,
+  "tag": "A",
+  "text": "CRITICAL · 02:00Position MISMATCH — acct-live-gr",
+  "verdict": "navigated",
+  "detail": "/execution/operations/incidents/inc_44"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 11,
+  "tag": "A",
+  "text": "WARN · 4mBroker sync STALE — dep_91 · OKXage 88s",
+  "verdict": "navigated",
+  "detail": "/deployments/sandbox/dep_77"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 12,
+  "tag": "A",
+  "text": "WARN · 06:00op_1251 PARTIAL unresolvedemergency-",
+  "verdict": "changed"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 13,
+  "tag": "A",
+  "text": "INFO · 1dCondition expiring in 7d — capacity cap",
+  "verdict": "navigated",
+  "detail": "/governance/approvals"
+ },
+ {
   "route": "/execution/operations/incidents/inc_fixture_44",
   "index": 0,
-  "tag": "BUTTON",
-  "text": "Evidence 0",
-  "verdict": "skipped:selected"
+  "tag": "A",
+  "text": "rf_2101",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter"
  },
  {
   "route": "/execution/operations/incidents/inc_fixture_44",
   "index": 1,
-  "tag": "BUTTON",
-  "text": "Timeline 2",
-  "verdict": "changed"
+  "tag": "A",
+  "text": "dep_88",
+  "verdict": "navigated",
+  "detail": "/deployments/live/dep_live"
  },
  {
   "route": "/execution/operations/incidents/inc_fixture_44",
   "index": 2,
-  "tag": "BUTTON",
-  "text": "Operations 1",
-  "verdict": "changed"
+  "tag": "A",
+  "text": "op_1252",
+  "verdict": "navigated",
+  "detail": "/administration/actions?operation=op_1252"
  },
  {
   "route": "/execution/operations/incidents/inc_fixture_44",
   "index": 3,
+  "tag": "A",
+  "text": "op_1253",
+  "verdict": "navigated",
+  "detail": "/administration/actions?operation=op_1253"
+ },
+ {
+  "route": "/execution/operations/incidents/inc_fixture_44",
+  "index": 4,
+  "tag": "A",
+  "text": "Open apply plan — reconcile from broker ▸",
+  "verdict": "navigated",
+  "detail": "/administration/actions?operation=op_1253"
+ },
+ {
+  "route": "/execution/operations/incidents/inc_fixture_44",
+  "index": 5,
   "tag": "BUTTON",
-  "text": "op_fixture_1253 → Action Drawer",
+  "text": "op_fixture_1253",
   "verdict": "navigated",
   "detail": "/administration/actions?operation=op_fixture_1253"
+ },
+ {
+  "route": "/execution/operations/incidents/inc_fixture_44",
+  "index": 6,
+  "tag": "A",
+  "text": "op_1252",
+  "verdict": "navigated",
+  "detail": "/administration/actions?operation=op_1252"
+ },
+ {
+  "route": "/execution/operations/incidents/inc_fixture_44",
+  "index": 7,
+  "tag": "A",
+  "text": "apply plan ▸",
+  "verdict": "navigated",
+  "detail": "/administration/actions?operation=op_1253"
  },
  {
   "route": "/governance/approvals",
@@ -503,12 +645,33 @@
   "route": "/deployments/paper/dep_94",
   "index": 3,
   "tag": "BUTTON",
+  "text": "Table",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 4,
+  "tag": "BUTTON",
+  "text": "Expand",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 5,
+  "tag": "BUTTON",
+  "text": "Export",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 6,
+  "tag": "BUTTON",
   "text": "Overview",
   "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 4,
+  "index": 7,
   "tag": "BUTTON",
   "text": "Positions",
   "verdict": "navigated",
@@ -516,7 +679,7 @@
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 5,
+  "index": 8,
   "tag": "BUTTON",
   "text": "Orders",
   "verdict": "navigated",
@@ -524,7 +687,7 @@
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 6,
+  "index": 9,
   "tag": "BUTTON",
   "text": "Fills",
   "verdict": "navigated",
@@ -532,7 +695,7 @@
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 7,
+  "index": 10,
   "tag": "BUTTON",
   "text": "Sessions",
   "verdict": "navigated",
@@ -540,7 +703,7 @@
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 8,
+  "index": 11,
   "tag": "BUTTON",
   "text": "Accounting",
   "verdict": "navigated",
@@ -548,7 +711,7 @@
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 9,
+  "index": 12,
   "tag": "BUTTON",
   "text": "Evidence",
   "verdict": "navigated",
@@ -556,35 +719,35 @@
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 10,
+  "index": 13,
   "tag": "BUTTON",
   "text": "Copy full artifact",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 11,
+  "index": 14,
   "tag": "A",
   "text": "AP-101",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 12,
+  "index": 15,
   "tag": "A",
   "text": "AP-207",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 13,
+  "index": 16,
   "tag": "A",
   "text": "PF-MAIN",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 14,
+  "index": 17,
   "tag": "A",
   "text": "paper-binance-carry-v32",
   "verdict": "skipped:hidden"
@@ -609,12 +772,33 @@
   "route": "/deployments/paper/dep_vnm/vn-market",
   "index": 2,
   "tag": "BUTTON",
+  "text": "Table",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 3,
+  "tag": "BUTTON",
+  "text": "Expand",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 4,
+  "tag": "BUTTON",
+  "text": "Export",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 5,
+  "tag": "BUTTON",
   "text": "Overview",
   "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 3,
+  "index": 6,
   "tag": "BUTTON",
   "text": "Positions",
   "verdict": "navigated",
@@ -622,7 +806,7 @@
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 4,
+  "index": 7,
   "tag": "BUTTON",
   "text": "Orders",
   "verdict": "navigated",
@@ -630,7 +814,7 @@
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 5,
+  "index": 8,
   "tag": "BUTTON",
   "text": "Fills",
   "verdict": "navigated",
@@ -638,7 +822,7 @@
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 6,
+  "index": 9,
   "tag": "BUTTON",
   "text": "Sessions",
   "verdict": "navigated",
@@ -646,7 +830,7 @@
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 7,
+  "index": 10,
   "tag": "BUTTON",
   "text": "Accounting",
   "verdict": "navigated",
@@ -654,7 +838,7 @@
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 8,
+  "index": 11,
   "tag": "BUTTON",
   "text": "Evidence",
   "verdict": "navigated",
@@ -662,35 +846,35 @@
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 9,
+  "index": 12,
   "tag": "BUTTON",
   "text": "Copy full artifact",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 10,
+  "index": 13,
   "tag": "A",
   "text": "AP-322",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 11,
+  "index": 14,
   "tag": "A",
   "text": "AP-338",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 12,
+  "index": 15,
   "tag": "A",
   "text": "PF-VN",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 13,
+  "index": 16,
   "tag": "A",
   "text": "paper-dnse-vnmomo",
   "verdict": "skipped:hidden"

@@ -69,23 +69,25 @@ describe("the locked role scale", () => {
     // an option (§5.2); nothing else shouts.
     const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
     const offenders = rules
-      .filter(([, sel, body]) => /text-transform\s*:\s*uppercase/.test(body) && !/--exec-font-th\)/.test(body) && !/\.exec-role-th/.test(sel))
+      // Command Center v4 matches hi-fi 5a to the letter (owner, 2026-08-25):
+      // mono 11px uppercase panel titles and 10px uppercase cell labels.
+      .filter(([, sel, body]) => /text-transform\s*:\s*uppercase/.test(body) && !/--exec-font-th\)/.test(body) && !/\.exec-role-th/.test(sel) && !/^\s*\.exec-(cc|inc2|oq)-/.test(sel))
       .map(([, sel]) => sel.trim().replace(/\s+/g, " ").slice(0, 60));
     expect(offenders).toEqual([]);
   });
 });
 
 describe("two families, and only the two that are bundled", () => {
-  it("declares Inter and JetBrains Mono for the Carbon surface, and no IBM Plex anywhere", () => {
+  it("declares IBM Plex Sans and IBM Plex Mono for the Carbon surface — and bundles them", () => {
+    // Owner, 2026-08-25: the hi-fi family returns, this time with the bytes
+    // behind it (main.tsx imports @fontsource/ibm-plex-*). The claim and the
+    // bundle must agree; the test below checks the package side.
     const carbon = tokens.slice(tokens.indexOf('[data-theme="operations-carbon"]'));
-    expect(carbon).toMatch(/--font-body:\s*"Inter"/);
-    expect(carbon).toMatch(/--font-mono:\s*"JetBrains Mono"/);
-    // The old block put Plex first and the build never loaded it: a claim the
-    // bytes did not honour. Any return of the name is that claim coming back.
-    // Declarations, not comments: the history of the claim is allowed to be
-    // told, the claim itself is not allowed back.
-    expect(tokens).not.toMatch(/--font-[a-z]+:[^;]*Plex/);
-    expect(css).not.toMatch(/font[^;]*:[^;]*Plex/);
+    expect(carbon).toMatch(/--font-body:\s*"IBM Plex Sans"/);
+    expect(carbon).toMatch(/--font-mono:\s*"IBM Plex Mono"/);
+    const main = readFileSync(join(__dirname, "../main.tsx"), "utf8");
+    expect(main).toMatch(/@fontsource\/ibm-plex-sans\/300\.css/);
+    expect(main).toMatch(/@fontsource\/ibm-plex-mono\/400\.css/);
   });
 
   it("keeps base.css reading the tokens rather than hard-coding families", () => {
@@ -98,6 +100,7 @@ describe("two families, and only the two that are bundled", () => {
     const pkg = JSON.parse(readFileSync(join(__dirname, "../../package.json"), "utf8")) as { dependencies: Record<string, string> };
     expect(pkg.dependencies["@fontsource/inter"]).toBeTruthy();
     expect(pkg.dependencies["@fontsource/jetbrains-mono"]).toBeTruthy();
-    expect(Object.keys(pkg.dependencies).filter((d) => /plex/i.test(d))).toEqual([]);
+    expect(pkg.dependencies["@fontsource/ibm-plex-sans"]).toBeTruthy();
+    expect(pkg.dependencies["@fontsource/ibm-plex-mono"]).toBeTruthy();
   });
 });

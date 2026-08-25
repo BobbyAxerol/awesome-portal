@@ -27,6 +27,9 @@
   --line: #e3e0d7;
   --line-soft: #efede4;
   --accent: #0f4c5c;
+  /* Stage identity colours (hi-fi 5a pinned/pipeline): paper is the one hue no state owns. */
+  --stage-paper: #7c5cbf;
+  --stage-paper-bg: #efe9fb;
   --accent-soft: #e2edf0;
   --accent-strong: #226173;
   --accent-2: #9a6a1f;
@@ -381,6 +384,8 @@
   --line-strong: #4c4c4c;
 
   --accent: #78a9ff;
+  --stage-paper: #be95ff;
+  --stage-paper-bg: #1f1630;
   --accent-soft: #001d6c;
   --accent-strong: #0f62fe;
   /* Ink for text sitting ON a filled accent or danger surface.
@@ -509,9 +514,11 @@
    * "Carbon typography" was silently Inter/JetBrains all along. The claim now
    * matches the bytes. No serif on this surface: --font-display is the sans,
    * so a shared component that reads it does not reintroduce Newsreader. */
-  --font-display: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Owner, 2026-08-25: the hi-fi families, now actually bundled
+     (@fontsource/ibm-plex-sans 300–600, @fontsource/ibm-plex-mono 400–600). */
+  --font-display: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   color-scheme: dark;
 }

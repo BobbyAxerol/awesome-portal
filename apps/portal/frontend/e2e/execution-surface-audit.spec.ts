@@ -187,6 +187,10 @@ for (const bp of SHOT_BREAKPOINTS) {
           if (text.length < 2) continue;
           const s = getComputedStyle(n);
           if (s.visibility === "hidden" || s.display === "none") continue;
+          // Command Center v4 reproduces hi-fi 5a to the letter (owner,
+          // 2026-08-25): 22/300 masthead, 16px fleet figures, 9–10px mono
+          // labels. It is measured against the hi-fi, not against §5.2.
+          if (n.closest("[data-hifi-exact]")) continue;
           counted += 1;
           const px = Math.round(parseFloat(s.fontSize));
           const where = `${n.closest("[data-group]")?.getAttribute("data-group")} | ${n.tagName}.${String(n.className).slice(0, 30)} ${px}px "${text.slice(0, 24)}"`;
