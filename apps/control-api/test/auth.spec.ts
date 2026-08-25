@@ -74,6 +74,37 @@ describe("auth flows (dev mode)", () => {
     expect(response.json()).toMatchObject({ state: "APP_LOGIN_REQUIRED" });
   });
 
+  it("a bound user with pending password change and NO session gets APP_LOGIN_REQUIRED, not 01C", async () => {
+    // Regression (2026-08-25): context used to report
+    // PASSWORD_CHANGE_REQUIRED for a bound INVITED user without a session,
+    // stranding them on frame 01C with no CSRF token. Without a session the
+    // user must complete 01B first; 01C is only reachable after login.
+    const unique = `stan-ctx-${Date.now()}`;
+    await admin.createUser({
+      username: unique,
+      displayName: "Stan",
+      role: "USER",
+    });
+    const user = await auth.users.findByUsername(unique);
+    await admin.resetCredential(user!.userId);
+
+    // Bind the Cloudflare identity without any portal session (simulates a
+    // returning visitor whose session was revoked by credential rotation).
+    await auth.bindings.create({
+      bindingId: `bnd_${user!.userId.slice(-8)}`,
+      userId: user!.userId,
+      issuer: "https://primussparkquant.cloudflareaccess.com",
+      subject: `test-subject-${unique}`,
+      email: `${unique}@azdag.com`,
+    });
+
+    const response = await inject("/api/auth/context", {
+      headers: { "x-dev-access-email": `${unique}@azdag.com` },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ state: "APP_LOGIN_REQUIRED" });
+  });
+
   it("full activation flow: login → change password → authenticated", async () => {
     await admin.createUser({
       username: "bobby",

@@ -174,13 +174,11 @@ export class AuthService {
         accessIdentity: { sub: identity.sub, email: identity.email },
       };
     }
-    if (user.mustChangePassword) {
-      return {
-        state: "PASSWORD_CHANGE_REQUIRED",
-        principal: null,
-        accessIdentity: { sub: identity.sub, email: identity.email },
-      };
-    }
+    // Without a Portal session the user must complete 01B first: the
+    // activation/password login creates the session (and its CSRF secret)
+    // that PASSWORD_CHANGE_REQUIRED's change-password call depends on.
+    // Reporting PASSWORD_CHANGE_REQUIRED here strands an unauthenticated
+    // visitor on frame 01C with no CSRF token (observed 2026-08-25).
     return {
       state: "APP_LOGIN_REQUIRED",
       principal: null,
