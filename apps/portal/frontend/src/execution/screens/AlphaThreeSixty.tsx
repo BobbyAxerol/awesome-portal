@@ -33,12 +33,22 @@ import type {
   PromotionStage,
   Readiness,
 } from "../contracts";
-import { AuthorityBadge, BrokerSyncChip, EnvironmentBadge, StatusChip } from "../components/badges";
-import { ChartTile } from "../components/chart";
+import { BrokerSyncChip, EnvironmentBadge, StatusChip } from "../components/badges";
 import { KeysetTable, type Column } from "../components/table";
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
 import { ExecutionSurface } from "../ExecutionSurface";
+import { EquityChart, type EquitySeries } from "../components/EquityChart";
+import { envelopeCaption } from "../components/chart";
+import { ContributionChart } from "../components/ContributionChart";
+import {
+  ExecutionContextRail,
+  ExecutionPageHeader,
+  ExecutionProvenanceDrawer,
+  ExecutionWorkspace,
+  shortDigest,
+  type HeaderBadge,
+} from "../components/workspace";
 
 /**
  * Row budgets for the bounded panels.
@@ -128,6 +138,8 @@ export interface InsightTile {
   /** Why there is not enough, in the server's words. */
   reason?: string | null;
   body?: ReactNode;
+  /** series when the contract publishes one; absent = honest state */
+  series?: EquitySeries | null;
 }
 
 export interface AlphaThreeSixtyProps {
@@ -145,9 +157,9 @@ export interface AlphaThreeSixtyProps {
   modeOptions: readonly string[];
   windowOptions: readonly string[];
   scope: AlphaScope;
-  onScopeChange?: (scope: AlphaScope) => void;
+  onScopeChange: (scope: AlphaScope) => void;
   tab: AlphaTab;
-  onTabChange?: (tab: AlphaTab) => void;
+  onTabChange: (tab: AlphaTab) => void;
   venues: readonly VenueRow[];
   kpis: readonly Kpi[];
   contributions: readonly VenueContribution[];
@@ -158,14 +170,18 @@ export interface AlphaThreeSixtyProps {
    * because they run the same artifact, and two alphas are not comparable at
    * all. `null` renders as unavailable rather than an empty frame.
    */
-  equity?: { envelope: ChartEnvelope; body?: ReactNode } | null;
+  equity?: { envelope: ChartEnvelope; series?: EquitySeries | null; body?: ReactNode } | null;
   deployments: readonly DeploymentRow[];
   tiles: readonly InsightTile[];
   /** Unbounded. Paged by cursor, never capped. */
   positions?: KeysetPage<PositionRow> | null;
   orders?: KeysetPage<OrderRow> | null;
   audit?: KeysetPage<AuditRow> | null;
-  onLoadOlder?: (tab: AlphaTab) => void;
+  onLoadOlder: (tab: AlphaTab) => void;
+  /** Row → the stage workbench that owns the deployment (HiFi 2a: "row → stage workbench"). */
+  onOpenDeployment: (row: DeploymentRow) => void;
+  /** Account cell → Account/Broker 360° (HiFi 2a: "account → Account 360°"). */
+  onOpenAccount: (accountId: string) => void;
   accounting?: readonly AccountingRow[];
   sessions?: readonly SessionRow[];
   reconciliation?: readonly ReconciliationRow[];
@@ -260,7 +276,7 @@ function ScopeBar({
   AlphaThreeSixtyProps,
   "scope" | "onScopeChange" | "portfolioOptions" | "modeOptions" | "venueOptions" | "windowOptions"
 >) {
-  const set = (patch: Partial<AlphaScope>) => onScopeChange?.({ ...scope, ...patch });
+  const set = (patch: Partial<AlphaScope>) => onScopeChange({ ...scope, ...patch });
   return (
     <div className="exec-alpha-scope">
       <span className="exec-tile-title">Scope</span>
@@ -337,6 +353,7 @@ function DeploymentMap({ venues }: { venues: readonly VenueRow[] }) {
       <div className="exec-blotter-note">
         one deployment = one venue account · multi-venue = parallel deployments
       </div>
+      <div className="exec-scroll-x">
       <table className="exec-alpha-map">
         <caption className="exec-blotter-note">Venue by stage</caption>
         <thead>
@@ -377,6 +394,7 @@ function DeploymentMap({ venues }: { venues: readonly VenueRow[] }) {
           ))}
         </tbody>
       </table>
+      </div>
       {notice ? <p className="exec-blotter-note">{notice}</p> : null}
     </section>
   );
@@ -395,6 +413,8 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
     scope,
     tab,
     onTabChange,
+    onOpenDeployment,
+    onOpenAccount,
     venues,
     kpis,
     contributions,
@@ -420,25 +440,63 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
   // of one of these, so this was live on a real page, not hypothetical.
   const uid = useId();
 
+  const absentKpis = kpis.filter((k) => k.value === null);
+  const alphaRail = (
+    <ExecutionContextRail
+      next={{
+        title: `Scope · ${scope.portfolio} · ${scope.mode} · ${scope.venue} · ${scope.window}`,
+        detail: (
+          <span className="exec-role-body">
+            {deployments.length} deployment{deployments.length === 1 ? "" : "s"} in scope · {contributions.length} venue contribution{contributions.length === 1 ? "" : "s"}. Change the scope bar and every panel follows.
+          </span>
+        ),
+        action: deployments[0] ? (
+          <button type="button" className="exec-role-control exec-btn-apply" onClick={() => onOpenDeployment(deployments[0])}>
+            Open first deployment in scope
+          </button>
+        ) : undefined,
+      }}
+      blockers={[
+        ...absentKpis.map((k) => ({ label: `${k.label} not published`, detail: null, severity: "watch" as const })),
+        ...tiles.filter((t) => t.state !== "ok").map((t) => ({ label: `${t.index} · ${t.title} ${t.state === "insufficient_data" ? "INSUFFICIENT_DATA" : "UNAVAILABLE"}`, detail: null, severity: "watch" as const })),
+      ]}
+      freshness={<span className="exec-role-meta">{envelope.authority} · as_of {envelope.asOf ?? "not stated"} · {envelope.freshness}</span>}
+      provenance={
+        <ExecutionProvenanceDrawer
+          items={[
+            { label: "artifact", short: artifactDigest.length > 20 ? shortDigest(artifactDigest) : artifactDigest, full: artifactDigest },
+            ...(r1Id ? [{ label: "R1", short: r1Id, full: null }] : []),
+            ...(r2Id ? [{ label: "R2", short: r2Id, full: null }] : []),
+            { label: "owner", short: owner, full: null },
+          ]}
+          onCopy={(full) => void navigator.clipboard?.writeText(full)}
+        />
+      }
+    />
+  );
   return (
     <ExecutionSurface kind="deployments" className="exec-alpha">
-      <header className="exec-inbox-head">
-        <div className="exec-tile-title">
-          {alphaName} · {alphaId}
-        </div>
-        <div className="exec-alpha-identity">
-          <AuthorityBadge envelope={envelope} />
-          <span className="exec-num">artifact {artifactDigest}</span>
-          <span className="exec-blotter-note">owner {owner}</span>
-          {r1Id ? <StatusChip label={`R1 ${r1Id}`} tone="mute" /> : null}
-          {r2Id ? <StatusChip label={`R2 ${r2Id}`} tone="mute" /> : null}
-          {passportHref ? (
-            <a className="exec-evidence-link" href={passportHref}>
-              Artifact passport →
-            </a>
-          ) : null}
-        </div>
-      </header>
+      <ExecutionWorkspace layout="balanced" rail={alphaRail}>
+      <ExecutionPageHeader
+        title={alphaName}
+        id={alphaId}
+        badges={[
+          { label: `${venues.length} venue${venues.length === 1 ? "" : "s"}`, axis: "other" },
+          { label: `${envelope.authority} · ${envelope.freshness}`, axis: "broker-sync", tone: envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn" },
+          ...(status === "partial" ? [{ label: "PARTIAL", axis: "readiness", tone: "warn" } as HeaderBadge] : []),
+        ]}
+        purpose="One alpha, all its deployments across venue × mode × stage — every panel below obeys the scope bar."
+        secondary={
+          <>
+            <span className="exec-role-meta">owner {owner}</span>
+            {passportHref ? (
+              <a className="exec-evidence-link" href={passportHref}>
+                Artifact passport →
+              </a>
+            ) : null}
+          </>
+        }
+      />
 
       <ScopeBar {...props} />
 
@@ -456,7 +514,7 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
             className="exec-inbox-filter"
             data-active={tab === option ? "true" : undefined}
             aria-selected={tab === option}
-            onClick={() => onTabChange?.(option)}
+            onClick={() => onTabChange(option)}
           >
             {option}
           </button>
@@ -475,7 +533,7 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
         {tab === "Overview" ? (
           <>
             <DeploymentMap venues={venues} />
-            <div className="exec-alpha-kpis">
+            <div className="exec-alpha-kpis" data-scope-panel="kpis">
               {kpis.map((kpi) => (
                 <div key={kpi.label} className="exec-alpha-kpi">
                   <div className="exec-blotter-note">{kpi.label}</div>
@@ -496,18 +554,19 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
                 not. */}
             <div className="exec-grid-2" data-ratio="1.35">
               {equity ? (
-                <ChartTile title="Equity by stage" envelope={equity.envelope}>
-                  {equity.body}
-                </ChartTile>
+                <div data-scope-panel="equity"><EquityChart title={`Equity by stage · ${scope.venue} · ${scope.window}`} envelope={equity.envelope} series={equity.series ?? null} /></div>
               ) : (
                 <PanelState
                   status="unavailable"
                   reason="No equity series was published for this alpha and window."
                 />
               )}
-              <Contribution rows={contributions} />
+              <div data-scope-panel="contribution">
+                <ContributionChart rows={contributions} />
+                <Contribution rows={contributions} />
+              </div>
             </div>
-            <Deployments rows={deployments} scope={scope} />
+            <div data-scope-panel="deployments"><Deployments onOpenDeployment={onOpenDeployment} onOpenAccount={onOpenAccount} rows={deployments} scope={scope} /></div>
           </>
         ) : null}
 
@@ -520,6 +579,7 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
         {tab === "Reconciliation" ? <Reconciliation rows={props.reconciliation ?? []} /> : null}
         {tab === "Audit" ? <Audit {...props} /> : null}
       </div>
+      </ExecutionWorkspace>
     </ExecutionSurface>
   );
 }
@@ -558,7 +618,7 @@ function Contribution({ rows }: { rows: readonly VenueContribution[] }) {
   );
 }
 
-function Deployments({ rows, scope }: { rows: readonly DeploymentRow[]; scope: AlphaScope }) {
+function Deployments({ onOpenDeployment, onOpenAccount, rows, scope }: { rows: readonly DeploymentRow[]; scope: AlphaScope; onOpenDeployment: (row: DeploymentRow) => void; onOpenAccount: (accountId: string) => void; }) {
   // Anything not READY survives the cap: a halted deployment buried at row 40
   // is the row somebody opened this screen to find.
   const shown = capPreserving(rows, DEPLOYMENT_BUDGET, (row) => row.readiness !== "READY");
@@ -566,6 +626,7 @@ function Deployments({ rows, scope }: { rows: readonly DeploymentRow[]; scope: A
   return (
     <section className="exec-gate-panel">
       <div className="exec-tile-title">Deployments in scope — {scope.venue}</div>
+      <div className="exec-scroll-x">
       <table className="exec-alpha-deployments">
         <caption className="exec-blotter-note">Deployments in scope</caption>
         <thead>
@@ -583,14 +644,22 @@ function Deployments({ rows, scope }: { rows: readonly DeploymentRow[]; scope: A
         <tbody>
           {shown.shown.map((row) => (
             <tr key={row.deploymentId} data-emphasis={row.readiness !== "READY" ? "warn" : undefined}>
-              <th scope="row">{row.deploymentId}</th>
+              <th scope="row">
+                <button type="button" className="exec-link" onClick={() => onOpenDeployment(row)}>
+                  {row.deploymentId}
+                </button>
+              </th>
               <td>
                 {row.venue} · {row.mode}
               </td>
               <td>
                 <EnvironmentBadge stage={row.stage} />
               </td>
-              <td>{row.accountId}</td>
+              <td>
+                <button type="button" className="exec-link" onClick={() => onOpenAccount(row.accountId)}>
+                  {row.accountId}
+                </button>
+              </td>
               <td>
                 <Num value={row.allocation} absent="not published" />
                 {row.allocation && row.currency ? (
@@ -613,29 +682,36 @@ function Deployments({ rows, scope }: { rows: readonly DeploymentRow[]; scope: A
           ))}
         </tbody>
       </table>
+      </div>
       {notice ? <p className="exec-blotter-note">{notice}</p> : null}
     </section>
   );
 }
 
 function Tiles({ tiles }: { tiles: readonly InsightTile[] }) {
+  // Twelve tiles, each a real chart or an explicit state — never a frame with a caption.
   return (
-    <div className="exec-alpha-tiles">
-      {tiles.map((tile) => (
-        <ChartTile key={tile.index} title={`${tile.index} · ${tile.title}`} envelope={tile.envelope}>
-          {tile.state === "ok" ? (
-            tile.body
-          ) : (
-            // A real state with its own reason, not a blank frame. Tile 5 shows
-            // one venue with enough fills beside one without; blanking the
-            // second would imply it was fine.
-            <PanelState
-              status={tile.state === "insufficient_data" ? "insufficient_data" : "unavailable"}
-              reason={tile.reason ?? "Not enough evidence in this window to draw this tile."}
-            />
-          )}
-        </ChartTile>
-      ))}
+    <div className="exec-alpha-tiles" data-scope-panel="tiles">
+      {tiles.map((tile) =>
+        tile.state === "ok" ? (
+          <EquityChart
+            key={tile.index}
+            title={`${tile.index} · ${tile.title}`}
+            envelope={tile.envelope}
+            series={tile.series ?? null}
+            height={220}
+            unavailableReason={`${tile.title}: series not published for this scope — BR-EX-34 §alpha tiles.`}
+          />
+        ) : (
+          <section key={tile.index} className="exec-chart-tile exec-chart-unavailable" aria-label={`${tile.index} · ${tile.title}`} data-state={tile.state}>
+            <div className="exec-chart-head">
+              <h3 className="exec-section-title">{tile.index} · {tile.title}</h3>
+            </div>
+            <PanelState status={tile.state === "insufficient_data" ? "insufficient_data" : "unavailable"} reason={tile.reason ?? undefined} />
+            <p className="exec-role-meta exec-chart-envelope">{envelopeCaption(tile.envelope)}</p>
+          </section>
+        ),
+      )}
     </div>
   );
 }
@@ -659,7 +735,7 @@ function Positions({ positions, onLoadOlder }: AlphaThreeSixtyProps) {
       page={positions}
       rowKey={(r) => `${r.deploymentId}-${r.symbol}-${r.side}`}
       minWidth={980}
-      onLoadOlder={() => onLoadOlder?.("Positions")}
+      onLoadOlder={() => onLoadOlder("Positions")}
     />
   ) : (
     <PanelState status="loading" reason="Loading positions." />
@@ -682,7 +758,7 @@ function Orders({ orders, onLoadOlder }: AlphaThreeSixtyProps) {
       page={orders}
       rowKey={(r) => r.orderId}
       minWidth={980}
-      onLoadOlder={() => onLoadOlder?.("Orders & Fills")}
+      onLoadOlder={() => onLoadOlder("Orders & Fills")}
     />
   ) : (
     <PanelState status="loading" reason="Loading orders." />
@@ -704,7 +780,7 @@ function Audit({ audit, onLoadOlder }: AlphaThreeSixtyProps) {
       page={audit}
       rowKey={(r) => `${r.at}-${r.command}-${r.target}`}
       minWidth={900}
-      onLoadOlder={() => onLoadOlder?.("Audit")}
+      onLoadOlder={() => onLoadOlder("Audit")}
     />
   ) : (
     <PanelState status="loading" reason="Loading the command journal." />
@@ -744,6 +820,7 @@ function Sessions({ rows }: { rows: readonly SessionRow[] }) {
   return (
     <section className="exec-gate-panel">
       <div className="exec-tile-title">Sessions — restart and recovery evidence</div>
+      <div className="exec-scroll-x">
       <table className="exec-360-sync">
         <caption className="exec-blotter-note">Session and recovery events</caption>
         <thead>
@@ -770,6 +847,7 @@ function Sessions({ rows }: { rows: readonly SessionRow[] }) {
           ))}
         </tbody>
       </table>
+      </div>
       {notice ? <p className="exec-blotter-note">{notice}</p> : null}
     </section>
   );
@@ -784,6 +862,7 @@ function Accounting({ rows }: { rows: readonly AccountingRow[] }) {
   return (
     <section className="exec-gate-panel">
       <div className="exec-tile-title">Accounting — per account and currency</div>
+      <div className="exec-scroll-x">
       <table className="exec-360-sync">
         <caption className="exec-blotter-note">Accounting by account and currency</caption>
         <thead>
@@ -809,6 +888,7 @@ function Accounting({ rows }: { rows: readonly AccountingRow[] }) {
           ))}
         </tbody>
       </table>
+      </div>
       {notice ? <p className="exec-blotter-note">{notice}</p> : null}
       <p className="exec-blotter-note">
         canonical in the Execution cell · one row per account and currency, never one row per
@@ -822,6 +902,7 @@ function Reconciliation({ rows }: { rows: readonly ReconciliationRow[] }) {
   return (
     <section className="exec-gate-panel">
       <div className="exec-tile-title">Reconciliation — per venue policy freshness</div>
+      <div className="exec-scroll-x">
       <table className="exec-360-sync">
         <caption className="exec-blotter-note">Reconciliation policy freshness</caption>
         <thead>
@@ -850,6 +931,7 @@ function Reconciliation({ rows }: { rows: readonly ReconciliationRow[] }) {
           ))}
         </tbody>
       </table>
+      </div>
       <p className="exec-blotter-note">paper deployments reconcile against nothing — N/A is correct there</p>
     </section>
   );

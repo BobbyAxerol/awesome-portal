@@ -1331,18 +1331,27 @@ Status is `HOST_PREFLIGHT_ACCEPTED / IAM_ISOLATION_NOT_AUTHORIZED /
 LIVE_D2_UNAUTHORIZED`; no service started. Evidence:
 [`EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md`](backend/EX_BE_02_LIVE_D2_SHARED_HOST_REQUALIFICATION.md).
 
-Two later exact retries still failed after the owner-reported attachment. The
-private exact-instance policy was revised to remove request-parameter
-conditions that did not yield an effective Allow while retaining the region
-and two-action boundary. Current status is
-`REVISION_2_REPORTED_ATTACHED / EFFECTIVE_ALLOW_NOT_PROVEN /
-LIVE_D2_UNAUTHORIZED`: the 2026-08-24 post-attachment exact DryRun also returned
-`UnauthorizedOperation`. The owner must prove that revision 2 is attached under
-the existing role's Permissions policies and is the managed-policy default,
-then inspect any role boundary/SCP deny before another DryRun. The role remains
-the temporary D1 operator until the D2 window; no detach or delete is a valid
-workaround. Evidence:
+Two later exact retries failed after the first owner-reported attachment. The
+private exact-instance policy was revised to remove metadata request-parameter
+conditions while retaining the region and two-action boundary. Bobby then made
+revision 2 the default permissions-policy version on the exact role and
+confirmed there is no permissions boundary. The 2026-08-24 exact verifier
+passed with `D2_ISOLATION_AUTHORITY_VERIFIED`; EC2 returned the required
+`DryRunOperation`. Current status is `IAM_EFFECTIVE_ALLOW_VERIFIED /
+LIVE_D2_UNAUTHORIZED`. No EC2 setting or association changed. The role remains
+the temporary D1 operator until the bounded D2 window; no detach or delete is a
+valid workaround. Evidence:
 [`EX_BE_02_D2_IAM_POLICY_REVISION_2.md`](backend/EX_BE_02_D2_IAM_POLICY_REVISION_2.md).
+
+The signed D2 image HIGH checkpoint is
+`TRIGGER_NOT_REACHABLE / OWNER_DISPOSITION_PENDING / LIVE_D2_UNAUTHORIZED`.
+Exact-image inspection proves the Rust Edge is `rustls`-backed and does not
+link OpenSSL. The Source Proxy links affected OpenSSL 3.5.7, but its D2 runtime
+has exactly one TLS/TCP listener and no QUIC/HTTP3/UDP activation; preflight now
+rejects any drift that could expose that trigger. This mitigation is not an
+owner waiver. Bobby must accept the temporary disposition or wait for a patched
+upstream base before opening D2. Evidence:
+[`EX_BE_02_D2_CVE_2026_14456_APPLICABILITY.md`](backend/EX_BE_02_D2_CVE_2026_14456_APPLICABILITY.md).
 
 The exact isolation sequence is now executable rather than prose-only. A
 tested operator tool verifies the DryRun, binds the exact instance/profile/

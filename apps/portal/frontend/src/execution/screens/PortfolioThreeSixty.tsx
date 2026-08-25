@@ -36,6 +36,14 @@ import { AuthorityBadge, EnvironmentBadge, StatusChip } from "../components/badg
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
 import { ExecutionSurface } from "../ExecutionSurface";
+import { EquityChart } from "../components/EquityChart";
+import {
+  ExecutionContextRail,
+  ExecutionPageHeader,
+  ExecutionProvenanceDrawer,
+  ExecutionWorkspace,
+  type HeaderBadge,
+} from "../components/workspace";
 
 /**
  * Cells the matrix may lay out before the representation changes.
@@ -152,7 +160,11 @@ export interface PortfolioThreeSixtyProps {
   benchmark: string;
   benchmarkId: string;
   tab: PortfolioTab;
-  onTabChange?: (tab: PortfolioTab) => void;
+  onTabChange: (tab: PortfolioTab) => void;
+  /** Holdings row → Alpha 360° (HiFi 3a: "alpha click → Alpha 360°"). */
+  onOpenAlpha: (alphaId: string) => void;
+  /** Account cell → Account/Broker 360° (HiFi 3a: "account click → Account 360°"). */
+  onOpenAccount: (accountId: string) => void;
   kpis: readonly { label: string; value: string | null; unit?: string | null }[];
   holdings: readonly HoldingRow[];
   /** FX note the hi-fi requires wherever a total crosses currencies. */
@@ -161,7 +173,7 @@ export interface PortfolioThreeSixtyProps {
   correlationEnvelope?: Envelope;
   /** Index of the alpha the leader lens is focused on. */
   lensIndex?: number | null;
-  onLensChange?: (index: number | null) => void;
+  onLensChange: (index: number | null) => void;
   leaders: readonly LeaderList[];
   insight?: { code: string; grade: string; window: string; text: string } | null;
   ledger: CapitalLedger | null;
@@ -214,6 +226,57 @@ function cellText(
   return { text: value, insufficient: false, samples };
 }
 
+/** |ρ| → 0..4 for the heatmap tint. Colour is presentation; the coefficient itself is never rewritten. */
+export function absBucket(coefficient: string): "0" | "1" | "2" | "3" | "4" {
+  const n = Math.abs(Number(coefficient));
+  if (!Number.isFinite(n)) return "0";
+  if (n >= 0.8) return "4";
+  if (n >= 0.6) return "3";
+  if (n >= 0.4) return "2";
+  if (n >= 0.2) return "1";
+  return "0";
+}
+
+/**
+ * Influence map (HiFi 3a): node = alpha, edge = |ρ| at or above the
+ * threshold, both read straight off the published packed matrix. Radius
+ * follows the holding's exposure share when published; otherwise nodes are
+ * equal — the map never computes an exposure of its own.
+ */
+export function InfluenceMap({ matrix, exposures, threshold = "0.5" }: { matrix: PackedCorrelation; exposures: ReadonlyMap<string, string | null>; threshold?: string }) {
+  const n = matrix.labels.length;
+  const cx = 160, cy = 120, R = 90;
+  const nodes = matrix.labels.map((l, i) => ({ ...l, x: cx + R * Math.cos((2 * Math.PI * i) / n - Math.PI / 2), y: cy + R * Math.sin((2 * Math.PI * i) / n - Math.PI / 2) }));
+  const edges: { a: number; b: number; rho: string }[] = [];
+  for (let a = 0; a < n; a += 1) for (let b = a + 1; b < n; b += 1) {
+    const rho = correlationAt(matrix, a, b);
+    if (rho !== null && compareAbsDecimal(rho, threshold) >= 0) edges.push({ a, b, rho });
+  }
+  const radius = (id: string) => {
+    const pct = exposures.get(id);
+    const v = pct === null || pct === undefined ? NaN : Number(pct.replace("%", ""));
+    return Number.isFinite(v) ? 6 + Math.min(18, v / 4) : 10;
+  };
+  return (
+    <figure className="exec-influence-wrap">
+      <svg className="exec-influence" viewBox="0 0 320 240" role="img" aria-label={`Influence map: ${n} alphas, ${edges.length} edges with |ρ| ≥ ${threshold}`}>
+        {edges.map((e) => (
+          <line key={`${e.a}-${e.b}`} x1={nodes[e.a].x} y1={nodes[e.a].y} x2={nodes[e.b].x} y2={nodes[e.b].y} strokeWidth={1 + 3 * Math.abs(Number(e.rho))} opacity={0.35 + 0.6 * Math.abs(Number(e.rho))}>
+            <title>{`${nodes[e.a].displayName} — ${nodes[e.b].displayName}: ρ ${e.rho}`}</title>
+          </line>
+        ))}
+        {nodes.map((node) => (
+          <g key={node.entityId}>
+            <circle cx={node.x} cy={node.y} r={radius(node.entityId)} />
+            <text x={node.x} y={node.y + radius(node.entityId) + 12} textAnchor="middle">{node.displayName}</text>
+          </g>
+        ))}
+      </svg>
+      <figcaption className="exec-role-meta">node = alpha (radius = published exposure share) · edge = |ρ| ≥ {threshold} from the published matrix · {edges.length} edges</figcaption>
+    </figure>
+  );
+}
+
 function CorrelationMatrix({
   matrix,
   lensIndex,
@@ -221,11 +284,12 @@ function CorrelationMatrix({
 }: {
   matrix: PackedCorrelation;
   lensIndex: number | null;
-  onLensChange?: (index: number | null) => void;
+  onLensChange: (index: number | null) => void;
 }) {
   const labels = matrix.labels;
   return (
     <div className="exec-pf-matrixwrap">
+      <div className="exec-scroll-x">
       <table className="exec-pf-matrix">
         <thead>
           <tr>
@@ -244,7 +308,7 @@ function CorrelationMatrix({
                 <button
                   type="button"
                   className="exec-pf-lensbtn"
-                  onClick={() => onLensChange?.(row === lensIndex ? null : row)}
+                  onClick={() => onLensChange(row === lensIndex ? null : row)}
                 >
                   {rowLabel.displayName}
                 </button>
@@ -256,11 +320,16 @@ function CorrelationMatrix({
                     key={column}
                     data-insufficient={cell.insufficient ? "true" : undefined}
                     data-lens={row === lensIndex || column === lensIndex ? "true" : undefined}
+                    data-self={row === column ? "true" : undefined}
+                    data-abs={cell.insufficient || row === column ? undefined : absBucket(cell.text)}
                     title={
                       cell.samples !== null ? `${cell.samples} samples` : "sample count not published"
                     }
                   >
-                    <span className="exec-num">{cell.text}</span>
+                    {/* Heatmap: the tint is |ρ| bucketed for colour only; the number stays the server's string. Click drills into the column's lens. */}
+                    <button type="button" className="exec-pf-cellbtn" onClick={() => onLensChange(column === lensIndex ? null : column)} aria-label={`${rowLabel.displayName} × ${labels[column].displayName}: ${cell.text}`}>
+                      <span className="exec-num">{cell.text}</span>
+                    </button>
                   </td>
                 );
               })}
@@ -268,6 +337,7 @@ function CorrelationMatrix({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -287,7 +357,7 @@ function CorrelationLens({
 }: {
   matrix: PackedCorrelation;
   lensIndex: number;
-  onLensChange?: (index: number | null) => void;
+  onLensChange: (index: number | null) => void;
 }) {
   const subject = matrix.labels[lensIndex];
   const others = matrix.labels
@@ -307,7 +377,7 @@ function CorrelationLens({
         <span>Leader lens</span>
         <select
           value={lensIndex}
-          onChange={(event) => onLensChange?.(Number(event.target.value))}
+          onChange={(event) => onLensChange(Number(event.target.value))}
         >
           {matrix.labels.map((label, index) => (
             <option key={label.entityId} value={index}>
@@ -316,6 +386,7 @@ function CorrelationLens({
           ))}
         </select>
       </label>
+      <div className="exec-scroll-x">
       <table className="exec-360-sync">
         <caption>{subject?.displayName} against every other entity</caption>
         <thead>
@@ -343,6 +414,7 @@ function CorrelationLens({
           ))}
         </tbody>
       </table>
+      </div>
       {notice ? <p className="exec-blotter-note">{notice}</p> : null}
     </div>
   );
@@ -357,6 +429,7 @@ function RankedPairs({ ranked }: { ranked: RankedCorrelation }) {
   const notice = capNotice(shown, "ranked pairs");
   return (
     <div>
+      <div className="exec-scroll-x">
       <table className="exec-360-sync">
         <thead>
           <tr>
@@ -391,6 +464,7 @@ function RankedPairs({ ranked }: { ranked: RankedCorrelation }) {
           })}
         </tbody>
       </table>
+      </div>
       {notice ? <p className="exec-blotter-note">{notice}</p> : null}
       {ranked.clusters.length > 0 ? (
         <ul className="exec-pf-clusters">
@@ -415,7 +489,7 @@ export function CorrelationPanel({
   correlation: Correlation | null;
   envelope?: Envelope;
   lensIndex?: number | null;
-  onLensChange?: (index: number | null) => void;
+  onLensChange: (index: number | null) => void;
   cellBudget?: number;
 }) {
   if (!correlation) {
@@ -564,6 +638,7 @@ function Ledger({
         const notice = capNotice(shown, `${bucket.currency} entries`);
         return (
           <div key={bucket.currency}>
+            <div className="exec-scroll-x">
             <table className="exec-360-sync">
               <caption>
                 {bucket.currency} — gross increase{" "}
@@ -618,6 +693,7 @@ function Ledger({
                 ))}
               </tbody>
             </table>
+            </div>
             {notice ? <p className="exec-blotter-note">{notice}</p> : null}
             {bucket.entryCount === null || bucket.entryCount === undefined ? (
               <p className="exec-blotter-note">
@@ -647,6 +723,8 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
     benchmarkId,
     tab,
     onTabChange,
+    onOpenAlpha,
+    onOpenAccount,
     kpis,
     holdings,
     fxNote,
@@ -686,19 +764,47 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
   // of one of these, so this was live on a real page, not hypothetical.
   const uid = useId();
 
+  const pfRail = (
+    <ExecutionContextRail
+      next={{
+        title: insight ? `INSIGHT · ${insight.code}` : leaders[0] ? `Leader lens · ${leaders[0].title}` : "No leader claim published",
+        detail: (
+          <span className="exec-role-body">
+            {insight ? `${insight.text} (grade ${insight.grade} · ${insight.window})` : "Structure & Correlation holds the matrix, the influence map and the ranked leader lists — none of them merged into a score."}
+          </span>
+        ),
+      }}
+      blockers={[
+        ...(incidents?.open ?? []).map((i) => ({ label: `${i.id} ${i.severity}`, detail: i.summary, severity: (i.severity === "CRITICAL" ? "blocking" : "watch") as "blocking" | "watch" })),
+        ...holdings.filter((h) => h.readiness !== "READY").map((h) => ({ label: `${h.deploymentId} ${h.readiness}`, detail: `${h.alpha} · ${h.venue} ${h.mode}`, severity: "watch" as const })),
+      ]}
+      freshness={<span className="exec-role-meta">{envelope.authority} · as_of {envelope.asOf ?? "not stated"} · {envelope.freshness}{correlationEnvelope ? ` · correlation ${correlationEnvelope.freshness}` : ""}</span>}
+      provenance={
+        <ExecutionProvenanceDrawer
+          items={[
+            { label: "benchmark", short: `${benchmark} (${benchmarkId})`, full: null },
+            { label: "window", short: scopeWindow, full: null },
+            ...(ledgerTotals ? [{ label: "capital", short: `${ledgerTotals.allocated} / ${ledgerTotals.max} ${ledgerTotals.currency}`, full: null }] : []),
+          ]}
+          onCopy={(full) => void navigator.clipboard?.writeText(full)}
+        />
+      }
+    />
+  );
   return (
     <ExecutionSurface kind="deployments" className="exec-pf">
-      <header className="exec-inbox-head">
-        <div className="exec-tile-title">
-          {portfolioName} · <span className="exec-num">{portfolioId}</span>
-        </div>
-        <div className="exec-alpha-identity">
-          <AuthorityBadge envelope={envelope} />
-          <span className="exec-blotter-note">
-            window {scopeWindow} · benchmark {benchmark} ({benchmarkId})
-          </span>
-        </div>
-      </header>
+      <ExecutionWorkspace layout="balanced" rail={pfRail}>
+      <ExecutionPageHeader
+        title={portfolioName}
+        id={portfolioId}
+        badges={[
+          { label: `${holdings.length} holding${holdings.length === 1 ? "" : "s"}`, axis: "other" },
+          { label: `${envelope.authority} · ${envelope.freshness}`, axis: "broker-sync", tone: envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn" },
+          ...(incidents && incidents.open.length ? [{ label: `${incidents.open.length} OPEN INCIDENT${incidents.open.length === 1 ? "" : "S"}`, axis: "readiness", tone: "bad" } as HeaderBadge] : []),
+        ]}
+        purpose="What the portfolio contains, how its alphas move together, who leads the book, and what changes if the leader changes."
+        secondary={<span className="exec-role-meta">window {scopeWindow} · benchmark {benchmark} ({benchmarkId})</span>}
+      />
 
       <div className="exec-alpha-tabs" role="tablist" aria-label="Portfolio detail">
         {PORTFOLIO_TABS.map((option) => (
@@ -711,7 +817,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
             className="exec-inbox-filter"
             data-active={tab === option ? "true" : undefined}
             aria-selected={tab === option}
-            onClick={() => onTabChange?.(option)}
+            onClick={() => onTabChange(option)}
           >
             {option}
           </button>
@@ -749,6 +855,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
               <div className="exec-blotter-note">
                 one account = one alpha, never shared
               </div>
+              <div className="exec-scroll-x">
               <table className="exec-alpha-deployments">
                 <caption className="exec-blotter-note">
                   Holdings — one row per deployment
@@ -771,9 +878,17 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                       key={row.deploymentId}
                       data-emphasis={row.readiness !== "READY" ? "warn" : undefined}
                     >
-                      <th scope="row">{row.alpha}</th>
+                      <th scope="row">
+                        <button type="button" className="exec-link" onClick={() => onOpenAlpha(row.alpha)}>
+                          {row.alpha}
+                        </button>
+                      </th>
                       <td>{row.deploymentId}</td>
-                      <td>{row.accountId}</td>
+                      <td>
+                        <button type="button" className="exec-link" onClick={() => onOpenAccount(row.accountId)}>
+                          {row.accountId}
+                        </button>
+                      </td>
                       <td>
                         {row.venue} · {row.mode}
                       </td>
@@ -798,6 +913,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                   ))}
                 </tbody>
               </table>
+              </div>
               {holdingsNotice ? <p className="exec-blotter-note">{holdingsNotice}</p> : null}
               {/* Required wherever a total crosses currencies. A portfolio total
                   over USDT and USDC is only meaningful with a named rate, and
@@ -815,6 +931,25 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
               lensIndex={lens}
               onLensChange={setLens}
             />
+            {correlation?.kind === "PACKED_MATRIX" ? (
+              <InfluenceMap matrix={correlation} exposures={new Map(holdings.map((h) => [h.alpha, h.exposurePct]))} />
+            ) : null}
+            <div className="exec-grid-2">
+              <EquityChart
+                title={`ρ(NAV, ${benchmark}) · 30d · threshold 0.6`}
+                envelope={{ window: scopeWindow, interval: "1d", currency: null, asOf: envelope.asOf ?? "", authority: "ANALYTICS" as never, formulaVersion: "rho_timeline", sourceRows: null, returnedRows: null, coverage: null }}
+                series={null}
+                height={200}
+                unavailableReason="ρ timeline and tail-ρ not published for this portfolio — BR-EX-34 §portfolio. The matrix above is the published correlation."
+              />
+              <EquityChart
+                title="Drawdown overlap timeline"
+                envelope={{ window: scopeWindow, interval: "1d", currency: null, asOf: envelope.asOf ?? "", authority: "ANALYTICS" as never, formulaVersion: "drawdown_overlap", sourceRows: null, returnedRows: null, coverage: null }}
+                series={null}
+                height={200}
+                unavailableReason="Drawdown overlap series not published — BR-EX-34 §portfolio."
+              />
+            </div>
             {insight ? (
               <section className="exec-gate-panel">
                 <div className="exec-360-colmeta">
@@ -835,6 +970,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
         {tab === "Approvals" ? (
           <section className="exec-gate-panel">
             <div className="exec-tile-title">Approvals touching this portfolio</div>
+            <div className="exec-scroll-x">
             <table className="exec-360-sync">
               <caption className="exec-blotter-note">Approvals touching this portfolio</caption>
               <thead>
@@ -864,6 +1000,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                 ))}
               </tbody>
             </table>
+            </div>
           </section>
         ) : null}
 
@@ -882,6 +1019,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                   No incidents are open against this portfolio in this window.
                 </p>
               ) : (
+                <div className="exec-scroll-x">
                 <table className="exec-360-sync">
                   <thead>
                     <tr>
@@ -902,8 +1040,10 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
               {incidents.resolved.length > 0 ? (
+                <div className="exec-scroll-x">
                 <table className="exec-360-sync">
                   <caption>resolved — and what closed them</caption>
                   <thead>
@@ -929,6 +1069,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                     ))}
                   </tbody>
                 </table>
+                </div>
               ) : null}
             </section>
           ) : (
@@ -946,6 +1087,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
           />
         ) : null}
       </div>
+      </ExecutionWorkspace>
     </ExecutionSurface>
   );
 }

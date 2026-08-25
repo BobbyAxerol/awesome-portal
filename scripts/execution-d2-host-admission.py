@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import grp
 import hashlib
+import ipaddress
 import json
 import os
 import pathlib
@@ -66,6 +67,7 @@ class HostFacts:
     prohibited_listener_ports: tuple[int, ...]
     runtime_group_gid: int | None
     invalid_runtime_paths: tuple[str, ...]
+    protected_listener_endpoints: tuple[str, ...] = ()
 
 
 def parse_pressure(raw: str, kind: str, average: str = "avg10") -> float:
@@ -101,8 +103,8 @@ def _run(argv: list[str]) -> str:
     return completed.stdout
 
 
-def _listener_ports(raw: str) -> tuple[int, ...]:
-    observed: set[int] = set()
+def _listener_endpoints(raw: str) -> tuple[str, ...]:
+    observed: set[str] = set()
     for line in raw.splitlines():
         fields = line.split()
         if len(fields) < 4:
@@ -110,8 +112,31 @@ def _listener_ports(raw: str) -> tuple[int, ...]:
         endpoint = fields[3]
         match = re.search(r":([0-9]+)$", endpoint)
         if match and int(match.group(1)) in PROHIBITED_LISTENER_PORTS:
-            observed.add(int(match.group(1)))
+            observed.add(endpoint)
     return tuple(sorted(observed))
+
+
+def _listener_ports(endpoints: tuple[str, ...]) -> tuple[int, ...]:
+    return tuple(sorted({int(endpoint.rsplit(":", 1)[1]) for endpoint in endpoints}))
+
+
+def validate_expected_listener_endpoints(raw_endpoints: list[str]) -> tuple[str, ...]:
+    if len(raw_endpoints) != 2 or len(set(raw_endpoints)) != 2:
+        raise ValueError("observation requires exactly two unique private listeners")
+    ports: set[int] = set()
+    for endpoint in raw_endpoints:
+        try:
+            address_raw, port_raw = endpoint.rsplit(":", 1)
+            address = ipaddress.ip_address(address_raw)
+            port = int(port_raw)
+        except (ValueError, TypeError) as exc:
+            raise ValueError("expected listener is malformed") from exc
+        if address.version != 4 or not address.is_private or address.is_unspecified:
+            raise ValueError("expected listener must use an exact private IPv4 address")
+        ports.add(port)
+    if ports != {8443, 8444}:
+        raise ValueError("expected listeners must cover exact D2 ports 8443 and 8444")
+    return tuple(sorted(raw_endpoints))
 
 
 def collect_host_facts(
@@ -143,7 +168,7 @@ def collect_host_facts(
         oom_count = sum(line.strip() == "true" for line in oom_rows.splitlines())
     running_names = run(["docker", "ps", "--format", "{{.Names}}"]).splitlines()
     portal_count = sum(bool(PORTAL_CONTAINER_PATTERN.search(name)) for name in running_names)
-    listeners = _listener_ports(run(["ss", "-H", "-ltn"]))
+    listener_endpoints = _listener_endpoints(run(["ss", "-H", "-ltn"]))
 
     try:
         runtime_gid = grp.getgrnam("portal-runtime").gr_gid
@@ -179,9 +204,10 @@ def collect_host_facts(
         running_container_count=len(running_ids),
         historical_oom_count=oom_count,
         execution_portal_container_count=portal_count,
-        prohibited_listener_ports=listeners,
+        prohibited_listener_ports=_listener_ports(listener_endpoints),
         runtime_group_gid=runtime_gid,
         invalid_runtime_paths=tuple(invalid_paths),
+        protected_listener_endpoints=listener_endpoints,
     )
 
 
@@ -196,6 +222,7 @@ def assess_host(
     mode: str = "preflight",
     baseline: HostFacts | None = None,
     expected_portal_containers: int = 3,
+    expected_listener_endpoints: tuple[str, ...] = (),
 ) -> dict[str, object]:
     if mode not in {"preflight", "observation"}:
         raise ValueError("mode must be preflight or observation")
@@ -253,8 +280,13 @@ def assess_host(
         and facts.execution_portal_container_count != expected_portal_containers
     ):
         blockers.append("EXECUTION_PORTAL_CONTAINER_COUNT_UNEXPECTED")
-    if facts.prohibited_listener_ports:
+    if mode == "preflight" and facts.protected_listener_endpoints:
         blockers.append("PRIVATE_SERVICE_PORT_COLLISION")
+    if mode == "observation":
+        if not expected_listener_endpoints:
+            blockers.append("EXPECTED_PRIVATE_LISTENERS_NOT_DECLARED")
+        elif set(facts.protected_listener_endpoints) != set(expected_listener_endpoints):
+            blockers.append("PRIVATE_SERVICE_LISTENER_SET_UNEXPECTED")
     if facts.runtime_group_gid is None:
         blockers.append("PORTAL_RUNTIME_GROUP_MISSING")
     if facts.invalid_runtime_paths:
@@ -312,6 +344,12 @@ def _parser() -> argparse.ArgumentParser:
         help="Exact running dark container count during observation (Edge, Proxy, PostgreSQL).",
     )
     parser.add_argument(
+        "--expected-private-listener",
+        action="append",
+        default=[],
+        help="Repeat exactly twice in observation mode for private 8443 and 8444 listeners.",
+    )
+    parser.add_argument(
         "--acknowledge-historical-oom",
         choices=("D2_NON_PORTAL_OOM_REVIEWED", "D2_HISTORICAL_OOM_REVIEWED"),
         help="Owner-reviewed exception; does not override live pressure gates.",
@@ -349,6 +387,13 @@ def main(argv: list[str] | None = None) -> int:
             if args.baseline_report is None:
                 raise ValueError("observation requires --baseline-report")
             baseline = load_baseline_report(args.baseline_report)
+        expected_listener_endpoints: tuple[str, ...] = ()
+        if args.mode == "observation":
+            expected_listener_endpoints = validate_expected_listener_endpoints(
+                args.expected_private_listener
+            )
+        elif args.expected_private_listener:
+            raise ValueError("preflight forbids expected running listeners")
         report = assess_host(
             collect_host_facts(),
             historical_oom_reviewed=args.acknowledge_historical_oom
@@ -356,6 +401,7 @@ def main(argv: list[str] | None = None) -> int:
             mode=args.mode,
             baseline=baseline,
             expected_portal_containers=args.expected_portal_containers,
+            expected_listener_endpoints=expected_listener_endpoints,
         )
     except Exception as exc:
         print(

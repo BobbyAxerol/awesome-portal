@@ -1894,6 +1894,16 @@ không phải 17 màn.
 > Canonical placement: full Portal stays on SGP; AWS-HK hosts only the minimal
 > Execution Edge boundary.
 
+> **D2 live checkpoint 2026-08-24:** minimal AWS-HK Rust Edge + Source Proxy +
+> schema-only PostgreSQL đã đạt `D2_DARK_ACCEPTED / SOURCE_INACTIVE`. IMDS hop
+> limit 1 và temporary instance profile detachment được verify trước startup;
+> ba service healthy qua soak hơn 15 phút, zero restart/OOM/source request, và
+> full rollback/redeploy giữ nguyên volume/migration 4/4 trong khi Trading
+> System luôn HTTP 200. Tất cả business/source/query/analytics/SSE/command flag
+> vẫn false/fixture. Phase backend kế tiếp là D3 live transport acceptance với
+> một owner window mới; chưa phải D4 hoặc source activation. Chi tiết:
+> [`EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md`](./backend/EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md).
+
 ## 12.4 Thứ tự slice của frontend
 
 Lane A chạy trước; mỗi slice đóng độc lập và không slice nào chờ codex.

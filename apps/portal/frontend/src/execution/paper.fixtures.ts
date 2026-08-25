@@ -15,6 +15,14 @@ import type {
   WorkbenchPosition,
   WorkbenchSession,
 } from "./screens/PaperWorkbench";
+/**
+ * Fixture DATA, not behaviour (EL-V2-03): the screen's handlers are required
+ * in its props, and a fixture factory that stubbed them would be the exact
+ * enabled-no-op this phase removes. Callers supply handlers — the preview
+ * controllers on product routes, explicit spies in tests.
+ */
+export type PaperWorkbenchData = Omit<PaperWorkbenchProps, "onRequestExit" | "onTabChange" | "onLoadOlder" | "onAdminActions" | "onCopyProvenance">;
+
 
 const EQUITY: ChartEnvelope = {
   window: "30d",
@@ -98,9 +106,7 @@ const DRIFT: DriftRow[] = [
   },
 ];
 
-export function paperWorkbench(
-  over: Partial<PaperWorkbenchProps> = {},
-): PaperWorkbenchProps {
+export function paperWorkbench(over: Partial<PaperWorkbenchData> = {}): PaperWorkbenchData {
   return {
     alphaLabel: "Carry v3.2",
     deploymentId: "dep_74",

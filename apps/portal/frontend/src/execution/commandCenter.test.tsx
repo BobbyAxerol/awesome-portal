@@ -50,7 +50,7 @@ describe("B12 — every published panel state maps, and an unknown one is not ok
 
   for (const name of ["busy", "empty", "partial", "stale", "unavailable"]) {
     it(`renders the ${name} fixture without inventing a panel`, () => {
-      render(<CommandCenterScreen snapshot={snapshot(name)} />);
+      render(<CommandCenterScreen onOpen={() => undefined} snapshot={snapshot(name)} />);
       // Exactly one page heading, and the panels the document actually carries
       // — no placeholder frames for panels it does not.
       expect(screen.getByRole("heading", { level: 1 })).toBeTruthy();
@@ -71,7 +71,7 @@ describe("B12 — every published panel state maps, and an unknown one is not ok
 describe("B13 — authority and freshness belong to the panel", () => {
   it("gives each panel its own header rather than one page verdict", () => {
     const s = snapshot("partial");
-    render(<CommandCenterScreen snapshot={s} />);
+    render(<CommandCenterScreen onOpen={() => undefined} snapshot={s} />);
     // Four panel frames, each labelled; the assertion is that they exist
     // separately, not that they agree.
     for (const title of ["Needs you now", "Fleet health", "Pinned watchlist", "Today"]) {
@@ -104,7 +104,7 @@ describe("B14 — observed_total_count is a floor, not a total", () => {
   });
 
   it("shows a fleet cell with no value as — rather than 0", () => {
-    render(<CommandCenterScreen snapshot={snapshot("partial")} />);
+    render(<CommandCenterScreen onOpen={() => undefined} snapshot={snapshot("partial")} />);
     const fleet = screen.getByLabelText("Fleet health");
     // Whatever the fixture withholds must not appear as a zero.
     expect(fleet.textContent).not.toMatch(/\b0\b(?!\d)/);
@@ -134,7 +134,7 @@ describe("B16 — a pin whose target cannot be read stays visible", () => {
     const raw = fixture("busy");
     raw.panels.pinned_watchlist.items[0].target_state = "unavailable";
     raw.panels.pinned_watchlist.items[0].target_label = null;
-    render(<CommandCenterScreen snapshot={readCommandCenter(raw)!} />);
+    render(<CommandCenterScreen onOpen={() => undefined} snapshot={readCommandCenter(raw)!} />);
     const pinned = screen.getByLabelText("Pinned watchlist");
     expect(pinned.textContent).toContain("target unavailable");
     // Still listed — not filtered out to keep the panel tidy.
@@ -152,19 +152,19 @@ describe("B17 — no live control while the stream is dark", () => {
   it("says the page does not update itself when stream_available is false", () => {
     const s = snapshot("busy");
     expect(s.streamAvailable).toBe(false);
-    render(<CommandCenterScreen snapshot={s} />);
+    render(<CommandCenterScreen onOpen={() => undefined} snapshot={s} />);
     expect(screen.getByText(/does not update itself/)).toBeTruthy();
   });
 
   it("offers no live or profile control at all, rather than a disabled one", () => {
-    render(<CommandCenterScreen snapshot={snapshot("busy")} />);
+    render(<CommandCenterScreen onOpen={() => undefined} snapshot={snapshot("busy")} />);
     expect(screen.queryByRole("button", { name: /live|stream|connect/i })).toBeNull();
   });
 
   it("drops the snapshot-only note once a stream is published", () => {
     const raw = fixture("busy");
     raw.snapshot.stream_available = true;
-    render(<CommandCenterScreen snapshot={readCommandCenter(raw)!} />);
+    render(<CommandCenterScreen onOpen={() => undefined} snapshot={readCommandCenter(raw)!} />);
     expect(screen.queryByText(/does not update itself/)).toBeNull();
   });
 });
@@ -232,7 +232,7 @@ describe("the live banner distinguishes published from connected", () => {
   };
 
   it("says nothing is connected when the stream is published but no state has arrived", () => {
-    render(<CommandCenterScreen snapshot={opened()} live={null} />);
+    render(<CommandCenterScreen onOpen={() => undefined} snapshot={opened()} live={null} />);
     expect(screen.getByText(/Stream published — not connected/)).toBeTruthy();
     // The marker is the claim. It must track the socket, not the server flag.
     expect(document.querySelector('[data-live="true"]')).toBeNull();
@@ -244,7 +244,7 @@ describe("the live banner distinguishes published from connected", () => {
 
   it("reports the subscription's own freshness once one exists", () => {
     render(
-      <CommandCenterScreen
+      <CommandCenterScreen onOpen={() => undefined}
         snapshot={opened()}
         live={{ ...INITIAL_SUBSCRIPTION, freshness: "OK", phase: "live" }}
       />,
@@ -256,7 +256,7 @@ describe("the live banner distinguishes published from connected", () => {
   });
 
   it("still refuses to mention a stream at all while the gate is shut", () => {
-    render(<CommandCenterScreen snapshot={snapshot("busy")} live={null} />);
+    render(<CommandCenterScreen onOpen={() => undefined} snapshot={snapshot("busy")} live={null} />);
     expect(document.querySelector('[data-live="true"]')).toBeNull();
     expect(screen.queryByText(/Stream published/)).toBeNull();
   });

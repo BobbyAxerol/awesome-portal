@@ -6,24 +6,23 @@
  * triage actions exercise the real plan/apply/poll UI against an in-memory
  * fixture response whose source-side-effect flag is false.
  */
-import { useMemo, type ReactNode } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect, useMemo, type ReactNode } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { reviewRouteFor } from "./screens/ApprovalInbox";
 
-import { account360 } from "./account360.fixtures";
-import { alpha360 } from "./alpha360.fixtures";
+import { usePresentation } from "../app/presentation";
+
 import { createFixtureApi } from "./api/fixtureApi";
-import { BLOTTER_CROSS_FILTER, blotterPage } from "./blotter.fixtures";
 import { CC_FIXTURES } from "./commandCenter.fixtures";
 import { readCommandCenter } from "./commandCenter";
 import { ExecutionSurface, type ExecutionSurfaceKind } from "./ExecutionSurface";
-import { GATE_MET, paperWorkbench } from "./paper.fixtures";
-import { portfolio360 } from "./portfolio360.fixtures";
-import { vnmWorkbench } from "./vnm.fixtures";
-import { AccountBroker360 } from "./screens/AccountBroker360";
-import { AlphaThreeSixty } from "./screens/AlphaThreeSixty";
-import { FullBlotter } from "./screens/FullBlotter";
-import { PaperWorkbench } from "./screens/PaperWorkbench";
-import { PortfolioThreeSixty } from "./screens/PortfolioThreeSixty";
+import {
+  AccountBroker360Preview,
+  AlphaThreeSixtyPreview,
+  FullBlotterPreview,
+  PaperWorkbenchPreview,
+  PortfolioThreeSixtyPreview,
+} from "./previewControllers";
 import {
   AdminCatalogueContainer,
   ApprovalInboxContainer,
@@ -47,35 +46,112 @@ const GOVERNANCE_SCREENS = new Set([
   "EXECUTION_PAPER_EXIT_REVIEW_SCREEN",
 ]);
 
-function PreviewFrame({ screenId, children }: { screenId: string; children: ReactNode }) {
+/**
+ * The banner says which source is behind the screen — from the registry's
+ * `delivery_profile`, never from a hard-coded word. fixture says fixture,
+ * shadow says shadow, source says source (EL-V2-09: the profile never lies).
+ */
+export const PROFILE_BANNER: Record<string, { title: string; line: string; detail: string }> = {
+  fixture: {
+    title: "FIXTURE PREVIEW",
+    line: "No live connection · Actions are simulated",
+    detail: "Local fixture data only. No connection to AWS-HK, the Trading System, any broker or any realtime stream. Every action is simulated inside the browser and nothing is sent anywhere.",
+  },
+  shadow: {
+    title: "SHADOW PROJECTION",
+    line: "Read-only replay of a BUILDING epoch · not the live source · actions are simulated",
+    detail: "Values come from a shadow projection the Portal ingested for parity checks. They are real-shaped but not the promoted epoch; nothing here is live, and no action is sent anywhere.",
+  },
+  source: {
+    title: "SOURCE · READ-ONLY",
+    line: "Promoted projection through the Portal boundary · commands remain disabled",
+    detail: "Values are read from the promoted projection served by the Portal boundary (SGP). The browser never contacts AWS-HK or the Trading System; command relay stays disabled unless a later authority contract enables it.",
+  },
+};
+export function PreviewBanner({ profile, screenId }: { profile: string | null | undefined; screenId?: string }) {
+  const key = profile && PROFILE_BANNER[profile] ? profile : profile ? "unknown" : "fixture";
+  const copy = PROFILE_BANNER[key] ?? {
+    title: `PROFILE ${String(profile).toUpperCase()}`,
+    line: "Unrecognised delivery profile — treated as not live",
+    detail: `The registry publishes delivery_profile "${profile}", which this build does not know. It is rendered as not live and nothing is sent anywhere.`,
+  };
+  return (
+    <aside className="exec-preview-banner" role="status" data-execution-preview={key}>
+      <strong>{copy.title}</strong>
+      <span>{copy.line}</span>
+      <details className="exec-preview-details">
+        <summary>Details</summary>
+        <p>{copy.detail}</p>
+      </details>
+      {/* EL-V2-03 §4.3: implementation identity lives in an inspector the
+          operator opens on purpose, never in the default scan path. */}
+      <details className="exec-preview-inspector">
+        <summary>Inspector</summary>
+        <dl className="exec-preview-inspector-list">
+          <div><dt>screen</dt><dd><code data-preview-screen-id>{screenId ?? "—"}</code></dd></div>
+          <div><dt>delivery</dt><dd><code>{key}</code></dd></div>
+          <div><dt>build flag</dt><dd><code>VITE_EXECUTION_PREVIEW_ENABLED=true</code></dd></div>
+        </dl>
+      </details>
+    </aside>
+  );
+}
+function PreviewFrame({ screenId, profile, children }: { screenId: string; profile?: string | null; children: ReactNode }) {
   const kind: ExecutionSurfaceKind = GOVERNANCE_SCREENS.has(screenId)
     ? "governance"
     : "deployments";
 
   return (
     <ExecutionSurface kind={kind} className="exec-preview-shell">
-      <aside className="exec-preview-banner" role="status" data-execution-preview="fixture">
-        <strong>DEV INTEGRATION PREVIEW</strong>
-        <span>
-          Dữ liệu fixture cục bộ · không kết nối AWS-HK, Trading System, broker hoặc realtime ·
-          mọi thao tác chỉ mô phỏng trong trình duyệt.
-        </span>
-        <code>{screenId}</code>
-      </aside>
+      {/* One line, English, below the breadcrumb — §7.2's exact treatment. The
+          previous banner was a Vietnamese paragraph (violating the UI-English
+          rule §3.8) at production-warning volume; the detail it carried now
+          lives in the disclosure so the default reading cost is one glance.
+          `screenId` moved into the inspector in EL-V2-03. */}
+      <PreviewBanner profile={profile} screenId={screenId} />
       {children}
     </ExecutionSurface>
   );
 }
 
-export function ExecutionPreviewRoute({ screenId }: { screenId: string }) {
+export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: string; profile?: string | null }) {
   const params = useParams();
+  const navigate = useNavigate();
   const api = useMemo(() => createFixtureApi(), []);
   const commandCenter = useMemo(() => readCommandCenter(CC_FIXTURES.busy), []);
 
+  const { setEntityLabel } = usePresentation();
   const approvalId = params.approvalId ?? (screenId.includes("R2") ? "AP-352" : "AP-201");
   const deploymentId = params.deploymentId ?? (screenId.includes("SANDBOX") ? "dep_77" : "dep_88");
   const reviewId = params.reviewId ?? "EX-771";
   const incidentId = params.incidentId ?? "inc_fixture_44";
+
+  // The breadcrumb tail (§4.3): the entity this preview resolved, by the name
+  // an operator uses. Only set where the fixture cast has one — an invented
+  // name would be a second feature model.
+  const entity = useMemo(() => {
+    switch (screenId) {
+      case "EXECUTION_PAPER_WORKBENCH_SCREEN": return "Carry v3.2";
+      case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN": return "VnMomo v0.9";
+      case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN": return "MM v1.1";
+      case "EXECUTION_CANARY_CONTROL_ROOM_SCREEN": return "Grid v2.1";
+      case "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN": return "Grid v2.1";
+      case "EXECUTION_ALPHA_360_SCREEN": return "Grid v2.1";
+      case "EXECUTION_PORTFOLIO_360_SCREEN": return "PF-CRYPTO";
+      case "EXECUTION_ACCOUNT_BROKER_360_SCREEN": return "acct-live-grid-v21";
+      case "EXECUTION_GATE_R1_REVIEW_SCREEN":
+      case "EXECUTION_GATE_R2_REVIEW_SCREEN": return approvalId;
+      case "EXECUTION_PAPER_EXIT_REVIEW_SCREEN": return reviewId;
+      case "EXECUTION_INCIDENT_DETAIL_SCREEN": return incidentId;
+      default: return null;
+    }
+  }, [screenId, approvalId, reviewId, incidentId]);
+  useEffect(() => {
+    setEntityLabel(entity);
+    // A stale "Carry v3.2" over the Blotter would be the breadcrumb lying
+    // about where the reader is: the producer clears its own label.
+    return () => setEntityLabel(null);
+  }, [entity, setEntityLabel]);
 
   let content: ReactNode;
   switch (screenId) {
@@ -89,7 +165,8 @@ export function ExecutionPreviewRoute({ screenId }: { screenId: string }) {
       content = <IncidentDetailContainer api={api} incidentId={incidentId} />;
       break;
     case "EXECUTION_APPROVAL_INBOX_SCREEN":
-      content = <ApprovalInboxContainer api={api} />;
+      // EL-V2-05: a row (and the rail's Open) navigates to the review its gate owns.
+      content = <ApprovalInboxContainer api={api} onOpenRequest={(id, gate) => navigate(reviewRouteFor({ id, gate }))} />;
       break;
     case "EXECUTION_GATE_R1_REVIEW_SCREEN":
       content = <GateR1ReviewContainer api={api} approvalId={approvalId} />;
@@ -101,10 +178,10 @@ export function ExecutionPreviewRoute({ screenId }: { screenId: string }) {
       content = <PaperExitReviewContainer api={api} reviewId={reviewId} />;
       break;
     case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN":
-      content = <PaperWorkbench {...vnmWorkbench({ deploymentId })} />;
+      content = <PaperWorkbenchPreview deploymentId={deploymentId} variant="vnm" />;
       break;
     case "EXECUTION_PAPER_WORKBENCH_SCREEN":
-      content = <PaperWorkbench {...paperWorkbench({ ...GATE_MET, deploymentId })} />;
+      content = <PaperWorkbenchPreview deploymentId={deploymentId} />;
       break;
     case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN":
       content = <SandboxCertificationContainer api={api} deploymentId={deploymentId} />;
@@ -116,27 +193,16 @@ export function ExecutionPreviewRoute({ screenId }: { screenId: string }) {
       content = <LiveFullOperationsContainer api={api} deploymentId={deploymentId} />;
       break;
     case "EXECUTION_FULL_BLOTTER_SCREEN":
-      content = (
-        <FullBlotter
-          envelope={{ authority: "EXECUTION", asOf: "2026-08-22T10:42:01Z", freshness: "OK" }}
-          page={blotterPage("FILLED")}
-          filter="FILLED"
-          crossFilter={BLOTTER_CROSS_FILTER}
-        />
-      );
+      content = <FullBlotterPreview initialFilter="FILLED" />;
       break;
     case "EXECUTION_ALPHA_360_SCREEN":
-      content = <AlphaThreeSixty {...alpha360({ alphaId: params.alphaId ?? "alpha_grid_v21" })} />;
+      content = <AlphaThreeSixtyPreview alphaId={params.alphaId ?? "av_2041"} />;
       break;
     case "EXECUTION_PORTFOLIO_360_SCREEN":
-      content = (
-        <PortfolioThreeSixty
-          {...portfolio360({ portfolioId: params.portfolioId ?? "PF-MAIN" })}
-        />
-      );
+      content = <PortfolioThreeSixtyPreview portfolioId={params.portfolioId ?? "PF-CRYPTO"} />;
       break;
     case "EXECUTION_ACCOUNT_BROKER_360_SCREEN":
-      content = <AccountBroker360 {...account360({ accountId: params.accountId ?? "acct_paper_grid_v21" })} />;
+      content = <AccountBroker360Preview accountId={params.accountId ?? "acct-live-grid-v21"} />;
       break;
     case "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN":
       content = <AdminCatalogueContainer api={api} />;
@@ -145,5 +211,5 @@ export function ExecutionPreviewRoute({ screenId }: { screenId: string }) {
       content = null;
   }
 
-  return <PreviewFrame screenId={screenId}>{content}</PreviewFrame>;
+  return <PreviewFrame screenId={screenId} profile={profile}>{content}</PreviewFrame>;
 }

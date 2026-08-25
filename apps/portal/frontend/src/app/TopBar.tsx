@@ -15,6 +15,7 @@ import type { PortalEnvironment } from "../portal/contracts";
 import type { Breadcrumb } from "../portal/navigation";
 import { ADMIN_USERS_ROUTE } from "./PortalRoutes";
 import { usePreferences } from "./preferences";
+import { usePresentation } from "./presentation";
 
 export function TopBar({
   breadcrumbs,
@@ -28,6 +29,7 @@ export function TopBar({
   onToggleMobileNav: () => void;
 }) {
   const preferences = usePreferences();
+  const { mode: presentationMode, entityLabel } = usePresentation();
   const { isAdmin } = useSession();
 
   return (
@@ -68,6 +70,16 @@ export function TopBar({
             {crumb.route ? <Link to={crumb.route}>{crumb.label}</Link> : <span>{crumb.label}</span>}
           </span>
         ))}
+        {/* §4.3 product locator tail: `Deployments / Paper / Carry v3.2`. The
+            entity name comes from the screen that resolved it (via the
+            presentation context) — the shell cannot know fixture display
+            names, and would otherwise print ids or nothing. */}
+        {entityLabel ? (
+          <span className="portal-crumb">
+            <span aria-hidden="true" className="portal-crumb-sep">/</span>
+            <span>{entityLabel}</span>
+          </span>
+        ) : null}
       </nav>
 
       <button type="button" className="portal-search-btn" onClick={onOpenPalette}>
@@ -76,19 +88,37 @@ export function TopBar({
         <kbd className="mono">⌘K</kbd>
       </button>
 
-      <label className="portal-pref mono">
-        <span className="sr-only">Theme</span>
-        <select
-          value={preferences.theme}
-          onChange={(event) =>
-            preferences.set("theme", event.target.value === "operations" ? "operations" : "research")
-          }
-          aria-label="Theme"
+      {/* The appearance control shows the EFFECTIVE workspace appearance
+          (EL-V2-01 §4.1). On an Execution route the workspace is Carbon by
+          the owner override, not by preference, so the control says so and is
+          disabled — a selector still claiming "Research Light" around a Carbon
+          canvas was the owner-rejected state this replaces. The stored
+          preference is untouched and resumes on the next Research route. */}
+      {presentationMode === "execution-carbon" ? (
+        <label
+          className="portal-pref mono"
+          title="Execution routes always use the Carbon workspace. Your theme preference still applies to Research and Planning."
         >
-          <option value="research">Research Light</option>
-          <option value="operations">Operations Dark</option>
-        </select>
-      </label>
+          <span className="sr-only">Theme</span>
+          <select value="execution-carbon" disabled aria-label="Theme (Execution Carbon, route-set)">
+            <option value="execution-carbon">Execution Carbon</option>
+          </select>
+        </label>
+      ) : (
+        <label className="portal-pref mono">
+          <span className="sr-only">Theme</span>
+          <select
+            value={preferences.theme}
+            onChange={(event) =>
+              preferences.set("theme", event.target.value === "operations" ? "operations" : "research")
+            }
+            aria-label="Theme"
+          >
+            <option value="research">Research Light</option>
+            <option value="operations">Operations Dark</option>
+          </select>
+        </label>
+      )}
 
       <label className="portal-pref mono">
         <span className="sr-only">Density</span>

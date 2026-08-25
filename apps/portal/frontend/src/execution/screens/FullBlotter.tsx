@@ -30,11 +30,21 @@ import {
   type PanelStatus,
 } from "../contracts";
 import type { FunnelStageName, OrderFunnel } from "../analytics";
-import { AuthorityBadge, OrderStatusChip } from "../components/badges";
+import { OrderStatusChip } from "../components/badges";
 import { KeysetTable, type Column } from "../components/table";
+import { AggregatesFooter } from "../components/AggregatesFooter";
+import type { CurrencyAggregate } from "../blotterAggregates";
+import { useState } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
+import {
+  ExecutionContextRail,
+  ExecutionPageHeader,
+  ExecutionProvenanceDrawer,
+  ExecutionWorkspace,
+  type HeaderBadge,
+} from "../components/workspace";
 
 /**
  * Fills shown per funnel stage before capping.
@@ -294,7 +304,7 @@ export interface FullBlotterProps {
   page: KeysetPage<BlotterRow>;
   /** Applied server-side. The chips report; they do not filter. */
   filter: BlotterFilter;
-  onFilterChange?: (filter: BlotterFilter) => void;
+  onFilterChange: (filter: BlotterFilter) => void;
   /**
    * The chart selection that narrowed this list, in the words the chart used.
    *
@@ -304,18 +314,20 @@ export interface FullBlotterProps {
    * the table come to disagree.
    */
   crossFilter?: string | null;
-  onResetCrossFilter?: () => void;
+  onResetCrossFilter: () => void;
   scope?: ReactNode;
   status?: PanelStatus;
   reason?: string;
-  onLoadOlder?: () => void;
+  onLoadOlder: () => void;
   loading?: boolean;
   /** The expanded row's funnel. Fetched per order, not with the page. */
   expandedOrderId?: string | null;
   funnel?: OrderFunnel | null;
   funnelStatus?: PanelStatus;
   funnelReason?: string;
-  onExpand?: (row: BlotterRow) => void;
+  onExpand: (row: BlotterRow) => void;
+  /** M7 totals per currency — server-published, three counts kept apart. */
+  aggregates?: readonly CurrencyAggregate[] | null;
 }
 
 export function FullBlotter({
@@ -335,6 +347,7 @@ export function FullBlotter({
   funnelStatus,
   funnelReason,
   onExpand,
+  aggregates,
 }: FullBlotterProps) {
   const columns: readonly Column<BlotterRow>[] = [
     {
@@ -416,15 +429,54 @@ export function FullBlotter({
     { key: "orderId", header: "order_id", width: "9rem", render: (row) => row.orderId },
   ];
 
+  const [hidden, setHidden] = useState<readonly string[]>([]);
+  const visibleColumns = columns.filter((c) => !hidden.includes(c.key));
+  const exportRows = () => {
+    // Bounded on purpose: the rows this page has loaded, never a "full export"
+    // the server did not publish. Values are the strings as rendered.
+    const header = visibleColumns.map((c) => c.key).join(",");
+    const lines = page.rows.map((row) => visibleColumns.map((c) => JSON.stringify(String((row as unknown as Record<string, unknown>)[c.key] ?? ""))).join(","));
+    const text = [header, ...lines].join("\n");
+    void navigator.clipboard?.writeText(text);
+    setExported(`${page.rows.length} loaded rows copied as CSV — bounded to this page, not the ${page.totalCount ?? "unpublished"} total`);
+  };
+  const [exported, setExported] = useState<string | null>(null);
+  const rejected = page.rows.filter((r) => r.status === "REJECTED" || r.status === "DENIED");
+  const blotterRail = (
+    <ExecutionContextRail
+      next={{
+        title: expandedOrderId ? `Funnel · ${expandedOrderId}` : "Pick an order for its funnel",
+        detail: (
+          <span className="exec-role-body">
+            {expandedOrderId ? "signal → intent → risk → ACK → fill, from the server's funnel — shown under the table." : "Click a row: its signal → intent → risk → ACK → fill funnel opens under the table."}
+          </span>
+        ),
+      }}
+      blockers={rejected.map((r) => ({ label: `${r.orderId} ${r.status}`, detail: null, severity: "watch" as const }))}
+      freshness={<span className="exec-role-meta">{envelope.authority} · as_of {envelope.asOf ?? "not stated"} · {envelope.freshness} · {page.rows.length} loaded of {page.totalCount ?? "an unpublished"} total</span>}
+      provenance={
+        <ExecutionProvenanceDrawer
+          items={[
+            { label: "filter", short: filter, full: null },
+            ...(crossFilter ? [{ label: "cross-filter", short: crossFilter, full: null }] : []),
+          ]}
+          onCopy={(full) => void navigator.clipboard?.writeText(full)}
+        />
+      }
+    />
+  );
   return (
     <ExecutionSurface kind="deployments" className="exec-blotter">
       {/* Reuses the inbox/gate header pair rather than adding a third. */}
-      <header className="exec-inbox-head">
-        <div className="exec-tile-title">Orders &amp; fills — full blotter</div>
-        <div className="exec-inbox-counts">
-          <AuthorityBadge envelope={envelope} />
-        </div>
-      </header>
+      <ExecutionWorkspace layout="balanced" rail={blotterRail}>
+      <ExecutionPageHeader
+        title="Orders & fills — full blotter"
+        badges={[
+          { label: `${envelope.authority} · ${envelope.freshness}`, axis: "broker-sync", tone: envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn" },
+          ...(crossFilter ? [{ label: "CROSS-FILTERED", axis: "other", tone: "warn" } as HeaderBadge] : []),
+        ]}
+        purpose="Every order and fill in scope — keyset pagination, virtualized rows, exact values, never abbreviated."
+      />
 
       {scope ? <div className="exec-blotter-scope">{scope}</div> : null}
 
@@ -437,7 +489,7 @@ export function FullBlotter({
             className="exec-inbox-filter"
             data-active={filter === option ? "true" : undefined}
             aria-pressed={filter === option}
-            onClick={() => onFilterChange?.(option)}
+            onClick={() => onFilterChange(option)}
           >
             {FILTER_LABEL[option]}
           </button>
@@ -446,10 +498,31 @@ export function FullBlotter({
           applied by the server — the chips re-query, they do not hide loaded rows
         </span>
       </div>
+      <div className="exec-blotter-tools" role="group" aria-label="Table tools">
+        <details className="exec-blotter-columns">
+          <summary className="exec-role-control">Columns ▾</summary>
+          <div className="exec-blotter-columnlist">
+            {columns.map((c) => (
+              <label key={c.key} className="exec-role-meta">
+                <input
+                  type="checkbox"
+                  checked={!hidden.includes(c.key)}
+                  onChange={(e) => setHidden((h) => (e.target.checked ? h.filter((k) => k !== c.key) : [...h, c.key]))}
+                />{" "}
+                {c.header}
+              </label>
+            ))}
+          </div>
+        </details>
+        <button type="button" className="exec-role-control exec-btn-ghost" onClick={exportRows} title="Copies the loaded rows as CSV — bounded to this page">
+          Export loaded rows
+        </button>
+        {exported ? <span className="exec-role-meta" role="status">{exported}</span> : null}
+      </div>
 
       <KeysetTable
         label="Orders and fills"
-        columns={columns}
+        columns={visibleColumns}
         page={page}
         rowKey={(row) => row.orderId}
         status={status}
@@ -464,7 +537,12 @@ export function FullBlotter({
           crossFilter ? (
             <div className="exec-blotter-cross">
               <span className="exec-chip" data-tone="warn">
-                Cross-filter · {crossFilter}
+                {/* Wrapped in a span rather than left as bare text. Inside an
+                    inline-flex chip a bare text run becomes an anonymous flex
+                    item, and an anonymous item cannot be given `min-width: 0`,
+                    so it sized the chip to its longest line and pushed the
+                    blotter 42px past its column on a phone. */}
+                <span className="exec-chip-text">Cross-filter · {crossFilter}</span>
                 <button
                   type="button"
                   className="exec-chip-reset"
@@ -486,6 +564,7 @@ export function FullBlotter({
           not this screen's. Restating them here would be a second source for
           one number. */}
       <footer className="exec-blotter-foot">
+        <AggregatesFooter aggregates={aggregates} />
         <span className="exec-blotter-note">
           click a row for its funnel · fees in venue currency, exact values, never abbreviated
         </span>
@@ -497,6 +576,7 @@ export function FullBlotter({
           <OrderFunnelStrip funnel={funnel} status={funnelStatus} reason={funnelReason} />
         </section>
       ) : null}
+      </ExecutionWorkspace>
     </ExecutionSurface>
   );
 }

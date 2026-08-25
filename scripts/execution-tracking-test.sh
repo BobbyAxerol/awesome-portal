@@ -144,13 +144,12 @@ for label, text in (
     ("IAM revision report", iamr),
 ):
     normalized = re.sub(r"\s+", " ", text)
-    if (
-        "REVISION_2_REPORTED_ATTACHED / EFFECTIVE_ALLOW_NOT_PROVEN / LIVE_D2_UNAUTHORIZED"
-        not in normalized
-    ):
-        raise SystemExit(f"{label} lost the D2 IAM revision-2 stop-gate")
-if "bca3ee7d9aa7cc3d27318ce3e27d4e655becd9d7bea5a0b674768c62066fb476" not in iamr:
+    if "IAM_EFFECTIVE_ALLOW_VERIFIED / LIVE_D2_UNAUTHORIZED" not in normalized:
+        raise SystemExit(f"{label} lost the accepted D2 IAM authority gate")
+if "a940447f0f96959e9980c86e16fe7786ec7a1c0e37931fd7cc84ea6be601fd9d" not in iamr:
     raise SystemExit("IAM revision report lost the private policy digest")
+if "D2_ISOLATION_AUTHORITY_VERIFIED" not in iamr or "DryRunOperation" not in iamr:
+    raise SystemExit("IAM revision report lost live DryRun acceptance evidence")
 
 for label, text in (
     ("master", m), ("tracker", t), ("backend README", b),

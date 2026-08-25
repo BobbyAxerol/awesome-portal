@@ -25,7 +25,8 @@ import {
   commandProfileInconsistency,
   type DeliveryPolicy,
 } from "../profile";
-import { OperationStatusChip, VerificationChip } from "./badges";
+import { VerificationChip } from "./badges";
+import { ExecutionTerminal, type TerminalRow, type TerminalVerdict } from "./workspace";
 
 export type DrawerStep = "plan" | "apply" | "verify";
 
@@ -68,6 +69,63 @@ const RISK_TIER_NOTE: Record<RiskTier, string> = {
   R3: "Live PROTECTIVE action such as halt or reduce. Phishing-resistant step-up, one-operation token.",
   R4: "Live RISK-INCREASING action such as enable or expand. WebAuthn, dual approval, envelope constraints.",
 };
+
+
+function statusSeverity(status: OperationStatus): TerminalRow["severity"] {
+  const st = status as string;
+  if (st === "FAILED" || st === "BLOCKED") return "bad";
+  if (st === "APPLIED_UNVERIFIED" || st === "PARTIAL" || st === "UNCERTAIN") return "warn";
+  if (st === "VERIFIED") return "ok";
+  return "info";
+}
+/** Terminal rows from the drawer's own facts — never a success claim from a 202. */
+export function terminalRows({
+  plan,
+  verifyEntries,
+  outcome,
+}: {
+  plan?: CommandPlan | null;
+  verifyEntries?: readonly VerifyEntry[];
+  outcome?: "VERIFIED" | "PARTIAL" | "FAILED" | null;
+}): TerminalRow[] {
+  const rows: TerminalRow[] = [];
+  if (plan) {
+    rows.push({ ts: "plan", phase: "PLAN", object: plan.id, message: `generated · expires ${plan.expiresInSeconds}s · ${plan.checks.length} checks`, severity: plan.checks.some((c) => c.outcome === "fail") ? "bad" : "ok" });
+    for (const check of plan.checks) {
+      rows.push({ ts: "plan", phase: "PLAN", object: "check", message: check.label, severity: check.outcome === "pass" ? "ok" : check.outcome === "warning" ? "warn" : "bad" });
+    }
+  }
+  if (verifyEntries?.length) {
+    rows.push({ ts: "apply", phase: "APPLY", object: plan?.id ?? "command", message: "202 accepted — not terminal success", severity: "warn" });
+    for (const entry of verifyEntries) {
+      rows.push({
+        ts: "verify",
+        phase: "VERIFY",
+        object: entry.label,
+        message: entry.status,
+        severity: statusSeverity(entry.status),
+      });
+    }
+  }
+  if (outcome === "PARTIAL") rows.push({ ts: "verify", phase: "VERIFY", object: "residue", message: "some sub-intents did not complete — re-apply with the same idempotency key", severity: "warn" });
+  if (outcome === "FAILED") rows.push({ ts: "verify", phase: "ERROR", object: "operation", message: "FAILED", severity: "bad" });
+  return rows;
+}
+export function terminalVerdict({
+  verifyEntries,
+  outcome,
+  verification,
+}: {
+  verifyEntries?: readonly VerifyEntry[];
+  outcome?: "VERIFIED" | "PARTIAL" | "FAILED" | null;
+  verification?: VerificationResult | null;
+}): TerminalVerdict {
+  if (outcome === "VERIFIED") return "VERIFIED";
+  if (outcome === "PARTIAL") return "PARTIAL";
+  if (outcome === "FAILED") return "FAILED";
+  if (verification === "UNCERTAIN") return "UNCERTAIN";
+  return verifyEntries?.length ? "ACCEPTED" : "PENDING";
+}
 
 export function CommandPlanDrawer({
   title,
@@ -133,6 +191,10 @@ export function CommandPlanDrawer({
   // Generated once for this intent and kept across every retry. Regenerating it
   // per click is what turns one intent into three operations.
   const [ownKey] = useState(() => requestKey ?? newRequestKey());
+  const [following, setFollowing] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+  const [cleared, setCleared] = useState(false);
+  const [lastCopy, setLastCopy] = useState<string | null>(null);
   const key = requestKey ?? ownKey;
 
   const blockingCheck = plan?.checks.find((check) => check.outcome === "fail");
@@ -341,18 +403,34 @@ export function CommandPlanDrawer({
       ) : null}
 
       {verifyEntries?.length ? (
-        <div>
-          {/* The first line of every verify timeline. A 202 means the request
-              was accepted, and nothing about whether it worked. */}
+        <>
+          {/* 202 is "the request was accepted", and nothing about whether it
+              worked — the sentence stays, and the terminal's verdict says the
+              same thing in its own vocabulary until an outcome arrives. */}
           <div className="exec-drawer-note exec-drawer-accepted">202 — accepted, NOT success yet</div>
-          {verifyEntries.map((entry) => (
-            <div className="exec-drawer-note" key={entry.label}>
-              <OperationStatusChip status={entry.status} /> {entry.label}
-            </div>
-          ))}
-        </div>
+          <ExecutionTerminal
+            title="Command verification"
+            rows={cleared ? [] : terminalRows({ plan, verifyEntries, outcome })}
+            verdict={terminalVerdict({ verifyEntries, outcome, verification })}
+            source={plan ? `command journal · plan ${plan.id} · request key ${key}` : `request key ${key}`}
+            following={following}
+            onToggleFollow={() => setFollowing((f) => !f)}
+            onCopy={(text) => {
+              setLastCopy(text);
+              void navigator.clipboard?.writeText(text);
+            }}
+            onExport={(rows) => {
+              const text = JSON.stringify(rows, null, 2);
+              setLastCopy(text);
+              void navigator.clipboard?.writeText(text);
+            }}
+            onClear={() => setCleared(true)}
+            expanded={expanded}
+            onToggleExpand={() => setExpanded((e) => !e)}
+          />
+          {lastCopy ? <div className="exec-drawer-note exec-drawer-copied">copied {lastCopy.length} chars</div> : null}
+        </>
       ) : null}
-
       {outcome ? (
         <div className="exec-drawer-note">
           {outcome === "PARTIAL" ? (

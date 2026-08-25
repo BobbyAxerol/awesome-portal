@@ -26,6 +26,18 @@ import { slaOverdue, type ApprovalId, type KeysetPage, type PanelStatus, type Sl
 import { StatusChip } from "../components/badges";
 import { SlaCell } from "../components/evidence";
 import { KeysetTable, type Column } from "../components/table";
+import { useState } from "react";
+import { PanelState } from "../components/states";
+import {
+  ExecutionContextRail,
+  ExecutionDecisionStrip,
+  ExecutionPageHeader,
+  ExecutionProvenanceDrawer,
+  ExecutionTabs,
+  ExecutionWorkspace,
+  type HeaderBadge,
+  type RailBlocker,
+} from "../components/workspace";
 
 /** The gate a request is asking to pass. Portal-owned workflow vocabulary. */
 export type ApprovalGate = "R1" | "R2" | "PAPER_EXIT" | "SANDBOX_EXIT" | "LIVE_GATE";
@@ -244,185 +256,224 @@ export function ApprovalInbox({
   onDismissCursorNotice,
   onLoadOlder,
   onLoadNewer,
+  onCopyProvenance,
 }: {
   page: KeysetPage<ApprovalRow>;
-  /**
-   * Whole-queue counts from the server, not from `page.rows`. `null` while
-   * loading or when the queue could not be counted — never substituted with 0.
-   */
   counts: InboxCounts | null;
   filter: InboxFilter;
   onFilterChange?: (next: InboxFilter) => void;
   status?: PanelStatus;
   reason?: string;
-  /**
-   * Why the queue is partial. `partial` keeps the table — some rows arrived and
-   * they are real — and states what is missing above it. Blanking the screen
-   * because one linked fact timed out would withhold work that can be done.
-   */
   partialReason?: string;
-  /** `approval.v3` — which policy version judged these requests. */
   policyVersion?: string;
   actor?: string;
   actorRoles?: readonly string[];
-  onOpenRequest?: (id: ApprovalId) => void;
-  /** Its own section. A decided request in the pending table is a false action item. */
+  /** Row → the review its gate owns. The gate travels with the id so the caller never guesses the route. */
+  onOpenRequest?: (id: ApprovalId, gate: ApprovalGate) => void;
   decided?: KeysetPage<ApprovalRow> | null;
-  /**
-   * The window the decided list covers. Stated because decided history is
-   * unbounded (scale doc §6, Phase 1) and a list with no window silently claims
-   * to be all of it.
-   */
   decidedWindow?: string;
-  /**
-   * How many rows of the current selection the actor cannot act on, counted by
-   * the server over the whole filter.
-   *
-   * Here so that a server-side filter dropping separation-of-duty rows becomes
-   * visible: the count and the rows would disagree. Their visibility is the
-   * proof that separation of duties is working, so losing them silently is the
-   * one filtering bug this screen must not be able to hide.
-   */
   inertCount?: number | null;
-  /**
-   * Set when a page reference stopped applying and the list reset to the start.
-   *
-   * It is announced rather than absorbed. A cursor voided by a query change is
-   * a normal, contractual event (`EX-BE-04b`), but from the reader's side the
-   * list silently jumps back to page one — and a reader who does not know that
-   * happened will assume the rows they were looking at were deleted.
-   */
   cursorNotice?: string | null;
   onDismissCursorNotice?: () => void;
   onLoadOlder?: () => void;
   onLoadNewer?: () => void;
+  onCopyProvenance: (full: string) => void;
 }) {
-  // Empty because a view narrowed it, versus empty because there is nothing.
-  // The server's filtered count is what separates them; without it the screen
-  // cannot tell, so it says the weaker thing.
+  const [tab, setTab] = useState<"Pending" | "Recently decided">("Pending");
   const emptyInThisView =
     page.rows.length === 0 &&
     ((page.filteredCount ?? 0) === 0) &&
     (counts?.pending ?? 0) > 0;
-
+  const needsYou = page.rows.filter((r) => r.needsYou && !r.inert);
+  const first = needsYou[0] ?? null;
+  const overdue = page.rows.filter((r) => slaOverdue(r.sla));
+  const blockedRows = page.rows.filter((r) => r.inert === "BLOCKED");
+  const badges: HeaderBadge[] = [
+    ...(counts ? [{ label: `${counts.pending} PENDING`, axis: "other" } as HeaderBadge] : []),
+    ...(counts && (counts.overdue ?? 0) > 0 ? [{ label: `${counts.overdue} OVERDUE`, axis: "other", tone: "bad" } as HeaderBadge] : []),
+    ...(status === "stale" ? [{ label: "STALE", axis: "broker-sync", tone: "bad" } as HeaderBadge] : []),
+    ...(status === "partial" ? [{ label: "PARTIAL", axis: "broker-sync", tone: "warn" } as HeaderBadge] : []),
+  ];
+  const blockers: RailBlocker[] = [
+    ...overdue.map((r) => ({ label: `${r.id} OVERDUE`, detail: `${r.gate} · ${r.subject}`, severity: "blocking" as const })),
+    ...blockedRows.map((r) => ({ label: `${r.id} BLOCKED`, detail: r.blockerSummary ?? `${r.blockerCount} blockers`, severity: "watch" as const })),
+  ];
+  const rail = (
+    <ExecutionContextRail
+      next={{
+        title: first ? `Needs you: ${first.id}` : "Nothing needs you",
+        detail: first ? (
+          <span className="exec-role-body">
+            {first.gate} · {first.subject} → {first.target}
+          </span>
+        ) : (
+          <span className="exec-role-body">No pending request in this view is yours to decide.</span>
+        ),
+        action:
+          first && onOpenRequest ? (
+            <button type="button" className="exec-role-control exec-btn-apply" onClick={() => onOpenRequest(first.id, first.gate)}>
+              Open {first.id}
+            </button>
+          ) : undefined,
+      }}
+      blockers={blockers}
+      freshness={
+        <span className="exec-role-meta">
+          sort: overdue → due-soon → age · queue {status}
+          {inertCount !== null ? ` · ${inertCount} not yours` : ""}
+        </span>
+      }
+      provenance={
+        <ExecutionProvenanceDrawer
+          items={[
+            ...(policyVersion ? [{ label: "policy", short: policyVersion, full: null }] : []),
+            ...(actor ? [{ label: "you", short: actor, full: null }] : []),
+            ...(actorRoles?.length ? [{ label: "roles", short: actorRoles.join(" + "), full: null }] : []),
+          ]}
+          onCopy={onCopyProvenance}
+        />
+      }
+    />
+  );
   return (
     <section className="exec-inbox" aria-label="Approval Inbox">
-      <header className="exec-inbox-head">
-        <div className="exec-tile-title">Approval Inbox</div>
-        <CountLine counts={counts} status={status} />
-        {/* Who is judging, and by which policy. Without it an operator cannot
-            tell whether a blocked Approve is their role or the request. */}
-        {policyVersion || actor ? (
-          <div className="exec-inbox-policy">
-            {policyVersion ? `policy ${policyVersion}` : null}
-            {policyVersion && actor ? " · " : null}
-            {actor ? `you are ${actor}` : null}
-            {actorRoles?.length ? ` · ${actorRoles.join(" + ")}` : null}
+      <ExecutionWorkspace layout="balanced" rail={rail}>
+        <ExecutionPageHeader
+          title="Approval Inbox"
+          badges={badges}
+          purpose="What waits on you, and what breaches SLA?"
+          secondary={
+            <>
+              <CountLine counts={counts} status={status} />
+              {/* Policy + actor + roles: the line that tells a reviewer whether
+                  a blocked Approve is their role or the request. */}
+              {policyVersion || actor ? (
+                <div className="exec-inbox-policy exec-role-meta">
+                  {policyVersion ? `policy ${policyVersion}` : null}
+                  {policyVersion && actor ? " · " : null}
+                  {actor ? `you are ${actor}` : null}
+                  {actorRoles?.length ? ` · ${actorRoles.join(" + ")}` : null}
+                </div>
+              ) : null}
+            </>
+          }
+        />
+        {status === "partial" ? (
+          <div className="exec-inbox-partial" role="status">
+            {partialReason ?? "Some linked facts could not be read. The rows below are real; the queue may be incomplete."}
           </div>
         ) : null}
-      </header>
-
-      {status === "partial" ? (
-        <div className="exec-inbox-partial">
-          {partialReason ?? "Some linked facts could not be read. The rows below are real; the queue may be incomplete."}
-        </div>
-      ) : null}
-
-      {status === "stale" ? (
-        <div className="exec-inbox-partial">
-          {reason ?? "This queue is older than its freshness budget. Decide from it only after refreshing."}
-        </div>
-      ) : null}
-
-      {cursorNotice ? (
-        <div className="exec-inbox-cursor-notice" role="status">
-          <span>{cursorNotice}</span>
-          {onDismissCursorNotice ? (
-            <button type="button" className="exec-btn-ghost" onClick={onDismissCursorNotice}>
-              Dismiss
+        {status === "stale" ? (
+          <div className="exec-inbox-partial" role="status">
+            {reason ?? "This queue is older than its freshness budget. Decide from it only after refreshing."}
+          </div>
+        ) : null}
+        {cursorNotice ? (
+          <div className="exec-inbox-cursor-notice" role="status">
+            <span>{cursorNotice}</span>
+            {onDismissCursorNotice ? (
+              <button type="button" className="exec-btn-ghost" onClick={onDismissCursorNotice}>
+                Dismiss
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        <ExecutionDecisionStrip
+          metrics={[
+            { label: "Pending", value: counts ? String(counts.pending) : null },
+            { label: "Overdue", value: counts && counts.overdue !== null ? String(counts.overdue) : null, tone: counts && (counts.overdue ?? 0) > 0 ? "bad" : undefined },
+            { label: "Due soon", value: counts && counts.dueSoon !== null ? String(counts.dueSoon) : null, tone: counts && (counts.dueSoon ?? 0) > 0 ? "warn" : undefined },
+            { label: "Needs you", value: String(needsYou.length), note: "in this view" },
+            { label: "Not yours", value: inertCount !== null ? String(inertCount) : null, note: "shown, dimmed" },
+          ]}
+        />
+        <div className="exec-inbox-filters" role="group" aria-label="Filters">
+          {INBOX_FILTERS.map((f) => (
+            <button
+              key={f}
+              type="button"
+              className="exec-inbox-filter"
+              data-active={f === filter ? "true" : undefined}
+              aria-pressed={f === filter}
+              disabled={status === "loading" || status === "denied" || status === "unavailable"}
+              onClick={() => onFilterChange?.(f)}
+            >
+              {FILTER_LABEL[f]}
             </button>
+          ))}
+        </div>
+        <ExecutionTabs
+          tabs={[
+            { key: "Pending", label: "Pending", count: page.totalCount ?? page.rows.length },
+            { key: "Recently decided", label: `Recently decided · ${decidedWindow}`, count: decided ? decided.rows.length : null },
+          ]}
+          active={tab}
+          onChange={(key) => setTab(key as "Pending" | "Recently decided")}
+          label="Approval queues"
+        >
+          {tab === "Pending" ? (
+            <>
+              <KeysetTable
+                label="Pending approvals"
+                columns={COLUMNS}
+                page={page}
+                rowKey={(r) => r.id}
+                rowEmphasis={rowEmphasis}
+                neverVirtualize
+                overflowNotice="This queue is over 200 pending items. That is an operational condition, not a display limit — it is shown in full on purpose."
+                status={status}
+                reason={
+                  reason ??
+                  (status === "ok" && page.rows.length === 0
+                    ? emptyInThisView
+                      ? `Nothing in ${FILTER_LABEL[filter]}. ${counts?.pending ?? 0} still pending in the queue.`
+                      : "Inbox zero."
+                    : undefined)
+                }
+                onRowClick={onOpenRequest ? (r) => onOpenRequest(r.id, r.gate) : undefined}
+                onLoadOlder={onLoadOlder}
+                onLoadNewer={onLoadNewer}
+              />
+              {/* The sentence that explains why un-actionable rows are still on
+                  screen; without it the dimming reads as a rendering bug. */}
+              <div className="exec-inbox-strip exec-role-meta">
+                {counts ? (
+                  <span>
+                    {counts.overdue} overdue · {counts.dueSoon} due soon
+                  </span>
+                ) : null}
+                {inertCount !== null ? (
+                  <span title="Rows you cannot act on are still counted and still shown.">{inertCount} not yours</span>
+                ) : null}
+                <strong>visibility ≠ authority</strong>
+              </div>
+            </>
           ) : null}
-        </div>
-      ) : null}
-
-      <div className="exec-inbox-filters" role="group" aria-label="Filters">
-        {INBOX_FILTERS.map((f) => (
-          <button
-            key={f}
-            type="button"
-            className="exec-inbox-filter"
-            data-active={f === filter ? "true" : undefined}
-            aria-pressed={f === filter}
-            disabled={status === "loading" || status === "denied" || status === "unavailable"}
-            onClick={() => onFilterChange?.(f)}
-          >
-            {FILTER_LABEL[f]}
-          </button>
-        ))}
-        <span className="exec-inbox-sort">sort: overdue → due-soon → age</span>
-      </div>
-
-      <KeysetTable
-        label="Pending approvals"
-        columns={COLUMNS}
-        page={page}
-        rowKey={(r) => r.id}
-        rowEmphasis={rowEmphasis}
-        // A work queue past 200 rows is an operational problem, not a rendering
-        // one (scale doc §6). Paginating it away would hide exactly that.
-        neverVirtualize
-        overflowNotice="This queue is over 200 pending items. That is an operational condition, not a display limit — it is shown in full on purpose."
-        status={status}
-        reason={
-          reason ??
-          (status === "ok" && page.rows.length === 0
-            ? // "Inbox zero" is a claim about the QUEUE. Saying it under an
-              // active filter announces the queue is clear while five requests
-              // sit in it — the filtered-empty result and the empty queue look
-              // identical and mean opposite things.
-              emptyInThisView
-              ? `Nothing in ${FILTER_LABEL[filter]}. ${counts?.pending ?? 0} still pending in the queue.`
-              : "Inbox zero."
-            : undefined)
-        }
-        onRowClick={onOpenRequest ? (r) => onOpenRequest(r.id) : undefined}
-        onLoadOlder={onLoadOlder}
-        onLoadNewer={onLoadNewer}
-      />
-
-      {/* The hi-fi's footer strip. The third clause is the one that matters:
-          it is the sentence that explains why un-actionable rows are still on
-          screen, and without it the dimming reads as a rendering bug. */}
-      <div className="exec-inbox-strip">
-        {counts ? (
-          <span>
-            {counts.overdue} overdue · {counts.dueSoon} due soon
-          </span>
-        ) : null}
-        <span>sort: overdue → due-soon → age</span>
-        {inertCount !== null ? (
-          <span title="Rows you cannot act on are still counted and still shown.">
-            {inertCount} not yours
-          </span>
-        ) : null}
-        <strong>visibility ≠ authority</strong>
-      </div>
-
-      {decided ? (
-        <div className="exec-inbox-decided">
-          <div className="exec-tile-title">
-            Recently decided
-            {decidedWindow ? <span className="exec-inbox-window"> · {decidedWindow}</span> : null}
-          </div>
-          <KeysetTable
-            label="Recently decided"
-            columns={COLUMNS}
-            page={decided}
-            rowKey={(r) => r.id}
-            reason="Nothing decided in this window."
-          />
-        </div>
-      ) : null}
+          {tab === "Recently decided" ? (
+            <div className="exec-inbox-decided">
+              {decided ? (
+                <KeysetTable
+                  label="Recently decided"
+                  columns={COLUMNS}
+                  page={decided}
+                  rowKey={(r) => r.id}
+                  reason={`Nothing decided in this window (${decidedWindow}).`}
+                />
+              ) : (
+                <PanelState status="empty" reason={`No decided list was published for ${decidedWindow}.`} />
+              )}
+              <button
+                type="button"
+                className="exec-role-control exec-btn-ghost"
+                disabled
+                title="Full history — no paginated history endpoint is published (BR-EX-35)."
+              >
+                Full history →
+              </button>
+            </div>
+          ) : null}
+        </ExecutionTabs>
+      </ExecutionWorkspace>
     </section>
   );
 }

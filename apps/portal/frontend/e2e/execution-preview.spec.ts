@@ -49,10 +49,58 @@ test("all reviewed screens and sidebar roots mount fixture-only previews", async
     await page.goto(route);
     const banner = page.locator('[data-execution-preview="fixture"]');
     await expect(banner).toBeVisible();
-    await expect(banner.locator("code")).toHaveText(screenId);
-    await expect(banner).toContainText("không kết nối AWS-HK");
+    // EL-V2-03: the screen id is inspector-only. It must be absent from the
+    // default chrome and present once the inspector is opened.
+    // Closed <details> keeps its text in the DOM, so "absent" is measured as
+    // NOT VISIBLE by default and visible once the inspector is opened.
+    await expect(banner.locator("[data-preview-screen-id]")).toBeHidden();
+    await banner.locator("details.exec-preview-inspector > summary").click();
+    await expect(banner.locator("[data-preview-screen-id]")).toBeVisible();
+    await expect(banner.locator("[data-preview-screen-id]")).toHaveText(screenId);
+    await banner.locator("details.exec-preview-inspector > summary").click();
+    // EL-V2-01 rewrote the banner to the one-line English §7.2 treatment; the
+    // old assertion pinned the Vietnamese paragraph it replaced.
+    await expect(banner).toContainText("No live connection");
     await settle(page);
   }
 
   expect(executionRequests, "fixture preview must never call an Execution API").toEqual([]);
+});
+
+test("the workspace has no seam: chrome and canvas are one Carbon system", async ({ page }) => {
+  // EL-V2-01 exit gate, measured rather than asserted from intent. The
+  // owner-rejected build had a warm-white topbar and sidebar around a Carbon
+  // canvas with the selector claiming Research Light; every half of that is
+  // checked here on a real product route, under the RESEARCH preference so a
+  // regression cannot hide behind the user's own dark setting.
+  await freezeClock(page);
+  await usePreferences(page, "research");
+  await stubPortalApi(page, "healthy");
+
+  const luminance = async (selector: string) => {
+    const rgb = await page.locator(selector).first().evaluate((n) => getComputedStyle(n).backgroundColor);
+    const [r, g, b] = (rgb.match(/\d+/g) ?? ["0", "0", "0"]).map(Number);
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  };
+
+  await page.goto("/deployments/paper/dep_94");
+  await settle(page);
+  expect(await page.evaluate(() => document.documentElement.getAttribute("data-theme"))).toBe(
+    "execution-carbon",
+  );
+  expect(await luminance(".portal-topbar")).toBeLessThan(0.5);
+  expect(await luminance(".portal-rail")).toBeLessThan(0.5);
+  expect(await luminance(".portal-content")).toBeLessThan(0.5);
+  const theme = page.getByLabel(/Theme \(Execution Carbon/);
+  await expect(theme).toBeDisabled();
+  // §4.3 locator tail: the entity the screen resolved.
+  await expect(page.locator(".portal-breadcrumbs")).toContainText("Carry v3.2");
+
+  // And back out: the stored preference resumes, untouched.
+  await page.goto("/");
+  await settle(page);
+  expect(await page.evaluate(() => document.documentElement.getAttribute("data-theme"))).toBe(
+    "research",
+  );
+  expect(await luminance(".portal-topbar")).toBeGreaterThan(0.5);
 });

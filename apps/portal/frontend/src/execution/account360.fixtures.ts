@@ -19,6 +19,14 @@ import type {
 } from "./screens/AccountBroker360";
 import { EXPOSURE_PARTIAL } from "./analytics.presentation.fixtures";
 import { readBindingExposure } from "./analytics";
+/**
+ * Fixture DATA, not behaviour (EL-V2-03): the screen's handlers are required
+ * in its props, and a fixture factory that stubbed them would be the exact
+ * enabled-no-op this phase removes. Callers supply handlers — the preview
+ * controllers on product routes, explicit spies in tests.
+ */
+export type AccountBroker360Data = Omit<AccountBroker360Props, "onSyncNow" | "onDryRun">;
+
 
 /**
  * Exposure consistent with the three linked accounts the hi-fi draws.
@@ -131,7 +139,7 @@ export const HEADROOM_UNKNOWN: AggregateHeadroom = {
   envelope: { ...HEADROOM_OK.envelope, freshness: "STALE" },
 };
 
-export function account360(over: Partial<AccountBroker360Props> = {}): AccountBroker360Props {
+export function account360(over: Partial<AccountBroker360Data> = {}): AccountBroker360Data {
   return {
     accountId: "acct-live-grid-v21",
     alpha: "Grid v2.1",

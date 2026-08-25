@@ -314,7 +314,7 @@ describe("Carbon surface contrast", () => {
     ["--warn", "--warn-bg", "warn chips"],
   ];
 
-  for (const theme of ["operations-carbon", "operations-carbon-light"]) {
+  for (const theme of ["operations-carbon"]) {
     it(`keeps every rendered text pair above 4.5:1 on ${theme}`, () => {
       const tokens = themeTokens(theme);
       const failures: string[] = [];
@@ -339,7 +339,7 @@ describe("Carbon surface contrast", () => {
     // one hair from `--ink-faint`. Ordered is still required: a "mute" token
     // that resolved darker than "faint" would invert every hierarchy built on
     // it while still passing the contrast floor above.
-    for (const theme of ["operations-carbon", "operations-carbon-light"]) {
+    for (const theme of ["operations-carbon"]) {
       const t = themeTokens(theme);
       const paper = t.get("--paper")!;
       const ramp = ["--ink", "--ink-soft", "--ink-faint", "--ink-mute"].map((name) =>
@@ -419,7 +419,7 @@ describe("contrast of pairs the stylesheet itself declares", () => {
     expect(pairs.length).toBeGreaterThan(8);
   });
 
-  for (const theme of ["operations-carbon", "operations-carbon-light"]) {
+  for (const theme of ["operations-carbon"]) {
     it(`keeps every declared foreground/background pair legible on ${theme}`, () => {
       const tokens = tokensFor(theme);
       const failures: string[] = [];

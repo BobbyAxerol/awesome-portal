@@ -71,7 +71,7 @@ describe("the vocabulary is the schema's", () => {
 
 describe("#1 — initial, empty, filtered and exact-count states", () => {
   it("renders rows and both server counts", () => {
-    render(<OperationsQueueScreen queue={queue()} now={NOW} />);
+    render(<OperationsQueueScreen onOpen={() => undefined} queue={queue()} now={NOW} />);
     expect(screen.getByText("op_fixture_queue_1")).toBeTruthy();
     expect(screen.getByText(/1 in this view · 1 total/)).toBeTruthy();
   });
@@ -80,7 +80,7 @@ describe("#1 — initial, empty, filtered and exact-count states", () => {
     const raw = JSON.parse(JSON.stringify(OPERATIONS_QUEUE_FIXTURE));
     raw.page.total_count = 4180;
     raw.page.filtered_count = 12;
-    render(<OperationsQueueScreen queue={readOperationsQueue(raw)!} now={NOW} />);
+    render(<OperationsQueueScreen onOpen={() => undefined} queue={readOperationsQueue(raw)!} now={NOW} />);
     // One row on screen, two very different server counts beside it.
     expect(screen.getByText(/12 in this view · 4180 total/)).toBeTruthy();
   });
@@ -88,12 +88,12 @@ describe("#1 — initial, empty, filtered and exact-count states", () => {
   it("says empty is empty, not unreadable", () => {
     const raw = JSON.parse(JSON.stringify(OPERATIONS_QUEUE_FIXTURE));
     raw.page.rows = [];
-    render(<OperationsQueueScreen queue={readOperationsQueue(raw)!} now={NOW} />);
+    render(<OperationsQueueScreen onOpen={() => undefined} queue={readOperationsQueue(raw)!} now={NOW} />);
     expect(screen.getByText(/queue is empty, which is different/)).toBeTruthy();
   });
 
   it("shows the port's failure rather than an empty queue", () => {
-    render(<OperationsQueueScreen queue={null} status="unavailable" reason="source down" now={NOW} />);
+    render(<OperationsQueueScreen onOpen={() => undefined} queue={null} status="unavailable" reason="source down" now={NOW} />);
     expect(screen.queryByText(/queue is empty/)).toBeNull();
   });
 });
@@ -110,7 +110,7 @@ describe("#2 — keyset navigation without page numbers", () => {
 
   it("offers older and newer, and draws no page number anywhere", () => {
     const { container } = render(
-      <OperationsQueueScreen queue={paged()} now={NOW} onLoadNext={() => {}} onLoadPrevious={() => {}} />,
+      <OperationsQueueScreen onOpen={() => undefined} queue={paged()} now={NOW} onLoadNext={() => {}} onLoadPrevious={() => {}} />,
     );
     expect(screen.getByRole("button", { name: /older/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /newer/i })).toBeTruthy();
@@ -120,7 +120,7 @@ describe("#2 — keyset navigation without page numbers", () => {
   });
 
   it("disables the direction the server says does not exist", () => {
-    render(<OperationsQueueScreen queue={queue()} now={NOW} onLoadNext={() => {}} onLoadPrevious={() => {}} />);
+    render(<OperationsQueueScreen onOpen={() => undefined} queue={queue()} now={NOW} onLoadNext={() => {}} onLoadPrevious={() => {}} />);
     expect(screen.getByRole("button", { name: /older/i }).hasAttribute("disabled")).toBe(true);
     expect(screen.getByRole("button", { name: /newer/i }).hasAttribute("disabled")).toBe(true);
   });
@@ -239,7 +239,7 @@ describe("#5 — a replayed mutation does not duplicate", () => {
 
 describe("#6 — source status stays independent of triage", () => {
   it("renders three separate cells", () => {
-    const { container } = render(<OperationsQueueScreen queue={queue()} now={NOW} />);
+    const { container } = render(<OperationsQueueScreen onOpen={() => undefined} queue={queue()} now={NOW} />);
     const row = container.querySelector("tbody tr")!;
     expect(within(row as HTMLElement).getByText("BLOCKED")).toBeTruthy();
     expect(within(row as HTMLElement).getByText("NOT_STARTED")).toBeTruthy();
@@ -254,20 +254,20 @@ describe("#6 — source status stays independent of triage", () => {
     // Somebody resolved it; the Trading System still failed. Dimming the row
     // because a person clicked would hide the thing that needs attention.
     expect(needsAttention(parsed.page.rows[0])).toBe(true);
-    const { container } = render(<OperationsQueueScreen queue={parsed} now={NOW} />);
+    const { container } = render(<OperationsQueueScreen onOpen={() => undefined} queue={parsed} now={NOW} />);
     expect(container.querySelector('tr[data-attention="true"]')).toBeTruthy();
   });
 });
 
 describe("#7 — the fixture and unavailable labels stay visible", () => {
   it("states the delivery profile and the source integration state", () => {
-    render(<OperationsQueueScreen queue={queue()} now={NOW} />);
+    render(<OperationsQueueScreen onOpen={() => undefined} queue={queue()} now={NOW} />);
     expect(screen.getByText(/source UNAVAILABLE/)).toBeTruthy();
     expect(screen.getByText(/profile fixture/)).toBeTruthy();
   });
 
   it("shows the alert rail unavailable rather than removing it", () => {
-    render(<OperationsQueueScreen queue={queue()} now={NOW} />);
+    render(<OperationsQueueScreen onOpen={() => undefined} queue={queue()} now={NOW} />);
     const rail = screen.getByLabelText("Alerts");
     expect(within(rail).getByText(/publishes no alerts route/)).toBeTruthy();
     // Hidden rails teach an operator there is nothing in them.
@@ -339,19 +339,19 @@ describe("#8 — keyboard and narrow viewport", () => {
   });
 
   it("groups the filter chips for a screen reader", () => {
-    render(<OperationsQueueScreen queue={queue()} now={NOW} onFilterChange={() => {}} />);
+    render(<OperationsQueueScreen onOpen={() => undefined} queue={queue()} now={NOW} onFilterChange={() => {}} />);
     expect(screen.getByRole("group", { name: /Filter the queue/i })).toBeTruthy();
   });
 
   it("labels the rail so it can be reached directly", () => {
-    render(<OperationsQueueScreen queue={queue()} now={NOW} />);
+    render(<OperationsQueueScreen onOpen={() => undefined} queue={queue()} now={NOW} />);
     expect(screen.getByLabelText("Alerts")).toBeTruthy();
   });
 });
 
 describe("a chip the server cannot honour says so", () => {
   it("disables Mine, because the endpoint publishes no actor filter", () => {
-    render(<OperationsQueueScreen queue={queue()} now={NOW} onFilterChange={() => {}} />);
+    render(<OperationsQueueScreen onOpen={() => undefined} queue={queue()} now={NOW} onFilterChange={() => {}} />);
     const mine = screen.getByRole("button", { name: /^Mine$/ });
     // Visible and disabled, not deleted: a missing chip reads as a design
     // choice, and one that silently returns everybody's work is worse than
@@ -361,7 +361,7 @@ describe("a chip the server cannot honour says so", () => {
   });
 
   it("leaves the two the server does honour enabled", () => {
-    render(<OperationsQueueScreen queue={queue()} now={NOW} onFilterChange={() => {}} />);
+    render(<OperationsQueueScreen onOpen={() => undefined} queue={queue()} now={NOW} onFilterChange={() => {}} />);
     expect(
       screen.getByRole("button", { name: /Needs attention/ }).hasAttribute("disabled"),
     ).toBe(false);

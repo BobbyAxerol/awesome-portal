@@ -1,7 +1,7 @@
 # EX-BE-02-LIVE — D2 IAM policy revision 2
 
-> Status: `REVISION_2_REPORTED_ATTACHED / EFFECTIVE_ALLOW_NOT_PROVEN / LIVE_D2_UNAUTHORIZED`  
-> Evidence time: 2026-08-24T01:54:16Z  
+> Status: `IAM_EFFECTIVE_ALLOW_VERIFIED / LIVE_D2_UNAUTHORIZED`  
+> Evidence time: 2026-08-24T10:09:47Z  
 > Runtime impact: none
 
 ## Result
@@ -33,7 +33,7 @@ Private revision-2 policy:
 
 ```text
 /home/bobby/secure/portal-execution-d2-isolation-policy.json
-sha256:bca3ee7d9aa7cc3d27318ce3e27d4e655becd9d7bea5a0b674768c62066fb476
+sha256:a940447f0f96959e9980c86e16fe7786ec7a1c0e37931fd7cc84ea6be601fd9d
 ```
 
 The file remains mode `0600` and outside Git.
@@ -73,3 +73,27 @@ effective. The owner-side check is now precise:
 The next backend action remains the same read-only DryRun. Detachment is still
 reserved for the approved D2 change window after image, identity and fresh-host
 admission gates pass.
+
+## 2026-08-24 revision-2 acceptance
+
+Bobby confirmed that revision 2 is the default version of the permissions
+policy attached to the exact existing role, with no permissions boundary. Codex
+then streamed the repository verifier to the AWS-HK instance and repeated the
+exact request using:
+
+- region `ap-east-1`;
+- instance `i-00a12daa5535dc225`;
+- association `iip-assoc-080fb4d501260d3da`; and
+- profile `PrimusPortalExecutionD1Operator-v1`.
+
+The verifier exited zero with `D2_ISOLATION_AUTHORITY_VERIFIED`. Its only write-
+class EC2 call had `DryRun=true`; AWS returned the required `DryRunOperation`.
+The instance remained running with IMDSv2 tokens required, hop limit two and the
+single expected profile association. No EC2 setting, profile association,
+Portal service, network route or Trading System state changed.
+
+`BE-V2-A` is accepted. This is permission evidence only: live D2 remains
+unauthorized until signed-image, workload-identity, fresh shared-host admission,
+owner-input and bounded change-window gates pass. In particular, profile
+detachment and IMDS hop-limit one remain reserved for the separately authorized
+activation sequence.
