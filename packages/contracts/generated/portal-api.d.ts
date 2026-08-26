@@ -1255,6 +1255,8 @@ export interface components {
          * @description Commissioning flags, never a substitute for runtime authorization.
          */
         DeliveryPolicyDefinition: {
+            /** Governance Write Enabled */
+            governance_write_enabled: boolean;
             /** Live Protective Commands Enabled */
             live_protective_commands_enabled: boolean;
             /** Live Risk Increasing Commands Enabled */

@@ -1,0 +1,35 @@
+{
+  "schema_version": "governance.approval-history.v1",
+  "record_authority": "PORTAL",
+  "delivery_profile": "fixture",
+  "read_at": "2026-08-26T09:30:00Z",
+  "actor": { "user_id": "usr_bobby", "username": "bobby", "roles": ["ADMIN"] },
+  "page": {
+    "rows": [
+      {
+        "id": "dec_n09_1",
+        "approval_id": "AP-R1-N09",
+        "gate": "R1",
+        "subject_id": "av_2041",
+        "subject": "Carry v3.2",
+        "outcome": "CHANGES_REQUESTED",
+        "decided_by": { "user_id": "usr_bobby", "username": "bobby" },
+        "decided_at": "2026-08-26T09:20:00Z",
+        "policy_version": "approval.v3",
+        "evidence_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "approval_version": 2
+      }
+    ],
+    "total_count": 1,
+    "filtered_count": 1,
+    "next_cursor": null,
+    "prev_cursor": null,
+    "has_more": false,
+    "has_previous": false,
+    "applied_filters": [],
+    "applied_sort": [
+      { "field": "decided_at", "direction": "desc" },
+      { "field": "history_id", "direction": "desc" }
+    ]
+  }
+}

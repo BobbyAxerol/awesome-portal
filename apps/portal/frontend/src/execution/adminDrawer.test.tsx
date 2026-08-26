@@ -138,6 +138,7 @@ describe("a non-Admin actor is denied without learning anything", () => {
     queryEnabled: true,
     projectionIngestionEnabled: true,
     sseEnabled: true,
+    governanceWriteEnabled: true,
     paperCommandsEnabled: true,
     sandboxCommandsEnabled: true,
     liveProtectiveCommandsEnabled: true,

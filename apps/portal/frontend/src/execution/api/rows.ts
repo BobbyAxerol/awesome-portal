@@ -516,6 +516,18 @@ export function readGateR2Detail(raw: unknown): GateR2Detail | null {
   const locks: R2Lock[] = [];
   const eligibilityObj = obj(data.eligibility);
   for (const entry of Array.isArray(eligibilityObj?.locks) ? eligibilityObj.locks : []) {
+    if (
+      typeof entry === "string" &&
+      [
+        "R1_LINEAGE_UNPUBLISHED",
+        "R1_NOT_APPROVED",
+        "R1_EXPIRED",
+        "R1_EVIDENCE_INCOMPLETE",
+      ].includes(entry)
+    ) {
+      locks.push("R1_NOT_VALID");
+      continue;
+    }
     const parsed = readEnum(entry, R2_LOCKS);
     if (parsed?.known) locks.push(parsed.value);
     else if (parsed) {

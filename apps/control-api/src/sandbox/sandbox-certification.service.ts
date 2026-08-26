@@ -161,6 +161,14 @@ export class SandboxCertificationService {
       promotionGrantId: input.promotion_grant_id,
       accountId: input.account_binding.account_id,
       externalAccountRef: input.account_binding.external_account_ref,
+      actorUsername: user.username,
+      smokePlan: input.smoke_plan ? {
+        planId: newUlid("smoke"),
+        qty: input.smoke_plan.qty,
+        cap: input.smoke_plan.cap,
+        currency: input.smoke_plan.currency,
+        timeboxMinutes: input.smoke_plan.timebox_minutes,
+      } : null,
     });
     return this.publicDetail(result.detail, user, result.replayed);
   }
@@ -395,6 +403,24 @@ export class SandboxCertificationService {
         sourcePanel("difference", "DERIVED", ["RECONCILIATION", "CLEANUP"]),
       ],
       timeboxed_run_policy: null,
+      smoke_plan: detail.smokePlan === null ? null : {
+        plan_id: detail.smokePlan.plan_id,
+        qty: detail.smokePlan.qty,
+        cap: detail.smokePlan.cap,
+        currency: detail.smokePlan.currency,
+        timebox_minutes: detail.smokePlan.timebox_minutes,
+        operator: {
+          user_id: detail.smokePlan.operator_user_id,
+          username: detail.smokePlan.operator_username,
+        },
+        status: detail.smokePlan.status,
+        approved_by: detail.smokePlan.approved_by_user_id === null ? null : {
+          user_id: detail.smokePlan.approved_by_user_id,
+          username: detail.smokePlan.approved_by_username,
+        },
+        approved_at: iso(detail.smokePlan.approved_at),
+        source_side_effect_requested: false,
+      },
       findings: {
         total_count: detail.findingsTotal,
         returned_count: detail.findings.length,

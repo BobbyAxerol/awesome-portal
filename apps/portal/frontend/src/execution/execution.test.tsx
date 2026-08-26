@@ -30,6 +30,7 @@ import {
   commandBlockedReason,
   commandEnabled,
   commandProfileInconsistency,
+  governanceWriteBlocked,
   PERMISSION_SOURCE,
   PROFILE_ORDER,
   PROFILE_RANK,
@@ -932,7 +933,7 @@ describe("M1 keyset table — the server's filter is the truth on display", () =
 });
 
 /* ===========================================================================
- * Registry revision 4 — delivery profile reconciliation
+ * Registry revision 5 — delivery profile reconciliation and governance policy
  * ======================================================================== */
 
 describe("delivery profile reconciliation is fail-closed", () => {
@@ -987,8 +988,8 @@ describe("delivery profile reconciliation is fail-closed", () => {
   });
 });
 
-describe("registry revision 4 consumption", () => {
-  it("reads the profile off a screen contract, where revision 4 publishes it", () => {
+describe("registry revision 5 consumption", () => {
+  it("reads the profile off a screen contract, where revision 5 publishes it", () => {
     expect(
       screenDeliveryProfile({ screen_id: "EXECUTION_BLOTTER_SCREEN", delivery_profile: "shadow" }),
     ).toBe("shadow");
@@ -1006,15 +1007,16 @@ describe("registry revision 4 consumption", () => {
   });
 });
 
-describe("delivery policy — the seven flags gate the commands", () => {
-  const REV4_FIXTURE_SCREEN = {
+describe("delivery policy — independent flags gate governance and commands", () => {
+  const REV5_FIXTURE_SCREEN = {
     screen_id: "EXECUTION_BLOTTER_SCREEN",
     delivery_profile: "fixture",
     delivery_policy: {
-      policy_revision: 1,
+      policy_revision: 2,
       query_enabled: false,
       projection_ingestion_enabled: false,
       sse_enabled: false,
+      governance_write_enabled: false,
       paper_commands_enabled: false,
       sandbox_commands_enabled: false,
       live_protective_commands_enabled: false,
@@ -1023,13 +1025,25 @@ describe("delivery policy — the seven flags gate the commands", () => {
   };
 
   it("parses the policy the registry actually publishes today", () => {
-    const p = screenDeliveryPolicy(REV4_FIXTURE_SCREEN);
+    const p = screenDeliveryPolicy(REV5_FIXTURE_SCREEN);
     expect(p).not.toBeNull();
-    expect(p?.policyRevision).toBe(1);
-    // Everything is off in revision 4 as delivered, which is correct: nothing
+    expect(p?.policyRevision).toBe(2);
+    // Everything is off in revision 5 as delivered, which is correct: nothing
     // is wired yet.
     expect(p?.queryEnabled).toBe(false);
     expect(p?.liveRiskIncreasingCommandsEnabled).toBe(false);
+  });
+
+  it("does not derive Portal governance authority from a Trading System command flag", () => {
+    const p = screenDeliveryPolicy({
+      delivery_policy: {
+        policy_revision: 2,
+        governance_write_enabled: true,
+        paper_commands_enabled: false,
+      },
+    });
+    expect(governanceWriteBlocked(p)).toBeNull();
+    expect(commandEnabled(p, "R1")).toBe(false);
   });
 
   it("keeps protective and risk-increasing live commands on separate flags", () => {
@@ -1061,14 +1075,15 @@ describe("delivery policy — the seven flags gate the commands", () => {
   });
 
   it("names the policy revision that blocked the command", () => {
-    const p = screenDeliveryPolicy(REV4_FIXTURE_SCREEN);
+    const p = screenDeliveryPolicy(REV5_FIXTURE_SCREEN);
     // A disabled button with no explanation reads the same as a broken one, and
     // the two need different responses.
-    expect(commandBlockedReason(p, "R1")).toContain("delivery policy revision 1");
+    expect(commandBlockedReason(p, "R1")).toContain("delivery policy revision 2");
+    expect(governanceWriteBlocked(p)).toContain("delivery policy revision 2");
   });
 });
 
-describe("registry revision 4 — parsed against the registry actually shipped", () => {
+describe("registry revision 5 — parsed against the registry actually shipped", () => {
   // A contract test across the FE/BE boundary rather than against a fixture of
   // our own making. It is the thing that notices the day the field moves, is
   // renamed, or grows a value this build does not know.
@@ -1090,8 +1105,9 @@ describe("registry revision 4 — parsed against the registry actually shipped",
     }
   });
 
-  it("parses every published policy and enables no command at revision 4", () => {
-    // Every screen ships with all seven flags off. If this ever fails, a
+  it("parses every published policy and enables no command or governance write at revision 5", () => {
+    expect(registry.revision).toBe(5);
+    // Every screen ships with all eight flags off. If this ever fails, an
     // command was switched on in the registry and somebody should know.
     // Not `continue`. A policy this build cannot parse used to skip the check
     // silently, so the loop passed loudest exactly when it understood least —
@@ -1106,6 +1122,10 @@ describe("registry revision 4 — parsed against the registry actually shipped",
       ).not.toBeNull();
       if (!policy) continue;
       checked += 1;
+      expect(
+        policy.governanceWriteEnabled,
+        `${String((screen as Record<string, unknown>).screen_id)} has governance writes enabled`,
+      ).toBe(false);
       for (const tier of ["R1", "R2", "R3", "R4"] as const) {
         expect(
           commandEnabled(policy, tier),
@@ -1143,6 +1163,7 @@ describe("registry revision 4 — parsed against the registry actually shipped",
       expect(policy.queryEnabled, `${id} query_enabled`).toBe(false);
       expect(policy.projectionIngestionEnabled, `${id} projection_ingestion_enabled`).toBe(false);
       expect(policy.sseEnabled, `${id} sse_enabled`).toBe(false);
+      expect(policy.governanceWriteEnabled, `${id} governance_write_enabled`).toBe(false);
     }
   });
 });
@@ -4313,6 +4334,7 @@ describe("plan → apply, shaped to DecisionPlanRequestSchema", () => {
       query_enabled: true,
       projection_ingestion_enabled: true,
       sse_enabled: true,
+      governance_write_enabled: true,
       paper_commands_enabled: true,
       sandbox_commands_enabled: true,
       live_protective_commands_enabled: true,

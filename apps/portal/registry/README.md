@@ -68,8 +68,13 @@ blocked screen publishes two required fields:
 - `delivery_profile`: `fixture | shadow | paper | sandbox | live_canary |
   live_full`;
 - `delivery_policy`: `policy_revision` plus independent booleans for query,
-  projection ingestion, SSE, Paper commands, Sandbox commands, Live protective
-  commands and Live risk-increasing commands.
+  projection ingestion, SSE, Portal governance writes, Paper commands, Sandbox
+  commands, Live protective commands and Live risk-increasing commands.
+
+`governance_write_enabled` is independent of all command flags: recording a
+Portal decision grants or denies authority but never relays a Trading System
+command. N09 adds the field fail-closed; current screen policies keep it false
+until a separate commissioning change.
 
 All 17 Execution Loop screens currently remain `fixture`; every runtime flag is
 false. This is deliberate: revision 4 makes the active profile visible without

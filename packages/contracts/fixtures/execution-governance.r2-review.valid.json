@@ -41,6 +41,45 @@
       "user_id": "usr_bobby",
       "username": "bobby",
       "roles": ["ADMIN"]
+    },
+    "r1_reference": {
+      "approval_id": "AP-R1-DETAIL",
+      "state": "APPROVED",
+      "href": "/governance/approvals/AP-R1-DETAIL/r1",
+      "expiry": "2026-08-24T09:30:00Z",
+      "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "decided_by": "lan",
+      "decided_at": "2026-08-22T09:30:00Z"
+    },
+    "r1_state": "APPROVED",
+    "r1_id": "AP-R1-DETAIL",
+    "grant_id": "grant-paper-activation-1",
+    "grant_name": "paper_activation_authorization",
+    "approver_role": "ADMIN",
+    "plan_author": "stan",
+    "evidence_manifest": {
+      "manifest_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "complete": true,
+      "entries": [
+        {
+          "evidence_id": "ev-r1-artifact",
+          "ordinal": 0,
+          "kind": "ALPHA_ARTIFACT",
+          "label": "Approved alpha artifact",
+          "sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "schema_version": "alpha-artifact.v1",
+          "source_authority": "RESEARCH",
+          "captured_at": "2026-08-22T08:00:00Z"
+        }
+      ]
+    },
+    "eligibility": {
+      "can_approve": true,
+      "can_approve_with_condition": true,
+      "can_deny": true,
+      "can_request_changes": true,
+      "locks": [],
+      "separation_of_duties": "OK"
     }
   }
 }

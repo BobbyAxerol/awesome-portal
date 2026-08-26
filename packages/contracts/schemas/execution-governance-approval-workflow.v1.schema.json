@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-governance-approval-workflow.v1.schema.json",
+  "title": "Portal governance approval workflow v1",
+  "$defs": {
+    "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{1,191}$" },
+    "Hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "Timestamp": { "type": "string", "format": "date-time" },
+    "NullableTimestamp": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
+    "Actor": {
+      "type": "object", "additionalProperties": false,
+      "required": ["user_id", "username"],
+      "properties": {
+        "user_id": { "$ref": "#/$defs/Identifier" },
+        "username": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "roles": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "enum": ["ADMIN", "USER"] } }
+      }
+    },
+    "TypedCondition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["text", "owner", "deadline", "expires_at", "blocking"],
+      "properties": {
+        "text": { "type": "string", "minLength": 8, "maxLength": 2000 },
+        "owner": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "deadline": { "type": ["string", "null"], "format": "date" },
+        "expires_at": { "type": ["string", "null"], "format": "date" },
+        "blocking": { "type": "boolean" }
+      }
+    },
+    "R1DecisionPlanRequest": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "workspace_id", "request_key", "command_type", "command_version", "target", "expected_approval_version", "payload"],
+      "properties": {
+        "schema_version": { "const": "governance.r1-decision-plan-request.v1" },
+        "workspace_id": { "type": "string", "minLength": 3, "maxLength": 96 },
+        "request_key": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$" },
+        "command_type": { "const": "GOVERNANCE_R1_DECISION" },
+        "command_version": { "const": 1 },
+        "target": {
+          "type": "object", "additionalProperties": false, "required": ["approval_id"],
+          "properties": { "approval_id": { "$ref": "#/$defs/Identifier" } }
+        },
+        "expected_approval_version": { "type": "integer", "minimum": 1 },
+        "payload": {
+          "type": "object", "additionalProperties": false,
+          "required": ["decision", "reason", "conditions", "evidence_hashes"],
+          "properties": {
+            "decision": { "enum": ["APPROVE", "APPROVE_WITH_CONDITION", "DENY", "REQUEST_CHANGES"] },
+            "reason": { "type": "string", "minLength": 8, "maxLength": 2000 },
+            "conditions": { "type": "array", "maxItems": 16, "uniqueItems": true, "items": { "$ref": "#/$defs/TypedCondition" } },
+            "evidence_hashes": { "type": "array", "maxItems": 128, "uniqueItems": true, "items": { "$ref": "#/$defs/Hash" } }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "decision": { "enum": ["APPROVE_WITH_CONDITION", "REQUEST_CHANGES"] } }, "required": ["decision"] },
+              "then": { "properties": { "conditions": { "minItems": 1 } } },
+              "else": { "properties": { "conditions": { "maxItems": 0 } } }
+            }
+          ]
+        }
+      }
+    },
+    "KnownLimitation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["limitation_id", "kind", "label", "statement", "expires_at"],
+      "properties": {
+        "limitation_id": { "$ref": "#/$defs/Identifier" },
+        "kind": { "enum": ["lineage", "warning", "restriction", "waiver"] },
+        "label": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "statement": { "type": "string", "minLength": 8, "maxLength": 2000 },
+        "expires_at": { "$ref": "#/$defs/NullableTimestamp" }
+      }
+    },
+    "R1ReviewResponse": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_authority", "delivery_profile", "read_at", "data"],
+      "properties": {
+        "schema_version": { "const": "governance.r1-review.v1" },
+        "record_authority": { "const": "PORTAL" },
+        "delivery_profile": { "const": "fixture" },
+        "read_at": { "$ref": "#/$defs/Timestamp" },
+        "data": {
+          "type": "object", "additionalProperties": false,
+          "required": ["approval", "actor", "eligibility", "known_limitations", "evidence_manifest", "checklist", "decisions", "linked_panels"],
+          "properties": {
+            "approval": { "$ref": "#/$defs/Approval" },
+            "actor": { "$ref": "#/$defs/Actor" },
+            "eligibility": { "$ref": "#/$defs/Eligibility" },
+            "known_limitations": { "type": "array", "maxItems": 64, "items": { "$ref": "#/$defs/KnownLimitation" } },
+            "evidence_manifest": { "$ref": "#/$defs/EvidenceManifest" },
+            "checklist": { "type": "array", "maxItems": 128, "items": { "type": "object" } },
+            "decisions": { "type": "array", "maxItems": 8, "items": { "type": "object" } },
+            "linked_panels": { "type": "array", "maxItems": 8, "items": { "type": "object" } }
+          }
+        }
+      }
+    },
+    "Approval": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "approval_id", "gate", "subject_type", "subject_id", "subject_label", "release_candidate",
+        "environment", "target_label", "requester", "creator", "status", "policy_version",
+        "quorum_met", "quorum_required", "approval_version", "evidence_set_hash", "evidence_complete",
+        "blocker_count", "blocker_summary", "sla_due_at", "expires_at", "created_at", "updated_at"
+      ],
+      "properties": {
+        "approval_id": { "$ref": "#/$defs/Identifier" },
+        "gate": { "const": "R1" },
+        "subject_type": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "subject_id": { "$ref": "#/$defs/Identifier" },
+        "subject_label": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "release_candidate": { "type": ["string", "null"], "maxLength": 256 },
+        "environment": { "const": "RESEARCH" },
+        "target_label": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "requester": { "$ref": "#/$defs/Actor" },
+        "creator": { "$ref": "#/$defs/Actor" },
+        "status": { "enum": ["PENDING", "APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQUESTED", "EXPIRED"] },
+        "policy_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "quorum_met": { "type": "integer", "minimum": 0 },
+        "quorum_required": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "approval_version": { "type": "integer", "minimum": 1 },
+        "evidence_set_hash": { "$ref": "#/$defs/Hash" },
+        "evidence_complete": { "type": "boolean" },
+        "blocker_count": { "type": "integer", "minimum": 0 },
+        "blocker_summary": { "type": ["string", "null"], "maxLength": 2000 },
+        "sla_due_at": { "$ref": "#/$defs/Timestamp" },
+        "expires_at": { "$ref": "#/$defs/Timestamp" },
+        "created_at": { "$ref": "#/$defs/Timestamp" },
+        "updated_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "Eligibility": {
+      "type": "object", "additionalProperties": false,
+      "required": ["can_approve", "can_approve_with_condition", "can_deny", "can_request_changes", "locks", "separation_of_duties"],
+      "properties": {
+        "can_approve": { "type": "boolean" },
+        "can_approve_with_condition": { "type": "boolean" },
+        "can_deny": { "type": "boolean" },
+        "can_request_changes": { "type": "boolean" },
+        "locks": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 128 } },
+        "separation_of_duties": { "enum": ["OK", "VIOLATION"] }
+      }
+    },
+    "EvidenceManifest": {
+      "type": "object", "additionalProperties": false,
+      "required": ["manifest_hash", "complete", "entries"],
+      "properties": {
+        "manifest_hash": { "$ref": "#/$defs/Hash" },
+        "complete": { "type": "boolean" },
+        "entries": { "type": "array", "maxItems": 128, "items": { "type": "object" } }
+      }
+    },
+    "ApprovalHistoryResponse": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_authority", "delivery_profile", "read_at", "actor", "page"],
+      "properties": {
+        "schema_version": { "const": "governance.approval-history.v1" },
+        "record_authority": { "const": "PORTAL" },
+        "delivery_profile": { "const": "fixture" },
+        "read_at": { "$ref": "#/$defs/Timestamp" },
+        "actor": { "$ref": "#/$defs/Actor" },
+        "page": {
+          "type": "object", "additionalProperties": false,
+          "required": ["rows", "total_count", "filtered_count", "next_cursor", "prev_cursor", "has_more", "has_previous", "applied_filters", "applied_sort"],
+          "properties": {
+            "rows": { "type": "array", "maxItems": 250, "items": { "$ref": "#/$defs/ApprovalHistoryRow" } },
+            "total_count": { "type": "integer", "minimum": 0 },
+            "filtered_count": { "type": "integer", "minimum": 0 },
+            "next_cursor": { "type": ["string", "null"] },
+            "prev_cursor": { "type": ["string", "null"] },
+            "has_more": { "type": "boolean" },
+            "has_previous": { "type": "boolean" },
+            "applied_filters": { "type": "array", "maxItems": 8, "items": { "type": "object" } },
+            "applied_sort": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "object" } }
+          }
+        }
+      }
+    },
+    "ApprovalHistoryRow": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "approval_id", "gate", "subject_id", "subject", "outcome", "decided_by", "decided_at", "policy_version", "evidence_digest", "approval_version"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Identifier" },
+        "approval_id": { "$ref": "#/$defs/Identifier" },
+        "gate": { "enum": ["R1", "R2", "PAPER_EXIT", "SANDBOX_EXIT", "LIVE_GATE"] },
+        "subject_id": { "$ref": "#/$defs/Identifier" },
+        "subject": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "outcome": { "enum": ["APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQUESTED"] },
+        "decided_by": { "$ref": "#/$defs/Actor" },
+        "decided_at": { "$ref": "#/$defs/Timestamp" },
+        "policy_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "evidence_digest": { "$ref": "#/$defs/Hash" },
+        "approval_version": { "type": "integer", "minimum": 2 }
+      }
+    }
+  }
+}

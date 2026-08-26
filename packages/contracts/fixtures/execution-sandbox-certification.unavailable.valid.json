@@ -69,6 +69,18 @@
     { "panel_id": "difference", "source_authority": "DERIVED", "as_of": null, "read_at": "2026-08-23T18:00:00.000Z", "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "panel_state": "unavailable", "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "formula_version": "sandbox-certification.v1", "capability_snapshot_id": null, "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "data": null, "warnings": [{ "code": "SANDBOX_DIFFERENCE_UNAVAILABLE" }] }
   ],
   "timeboxed_run_policy": null,
+  "smoke_plan": {
+    "plan_id": "smoke_fixture_1",
+    "qty": "0.010000000000000000",
+    "cap": "100.000000000000000000",
+    "currency": "USDT",
+    "timebox_minutes": 30,
+    "operator": { "user_id": "usr_fixture_admin", "username": "bobby" },
+    "status": "PLANNED",
+    "approved_by": null,
+    "approved_at": null,
+    "source_side_effect_requested": false
+  },
   "findings": { "total_count": 0, "returned_count": 0, "truncated": false, "rows": [] },
   "timeline": {
     "total_count": 1,

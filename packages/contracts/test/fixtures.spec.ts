@@ -80,6 +80,10 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-realtime-event.v1.schema.json",
   "execution-governance.r2-review.valid.json":
     "https://schemas.primusspark.com/portal/execution-governance-r2-review.v1.schema.json",
+  "execution-governance.r1-review.valid.json":
+    "https://schemas.primusspark.com/portal/execution-governance-approval-workflow.v1.schema.json#/$defs/R1ReviewResponse",
+  "execution-governance.approval-history.valid.json":
+    "https://schemas.primusspark.com/portal/execution-governance-approval-workflow.v1.schema.json#/$defs/ApprovalHistoryResponse",
   "execution-governance.paper-exit-review.valid.json":
     "https://schemas.primusspark.com/portal/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitReviewResponse",
   "execution-command-center.busy.valid.json":

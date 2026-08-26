@@ -1,0 +1,59 @@
+{
+  "schema_version": "governance.r1-review.v1",
+  "record_authority": "PORTAL",
+  "delivery_profile": "fixture",
+  "read_at": "2026-08-26T09:00:00Z",
+  "data": {
+    "approval": {
+      "approval_id": "AP-R1-N09",
+      "gate": "R1",
+      "subject_type": "ALPHA_VERSION",
+      "subject_id": "av_2041",
+      "subject_label": "Carry v3.2",
+      "release_candidate": "RC-41",
+      "environment": "RESEARCH",
+      "target_label": "R1 evidence review",
+      "requester": { "user_id": "usr_stan", "username": "stan" },
+      "creator": { "user_id": "usr_stan", "username": "stan" },
+      "status": "PENDING",
+      "policy_version": "approval.v3",
+      "quorum_met": 0,
+      "quorum_required": 1,
+      "approval_version": 1,
+      "evidence_set_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "evidence_complete": true,
+      "blocker_count": 0,
+      "blocker_summary": null,
+      "sla_due_at": "2026-08-26T15:00:00Z",
+      "expires_at": "2026-08-28T09:00:00Z",
+      "created_at": "2026-08-26T08:00:00Z",
+      "updated_at": "2026-08-26T08:00:00Z"
+    },
+    "actor": { "user_id": "usr_bobby", "username": "bobby", "roles": ["ADMIN"] },
+    "eligibility": {
+      "can_approve": true,
+      "can_approve_with_condition": true,
+      "can_deny": true,
+      "can_request_changes": true,
+      "locks": [],
+      "separation_of_duties": "OK"
+    },
+    "known_limitations": [
+      {
+        "limitation_id": "lim_capacity_1",
+        "kind": "restriction",
+        "label": "Capacity envelope",
+        "statement": "Approved only inside the recorded Paper notional envelope.",
+        "expires_at": "2026-10-01T00:00:00Z"
+      }
+    ],
+    "evidence_manifest": {
+      "manifest_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "complete": true,
+      "entries": []
+    },
+    "checklist": [],
+    "decisions": [],
+    "linked_panels": []
+  }
+}

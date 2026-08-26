@@ -432,6 +432,12 @@ export interface components {
             /** @enum {unknown} */
             triage_state: "UNACKNOWLEDGED" | "ACKNOWLEDGED" | "RESOLVED";
             workflow_version: number;
+            assigned_to: {
+                user_id: components["schemas"]["Identifier"];
+                username: string;
+            } | null;
+            assigned_at: components["schemas"]["DateTime"] | null;
+            incident_id: components["schemas"]["Identifier"] | null;
             acknowledged_at: components["schemas"]["DateTime"] | null;
             acknowledged_by_user_id: components["schemas"]["Identifier"] | null;
             resolved_at: components["schemas"]["DateTime"] | null;

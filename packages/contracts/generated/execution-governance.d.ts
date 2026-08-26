@@ -4,6 +4,40 @@
  */
 
 export interface paths {
+    "/api/v1/execution/governance/approvals/{approval_id}/r1": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Returns one workspace-bound Portal R1 review, its immutable evidence manifest, known limitations, eligibility and decision history. */
+        get: operations["executionGovernanceR1Review"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/governance/approvals/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Returns immutable terminal approval attempts with bounded bidirectional keyset pagination. REQUEST_CHANGES appears as CHANGES_REQUESTED and never rewrites the governed gate. */
+        get: operations["executionGovernanceApprovalHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/execution/governance/approvals/{approval_id}/r2": {
         parameters: {
             query?: never;
@@ -47,8 +81,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Plans a Portal Paper Exit decision. This shared route also supports separately-versioned governance command families; this operation documents the Paper Exit discriminator. */
-        post: operations["planPaperExitDecision"];
+        /** @description Plans a Portal-local R1 or Paper Exit decision. REQUEST_CHANGES closes only the current immutable approval attempt; it does not deny the governed gate or create a replacement request. */
+        post: operations["planGovernanceDecision"];
         delete?: never;
         options?: never;
         head?: never;
@@ -226,22 +260,327 @@ export interface components {
             approval: components["schemas"]["R2Approval"];
             actor: components["schemas"]["ReviewActor"];
         };
-        R2ReviewResponse: {
-            /** @constant */
-            schema_version: "governance.r2-review.v1";
-            /** @constant */
-            record_authority: "PORTAL";
-            /** @constant */
-            delivery_profile: "fixture";
-            read_at: components["schemas"]["DateTime"];
-            data: components["schemas"]["R2ReviewData"];
-        };
+        R2ReviewResponse: components["schemas"]["execution-governance-r2-review.v1.schema"];
         Problem: {
             error: {
                 code: string;
                 message: string;
             };
             request_id: string;
+        };
+        /** Format: date-time */
+        Timestamp: string;
+        "$defs-Identifier": string;
+        Actor: {
+            user_id: components["schemas"]["$defs-Identifier"];
+            username: string;
+            roles?: ("ADMIN" | "USER")[];
+        };
+        Approval: {
+            approval_id: components["schemas"]["$defs-Identifier"];
+            /** @constant */
+            gate: "R1";
+            subject_type: string;
+            subject_id: components["schemas"]["$defs-Identifier"];
+            subject_label: string;
+            release_candidate: string | null;
+            /** @constant */
+            environment: "RESEARCH";
+            target_label: string;
+            requester: components["schemas"]["Actor"];
+            creator: components["schemas"]["Actor"];
+            /** @enum {unknown} */
+            status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+            policy_version: string;
+            quorum_met: number;
+            quorum_required: number;
+            approval_version: number;
+            evidence_set_hash: components["schemas"]["Hash"];
+            evidence_complete: boolean;
+            blocker_count: number;
+            blocker_summary: string | null;
+            sla_due_at: components["schemas"]["Timestamp"];
+            expires_at: components["schemas"]["Timestamp"];
+            created_at: components["schemas"]["Timestamp"];
+            updated_at: components["schemas"]["Timestamp"];
+        };
+        Eligibility: {
+            can_approve: boolean;
+            can_approve_with_condition: boolean;
+            can_deny: boolean;
+            can_request_changes: boolean;
+            locks: string[];
+            /** @enum {unknown} */
+            separation_of_duties: "OK" | "VIOLATION";
+        };
+        NullableTimestamp: components["schemas"]["Timestamp"] | null;
+        KnownLimitation: {
+            limitation_id: components["schemas"]["$defs-Identifier"];
+            /** @enum {unknown} */
+            kind: "lineage" | "warning" | "restriction" | "waiver";
+            label: string;
+            statement: string;
+            expires_at: components["schemas"]["NullableTimestamp"];
+        };
+        EvidenceManifest: {
+            manifest_hash: components["schemas"]["Hash"];
+            complete: boolean;
+            entries: Record<string, never>[];
+        };
+        R1ReviewResponse: {
+            /** @constant */
+            schema_version: "governance.r1-review.v1";
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            delivery_profile: "fixture";
+            read_at: components["schemas"]["Timestamp"];
+            data: {
+                approval: components["schemas"]["Approval"];
+                actor: components["schemas"]["Actor"];
+                eligibility: components["schemas"]["Eligibility"];
+                known_limitations: components["schemas"]["KnownLimitation"][];
+                evidence_manifest: components["schemas"]["EvidenceManifest"];
+                checklist: Record<string, never>[];
+                decisions: Record<string, never>[];
+                linked_panels: Record<string, never>[];
+            };
+        };
+        ApprovalHistoryRow: {
+            id: components["schemas"]["$defs-Identifier"];
+            approval_id: components["schemas"]["$defs-Identifier"];
+            /** @enum {unknown} */
+            gate: "R1" | "R2" | "PAPER_EXIT" | "SANDBOX_EXIT" | "LIVE_GATE";
+            subject_id: components["schemas"]["$defs-Identifier"];
+            subject: string;
+            /** @enum {unknown} */
+            outcome: "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED";
+            decided_by: components["schemas"]["Actor"];
+            decided_at: components["schemas"]["Timestamp"];
+            policy_version: string;
+            evidence_digest: components["schemas"]["Hash"];
+            approval_version: number;
+        };
+        ApprovalHistoryResponse: {
+            /** @constant */
+            schema_version: "governance.approval-history.v1";
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            delivery_profile: "fixture";
+            read_at: components["schemas"]["Timestamp"];
+            actor: components["schemas"]["Actor"];
+            page: {
+                rows: components["schemas"]["ApprovalHistoryRow"][];
+                total_count: number;
+                filtered_count: number;
+                next_cursor: string | null;
+                prev_cursor: string | null;
+                has_more: boolean;
+                has_previous: boolean;
+                applied_filters: Record<string, never>[];
+                applied_sort: Record<string, never>[];
+            };
+        };
+        identifier: string;
+        portal_actor: {
+            user_id: components["schemas"]["identifier"];
+            username: string;
+        };
+        hash: string;
+        /** Format: date-time */
+        date_time: string;
+        approval: {
+            approval_id: components["schemas"]["identifier"];
+            /** @constant */
+            gate: "R2";
+            subject_type: string;
+            subject_id: components["schemas"]["identifier"];
+            subject_label: string;
+            release_candidate: string | null;
+            environment: string;
+            target_label: string;
+            requester: components["schemas"]["portal_actor"];
+            creator: components["schemas"]["portal_actor"];
+            /** @constant */
+            status: "PENDING";
+            policy_version: string;
+            quorum_met: number;
+            quorum_required: number;
+            approval_version: number;
+            evidence_set_hash: components["schemas"]["hash"];
+            evidence_complete: boolean;
+            blocker_count: number;
+            blocker_summary: string | null;
+            sla_due_at: components["schemas"]["date_time"];
+            expires_at: components["schemas"]["date_time"];
+            created_at: components["schemas"]["date_time"];
+            updated_at: components["schemas"]["date_time"];
+            portfolio_id: components["schemas"]["identifier"];
+            currency: string;
+        };
+        review_actor: {
+            user_id: components["schemas"]["identifier"];
+            username: string;
+            roles: ("ADMIN" | "USER")[];
+        };
+        r1_reference: {
+            approval_id: components["schemas"]["identifier"];
+            /** @enum {unknown} */
+            state: "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED" | "PENDING";
+            href: string;
+            /** Format: date-time */
+            expiry: string | null;
+            digest: components["schemas"]["hash"] | null;
+            decided_by: string | null;
+            decided_at: components["schemas"]["date_time"] | null;
+        };
+        evidence_manifest: {
+            manifest_hash: components["schemas"]["hash"];
+            complete: boolean;
+            entries: {
+                evidence_id: components["schemas"]["identifier"];
+                ordinal: number;
+                kind: string;
+                label: string;
+                sha256: components["schemas"]["hash"];
+                schema_version: string;
+                /** @enum {unknown} */
+                source_authority: "RESEARCH" | "EXECUTION" | "BROKER" | "DERIVED";
+                captured_at: components["schemas"]["date_time"];
+            }[];
+        };
+        eligibility: {
+            can_approve: boolean;
+            can_approve_with_condition: boolean;
+            can_deny: boolean;
+            can_request_changes: boolean;
+            locks: string[];
+            /** @enum {unknown} */
+            separation_of_duties: "OK" | "VIOLATION";
+        };
+        review_data: {
+            approval: components["schemas"]["approval"];
+            actor: components["schemas"]["review_actor"];
+            r1_reference: components["schemas"]["r1_reference"] | null;
+            /** @enum {unknown} */
+            r1_state: "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED" | "PENDING" | "MISSING";
+            r1_id: components["schemas"]["identifier"] | null;
+            grant_id: components["schemas"]["identifier"] | null;
+            grant_name: string | null;
+            /** @enum {unknown} */
+            approver_role: "ADMIN" | null;
+            plan_author: string | null;
+            evidence_manifest: components["schemas"]["evidence_manifest"] | null;
+            eligibility: components["schemas"]["eligibility"];
+        };
+        /**
+         * Portal Execution Governance R2 Review v1
+         * @description Read-only, workspace-bound active R2 review with the immutable capital-preview scope. This document is not an R2 decision or execution authorization.
+         */
+        "execution-governance-r2-review.v1.schema": {
+            /** @constant */
+            schema_version: "governance.r2-review.v1";
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            delivery_profile: "fixture";
+            read_at: components["schemas"]["date_time"];
+            data: components["schemas"]["review_data"];
+            $defs: {
+                identifier: string;
+                /** Format: date-time */
+                date_time: string;
+                hash: string;
+                portal_actor: {
+                    user_id: components["schemas"]["identifier"];
+                    username: string;
+                };
+                review_actor: {
+                    user_id: components["schemas"]["identifier"];
+                    username: string;
+                    roles: ("ADMIN" | "USER")[];
+                };
+                approval: {
+                    approval_id: components["schemas"]["identifier"];
+                    /** @constant */
+                    gate: "R2";
+                    subject_type: string;
+                    subject_id: components["schemas"]["identifier"];
+                    subject_label: string;
+                    release_candidate: string | null;
+                    environment: string;
+                    target_label: string;
+                    requester: components["schemas"]["portal_actor"];
+                    creator: components["schemas"]["portal_actor"];
+                    /** @constant */
+                    status: "PENDING";
+                    policy_version: string;
+                    quorum_met: number;
+                    quorum_required: number;
+                    approval_version: number;
+                    evidence_set_hash: components["schemas"]["hash"];
+                    evidence_complete: boolean;
+                    blocker_count: number;
+                    blocker_summary: string | null;
+                    sla_due_at: components["schemas"]["date_time"];
+                    expires_at: components["schemas"]["date_time"];
+                    created_at: components["schemas"]["date_time"];
+                    updated_at: components["schemas"]["date_time"];
+                    portfolio_id: components["schemas"]["identifier"];
+                    currency: string;
+                };
+                r1_reference: {
+                    approval_id: components["schemas"]["identifier"];
+                    /** @enum {unknown} */
+                    state: "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED" | "PENDING";
+                    href: string;
+                    /** Format: date-time */
+                    expiry: string | null;
+                    digest: components["schemas"]["hash"] | null;
+                    decided_by: string | null;
+                    decided_at: components["schemas"]["date_time"] | null;
+                };
+                evidence_manifest: {
+                    manifest_hash: components["schemas"]["hash"];
+                    complete: boolean;
+                    entries: {
+                        evidence_id: components["schemas"]["identifier"];
+                        ordinal: number;
+                        kind: string;
+                        label: string;
+                        sha256: components["schemas"]["hash"];
+                        schema_version: string;
+                        /** @enum {unknown} */
+                        source_authority: "RESEARCH" | "EXECUTION" | "BROKER" | "DERIVED";
+                        captured_at: components["schemas"]["date_time"];
+                    }[];
+                };
+                eligibility: {
+                    can_approve: boolean;
+                    can_approve_with_condition: boolean;
+                    can_deny: boolean;
+                    can_request_changes: boolean;
+                    locks: string[];
+                    /** @enum {unknown} */
+                    separation_of_duties: "OK" | "VIOLATION";
+                };
+                review_data: {
+                    approval: components["schemas"]["approval"];
+                    actor: components["schemas"]["review_actor"];
+                    r1_reference: components["schemas"]["r1_reference"] | null;
+                    /** @enum {unknown} */
+                    r1_state: "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED" | "PENDING" | "MISSING";
+                    r1_id: components["schemas"]["identifier"] | null;
+                    grant_id: components["schemas"]["identifier"] | null;
+                    grant_name: string | null;
+                    /** @enum {unknown} */
+                    approver_role: "ADMIN" | null;
+                    plan_author: string | null;
+                    evidence_manifest: components["schemas"]["evidence_manifest"] | null;
+                    eligibility: components["schemas"]["eligibility"];
+                };
+            };
         };
         NullableDateTime: components["schemas"]["DateTime"] | null;
         Review: {
@@ -268,13 +607,13 @@ export interface components {
             extension_days: 14 | null;
             extended_until: components["schemas"]["NullableDateTime"];
         };
-        Actor: {
+        "$defs-Actor": {
             user_id: components["schemas"]["Identifier"];
             username: string;
             roles: ("ADMIN" | "USER")[];
         };
         NullableString: string | null;
-        Eligibility: {
+        "$defs-Eligibility": {
             can_approve: boolean;
             can_approve_with_condition: boolean;
             can_deny: boolean;
@@ -396,7 +735,7 @@ export interface components {
             read_at: components["schemas"]["DateTime"];
             data: {
                 review: components["schemas"]["Review"];
-                actor: components["schemas"]["Actor"];
+                actor: components["schemas"]["$defs-Actor"];
                 /** @enum {unknown} */
                 status: "ok" | "partial" | "stale" | "unavailable";
                 reason: components["schemas"]["NullableString"];
@@ -409,7 +748,7 @@ export interface components {
                 formula_version: string;
                 evidence_set_hash: components["schemas"]["Hash"];
                 source_snapshot_hash: components["schemas"]["Hash"];
-                eligibility: components["schemas"]["Eligibility"];
+                eligibility: components["schemas"]["$defs-Eligibility"];
                 lineage: components["schemas"]["Lineage"][];
                 panels: components["schemas"]["Panel"][];
                 evaluation: components["schemas"]["Evaluation"];
@@ -429,6 +768,36 @@ export interface components {
                 decisions: components["schemas"]["Decision"][];
                 promotion_grant: components["schemas"]["PromotionGrant"] | null;
             };
+        };
+        TypedCondition: {
+            text: string;
+            owner: string;
+            /** Format: date */
+            deadline: string | null;
+            /** Format: date */
+            expires_at: string | null;
+            blocking: boolean;
+        };
+        R1DecisionPlanRequest: {
+            /** @constant */
+            schema_version: "governance.r1-decision-plan-request.v1";
+            workspace_id: string;
+            request_key: string;
+            /** @constant */
+            command_type: "GOVERNANCE_R1_DECISION";
+            /** @constant */
+            command_version: 1;
+            target: {
+                approval_id: components["schemas"]["$defs-Identifier"];
+            };
+            expected_approval_version: number;
+            payload: {
+                /** @enum {unknown} */
+                decision: "APPROVE" | "APPROVE_WITH_CONDITION" | "DENY" | "REQUEST_CHANGES";
+                reason: string;
+                conditions: components["schemas"]["TypedCondition"][];
+                evidence_hashes: components["schemas"]["Hash"][];
+            } & unknown;
         };
         PaperExitDecisionPlanRequest: {
             /** @constant */
@@ -550,15 +919,11 @@ export interface components {
             /** @constant */
             external_side_effect_requested: false;
         };
-        /** Format: date-time */
-        Timestamp: string;
-        "$defs-Identifier": string;
-        "$defs-Actor": {
+        "execution-sandbox-certification.v1.schema_$defs-Actor": {
             user_id: components["schemas"]["$defs-Identifier"];
             username: string;
             roles: ("ADMIN" | "USER")[];
         };
-        NullableTimestamp: components["schemas"]["Timestamp"] | null;
         NullableIdentifier: components["schemas"]["$defs-Identifier"] | null;
         NullableHash: components["schemas"]["Hash"] | null;
         CertificationRecord: {
@@ -658,6 +1023,26 @@ export interface components {
                 code: string;
             }[];
         };
+        SmokePlan: {
+            plan_id: components["schemas"]["$defs-Identifier"];
+            qty: string;
+            cap: string;
+            currency: string;
+            timebox_minutes: number;
+            operator: {
+                user_id: components["schemas"]["$defs-Identifier"];
+                username: string;
+            };
+            /** @enum {unknown} */
+            status: "PLANNED" | "APPROVED" | "REJECTED";
+            approved_by: {
+                user_id: components["schemas"]["$defs-Identifier"];
+                username: string | null;
+            } | null;
+            approved_at: components["schemas"]["NullableTimestamp"];
+            /** @constant */
+            source_side_effect_requested: false;
+        };
         FindingCollection: {
             total_count: number;
             returned_count: number;
@@ -720,13 +1105,14 @@ export interface components {
             promotion_execution_requested: false;
             replayed: boolean;
             read_at: components["schemas"]["Timestamp"];
-            actor: components["schemas"]["$defs-Actor"];
+            actor: components["schemas"]["execution-sandbox-certification.v1.schema_$defs-Actor"];
             certification: components["schemas"]["CertificationRecord"];
             lineage: components["schemas"]["LineageItem"][];
             progress: components["schemas"]["Progress"];
             steps: components["schemas"]["Step"][];
             source_panels: components["schemas"]["SourcePanel"][];
             timeboxed_run_policy: null;
+            smoke_plan: components["schemas"]["SmokePlan"] | null;
             findings: components["schemas"]["FindingCollection"];
             timeline: components["schemas"]["Timeline"];
             promotion_plans: components["schemas"]["PromotionPlanSummary"][];
@@ -742,6 +1128,12 @@ export interface components {
             account_binding: {
                 account_id: components["schemas"]["$defs-Identifier"];
                 external_account_ref: components["schemas"]["$defs-Identifier"];
+            };
+            smoke_plan?: {
+                qty: string;
+                cap: string;
+                currency: string;
+                timebox_minutes: number;
             };
         };
         SubmitRequest: {
@@ -820,6 +1212,60 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    executionGovernanceR1Review: {
+        parameters: {
+            query?: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+            };
+            header?: never;
+            path: {
+                approval_id: components["parameters"]["ApprovalId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Portal-owned R1 review */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["R1ReviewResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    executionGovernanceApprovalHistory: {
+        parameters: {
+            query?: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+                after?: string;
+                before?: string;
+                limit?: number;
+                gate?: "R1" | "R2" | "PAPER_EXIT" | "SANDBOX_EXIT" | "LIVE_GATE";
+                subject?: string;
+                sort?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Portal-owned immutable approval history */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalHistoryResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     executionGovernanceR2Review: {
         parameters: {
             query?: {
@@ -839,7 +1285,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["R2ReviewResponse"];
+                    "application/json": components["schemas"]["execution-governance-r2-review.v1.schema"];
                 };
             };
             default: components["responses"]["Problem"];
@@ -870,7 +1316,7 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    planPaperExitDecision: {
+    planGovernanceDecision: {
         parameters: {
             query?: never;
             header?: never;
@@ -879,7 +1325,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PaperExitDecisionPlanRequest"];
+                "application/json": components["schemas"]["R1DecisionPlanRequest"] | components["schemas"]["PaperExitDecisionPlanRequest"];
             };
         };
         responses: {

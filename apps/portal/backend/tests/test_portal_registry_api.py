@@ -82,7 +82,7 @@ async def test_registry_endpoint_serves_validated_document_and_cache_headers() -
     payload = response.json()
     assert payload["schema_version"] == "portal.registry.v1"
     assert payload["registry_id"] == "portal-default"
-    assert payload["revision"] == 4
+    assert payload["revision"] == 5
     execution = next(
         screen
         for screen in payload["screens"]
@@ -90,10 +90,11 @@ async def test_registry_endpoint_serves_validated_document_and_cache_headers() -
     )
     assert execution["delivery_profile"] == "fixture"
     assert execution["delivery_policy"] == {
-        "policy_revision": 1,
+        "policy_revision": 2,
         "query_enabled": False,
         "projection_ingestion_enabled": False,
         "sse_enabled": False,
+        "governance_write_enabled": False,
         "paper_commands_enabled": False,
         "sandbox_commands_enabled": False,
         "live_protective_commands_enabled": False,

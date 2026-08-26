@@ -67,7 +67,7 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
 
   beforeEach(async () => {
     await ctx.pool.query(
-      "TRUNCATE execution_operation_workflow_events, execution_operation_queue_items, " +
+      "TRUNCATE execution_incidents, execution_operation_workflow_events, execution_operation_queue_items, " +
       "execution_command_plans_f0, outbox_messages, product_audit_events CASCADE",
     );
   });
@@ -522,6 +522,65 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
     expect(previous.statusCode).toBe(200);
     expect(previous.json().page.rows.map((item: { operation_id: string }) => item.operation_id))
       .toEqual(first.json().page.rows.map((item: { operation_id: string }) => item.operation_id));
+  });
+
+  it("defines Mine as explicit assignment and publishes the correlated incident id", async () => {
+    const assigned = await mutation(bobby, "/api/v1/execution/commands/plans", payload({
+      request_key: "ops:mine:assigned",
+      target: { type: "ACCOUNT", id: "paper-account-assigned" },
+    }));
+    const unassigned = await mutation(bobby, "/api/v1/execution/commands/plans", payload({
+      request_key: "ops:mine:unassigned",
+      target: { type: "ACCOUNT", id: "paper-account-unassigned" },
+    }));
+    const operationId = assigned.json().operation_id;
+    const acknowledged = await mutation(
+      bobby,
+      `/api/v1/execution/operations/${operationId}/acknowledge`,
+      {
+        schema_version: "execution.operation-acknowledge-request.v1",
+        workspace_id: workspaceId,
+        request_key: "ops:mine:ack",
+        expected_workflow_version: 1,
+      },
+    );
+    expect(acknowledged.statusCode).toBe(201);
+    expect(acknowledged.json().operation.assigned_to).toEqual({
+      user_id: bobby.userId,
+      username: bobby.username,
+    });
+    expect(acknowledged.json().operation.assigned_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+
+    await ctx.pool.query(
+      `INSERT INTO execution_incidents
+         (incident_id, workspace_id, title, summary, severity, environment,
+          target_type, target_id, workflow_state, workflow_version, opened_by_user_id)
+       VALUES ('inc-mine-1', $1, 'Assigned queue incident',
+               'Portal-local incident correlated to the assigned operation.',
+               'WARNING', 'PAPER', 'ACCOUNT', 'paper-account-assigned',
+               'OPEN', 1, $2)`,
+      [workspaceId, bobby.userId],
+    );
+    await ctx.pool.query(
+      `INSERT INTO execution_incident_operation_links
+         (incident_id, workspace_id, operation_id, relationship, linked_by_user_id)
+       VALUES ('inc-mine-1', $1, $2, 'TRIGGERED_BY', $3)`,
+      [workspaceId, operationId, bobby.userId],
+    );
+
+    const mine = await inject(
+      bobby,
+      `/api/v1/execution/operations?workspace_id=${workspaceId}&assigned_to=me`,
+    );
+    expect(mine.statusCode).toBe(200);
+    expect(mine.json().page).toMatchObject({ total_count: 2, filtered_count: 1 });
+    expect(mine.json().page.rows).toMatchObject([{
+      operation_id: operationId,
+      assigned_to: { user_id: bobby.userId, username: bobby.username },
+      incident_id: "inc-mine-1",
+    }]);
+    expect(mine.json().page.rows.map((row: { operation_id: string }) => row.operation_id))
+      .not.toContain(unassigned.json().operation_id);
   });
 
   it("keeps acknowledgement and resolution local, ordered, audited and idempotent", async () => {

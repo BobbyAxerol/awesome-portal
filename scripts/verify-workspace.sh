@@ -111,6 +111,7 @@ for required in \
   "${ROOT_DIR}/packages/contracts/schemas/keyset-page.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-projection-page.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-governance-r2-review.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-governance-approval-workflow.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-governance-paper-exit.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-realtime-event.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-operations.v1.schema.json" \
@@ -126,6 +127,8 @@ for required in \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.binding-exposure.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-projection-page.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-governance.r2-review.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-governance.r1-review.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-governance.approval-history.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-governance.paper-exit-review.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.auth-expiring.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.projection-gap.valid.json" \
@@ -213,6 +216,7 @@ for required in \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000007_execution-operations-f0-hardening.sql" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000008_execution-operations-queue.sql" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000009_execution-incidents.sql" \
+  "${ROOT_DIR}/apps/control-api/migrations/1723680000012_execution-n09-governance-workflow.sql" \
   "${ROOT_DIR}/apps/control-api/src/id.ts" \
   "${ROOT_DIR}/apps/control-api/src/repos/workspaces.ts" \
   "${ROOT_DIR}/apps/control-api/src/repos/runs.ts" \
@@ -356,6 +360,8 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/acceptance-results.example.json" \
   "${ROOT_DIR}/scripts/execution-image-publication-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_05_N09_PORTAL_GOVERNANCE_WORKFLOW_GAPS.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N09_GOVERNANCE_WORKFLOW_HANDOFF.md" \
   "${ROOT_DIR}/.github/workflows/publish-images.yml" \
   "${ROOT_DIR}/deploy/execution-d1/README.md" \
   "${ROOT_DIR}/deploy/execution-d1/owner-input.env.example" \

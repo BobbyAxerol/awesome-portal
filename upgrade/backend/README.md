@@ -672,6 +672,14 @@ authority.
   browser closes EventSource on terminal/generic errors. Feature flags remain
   false until the single external `d4.paper-read.v2` source-evidence dependency
   exists; command authority is unchanged.
+- [EX-BE-05 / N09 Portal-owned Governance and Workflow Gaps](./EX_BE_05_N09_PORTAL_GOVERNANCE_WORKFLOW_GAPS.md)
+  — **integration complete / production inactive:** R2 immutable R1 lineage,
+  independent governance-write policy, explicit operation assignment and
+  incident link, bidirectional approval history, `REQUEST_CHANGES`, typed R1
+  limitations and bounded Sandbox smoke-plan evidence are now canonical across
+  PostgreSQL, Control API, OpenAPI, fixtures and generated TypeScript. Registry
+  policy remains false; no Trading System, AWS-HK, source or command authority
+  changed.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

@@ -203,6 +203,12 @@ describe("EX-BE-05b/F2 Portal Sandbox Certification", () => {
         account_id: `acct_${grant.deploymentId}`,
         external_account_ref: `okx_testnet_${grant.deploymentId}`,
       },
+      smoke_plan: {
+        qty: "0.010000000000000000",
+        cap: "100.000000000000000000",
+        currency: "USDT",
+        timebox_minutes: 30,
+      },
     };
   }
 
@@ -221,6 +227,13 @@ describe("EX-BE-05b/F2 Portal Sandbox Certification", () => {
        FROM governance_paper_exit_reviews r WHERE r.review_id = $8`,
       [certificationId, workspaceId, grant.deploymentId, grant.grantId,
         `acct_${suffix}`, `okx_testnet_${suffix}`, bobby.userId, grant.reviewId],
+    );
+    await ctx.pool.query(
+      `INSERT INTO governance_sandbox_smoke_plans
+         (plan_id, certification_id, workspace_id, qty, cap, currency,
+          timebox_minutes, operator_user_id, operator_username)
+       VALUES ($1, $2, $3, 0.01, 100, 'USDT', 30, $4, $5)`,
+      [`smoke_${suffix}`, certificationId, workspaceId, bobby.userId, bobby.username],
     );
     const authority: Record<SandboxCertificationStep, string> = {
       CONNECT: "BROKER", SYNC: "BROKER", ORDER_TYPES: "BROKER",
@@ -256,6 +269,18 @@ describe("EX-BE-05b/F2 Portal Sandbox Certification", () => {
     expect(denied.statusCode).toBe(403);
     expect(denied.json().error.code).toBe("ADMIN_ROLE_REQUIRED");
 
+    const invalidBounds = await mutation(
+      bobby,
+      "/api/v1/execution/governance/sandbox-certifications",
+      {
+        ...payload,
+        request_key: "sandbox:create:invalid-bounds",
+        smoke_plan: { ...payload.smoke_plan, cap: "0.001" },
+      },
+    );
+    expect(invalidBounds.statusCode).toBe(400);
+    expect(invalidBounds.json().error.code).toBe("INVALID_SANDBOX_CERTIFICATION_CREATE");
+
     const first = await mutation(bobby, "/api/v1/execution/governance/sandbox-certifications", payload);
     expect(first.statusCode).toBe(201);
     expect(first.json()).toMatchObject({
@@ -268,6 +293,17 @@ describe("EX-BE-05b/F2 Portal Sandbox Certification", () => {
       replayed: false,
       certification: { workflow_state: "DRAFT", workflow_version: 1, runtime_state: null },
       progress: { passed_count: 0, total_count: 7, eligible: false },
+      smoke_plan: {
+        qty: "0.010000000000000000",
+        cap: "100.000000000000000000",
+        currency: "USDT",
+        timebox_minutes: 30,
+        operator: { user_id: bobby.userId, username: bobby.username },
+        status: "PLANNED",
+        approved_by: null,
+        approved_at: null,
+        source_side_effect_requested: false,
+      },
     });
     expect(first.json().steps).toHaveLength(7);
     expect(first.json().steps.every((step: { evaluation_state: string }) => step.evaluation_state === "UNAVAILABLE"))
@@ -275,6 +311,11 @@ describe("EX-BE-05b/F2 Portal Sandbox Certification", () => {
     expect(first.json().source_panels).toHaveLength(3);
     expect(first.json().source_panels.every((panel: { panel_state: string; data: unknown }) =>
       panel.panel_state === "unavailable" && panel.data === null)).toBe(true);
+    await expect(ctx.pool.query(
+      `UPDATE governance_sandbox_smoke_plans SET cap = 200
+        WHERE certification_id = $1`,
+      [first.json().certification.certification_id],
+    )).rejects.toThrow(/immutable/i);
 
     const replay = await mutation(bobby, "/api/v1/execution/governance/sandbox-certifications", payload);
     expect(replay.statusCode).toBe(201);
@@ -319,6 +360,7 @@ describe("EX-BE-05b/F2 Portal Sandbox Certification", () => {
       delivery_profile: "shadow",
       source_integration_state: "SHADOW",
       progress: { passed_count: 7, total_count: 7, eligible: true, blocker_codes: [] },
+      smoke_plan: { status: "PLANNED", source_side_effect_requested: false },
     });
     const evidenceHash = detail.json().progress.evidence_set_hash;
     const base = {
@@ -377,6 +419,12 @@ describe("EX-BE-05b/F2 Portal Sandbox Certification", () => {
       workflow_version: 3,
       decided_evidence_set_hash: evidenceHash,
     });
+    expect(approved.json().smoke_plan).toMatchObject({
+      status: "APPROVED",
+      approved_by: { user_id: approver.userId, username: approver.username },
+      source_side_effect_requested: false,
+    });
+    expect(approved.json().smoke_plan.approved_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 
     const planned = await mutation(
       approver,
