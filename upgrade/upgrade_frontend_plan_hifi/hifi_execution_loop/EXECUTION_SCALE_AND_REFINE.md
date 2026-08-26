@@ -1161,3 +1161,27 @@ component nào tiêu thụ.
 - **Bổ sung 2026-08-26 (phụ lục I.7):** Structure (matrix ★BM + insufficient, market corr + tail ρ, leadership 3 list + insight, influence map, drawdown overlap), Capital Ledger v1.1 (type/before/after/approval), Approvals, Incidents (open count server), Audit keyset.
 - **Fixture:** `execution-portfolio-360.PF-CRYPTO.v1_1.valid.json`. **Xoá smoke:** khi 51 giao.
 
+### BR-EX-52 — Accounts & Bindings list (hi-fi, entry screen WF 1g) (2026-08-26) — **spec cho codex**
+
+- **Cần:** `GET /api/v1/execution/bindings?filter=all|live|testnet|paper|issues` → `bindings-list.v1`: `summary{bindings, venues, virtual_accounts}`, `kpis{physical_equity{value,ccy,binding_id,live}, virtual_allocated{value, headroom, invariant_ok}, credentials{valid, expiring[{alias,days}], otp}, findings{mismatch, incident_id, account_id}, sync_health{ok, total, na_reason}}`, `counts{all,live,testnet,paper,issues}`,
+  `rows[{binding_id, venue, env: MAINNET|TESTNET|PAPER_FEED, purpose_note, credential{alias, state: VALID|EXPIRING|OTP_FLOW|REVOKED, days_to_expiry?, scopes[], withdraw:bool, rotate_href?}, physical_equity{value,ccy}|{kind: TEST_FUNDS|SIMULATED}, virtual{sum, ccy, headroom}, accounts:int, sync{kind: ws|rest|md_feed|calendar, age_seconds, policy_seconds, snapshot_minutes?, state}, health{text, tone, link?}, note, virtual_accounts[{account_id, stage, alpha, deployment_id, portfolio, equity, alloc, sync{state}, health{text,tone}}]}]`.
+- **Nguồn:** `broker_bindings` (MISSING trong DB guide → `venue_accounts` + `venue_credentials`), `accounts` (virtual, by `external_account_ref`), `strategy_deployments`, `account_balances`/`margin_balances`, `broker_account_sync_snapshots`, `venue_rate_limits`, `venues.trading_sessions`, `reconciliation_findings`, PORTAL incidents.
+- **Invariant:** Σ virtual ≤ physical ở allocation time (server enforce); test funds không vào NAV; paper không có recon; VND/USDC không FX-mix.
+- **Ảnh hưởng hiện tại:** `/deployments/accounts` chạy `accounts.smoke.ts` (5 binding, 8 virtual). Motion: clock, physical equity jitter, ws/rest age, EXPIRING pulse, VN session.
+- **Fixture:** `execution-bindings-list.valid.json`. **Xoá smoke:** khi 52 giao.
+
+### BR-EX-53 — Binding Detail (hi-fi "Binding Detail — binance_main_01") (2026-08-26) — **spec cho codex**
+
+- **Cần:** `GET /api/v1/execution/bindings/{binding_id}` → `binding-detail.v1`: `binding{id, venue, env, settle_ccy, open_findings}`, `capital{physical, virtual_sum, headroom, segments[{account_id, label, allocated}]}`,
+  `credential{alias, state, scopes[], withdraw_granted:false, scope_verified_at, secret{fingerprint, vaulted:true}, ip_allowlist{count, last_drift_check_at, state}, rotation{created_at, rotated_at, operation_id, next_due_at, policy_days}, rate_budget{used_per_min, limit_per_min, order_budget_pct}}`,
+  `sync_stream[{t, state: OK|SNAPSHOT|MISMATCH|STALE, digest, note, finding_id?, incident_id?}]` (≤50, SSE `binding.snapshot` khi N08), `virtual_accounts[{account_id, stage, alpha, deployment_id, portfolio, allocated, equity, exposure, recon{state, finding_id|incident_id}}]`, `audit[{t, text, operation_id, approval_id?, actor, step_up}]`.
+- **Action:** `POST /bindings/{id}/rotate-credential` → plan → apply → verify qua Admin Action Drawer (step-up, dual-key window).
+- **Nguồn:** `venue_credentials` (alias/state/scopes/fingerprint — **secret không bao giờ qua API**), `venue_rate_limits`, `broker_account_sync_snapshots` (digest = content hash), `accounts` ⋈ `strategy_deployments` ⋈ `portfolio_allocations`, `reconciliation_findings`, `audit_log` (binding-scoped), `operator_operations`.
+- **Fixture:** `execution-binding-detail.binance_main_01.valid.json`. **Xoá smoke:** khi 53 giao.
+
+### BR-EX-54 — Account/Broker 360 v2 (hi-fi WF 1g) (2026-08-26) — **spec cho codex**
+
+- **Cần trong `account-broker-360.v1` → v1.1 (additive):** `masthead{env: LIVE|…, sync{state, age_seconds}, headroom_state: OK|EXCEEDED, facts: "live · BINANCE · MARGIN / CROSS · settle USDT · account rev 14"}`, `internal{positions, open_orders, equity, cash_free, locked_reserved, as_of}`, `broker{positions, open_orders, balance, digest, age_seconds, source: REST|WS}`, `difference{rows[{key, verdict: MATCH|DELTA, delta, severity: INFO|WARN|CRITICAL, note}], formula:"diff.v1", action_href}`, `binding{external_account_ref, credential{alias,state}, position_mode, linked[{account_id, alpha, virtual_exposure, stage, current}], aggregate{virtual, physical, headroom, verdict}}`, `sync_history[{t, source, status: OK|STALE, age_seconds?, digest}]`, `findings{open, last_dry_run{verdict, at, id}, resolved_30d, history_href}`; actions `sync_now`, `dry_run_reconcile` (đã có simulate).
+- **Ảnh hưởng hiện tại:** màn đã có contract; restyle theo grammar hi-fi 1g (khung LIVE đỏ, 3 panel mono, binding table, sync history, findings + 2 nút). Smoke chỉ cho `facts` masthead nếu thiếu.
+- **Fixture:** cập nhật `execution-account-broker-360.*.valid.json`.
+

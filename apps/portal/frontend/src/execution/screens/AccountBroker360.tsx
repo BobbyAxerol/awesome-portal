@@ -42,19 +42,9 @@ import { capNotice, capPreserving } from "../components/cap";
 const LINKED_BUDGET = 12;
 const SYNC_BUDGET = 10;
 import { ExecutionSurface } from "../ExecutionSurface";
-import { useState } from "react";
-import {
-  ExecutionContextRail,
-  ExecutionPageHeader,
-  ExecutionProvenanceDrawer,
-  ExecutionTabs,
-  ExecutionWorkspace,
-  shortDigest,
-  type HeaderBadge,
-  type RailBlocker,
-} from "../components/workspace";
 
-type AccountTab = "Binding & linked" | "Sync history" | "Findings";
+import { ExecutionWorkspace } from "../components/workspace";
+
 
 /** One side of the three-column comparison. Values are strings, always. */
 export interface StateColumn {
@@ -356,7 +346,6 @@ export function AccountBroker360({
       </ExecutionSurface>
     );
   }
-  const [tab, setTab] = useState<AccountTab>("Binding & linked");
   const live = stage === "LIVE_FULL" || stage === "LIVE_CANARY";
 
   // The account being viewed always survives the cap — a list of siblings that
@@ -388,78 +377,31 @@ export function AccountBroker360({
   );
   const syncNotice = capNotice(shownSync, "syncs");
 
-  const diffBlockers: RailBlocker[] = [
-    ...(aggregate && aggregate.verdict !== "OK" ? [{ label: `headroom ${aggregate.verdict}`, detail: null, severity: (aggregate.verdict === "EXCEEDED" ? "blocking" : "watch") as "blocking" | "watch" }] : []),
-    ...difference.rows.filter((row) => row.verdict !== "MATCH").map((row) => ({ label: `${row.label} ${row.verdict}`, detail: null, severity: (String(row.severity) === "CRITICAL" ? "blocking" : "watch") as "blocking" | "watch" })),
-    ...(openFindings ? [{ label: `${openFindings} open reconciliation ${openFindings === 1 ? "finding" : "findings"}`, detail: lastDryRun ? `last dry-run ${lastDryRun.verdict} ${lastDryRun.at}` : "never dry-run", severity: "watch" as const }] : []),
-    ...(!credentialValid ? [{ label: "credential INVALID", detail: credentialAlias, severity: "blocking" as const }] : []),
-  ];
-  const contextRail = (
-    <ExecutionContextRail
-      next={{
-        title: aggregate ? `Headroom ${aggregate.verdict} — ${aggregate.headroom} ${aggregate.currency}` : "Headroom not published",
-        detail: (
-          <span className="exec-role-body">
-            {aggregate ? "Figures are in the headroom banner; nothing here is summed." : "The aggregate virtual-vs-physical check has no published figure for this binding."}
-          </span>
-        ),
-        action: operatorAdmin ? (
-          <div className="exec-360-actions exec-stage-actions">
-            <button type="button" className="exec-role-control exec-btn-ghost" onClick={onSyncNow}>
-              Sync now
-            </button>
-            <button type="button" className="exec-role-control exec-btn-apply" onClick={onDryRun}>
-              Dry-run reconcile
-            </button>
-          </div>
-        ) : undefined,
-      }}
-      blockers={diffBlockers}
-      freshness={
-        <span className="exec-role-meta">
-          broker {broker.envelope.authority} · as_of {broker.envelope.asOf ?? "not stated"} · {broker.envelope.freshness} · policy {syncPolicy}
-        </span>
-      }
-      provenance={
-        <ExecutionProvenanceDrawer
-          items={[
-            { label: "external_account_ref", short: externalAccountRef, full: null },
-            { label: "credential", short: `${credentialAlias} · ${credentialValid ? "VALID" : "INVALID"} · secret never displayed`, full: null },
-            ...(broker.digest ? [{ label: "broker digest", short: shortDigest(broker.digest), full: broker.digest }] : []),
-            ...(internal.digest ? [{ label: "internal digest", short: shortDigest(internal.digest), full: internal.digest }] : []),
-            { label: "position mode", short: positionMode, full: null },
-          ]}
-          onCopy={(full) => void navigator.clipboard?.writeText(full)}
-        />
-      }
-    />
-  );
+  const syncTop = syncHistory[0];
+  const syncChip = syncTop ? `SYNC ${syncTop.status}${syncTop.detail ? ` ${syncTop.detail}` : ""}` : "SYNC not stated";
   return (
-    <ExecutionSurface kind="deployments" className="exec-360">
-      {/* A solid band, not a tinted panel. A live account is the one state
-          where a reader must not have to look for the badge. */}
-      {live ? (
-        <div className="exec-360-guard" data-stage={stage}>
-          LIVE ACCOUNT — commands here move real capital
-        </div>
-      ) : null}
-
-      <ExecutionWorkspace layout="balanced" rail={contextRail}>
-      <ExecutionPageHeader
-        title={accountId}
-        badges={[
-          { label: stage, axis: "stage", tone: live ? "bad" : undefined },
-          { label: `sync ${syncHistory[0]?.status ?? "not stated"}`, axis: "broker-sync", tone: syncHistory[0]?.status === "OK" ? "good" : syncHistory[0]?.status === "STALE" ? "warn" : "bad" },
-          { label: credentialValid ? "CREDENTIAL VALID" : "CREDENTIAL INVALID", axis: "other", tone: credentialValid ? "good" : "bad" },
-          ...(aggregate ? [{ label: `headroom ${aggregate.verdict}`, axis: "readiness", tone: aggregate.verdict === "OK" ? "good" : aggregate.verdict === "EXCEEDED" ? "bad" : "warn" } as HeaderBadge] : []),
-        ]}
-        purpose="Virtual state against the physical broker — the risk boundary."
-        secondary={
-          <span className="exec-360-identity exec-role-meta">
-            <span className="exec-num">{alpha}</span> · <span className="exec-num">{deployment}</span> · <span className="exec-num">{portfolio}</span> · <span className="exec-num">{venue}</span> · <span className="exec-num">{marginMode}</span> · settle <span className="exec-num">{settleCurrency}</span> · <span className="exec-num">{accountRevision}</span>
-          </span>
-        }
-      />
+    <ExecutionSurface kind="deployments" className="exec-360 exec-a3 exec-ac" data-hifi-exact="account-broker-360">
+      <ExecutionWorkspace layout="dense">
+      {/* Hi-fi 1g: a live account wears a 3px red frame around its masthead —
+          the one state where a reader must not have to look for the badge.
+          `.exec-360-guard` stays the live marker for the tests. */}
+      <header className={`exec-ac-masthead${live ? " exec-360-guard" : ""}`} data-stage={stage} data-live={live ? "true" : undefined}>
+        {live ? (
+          <>
+            <svg viewBox="0 0 16 18" className="exec-ac-shield" aria-hidden="true"><path d="M8 1 L15 4 V9 C15 13.5 12 16.5 8 17.5 C4 16.5 1 13.5 1 9 V4 Z" fill="var(--bad-bg)" stroke="var(--bad)" strokeWidth="1.5" /></svg>
+            <span className="exec-ac-live">LIVE</span>
+            <span className="exec-sr-only">LIVE ACCOUNT — commands here move real capital</span>
+          </>
+        ) : null}
+        <span className="exec-ac-kind">ACCOUNT</span>
+        <h1 className="exec-ac-h1">{accountId}</h1>
+        <span className="exec-ac-meta"><span className="exec-num">{alpha}</span> · <a href={`/deployments/live/${deployment}`}>{deployment}</a> · <a href={`/deployments/portfolios/${portfolio}`}>{portfolio}</a></span>
+        <span className="exec-ac-sync" data-tone={syncTop?.status === "OK" ? "good" : syncTop?.status === "STALE" ? "warn" : "bad"}>{syncChip}</span>
+        {aggregate?.verdict === "EXCEEDED" ? <span className="exec-ac-sync" data-tone="bad">HEADROOM BREACH</span> : null}
+        <span className="exec-a3-wf">WF 1g</span>
+        <span className="exec-a3-spacer" />
+        <span className="exec-ac-facts">{stage === "LIVE_FULL" || stage === "LIVE_CANARY" ? "live" : stage.toLowerCase()} · {venue} · {marginMode} · settle {settleCurrency} · {accountRevision}</span>
+      </header>
 
       <div className="exec-360-grid3">
         <Column title="Internal virtual state" column={internal} />
@@ -479,17 +421,8 @@ export function AccountBroker360({
 
       <HeadroomBanner aggregate={aggregate} exposure={exposure} />
 
-      <ExecutionTabs
-        tabs={[
-          { key: "Binding & linked", label: "Binding & linked", count: linked.length },
-          { key: "Sync history", label: "Sync history", count: syncTotal ?? syncHistory.length },
-          { key: "Findings", label: "Findings", count: openFindings },
-        ]}
-        active={tab}
-        onChange={(key) => setTab(key as AccountTab)}
-        label="Account sections"
-      >
-        {tab === "Binding & linked" ? (
+      {/* Hi-fi 1g shows binding, sync history and findings at once — no tabs. */}
+        {(
       <section className="exec-gate-panel">
         <div className="exec-tile-title">
           Broker binding · external_account_ref {externalAccountRef}
@@ -545,8 +478,9 @@ export function AccountBroker360({
           virtual accounts, never assigned per-alpha
         </p>
       </section>
-        ) : null}
-        {tab === "Sync history" ? (
+        )}
+        <div className="exec-pf2-grid" data-ratio="1">
+        {(
         <section className="exec-gate-panel">
           <div className="exec-tile-title">Sync history</div>
           <div className="exec-360-note">policy {syncPolicy}</div>
@@ -597,8 +531,8 @@ export function AccountBroker360({
           ) : null}
         </section>
 
-        ) : null}
-        {tab === "Findings" ? (
+        )}
+        {(
         <section className="exec-gate-panel">
           <div className="exec-tile-title">Reconciliation findings</div>
           <dl className="exec-360-facts">
@@ -635,12 +569,10 @@ export function AccountBroker360({
               </button>
             </div>
           ) : null}
-          <p className="exec-360-note">
-            apply-from-broker mutations go through plan → apply → verify (Action Drawer)
-          </p>
+          <p className="exec-360-note">apply-from-broker mutations go through plan → apply → verify (Action Drawer)</p>
         </section>
-        ) : null}
-      </ExecutionTabs>
+        )}
+        </div>
       </ExecutionWorkspace>
     </ExecutionSurface>
   );

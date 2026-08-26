@@ -343,6 +343,32 @@ Legs / fills / lineage: xem BR-EX-48 trong `EXECUTION_SCALE_AND_REFINE.md`. Fixt
 | `what_if[]` | `{scenario, estimate_text, headline, formula}` | yes | DERIVED (`marginal.v1`) | labeled estimates |
 | `symbol_overlap[]` | `{symbol, alphas[], same_direction_notional, tone}` | no | DERIVED | |
 
+## A.52 · `bindings-list.v1` — Accounts & Bindings (entry WF 1g)
+
+| field | type | null? | authority | ví dụ / rule |
+|---|---|---|---|---|
+| `rows[].env` | enum `MAINNET\|TESTNET\|PAPER_FEED` | no | PORTAL_CONTROL (`venue_accounts`) | chip màu theo env |
+| `rows[].credential` | `{alias, state: VALID\|EXPIRING\|OTP_FLOW\|REVOKED, days_to_expiry?, scopes[], withdraw:false, rotate_href?}` | no | PORTAL_CONTROL (`venue_credentials`) | secret không bao giờ trả |
+| `rows[].physical_equity` | `{value,ccy}` \| `{kind: TEST_FUNDS\|SIMULATED}` | no | BROKER | test funds/simulated không có số |
+| `rows[].virtual` | `{sum, ccy, headroom}` | yes | PORTAL_PROJECTION | headroom = physical − Σ virtual |
+| `rows[].sync` | `{kind: ws\|rest\|md_feed\|calendar, age_seconds, policy_seconds, snapshot_minutes?, state}` | no | BROKER sync | `"ws 4.1s / 5s + 5m snap"` |
+| `rows[].virtual_accounts[]` | xem BR-EX-52 | no | mixed | |
+
+## A.53 · `binding-detail.v1` — Binding Detail
+
+| field | type | null? | authority | ví dụ / rule |
+|---|---|---|---|---|
+| `capital.segments[]` | `[{account_id, label, allocated}]` | no | PORTAL_PROJECTION | bar theo tỉ lệ allocated/physical |
+| `credential.secret` | `{fingerprint, vaulted:true}` | no | PORTAL_CONTROL | chỉ fingerprint |
+| `credential.ip_allowlist` | `{count, last_drift_check_at, state}` | yes | PORTAL_CONTROL | |
+| `credential.rate_budget` | `{used_per_min, limit_per_min, order_budget_pct}` | yes | `venue_rate_limits` | |
+| `sync_stream[]` | `[{t, state, digest, note, finding_id?, incident_id?}]` | no | BROKER sync snapshots | immutable evidence |
+| `audit[]` | `[{t, text, operation_id, approval_id?, actor, step_up}]` | no | `audit_log` | credential & structure only |
+
+## A.54 · `account-broker-360.v1.1` — Account/Broker 360 (WF 1g)
+
+Additive: `masthead{env, sync{state,age_seconds}, headroom_state, facts}`, `internal.cash_free`, `internal.locked_reserved`, `broker.source`, `difference.rows[].severity`, `findings.history_href`. Còn lại contract v1 đã có.
+
 ---
 
 # Phụ lục B — Definition of Ready (§5.1 backend plan) điền sẵn cho từng gói
@@ -361,6 +387,9 @@ Codex chỉ cần xác nhận/sửa từng ô; ô nào tôi không có quyền q
 | **49** fleet | Codex · `dev` | READ; PORTAL_PROJECTION over strategies ⋈ strategy_deployments ⋈ allocations ⋈ snapshots; DERIVED pnl/spark | new `fleet-list.v1` | ≤500 alphas keyset ≤50/page; deployments ≤20/alpha; spark ≤30 pts | any viewer | route absent → panel unavailable (today) | BR-EX-43 tick for session pnl/sync age | fixture `execution-fleet-list.valid.json`; sort-rule tests; frontend `alphaFleet.test` |
 | **50** replay | Codex · Trading System owner (OHLC/fills) · `dev` | READ; TRADING_SYSTEM candles/markers/legs · DERIVED round trips · PORTAL_CONTROL job | new `replay.v1` | 120–2,000 candles; markers ≤500/window; log keyset ≤200 | any viewer | route absent → tab shows unavailable | BR-EX-48 legs/fills; BR-EX-43 tick | fixture `execution-replay.dep_88.valid.json`; marker↔log id consistency test; frontend `alpha360.test` replay cases |
 | **51** portfolio v2 | Codex · `dev` | READ (+2 actions later); DERIVED twr/corr/marginal · PORTAL_CONTROL revisions/log/limits | `portfolio-360.v1` → v1.1 additive | 3 windows ≤400 pts; config log ≤200 keyset; cross ≤20 portfolios | viewer read; report/rebalance = ADMIN step-up (future) | route fields absent → panels unavailable; strip falls back to contract KPIs | BR-EX-43 tick (NAV live); BR-EX-30/35 approvals | fixture `execution-portfolio-360.PF-CRYPTO.v1_1.valid.json`; era/rev consistency tests; frontend `analytics360.test` portfolio cases |
+| **52** bindings list | Codex · `dev` | READ; PORTAL_CONTROL (bindings/credentials) · BROKER (equity/sync) · PORTAL_PROJECTION (virtual) | new `bindings-list.v1` | ≤50 bindings; ≤20 virtual/binding; sync age per tick | viewer read; credential secrets never | route absent → panel unavailable | `venue_accounts`/`venue_credentials`; BR-EX-43 tick | fixture `execution-bindings-list.valid.json`; invariant test Σ virtual ≤ physical; frontend `accountsBindings.test` |
+| **53** binding detail | Codex · `dev` | READ (+ rotate action via Drawer) | new `binding-detail.v1` | stream ≤50; audit ≤200 keyset | viewer read; rotate = ADMIN step-up | route absent → panel unavailable | `venue_credentials`, `broker_account_sync_snapshots`, `audit_log` | fixture `execution-binding-detail.binance_main_01.valid.json`; secret-leak test (no key material in payload) |
+| **54** account 360 v1.1 | Codex · `dev` | READ (+ existing simulate actions) | `account-broker-360.v1` → v1.1 additive | 1 account/screen | viewer read | missing additive fields → v1 rendering | existing contract | fixture update; frontend `account360.test` |
 | **41** stage telemetry | Codex · `dev` (source-dark schema first, N10) | READ; PORTAL_PROJECTION/TRADING_SYSTEM/BROKER/DERIVED per 41.x | new `stage-equity.v1`, `envelope-consumption.v1`, `execution-quality.v1`, `positions.v1`, `contribution.v1`; `sandbox-certification.v1.1` | ≤5,000 pts/series; caps ≤8; buckets ≤12; positions ≤500 | viewer read | per-panel honest states (today) | N06 Paper qualification for source-backed values | per-kind fixtures; exact-decimal pure-engine tests |
 
 # Phụ lục C — OpenAPI path stubs (đề xuất; codex quyết tên cuối)
@@ -377,6 +406,9 @@ paths:
   /api/v1/execution/blotter/orders/{id}/legs:  # GET → order-legs.v1
   /api/v1/execution/blotter/orders/{id}/fills: # GET ?cursor → order-fills.v1 (+ lineage)
   /api/v1/execution/portfolios/{id}:           # v1.1 additive (BR-EX-51); POST …/report-pack, POST …/rebalance-plan later
+  /api/v1/execution/bindings:                  # GET ?filter → bindings-list.v1 (BR-EX-52)
+  /api/v1/execution/bindings/{id}:             # GET → binding-detail.v1 (BR-EX-53); POST …/rotate-credential later
+  /api/v1/execution/accounts/{id}:             # v1.1 additive (BR-EX-54)
   /api/v1/execution/fleet:                     # GET ?stage&venue&owner[&cursor] → fleet-list.v1 (BR-EX-49)
   /api/v1/execution/deployments/{id}/replay:   # GET ?symbol&interval=1h&window=120 → replay.v1 (BR-EX-50)
   /api/v1/execution/deployments/{id}/stage-equity:            # 41.1
@@ -409,14 +441,15 @@ paths:
 7. **49**: xoá `alphaFleet.smoke.ts`, re-record `el-v2-08-alpha-fleet`.
 8. **50**: xoá `alphaReplay.smoke.ts`, re-record `el-v2-08-alpha-replay`.
 9. **51**: xoá `portfolio360.smoke.ts`, re-record `el-v2-08-portfolio-*`.
-10. **34/40**: xoá `alpha360.smoke.ts`.
+10. **52/53**: xoá `accounts.smoke.ts`, re-record `el-v2-08-accounts-*`; **54**: bỏ smoke facts trong Account 360.
+11. **34/40**: xoá `alpha360.smoke.ts`.
 
 Mỗi bước: handoff codex kèm **Required frontend tests**; tôi regenerate `portal-api.d.ts`, nạp fixture canonical
 trong test (không chép tay), ghi `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` vào ledger §3, tick grammar §8.
 
 # Phụ lục F — cách codex nhận request này
 
-- **Intake chính thức:** 11 hàng BR-EX-41…51 trong §7.2 của `portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`
+- **Intake chính thức:** 14 hàng BR-EX-41…54 trong §7.2 của `portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`
   (đang là sửa unstaged trên `feat/execution-n04-lease-aware-consumer`). Bản patch để apply lại nếu cần:
   `BACKEND_PLAN_7_2_ROWS_2026-08-25.md` (cùng thư mục, 8 hàng nguyên văn).
 - **Chi tiết field/type/enum/ví dụ:** phụ lục A; DoR: phụ lục B; path: C; error: D; thứ tự: E.

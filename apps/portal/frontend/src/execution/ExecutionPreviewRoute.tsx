@@ -7,8 +7,10 @@
  * fixture response whose source-side-effect flag is false.
  */
 import { useEffect, useMemo, type ReactNode } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AlphaFleet } from "./screens/AlphaFleet";
+import { AccountsBindings } from "./screens/AccountsBindings";
+import { BindingDetail } from "./screens/BindingDetail";
 import { reviewRouteFor } from "./screens/ApprovalInbox";
 
 import { usePresentation } from "../app/presentation";
@@ -117,6 +119,7 @@ function PreviewFrame({ screenId, profile, children }: { screenId: string; profi
 
 export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: string; profile?: string | null }) {
   const params = useParams();
+  const [search] = useSearchParams();
   const navigate = useNavigate();
   const api = useMemo(() => createFixtureApi(), []);
   const commandCenter = useMemo(() => readCommandCenter(CC_FIXTURES.busy), []);
@@ -205,7 +208,14 @@ export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: 
       content = <PortfolioThreeSixtyPreview portfolioId={params.portfolioId ?? "PF-CRYPTO"} />;
       break;
     case "EXECUTION_ACCOUNT_BROKER_360_SCREEN":
-      content = <AccountBroker360Preview accountId={params.accountId ?? "acct-live-grid-v21"} />;
+      // Feature canonical route (/deployments/accounts) = the bindings list,
+      // entry screen of WF 1g; ?binding= opens a binding; /:accountId opens
+      // the account's 360.
+      content = params.accountId
+        ? <AccountBroker360Preview accountId={params.accountId} />
+        : search.get("binding")
+          ? <BindingDetail bindingId={search.get("binding")!} />
+          : <AccountsBindings />;
       break;
     case "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN":
       content = <AdminCatalogueContainer api={api} />;

@@ -7,7 +7,7 @@
  * from the browser, and that a population it could not complete is never
  * presented as a total.
  */
-import { cleanup, render, screen, within, fireEvent } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AccountBroker360, HeadroomBanner } from "./screens/AccountBroker360";
@@ -190,13 +190,11 @@ describe("Account 360° — the secret, the guard band and the buttons", () => {
 
   it("keeps the stale sync row visible rather than showing only successes", () => {
     render(<AccountBroker360 {...accountHandlers()} {...account360()} />);
-    fireEvent.click(screen.getByRole("tab", { name: /Sync history/ }));
     expect(screen.getByText("STALE 6.2s")).toBeTruthy();
   });
 
   it("says apply-from-broker goes through plan, apply and verify", () => {
     render(<AccountBroker360 {...accountHandlers()} {...account360()} />);
-    fireEvent.click(screen.getByRole("tab", { name: /Findings/ }));
     expect(screen.getByText(/plan → apply → verify/)).toBeTruthy();
   });
 
@@ -266,7 +264,6 @@ describe("Account 360° — at the volume the backend actually returns", () => {
     }));
     const { container } = render(<AccountBroker360 {...accountHandlers()} {...account360({ syncHistory: history })} />);
     expect(container.querySelectorAll(".exec-360-sync tbody tr").length).toBeLessThanOrEqual(10);
-    fireEvent.click(screen.getByRole("tab", { name: /Sync history/ }));
     expect(screen.getByText("STALE 6.2s")).toBeTruthy();
     expect(screen.getByText(/showing 10 of 17,280 syncs/)).toBeTruthy();
   });
@@ -281,7 +278,6 @@ describe("Account 360° — at the volume the backend actually returns", () => {
     render(<AccountBroker360 {...accountHandlers()} {...account360({ syncHistory: history })} />);
     // Fifty failures and room for ten is a finding about the binding, not a
     // rendering detail, and a plain "showing 10 of 500" would hide it.
-    fireEvent.click(screen.getByRole("tab", { name: /Sync history/ }));
     expect(screen.getByText(/more non-routine rows exist/)).toBeTruthy();
   });
 
@@ -298,7 +294,6 @@ describe("Account 360° — an unbounded history is a window, and says so", () =
     // five-second policy this screen itself prints. Ten rows with no caveat
     // read as the history.
     render(<AccountBroker360 {...accountHandlers()} {...account360()} />);
-    fireEvent.click(screen.getByRole("tab", { name: /Sync history/ }));
     expect(screen.getByText(/window over an unbounded history/)).toBeTruthy();
   });
 
@@ -310,10 +305,8 @@ describe("Account 360° — an unbounded history is a window, and says so", () =
       digest: null,
     }));
     render(<AccountBroker360 {...accountHandlers()} {...account360({ syncHistory: history, syncTotal: 1_204_991 })} />);
-    fireEvent.click(screen.getByRole("tab", { name: /Sync history/ }));
     expect(screen.getByText(/showing 10 of 1,204,991 syncs/)).toBeTruthy();
     // And with a real total the caveat is unnecessary.
-    fireEvent.click(screen.getByRole("tab", { name: /Sync history/ }));
     expect(screen.queryByText(/window over an unbounded history/)).toBeNull();
   });
 });
