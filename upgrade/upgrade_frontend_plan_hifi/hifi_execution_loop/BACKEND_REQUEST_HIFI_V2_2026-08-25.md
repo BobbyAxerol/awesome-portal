@@ -960,3 +960,90 @@ Ký hiệu: **DB** = bảng trong trading DB (88 bảng/2 view); **TS route** = 
 6. binding-detail: Σ `segments.allocated == virtual_sum`; stream sorted desc; audit chỉ có action credential/structure.
 7. account 360 v1.1: additive — client v1 vẫn đọc được.
 
+---
+
+# Phụ lục L — BR-EX-56/57 · Live Overview & Live Full Operations: đặc tả đầy đủ
+
+## L.1 Domain (DB guide + hi-fi 1f/1e)
+
+- **Live deployment** = `strategy_deployments` với `stage ∈ {LIVE_FULL, LIVE_CANARY}` và `mode = live`; canary mang `canary{day,total}` từ approval điều kiện (`AP-311`, `AP-259`) và envelope (max order 500, scale-up rule).
+- **Session pnl** = pnl trong `execution_sessions` hiện tại, re-price theo mark (`positions_v2` × tick) net fee (`fills.fee`). **Exposure** = Σ|notional| `positions_v2` per deployment.
+- **Health**: `FAIL_CLOSED` khi `reconciliation_findings` MISMATCH mở (PORTAL incident) hoặc broker sync STALE quá policy; `DEGRADED` khi realtime gap; `READY` còn lại. Rule Trading System: MISMATCH → new orders blocked, protective open; **canary scale-up blocked while any sibling account is fail-closed** (server rule, hiển thị trong note).
+- **Protective ladder** = halt → reduce → emergency close (command policy v1 đã có), rollback plan `rb_31` (`operator_operations`) tested_at.
+- **Lifecycle** = R1/R2 approvals (`alpha_ledger`/PORTAL approvals) → PAPER exit (PX) → SANDBOX exit (SX) → CANARY exit (CX) → LIVE since; mỗi bước link decision id.
+- **Tape** = `fills` (FILL), quote refresh (market data heartbeat), incidents (MISMATCH) — ≤20, SSE `live.tape`.
+
+## L.2 `live-overview.v1` — response mẫu (khớp `live.smoke.ts`)
+
+```json
+{
+  "envelope": { "authority": "EXECUTION", "as_of": "2026-08-26T07:54:23Z", "freshness": "OK", "broker_as_of": "2026-08-26T07:54:22Z" },
+  "summary": { "deployments": 4, "full": 2, "canary": 2, "venues_today": 1 },
+  "kpis": {
+    "live_capital": { "value": "46000", "full": "41000", "canary_envelope": "5000", "ccy": "USDT" },
+    "session_pnl": { "value": "494.15", "ccy": "USDT", "live": true, "fees_included": true },
+    "gross_exposure": { "value": "27819", "pct_of_capital": "0.605" },
+    "fail_closed": { "n": 1, "of": 4, "deployment_id": "dep_live", "reason": "MISMATCH", "incident_id": "inc_44" },
+    "protective_ladder": { "state": "ARMED", "steps": ["halt", "reduce", "close"] },
+    "broker_sync": { "kind": "ws", "age_seconds": 1.4, "binding_id": "binance_main_01", "policy_seconds": 5 }
+  },
+  "counts": { "all": 4, "full": 2, "canary": 2, "issues": 1 },
+  "venues": [ { "venue": "BINANCE", "live": true }, { "venue": "OKX", "live": false }, { "venue": "DERIBIT", "live": false }, { "venue": "VNM", "live": false } ],
+  "rows": [
+    { "deployment_id": "dep_live", "alpha": "Grid v2.1", "alpha_id": "av_2041", "stage": "LIVE_FULL", "since": "2026-08-01", "gate_id": "AP-330",
+      "venue": "BINANCE", "account_id": "acct-live-grid-v21", "portfolio": "PF-CRYPTO", "alloc": "18400", "exposure": "12220",
+      "session_pnl": { "value": "326.74", "live": true }, "dd": "-0.012", "pulse_60m": ["0","0.4","-0.2","1.1"],
+      "health": { "state": "FAIL_CLOSED", "incident_id": "inc_44" },
+      "note": "MISMATCH Δ 0.0200 BTC · new orders blocked, protective open · inc_44 open 16m · recon op_1253 AWAITING_APPLY",
+      "note_links": [ { "label": "inc_44", "href": "/execution/operations/incidents/inc_44" }, { "label": "op_1253 AWAITING_APPLY", "href": "/execution/operations?operation=op_1253" } ] },
+    { "deployment_id": "dep_63", "alpha": "MM v1.1", "stage": "LIVE_CANARY", "canary": { "day": 2, "total": 14 }, "gate_id": "AP-259",
+      "venue": "BINANCE", "account_id": "acct-canary-mm-v11", "portfolio": "PF-CRYPTO", "alloc": "7700", "exposure": "4940", "session_pnl": { "value": "20.05", "live": true }, "dd": "-0.003",
+      "health": { "state": "READY" }, "note": "condition: capacity cap 10,000 until 2026-09-02 (expires in 7d, owner Lan)", "note_links": [ { "label": "waivers & conditions", "href": "/governance/waivers" } ] }
+  ],
+  "tape": [ { "t": "2026-08-26T07:54:14Z", "deployment_id": "dep_live_c32", "event": "FILL", "text": "FILL BTCUSDT 0.0080 @ 61,452.74", "tone": "mute" }, { "t": "2026-08-26T10:41:52Z", "deployment_id": "dep_live", "event": "MISMATCH", "text": "MISMATCH — fail-closed", "tone": "bad" } ]
+}
+```
+
+## L.3 `live-full.v1.1` — bổ sung (rút gọn)
+
+```json
+{
+  "masthead": { "alpha": "Grid v2.1", "portfolio": "PF-CRYPTO", "venue": "BINANCE", "active": true, "readiness": "READY", "stage": "LIVE_FULL", "promoted_from": "LIVE_CANARY", "promoted_at": "2026-08-01" },
+  "meta": { "artifact_digest": "sha256:41bb7d…c4", "canary_exit_id": "CX-08", "live_approval_id": "AP-330", "portfolio_id": "PF-CRYPTO", "deployment_id": "dep_88", "account_id": "acct-live-grid-v21", "venue": "BINANCE" },
+  "lifecycle": [ { "stage": "R1", "decision_id": "AP-118" }, { "stage": "R2", "decision_id": "AP-152" }, { "stage": "PAPER", "decision_id": "PX-22" }, { "stage": "SANDBOX", "decision_id": "SX-14" }, { "stage": "CANARY", "decision_id": "CX-08" } ], "current": { "stage": "LIVE", "since": "2026-08-01" },
+  "kpis": { "capital": { "value": "60000.00", "ccy": "USDT" }, "gross_exposure": "41080", "net_exposure": "12140", "risk_envelope_used_pct": "0.58", "daily_loss": { "value": "-0.004", "limit": "-0.02" }, "broker_freshness_seconds": 1.1 },
+  "broker_truth": { "sync": { "state": "OK", "age_seconds": 1.1, "digest": "4f2a…" }, "last_recon": { "verdict": "clean", "at": "2026-08-26T09:58:00Z", "id": "rec_902" }, "positions_match": { "n": 4, "of": 4 }, "open_orders_match": { "n": 2, "of": 2 }, "balance_delta": { "value": "0.00", "ccy": "USDT" }, "mismatch": null },
+  "open_exposure": { "positions": [ { "symbol": "BTCUSDT", "side": "LONG", "qty": "0.4000", "upnl": "2140.20", "leverage": "1.3" } ], "open_orders": { "count": 2, "type": "LIMIT", "pending_exposure": "3240.00" }, "reservations": 3 },
+  "incidents": { "active": [], "ladder": { "steps": ["halt", "reduce", "emergency_close"], "rollback_plan": { "id": "rb_31", "tested_at": "2026-07-28" } }, "last_operation": { "id": "op_1240", "kind": "allocation scale", "verdict": "VERIFIED", "at": "2026-08-01" } },
+  "contribution_30d": { "bars": [ { "day": "2026-07-28", "value": "32.10" } ], "total": "3102.44", "cost_drag": "-212.08", "formula": "contrib.v1" }
+}
+```
+
+## L.4 Quy tắc
+
+| Mục | Quy tắc |
+|---|---|
+| `health.state` | FAIL_CLOSED > DEGRADED > READY; FAIL_CLOSED ⇔ có incident MISMATCH mở hoặc sync STALE > policy; **không bao giờ** READY khi sync vắng |
+| `fail_closed.n` | đếm rows FAIL_CLOSED; `of` = tổng live rows |
+| `session_pnl` | per tick khi `live:true`; đóng phiên → `live:false`, giá trị cuối |
+| `pulse_60m` | 24 điểm, 2.5 phút/điểm, pnl delta chuẩn hoá; thiếu → null (frontend vẽ đường phẳng mờ) |
+| canary note | server soạn từ envelope + sibling state: "scale-up blocked while any sibling account is fail-closed" chỉ khi thực sự có sibling FAIL_CLOSED |
+| condition note | từ approval conditions: `expires_in` tính server; owner |
+| `lifecycle[].decision_id` | phải tồn tại (approvals/exit reviews); thiếu → `null` + frontend in stage không link |
+| `broker_truth.mismatch` | object khi MISMATCH: `{symbol, local, broker, delta, detected_at, finding_id}` → frontend đổi panel sang banner đỏ (đã có `.exec-mismatch-slot`) |
+| `open_exposure.positions[].upnl` | string signed; leverage string |
+| `contribution_30d.bars` | 30 ngày, net fees; `cost_drag` âm |
+| Actions | halt/reduce/emergency_close = command policy v1; `step_up_required:true`; PARTIAL không render xanh |
+
+## L.5 Lỗi / trạng thái
+`503 LIVE_PROJECTION_UNAVAILABLE` · tape SSE vắng → tape tĩnh từ GET · `mismatch` + `sync.state` mâu thuẫn → server trả `completeness:"PARTIAL"` + warning.
+
+## L.6 Test bắt buộc
+1. health rule: fixture có 1 MISMATCH → đúng 1 FAIL_CLOSED, `fail_closed.n == 1`.
+2. `counts` khớp rows theo filter; `issues` == FAIL_CLOSED + DEGRADED.
+3. `live_capital.value == full + canary_envelope`.
+4. lifecycle decision ids tồn tại; `current.since == promoted_at`.
+5. `positions_match.n ≤ of`; mismatch object ⇔ readiness BLOCKED.
+6. tape sorted desc, ≤20; SSE event schema = GET item.
+7. v1.1 additive — client v1 đọc được.
+
