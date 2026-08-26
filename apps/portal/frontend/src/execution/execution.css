@@ -5582,7 +5582,8 @@
 .exec-a3 .exec-rail-blockers li[data-severity="blocking"] .exec-rail-severity { color: var(--bad); border-color: var(--bad); }
 .exec-a3 .exec-rail-blockers li[data-severity="watch"] .exec-rail-severity { color: var(--warn); border-color: var(--warn); }
 .exec-a3 .exec-rail-blockers li > .exec-role-body { grid-area: code; font: 400 11px/16px var(--font-mono); color: var(--ink); overflow-wrap: anywhere; }
-.exec-a3 .exec-rail-blockers li > .exec-role-meta { grid-area: src; font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-a3 .exec-rail-blockers li > .exec-role-meta:not(.exec-rail-severity) { grid-area: src; font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-a3 .exec-rail-blockers li > .exec-rail-severity { grid-area: sev; align-self: start; white-space: nowrap; }
 .exec-a3 .exec-rail-none { color: var(--ink-mute); }
 .exec-a3 .exec-rail-action .exec-role-control, .exec-a3 .exec-rail-action .exec-btn-ghost { font: 400 11px/16px var(--font-mono); border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-soft); padding: 5px 12px; }
 .exec-a3 .exec-rail-action .exec-btn-apply { background: var(--accent); color: var(--paper); border-color: var(--accent); }
