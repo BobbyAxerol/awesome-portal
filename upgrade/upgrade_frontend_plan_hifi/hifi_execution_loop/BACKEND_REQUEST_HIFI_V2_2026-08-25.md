@@ -380,6 +380,22 @@ Additive: `masthead{env, sync{state,age_seconds}, headroom_state, facts}`, `inte
 | `[].href` | string | yes | | route canonical |
 | `[].env` | enum | yes | | LIVE/MAINNET tô đỏ trên chip crumb |
 
+## A.56 · `live-overview.v1` — Live Overview (entry WF 1f/1e)
+
+| field | type | null? | authority | ví dụ / rule |
+|---|---|---|---|---|
+| `kpis.live_capital` | `{value, full, canary_envelope, ccy}` | no | PORTAL_PROJECTION (allocations) | `46,000 = 41,000 + 5,000` |
+| `kpis.session_pnl` | `{value:string, live:true}` | yes | DERIVED (marks per tick) | fees included |
+| `kpis.fail_closed` | `{n, of, deployment_id, incident_id}` | no | PORTAL_CONTROL | pulse khi n>0 |
+| `kpis.protective_ladder` | `{state: ARMED\|DEGRADED, steps: [halt, reduce, close]}` | no | PORTAL_CONTROL | "always open" |
+| `rows[].health.state` | enum `READY\|FAIL_CLOSED\|DEGRADED` | no | PORTAL_CONTROL + recon | FAIL_CLOSED = MISMATCH hoặc broker STALE quá policy |
+| `rows[].pulse_60m` | `string[24]` | yes | DERIVED | 60 phút, 2.5 phút/điểm |
+| `tape[]` | `[{t, deployment_id, event, text, tone}]` | no | `fills` + `broker_account_sync_snapshots` + incidents | SSE `live.tape` |
+
+## A.57 · `live-full.v1.1` — Live Full Operations (WF 1f)
+
+Additive: `masthead`, `meta`, `lifecycle[] + current`, `kpis`, `broker_truth` (kể cả `mismatch` object), `open_exposure`, `incidents{ladder, last_operation}`, `contribution_30d` — chi tiết ở BR-EX-57. Mọi số là chuỗi decimal; `lifecycle[].decision_id` phải tồn tại trong approvals/exit reviews (test).
+
 ---
 
 # Phụ lục B — Definition of Ready (§5.1 backend plan) điền sẵn cho từng gói
@@ -402,6 +418,8 @@ Codex chỉ cần xác nhận/sửa từng ô; ô nào tôi không có quyền q
 | **53** binding detail | Codex · `dev` | READ (+ rotate action via Drawer) | new `binding-detail.v1` | stream ≤50; audit ≤200 keyset | viewer read; rotate = ADMIN step-up | route absent → panel unavailable | `venue_credentials`, `broker_account_sync_snapshots`, `audit_log` | fixture `execution-binding-detail.binance_main_01.valid.json`; secret-leak test (no key material in payload) |
 | **54** account 360 v1.1 | Codex · `dev` | READ (+ existing simulate actions) | `account-broker-360.v1` → v1.1 additive | 1 account/screen | viewer read | missing additive fields → v1 rendering | existing contract | fixture update; frontend `account360.test` |
 | **55** entity names | Codex · `dev` | READ; PORTAL_PROJECTION over registry/strategies/deployments/accounts/portfolios + Portal-owned incidents/approvals | new `entity-names.v1` (batch) | ≤50 ids/call; cached ETag | any viewer | unknown id → null label (id shown raw) | none | fixture `execution-entity-names.valid.json`; frontend crumb tests | 
+| **56** live overview | Codex · `dev` | READ; PORTAL_PROJECTION + PORTAL_CONTROL + BROKER sync | new `live-overview.v1` | ≤50 live deployments; tape ≤20 + SSE; per tick | viewer read | route absent → panel unavailable | BR-EX-43 tick; incidents; approvals | fixture `execution-live-overview.valid.json`; health-state rule tests; frontend `liveOverview.test` |
+| **57** live full v1.1 | Codex · `dev` | READ (+ existing protective actions) | `live-full.v1` → v1.1 additive | 1 deployment/screen; positions ≤200 | viewer read; actions ADMIN step-up | missing additive → v1 rendering | existing contract; exit reviews/approvals ids | fixture update; lifecycle id consistency; frontend `liveFull.test` |
 | **41** stage telemetry | Codex · `dev` (source-dark schema first, N10) | READ; PORTAL_PROJECTION/TRADING_SYSTEM/BROKER/DERIVED per 41.x | new `stage-equity.v1`, `envelope-consumption.v1`, `execution-quality.v1`, `positions.v1`, `contribution.v1`; `sandbox-certification.v1.1` | ≤5,000 pts/series; caps ≤8; buckets ≤12; positions ≤500 | viewer read | per-panel honest states (today) | N06 Paper qualification for source-backed values | per-kind fixtures; exact-decimal pure-engine tests |
 
 # Phụ lục C — OpenAPI path stubs (đề xuất; codex quyết tên cuối)
@@ -422,6 +440,8 @@ paths:
   /api/v1/execution/bindings/{id}:             # GET → binding-detail.v1 (BR-EX-53); POST …/rotate-credential later
   /api/v1/execution/accounts/{id}:             # v1.1 additive (BR-EX-54)
   /api/v1/execution/entities:                  # GET ?ids=… → entity-names.v1 (BR-EX-55, cross-screen)
+  /api/v1/execution/live:                      # GET ?filter&venue → live-overview.v1 (BR-EX-56); SSE live.tape
+  /api/v1/execution/deployments/{id}/live:     # v1.1 additive (BR-EX-57)
   /api/v1/execution/fleet:                     # GET ?stage&venue&owner[&cursor] → fleet-list.v1 (BR-EX-49)
   /api/v1/execution/deployments/{id}/replay:   # GET ?symbol&interval=1h&window=120 → replay.v1 (BR-EX-50)
   /api/v1/execution/deployments/{id}/stage-equity:            # 41.1
@@ -455,14 +475,15 @@ paths:
 8. **50**: xoá `alphaReplay.smoke.ts`, re-record `el-v2-08-alpha-replay`.
 9. **51**: xoá `portfolio360.smoke.ts`, re-record `el-v2-08-portfolio-*`.
 10. **52/53**: xoá `accounts.smoke.ts`, re-record `el-v2-08-accounts-*`; **54**: bỏ smoke facts trong Account 360.
-11. **34/40**: xoá `alpha360.smoke.ts`.
+11. **56/57**: xoá `live.smoke.ts`, re-record `el-v2-06-live` + `el-v2-08-live-overview`.
+12. **34/40**: xoá `alpha360.smoke.ts`.
 
 Mỗi bước: handoff codex kèm **Required frontend tests**; tôi regenerate `portal-api.d.ts`, nạp fixture canonical
 trong test (không chép tay), ghi `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` vào ledger §3, tick grammar §8.
 
 # Phụ lục F — cách codex nhận request này
 
-- **Intake chính thức:** 15 hàng BR-EX-41…55 trong §7.2 của `portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`
+- **Intake chính thức:** 17 hàng BR-EX-41…57 trong §7.2 của `portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`
   (đang là sửa unstaged trên `feat/execution-n04-lease-aware-consumer`). Bản patch để apply lại nếu cần:
   `BACKEND_PLAN_7_2_ROWS_2026-08-25.md` (cùng thư mục, 8 hàng nguyên văn).
 - **Chi tiết field/type/enum/ví dụ:** phụ lục A; DoR: phụ lục B; path: C; error: D; thứ tự: E.

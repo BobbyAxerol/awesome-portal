@@ -87,6 +87,11 @@ export function TopBar({
           ⚑ Alerts · {chrome.alerts.critical} critical
         </a>
       ) : null}
+      {chrome.price ? (
+        <span className="portal-price-chip mono" aria-label={`${chrome.price.symbol} ${chrome.price.value}`}>
+          {chrome.price.symbol} <b data-tone={chrome.price.up ? "good" : "bad"}>{chrome.price.value}</b> <span data-tone={chrome.price.up ? "good" : "bad"}>{chrome.price.up ? "▲" : "▼"}</span>
+        </span>
+      ) : null}
       <button type="button" className="portal-search-btn" onClick={onOpenPalette}>
         <Search size={13} aria-hidden="true" />
         <span>Search</span>

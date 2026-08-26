@@ -1194,3 +1194,19 @@ component nào tiêu thụ.
 - **Invariant:** label chỉ là hiển thị; id vẫn là khoá trong URL và mọi liên kết; không có label → id.
 - **Fixture:** `execution-entity-names.valid.json`. Không có smoke riêng; map cứng `av_2041` trong `ExecutionPreviewRoute.tsx` xoá khi 55 giao.
 
+### BR-EX-56 — Live Overview (hi-fi "Live Overview (entry)", WF 1f/1e) (2026-08-26) — **spec cho codex**
+
+- **Cần:** `GET /api/v1/execution/live?filter=all|full|canary|issues&venue` → `live-overview.v1`: `summary{deployments, full, canary, venues_today}`, `kpis{live_capital{value, full, canary_envelope, ccy}, session_pnl{value, live:true}, gross_exposure{value, pct_of_capital}, fail_closed{n, of, deployment_id, incident_id}, protective_ladder{state: ARMED|DEGRADED, steps[]}, broker_sync{kind, age_seconds, binding_id, policy_seconds}}`, `counts{all,full,canary,issues}`, `venues[{venue, live:bool}]`,
+  `rows[{deployment_id, alpha, stage: LIVE_FULL|LIVE_CANARY, canary{day,total}?, since, gate_id, venue, account_id, portfolio, alloc, exposure, session_pnl{value, live}, dd, pulse_60m[24], health{state: READY|FAIL_CLOSED|DEGRADED, incident_id?}, note, note_links[]}]`, `tape[{t, deployment_id, event: FILL|QUOTE_REFRESH|MISMATCH, text, tone}]` (≤20, SSE `live.tape`).
+- **Nguồn:** `strategy_deployments` (stage LIVE_*) ⋈ `accounts`/`portfolio_allocations` ⋈ `positions_v2` (exposure) ⋈ `execution_sessions` (session pnl) ⋈ `fills` (tape) ⋈ `broker_account_sync_snapshots` ⋈ `reconciliation_findings`/PORTAL incidents (fail-closed) ⋈ approvals/conditions (notes).
+- **Motion:** BTCUSDT tick (BR-EX-43) → session pnl/exposure/pulse; ws age; incident age.
+- **Ảnh hưởng:** `/deployments/live` chạy `live.smoke.ts` (4 hàng). **Fixture:** `execution-live-overview.valid.json`. **Xoá smoke:** khi 56 giao.
+
+### BR-EX-57 — Live Full Operations v1.1 (hi-fi WF 1f) (2026-08-26) — **spec cho codex**
+
+- **Cần thêm (additive) trong `live-full.v1`:** `masthead{alpha, portfolio, venue, active:bool, readiness: READY|BLOCKED, stage, promoted_from, promoted_at}`, `meta{artifact_digest, canary_exit_id, live_approval_id, portfolio_id, deployment_id, account_id, venue}`, `lifecycle[{stage: R1|R2|PAPER|SANDBOX|CANARY, decision_id, href}]` + `current{stage, since}`,
+  `kpis{capital{value,ccy}, gross_exposure, net_exposure, risk_envelope_used_pct, daily_loss{value, limit}, broker_freshness_seconds}`, `broker_truth{sync{state, age_seconds, digest}, last_recon{verdict, at, id}, positions_match{n, of}, open_orders_match{n, of}, balance_delta{value,ccy}, mismatch?{symbol, local, broker, delta, detected_at}}`,
+  `open_exposure{positions[{symbol, side, qty, upnl, leverage}], open_orders{count, type, pending_exposure}, reservations}`, `incidents{active[], ladder{steps[], rollback_plan{id, tested_at}}, last_operation{id, kind, verdict, at}}`, `contribution_30d{bars[{day, value}], total, cost_drag, formula:"contrib.v1"}`.
+- **Actions** (đã có policy trong v1: halt/reduce/emergency close) — giữ, thêm `step_up_required:true`.
+- **Ảnh hưởng:** `LiveFullOperationsScreen` restyle theo 1f; phần thiếu lấy từ `live.smoke.ts.full`. **Fixture:** cập nhật `execution-live-full.*.valid.json`.
+

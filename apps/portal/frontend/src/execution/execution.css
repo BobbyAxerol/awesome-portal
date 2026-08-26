@@ -5498,3 +5498,43 @@
 .exec-ac .exec-360-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 14px 12px; }
 .exec-ac .exec-360-actions .exec-btn-ghost { font: 400 11px/16px var(--font-mono); color: var(--ink-soft); border: 1px solid var(--line); background: var(--surface-2); padding: 5px 12px; cursor: pointer; }
 @media (max-width: 1023px) { .exec-ac .exec-360-grid3 { grid-template-columns: 1fr; } }
+/* ── Live Overview (.exec-lv, shares .exec-af) — hi-fi "Live Overview (entry)" ── */
+.exec-lv-kpis { border-top: 3px solid var(--bad); }
+.exec-lv-table { min-width: 1180px; }
+.exec-lv-dashed { border-style: dashed; color: var(--ink-mute); cursor: default; }
+.exec-lv-row[data-hot="true"] td, .exec-lv-note[data-hot="true"] td { background: var(--bad-bg); }
+.exec-lv-edge { border-left: 3px solid transparent; }
+.exec-lv-row[data-hot="true"] .exec-lv-edge { border-left-color: var(--bad); }
+.exec-lv-note td { padding-left: 23px !important; }
+.exec-lv-spark { width: 90px; height: 20px; display: block; }
+.exec-lv-health { font: 600 11px/16px var(--font-mono); padding: 1px 8px; }
+.exec-lv-health[data-tone="bad"] { background: var(--bad-bg); color: var(--bad); } .exec-lv-health[data-tone="good"] { background: var(--good-bg); color: var(--good); }
+.exec-lv-tape { display: flex; flex-wrap: wrap; gap: 4px 24px; border: 1px solid var(--line); background: var(--paper-raised); margin-top: 12px; padding: 9px 14px; font: 400 11px/16px var(--font-mono); color: var(--ink-soft); }
+.exec-lv-tape [data-tone="bad"] { color: var(--bad); }
+.exec-lv-tapelabel { font: 400 10px/16px var(--font-mono); text-transform: uppercase; color: var(--ink-faint); align-self: center; }
+@media (prefers-reduced-motion: no-preference) { .exec-lv-health[data-pulse="true"] { animation: om-pulse 1.6s infinite; } }
+/* Live Full Operations — hi-fi WF 1f (.exec-lf, shares .exec-ac masthead + .exec-a3/.exec-pf2 panels) */
+.exec-lf-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; padding: 7px 12px; margin-bottom: 14px; border: 1px solid var(--line-soft); background: var(--paper-sunken); font: 400 11px/16px var(--font-mono); color: var(--ink-soft); }
+.exec-lf-meta .exec-af-mute { color: var(--ink-mute); }
+.exec-lf-life { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 5px 12px; margin-bottom: 14px; border: 1px solid var(--line-soft); background: var(--paper-sunken); font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-lf-life [data-tone="good"], .exec-lf-life [data-tone="good"] a { color: var(--good); }
+.exec-lf-life .exec-lf-arrow { color: var(--line-strong); }
+.exec-lf-now { color: var(--ink); font-weight: 600; border: 1px solid var(--accent); padding: 0 6px; }
+.exec-lf-life .exec-af-spacer { flex: 1; }
+.exec-lf-kv { padding: 12px 14px; display: grid; grid-template-columns: minmax(120px, 40%) minmax(0, 1fr); gap: 6px 12px; font: 400 12px/16px var(--font-mono); color: var(--ink); overflow-wrap: anywhere; flex: 1; }
+.exec-lf-kv .exec-bd-k { font: 400 10px/16px var(--font-mono); text-transform: uppercase; color: var(--ink-faint); }
+.exec-lf-kv [data-tone="good"] { color: var(--good); } .exec-lf-kv [data-tone="bad"] { color: var(--bad); }
+.exec-lf-actions { display: flex; gap: 8px; padding: 0 14px 12px; flex-wrap: wrap; }
+.exec-lf-halt { font: 600 11px/16px var(--font-mono); color: var(--paper); background: var(--bad); border: 0; padding: 5px 12px; cursor: pointer; }
+.exec-lf-danger { font: 400 11px/16px var(--font-mono); color: var(--bad); background: transparent; border: 1px solid var(--bad); padding: 5px 12px; cursor: pointer; }
+.exec-lf-halt:disabled, .exec-lf-danger:disabled { opacity: 0.6; cursor: not-allowed; }
+.exec-lf-bars { padding: 14px 14px 6px; }
+.exec-lf-barsvg { width: 100%; height: auto; display: block; }
+.exec-lf-facts { padding: 6px 14px 10px; font: 400 11px/16px var(--font-mono); color: var(--ink-soft); display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.exec-lf-facts b[data-tone="good"] { color: var(--good); }
+.exec-lf .exec-pf2-table td[data-tone="good"] { color: var(--good); } .exec-lf .exec-pf2-table td[data-tone="bad"] { color: var(--bad); }
+
+.exec-lf .exec-guard-band { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.exec-lf .exec-strip { margin-bottom: 14px; }
+.exec-lf .exec-strip-cell { background: var(--paper-raised); border: 1px solid var(--line); }
+.exec-lf-telemetry { margin-bottom: 14px; } .exec-lf-telemetry > summary { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); cursor: pointer; margin-bottom: 8px; }

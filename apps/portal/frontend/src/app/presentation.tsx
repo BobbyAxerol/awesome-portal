@@ -98,6 +98,8 @@ interface PresentationContextValue {
 export interface PresentationChrome {
   alerts?: { critical: number; href: string; onToggle?: () => void } | null;
   navBadge?: { route: string; count: number; tone: "warn" | "bad" } | null;
+  /** Live mark chip in the topbar (hi-fi Live overview): symbol · price · ▲/▼. */
+  price?: { symbol: string; value: string; up: boolean } | null;
 }
 
 const PresentationContext = createContext<PresentationContextValue | null>(null);

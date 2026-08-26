@@ -2328,3 +2328,10 @@
 .portal-alerts-chip { display: none; }
 .portal-navbadge { display: none; }
 :root[data-theme="execution-carbon"] .portal-alerts-chip, :root[data-theme="execution-carbon"] .portal-navbadge { display: inline-block; }
+
+/* Live mark chip (presentation chrome `price`) — Carbon only, hi-fi Live overview. */
+:root[data-theme="execution-carbon"] .portal-price-chip { display: inline-flex; align-items: center; gap: 6px; font: 400 11px/16px var(--font-mono); color: var(--ink-soft); border: 1px solid var(--line); background: var(--surface-2); padding: 3px 10px; font-variant-numeric: tabular-nums; }
+:root[data-theme="execution-carbon"] .portal-price-chip [data-tone="good"] { color: var(--good); }
+:root[data-theme="execution-carbon"] .portal-price-chip [data-tone="bad"] { color: var(--bad); }
+.portal-price-chip { display: none; }
+:root[data-theme="execution-carbon"] .portal-price-chip { display: inline-flex; }

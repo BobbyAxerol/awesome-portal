@@ -11,6 +11,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AlphaFleet } from "./screens/AlphaFleet";
 import { AccountsBindings } from "./screens/AccountsBindings";
 import { BindingDetail } from "./screens/BindingDetail";
+import { LiveOverview } from "./screens/LiveOverview";
 import { reviewRouteFor } from "./screens/ApprovalInbox";
 
 import { usePresentation } from "../app/presentation";
@@ -139,7 +140,7 @@ export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: 
       case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN": return "VnMomo v0.9";
       case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN": return "MM v1.1";
       case "EXECUTION_CANARY_CONTROL_ROOM_SCREEN": return "Grid v2.1";
-      case "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN": return "Grid v2.1";
+      case "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN": return params.deploymentId ? "Grid v2.1" : null;
       // List routes (no id) carry no entity; a 360 names the entity it resolved.
       case "EXECUTION_ALPHA_360_SCREEN": return params.alphaId ? (params.alphaId === "av_2041" ? "Grid v2.1" : params.alphaId) : null;
       case "EXECUTION_PORTFOLIO_360_SCREEN": return params.portfolioId ?? "PF-CRYPTO";
@@ -150,7 +151,7 @@ export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: 
       case "EXECUTION_INCIDENT_DETAIL_SCREEN": return incidentId;
       default: return null;
     }
-  }, [screenId, approvalId, reviewId, incidentId, params.alphaId, params.accountId, params.portfolioId, search]);
+  }, [screenId, approvalId, reviewId, incidentId, params.alphaId, params.accountId, params.portfolioId, params.deploymentId, search]);
   useEffect(() => {
     setEntityLabel(entity);
     // A stale "Carry v3.2" over the Blotter would be the breadcrumb lying
@@ -195,7 +196,9 @@ export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: 
       content = <CanaryControlRoomContainer api={api} deploymentId={deploymentId} />;
       break;
     case "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN":
-      content = <LiveFullOperationsContainer api={api} deploymentId={deploymentId} />;
+      // Feature canonical route (/deployments/live) = the live overview, entry
+      // screen of WF 1f/1e; /:deploymentId opens that deployment's workbench.
+      content = params.deploymentId ? <LiveFullOperationsContainer api={api} deploymentId={deploymentId} /> : <LiveOverview />;
       break;
     case "EXECUTION_FULL_BLOTTER_SCREEN":
       content = <FullBlotterPreview initialFilter="ALL" />;
