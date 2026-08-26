@@ -522,6 +522,7 @@ dependencies = [
  "rustls-pemfile",
  "serde",
  "serde_json",
+ "source-qualification",
  "thiserror",
  "time",
  "tokio",

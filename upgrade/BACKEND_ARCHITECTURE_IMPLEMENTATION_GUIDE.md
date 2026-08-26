@@ -1271,6 +1271,24 @@ deep-dive → ADR → slice → evidence discipline documented above.
   scope/read identity, query/resource bounds and recovery. The owner has not
   published N02/N03, so runtime stays v1/dormant and N04 remains blocked. Detail:
   [`EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md`](./backend/EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md).
+- **EX-BE-03 / N04–N07 plus EX-BE-06 / N08 Portal continuation
+  (2026-08-26):** the lease-fenced shared consumer, retention/recovery policy,
+  real-source evidence authority and first deployment-scoped Paper Workbench
+  APIs are complete on the Portal side. N06 now distinguishes a full-safety
+  30-minute Paper-fast profile from separate extended 24-hour confidence.
+  Bobby approved the Paper-fast, N07 shadow and N08 SSE promotions; those owner
+  decisions must not be requested again. N08 adds an exact accepted manifest
+  bound to N06, the still-active N07 epoch/manifest, immutable images/contracts
+  and nine evidence hashes; it exposes an exact snapshot-before-stream path
+  through the reusable mTLS/H2/JWT BFF and closes EventSource on terminal or
+  generic errors. Status is `PORTAL_IMPLEMENTATION_COMPLETE /
+  OWNER_PROMOTION_APPROVED / RUNTIME_FAIL_CLOSED /
+  REAL_SOURCE_EVIDENCE_PENDING`: source-owner `d4.paper-read.v2` bytes remain
+  the one external dependency, all runtime/registry flags stay false and no
+  Trading System state was changed. Detail:
+  [`N06`](./backend/EX_BE_03_N06_REAL_SOURCE_QUALIFICATION_AND_SOAK.md),
+  [`N07`](./backend/EX_BE_03_N07_PROJECTION_QUERY_ANALYTICS_SHADOW.md),
+  [`N08`](./backend/EX_BE_06_N08_SSE_REAL_SOURCE_ACTIVATION.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

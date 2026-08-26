@@ -370,7 +370,10 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     expect(second.statusCode).toBe(200);
     expect(second.json().page.prev_cursor).toMatch(/^kc1\./);
     expect(second.json().page.rows[0].id).not.toBe(body.page.rows[0].id);
-  }, 30_000);
+  // This is a correctness/scale corpus, not a 30-second latency SLO. Clean or
+  // shared CI hosts can spend most of the original budget inserting 182k real
+  // PostgreSQL rows; endpoint latency is benchmarked separately with EXPLAIN.
+  }, 60_000);
 
   it("returns immutable R1 evidence and honest unavailable linked panels", async () => {
     const seeded = await seedApproval({ approvalId: "AP-DETAIL" });

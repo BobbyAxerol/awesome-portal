@@ -1,9 +1,11 @@
-# Opt-in SGP overlay for EX-BE-06. Do not include this file until the AWS edge
-# projection source and cross-cell acceptance evidence are approved.
+# Opt-in SGP overlay for N08. The AWS Edge independently refuses startup unless
+# its owner-approved activation manifest still matches the active N07 epoch.
 services:
   control-api:
     environment:
       FEATURE_EXECUTION_EDGE: "true"
+      FEATURE_EXECUTION_SHADOW_QUERY: "true"
+      FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW: "true"
       FEATURE_EXECUTION_REALTIME_SSE: "true"
       EXECUTION_EDGE_ORIGIN: ${EXECUTION_EDGE_ORIGIN:?set the private AWS edge HTTPS origin}
       EXECUTION_EDGE_ENVIRONMENT: ${EXECUTION_EDGE_ENVIRONMENT:?paper, sandbox, or live}

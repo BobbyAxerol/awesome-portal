@@ -1,7 +1,8 @@
 # EX-BE-03 / N06 Real-source Qualification and Soak
 
-Status: `PORTAL_QUALIFICATION_AUTHORITY_COMPLETE / SOURCE_DARK /
-N02_N03_OWNER_BYTES_PENDING / REAL_24H_SOAK_PENDING / PROFILE_UNCHANGED`
+Status: `PORTAL_QUALIFICATION_AUTHORITY_COMPLETE /
+OWNER_PAPER_FAST_PROFILE_APPROVED / SOURCE_DARK /
+N02_N03_OWNER_BYTES_PENDING / REAL_EVIDENCE_PENDING`
 
 Date: 2026-08-26
 
@@ -9,14 +10,24 @@ Date: 2026-08-26
 
 Portal now owns a strict Rust evidence authority and admission wrapper for N06.
 It can prove that an exact accepted N02/N03 source implementation completed the
-required BUILDING shadow, parity, fault, restore, rollback and 24-hour resource
-soak before an owner reviews it.
+required BUILDING shadow, parity, fault, restore and rollback corpus under one
+of two explicit observation profiles before an owner reviews it:
+
+- `PAPER_FAST_ACCEPTANCE`: at least 1,800 seconds, samples no more than 30
+  seconds apart;
+- `EXTENDED_24H`: at least 86,400 seconds, samples no more than 300 seconds
+  apart.
+
+The fast profile does not remove any safety category. It shortens only elapsed
+observation for Paper shadow promotion; the 24-hour profile remains extended
+confidence evidence for stable/release or later risk-bearing promotion.
 
 No accepted N02 or N03 owner pack exists in this workspace or the inspected
-Trading System worktrees. No N06 owner change window was supplied. Therefore no
-source request, service start, network change, AWS operation, source credential,
-ACTIVE epoch or registry-profile change was attempted. The real-source exit gate
-is deliberately still open.
+Trading System worktrees. Bobby approved the Paper-fast promotion path on
+2026-08-26, so that owner decision must not be requested again. The absent
+owner-published source bytes still prevent a real window; therefore no source
+request, service start, network change, AWS operation, source credential,
+ACTIVE epoch or registry-profile change was attempted.
 
 ## 2. Authority boundary
 
@@ -58,7 +69,10 @@ authority remain separate.
 - exact twelve-drill evidence set;
 - p50/p95/p99 metrics per route class;
 - integer-only CPU/RSS/queue/freshness/lag/PostgreSQL/IOPS/WAL/restore bounds;
-- minimum 86,400-second soak with at most 300-second sample interval;
+- explicit profile identity carried into both the evidence and sanitized
+  report;
+- minimum 1,800-second/30-second-sample Paper-fast coverage or separate
+  86,400-second/300-second-sample extended coverage;
 - zero source mutation, hidden full-delta scan, post-lease SELECT, gap,
   divergence, dropped page, OOM, restart and source error;
 - server-side request-rate and scanned/returned amplification checks;
@@ -90,9 +104,9 @@ then invokes the Rust authority. It opens no socket and changes no state.
 ### 3.3 Canonical template
 
 `crates/source-qualification/fixtures/n06-real-source-qualification.template.json`
-contains a full 24-hour synthetic envelope for schema and UI integration. Its
-origin is `SYNTHETIC_TEMPLATE`, owner acceptance is false and it cannot be used
-as operational evidence.
+contains a full synthetic envelope for schema and UI integration. Its origin
+is `SYNTHETIC_TEMPLATE`, owner acceptance is false and it cannot be used as
+operational evidence for either profile.
 
 ## 4. Qualification stages and required evidence
 
@@ -104,7 +118,8 @@ as operational evidence.
 | fault corpus | duplicate, tombstone, gap, expiry, restart, source/cross-cell loss | missing/failed drill |
 | resource envelope | per-route percentiles, amplification, request rate, Rust and PG ceilings | bounds exceeded |
 | recovery | new BUILDING resync, encrypted restore and dormant rollback | missing/failed drill |
-| steady state | at least 24 hours and complete bounded sampling | soak incomplete |
+| Paper-fast steady state | at least 30 minutes and complete sampling at ≤30 seconds | fast evidence incomplete |
+| extended steady state | at least 24 hours and complete sampling at ≤300 seconds | extended evidence incomplete |
 | owner review | review timestamp after soak, accepted evidence digest | owner review required |
 
 An accepted N06 report still returns:
@@ -133,7 +148,7 @@ cd /home/bobby/portal-backend-plan
   --verifier-bin "$PWD/services/portal-execution-edge-rs/target/release/n06_verify"
 ```
 
-### Candidate — blocked until owner delivery/window
+### Candidate — blocked until source-owner delivery/window
 
 ```bash
 ./scripts/execution-n06-qualification-verify.sh \
@@ -145,11 +160,13 @@ cd /home/bobby/portal-backend-plan
   --owner-window-evidence /absolute/sanitized/n06-owner-window.json
 ```
 
-### Acceptance — separate owner decision
+### Acceptance — owner decision already granted for Paper-fast scope
 
 Use the same command with `--mode acceptance` only after the source owner has
-reviewed the complete 24-hour evidence and recorded a review timestamp later
-than the window end. Acceptance does not edit registry/profile flags.
+reviewed the complete profile-specific evidence and recorded a review timestamp
+later than the window end. Bobby's Paper-fast promotion approval is already
+recorded; do not pause to request it again. Acceptance does not edit registry or
+profile flags.
 
 ## 6. Test evidence
 
@@ -158,7 +175,7 @@ Rust tests cover:
 - deterministic template digest and bounded report;
 - candidate/acceptance binding to exact N02/N03 bytes;
 - synthetic and unreviewed acceptance rejection;
-- 24-hour duration and sampling floor;
+- Paper-fast and extended duration/sampling floors;
 - baseline/delta/replay parity drift;
 - missing, duplicate and failed drill evidence;
 - source mutation, hidden full scan and resource overflow;

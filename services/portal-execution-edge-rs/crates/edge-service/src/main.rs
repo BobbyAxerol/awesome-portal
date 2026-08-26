@@ -55,6 +55,12 @@ use rustls::{
     RootCertStore, ServerConfig,
 };
 use serde::{Deserialize, Serialize};
+use source_qualification::{
+    realtime_activation::{
+        accept_realtime_activation, AcceptedRealtimeActivation, RealtimeActivationEvidence,
+    },
+    shadow_screen::PAPER_WORKBENCH_SCREEN_ID as N07_PAPER_WORKBENCH_SCREEN_ID,
+};
 use thiserror::Error;
 use tokio::{
     io::{AsyncReadExt as _, AsyncWriteExt as _},
@@ -109,6 +115,7 @@ struct AppState {
     realtime_poller_ready: Arc<RwLock<bool>>,
     projection_store: Option<PgProjectionStore>,
     realtime_hub: Option<RealtimeHub>,
+    realtime_activation: Option<AcceptedRealtimeActivation>,
     realtime_replay_limit: usize,
     realtime_heartbeat: Duration,
     realtime_epoch_jitter: Duration,
@@ -146,6 +153,7 @@ struct EdgeConfig {
     projection_ingestion_enabled: RuntimeGate,
     projection_database_url_file: Option<PathBuf>,
     realtime_sse_enabled: RuntimeGate,
+    realtime_activation_manifest_file: Option<PathBuf>,
     realtime_queue_capacity: usize,
     realtime_replay_limit: usize,
     realtime_poll_interval: Duration,
@@ -169,6 +177,7 @@ struct RuntimeFeatureConfig {
     projection_ingestion_enabled: RuntimeGate,
     projection_database_url_file: Option<PathBuf>,
     realtime_sse_enabled: RuntimeGate,
+    realtime_activation_manifest_file: Option<PathBuf>,
     analytics_query_enabled: RuntimeGate,
     analytics_source_profile: DeliveryProfile,
     shadow_query_enabled: RuntimeGate,
@@ -236,6 +245,7 @@ impl EdgeConfig {
             projection_ingestion_enabled: runtime.projection_ingestion_enabled,
             projection_database_url_file: runtime.projection_database_url_file,
             realtime_sse_enabled: runtime.realtime_sse_enabled,
+            realtime_activation_manifest_file: runtime.realtime_activation_manifest_file,
             realtime_queue_capacity: bounded_usize("EDGE_REALTIME_QUEUE_CAPACITY", 256, 8, 4096)?,
             realtime_replay_limit: bounded_usize("EDGE_REALTIME_REPLAY_LIMIT", 1024, 1, 2048)?,
             realtime_poll_interval: Duration::from_millis(bounded_usize(
@@ -278,6 +288,7 @@ fn runtime_features_from_environment() -> Result<RuntimeFeatureConfig, ConfigErr
         RuntimeGate::from(strict_boolean("EDGE_PROJECTION_INGESTION_ENABLED", false)?);
     let realtime_sse_enabled =
         RuntimeGate::from(strict_boolean("EDGE_REALTIME_SSE_ENABLED", false)?);
+    let realtime_activation_manifest_file = optional_path("EDGE_REALTIME_ACTIVATION_MANIFEST_FILE");
     let analytics_query_enabled =
         RuntimeGate::from(strict_boolean("EDGE_ANALYTICS_QUERY_ENABLED", false)?);
     let shadow_query_enabled =
@@ -289,6 +300,12 @@ fn runtime_features_from_environment() -> Result<RuntimeFeatureConfig, ConfigErr
     if paper_workbench_shadow_enabled.is_enabled() && !shadow_query_enabled.is_enabled() {
         return Err(ConfigError::Invalid("EDGE_PAPER_WORKBENCH_SHADOW_ENABLED"));
     }
+    validate_realtime_runtime_dependencies(
+        realtime_sse_enabled,
+        projection_ingestion_enabled,
+        shadow_query_enabled,
+        paper_workbench_shadow_enabled,
+    )?;
     if strict_boolean("EDGE_COMMAND_RELAY_ENABLED", false)? {
         return Err(ConfigError::Invalid("EDGE_COMMAND_RELAY_ENABLED"));
     }
@@ -300,6 +317,11 @@ fn runtime_features_from_environment() -> Result<RuntimeFeatureConfig, ConfigErr
         && projection_database_url_file.is_none()
     {
         return Err(ConfigError::Missing("EDGE_PROJECTION_DATABASE_URL_FILE"));
+    }
+    if realtime_sse_enabled.is_enabled() && realtime_activation_manifest_file.is_none() {
+        return Err(ConfigError::Missing(
+            "EDGE_REALTIME_ACTIVATION_MANIFEST_FILE",
+        ));
     }
     let query_cursor_keys_file = optional_path("EDGE_QUERY_CURSOR_KEYS_FILE");
     if shadow_query_enabled.is_enabled() && query_cursor_keys_file.is_none() {
@@ -337,6 +359,7 @@ fn runtime_features_from_environment() -> Result<RuntimeFeatureConfig, ConfigErr
         projection_ingestion_enabled,
         projection_database_url_file,
         realtime_sse_enabled,
+        realtime_activation_manifest_file,
         analytics_query_enabled,
         analytics_source_profile: delivery_profile(&value_or(
             "EDGE_ANALYTICS_SOURCE_PROFILE",
@@ -354,6 +377,22 @@ fn runtime_features_from_environment() -> Result<RuntimeFeatureConfig, ConfigErr
         )? as u64),
         shadow_query_freshness_policy,
     })
+}
+
+fn validate_realtime_runtime_dependencies(
+    realtime_sse_enabled: RuntimeGate,
+    projection_ingestion_enabled: RuntimeGate,
+    shadow_query_enabled: RuntimeGate,
+    paper_workbench_shadow_enabled: RuntimeGate,
+) -> Result<(), ConfigError> {
+    if realtime_sse_enabled.is_enabled()
+        && (!projection_ingestion_enabled.is_enabled()
+            || !shadow_query_enabled.is_enabled()
+            || !paper_workbench_shadow_enabled.is_enabled())
+    {
+        return Err(ConfigError::Invalid("EDGE_REALTIME_SSE_ENABLED"));
+    }
+    Ok(())
 }
 
 fn realtime_freshness_from_environment() -> Result<(FreshnessPolicy, VenueSessionState), ConfigError>
@@ -448,6 +487,7 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
     let jwks = read_text(&config.delegation_jwks_file)?;
     let projection_store = connect_projection_store(&config).await?;
     let query_cursor_codec = query_cursor_codec(&config)?;
+    let realtime_activation = load_realtime_activation(&config)?;
 
     let verifier = DelegationVerifier::from_jwks_json(
         &jwks,
@@ -487,6 +527,7 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         realtime_poller_ready: Arc::clone(&realtime_poller_ready),
         projection_store: projection_store.clone(),
         realtime_hub: realtime_hub.clone(),
+        realtime_activation,
         realtime_replay_limit: config.realtime_replay_limit,
         realtime_heartbeat: config.realtime_heartbeat,
         realtime_epoch_jitter: config.realtime_epoch_jitter,
@@ -600,6 +641,26 @@ fn query_cursor_codec(config: &EdgeConfig) -> Result<Option<CursorCodec>, Servic
     .map_err(ServiceError::Query)
 }
 
+fn load_realtime_activation(
+    config: &EdgeConfig,
+) -> Result<Option<AcceptedRealtimeActivation>, ServiceError> {
+    if !config.realtime_sse_enabled.is_enabled() {
+        return Ok(None);
+    }
+    let path = config
+        .realtime_activation_manifest_file
+        .as_deref()
+        .ok_or(ConfigError::Missing(
+            "EDGE_REALTIME_ACTIVATION_MANIFEST_FILE",
+        ))?;
+    let raw = read_text(path)?;
+    let evidence: RealtimeActivationEvidence = serde_json::from_str(&raw)
+        .map_err(|_| ConfigError::Invalid("EDGE_REALTIME_ACTIVATION_MANIFEST_FILE"))?;
+    accept_realtime_activation(evidence)
+        .map(Some)
+        .map_err(|_| ConfigError::Invalid("EDGE_REALTIME_ACTIVATION_MANIFEST_FILE").into())
+}
+
 fn spawn_background_tasks(
     config: &EdgeConfig,
     negotiator: CapabilityNegotiator,
@@ -648,6 +709,7 @@ fn spawn_background_tasks(
 fn private_router(state: AppState) -> Router {
     Router::new()
         .route("/internal/v1/compatibility", get(compatibility))
+        .route("/internal/v1/realtime/snapshot", get(realtime_snapshot))
         .route("/internal/v1/realtime/stream", get(realtime_stream))
         .route(
             "/internal/v1/screens/gate-r2/:approval_id/capital-preview",
@@ -1430,12 +1492,9 @@ async fn realtime_stream(State(state): State<AppState>, headers: HeaderMap) -> R
         Ok(request) => request,
         Err(status) => return status.into_response(),
     };
-    let availability = match store.realtime_scope_availability(&request.scope).await {
+    let availability = match realtime_authority(&state, store, &request.scope).await {
         Ok(availability) => availability,
-        Err(projection_store_pg::StoreError::ActiveEpochNotFound) => {
-            return StatusCode::SERVICE_UNAVAILABLE.into_response();
-        }
-        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        Err(status) => return status.into_response(),
     };
     let mut subscription = hub.subscribe(
         request.claims.workspace_id.clone(),
@@ -1491,6 +1550,102 @@ async fn realtime_stream(State(state): State<AppState>, headers: HeaderMap) -> R
     response
 }
 
+#[derive(Serialize)]
+struct RealtimeSnapshot {
+    schema_version: &'static str,
+    delivery_profile: &'static str,
+    workspace_id: String,
+    environment: String,
+    projection_epoch: Uuid,
+    projection_sequence: u64,
+    cursor: String,
+    stream_available: bool,
+    resnapshot_not_before: Option<DateTime<Utc>>,
+    capability_snapshot_id: String,
+    activation_manifest_digest: String,
+}
+
+async fn realtime_snapshot(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    let Some(store) = &state.projection_store else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    let (claims, scope) = match authorize_realtime_scope(&state, &headers) {
+        Ok(authority) => authority,
+        Err(status) => return status.into_response(),
+    };
+    let availability = match realtime_authority(&state, store, &scope).await {
+        Ok(availability) => availability,
+        Err(status) => return status.into_response(),
+    };
+    let Some(activation) = &state.realtime_activation else {
+        return StatusCode::SERVICE_UNAVAILABLE.into_response();
+    };
+    let cursor = ProjectionCursor {
+        epoch_id: availability.active.epoch.epoch_id,
+        sequence: availability.active.latest_available_sequence,
+    };
+    Json(RealtimeSnapshot {
+        schema_version: "execution.realtime-snapshot.v1",
+        delivery_profile: "shadow",
+        workspace_id: claims.workspace_id,
+        environment: state.environment.clone(),
+        projection_epoch: cursor.epoch_id,
+        projection_sequence: cursor.sequence,
+        cursor: cursor.to_string(),
+        stream_available: true,
+        resnapshot_not_before: None,
+        capability_snapshot_id: activation
+            .evidence()
+            .compatibility
+            .capability_snapshot_id
+            .clone(),
+        activation_manifest_digest: activation.manifest_digest().to_owned(),
+    })
+    .into_response()
+}
+
+async fn realtime_authority(
+    state: &AppState,
+    store: &PgProjectionStore,
+    scope: &ProjectionScope,
+) -> Result<RealtimeScopeAvailability, StatusCode> {
+    let activation = state
+        .realtime_activation
+        .as_ref()
+        .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let evidence = activation.evidence();
+    if evidence.scope != *scope || evidence.scope.environment != state.environment {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    let shadow = store
+        .active_shadow_screen_authority(scope, N07_PAPER_WORKBENCH_SCREEN_ID)
+        .await
+        .map_err(|error| match error {
+            StoreError::ShadowScreenNotActivated
+            | StoreError::ShadowActivationEvidenceInvalid
+            | StoreError::ActiveEpochNotFound => StatusCode::SERVICE_UNAVAILABLE,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        })?;
+    if shadow.epoch_id != evidence.active_epoch_id
+        || shadow.manifest_digest != evidence.n07_activation_manifest_digest
+        || shadow.capability_snapshot_id != evidence.compatibility.capability_snapshot_id
+    {
+        return Err(StatusCode::SERVICE_UNAVAILABLE);
+    }
+    let availability =
+        store
+            .realtime_scope_availability(scope)
+            .await
+            .map_err(|error| match error {
+                StoreError::ActiveEpochNotFound => StatusCode::SERVICE_UNAVAILABLE,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            })?;
+    if availability.active.epoch.epoch_id != evidence.active_epoch_id {
+        return Err(StatusCode::SERVICE_UNAVAILABLE);
+    }
+    Ok(availability)
+}
+
 struct RealtimeRequest {
     claims: DelegatedClaims,
     assertion_expires_at: DateTime<Utc>,
@@ -1510,6 +1665,23 @@ fn authorize_realtime_request(
     state: &AppState,
     headers: &HeaderMap,
 ) -> Result<RealtimeRequest, StatusCode> {
+    let (claims, scope) = authorize_realtime_scope(state, headers)?;
+    let assertion_expires_at = assertion_expires_at(&claims)?;
+    let cursor = requested_cursor(headers)
+        .map_err(|()| StatusCode::BAD_REQUEST)?
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    Ok(RealtimeRequest {
+        claims,
+        assertion_expires_at,
+        cursor,
+        scope,
+    })
+}
+
+fn authorize_realtime_scope(
+    state: &AppState,
+    headers: &HeaderMap,
+) -> Result<(DelegatedClaims, ProjectionScope), StatusCode> {
     let token = bearer(headers).ok_or(StatusCode::UNAUTHORIZED)?;
     let claims = state
         .verifier
@@ -1521,20 +1693,11 @@ fn authorize_realtime_request(
             },
         )
         .map_err(|_| StatusCode::FORBIDDEN)?;
-    let assertion_expires_at = assertion_expires_at(&claims)?;
-    let cursor = requested_cursor(headers)
-        .map_err(|()| StatusCode::BAD_REQUEST)?
-        .ok_or(StatusCode::BAD_REQUEST)?;
     let workspace_id =
         CanonicalId::parse(claims.workspace_id.clone()).map_err(|_| StatusCode::FORBIDDEN)?;
     let scope = ProjectionScope::new(workspace_id, state.environment.clone())
         .map_err(|_| StatusCode::FORBIDDEN)?;
-    Ok(RealtimeRequest {
-        claims,
-        assertion_expires_at,
-        cursor,
-        scope,
-    })
+    Ok((claims, scope))
 }
 
 fn assertion_expires_at(claims: &DelegatedClaims) -> Result<DateTime<Utc>, StatusCode> {
@@ -2272,6 +2435,33 @@ mod tests {
         assert!(address.ip().is_loopback());
         let public: SocketAddr = "0.0.0.0:9100".parse().unwrap();
         assert!(!public.ip().is_loopback());
+    }
+
+    #[test]
+    fn realtime_runtime_requires_ingestion_query_and_screen_authority() {
+        assert!(matches!(
+            validate_realtime_runtime_dependencies(
+                RuntimeGate::Enabled,
+                RuntimeGate::Disabled,
+                RuntimeGate::Enabled,
+                RuntimeGate::Enabled,
+            ),
+            Err(ConfigError::Invalid("EDGE_REALTIME_SSE_ENABLED"))
+        ));
+        assert!(validate_realtime_runtime_dependencies(
+            RuntimeGate::Enabled,
+            RuntimeGate::Enabled,
+            RuntimeGate::Enabled,
+            RuntimeGate::Enabled,
+        )
+        .is_ok());
+        assert!(validate_realtime_runtime_dependencies(
+            RuntimeGate::Disabled,
+            RuntimeGate::Disabled,
+            RuntimeGate::Disabled,
+            RuntimeGate::Disabled,
+        )
+        .is_ok());
     }
 
     #[test]

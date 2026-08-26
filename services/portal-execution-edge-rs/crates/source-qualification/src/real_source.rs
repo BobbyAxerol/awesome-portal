@@ -10,8 +10,10 @@ pub const REAL_SOURCE_EVIDENCE_SCHEMA_VERSION: &str = "execution.real-source-qua
 pub const N06_SOURCE_CONTRACT_REVISION: &str = "d4.paper-read.v2";
 pub const N06_SOURCE_SCOPE_ID: &str = "PAPER_BINANCE_USDM";
 pub const N06_WORKSPACE_ID: &str = "workspace_paper_binance_usdm";
-pub const MINIMUM_SOAK_SECONDS: u64 = 86_400;
-pub const MAXIMUM_SAMPLE_INTERVAL_SECONDS: u64 = 300;
+pub const FAST_PAPER_MINIMUM_SOAK_SECONDS: u64 = 1_800;
+pub const FAST_PAPER_MAXIMUM_SAMPLE_INTERVAL_SECONDS: u64 = 30;
+pub const EXTENDED_MINIMUM_SOAK_SECONDS: u64 = 86_400;
+pub const EXTENDED_MAXIMUM_SAMPLE_INTERVAL_SECONDS: u64 = 300;
 const MAXIMUM_IDENTIFIER_BYTES: usize = 128;
 
 const REQUIRED_DRILLS: &[&str] = &[
@@ -61,6 +63,35 @@ pub enum QualificationAuthority {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum EvidenceDataClass {
     SanitizedMetadataOnly,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum QualificationProfile {
+    /// Owner-approved Paper shadow admission. It keeps the complete parity,
+    /// fault, restore, load and rollback corpus, but does not make a 24-hour
+    /// wall-clock delay the price of every development promotion.
+    #[serde(rename = "PAPER_FAST_ACCEPTANCE")]
+    PaperFastAcceptance,
+    /// Long-running confidence evidence for stable/release and later
+    /// risk-bearing stages. It never substitutes for the fast profile's fault
+    /// drills; it extends observation coverage.
+    #[serde(rename = "EXTENDED_24H")]
+    Extended24h,
+}
+
+impl QualificationProfile {
+    const fn coverage(self) -> (u64, u64) {
+        match self {
+            Self::PaperFastAcceptance => (
+                FAST_PAPER_MINIMUM_SOAK_SECONDS,
+                FAST_PAPER_MAXIMUM_SAMPLE_INTERVAL_SECONDS,
+            ),
+            Self::Extended24h => (
+                EXTENDED_MINIMUM_SOAK_SECONDS,
+                EXTENDED_MAXIMUM_SAMPLE_INTERVAL_SECONDS,
+            ),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -185,6 +216,7 @@ pub struct OwnerReview {
 pub struct RealSourceQualificationEvidence {
     pub schema_version: String,
     pub evidence_origin: EvidenceOrigin,
+    pub qualification_profile: QualificationProfile,
     pub identity: QualificationIdentity,
     pub building_epoch_id: Uuid,
     pub epoch_status: String,
@@ -217,6 +249,7 @@ pub struct RealSourceQualificationReport {
     pub source_scope_id: String,
     pub building_epoch_id: Uuid,
     pub evidence_digest: String,
+    pub qualification_profile: QualificationProfile,
     pub decision: RealSourceDecision,
     pub soak_seconds: u64,
     pub source_mutations: u64,
@@ -258,10 +291,12 @@ pub fn qualify_real_source(
         .num_seconds();
     let duration =
         u64::try_from(duration).map_err(|_| RealSourceQualificationError::NumericOverflow)?;
+    let (minimum_soak_seconds, maximum_sample_interval_seconds) =
+        evidence.qualification_profile.coverage();
     if duration != evidence.soak.duration_seconds
-        || duration < MINIMUM_SOAK_SECONDS
+        || duration < minimum_soak_seconds
         || evidence.soak.sample_interval_seconds == 0
-        || evidence.soak.sample_interval_seconds > MAXIMUM_SAMPLE_INTERVAL_SECONDS
+        || evidence.soak.sample_interval_seconds > maximum_sample_interval_seconds
     {
         return Err(RealSourceQualificationError::SoakCoverageInsufficient);
     }
@@ -296,6 +331,7 @@ pub fn qualify_real_source(
         source_scope_id: evidence.identity.source_scope_id.clone(),
         building_epoch_id: evidence.building_epoch_id,
         evidence_digest: canonical_digest(evidence)?,
+        qualification_profile: evidence.qualification_profile,
         decision,
         soak_seconds: evidence.soak.duration_seconds,
         source_mutations: evidence.soak.source_mutation_count,
@@ -607,7 +643,7 @@ pub enum RealSourceQualificationError {
     EpochNotBuilding,
     #[error("qualification window is invalid")]
     InvalidWindow,
-    #[error("24-hour soak coverage is incomplete")]
+    #[error("the selected qualification profile has incomplete soak coverage")]
     SoakCoverageInsufficient,
     #[error("baseline, delta or replay semantic parity mismatched")]
     SemanticParityMismatch,

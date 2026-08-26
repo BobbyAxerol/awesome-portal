@@ -92,6 +92,10 @@ jobs:
         working-directory: apps/portal/frontend
         run: |
           npm ci
+          # Portal compiles the embedded Planning feature from source. A clean
+          # runner therefore needs Planning's dependency graph before tsc/vite,
+          # even though its own test/build step runs immediately afterward.
+          npm ci --prefix ../../../features/roadmap-task-board/frontend
           npm audit --package-lock-only --audit-level=moderate
           npm test
           npm run build
@@ -99,7 +103,6 @@ jobs:
       - name: Test and build Roadmap & Task Board
         working-directory: features/roadmap-task-board/frontend
         run: |
-          npm ci
           npm audit --package-lock-only --audit-level=moderate
           npm test
           npm run build

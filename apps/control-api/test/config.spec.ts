@@ -82,3 +82,36 @@ describe("Control API non-local signing keyrings", () => {
     })).toThrow(/QUERY_CURSOR_KEYS_FILE could not be read/);
   });
 });
+
+describe("Execution realtime feature dependencies", () => {
+  const executionEdgeEnv = (): NodeJS.ProcessEnv => ({
+    ...baseEnv(),
+    QUERY_CURSOR_KEYS_JSON:
+      '{"query-k1":"query-realtime-test-key-that-is-longer-than-thirty-two-bytes"}',
+    GOVERNANCE_APPLY_KEYS_JSON:
+      '{"governance-k1":"governance-realtime-test-key-longer-than-thirty-two-bytes"}',
+    FEATURE_EXECUTION_EDGE: "true",
+    EXECUTION_EDGE_PRIVATE_KEY_FILE: "/run/secrets/execution-edge/delegation.pem",
+    EXECUTION_EDGE_CA_FILE: "/run/secrets/execution-edge/ca.crt",
+    EXECUTION_EDGE_CLIENT_CERT_FILE: "/run/secrets/execution-edge/client.crt",
+    EXECUTION_EDGE_CLIENT_KEY_FILE: "/run/secrets/execution-edge/client.key",
+  });
+
+  it("rejects realtime when the commissioned shadow query and screen are not active", () => {
+    expect(() => loadConfig({
+      ...executionEdgeEnv(),
+      FEATURE_EXECUTION_REALTIME_SSE: "true",
+    })).toThrow(/requires FEATURE_EXECUTION_SHADOW_QUERY=true/);
+  });
+
+  it("accepts realtime only with the complete N07 read path", () => {
+    const config = loadConfig({
+      ...executionEdgeEnv(),
+      FEATURE_EXECUTION_REALTIME_SSE: "true",
+      FEATURE_EXECUTION_SHADOW_QUERY: "true",
+      FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW: "true",
+    });
+
+    expect(config.FEATURE_EXECUTION_REALTIME_SSE).toBe("true");
+  });
+});

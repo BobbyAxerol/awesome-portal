@@ -2,7 +2,8 @@ use chrono::{TimeDelta, Utc};
 
 use super::real_source::{
     qualify_real_source, EvidenceOrigin, QualificationMode, QualificationPrerequisites,
-    RealSourceDecision, RealSourceQualificationError, RealSourceQualificationEvidence,
+    QualificationProfile, RealSourceDecision, RealSourceQualificationError,
+    RealSourceQualificationEvidence,
 };
 
 const TEMPLATE: &[u8] = include_bytes!("../fixtures/n06-real-source-qualification.template.json");
@@ -43,6 +44,10 @@ fn template_proves_the_full_harness_without_claiming_activation() {
     assert_eq!(first, second);
     assert_eq!(first.decision, RealSourceDecision::TemplateValid);
     assert_eq!(first.soak_seconds, 86_400);
+    assert_eq!(
+        first.qualification_profile,
+        QualificationProfile::Extended24h
+    );
     assert_eq!(first.source_mutations, 0);
     assert_eq!(first.divergence_count, 0);
     assert!(!first.activation_authorized);
@@ -112,7 +117,7 @@ fn synthetic_or_unreviewed_evidence_never_passes_acceptance() {
 }
 
 #[test]
-fn soak_requires_a_contiguous_24_hour_sample_envelope() {
+fn each_profile_requires_its_exact_contiguous_sample_envelope() {
     let mut evidence = template();
     evidence.ended_at -= TimeDelta::seconds(1);
     evidence.soak.duration_seconds -= 1;
@@ -127,6 +132,42 @@ fn soak_requires_a_contiguous_24_hour_sample_envelope() {
     missing_sample.soak.sample_count = 287;
     assert_eq!(
         qualify_real_source(&missing_sample, QualificationMode::Template, None)
+            .unwrap_err()
+            .reason_code(),
+        "N06_SOAK_COVERAGE_INSUFFICIENT"
+    );
+
+    let mut fast = template();
+    fast.qualification_profile = QualificationProfile::PaperFastAcceptance;
+    fast.ended_at = fast.started_at + TimeDelta::seconds(1_800);
+    fast.soak.duration_seconds = 1_800;
+    fast.soak.sample_interval_seconds = 30;
+    fast.soak.sample_count = 60;
+    fast.soak.full_reconciliation_count = 6;
+    // Keep route/request totals inside the shorter window's rate ceiling.
+    fast.route_metrics[1].request_count = 2_995;
+    fast.soak.source_request_count = 3_000;
+    assert_eq!(
+        qualify_real_source(&fast, QualificationMode::Template, None)
+            .unwrap()
+            .qualification_profile,
+        QualificationProfile::PaperFastAcceptance
+    );
+
+    let mut under = fast.clone();
+    under.ended_at -= TimeDelta::seconds(1);
+    under.soak.duration_seconds -= 1;
+    assert_eq!(
+        qualify_real_source(&under, QualificationMode::Template, None)
+            .unwrap_err()
+            .reason_code(),
+        "N06_SOAK_COVERAGE_INSUFFICIENT"
+    );
+
+    let mut sparse = fast;
+    sparse.soak.sample_interval_seconds = 31;
+    assert_eq!(
+        qualify_real_source(&sparse, QualificationMode::Template, None)
             .unwrap_err()
             .reason_code(),
         "N06_SOAK_COVERAGE_INSUFFICIENT"

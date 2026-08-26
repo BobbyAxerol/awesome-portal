@@ -124,6 +124,32 @@ Rules for these agents:
   `upgrade/backend/README.md` (codex's tracking), so both agents read the
   same current status without re-deriving it.
 
+## Owner-authorized phase closeout
+
+- An explicit Bobby approval to promote a named phase/scope is the owner
+  decision for that exact phase; do not ask for the same approval again under
+  a different label. Run the shortest declared evidence profile that still
+  exercises every required safety category, persist the real result, perform
+  the bounded activation/rollback rehearsal, and close the phase in the same
+  change window when the gates pass. A monitored background container is
+  allowed when the evidence window outlives an interactive agent turn.
+- Do not leave a phase at “Portal implementation complete / owner promotion
+  pending” after Bobby has already approved that promotion. Either finish the
+  operational gate or identify one concrete non-owner dependency in a single
+  consolidated action packet.
+- In particular, do not repeat the stale N07 claim “Portal complete but blocked
+  by N06 real 24-hour evidence and owner promotion”. Bobby approved the named
+  Paper-shadow promotion on 2026-08-26; N07/N08 now wait only for the real v2
+  source and the declared Paper-fast evidence profile. `EXTENDED_24H` remains
+  separate release-confidence evidence, not a Paper development activation
+  prerequisite.
+- “Fast” never means synthetic evidence presented as real, skipped negative
+  tests, or weakened source/command authority. Paper-shadow qualification may
+  use its bounded fast profile; extended 24-hour soak remains a distinct
+  release/long-running confidence profile. Missing external source bytes,
+  credentials or owner-owned implementation must fail closed and be reported
+  once, not rediscovered phase by phase.
+
 ## Commands
 
 All stack operations go through `./scripts/portal` (mirrored in `make`):

@@ -256,6 +256,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
       "FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW=true requires FEATURE_EXECUTION_SHADOW_QUERY=true",
     );
   }
+  if (
+    config.FEATURE_EXECUTION_REALTIME_SSE === "true" &&
+    (config.FEATURE_EXECUTION_SHADOW_QUERY !== "true" ||
+      config.FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW !== "true")
+  ) {
+    throw new Error(
+      "FEATURE_EXECUTION_REALTIME_SSE=true requires FEATURE_EXECUTION_SHADOW_QUERY=true and FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW=true",
+    );
+  }
   return config;
 }
 

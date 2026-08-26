@@ -361,6 +361,12 @@ export function openStream(options: StreamOptions): StreamHandle {
     }
     opened.addEventListener("error", () => {
       if (closed || source !== opened) return;
+      // Native EventSource retries transport errors by itself. Close first so
+      // a dead session, lost source or withdrawn activation cannot create an
+      // unbounded request loop behind the facade. Recovery is explicit: fetch
+      // a fresh snapshot/preflight and construct a new handle.
+      opened.close();
+      source = null;
       // A transport error after the published auth deadline is an expired
       // session, typed — not an anonymous reconnect loop.
       const deadline = state.authExpiresAt ? Date.parse(state.authExpiresAt) : NaN;

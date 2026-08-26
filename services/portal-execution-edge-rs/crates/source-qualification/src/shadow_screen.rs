@@ -324,7 +324,9 @@ mod tests {
     use execution_contracts::CanonicalId;
 
     use super::*;
-    use crate::real_source::{RealSourceDecision, REAL_SOURCE_EVIDENCE_SCHEMA_VERSION};
+    use crate::real_source::{
+        QualificationProfile, RealSourceDecision, REAL_SOURCE_EVIDENCE_SCHEMA_VERSION,
+    };
 
     fn digest(value: char) -> String {
         format!("sha256:{}", value.to_string().repeat(64))
@@ -380,6 +382,7 @@ mod tests {
                 source_scope_id: "PAPER_BINANCE_USDM".to_owned(),
                 building_epoch_id: epoch,
                 evidence_digest: digest('7'),
+                qualification_profile: QualificationProfile::PaperFastAcceptance,
                 decision: RealSourceDecision::EvidenceAccepted,
                 soak_seconds: 86_400,
                 source_mutations: 0,

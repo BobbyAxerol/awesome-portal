@@ -639,22 +639,34 @@ authority.
   by fresh PostgreSQL replay/restore tests. No source traffic, backup schedule,
   production cleanup or profile promotion was enabled.
 - [EX-BE-03 / N06 Real-source Qualification and Soak](./EX_BE_03_N06_REAL_SOURCE_QUALIFICATION_AND_SOAK.md)
-  — **Portal qualification authority complete / real 24-hour evidence
-  pending:** Rust now binds exact N02/N03 bytes, immutable image/schema identity,
-  BUILDING parity, twelve failure/recovery drills and bounded route/Rust/PG
-  metrics into a sanitized 24-hour evidence decision. Synthetic evidence cannot
-  pass real modes, owner review is post-window, and even accepted evidence cannot
-  activate a reader. No N02/N03 owner pack or N06 window exists locally, so no
-  source call or runtime/profile change occurred.
+  — **Portal qualification authority complete / Bobby Paper-fast profile
+  approved / real source bytes pending:** Rust now binds exact N02/N03 bytes,
+  immutable image/schema identity, BUILDING parity, twelve failure/recovery
+  drills and bounded route/Rust/PG metrics into either a 30-minute Paper-fast or
+  separate extended 24-hour decision. Both retain the full safety corpus;
+  synthetic evidence cannot pass real modes and accepted evidence still cannot
+  activate a reader. No N02/N03 owner pack or real N06 window exists locally,
+  so no source call or runtime/profile change occurred.
 - [EX-BE-03 / N07 Projection, Query, analytics and narrow screen APIs in shadow](./EX_BE_03_N07_PROJECTION_QUERY_ANALYTICS_SHADOW.md)
-  — **Portal implementation complete / shadow profile inactive:** immutable
+  — **Portal implementation complete / Bobby shadow promotion approved /
+  runtime fail-closed:** immutable
   compatibility evidence now gates an atomic epoch cutover, and the first
   commissioned Paper Workbench `orders`/`positions` API is deployment-scoped
   through Rust Query plus a session/mTLS/H2/delegated-JWT TypeScript BFF.
   Signed keysets, exact in-scope counts/aggregates, exact decimals, freshness,
-  partiality, retention and typed recovery are contract-tested. N06 real
-  evidence and owner promotion remain absent, so registry is still `fixture`,
-  flags are false and no source/runtime was touched.
+  partiality, retention and typed recovery are contract-tested. The owner
+  decision is recorded and must not be requested again; N06 real Paper-fast
+  evidence remains absent, so registry is still `fixture`, flags are false and
+  no source/runtime was touched.
+- [EX-BE-06 / N08 SSE Real-source Activation](./EX_BE_06_N08_SSE_REAL_SOURCE_ACTIVATION.md)
+  — **Portal implementation complete / owner promotion approved / runtime
+  fail-closed:** one exact Rust activation capability binds N06, active N07
+  authority/epoch, immutable contracts/images, nine evidence hashes and owner
+  approval. The Edge exposes an exact snapshot-before-stream route; TypeScript
+  proxies snapshot/SSE over reusable mTLS HTTP/2 with short delegated JWT; the
+  browser closes EventSource on terminal/generic errors. Feature flags remain
+  false until the single external `d4.paper-read.v2` source-evidence dependency
+  exists; command authority is unchanged.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

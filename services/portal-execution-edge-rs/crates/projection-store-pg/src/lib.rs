@@ -1620,6 +1620,8 @@ mod tests {
                 source_scope_id: "PAPER_BINANCE_USDM".to_owned(),
                 building_epoch_id: epoch_id,
                 evidence_digest: digest('7'),
+                qualification_profile:
+                    source_qualification::real_source::QualificationProfile::PaperFastAcceptance,
                 decision: RealSourceDecision::EvidenceAccepted,
                 soak_seconds: 86_400,
                 source_mutations: 0,

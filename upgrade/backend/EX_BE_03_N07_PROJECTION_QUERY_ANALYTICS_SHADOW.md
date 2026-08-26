@@ -1,7 +1,7 @@
 # EX-BE-03 / N07 Projection, Query, analytics and narrow screen APIs in shadow
 
-Status: `PORTAL_IMPLEMENTATION_COMPLETE / SHADOW_PROFILE_INACTIVE /
-N06_REAL_EVIDENCE_PENDING / OWNER_PROMOTION_PENDING`
+Status: `PORTAL_IMPLEMENTATION_COMPLETE / OWNER_SHADOW_PROMOTION_APPROVED /
+REAL_SOURCE_EVIDENCE_PENDING / RUNTIME_FAIL_CLOSED`
 
 Date: 2026-08-26
 
@@ -14,9 +14,11 @@ claim the equity, accounting, execution-quality, contribution, Alpha Fleet or
 Trade Replay contracts requested in later BR packages.
 
 No runtime was activated. Registry delivery remains `fixture`; Edge Query,
-Paper Workbench, realtime and command flags remain false. The current N06 truth
-still lacks accepted real 24-hour evidence, so no synthetic report can promote
-the BUILDING epoch.
+Paper Workbench, realtime and command flags remain false. Bobby granted the
+named Paper shadow promotion on 2026-08-26; that owner decision is complete and
+must not be requested again. The current N06 truth still lacks accepted real
+Paper-fast evidence from an owner-published `d4.paper-read.v2` implementation,
+so no synthetic report can promote the BUILDING epoch.
 
 ## 2. Architecture and authority
 
@@ -178,14 +180,17 @@ Required repository gates are:
 ```
 
 Operational parity/source-loss/load/rollback/visual hashes must come from a
-real N06-accepted window; unit fixtures are not operational evidence.
+real N06-accepted Paper-fast or extended window; unit fixtures are not
+operational evidence.
 
 ## 8. Remaining operational exit gate
 
 1. Trading System owner publishes and accepts N02/N03 artifacts.
-2. N04 consumes those exact bytes and N06 completes accepted 24-hour evidence.
+2. N04 consumes those exact bytes and N06 completes accepted Paper-fast
+   evidence; extended 24-hour confidence may continue separately.
 3. N07 candidate manifest binds exact images/schema/query and six gate hashes.
-4. Bobby reviews and approves the N07 acceptance manifest.
+4. Apply the already-recorded Bobby approval to the exact acceptance manifest;
+   do not request another promotion decision for this scope.
 5. Activation transaction promotes only the named Paper epoch.
 6. Edge Query then Paper screen are enabled; SGP BFF follows.
 7. Claude runs fixture-vs-shadow and visual honest-state review.

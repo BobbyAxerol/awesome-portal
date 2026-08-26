@@ -79,6 +79,7 @@ describe("openStream", () => {
     await tick(); await tick(); await tick();
     src.emit("error", {});
     expect(["reconnecting", "failed"]).toContain(last.phase);
+    expect(src.closed).toBe(true);
   });
   it("a transport error after the published auth deadline is a typed AUTH_EXPIRED", async () => {
     const src = fakeSource();
@@ -89,6 +90,7 @@ describe("openStream", () => {
     src.emit("error", {});
     expect(last.phase).toBe("auth_expired");
     expect(last.authExpired).toBe(true);
+    expect(src.closed).toBe(true);
   });
 });
 

@@ -77,7 +77,7 @@ fi
   --security-opt no-new-privileges:true \
   --tmpfs /tmp:rw,exec,mode=1777,size=64m \
   --tmpfs /cargo:rw,exec,mode=1777,size=512m \
-  --tmpfs /target:rw,exec,mode=1777,size=3072m \
+  --tmpfs /target:rw,exec,mode=1777,size=4096m \
   -e HOME=/tmp \
   -e CARGO_HOME=/cargo \
   -e CARGO_TARGET_DIR=/target \

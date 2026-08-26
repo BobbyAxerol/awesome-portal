@@ -11,7 +11,9 @@ import { AuthSession, PortalUser } from "../domain";
 import { ExecutionDelegationService } from "./delegation";
 
 const CURSOR_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}:[0-9]+$/i;
+const DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
 const COMMAND_CENTER_RESOURCE = "execution:command-center";
+const REALTIME_SNAPSHOT_MAX_BYTES = 64 * 1024;
 
 export interface RealtimePrincipal {
   user: PortalUser;
@@ -28,6 +30,20 @@ export interface RealtimeUpstream {
   stream: ClientHttp2Stream;
   status: number;
   contentType: string;
+}
+
+export interface RealtimeSnapshotResponse {
+  schema_version: "execution.realtime-snapshot.v1";
+  delivery_profile: "shadow";
+  workspace_id: string;
+  environment: string;
+  projection_epoch: string;
+  projection_sequence: number;
+  cursor: string;
+  stream_available: true;
+  resnapshot_not_before: string | null;
+  capability_snapshot_id: string;
+  activation_manifest_digest: string;
 }
 
 /**
@@ -149,6 +165,34 @@ export class ExecutionRealtimeProxy implements OnApplicationShutdown {
     }
   }
 
+  async snapshot(request: RealtimePrincipal): Promise<RealtimeSnapshotResponse> {
+    if (!this.delegation || !this.tls) {
+      throw new RealtimeProxyError("REALTIME_DISABLED", 404);
+    }
+    const assertion = await this.delegation.issueReadAssertion({
+      principalId: request.user.userId,
+      sessionId: request.session.sessionId,
+      workspaceId: request.workspaceId,
+      roles: [request.user.role],
+      resources: [COMMAND_CENTER_RESOURCE],
+      authenticationTime: request.session.authenticationTime,
+      authenticationMethods: ["portal_session"],
+    });
+    const session = await this.getSession();
+    const stream = session.request({
+      ":method": "GET",
+      ":path": "/internal/v1/realtime/snapshot",
+      accept: "application/json",
+      authorization: `Bearer ${assertion}`,
+      "cache-control": "no-cache",
+    }, { endStream: true });
+    const body = await readBoundedSnapshot(
+      stream,
+      this.config.EXECUTION_EDGE_CONNECT_TIMEOUT_MS,
+    );
+    return parseRealtimeSnapshot(body, request.workspaceId, this.config.EXECUTION_EDGE_ENVIRONMENT);
+  }
+
   close(): void {
     this.session?.close();
     this.session = null;
@@ -227,6 +271,92 @@ export class ExecutionRealtimeProxy implements OnApplicationShutdown {
     stream.once("close", release);
     stream.once("aborted", release);
   }
+}
+
+function readBoundedSnapshot(stream: ClientHttp2Stream, timeoutMs: number): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    let accepted = false;
+    const timeout = setTimeout(() => {
+      stream.close(constants.NGHTTP2_CANCEL);
+      reject(new RealtimeProxyError("REALTIME_SNAPSHOT_TIMEOUT", 504));
+    }, timeoutMs);
+    stream.once("response", (headers) => {
+      const status = Number(headers[":status"] ?? 502);
+      const contentType = String(headers["content-type"] ?? "");
+      if (status !== 200 || !contentType.startsWith("application/json")) {
+        clearTimeout(timeout);
+        stream.close(constants.NGHTTP2_CANCEL);
+        reject(new RealtimeProxyError("REALTIME_SNAPSHOT_REJECTED", status));
+        return;
+      }
+      accepted = true;
+    });
+    stream.on("data", (chunk: Buffer) => {
+      if (!accepted) return;
+      size += chunk.length;
+      if (size > REALTIME_SNAPSHOT_MAX_BYTES) {
+        clearTimeout(timeout);
+        stream.close(constants.NGHTTP2_CANCEL);
+        reject(new RealtimeProxyError("REALTIME_SNAPSHOT_BUDGET_EXCEEDED", 502));
+        return;
+      }
+      chunks.push(chunk);
+    });
+    stream.once("end", () => {
+      clearTimeout(timeout);
+      if (accepted) resolve(Buffer.concat(chunks));
+    });
+    stream.once("error", () => {
+      clearTimeout(timeout);
+      reject(new RealtimeProxyError("REALTIME_SNAPSHOT_UNAVAILABLE", 502));
+    });
+  });
+}
+
+export function parseRealtimeSnapshot(
+  body: Buffer,
+  expectedWorkspaceId: string,
+  expectedEnvironment: string,
+): RealtimeSnapshotResponse {
+  let value: unknown;
+  try {
+    value = JSON.parse(body.toString("utf8"));
+  } catch {
+    throw new RealtimeProxyError("REALTIME_SNAPSHOT_INVALID", 502);
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new RealtimeProxyError("REALTIME_SNAPSHOT_INVALID", 502);
+  }
+  const snapshot = value as Record<string, unknown>;
+  const exactKeys = [
+    "schema_version", "delivery_profile", "workspace_id", "environment",
+    "projection_epoch", "projection_sequence", "cursor", "stream_available",
+    "resnapshot_not_before", "capability_snapshot_id", "activation_manifest_digest",
+  ];
+  if (Object.keys(snapshot).sort().join("|") !== [...exactKeys].sort().join("|")
+    || snapshot.schema_version !== "execution.realtime-snapshot.v1"
+    || snapshot.delivery_profile !== "shadow"
+    || snapshot.workspace_id !== expectedWorkspaceId
+    || snapshot.environment !== expectedEnvironment
+    || typeof snapshot.projection_epoch !== "string"
+    || typeof snapshot.projection_sequence !== "number"
+    || !Number.isSafeInteger(snapshot.projection_sequence)
+    || snapshot.projection_sequence < 0
+    || typeof snapshot.cursor !== "string"
+    || !CURSOR_PATTERN.test(snapshot.cursor)
+    || snapshot.cursor !== `${snapshot.projection_epoch}:${snapshot.projection_sequence}`
+    || snapshot.stream_available !== true
+    || snapshot.resnapshot_not_before !== null
+    || typeof snapshot.capability_snapshot_id !== "string"
+    || snapshot.capability_snapshot_id.length === 0
+    || snapshot.capability_snapshot_id.length > 128
+    || typeof snapshot.activation_manifest_digest !== "string"
+    || !DIGEST_PATTERN.test(snapshot.activation_manifest_digest)) {
+    throw new RealtimeProxyError("REALTIME_SNAPSHOT_INVALID", 502);
+  }
+  return snapshot as unknown as RealtimeSnapshotResponse;
 }
 
 export class RealtimeProxyError extends Error {

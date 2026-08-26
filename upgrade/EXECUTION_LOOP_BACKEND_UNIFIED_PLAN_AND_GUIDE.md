@@ -190,9 +190,9 @@ typed unavailable states and sanitized parity artifacts only.
 | EX-BE-05b/F0 | `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | published command capabilities and live relay |
 | EX-BE-05b/F1a/F1b | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | source facts; BR-EX-32/33; eight unpublished ops routes |
 | EX-BE-05b/F2/F3/F4 | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Sandbox/Canary/Live source, evidence and command gates |
-| EX-BE-06 SSE | `FOUNDATION_COMPLETE / ACTIVATION_EVIDENCE_PENDING` | real snapshot/resume/gap parity, h2 and source-loss evidence |
+| EX-BE-06 SSE | `PORTAL_IMPLEMENTATION_COMPLETE / OWNER_PROMOTION_APPROVED / REAL_SOURCE_EVIDENCE_PENDING` | one real v2 Paper-fast snapshot/resume/gap/H2/source-loss evidence run; no further Bobby approval |
 | EX-BE-07a analytics | `FOUNDATION_COMPLETE` | current Claude series/tile additions and source parity |
-| EX-BE-07b screen APIs | `INTEGRATION_COMPLETE / SOURCE_ACTIVATION_EVIDENCE_PENDING` | active source, load/soak and independent screen promotion |
+| EX-BE-07b screen APIs | `PORTAL_IMPLEMENTATION_COMPLETE / OWNER_PROMOTION_APPROVED / REAL_SOURCE_EVIDENCE_PENDING` | active v2 source and Paper-fast evidence; no further Bobby approval |
 | EX-BE-08a | `OFFLINE_FOUNDATION_COMPLETE / LIVE_EVIDENCE_PENDING` | real-source parity, fault/load/soak/restore/rollback |
 | PRE-IAM-01…06 | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | no reopening; later phases consume their contracts/evidence |
 
@@ -204,12 +204,12 @@ typed unavailable states and sanitized parity artifacts only.
 | 1 | Approval Inbox | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | BR-EX-31/35; activation |
 | 2 | Gate R1 | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | BR-EX-36/37; activation |
 | 3 | Gate R2 | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | BR-EX-30 lineage/passport completion |
-| 4 | Paper Workbench | `FOUNDATION_COMPLETE` | narrow screen API, BR-EX-34 and qualified Paper source |
+| 4 | Paper Workbench | `PORTAL_IMPLEMENTATION_COMPLETE / RUNTIME_FAIL_CLOSED` | qualified real v2 Paper source; owner approval already recorded |
 | 5 | Paper Exit Review | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Paper source facts and activation |
 | 6 | Admin Action Drawer | `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | published routes + EX-BE-05b live relay |
 | 7 | Operations Queue | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | BR-EX-32/33 and published ops sources |
 | 8 | Incident Detail | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | published alerts/dead-letter/trace sources |
-| 9 | Command Center | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | real source composition + SSE |
+| 9 | Command Center | `PORTAL_IMPLEMENTATION_COMPLETE / RUNTIME_FAIL_CLOSED` | one qualified real v2 source window before SSE activation |
 | 10 | Sandbox Certification | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | BR-EX-38, Sandbox source and certification evidence |
 | 11 | Canary Control Room | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | source/rollback evidence and Canary command gates |
 | 12 | Live Full Operations | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Canary exit, source authority and dual-approved commands |
@@ -519,8 +519,8 @@ remain off. Detail:
 ### N06 — Real-source qualification and soak
 
 **Mapping:** D4-OPT-05 + live continuation of EX-BE-08a.  
-**Status:** `PORTAL_QUALIFICATION_AUTHORITY_COMPLETE / SOURCE_DARK /
-REAL_24H_EVIDENCE_PENDING / N02_N03_WIRE_AND_OWNER_WINDOW_BLOCKED`.  
+**Status:** `PORTAL_QUALIFICATION_AUTHORITY_COMPLETE /
+OWNER_PAPER_FAST_PROFILE_APPROVED / REAL_SOURCE_BYTES_PENDING / SOURCE_DARK`.  
 **Priority:** P0.
 
 **Goal**
@@ -533,8 +533,9 @@ Prove correctness and resource safety before any reader consumes an ACTIVE epoch
 2. baseline and delta semantic parity against sealed corpus;
 3. source loss/recovery, restart, duplicate, gap, expiry and tombstone drills;
 4. cross-cell load/fault/restore/rollback tests;
-5. 24-hour steady-state Paper soak with incremental source behavior;
-6. owner review and separate read-profile promotion decision.
+5. Paper-fast acceptance: at least 30 minutes, samples at most 30 seconds apart;
+6. extended confidence: a separate 24-hour profile, samples at most 300 seconds apart;
+7. owner review and separate read-profile promotion decision.
 
 **Required metrics**
 
@@ -548,7 +549,8 @@ Prove correctness and resource safety before any reader consumes an ACTIVE epoch
 **Exit gate**
 
 All evidence is tied to exact source/edge/proxy image digests, contract revision, dataset scope and
-owner window. Acceptance does not itself change a registry profile.
+owner window. Both profiles retain the complete parity/fault/load/restore/rollback corpus;
+Paper-fast shortens elapsed observation only. Acceptance does not itself change a registry profile.
 
 **Delivered on Portal side**
 
@@ -556,13 +558,16 @@ owner window. Acceptance does not itself change a registry profile.
 - byte binding to accepted N02/N03 manifests plus source/Edge/Proxy/schema identities;
 - BUILDING-only baseline/delta/replay parity and exact twelve-drill corpus;
 - integer-only per-route latency, amplification, request-rate, Rust and PostgreSQL budgets;
-- minimum 24-hour soak coverage, source-idle, zero-mutation and recovery enforcement;
+- explicit `PAPER_FAST_ACCEPTANCE` and `EXTENDED_24H` profiles with bounded sampling;
+- source-idle, zero-mutation and recovery enforcement in both profiles;
 - typed sanitized authority/data-class boundary and post-window owner review;
 - template/candidate/acceptance separation with activation permanently false;
 - credential-free wrapper/fixture tests and a dedicated Claude state handoff.
 
-No N02/N03 owner bytes or N06 window exist locally, so real traffic and the operational 24-hour
-exit gate remain pending. Detail:
+Owner promotion for the bounded Paper-fast profile was granted on 2026-08-26 and must not be
+requested again. No accepted N02/N03 source bytes or real N06 window exist locally, so real traffic
+and the operational Paper-fast evidence remain unavailable; the extended 24-hour profile remains a
+later confidence gate, not a prerequisite invented for every development promotion. Detail:
 [`EX_BE_03_N06_REAL_SOURCE_QUALIFICATION_AND_SOAK.md`](./backend/EX_BE_03_N06_REAL_SOURCE_QUALIFICATION_AND_SOAK.md).
 
 **Claude parallel lane:** run parity harness on sanitized accepted shadow artifacts; do not select
@@ -571,8 +576,8 @@ the source reader until N07 promotion.
 ### N07 — Projection, Query, analytics and narrow screen APIs in shadow
 
 **Mapping:** EX-BE-03 → EX-BE-04b → EX-BE-07b.  
-**Status:** `PORTAL_IMPLEMENTATION_COMPLETE / SHADOW_PROFILE_INACTIVE /
-N06_REAL_EVIDENCE_AND_OWNER_PROMOTION_PENDING`.  
+**Status:** `PORTAL_IMPLEMENTATION_COMPLETE / OWNER_SHADOW_PROMOTION_APPROVED /
+REAL_SOURCE_EVIDENCE_PENDING / RUNTIME_FAIL_CLOSED`.  
 **Priority:** P1 after N06.
 
 **Goal**
@@ -606,9 +611,11 @@ and visual honest-state review. Promotion is `fixture -> shadow`, not directly t
 - strict OpenAPI/generated types/canonical fixture plus independent, default-off Query/screen flags;
 - opt-in deployment overlay that still leaves analytics, realtime and commands disabled.
 
-The Portal implementation and offline gates are complete. The operational exit gate is not:
-the current N06 state has no real accepted 24-hour evidence/owner window, registry remains
-`fixture`, all N07 flags remain false and no real source or runtime was touched. Detail:
+The Portal implementation/offline gates and Bobby's owner promotion decision are complete. That
+approval is recorded and must not be requested again. Runtime still fails closed because the
+current N06 state has no accepted real-source Paper-fast evidence from an owner-published
+`d4.paper-read.v2` implementation. Registry therefore remains `fixture`, all N07 flags remain
+false and no real source or runtime was touched. Detail:
 [`EX_BE_03_N07_PROJECTION_QUERY_ANALYTICS_SHADOW.md`](./backend/EX_BE_03_N07_PROJECTION_QUERY_ANALYTICS_SHADOW.md).
 
 **Claude parallel lane:** consume the N07 Paper Workbench fixture/API in an adapter and run parity
@@ -618,7 +625,8 @@ states. Do not wire the wider BR-EX-41/49/50 panels to this narrow N07 response.
 ### N08 — SSE real-source activation
 
 **Mapping:** EX-BE-06.  
-**Status:** `FOUNDATION_COMPLETE / SOURCE_ACTIVATION_EVIDENCE_PENDING`.  
+**Status:** `PORTAL_IMPLEMENTATION_COMPLETE / OWNER_PROMOTION_APPROVED /
+RUNTIME_FAIL_CLOSED / REAL_SOURCE_EVIDENCE_PENDING`.  
 **Priority:** P1 after N06; may qualify alongside N07 but activates separately.
 
 **Goal**
@@ -640,6 +648,28 @@ infinite reconnect loop.
 
 Positive/negative auth, resume, epoch change, gap, 100-client fan-out, slow consumer, link loss and
 rollback pass at accepted source scale. `sse_enabled` is promoted independently.
+
+**Delivered on Portal side**
+
+- exact `execution.realtime-activation.v1` candidate/acceptance authority binding N06, the active
+  N07 manifest, epoch, source revision, immutable images/contracts, every N08 gate hash and Bobby's
+  explicit approval;
+- startup and per-request fail-closed checks: a boolean cannot open SSE without the accepted
+  manifest and the exact still-ACTIVE N07 epoch;
+- canonical snapshot-before-stream endpoints at the Rust edge and same-origin TypeScript BFF;
+- bounded 64 KiB exact-schema snapshot parsing over the same reusable TLS 1.3 mTLS/H2 session and
+  short delegated JWT used by the stream;
+- deterministic Last-Event-ID precedence, replay/gap/epoch/cursor/source-loss behavior, 100-client
+  fan-out and slow-consumer termination from the existing Rust realtime core;
+- browser terminal-error hardening: generic errors and expired sessions close native EventSource,
+  so it cannot retry forever behind the facade;
+- all command authority remains false and independent.
+
+Bobby's N08 promotion approval is recorded; no further owner approval is required for this exact
+Paper shadow scope. The one remaining external dependency is accepted real `d4.paper-read.v2`
+source evidence for N06/N07. Until those bytes exist, the manifest cannot be forged and both SSE
+flags remain false. Detail:
+[`EX_BE_06_N08_SSE_REAL_SOURCE_ACTIVATION.md`](./backend/EX_BE_06_N08_SSE_REAL_SOURCE_ACTIVATION.md).
 
 **Claude parallel lane:** keep the already-fixed terminal error handling; exercise typed 401/gap/
 backpressure/source-loss states against the accepted shadow stream.
@@ -1047,7 +1077,11 @@ Append rows here. Do not create another active request file.
 | BR-EX-49 | 2026-08-25 | Alpha Fleet `/deployments/alphas` (entry screen WF 2a) | Feature is COMMISSIONED with no data: operator has no fleet view — which alpha is live where, exposure, session pnl, what needs attention, next gate per alpha | Facts + aggregates (read): `fleet-list.v1` — summary, KPI strip (live exposure vs physical, fleet session pnl, deployments by stage, attention counts, portfolios), stage-filter counts, per-alpha rows (stage presence, alloc, 30d pnl per currency, max dd, equity sparkline, health/next gate, note) with nested deployments (venue·mode, stage note, alloc, pnl, dd, account, health, sync age); server sort live-exposure-first then furthest stage | PORTAL_PROJECTION over strategies ⋈ strategy_deployments ⋈ portfolio_allocations ⋈ performance/equity snapshots; DERIVED pnl/spark; PORTAL_CONTROL gates/attention; TRADING_SYSTEM tick for session pnl | read-only · medium: FX-mixing currencies or hiding a BLOCKED row misleads — per-currency values, blocked rows always visible | ≤500 alphas keyset ≤50/page; ≤20 deployments/alpha; spark ≤30 pts (extrema kept); as_of per second; session pnl per tick | registry feature `EXECUTION_ALPHA_FLEET`; BR-EX-43 tick; BR-EX-30/35 decision ids for next gate | route absent → panel unavailable (today); research rows without figures → `—` with reason | fixture `execution-fleet-list.valid.json`; sort-rule + per-currency tests; frontend `alphaFleet.test` | Codex | N09 (Portal projection) · N10 (derivations) | `RECEIVED` | `AlphaFleet` — smoke `alphaFleet.smoke.ts` deleted on delivery | none until approved | hi-fi "Alpha Fleet (list)"; appendix A.49 |
 | BR-EX-50 | 2026-08-25 | Alpha 360 `/deployments/alphas/{id}` · Trade Replay tab | Operator cannot read fills against price: no candles, no fill/reject/armed markers, no bracket legs as levels, no round-trip pnl, no replay job, no trade log tied to markers | Facts (read): `replay.v1` — venue 1h OHLC (last bucket live), markers (ENTRY_FILL/EXIT_FILL_TP/EXIT_FILL_SL/EXIT_PARTIAL/BRACKET_ARMED/REJECT) with order/fill/bracket ids, round trips with pnl, legs (TP/SL/TRAILING trigger, flags, filled/total, activation_policy), mark tick, replay job (`execution_replay_jobs`), trade log keyset; deployment/symbol pickers | TRADING_SYSTEM candles/markers/legs/log; DERIVED round trips; PORTAL_CONTROL job; tick via BR-EX-43 | read-only · low-medium: marker time must be fill event ts; a misplaced marker misreads a trade | 120–2,000 candles; markers ≤500/window; log ≤200/page; tick ≤1/1.4s | BR-EX-48 legs/fills; BR-EX-43 tick; §6.5 orders/fills routes (N11) | route absent → tab unavailable; mark absent → no live line | fixture `execution-replay.dep_88.valid.json`; marker↔log id consistency; frontend `alpha360.test` replay cases | Codex · Trading System owner (OHLC) | N11 (adapters) · N08 (tick) | `RECEIVED` | `TradeReplay` — smoke `alphaReplay.smoke.ts` deleted on delivery | none until approved | hi-fi Alpha 360 WF 2a/2b; appendix A.50 |
 | BR-EX-51 | 2026-08-25 | Portfolio 360 `/deployments/portfolios/{id}` (Overview + Structure) | Operator sees static KPIs only: no live NAV/today, no performance attributed to configuration revisions, no cross-portfolio comparison, no configuration log tied to operations/approvals, no what-if or symbol-overlap read | Facts + aggregates (read): `portfolio-360.v1.1` — status/facts, live strip (NAV per tick, today, allocated/max/free, exposure, return vs benchmark + α, max dd vs limit, attention), equity vs benchmark by window with revision eras, cross-portfolio rows + cross corr, configuration log (rev ↔ operation_id ↔ approval ↔ since-rev pnl), structure KPIs, what-if (`marginal.v1`), symbol overlap, footer links; actions report-pack / rebalance-plan later | DERIVED (`twr.v1`, `corr.v1`, `marginal.v1`) over snapshots · PORTAL_CONTROL revisions/log/limits/attention · TRADING_SYSTEM tick for NAV | read-only now (actions later, ADMIN step-up) · medium: an era mis-cut misattributes pnl to a configuration — revision boundaries are the ledger's | 3 windows ≤400 pts; log ≤200 keyset; cross ≤20; tick ≤1/1.4s | BR-EX-43 tick; BR-EX-30/35 approval ids; capital ledger (existing) | fields absent → panels unavailable; strip falls back to contract KPIs (today's `<details>`) | fixture `execution-portfolio-360.PF-CRYPTO.v1_1.valid.json`; era↔rev↔operation consistency; per-currency tests; frontend `analytics360.test` | Codex | N09 (projection) · N10 (derivations) · N08 (tick) | `RECEIVED` | `PortfolioThreeSixty` — smoke `portfolio360.smoke.ts` deleted on delivery | none until approved | hi-fi WF 3a; appendix A.51 |
-| _next: BR-EX-52_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
+| BR-EX-52 | 2026-08-26 | Accounts & Bindings `/deployments/accounts` (entry screen WF 1g) | No list of bindings: operator cannot see which credentialed external accounts back which virtual accounts, physical equity vs Σ virtual headroom, credential expiry/OTP, sync health per venue policy, open findings | Facts + aggregates (read): `bindings-list.v1` — summary, KPI strip (physical equity live, Σ virtual + headroom, credentials valid/expiring/OTP, findings, sync health), filter counts, binding rows (env, credential state/scopes, physical, Σ virtual, accounts, sync kind/age/policy, health) with nested virtual accounts | PORTAL_CONTROL (bindings, credentials — never secrets) · BROKER (equity, sync snapshots) · PORTAL_PROJECTION (virtual allocation) | read-only · medium: Σ virtual > physical must never read green; test/simulated funds never join NAV | ≤50 bindings; ≤20 virtual/binding; as_of per second; equity per tick | `venue_accounts`, `venue_credentials`, `accounts`, `strategy_deployments`, `broker_account_sync_snapshots`, `venue_rate_limits`, `venues.trading_sessions`; BR-EX-43 tick | route absent → panel unavailable (today); sync age absent → STALE/UNKNOWN, never OK | fixture `execution-bindings-list.valid.json`; invariant tests; frontend `accountsBindings.test` | Codex | N09 · N11 (broker adapters) | `RECEIVED` | `AccountsBindings` — smoke `accounts.smoke.ts` deleted on delivery | none until approved | hi-fi "Accounts & Bindings (list)"; appendix A.52 |
+| BR-EX-53 | 2026-08-26 | Binding Detail `/deployments/accounts?binding={id}` | Operator cannot audit a binding: capital invariant bar per virtual account, credential scopes/secret fingerprint/ip allowlist/rotation/rate budget, live sync stream with digests, per-account recon, binding audit | Facts (read) `binding-detail.v1` + action `rotate-credential` (plan → apply → verify, step-up) | PORTAL_CONTROL (credential metadata) · BROKER (sync snapshots) · PORTAL_PROJECTION (capital) · `audit_log` | read + one governed mutation · high on the action (credential), read-only otherwise; **no key material ever in any payload** | stream ≤50 (+SSE `binding.snapshot`), audit ≤200 keyset | `venue_credentials`, `venue_rate_limits`, `broker_account_sync_snapshots`, `reconciliation_findings`, `audit_log`, `operator_operations`; N08 for stream | route absent → unavailable; rotate route absent → button links to Drawer with reason | fixture `execution-binding-detail.binance_main_01.valid.json`; secret-leak test; frontend `bindingDetail.test` | Codex | N09 · N11 · N08 | `RECEIVED` | `BindingDetail` — smoke deleted on delivery | rotate action = activation-gated (ADMIN step-up) | hi-fi "Binding Detail"; appendix A.53 |
+| BR-EX-54 | 2026-08-26 | Account/Broker 360 `/deployments/accounts/{id}` | Hi-fi 1g masthead facts (env, sync age, headroom state, margin/settle/rev), cash free / locked, broker source, diff severity, findings history are not in v1 | Additive fields on `account-broker-360.v1` → v1.1 | as v1 | read-only | 1 account/screen | existing contract | missing fields → v1 rendering | fixture update; frontend `account360.test` | Codex | N09 | `RECEIVED` | `AccountBroker360` | none | hi-fi "Account Broker 360"; appendix A.54 |
+| BR-EX-55 | 2026-08-26 | Every Execution screen — breadcrumb tail and masthead names | Names come from a hardcoded fixture map (`av_2041 → Grid v2.1`) or from the screen id, which is how a list route showed a fixture entity in its breadcrumb; other ids render raw | Facts (read): `entity-names.v1` batch resolver — id → kind, label, sub, href, env for alpha/deployment/account/binding/portfolio/incident/approval/exit_review | PORTAL_PROJECTION over `strategies`/`alphas`, `strategy_deployments`, `accounts`, `venue_accounts`, `portfolios`, Portal-owned incidents/approvals/exit reviews | read-only · low (display only; ids stay the keys) | ≤50 ids per call; ETag cached | any viewer | unknown id → `label:null` → raw id, never invented | none | fixture `execution-entity-names.valid.json`; frontend breadcrumb tests per route | Codex | N09 | `RECEIVED` | `ExecutionPreviewRoute` entity map deleted on delivery | none | cross-screen; appendix A.55 |
+| _next: BR-EX-56_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
 
 ### 7.3 Request quality gate
 
@@ -1154,7 +1188,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | Backend completed-slice index | `backend/README.md` |
 | Claude original request/review | `upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_BACKEND_PLAN_REQUEST.md`, `BACKEND_PLAN_REVIEW.md` |
 | Claude scale/current BR requests | `upgrade_frontend_plan_hifi/hifi_execution_loop/EXECUTION_SCALE_AND_REFINE.md` |
-| **Hi-fi V2 requests BR-EX-41…51 — field-level detail** (types/enums/examples, DoR §5.1 pre-filled per package, OpenAPI path stubs, typed error/state examples, delivery order and per-package smoke retirement) | `upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` (appendices A–I; G/H/I = full JSON examples, derivation rules, errors, live events and required tests for BR-EX-49/50/51); verbatim copy of the §7.2 rows: `…/BACKEND_PLAN_7_2_ROWS_2026-08-25.md` |
+| **Hi-fi V2 requests BR-EX-41…55 — field-level detail** (types/enums/examples, DoR §5.1 pre-filled per package, OpenAPI path stubs, typed error/state examples, delivery order and per-package smoke retirement) | `upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` (appendices A–K; G/H/I = full JSON examples, derivation rules, errors, live events and required tests for BR-EX-49/50/51; J = source mapping and open decisions; K = full spec for BR-EX-52/53/54 bindings/accounts); verbatim copy of the §7.2 rows: `…/BACKEND_PLAN_7_2_ROWS_2026-08-25.md` |
 | UI/UX authority for those requests — what each screen must show and why | hi-fi files `…/Design system discussion request_version2/HiFi *.dc.html` + owner screenshots 2026-08-25; grammar and per-screen smoke table `…/DESIGN_GRAMMAR_V3.md` (§8); audit `…/AUDIT_DENSITY_AND_INSIGHT_2026-08-25.md` |
 | Frontend smoke modules to delete on delivery (one per screen, contract at file head) | `apps/portal/frontend/src/execution/{commandCenter,incident,operationsQueue,blotter,stage,alpha360}.smoke.ts` |
 | Shared frontend/backend board | `upgrade_frontend_plan_hifi/hifi_execution_loop/PHASE_TRACKER.md` |
@@ -1175,4 +1209,4 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | Date | Change | Evidence/status effect |
 |---|---|---|
 | 2026-08-25 | Initial unified plan: current D1–D4 truth, N00–N17, H/A/BR-EX-01…40 and future Claude intake | documentation only; no runtime/profile/source/command change |
-| 2026-08-25 | Claude: §7.2 BR-EX-41…51 appended (`RECEIVED`) — hi-fi V2 Command Center 5a / Incident 4d / stage workbenches; schema appendix in `hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` | documentation only; no runtime/profile/source/command change; codex triages per §7.1 |
+| 2026-08-25 | Claude: §7.2 BR-EX-41…55 appended (`RECEIVED`) — hi-fi V2 Command Center 5a / Incident 4d / stage workbenches; schema appendix in `hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` | documentation only; no runtime/profile/source/command change; codex triages per §7.1 |

@@ -1,6 +1,7 @@
 {
   "schema_version": "execution.real-source-qualification.v1",
   "evidence_origin": "SYNTHETIC_TEMPLATE",
+  "qualification_profile": "EXTENDED_24H",
   "identity": {
     "run_id": "0198e84d-3d80-7f10-8b20-1ed93a820001",
     "owner_window_id": "n06-template-window",

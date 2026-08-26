@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  HttpException,
   Inject,
   Query,
   Req,
@@ -76,6 +77,29 @@ export class ExecutionRealtimeController {
       void reply.status(502).send({
         error: { code: "REALTIME_UPSTREAM_UNAVAILABLE", message: "Execution realtime stream is unavailable." },
       });
+    }
+  }
+
+  @Get("/command-center/realtime-snapshot")
+  async commandCenterSnapshot(@Req() request: RealtimeRequest) {
+    try {
+      return await this.proxy.snapshot({
+        user: request.portalUser,
+        session: request.portalSession,
+        workspaceId: request.portalWorkspaceId,
+      });
+    } catch (error) {
+      if (error instanceof RealtimeProxyError) {
+        throw new HttpException({
+          error: { code: error.code, message: "Execution realtime snapshot is unavailable." },
+        }, error.status);
+      }
+      throw new HttpException({
+        error: {
+          code: "REALTIME_SNAPSHOT_UNAVAILABLE",
+          message: "Execution realtime snapshot is unavailable.",
+        },
+      }, 502);
     }
   }
 }

@@ -50,7 +50,10 @@ describe("the published projection page", () => {
     expect(p.prevCursor).toBeNull();
     expect(p.hasMore).toBe(true);
     expect(p.hasPrevious).toBe(false);
-    expect(p.appliedFilters).toEqual([{ field: "status", op: "eq", value: "PARTIALLY_FILLED" }]);
+    expect(p.appliedFilters).toEqual([
+      { field: "status", op: "eq", value: "PARTIALLY_FILLED" },
+      { field: "deployment_id", op: "eq", value: "dep_74" },
+    ]);
     expect(p.appliedSort).toEqual([{ field: "as_of", direction: "desc" }]);
   });
 
