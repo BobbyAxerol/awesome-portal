@@ -124,6 +124,12 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-staged-activation.v1.schema.json#/$defs/PlanResponse",
   "execution-staged-activation.states.valid.json":
     "https://schemas.primusspark.com/portal/execution-staged-activation.v1.schema.json#/$defs/UiStateCorpus",
+  "execution-intercell-gateway.source-dark.valid.json":
+    "https://schemas.primusspark.com/portal/execution-intercell-gateway.v1.schema.json#/$defs/GatewayProfile",
+  "execution-intercell-gateway.event-corpus.valid.json":
+    "https://schemas.primusspark.com/portal/execution-intercell-gateway.v1.schema.json#/$defs/EventCorpus",
+  "execution-intercell-gateway.artifact-corpus.valid.json":
+    "https://schemas.primusspark.com/portal/execution-intercell-gateway.v1.schema.json#/$defs/ArtifactCorpus",
   "execution-analytics.equity-projection.valid.json":
     "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/EquityProjectionResponse",
   "execution-analytics.insight-line.valid.json":
@@ -231,6 +237,90 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
       "fixture", "denied", "incompatible", "stale", "partial", "rollback", "restart",
     ]);
     expect(states.every((item) => item.action_enabled === false)).toBe(true);
+  });
+
+  it("keeps N15A four-interface authority source-dark, separate and bounded", () => {
+    const profile = loadJson(
+      join(fixtureDir, "execution-intercell-gateway.source-dark.valid.json"),
+    ) as {
+      source_dark: boolean;
+      runtime_active: boolean;
+      source_call_authorized: boolean;
+      identity_policy: Record<string, unknown>;
+      interfaces: Array<{ interface: string; publication_state: string }>;
+      transports: Array<Record<string, unknown> & { interface: string }>;
+    };
+    expect(profile).toMatchObject({
+      source_dark: true,
+      runtime_active: false,
+      source_call_authorized: false,
+    });
+    expect(profile.interfaces.map((item) => item.interface)).toEqual([
+      "QUERY", "COMMAND", "EVENT", "ARTIFACT",
+    ]);
+    expect(profile.interfaces.every((item) => item.publication_state === "FIXTURE_ONLY")).toBe(true);
+    expect(profile.identity_policy).toMatchObject({
+      identities_distinct: true,
+      delegated_resource_policy: "EXACT_RESOURCE_ONLY",
+      raw_browser_token_forwarding: false,
+      wildcard_scope_allowed: false,
+    });
+    expect(profile.transports.every((item) =>
+      item.redirects_allowed === false && item.http2_required === true &&
+      item.tls13_required === true && item.retry_after_dispatch === 0)).toBe(true);
+    expect(profile.transports.find((item) => item.interface === "COMMAND"))
+      .toMatchObject({ retry_before_dispatch: 0, method: "POST" });
+
+    const schema = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-intercell-gateway.v1.schema.json#/$defs/GatewayProfile",
+    );
+    expect(schema!({ ...profile, runtime_active: true })).toBe(false);
+    expect(schema!({ ...profile, source_call_authorized: true })).toBe(false);
+    expect(schema!({
+      ...profile,
+      identity_policy: { ...profile.identity_policy, wildcard_scope_allowed: true },
+    })).toBe(false);
+  });
+
+  it("publishes N15A component codegen without mounting a runtime route", () => {
+    const openapi = loadJson(
+      join(ROOT, "openapi", "execution-intercell-gateway.openapi.json"),
+    ) as { paths: Record<string, unknown>; servers: unknown[]; "x-runtime-mounted": boolean };
+    expect(openapi.paths).toEqual({});
+    expect(openapi.servers).toEqual([]);
+    expect(openapi["x-runtime-mounted"]).toBe(false);
+    const generated = readFileSync(
+      join(ROOT, "generated", "execution-intercell-gateway.d.ts"),
+      "utf8",
+    );
+    for (const token of [
+      "GatewayInterface",
+      "GatewayProfile",
+      "InterfaceNegotiation",
+      "GatewayEvent",
+      "ArtifactDescriptor",
+    ]) expect(generated).toContain(token);
+  });
+
+  it("rejects incomplete N15A events and artifact descriptors", () => {
+    const events = loadJson(
+      join(fixtureDir, "execution-intercell-gateway.event-corpus.valid.json"),
+    ) as { events: Array<Record<string, unknown>> };
+    const artifacts = loadJson(
+      join(fixtureDir, "execution-intercell-gateway.artifact-corpus.valid.json"),
+    ) as { cases: Array<{ descriptor: Record<string, unknown> }> };
+    const eventSchema = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-intercell-gateway.v1.schema.json#/$defs/GatewayEvent",
+    );
+    const artifactSchema = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-intercell-gateway.v1.schema.json#/$defs/ArtifactDescriptor",
+    );
+    const { cursor: _cursor, ...eventWithoutCursor } = events.events[0];
+    const { sha256: _digest, ...artifactWithoutDigest } = artifacts.cases[0].descriptor;
+    expect(eventSchema!(eventWithoutCursor)).toBe(false);
+    expect(eventSchema!({ ...events.events[0], operation: "PATCH" })).toBe(false);
+    expect(artifactSchema!(artifactWithoutDigest)).toBe(false);
+    expect(artifactSchema!({ ...artifacts.cases[0].descriptor, access_policy: "PUBLIC" })).toBe(false);
   });
 
   it("rejects malformed event envelopes", () => {

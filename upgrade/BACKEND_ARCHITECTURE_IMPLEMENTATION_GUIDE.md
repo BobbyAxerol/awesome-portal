@@ -1452,6 +1452,17 @@ activation or the phase):**
   AWS-HK or Trading System route changed. See
   [`EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md`](./backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md).
 
+- **N15A source-dark four-interface gateway (2026-08-26):** Query, Command,
+  Event and Artifact now have independent semantic version/rollback authority,
+  distinct read/command workload identities, exact-resource delegated
+  assertions and bounded TLS1.3/HTTP2 transport blueprints. Rust owns Event
+  replay/gap/epoch rules, Artifact metadata/reference validation and local
+  partition/replay/expiry/schema/source-loss doubles. Component OpenAPI has no
+  paths/servers and tests prove `network_attempts=0`. Status is
+  `N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING /
+  PRODUCTION_INACTIVE`; no origin, credential, source or runtime changed. See
+  [`EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md`](./backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md).
+
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
   workload-identity/window gates precede D2, then authenticated transport and

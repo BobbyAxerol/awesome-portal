@@ -1953,6 +1953,17 @@ không phải 17 màn.
 > owner source/gateway bytes after N13B target selection. Detail:
 > [`EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md`](./backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md).
 
+> **Backend checkpoint 2026-08-26 — N15A source-dark four-interface gateway:**
+> status is `N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING /
+> PRODUCTION_INACTIVE`. Query, Command, Event and Artifact negotiate/fail/roll
+> back independently, use separate read/command identities and bounded
+> TLS1.3/HTTP2 policies, and have pure Event continuity plus Artifact reference
+> validation. Component OpenAPI has no path/server and local fault evidence
+> proves `network_attempts=0`; no AWS-HK/Trading System source, credential or
+> runtime changed. N15B later imports exact accepted owner bytes and performs
+> real per-interface mTLS/JWT/WAN/fault/SLO acceptance. Detail:
+> [`EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md`](./backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md).
+
 ## 12.4 Thứ tự slice của frontend
 
 Lane A chạy trước; mỗi slice đóng độc lập và không slice nào chờ codex.

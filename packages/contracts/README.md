@@ -95,6 +95,17 @@ seven-state UI corpus (`fixture`, `denied`, `incompatible`, `stale`, `partial`,
 `rollback`, `restart`) is the canonical Claude handoff; none of those fixtures
 grants source, Query, SSE or command authority.
 
+N15A adds the source-dark four-interface gateway authority at
+`execution-intercell-gateway.openapi.json`, generated as
+`generated/execution-intercell-gateway.d.ts`. Query, Command, Event and
+Artifact negotiate independently and retain their own version/rollback state.
+The profile binds the N11 Query, N12 Command, N02 Event and N15 Artifact schema
+digests, separates read and command workload identities, requires exact-resource
+delegation, TLS 1.3/HTTP2 and bounded no-redirect transports, and permits no
+post-dispatch retry. The OpenAPI has no paths or servers. Event and Artifact
+corpora cover replay/gap/epoch/tombstone and digest/schema/size/expiry/access
+rejections without publishing a source location, credential or artifact body.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields
@@ -140,6 +151,7 @@ packages/contracts/
     execution-command-center-snapshot.v1.schema.json
     execution-operations.v1.schema.json
     execution-staged-activation.v1.schema.json
+    execution-intercell-gateway.v1.schema.json
   fixtures/
     problem.valid.json
     command.valid.json
@@ -162,6 +174,7 @@ packages/contracts/
     execution-command-center.{busy,empty,partial,stale,unavailable}.valid.json
     execution-command-{catalog,plan,operation,relay-denied}.valid.json
     execution-staged-activation.{capabilities,plan-blocked,states}.valid.json
+    execution-intercell-gateway.{source-dark,event-corpus,artifact-corpus}.valid.json
   openapi/
     execution-analytics.openapi.json
     execution-analytics-series.openapi.json
@@ -170,6 +183,7 @@ packages/contracts/
     execution-command-center.openapi.json
     execution-operations.openapi.json
     execution-staged-activation.openapi.json
+    execution-intercell-gateway.openapi.json
   generated/
     portal-api.d.ts
     execution-analytics.d.ts
@@ -179,6 +193,7 @@ packages/contracts/
     execution-command-center.d.ts
     execution-operations.d.ts
     execution-staged-activation.d.ts
+    execution-intercell-gateway.d.ts
   contracts-snapshot.json
   package.json
   tsconfig.json

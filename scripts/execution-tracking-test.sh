@@ -25,12 +25,16 @@ OWNER_MASTER_REQUEST="${ROOT_DIR}/upgrade/backend/TRADING_SYSTEM_PORTAL_EXECUTIO
 EXECUTION_UNIFIED_PLAN="${ROOT_DIR}/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md"
 N14A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md"
 N14A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md"
+N15A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md"
+N15A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md"
 
 for required_file in \
     "${OWNER_MASTER_REQUEST}" \
     "${EXECUTION_UNIFIED_PLAN}" \
     "${N14A_REPORT}" \
-    "${N14A_HANDOFF}"
+    "${N14A_HANDOFF}" \
+    "${N15A_REPORT}" \
+    "${N15A_HANDOFF}"
 do
     if [[ ! -f "${required_file}" ]]; then
         echo "execution owner/phase plan is missing: ${required_file}" >&2
@@ -53,7 +57,7 @@ done
 for token in \
     "N13A_COMPLETE_SOURCE_DARK / N13B_MASTER_OWNER_RETURN_PENDING" \
     "N14A_COMPLETE_SOURCE_DARK / N14B_OWNER_RELEASE_EVIDENCE_PENDING" \
-    "N15A_READ_COMMAND_FOUNDATION_READY" \
+    "N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING" \
     "N16A_PLANNED / N16B_R3_OWNER_ACCEPTANCE_PENDING" \
     "N17A_PLANNED / N17B_PRODUCTION_OWNER_EVIDENCE_PENDING"
 do
@@ -91,6 +95,36 @@ do
 done
 if ! grep -Fq "N14A backend — Portal release authority" "${TRACKER}"; then
     echo "shared tracker lost N14A closeout section" >&2
+    exit 1
+fi
+
+for token in \
+    "N15A_COMPLETE_SOURCE_DARK" \
+    "N15B_OWNER_PUBLICATION_PENDING" \
+    "Query" \
+    "Command" \
+    "Event" \
+    "Artifact" \
+    "network_attempts=0"
+do
+    if ! grep -Fq "${token}" "${N15A_REPORT}"; then
+        echo "N15A report lost source-dark gateway invariant: ${token}" >&2
+        exit 1
+    fi
+done
+for token in \
+    "N15A_COMPLETE_SOURCE_DARK" \
+    "PRODUCTION_INACTIVE" \
+    "N15B" \
+    "generated/execution-intercell-gateway.d.ts"
+do
+    if ! grep -Fq "${token}" "${N15A_HANDOFF}"; then
+        echo "N15A Claude handoff lost consumer boundary: ${token}" >&2
+        exit 1
+    fi
+done
+if ! grep -Fq "N15A backend — Source-dark four-interface gateway" "${TRACKER}"; then
+    echo "shared tracker lost N15A closeout section" >&2
     exit 1
 fi
 

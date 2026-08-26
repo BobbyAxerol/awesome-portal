@@ -1,0 +1,301 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-intercell-gateway.v1.schema.json",
+  "$ref": "#/$defs/GatewayProfile",
+  "$defs": {
+    "ContractVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["major", "minor"],
+      "properties": {
+        "major": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "minor": { "type": "integer", "minimum": 0, "maximum": 65535 }
+      }
+    },
+    "VersionRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimum", "maximum"],
+      "properties": {
+        "minimum": { "$ref": "#/$defs/ContractVersion" },
+        "maximum": { "$ref": "#/$defs/ContractVersion" }
+      }
+    },
+    "InterfaceOffer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "interface",
+        "versions",
+        "preferred",
+        "rollback",
+        "publication_state",
+        "contract_digest"
+      ],
+      "properties": {
+        "interface": { "enum": ["QUERY", "COMMAND", "EVENT", "ARTIFACT"] },
+        "versions": { "$ref": "#/$defs/VersionRange" },
+        "preferred": { "$ref": "#/$defs/ContractVersion" },
+        "rollback": { "$ref": "#/$defs/ContractVersion" },
+        "publication_state": { "enum": ["FIXTURE_ONLY", "OWNER_PUBLISHED", "UNAVAILABLE"] },
+        "contract_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    },
+    "IdentityPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "read_identity_class",
+        "command_identity_class",
+        "identities_distinct",
+        "delegated_resource_policy",
+        "raw_browser_token_forwarding",
+        "wildcard_scope_allowed"
+      ],
+      "properties": {
+        "read_identity_class": { "const": "portal-execution-read" },
+        "command_identity_class": { "const": "portal-execution-command" },
+        "identities_distinct": { "const": true },
+        "delegated_resource_policy": { "const": "EXACT_RESOURCE_ONLY" },
+        "raw_browser_token_forwarding": { "const": false },
+        "wildcard_scope_allowed": { "const": false }
+      }
+    },
+    "TransportPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "interface",
+        "method",
+        "connect_timeout_ms",
+        "request_timeout_ms",
+        "queue_timeout_ms",
+        "maximum_concurrency",
+        "maximum_response_bytes",
+        "retry_before_dispatch",
+        "retry_after_dispatch",
+        "redirects_allowed",
+        "http2_required",
+        "tls13_required",
+        "redacted_observability_fields"
+      ],
+      "properties": {
+        "interface": { "enum": ["QUERY", "COMMAND", "EVENT", "ARTIFACT"] },
+        "method": { "enum": ["GET", "POST", "STREAM", "REFERENCE"] },
+        "connect_timeout_ms": { "type": "integer", "minimum": 1, "maximum": 5000 },
+        "request_timeout_ms": { "type": "integer", "minimum": 1, "maximum": 30000 },
+        "queue_timeout_ms": { "type": "integer", "minimum": 1, "maximum": 2000 },
+        "maximum_concurrency": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "maximum_response_bytes": { "type": "integer", "minimum": 1024, "maximum": 8388608 },
+        "retry_before_dispatch": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "retry_after_dispatch": { "const": 0 },
+        "redirects_allowed": { "const": false },
+        "http2_required": { "const": true },
+        "tls13_required": { "const": true },
+        "redacted_observability_fields": {
+          "type": "array",
+          "prefixItems": [
+            { "const": "interface" },
+            { "const": "outcome" },
+            { "const": "latency_ms" },
+            { "const": "response_bytes" },
+            { "const": "retry_count" }
+          ],
+          "items": false,
+          "minItems": 5,
+          "maxItems": 5
+        }
+      }
+    },
+    "GatewayProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "profile_id",
+        "source_dark",
+        "runtime_active",
+        "source_call_authorized",
+        "identity_policy",
+        "interfaces",
+        "transports"
+      ],
+      "properties": {
+        "schema_version": { "const": "portal.execution.intercell-gateway.v1" },
+        "profile_id": { "const": "n15a-source-dark" },
+        "source_dark": { "const": true },
+        "runtime_active": { "const": false },
+        "source_call_authorized": { "const": false },
+        "identity_policy": { "$ref": "#/$defs/IdentityPolicy" },
+        "interfaces": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/InterfaceOffer" },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "transports": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/TransportPolicy" },
+          "minItems": 4,
+          "maxItems": 4
+        }
+      }
+    },
+    "GatewayEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_id",
+        "schema_version",
+        "epoch",
+        "source_sequence",
+        "cursor",
+        "operation",
+        "entity_kind",
+        "entity_id",
+        "payload_sha256",
+        "occurred_at"
+      ],
+      "properties": {
+        "event_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "schema_version": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "epoch": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "source_sequence": { "type": "integer", "minimum": 1 },
+        "cursor": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "operation": { "enum": ["UPSERT", "DELETE"] },
+        "entity_kind": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "entity_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "payload_sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "occurred_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "EventCorpus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "source_dark", "events"],
+      "properties": {
+        "schema_version": { "const": "portal.execution.intercell-event-corpus.v1" },
+        "source_dark": { "const": true },
+        "events": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/GatewayEvent" },
+          "minItems": 4,
+          "maxItems": 32
+        }
+      }
+    },
+    "ArtifactDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "kind",
+        "sha256",
+        "size_bytes",
+        "media_type",
+        "schema_version",
+        "source_authority",
+        "created_at",
+        "retention_class",
+        "access_policy",
+        "signed_read_url_expiry"
+      ],
+      "properties": {
+        "artifact_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "kind": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "size_bytes": { "type": "integer", "minimum": 1, "maximum": 1073741824 },
+        "media_type": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "schema_version": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "source_authority": { "enum": ["RESEARCH_CELL", "EXECUTION_CELL"] },
+        "created_at": { "type": "string", "format": "date-time" },
+        "retention_class": { "enum": ["RELEASE", "EVIDENCE", "EPHEMERAL"] },
+        "access_policy": { "enum": ["WORKLOAD_SCOPED_READ", "REFERENCE_ONLY"] },
+        "signed_read_url_expiry": {
+          "anyOf": [
+            { "type": "string", "format": "date-time" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "ArtifactCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["descriptor", "digest_verified", "signature_verified", "expected"],
+      "properties": {
+        "descriptor": { "$ref": "#/$defs/ArtifactDescriptor" },
+        "digest_verified": { "type": "boolean" },
+        "signature_verified": { "type": "boolean" },
+        "expected": {
+          "enum": [
+            "ACCEPTED",
+            "TOO_LARGE",
+            "SCHEMA_INCOMPATIBLE",
+            "EXPIRED",
+            "DIGEST_MISMATCH",
+            "SIGNATURE_INVALID",
+            "POLICY_DENIED"
+          ]
+        }
+      }
+    },
+    "ArtifactCorpus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "source_dark", "policy", "cases"],
+      "properties": {
+        "schema_version": { "const": "portal.execution.intercell-artifact-corpus.v1" },
+        "source_dark": { "const": true },
+        "policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kinds",
+            "maximum_size_bytes",
+            "accepted_media_types",
+            "accepted_authorities",
+            "accepted_retention_classes"
+          ],
+          "properties": {
+            "kinds": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "minProperties": 1
+            },
+            "maximum_size_bytes": { "type": "integer", "minimum": 1024, "maximum": 1073741824 },
+            "accepted_media_types": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            "accepted_authorities": {
+              "type": "array",
+              "items": { "enum": ["RESEARCH_CELL", "EXECUTION_CELL"] },
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            "accepted_retention_classes": {
+              "type": "array",
+              "items": { "enum": ["RELEASE", "EVIDENCE", "EPHEMERAL"] },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          }
+        },
+        "cases": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ArtifactCase" },
+          "minItems": 7,
+          "maxItems": 32
+        }
+      }
+    }
+  }
+}

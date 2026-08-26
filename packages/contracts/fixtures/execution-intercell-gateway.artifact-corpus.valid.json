@@ -1,0 +1,142 @@
+{
+  "schema_version": "portal.execution.intercell-artifact-corpus.v1",
+  "source_dark": true,
+  "policy": {
+    "kinds": {
+      "ALPHA_RELEASE": ["alpha.release.v1"],
+      "EXECUTION_EVIDENCE": ["execution.evidence.v1"]
+    },
+    "maximum_size_bytes": 1048576,
+    "accepted_media_types": ["application/json", "application/vnd.primus.release+json"],
+    "accepted_authorities": ["RESEARCH_CELL", "EXECUTION_CELL"],
+    "accepted_retention_classes": ["RELEASE", "EVIDENCE"]
+  },
+  "cases": [
+    {
+      "descriptor": {
+        "artifact_id": "artifact-accepted",
+        "kind": "ALPHA_RELEASE",
+        "sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "size_bytes": 4096,
+        "media_type": "application/vnd.primus.release+json",
+        "schema_version": "alpha.release.v1",
+        "source_authority": "RESEARCH_CELL",
+        "created_at": "2026-05-04T15:59:00Z",
+        "retention_class": "RELEASE",
+        "access_policy": "WORKLOAD_SCOPED_READ",
+        "signed_read_url_expiry": "2026-05-04T16:04:00Z"
+      },
+      "digest_verified": true,
+      "signature_verified": true,
+      "expected": "ACCEPTED"
+    },
+    {
+      "descriptor": {
+        "artifact_id": "artifact-too-large",
+        "kind": "ALPHA_RELEASE",
+        "sha256": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "size_bytes": 1048577,
+        "media_type": "application/vnd.primus.release+json",
+        "schema_version": "alpha.release.v1",
+        "source_authority": "RESEARCH_CELL",
+        "created_at": "2026-05-04T15:59:00Z",
+        "retention_class": "RELEASE",
+        "access_policy": "WORKLOAD_SCOPED_READ",
+        "signed_read_url_expiry": "2026-05-04T16:04:00Z"
+      },
+      "digest_verified": true,
+      "signature_verified": true,
+      "expected": "TOO_LARGE"
+    },
+    {
+      "descriptor": {
+        "artifact_id": "artifact-schema-drift",
+        "kind": "ALPHA_RELEASE",
+        "sha256": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "size_bytes": 4096,
+        "media_type": "application/vnd.primus.release+json",
+        "schema_version": "alpha.release.v2",
+        "source_authority": "RESEARCH_CELL",
+        "created_at": "2026-05-04T15:59:00Z",
+        "retention_class": "RELEASE",
+        "access_policy": "WORKLOAD_SCOPED_READ",
+        "signed_read_url_expiry": "2026-05-04T16:04:00Z"
+      },
+      "digest_verified": true,
+      "signature_verified": true,
+      "expected": "SCHEMA_INCOMPATIBLE"
+    },
+    {
+      "descriptor": {
+        "artifact_id": "artifact-expired",
+        "kind": "ALPHA_RELEASE",
+        "sha256": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "size_bytes": 4096,
+        "media_type": "application/vnd.primus.release+json",
+        "schema_version": "alpha.release.v1",
+        "source_authority": "RESEARCH_CELL",
+        "created_at": "2026-05-04T15:58:00Z",
+        "retention_class": "RELEASE",
+        "access_policy": "WORKLOAD_SCOPED_READ",
+        "signed_read_url_expiry": "2026-05-04T15:59:59Z"
+      },
+      "digest_verified": true,
+      "signature_verified": true,
+      "expected": "EXPIRED"
+    },
+    {
+      "descriptor": {
+        "artifact_id": "artifact-digest-mismatch",
+        "kind": "EXECUTION_EVIDENCE",
+        "sha256": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "size_bytes": 2048,
+        "media_type": "application/json",
+        "schema_version": "execution.evidence.v1",
+        "source_authority": "EXECUTION_CELL",
+        "created_at": "2026-05-04T15:59:00Z",
+        "retention_class": "EVIDENCE",
+        "access_policy": "REFERENCE_ONLY",
+        "signed_read_url_expiry": null
+      },
+      "digest_verified": false,
+      "signature_verified": true,
+      "expected": "DIGEST_MISMATCH"
+    },
+    {
+      "descriptor": {
+        "artifact_id": "artifact-signature-invalid",
+        "kind": "EXECUTION_EVIDENCE",
+        "sha256": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "size_bytes": 2048,
+        "media_type": "application/json",
+        "schema_version": "execution.evidence.v1",
+        "source_authority": "EXECUTION_CELL",
+        "created_at": "2026-05-04T15:59:00Z",
+        "retention_class": "EVIDENCE",
+        "access_policy": "REFERENCE_ONLY",
+        "signed_read_url_expiry": null
+      },
+      "digest_verified": true,
+      "signature_verified": false,
+      "expected": "SIGNATURE_INVALID"
+    },
+    {
+      "descriptor": {
+        "artifact_id": "artifact-policy-denied",
+        "kind": "EXECUTION_EVIDENCE",
+        "sha256": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+        "size_bytes": 2048,
+        "media_type": "application/octet-stream",
+        "schema_version": "execution.evidence.v1",
+        "source_authority": "EXECUTION_CELL",
+        "created_at": "2026-05-04T15:59:00Z",
+        "retention_class": "EVIDENCE",
+        "access_policy": "REFERENCE_ONLY",
+        "signed_read_url_expiry": null
+      },
+      "digest_verified": true,
+      "signature_verified": true,
+      "expected": "POLICY_DENIED"
+    }
+  ]
+}

@@ -991,8 +991,7 @@ approval. N14A templates/candidates cannot satisfy this gate.
 ### N15 — Formal inter-cell gateway authority
 
 **Mapping:** BAR-18.  
-**Status:** `N15A_READ_COMMAND_FOUNDATION_READY /
-N15B_EVENT_ARTIFACT_OWNER_PUBLICATION_PENDING`.  
+**Status:** `N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING`.  
 **Priority:** P2.
 
 **Goal**
@@ -1017,6 +1016,14 @@ N11 Query, N12 Command, N02/N03 Event coverage and the master Artifact ruling.
 
 **N15A exit gate:** contract/codegen/parity/security/fault tests pass with no
 real endpoint, credential or source call.
+
+**Completed 2026-08-26:** the Portal now owns one source-dark four-interface
+authority with independent Query, Command, Event and Artifact version ranges,
+rollback selection, identity/transport policy, Event continuity, Artifact
+metadata/reference policy and local fault doubles. The OpenAPI contains only
+components and no paths/servers; tests prove `network_attempts=0`, no source
+call and no activation. See
+[`EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md`](./backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md).
 
 #### N15B — Real inter-cell gateway acceptance
 
@@ -1378,16 +1385,13 @@ command commit.
 
 ## 11. Recommended next sequence
 
-Current order after N13A and N14A completion:
+Current order after N13A, N14A and N15A completion:
 
-1. **N15A** — finish the source-dark Event/Artifact gateway authority and local
-   four-interface transport doubles; existing read/command foundations remain
-   inactive.
-2. **N16A** — same-domain routing and emergency policy against local doubles,
+1. **N16A** — same-domain routing and emergency policy against local doubles,
    with no public protective command.
-3. **N17A** — offline SLO/DR/rotation/evidence preparation and isolated game-day
+2. **N17A** — offline SLO/DR/rotation/evidence preparation and isolated game-day
    rehearsal.
-4. Keep N13B–N17B parked until the single master Trading System owner return is
+3. Keep N13B–N17B parked until the single master Trading System owner return is
    accepted. Then resume in order from **N13B**, never by jumping directly to a
    later B phase.
 
@@ -1433,3 +1437,4 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | 2026-08-26 | N10 BR-EX-34/39/40 closed | Rust pure engines + schema/OpenAPI/generated TS + canonical fixtures complete; routes/source/SSE/registry/commands inactive |
 | 2026-08-26 | N11 Portal publication gate + adapters closed | one 24-capability owner request, byte-bound schema/fixture verifier and strict Rust GET adapter complete; owner publication/source/runtime pending |
 | 2026-08-26 | N14A Portal release authority closed | six digest-pinned images, CI-bound SBOM/SLSA/Trivy/signature evidence, owner acceptance contract, dev/stable isolation and PostgreSQL restore/forward-fix rehearsal complete; N14B owner binding pending, source/runtime inactive |
+| 2026-08-26 | N15A four-interface gateway authority closed | independent Query/Command/Event/Artifact negotiation, split identities, bounded transports, Event continuity, Artifact reference policy and local fault doubles complete; N15B owner publication pending, network/source/runtime inactive |

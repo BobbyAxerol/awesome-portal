@@ -994,3 +994,24 @@ durable run/attempt events. Detailed evidence:
   bind accepted Trading System owner bytes and the N13B target profile; no
   AWS-HK/source/Query/SSE/command authority changed. Detail:
   [`EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md`](./EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md).
+
+## Backend state — 2026-08-26 (N15A four-interface gateway)
+
+- Query, Command, Event and Artifact are four independent versioned
+  authorities; each has its own preferred/rollback version and typed
+  compatible/unavailable/incompatible outcome.
+- Read and command identities are distinct. Delegated assertions are exact
+  resource scoped, short lived and replay protected; commands additionally
+  require approved-operation binding.
+- TLS1.3/HTTP2 transport blueprints are bounded and redirect-free. No request
+  retries after dispatch, and Command never retries automatically.
+- Event replay/gap/out-of-order/epoch semantics and Artifact
+  digest/schema/size/access/expiry policy have pure Rust authorities and local
+  failure corpora.
+- OpenAPI is component-only with no path/server. The local double records
+  `network_attempts=0`; no AWS-HK/Trading System call, listener, credential,
+  migration or runtime flag was introduced.
+- Status is `N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING /
+  PRODUCTION_INACTIVE`. N15B later binds the accepted master owner pack and
+  proves all four real interfaces independently. Detail:
+  [`EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md`](./EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md).

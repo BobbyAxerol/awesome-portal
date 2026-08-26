@@ -2703,7 +2703,7 @@ master request activates a source, screen or command.
 |---|---|---|---|
 | N13 | delivery-profile state machine, repositories/APIs, evidence validation, rollback fixtures | import owner bytes, Paper shadow/qualification and staged promotion | `N13A_COMPLETE_SOURCE_DARK / N13B_MASTER_OWNER_RETURN_PENDING` |
 | N14 | exact six-image digest manifest, CI-bound signatures/SBOM/SLSA/Trivy, dev/stable isolation, owner decision and restore/forward-fix rehearsal complete | after N13B target selection, bind accepted Trading System source/gateway commit/image/config/contracts and run joint release/rollback/forward-fix with exact dual-owner approval | `N14A_COMPLETE_SOURCE_DARK / N14B_OWNER_RELEASE_EVIDENCE_PENDING` |
-| N15 | Query/Command/Event/Artifact contracts, negotiation and local transport doubles | real mTLS/JWT routes, WAN/fault/compatibility acceptance | `N15A_READ_COMMAND_FOUNDATION_READY / N15B_EVENT_ARTIFACT_OWNER_PUBLICATION_PENDING` |
+| N15 | independent Query/Command/Event/Artifact contracts, rollback negotiation, identity/transport policy, Event/Artifact semantics and local fault doubles complete | bind accepted owner bytes and prove real mTLS/JWT routes plus WAN/fault/compatibility/SLO evidence independently | `N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING` |
 | N16 | same-domain/emergency policy, audit and simulated origin failure | accepted R3 protective route and real observed acknowledgement | `N16A_PLANNED / N16B_R3_OWNER_ACCEPTANCE_PENDING` |
 | N17 | SLO/DR/rotation tooling, isolated restore and dry-run game day | bounded production activation and joint SLO/DR/game-day evidence | `N17A_PLANNED / N17B_PRODUCTION_OWNER_EVIDENCE_PENDING` |
 
@@ -2726,6 +2726,26 @@ Backend report:
 Claude handoff:
 [`CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md`](./CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md).
 
-Next A action is N15A Event/Artifact completion. N14B remains parked until the
+Next A action is N16A source-dark same-domain/emergency policy. N14B remains parked until the
 master owner return and N13B exact target profile; it must bind owner bytes and
 run the joint release rehearsal, not reinterpret this source-dark result.
+
+### N15A backend — Source-dark four-interface gateway (2026-08-26)
+
+Codex completed one pure, source-dark authority for the independent Query,
+Command, Event and Artifact interfaces. It includes closed version ranges and
+rollback selection, separate read/command identities, bounded TLS1.3/HTTP2
+transport blueprints, Event replay/gap/epoch rules, Artifact
+digest/schema/size/access/expiry rules and local fault doubles. The component
+OpenAPI has no routes or servers; no credential, origin, migration, source call
+or runtime changed, and the local transport records `network_attempts=0`.
+
+Backend report:
+[`EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md`](../../backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md).
+Claude handoff:
+[`CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md`](./CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md).
+
+Next A action is N16A. N15B remains parked until accepted exact bytes from the
+single master Trading System owner pack; it then binds each interface and runs
+real mTLS/JWT, WAN/fault/compatibility/rollback/SLO acceptance without treating
+one passing interface as global authority.
