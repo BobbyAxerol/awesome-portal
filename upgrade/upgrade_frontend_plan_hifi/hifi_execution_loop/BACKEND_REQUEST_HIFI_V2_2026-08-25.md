@@ -298,3 +298,74 @@ Alerts: `GET /api/v1/execution/alerts?limit=20` như trên. Fixtures: `execution
 Legs / fills / lineage: xem BR-EX-48 trong `EXECUTION_SCALE_AND_REFINE.md`. Fixture:
 `execution-blotter-orders.hifi.valid.json`. Tiêu thụ: `FullBlotter` (`leadingRows` smoke `blotter.smoke.ts`).
 
+---
+
+# Phụ lục B — Definition of Ready (§5.1 backend plan) điền sẵn cho từng gói
+
+Codex chỉ cần xác nhận/sửa từng ô; ô nào tôi không có quyền quyết ghi **[codex quyết]**.
+
+| Gói | Owner · env | Authority & scope R/W | Schema rev · compat | Scale/cardinality/freshness/completeness | Auth/RBAC/SoD | Failure/unavailable/rollback | External/Bobby dependency | Test corpus & exit evidence |
+|---|---|---|---|---|---|---|---|---|
+| **42** pinned | Codex · Portal `dev` profile fixture→shadow | READ; PORTAL_PROJECTION (stage/status) + DERIVED figure | `command-center.v1` → v1.1 additive (new optional fields; old clients ignore) | ≤5 pins/user; freshness = snapshot `read_at`; completeness per pin (`target_available`) | reader: any Execution viewer; no write | pin target unavailable → row dashed (today); figure null → `—` | none | fixture `execution-command-center.pinned.valid.json`; schema test; frontend `commandCenter.test` pinned cases |
+| **44** fleet | Codex · same | READ; PORTAL_PROJECTION | `command-center.v1.1` additive | 6 cells; `read_at` | any viewer | cell null → `—` | none | fixture busy/quiet updated |
+| **45** pipeline | Codex · same | READ; PORTAL_PROJECTION over registry + PORTAL_CONTROL decision ids | new `promotion-pipeline.v1` (OpenAPI path below) | ≤200 versions/90d, keyset `cursor` >50; `read_at`; `completeness` PARTIAL when a decision id missing | any viewer | route unavailable → panel state; partial → `kind:none` + warning | BR-EX-30/35 for decision ids | fixture `execution-promotion-pipeline.valid.json`; server-side conversion/version-count tests; frontend `commandCenter.test` pipeline cases |
+| **43** alerts+ticks | Codex (summary/SSE) · Trading System owner (market feed) · `dev` shadow first | READ; PORTAL_PROJECTION (alerts) · TRADING_SYSTEM (market) | new `alerts-summary.v1`; SSE events `alerts.summary`, `market.tick` on the existing channel (N08) | summary ≤1/30s/user; tick ≤1/1.4s/symbol ≤3/screen; freshness = `as_of`; `freshness: FRESH\|STALE` | any viewer; stream needs session (typed 401 = existing corpus) | summary absent → chip hidden; tick absent → band shows last as_of + STALE; never 0 | **N08 activation approval (Bobby)**; market feed contract (`EXTERNAL_CONTRACT_PENDING`) | fixture `execution-alerts-summary.valid.json`; SSE corpus (gap/backpressure/auth_expired) reused |
+| **46** incident v2 | Codex (Portal fields) · Trading System owner (finding/snapshot routes §6.5) · `dev` | READ; PORTAL_CONTROL (incident/gates/timeline) · TRADING_SYSTEM (facts) · DERIVED (Δ money, `derived_display`) | `incident-detail.v1` → v1.1 additive | 1 incident/screen; timeline ≤500 keyset; spark ≤48 | viewer read; gates never unlock from UI; resolve = existing ADMIN workflow | routes unpublished → source panels unavailable (today); market absent → band hidden; gates fall back to blocker codes | §6.5 routes (N11), BR-EX-43 | fixtures `.open` + `.resolved`; gate-mirror consistency test (`resolution_gates[].blocker_code` ⊆ `resolution_gate.blocker_codes`); frontend `incident.test` |
+| **47** queue v2 | Codex · `dev` | READ; PORTAL_PROJECTION over command journal; DERIVED priority/escalation (server rule) | `operations-queue.v1` → v1.1 additive; new `alerts.v1` | ≤200 rows/24h keyset; alerts ≤20; countdowns from ISO | viewer read; ack/resolve = existing ADMIN workflow | alerts route unpublished → rail unavailable (today); missing priority → no chip, never guessed | §6.5 ops routes (N11); BR-EX-32/33 | fixtures `execution-operations-queue.attention.valid.json`, `execution-alerts.valid.json`; server priority-rule tests; frontend `operations.test`, `operationsWorkflow.test` |
+| **48** blotter v2 | Codex (Portal) · Trading System owner (orders_v2/fills_v2 routes) · `dev` | READ; TRADING_SYSTEM (orders/legs/fills) · PORTAL_CONTROL (risk grant/reject) · DERIVED (`slippage.v1`) | `blotter-orders.v1` → v1.1 additive; new `order-legs.v1`, `order-fills.v1` | 10⁵–10⁷ rows keyset ≤200/page; legs ≤8; fills ≤5,000 paged; tick ≤1/1.3s | viewer read | route unpublished → fields null "not published"; tick absent → no pill | BR-EX-24/25 (`OWNER_DECISION_PENDING`) · BR-EX-43 | fixture `execution-blotter-orders.hifi.valid.json` (+legs+fills); exact-decimal tests; frontend `analytics360.test` blotter cases, journey 4 |
+| **41** stage telemetry | Codex · `dev` (source-dark schema first, N10) | READ; PORTAL_PROJECTION/TRADING_SYSTEM/BROKER/DERIVED per 41.x | new `stage-equity.v1`, `envelope-consumption.v1`, `execution-quality.v1`, `positions.v1`, `contribution.v1`; `sandbox-certification.v1.1` | ≤5,000 pts/series; caps ≤8; buckets ≤12; positions ≤500 | viewer read | per-panel honest states (today) | N06 Paper qualification for source-backed values | per-kind fixtures; exact-decimal pure-engine tests |
+
+# Phụ lục C — OpenAPI path stubs (đề xuất; codex quyết tên cuối)
+
+```yaml
+paths:
+  /api/v1/execution/command-center:            # v1.1 additive: pinned.items[].{stage,status,figure,figure_tone,venue,deployment_id}, fleet.cells[].{sub,sub_tone,tone,href}
+  /api/v1/execution/promotion-pipeline:        # GET ?window=90d[&cursor]  → promotion-pipeline.v1
+  /api/v1/execution/alerts/summary:            # GET → alerts-summary.v1 (ETag, Cache-Control: no-cache, must-revalidate)
+  /api/v1/execution/alerts:                    # GET ?limit=20 → alerts.v1[]
+  /api/v1/execution/operations:                # v1.1 additive per-row + root kpis/throughput/source
+  /api/v1/execution/incidents/{incident_id}:   # v1.1 additive (subject, opened_at, owner, origin, sla_ack, resolve_budget, market, evidence_facts, operations_taken, apply_plan, resolution_gates, timeline_lines, waiting_line, resolved)
+  /api/v1/execution/blotter/orders:            # v1.1 additive per-row; ?filter=ALL|WORKING|CONDITIONAL|BRACKETS|FILLED|PARTIAL|REJECTED
+  /api/v1/execution/blotter/orders/{id}/legs:  # GET → order-legs.v1
+  /api/v1/execution/blotter/orders/{id}/fills: # GET ?cursor → order-fills.v1 (+ lineage)
+  /api/v1/execution/deployments/{id}/stage-equity:            # 41.1
+  /api/v1/execution/deployments/{id}/envelope-consumption:    # 41.2
+  /api/v1/execution/deployments/{id}/execution-quality:       # 41.3
+  /api/v1/execution/deployments/{id}/positions:               # 41.4
+  /api/v1/execution/deployments/{id}/contribution:            # 41.5
+# SSE (existing channel, N08): event: alerts.summary · event: market.tick
+```
+
+# Phụ lục D — typed error / state examples frontend sẽ render
+
+| Tình huống | Response đề xuất | Frontend hiển thị |
+|---|---|---|
+| route chưa publish (Trading System) | `503 {"error":{"code":"SOURCE_ROUTE_UNPUBLISHED","route":"orders_v2/fills","authority":"TRADING_SYSTEM"}}` hoặc panel `panel_state:"unavailable"` | honest state "not published" — **không** 0, không "—" cho số |
+| stale | `panel_state:"stale", freshness_state:"STALE", age_seconds` | chip STALE + `as_of`; countdown dừng |
+| partial (thiếu decision id, thiếu leg) | `completeness:"PARTIAL", warnings:[{code:"DECISION_ID_MISSING", ref}]` | ô `kind:none`, caption warning |
+| denied | `403 {"error":{"code":"EXECUTION_READ_DENIED"}}` | state denied (không lộ payload) |
+| stream auth hết hạn | `event: error {"code":"AUTH_EXPIRED"}` (corpus hiện có) | chip SESSION EXPIRED, values-as-read |
+| cursor lệch | `409 CURSOR_AHEAD` / `CURSOR_EXPIRED` (H-8) | reload notice |
+
+# Phụ lục E — thứ tự giao & điều kiện đóng từng gói (Claude phía frontend)
+
+1. **42 → 44 → 45** (một PR `command-center v1.1` + `promotion-pipeline.v1`): tôi xoá `commandCenter.smoke.ts` (trừ `CC_SMOKE_MOTION` chờ 43), re-record `el-v2-07-command-center`, đóng hàng tracker.
+2. **47** (+ `alerts.v1`): xoá `operationsQueue.smoke.ts`, re-record `el-v2-07-operations-queue`.
+3. **46**: xoá `incident.smoke.ts` (trừ market band chờ 43), re-record `el-v2-07-incident`.
+4. **48** (+24/25): xoá `blotter.smoke.ts` + slot `leadingRows`, re-record `el-v2-08-blotter`.
+5. **41**: xoá `stage.smoke.ts`, re-record `el-v2-06-*`.
+6. **43** (N08, Bobby duyệt activation): xoá `CC_SMOKE_MOTION`, market band Incident, pill giá Blotter chuyển sang stream.
+7. **34/40**: xoá `alpha360.smoke.ts`.
+
+Mỗi bước: handoff codex kèm **Required frontend tests**; tôi regenerate `portal-api.d.ts`, nạp fixture canonical
+trong test (không chép tay), ghi `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` vào ledger §3, tick grammar §8.
+
+# Phụ lục F — cách codex nhận request này
+
+- **Intake chính thức:** 8 hàng BR-EX-41…48 trong §7.2 của `portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`
+  (đang là sửa unstaged trên `feat/execution-n04-lease-aware-consumer`). Bản patch để apply lại nếu cần:
+  `BACKEND_PLAN_7_2_ROWS_2026-08-25.md` (cùng thư mục, 8 hàng nguyên văn).
+- **Chi tiết field/type/enum/ví dụ:** phụ lục A; DoR: phụ lục B; path: C; error: D; thứ tự: E.
+- Trả lời theo §7.1: `RECEIVED → NEEDS_CLARIFICATION | CONTRACT_PLANNED | OWNER_DECISION_PENDING | EXTERNAL_CONTRACT_PENDING | REJECTED`,
+  ghi vào cột Status §7.2 và `EXECUTION_REQUEST_LEDGER.md` §3.
+
