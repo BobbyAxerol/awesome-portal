@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { importPKCS8, SignJWT, type KeyLike } from "jose";
 import type { Role } from "../domain";
 
-const RESOURCE_PATTERN = /^(?:(?:alpha|deployment|account):[A-Za-z0-9._-]{1,128}|execution:command-center|execution:screen:(?:gate-r2|blotter|alpha-360|portfolio-360|account-broker-360):[A-Za-z0-9._-]{1,128})$/;
+const RESOURCE_PATTERN = /^(?:(?:alpha|deployment|account):[A-Za-z0-9._-]{1,128}|execution:command-center|execution:screen:(?:gate-r2|blotter|alpha-360|portfolio-360|account-broker-360|paper-workbench):[A-Za-z0-9._-]{1,128})$/;
 
 export interface ExecutionDelegationConfig {
   issuer: string;

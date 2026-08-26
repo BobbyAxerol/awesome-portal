@@ -104,6 +104,8 @@ grep -Fq 'EDGE_D4_SOURCE_CLIENT_IDENTITY_FILE: /run/secrets/d4-source-proxy-clie
 grep -Fq 'EDGE_PROJECTION_INGESTION_ENABLED: "false"' "${tmp_dir}/compose.yaml"
 grep -Fq 'EDGE_REALTIME_SSE_ENABLED: "false"' "${tmp_dir}/compose.yaml"
 grep -Fq 'EDGE_ANALYTICS_QUERY_ENABLED: "false"' "${tmp_dir}/compose.yaml"
+grep -Fq 'EDGE_SHADOW_QUERY_ENABLED: "false"' "${tmp_dir}/compose.yaml"
+grep -Fq 'EDGE_PAPER_WORKBENCH_SHADOW_ENABLED: "false"' "${tmp_dir}/compose.yaml"
 grep -Fq 'EDGE_COMMAND_RELAY_ENABLED: "false"' "${tmp_dir}/compose.yaml"
 if grep -Eq 'published: "(5432|8011|8444)"|EDGE_D4_SOURCE_API_KEY|X-Portal-Paper-Read-Key' "${tmp_dir}/compose.yaml"; then
   printf 'D4 Compose unexpectedly published a source or database port.\n' >&2

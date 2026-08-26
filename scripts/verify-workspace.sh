@@ -311,6 +311,7 @@ for required in \
   "${ROOT_DIR}/deploy/images/execution-edge.Dockerfile" \
   "${ROOT_DIR}/deploy/images/source-proxy.Dockerfile" \
   "${ROOT_DIR}/deploy/compose.execution-edge.yaml" \
+  "${ROOT_DIR}/deploy/compose.execution-shadow-query.yaml" \
   "${ROOT_DIR}/deploy/.env.execution-edge.example" \
   "${ROOT_DIR}/scripts/execution-edge-test.sh" \
   "${ROOT_DIR}/scripts/execution-offline-hardening-test.sh" \
@@ -412,10 +413,15 @@ for required in \
   "${ROOT_DIR}/upgrade/backend/EX_BE_03_N05_RETENTION_RECOVERY_CLEANUP.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_03_N06_REAL_SOURCE_QUALIFICATION_AND_SOAK.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N06_REAL_SOURCE_QUALIFICATION_HANDOFF.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_03_N07_PROJECTION_QUERY_ANALYTICS_SHADOW.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N07_SHADOW_SCREEN_APIS_HANDOFF.md" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/source-qualification/src/real_source.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/source-qualification/src/real_source_tests.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/source-qualification/src/bin/n06_verify.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/source-qualification/fixtures/n06-real-source-qualification.template.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/source-qualification/src/shadow_screen.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0010_shadow_screen_activation.sql" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-paper-workbench.orders-shadow.valid.json" \
   "${ROOT_DIR}/scripts/execution-n06-qualification-verify.sh" \
   "${ROOT_DIR}/scripts/execution-n06-qualification-test.sh" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md" \
@@ -871,10 +877,15 @@ for tracked_source in \
   upgrade/backend/EX_BE_03_N05_RETENTION_RECOVERY_CLEANUP.md \
   upgrade/backend/EX_BE_03_N06_REAL_SOURCE_QUALIFICATION_AND_SOAK.md \
   upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N06_REAL_SOURCE_QUALIFICATION_HANDOFF.md \
+  upgrade/backend/EX_BE_03_N07_PROJECTION_QUERY_ANALYTICS_SHADOW.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N07_SHADOW_SCREEN_APIS_HANDOFF.md \
   services/portal-execution-edge-rs/crates/source-qualification/src/real_source.rs \
   services/portal-execution-edge-rs/crates/source-qualification/src/real_source_tests.rs \
   services/portal-execution-edge-rs/crates/source-qualification/src/bin/n06_verify.rs \
   services/portal-execution-edge-rs/crates/source-qualification/fixtures/n06-real-source-qualification.template.json \
+  services/portal-execution-edge-rs/crates/source-qualification/src/shadow_screen.rs \
+  services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0010_shadow_screen_activation.sql \
+  packages/contracts/fixtures/execution-paper-workbench.orders-shadow.valid.json \
   scripts/execution-n06-qualification-verify.sh \
   scripts/execution-n06-qualification-test.sh \
   upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md \
@@ -1102,6 +1113,13 @@ docker compose --project-directory "${ROOT_DIR}" \
 docker compose --project-directory "${ROOT_DIR}" \
   --env-file "${ROOT_DIR}/deploy/.env.execution-edge.example" \
   -f "${ROOT_DIR}/deploy/compose.execution-edge.yaml" config --quiet
+EXECUTION_EDGE_ORIGIN=https://10.70.0.2:8443 \
+EXECUTION_EDGE_DELEGATION_AUDIENCE=portal-execution-edge-paper \
+CONTROL_API_EXECUTION_EDGE_SECRET_DIRECTORY=/srv/primus/control-api/execution-edge-secrets \
+docker compose --project-directory "${ROOT_DIR}" \
+  --env-file "${ROOT_DIR}/deploy/.env.production.example" \
+  -f "${ROOT_DIR}/deploy/compose.production.yaml" \
+  -f "${ROOT_DIR}/deploy/compose.execution-shadow-query.yaml" config --quiet
 "${ROOT_DIR}/scripts/execution-d1-test.sh"
 "${ROOT_DIR}/scripts/execution-d2-test.sh"
 "${ROOT_DIR}/scripts/execution-d3-test.sh"

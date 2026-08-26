@@ -1,0 +1,78 @@
+{
+  "schema_version": "execution.paper-workbench.shadow-panel.v1",
+  "screen_id": "EXECUTION_PAPER_WORKBENCH_SCREEN",
+  "delivery_profile": "shadow",
+  "deployment_id": "dep_74",
+  "panel": "orders",
+  "panel_state": "partial",
+  "authority": "PORTAL_PROJECTION",
+  "upstream_authorities": ["EXECUTION"],
+  "source_completeness": "POLL_BOUNDED",
+  "poll_interval_ms": 1000,
+  "freshness_state": "OK",
+  "freshness_policy_version": "paper.shadow-query.v1",
+  "age_seconds": 1,
+  "lag_ms": 20,
+  "read_at": "2026-08-26T08:00:01Z",
+  "epoch_id": "01993a4e-08c0-7f31-8ab3-0b2c90000001",
+  "activation_manifest_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "capability_snapshot_id": "cap-n07-shadow-1",
+  "warnings": [
+    {
+      "code": "POLL_BOUNDED_SOURCE",
+      "message": "The panel is a bounded poll projection, not an event-complete ledger."
+    },
+    {
+      "code": "RETENTION_UNCONFIGURED",
+      "message": "Retention authority is not published for this entity page."
+    }
+  ],
+  "page": {
+    "schema_version": "execution.query.v1",
+    "epoch_id": "01993a4e-08c0-7f31-8ab3-0b2c90000001",
+    "rows": [
+      {
+        "entity_id": "ord_01K32QRJ4F5XB5M56TNANW0G9J",
+        "projection_sequence": 401,
+        "source_authority": "EXECUTION",
+        "source_completeness": "POLL_BOUNDED",
+        "poll_interval_ms": 1000,
+        "as_of": "2026-08-26T08:00:00Z",
+        "source_read_at": "2026-08-26T08:00:00.100Z",
+        "projected_at": "2026-08-26T08:00:00.120Z",
+        "adapter_version": "paper-source-ingestor.d4.v1",
+        "capability_snapshot_id": "cap-n07-shadow-1",
+        "payload": {
+          "deployment_id": "dep_74",
+          "status": "PARTIALLY_FILLED",
+          "currency": "USDT",
+          "quantity": "1.250000000000000001",
+          "notional": "84375.0000000000000675"
+        }
+      }
+    ],
+    "total_count": 91000,
+    "filtered_count": 45500,
+    "next_cursor": "opaque-next-cursor",
+    "prev_cursor": null,
+    "has_more": true,
+    "has_previous": false,
+    "applied_filters": [
+      { "field": "deployment_id", "operator": "eq", "values": ["dep_74"] },
+      { "field": "status", "operator": "eq", "values": ["PARTIALLY_FILLED"] }
+    ],
+    "applied_sort": [{ "field": "as_of", "direction": "desc" }],
+    "aggregates_by_currency": [
+      {
+        "currency": "USDT",
+        "row_count": 45500,
+        "quantity_count": 45500,
+        "quantity": "125000.250000000000000001",
+        "notional_count": 45500,
+        "notional": "4875000.750000000000000001",
+        "invalid_numeric_count": 0
+      }
+    ],
+    "retention": { "availability": "UNKNOWN", "policy_version": "UNCONFIGURED" }
+  }
+}

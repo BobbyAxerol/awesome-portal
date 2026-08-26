@@ -306,6 +306,8 @@ for rendered in "${tmp_dir}/candidate.yaml" "${tmp_dir}/rollback.yaml"; do
   grep -Fq 'EDGE_SOURCE_PROBES_ENABLED: "false"' "${rendered}"
   grep -Fq 'EDGE_REALTIME_SSE_ENABLED: "false"' "${rendered}"
   grep -Fq 'EDGE_ANALYTICS_QUERY_ENABLED: "false"' "${rendered}"
+  grep -Fq 'EDGE_SHADOW_QUERY_ENABLED: "false"' "${rendered}"
+  grep -Fq 'EDGE_PAPER_WORKBENCH_SHADOW_ENABLED: "false"' "${rendered}"
   grep -Fq 'EDGE_COMMAND_RELAY_ENABLED: "false"' "${rendered}"
   grep -Fq 'EDGE_ANALYTICS_SOURCE_PROFILE: fixture' "${rendered}"
   grep -Fq 'POSTGRES_PASSWORD_FILE: /run/secrets/postgres-bootstrap-password' "${rendered}"
@@ -331,6 +333,13 @@ sed -i 's/^EDGE_ANALYTICS_QUERY_ENABLED=false$/EDGE_ANALYTICS_QUERY_ENABLED=true
 chmod 0600 "${tmp_dir}/unsafe.env"
 if "${preflight}" --env-file "${tmp_dir}/unsafe.env" --mode offline >/dev/null 2>&1; then
   printf 'D2 preflight unexpectedly accepted an enabled analytics flag.\n' >&2
+  exit 1
+fi
+cp "${tmp_dir}/candidate.env" "${tmp_dir}/unsafe-shadow.env"
+sed -i 's/^EDGE_SHADOW_QUERY_ENABLED=false$/EDGE_SHADOW_QUERY_ENABLED=true/' "${tmp_dir}/unsafe-shadow.env"
+chmod 0600 "${tmp_dir}/unsafe-shadow.env"
+if "${preflight}" --env-file "${tmp_dir}/unsafe-shadow.env" --mode offline >/dev/null 2>&1; then
+  printf 'D2 preflight unexpectedly accepted an enabled N07 shadow-query flag.\n' >&2
   exit 1
 fi
 cp "${tmp_dir}/candidate.env" "${tmp_dir}/unsafe-command.env"

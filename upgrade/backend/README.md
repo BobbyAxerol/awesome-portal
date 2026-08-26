@@ -646,6 +646,15 @@ authority.
   pass real modes, owner review is post-window, and even accepted evidence cannot
   activate a reader. No N02/N03 owner pack or N06 window exists locally, so no
   source call or runtime/profile change occurred.
+- [EX-BE-03 / N07 Projection, Query, analytics and narrow screen APIs in shadow](./EX_BE_03_N07_PROJECTION_QUERY_ANALYTICS_SHADOW.md)
+  — **Portal implementation complete / shadow profile inactive:** immutable
+  compatibility evidence now gates an atomic epoch cutover, and the first
+  commissioned Paper Workbench `orders`/`positions` API is deployment-scoped
+  through Rust Query plus a session/mTLS/H2/delegated-JWT TypeScript BFF.
+  Signed keysets, exact in-scope counts/aggregates, exact decimals, freshness,
+  partiality, retention and typed recovery are contract-tested. N06 real
+  evidence and owner promotion remain absent, so registry is still `fixture`,
+  flags are false and no source/runtime was touched.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

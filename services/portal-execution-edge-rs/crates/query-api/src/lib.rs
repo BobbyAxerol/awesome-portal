@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use chrono::{DateTime, TimeDelta, Utc};
-use execution_contracts::{DecimalString, SourceAuthority};
+use execution_contracts::{DecimalString, SourceAuthority, SourceCompleteness};
 use hmac::{Hmac, Mac as _};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
@@ -202,6 +202,7 @@ pub enum FilterField {
     AccountId,
     PortfolioId,
     StrategyId,
+    DeploymentId,
     SourceAuthority,
     AsOf,
 }
@@ -300,8 +301,8 @@ impl QueryAllowlist {
     #[must_use]
     pub fn projection_entities() -> Self {
         use FilterField::{
-            AccountId, AsOf, Currency, InstrumentId, PortfolioId, SourceAuthority, Status,
-            StrategyId,
+            AccountId, AsOf, Currency, DeploymentId, InstrumentId, PortfolioId, SourceAuthority,
+            Status, StrategyId,
         };
         use FilterOperator::{Contains, Eq, Gte, In, Lte};
         Self {
@@ -312,6 +313,7 @@ impl QueryAllowlist {
                 (AccountId, BTreeSet::from([Eq, In])),
                 (PortfolioId, BTreeSet::from([Eq, In])),
                 (StrategyId, BTreeSet::from([Eq, In])),
+                (DeploymentId, BTreeSet::from([Eq])),
                 (SourceAuthority, BTreeSet::from([Eq, In])),
                 (AsOf, BTreeSet::from([Gte, Lte])),
             ]),
@@ -456,6 +458,8 @@ pub struct ProjectionQueryRow {
     pub entity_id: String,
     pub projection_sequence: u64,
     pub source_authority: SourceAuthority,
+    pub source_completeness: SourceCompleteness,
+    pub poll_interval_ms: Option<i64>,
     pub as_of: DateTime<Utc>,
     pub source_read_at: DateTime<Utc>,
     pub projected_at: DateTime<Utc>,

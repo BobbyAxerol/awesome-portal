@@ -19,6 +19,7 @@ paper-source-runner = { path = "../paper-source-runner" }
 paper-source-transport = { path = "../paper-source-transport" }
 projection-core = { path = "../projection-core" }
 projection-store-pg = { path = "../projection-store-pg" }
+query-api = { path = "../query-api" }
 realtime-sse = { path = "../realtime-sse" }
 reqwest.workspace = true
 rustls.workspace = true

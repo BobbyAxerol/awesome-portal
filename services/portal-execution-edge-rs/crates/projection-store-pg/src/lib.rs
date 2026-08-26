@@ -10,6 +10,9 @@ use projection_core::{
     ProjectionObservation, ProjectionOperation, ProjectionReducer, ProjectionScope, ReplayRecord,
     SnapshotCompleteness, SourceSequenceSemantics,
 };
+use source_qualification::shadow_screen::{
+    accept_shadow_activation, AcceptedShadowActivation, ShadowActivationEvidence,
+};
 use sqlx::{postgres::PgPoolOptions, PgPool, Postgres, Row, Transaction};
 use thiserror::Error;
 use uuid::Uuid;
@@ -78,6 +81,14 @@ pub struct ActivatedEpoch {
     pub retained_previous_epoch_id: Option<Uuid>,
     pub overlap_until: DateTime<Utc>,
     pub state_digest: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ShadowScreenAuthority {
+    pub epoch_id: Uuid,
+    pub screen_id: String,
+    pub manifest_digest: String,
+    pub capability_snapshot_id: String,
 }
 
 #[derive(Clone)]
@@ -599,7 +610,8 @@ impl PgProjectionStore {
     ///
     /// Rejects parity drift, unresolved dead letters/gaps, invalid status or a
     /// database failure. The swap is one transaction.
-    pub async fn activate_epoch(
+    #[cfg(test)]
+    async fn activate_epoch(
         &self,
         scope: &ProjectionScope,
         candidate_epoch_id: Uuid,
@@ -703,6 +715,200 @@ impl PgProjectionStore {
             retained_previous_epoch_id: previous,
             overlap_until,
             state_digest: actual_state_digest,
+        })
+    }
+
+    /// Atomically records an accepted N07 compatibility manifest and promotes
+    /// its parity-matched Paper BUILDING epoch to ACTIVE. Registry and runtime
+    /// flags remain separate owner-controlled changes.
+    ///
+    /// # Errors
+    ///
+    /// Rejects evidence/epoch compatibility drift, parity mismatch, unresolved
+    /// blockers, duplicate activation evidence or a database failure.
+    #[allow(clippy::too_many_lines)]
+    pub async fn activate_shadow_epoch(
+        &self,
+        accepted: &AcceptedShadowActivation,
+        activated_at: DateTime<Utc>,
+        overlap: Duration,
+    ) -> Result<ActivatedEpoch, StoreError> {
+        let evidence = accepted.evidence();
+        let overlap = TimeDelta::from_std(overlap).map_err(|_| StoreError::InvalidOverlap)?;
+        let mut transaction = self.pool.begin().await?;
+        let candidate = sqlx::query(
+            "SELECT workspace_id, environment, status, adapter_version,
+                    source_gateway_digest, capability_snapshot_id
+             FROM portal_projection.epochs WHERE epoch_id = $1 FOR UPDATE",
+        )
+        .bind(evidence.candidate_epoch_id)
+        .fetch_optional(&mut *transaction)
+        .await?
+        .ok_or(StoreError::EpochNotFound)?;
+        if candidate.try_get::<String, _>("workspace_id")? != evidence.scope.workspace_id.as_str()
+            || candidate.try_get::<String, _>("environment")? != evidence.scope.environment
+        {
+            return Err(StoreError::ScopeMismatch);
+        }
+        if candidate.try_get::<String, _>("status")? != "BUILDING" {
+            return Err(StoreError::EpochNotBuilding);
+        }
+        if candidate.try_get::<String, _>("adapter_version")?
+            != evidence.compatibility.adapter_version
+            || candidate.try_get::<String, _>("source_gateway_digest")?
+                != evidence.compatibility.source_gateway_digest
+            || candidate.try_get::<String, _>("capability_snapshot_id")?
+                != evidence.compatibility.capability_snapshot_id
+        {
+            return Err(StoreError::ShadowCompatibilityMismatch);
+        }
+        let blockers: i64 = sqlx::query_scalar(
+            "SELECT
+               (SELECT count(*) FROM portal_projection.dead_letters
+                WHERE epoch_id = $1 AND status IN ('OPEN', 'REPLAYING'))
+               +
+               (SELECT count(*) FROM portal_projection.gaps
+                WHERE epoch_id = $1 AND resolved_at IS NULL)",
+        )
+        .bind(evidence.candidate_epoch_id)
+        .fetch_one(&mut *transaction)
+        .await?;
+        if blockers != 0 {
+            return Err(StoreError::EpochHasUnresolvedBlockers);
+        }
+        let rows = sqlx::query(
+            "SELECT * FROM portal_projection.entities
+             WHERE epoch_id = $1 ORDER BY entity_kind, entity_id",
+        )
+        .bind(evidence.candidate_epoch_id)
+        .fetch_all(&mut *transaction)
+        .await?;
+        let entities = rows
+            .iter()
+            .map(row_to_entity)
+            .collect::<Result<Vec<_>, _>>()?;
+        let actual_state_digest = semantic_state_digest(&entities)?;
+        if evidence.expected_state_digest != actual_state_digest {
+            sqlx::query(
+                "UPDATE portal_projection.epochs
+                 SET expected_state_digest = $2, actual_state_digest = $3
+                 WHERE epoch_id = $1",
+            )
+            .bind(evidence.candidate_epoch_id)
+            .bind(&evidence.expected_state_digest)
+            .bind(&actual_state_digest)
+            .execute(&mut *transaction)
+            .await?;
+            transaction.commit().await?;
+            return Err(StoreError::ParityMismatch);
+        }
+        let previous = sqlx::query_scalar::<_, Uuid>(
+            "SELECT epoch_id FROM portal_projection.epochs
+             WHERE workspace_id = $1 AND environment = $2 AND status = 'ACTIVE'
+             FOR UPDATE",
+        )
+        .bind(evidence.scope.workspace_id.as_str())
+        .bind(&evidence.scope.environment)
+        .fetch_optional(&mut *transaction)
+        .await?;
+        let overlap_until = activated_at + overlap;
+        if let Some(previous_epoch_id) = previous {
+            sqlx::query(
+                "UPDATE portal_projection.epochs
+                 SET status = 'RETAINED', overlap_until = $2
+                 WHERE epoch_id = $1",
+            )
+            .bind(previous_epoch_id)
+            .bind(overlap_until)
+            .execute(&mut *transaction)
+            .await?;
+        }
+        let owner_approved_at = evidence
+            .owner_approval
+            .approved_at
+            .ok_or(StoreError::ShadowOwnerApprovalMissing)?;
+        sqlx::query(
+            "INSERT INTO portal_projection.shadow_screen_activations
+             (activation_id,epoch_id,workspace_id,environment,screen_id,
+              delivery_profile,manifest_digest,manifest,owner_id,
+              owner_approved_at,activated_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
+        )
+        .bind(Uuid::now_v7())
+        .bind(evidence.candidate_epoch_id)
+        .bind(evidence.scope.workspace_id.as_str())
+        .bind(&evidence.scope.environment)
+        .bind(&evidence.screen_id)
+        .bind(&evidence.delivery_profile)
+        .bind(accepted.manifest_digest())
+        .bind(serde_json::to_value(evidence).map_err(|_| StoreError::Serialization)?)
+        .bind(&evidence.owner_approval.owner_id)
+        .bind(owner_approved_at)
+        .bind(activated_at)
+        .execute(&mut *transaction)
+        .await?;
+        sqlx::query(
+            "UPDATE portal_projection.epochs
+             SET status = 'ACTIVE', activated_at = $2,
+                 expected_state_digest = $3, actual_state_digest = $3
+             WHERE epoch_id = $1",
+        )
+        .bind(evidence.candidate_epoch_id)
+        .bind(activated_at)
+        .bind(&actual_state_digest)
+        .execute(&mut *transaction)
+        .await?;
+        transaction.commit().await?;
+        Ok(ActivatedEpoch {
+            active_epoch_id: evidence.candidate_epoch_id,
+            retained_previous_epoch_id: previous,
+            overlap_until,
+            state_digest: actual_state_digest,
+        })
+    }
+
+    /// Resolves an ACTIVE epoch only when it was commissioned by an immutable,
+    /// still-valid N07 shadow-screen manifest.
+    ///
+    /// # Errors
+    ///
+    /// Fails closed for absent/tampered activation evidence or scope drift.
+    pub async fn active_shadow_screen_authority(
+        &self,
+        scope: &ProjectionScope,
+        screen_id: &str,
+    ) -> Result<ShadowScreenAuthority, StoreError> {
+        let row = sqlx::query(
+            "SELECT e.epoch_id, e.capability_snapshot_id, a.screen_id,
+                    a.manifest_digest, a.manifest
+             FROM portal_projection.epochs e
+             JOIN portal_projection.shadow_screen_activations a ON a.epoch_id=e.epoch_id
+             WHERE e.workspace_id=$1 AND e.environment=$2 AND e.status='ACTIVE'
+               AND a.screen_id=$3 AND a.delivery_profile='shadow'",
+        )
+        .bind(scope.workspace_id.as_str())
+        .bind(&scope.environment)
+        .bind(screen_id)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or(StoreError::ShadowScreenNotActivated)?;
+        let epoch_id: Uuid = row.try_get("epoch_id")?;
+        let manifest_digest: String = row.try_get("manifest_digest")?;
+        let manifest: ShadowActivationEvidence =
+            serde_json::from_value(row.try_get("manifest")?)
+                .map_err(|_| StoreError::ShadowActivationEvidenceInvalid)?;
+        let accepted = accept_shadow_activation(manifest)
+            .map_err(|_| StoreError::ShadowActivationEvidenceInvalid)?;
+        if accepted.manifest_digest() != manifest_digest
+            || accepted.evidence().candidate_epoch_id != epoch_id
+        {
+            return Err(StoreError::ShadowActivationEvidenceInvalid);
+        }
+        Ok(ShadowScreenAuthority {
+            epoch_id,
+            screen_id: row.try_get("screen_id")?,
+            manifest_digest,
+            capability_snapshot_id: row.try_get("capability_snapshot_id")?,
         })
     }
 
@@ -1202,6 +1408,14 @@ pub enum StoreError {
     ParityMismatch,
     #[error("projection epoch overlap is invalid")]
     InvalidOverlap,
+    #[error("N07 shadow compatibility manifest does not match the BUILDING epoch")]
+    ShadowCompatibilityMismatch,
+    #[error("N07 shadow activation owner approval timestamp is missing")]
+    ShadowOwnerApprovalMissing,
+    #[error("N07 shadow screen is not commissioned for the active epoch")]
+    ShadowScreenNotActivated,
+    #[error("N07 shadow activation evidence is invalid or tampered")]
+    ShadowActivationEvidenceInvalid,
     #[error("persisted projection cursor is internally inconsistent")]
     PersistedCursorInvariant,
     #[error("persisted projection vocabulary is unsupported")]
@@ -1309,6 +1523,17 @@ mod tests {
     };
     use sha2::{Digest as _, Sha256};
     use shared_consumer_core::{ConsumerLeaseProof, LeaseOwnerDigest};
+    use source_qualification::{
+        real_source::{
+            RealSourceDecision, RealSourceQualificationReport, REAL_SOURCE_EVIDENCE_SCHEMA_VERSION,
+        },
+        shadow_screen::{
+            accept_shadow_activation, ShadowActivationEvidence, ShadowCompatibilityManifest,
+            ShadowGateEvidence, ShadowOwnerApproval, ShadowRuntimeIntent,
+            PAPER_WORKBENCH_PRIVATE_ROUTE, PAPER_WORKBENCH_PUBLIC_ROUTE, PAPER_WORKBENCH_SCREEN_ID,
+            SHADOW_ACTIVATION_SCHEMA_VERSION,
+        },
+    };
 
     use super::*;
 
@@ -1332,6 +1557,84 @@ mod tests {
             source_gateway_digest: "sha256:test-gateway".to_owned(),
             capability_snapshot_id: "cap_pg_test".to_owned(),
         }
+    }
+
+    fn digest(value: char) -> String {
+        format!("sha256:{}", value.to_string().repeat(64))
+    }
+
+    fn n07_scope() -> ProjectionScope {
+        ProjectionScope::new(
+            CanonicalId::parse("workspace_paper_binance_usdm").unwrap(),
+            "paper",
+        )
+        .unwrap()
+    }
+
+    fn accepted_n07(
+        epoch_id: Uuid,
+        state_digest: String,
+        metadata: &EpochMetadata,
+    ) -> source_qualification::shadow_screen::AcceptedShadowActivation {
+        let evidence = ShadowActivationEvidence {
+            schema_version: SHADOW_ACTIVATION_SCHEMA_VERSION.to_owned(),
+            screen_id: PAPER_WORKBENCH_SCREEN_ID.to_owned(),
+            public_route: PAPER_WORKBENCH_PUBLIC_ROUTE.to_owned(),
+            private_route: PAPER_WORKBENCH_PRIVATE_ROUTE.to_owned(),
+            delivery_profile: "shadow".to_owned(),
+            scope: n07_scope(),
+            candidate_epoch_id: epoch_id,
+            expected_state_digest: state_digest.clone(),
+            projected_state_digest: state_digest.clone(),
+            replay_state_digest: state_digest,
+            compatibility: ShadowCompatibilityManifest {
+                source_contract_revision: "d4.paper-read.v2".to_owned(),
+                adapter_version: metadata.adapter_version.clone(),
+                source_gateway_digest: metadata.source_gateway_digest.clone(),
+                capability_snapshot_id: metadata.capability_snapshot_id.clone(),
+                projection_schema_digest: digest('c'),
+                query_contract_digest: digest('d'),
+                edge_image_digest: digest('e'),
+                control_api_image_digest: digest('f'),
+            },
+            runtime_intent: ShadowRuntimeIntent {
+                projection_enabled: true,
+                query_enabled: true,
+                screen_enabled: true,
+                realtime_enabled: false,
+                command_enabled: false,
+            },
+            gate_evidence: ShadowGateEvidence {
+                fixture_parity_sha256: digest('1'),
+                source_loss_sha256: digest('2'),
+                auth_matrix_sha256: digest('3'),
+                load_test_sha256: digest('4'),
+                rollback_sha256: digest('5'),
+                visual_honest_state_sha256: digest('6'),
+            },
+            n06_report: RealSourceQualificationReport {
+                schema_version: REAL_SOURCE_EVIDENCE_SCHEMA_VERSION.to_owned(),
+                run_id: Uuid::now_v7(),
+                owner_window_id: "window-n06".to_owned(),
+                contract_revision: "d4.paper-read.v2".to_owned(),
+                source_scope_id: "PAPER_BINANCE_USDM".to_owned(),
+                building_epoch_id: epoch_id,
+                evidence_digest: digest('7'),
+                decision: RealSourceDecision::EvidenceAccepted,
+                soak_seconds: 86_400,
+                source_mutations: 0,
+                divergence_count: 0,
+                activation_authorized: false,
+                registry_profile_changed: false,
+            },
+            owner_approval: ShadowOwnerApproval {
+                owner_id: "bobby".to_owned(),
+                approved: true,
+                approved_at: Some(at(1)),
+                evidence_sha256: digest('8'),
+            },
+        };
+        accept_shadow_activation(evidence).unwrap()
     }
 
     fn d4_metadata() -> EpochMetadata {
@@ -2243,6 +2546,70 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn n07_shadow_cutover_is_manifest_bound_atomic_and_auditable() {
+        let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
+            return;
+        };
+        let _guard = postgres_test_lock().lock().await;
+        let store = PgProjectionStore::connect(&database_url).await.unwrap();
+        store.migrate().await.unwrap();
+        reset(&store, &database_url).await;
+
+        let scope = n07_scope();
+        let metadata = EpochMetadata {
+            adapter_version: "paper-source-ingestor.d4.v1".to_owned(),
+            source_gateway_digest: digest('b'),
+            capability_snapshot_id: "cap-n07".to_owned(),
+        };
+        let epoch_id = store
+            .create_building_epoch(&scope, &metadata, at(0))
+            .await
+            .unwrap();
+        let state_digest = semantic_state_digest(&[]).unwrap();
+        let accepted = accepted_n07(epoch_id, state_digest.clone(), &metadata);
+        let activated = store
+            .activate_shadow_epoch(&accepted, at(2), Duration::from_secs(60))
+            .await
+            .unwrap();
+        assert_eq!(activated.active_epoch_id, epoch_id);
+        assert_eq!(activated.state_digest, state_digest);
+        assert_eq!(activated.retained_previous_epoch_id, None);
+
+        let stored: (String, String, serde_json::Value) = sqlx::query_as(
+            "SELECT screen_id, manifest_digest, manifest
+             FROM portal_projection.shadow_screen_activations WHERE epoch_id=$1",
+        )
+        .bind(epoch_id)
+        .fetch_one(&store.pool)
+        .await
+        .unwrap();
+        assert_eq!(stored.0, PAPER_WORKBENCH_SCREEN_ID);
+        assert_eq!(stored.1, accepted.manifest_digest());
+        assert_eq!(stored.2["delivery_profile"], "shadow");
+        assert_eq!(stored.2["runtime_intent"]["realtime_enabled"], false);
+        assert_eq!(stored.2["runtime_intent"]["command_enabled"], false);
+        let authority = store
+            .active_shadow_screen_authority(&scope, PAPER_WORKBENCH_SCREEN_ID)
+            .await
+            .unwrap();
+        assert_eq!(authority.epoch_id, epoch_id);
+        assert_eq!(authority.manifest_digest, accepted.manifest_digest());
+        assert!(matches!(
+            store
+                .active_shadow_screen_authority(&scope, "OTHER_SCREEN")
+                .await,
+            Err(StoreError::ShadowScreenNotActivated)
+        ));
+
+        assert!(matches!(
+            store
+                .activate_shadow_epoch(&accepted, at(3), Duration::from_secs(60))
+                .await,
+            Err(StoreError::EpochNotBuilding)
+        ));
+    }
+
+    #[tokio::test]
     async fn realtime_resume_pages_are_exact_bounded_and_scope_aware() {
         let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
             return;
@@ -2411,6 +2778,7 @@ mod tests {
                       'status', CASE WHEN g % 2 = 0 THEN 'OPEN' ELSE 'FILLED' END,
                       'currency', CASE WHEN g % 3 = 0 THEN 'USD' ELSE 'VND' END,
                       'instrument_id', 'BTC-PERP',
+                      'deployment_id', CASE WHEN g % 2 = 0 THEN 'dep_74' ELSE 'dep_other' END,
                       'quantity', '0.100000000000000001',
                       'notional', g::text || '.000000000000000001')
              FROM generate_series(1,182000) AS g",
@@ -2452,7 +2820,7 @@ mod tests {
               capability_snapshot_id,payload_digest,payload)
              VALUES ($1,'ORDER','order_newer',182001,'EXECUTION',$2,$2,$2,'UNKNOWN',
                      'ts-adapter-v1','cap_scale','sha256:newer',
-                     '{\"status\":\"OPEN\",\"currency\":\"USD\",\"quantity\":\"0.1\",\"notional\":\"1.1\"}')",
+                     '{\"status\":\"OPEN\",\"currency\":\"USD\",\"deployment_id\":\"dep_74\",\"quantity\":\"0.1\",\"notional\":\"1.1\"}')",
         )
         .bind(epoch_id)
         .bind(at(300_000))
@@ -2555,6 +2923,30 @@ mod tests {
             .aggregates_by_currency
             .iter()
             .any(|aggregate| aggregate.currency.as_deref() == Some("VND")));
+
+        let deployment_scoped = store
+            .query_entities_scoped(
+                &scope,
+                ProjectionEntityKind::Order,
+                &EntityQueryRequest::default(),
+                &[QueryFilter {
+                    field: FilterField::DeploymentId,
+                    operator: FilterOperator::Eq,
+                    values: vec!["dep_74".to_owned()],
+                }],
+                &codec,
+                now,
+            )
+            .await
+            .unwrap();
+        assert_eq!(deployment_scoped.total_count, 91_000);
+        assert_eq!(deployment_scoped.filtered_count, 91_000);
+        assert!(deployment_scoped.rows.iter().all(|row| {
+            row.payload
+                .get("deployment_id")
+                .and_then(serde_json::Value::as_str)
+                == Some("dep_74")
+        }));
 
         store
             .record_retention_policy(

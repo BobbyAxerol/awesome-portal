@@ -60,6 +60,7 @@ const analyticsFixtureSchemas: Record<string, string> = {
   "execution-analytics.correlation.valid.json": "CorrelationResponse",
   "execution-analytics.capital-ledger.valid.json": "CapitalLedgerResponse",
   "execution-analytics.binding-exposure.valid.json": "BindingExposureResponse",
+  "execution-paper-workbench.orders-shadow.valid.json": "PaperWorkbenchShadowPanelResponse",
 };
 
 const schemaIds: Record<string, string> = {

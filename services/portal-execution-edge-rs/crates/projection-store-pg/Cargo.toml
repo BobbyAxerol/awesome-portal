@@ -13,6 +13,7 @@ execution-contracts = { path = "../execution-contracts" }
 home.workspace = true
 projection-core = { path = "../projection-core" }
 query-api = { path = "../query-api" }
+source-qualification = { path = "../source-qualification" }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

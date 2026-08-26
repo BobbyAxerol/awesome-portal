@@ -37,6 +37,7 @@ TRACKED = (
     "fixtures/event.valid.json",
     "fixtures/keyset-page.valid.json",
     "fixtures/execution-projection-page.valid.json",
+    "fixtures/execution-paper-workbench.orders-shadow.valid.json",
     "fixtures/execution-governance.r2-review.valid.json",
     "fixtures/execution-governance.paper-exit-review.valid.json",
     "fixtures/execution-realtime.auth-expiring.valid.json",

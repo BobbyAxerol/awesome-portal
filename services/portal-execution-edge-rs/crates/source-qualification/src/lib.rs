@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 pub mod real_source;
+pub mod shadow_screen;
 
 use chrono::{DateTime, TimeDelta, Utc};
 use execution_contracts::CanonicalId;
