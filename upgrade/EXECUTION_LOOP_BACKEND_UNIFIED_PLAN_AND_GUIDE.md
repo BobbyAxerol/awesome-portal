@@ -352,8 +352,8 @@ became active.
 ### N02 — Incremental source contract revision
 
 **Mapping:** D4-OPT-01; Trading System compatibility request.  
-**Status:** `PORTAL_REQUEST_VERIFIER_COMPLETE / OWNER_REQUEST_DISPATCHED /
-OWNER_PACK_PENDING / RUNTIME_V1_LOCKED`.  
+**Status:** `PORTAL_REQUEST_VERIFIER_COMPLETE / NARROW_REQUEST_SUPERSEDED /
+CONSOLIDATED_READ_PACK_PENDING / RUNTIME_V1_LOCKED`.  
 **Priority:** P0.
 
 **Goal**
@@ -389,16 +389,18 @@ revision and owner acceptance. Portal does not edit Trading System code to obtai
 
 The external exit gate is intentionally still open. Detail:
 [`EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md`](./backend/EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md).
-The exact N02+N03 owner request has been dispatched as
+The historical narrow N02+N03 owner request is retained as
 [`TRADING_SYSTEM_D4_PAPER_READ_V2_IMPLEMENTATION_REQUEST.md`](./backend/TRADING_SYSTEM_D4_PAPER_READ_V2_IMPLEMENTATION_REQUEST.md).
+It was superseded before implementation; the source owner must wait for the
+final capability-negotiated N02/N03/N11 read pack.
 
 **Claude parallel lane:** prepare UI for typed gap/resync/retention/completeness only; no live source.
 
 ### N03 — Trading-System-owned incremental source implementation
 
 **Mapping:** D4-OPT-02.  
-**Status:** `PORTAL_ACCEPTANCE_HARNESS_COMPLETE / OWNER_REQUEST_DISPATCHED /
-N02_OWNER_PACK_PENDING / EXTERNAL_IMPLEMENTATION_PENDING`.  
+**Status:** `PORTAL_ACCEPTANCE_HARNESS_COMPLETE / NARROW_REQUEST_SUPERSEDED /
+CONSOLIDATED_READ_PACK_PENDING / EXTERNAL_IMPLEMENTATION_PENDING`.  
 **Owner:** Trading System owner, not Codex.  
 **Priority:** P0 after N02.
 
@@ -1194,7 +1196,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | Backend completed-slice index | `backend/README.md` |
 | Claude original request/review | `upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_BACKEND_PLAN_REQUEST.md`, `BACKEND_PLAN_REVIEW.md` |
 | Claude scale/current BR requests | `upgrade_frontend_plan_hifi/hifi_execution_loop/EXECUTION_SCALE_AND_REFINE.md` |
-| **Hi-fi V2 requests BR-EX-41…57 — field-level detail** (types/enums/examples, DoR §5.1 pre-filled per package, OpenAPI path stubs, typed error/state examples, delivery order and per-package smoke retirement) | `upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` (appendices A–K; G/H/I = full JSON examples, derivation rules, errors, live events and required tests for BR-EX-49/50/51; J = source mapping and open decisions; K = full spec for BR-EX-52/53/54 bindings/accounts); verbatim copy of the §7.2 rows: `…/BACKEND_PLAN_7_2_ROWS_2026-08-25.md` |
+| **Hi-fi V2 requests BR-EX-41…57 — field-level detail** (types/enums/examples, DoR §5.1 pre-filled per package, OpenAPI path stubs, typed error/state examples, delivery order and per-package smoke retirement) | `upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` (appendices A–L; G/H/I = full JSON examples, derivation rules, errors, live events and required tests for BR-EX-49/50/51; J = source mapping and open decisions; K = BR-EX-52/53/54 bindings/accounts; L = BR-EX-56/57 live overview/full); verbatim copy of the §7.2 rows: `…/BACKEND_PLAN_7_2_ROWS_2026-08-25.md` |
 | UI/UX authority for those requests — what each screen must show and why | hi-fi files `…/Design system discussion request_version2/HiFi *.dc.html` + owner screenshots 2026-08-25; grammar and per-screen smoke table `…/DESIGN_GRAMMAR_V3.md` (§8); audit `…/AUDIT_DENSITY_AND_INSIGHT_2026-08-25.md` |
 | Frontend smoke modules to delete on delivery (one per screen, contract at file head) | `apps/portal/frontend/src/execution/{commandCenter,incident,operationsQueue,blotter,stage,alpha360}.smoke.ts` |
 | Shared frontend/backend board | `upgrade_frontend_plan_hifi/hifi_execution_loop/PHASE_TRACKER.md` |

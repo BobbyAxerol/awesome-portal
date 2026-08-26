@@ -1,11 +1,19 @@
 # Trading System owner request — D4 Paper Read v2
 
-Status: `OWNER_REQUEST_DISPATCHED / IMPLEMENTATION_PENDING / RUNTIME_V1_DORMANT`
+Status: `SUPERSEDED_BEFORE_IMPLEMENTATION / WAIT_FOR_FINAL_CONSOLIDATED_READ_PACK /
+RUNTIME_V1_DORMANT`
 
 Date: 2026-08-26  
 Requested by: Bobby  
 Portal implementation owner: Codex  
 Source implementation owner: Trading System owner/agent
+
+> **STOP — do not implement this narrow pack.** Bobby superseded this request
+> before implementation because later Portal read capabilities must not create
+> one Trading System change per N-phase. Keep the Trading System worktree and
+> v1 runtime dormant. Wait for the final consolidated, capability-negotiated
+> read pack covering N02/N03/N11. This file remains only as an audit record of
+> the superseded scope.
 
 ## 1. Decision and requested outcome
 

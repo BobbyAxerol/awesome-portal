@@ -611,24 +611,24 @@ authority.
   `D4_DORMANT_VERIFIED`. No live window, registry profile, epoch activation or
   Trading System change was made.
 - [EX-BE-02 / N02 Incremental Source Contract Revision](./EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md)
-  — **Portal request/verifier complete / owner request dispatched / owner pack pending / runtime v1
+  — **Portal request/verifier complete / narrow request superseded / consolidated read pack pending / runtime v1
   locked:** a request-only v2 schema now locks consumer lease, cursor/delta,
   tombstone, retention, resync, completeness and bounded authority. An exact
   four-file digest envelope and 15-case fail-closed verifier are green. No v2
   owner publication was found, so no contract import, Rust reader change,
   source traffic, registry promotion or Trading System edit was made.
 - [EX-BE-02 / N03 Trading-System-owned Incremental Source Implementation](./EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md)
-  — **Portal acceptance harness complete / owner request dispatched / N02 and owner implementation
+  — **Portal acceptance harness complete / narrow request superseded / consolidated read pack pending / N02 and owner implementation
   pending:** an exact five-file evidence envelope chains immutable source
   commit/image to accepted N02 bytes and proves zero idle SELECT/bytes, no
   ordinary-delta full scan, query-plan/resource bounds and 14 recovery/security
   scenarios. The current AWS-HK v1 facade remains dormant; Portal did not edit,
   deploy or call Trading System.
 - [Trading System D4 Paper Read v2 implementation request](./TRADING_SYSTEM_D4_PAPER_READ_V2_IMPLEMENTATION_REQUEST.md)
-  — one-pass N02+N03 owner handoff defining the minimal demand-driven v2
-  facade, exact nine-file non-secret return package, bounded acceptance window,
-  dormant-v1 rollback and the Portal N04→N08 continuation. It grants no source
-  mutation, command, broker, live/canary or Portal activation authority.
+  — **superseded before implementation:** historical narrow N02+N03 handoff.
+  Trading System must keep v1 dormant and wait for the final consolidated,
+  capability-negotiated N02/N03/N11 read pack. It grants no source mutation,
+  command, broker, live/canary or Portal activation authority.
 - [EX-BE-03 / N04 Lease-aware Rust Shared Consumer](./EX_BE_03_N04_LEASE_AWARE_RUST_SHARED_CONSUMER.md)
   — **source-dark core + PostgreSQL fencing complete / N02-N03 wire integration
   pending / live source off:** one Rust shared-consumer state machine now owns
