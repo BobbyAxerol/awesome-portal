@@ -140,16 +140,17 @@ export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: 
       case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN": return "MM v1.1";
       case "EXECUTION_CANARY_CONTROL_ROOM_SCREEN": return "Grid v2.1";
       case "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN": return "Grid v2.1";
-      case "EXECUTION_ALPHA_360_SCREEN": return "Grid v2.1";
-      case "EXECUTION_PORTFOLIO_360_SCREEN": return "PF-CRYPTO";
-      case "EXECUTION_ACCOUNT_BROKER_360_SCREEN": return "acct-live-grid-v21";
+      // List routes (no id) carry no entity; a 360 names the entity it resolved.
+      case "EXECUTION_ALPHA_360_SCREEN": return params.alphaId ? (params.alphaId === "av_2041" ? "Grid v2.1" : params.alphaId) : null;
+      case "EXECUTION_PORTFOLIO_360_SCREEN": return params.portfolioId ?? "PF-CRYPTO";
+      case "EXECUTION_ACCOUNT_BROKER_360_SCREEN": return params.accountId ?? search.get("binding") ?? null;
       case "EXECUTION_GATE_R1_REVIEW_SCREEN":
       case "EXECUTION_GATE_R2_REVIEW_SCREEN": return approvalId;
       case "EXECUTION_PAPER_EXIT_REVIEW_SCREEN": return reviewId;
       case "EXECUTION_INCIDENT_DETAIL_SCREEN": return incidentId;
       default: return null;
     }
-  }, [screenId, approvalId, reviewId, incidentId]);
+  }, [screenId, approvalId, reviewId, incidentId, params.alphaId, params.accountId, params.portfolioId, search]);
   useEffect(() => {
     setEntityLabel(entity);
     // A stale "Carry v3.2" over the Blotter would be the breadcrumb lying
