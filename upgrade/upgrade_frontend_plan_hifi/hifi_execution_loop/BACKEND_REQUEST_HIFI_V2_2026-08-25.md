@@ -827,3 +827,102 @@ Ký hiệu: **DB** = bảng trong trading DB (88 bảng/2 view); **TS route** = 
 5. **Incidents/approvals**: đã Portal-owned theo N09 — xác nhận schema id (`inc_*`, `AP-*`, `PX-*`, `EX-*`).
 6. Formula versions (`twr.v1`, `corr.v1`, `tail.v1`, `riskcontrib.v1`, `marginal.v1`, `regime.v2`) đăng ký trong `compatibility_surface_registry`.
 
+---
+
+# Phụ lục K — BR-EX-52/53/54 · Accounts & Bindings, Binding Detail, Account/Broker 360: đặc tả đầy đủ
+
+## K.1 Domain (từ DB guide + hi-fi 1g)
+
+- **Binding** = một external account có credential tại một venue: DB `venue_accounts` (`external_account_ref`, `venue`, `env: MAINNET|TESTNET|PAPER_FEED`, `position_mode`) ⋈ `venue_credentials` (alias, scopes, state, fingerprint, rotation, **secret ở vault — không có cột nào đi qua API**) ⋈ `venue_rate_limits`.
+- **Virtual account** = `accounts` (portal allocation ledger, `mode`, `external_account_ref`) ⋈ `strategy_deployments` ⋈ `portfolio_allocations`; equity từ `account_equity_snapshots`/`account_balances`/`margin_balances`; exposure từ `positions_v2`.
+- **Physical truth** = `broker_account_sync_snapshots` (digest = content hash, source ws/REST, age) — "broker is truth"; paper/testnet không có broker truth (`TEST_FUNDS` / `SIMULATED`).
+- **Invariant** Σ virtual ≤ physical: kiểm tra ở allocation time (`account_reservations`, `portfolio_capital_ledger`); màn chỉ hiển thị `headroom = physical − Σ virtual` và verdict server.
+- **Recon**: `reconciliation_findings` (MISMATCH/BROKER_STALE/…) ⋈ PORTAL incidents; MISMATCH → orders fail closed, protective stays open (rule của Trading System).
+
+## K.2 Endpoints
+
+| Method · path | Trả về |
+|---|---|
+| `GET /api/v1/execution/bindings?filter=all\|live\|testnet\|paper\|issues` | `bindings-list.v1` |
+| `GET /api/v1/execution/bindings/{binding_id}` | `binding-detail.v1` (+ SSE `binding.snapshot` khi N08) |
+| `POST /api/v1/execution/bindings/{binding_id}/rotate-credential` (sau) | `202 {operation_id}` — plan → apply → verify, step-up, dual-key window |
+| `GET /api/v1/execution/accounts/{account_id}` | `account-broker-360.v1.1` (additive) |
+
+## K.3 `bindings-list.v1` — response mẫu (khớp `accounts.smoke.ts`)
+
+```json
+{
+  "envelope": { "authority": "BROKER", "as_of": "2026-08-26T06:50:43Z", "freshness": "OK" },
+  "summary": { "bindings": 5, "venues": 4, "virtual_accounts": 8 },
+  "kpis": {
+    "physical_equity": { "value": "43120.00", "ccy": "USDT", "binding_id": "binance_main_01", "live": true },
+    "virtual_allocated": { "value": "41000", "ccy": "USDT", "headroom": "2120.00", "invariant_ok": true },
+    "credentials": { "valid": 3, "expiring": [ { "alias": "DRB-01", "days": 6 } ], "otp": 1 },
+    "findings": { "mismatch": 1, "incident_id": "inc_44", "account_id": "acct-live-grid-v21" },
+    "sync_health": { "ok": 4, "total": 5, "na": [ { "binding_id": "dnse_main_01", "reason": "calendar" } ] }
+  },
+  "counts": { "all": 5, "live": 1, "testnet": 2, "paper": 2, "issues": 2 },
+  "rows": [
+    { "binding_id": "binance_main_01", "venue": "BINANCE", "env": "MAINNET", "purpose_note": null,
+      "credential": { "alias": "BIN-01", "state": "VALID", "scopes": ["trade", "read"], "withdraw": false },
+      "physical_equity": { "value": "43120.00", "ccy": "USDT" },
+      "virtual": { "sum": "41000", "ccy": "USDT", "headroom": "2120.00" }, "accounts": 3,
+      "sync": { "kind": "ws", "age_seconds": 4.1, "policy_seconds": 5, "snapshot_minutes": 5, "state": "OK" },
+      "health": { "text": "1 MISMATCH", "tone": "bad", "link": { "label": "inc_44", "href": "/execution/operations/incidents/inc_44" } },
+      "virtual_accounts": [
+        { "account_id": "acct-live-grid-v21", "stage": "LIVE_FULL", "alpha": "Grid v2.1", "deployment_id": "dep_live", "portfolio": "PF-CRYPTO", "equity": "20354", "alloc": "18400", "sync": { "state": "HALTED", "text": "recon HALTED" }, "health": { "text": "MISMATCH Δ 0.0200 BTC", "tone": "bad" } }
+      ] },
+    { "binding_id": "deribit_main_01", "venue": "DERIBIT", "env": "PAPER_FEED", "purpose_note": "market-data feed only — no live binding yet",
+      "credential": { "alias": "DRB-01", "state": "EXPIRING", "days_to_expiry": 6, "rotate_href": "/administration/actions?action=rotate_credential&binding=deribit_main_01" },
+      "physical_equity": { "kind": "SIMULATED" }, "virtual": { "sum": "60000", "ccy": "USDC", "headroom": null, "simulated": true }, "accounts": 1,
+      "sync": { "kind": "md_feed", "state": "OK" }, "health": { "text": "paper — no recon", "tone": "good" } }
+  ]
+}
+```
+
+## K.4 `binding-detail.v1` — response mẫu (rút gọn)
+
+```json
+{
+  "binding": { "id": "binance_main_01", "venue": "BINANCE", "env": "MAINNET", "settle_ccy": "USDT", "position_mode": "NET", "open_findings": 1 },
+  "capital": { "physical": "43120.00", "virtual_sum": "41000", "headroom": "2120.00", "segments": [ { "account_id": "acct-live-grid-v21", "label": "grid-v21", "allocated": "18400" }, { "account_id": "acct-live-carry-v32", "label": "carry-v32", "allocated": "14900" }, { "account_id": "acct-canary-mm-v11", "label": "mm-v11", "allocated": "7700" } ] },
+  "credential": { "alias": "BIN-01", "state": "VALID", "scopes": ["trade", "read"], "withdraw_granted": false, "scope_verified_at": "2026-08-26T06:49:00Z",
+    "secret": { "fingerprint": "9c41…e2", "vaulted": true }, "ip_allowlist": { "count": 2, "last_drift_check_at": "2026-08-26T06:50:02Z", "state": "OK" },
+    "rotation": { "created_at": "2026-05-02", "rotated_at": "2026-07-15", "operation_id": "op_1160", "next_due_at": "2026-10-15", "policy_days": 90 },
+    "rate_budget": { "used_per_min": 118, "limit_per_min": 1200, "order_budget_pct": 8 } },
+  "sync_stream": [ { "t": "2026-08-26T10:41:52Z", "state": "MISMATCH", "digest": "4f2a…c1", "note": "BTCUSDT Δ 0.0200", "finding_id": "rf_2101", "incident_id": "inc_44" } ],
+  "virtual_accounts": [ { "account_id": "acct-live-grid-v21", "stage": "LIVE_FULL", "alpha": "Grid v2.1", "deployment_id": "dep_live", "portfolio": "PF-CRYPTO", "allocated": "18400", "equity": "20354", "exposure": "12220", "recon": { "state": "MISMATCH", "delta": "0.0200 BTC", "incident_id": "inc_44" } } ],
+  "audit": [ { "t": "2026-07-15T10:02:00Z", "text": "credential rotated (dual-key window 18m, zero downtime)", "operation_id": "op_1160", "actor": "Stan", "step_up": true } ]
+}
+```
+
+## K.5 Quy tắc
+
+| Mục | Quy tắc |
+|---|---|
+| `physical_equity` | chỉ có số khi env = MAINNET và có broker snapshot; TESTNET → `{kind: TEST_FUNDS}`, PAPER_FEED → `{kind: SIMULATED}` — frontend in chữ, không in số |
+| `virtual.headroom` | `physical − Σ virtual` cùng ccy; null khi physical không có; ccy khác (USDC/VND) không quy đổi, `simulated:true` |
+| `sync.state` | so `age_seconds` với `policy_seconds` của venue (`venue_rate_limits`/policy table): OK nếu ≤ policy, STALE nếu >, HALTED khi recon halted; `calendar` → `PAUSED_BY_CALENDAR` ngoài phiên (`venues.trading_sessions`) |
+| `credential.state` | VALID / EXPIRING (≤14d) / OTP_FLOW (session token, manual re-auth) / REVOKED; **không bao giờ trả key material**; test `secret-leak`: payload không chứa chuỗi khớp key format |
+| `health` | ưu tiên MISMATCH (incident) → HALTED → EXPIRING → calendar/N/A → READY |
+| `counts.issues` | binding có ≥1 trong: MISMATCH, HALTED, EXPIRING, OTP_FLOW |
+| `capital.segments` | theo `allocated` (ledger), không theo equity; bar re-prices với physical, allocation không đổi |
+| `sync_stream` | immutable; `digest` = content hash snapshot; MISMATCH gắn `finding_id` + `incident_id`; SSE `binding.snapshot` prepend |
+| `audit` | chỉ credential & structure (`audit_log` binding scope); tiền đi qua Capital Ledger |
+| Account 360 `difference` | `diff.v1`: MATCH / DELTA với severity INFO\|WARN\|CRITICAL; balance Δ do funding accrual → INFO |
+| Account 360 `masthead.headroom_state` | từ aggregate verdict (headroom.v1): EXCEEDED → chip HEADROOM BREACH + banner đỏ, orders fail closed trên **mọi** account của binding |
+
+## K.6 Lỗi / trạng thái
+
+`503 BINDINGS_PROJECTION_UNAVAILABLE` · `404 BINDING_NOT_FOUND` · `403 BINDING_READ_DENIED` · rotate: `409 ROTATION_IN_PROGRESS`, `428 STEP_UP_REQUIRED` · sync snapshot vắng → `sync.state: UNKNOWN` (không bao giờ OK).
+
+## K.7 Test bắt buộc
+
+1. invariant: mọi row MAINNET có `headroom == physical − virtual.sum` (decimal exact) và `invariant_ok == headroom ≥ 0`.
+2. TEST_FUNDS/SIMULATED không có `value`.
+3. secret-leak: serialize payload, regex key/secret/token → 0 match ngoài `fingerprint`.
+4. `sync.state` khớp bảng policy cho fixture (OK/STALE/HALTED/PAUSED_BY_CALENDAR).
+5. `counts` khớp filter rows; `issues` đúng định nghĩa.
+6. binding-detail: Σ `segments.allocated == virtual_sum`; stream sorted desc; audit chỉ có action credential/structure.
+7. account 360 v1.1: additive — client v1 vẫn đọc được.
+
