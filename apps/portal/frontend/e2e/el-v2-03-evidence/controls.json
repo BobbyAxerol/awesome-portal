@@ -1295,20 +1295,44 @@
  {
   "route": "/deployments/alphas/av_2041",
   "index": 1,
+  "tag": "A",
+  "text": "sha256:41bb7d…c4",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2041#passport"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 2,
+  "tag": "A",
+  "text": "AP-118",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-118"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 3,
+  "tag": "A",
+  "text": "AP-152",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-152"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 4,
   "tag": "SELECT",
   "text": "PF-CRYPTOPF-MAIN",
   "verdict": "changed"
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 2,
+  "index": 5,
   "tag": "SELECT",
   "text": "Allpapersandboxlive",
   "verdict": "changed"
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 3,
+  "index": 6,
   "tag": "SELECT",
   "text": "AllBINANCEOKXDERIBITVN MARKET",
   "verdict": "navigated",
@@ -1316,21 +1340,21 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 4,
+  "index": 7,
   "tag": "SELECT",
   "text": "24h7d30d90d",
   "verdict": "changed"
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 5,
+  "index": 8,
   "tag": "BUTTON",
   "text": "Overview",
   "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 6,
+  "index": 9,
   "tag": "BUTTON",
   "text": "Insight Charts",
   "verdict": "navigated",
@@ -1338,7 +1362,15 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 7,
+  "index": 10,
+  "tag": "BUTTON",
+  "text": "Trade Replay",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2041?tab=Trade+Replay"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 11,
   "tag": "BUTTON",
   "text": "Positions",
   "verdict": "navigated",
@@ -1346,7 +1378,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 8,
+  "index": 12,
   "tag": "BUTTON",
   "text": "Orders & Fills",
   "verdict": "navigated",
@@ -1354,7 +1386,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 9,
+  "index": 13,
   "tag": "BUTTON",
   "text": "Risk",
   "verdict": "navigated",
@@ -1362,7 +1394,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 10,
+  "index": 14,
   "tag": "BUTTON",
   "text": "Sessions",
   "verdict": "navigated",
@@ -1370,7 +1402,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 11,
+  "index": 15,
   "tag": "BUTTON",
   "text": "Accounting",
   "verdict": "navigated",
@@ -1378,7 +1410,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 12,
+  "index": 16,
   "tag": "BUTTON",
   "text": "Reconciliation",
   "verdict": "navigated",
@@ -1386,7 +1418,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 13,
+  "index": 17,
   "tag": "BUTTON",
   "text": "Audit",
   "verdict": "navigated",
@@ -1394,7 +1426,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 14,
+  "index": 18,
   "tag": "BUTTON",
   "text": "dep_88",
   "verdict": "navigated",
@@ -1402,7 +1434,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 15,
+  "index": 19,
   "tag": "BUTTON",
   "text": "acct-canary-grid",
   "verdict": "navigated",
@@ -1410,7 +1442,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 16,
+  "index": 20,
   "tag": "BUTTON",
   "text": "dep_91",
   "verdict": "navigated",
@@ -1418,7 +1450,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 17,
+  "index": 21,
   "tag": "BUTTON",
   "text": "acct-sbx-grid-okx",
   "verdict": "navigated",
@@ -1426,7 +1458,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 18,
+  "index": 22,
   "tag": "BUTTON",
   "text": "dep_94",
   "verdict": "navigated",
@@ -1434,26 +1466,11 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 19,
+  "index": 23,
   "tag": "BUTTON",
   "text": "acct-paper-grid-drb",
   "verdict": "navigated",
   "detail": "/deployments/accounts/acct-paper-grid-drb"
- },
- {
-  "route": "/deployments/alphas/av_2041",
-  "index": 20,
-  "tag": "BUTTON",
-  "text": "Open first deployment in scope",
-  "verdict": "navigated",
-  "detail": "/deployments/live/dep_88/canary"
- },
- {
-  "route": "/deployments/alphas/av_2041",
-  "index": 21,
-  "tag": "BUTTON",
-  "text": "Copy full artifact",
-  "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
@@ -1505,66 +1522,119 @@
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
   "index": 6,
-  "tag": "BUTTON",
-  "text": "Grid v2.1",
+  "tag": "A",
+  "text": "inc_44",
   "verdict": "navigated",
-  "detail": "/deployments/alphas/Grid%20v2.1"
+  "detail": "/execution/operations/incidents/inc_44"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
   "index": 7,
   "tag": "BUTTON",
+  "text": "30d",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 8,
+  "tag": "BUTTON",
+  "text": "90d",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 9,
+  "tag": "BUTTON",
+  "text": "All",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 10,
+  "tag": "A",
+  "text": "PF-MAIN",
+  "verdict": "navigated",
+  "detail": "/deployments/portfolios/PF-MAIN"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 11,
+  "tag": "A",
   "text": "acct-canary-grid",
   "verdict": "navigated",
   "detail": "/deployments/accounts/acct-canary-grid"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 8,
-  "tag": "BUTTON",
-  "text": "Grid v2.1",
+  "index": 12,
+  "tag": "A",
+  "text": "op_1201",
   "verdict": "navigated",
-  "detail": "/deployments/alphas/Grid%20v2.1"
+  "detail": "/execution/operations?operation=op_1201"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 9,
-  "tag": "BUTTON",
+  "index": 13,
+  "tag": "A",
   "text": "acct-paper-grid-drb",
   "verdict": "navigated",
   "detail": "/deployments/accounts/acct-paper-grid-drb"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 10,
-  "tag": "BUTTON",
-  "text": "Carry v3.2",
+  "index": 14,
+  "tag": "A",
+  "text": "op_1240",
   "verdict": "navigated",
-  "detail": "/deployments/alphas/Carry%20v3.2"
+  "detail": "/execution/operations?operation=op_1240"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 11,
-  "tag": "BUTTON",
+  "index": 15,
+  "tag": "A",
+  "text": "op_1222",
+  "verdict": "navigated",
+  "detail": "/execution/operations?operation=op_1222"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 16,
+  "tag": "A",
+  "text": "acct-sbx-mm-okx",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts/acct-sbx-mm-okx"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 17,
+  "tag": "A",
+  "text": "op_1187",
+  "verdict": "navigated",
+  "detail": "/execution/operations?operation=op_1187"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 18,
+  "tag": "A",
   "text": "paper-binance-carry-v32",
   "verdict": "navigated",
   "detail": "/deployments/accounts/paper-binance-carry-v32"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 12,
-  "tag": "BUTTON",
-  "text": "MM v1.1",
+  "index": 19,
+  "tag": "A",
+  "text": "op_1102",
   "verdict": "navigated",
-  "detail": "/deployments/alphas/MM%20v1.1"
+  "detail": "/execution/operations?operation=op_1102"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 13,
-  "tag": "BUTTON",
-  "text": "acct-canary-mm-v11",
+  "index": 20,
+  "tag": "A",
+  "text": "op_1044",
   "verdict": "navigated",
-  "detail": "/deployments/accounts/acct-canary-mm-v11"
+  "detail": "/execution/operations?operation=op_1044"
  },
  {
   "route": "/deployments/accounts/acct-live-grid-v21",
