@@ -352,7 +352,8 @@ became active.
 ### N02 — Incremental source contract revision
 
 **Mapping:** D4-OPT-01; Trading System compatibility request.  
-**Status:** `PORTAL_REQUEST_VERIFIER_COMPLETE / OWNER_PACK_PENDING / RUNTIME_V1_LOCKED`.  
+**Status:** `PORTAL_REQUEST_VERIFIER_COMPLETE / OWNER_REQUEST_DISPATCHED /
+OWNER_PACK_PENDING / RUNTIME_V1_LOCKED`.  
 **Priority:** P0.
 
 **Goal**
@@ -388,13 +389,16 @@ revision and owner acceptance. Portal does not edit Trading System code to obtai
 
 The external exit gate is intentionally still open. Detail:
 [`EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md`](./backend/EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md).
+The exact N02+N03 owner request has been dispatched as
+[`TRADING_SYSTEM_D4_PAPER_READ_V2_IMPLEMENTATION_REQUEST.md`](./backend/TRADING_SYSTEM_D4_PAPER_READ_V2_IMPLEMENTATION_REQUEST.md).
 
 **Claude parallel lane:** prepare UI for typed gap/resync/retention/completeness only; no live source.
 
 ### N03 — Trading-System-owned incremental source implementation
 
 **Mapping:** D4-OPT-02.  
-**Status:** `PORTAL_ACCEPTANCE_HARNESS_COMPLETE / N02_OWNER_PACK_PENDING / EXTERNAL_IMPLEMENTATION_PENDING`.  
+**Status:** `PORTAL_ACCEPTANCE_HARNESS_COMPLETE / OWNER_REQUEST_DISPATCHED /
+N02_OWNER_PACK_PENDING / EXTERNAL_IMPLEMENTATION_PENDING`.  
 **Owner:** Trading System owner, not Codex.  
 **Priority:** P0 after N02.
 
@@ -1081,7 +1085,9 @@ Append rows here. Do not create another active request file.
 | BR-EX-53 | 2026-08-26 | Binding Detail `/deployments/accounts?binding={id}` | Operator cannot audit a binding: capital invariant bar per virtual account, credential scopes/secret fingerprint/ip allowlist/rotation/rate budget, live sync stream with digests, per-account recon, binding audit | Facts (read) `binding-detail.v1` + action `rotate-credential` (plan → apply → verify, step-up) | PORTAL_CONTROL (credential metadata) · BROKER (sync snapshots) · PORTAL_PROJECTION (capital) · `audit_log` | read + one governed mutation · high on the action (credential), read-only otherwise; **no key material ever in any payload** | stream ≤50 (+SSE `binding.snapshot`), audit ≤200 keyset | `venue_credentials`, `venue_rate_limits`, `broker_account_sync_snapshots`, `reconciliation_findings`, `audit_log`, `operator_operations`; N08 for stream | route absent → unavailable; rotate route absent → button links to Drawer with reason | fixture `execution-binding-detail.binance_main_01.valid.json`; secret-leak test; frontend `bindingDetail.test` | Codex | N09 · N11 · N08 | `RECEIVED` | `BindingDetail` — smoke deleted on delivery | rotate action = activation-gated (ADMIN step-up) | hi-fi "Binding Detail"; appendix A.53 |
 | BR-EX-54 | 2026-08-26 | Account/Broker 360 `/deployments/accounts/{id}` | Hi-fi 1g masthead facts (env, sync age, headroom state, margin/settle/rev), cash free / locked, broker source, diff severity, findings history are not in v1 | Additive fields on `account-broker-360.v1` → v1.1 | as v1 | read-only | 1 account/screen | existing contract | missing fields → v1 rendering | fixture update; frontend `account360.test` | Codex | N09 | `RECEIVED` | `AccountBroker360` | none | hi-fi "Account Broker 360"; appendix A.54 |
 | BR-EX-55 | 2026-08-26 | Every Execution screen — breadcrumb tail and masthead names | Names come from a hardcoded fixture map (`av_2041 → Grid v2.1`) or from the screen id, which is how a list route showed a fixture entity in its breadcrumb; other ids render raw | Facts (read): `entity-names.v1` batch resolver — id → kind, label, sub, href, env for alpha/deployment/account/binding/portfolio/incident/approval/exit_review | PORTAL_PROJECTION over `strategies`/`alphas`, `strategy_deployments`, `accounts`, `venue_accounts`, `portfolios`, Portal-owned incidents/approvals/exit reviews | read-only · low (display only; ids stay the keys) | ≤50 ids per call; ETag cached | any viewer | unknown id → `label:null` → raw id, never invented | none | fixture `execution-entity-names.valid.json`; frontend breadcrumb tests per route | Codex | N09 | `RECEIVED` | `ExecutionPreviewRoute` entity map deleted on delivery | none | cross-screen; appendix A.55 |
-| _next: BR-EX-56_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
+| BR-EX-56 | 2026-08-26 | Live `/deployments/live` (entry screen WF 1f/1e) | No live overview: operator cannot see live capital Σ, session pnl, gross exposure, which deployment is fail-closed, ladder state, broker sync, per-deployment pulse and the live tape | Facts + aggregates (read): `live-overview.v1` — summary, KPI strip, filter/venue counts, rows (stage, venue·account·portfolio, alloc, exposure, session pnl live, dd, pulse 60m, health, note), tape (≤20 + SSE `live.tape`) | PORTAL_PROJECTION (allocations/exposure) · DERIVED (session pnl, pulse) · PORTAL_CONTROL (fail-closed, ladder, conditions) · BROKER (sync) · TRADING_SYSTEM (fills tape, tick) | read-only · high visibility: FAIL_CLOSED must never read READY; canary scale-up blocked while a sibling is fail-closed is a server rule shown as note | ≤50 rows; tape ≤20; tick ≤1/1.4s | BR-EX-43 tick; incidents/approvals/conditions (Portal); `strategy_deployments`, `positions_v2`, `execution_sessions`, `fills`, `broker_account_sync_snapshots` | route absent → unavailable; sync absent → health DEGRADED, never READY | fixture `execution-live-overview.valid.json`; health-state rule tests; frontend `liveOverview.test` | Codex | N09 · N08 (tape) · N11 | `RECEIVED` | `LiveOverview` — smoke `live.smoke.ts` deleted on delivery | none until approved | hi-fi "Live Overview (entry)"; appendix A.56 |
+| BR-EX-57 | 2026-08-26 | Live Full Operations `/deployments/live/{id}` | Hi-fi 1f masthead/meta/lifecycle strip, 5-cell KPI, broker & reconciliation truth (incl. mismatch object), open exposure table, protective ladder + last operation, 30d contribution bars are not in v1 | Additive fields on `live-full.v1` → v1.1 (BR-EX-57) | as v1 + DERIVED contrib.v1 | read-only (actions unchanged, ADMIN step-up) | 1 deployment; positions ≤200; bars 30 | existing contract; decision ids | missing → v1 rendering | fixture update; lifecycle decision-id consistency; frontend `liveFull.test` | Codex | N09 · N10 | `RECEIVED` | `LiveFullOperationsScreen` — `live.smoke.ts.full` deleted on delivery | none | hi-fi "Live Full Operations (WF 1f)"; appendix A.57 |
+| _next: BR-EX-58_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
 
 ### 7.3 Request quality gate
 
@@ -1188,7 +1194,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | Backend completed-slice index | `backend/README.md` |
 | Claude original request/review | `upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_BACKEND_PLAN_REQUEST.md`, `BACKEND_PLAN_REVIEW.md` |
 | Claude scale/current BR requests | `upgrade_frontend_plan_hifi/hifi_execution_loop/EXECUTION_SCALE_AND_REFINE.md` |
-| **Hi-fi V2 requests BR-EX-41…55 — field-level detail** (types/enums/examples, DoR §5.1 pre-filled per package, OpenAPI path stubs, typed error/state examples, delivery order and per-package smoke retirement) | `upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` (appendices A–K; G/H/I = full JSON examples, derivation rules, errors, live events and required tests for BR-EX-49/50/51; J = source mapping and open decisions; K = full spec for BR-EX-52/53/54 bindings/accounts); verbatim copy of the §7.2 rows: `…/BACKEND_PLAN_7_2_ROWS_2026-08-25.md` |
+| **Hi-fi V2 requests BR-EX-41…57 — field-level detail** (types/enums/examples, DoR §5.1 pre-filled per package, OpenAPI path stubs, typed error/state examples, delivery order and per-package smoke retirement) | `upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` (appendices A–K; G/H/I = full JSON examples, derivation rules, errors, live events and required tests for BR-EX-49/50/51; J = source mapping and open decisions; K = full spec for BR-EX-52/53/54 bindings/accounts); verbatim copy of the §7.2 rows: `…/BACKEND_PLAN_7_2_ROWS_2026-08-25.md` |
 | UI/UX authority for those requests — what each screen must show and why | hi-fi files `…/Design system discussion request_version2/HiFi *.dc.html` + owner screenshots 2026-08-25; grammar and per-screen smoke table `…/DESIGN_GRAMMAR_V3.md` (§8); audit `…/AUDIT_DENSITY_AND_INSIGHT_2026-08-25.md` |
 | Frontend smoke modules to delete on delivery (one per screen, contract at file head) | `apps/portal/frontend/src/execution/{commandCenter,incident,operationsQueue,blotter,stage,alpha360}.smoke.ts` |
 | Shared frontend/backend board | `upgrade_frontend_plan_hifi/hifi_execution_loop/PHASE_TRACKER.md` |
@@ -1209,4 +1215,4 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | Date | Change | Evidence/status effect |
 |---|---|---|
 | 2026-08-25 | Initial unified plan: current D1–D4 truth, N00–N17, H/A/BR-EX-01…40 and future Claude intake | documentation only; no runtime/profile/source/command change |
-| 2026-08-25 | Claude: §7.2 BR-EX-41…55 appended (`RECEIVED`) — hi-fi V2 Command Center 5a / Incident 4d / stage workbenches; schema appendix in `hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` | documentation only; no runtime/profile/source/command change; codex triages per §7.1 |
+| 2026-08-25 | Claude: §7.2 BR-EX-41…57 appended (`RECEIVED`) — hi-fi V2 Command Center 5a / Incident 4d / stage workbenches; schema appendix in `hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` | documentation only; no runtime/profile/source/command change; codex triages per §7.1 |

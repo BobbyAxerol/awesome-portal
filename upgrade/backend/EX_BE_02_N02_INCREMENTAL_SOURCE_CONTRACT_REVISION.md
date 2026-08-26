@@ -1,6 +1,7 @@
 # EX-BE-02 / N02 Incremental Source Contract Revision
 
-Status: `PORTAL_REQUEST_VERIFIER_COMPLETE / OWNER_PACK_PENDING / RUNTIME_V1_LOCKED`
+Status: `PORTAL_REQUEST_VERIFIER_COMPLETE / OWNER_REQUEST_DISPATCHED /
+OWNER_PACK_PENDING / RUNTIME_V1_LOCKED`
 
 Date: 2026-08-25
 
@@ -145,3 +146,8 @@ After owner publication:
 5. keep activation and delivery-profile promotion separate through N07/N08.
 
 No owner package means no N03 acceptance, no N04 source consumer and no live Lane B.
+
+The consolidated owner implementation request and exact return paths are in
+[`TRADING_SYSTEM_D4_PAPER_READ_V2_IMPLEMENTATION_REQUEST.md`](./TRADING_SYSTEM_D4_PAPER_READ_V2_IMPLEMENTATION_REQUEST.md).
+It supersedes piecemeal N02 questions; the owner should return one complete
+N02+N03 handoff.

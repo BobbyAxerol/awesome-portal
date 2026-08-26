@@ -1,7 +1,7 @@
 # EX-BE-02 / N03 Trading-System-owned Incremental Source Implementation
 
-Status: `PORTAL_ACCEPTANCE_HARNESS_COMPLETE / N02_OWNER_PACK_PENDING /
-OWNER_IMPLEMENTATION_PENDING / RUNTIME_V1_DORMANT`
+Status: `PORTAL_ACCEPTANCE_HARNESS_COMPLETE / OWNER_REQUEST_DISPATCHED /
+N02_OWNER_PACK_PENDING / OWNER_IMPLEMENTATION_PENDING / RUNTIME_V1_DORMANT`
 
 Date: 2026-08-25
 
@@ -152,3 +152,8 @@ N03 closes only after:
 Only then may Portal begin N04, the Rust lease-aware shared consumer. N03 acceptance
 does not itself activate source traffic, projection Query, SSE or Lane B.
 
+The source owner now has one consolidated implementation/acceptance request:
+[`TRADING_SYSTEM_D4_PAPER_READ_V2_IMPLEMENTATION_REQUEST.md`](./TRADING_SYSTEM_D4_PAPER_READ_V2_IMPLEMENTATION_REQUEST.md).
+It defines the minimal v1-compatible facade change, exact N02/N03 return paths,
+bounded window, rollback and Portal continuation without another N07/N08 owner
+approval.
