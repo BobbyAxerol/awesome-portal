@@ -1227,7 +1227,9 @@ export function IncidentDetailContainer({
   );
   return (
     <IncidentDetailScreen
-      incident={state.value}
+      // The route names the incident; the fixture's own id (inc_fixture_44)
+      // is a fixture fact. The breadcrumb and the masthead must agree.
+      incident={{ ...state.value, incidentId }}
       status={state.status}
       reason={state.reason}
     onOpenOperation={(operationId) => navigateIncident(`/administration/actions?operation=${encodeURIComponent(operationId)}`)}
