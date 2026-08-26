@@ -139,8 +139,9 @@ export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: 
       case "EXECUTION_PAPER_WORKBENCH_SCREEN": return "Carry v3.2";
       case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN": return "VnMomo v0.9";
       case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN": return "MM v1.1";
-      case "EXECUTION_CANARY_CONTROL_ROOM_SCREEN": return "Grid v2.1";
-      case "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN": return params.deploymentId ? "Grid v2.1" : null;
+      // Live Full and Canary share an alpha; the crumb names the deployment and the room.
+      case "EXECUTION_CANARY_CONTROL_ROOM_SCREEN": return `${deploymentId} · canary`;
+      case "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN": return params.deploymentId ? `${params.deploymentId} · live full` : null;
       // List routes (no id) carry no entity; a 360 names the entity it resolved.
       case "EXECUTION_ALPHA_360_SCREEN": return params.alphaId ? (params.alphaId === "av_2041" ? "Grid v2.1" : params.alphaId) : null;
       case "EXECUTION_PORTFOLIO_360_SCREEN": return params.portfolioId ?? "PF-CRYPTO";

@@ -145,7 +145,7 @@ export function LiveFullOperationsScreen({
           {smoke ? (
             <>
               <div className="exec-lf-meta">
-                {smoke.full.meta.map((m) => <span key={m.k}>{m.k} <a href={m.href}>{m.v}</a></span>)}
+                {smoke.full.meta.map((m) => <span key={m.k}>{m.k} <a href={m.k === "deployment" ? `/deployments/live/${live.deploymentId ?? m.v}` : m.href}>{m.k === "deployment" ? (live.deploymentId ?? m.v) : m.v}</a></span>)}
                 <span className="exec-af-mute">{smoke.full.metaNote}</span>
               </div>
               <div className="exec-lf-life">
