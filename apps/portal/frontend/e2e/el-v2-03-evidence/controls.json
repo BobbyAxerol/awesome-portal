@@ -1071,41 +1071,37 @@
  {
   "route": "/deployments/blotter",
   "index": 0,
-  "tag": "BUTTON",
-  "text": "All",
-  "verdict": "navigated",
-  "detail": "/deployments/blotter?filter=ALL"
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/blotter",
   "index": 1,
-  "tag": "BUTTON",
-  "text": "Filled",
-  "verdict": "skipped:selected"
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/blotter",
   "index": 2,
-  "tag": "BUTTON",
-  "text": "Partial",
-  "verdict": "navigated",
-  "detail": "/deployments/blotter?filter=PARTIAL"
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/blotter",
   "index": 3,
-  "tag": "BUTTON",
-  "text": "Rejected",
-  "verdict": "navigated",
-  "detail": "/deployments/blotter?filter=REJECTED"
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/blotter",
   "index": 4,
-  "tag": "BUTTON",
-  "text": "Open",
-  "verdict": "navigated",
-  "detail": "/deployments/blotter?filter=OPEN"
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/blotter",
@@ -1145,43 +1141,147 @@
  {
   "route": "/deployments/blotter",
   "index": 10,
-  "tag": "INPUT",
-  "text": "",
-  "verdict": "skipped:hidden"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 11,
-  "tag": "INPUT",
-  "text": "",
-  "verdict": "skipped:hidden"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 12,
-  "tag": "INPUT",
-  "text": "",
-  "verdict": "skipped:hidden"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 13,
-  "tag": "INPUT",
-  "text": "",
-  "verdict": "skipped:hidden"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 14,
   "tag": "BUTTON",
   "text": "Export loaded rows",
   "verdict": "changed"
  },
  {
   "route": "/deployments/blotter",
+  "index": 11,
+  "tag": "BUTTON",
+  "text": "All",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 12,
+  "tag": "BUTTON",
+  "text": "Working (3)",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?filter=OPEN"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 13,
+  "tag": "BUTTON",
+  "text": "Conditional (2)",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 14,
+  "tag": "BUTTON",
+  "text": "Brackets (1)",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/blotter",
   "index": 15,
   "tag": "BUTTON",
+  "text": "Filled",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?filter=FILLED"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 16,
+  "tag": "BUTTON",
+  "text": "Partial",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?filter=PARTIAL"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 17,
+  "tag": "BUTTON",
+  "text": "Rejected",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?filter=REJECTED"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 18,
+  "tag": "BUTTON",
   "text": "Reset the cross-filter chart selection · Aug 12 ",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 19,
+  "tag": "A",
+  "text": "ord_8841",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?order=ord_8841"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 20,
+  "tag": "A",
+  "text": "ord_8843",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?order=ord_8843"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 21,
+  "tag": "A",
+  "text": "br_0092",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?order=br_0092"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 22,
+  "tag": "A",
+  "text": "ord_8832.E",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?order=ord_8832.E"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 23,
+  "tag": "A",
+  "text": "ord_8832.TP",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?order=ord_8832.TP"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 24,
+  "tag": "A",
+  "text": "ord_8832.SL",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?order=ord_8832.SL"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 25,
+  "tag": "A",
+  "text": "ord_8820",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?order=ord_8820"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 26,
+  "tag": "A",
+  "text": "ord_8817",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?order=ord_8817"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 27,
+  "tag": "A",
+  "text": "ord_8815",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?order=ord_8815"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 28,
+  "tag": "BUTTON",
+  "text": "▼ load older",
   "verdict": "changed"
  },
  {
