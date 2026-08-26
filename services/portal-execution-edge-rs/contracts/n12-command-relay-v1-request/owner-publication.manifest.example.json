@@ -1,0 +1,26 @@
+{
+  "schema_version": "trading-system.portal-command-publication-manifest.v1",
+  "request_revision": "portal.execution.command-publication-request.v1",
+  "source_contract_revision": "UNPUBLISHED",
+  "source_contract_commit": "0000000000000000000000000000000000000000",
+  "source_image_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "owner_id": "trading-system-command-owner",
+  "owner_accepted": false,
+  "owner_acceptance_evidence_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "command_capability_catalogue_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "terminal_corpus_index_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "acceptance_results_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "authority": {
+    "publication_evidence_only": true,
+    "portal_activation": false,
+    "network_change": false,
+    "read_identity_unchanged": true,
+    "database": false,
+    "redis": false,
+    "cli": false,
+    "broker": false,
+    "paper_runtime": false,
+    "sandbox_runtime": false,
+    "live_runtime": false
+  }
+}

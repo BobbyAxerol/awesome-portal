@@ -2650,3 +2650,18 @@ Backend report:
 Claude handoff:
 [`CODEX_TO_CLAUDE_N11_EXTERNAL_READ_HANDOFF.md`](./CODEX_TO_CLAUDE_N11_EXTERNAL_READ_HANDOFF.md).
 This checkpoint does not authorize any Trading System call or remove any fixture/unavailable label.
+
+### N12 backend — live command publication/relay gate (2026-08-26)
+
+| Slice | BE | FE | Runtime/source | Evidence |
+|---|---|---|---|---|
+| nine-capability owner request | `PORTAL_GATE_COMPLETE / PRODUCTION_INACTIVE` | canonical catalogue consumer pending | `INACTIVE` | exact R1/R2/R3/R4 scope/auth/route/bounds |
+| owner publication verifier | `PORTAL_GATE_COMPLETE / PRODUCTION_INACTIVE` | n/a | `INACTIVE` | actual schema/request/accepted/terminal bytes + manifest |
+| Rust command authorization/journal | `PORTAL_GATE_COMPLETE / PRODUCTION_INACTIVE` | terminal state mapper pending | `INACTIVE` | independent flags/kill switch, 202 nonterminal, restart-safe UNCERTAIN locks |
+| owner command publication/activation | `PENDING_OWNER` | controls remain unavailable | `INACTIVE` | no accepted owner pack or command identity yet |
+
+Backend report:
+[`EX_BE_05B_N12_LIVE_COMMAND_RELAY.md`](../../backend/EX_BE_05B_N12_LIVE_COMMAND_RELAY.md).
+Claude handoff:
+[`CODEX_TO_CLAUDE_N12_COMMAND_RELAY_HANDOFF.md`](./CODEX_TO_CLAUDE_N12_COMMAND_RELAY_HANDOFF.md).
+Read/query/SSE health never enables a command; every existing runtime command flag remains false.

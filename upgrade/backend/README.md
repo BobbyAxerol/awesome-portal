@@ -921,3 +921,20 @@ durable run/attempt events. Detailed evidence:
   OWNER_PUBLICATION_PENDING / PRODUCTION_INACTIVE`; no source route, profile,
   network, secret, DB/Redis/CLI/broker or command authority changed. Detail:
   [`EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md`](./EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md).
+
+## Backend state — 2026-08-26 (N12 live command relay gate)
+
+- One consolidated owner request defines nine exact Paper/Sandbox/Live
+  command capabilities with separate R1/R2/R3/R4 policy and a dedicated
+  command identity; it never derives authority from the CLI catalogue.
+- The publication verifier binds real schema/request/accepted/terminal fixture
+  bytes, source identity and negative/acceptance evidence. Acceptance still
+  returns `portal_activation=false`.
+- The Rust relay validates independent command flags/kill switch,
+  operation-scoped delegation, target version, WebAuthn/dual approval and
+  bounded routes. Its restart-safe journal keeps 202 non-terminal and preserves
+  `UNCERTAIN` target locks without blind retry.
+- Status is `PORTAL_COMMAND_PUBLICATION_GATE_AND_RELAY_COMPLETE /
+  OWNER_PUBLICATION_PENDING / PRODUCTION_INACTIVE`; runtime flags remain false
+  and TypeScript apply remains denied. Detail:
+  [`EX_BE_05B_N12_LIVE_COMMAND_RELAY.md`](./EX_BE_05B_N12_LIVE_COMMAND_RELAY.md).

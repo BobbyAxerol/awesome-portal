@@ -1418,6 +1418,15 @@ activation or the phase):**
   allowed. See
   [`EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md`](./backend/EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md).
 
+- **N12 command boundary (2026-08-26):** Portal's consolidated nine-capability
+  owner request, byte-bound publication verifier and Rust pre-dispatch/journal
+  gate are complete. Command identity is distinct from read identity; Paper,
+  Sandbox, R3, R4 and the command kill switch remain independent. HTTP 202 is
+  non-terminal and `UNCERTAIN` survives restart, blocks same-target R4 and
+  permits only owner-proven monotonic/idempotent protection. Owner publication
+  and every runtime command flag remain pending/false. See
+  [`EX_BE_05B_N12_LIVE_COMMAND_RELAY.md`](./backend/EX_BE_05B_N12_LIVE_COMMAND_RELAY.md).
+
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
   workload-identity/window gates precede D2, then authenticated transport and

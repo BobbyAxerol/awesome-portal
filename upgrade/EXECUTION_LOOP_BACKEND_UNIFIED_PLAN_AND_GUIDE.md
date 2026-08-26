@@ -803,7 +803,7 @@ never sum a visible page or infer missing source facts.
 ### N12 — Live command relay
 
 **Mapping:** EX-BE-05b live continuation.  
-**Status:** `PRODUCTION_INACTIVE / EXTERNAL_COMMAND_CAPABILITY_PENDING`.  
+**Status:** `PORTAL_COMMAND_PUBLICATION_GATE_AND_RELAY_COMPLETE / OWNER_PUBLICATION_PENDING / PRODUCTION_INACTIVE`.  
 **Priority:** P1 for protective Paper/Sandbox; later for risk-increasing Live.
 
 **Goal**
@@ -826,6 +826,12 @@ authority without moving decision/risk truth into Portal.
 
 Negative matrix, duplicate/ambiguous/restart/replay, broker/source loss, rollback and owner approval
 pass first in Paper, then Sandbox. Live commands are not implied.
+
+Portal-side publication verification, independent flag/kill-switch policy and
+restart-safe Rust journal are complete. Owner command routes/identity/corpus
+have not been published, so TypeScript apply and every runtime command lane
+remain disabled. Detail:
+[`EX_BE_05B_N12_LIVE_COMMAND_RELAY.md`](./backend/EX_BE_05B_N12_LIVE_COMMAND_RELAY.md).
 
 **Claude parallel lane:** render the canonical catalogue and terminal; keep unreachable entries hidden/
 disabled and never equate HTTP 202 with success.
@@ -1034,7 +1040,7 @@ list.**
 | 25 | four-stage versus five-hop funnel | `OWNER_DECISION_PENDING` | N11 |
 | 26 | authoritative aggregate exposure verdict | `EXTERNAL_CONTRACT_PENDING` | N11 |
 | 27 | packed correlation `sample_counts` | `EXTERNAL_CONTRACT_PENDING` | N11 |
-| 28a | canonical command catalogue | `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | N12 |
+| 28a | canonical command catalogue | `PORTAL_COMMAND_GATE_COMPLETE / OWNER_PUBLICATION_PENDING / PRODUCTION_INACTIVE` | N12 |
 | 28b | allocation risk classification | `OWNER_DECISION_PENDING`, conservative floor R1 | N12 |
 | 29 | typed `conditions[]` | `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | N09/N12 |
 | 30 | R2 lineage/grant/role/author/passport | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | N09 |

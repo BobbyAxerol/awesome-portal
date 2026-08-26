@@ -392,6 +392,16 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n11-external-read-v1-request/owner-publication.manifest.example.json" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N11_EXTERNAL_READ_HANDOFF.md" \
+  "${ROOT_DIR}/scripts/execution-n12-command-publication-verify.py" \
+  "${ROOT_DIR}/scripts/test_execution_n12_command_publication_verify.py" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/README.md" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/command-capability-catalogue.schema.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/command-capability-catalogue.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/terminal-corpus-index.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/acceptance-results.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/owner-publication.manifest.example.json" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_05B_N12_LIVE_COMMAND_RELAY.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N12_COMMAND_RELAY_HANDOFF.md" \
   "${ROOT_DIR}/.github/workflows/publish-images.yml" \
   "${ROOT_DIR}/deploy/execution-d1/README.md" \
   "${ROOT_DIR}/deploy/execution-d1/owner-input.env.example" \
@@ -788,6 +798,14 @@ for tracked_source in \
   services/portal-execution-edge-rs/contracts/n11-external-read-v1-request/owner-publication.manifest.example.json \
   scripts/execution-n11-external-read-verify.py \
   scripts/test_execution_n11_external_read_verify.py \
+  services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/README.md \
+  services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/command-capability-catalogue.schema.json \
+  services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/command-capability-catalogue.example.json \
+  services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/terminal-corpus-index.example.json \
+  services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/acceptance-results.example.json \
+  services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/owner-publication.manifest.example.json \
+  scripts/execution-n12-command-publication-verify.py \
+  scripts/test_execution_n12_command_publication_verify.py \
   services/portal-execution-edge-rs/rust-toolchain.toml \
   services/portal-execution-edge-rs/contract-pack.lock.json \
   services/portal-execution-edge-rs/crates/execution-contracts/src/lib.rs \
@@ -1156,7 +1174,9 @@ python3 -m py_compile \
   "${ROOT_DIR}/scripts/execution-n03-implementation-verify.py" \
   "${ROOT_DIR}/scripts/test_execution_n03_implementation_verify.py" \
   "${ROOT_DIR}/scripts/execution-n11-external-read-verify.py" \
-  "${ROOT_DIR}/scripts/test_execution_n11_external_read_verify.py"
+  "${ROOT_DIR}/scripts/test_execution_n11_external_read_verify.py" \
+  "${ROOT_DIR}/scripts/execution-n12-command-publication-verify.py" \
+  "${ROOT_DIR}/scripts/test_execution_n12_command_publication_verify.py"
 python3 "${ROOT_DIR}/scripts/test_execution_iam_verify.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_authorization.py"
@@ -1169,6 +1189,8 @@ python3 "${ROOT_DIR}/scripts/execution-n03-implementation-verify.py" --mode temp
 python3 "${ROOT_DIR}/scripts/test_execution_n03_implementation_verify.py"
 python3 "${ROOT_DIR}/scripts/execution-n11-external-read-verify.py" --mode template
 python3 "${ROOT_DIR}/scripts/test_execution_n11_external_read_verify.py"
+python3 "${ROOT_DIR}/scripts/execution-n12-command-publication-verify.py" --mode template
+python3 "${ROOT_DIR}/scripts/test_execution_n12_command_publication_verify.py"
 "${ROOT_DIR}/scripts/test-execution-d4-storage.sh"
 "${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh"
 "${ROOT_DIR}/scripts/execution-d4-qualification-preflight-test.sh"

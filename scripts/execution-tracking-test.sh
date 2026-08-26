@@ -54,11 +54,15 @@ n09 = n09_report.read_text()
 n09h = n09_handoff.read_text()
 n11_report = backend.parent / "EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md"
 n11_handoff = tracker.parent / "CODEX_TO_CLAUDE_N11_EXTERNAL_READ_HANDOFF.md"
-for path in (n11_report, n11_handoff):
+n12_report = backend.parent / "EX_BE_05B_N12_LIVE_COMMAND_RELAY.md"
+n12_handoff = tracker.parent / "CODEX_TO_CLAUDE_N12_COMMAND_RELAY_HANDOFF.md"
+for path in (n11_report, n11_handoff, n12_report, n12_handoff):
     if not path.is_file():
-        raise SystemExit(f"N11 tracking file missing: {path}")
+        raise SystemExit(f"N11/N12 tracking file missing: {path}")
 n11 = n11_report.read_text()
 n11h = n11_handoff.read_text()
+n12 = n12_report.read_text()
+n12h = n12_handoff.read_text()
 
 for label, text in (("N09 report", n09), ("N09 Claude handoff", n09h)):
     for token in (
@@ -83,6 +87,14 @@ for label, text in (("N11 report", n11), ("N11 Claude handoff", n11h)):
             raise SystemExit(f"{label} lost N11 boundary {token}")
 if "Rust compatibility adapter" not in n11 or "availability" not in n11h:
     raise SystemExit("N11 tracking files lost adapter/consumer boundary")
+for label, text in (("N12 report", n12), ("N12 Claude handoff", n12h)):
+    for token in ("OWNER_PUBLICATION_PENDING", "PRODUCTION_INACTIVE", "UNCERTAIN"):
+        if token not in text:
+            raise SystemExit(f"{label} lost N12 boundary {token}")
+if "202" not in n12 or "202" not in n12h or "command kill switch" not in n12:
+    raise SystemExit("N12 tracking files lost terminal/kill-switch semantics")
+if "N12 backend — live command publication/relay gate" not in t:
+    raise SystemExit("tracker lost N12 shared-board section")
 
 qualified = "`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`"
 for phase in (3, 14, 15, 16, 17):
@@ -412,7 +424,12 @@ for label, text in (
         raise SystemExit(f"{label} lost the F3 command-inactive visibility boundary")
 for request in ("BR-EX-28 canonical command catalogue", "BR-EX-29 typed `conditions[]`"):
     row = next((line for line in l.splitlines() if request in line), None)
-    if row is None or "`FOUNDATION_COMPLETE / PRODUCTION_INACTIVE`" not in row:
+    expected = (
+        "`PORTAL_COMMAND_GATE_COMPLETE / OWNER_PUBLICATION_PENDING / PRODUCTION_INACTIVE`"
+        if request.startswith("BR-EX-28")
+        else "`FOUNDATION_COMPLETE / PRODUCTION_INACTIVE`"
+    )
+    if row is None or expected not in row:
         raise SystemExit(f"request ledger lost the accepted F0 status: {request}")
 
 entries = c.get("entries", [])
