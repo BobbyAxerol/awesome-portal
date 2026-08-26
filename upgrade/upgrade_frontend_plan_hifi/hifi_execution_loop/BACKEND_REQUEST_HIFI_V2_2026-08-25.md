@@ -730,3 +730,67 @@ Thêm `type` enum `SEED\|ALLOCATE\|REBALANCE\|CANARY_ALLOCATE\|RELEASE`, `alloca
 11. incidents: `open` == count(rows where resolved_at null).
 12. audit: mọi `evidence.operation_id` là VERIFIED/PARTIAL trong journal; không có RECORDED cho hành động mutation.
 
+---
+
+# Phụ lục J — Nguồn dữ liệu & domain logic cho BR-EX-49/50/51 (theo `DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md` và Trading System routes §6.5)
+
+Ký hiệu: **DB** = bảng trong trading DB (88 bảng/2 view); **TS route** = route Trading System publish (contract pack); **PORTAL** = bảng/projection Portal sở hữu (N09); **DERIVED** = tính trong Portal projection theo formula version; **MISSING** = chưa có nguồn — codex quyết (tạo bảng Portal-owned, hoặc `EXTERNAL_CONTRACT_PENDING`).
+
+## J.1 BR-EX-49 · Alpha Fleet
+
+| field | nguồn | logic |
+|---|---|---|
+| `rows[].alpha_id, name, version, artifact_digest, research_status, owner` | DB `strategies` (alpha_id = strategy_id) ⋈ `alphas` ⋈ `alpha_ledger` (research status/approval refs) ⋈ `traders` (owner) | research_status = trạng thái R1/R2 gần nhất trong `alpha_ledger`; research-only alpha = có trong `strategies` nhưng 0 hàng `strategy_deployments` |
+| `rows[].deployments[]` | DB `strategy_deployments` (deployment_id, venue, mode, stage, account_id, portfolio_id) ⋈ `accounts` ⋈ `venue_accounts` | stage từ `strategy_deployments.stage`; `stage_note` = ngày vào stage + approval id (PORTAL approvals) |
+| `alloc` | DB `portfolio_allocations` (per deployment/account, ccy) | Σ theo ccy; không FX |
+| `net_pnl_30d`, `max_dd_30d`, `equity_30d` | DB `performance_snapshots` + `account_equity_snapshots` (by deployment_id/account_id, 1h/1d) | DERIVED `twr.v1`; sparkline LTTB giữ extrema |
+| `fleet_pnl_session` | DB `execution_sessions` (session hiện tại) + marks từ TS route positions/market tick | DERIVED, re-price per tick |
+| `live_exposure.physical` | DB `broker_account_sync_snapshots` / `account_sync_snapshots` (binance_main_01) | so với `account_balances` + `positions_v2` |
+| `health` | PORTAL incidents (MISMATCH) + `reconciliation_findings` (DB) + PORTAL approvals (OVERDUE) + `execution_sessions.state` (no active session) + `service_heartbeats`/`broker_account_sync_snapshots` (sync age) | ưu tiên như G.3 |
+| `attention` | như trên, đếm server | |
+| VN MARKET session | DB `venues.trading_sessions` (JSONB) + `settlement_calendars` | server trả `session{state, resumes_at}` |
+| `counts` | DB `strategy_deployments` group by stage | alpha đếm ở mọi stage nó có |
+
+## J.2 BR-EX-50 · Trade Replay
+
+| field | nguồn | logic |
+|---|---|---|
+| `candles[]` | **MISSING trong DB** — Trading System market-data (venue OHLC 1h) hoặc `funding_rates`-style store mới | codex quyết: TS route `market/candles` (EXTERNAL_CONTRACT_PENDING) hay Portal cache |
+| `markers[]` | DB `fills` (fill_id, trade_time, price, quantity, client_order_id, venue_order_id) ⋈ `orders` (order_type, side, trigger_price, status, risk_grant_id) ⋈ `order_brackets` / `order_bracket_legs` (bracket_group_id, role, activation_policy) | kind: ENTRY_FILL = fill mở/tăng vị thế (`positions_v2` delta cùng chiều); EXIT_FILL_TP/SL theo leg role; BRACKET_ARMED = ack children; REJECT = `orders.status` REJECTED pre-venue (`venue_order_id` null) hoặc `risk_grants.rejected_orders` |
+| `round_trips[]` | DERIVED từ fills ghép theo bracket_group_id / `alpha_positions` open→close | pnl net fee (`fills.fee`) |
+| `legs[]` | DB `order_bracket_legs` ⋈ `orders` (WORKING/CREATED/PARTIAL) | `armed_index` = nến của ack children |
+| `mark` | TS market tick (BR-EX-43) | |
+| `job` | **MISSING** `execution_replay_jobs` — Portal-owned bảng mới (N09) | id, status, built_at, window |
+| `log[]` | DB `orders` (SUBMIT/ACK/REJECT theo `status` + timestamps) + `fills` (FILL) + `order_bracket_legs` (TRIGGER) ⋈ `execution_sessions` | keyset theo `t` desc; id trùng marker |
+| `pickers` | DB `strategy_deployments` trong scope alpha; `instruments` cho symbol | |
+
+## J.3 BR-EX-51 · Portfolio 360
+
+| field | nguồn | logic |
+|---|---|---|
+| `portfolio.status, facts` | DB `portfolios` (status, base_ccy) ⋈ `portfolio_allocations` (alphas/accounts count) | |
+| `strip.nav, today` | DB `portfolio_equity_snapshots` (1d) + marks per tick (TS) | NAV live = snapshot cuối + Δ mark trên `positions_v2` |
+| `strip.allocated/max/free` | DB `portfolio_capital_ledger` (append-only) + `portfolios.max_capital` | free = max − allocated − `account_reservations` |
+| `strip.exposure` | DB `positions_v2` ⋈ `accounts` (6 accounts · 3 venues) | gross Σ \|notional\| theo base ccy; ccy khác → FX policy `fx_usdc_usdt.v1` chỉ cho total |
+| `return_30d`, `alpha` | DB `portfolio_equity_snapshots` + benchmark series (**MISSING**: bảng `benchmarks`/`bms_204` chưa có trong DB → Portal-owned hoặc external) | TWR 1d |
+| `max_dd_30d.limit` | DB `risk_profiles` (rev đang hiệu lực, `account_policies`) | |
+| `attention` | PORTAL incidents + DB `reconciliation_findings` | |
+| `equity_segmented.eras` | **`portfolio_config_revisions` MISSING** → derive từ `portfolio_capital_ledger` + `portfolio_audit_log` (mỗi entry có `operation_id`, approval) — codex quyết tạo view/bảng revision | rev tăng theo thời gian; label từ change type + số tiền |
+| `cross_portfolio` | DB `portfolios` ⋈ `portfolio_equity_snapshots` (mọi portfolio, cùng window) | sleeve ccy khác = hàng riêng |
+| `config_log` | DB `portfolio_audit_log` ⋈ `portfolio_capital_ledger` ⋈ `operator_operations` (VERIFIED) ⋈ PORTAL approvals | since_rev_pnl từ `portfolio_equity_snapshots` |
+| Structure `correlation.*`, `market_corr`, `leadership`, `influence_map`, `drawdown_overlap` | DERIVED từ `performance_snapshots` (per deployment 1h) + benchmark series; `sizing_decisions` cho exposure share; `positions_v2` cho symbol overlap | formula versions corr.v1/tail.v1/riskcontrib.v1/marginal.v1/regime.v2 do Portal derive (N10) |
+| `what_if` | DERIVED `marginal.v1` trên covariance `cov_30d_v2` | luôn gắn `formula`; không ghi DB |
+| Capital Ledger tab | DB `portfolio_capital_ledger` (+ `cash_ledger`/`margin_ledger` cho FX-normalized) ⋈ `operator_operations` | invariant after−before |
+| Approvals tab | PORTAL approvals (N09) filter portfolio scope | |
+| Incidents tab | PORTAL incidents ⋈ `reconciliation_findings` ⋈ `operator_operations` (rollback rb_31) | |
+| Audit tab | DB `portfolio_audit_log` + `audit_log` + command journal (`operator_operations`) | state VERIFIED/RECORDED/PARTIAL |
+
+## J.4 Việc codex cần chốt (không đoán)
+
+1. **Candles**: nguồn OHLC — TS route hay Portal cache (ảnh hưởng N08/N11).
+2. **Benchmarks**: nơi lưu `bms_204` series và version.
+3. **Config revisions**: view derive từ ledger/audit hay bảng mới `portfolio_config_revisions`.
+4. **Replay jobs**: bảng Portal-owned `execution_replay_jobs` + retention (N05).
+5. **Incidents/approvals**: đã Portal-owned theo N09 — xác nhận schema id (`inc_*`, `AP-*`, `PX-*`, `EX-*`).
+6. Formula versions (`twr.v1`, `corr.v1`, `tail.v1`, `riskcontrib.v1`, `marginal.v1`, `regime.v2`) đăng ký trong `compatibility_surface_registry`.
+
