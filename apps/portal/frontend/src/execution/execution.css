@@ -5662,3 +5662,5 @@
 .exec-surface .exec-visual, .exec-surface .exec-visual-row > *, .exec-surface .exec-visual-grid > * { min-width: 0; }
 .exec-surface .exec-rail-section > h2, .exec-surface .exec-rail-section > h3 { overflow-wrap: anywhere; }
 @media (max-width: 767px) { .exec-surface .exec-visual-row { grid-template-columns: minmax(0, 1fr); } .exec-surface .exec-visual-grid { grid-template-columns: minmax(0, 1fr); } .exec-cn .exec-ac-masthead { padding: 6px 8px; } }
+.exec-surface .exec-visual .exec-360-sync th, .exec-surface .exec-visual table th { font: 400 11px/16px var(--font-mono); }
+.exec-a3 .exec-visual .exec-360-sync th, .exec-a3 .exec-visual table th { font: 400 10px/16px var(--font-mono); }
