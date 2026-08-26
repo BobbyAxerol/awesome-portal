@@ -10,5 +10,7 @@ export function smokeMotionAllowed(): boolean {
   if (typeof window === "undefined") return false;
   if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return false;
   if (window.location?.pathname.includes("/_fixtures")) return false;
+  // Automated browsers (Playwright baselines/journeys) measure a still page.
+  if (typeof navigator !== "undefined" && navigator.webdriver) return false;
   return true;
 }
