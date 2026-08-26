@@ -254,8 +254,17 @@ N00 tracking/request reconciliation
  +--> N11 external read adapter prep (only after TS contracts publish)
  +--> N12 command relay prep (independent gate; never unlocked by reads)
 
-N13 -> N14 release authority -> N15 full gateway -> N16 emergency ops -> N17 production/DR
+Portal/source-dark lane (may continue while Trading System works):
+N13A -> N14A -> N15A -> N16A -> N17A
+
+Owner/live lane (requires the master owner return and the matching A exit gate):
+N13B -> N14B -> N15B -> N16B -> N17B
 ```
+
+An `A` lane is Portal-owned, source-dark and safe to implement with contracts,
+fixtures, isolated PostgreSQL and offline transport doubles. A `B` lane imports
+owner-published bytes or touches a real inter-cell/runtime boundary. Completing
+an A lane never implies that its B lane, source, screen or command is active.
 
 ### 3.2 What may run now without IAM/network/source activation
 
@@ -862,11 +871,44 @@ disabled and never equate HTTP 202 with success.
 ### N13 — Staged product activation
 
 **Mapping:** product phases 4–18; delivery profile ladder.  
-**Status:** `NOT_STARTED / N06_N12_DEPENDENT`.  
+**Status:** `N13A_READY / N13B_MASTER_OWNER_RETURN_PENDING`.  
 **Priority:** P1 after foundations.
 
 N13 requires accepted owner bytes and environment-specific evidence from the
 master campaign; it does not require another Trading System feature request.
+
+#### N13A — Source-dark staged activation foundation
+
+**Can start now. Owner:** Portal.
+
+- implement the delivery-profile state machine and legal transition graph;
+- persist profile/capability state, immutable evidence references and
+  compatibility requirements in isolated Portal PostgreSQL;
+- expose TypeScript plan/apply/verify APIs with RBAC, CSRF, idempotency,
+  optimistic concurrency, audit and outbox;
+- keep Query, SSE and R1/R2/R3/R4 flags independent and default false;
+- implement atomic promotion/rollback plans and affected-capability-only
+  rollback;
+- validate signed contract/image/schema/evidence references without importing
+  or trusting an owner candidate;
+- provide canonical fixture, denied, incompatible, stale, partial, rollback
+  and restart test states for Claude.
+
+**N13A exit gate:** fresh-PostgreSQL migration/repository/API/security tests,
+duplicate/conflict/restart/rollback corpus and fixture-only end-to-end tests
+pass. Every runtime/source/command flag remains false.
+
+#### N13B — Owner-backed staged activation
+
+**Blocked until:** accepted master owner return, N06 Paper evidence and N13A.
+
+- import exact accepted owner bytes and immutable identities;
+- run candidate/acceptance verification and real Paper shadow parity;
+- promote one read-only Paper capability at a time;
+- qualify Paper protective commands, then Sandbox, Live Canary protective,
+  Live Canary risk-increasing and finally Live Full;
+- collect per-step load/fault/auth/audit/restore/rollback evidence;
+- roll back only the failed capability/profile.
 
 **Order**
 
@@ -892,28 +934,42 @@ acceptance matrix for the exact promoted screen/profile.
 ### N14 — Deployment and release authority
 
 **Mapping:** BAR-17.  
-**Status:** `PLANNED`.  
+**Status:** `N14A_PLANNED / N14B_OWNER_RELEASE_EVIDENCE_PENDING`.  
 **Priority:** P2 before formal release.
 
 Trading System contributes immutable compatibility/evidence under the master
 campaign. N14 does not open a new endpoint request.
 
-**Goal and deliverables**
+#### N14A — Portal release authority, source-dark
 
-- immutable multi-service release manifest and compatibility matrix;
-- signed images/SBOM/vulnerability evidence;
-- SGP dev versus main/stable deployment separation;
-- migration/preflight/rollback/forward-fix contract;
-- release candidate evidence and owner promotion record;
-- no dev build can mutate or route stable runtime/database accidentally.
+- immutable multi-service Portal release manifest and compatibility matrix;
+- signed Portal images, SBOM and vulnerability evidence;
+- isolated SGP dev versus main/stable deployment state;
+- migration/preflight/rollback/forward-fix contracts;
+- release-candidate evidence schema and owner-decision record;
+- tests proving a dev build cannot route to or mutate stable state.
 
-**Exit gate:** deploy/rollback rehearsal on isolated state, signature verification and owner release
-approval.
+**N14A exit gate:** isolated deploy/rollback rehearsal, signature verification,
+database restore and branch/runtime separation pass without Trading System
+traffic.
+
+#### N14B — Joint immutable release compatibility
+
+**Blocked until:** accepted owner contracts/images and N13B target profile.
+
+- bind exact Trading System source/gateway commit, image, config and contract
+  digests into the release compatibility matrix;
+- execute joint preflight, deploy, rollback and forward-fix rehearsal;
+- record owner release approval for the exact environment/capability set.
+
+**Combined N14 exit gate:** deploy/rollback rehearsal on isolated state,
+signature verification and owner release approval.
 
 ### N15 — Formal inter-cell gateway authority
 
 **Mapping:** BAR-18.  
-**Status:** `READ_FOUNDATION_COMPLETE / COMMAND_EVENT_ARTIFACT_AUTHORITY_PENDING`.  
+**Status:** `N15A_READ_COMMAND_FOUNDATION_READY /
+N15B_EVENT_ARTIFACT_OWNER_PUBLICATION_PENDING`.  
 **Priority:** P2.
 
 **Goal**
@@ -923,50 +979,108 @@ foundation; commands, production events and artifact exchange require their own 
 All four owner-side publications are already requested by the master campaign:
 N11 Query, N12 Command, N02/N03 Event coverage and the master Artifact ruling.
 
+#### N15A — Source-dark four-interface gateway contract
+
+- formalize independent Query, Command, Event and Artifact version ranges;
+- capability negotiation, incompatible/unavailable outcomes and rollback
+  selection;
+- separate read/command identities and delegated-resource policy;
+- bounded transport blueprints, pools, timeouts, retry/no-retry rules and
+  redacted observability;
+- Event replay/gap/epoch fixtures using N02 semantics;
+- Artifact digest/schema/size/access-policy fixtures and rejection corpus;
+- local transport doubles for partition, duplicate, out-of-order, expiry and
+  forged assertion tests.
+
+**N15A exit gate:** contract/codegen/parity/security/fault tests pass with no
+real endpoint, credential or source call.
+
+#### N15B — Real inter-cell gateway acceptance
+
+**Blocked until:** accepted N02/N03/N11/N12/N15 owner artifacts and N15A.
+
+- wire exact mTLS/JWT identities and owner-published route locations;
+- prove Query, Command, Event and Artifact compatibility independently;
+- run WAN partition, replay, duplicate, out-of-order, expiry, schema-drift,
+  source-loss and rollback tests;
+- publish end-to-end trace/correlation and measured SLO evidence.
+
 **Exit gate:** version/compatibility negotiation, identities, SLOs, observability, failure semantics,
 rollback and owner matrix exist for all four without generic host/DB/Redis access.
 
 ### N16 — Same-domain routing and emergency operations
 
 **Mapping:** BAR-19.  
-**Status:** `PLANNED`.  
+**Status:** `N16A_PLANNED / N16B_R3_OWNER_ACCEPTANCE_PENDING`.  
 **Priority:** P2.
 
 The Trading System dependency is the existing N12 R3 protective contract plus
 N11 operational facts. Same-domain routing and break-glass ceremony remain
 Portal/Cloudflare work; no hidden second command request is allowed.
 
-**Goal and deliverables**
+#### N16A — Source-dark routing and emergency policy
 
-- same-domain routing with session/RBAC consistency;
-- operator maintenance/degraded modes;
-- emergency protective path separate from ordinary risk-increasing commands;
-- break-glass reason, expiry, actor, evidence and immutable audit;
-- Cloudflare/tunnel/origin failure and rollback drills.
+- same-domain route/profile configuration and origin-isolation templates;
+- consistent session/RBAC plus stronger emergency step-up/short-session policy;
+- minimal emergency UI states, typed unavailable/degraded behavior and
+  command-independent health;
+- break-glass reason, expiry, actor, approvals and immutable Portal audit;
+- simulated Research/Cloudflare/origin loss and rollback drills;
+- no emergency control when the N12 R3 catalogue is unpublished.
 
-**Exit gate:** no emergency path bypasses Trading System authority or audit; public/auth/source loss
-is visibly degraded and recoverable.
+**N16A exit gate:** routing/auth/audit/fixture/failover tests pass against local
+doubles; no public route or Trading System command becomes active.
+
+#### N16B — Real protective-path acceptance
+
+**Blocked until:** accepted N12 R3 routes, dedicated command identity, N15B and
+an owner change window.
+
+- exercise same-domain emergency read/protective flow while Research is
+  degraded or unavailable;
+- prove observed Trading System acknowledgement and terminal reconciliation;
+- verify stronger access policy, no browser-visible internal hostname/token,
+  immutable audit and rollback;
+- confirm R4 resume/scale cannot inherit the emergency path.
+
+**Combined N16 exit gate:** no emergency path bypasses Trading System authority
+or audit; public/auth/source loss is visibly degraded and recoverable.
 
 ### N17 — Production activation, SLO, DR and owner operations
 
 **Mapping:** BAR-20 + product phase 18.  
-**Status:** `OPERATIONAL_EVIDENCE_PENDING`.  
+**Status:** `N17A_PLANNED / N17B_PRODUCTION_OWNER_EVIDENCE_PENDING`.  
 **Priority:** final.
 
 Trading System participates in measured SLO, rollback, rotation and game-day
 evidence requested by the master campaign. No new feature route is expected.
 
-**Goal and deliverables**
+#### N17A — Source-dark production/DR preparation
 
-- measured SLO/error budgets and alerts;
-- encrypted backup/PITR/rebuild/restore evidence;
-- key/certificate/credential rotation and compromise drill;
-- quarterly game day, incident/rollback ownership and RPO/RTO;
-- retention/cost/capacity review;
-- stable runbook, support matrix and release sign-off.
+- SLO/error-budget schema, dashboards, alert rules and evidence collectors;
+- encrypted backup/PITR/rebuild/restore automation for Portal-owned state;
+- key/certificate/credential rotation and compromise runbooks;
+- capacity/retention/cost budgets and quarterly game-day plan;
+- owner matrix, incident/rollback responsibilities and release checklist;
+- simulated partition, auth-loss, source-loss and command-containment corpus.
 
-**Exit gate:** Bobby signs the exact production acceptance record after successful restore, rollback,
-source-loss, auth-loss and command-containment rehearsals.
+**N17A exit gate:** offline/isolated restore, rollback, rotation dry-run and
+evidence validation pass without production activation.
+
+#### N17B — Joint production acceptance
+
+**Blocked until:** N13B–N16B accepted for the exact profile and owner window.
+
+- activate the approved production capability set only;
+- measure SLO/error budgets and capacity under real bounded traffic;
+- run joint backup/restore, WAN partition, auth/source loss, command
+  containment and rollback game day;
+- record RPO/RTO, rotation and owner/SRE evidence;
+- require Bobby's final exact release sign-off.
+
+**Combined N17 exit gate:** Bobby signs the exact production acceptance record
+after successful restore, rollback, source-loss, auth-loss and
+command-containment rehearsals.
 
 ---
 

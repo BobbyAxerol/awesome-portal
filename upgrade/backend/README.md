@@ -13,6 +13,10 @@ Chúng không thay thế phase hoặc exit gate trong
   nine N12 commands, N15 Event/Artifact authority and the N13–N17 operational
   evidence ladder. Older D4, Claude, N11 and N12 request prose is audit or a
   machine annex and must not be sent separately.
+- [Execution Loop backend unified plan](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md)
+  now splits every remaining N13–N17 phase into `A` (Portal-owned,
+  source-dark, can continue immediately) and `B` (owner artifacts or real
+  runtime required). A completion never implies B activation.
 
 - [BAR-01 — Feature/Screen/Concern Registry & Command Center Summary Contract](./BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md)
   — contract backend cho U02/U03. **Backend contract complete (BE1–BE6):**

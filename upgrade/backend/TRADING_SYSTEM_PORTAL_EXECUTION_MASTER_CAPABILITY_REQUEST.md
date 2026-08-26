@@ -272,16 +272,25 @@ not justify a separate request document or a global activation switch.
 | N10 | Portal analytics contracts | consumes N11 facts | No |
 | N11 | 24 external GET capabilities | §3.2 + N11 annex | No |
 | N12 | nine command capabilities | §3.3 + N12 annex | No |
-| N13 | staged Paper→Sandbox→Canary→Live promotion | same contracts, new evidence/profile only | No |
-| N14 | release compatibility and immutable identities | operational evidence | No |
-| N15 | Query/Command/Event/Artifact authority | §§3.1–3.4 | No |
-| N16 | emergency protective operation and observed ack | N12 R3 + N11 ops facts | No |
-| N17 | SLO, DR, restore, rotation and game-day evidence | operational evidence | No |
+| N13A | Portal staged-activation state machine, source-dark | none; Portal works now | No |
+| N13B | Paper→Sandbox→Canary→Live promotion | same contracts, new evidence/profile only | No |
+| N14A | Portal release manifest/isolation/rollback | none; Portal works source-dark | No |
+| N14B | joint release compatibility and immutable identities | operational evidence | No |
+| N15A | four-interface contracts and transport doubles | none; Portal works source-dark | No |
+| N15B | real Query/Command/Event/Artifact acceptance | §§3.1–3.4 | No |
+| N16A | same-domain/emergency policy and simulated failover | none; Portal works source-dark | No |
+| N16B | real emergency protective operation and observed ack | N12 R3 + N11 ops facts | No |
+| N17A | Portal SLO/DR/rotation tooling and dry-runs | none; Portal works source-dark | No |
+| N17B | joint production SLO, DR, restore, rotation and game day | operational evidence | No |
 
 On current knowledge, no additional Trading System feature request is needed
 after this one. A new request is legal only when a genuinely new product
 requirement appears or the owner publishes an incompatible contract change; it
 must amend this master revision instead of creating a free-standing phase file.
+
+The Portal team will continue every `A` lane while the owner campaign runs.
+Trading System completion is a hard prerequisite only for the matching `B`
+lane; no A-lane completion can be cited as runtime or activation evidence.
 
 ## 7. Acceptance and activation discipline
 

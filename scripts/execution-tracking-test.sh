@@ -22,11 +22,14 @@ F4_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/C
 N09_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_05_N09_PORTAL_GOVERNANCE_WORKFLOW_GAPS.md"
 N09_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N09_GOVERNANCE_WORKFLOW_HANDOFF.md"
 OWNER_MASTER_REQUEST="${ROOT_DIR}/upgrade/backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md"
+EXECUTION_UNIFIED_PLAN="${ROOT_DIR}/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md"
 
-if [[ ! -f "${OWNER_MASTER_REQUEST}" ]]; then
-    echo "official Trading System master request is missing" >&2
-    exit 1
-fi
+for required_file in "${OWNER_MASTER_REQUEST}" "${EXECUTION_UNIFIED_PLAN}"; do
+    if [[ ! -f "${required_file}" ]]; then
+        echo "execution owner/phase plan is missing: ${required_file}" >&2
+        exit 1
+    fi
+done
 for token in \
     "OFFICIAL_SINGLE_OWNER_REQUEST" \
     "d4-paper-read-v2-request" \
@@ -37,6 +40,22 @@ for token in \
 do
     if ! grep -Fq "${token}" "${OWNER_MASTER_REQUEST}"; then
         echo "official Trading System master request lost invariant: ${token}" >&2
+        exit 1
+    fi
+done
+for token in \
+    "N13A_READY / N13B_MASTER_OWNER_RETURN_PENDING" \
+    "N14A_PLANNED / N14B_OWNER_RELEASE_EVIDENCE_PENDING" \
+    "N15A_READ_COMMAND_FOUNDATION_READY" \
+    "N16A_PLANNED / N16B_R3_OWNER_ACCEPTANCE_PENDING" \
+    "N17A_PLANNED / N17B_PRODUCTION_OWNER_EVIDENCE_PENDING"
+do
+    if ! grep -Fq "${token}" "${EXECUTION_UNIFIED_PLAN}"; then
+        echo "execution unified plan lost A/B split: ${token}" >&2
+        exit 1
+    fi
+    if ! grep -Fq "${token}" "${TRACKER}"; then
+        echo "shared tracker lost A/B split: ${token}" >&2
         exit 1
     fi
 done

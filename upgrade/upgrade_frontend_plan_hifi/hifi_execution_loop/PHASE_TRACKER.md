@@ -2679,3 +2679,18 @@ component contract directories are machine annexes. Current inspection found
 no further known Trading System feature request after this campaign. Claude
 continues to consume typed unavailable/partial states and must not infer that a
 master request activates a source, screen or command.
+
+### N13–N17 A/B execution split
+
+| Phase | Lane A — Portal continues now | Lane B — external/live gate | Current status |
+|---|---|---|---|
+| N13 | delivery-profile state machine, repositories/APIs, evidence validation, rollback fixtures | import owner bytes, Paper shadow/qualification and staged promotion | `N13A_READY / N13B_MASTER_OWNER_RETURN_PENDING` |
+| N14 | Portal release manifest, signed images/SBOM, dev/stable isolation, migration/rollback rehearsal | bind exact Trading System identities and run joint release rehearsal | `N14A_PLANNED / N14B_OWNER_RELEASE_EVIDENCE_PENDING` |
+| N15 | Query/Command/Event/Artifact contracts, negotiation and local transport doubles | real mTLS/JWT routes, WAN/fault/compatibility acceptance | `N15A_READ_COMMAND_FOUNDATION_READY / N15B_EVENT_ARTIFACT_OWNER_PUBLICATION_PENDING` |
+| N16 | same-domain/emergency policy, audit and simulated origin failure | accepted R3 protective route and real observed acknowledgement | `N16A_PLANNED / N16B_R3_OWNER_ACCEPTANCE_PENDING` |
+| N17 | SLO/DR/rotation tooling, isolated restore and dry-run game day | bounded production activation and joint SLO/DR/game-day evidence | `N17A_PLANNED / N17B_PRODUCTION_OWNER_EVIDENCE_PENDING` |
+
+Rule: Claude and Portal backend may implement/test every A lane without waiting
+for Trading System. No B lane may start from template/candidate/fixture bytes,
+and no A-lane status may remove an unavailable label or enable a source,
+Query/SSE profile or command.
