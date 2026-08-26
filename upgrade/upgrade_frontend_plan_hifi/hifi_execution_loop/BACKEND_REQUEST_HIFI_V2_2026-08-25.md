@@ -1129,3 +1129,56 @@ Ký hiệu: **DB** = bảng trong trading DB (88 bảng/2 view); **TS route** = 
 5. Canary review day/total: nguồn conditions của approval hay `metadata_v2` — BR-EX-35 đã hỏi, chưa chốt.
 6. Sibling fail-closed rule (scale-up blocked): server đánh dấu `rows[].canary.scale_up_blocked_by` để note không suy diễn.
 
+---
+
+# Phụ lục M — BR-EX-59 · Canary Control Room v1.1: đặc tả đầy đủ
+
+## M.1 Domain (hi-fi 1e + DB guide)
+
+- Canary = `strategy_deployments` với stage LIVE_CANARY, capital envelope nhỏ (5,000) do **canary dual approval AP-311** đặt (PORTAL approvals + conditions: day/total, checkpoints d3/d7, exit d14). Envelope caps từ `risk_grants(max_gross_notional, max_net_notional, expires_at)` + `risk_profiles(max_notional_order, max_notional_position, max_daily_loss, max_order_per_minute)`; breach ⇒ auto-halt (Trading System rule).
+- **Readiness** GUARDED bình thường; DEGRADED khi `broker_account_sync_snapshots.synced_at` cũ hơn policy → scale blocked, protective open, runtime vẫn ACTIVE.
+- **Exit readiness gates** (server-enforced, màn chỉ mirror): min duration (day ≥ total), drift vs paper twin (`dep_94`, so `performance_snapshots` live vs paper: fill Δ, slip Δ ≤ tol), envelope discipline (0 breach = 0 `reconciliation_findings`/`operator_operations` halt do envelope), reconciliation clean streak, incidents 0 critical. "Elapsed time alone never promotes."
+- **Promotion decision** = Canary Exit Review (PORTAL exit review CX-*) + dual approval → LIVE_FULL; options HOLD/REDUCE/ROLLBACK/REQUEST_SCALE đi qua plan → apply → verify.
+
+## M.2 Response mẫu (rút gọn, khớp `canary.smoke.ts`)
+
+```json
+{
+  "masthead": { "alpha": "Grid v2.1", "portfolio": "PF-CRYPTO", "venue": "BINANCE", "active": true, "readiness": "GUARDED", "trial": { "day": 9, "total": 14 }, "exit_review_at": "2026-08-31T08:00:00Z", "real_capital": true },
+  "meta": { "artifact_digest": "sha256:41bb7d…c4", "r1_id": "AP-118", "r2_id": "AP-152", "sandbox_exit_id": "SX-14", "canary_approval_id": "AP-311", "portfolio_id": "PF-CRYPTO", "deployment_id": "dep_88", "account_id": "acct-canary-grid", "venue": "BINANCE", "envelope_rev": 3 },
+  "lifecycle": [ { "stage": "R1", "decision_id": "AP-118" }, { "stage": "R2", "decision_id": "AP-152" }, { "stage": "PAPER", "decision_id": "PX-22" }, { "stage": "SANDBOX", "decision_id": "SX-14" } ], "current": { "stage": "CANARY", "day": 9, "total": 14 }, "next": { "stage": "LIVE" },
+  "kpis": { "canary_capital": { "value": "5000.00", "ccy": "USDT" }, "net_pnl_trial": { "value": "110.79", "live": true, "window_days": 9 }, "drawdown": "-0.008", "risk_envelope_used_pct": "0.34", "broker_freshness": { "seconds": 3.4, "state": "OK" } },
+  "stage_lines": { "join_digest": "sha256:41bb7d…c4", "canary_start_at": "2026-08-13T00:00:00Z", "backtest": [ { "t": "…", "v": "1.000" } ], "paper": [], "live": [], "formula": "equity_projection.v1", "buckets": "1h" },
+  "envelope": { "approval_id": "AP-311", "rows": [ { "key": "capital", "used": "5000", "cap": "5000", "pct": "1.00", "at_cap": true }, { "key": "max_drawdown", "used": "0.008", "cap": "0.02", "pct": "0.40" }, { "key": "orders_today", "used": "12", "cap": "40", "pct": "0.30" }, { "key": "observation_duration", "used": "9", "cap": "14", "pct": "0.64" } ], "limits": { "max_order": "500", "max_position": "2500", "daily_loss_pct": "0.01", "rate_per_min": 5 }, "breach_policy": "auto_halt" },
+  "positions": [ { "symbol": "BTCUSDT", "side": "LONG", "qty": "0.0080", "entry": "61120.00", "upnl": "36.99", "ack_p50_ms": 240 } ], "orders_today": { "open": 1, "fills": 12, "rejects": 0 },
+  "incidents": { "critical_open": 0, "last_recon": { "verdict": "clean", "at": "2026-08-26T09:44:00Z", "id": "rec_881" }, "partial_operations": 0, "scale_blockers": [] },
+  "trial_timeline": { "days": 14, "today": 9, "checkpoints": [ { "day": 3, "review_id": "cr_301", "verdict": "envelope clean" }, { "day": 7, "review_id": "cr_307", "verdict": "drift within tolerance" } ], "exit_day": 14 },
+  "exit_readiness": { "done": 4, "total": 5, "gates": [ { "key": "min_duration", "ok": false, "text": "day 9/14" }, { "key": "drift", "ok": true, "text": "fill Δ +0.3bp · slip Δ +0.8bp · tol 5bp", "ref": { "kind": "deployment", "id": "dep_94" } }, { "key": "envelope", "ok": true, "text": "0 breaches in 9d" }, { "key": "reconciliation", "ok": true, "text": "clean streak 9d", "ref": { "kind": "recon", "id": "rec_881" } }, { "key": "incidents", "ok": true, "text": "0 critical in trial window" } ], "request_exit_review": { "enabled": false, "unlock_rule": "5/5 (d14, or earlier by waiver)" } },
+  "marginal": { "corr_portfolio": { "value": "0.42", "samples": 216, "window": "9d live" }, "corr_benchmark": "0.55", "concentration_if_scaled": { "factor": 5, "top1_pct": "0.74" }, "grade": "C", "formula": "marginal.v1" },
+  "decision": { "options": ["HOLD", "REDUCE", "ROLLBACK", "REQUEST_SCALE"], "evidence_pack_href": "/governance/exit-reviews/EX-771" }
+}
+```
+
+## M.3 Nguồn theo cột thật
+
+| field | bảng · cột |
+|---|---|
+| `masthead.trial`, `exit_review_at`, `trial_timeline.checkpoints` | PORTAL approvals `AP-311` conditions (review window, checkpoint days) + PORTAL exit reviews `cr_*`; `since` = `operator_operations(operation_type='deployment.activate_canary', status='VERIFIED', updated_at)` |
+| `masthead.readiness` | `broker_account_sync_snapshots(synced_at)` vs venue policy; `service_heartbeats` |
+| `kpis.canary_capital` | `portfolio_allocations(allocated_capital)` |
+| `kpis.net_pnl_trial` | `account_equity_snapshots(net_pnl, ts ≥ canary_start)` + `positions_v2.unrealized_pnl` re-priced |
+| `kpis.drawdown` | `account_equity_snapshots.drawdown` |
+| `kpis.risk_envelope_used_pct` | `positions_v2.notional` Σ / `risk_grants.max_gross_notional` |
+| `stage_lines` | `performance_snapshots`/`account_equity_snapshots.equity` cho dep_88 (live) và dep_94 (paper twin, `mode='paper'`), backtest từ `alpha_ledger` run cùng `artifact_digest` |
+| `envelope.rows` | capital: allocations; max_drawdown: snapshots vs `risk_profiles.max_drawdown`; orders_today: `execution_sessions.submitted_count` hoặc `orders` count hôm nay vs cap (approval condition); observation: day/total |
+| `envelope.limits` | `risk_profiles(max_notional_order, max_notional_position, max_daily_loss, max_order_per_minute)` |
+| `positions[]` | `positions_v2` ⋈ `instruments.symbol`; `ack_p50_ms` từ `domain_events` (ACK − SUBMIT) |
+| `orders_today` | `orders`/`fills` hôm nay; rejects = `execution_sessions.broker_rejected_count` |
+| `incidents` | `reconciliation_findings(severity='CRITICAL', status='OPEN')`, last recon `rec_*`, `operator_operations(status='PARTIAL')`, scale blockers = command policy blockerCodes |
+| `exit_readiness.gates` | server rule engine (PORTAL_CONTROL) — inputs như trên |
+| `marginal` | DERIVED corr.v1/marginal.v1 trên `performance_snapshots` (9d) |
+
+## M.4 Lỗi / test bắt buộc
+- `409 SCALE_BLOCKED {reason: BROKER_STALE|SIBLING_FAIL_CLOSED|ENVELOPE_AT_CAP}` cho REQUEST_SCALE; `428 STEP_UP_REQUIRED`.
+- Tests: (1) gates.done == count(ok) và `request_exit_review.enabled ⇔ done==total || waiver`; (2) `trial.day` khớp `today` của timeline và `current.day`; (3) `envelope.rows[].pct == used/cap` (decimal exact), `at_cap ⇔ pct ≥ 1`; (4) 3 series chung `join_digest`; (5) readiness DEGRADED ⇔ sync age > policy; (6) v1.1 additive.
+
