@@ -61,7 +61,7 @@ test.describe("§8.2 journeys", () => {
     if (await lens.count()) {
       await lens.selectOption({ index: 1 });
     }
-    await page.getByRole("tab", { name: "Overview" }).click();
+    // Holdings live on Structure & Correlation (hi-fi 3a); the alpha link is there.
     await page.getByRole("button", { name: "Grid v2.1" }).first().click();
     await expect(page).toHaveURL(/\/deployments\/alphas\/Grid v2\.1|\/deployments\/alphas\//);
   });

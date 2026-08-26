@@ -145,7 +145,7 @@ describe("canonical navigation carries context", () => {
     expect(screen.getByTestId("loc").textContent).toBe("/deployments/live/dep_88/canary");
   });
   it("Portfolio: an account cell opens Account 360°", () => {
-    mount(<PortfolioThreeSixtyPreview portfolioId="PF-CRYPTO" />, "/deployments/portfolios/PF-CRYPTO");
+    mount(<PortfolioThreeSixtyPreview portfolioId="PF-CRYPTO" />, "/deployments/portfolios/PF-CRYPTO?tab=Structure+%26+Correlation");
     fireEvent.click(screen.getAllByRole("button", { name: "acct-canary-grid" })[0]);
     expect(screen.getByTestId("loc").textContent).toBe("/deployments/accounts/acct-canary-grid");
   });

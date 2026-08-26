@@ -5155,3 +5155,269 @@
   .exec-bl-livedot { animation: om-tick 1.2s infinite; }
   .exec-bl-trig, .exec-bl-status[data-pulse="true"] { animation: om-pulse 1.6s infinite; }
 }
+
+/* ── Alpha Fleet — hi-fi "Alpha Fleet (list)", owner 2026-08-25 ───────────
+   Page max 1520 / 20px 20px 64px · h1 300 22 · KPI strip 1px gap · chips
+   mono 10 · table mono 12 min 1180 · deployment rows on the paper tint. */
+.exec-af .exec-ws { max-width: none; gap: 0; }
+.exec-af-page { width: 100%; box-sizing: border-box; max-width: min(1520px, 100%); margin: 0 auto; padding: 20px 20px 64px; }
+.exec-af-spacer { flex: 1; }
+.exec-af-masthead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-bottom: 10px; }
+.exec-af-h1 { margin: 0; font: 300 22px/1.25 var(--font-body); color: var(--ink); }
+.exec-af-sum { font: 400 11px/16px var(--font-mono); color: var(--ink-soft); }
+.exec-af-wf { font: 400 9px/12px var(--font-mono); color: var(--ink-mute); border: 1px dashed var(--line-strong); padding: 1px 6px; }
+.exec-af-source { font: 400 10px/14px var(--font-mono); color: var(--ink-soft); border: 1px solid var(--line); background: var(--paper-raised); padding: 2px 8px; display: inline-flex; align-items: center; gap: 6px; }
+.exec-af-source b { color: var(--ink); font-weight: 600; }
+.exec-af-livedot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
+.exec-af-num { font-variant-numeric: tabular-nums; }
+.exec-af-kpis { display: flex; flex-wrap: wrap; gap: 1px; background: var(--line-soft); border: 1px solid var(--line); margin-bottom: 12px; }
+.exec-af-kpi { flex: 1 1 130px; min-width: 120px; background: var(--paper-raised); padding: 9px 12px; }
+.exec-af-kpi[data-tint="true"] { background: var(--warn-bg); }
+.exec-af-kpilabel { font: 400 10px/14px var(--font-mono); text-transform: uppercase; color: var(--ink-faint); }
+.exec-af-kpilabel[data-tone="warn"] { color: var(--warn); }
+.exec-af-kpival { font: 400 17px/24px var(--font-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+.exec-af-kpival[data-tone="bad"] { color: var(--bad); } .exec-af-kpival[data-tone="good"] { color: var(--good); }
+.exec-af-kpiccy { font: 400 10px/14px var(--font-mono); color: var(--ink-faint); } .exec-af-kpiccy[data-tone="bad"] { color: var(--bad); }
+.exec-af-kpisub { font: 400 10px/14px var(--font-mono); color: var(--ink-soft); }
+.exec-af-kpi[data-tint="true"] .exec-af-kpisub { color: var(--ink-soft); }
+.exec-af-kpiports { font: 400 13px/20px var(--font-mono); padding-top: 3px; }
+.exec-af-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; align-items: center; }
+.exec-af-chip { font: 400 10px/14px var(--font-mono); color: var(--ink-soft); background: var(--surface-2); border: 1px solid var(--line); padding: 4px 10px; cursor: pointer; }
+.exec-af-chip[data-active="true"] { color: var(--paper); background: var(--accent); border-color: var(--accent); font-weight: 600; }
+.exec-af-chip:disabled { cursor: not-allowed; opacity: 0.7; }
+.exec-af-filternote { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); margin-left: 8px; }
+.exec-af-panel { border: 1px solid var(--line); background: var(--paper-raised); }
+.exec-af-table { width: 100%; min-width: 1180px; border-collapse: collapse; font: 400 12px/16px var(--font-mono); font-variant-numeric: tabular-nums; }
+.exec-af-table thead th { font: 500 10px/14px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); text-align: left; border-bottom: 1px solid var(--line); padding: 8px 10px; }
+.exec-af-table th[data-numeric="true"], .exec-af-table td[data-numeric="true"] { text-align: right; }
+.exec-af-th-mark { width: 26px; } .exec-af-th-go { width: 34px; }
+.exec-af-table tbody td { padding: 8px 10px; vertical-align: top; }
+.exec-af-row[role="button"] { cursor: pointer; }
+.exec-af-row[data-dim="true"], .exec-af-note[data-dim="true"] { opacity: 0.75; }
+.exec-af-mark { padding-right: 0 !important; color: var(--accent); }
+.exec-af-sub { font: 400 9px/12px var(--font-mono); color: var(--ink-mute); }
+.exec-af-sub[data-tone="warn"] { color: var(--warn); }
+.exec-af-dim { color: var(--ink-soft); } .exec-af-mute { color: var(--ink-mute); }
+.exec-af-table [data-tone="good"] { color: var(--good); } .exec-af-table [data-tone="bad"] { color: var(--bad); } .exec-af-table [data-tone="warn"] { color: var(--warn); } .exec-af-table [data-tone="mute"] { color: var(--ink-faint); }
+.exec-af-sum [data-tone="bad"] { color: var(--bad); }
+.exec-af-stages { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.exec-af-stage { font: 400 10px/14px var(--font-mono); padding: 0 5px; border: 1px solid var(--line-strong); color: var(--ink-soft); white-space: nowrap; }
+.exec-af-stage[data-tone="live"], .exec-af-stage[data-tone="canary"] { color: var(--bad); border-color: var(--bad); }
+.exec-af-stage[data-strong="true"] { font-weight: 700; }
+.exec-af-stage[data-tone="canary"][data-strong="true"] { border-width: 2px; }
+.exec-af-stage[data-tone="sandbox"] { color: var(--warn); border-color: var(--warn); }
+.exec-af-stage[data-tone="paper"] { color: var(--stage-paper); border-color: var(--stage-paper); }
+.exec-af-stage[data-tone="research"] { color: var(--ink-faint); }
+.exec-af-stage[data-tone="blocked"] { color: var(--bad); border-color: var(--bad); }
+.exec-af-stage[data-dashed="true"] { border-style: dashed; }
+.exec-af-spark { width: 90px; height: 24px; display: block; }
+.exec-af-go a { color: var(--accent); }
+.exec-af-note td { padding: 0 10px 6px 36px !important; border-bottom: 1px solid var(--line-soft); font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-af-dep td { background: var(--stage-paper-bg); padding: 6px 10px !important; color: var(--ink-soft); }
+.exec-af-dep[data-last="true"] td { border-bottom: 1px solid var(--line-soft); }
+.exec-af-empty { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-af-foot { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: center; padding: 8px 14px; border-top: 1px solid var(--line); font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-af-smoke { margin: 10px 0 0; font: 400 10px/14px var(--font-mono); color: var(--warn); }
+@media (max-width: 767px) { .exec-af-page { padding: 16px 12px 48px; } }
+@media (prefers-reduced-motion: no-preference) {
+  .exec-af-livedot { animation: om-tick 1.2s infinite; }
+  .exec-af-pulse { animation: om-pulse 1.6s infinite; }
+}
+
+/* ── Alpha 360 masthead / scope / tabs — hi-fi WF 2a/2b, owner 2026-08-25 ──
+   ALPHA kind chip · h1 300 22 · status chip · meta strip on the sunken paper ·
+   scope chips mono 10 · tabs mono 11 uppercase with 2px accent underline. */
+.exec-a3 .exec-ws { max-width: 1440px; }
+.exec-a3-masthead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-bottom: 8px; }
+.exec-a3-kind { font: 600 10px/14px var(--font-mono); letter-spacing: 0.08em; color: var(--ink-soft); border: 1px solid var(--line-strong); padding: 1px 7px; }
+.exec-a3-h1 { margin: 0; font: 300 22px/1.25 var(--font-body); color: var(--ink); }
+.exec-a3-id { color: var(--ink-faint); }
+.exec-a3-status { font: 600 10px/14px var(--font-mono); letter-spacing: 0.08em; color: var(--good); border: 1px solid var(--good); padding: 1px 7px; }
+.exec-a3-wf { font: 400 9px/12px var(--font-mono); color: var(--ink-mute); border: 1px dashed var(--line-strong); padding: 1px 6px; }
+.exec-a3-spacer { flex: 1; }
+.exec-a3-source { font: 400 10px/14px var(--font-mono); color: var(--ink-soft); border: 1px solid var(--line); background: var(--paper-raised); padding: 2px 8px; }
+.exec-a3-source b { color: var(--ink); font-weight: 600; }
+.exec-a3-source [data-tone="good"] { color: var(--good); } .exec-a3-source [data-tone="bad"] { color: var(--bad); } .exec-a3-source [data-tone="warn"] { color: var(--warn); }
+.exec-a3-btn { font: 400 11px/16px var(--font-mono); color: var(--ink-soft); border: 1px solid var(--line); background: var(--surface-2); padding: 5px 12px; }
+.exec-a3-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; padding: 7px 12px; margin-bottom: 12px; border: 1px solid var(--line-soft); background: var(--paper-sunken); font: 400 11px/16px var(--font-mono); color: var(--ink-soft); }
+.exec-a3-meta b[data-stage="LIVE_CANARY"], .exec-a3-meta b[data-stage="LIVE_FULL"] { color: var(--bad); }
+.exec-a3-meta b[data-stage="SANDBOX_VALIDATION"] { color: var(--warn); }
+.exec-a3-meta b[data-stage="PAPER_OBSERVATION"] { color: var(--stage-paper); }
+.exec-a3-mute { color: var(--ink-mute); }
+.exec-a3 .exec-alpha-scope { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; padding: 0; border: 0; background: none; }
+.exec-a3-scopelabel { font: 400 10px/14px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-mute); }
+.exec-a3 .exec-alpha-select { display: inline-flex; align-items: center; gap: 4px; font: 400 10px/14px var(--font-mono); color: var(--ink-soft); background: var(--surface-2); border: 1px solid var(--line); padding: 3px 8px; }
+.exec-a3 .exec-alpha-select span { color: var(--ink-soft); }
+.exec-a3 .exec-alpha-select select { font: inherit; color: var(--ink); background: transparent; border: 0; padding: 0; }
+.exec-a3-scopenote { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-a3 .exec-alpha-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 14px; overflow-x: auto; scrollbar-width: thin; }
+.exec-a3-tab { font: 400 11px/16px var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; padding: 10px 10px; cursor: pointer; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--ink-faint); white-space: nowrap; }
+.exec-a3-tab[data-active="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+/* Trade Replay */
+.exec-rp-panel { border: 1px solid var(--line); background: var(--paper-raised); margin-bottom: 14px; }
+.exec-rp-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 9px 12px; border-bottom: 1px solid var(--line-soft); }
+.exec-rp-title { font: 400 10px/14px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
+.exec-rp-chip { font: 400 10px/14px var(--font-mono); color: var(--ink-soft); background: var(--surface-2); border: 1px solid var(--line); padding: 2px 8px; cursor: pointer; }
+.exec-rp-chip:disabled { cursor: not-allowed; opacity: 0.8; }
+.exec-rp-ctl { display: inline-flex; gap: 2px; } .exec-rp-ctl .exec-rp-chip { font: 400 11px/16px var(--font-mono); padding: 2px 9px; }
+.exec-rp-spacer { flex: 1; }
+.exec-rp-mark { font: 400 11px/16px var(--font-mono); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.exec-rp-mark [data-tone="good"] { color: var(--good); } .exec-rp-mark [data-tone="bad"] { color: var(--bad); }
+.exec-rp-win { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-rp-canvas { padding: 10px 12px 2px; cursor: grab; user-select: none; }
+.exec-rp-svg { width: 100%; height: auto; display: block; }
+.exec-rp-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 6px 12px; font: 400 10px/14px var(--font-mono); color: var(--ink-soft); }
+.exec-rp-legend [data-tone="good"] { color: var(--good); } .exec-rp-legend [data-tone="bad"] { color: var(--bad); } .exec-rp-legend [data-tone="warn"] { color: var(--warn); }
+.exec-rp-mute { color: var(--ink-mute); }
+.exec-rp-foot { padding: 6px 12px 8px; border-top: 1px solid var(--line-soft); font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-rp-table { width: 100%; min-width: 920px; border-collapse: collapse; font: 400 12px/16px var(--font-mono); font-variant-numeric: tabular-nums; }
+.exec-rp-table th { font: 500 10px/14px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); text-align: left; border-bottom: 1px solid var(--line); padding: 7px 12px; }
+.exec-rp-table th[data-numeric="true"], .exec-rp-table td[data-numeric="true"] { text-align: right; }
+.exec-rp-table td { padding: 6px 12px; border-bottom: 1px solid var(--line-soft); }
+.exec-rp-dim { color: var(--ink-soft); }
+.exec-rp-table [data-tone="good"] { color: var(--good); } .exec-rp-table [data-tone="bad"] { color: var(--bad); } .exec-rp-table [data-tone="warn"] { color: var(--warn); } .exec-rp-table [data-tone="mute"] { color: var(--ink-faint); }
+.exec-rp-ev { font: 600 10px/14px var(--font-mono); padding: 1px 6px; }
+.exec-rp-ev[data-tone="warn"] { background: var(--warn-bg); color: var(--warn); }
+.exec-rp-ev[data-tone="good"] { background: var(--good-bg); color: var(--good); }
+.exec-rp-ev[data-tone="accent"] { background: var(--accent-soft); color: var(--accent); }
+.exec-rp-ev[data-tone="bad"] { background: var(--bad-bg); color: var(--bad); }
+.exec-rp-ev[data-tone="mute"] { background: var(--surface-2); color: var(--ink-soft); }
+.exec-rp-smoke { margin: 0; font: 400 10px/14px var(--font-mono); color: var(--warn); }
+/* Alpha 360 body panels — same hi-fi grammar as the masthead: raised panel,
+   mono uppercase panel title with a right-hand mono note, mono tables,
+   six-cell KPI strip with 1px gaps. Scoped so the tests' markup is untouched. */
+.exec-a3 .exec-alpha-body > *, .exec-a3 .exec-alpha-body .exec-gate-panel { margin-bottom: 14px; }
+.exec-a3 .exec-gate-panel { border: 1px solid var(--line); background: var(--paper-raised); padding: 0; }
+.exec-a3 .exec-gate-panel > .exec-tile-title { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); font: 400 11px/16px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
+.exec-a3 .exec-gate-panel > .exec-tile-title + .exec-blotter-note { padding: 6px 14px 0; }
+.exec-a3 .exec-gate-panel .exec-blotter-note, .exec-a3 .exec-alpha-body .exec-blotter-note { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-a3 .exec-gate-panel > .exec-scroll-x { padding: 0; }
+.exec-a3 .exec-gate-panel > p.exec-blotter-note { padding: 7px 14px; border-top: 1px solid var(--line-soft); margin: 0; }
+.exec-a3 .exec-alpha-map caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.exec-a3 .exec-alpha-body table { width: 100%; border-collapse: collapse; font: 400 12px/16px var(--font-mono); font-variant-numeric: tabular-nums; }
+.exec-a3 .exec-alpha-body table th { font: 500 10px/14px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); text-align: left; border-bottom: 1px solid var(--line); padding: 8px 12px; }
+.exec-a3 .exec-alpha-body table td { padding: 7px 12px; border-bottom: 1px solid var(--line-soft); }
+.exec-a3 .exec-alpha-body table tr:last-child td { border-bottom: 0; }
+.exec-a3 .exec-alpha-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+.exec-a3 .exec-alpha-kpi { min-width: 0; background: var(--paper-raised); padding: 8px 12px; border: 0; }
+.exec-a3 .exec-alpha-kpi > .exec-blotter-note { font: 400 10px/14px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
+.exec-a3 .exec-alpha-kpi > div:last-child { font: 500 18px/24px var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink); }
+.exec-a3 .exec-alpha-kpi .exec-gate-unverified { font: 400 11px/16px var(--font-mono); }
+.exec-a3 .exec-grid-2 { gap: 14px; }
+.exec-a3 .exec-chart-tile, .exec-a3 .exec-chart-unavailable { border: 1px solid var(--line); background: var(--paper-raised); }
+.exec-a3 .exec-chart-head h3, .exec-a3 .exec-section-title { font: 400 11px/16px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
+@media (max-width: 1023px) { .exec-a3 .exec-alpha-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 599px) { .exec-a3 .exec-alpha-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* ── Portfolio 360 — hi-fi WF 3a, owner 2026-08-25 (shares the .exec-a3 masthead/tabs/panel grammar) ── */
+.exec-pf2-status { font: 600 11px/16px var(--font-mono); padding: 1px 8px; background: var(--good-bg); color: var(--good); }
+.exec-pf2-facts { font: 400 10px/14px var(--font-mono); color: var(--ink-soft); border: 1px solid var(--line); padding: 1px 7px; }
+.exec-pf2-primary { font: 600 11px/16px var(--font-mono); color: var(--paper); background: var(--accent); border: 0; padding: 6px 14px; cursor: pointer; }
+.exec-pf2-primary:disabled { cursor: not-allowed; opacity: 0.85; }
+.exec-pf2-chip { font: 400 10px/14px var(--font-mono); color: var(--ink-soft); background: var(--surface-2); border: 1px solid var(--line); padding: 3px 8px; cursor: pointer; }
+.exec-pf2-chip[data-active="true"] { color: var(--paper); background: var(--accent); border-color: var(--accent); font-weight: 600; }
+.exec-pf2-dim { color: var(--ink-mute); }
+.exec-pf2-spacer { flex: 1; }
+.exec-pf2-note { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); margin: 0; }
+.exec-pf2-kpis { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 1px; background: var(--line-soft); border: 1px solid var(--line); margin-bottom: 14px; }
+.exec-pf2-kpis[data-cols="5"] { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); overflow: visible; }
+.exec-pf2-kpi { flex: 1 1 120px; min-width: 110px; background: var(--paper-raised); padding: 9px 12px; }
+.exec-pf2-kpi[data-wide="true"] { flex: 1.4 1 150px; min-width: 140px; }
+.exec-pf2-kpi[data-tint="true"] { background: var(--warn-bg); flex-basis: 130px; }
+.exec-pf2-kpilabel { font: 400 10px/14px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); display: flex; align-items: center; gap: 6px; }
+.exec-pf2-kpilabel[data-tone="warn"] { color: var(--warn); }
+.exec-pf2-livedot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
+.exec-pf2-kpival { font: 500 17px/24px var(--font-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+.exec-pf2-kpival[data-size="lg"] { font: 500 19px/24px var(--font-mono); }
+.exec-pf2-kpival[data-tone="good"] { color: var(--good); } .exec-pf2-kpival[data-tone="bad"] { color: var(--bad); }
+.exec-pf2-kpiccy { font: 400 10px/14px var(--font-mono); color: var(--ink-faint); } .exec-pf2-kpiccy[data-tone="bad"] { color: var(--bad); }
+.exec-pf2-kpisubval { font: 500 14px/20px var(--font-mono); } .exec-pf2-kpisubval[data-tone="good"] { color: var(--good); } .exec-pf2-kpisubval[data-tone="mute"] { color: var(--ink-faint); }
+.exec-pf2-kpisub { font: 400 10px/14px var(--font-mono); color: var(--ink-soft); }
+.exec-pf2-kpisub[data-tone="good"] { color: var(--good); }
+.exec-pf2-kpi[data-tint="true"] .exec-pf2-kpisub { color: var(--ink-soft); }
+.exec-pf2-panel { border: 1px solid var(--line); background: var(--paper-raised); margin-bottom: 14px; display: flex; flex-direction: column; }
+.exec-pf2-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); }
+.exec-pf2-head[data-mid="true"] { border-top: 1px solid var(--line-soft); }
+.exec-pf2-title { font: 400 11px/16px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
+.exec-pf2-wins { display: inline-flex; gap: 4px; } .exec-pf2-wins .exec-pf2-chip { padding: 2px 9px; }
+.exec-pf2-plot { padding: 12px 14px 4px; position: relative; }
+.exec-pf2-svg { width: 100%; height: 170px; display: block; }
+.exec-pf2-era { opacity: 0.06; } .exec-pf2-era[data-tone="warn"] { fill: var(--warn); } .exec-pf2-era[data-tone="paper"] { fill: var(--stage-paper); } .exec-pf2-era[data-tone="bad"] { fill: var(--bad); opacity: 0.08; } .exec-pf2-era[data-tone="accent"] { fill: var(--accent); } .exec-pf2-era[data-tone="good"] { fill: var(--good); } .exec-pf2-era[data-tone="mute"] { fill: var(--ink-faint); }
+.exec-pf2-eralabels { position: relative; height: 14px; margin-top: -14px; font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-pf2-eralabels span { position: absolute; top: 0; padding-left: 4px; white-space: nowrap; }
+.exec-pf2-foot { padding: 7px 14px; border-top: 1px solid var(--line-soft); font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-pf2-table { width: 100%; min-width: 380px; border-collapse: collapse; font: 400 12px/16px var(--font-mono); font-variant-numeric: tabular-nums; }
+.exec-pf2-config { min-width: 940px; }
+.exec-pf2-table th { font: 500 10px/14px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); text-align: left; border-bottom: 1px solid var(--line); padding: 7px 12px; }
+.exec-pf2-table th[data-numeric="true"], .exec-pf2-table td[data-numeric="true"] { text-align: right; }
+.exec-pf2-table td { padding: 7px 12px; border-bottom: 1px solid var(--line-soft); color: var(--ink); }
+.exec-pf2-table tr:last-child td { border-bottom: 0; }
+.exec-pf2-table [data-tone="good"] { color: var(--good); } .exec-pf2-table [data-tone="bad"] { color: var(--bad); } .exec-pf2-table [data-tone="warn"] { color: var(--warn); } .exec-pf2-table [data-tone="mute"] { color: var(--ink-faint); }
+.exec-pf2-table tr[data-this="true"] td { background: var(--stage-paper-bg); }
+.exec-pf2-this { font: 400 9px/12px var(--font-mono); color: var(--accent); }
+.exec-pf2-sleeve { font: 400 9px/12px var(--font-mono); color: var(--warn); }
+.exec-pf2-spark { width: 80px; height: 20px; display: block; }
+.exec-pf2-corr { color: var(--ink-soft); }
+.exec-pf2-rev { border-left: 3px solid transparent !important; }
+.exec-pf2-config tr[data-current="true"] td { background: var(--warn-bg); } .exec-pf2-config tr[data-current="true"] .exec-pf2-rev { border-left-color: var(--bad) !important; }
+.exec-pf2-config tr[data-retired="true"] { opacity: 0.7; }
+.exec-pf2-current { font: 400 9px/12px var(--font-mono); color: var(--bad); }
+.exec-pf2-change { font: 600 10px/14px var(--font-mono); padding: 0 5px; border: 1px solid currentColor; }
+.exec-pf2-change[data-tone="bad"] { color: var(--bad); } .exec-pf2-change[data-tone="accent"] { color: var(--accent); } .exec-pf2-change[data-tone="warn"] { color: var(--warn); } .exec-pf2-change[data-tone="good"] { color: var(--good); }
+.exec-pf2-change[data-dashed="true"] { border-style: dashed; }
+.exec-pf2-contract { margin-bottom: 14px; } .exec-pf2-contract > summary { cursor: pointer; margin-bottom: 8px; }
+.exec-pf2-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-bottom: 14px; }
+.exec-pf2-whatif { padding: 14px; display: grid; gap: 6px 12px; font: 400 12px/16px var(--font-mono); color: var(--ink-soft); }
+.exec-pf2-whatifrow { display: grid; grid-template-columns: minmax(140px, 44%) minmax(0, 1fr); gap: 6px 12px; overflow-wrap: anywhere; }
+.exec-pf2-whatifrow b[data-tone="good"] { color: var(--good); }
+.exec-pf2-whatif .exec-pf2-note { margin-top: 4px; line-height: 1.5; }
+.exec-pf2-overlap td { padding: 6px 14px; }
+.exec-pf2-links { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.exec-pf2-btn { font: 400 11px/16px var(--font-mono); border: 1px solid var(--line); background: var(--surface-2); padding: 5px 12px; color: var(--ink-soft); }
+.exec-pf2-smoke { margin: 0 0 14px; font: 400 10px/14px var(--font-mono); color: var(--warn); }
+@media (max-width: 1023px) { .exec-pf2-kpis[data-cols="5"] { grid-template-columns: repeat(3, minmax(0, 1fr)); } .exec-pf2-two { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: no-preference) { .exec-pf2-livedot { animation: om-tick 1.2s infinite; } .exec-pf2-pulse { animation: om-pulse 1.6s infinite; } }
+.exec-pf2 .exec-alpha-deployments caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* Portfolio 360 · Structure / Ledger / Approvals / Incidents / Audit (hi-fi 3a) */
+.exec-pf2-grid { display: grid; gap: 14px; margin-bottom: 14px; }
+.exec-pf2-grid[data-ratio="1.15"] { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+.exec-pf2-grid[data-ratio="1"] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.exec-pf2-grid[data-ratio="1.2r"] { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
+.exec-pf2-grid > .exec-pf2-panel { margin-bottom: 0; }
+.exec-pf2-corrm { min-width: 0; }
+.exec-pf2-corrm td[data-self="true"] { background: var(--surface-2); color: var(--ink-mute); }
+.exec-pf2-corrm td[data-hot="true"] { background: var(--warn-bg); color: var(--warn); font-weight: 600; }
+.exec-pf2-corrm th[data-tone="warn"] { color: var(--warn); }
+.exec-pf2-plotpad { padding: 14px 14px 6px; flex: 1; display: flex; align-items: center; }
+.exec-pf2-svgauto { width: 100%; height: auto; display: block; }
+.exec-pf2-facts { padding: 6px 14px 10px; font: 400 11px/16px var(--font-mono); color: var(--ink-soft); display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.exec-pf2-facts b[data-tone="warn"] { color: var(--warn); } .exec-pf2-facts b[data-tone="bad"] { color: var(--bad); }
+.exec-pf2-bars { padding: 14px; display: flex; flex-direction: column; gap: 12px; font: 400 12px/16px var(--font-mono); color: var(--ink-soft); }
+.exec-pf2-barrow { display: flex; justify-content: space-between; gap: 8px; } .exec-pf2-barrow b { color: var(--ink); } .exec-pf2-barval { color: var(--ink); }
+.exec-pf2-bar { height: 7px; background: var(--paper-sunken); border: 1px solid var(--line); overflow: hidden; margin-top: 4px; }
+.exec-pf2-barfill { height: 100%; background: var(--accent); transition: width 600ms ease; }
+.exec-pf2-barfill[data-tone="bad"] { background: var(--bad); } .exec-pf2-barfill[data-tone="warn"] { background: var(--warn); }
+.exec-pf2-insight { border: 1px solid var(--line); background: var(--surface-2); padding: 8px 10px; font: 400 11px/16px var(--font-mono); color: var(--ink-soft); }
+.exec-pf2-insight b[data-tone="warn"] { color: var(--warn); }
+.exec-pf2-lens[data-active="true"] { color: var(--accent); border-color: var(--accent); background: var(--surface-2); font-weight: 400; }
+.exec-pf2 tr[data-lens="true"] td { background: var(--accent-soft); }
+.exec-pf2-ink { color: var(--ink); }
+.exec-pf2-decision { font: 600 11px/16px var(--font-mono); padding: 1px 8px; background: var(--good-bg); color: var(--good); }
+.exec-pf2-state { font: 600 11px/16px var(--font-mono); padding: 1px 8px; background: var(--good-bg); color: var(--good); }
+.exec-pf2-state[data-tone="mute"] { background: var(--surface-2); color: var(--ink-soft); }
+.exec-pf2-paper { color: var(--stage-paper); }
+.exec-pf2-incnote { margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); font: 400 11px/16px var(--font-mono); color: var(--ink-faint); }
+.exec-pf2-contract > summary { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); cursor: pointer; }
+@media (max-width: 1023px) { .exec-pf2-grid[data-ratio] { grid-template-columns: 1fr; } }
+/* Holdings · stage · health chips on the Portfolio Structure tab — hi-fi 3a:
+   stage = 10/600 mono bordered in the stage colour, health = 10/600 mono filled. */
+.exec-pf2 .exec-alpha-deployments td .exec-env, .exec-pf2 .exec-alpha-deployments td .exec-chip { display: inline-block; font: 600 10px/14px var(--font-mono); letter-spacing: 0.02em; padding: 1px 6px; vertical-align: middle; border-radius: 0; }
+.exec-pf2 .exec-alpha-deployments td .exec-env { border: 1px solid var(--line-strong); background: transparent; color: var(--ink-soft); margin-right: 4px; }
+.exec-pf2 .exec-alpha-deployments td .exec-env[data-stage="LIVE_CANARY"], .exec-pf2 .exec-alpha-deployments td .exec-env[data-stage="LIVE_FULL"] { border-color: var(--bad); color: var(--bad); }
+.exec-pf2 .exec-alpha-deployments td .exec-env[data-stage="SANDBOX_VALIDATION"] { border-color: var(--warn); color: var(--warn); }
+.exec-pf2 .exec-alpha-deployments td .exec-env[data-stage="PAPER_OBSERVATION"] { border-color: var(--stage-paper); color: var(--stage-paper); }
+.exec-pf2 .exec-alpha-deployments td .exec-chip { border: 0; }
+.exec-pf2 .exec-alpha-deployments td .exec-chip[data-tone="good"] { background: var(--good-bg); color: var(--good); }
+.exec-pf2 .exec-alpha-deployments td .exec-chip[data-tone="warn"] { background: var(--warn-bg); color: var(--warn); }
+.exec-pf2 .exec-alpha-deployments td .exec-chip[data-tone="bad"] { background: var(--bad-bg); color: var(--bad); }
+.exec-pf2 .exec-alpha-deployments tr[data-emphasis="warn"] th { border-left: 0; }

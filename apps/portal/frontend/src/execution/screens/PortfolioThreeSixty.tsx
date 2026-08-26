@@ -36,14 +36,11 @@ import { AuthorityBadge, EnvironmentBadge, StatusChip } from "../components/badg
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
 import { ExecutionSurface } from "../ExecutionSurface";
+import { PfApprovalsHifi, PfAuditHifi, PfConfigLog, PfCorrMatrix, PfCrossPortfolio, PfDdOverlap, PfEraChart, PfFooterLinks, PfIncidentsHifi, PfInfluence, PfLeadership, PfLedgerHifi, PfLiveStrip, PfMarketCorr, PfSmokeNote, PfStructureExtras, PfWhatIf } from "../components/PortfolioOverview";
+import { pfSmoke } from "../portfolio360.smoke";
+import { useAlphaClock } from "../alpha360.smoke";
 import { EquityChart } from "../components/EquityChart";
-import {
-  ExecutionContextRail,
-  ExecutionPageHeader,
-  ExecutionProvenanceDrawer,
-  ExecutionWorkspace,
-  type HeaderBadge,
-} from "../components/workspace";
+import { ExecutionWorkspace } from "../components/workspace";
 
 /**
  * Cells the matrix may lay out before the representation changes.
@@ -763,48 +760,30 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
   // tabs point at the FIRST screen's panel. The fixtures surface renders five
   // of one of these, so this was live on a real page, not hypothetical.
   const uid = useId();
+  const smoke = pfSmoke();
+  const clock = useAlphaClock(envelope.asOf);
 
-  const pfRail = (
-    <ExecutionContextRail
-      next={{
-        title: insight ? `INSIGHT · ${insight.code}` : leaders[0] ? `Leader lens · ${leaders[0].title}` : "No leader claim published",
-        detail: (
-          <span className="exec-role-body">
-            {insight ? `${insight.text} (grade ${insight.grade} · ${insight.window})` : "Matrix, influence map and ranked leaders — never merged into a score."}
-          </span>
-        ),
-      }}
-      blockers={[
-        ...(incidents?.open ?? []).map((i) => ({ label: `${i.id} ${i.severity}`, detail: i.summary, severity: (i.severity === "CRITICAL" ? "blocking" : "watch") as "blocking" | "watch" })),
-        ...holdings.filter((h) => h.readiness !== "READY").map((h) => ({ label: `${h.deploymentId} ${h.readiness}`, detail: `${h.alpha} · ${h.venue} ${h.mode}`, severity: "watch" as const })),
-      ]}
-      freshness={<span className="exec-role-meta">{envelope.authority} · as_of {envelope.asOf ?? "not stated"} · {envelope.freshness}{correlationEnvelope ? ` · correlation ${correlationEnvelope.freshness}` : ""}</span>}
-      provenance={
-        <ExecutionProvenanceDrawer
-          items={[
-            { label: "benchmark", short: `${benchmark} (${benchmarkId})`, full: null },
-            { label: "window", short: scopeWindow, full: null },
-            ...(ledgerTotals ? [{ label: "capital", short: `${ledgerTotals.allocated} / ${ledgerTotals.max} ${ledgerTotals.currency}`, full: null }] : []),
-          ]}
-          onCopy={(full) => void navigator.clipboard?.writeText(full)}
-        />
-      }
-    />
-  );
   return (
-    <ExecutionSurface kind="deployments" className="exec-pf">
-      <ExecutionWorkspace layout="balanced" rail={pfRail}>
-      <ExecutionPageHeader
-        title={portfolioName}
-        id={portfolioId}
-        badges={[
-          { label: `${holdings.length} holding${holdings.length === 1 ? "" : "s"}`, axis: "other" },
-          { label: `${envelope.authority} · ${envelope.freshness}`, axis: "broker-sync", tone: envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn" },
-          ...(incidents && incidents.open.length ? [{ label: `${incidents.open.length} OPEN INCIDENT${incidents.open.length === 1 ? "" : "S"}`, axis: "readiness", tone: "bad" } as HeaderBadge] : []),
-        ]}
-        purpose="What the book holds, how its alphas move together, who leads."
-        secondary={<span className="exec-role-meta">window {scopeWindow} · benchmark {benchmark} ({benchmarkId})</span>}
-      />
+    <ExecutionSurface kind="deployments" className="exec-pf exec-a3 exec-pf2" data-hifi-exact="portfolio-360">
+      <ExecutionWorkspace layout="dense">
+      <header className="exec-a3-masthead">
+        <h1 className="exec-a3-h1">{portfolioId} <span className="exec-a3-id">— Portfolio 360°</span></h1>
+        {smoke ? <span className="exec-pf2-status">● {smoke.status}</span> : null}
+        <span className="exec-pf2-facts">{smoke ? smoke.facts : portfolioName}</span>
+        <span className="exec-a3-wf">WF 3a</span>
+        <span className="exec-a3-spacer" />
+        <span className="exec-a3-source"><b>{envelope.authority}</b> · as_of {envelope.asOf ? envelope.asOf.slice(11) : "not stated"} · <span data-tone={envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn"}>{clock ? `age ${clock}` : envelope.freshness}</span></span>
+        <button type="button" className="exec-a3-btn" disabled title="Report pack export is not published (BR-EX-51)">Report pack</button>
+        <button type="button" className="exec-pf2-primary" disabled title="Rebalance plan needs the plan → apply → verify route (BR-EX-51); the Admin Action Drawer carries today's allocation actions">Rebalance plan ▾</button>
+      </header>
+      <div className="exec-alpha-scope exec-pf2-scope">
+        <span className="exec-a3-scopelabel">Scope</span>
+        <span className="exec-pf2-chip">Window {scopeWindow} ▾</span>
+        <span className="exec-pf2-chip">Mode All ▾</span>
+        <span className="exec-pf2-chip">Venue All ▾</span>
+        <span className="exec-pf2-chip">Benchmark {benchmark} ▾ <span className="exec-pf2-dim">{benchmarkId}</span></span>
+        <span className="exec-a3-scopenote">every panel below obeys this scope</span>
+      </div>
 
       <div className="exec-alpha-tabs" role="tablist" aria-label="Portfolio detail">
         {PORTFOLIO_TABS.map((option) => (
@@ -814,7 +793,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
             role="tab"
             id={`${uid}-tab-${option.replace(/\W+/g, "-")}`}
             aria-controls={`${uid}-tabpanel`}
-            className="exec-inbox-filter"
+            className="exec-a3-tab"
             data-active={tab === option ? "true" : undefined}
             aria-selected={tab === option}
             onClick={() => onTabChange(option)}
@@ -835,6 +814,12 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
       >
         {tab === "Overview" ? (
           <>
+            <PfLiveStrip />
+            <PfEraChart />
+            <PfCrossPortfolio portfolioId={portfolioId} />
+            <PfConfigLog />
+            <details className="exec-pf2-contract">
+              <summary className="exec-pf2-note">published KPIs (contract) — the strip above is smoke until BR-EX-51</summary>
             <div className="exec-alpha-kpis">
               {kpis.map((kpi) => (
                 <div key={kpi.label} className="exec-alpha-kpi">
@@ -848,6 +833,13 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                 </div>
               ))}
             </div>
+            </details>
+          </>
+        ) : null}
+
+        {tab === "Structure & Correlation" ? (
+          <>
+            <PfStructureExtras />
             <section className="exec-gate-panel">
               <div className="exec-tile-title">
                 Holdings structure — portfolio → alpha → deployment → account
@@ -920,11 +912,12 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                   the note names it. */}
               {fxNote ? <p className="exec-blotter-note">{fxNote}</p> : null}
             </section>
-          </>
-        ) : null}
-
-        {tab === "Structure & Correlation" ? (
-          <>
+            <div className="exec-pf2-grid" data-ratio="1.15"><PfCorrMatrix /><PfMarketCorr /></div>
+            <div className="exec-pf2-grid" data-ratio="1"><PfLeadership lens={lens !== null} onLens={() => setLens(lens === null ? 0 : null)} /><PfWhatIf /></div>
+            <div className="exec-pf2-grid" data-ratio="1.2r"><PfInfluence /><PfDdOverlap /></div>
+            <PfFooterLinks />
+            <details className="exec-pf2-contract" open={!smoke}>
+              <summary>published correlation · corr.v1 contract (matrix · lens · ranked · influence · ρ timeline · drawdown overlap · leaders) — retires with BR-EX-51</summary>
             <CorrelationPanel
               correlation={correlation}
               envelope={correlationEnvelope}
@@ -964,12 +957,21 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
               </section>
             ) : null}
             <Leaders lists={leaders} />
+            </details>
           </>
         ) : null}
 
-        {tab === "Capital Ledger" ? <Ledger ledger={ledger} totals={ledgerTotals} /> : null}
+        {tab === "Capital Ledger" ? (
+          <>
+            <PfLedgerHifi />
+            <details className="exec-pf2-contract" open={!smoke}><summary>published ledger · capital-ledger.v1 contract — retires with BR-EX-51</summary><Ledger ledger={ledger} totals={ledgerTotals} /></details>
+          </>
+        ) : null}
 
         {tab === "Approvals" ? (
+          <>
+          <PfApprovalsHifi />
+          <details className="exec-pf2-contract" open={!smoke}><summary>published approvals · contract — retires with BR-EX-51</summary>
           <section className="exec-gate-panel">
             <div className="exec-tile-title">Approvals touching this portfolio</div>
             <div className="exec-scroll-x">
@@ -1004,9 +1006,15 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
             </table>
             </div>
           </section>
+          </details>
+          </>
         ) : null}
 
         {tab === "Incidents" ? (
+          <>
+          <PfIncidentsHifi />
+          <details className="exec-pf2-contract" open={!smoke}><summary>published incidents · contract — retires with BR-EX-51</summary>
+          {
           // Read, never asserted. The previous version rendered "No open
           // incidents" unconditionally — a claim about safety made by a
           // component that had never been given any incident data, and one
@@ -1080,13 +1088,22 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
               reason="Incidents for this portfolio have not been published, so none can be claimed either way."
             />
           )
+        }
+          </details>
+          </>
         ) : null}
 
+        <PfSmokeNote />
         {tab === "Audit" ? (
+          <>
+          <PfAuditHifi />
+          <details className="exec-pf2-contract" open={!smoke}><summary>published audit · contract — retires with BR-EX-51</summary>
           <PanelState
             status="unavailable"
             reason="The portfolio command journal is not published yet."
           />
+          </details>
+          </>
         ) : null}
       </div>
       </ExecutionWorkspace>

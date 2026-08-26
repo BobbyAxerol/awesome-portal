@@ -186,7 +186,8 @@ describe("Portfolio 360° — the leader lens", () => {
     expect(lists).toHaveLength(3);
     // An alpha that is 70% of exposure but 20% of variance is a different
     // problem from the reverse, and one blended number answers both the same.
-    expect(screen.queryByText(/leader score/i)).toBeNull();
+    // The hi-fi note names the anti-pattern ("never one merged “leader score”"); only an element that IS a score is forbidden.
+    expect(screen.queryByText(/^\s*leader score\s*$/i)).toBeNull();
   });
 });
 
@@ -209,23 +210,23 @@ describe("Portfolio 360° — ledger and structure", () => {
     // The zero-amount rebalance is UNCHANGED, and a client reading the sign
     // would call it nothing at all.
     expect(screen.getByText("UNCHANGED")).toBeTruthy();
-    expect(screen.getByText("REBALANCE")).toBeTruthy();
+    expect(screen.getAllByText("REBALANCE").length).toBeGreaterThan(0);
   });
 
   it("shows before and after on every ledger row", () => {
     render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360({ tab: "Capital Ledger" })} />);
     expect(screen.getByText("0 → 500")).toBeTruthy();
-    expect(screen.getByText(/ledger's own invariant/)).toBeTruthy();
+    expect(screen.getAllByText(/ledger's own invariant/).length).toBeGreaterThan(0);
   });
 
   it("names the FX policy wherever a total crosses currencies", () => {
-    render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360()} />);
+    render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360({ tab: "Structure & Correlation" })} />);
     expect(screen.getByText(/fx_usdc_usdt\.v1/)).toBeTruthy();
     expect(screen.getByText(/VND.*would require an FX policy/)).toBeTruthy();
   });
 
   it("keeps a halted holding visible and marked", () => {
-    const { container } = render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360()} />);
+    const { container } = render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360({ tab: "Structure & Correlation" })} />);
     const row = screen.getByText("acct-canary-mm-v11").closest("tr") as HTMLElement;
     expect(within(row).getByText("BLOCKED")).toBeTruthy();
     expect(container.querySelector('tr[data-emphasis="warn"]')).toBeTruthy();

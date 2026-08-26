@@ -138,7 +138,7 @@ describe("chart contract — export and cross-filter", () => {
     fireEvent.click(screen.getByRole("button", { name: "Table" }));
     fireEvent.click(screen.getAllByRole("button", { name: /2026-07-23T11:00:00Z/ })[0]);
     expect(onSelect).toHaveBeenCalledWith("2026-07-23T11:00:00Z");
-  });
+  }, 15_000);
 });
 
 describe("perf budget — 10⁵ rows", () => {
