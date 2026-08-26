@@ -1214,3 +1214,13 @@ component nào tiêu thụ.
 
 - `GET /api/v1/execution/blockers/catalog` → `blocker-catalog.v1` (code → label, severity, owner, resolves_via, doc_href, rank) + `blockers[{code, since, source, ref}]` trong các contract stage thay `blockerCodes[]`. Chi tiết: phụ lục L.7. **Fixture:** `execution-blocker-catalog.valid.json`.
 
+### BR-EX-59 — Canary Control Room v1.1 (hi-fi WF 1e) (2026-08-26) — **spec cho codex**
+
+- **Cần thêm (additive) trong `canary-control-room.v1`:** `masthead{alpha, portfolio, venue, active, readiness: GUARDED|DEGRADED, trial{day,total}, exit_review_at, real_capital:true}`, `meta{artifact_digest, r1_id, r2_id, sandbox_exit_id, canary_approval_id, portfolio_id, deployment_id, account_id, venue, envelope_rev}`, `lifecycle[]` + `current{stage:"CANARY", day, total}`,
+  `kpis{canary_capital, net_pnl_trial{value, live}, drawdown, risk_envelope_used_pct, broker_freshness_seconds|STALE}`, `stage_lines{backtest[], paper[], live[], canary_start_at, join_digest, formula:"equity_projection.v1"}` (normalized 1h), `envelope{approval_id, rows[{key: capital|max_drawdown|orders_today|observation_duration, used, cap, pct, at_cap}], limits{max_order, max_position, daily_loss_pct, rate_per_min}, breach_policy:"auto_halt"}`,
+  `positions[{symbol, side, qty, entry, upnl, ack_p50_ms}]`, `orders_today{open, fills, rejects}`, `incidents{critical_open, last_recon{verdict, at, id}, partial_operations, scale_blockers[]}`,
+  `trial_timeline{days, today, checkpoints[{day, review_id, verdict}], exit_day}`, `exit_readiness{done, total, gates[{key: min_duration|drift|envelope|reconciliation|incidents, ok, text, ref?}], request_exit_review{enabled, unlock_rule}}`, `marginal{corr_portfolio{value, samples, window}, corr_benchmark, concentration_if_scaled{factor, top1_pct}, grade, formula:"marginal.v1"}`, `decision{options: [HOLD, REDUCE, ROLLBACK, REQUEST_SCALE], evidence_pack_href}`.
+- **Motion:** exit-review countdown từ `exit_review_at`; pnl/uPnL per tick; ws age; timeline hôm nay nhấp nháy.
+- **Nguồn:** `strategy_deployments`, `portfolio_allocations`, `risk_grants`/`risk_profiles` (envelope caps), `account_equity_snapshots` (pnl/dd), `performance_snapshots` + paper twin (dep_94) + backtest run (`alpha_ledger`) cho 3 đường, `positions_v2`, `orders`/`fills` (orders today, ack latency từ `domain_events`), `reconciliation_findings`, `operator_operations` (partial), PORTAL approvals/conditions (AP-311 day/total, checkpoints cr_*), PORTAL exit reviews.
+- **Ảnh hưởng:** `CanaryControlRoomScreen` restyle 1e; thiếu lấy từ `canary.smoke.ts`. **Fixture:** cập nhật `execution-canary-control-room.*.valid.json`. **Xoá smoke:** khi 59 giao.
+

@@ -5571,7 +5571,7 @@
 .exec-a3 .exec-rail-section { padding: 10px 14px; border-bottom: 1px solid var(--line-soft); margin: 0; }
 .exec-a3 .exec-rail-section:last-child { border-bottom: 0; }
 .exec-a3 .exec-rail-section > h2, .exec-a3 .exec-rail-section > h3 { margin: 0 0 6px; font: 400 11px/16px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
-.exec-a3 .exec-rail-section[data-section="next"] > h2 { color: var(--ink); text-transform: none; letter-spacing: 0; font-size: 12px; }
+.exec-a3 .exec-rail-section[data-section="next"] > h2 { color: var(--ink); text-transform: none; letter-spacing: 0; font: 400 12px/16px var(--font-mono); }
 .exec-a3 .exec-rail-section .exec-role-body { font: 400 11px/16px var(--font-mono); color: var(--ink-soft); }
 .exec-a3 .exec-rail-section .exec-role-meta { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
 .exec-a3 .exec-rail-section[data-section="next"] .exec-live-note { border-left: 3px solid var(--warn); padding: 4px 0 4px 8px; margin-top: 8px; color: var(--ink-soft); }
@@ -5601,4 +5601,43 @@
 .exec-pf2-grid > * { min-width: 0; }
 .exec-pf2-eralabels { overflow: hidden; }
 .exec-pf2-kpi[data-tint="true"] .exec-pf2-kpiccy[data-tone="bad"], .exec-af-kpi[data-tint="true"] .exec-af-kpiccy[data-tone="bad"] { background: var(--paper-raised); padding: 0 4px; }
-@media (max-width: 767px) { .exec-pf2-table, .exec-ac table, .exec-lf .exec-pf2-table { min-width: 0; } .exec-pf2-grid[data-ratio] { grid-template-columns: minmax(0, 1fr); } .exec-lf-meta, .exec-lf-life { font-size: 10px; } }
+@media (max-width: 767px) { .exec-pf2-table, .exec-ac table, .exec-lf .exec-pf2-table { min-width: 0; } .exec-pf2-grid[data-ratio] { grid-template-columns: minmax(0, 1fr); } .exec-lf-meta, .exec-lf-life { font: 400 10px/14px var(--font-mono); } }
+/* ── Canary Control Room — hi-fi WF 1e (.exec-cn, shares .exec-ac masthead + .exec-lf strips + .exec-pf2 panels) ── */
+.exec-cn .exec-ac-masthead[data-live="true"] { border: 4px double var(--bad); }
+.exec-cn .exec-ac-shield { width: 16px; height: 18px; }
+.exec-cn-guarded { font: 600 11px/16px var(--font-mono); padding: 1px 8px; border: 1px solid var(--bad); color: var(--bad); }
+.exec-cn-degraded { font: 600 11px/16px var(--font-mono); padding: 1px 8px; background: var(--warn-bg); color: var(--warn); }
+.exec-cn-facts b { color: var(--ink); } .exec-cn-facts b[data-tone="warn"] { color: var(--warn); font-variant-numeric: tabular-nums; }
+.exec-cn-stale { border: 1px solid var(--warn); border-left: 4px solid var(--warn); background: var(--warn-bg); color: var(--ink); padding: 8px 12px; margin-bottom: 14px; font: 400 12px/18px var(--font-mono); }
+.exec-cn-stale b { font: 600 11px/16px var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--warn); }
+.exec-cn-svg { width: 100%; height: auto; display: block; }
+.exec-cn-legend { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-cn-timeline { padding: 12px 14px 6px; display: flex; gap: 3px; }
+.exec-cn-day { flex: 1; height: 22px; background: var(--accent-soft); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font: 400 9px/12px var(--font-mono); color: var(--accent); }
+.exec-cn-day[data-kind="check"] { background: var(--good-bg); border-color: var(--good); color: var(--good); }
+.exec-cn-day[data-kind="today"] { background: var(--warn-bg); border: 2px solid var(--accent); color: var(--ink); }
+.exec-cn-day[data-kind="future"] { background: var(--paper-sunken); border: 1px dashed var(--line-strong); }
+.exec-cn-day[data-kind="exit"] { background: var(--bad-bg); border-color: var(--bad); color: var(--bad); }
+.exec-cn-tlnotes { display: flex; flex-wrap: wrap; gap: 4px 20px; padding: 6px 14px 12px; font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-cn-tlnotes [data-tone="ink"] { color: var(--ink-soft); } .exec-cn-tlnotes b[data-tone="warn"] { color: var(--warn); font-variant-numeric: tabular-nums; }
+.exec-cn-gates { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; font: 400 12px/16px var(--font-mono); flex: 1; }
+.exec-cn-gates [data-ok="true"] { color: var(--good); } .exec-cn-gates [data-ok="false"] { color: var(--bad); }
+.exec-cn-gates b[data-tone="warn"] { color: var(--warn); font-variant-numeric: tabular-nums; }
+.exec-cn-cta { padding: 9px 14px; border-top: 1px solid var(--line-soft); }
+.exec-cn-cta > span { font: 400 11px/16px var(--font-mono); color: var(--ink-mute); border: 1px dashed var(--line-strong); padding: 5px 12px; cursor: not-allowed; display: inline-block; }
+.exec-cn-decision { padding: 14px; font: 400 12px/16px var(--font-mono); color: var(--ink-soft); }
+.exec-cn-decisionbtns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.exec-cn-decisionbtns button { font: 400 11px/16px var(--font-mono); border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-soft); padding: 4px 10px; cursor: pointer; }
+.exec-cn-decisionbtns button[data-tone="bad"] { border-color: var(--bad); color: var(--bad); background: var(--paper-raised); }
+.exec-cn-decisionbtns button:disabled { cursor: not-allowed; opacity: 0.7; }
+.exec-cn-decisiontext { font: 400 11px/18px var(--font-mono); color: var(--ink-faint); } .exec-cn-decisiontext b { color: var(--ink-soft); }
+.exec-cn-actionbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; border: 1px solid var(--line); background: var(--paper-raised); padding: 10px 14px; margin-bottom: 14px; font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-cn-actionbar .exec-af-spacer { flex: 1; }
+.exec-cn-marginal { padding: 14px; font: 400 12px/16px var(--font-mono); }
+.exec-cn-marginal .exec-lf-kv { padding: 0; grid-template-columns: minmax(0, 46%) minmax(0, 1fr); }
+.exec-cn-marginal [data-tone="warn"] { color: var(--warn); }
+@media (prefers-reduced-motion: no-preference) { .exec-cn-day[data-kind="today"] { animation: om-tick 1.2s infinite; } }
+.exec-cn .exec-guard-band { display: none; }
+.exec-pf2-grid[data-ratio="1.55"] { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); }
+.exec-cn-option { font: 400 11px/16px var(--font-mono); border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-soft); padding: 4px 10px; }
+.exec-cn-option[data-tone="bad"] { border-color: var(--bad); color: var(--bad); background: var(--paper-raised); }

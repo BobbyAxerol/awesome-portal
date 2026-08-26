@@ -396,6 +396,19 @@ Additive: `masthead{env, sync{state,age_seconds}, headroom_state, facts}`, `inte
 
 Additive: `masthead`, `meta`, `lifecycle[] + current`, `kpis`, `broker_truth` (kể cả `mismatch` object), `open_exposure`, `incidents{ladder, last_operation}`, `contribution_30d` — chi tiết ở BR-EX-57. Mọi số là chuỗi decimal; `lifecycle[].decision_id` phải tồn tại trong approvals/exit reviews (test).
 
+## A.59 · `canary-control-room.v1.1` — Canary Control Room (WF 1e)
+
+| field | type | null? | authority | ví dụ / rule |
+|---|---|---|---|---|
+| `masthead.readiness` | enum `GUARDED\|DEGRADED` | no | PORTAL_CONTROL + broker sync | DEGRADED khi sync STALE > policy → scale blocked, protective open |
+| `masthead.trial` / `exit_review_at` | `{day,total}` / ISO | no | PORTAL approvals (AP-311 conditions) | countdown server timestamp |
+| `stage_lines` | `{backtest[{t,v}], paper[{t,v}], live[{t,v}], canary_start_at, join_digest}` | yes | DERIVED (`equity_projection.v1`) | 3 series cùng digest; normalized 1.0 |
+| `envelope.rows[]` | `[{key, used, cap, pct, at_cap}]` | no | `risk_grants`/`risk_profiles` + PORTAL | `at_cap` → amber |
+| `trial_timeline.checkpoints[]` | `[{day, review_id, verdict}]` | no | PORTAL exit reviews (`cr_*`) | recorded reviews, not auto-gates |
+| `exit_readiness.gates[]` | `[{key, ok, text, ref}]` | no | PORTAL_CONTROL (server-enforced, mirror only) | `request_exit_review.enabled` chỉ khi done==total hoặc waiver |
+| `marginal` | `{corr_portfolio{value,samples,window}, corr_benchmark, concentration_if_scaled{factor, top1_pct}, grade}` | yes | DERIVED (`marginal.v1`, `corr.v1`) | grade C khi < 30d |
+| `decision.options[]` | enum | no | PORTAL_CONTROL | mỗi option = plan → apply → verify + dual approval |
+
 ---
 
 # Phụ lục B — Definition of Ready (§5.1 backend plan) điền sẵn cho từng gói
@@ -420,6 +433,7 @@ Codex chỉ cần xác nhận/sửa từng ô; ô nào tôi không có quyền q
 | **55** entity names | Codex · `dev` | READ; PORTAL_PROJECTION over registry/strategies/deployments/accounts/portfolios + Portal-owned incidents/approvals | new `entity-names.v1` (batch) | ≤50 ids/call; cached ETag | any viewer | unknown id → null label (id shown raw) | none | fixture `execution-entity-names.valid.json`; frontend crumb tests | 
 | **56** live overview | Codex · `dev` | READ; PORTAL_PROJECTION + PORTAL_CONTROL + BROKER sync | new `live-overview.v1` | ≤50 live deployments; tape ≤20 + SSE; per tick | viewer read | route absent → panel unavailable | BR-EX-43 tick; incidents; approvals | fixture `execution-live-overview.valid.json`; health-state rule tests; frontend `liveOverview.test` |
 | **57** live full v1.1 | Codex · `dev` | READ (+ existing protective actions) | `live-full.v1` → v1.1 additive | 1 deployment/screen; positions ≤200 | viewer read; actions ADMIN step-up | missing additive → v1 rendering | existing contract; exit reviews/approvals ids | fixture update; lifecycle id consistency; frontend `liveFull.test` |
+| **59** canary v1.1 | Codex · `dev` | READ (+ existing protective/scale actions) | `canary-control-room.v1` → v1.1 additive | 1 deployment; series ≤400 pts × 3 | viewer read; actions ADMIN step-up + dual | missing additive → v1 rendering; sync STALE → DEGRADED | existing contract; approvals/conditions; exit reviews; paper twin | fixture update; gate-mirror consistency; frontend `canary.test` |
 | **41** stage telemetry | Codex · `dev` (source-dark schema first, N10) | READ; PORTAL_PROJECTION/TRADING_SYSTEM/BROKER/DERIVED per 41.x | new `stage-equity.v1`, `envelope-consumption.v1`, `execution-quality.v1`, `positions.v1`, `contribution.v1`; `sandbox-certification.v1.1` | ≤5,000 pts/series; caps ≤8; buckets ≤12; positions ≤500 | viewer read | per-panel honest states (today) | N06 Paper qualification for source-backed values | per-kind fixtures; exact-decimal pure-engine tests |
 
 # Phụ lục C — OpenAPI path stubs (đề xuất; codex quyết tên cuối)
@@ -442,6 +456,7 @@ paths:
   /api/v1/execution/entities:                  # GET ?ids=… → entity-names.v1 (BR-EX-55, cross-screen)
   /api/v1/execution/live:                      # GET ?filter&venue → live-overview.v1 (BR-EX-56); SSE live.tape
   /api/v1/execution/deployments/{id}/live:     # v1.1 additive (BR-EX-57)
+  /api/v1/execution/deployments/{id}/canary:   # v1.1 additive (BR-EX-59)
   /api/v1/execution/fleet:                     # GET ?stage&venue&owner[&cursor] → fleet-list.v1 (BR-EX-49)
   /api/v1/execution/deployments/{id}/replay:   # GET ?symbol&interval=1h&window=120 → replay.v1 (BR-EX-50)
   /api/v1/execution/deployments/{id}/stage-equity:            # 41.1
@@ -476,14 +491,15 @@ paths:
 9. **51**: xoá `portfolio360.smoke.ts`, re-record `el-v2-08-portfolio-*`.
 10. **52/53**: xoá `accounts.smoke.ts`, re-record `el-v2-08-accounts-*`; **54**: bỏ smoke facts trong Account 360.
 11. **56/57**: xoá `live.smoke.ts`, re-record `el-v2-06-live` + `el-v2-08-live-overview`.
-12. **34/40**: xoá `alpha360.smoke.ts`.
+12. **59**: xoá `canary.smoke.ts`, re-record `el-v2-06-canary`.
+13. **34/40**: xoá `alpha360.smoke.ts`.
 
 Mỗi bước: handoff codex kèm **Required frontend tests**; tôi regenerate `portal-api.d.ts`, nạp fixture canonical
 trong test (không chép tay), ghi `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` vào ledger §3, tick grammar §8.
 
 # Phụ lục F — cách codex nhận request này
 
-- **Intake chính thức:** 17 hàng BR-EX-41…57 trong §7.2 của `portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`
+- **Intake chính thức:** 19 hàng BR-EX-41…59 trong §7.2 của `portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`
   (đang là sửa unstaged trên `feat/execution-n04-lease-aware-consumer`). Bản patch để apply lại nếu cần:
   `BACKEND_PLAN_7_2_ROWS_2026-08-25.md` (cùng thư mục, 8 hàng nguyên văn).
 - **Chi tiết field/type/enum/ví dụ:** phụ lục A; DoR: phụ lục B; path: C; error: D; thứ tự: E.
