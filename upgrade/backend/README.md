@@ -632,6 +632,20 @@ authority.
   fencing; stale workers cannot atomically commit facts/DELETE/cursor after lease
   loss. Synthetic fixtures and fresh-PG/restart/restore tests are green. No v2
   request example became runtime and no AWS-HK traffic was opened.
+- [EX-BE-03 / N05 Retention, Recovery and Cleanup](./EX_BE_03_N05_RETENTION_RECOVERY_CLEANUP.md)
+  — **source-dark retention/recovery core complete / live policy inactive:**
+  immutable policy/checkpoint evidence, five-state retention truth, new-epoch
+  rebuild directives and rollback-window/lease-gated atomic cleanup are backed
+  by fresh PostgreSQL replay/restore tests. No source traffic, backup schedule,
+  production cleanup or profile promotion was enabled.
+- [EX-BE-03 / N06 Real-source Qualification and Soak](./EX_BE_03_N06_REAL_SOURCE_QUALIFICATION_AND_SOAK.md)
+  — **Portal qualification authority complete / real 24-hour evidence
+  pending:** Rust now binds exact N02/N03 bytes, immutable image/schema identity,
+  BUILDING parity, twelve failure/recovery drills and bounded route/Rust/PG
+  metrics into a sanitized 24-hour evidence decision. Synthetic evidence cannot
+  pass real modes, owner review is post-window, and even accepted evidence cannot
+  activate a reader. No N02/N03 owner pack or N06 window exists locally, so no
+  source call or runtime/profile change occurred.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

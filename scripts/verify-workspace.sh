@@ -409,6 +409,15 @@ for required in \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N03_OWNER_IMPLEMENTATION_HANDOFF.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_03_N04_LEASE_AWARE_RUST_SHARED_CONSUMER.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N04_LEASE_AWARE_CONSUMER_HANDOFF.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_03_N05_RETENTION_RECOVERY_CLEANUP.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_03_N06_REAL_SOURCE_QUALIFICATION_AND_SOAK.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N06_REAL_SOURCE_QUALIFICATION_HANDOFF.md" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/source-qualification/src/real_source.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/source-qualification/src/real_source_tests.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/source-qualification/src/bin/n06_verify.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/source-qualification/fixtures/n06-real-source-qualification.template.json" \
+  "${ROOT_DIR}/scripts/execution-n06-qualification-verify.sh" \
+  "${ROOT_DIR}/scripts/execution-n06-qualification-test.sh" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md" \
@@ -859,6 +868,15 @@ for tracked_source in \
   upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N03_OWNER_IMPLEMENTATION_HANDOFF.md \
   upgrade/backend/EX_BE_03_N04_LEASE_AWARE_RUST_SHARED_CONSUMER.md \
   upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N04_LEASE_AWARE_CONSUMER_HANDOFF.md \
+  upgrade/backend/EX_BE_03_N05_RETENTION_RECOVERY_CLEANUP.md \
+  upgrade/backend/EX_BE_03_N06_REAL_SOURCE_QUALIFICATION_AND_SOAK.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N06_REAL_SOURCE_QUALIFICATION_HANDOFF.md \
+  services/portal-execution-edge-rs/crates/source-qualification/src/real_source.rs \
+  services/portal-execution-edge-rs/crates/source-qualification/src/real_source_tests.rs \
+  services/portal-execution-edge-rs/crates/source-qualification/src/bin/n06_verify.rs \
+  services/portal-execution-edge-rs/crates/source-qualification/fixtures/n06-real-source-qualification.template.json \
+  scripts/execution-n06-qualification-verify.sh \
+  scripts/execution-n06-qualification-test.sh \
   upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md \
   upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md \
   upgrade/backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md \
@@ -1026,6 +1044,8 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-d4-qualification-preflight-test.sh" \
   "${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh" \
   "${ROOT_DIR}/scripts/test-execution-d4-storage.sh" \
+  "${ROOT_DIR}/scripts/execution-n06-qualification-verify.sh" \
+  "${ROOT_DIR}/scripts/execution-n06-qualification-test.sh" \
   "${ROOT_DIR}/scripts/execution-image-publication-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
@@ -1064,6 +1084,7 @@ python3 "${ROOT_DIR}/scripts/test_execution_n03_implementation_verify.py"
 "${ROOT_DIR}/scripts/test-execution-d4-storage.sh"
 "${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh"
 "${ROOT_DIR}/scripts/execution-d4-qualification-preflight-test.sh"
+"${ROOT_DIR}/scripts/execution-n06-qualification-test.sh"
 
 while IFS= read -r tracked_path; do
   case "${tracked_path}" in

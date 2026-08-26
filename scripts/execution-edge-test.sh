@@ -88,7 +88,22 @@ fi
     cargo fmt --all -- --check
     cargo test --locked --all-targets
     cargo clippy --locked --all-targets -- -D warnings
+    n06_template_report="$(cargo run --locked -q -p source-qualification --bin n06_verify -- \
+      --mode template \
+      --evidence crates/source-qualification/fixtures/n06-real-source-qualification.template.json)"
+    printf "%s\n" "${n06_template_report}" >/tmp/n06-template-report.json
+    grep -Fq "\"decision\":\"TEMPLATE_VALID\"" /tmp/n06-template-report.json || {
+      printf "N06 template CLI did not return TEMPLATE_VALID.\n" >&2
+      printf "%s\n" "${n06_template_report}" >&2
+      exit 1
+    }
+    grep -Fq "\"activation_authorized\":false" /tmp/n06-template-report.json || {
+      printf "N06 template CLI widened activation authority.\n" >&2
+      exit 1
+    }
   '
+
+printf 'Rust workspace and N06 template CLI gates passed; starting PostgreSQL restore drill.\n'
 
 # Credential-free restore drill: prove the migrated projection schema and all
 # rows left by the replay/query suite survive a custom-format backup/restore.
@@ -106,4 +121,6 @@ restore_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d porta
   exit 1
 }
 
-printf 'Execution edge contracts, auth, transport, bounded load, projection replay/query, retention/recovery/cleanup, source-backed analytics, adapter rollback and PostgreSQL restore gates passed.\n'
+printf 'PostgreSQL projection restore signature matched.\n'
+
+printf 'Execution edge contracts, auth, transport, bounded load, projection replay/query, retention/recovery/cleanup, N06 qualification, source-backed analytics, adapter rollback and PostgreSQL restore gates passed.\n'
