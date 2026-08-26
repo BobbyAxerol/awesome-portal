@@ -27,12 +27,12 @@ import { alphaHandlers } from "./testHandlers";
 afterEach(cleanup);
 
 describe("Alpha 360° — one scope, obeyed by every tab", () => {
-  it("offers all nine tabs", () => {
+  it("offers all ten tabs", () => {
     render(<AlphaThreeSixty {...alphaHandlers()} {...alpha360()} />);
     for (const tab of ALPHA_TABS) {
       expect(screen.getByRole("tab", { name: tab })).toBeTruthy();
     }
-    expect(ALPHA_TABS).toHaveLength(9);
+    expect(ALPHA_TABS).toHaveLength(10);
   });
 
   it("reports a scope change once, rather than each tab holding its own", () => {

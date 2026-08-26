@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 /**
  * SMOKE DATA — Alpha 360° insight tiles. TEMPORARY. DELETE WHEN BR-EX-34 SHIPS.
  *
@@ -88,4 +89,18 @@ export function smokeEnvelope(base: ChartEnvelope): ChartEnvelope {
     coverage: 1,
     warnings: [...(base.warnings ?? []), SMOKE_WARNING],
   };
+}
+
+
+/** Hi-fi masthead: `age 1.4s` ticking from `as_of`. Smoke-only; off → freshness word. */
+export function useAlphaClock(asOf: string | null | undefined): string | null {
+  const [t, set] = useState(0);
+  useEffect(() => {
+    if (!ALPHA_INSIGHT_SMOKE || !asOf) return;
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const id = window.setInterval(() => set((n) => n + 1), 100);
+    return () => window.clearInterval(id);
+  }, [asOf]);
+  if (!ALPHA_INSIGHT_SMOKE || !asOf) return null;
+  return `${(1.4 + (t % 46) / 10).toFixed(1)}s`;
 }
