@@ -298,6 +298,33 @@ Alerts: `GET /api/v1/execution/alerts?limit=20` như trên. Fixtures: `execution
 Legs / fills / lineage: xem BR-EX-48 trong `EXECUTION_SCALE_AND_REFINE.md`. Fixture:
 `execution-blotter-orders.hifi.valid.json`. Tiêu thụ: `FullBlotter` (`leadingRows` smoke `blotter.smoke.ts`).
 
+## A.49 · `fleet-list.v1` — Alpha Fleet (entry WF 2a)
+
+| field | type | null? | authority | ví dụ / rule |
+|---|---|---|---|---|
+| `summary` | `{alphas:int, deployments:int, live:int}` | no | PORTAL_PROJECTION | `6 · 8 · 2` |
+| `kpis.live_exposure` | `{value:string, ccy, physical:string, account}` | yes | TRADING_SYSTEM / BROKER | `41,000 USDT vs physical 43,120 · binance_main_01` |
+| `kpis.fleet_pnl_session` | `{value:string, ccy, live:bool}` | yes | DERIVED | re-prices per tick |
+| `kpis.attention` | `{mismatch:int, halted:int, gate_overdue:int}` | no | PORTAL_CONTROL | |
+| `counts` | `{all,live,canary,sandbox,paper,research}` | no | PORTAL_PROJECTION | chip counts |
+| `rows[].stage_presence[]` | `[{stage, label, strong, dashed}]` | no | PORTAL_PROJECTION | `"⛨ CANARY d9/14"` strong |
+| `rows[].net_pnl_30d` | `{value, ccy, note}` | yes | DERIVED | `note: "+1,842.00 USDC paper — not summed"` |
+| `rows[].equity_30d` | `string[]` (10–30 điểm) | yes | DERIVED (`equity_projection.v1` downsample, extrema kept) | sparkline |
+| `rows[].health` | `{text, tone: good\|warn\|bad\|mute, link{label,href}}` | no | PORTAL_CONTROL | `"R2 AP-352 OVERDUE 26h"` |
+| `rows[].deployments[]` | xem BR-EX-49 | no | mixed | 0 với research row |
+
+## A.50 · `replay.v1` — Trade Replay
+
+| field | type | null? | authority | ví dụ / rule |
+|---|---|---|---|---|
+| `candles[]` | `[{t:ISO, o,h,l,c: string}]` ≤ 2,000 | no | TRADING_SYSTEM (venue OHLC) | 1h; last bucket live |
+| `markers[]` | `[{t, index, kind, price, order_id, fill_id?, bracket_group_id?}]` | no | TRADING_SYSTEM | kind enum ở BR-EX-50 |
+| `round_trips[]` | `[{entry_index, entry_price, exit_index, exit_price, pnl{value,ccy}, kind}]` | no | DERIVED | |
+| `legs[]` | `[{role, order_id, trigger_price, order_type, flags[], filled, total, activation_policy}]` | no | TRADING_SYSTEM | dashed levels |
+| `mark` | `{price:string, at}` | yes | TRADING_SYSTEM tick (BR-EX-43) | |
+| `job` | `{id, table:"execution_replay_jobs", status}` | yes | PORTAL_CONTROL | `erj_112` |
+| `log[]` | `[{t, event, order_id, fill_id?, leg?, type, side, qty, price_or_trigger, fee{amount,liquidity}?, note}]` | no | TRADING_SYSTEM | keyset ≤200 |
+
 ---
 
 # Phụ lục B — Definition of Ready (§5.1 backend plan) điền sẵn cho từng gói
@@ -313,6 +340,8 @@ Codex chỉ cần xác nhận/sửa từng ô; ô nào tôi không có quyền q
 | **46** incident v2 | Codex (Portal fields) · Trading System owner (finding/snapshot routes §6.5) · `dev` | READ; PORTAL_CONTROL (incident/gates/timeline) · TRADING_SYSTEM (facts) · DERIVED (Δ money, `derived_display`) | `incident-detail.v1` → v1.1 additive | 1 incident/screen; timeline ≤500 keyset; spark ≤48 | viewer read; gates never unlock from UI; resolve = existing ADMIN workflow | routes unpublished → source panels unavailable (today); market absent → band hidden; gates fall back to blocker codes | §6.5 routes (N11), BR-EX-43 | fixtures `.open` + `.resolved`; gate-mirror consistency test (`resolution_gates[].blocker_code` ⊆ `resolution_gate.blocker_codes`); frontend `incident.test` |
 | **47** queue v2 | Codex · `dev` | READ; PORTAL_PROJECTION over command journal; DERIVED priority/escalation (server rule) | `operations-queue.v1` → v1.1 additive; new `alerts.v1` | ≤200 rows/24h keyset; alerts ≤20; countdowns from ISO | viewer read; ack/resolve = existing ADMIN workflow | alerts route unpublished → rail unavailable (today); missing priority → no chip, never guessed | §6.5 ops routes (N11); BR-EX-32/33 | fixtures `execution-operations-queue.attention.valid.json`, `execution-alerts.valid.json`; server priority-rule tests; frontend `operations.test`, `operationsWorkflow.test` |
 | **48** blotter v2 | Codex (Portal) · Trading System owner (orders_v2/fills_v2 routes) · `dev` | READ; TRADING_SYSTEM (orders/legs/fills) · PORTAL_CONTROL (risk grant/reject) · DERIVED (`slippage.v1`) | `blotter-orders.v1` → v1.1 additive; new `order-legs.v1`, `order-fills.v1` | 10⁵–10⁷ rows keyset ≤200/page; legs ≤8; fills ≤5,000 paged; tick ≤1/1.3s | viewer read | route unpublished → fields null "not published"; tick absent → no pill | BR-EX-24/25 (`OWNER_DECISION_PENDING`) · BR-EX-43 | fixture `execution-blotter-orders.hifi.valid.json` (+legs+fills); exact-decimal tests; frontend `analytics360.test` blotter cases, journey 4 |
+| **49** fleet | Codex · `dev` | READ; PORTAL_PROJECTION over strategies ⋈ strategy_deployments ⋈ allocations ⋈ snapshots; DERIVED pnl/spark | new `fleet-list.v1` | ≤500 alphas keyset ≤50/page; deployments ≤20/alpha; spark ≤30 pts | any viewer | route absent → panel unavailable (today) | BR-EX-43 tick for session pnl/sync age | fixture `execution-fleet-list.valid.json`; sort-rule tests; frontend `alphaFleet.test` |
+| **50** replay | Codex · Trading System owner (OHLC/fills) · `dev` | READ; TRADING_SYSTEM candles/markers/legs · DERIVED round trips · PORTAL_CONTROL job | new `replay.v1` | 120–2,000 candles; markers ≤500/window; log keyset ≤200 | any viewer | route absent → tab shows unavailable | BR-EX-48 legs/fills; BR-EX-43 tick | fixture `execution-replay.dep_88.valid.json`; marker↔log id consistency test; frontend `alpha360.test` replay cases |
 | **41** stage telemetry | Codex · `dev` (source-dark schema first, N10) | READ; PORTAL_PROJECTION/TRADING_SYSTEM/BROKER/DERIVED per 41.x | new `stage-equity.v1`, `envelope-consumption.v1`, `execution-quality.v1`, `positions.v1`, `contribution.v1`; `sandbox-certification.v1.1` | ≤5,000 pts/series; caps ≤8; buckets ≤12; positions ≤500 | viewer read | per-panel honest states (today) | N06 Paper qualification for source-backed values | per-kind fixtures; exact-decimal pure-engine tests |
 
 # Phụ lục C — OpenAPI path stubs (đề xuất; codex quyết tên cuối)
@@ -328,6 +357,8 @@ paths:
   /api/v1/execution/blotter/orders:            # v1.1 additive per-row; ?filter=ALL|WORKING|CONDITIONAL|BRACKETS|FILLED|PARTIAL|REJECTED
   /api/v1/execution/blotter/orders/{id}/legs:  # GET → order-legs.v1
   /api/v1/execution/blotter/orders/{id}/fills: # GET ?cursor → order-fills.v1 (+ lineage)
+  /api/v1/execution/fleet:                     # GET ?stage&venue&owner[&cursor] → fleet-list.v1 (BR-EX-49)
+  /api/v1/execution/deployments/{id}/replay:   # GET ?symbol&interval=1h&window=120 → replay.v1 (BR-EX-50)
   /api/v1/execution/deployments/{id}/stage-equity:            # 41.1
   /api/v1/execution/deployments/{id}/envelope-consumption:    # 41.2
   /api/v1/execution/deployments/{id}/execution-quality:       # 41.3
@@ -355,17 +386,186 @@ paths:
 4. **48** (+24/25): xoá `blotter.smoke.ts` + slot `leadingRows`, re-record `el-v2-08-blotter`.
 5. **41**: xoá `stage.smoke.ts`, re-record `el-v2-06-*`.
 6. **43** (N08, Bobby duyệt activation): xoá `CC_SMOKE_MOTION`, market band Incident, pill giá Blotter chuyển sang stream.
-7. **34/40**: xoá `alpha360.smoke.ts`.
+7. **49**: xoá `alphaFleet.smoke.ts`, re-record `el-v2-08-alpha-fleet`.
+8. **50**: xoá `alphaReplay.smoke.ts`, re-record `el-v2-08-alpha-replay`.
+9. **34/40**: xoá `alpha360.smoke.ts`.
 
 Mỗi bước: handoff codex kèm **Required frontend tests**; tôi regenerate `portal-api.d.ts`, nạp fixture canonical
 trong test (không chép tay), ghi `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` vào ledger §3, tick grammar §8.
 
 # Phụ lục F — cách codex nhận request này
 
-- **Intake chính thức:** 8 hàng BR-EX-41…48 trong §7.2 của `portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`
+- **Intake chính thức:** 10 hàng BR-EX-41…50 trong §7.2 của `portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`
   (đang là sửa unstaged trên `feat/execution-n04-lease-aware-consumer`). Bản patch để apply lại nếu cần:
   `BACKEND_PLAN_7_2_ROWS_2026-08-25.md` (cùng thư mục, 8 hàng nguyên văn).
 - **Chi tiết field/type/enum/ví dụ:** phụ lục A; DoR: phụ lục B; path: C; error: D; thứ tự: E.
 - Trả lời theo §7.1: `RECEIVED → NEEDS_CLARIFICATION | CONTRACT_PLANNED | OWNER_DECISION_PENDING | EXTERNAL_CONTRACT_PENDING | REJECTED`,
   ghi vào cột Status §7.2 và `EXECUTION_REQUEST_LEDGER.md` §3.
+
+---
+
+# Phụ lục G — BR-EX-49 · Alpha Fleet: đặc tả đầy đủ để codex làm không phải đoán
+
+## G.1 Endpoint
+
+`GET /api/v1/execution/fleet?stage=all|live|canary|sandbox|paper|research&venue=<venue|all>&owner=<user|all>&cursor=<keyset>&limit=50`
+— schema `fleet-list.v1`; `ETag` + `Cache-Control: no-cache, must-revalidate`; `Vary: Authorization`.
+Nguồn: `strategies` (alpha_id = strategy_id) ⋈ `strategy_deployments` ⋈ `portfolio_allocations` ⋈ `performance_snapshots` / `account_equity_snapshots` (by deployment_id) ⋈ `approvals` (next gate) ⋈ `broker_sync` (sync age) ⋈ `incidents` (attention).
+
+## G.2 Response mẫu (khớp `alphaFleet.smoke.ts`, số là string decimal)
+
+```json
+{
+  "envelope": { "authority": "EXECUTION", "as_of": "2026-08-25T04:42:49Z", "freshness": "OK" },
+  "summary": { "alphas": 6, "deployments": 8, "live": 2 },
+  "kpis": {
+    "live_exposure": { "value": "41000", "ccy": "USDT", "physical": "43120", "account": "binance_main_01" },
+    "fleet_pnl_session": { "value": "2085.00", "ccy": "USDT", "live": true, "as_of": "2026-08-25T04:42:49Z" },
+    "deployments": { "total": 8, "by_stage": { "live": 2, "canary": 2, "sandbox": 2, "paper": 3 } },
+    "attention": { "mismatch": 1, "halted": 1, "gate_overdue": 1 },
+    "portfolios": [ { "id": "PF-CRYPTO", "href": "/deployments/portfolios/PF-CRYPTO" }, { "id": "PF-MAIN", "href": null } ]
+  },
+  "counts": { "all": 6, "live": 1, "canary": 2, "sandbox": 2, "paper": 3, "research": 2 },
+  "rows": [
+    {
+      "alpha_id": "av_2041", "name": "Grid", "version": "v2.1", "artifact_digest": "sha256:41bb7d…c4", "research_status": "RESEARCH_APPROVED",
+      "owner": "Stan", "portfolios": [ { "id": "PF-CRYPTO", "href": "/deployments/portfolios/PF-CRYPTO" } ],
+      "stage_presence": [
+        { "stage": "LIVE_FULL", "label": "LIVE", "strong": true },
+        { "stage": "LIVE_CANARY", "label": "CANARY d9/14", "strong": true, "shield": true },
+        { "stage": "SANDBOX_VALIDATION", "label": "SANDBOX", "paused": true },
+        { "stage": "PAPER_OBSERVATION", "label": "PAPER 30/30" }
+      ],
+      "alloc": { "value": "93400", "ccy": "USDT" },
+      "net_pnl_30d": { "value": "2066.40", "ccy": "USDT", "note": { "value": "1842.00", "ccy": "USDC", "text": "paper — not summed" } },
+      "max_dd_30d": "-0.016", "equity_30d": ["20","19","16","17","13","14","10","8","9","5"],
+      "health": { "text": "1 MISMATCH", "tone": "bad", "tail": "paper exit", "link": { "label": "EX-771", "href": "/governance/exit-reviews/EX-771" } },
+      "note": "4 deployments (strategy_deployments)",
+      "deployments": [
+        { "deployment_id": "dep_live", "venue": "BINANCE", "mode": "live", "stage": "LIVE_FULL", "stage_note": "since 2026-08-01 · AP-330 · CX-08",
+          "alloc": "18400", "pnl": { "value": "1954.00", "ccy": "USDT", "live": true }, "dd": "-0.012",
+          "account_id": "acct-live-grid-v21", "portfolio": "PF-CRYPTO",
+          "health": { "text": "sync MISMATCH", "tone": "bad", "link": { "label": "inc_44", "href": "/execution/operations/incidents/inc_44" } }, "sync_age_seconds": null },
+        { "deployment_id": "dep_88", "venue": "BINANCE", "mode": "live", "stage": "LIVE_CANARY", "stage_note": "day 9/14 · AP-311",
+          "alloc": "5000", "pnl": { "value": "112.40", "ccy": "USDT", "live": true }, "dd": "-0.008",
+          "account_id": "acct-canary-grid", "portfolio": "PF-CRYPTO", "health": { "text": "READY · sync", "tone": "good" }, "sync_age_seconds": 2.7 },
+        { "deployment_id": "dep_91", "venue": "OKX", "mode": "sandbox", "stage": "SANDBOX_VALIDATION", "stage_note": "HALTED · op_1187", "stage_note_tone": "warn",
+          "alloc": "10000", "pnl": null, "dd": null, "account_id": "acct-sbx-grid-okx", "portfolio": "PF-CRYPTO", "health": { "text": "no active session", "tone": "warn" }, "sync_age_seconds": null },
+        { "deployment_id": "dep_94", "venue": "DERIBIT", "mode": "paper", "stage": "PAPER_OBSERVATION", "stage_note": "30/30 gate met", "stage_note_tone": "good",
+          "alloc": "60000", "pnl": { "value": "1842.00", "ccy": "USDC", "live": false }, "dd": "-0.014",
+          "account_id": "acct-paper-grid-drb", "portfolio": "PF-CRYPTO", "health": { "text": "READY · exit review", "tone": "good", "link": { "label": "EX-771", "href": "/governance/exit-reviews/EX-771" } }, "sync_age_seconds": null }
+      ]
+    },
+    { "alpha_id": "RC-52", "name": "MeanRev", "version": "v0.3", "artifact_digest": null, "research_status": "BLOCKED", "owner": "Lan", "portfolios": [],
+      "stage_presence": [ { "stage": "RESEARCH", "label": "RESEARCH · BLOCKED", "dashed": true, "blocked": true } ],
+      "alloc": null, "net_pnl_30d": null, "max_dd_30d": null, "equity_30d": null,
+      "health": { "text": "AP-360 — audit replay failed", "tone": "bad" }, "note": "research — blocked", "deployments": [], "dim": true }
+  ],
+  "page": { "next_cursor": null, "total_count": 6, "filtered_count": 6 }
+}
+```
+
+## G.3 Quy tắc suy ra (server làm, frontend chỉ vẽ)
+
+| Cột | Quy tắc |
+|---|---|
+| Sort | `live_exposure desc` (tổng alloc các deployment LIVE_FULL+LIVE_CANARY) → `furthest_stage desc` (LIVE_FULL > LIVE_CANARY > SANDBOX_VALIDATION > PAPER_OBSERVATION > RESEARCH) → `name asc`; research rows luôn cuối, `dim:true` |
+| `stage_presence[]` | một chip cho **mỗi stage** alpha đang có ≥1 deployment; label: LIVE → `LIVE`; canary → `CANARY d{day}/{total}` + `shield:true`; sandbox → `SANDBOX` + `paused:true` khi HALTED, hoặc `SANDBOX cert {done}/{total}`; paper → `PAPER {sessions}/{required}`; research → `RESEARCH` (`dashed`), `RESEARCH · BLOCKED` (`blocked`) |
+| `alloc` | Σ allocation deployment **cùng tiền tệ**; khác tiền tệ → trả từng `{value,ccy}` trong `alloc_by_ccy[]`, `alloc` = ccy portfolio base |
+| `net_pnl_30d` | Σ pnl 30d các deployment cùng ccy; ccy khác → `note{value,ccy,text:"paper — not summed"}`; **không FX** |
+| `max_dd_30d` | min drawdown giữa các deployment (chuỗi ratio, 3 chữ số) |
+| `equity_30d` | 10–30 điểm normalized từ `equity_projection.v1` (LTTB, giữ extrema; `downsample_meta` ở envelope) |
+| `health` | ưu tiên: incident MISMATCH (bad) → gate OVERDUE (warn) → HALTED/no session (warn) → READY + next gate/condition (good) → research: `R1 {AP} quorum a/b · due {h}` (mute) hoặc BLOCKED reason (bad) |
+| `counts` | alpha được đếm ở **mọi** stage nó có deployment (Grid đếm ở live, canary, sandbox, paper) |
+| `attention.gate_overdue` | approvals có `due_at < now` và chưa quyết |
+| `sync_age_seconds` | từ broker_sync heartbeat; null với paper/no binding |
+| VN MARKET | `session{calendar:"HOSE", open:"09:00", close:"14:45", tz:"Asia/Ho_Chi_Minh", state: OPEN\|SUSPENDED_BY_CALENDAR, resumes_at}` — frontend không tự tính lịch |
+
+## G.4 Trạng thái / lỗi
+
+| Tình huống | Response | UI |
+|---|---|---|
+| chưa có projection | `503 {"error":{"code":"FLEET_PROJECTION_UNAVAILABLE"}}` | panel unavailable (hiện tại) |
+| snapshot cũ | `envelope.freshness:"STALE"`, `age_seconds` | chip STALE, as_of dừng |
+| alpha có deployment nhưng snapshot thiếu | row `completeness:"PARTIAL"`, `warnings[{code:"SNAPSHOT_MISSING", deployment_id}]` | `—` + lý do |
+| filter venue/owner chưa hỗ trợ | `400 {"error":{"code":"FILTER_UNSUPPORTED","filter":"owner"}}` | chip disabled kèm lý do |
+| cursor hết hạn | `409 CURSOR_EXPIRED` | reload notice |
+
+## G.5 Live (N08)
+
+SSE event `fleet.tick` `{as_of, fleet_pnl_session{value,ccy}, rows[{alpha_id, net_pnl_30d?, deployments[{deployment_id, pnl?, sync_age_seconds?}]}]}` ≤1/1.4s; chỉ field đổi.
+
+## G.6 Test bắt buộc (codex) — fixture `execution-fleet-list.valid.json`
+
+1. sort: Grid (live 23,400) trước Carry (0 live, sandbox) trước MM (canary 7,700)? **Không** — MM có live exposure 7,700 > Carry 0 → thứ tự Grid, MM, Carry, VnMomo, RSI, MeanRev. Test khoá thứ tự này.
+2. counts: Grid xuất hiện trong 4 count; tổng counts ≠ số alpha (được phép).
+3. per-currency: alpha có USDT + USDC → `net_pnl_30d.note` chứ không cộng.
+4. BLOCKED row luôn có mặt với `stage=all` và `stage=research`.
+5. `equity_30d` giữ min/max của series gốc.
+6. schema round-trip + ETag 304.
+
+---
+
+# Phụ lục H — BR-EX-50 · Trade Replay: đặc tả đầy đủ
+
+## H.1 Endpoint
+
+`GET /api/v1/execution/deployments/{deployment_id}/replay?symbol=BTCUSDT&interval=1h&window=120&until=<ISO>` → `replay.v1`.
+`GET /api/v1/execution/deployments/{deployment_id}/replay/log?symbol&cursor&limit=200` → `replay-log.v1` (keyset theo `t` desc).
+Nguồn: `orders` ⋈ `fills` (order_id) ⋈ `order_bracket_legs` (bracket_group_id) ⋈ `execution_replay_jobs` ⋈ venue OHLC (candle store) ⋈ `market.tick` (BR-EX-43).
+
+## H.2 Response mẫu (rút gọn, khớp `alphaReplay.smoke.ts`)
+
+```json
+{
+  "envelope": { "authority": "TRADING_SYSTEM", "as_of": "2026-08-25T12:00:00Z", "freshness": "OK" },
+  "deployment": { "id": "dep_88", "venue": "BINANCE" }, "symbol": "BTCUSDT", "interval": "1h",
+  "pickers": { "deployments": [ { "id": "dep_88", "label": "dep_88 · BINANCE" }, { "id": "dep_94", "label": "dep_94 · DERIBIT" } ], "symbols": ["BTCUSDT"] },
+  "candles": [ { "t": "2026-08-20T13:00:00Z", "o": "61230.00", "h": "61310.20", "l": "61180.00", "c": "61265.40" } ],
+  "last_bucket_live": true,
+  "mark": { "price": "61807.25", "at": "2026-08-25T12:00:00.412Z", "source": "mark" },
+  "markers": [
+    { "t": "2026-08-21T22:00:00Z", "index": 34, "kind": "ENTRY_FILL", "price": "60980.00", "order_id": "ord_8771", "fill_id": "fill_3280" },
+    { "t": "2026-08-22T05:00:00Z", "index": 41, "kind": "EXIT_FILL_TP", "price": "61540.00", "order_id": "ord_8771.TP", "fill_id": "fill_3288" },
+    { "t": "2026-08-25T03:00:00Z", "index": 111, "kind": "BRACKET_ARMED", "bracket_group_id": "br_0092", "activation_policy": "SUBMIT_CHILDREN_AFTER_ENTRY_FILLED" },
+    { "t": "2026-08-24T16:00:00Z", "index": 100, "kind": "REJECT", "price": "60700.00", "order_id": "ord_8815", "reason": "rg_2188 max position notional" },
+    { "t": "2026-08-25T08:00:00Z", "index": 116, "kind": "EXIT_PARTIAL", "price": "61900.00", "order_id": "ord_8832.TP", "fill_id": "fill_3320" }
+  ],
+  "round_trips": [ { "entry_index": 34, "entry_price": "60980.00", "exit_index": 41, "exit_price": "61540.00", "pnl": { "value": "4.48", "ccy": "USDT" }, "kind": "TP" } ],
+  "legs": [
+    { "role": "TP", "order_id": "ord_8832.TP", "trigger_price": "61900.00", "order_type": "TAKE_PROFIT", "flags": ["REDUCE_ONLY"], "filled": "0.0040", "total": "0.0080", "armed_index": 111 },
+    { "role": "SL", "order_id": "ord_8832.SL", "trigger_price": "60900.00", "order_type": "STOP_MARKET", "flags": ["REDUCE_ONLY"], "filled": "0.0000", "total": "0.0080", "armed_index": 111 }
+  ],
+  "job": { "id": "erj_112", "table": "execution_replay_jobs", "status": "COMPLETE", "built_at": "2026-08-25T11:58:40Z" }
+}
+```
+
+## H.3 Quy tắc
+
+| Mục | Quy tắc |
+|---|---|
+| `index` | vị trí nến chứa `t` trong `candles[]` của **cùng response** (0-based); frontend không tự tìm |
+| marker kind | `ENTRY_FILL` (fill mở/tăng vị thế) · `EXIT_FILL_TP` · `EXIT_FILL_SL` (fill do stop trigger) · `EXIT_PARTIAL` (fill một phần của TP/SL leg) · `BRACKET_ARMED` (children submit, `t` = ack của children) · `REJECT` (pre-venue, không có venue_order_id) |
+| round trip | ghép entry→exit theo `bracket_group_id`/`position_id`; pnl net fee, ccy của account |
+| legs | chỉ leg đang WORKING/CREATED/PARTIAL của bracket mở; `armed_index` để vẽ level từ nến đó |
+| candles | venue OHLC, không downsample dưới interval; `last_bucket_live:true` → frontend gắn `mark` vào nến cuối |
+| log | mỗi hàng có `event` ∈ FILL\|SUBMIT\|ACK\|REJECT\|TRIGGER, `order_id`/`fill_id` **trùng** id của marker tương ứng (marker↔row) |
+| khoảng cách tới trigger | frontend hiển thị `mark − trigger_price` ghi `derived_display`; server không cần gửi |
+
+## H.4 Lỗi / trạng thái
+
+`503 REPLAY_SOURCE_UNPUBLISHED` (OHLC hoặc fills chưa có) → tab unavailable · `404 DEPLOYMENT_NOT_IN_SCOPE` · `409 REPLAY_JOB_PENDING {job}` → panel "replay job erj_… building" · mark absent → không vẽ đường mark.
+
+## H.5 Live
+
+`market.tick` (BR-EX-43) cho `mark`; `fill.event` `{deployment_id, marker}` khi có fill mới → frontend thêm marker + hàng log đầu.
+
+## H.6 Test bắt buộc — fixture `execution-replay.dep_88.valid.json`
+
+1. mọi `markers[].index` ∈ [0, candles.length) và `candles[index].t ≤ marker.t < candles[index+1].t`.
+2. mọi marker FILL có `fill_id` tồn tại trong log; REJECT không có `fill_id`, không có venue_order_id.
+3. `round_trips[].pnl` = Σ fill (exit − entry) − fee, so với fills fixture.
+4. legs chỉ chứa leg chưa terminal; `armed_index` = index của marker BRACKET_ARMED cùng group.
+5. `last_bucket_live` đúng khi `candles[-1].t + interval > as_of`.
+6. keyset log: trang 2 không lặp hàng.
 

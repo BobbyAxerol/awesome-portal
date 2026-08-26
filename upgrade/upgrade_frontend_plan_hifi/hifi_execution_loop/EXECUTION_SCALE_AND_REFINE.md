@@ -1122,3 +1122,27 @@ component nào tiêu thụ.
 - **Invariant:** số luôn chuỗi decimal đúng precision; không tổng hợp chéo tiền tệ (USDC ≠ USDT); rejected là hàng hạng nhất.
 - **Fixture:** `execution-blotter-orders.hifi.valid.json` (5 hàng + legs + fills). **Xoá smoke:** khi 48 (+24/25/43) giao.
 
+### BR-EX-49 — Alpha Fleet list (hi-fi "Alpha Fleet (list)", entry screen WF 2a) (2026-08-25) — **spec cho codex**
+
+- **Cần:** `GET /api/v1/execution/fleet?stage=all|live|canary|sandbox|paper|research&venue&owner` → `fleet-list.v1`:
+  `summary{alphas, deployments, live}`, `kpis{live_exposure{value,ccy,physical,account}, fleet_pnl_session{value,ccy,live:true}, deployments{total, by_stage{live,canary,sandbox,paper}}, attention{mismatch,halted,gate_overdue}, portfolios[{id,href}]}`,
+  `counts{all,live,canary,sandbox,paper,research}`, `rows[{alpha_id, name, version, artifact_digest, research_status, owner, portfolios[], stage_presence[{stage, label, strong, dashed}], alloc{value,ccy}, net_pnl_30d{value,ccy,note}, max_dd_30d, equity_30d[10..30] (sparkline), health{text,tone,link}, note, deployments[{deployment_id, venue, mode, stage, stage_note, alloc, pnl{value,ccy}, dd, account_id, portfolio, health{text,tone,link}, sync_age_seconds}]}]`.
+- **Sort server-side:** live exposure desc, then furthest stage; research rows (no deployment) sau cùng, `dim:true`; BLOCKED giữ hiển thị.
+- **Live:** `fleet_pnl_session` + canary `sync_age_seconds` từ tick (BR-EX-43); `as_of` mỗi giây từ envelope.
+- **Lý do UI:** feature `EXECUTION_ALPHA_FLEET` là COMMISSIONED/`NONE`; hi-fi là màn vào của WF 2a (row → Alpha 360, deployment row → workbench, account → Account 360).
+- **Ảnh hưởng hiện tại:** `/deployments/alphas` chạy `alphaFleet.smoke.ts` (6 alpha / 8 deployment hi-fi). Motion: as_of clock, pnl jitter 1.4s, sync age, VN MARKET session theo lịch ICT.
+- **Invariant:** PnL theo tiền tệ (USDT/USDC/VND) không FX-mix; số string decimal; research row không có số → `—` với lý do.
+- **Fixture:** `execution-fleet-list.valid.json`. **Xoá smoke:** khi 49 giao.
+
+### BR-EX-50 — Alpha 360 · Trade Replay (candles + fill markers + bracket legs + trade log) (2026-08-25) — **spec cho codex**
+
+- **Cần:** `GET /api/v1/execution/deployments/{id}/replay?symbol&interval=1h&window=120` → `replay.v1`:
+  `candles[{t, o, h, l, c}]` (string decimal, venue OHLC, last bucket live), `markers[{t, index, kind: ENTRY_FILL|EXIT_FILL_TP|EXIT_FILL_SL|EXIT_PARTIAL|BRACKET_ARMED|REJECT, price, order_id, fill_id, bracket_group_id}]`,
+  `round_trips[{entry_index, entry_price, exit_index, exit_price, pnl{value,ccy}, kind: TP|SL}]`, `legs[{role: TP|SL|TRAILING, order_id, trigger_price, order_type, flags, filled, total, activation_policy}]`,
+  `mark{price, at}` (tick BR-EX-43), `job{id, table: execution_replay_jobs, status}`, `log[{t(ms), event: FILL|SUBMIT|ACK|REJECT|TRIGGER, order_id, fill_id, leg, type, side, qty, price_or_trigger, fee{amount,liquidity}, note}]` (keyset ≤200).
+- **Pickers:** `deployments[]` và `symbols[]` cho deployment trong scope alpha.
+- **Lý do UI:** hi-fi tab "Trade Replay" — đọc leg so với thiết kế (entry POST-ONLY tại grid line, STOP dưới, TP trên); marker ↔ trade log chung id.
+- **Ảnh hưởng hiện tại:** `components/TradeReplay.tsx` vẽ SVG từ `alphaReplay.smoke.ts` (120 nến seed 7 như hi-fi, 3 round trip, bracket br_0092, reject); zoom/pan/wheel/drag/Fit; mark tick 1.4s.
+- **Invariant:** marker time = fill event ts (UTC); candle không downsample dưới 1h; replay job id hiện trong footer.
+- **Fixture:** `execution-replay.dep_88.valid.json`. **Xoá smoke:** khi 50 (+43) giao.
+
