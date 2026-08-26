@@ -140,7 +140,7 @@ Requirements:
 Owner-side candidate check:
 
 ```bash
-python3 verifiers/execution-n02-contract-verify.py \
+python3 scripts/execution-n02-contract-verify.py \
   --mode candidate \
   --pack-dir /home/bobby/portal-n02-n03-v2-return/n02-owner-pack
 ```
@@ -204,7 +204,7 @@ package.
 Owner-side final check:
 
 ```bash
-python3 verifiers/execution-n03-implementation-verify.py \
+python3 scripts/execution-n03-implementation-verify.py \
   --mode acceptance \
   --pack-dir /home/bobby/portal-n02-n03-v2-return/n03-owner-pack \
   --n02-pack-dir /home/bobby/portal-n02-n03-v2-return/n02-owner-pack
