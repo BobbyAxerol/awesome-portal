@@ -1210,3 +1210,7 @@ component nào tiêu thụ.
 - **Actions** (đã có policy trong v1: halt/reduce/emergency close) — giữ, thêm `step_up_required:true`.
 - **Ảnh hưởng:** `LiveFullOperationsScreen` restyle theo 1f; phần thiếu lấy từ `live.smoke.ts.full`. **Fixture:** cập nhật `execution-live-full.*.valid.json`.
 
+### BR-EX-58 — Blocker catalog for the stage-workbench Guard rail (2026-08-26) — **spec cho codex**
+
+- `GET /api/v1/execution/blockers/catalog` → `blocker-catalog.v1` (code → label, severity, owner, resolves_via, doc_href, rank) + `blockers[{code, since, source, ref}]` trong các contract stage thay `blockerCodes[]`. Chi tiết: phụ lục L.7. **Fixture:** `execution-blocker-catalog.valid.json`.
+

@@ -5539,3 +5539,51 @@
 .exec-lf .exec-strip-cell { background: var(--paper-raised); border: 1px solid var(--line); }
 .exec-lf-telemetry { margin-bottom: 14px; } .exec-lf-telemetry > summary { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); cursor: pointer; margin-bottom: 8px; }
 .exec-lf-contractstrip { margin-bottom: 14px; } .exec-lf-contractstrip > summary { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); cursor: pointer; margin-bottom: 8px; }
+/* ── Stage-workbench grammar under the hi-fi surfaces (.exec-a3): the shared
+   decision strip, the BR-EX-41 telemetry tiles and the context rail take the
+   mono panel grammar instead of the sans card grammar. Owner 2026-08-26. ── */
+.exec-a3 .exec-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--line-soft); border: 1px solid var(--line); padding: 0; margin: 0; }
+.exec-a3 .exec-strip-cell { background: var(--paper-raised); border: 0; padding: 8px 12px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.exec-a3 .exec-strip-label { font: 400 10px/14px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
+.exec-a3 .exec-strip-value { font: 500 17px/24px var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink); display: flex; align-items: baseline; gap: 6px; }
+.exec-a3 .exec-strip-figure { font: inherit; }
+.exec-a3 .exec-strip-cell .exec-value-unit, .exec-a3 .exec-strip-note, .exec-a3 .exec-strip-absent { font: 400 10px/14px var(--font-mono); color: var(--ink-faint); }
+.exec-a3 .exec-strip-cell[data-tone="good"] .exec-strip-value { color: var(--good); } .exec-a3 .exec-strip-cell[data-tone="bad"] .exec-strip-value { color: var(--bad); } .exec-a3 .exec-strip-cell[data-tone="warn"] .exec-strip-value { color: var(--warn); }
+/* telemetry tiles */
+.exec-a3 .exec-visual-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 14px; margin-bottom: 14px; }
+.exec-a3 .exec-visual-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 14px; }
+.exec-a3 .exec-visual { border: 1px solid var(--line); background: var(--paper-raised); padding: 0; display: flex; flex-direction: column; }
+.exec-a3 .exec-visual .exec-chart-head, .exec-a3 .exec-visual > .exec-section-title, .exec-a3 .exec-visual .exec-spark-head { padding: 10px 14px; border-bottom: 1px solid var(--line-soft); font: 400 11px/16px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.exec-a3 .exec-visual .exec-chart-head h3, .exec-a3 .exec-visual .exec-section-title { font: inherit; color: inherit; margin: 0; }
+.exec-a3 .exec-visual .exec-chart-body { padding: 8px 10px 4px; }
+.exec-a3 .exec-visual .exec-role-body, .exec-a3 .exec-visual .exec-role-num { font: 400 12px/16px var(--font-mono); color: var(--ink-soft); }
+.exec-a3 .exec-visual .exec-role-meta, .exec-a3 .exec-visual .exec-chart-evidence-note, .exec-a3 .exec-visual .exec-blotter-note { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-a3 .exec-visual .exec-chart-evidence-note { padding: 6px 14px 10px; }
+.exec-a3 .exec-caps-list { padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 9px; font: 400 12px/16px var(--font-mono); color: var(--ink-soft); }
+.exec-a3 .exec-cap-head { display: flex; justify-content: space-between; gap: 8px; } .exec-a3 .exec-cap-head .exec-role-num { color: var(--ink); }
+.exec-a3 .exec-cap-track { height: 6px; background: var(--paper-sunken); border: 1px solid var(--line); overflow: hidden; margin-top: 3px; }
+.exec-a3 .exec-cap-fill { height: 100%; background: var(--accent); }
+.exec-a3 .exec-cap[data-tone="warn"] .exec-cap-fill { background: var(--warn); } .exec-a3 .exec-cap[data-tone="bad"] .exec-cap-fill { background: var(--bad); }
+.exec-a3 .exec-visual .exec-360-sync { font: 400 12px/16px var(--font-mono); }
+.exec-a3 .exec-visual .exec-360-sync th { font: 400 10px/16px var(--font-mono); text-transform: uppercase; color: var(--ink-faint); }
+/* context rail → "Guard" panel */
+.exec-a3 .exec-context-rail { border: 1px solid var(--line); background: var(--paper-raised); padding: 0; display: flex; flex-direction: column; gap: 0; font: 400 12px/16px var(--font-mono); color: var(--ink-soft); }
+.exec-a3 .exec-rail-section { padding: 10px 14px; border-bottom: 1px solid var(--line-soft); margin: 0; }
+.exec-a3 .exec-rail-section:last-child { border-bottom: 0; }
+.exec-a3 .exec-rail-section > h2, .exec-a3 .exec-rail-section > h3 { margin: 0 0 6px; font: 400 11px/16px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
+.exec-a3 .exec-rail-section[data-section="next"] > h2 { color: var(--ink); text-transform: none; letter-spacing: 0; font-size: 12px; }
+.exec-a3 .exec-rail-section .exec-role-body { font: 400 11px/16px var(--font-mono); color: var(--ink-soft); }
+.exec-a3 .exec-rail-section .exec-role-meta { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-a3 .exec-rail-section[data-section="next"] .exec-live-note { border-left: 3px solid var(--warn); padding: 4px 0 4px 8px; margin-top: 8px; color: var(--ink-soft); }
+.exec-a3 .exec-rail-blockers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.exec-a3 .exec-rail-blockers li { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "sev code" "sev src"; column-gap: 8px; row-gap: 1px; align-items: baseline; border-left: 3px solid var(--line-strong); padding: 3px 0 3px 8px; }
+.exec-a3 .exec-rail-blockers li[data-severity="blocking"] { border-left-color: var(--bad); } .exec-a3 .exec-rail-blockers li[data-severity="watch"] { border-left-color: var(--warn); }
+.exec-a3 .exec-rail-severity { grid-area: sev; font: 600 9px/14px var(--font-mono); letter-spacing: 0.08em; color: var(--ink-mute); padding: 0 5px; border: 1px solid var(--line-strong); }
+.exec-a3 .exec-rail-blockers li[data-severity="blocking"] .exec-rail-severity { color: var(--bad); border-color: var(--bad); }
+.exec-a3 .exec-rail-blockers li[data-severity="watch"] .exec-rail-severity { color: var(--warn); border-color: var(--warn); }
+.exec-a3 .exec-rail-blockers li > .exec-role-body { grid-area: code; font: 400 11px/16px var(--font-mono); color: var(--ink); overflow-wrap: anywhere; }
+.exec-a3 .exec-rail-blockers li > .exec-role-meta { grid-area: src; font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-a3 .exec-rail-none { color: var(--ink-mute); }
+.exec-a3 .exec-rail-action .exec-role-control, .exec-a3 .exec-rail-action .exec-btn-ghost { font: 400 11px/16px var(--font-mono); border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-soft); padding: 5px 12px; }
+.exec-a3 .exec-rail-action .exec-btn-apply { background: var(--accent); color: var(--paper); border-color: var(--accent); }
+.exec-a3 .exec-rail-section[data-section="provenance"] summary { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); cursor: pointer; }

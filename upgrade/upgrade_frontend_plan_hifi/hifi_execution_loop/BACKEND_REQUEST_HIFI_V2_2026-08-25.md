@@ -1047,3 +1047,10 @@ Ký hiệu: **DB** = bảng trong trading DB (88 bảng/2 view); **TS route** = 
 6. tape sorted desc, ≤20; SSE event schema = GET item.
 7. v1.1 additive — client v1 đọc được.
 
+## L.7 Bổ sung — rail "Guard" trên các stage workbench (BR-EX-58 · blocker catalog)
+
+- **Vấn đề:** rail hiển thị mã blocker thô (`PRODUCTION_COMMAND_INACTIVE`, `LIVE_SOURCE_UNAVAILABLE`, …) từ 3–4 nguồn; operator không biết ai sở hữu, từ khi nào, mở ở đâu. Frontend đã gộp trùng theo mã và nhóm nguồn (`lifecycle · broker consistency · realtime`), nhưng nhãn người đọc, owner, `since`, link xử lý và thứ tự ưu tiên phải là **catalog server**.
+- **Cần:** `GET /api/v1/execution/blockers/catalog` → `blocker-catalog.v1`: `[{code, label, severity: BLOCKING|WATCH, owner: TRADING_SYSTEM|PORTAL|BROKER|OPERATOR, resolves_via: {kind: activation|approval|source|operation|incident, href_template}, doc_href, rank}]` (ETag, đổi theo release). Và trong mọi contract stage (`paper/sandbox/canary/live-*.v1`): `blockers[{code, since, source: lifecycle|broker_consistency|projection_continuity|realtime, ref?: {kind, id, href}}]` thay cho `blockerCodes: string[]`.
+- **Hiển thị:** rail = panel "GUARD" mono: dòng 1 = protective ladder + policy; danh sách blocker = `severity edge · code (mono 11) · label · owner chip · since · →` sắp theo `rank`; mã không có trong catalog → in thô (không bịa).
+- **Fixture:** `execution-blocker-catalog.valid.json`. Test: mọi `blockerCodes` trong các fixture stage tồn tại trong catalog (hoặc test ghi nhận thiếu).
+
