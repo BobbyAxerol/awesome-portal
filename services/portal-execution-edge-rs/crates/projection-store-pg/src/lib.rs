@@ -18,6 +18,7 @@ mod analytics_repository;
 mod d4_writer;
 mod query;
 mod realtime;
+mod retention;
 mod shared_consumer;
 
 pub use analytics_repository::{
@@ -32,6 +33,11 @@ pub use query::{RetentionPolicySnapshot, SeriesPointWrite};
 pub use realtime::{
     RealtimeActiveEpochWatermark, RealtimeEpochAvailability, RealtimeJournalPage,
     RealtimeJournalRecord, RealtimeScopeAvailability,
+};
+pub use retention::{
+    evaluate_storage_pressure, recovery_directive, retention_policy_digest, CleanupOutcome,
+    CleanupPlan, RecoveryCause, RecoveryCheckpointEvidence, RecoveryDirective,
+    RetentionLifecyclePolicySnapshot, StorageBudgetObservation, StoragePressure,
 };
 pub use shared_consumer::SharedConsumerLeaseAcquireOutcome;
 
@@ -1270,6 +1276,26 @@ pub enum StoreError {
     SharedConsumerLeaseBusy,
     #[error("shared consumer lease is absent, expired or fenced out")]
     SharedConsumerLeaseLost,
+    #[error("retention lifecycle policy is invalid")]
+    InvalidRetentionLifecyclePolicy,
+    #[error("retention lifecycle policy version was reused with different content")]
+    RetentionPolicyVersionCollision,
+    #[error("recovery checkpoint evidence is invalid")]
+    InvalidRecoveryCheckpoint,
+    #[error("recovery checkpoint does not cover the full durable epoch")]
+    RecoveryCheckpointCoverageMismatch,
+    #[error("projection epoch is not retained or retired recovery material")]
+    EpochNotRecoverable,
+    #[error("retained projection epoch cannot be retired yet")]
+    EpochNotRetireable,
+    #[error("retired epoch cleanup is missing policy or recovery evidence")]
+    CleanupEvidenceMissing,
+    #[error("retired epoch cleanup run does not exist")]
+    CleanupRunNotFound,
+    #[error("retired epoch cleanup has not passed its rollback gate")]
+    CleanupNotReady,
+    #[error("retired epoch cleanup is blocked by a live consumer lease")]
+    CleanupLeaseStillActive,
 }
 
 #[cfg(test)]
@@ -1428,7 +1454,8 @@ mod tests {
     async fn reset(store: &PgProjectionStore, database_url: &str) {
         assert!(database_url.contains("/portal_projection_test"));
         sqlx::query(
-            "TRUNCATE portal_projection.retention_policy_snapshots,
+            "TRUNCATE portal_projection.retention_lifecycle_policy_snapshots,
+                      portal_projection.retention_policy_snapshots,
                       portal_projection.freshness_policy_snapshots,
                       portal_projection.epochs CASCADE",
         )
@@ -3139,6 +3166,245 @@ mod tests {
                 .load_correlation_source(&scope, &portfolio, &requirement)
                 .await,
             Err(StoreError::AnalyticsSourceIntegrityMismatch)
+        ));
+    }
+
+    #[tokio::test]
+    #[allow(clippy::too_many_lines)] // one drill proves the complete guarded lifecycle
+    async fn n05_retention_recovery_cleanup_is_evidenced_atomic_and_rollback_bounded() {
+        let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
+            return;
+        };
+        let _guard = postgres_test_lock().lock().await;
+        let store = PgProjectionStore::connect(&database_url).await.unwrap();
+        store.migrate().await.unwrap();
+        reset(&store, &database_url).await;
+        let scope = scope();
+
+        let retired_epoch = store
+            .create_building_epoch(&scope, &metadata(), at(0))
+            .await
+            .unwrap();
+        let archived_observation = observation("evt_n05_1", 1, 1, "FILLED");
+        store
+            .apply_observation(
+                &scope,
+                retired_epoch,
+                "orders:n05",
+                &archived_observation,
+                at(2),
+            )
+            .await
+            .unwrap();
+        let retired_entity = store
+            .load_entity(retired_epoch, &archived_observation.entity)
+            .await
+            .unwrap()
+            .unwrap();
+        let retired_digest = semantic_state_digest(&[retired_entity]).unwrap();
+        store
+            .activate_epoch(
+                &scope,
+                retired_epoch,
+                &retired_digest,
+                at(3),
+                Duration::from_secs(10),
+            )
+            .await
+            .unwrap();
+
+        let active_epoch = store
+            .create_building_epoch(&scope, &metadata(), at(4))
+            .await
+            .unwrap();
+        let empty_digest = semantic_state_digest(&[]).unwrap();
+        store
+            .activate_epoch(
+                &scope,
+                active_epoch,
+                &empty_digest,
+                at(20),
+                Duration::from_secs(10),
+            )
+            .await
+            .unwrap();
+        assert!(matches!(
+            store
+                .retire_retained_epoch(&scope, retired_epoch, at(29))
+                .await,
+            Err(StoreError::EpochNotRetireable)
+        ));
+        assert!(matches!(
+            store
+                .retire_retained_epoch(&scope, retired_epoch, at(100_000_000))
+                .await,
+            Err(StoreError::EpochNotRetireable)
+        ));
+        store
+            .retire_retained_epoch(&scope, retired_epoch, at(30))
+            .await
+            .unwrap();
+        assert_eq!(
+            store.load_epoch_status(retired_epoch).await.unwrap(),
+            ProjectionEpochStatus::Retired
+        );
+        assert_eq!(
+            store.load_epoch_status(active_epoch).await.unwrap(),
+            ProjectionEpochStatus::Active
+        );
+
+        let mut policy = RetentionLifecyclePolicySnapshot {
+            policy_id: Uuid::now_v7(),
+            policy_version: "n05-paper-v1".to_owned(),
+            policy_digest: String::new(),
+            hot_window: Duration::from_secs(30),
+            rollback_window: Duration::from_secs(60),
+            storage_budget_bytes: 10 * 1024 * 1024 * 1024,
+            soft_limit_percent: 70,
+            hard_limit_percent: 85,
+            max_journal_rows: 1_000_000,
+            created_at: at(31),
+        };
+        policy.policy_digest = retention_policy_digest(&scope, &policy);
+        store
+            .record_retention_lifecycle_policy(&scope, &policy)
+            .await
+            .unwrap();
+
+        let archived_journal = store.load_replay_records(retired_epoch).await.unwrap();
+        assert_eq!(archived_journal.len(), 1);
+        let archive_replay =
+            projection_core::replay(scope.clone(), retired_epoch, archived_journal.clone())
+                .unwrap();
+        assert_eq!(archive_replay.state_digest, retired_digest);
+        let checkpoint = RecoveryCheckpointEvidence {
+            checkpoint_id: Uuid::now_v7(),
+            epoch_id: retired_epoch,
+            through_journal_ordinal: archived_journal[0].journal_ordinal,
+            through_projection_sequence: 1,
+            state_digest: retired_digest.clone(),
+            archive_digest: format!("sha256:{}", "b".repeat(64)),
+            encryption_key_digest: format!("sha256:{}", "c".repeat(64)),
+            archive_verified_at: at(32),
+            restore_verified_at: at(33),
+            created_at: at(34),
+        };
+        store.record_recovery_checkpoint(&checkpoint).await.unwrap();
+        assert!(sqlx::query(
+            "UPDATE portal_projection.retention_recovery_checkpoints
+             SET archive_digest=$2 WHERE checkpoint_id=$1",
+        )
+        .bind(checkpoint.checkpoint_id)
+        .bind(format!("sha256:{}", "d".repeat(64)))
+        .execute(&store.pool)
+        .await
+        .is_err());
+        assert!(
+            sqlx::query("DELETE FROM portal_projection.event_journal WHERE epoch_id=$1",)
+                .bind(retired_epoch)
+                .execute(&store.pool)
+                .await
+                .is_err()
+        );
+
+        let plan = store
+            .plan_retired_epoch_cleanup(
+                &scope,
+                retired_epoch,
+                policy.policy_id,
+                checkpoint.checkpoint_id,
+                at(35),
+            )
+            .await
+            .unwrap();
+        assert_eq!(plan.cleanup_not_before, at(90));
+        assert!(matches!(
+            store
+                .execute_retired_epoch_cleanup(plan.cleanup_run_id, at(100_000_000))
+                .await,
+            Err(StoreError::CleanupNotReady)
+        ));
+        assert!(matches!(
+            store
+                .execute_retired_epoch_cleanup(plan.cleanup_run_id, at(89))
+                .await,
+            Err(StoreError::CleanupNotReady)
+        ));
+        sqlx::query(
+            "INSERT INTO portal_projection.shared_consumer_leases
+             (workspace_id, environment, source_scope_id, epoch_id, lease_id,
+              owner_digest, fencing_token, acquired_at, renewed_at, expires_at, updated_at)
+             VALUES ($1,'paper','PAPER_BINANCE_USDM',$2,$3,$4,1,$5,$5,$6,$5)",
+        )
+        .bind(scope.workspace_id.as_str())
+        .bind(retired_epoch)
+        .bind(Uuid::now_v7())
+        .bind(format!("sha256:{}", "e".repeat(64)))
+        .bind(at(80))
+        .bind(at(100))
+        .execute(&store.pool)
+        .await
+        .unwrap();
+        assert!(matches!(
+            store
+                .execute_retired_epoch_cleanup(plan.cleanup_run_id, at(90))
+                .await,
+            Err(StoreError::CleanupLeaseStillActive)
+        ));
+        sqlx::query("DELETE FROM portal_projection.shared_consumer_leases WHERE epoch_id=$1")
+            .bind(retired_epoch)
+            .execute(&store.pool)
+            .await
+            .unwrap();
+        let outcome = store
+            .execute_retired_epoch_cleanup(plan.cleanup_run_id, at(90))
+            .await
+            .unwrap();
+        assert!(outcome.rows_removed >= 4);
+        assert!(outcome.result_digest.starts_with("sha256:"));
+        assert!(store
+            .load_entity(retired_epoch, &archived_observation.entity)
+            .await
+            .unwrap()
+            .is_none());
+        assert!(store
+            .load_replay_records(retired_epoch)
+            .await
+            .unwrap()
+            .is_empty());
+        assert_eq!(
+            projection_core::replay(scope, retired_epoch, archived_journal)
+                .unwrap()
+                .state_digest,
+            retired_digest
+        );
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>(
+                "SELECT count(*) FROM portal_projection.retention_recovery_checkpoints
+                 WHERE epoch_id=$1",
+            )
+            .bind(retired_epoch)
+            .fetch_one(&store.pool)
+            .await
+            .unwrap(),
+            1
+        );
+        assert_eq!(
+            sqlx::query_scalar::<_, String>(
+                "SELECT status FROM portal_projection.retention_cleanup_runs
+                 WHERE cleanup_run_id=$1",
+            )
+            .bind(plan.cleanup_run_id)
+            .fetch_one(&store.pool)
+            .await
+            .unwrap(),
+            "COMPLETED"
+        );
+        assert!(matches!(
+            store
+                .execute_retired_epoch_cleanup(plan.cleanup_run_id, at(91))
+                .await,
+            Err(StoreError::CleanupNotReady)
         ));
     }
 }

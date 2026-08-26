@@ -92,7 +92,7 @@ fi
 
 # Credential-free restore drill: prove the migrated projection schema and all
 # rows left by the replay/query suite survive a custom-format backup/restore.
-PROJECTION_SIGNATURE_SQL="SELECT concat((SELECT count(*) FROM _sqlx_migrations), ':', (SELECT count(*) FROM portal_projection.epochs), ':', (SELECT count(*) FROM portal_projection.event_journal), ':', (SELECT count(*) FROM portal_projection.analytics_source_snapshots), ':', (SELECT count(*) FROM portal_projection.analytics_source_facts), ':', (SELECT count(*) FROM portal_projection.d4_source_checkpoints), ':', (SELECT count(*) FROM portal_projection.d4_source_failures), ':', (SELECT count(*) FROM portal_projection.shared_consumer_leases));"
+PROJECTION_SIGNATURE_SQL="SELECT concat((SELECT count(*) FROM _sqlx_migrations), ':', (SELECT count(*) FROM portal_projection.epochs), ':', (SELECT count(*) FROM portal_projection.event_journal), ':', (SELECT count(*) FROM portal_projection.analytics_source_snapshots), ':', (SELECT count(*) FROM portal_projection.analytics_source_facts), ':', (SELECT count(*) FROM portal_projection.d4_source_checkpoints), ':', (SELECT count(*) FROM portal_projection.d4_source_failures), ':', (SELECT count(*) FROM portal_projection.shared_consumer_leases), ':', (SELECT count(*) FROM portal_projection.retention_lifecycle_policy_snapshots), ':', (SELECT count(*) FROM portal_projection.retention_recovery_checkpoints), ':', (SELECT count(*) FROM portal_projection.retention_cleanup_runs));"
 source_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_projection_test -Atc "${PROJECTION_SIGNATURE_SQL}")"
 "${DOCKER[@]}" exec "${PG_CONTAINER}" pg_dump -U portal -d portal_projection_test \
   --format=custom --file=/tmp/portal_projection_test.dump
@@ -106,4 +106,4 @@ restore_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d porta
   exit 1
 }
 
-printf 'Execution edge contracts, auth, transport, bounded load, projection replay/query, source-backed analytics, adapter rollback and PostgreSQL restore gates passed.\n'
+printf 'Execution edge contracts, auth, transport, bounded load, projection replay/query, retention/recovery/cleanup, source-backed analytics, adapter rollback and PostgreSQL restore gates passed.\n'

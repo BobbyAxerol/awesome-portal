@@ -860,6 +860,33 @@ mod tests {
     }
 
     #[test]
+    fn canonical_retention_fixture_exposes_all_five_non_empty_states() {
+        let decisions: Vec<RetentionDecision> = serde_json::from_str(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/fixtures/retention-availability.v1.json"
+        )))
+        .unwrap();
+        assert_eq!(
+            decisions
+                .iter()
+                .map(|decision| decision.availability)
+                .collect::<Vec<_>>(),
+            vec![
+                RetentionAvailability::Hot,
+                RetentionAvailability::PartialHot,
+                RetentionAvailability::ColdRequestable,
+                RetentionAvailability::Purged,
+                RetentionAvailability::Unknown,
+            ]
+        );
+        assert!(decisions[2].access_request_path.is_some());
+        assert!(decisions
+            .iter()
+            .enumerate()
+            .all(|(index, decision)| index == 2 || decision.access_request_path.is_none()));
+    }
+
+    #[test]
     fn projection_query_page_serializes_canonical_keyset_field_names() {
         let fixture: serde_json::Value = serde_json::from_str(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),

@@ -477,7 +477,8 @@ blocked. Detail:
 ### N05 — Retention, recovery and cleanup
 
 **Mapping:** D4-OPT-04; EX-BE-03/04b recovery continuation.  
-**Status:** `READY / SOURCE_DARK / N06_LIVE_BLOCKED`.  
+**Status:** `SOURCE_DARK_COMPLETE / RETENTION_RECOVERY_CORE_COMPLETE /
+LIVE_POLICY_ACTIVATION_PENDING / N06_LIVE_BLOCKED`.  
 **Priority:** P0.
 
 **Goal**
@@ -498,12 +499,27 @@ Bound disk/memory and prove that loss, expiry and rollback never become silent e
 Retention-floor, disk-pressure, rebuild, restore, rollback and gap-resync drills pass with no stale
 profile claim.
 
+**Delivered on Portal side**
+
+- immutable, canonically digested lifecycle/budget policy snapshots;
+- integer-safe soft/hard storage pressure and journal ceilings;
+- typed five-state retention fixture with no empty-success ambiguity;
+- RETAINED overlap enforcement and explicit RETIRED transition;
+- full-journal/state archive coverage plus encrypted-archive and restore evidence;
+- rollback-window-gated, live-lease-aware, atomic cleanup for RETIRED heavy rows only;
+- cursor-expiry/gap/hard-pressure directives that require a new BUILDING epoch;
+- deterministic replay, immutable evidence, cleanup idempotency and PostgreSQL dump/restore drills.
+
+Live policy values, backup scheduling, source traffic, registry promotion and production cleanup
+remain off. Detail:
+[`EX_BE_03_N05_RETENTION_RECOVERY_CLEANUP.md`](./backend/EX_BE_03_N05_RETENTION_RECOVERY_CLEANUP.md).
+
 **Claude parallel lane:** render beyond-retention and rebuild states distinctly from empty results.
 
 ### N06 — Real-source qualification and soak
 
 **Mapping:** D4-OPT-05 + live continuation of EX-BE-08a.  
-**Status:** `OPERATIONAL_EVIDENCE_PENDING / N03_N05_BLOCKED`.  
+**Status:** `OPERATIONAL_EVIDENCE_PENDING / N02_N03_WIRE_AND_OWNER_WINDOW_BLOCKED`.  
 **Priority:** P0.
 
 **Goal**
@@ -1070,8 +1086,8 @@ The immediate backend order after Bobby accepts this plan is:
 3. **N10 contract design** for BR-EX-34/39/40, source-dark and fixture-backed.
 4. Send the completed **N02** request/verifier pack to the Trading System owner; Codex waits for
    the exact four-file publication and acceptance result rather than editing Trading System.
-5. N04's source-dark core and PostgreSQL fencing are complete. Implement **N05** offline
-   retention/recovery now; import N02/N03 owner bytes before the N04 wire adapter or **N06**.
+5. N04's source-dark core/fencing and **N05** retention/recovery are complete. Import and verify
+   exact N02/N03 owner bytes before the N04 thin wire adapter or **N06**; do not infer the wire.
 6. Activate read surfaces through **N07**, realtime through **N08**, and commands through **N12**.
 7. Promote environments only through **N13**, then close formal release/production runway
    **N14 → N17**.
@@ -1096,6 +1112,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | D4 runtime optimization | `backend/EX_BE_02_D4_SOURCE_FACADE_RUNTIME_OPTIMIZATION.md` |
 | Projection/Query/SSE/analytics | `backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md`, `backend/EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md`, `backend/EX_BE_06_MULTIPLEXED_SSE_RESUME_BACKPRESSURE.md`, `backend/EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md` |
 | Source qualification | `backend/EX_BE_08A_OFFLINE_SOURCE_QUALIFICATION.md` |
+| Retention/recovery/cleanup | `backend/EX_BE_03_N05_RETENTION_RECOVERY_CLEANUP.md` |
 | Dual-cell supplement | `RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md` |
 | Paper-to-Live supplement | `PAPER_TO_LIVE_EXECUTION_PORTAL_BACKEND_UIUX_ADJUSTMENT_SPEC_v0.6_vi.md` |
 | Trading schema guide | `DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md` |
