@@ -691,3 +691,42 @@ Nguồn: `portfolios` ⋈ `portfolio_allocations` ⋈ `portfolio_config_revision
 6. `nav[]` downsample giữ min/max gốc; ≤400 điểm.
 7. schema round-trip + ETag 304; v1 client đọc được v1.1 (additive).
 
+## I.7 Bổ sung (2026-08-26) — các tab con của Portfolio 360 theo hi-fi 3a
+
+Owner xác nhận: mọi tab con phải đủ hi-fi. Bổ sung vào `portfolio-360.v1.1` (hoặc route riêng theo tab, codex quyết):
+
+### I.7.1 Structure & Correlation
+
+| field | type | authority | rule |
+|---|---|---|---|
+| `correlation.matrix` | `{labels[], rows[{label, cells[string\|null], bm{value\|null, hot:bool}}], meta{buckets:"1h", samples, coverage, formula:"corr.v1"}, insufficient[{alpha, days_observed}]}` | DERIVED (`corr.v1`) | `null` = INSUFFICIENT_DATA (giữ ô, in `—`); `bm.hot` khi \|ρ\| ≥ 0.5; BM cột ghim trong ma trận |
+| `market_corr` | `{series[{t, rho}], threshold{value:"0.60", label:"beta-proxy threshold"}, crossings[{from,to}], now, high_30d, tail_rho{value, note:"worst-decile BM days"}, meta}` | DERIVED (`corr.v1`, `tail.v1`) | ρ(NAV, benchmark) rolling 30d; ≤ 400 điểm |
+| `leadership` | `{exposure_share{alpha, deployments, pct}, risk_contribution{alpha, pct, formula:"riskcontrib.v1", covariance:"cov_30d_v2"}, corr_influence{alpha, avg_abs_rho_others, rho_bm}, insight{code, grade, window, text, evidence_refs[]}}` | DERIVED | **ba danh sách riêng, không gộp điểm** (tests khoá) |
+| `influence_map` | `{nodes[{alpha, exposure_pct, insufficient:bool}], edges[{a, b, rho}], bm{rho_by_alpha{}}, edge_threshold:"0.15"}` | DERIVED | frontend tự bố cục; dashed khi insufficient |
+| `drawdown_overlap` | `{episodes[{alpha, from, to, depth}], joint[{from, to, alphas[], regime{label, formula:"regime.v2"}}], insufficient[{alpha, days_observed}]}` | DERIVED | episode = peak-to-recovery; joint = ≥2 alpha cùng DD |
+| `leader_lens` | frontend-only (tô hàng của alpha dẫn) | — | không cần backend |
+
+### I.7.2 Capital Ledger (`capital-ledger.v1` → v1.1)
+
+Thêm `type` enum `SEED\|ALLOCATE\|REBALANCE\|CANARY_ALLOCATE\|RELEASE`, `allocated_before`, `allocated_after` (chuỗi decimal), `approval_id`, `actor`; header `{allocated, max, free, ccy}`. Invariant: `after − before == amount`, chuỗi rev liên tục; FX-normalized entry gắn `fx_policy`.
+
+### I.7.3 Approvals (`portfolio-approvals.v1`)
+
+`rows[{id, kind: R1\|R2\|LIVE_CANARY\|PAPER_EXIT\|CANARY_EXIT, subject, decision: APPROVED\|APPROVED_WITH_CONDITIONS\|REJECTED\|PENDING, approvers[], decided_at, conditions{active:int, expires_at?}, href}]` — nguồn approvals ⋈ portfolio scope; "expiring conditions surface in Incidents 7 days ahead" là rule của Incidents feed.
+
+### I.7.4 Incidents (`portfolio-incidents.v1`)
+
+`{open:int, accounts:int, last_rollback{id, at}, rows[{id, type: BROKER_STALE\|REJECT_SPIKE\|MISMATCH\|…, scope, opened_at, resolved_at, resolution_note, closed_by{approval_id\|condition_id\|operation_id}, duration_seconds}]}` — `open` là số đếm server, không suy từ rows.
+
+### I.7.5 Audit (`portfolio-audit.v1`, keyset)
+
+`rows[{t, actor, step_up:bool, action, resource, evidence{operation_id?, approval_id?, digest?}, state: VERIFIED\|RECORDED\|PARTIAL}]` từ `portfolio_audit_log` ⋈ command journal; PARTIAL không bao giờ hiển thị xanh.
+
+### I.7.6 Test bổ sung
+
+8. matrix: mọi ô `null` có bản ghi trong `insufficient[]`; đối xứng ρ(a,b)=ρ(b,a).
+9. leadership: ba danh sách có thể xếp hạng khác nhau (fixture cố tình khác) — không có trường `score`.
+10. ledger: `after − before == amount` cho mọi hàng; header.allocated == after của hàng mới nhất.
+11. incidents: `open` == count(rows where resolved_at null).
+12. audit: mọi `evidence.operation_id` là VERIFIED/PARTIAL trong journal; không có RECORDED cho hành động mutation.
+

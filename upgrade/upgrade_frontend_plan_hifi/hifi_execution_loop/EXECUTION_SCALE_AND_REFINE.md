@@ -1158,5 +1158,6 @@ component nào tiêu thụ.
 - **Lý do UI:** hi-fi Overview 3a là "NAV live + hiệu năng theo cấu hình + so sánh sổ + lịch sử cấu hình"; contract hiện chỉ có KPI tĩnh + holdings + correlation.
 - **Ảnh hưởng hiện tại:** `/deployments/portfolios/PF-CRYPTO` chạy `portfolio360.smoke.ts`; KPI contract giữ trong `<details>`; holdings chuyển sang tab Structure (đúng hi-fi). Motion: clock 1s, NAV/today/exposure jitter 1.4s, attention pulse.
 - **Invariant:** per-currency; era = revision đang hiệu lực; mỗi rev ↔ 1 operation_id + approval; VND sleeve liệt kê, không cộng.
+- **Bổ sung 2026-08-26 (phụ lục I.7):** Structure (matrix ★BM + insufficient, market corr + tail ρ, leadership 3 list + insight, influence map, drawdown overlap), Capital Ledger v1.1 (type/before/after/approval), Approvals, Incidents (open count server), Audit keyset.
 - **Fixture:** `execution-portfolio-360.PF-CRYPTO.v1_1.valid.json`. **Xoá smoke:** khi 51 giao.
 
