@@ -5534,7 +5534,7 @@
 .exec-lf-facts b[data-tone="good"] { color: var(--good); }
 .exec-lf .exec-pf2-table td[data-tone="good"] { color: var(--good); } .exec-lf .exec-pf2-table td[data-tone="bad"] { color: var(--bad); }
 
-.exec-lf .exec-guard-band { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.exec-lf .exec-guard-band { display: none; }
 .exec-lf .exec-strip { margin-bottom: 14px; }
 .exec-lf .exec-strip-cell { background: var(--paper-raised); border: 1px solid var(--line); }
 .exec-lf-telemetry { margin-bottom: 14px; } .exec-lf-telemetry > summary { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); cursor: pointer; margin-bottom: 8px; }
@@ -5588,3 +5588,17 @@
 .exec-a3 .exec-rail-action .exec-role-control, .exec-a3 .exec-rail-action .exec-btn-ghost { font: 400 11px/16px var(--font-mono); border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-soft); padding: 5px 12px; }
 .exec-a3 .exec-rail-action .exec-btn-apply { background: var(--accent); color: var(--paper); border-color: var(--accent); }
 .exec-a3 .exec-rail-section[data-section="provenance"] summary { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); cursor: pointer; }
+
+/* audit fixes 2026-08-26: contrast on tinted rows, narrow-width containment */
+.exec-pf2-config tr[data-current="true"] td { background: var(--paper-raised); }
+.exec-pf2-config tr[data-current="true"] .exec-pf2-change, .exec-pf2-current, .exec-pf2 tr[data-hot="true"] [data-tone="bad"], .exec-bd tr[data-hot="true"] [data-tone="bad"] { background: var(--paper-raised); padding-left: 4px; padding-right: 4px; }
+.exec-pf2-plot { overflow: hidden; }
+.exec-pf2-kpis[data-cols="5"] { overflow-x: auto; }
+.exec-ac-masthead, .exec-lf-meta, .exec-lf-life, .exec-lf-kv, .exec-bd-kv { min-width: 0; overflow-wrap: anywhere; }
+.exec-lf-kv, .exec-bd-kv { grid-template-columns: minmax(0, 40%) minmax(0, 1fr); }
+.exec-lf-bartitle { padding: 0 0 6px; }
+@media (max-width: 767px) { .exec-lf-kv, .exec-bd-kv { grid-template-columns: 1fr; } .exec-ac-masthead { padding: 6px 8px; } .exec-pf2-kpis[data-cols="5"] { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.exec-pf2-grid > * { min-width: 0; }
+.exec-pf2-eralabels { overflow: hidden; }
+.exec-pf2-kpi[data-tint="true"] .exec-pf2-kpiccy[data-tone="bad"], .exec-af-kpi[data-tint="true"] .exec-af-kpiccy[data-tone="bad"] { background: var(--paper-raised); padding: 0 4px; }
+@media (max-width: 767px) { .exec-pf2-table, .exec-ac table, .exec-lf .exec-pf2-table { min-width: 0; } .exec-pf2-grid[data-ratio] { grid-template-columns: minmax(0, 1fr); } .exec-lf-meta, .exec-lf-life { font-size: 10px; } }

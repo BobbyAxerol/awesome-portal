@@ -385,12 +385,11 @@ export function AccountBroker360({
       {/* Hi-fi 1g: a live account wears a 3px red frame around its masthead —
           the one state where a reader must not have to look for the badge.
           `.exec-360-guard` stays the live marker for the tests. */}
-      <header className={`exec-ac-masthead${live ? " exec-360-guard" : ""}`} data-stage={stage} data-live={live ? "true" : undefined}>
+      <header className={`exec-ac-masthead${live ? " exec-360-guard" : ""}`} data-stage={stage} data-live={live ? "true" : undefined} aria-label={live ? "LIVE ACCOUNT — commands here move real capital" : undefined}>
         {live ? (
           <>
             <svg viewBox="0 0 16 18" className="exec-ac-shield" aria-hidden="true"><path d="M8 1 L15 4 V9 C15 13.5 12 16.5 8 17.5 C4 16.5 1 13.5 1 9 V4 Z" fill="var(--bad-bg)" stroke="var(--bad)" strokeWidth="1.5" /></svg>
             <span className="exec-ac-live">LIVE</span>
-            <span className="exec-sr-only">LIVE ACCOUNT — commands here move real capital</span>
           </>
         ) : null}
         <span className="exec-ac-kind">ACCOUNT</span>

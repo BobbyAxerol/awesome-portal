@@ -132,10 +132,9 @@ export function LiveFullOperationsScreen({
           {/* Hi-fi 1f: the live masthead wears the 3px red frame with the shield.
               The badges keep the contract's four axes; the smoke adds the
               alpha/portfolio/venue words the contract does not carry yet. */}
-          <header className="exec-masthead exec-ac-masthead exec-360-guard" data-live="true">
+          <header className="exec-masthead exec-ac-masthead exec-360-guard" data-live="true" aria-label="LIVE — full production capital when active · every action needs step-up auth and dual approval">
             <svg viewBox="0 0 16 18" className="exec-ac-shield" aria-hidden="true"><path d="M8 1 L15 4 V9 C15 13.5 12 16.5 8 17.5 C4 16.5 1 13.5 1 9 V4 Z" fill="var(--bad-bg)" stroke="var(--bad)" strokeWidth="1.5" /></svg>
             <span className="exec-ac-live">LIVE</span>
-            <span className="exec-sr-only">full production capital when active · every action needs step-up auth and dual approval</span>
             <div className="exec-ac-h1" role="heading" aria-level={1}>{smoke?.full.title ?? (live.deploymentId ?? "deployment not stated")} <span className="exec-a3-id">· {smoke?.full.sub ?? `${live.portfolioId ?? "portfolio not stated"} · ${live.venue ?? "venue not stated"}`}</span></div>
             <span className="exec-ac-sync" data-tone={live.runtimeState === "ACTIVE" ? "good" : "warn"}>● {live.runtimeState ?? "runtime not stated"}</span>
             <span className="exec-ac-sync" data-tone={mismatch || gap ? "bad" : "good"}><span aria-hidden="true">{mismatch || gap ? "✗" : "✓"}</span> <span>{mismatch ? "MISMATCH" : gap ? "GAP" : "READY"}</span></span>
@@ -244,10 +243,10 @@ export function LiveFullOperationsScreen({
               <section className="exec-pf2-panel" aria-label="Contribution & edge evidence (hi-fi)">
                 <header className="exec-pf2-head"><span className="exec-pf2-title">Contribution &amp; edge evidence · 30d</span><span className="exec-pf2-spacer" /><span className="exec-pf2-note">{smoke.full.contribution.meta}</span></header>
                 <div className="exec-lf-bars">
+                  <div className="exec-pf2-note exec-lf-bartitle">{smoke.full.contribution.title}</div>
                   <svg viewBox="0 0 640 190" className="exec-lf-barsvg" role="img" aria-label="Daily PnL contribution, 30 days" style={{ fontFamily: "var(--font-mono)" }}>
                     <line x1="0" y1="150" x2="640" y2="150" stroke="var(--line)" strokeWidth="1" />
                     {smoke.full.contribution.bars.map((v, i) => <rect key={i} x={16 + i * 44} y={v >= 0 ? 150 - v : 150} width="30" height={Math.abs(v)} fill={v >= 0 ? "var(--good-bg)" : "var(--bad-bg)"} stroke={v >= 0 ? "var(--good)" : "var(--bad)"} strokeWidth="0.5" />)}
-                    <text x="16" y="22" fontSize="12" fill="var(--ink-soft)">{smoke.full.contribution.title}</text>
                   </svg>
                 </div>
                 <div className="exec-lf-facts"><span>30d contribution <b data-tone="good">{smoke.full.contribution.total}</b></span><span>cost drag {smoke.full.contribution.drag}</span><span className="exec-pf2-dim">detailed edge decomposition → <a href={`/deployments/portfolios/${live.portfolioId ?? "PF-CRYPTO"}`}>Portfolio 360°</a> · research evidence → <a href="#passport">Artifact Passport</a> (drill-down)</span></div>
