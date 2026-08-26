@@ -1,0 +1,10 @@
+{
+  "schema_version": "execution.analytics.insight-series.v1", "runtime_active": false, "source_side_effect_requested": false,
+  "subject_id": "alpha_1", "panel_state": "ok", "returned_tiles": 1, "total_series_items": 2,
+  "tiles": [{
+    "tile_id": "equity-by-stage", "title": "Equity by stage", "tile_kind": "line", "formula_version": "equity_by_stage.v1",
+    "authority": "DERIVED", "freshness": "OK", "completeness": "COMPLETE", "as_of": "2026-08-26T10:00:00Z",
+    "minimum_samples": 30, "observed_samples": 120, "state": "READY",
+    "series": { "kind": "line", "points": [{ "bucket_start": "2026-08-26T09:00:00Z", "value": "100.000000000000000001" }, { "bucket_start": "2026-08-26T10:00:00Z", "value": "100.25" }] }
+  }]
+}

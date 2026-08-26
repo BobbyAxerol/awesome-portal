@@ -118,6 +118,20 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-canary-control-room.v1.schema.json#/$defs/CanaryControlRoom",
   "execution-live-full-operations.unavailable.valid.json":
     "https://schemas.primusspark.com/portal/execution-live-full-operations.v1.schema.json#/$defs/LiveFullOperations",
+  "execution-analytics.equity-projection.valid.json":
+    "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/EquityProjectionResponse",
+  "execution-analytics.insight-line.valid.json":
+    "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/InsightTileBatch",
+  "execution-analytics.insight-histogram.valid.json":
+    "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/InsightTileBatch",
+  "execution-analytics.insight-funnel.valid.json":
+    "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/InsightTileBatch",
+  "execution-analytics.insight-waterfall.valid.json":
+    "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/InsightTileBatch",
+  "execution-analytics.insight-heatmap.valid.json":
+    "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/InsightTileBatch",
+  "execution-analytics.insight-bar.valid.json":
+    "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/InsightTileBatch",
 };
 
 const liveFullFixture = loadJson(
@@ -206,6 +220,49 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(
       validate!({ ...event, occurred_at: "2026-08-15T12:00:00" }),
     ).toBe(false);
+  });
+
+  it("publishes one typed Execution envelope sample per mapper event type", () => {
+    const corpus = loadJson(join(fixtureDir, "execution-events.corpus.valid.json")) as Array<Record<string, unknown>>;
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-event-envelope.v1.schema.json",
+    );
+    expect(validate).toBeDefined();
+    expect(corpus).toHaveLength(10);
+    expect(new Set(corpus.map((event) => event.event_type)).size).toBe(10);
+    for (const event of corpus) {
+      if (!validate!(event)) throw new Error(JSON.stringify(validate!.errors, null, 2));
+      expect(event.schema_version).toBe("execution.event.v1");
+      expect(typeof event.schema_version).toBe("string");
+    }
+    expect(validate!({ ...corpus[0], schema_version: 1 })).toBe(false);
+    expect(validate!({ ...corpus[0], entity_kind: "position" })).toBe(false);
+    expect(validate!({ ...corpus[0], payload: { ...(corpus[0].payload as object), quantity: 1 } })).toBe(false);
+  });
+
+  it("keeps N10 series contracts source-dark and tile kinds semantic", () => {
+    const equity = loadJson(join(fixtureDir, "execution-analytics.equity-projection.valid.json")) as {
+      runtime_active: boolean;
+      source_side_effect_requested: boolean;
+      analytics: { data: { points: Array<{ equity: string | null }>; gaps: unknown[] } };
+    };
+    expect(equity.runtime_active).toBe(false);
+    expect(equity.source_side_effect_requested).toBe(false);
+    expect(equity.analytics.data.points.some((point) => point.equity === null)).toBe(true);
+    expect(equity.analytics.data.gaps.length).toBeGreaterThan(0);
+
+    const line = loadJson(join(fixtureDir, "execution-analytics.insight-line.valid.json")) as {
+      tiles: Array<Record<string, unknown>>;
+    };
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/InsightTileBatch",
+    );
+    expect(validate).toBeDefined();
+    expect(validate!({
+      ...line,
+      tiles: [{ ...line.tiles[0], tile_kind: "bar" }],
+    })).toBe(false);
+    expect(validate!({ ...line, runtime_active: true })).toBe(false);
   });
 
   it("rejects incomplete or offset-shaped keyset pages", () => {

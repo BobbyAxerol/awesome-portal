@@ -1,0 +1,10 @@
+{
+  "schema_version": "execution.analytics.insight-series.v1", "runtime_active": false, "source_side_effect_requested": false,
+  "subject_id": "alpha_1", "panel_state": "ok", "returned_tiles": 1, "total_series_items": 2,
+  "tiles": [{
+    "tile_id": "trade-return-histogram", "title": "Trade return histogram", "tile_kind": "histogram", "formula_version": "trade_return_histogram.v1",
+    "authority": "DERIVED", "freshness": "OK", "completeness": "COMPLETE", "as_of": "2026-08-26T10:00:00Z",
+    "minimum_samples": 30, "observed_samples": 80, "state": "READY",
+    "series": { "kind": "histogram", "points": [{ "lower": "-0.01", "upper": "0", "count": 21 }, { "lower": "0", "upper": "0.01", "count": 59 }] }
+  }]
+}

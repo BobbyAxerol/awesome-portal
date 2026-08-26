@@ -14,6 +14,17 @@ not a generic analytics/query API. Its envelopes keep
 epoch, source snapshot, capability identity, delivery profile, projection
 sequence, freshness policy and string decimals explicit.
 
+N10 adds a deliberately source-dark series authority at
+`openapi/execution-analytics-series.openapi.json`, generated as
+`generated/execution-analytics-series.d.ts`. It defines an adaptive
+equity/drawdown/approved-band response and semantic line, histogram, funnel,
+waterfall, heatmap and bar tiles. V1 hard-codes `runtime_active=false`; it does
+not mount a route, read Trading System data or retire frontend smoke data.
+Approved bands are joined only by immutable run ID plus artifact digest, gaps
+remain explicit, and a response is bounded to 5,000 items / 2 MiB. The same
+pack fixes Execution mapper events to the string schema version
+`execution.event.v1` and provides one typed, secret-free fixture per event type.
+
 Execution governance and realtime use separate narrow contracts:
 `openapi/execution-governance.openapi.json` / `generated/execution-governance.d.ts`
 for the Portal-owned active R2 binding plus the source-safe Paper Exit
@@ -115,6 +126,8 @@ packages/contracts/
     execution-governance-r2-review.v1.schema.json
     execution-governance-paper-exit.v1.schema.json
     execution-realtime-event.v1.schema.json
+    execution-analytics-series.v1.schema.json
+    execution-event-envelope.v1.schema.json
     execution-command-center-snapshot.v1.schema.json
     execution-operations.v1.schema.json
   fixtures/
@@ -128,6 +141,9 @@ packages/contracts/
     execution-analytics.correlation.valid.json
     execution-analytics.capital-ledger.valid.json
     execution-analytics.binding-exposure.valid.json
+    execution-analytics.equity-projection.valid.json
+    execution-analytics.insight-{line,histogram,funnel,waterfall,heatmap,bar}.valid.json
+    execution-events.corpus.valid.json
     execution-projection-page.valid.json
     execution-governance.r2-review.valid.json
     execution-governance.paper-exit-review.valid.json
@@ -137,6 +153,7 @@ packages/contracts/
     execution-command-{catalog,plan,operation,relay-denied}.valid.json
   openapi/
     execution-analytics.openapi.json
+    execution-analytics-series.openapi.json
     execution-governance.openapi.json
     execution-realtime.openapi.json
     execution-command-center.openapi.json
@@ -144,6 +161,7 @@ packages/contracts/
   generated/
     portal-api.d.ts
     execution-analytics.d.ts
+    execution-analytics-series.d.ts
     execution-governance.d.ts
     execution-realtime.d.ts
     execution-command-center.d.ts

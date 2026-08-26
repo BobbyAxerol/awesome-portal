@@ -1,0 +1,67 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal Execution Series and Insight Analytics API",
+    "version": "1.0.0",
+    "description": "N10 source-dark contracts. Routes are intentionally unmounted until source-backed N06/N07/N11 gates pass; v1 fixtures have runtime_active=false."
+  },
+  "servers": [{ "url": "/" }],
+  "security": [{ "portalSession": [] }],
+  "paths": {
+    "/api/v1/execution/deployments/{deploymentId}/equity-projection": {
+      "get": {
+        "operationId": "executionEquityProjection",
+        "description": "Returns exact equity/drawdown and immutable-run-approved bands. The server selects the finest canonical interval at or below 5,000 points; clients cannot force a bucket.",
+        "parameters": [
+          { "$ref": "#/components/parameters/DeploymentId" },
+          { "name": "window", "in": "query", "required": false, "schema": { "type": "string", "enum": ["1d", "7d", "30d", "90d", "1y"], "default": "30d" } },
+          { "name": "intent", "in": "query", "required": false, "schema": { "type": "string", "enum": ["overview", "inspect"], "default": "overview" } }
+        ],
+        "responses": {
+          "200": { "description": "Source-dark equity projection contract", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EquityProjectionResponse" } } } },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/execution/alphas/{alphaId}/insight-series": {
+      "post": {
+        "operationId": "executionInsightSeries",
+        "description": "Returns at most twelve semantic line/histogram/funnel/waterfall/heatmap/bar tiles and at most 5,000 total series items.",
+        "parameters": [{ "$ref": "#/components/parameters/AlphaId" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InsightSeriesRequest" } } } },
+        "responses": {
+          "200": { "description": "Bounded semantic insight series", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InsightTileBatch" } } } },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": { "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" } },
+    "parameters": {
+      "DeploymentId": { "name": "deploymentId", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "AlphaId": { "name": "alphaId", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/Identifier" } }
+    },
+    "responses": {
+      "Problem": { "description": "Typed fail-closed analytics error", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+    },
+    "schemas": {
+      "Identifier": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$" },
+      "InsightSeriesRequest": {
+        "type": "object", "additionalProperties": false, "required": ["tile_ids"],
+        "properties": { "tile_ids": { "type": "array", "minItems": 1, "maxItems": 12, "uniqueItems": true, "items": { "$ref": "#/components/schemas/Identifier" } } }
+      },
+      "EquityProjectionResponse": { "$ref": "../schemas/execution-analytics-series.v1.schema.json#/$defs/EquityProjectionResponse" },
+      "InsightTileBatch": { "$ref": "../schemas/execution-analytics-series.v1.schema.json#/$defs/InsightTileBatch" },
+      "ExecutionEventEnvelope": { "$ref": "../schemas/execution-event-envelope.v1.schema.json" },
+      "Problem": {
+        "type": "object", "additionalProperties": false, "required": ["type", "title", "status", "code", "detail", "request_id"],
+        "properties": {
+          "type": { "type": "string", "format": "uri" }, "title": { "type": "string" }, "status": { "type": "integer", "minimum": 400, "maximum": 599 },
+          "code": { "type": "string", "enum": ["ANALYTICS_SERIES_RANGE_INVALID", "ANALYTICS_SERIES_POINT_LIMIT", "ANALYTICS_SERIES_GAP_UNEXPLAINED", "ANALYTICS_APPROVED_BAND_LINEAGE_MISMATCH", "ANALYTICS_TILE_KIND_MISMATCH", "ANALYTICS_TILE_SAMPLE_STATE_INVALID", "ANALYTICS_RESPONSE_SIZE_LIMIT", "ANALYTICS_SOURCE_UNAVAILABLE"] },
+          "detail": { "type": "string", "maxLength": 512 }, "request_id": { "type": "string", "minLength": 1, "maxLength": 128 }
+        }
+      }
+    }
+  }
+}

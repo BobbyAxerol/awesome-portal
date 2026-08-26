@@ -1107,6 +1107,43 @@ fn analytics_error_contract(error: &AnalyticsError) -> (StatusCode, &'static str
             "ANALYTICS_CORRELATION_INVALID",
             "Correlation input violates the published analytics contract.",
         ),
+        AnalyticsError::InvalidSeriesRange => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_SERIES_RANGE_INVALID",
+            "Analytics series range cannot be represented by the canonical interval ladder.",
+        ),
+        AnalyticsError::SeriesPointLimit { .. } => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_SERIES_POINT_LIMIT",
+            "Analytics series exceeds the published point limit.",
+        ),
+        AnalyticsError::InvalidSeriesOrdering { .. }
+        | AnalyticsError::InvalidSeriesBucket
+        | AnalyticsError::UnexplainedSeriesGap => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_SERIES_GAP_UNEXPLAINED",
+            "Analytics series ordering, bucket alignment or gap evidence is invalid.",
+        ),
+        AnalyticsError::ApprovedBandLineageMismatch | AnalyticsError::InvalidApprovedBand => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_APPROVED_BAND_LINEAGE_MISMATCH",
+            "Approved research band lineage or bounds are invalid.",
+        ),
+        AnalyticsError::InvalidTileSeries(_) => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_TILE_KIND_MISMATCH",
+            "Insight series does not satisfy its semantic tile kind.",
+        ),
+        AnalyticsError::InvalidTileSampleState => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_TILE_SAMPLE_STATE_INVALID",
+            "Insight series and sample state are inconsistent.",
+        ),
+        AnalyticsError::ResponseSizeLimit { .. } => (
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "ANALYTICS_RESPONSE_SIZE_LIMIT",
+            "Analytics response exceeds the published size limit.",
+        ),
     }
 }
 

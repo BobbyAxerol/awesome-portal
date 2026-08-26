@@ -1,5 +1,15 @@
 #![forbid(unsafe_code)]
 
+mod events;
+
+pub use events::{
+    AccountUpdatedPayload, BrokerBindingUpdatedPayload, ExecutionEvent, ExecutionEventEnvelope,
+    ExecutionEventEnvelopeInput, ExecutionEventType, FillRecordedPayload, OperationUpdatedPayload,
+    OrderUpdatedPayload, PerformanceUpdatedPayload, PositionUpdatedPayload,
+    ReconciliationUpdatedPayload, RuntimeUpdatedPayload, SourceEventObservedPayload,
+    EXECUTION_EVENT_SCHEMA_VERSION,
+};
+
 use std::{collections::BTreeMap, fmt};
 
 use chrono::{DateTime, Utc};
@@ -360,6 +370,8 @@ pub enum ContractError {
     InvalidIdentifier,
     #[error("invalid exact decimal string: {0}")]
     InvalidDecimal(String),
+    #[error("execution event envelope schema or discriminator is invalid")]
+    InvalidEventEnvelope,
 }
 
 #[cfg(test)]

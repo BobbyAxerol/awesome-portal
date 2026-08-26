@@ -680,6 +680,14 @@ authority.
   PostgreSQL, Control API, OpenAPI, fixtures and generated TypeScript. Registry
   policy remains false; no Trading System, AWS-HK, source or command authority
   changed.
+- [EX-BE-07 / N10 Series and Insight Analytics Contracts](./EX_BE_07_N10_SERIES_AND_INSIGHT_ANALYTICS_CONTRACTS.md)
+  — **contract and pure-engine complete / production inactive:** exact-decimal
+  equity/drawdown/approved-band series, adaptive bounded intervals, explicit
+  gap and lineage semantics, six typed insight series, the twelve-tile Alpha
+  360 catalogue and ten typed Execution mapper envelopes are canonical across
+  JSON Schema, OpenAPI, Rust, generated TypeScript and fixtures. Routes remain
+  unmounted and source-dark; no Trading System, AWS-HK, registry, SSE or
+  command authority changed.
 - `EX-BE-03` **foundation complete / source-ingestion integration pending:**
   pure Rust reducer idempotent, structured source cursor, explicit completeness,
   snapshot/replay, semantic parity, epoch overlap+jitter và server freshness đã

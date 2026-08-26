@@ -1,0 +1,44 @@
+{
+  "schema_version": "execution.analytics.equity-projection.v1",
+  "runtime_active": false,
+  "source_side_effect_requested": false,
+  "analytics": {
+    "schema_version": "execution.analytics.v1",
+    "formula_version": "equity_projection.v1",
+    "source_authority": "DERIVED",
+    "input_freshness_floor": "OK",
+    "panel_state": "partial",
+    "input_completeness": "PARTIAL",
+    "input_as_of": "2026-08-26T10:00:00Z",
+    "warnings": [{ "code": "SERIES_HAS_EXPLICIT_GAPS", "message": "No values were interpolated across gaps" }],
+    "data": {
+      "deployment_id": "dep_88",
+      "currency": "USDT",
+      "requested_from": "2026-08-26T08:00:00Z",
+      "requested_to": "2026-08-26T10:00:00Z",
+      "interval": "1m",
+      "interval_seconds": 60,
+      "expected_buckets": 121,
+      "returned_buckets": 2,
+      "source_rows": 2,
+      "coverage": "0.0165289256198347107438016529",
+      "joined_run_id": "run_44",
+      "artifact_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "points": [
+        { "bucket_start": "2026-08-26T08:00:00Z", "equity": "100.000000000000000001", "drawdown": "0" },
+        { "bucket_start": "2026-08-26T08:01:00Z", "equity": null, "drawdown": null },
+        { "bucket_start": "2026-08-26T08:02:00Z", "equity": "100.250000000000000001", "drawdown": "-0.0025" }
+      ],
+      "approved_band": {
+        "run_id": "run_44",
+        "artifact_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "points": [
+          { "bucket_start": "2026-08-26T08:00:00Z", "lower": "98.5", "upper": "101.5" },
+          { "bucket_start": "2026-08-26T08:02:00Z", "lower": "98.6", "upper": "101.6" }
+        ]
+      },
+      "gaps": [{ "from": "2026-08-26T08:01:00Z", "to": "2026-08-26T08:01:00Z", "reason": "SOURCE_GAP" }],
+      "retention": { "availability": "HOT", "policy_version": "retention.paper.v1" }
+    }
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-event-envelope.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "workspace_id", "environment", "projection_epoch", "projection_sequence", "entity_kind", "entity_id", "source_authority", "source_cursor", "source_sequence", "source_completeness", "as_of", "source_read_at", "projected_at", "freshness", "freshness_policy_version", "source_discontinuity", "event_type", "payload"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "execution.event.v1" },
+    "workspace_id": { "$ref": "#/$defs/Identifier" },
+    "environment": { "type": "string", "enum": ["paper", "sandbox", "live_canary", "live_full"] },
+    "projection_epoch": { "type": "string", "format": "uuid" },
+    "projection_sequence": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "entity_kind": { "type": "string", "enum": ["order", "fill", "position", "event", "runtime", "account", "broker_binding", "reconciliation", "performance", "operation"] },
+    "entity_id": { "$ref": "#/$defs/Identifier" },
+    "source_authority": { "type": "string", "enum": ["RESEARCH", "EXECUTION", "BROKER", "DERIVED"] },
+    "source_cursor": { "oneOf": [{ "$ref": "#/$defs/SourceCursor" }, { "type": "null" }] },
+    "source_sequence": { "type": ["integer", "null"], "minimum": 0, "maximum": 9007199254740991 },
+    "source_completeness": { "type": "string", "enum": ["EVENT_SOURCED", "POLL_BOUNDED", "UNKNOWN"] },
+    "as_of": { "oneOf": [{ "$ref": "#/$defs/DateTime" }, { "type": "null" }] },
+    "source_read_at": { "$ref": "#/$defs/DateTime" },
+    "projected_at": { "$ref": "#/$defs/DateTime" },
+    "freshness": { "type": "string", "enum": ["OK", "AGING", "STALE", "PAUSED", "UNKNOWN"] },
+    "freshness_policy_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "source_discontinuity": { "type": "boolean" },
+    "event_type": { "type": "string", "enum": ["order.updated", "fill.recorded", "position.updated", "source_event.observed", "runtime.updated", "account.updated", "broker_binding.updated", "reconciliation.updated", "performance.updated", "operation.updated"] },
+    "payload": { "oneOf": [{ "$ref": "#/$defs/OrderUpdated" }, { "$ref": "#/$defs/FillRecorded" }, { "$ref": "#/$defs/PositionUpdated" }, { "$ref": "#/$defs/SourceEventObserved" }, { "$ref": "#/$defs/RuntimeUpdated" }, { "$ref": "#/$defs/AccountUpdated" }, { "$ref": "#/$defs/BrokerBindingUpdated" }, { "$ref": "#/$defs/ReconciliationUpdated" }, { "$ref": "#/$defs/PerformanceUpdated" }, { "$ref": "#/$defs/OperationUpdated" }] }
+  },
+  "allOf": [
+    { "if": { "properties": { "event_type": { "const": "order.updated" } }, "required": ["event_type"] }, "then": { "properties": { "entity_kind": { "const": "order" }, "payload": { "$ref": "#/$defs/OrderUpdated" } } } },
+    { "if": { "properties": { "event_type": { "const": "fill.recorded" } }, "required": ["event_type"] }, "then": { "properties": { "entity_kind": { "const": "fill" }, "payload": { "$ref": "#/$defs/FillRecorded" } } } },
+    { "if": { "properties": { "event_type": { "const": "position.updated" } }, "required": ["event_type"] }, "then": { "properties": { "entity_kind": { "const": "position" }, "payload": { "$ref": "#/$defs/PositionUpdated" } } } },
+    { "if": { "properties": { "event_type": { "const": "source_event.observed" } }, "required": ["event_type"] }, "then": { "properties": { "entity_kind": { "const": "event" }, "payload": { "$ref": "#/$defs/SourceEventObserved" } } } },
+    { "if": { "properties": { "event_type": { "const": "runtime.updated" } }, "required": ["event_type"] }, "then": { "properties": { "entity_kind": { "const": "runtime" }, "payload": { "$ref": "#/$defs/RuntimeUpdated" } } } },
+    { "if": { "properties": { "event_type": { "const": "account.updated" } }, "required": ["event_type"] }, "then": { "properties": { "entity_kind": { "const": "account" }, "payload": { "$ref": "#/$defs/AccountUpdated" } } } },
+    { "if": { "properties": { "event_type": { "const": "broker_binding.updated" } }, "required": ["event_type"] }, "then": { "properties": { "entity_kind": { "const": "broker_binding" }, "payload": { "$ref": "#/$defs/BrokerBindingUpdated" } } } },
+    { "if": { "properties": { "event_type": { "const": "reconciliation.updated" } }, "required": ["event_type"] }, "then": { "properties": { "entity_kind": { "const": "reconciliation" }, "payload": { "$ref": "#/$defs/ReconciliationUpdated" } } } },
+    { "if": { "properties": { "event_type": { "const": "performance.updated" } }, "required": ["event_type"] }, "then": { "properties": { "entity_kind": { "const": "performance" }, "payload": { "$ref": "#/$defs/PerformanceUpdated" } } } },
+    { "if": { "properties": { "event_type": { "const": "operation.updated" } }, "required": ["event_type"] }, "then": { "properties": { "entity_kind": { "const": "operation" }, "payload": { "$ref": "#/$defs/OperationUpdated" } } } }
+  ],
+  "$defs": {
+    "Identifier": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$" },
+    "Decimal": { "type": "string", "pattern": "^[+-]?[0-9]+([.][0-9]+)?$" },
+    "Currency": { "type": "string", "pattern": "^[A-Z0-9]{2,12}$" },
+    "DateTime": { "type": "string", "format": "date-time" },
+    "SourceCursor": {
+      "type": "object", "additionalProperties": false, "required": ["event_ts", "created_at", "event_id"],
+      "properties": { "event_ts": { "$ref": "#/$defs/DateTime" }, "created_at": { "$ref": "#/$defs/DateTime" }, "event_id": { "$ref": "#/$defs/Identifier" } }
+    },
+    "OrderUpdated": {
+      "type": "object", "additionalProperties": false, "required": ["order_id", "status", "quantity", "price", "currency"],
+      "properties": { "order_id": { "$ref": "#/$defs/Identifier" }, "status": { "type": "string", "minLength": 1, "maxLength": 64 }, "quantity": { "$ref": "#/$defs/Decimal" }, "price": { "oneOf": [{ "$ref": "#/$defs/Decimal" }, { "type": "null" }] }, "currency": { "$ref": "#/$defs/Currency" } }
+    },
+    "FillRecorded": {
+      "type": "object", "additionalProperties": false, "required": ["fill_id", "order_id", "quantity", "price", "fee", "currency", "liquidity"],
+      "properties": { "fill_id": { "$ref": "#/$defs/Identifier" }, "order_id": { "$ref": "#/$defs/Identifier" }, "quantity": { "$ref": "#/$defs/Decimal" }, "price": { "$ref": "#/$defs/Decimal" }, "fee": { "oneOf": [{ "$ref": "#/$defs/Decimal" }, { "type": "null" }] }, "currency": { "$ref": "#/$defs/Currency" }, "liquidity": { "type": "string", "enum": ["MAKER", "TAKER", "UNKNOWN"] } }
+    },
+    "PositionUpdated": {
+      "type": "object", "additionalProperties": false, "required": ["position_id", "instrument_id", "quantity", "mark_price", "unrealized_pnl", "currency"],
+      "properties": { "position_id": { "$ref": "#/$defs/Identifier" }, "instrument_id": { "$ref": "#/$defs/Identifier" }, "quantity": { "$ref": "#/$defs/Decimal" }, "mark_price": { "oneOf": [{ "$ref": "#/$defs/Decimal" }, { "type": "null" }] }, "unrealized_pnl": { "oneOf": [{ "$ref": "#/$defs/Decimal" }, { "type": "null" }] }, "currency": { "$ref": "#/$defs/Currency" } }
+    },
+    "SourceEventObserved": {
+      "type": "object", "additionalProperties": false, "required": ["source_event_id", "source_event_type", "occurred_at"],
+      "properties": { "source_event_id": { "$ref": "#/$defs/Identifier" }, "source_event_type": { "type": "string", "minLength": 1, "maxLength": 128 }, "occurred_at": { "$ref": "#/$defs/DateTime" } }
+    },
+    "RuntimeUpdated": {
+      "type": "object", "additionalProperties": false, "required": ["runtime_id", "state", "reason"],
+      "properties": { "runtime_id": { "$ref": "#/$defs/Identifier" }, "state": { "type": "string", "minLength": 1, "maxLength": 64 }, "reason": { "type": ["string", "null"], "maxLength": 512 } }
+    },
+    "AccountUpdated": {
+      "type": "object", "additionalProperties": false, "required": ["account_id", "currency", "equity", "available"],
+      "properties": { "account_id": { "$ref": "#/$defs/Identifier" }, "currency": { "$ref": "#/$defs/Currency" }, "equity": { "$ref": "#/$defs/Decimal" }, "available": { "$ref": "#/$defs/Decimal" } }
+    },
+    "BrokerBindingUpdated": {
+      "type": "object", "additionalProperties": false, "required": ["binding_id", "state", "sync_age_seconds"],
+      "properties": { "binding_id": { "$ref": "#/$defs/Identifier" }, "state": { "type": "string", "minLength": 1, "maxLength": 64 }, "sync_age_seconds": { "type": ["integer", "null"], "minimum": 0 } }
+    },
+    "ReconciliationUpdated": {
+      "type": "object", "additionalProperties": false, "required": ["finding_id", "severity", "state", "difference", "currency"],
+      "properties": { "finding_id": { "$ref": "#/$defs/Identifier" }, "severity": { "type": "string", "enum": ["INFO", "WARNING", "CRITICAL"] }, "state": { "type": "string", "minLength": 1, "maxLength": 64 }, "difference": { "oneOf": [{ "$ref": "#/$defs/Decimal" }, { "type": "null" }] }, "currency": { "oneOf": [{ "$ref": "#/$defs/Currency" }, { "type": "null" }] } }
+    },
+    "PerformanceUpdated": {
+      "type": "object", "additionalProperties": false, "required": ["deployment_id", "currency", "equity", "drawdown"],
+      "properties": { "deployment_id": { "$ref": "#/$defs/Identifier" }, "currency": { "$ref": "#/$defs/Currency" }, "equity": { "$ref": "#/$defs/Decimal" }, "drawdown": { "$ref": "#/$defs/Decimal" } }
+    },
+    "OperationUpdated": {
+      "type": "object", "additionalProperties": false, "required": ["operation_id", "state", "incident_id"],
+      "properties": { "operation_id": { "$ref": "#/$defs/Identifier" }, "state": { "type": "string", "minLength": 1, "maxLength": 64 }, "incident_id": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] } }
+    }
+  }
+}

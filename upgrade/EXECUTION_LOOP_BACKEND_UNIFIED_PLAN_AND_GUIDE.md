@@ -721,7 +721,7 @@ All new policy flags remain false. Detail:
 ### N10 — Series and insight analytics contracts
 
 **Mapping:** EX-BE-07a/07b extension; product phases 4, 11, 12, 15, 16, 17.  
-**Status:** `CONTRACT_PLANNED`.  
+**Status:** `CONTRACT_COMPLETE / PRODUCTION_INACTIVE`.  
 **Priority:** P1; source-dark schema/pure engine may start in parallel with N02.
 
 **Included Claude requests**
@@ -744,7 +744,13 @@ All new policy flags remain false. Detail:
 **Exit gate**
 
 OpenAPI/Rust/generated TypeScript parity, exact-decimal pure-engine tests, per-kind canonical fixtures,
-typed errors and response-size/load bounds pass. Source-backed promotion waits for N06/N07.
+typed errors and response-size/load bounds pass. Source-backed promotion waits for N06/N07/N11.
+
+**Delivered:** adaptive equity/drawdown/band engine, six semantic tile kinds, twelve-tile Alpha
+catalogue, canonical string `execution.event.v1`, ten-event envelope/payload corpus, source-dark
+OpenAPI and generated TypeScript. Both response contracts keep `runtime_active=false`; no route,
+source, SSE, registry or command authority changed. Detail:
+[`EX_BE_07_N10_SERIES_AND_INSIGHT_ANALYTICS_CONTRACTS.md`](./backend/EX_BE_07_N10_SERIES_AND_INSIGHT_ANALYTICS_CONTRACTS.md).
 
 **Claude parallel lane:** keep smoke labels explicit; implement renderers against canonical kind/series
 fixtures once delivered, without inventing numbers.
@@ -1021,17 +1027,18 @@ list.**
 | 31 | independent `governance_write_enabled` | `CONTRACT_COMPLETE / POLICY_FALSE` | N09 |
 | 32 | Operations `Mine` actor/assignee semantics | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | N09 |
 | 33 | operation → incident reference | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | N09 |
-| 34 | equity/band/drawdown series | `CONTRACT_PLANNED` | N10 |
+| 34 | equity/band/drawdown series | `CONTRACT_COMPLETE / PRODUCTION_INACTIVE` | N10 |
 | 35 | approval history keyset API | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | N09 |
 | 36 | `REQUEST_CHANGES` verb/lifecycle | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | N09 |
 | 37 | typed R1 `known_limitations[]` | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | N09 |
 | 38 | bounded Sandbox smoke plan | `INTEGRATION_COMPLETE / RUNTIME_INACTIVE` | N09 |
-| 39 | event envelope+payload corpus and schema version | `CONTRACT_PLANNED` | N10 then N08 |
-| 40 | insight `tile_kind` + per-kind series schema | `CONTRACT_PLANNED` | N10 |
+| 39 | event envelope+payload corpus and schema version | `CONTRACT_COMPLETE / SSE_INTEGRATION_PENDING` | N10 then N08/N11 |
+| 40 | insight `tile_kind` + per-kind series schema | `CONTRACT_COMPLETE / FRONTEND_INTEGRATION_PENDING` | N10 |
 
 No BR-EX-30…40 row is silently considered implemented because a similarly named fixture or UI field
 exists. N09 rows above are complete only because generated contracts, backend behavior and fresh-PG
-tests prove them; N10 rows remain planned.
+tests prove them; N10 rows are contract-complete but remain production-inactive until their explicit
+source and frontend integration gates pass.
 
 ### 6.5 Eight unpublished Trading System operations routes
 
@@ -1097,7 +1104,8 @@ Append rows here. Do not create another active request file.
 | BR-EX-56 | 2026-08-26 | Live `/deployments/live` (entry screen WF 1f/1e) | No live overview: operator cannot see live capital Σ, session pnl, gross exposure, which deployment is fail-closed, ladder state, broker sync, per-deployment pulse and the live tape | Facts + aggregates (read): `live-overview.v1` — summary, KPI strip, filter/venue counts, rows (stage, venue·account·portfolio, alloc, exposure, session pnl live, dd, pulse 60m, health, note), tape (≤20 + SSE `live.tape`) | PORTAL_PROJECTION (allocations/exposure) · DERIVED (session pnl, pulse) · PORTAL_CONTROL (fail-closed, ladder, conditions) · BROKER (sync) · TRADING_SYSTEM (fills tape, tick) | read-only · high visibility: FAIL_CLOSED must never read READY; canary scale-up blocked while a sibling is fail-closed is a server rule shown as note | ≤50 rows; tape ≤20; tick ≤1/1.4s | BR-EX-43 tick; incidents/approvals/conditions (Portal); `strategy_deployments`, `positions_v2`, `execution_sessions`, `fills`, `broker_account_sync_snapshots` | route absent → unavailable; sync absent → health DEGRADED, never READY | fixture `execution-live-overview.valid.json`; health-state rule tests; frontend `liveOverview.test` | Codex | N09 · N08 (tape) · N11 | `RECEIVED` | `LiveOverview` — smoke `live.smoke.ts` deleted on delivery | none until approved | hi-fi "Live Overview (entry)"; appendix A.56 |
 | BR-EX-57 | 2026-08-26 | Live Full Operations `/deployments/live/{id}` | Hi-fi 1f masthead/meta/lifecycle strip, 5-cell KPI, broker & reconciliation truth (incl. mismatch object), open exposure table, protective ladder + last operation, 30d contribution bars are not in v1 | Additive fields on `live-full.v1` → v1.1 (BR-EX-57) | as v1 + DERIVED contrib.v1 | read-only (actions unchanged, ADMIN step-up) | 1 deployment; positions ≤200; bars 30 | existing contract; decision ids | missing → v1 rendering | fixture update; lifecycle decision-id consistency; frontend `liveFull.test` | Codex | N09 · N10 | `RECEIVED` | `LiveFullOperationsScreen` — `live.smoke.ts.full` deleted on delivery | none | hi-fi "Live Full Operations (WF 1f)"; appendix A.57 |
 | BR-EX-58 | 2026-08-26 | Stage workbenches (Paper/Sandbox/Canary/Live) — Guard rail | Blocker codes arrive raw from 3–4 sources; no human label, owner, since, resolution link or ordering — the rail reads as a log dump | Facts (read): `blocker-catalog.v1` (code → label, severity, owner, resolves_via href template, doc, rank) + stage contracts carry `blockers[{code, since, source, ref}]` instead of bare `blockerCodes[]` | PORTAL_CONTROL (catalog, Portal-owned) · each source keeps its codes | read-only · low | ≤200 codes; ETag | any viewer | code missing from catalog → raw code shown, never invented | none | fixture `execution-blocker-catalog.valid.json`; all stage-fixture codes ∈ catalog test | Codex | N09 | `RECEIVED` | `ExecutionContextRail` blockers | none | appendix L.7 |
-| _next: BR-EX-59_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
+| BR-EX-59 | 2026-08-26 | Canary Control Room `/deployments/live/{id}/canary` | Hi-fi 1e masthead (trial day, exit-review countdown, GUARDED/DEGRADED), lineage + lifecycle strips, 5-cell KPI, live-vs-paper-vs-backtest lines on one digest, envelope bars with at-cap, positions with ACK latency, incidents/recon, 14-day trial timeline with recorded checkpoints, exit-readiness gates (server mirror), marginal contribution, promotion decision options are not in v1 | Additive fields on `canary-control-room.v1` → v1.1 (BR-EX-59) | PORTAL_CONTROL (trial, gates, checkpoints, decision) · DERIVED (equity_projection.v1, marginal.v1) · TRADING_SYSTEM (positions, orders, ack) · BROKER (sync) | read-only + existing governed actions · high: "elapsed time alone never promotes" — gates are server-enforced, screen mirrors | 1 deployment; 3 series ≤400 pts; timeline ≤30 days | existing contract; approvals/conditions; exit reviews; paper twin dep_94; backtest run | missing → v1 rendering; sync STALE → readiness DEGRADED + scale blocked | fixture update; gate-mirror + timeline consistency tests; frontend `canary.test` | Codex | N09 · N10 | `RECEIVED` | `CanaryControlRoomScreen` — smoke `canary.smoke.ts` deleted on delivery | none | hi-fi "Canary Control Room (WF 1e)"; appendix A.59 |
+| _next: BR-EX-60_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
 
 ### 7.3 Request quality gate
 
@@ -1204,7 +1212,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | Backend completed-slice index | `backend/README.md` |
 | Claude original request/review | `upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_BACKEND_PLAN_REQUEST.md`, `BACKEND_PLAN_REVIEW.md` |
 | Claude scale/current BR requests | `upgrade_frontend_plan_hifi/hifi_execution_loop/EXECUTION_SCALE_AND_REFINE.md` |
-| **Hi-fi V2 requests BR-EX-41…58 — field-level detail** (types/enums/examples, DoR §5.1 pre-filled per package, OpenAPI path stubs, typed error/state examples, delivery order and per-package smoke retirement) | `upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` (appendices A–L; G/H/I = full JSON examples, derivation rules, errors, live events and required tests for BR-EX-49/50/51; J = source mapping and open decisions; K = BR-EX-52/53/54 bindings/accounts; L = BR-EX-56/57 live overview/full); verbatim copy of the §7.2 rows: `…/BACKEND_PLAN_7_2_ROWS_2026-08-25.md` |
+| **Hi-fi V2 requests BR-EX-41…59 — field-level detail** (types/enums/examples, DoR §5.1 pre-filled per package, OpenAPI path stubs, typed error/state examples, delivery order and per-package smoke retirement) | `upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` (appendices A–M; G/H/I = full JSON examples, derivation rules, errors, live events and required tests for BR-EX-49/50/51; J = source mapping and open decisions; K = BR-EX-52/53/54 bindings/accounts; L = BR-EX-56/57 live overview/full; M = BR-EX-59 canary); verbatim copy of the §7.2 rows: `…/BACKEND_PLAN_7_2_ROWS_2026-08-25.md` |
 | UI/UX authority for those requests — what each screen must show and why | hi-fi files `…/Design system discussion request_version2/HiFi *.dc.html` + owner screenshots 2026-08-25; grammar and per-screen smoke table `…/DESIGN_GRAMMAR_V3.md` (§8); audit `…/AUDIT_DENSITY_AND_INSIGHT_2026-08-25.md` |
 | Frontend smoke modules to delete on delivery (one per screen, contract at file head) | `apps/portal/frontend/src/execution/{commandCenter,incident,operationsQueue,blotter,stage,alpha360}.smoke.ts` |
 | Shared frontend/backend board | `upgrade_frontend_plan_hifi/hifi_execution_loop/PHASE_TRACKER.md` |
@@ -1225,5 +1233,6 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | Date | Change | Evidence/status effect |
 |---|---|---|
 | 2026-08-25 | Initial unified plan: current D1–D4 truth, N00–N17, H/A/BR-EX-01…40 and future Claude intake | documentation only; no runtime/profile/source/command change |
-| 2026-08-25 | Claude: §7.2 BR-EX-41…58 appended (`RECEIVED`) — hi-fi V2 Command Center 5a / Incident 4d / stage workbenches; schema appendix in `hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` | documentation only; no runtime/profile/source/command change; codex triages per §7.1 |
+| 2026-08-25 | Claude: §7.2 BR-EX-41…59 appended (`RECEIVED`) — hi-fi V2 Command Center 5a / Incident 4d / stage workbenches; schema appendix in `hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` | documentation only; no runtime/profile/source/command change; codex triages per §7.1 |
 | 2026-08-26 | N09 BR-EX-30/31/32/33/35/36/37/38 closed | Portal contracts/repository/API/codegen complete; registry write policy false; production/source/command inactive |
+| 2026-08-26 | N10 BR-EX-34/39/40 closed | Rust pure engines + schema/OpenAPI/generated TS + canonical fixtures complete; routes/source/SSE/registry/commands inactive |

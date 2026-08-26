@@ -9,8 +9,10 @@ repository.workspace = true
 [dependencies]
 chrono.workspace = true
 execution-contracts = { path = "../execution-contracts" }
+query-api = { path = "../query-api" }
 rust_decimal.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]

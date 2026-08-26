@@ -269,6 +269,26 @@ pub enum AnalyticsError {
     SuppliedSelfCorrelation,
     #[error("capital ledger entry does not reconcile: {0}")]
     LedgerMismatch(String),
+    #[error("series time range is invalid or wider than the canonical interval ladder")]
+    InvalidSeriesRange,
+    #[error("series contains more than {maximum} points: {actual}")]
+    SeriesPointLimit { actual: usize, maximum: usize },
+    #[error("series point or gap ordering is invalid: {field}")]
+    InvalidSeriesOrdering { field: &'static str },
+    #[error("series timestamp is outside or misaligned with the selected bucket interval")]
+    InvalidSeriesBucket,
+    #[error("a missing series value is not covered by an explicit gap")]
+    UnexplainedSeriesGap,
+    #[error("approved research band does not match the immutable run/digest lineage")]
+    ApprovedBandLineageMismatch,
+    #[error("approved research band lower bound exceeds its upper bound")]
+    InvalidApprovedBand,
+    #[error("insight series shape is invalid for tile kind {0}")]
+    InvalidTileSeries(&'static str),
+    #[error("insight tile sample count does not satisfy its declared state")]
+    InvalidTileSampleState,
+    #[error("analytics response is {actual} bytes; maximum is {maximum}")]
+    ResponseSizeLimit { actual: usize, maximum: usize },
 }
 
 impl FromStr for CurrencyCode {

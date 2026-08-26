@@ -2619,3 +2619,19 @@ preview" trong `docs/release-and-deployment.md`. Chỉ `portal-web` được reb
 được merge, hostname này phải được rebuild lại từ worktree `dev` (quy trình §"Canonical development").
 Route để duyệt: `/governance/approvals`, `/governance/approvals/AP-201/r1`, `/deployments/paper/dep_94`,
 `/deployments/live/dep_live`, `/deployments/alphas/av_2041`, `/deployments/blotter`, `/execution/_fixtures`.
+
+### N10 backend — series and insight analytics contracts (2026-08-26)
+
+| Phase | BE | FE | Runtime/source | Evidence |
+|---|---|---|---|---|
+| N10 / BR-EX-34 | `CONTRACT_COMPLETE` | `READY_FOR_READER_INTEGRATION` | `INACTIVE` | exact-decimal equity/drawdown/band, adaptive ≤5,000 buckets, explicit gaps, immutable lineage |
+| N10 / BR-EX-40 | `CONTRACT_COMPLETE` | `READY_FOR_READER_INTEGRATION` | `INACTIVE` | six semantic tile kinds, twelve-tile catalogue, ≤5,000 items / ≤2 MiB |
+| N10 / BR-EX-39 | `CONTRACT_COMPLETE` | `SSE_MAPPER_INTEGRATION_PENDING` | `INACTIVE` | ten typed envelopes; canonical string `execution.event.v1` |
+
+Canonical backend report:
+[`EX_BE_07_N10_SERIES_AND_INSIGHT_ANALYTICS_CONTRACTS.md`](../../../backend/EX_BE_07_N10_SERIES_AND_INSIGHT_ANALYTICS_CONTRACTS.md).
+Claude handoff:
+[`CODEX_TO_CLAUDE_N10_SERIES_INSIGHT_HANDOFF.md`](./CODEX_TO_CLAUDE_N10_SERIES_INSIGHT_HANDOFF.md).
+The OpenAPI routes are contract-only and unmounted; registry/source flags remain false. Claude may
+integrate the generated readers and canonical fixtures now, but must preserve freshness,
+partiality, explicit gaps and exact-decimal strings and must not label fixture data as live.

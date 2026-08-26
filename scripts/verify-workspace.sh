@@ -114,6 +114,8 @@ for required in \
   "${ROOT_DIR}/packages/contracts/schemas/execution-governance-approval-workflow.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-governance-paper-exit.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-realtime-event.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-analytics-series.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-event-envelope.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-operations.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/problem.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/command.valid.json" \
@@ -132,6 +134,14 @@ for required in \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-governance.paper-exit-review.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.auth-expiring.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.projection-gap.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.equity-projection.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-line.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-histogram.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-funnel.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-waterfall.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-heatmap.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-bar.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-events.corpus.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-command-catalog.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-command-plan.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-command-operation.valid.json" \
@@ -142,10 +152,12 @@ for required in \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-incident-workflow.resolved.valid.json" \
   "${ROOT_DIR}/packages/contracts/generated/portal-api.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-analytics.d.ts" \
+  "${ROOT_DIR}/packages/contracts/generated/execution-analytics-series.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-governance.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-realtime.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-operations.d.ts" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-analytics.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-analytics-series.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-governance.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-realtime.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-operations.openapi.json" \
@@ -264,6 +276,9 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/rust-toolchain.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contract-pack.lock.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/execution-contracts/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/execution-contracts/src/events.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/analytics/src/series.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/analytics/src/tiles.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/ts-contract-v1/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/ts-adapter-v1/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/edge-auth/src/lib.rs" \
@@ -362,6 +377,8 @@ for required in \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_05_N09_PORTAL_GOVERNANCE_WORKFLOW_GAPS.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N09_GOVERNANCE_WORKFLOW_HANDOFF.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_07_N10_SERIES_AND_INSIGHT_ANALYTICS_CONTRACTS.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N10_SERIES_INSIGHT_HANDOFF.md" \
   "${ROOT_DIR}/.github/workflows/publish-images.yml" \
   "${ROOT_DIR}/deploy/execution-d1/README.md" \
   "${ROOT_DIR}/deploy/execution-d1/owner-input.env.example" \
@@ -593,6 +610,8 @@ for tracked_source in \
   packages/contracts/schemas/execution-governance-r2-review.v1.schema.json \
   packages/contracts/schemas/execution-governance-paper-exit.v1.schema.json \
   packages/contracts/schemas/execution-realtime-event.v1.schema.json \
+  packages/contracts/schemas/execution-analytics-series.v1.schema.json \
+  packages/contracts/schemas/execution-event-envelope.v1.schema.json \
   packages/contracts/schemas/execution-operations.v1.schema.json \
   packages/contracts/fixtures/problem.valid.json \
   packages/contracts/fixtures/command.valid.json \
@@ -609,6 +628,14 @@ for tracked_source in \
   packages/contracts/fixtures/execution-governance.paper-exit-review.valid.json \
   packages/contracts/fixtures/execution-realtime.auth-expiring.valid.json \
   packages/contracts/fixtures/execution-realtime.projection-gap.valid.json \
+  packages/contracts/fixtures/execution-analytics.equity-projection.valid.json \
+  packages/contracts/fixtures/execution-analytics.insight-line.valid.json \
+  packages/contracts/fixtures/execution-analytics.insight-histogram.valid.json \
+  packages/contracts/fixtures/execution-analytics.insight-funnel.valid.json \
+  packages/contracts/fixtures/execution-analytics.insight-waterfall.valid.json \
+  packages/contracts/fixtures/execution-analytics.insight-heatmap.valid.json \
+  packages/contracts/fixtures/execution-analytics.insight-bar.valid.json \
+  packages/contracts/fixtures/execution-events.corpus.valid.json \
   packages/contracts/fixtures/execution-command-catalog.valid.json \
   packages/contracts/fixtures/execution-command-plan.valid.json \
   packages/contracts/fixtures/execution-command-operation.valid.json \
@@ -619,10 +646,12 @@ for tracked_source in \
   packages/contracts/fixtures/execution-incident-workflow.resolved.valid.json \
   packages/contracts/generated/portal-api.d.ts \
   packages/contracts/generated/execution-analytics.d.ts \
+  packages/contracts/generated/execution-analytics-series.d.ts \
   packages/contracts/generated/execution-governance.d.ts \
   packages/contracts/generated/execution-realtime.d.ts \
   packages/contracts/generated/execution-operations.d.ts \
   packages/contracts/openapi/execution-analytics.openapi.json \
+  packages/contracts/openapi/execution-analytics-series.openapi.json \
   packages/contracts/openapi/execution-governance.openapi.json \
   packages/contracts/openapi/execution-realtime.openapi.json \
   packages/contracts/openapi/execution-operations.openapi.json \
@@ -738,6 +767,9 @@ for tracked_source in \
   services/portal-execution-edge-rs/rust-toolchain.toml \
   services/portal-execution-edge-rs/contract-pack.lock.json \
   services/portal-execution-edge-rs/crates/execution-contracts/src/lib.rs \
+  services/portal-execution-edge-rs/crates/execution-contracts/src/events.rs \
+  services/portal-execution-edge-rs/crates/analytics/src/series.rs \
+  services/portal-execution-edge-rs/crates/analytics/src/tiles.rs \
   services/portal-execution-edge-rs/crates/ts-contract-v1/src/lib.rs \
   services/portal-execution-edge-rs/crates/ts-adapter-v1/src/lib.rs \
   services/portal-execution-edge-rs/crates/command-relay/Cargo.toml \
@@ -991,6 +1023,17 @@ for json_contract in \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.correlation.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.capital-ledger.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.binding-exposure.valid.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-analytics-series.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-event-envelope.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.equity-projection.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-line.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-histogram.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-funnel.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-waterfall.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-heatmap.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-bar.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-events.corpus.valid.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-analytics-series.openapi.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-projection-page.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-projection-page.valid.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-governance-r2-review.v1.schema.json" \

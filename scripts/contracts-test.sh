@@ -40,6 +40,8 @@ trap cleanup EXIT
     diff -q /tmp/portal-api.d.ts generated/portal-api.d.ts
     npx openapi-typescript openapi/execution-analytics.openapi.json -o /tmp/execution-analytics.d.ts
     diff -q /tmp/execution-analytics.d.ts generated/execution-analytics.d.ts
+    npx openapi-typescript openapi/execution-analytics-series.openapi.json -o /tmp/execution-analytics-series.d.ts
+    diff -q /tmp/execution-analytics-series.d.ts generated/execution-analytics-series.d.ts
     npx openapi-typescript openapi/execution-governance.openapi.json -o /tmp/execution-governance.d.ts
     diff -q /tmp/execution-governance.d.ts generated/execution-governance.d.ts
     npx openapi-typescript openapi/execution-realtime.openapi.json -o /tmp/execution-realtime.d.ts
