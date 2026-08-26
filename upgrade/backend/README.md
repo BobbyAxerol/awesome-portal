@@ -7,6 +7,13 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- [Official Trading System owner request — Portal Execution capability campaign](./TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md)
+  — **the only active document to send to the Trading System owner.** It
+  consolidates N02/N03 incremental source, N06 evidence, all 24 N11 reads, all
+  nine N12 commands, N15 Event/Artifact authority and the N13–N17 operational
+  evidence ladder. Older D4, Claude, N11 and N12 request prose is audit or a
+  machine annex and must not be sent separately.
+
 - [BAR-01 — Feature/Screen/Concern Registry & Command Center Summary Contract](./BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md)
   — contract backend cho U02/U03. **Backend contract complete (BE1–BE6):**
   registry + API, hai read-only summary adapter, deadline-aware aggregator,
@@ -921,6 +928,8 @@ durable run/attempt events. Detailed evidence:
   OWNER_PUBLICATION_PENDING / PRODUCTION_INACTIVE`; no source route, profile,
   network, secret, DB/Redis/CLI/broker or command authority changed. Detail:
   [`EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md`](./EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md).
+- N11 is a machine annex of the official master owner request; it is not sent
+  as an independent change request.
 
 ## Backend state — 2026-08-26 (N12 live command relay gate)
 
@@ -938,3 +947,5 @@ durable run/attempt events. Detailed evidence:
   OWNER_PUBLICATION_PENDING / PRODUCTION_INACTIVE`; runtime flags remain false
   and TypeScript apply remains denied. Detail:
   [`EX_BE_05B_N12_LIVE_COMMAND_RELAY.md`](./EX_BE_05B_N12_LIVE_COMMAND_RELAY.md).
+- N12 is a separately gated machine annex of the same official master owner
+  request, not a second owner campaign.

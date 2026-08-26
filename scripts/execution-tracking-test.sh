@@ -21,6 +21,25 @@ F4_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_05B_F4_LIVE_FULL_OPERATIONS.md"
 F4_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F4_HANDOFF.md"
 N09_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_05_N09_PORTAL_GOVERNANCE_WORKFLOW_GAPS.md"
 N09_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N09_GOVERNANCE_WORKFLOW_HANDOFF.md"
+OWNER_MASTER_REQUEST="${ROOT_DIR}/upgrade/backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md"
+
+if [[ ! -f "${OWNER_MASTER_REQUEST}" ]]; then
+    echo "official Trading System master request is missing" >&2
+    exit 1
+fi
+for token in \
+    "OFFICIAL_SINGLE_OWNER_REQUEST" \
+    "d4-paper-read-v2-request" \
+    "n11-external-read-v1-request" \
+    "n12-command-relay-v1-request" \
+    "N01–N17 dependency audit" \
+    "no additional Trading System feature request"
+do
+    if ! grep -Fq "${token}" "${OWNER_MASTER_REQUEST}"; then
+        echo "official Trading System master request lost invariant: ${token}" >&2
+        exit 1
+    fi
+done
 
 python3 - "${MASTER}" "${TRACKER}" "${ROADMAP}" "${LEDGER}" "${BACKEND_README}" "${ARCHITECTURE}" "${FRONTEND_HANDOFF}" "${CATALOG}" "${ADMISSION_HISTORY}" "${UNIFIED}" "${F2_REPORT}" "${F2_HANDOFF}" "${F3_REPORT}" "${F3_HANDOFF}" "${IAM_REVISION}" "${F4_REPORT}" "${F4_HANDOFF}" "${N09_REPORT}" "${N09_HANDOFF}" <<'PY'
 from pathlib import Path
@@ -425,11 +444,11 @@ for label, text in (
 for request in ("BR-EX-28 canonical command catalogue", "BR-EX-29 typed `conditions[]`"):
     row = next((line for line in l.splitlines() if request in line), None)
     expected = (
-        "`PORTAL_COMMAND_GATE_COMPLETE / OWNER_PUBLICATION_PENDING / PRODUCTION_INACTIVE`"
+        ("PORTAL_COMMAND_GATE_COMPLETE", "MASTER_OWNER_REQUEST_READY", "OWNER_PUBLICATION_PENDING", "PRODUCTION_INACTIVE")
         if request.startswith("BR-EX-28")
-        else "`FOUNDATION_COMPLETE / PRODUCTION_INACTIVE`"
+        else ("FOUNDATION_COMPLETE", "PRODUCTION_INACTIVE")
     )
-    if row is None or expected not in row:
+    if row is None or any(token not in row for token in expected):
         raise SystemExit(f"request ledger lost the accepted F0 status: {request}")
 
 entries = c.get("entries", [])

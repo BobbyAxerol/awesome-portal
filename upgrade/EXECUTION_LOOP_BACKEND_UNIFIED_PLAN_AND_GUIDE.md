@@ -274,6 +274,22 @@ N13 -> N14 release authority -> N15 full gateway -> N16 emergency ops -> N17 pro
 - N12 real command relay.
 - any `fixture -> shadow -> paper -> sandbox -> live_canary -> live_full` promotion.
 
+### 3.4 Single official Trading System owner request
+
+All known external dependencies are now consolidated in
+[`TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`](./backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md).
+It is the only active document to send to the Trading System owner and covers
+N02/N03 source publication, N06 operational evidence, N11 reads, N12 commands,
+N15 Event/Artifact authority and the N13–N17 promotion/release/emergency/DR
+evidence ladder. Component request directories are machine annexes, not
+separate owner asks. Older D4 and Claude request prose is audit-only.
+
+Current inspection found no additional known Trading System feature request
+after this master campaign. N13–N17 use the same contracts with independently
+reviewed evidence/profile promotions. A genuinely new product capability or an
+incompatible owner contract change amends the master revision instead of
+creating another phase-local request file.
+
 ---
 
 ## 4. Unified backend phases
@@ -352,8 +368,8 @@ became active.
 ### N02 — Incremental source contract revision
 
 **Mapping:** D4-OPT-01; Trading System compatibility request.  
-**Status:** `PORTAL_REQUEST_VERIFIER_COMPLETE / NARROW_REQUEST_SUPERSEDED /
-CONSOLIDATED_READ_PACK_PENDING / RUNTIME_V1_LOCKED`.  
+**Status:** `PORTAL_REQUEST_VERIFIER_COMPLETE / MASTER_OWNER_REQUEST_READY /
+OWNER_PUBLICATION_PENDING / RUNTIME_V1_LOCKED`.  
 **Priority:** P0.
 
 **Goal**
@@ -391,16 +407,16 @@ The external exit gate is intentionally still open. Detail:
 [`EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md`](./backend/EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md).
 The historical narrow N02+N03 owner request is retained as
 [`TRADING_SYSTEM_D4_PAPER_READ_V2_IMPLEMENTATION_REQUEST.md`](./backend/TRADING_SYSTEM_D4_PAPER_READ_V2_IMPLEMENTATION_REQUEST.md).
-It was superseded before implementation; the source owner must wait for the
-final capability-negotiated N02/N03/N11 read pack.
+It was superseded before implementation and is audit-only. The source owner
+uses the single official master request in §3.4; N02 remains its machine annex.
 
 **Claude parallel lane:** prepare UI for typed gap/resync/retention/completeness only; no live source.
 
 ### N03 — Trading-System-owned incremental source implementation
 
 **Mapping:** D4-OPT-02.  
-**Status:** `PORTAL_ACCEPTANCE_HARNESS_COMPLETE / NARROW_REQUEST_SUPERSEDED /
-CONSOLIDATED_READ_PACK_PENDING / EXTERNAL_IMPLEMENTATION_PENDING`.  
+**Status:** `PORTAL_ACCEPTANCE_HARNESS_COMPLETE / MASTER_OWNER_REQUEST_READY /
+OWNER_IMPLEMENTATION_PENDING / EXTERNAL_IMPLEMENTATION_PENDING`.  
 **Owner:** Trading System owner, not Codex.  
 **Priority:** P0 after N02.
 
@@ -431,7 +447,8 @@ non-secret contract artifacts.
 - 14-scenario owner acceptance matrix and 15-case fail-closed verifier tests;
 - read-only discovery proving the current v1 facade still performs unconditional full refreshes.
 
-The Trading System owner implementation and N02 owner publication remain external dependencies.
+The Trading System owner implementation and N02 owner publication remain external dependencies,
+but they are requested once through the §3.4 master campaign rather than a phase-local handoff.
 Detail:
 [`EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md`](./backend/EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md).
 
@@ -770,6 +787,9 @@ fixtures once delivered, without inventing numbers.
 - authoritative VNM calendar/session/ATO/ATC capability;
 - the eight exact `ops` routes in §6.5.
 
+These are not sent as an independent N11 request. The N11 catalogue is the
+external-read machine annex of the official master request in §3.4.
+
 **Portal deliverables complete**
 
 - one consolidated revision-1 request enumerating 24 exact GET capabilities;
@@ -833,6 +853,9 @@ have not been published, so TypeScript apply and every runtime command lane
 remain disabled. Detail:
 [`EX_BE_05B_N12_LIVE_COMMAND_RELAY.md`](./backend/EX_BE_05B_N12_LIVE_COMMAND_RELAY.md).
 
+N12 is the independently gated command annex of the official master request in
+§3.4, not another owner campaign.
+
 **Claude parallel lane:** render the canonical catalogue and terminal; keep unreachable entries hidden/
 disabled and never equate HTTP 202 with success.
 
@@ -841,6 +864,9 @@ disabled and never equate HTTP 202 with success.
 **Mapping:** product phases 4–18; delivery profile ladder.  
 **Status:** `NOT_STARTED / N06_N12_DEPENDENT`.  
 **Priority:** P1 after foundations.
+
+N13 requires accepted owner bytes and environment-specific evidence from the
+master campaign; it does not require another Trading System feature request.
 
 **Order**
 
@@ -869,6 +895,9 @@ acceptance matrix for the exact promoted screen/profile.
 **Status:** `PLANNED`.  
 **Priority:** P2 before formal release.
 
+Trading System contributes immutable compatibility/evidence under the master
+campaign. N14 does not open a new endpoint request.
+
 **Goal and deliverables**
 
 - immutable multi-service release manifest and compatibility matrix;
@@ -891,6 +920,8 @@ approval.
 
 Formalize four independent interfaces: Query, Command, Event and Artifact. D1–D4 provide the read
 foundation; commands, production events and artifact exchange require their own contracts/gates.
+All four owner-side publications are already requested by the master campaign:
+N11 Query, N12 Command, N02/N03 Event coverage and the master Artifact ruling.
 
 **Exit gate:** version/compatibility negotiation, identities, SLOs, observability, failure semantics,
 rollback and owner matrix exist for all four without generic host/DB/Redis access.
@@ -900,6 +931,10 @@ rollback and owner matrix exist for all four without generic host/DB/Redis acces
 **Mapping:** BAR-19.  
 **Status:** `PLANNED`.  
 **Priority:** P2.
+
+The Trading System dependency is the existing N12 R3 protective contract plus
+N11 operational facts. Same-domain routing and break-glass ceremony remain
+Portal/Cloudflare work; no hidden second command request is allowed.
 
 **Goal and deliverables**
 
@@ -917,6 +952,9 @@ is visibly degraded and recoverable.
 **Mapping:** BAR-20 + product phase 18.  
 **Status:** `OPERATIONAL_EVIDENCE_PENDING`.  
 **Priority:** final.
+
+Trading System participates in measured SLO, rollback, rotation and game-day
+evidence requested by the master campaign. No new feature route is expected.
 
 **Goal and deliverables**
 

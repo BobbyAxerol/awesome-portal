@@ -1,11 +1,13 @@
-# N12 Consolidated Trading System Command Publication Request
+# N12 Trading System Command Publication Machine Annex
 
 Status: `PORTAL_COMMAND_GATE_COMPLETE / OWNER_PUBLICATION_PENDING / PRODUCTION_INACTIVE`  
 Request revision: `portal.execution.command-publication-request.v1`
 
-This is the one consolidated command request from Portal to the Trading System
-owner. It covers the first Paper/Sandbox protective commands, the later Live
-protective ladder and the separately governed Live risk-increasing commands.
+This is the N12 machine annex of
+`upgrade/backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`.
+Do not send it as a separate owner request. Within the single owner campaign it
+covers the first Paper/Sandbox protective commands, the later Live protective
+ladder and the separately governed Live risk-increasing commands.
 It does not derive authority from the 64-entry CLI catalogue and it does not
 authorize a Source Proxy, DB/Redis/CLI/broker credential, runtime flag or
 network change.

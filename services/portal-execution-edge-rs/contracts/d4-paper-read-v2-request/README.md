@@ -1,9 +1,12 @@
-# D4 Paper Read v2 — Incremental Contract Request
+# D4 Paper Read v2 — Incremental Contract Machine Annex
 
 Status: `REQUEST_ONLY / NOT_OWNER_PUBLISHED / NOT_RUNTIME_CONSUMABLE`
 
-This directory defines the exact non-secret package Portal asks the Trading
-System owner to publish for N02. It is not a source contract, runtime adapter or
+This directory is the N02 machine annex of
+`upgrade/backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`.
+Do not send or implement it as a separate owner request. It defines the exact
+non-secret package Portal asks the Trading System owner to publish within the
+single coordinated campaign. It is not a source contract, runtime adapter or
 permission to change Trading System.
 
 An owner package contains exactly:

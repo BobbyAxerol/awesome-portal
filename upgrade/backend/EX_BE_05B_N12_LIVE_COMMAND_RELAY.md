@@ -24,7 +24,13 @@ No Trading System code, AWS-HK runtime, Source Proxy, listener, network rule,
 secret, mTLS/JWT issuer, database, Redis, CLI, broker, registry profile or
 command flag was changed.
 
-## 2. Consolidated owner publication request
+## 2. Master-request command annex
+
+N12 is not sent as a separate owner request. It is the command machine annex
+of
+[`TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`](./TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md),
+which also covers incremental source, external reads and future Event/Artifact
+authority.
 
 The request pack replaces phase-by-phase command asks with nine exact future
 capabilities:

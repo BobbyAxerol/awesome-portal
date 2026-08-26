@@ -1,11 +1,13 @@
-# N11 Consolidated Trading System External Read Publication Request
+# N11 Trading System External Read Publication Machine Annex
 
 Status: `PORTAL_REQUEST_AND_GATE_COMPLETE / OWNER_PUBLICATION_PENDING`  
 Request revision: `portal.execution.external-read-request.v1`
 
-This is the single consolidated request from Portal to the Trading System
-owner. It supersedes sending separate source requests for BR-EX-24…27, VNM
-session truth, stage/replay/binding/live source panels and the eight ops reads.
+This is the N11 machine annex of
+`upgrade/backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`.
+Do not send it as a separate owner request. Within the single owner campaign it
+supersedes separate source asks for BR-EX-24…27, VNM session truth,
+stage/replay/binding/live source panels and the eight ops reads.
 
 It does **not** authorize Portal to change Trading System, call a source route,
 receive database/Redis/CLI/broker credentials or mount a Source Proxy location.

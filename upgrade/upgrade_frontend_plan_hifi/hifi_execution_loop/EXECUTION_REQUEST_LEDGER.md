@@ -72,7 +72,7 @@ activation remains independently gated by the per-phase table in §12.2.
 | BR-EX-25 five-hop vs four-stage funnel | Bobby product/source owner | semantic-ruling artifact requires owner choice; UI does not invent signal/intent facts | `PORTAL_REQUEST_COMPLETE / OWNER_RULING_PENDING` |
 | BR-EX-26 aggregate exposure verdict | Trading System source owner; Codex adapter gate complete | `bindings.exposure-verdict` requests full-population per-currency verdict; UI stays unavailable | `PORTAL_ADAPTER_GATE_COMPLETE / OWNER_PUBLICATION_PENDING` |
 | BR-EX-27 packed correlation `sample_counts` | Trading System source owner; Codex adapter gate complete | `portfolios.correlation-samples` requests per-cell counts and explicit diagonal semantics | `PORTAL_ADAPTER_GATE_COMPLETE / OWNER_PUBLICATION_PENDING` |
-| BR-EX-28 canonical command catalogue | Codex N12; Claude consumer; Trading System publication owner | revision-2 64-action inventory stays unreachable; N12 requests nine exact R1–R4 capabilities, validates a dedicated command identity and owner artifact bytes, and keeps all runtime command flags false | `PORTAL_COMMAND_GATE_COMPLETE / OWNER_PUBLICATION_PENDING / PRODUCTION_INACTIVE` |
+| BR-EX-28 canonical command catalogue | Codex N12; Claude consumer; Trading System publication owner | revision-2 64-action inventory stays unreachable; the master campaign's N12 annex requests nine exact R1–R4 capabilities, validates a dedicated command identity and owner artifact bytes, and keeps all runtime command flags false | `PORTAL_COMMAND_GATE_COMPLETE / MASTER_OWNER_REQUEST_READY / OWNER_PUBLICATION_PENDING / PRODUCTION_INACTIVE` |
 | BR-EX-28 allocation classification | Bobby/Trading System command owner; Codex enforces conservative floor | remains at least R1, owner-reviewed and plan/apply-gated; it can never fall to R0 without a published ruling | `OWNER_DECISION_PENDING` |
 | BR-EX-29 typed `conditions[]` | Codex EX-BE-05b/F0; Claude consumer | backend/schema/PostgreSQL canonical array delivered; legacy singular value remains only at explicit compatibility boundary | `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` |
 
@@ -101,14 +101,24 @@ that use case. Portal never receives a generic DB, Redis or CLI escape hatch.
 
 ### 4.4 N12 command publication stop gate
 
-N12 has one consolidated nine-capability owner request, a byte-bound verifier
-and a restart-safe Rust authorization/journal gate. It does not publish or
-activate a route. Dedicated command identity, exact schemas/fixtures, terminal
-corpus and owner evidence remain external. HTTP 202 stays non-terminal;
+N12 contributes one nine-capability machine annex to the official master owner
+campaign, plus a byte-bound verifier and restart-safe Rust
+authorization/journal gate. It does not publish or activate a route. Dedicated
+command identity, exact schemas/fixtures, terminal corpus and owner evidence
+remain external. HTTP 202 stays non-terminal;
 `UNCERTAIN` disables blind retry and blocks same-target R4. Command kill switch
 and Paper/Sandbox/R3/R4 flags are independent of every read/query/SSE flag.
 
-### 4.5 D4 source-identity/cursor ruling
+### 4.5 Official owner-request entrypoint
+
+The only active Trading System request is
+`upgrade/backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`.
+It includes the N02/N03 incremental source, N06 evidence, N11 external reads,
+N12 commands, N15 Event/Artifact rulings and N13–N17 operational evidence.
+No component pack is sent independently. A future external capability amends
+the master revision; it does not create another free-standing request file.
+
+### 4.6 D4 source-identity/cursor ruling
 
 Status: `D4_OFFLINE_AUTHORIZATION_PREPARED /
 LIVE_D4_PREDECESSOR_BLOCKED`.

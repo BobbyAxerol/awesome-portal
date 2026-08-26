@@ -35,8 +35,8 @@ Kế hoạch chi tiết từng phase: các khối **Claude supplement** trong ch
 | EL-V2-10 | Density · copy budget · Insight polish (Bobby thêm 2026-08-25) | **F1–F9 sửa xong 2026-08-25, chờ Bobby duyệt hình ảnh** | audit md có số trước/sau ✓ · smoke 9 tile chart + nhãn SMOKE ✓ · `EquityChart` warnings + gap→tooltip + `compact` ✓ · tile grid cố định/level ✓ · `Hint` gấp 9 note cơ chế, 7 `purpose` rút ✓ · baseline re-record 1 lần (26 png, chỉ Execution) ✓ · **NỢ: xoá `alpha360.smoke.ts` khi BR-EX-34 giao** · BR-EX-40 treo | `AUDIT_DENSITY_AND_INSIGHT_2026-08-25.md`, `alpha360.smoke.ts`, `alpha360.fixtures.ts` (`withSmokeSeries`), `alpha360.test.tsx` (2 case smoke), `EquityChart.tsx` (`EnvelopeWarnings`), baseline `el-v2-08-alpha-tiles.png` re-record |
 | — | Codex D4 Source Facade runtime audit | `D4_SOURCE_RUNTIME_AUDITED / LOOPBACK_ONLY / PROXY_DISABLED` — facade `127.0.0.1:8011`, 4 GET allowlist (`/v1/orders,fills,positions,events`), contract `d4.paper-read.v1`; bounded retention/resource profile đã được ghi nhận, không mở traffic Portal | Frontend vẫn giữ Lane B inactive; chỉ chuyển reader sau EX-BE-08a và registry delivery-profile promotion riêng | `D4_PORTAL_SOURCE_HANDOFF.md`, `EX_BE_02_D4_SOURCE_FACADE_RUNTIME_OPTIMIZATION.md` |
 | — | Codex N01 D4 dormant closeout | `OFFLINE_IMPLEMENTATION_ACCEPTED / LIVE_CLOSEOUT_EVIDENCE_PENDING / D4_READER_DARK` — exact-label host guard đóng khi missed-start/qualifier-finished/revoked/expired, restore D2 dark không pull image; chưa mở owner window hay source traffic mới | Claude tiếp tục fixture/typed unavailable, không chọn Lane B; live reader chỉ sau zero-idle evidence + N02–N08 + promotion riêng | `EX_BE_02_D4_DORMANT_CLOSEOUT_DISCIPLINE.md` |
-| — | Codex N02 incremental source contract | `PORTAL_REQUEST_VERIFIER_COMPLETE / NARROW_REQUEST_SUPERSEDED / CONSOLIDATED_READ_PACK_PENDING / RUNTIME_V1_LOCKED` — request-only v2 verifier remains valid; narrow Paper-only handoff was stopped before implementation so N11 does not cause another TS change | Claude dùng typed gap/resync/retention/completeness fixtures, giữ Lane B fixture/unavailable; không chọn live reader trước owner acceptance + N03/N04 | `EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md`, `TRADING_SYSTEM_D4_PAPER_READ_V2_IMPLEMENTATION_REQUEST.md`, `CODEX_TO_CLAUDE_N02_INCREMENTAL_SOURCE_CONTRACT_HANDOFF.md` |
-| — | Codex N03 owner implementation gate | `PORTAL_ACCEPTANCE_HARNESS_COMPLETE / NARROW_REQUEST_SUPERSEDED / CONSOLIDATED_READ_PACK_PENDING / OWNER_IMPLEMENTATION_PENDING / RUNTIME_V1_DORMANT` — source owner instructed to keep worktree/runtime dormant and wait for one capability-negotiated N02/N03/N11 pack | Claude chỉ tiếp tục fixture/parity typed states; không chọn Lane B trước N02+N03 owner acceptance và N04 Rust consumer | `EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md`, `TRADING_SYSTEM_D4_PAPER_READ_V2_IMPLEMENTATION_REQUEST.md`, `CODEX_TO_CLAUDE_N03_OWNER_IMPLEMENTATION_HANDOFF.md` |
+| — | Codex N02 incremental source contract | `PORTAL_REQUEST_VERIFIER_COMPLETE / MASTER_OWNER_REQUEST_READY / OWNER_PUBLICATION_PENDING / RUNTIME_V1_LOCKED` — request-only v2 verifier remains valid; N02 is a machine annex of the single N02–N17 owner campaign | Claude dùng typed gap/resync/retention/completeness fixtures, giữ Lane B fixture/unavailable; không chọn live reader trước owner acceptance + N03/N04 | `TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`, `EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md`, `CODEX_TO_CLAUDE_N02_INCREMENTAL_SOURCE_CONTRACT_HANDOFF.md` |
+| — | Codex N03 owner implementation gate | `PORTAL_ACCEPTANCE_HARNESS_COMPLETE / MASTER_OWNER_REQUEST_READY / OWNER_IMPLEMENTATION_PENDING / RUNTIME_V1_DORMANT` — source owner receives N03 together with N02/N11/N12/N15, not through a phase-local request | Claude chỉ tiếp tục fixture/parity typed states; không chọn Lane B trước N02+N03 owner acceptance và N04 Rust consumer | `TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`, `EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md`, `CODEX_TO_CLAUDE_N03_OWNER_IMPLEMENTATION_HANDOFF.md` |
 | — | Codex N04 lease-aware Rust shared consumer | `SOURCE_DARK_CORE_COMPLETE / POSTGRESQL_FENCING_COMPLETE / N02_N03_WIRE_INTEGRATION_PENDING / LIVE_SOURCE_OFF` — singleton demand-aware core, bounded retry/circuit, typed redacted snapshot, DB-time lease + monotonic fence, atomic facts/DELETE/cursor; offline/fresh-PG/restart/restore green | Claude consume exact redacted snapshots, render Dormant/Idle/Commit/Backoff/Circuit/Rebuild distinctly; no hashes/tokens/per-screen polling/Lane B | `EX_BE_03_N04_LEASE_AWARE_RUST_SHARED_CONSUMER.md`, `CODEX_TO_CLAUDE_N04_LEASE_AWARE_CONSUMER_HANDOFF.md` |
 | — | Codex N05 retention, recovery and cleanup | `SOURCE_DARK_CORE_COMPLETE / LIVE_POLICY_INACTIVE` — immutable lifecycle policy/checkpoint, five-state retention, new-epoch recovery and rollback-window/lease-gated cleanup; fresh-PG/restart/restore green | Claude consumes typed retention/recovery states only; no client-side retention guess or cleanup control | `EX_BE_03_N05_RETENTION_RECOVERY_CLEANUP.md` |
 | — | Codex N06 real-source qualification | `PORTAL_QUALIFICATION_AUTHORITY_COMPLETE / OWNER_PAPER_FAST_PROFILE_APPROVED / REAL_SOURCE_BYTES_PENDING / SOURCE_DARK` — exact N02/N03/image/schema binding, parity and 12 drills; 30m/≤30s Paper-fast and separate 24h/≤300s extended profiles; neither acceptance can activate registry/runtime | Claude may use sanitized template/state fixtures; never label synthetic or candidate evidence as source active | `EX_BE_03_N06_REAL_SOURCE_QUALIFICATION_AND_SOAK.md`, `CODEX_TO_CLAUDE_N06_REAL_SOURCE_QUALIFICATION_HANDOFF.md` |
@@ -2650,6 +2650,8 @@ Backend report:
 Claude handoff:
 [`CODEX_TO_CLAUDE_N11_EXTERNAL_READ_HANDOFF.md`](./CODEX_TO_CLAUDE_N11_EXTERNAL_READ_HANDOFF.md).
 This checkpoint does not authorize any Trading System call or remove any fixture/unavailable label.
+N11 is a machine annex of the single official owner campaign, not a separate
+handoff.
 
 ### N12 backend — live command publication/relay gate (2026-08-26)
 
@@ -2665,3 +2667,15 @@ Backend report:
 Claude handoff:
 [`CODEX_TO_CLAUDE_N12_COMMAND_RELAY_HANDOFF.md`](./CODEX_TO_CLAUDE_N12_COMMAND_RELAY_HANDOFF.md).
 Read/query/SSE health never enables a command; every existing runtime command flag remains false.
+N12 is a separately gated machine annex of the same official owner campaign.
+
+### Official Trading System owner campaign (2026-08-26)
+
+The only document Bobby should send is
+[`TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`](../../backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md).
+It consolidates N02/N03/N06/N11/N12, N15 Event/Artifact rulings and the N13–N17
+operational evidence ladder. Older D4/Claude request files are audit-only;
+component contract directories are machine annexes. Current inspection found
+no further known Trading System feature request after this campaign. Claude
+continues to consume typed unavailable/partial states and must not infer that a
+master request activates a source, screen or command.

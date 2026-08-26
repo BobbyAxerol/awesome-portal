@@ -1,10 +1,14 @@
-# N03 Trading-System-owned Incremental Source Implementation Request
+# N03 Trading-System-owned Incremental Source Implementation Machine Annex
 
 Status: `REQUEST_ONLY / OWNER_IMPLEMENTATION_NOT_PUBLISHED / NO_RUNTIME_AUTHORITY`
 
-This directory defines the sanitized evidence package required to accept a
-Trading-System-owned implementation of the N02 contract. It is not source code,
-an image, a deployment manifest or permission for Portal to modify Trading System.
+This directory is the N03 machine annex of
+`upgrade/backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`.
+Do not send or implement it as a separate owner request. It defines the
+sanitized evidence package required to accept a Trading-System-owned
+implementation of the N02 contract inside the single coordinated campaign. It
+is not source code, an image, a deployment manifest or permission for Portal to
+modify Trading System.
 
 An owner package contains exactly:
 
@@ -35,4 +39,3 @@ python3 scripts/execution-n03-implementation-verify.py \
 Final owner publication check uses `--mode acceptance` with the same two absolute
 paths. Passing it proves only immutable, non-secret implementation evidence. It
 does not start a service, open traffic, import files or promote a Portal reader.
-

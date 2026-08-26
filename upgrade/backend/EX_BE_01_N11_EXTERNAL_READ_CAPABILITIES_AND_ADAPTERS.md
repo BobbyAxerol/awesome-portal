@@ -26,8 +26,11 @@ No Trading System code, database, Redis, CLI, broker, AWS-HK listener, mTLS
 configuration, delegated JWT issuer, Source Proxy location, registry delivery
 profile or Portal runtime was changed.
 
-## 2. Consolidated capability surface
+## 2. Master-request capability annex
 
+N11 is no longer a separate owner request. It is the external-read machine
+annex of
+[`TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`](./TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md).
 Twenty-four exact `GET` capabilities are locked:
 
 | Group | Capabilities |
@@ -131,8 +134,8 @@ network rule, secret, deployment or external state to undo.
 
 ## 8. Next backend phase
 
-N12 is the live command relay contract/authority phase. Keep it separate from
-this read-only pack: read failure must never grant command authority. Before a
-final owner handoff, append N12's exact command publication request so the
-Trading System owner receives one coordinated read+command packet rather than
-another sequence of narrow requests.
+N12 is implemented as an independently gated command annex, while the owner
+receives N02/N03/N11/N12/N15 through one master request. Read failure still
+cannot grant command authority. The next Portal phase is N13 staged activation
+after the owner returns accepted bytes; no new Trading System request document
+is expected.
