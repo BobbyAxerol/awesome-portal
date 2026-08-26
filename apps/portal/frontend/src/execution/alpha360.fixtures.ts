@@ -164,7 +164,7 @@ export function alpha360(over: Partial<AlphaThreeSixtyData> = {}): AlphaThreeSix
     owner: "Stan",
     r1Id: "AP-118",
     r2Id: "AP-152",
-    passportHref: "#passport",
+    passportHref: "/deployments/alphas/av_2041?tab=Audit",
     envelope: { authority: "EXECUTION", asOf: "2026-08-22T10:42:01Z", freshness: "OK" },
     venueOptions: ["All", "BINANCE", "OKX", "DERIBIT", "VN MARKET"],
     portfolioOptions: ["PF-CRYPTO", "PF-MAIN"],

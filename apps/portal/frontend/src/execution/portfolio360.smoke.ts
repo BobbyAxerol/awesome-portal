@@ -72,7 +72,7 @@ export const PF_SMOKE_DATA = {
   ],
   links: [
     { label: "Capital ledger →", href: "?tab=Capital+Ledger" }, { label: "Incidents (0 open) →", href: "?tab=Incidents" },
-    { label: "Reconciliation findings (0) →", href: "/deployments/reconciliation" }, { label: "Approvals: R2 AP-207 · AP-311 →", href: "?tab=Approvals" },
+    { label: "Reconciliation findings (0) →", href: "/deployments/accounts" }, { label: "Approvals: R2 AP-207 · AP-311 →", href: "?tab=Approvals" },
   ],
 };
 
@@ -132,11 +132,11 @@ export const PF_SMOKE_TABS = {
   },
   approvals: {
     rows: [
-      { id: "AP-311", href: "/governance/approvals/AP-311", gate: "LIVE_CANARY", gateTone: "bad", subject: "Grid v2.1 → BINANCE canary", decision: "APPROVED", approvers: "Lan + Risk (dual)", decided: "2026-07-30", conditions: "2 active" },
-      { id: "AP-259", href: "/governance/approvals/AP-259", gate: "R2", gateTone: "accent", subject: "MM v1.1 → OKX sandbox", decision: "APPROVED_WITH_CONDITIONS", approvers: "Lan, Minh", decided: "2026-07-18", conditions: "1 active · exp 2026-10-01" },
+      { id: "AP-311", href: "/governance/approvals/AP-311/r2", gate: "LIVE_CANARY", gateTone: "bad", subject: "Grid v2.1 → BINANCE canary", decision: "APPROVED", approvers: "Lan + Risk (dual)", decided: "2026-07-30", conditions: "2 active" },
+      { id: "AP-259", href: "/governance/approvals/AP-259/r2", gate: "R2", gateTone: "accent", subject: "MM v1.1 → OKX sandbox", decision: "APPROVED_WITH_CONDITIONS", approvers: "Lan, Minh", decided: "2026-07-18", conditions: "1 active · exp 2026-10-01" },
       { id: "PX-31", href: "/governance/exit-reviews/PX-31", gate: "PAPER_EXIT", gateTone: "paper", subject: "MM v1.1 paper observation", decision: "APPROVED", approvers: "Lan", decided: "2026-07-15", conditions: "0" },
-      { id: "AP-152", href: "/governance/approvals/AP-152", gate: "R2", gateTone: "accent", subject: "Grid v2.1 → DERIBIT paper", decision: "APPROVED_WITH_CONDITIONS", approvers: "Lan, Risk", decided: "2026-06-28", conditions: "1 active" },
-      { id: "AP-118", href: "/governance/approvals/AP-118", gate: "R1", gateTone: "accent", subject: "Grid v2.1 · RC-38", decision: "APPROVED", approvers: "Minh, Lan", decided: "2026-06-20", conditions: "0" },
+      { id: "AP-152", href: "/governance/approvals/AP-152/r2", gate: "R2", gateTone: "accent", subject: "Grid v2.1 → DERIBIT paper", decision: "APPROVED_WITH_CONDITIONS", approvers: "Lan, Risk", decided: "2026-06-28", conditions: "1 active" },
+      { id: "AP-118", href: "/governance/approvals/AP-118/r1", gate: "R1", gateTone: "accent", subject: "Grid v2.1 · RC-38", decision: "APPROVED", approvers: "Minh, Lan", decided: "2026-06-20", conditions: "0" },
     ],
     foot: "conditions are typed objects (owner · deadline · expiry · blocking) — expiring conditions surface in Incidents 7 days ahead",
   },

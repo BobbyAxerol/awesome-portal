@@ -225,7 +225,7 @@ export function PfLeadership({ lens, onLens }: { lens: boolean; onLens: () => vo
           </div>
         ))}
         <p className="exec-pf2-note">{l.meta}</p>
-        <div className="exec-pf2-insight"><b data-tone="warn">{l.insight.code}</b> · {l.insight.grade} · <a href="#evidence">evidence refs →</a><br /><span className="exec-pf2-dim">{l.insight.text}</span></div>
+        <div className="exec-pf2-insight"><b data-tone="warn">{l.insight.code}</b> · {l.insight.grade} · <a href="/deployments/portfolios/PF-CRYPTO?tab=Audit">evidence refs →</a><br /><span className="exec-pf2-dim">{l.insight.text}</span></div>
       </div>
     </section>
   );

@@ -452,10 +452,10 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
         {passportHref ? <a className="exec-a3-btn" href={passportHref}>Artifact passport →</a> : null}
       </header>
       <div className="exec-a3-meta">
-        <span>artifact <a href={passportHref ?? "#"} title={artifactDigest}>{artifactDigest.length > 20 ? shortDigest(artifactDigest) : artifactDigest}</a></span>
+        <span>artifact <a href={passportHref ?? `/deployments/alphas/${alphaId}?tab=Audit`} title={artifactDigest}>{artifactDigest.length > 20 ? shortDigest(artifactDigest) : artifactDigest}</a></span>
         <span>owner {owner}</span>
-        {r1Id ? <span>R1 <a href={`/governance/approvals/${r1Id}`}>{r1Id}</a></span> : null}
-        {r2Id ? <span>R2 <a href={`/governance/approvals/${r2Id}`}>{r2Id}</a></span> : null}
+        {r1Id ? <span>R1 <a href={`/governance/approvals/${r1Id}/r1`}>{r1Id}</a></span> : null}
+        {r2Id ? <span>R2 <a href={`/governance/approvals/${r2Id}/r2`}>{r2Id}</a></span> : null}
         <span>current stages: {stagesNow.length ? stagesNow.map((st, i) => <span key={st}>{i ? " · " : ""}<b data-stage={st}>{st}</b></span>) : <span className="exec-a3-mute">none in scope</span>}</span>
       </div>
 

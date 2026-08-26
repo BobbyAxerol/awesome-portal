@@ -69,7 +69,7 @@ export const FLEET_SMOKE_DATA = {
       portfolios: [{ label: "PF-CRYPTO", href: "/deployments/portfolios/PF-CRYPTO" }, { label: "PF-MAIN", href: null }],
       stages: [{ label: "SANDBOX cert 5/7", tone: "sandbox" }, { label: "PAPER 12/30", tone: "paper" }], stageKeys: ["sandbox", "paper"],
       alloc: "60,000", pnl: "+342.10", pnlCcy: "USDT", dd: "−0.9%", spark: [18, 17, 18, 15, 16, 12, 13, 11, 10, 9],
-      health: { text: "R2 AP-352 OVERDUE 26h", tone: "warn", tail: " · ", link: { label: "review →", href: "/governance/approvals/AP-352" } },
+      health: { text: "R2 AP-352 OVERDUE 26h", tone: "warn", tail: " · ", link: { label: "review →", href: "/governance/approvals/AP-352/r2" } },
       note: "dep_74 paper BINANCE · paper-binance-carry-v32 · PF-CRYPTO — dep_77 sandbox OKX TESTNET · acct-sbx-carry-okx · target PF-MAIN (AP-352)",
       noteLinks: [{ label: "paper-binance-carry-v32", href: "/deployments/accounts/paper-binance-carry-v32" }, { label: "acct-sbx-carry-okx", href: "/deployments/accounts/acct-sbx-carry-okx" }],
     },
@@ -93,7 +93,7 @@ export const FLEET_SMOKE_DATA = {
       alpha: "RSI v1.7", version: "", href: null, id: "RC-41", digest: "research — no deployments yet", status: "", owner: "Minh", portfolios: [],
       stages: [{ label: "RESEARCH", tone: "research", dashed: true }], stageKeys: ["research"],
       alloc: null, pnl: null, dd: null, spark: null, sparkNote: "backtest only",
-      health: { text: "R1 ", tone: "mute", link: { label: "AP-201", href: "/governance/approvals/AP-201" }, tail: " quorum 1/2 · due 22h" },
+      health: { text: "R1 ", tone: "mute", link: { label: "AP-201", href: "/governance/approvals/AP-201/r1" }, tail: " quorum 1/2 · due 22h" },
       note: "fleet row exists from strategies registry — deployments appear only after R2 grants capital", dim: true,
     },
     {

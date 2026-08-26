@@ -249,7 +249,7 @@ export function LiveFullOperationsScreen({
                     {smoke.full.contribution.bars.map((v, i) => <rect key={i} x={16 + i * 44} y={v >= 0 ? 150 - v : 150} width="30" height={Math.abs(v)} fill={v >= 0 ? "var(--good-bg)" : "var(--bad-bg)"} stroke={v >= 0 ? "var(--good)" : "var(--bad)"} strokeWidth="0.5" />)}
                   </svg>
                 </div>
-                <div className="exec-lf-facts"><span>30d contribution <b data-tone="good">{smoke.full.contribution.total}</b></span><span>cost drag {smoke.full.contribution.drag}</span><span className="exec-pf2-dim">detailed edge decomposition → <a href={`/deployments/portfolios/${live.portfolioId ?? "PF-CRYPTO"}`}>Portfolio 360°</a> · research evidence → <a href="#passport">Artifact Passport</a> (drill-down)</span></div>
+                <div className="exec-lf-facts"><span>30d contribution <b data-tone="good">{smoke.full.contribution.total}</b></span><span>cost drag {smoke.full.contribution.drag}</span><span className="exec-pf2-dim">detailed edge decomposition → <a href={`/deployments/portfolios/${live.portfolioId ?? "PF-CRYPTO"}`}>Portfolio 360°</a> · research evidence → <a href="/deployments/alphas/av_2041?tab=Audit">Artifact Passport</a> (drill-down)</span></div>
               </section>
             </div>
             <p className="exec-af-smoke">! {smoke.warning}</p>
