@@ -1,0 +1,18 @@
+{
+  "schema_version": "portal.release-owner-decision.v1",
+  "decision_id": "reldec_00000000000000000000000000",
+  "release_manifest_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "candidate_evidence_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "decision": "PENDING",
+  "decided_by": null,
+  "decided_at": null,
+  "rationale": "Await exact source-dark release evidence and owner review.",
+  "scope": "PORTAL_SOURCE_DARK_ONLY",
+  "vulnerability_evidence_accepted": false,
+  "deployment_authorized": false,
+  "source_activation_authorized": false,
+  "query_activation_authorized": false,
+  "sse_activation_authorized": false,
+  "command_activation_authorized": false,
+  "trading_system_release_accepted": false
+}

@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://primusspark.com/schemas/portal-release-manifest.v1.schema.json",
+  "title": "Portal immutable multi-service release manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "release_id", "source_commit", "source_ref", "image_tag",
+    "delivery_profile", "created_at", "authority", "services", "profile_bindings",
+    "compatibility_matrix", "migration_chain", "candidate_evidence", "rollback"
+  ],
+  "properties": {
+    "schema_version": {"const": "portal.release-manifest.v1"},
+    "release_id": {"type": "string", "pattern": "^rel_[0-9A-HJKMNP-TV-Z]{26}$"},
+    "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "source_ref": {"const": "refs/heads/main"},
+    "image_tag": {"type": "string", "pattern": "^sha-[0-9a-f]{40}$"},
+    "delivery_profile": {"const": "source-dark"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "authority": {
+      "const": {
+        "portal_release": true,
+        "trading_system_release": false,
+        "source_activation": false,
+        "query_activation": false,
+        "sse_activation": false,
+        "command_activation": false,
+        "database_copy_between_channels": false
+      }
+    },
+    "services": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["service_id", "cell", "image", "image_digest", "source_enabled", "command_enabled"],
+        "properties": {
+          "service_id": {"enum": ["portal-api", "portal-web", "control-api", "roadmap-task-board-api", "execution-edge", "source-proxy"]},
+          "cell": {"enum": ["SGP_RESEARCH", "AWS_HK_EXECUTION"]},
+          "image": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._/-]*@sha256:[0-9a-f]{64}$"},
+          "image_digest": {"$ref": "#/$defs/digest"},
+          "source_enabled": {"const": false},
+          "command_enabled": {"const": false}
+        }
+      }
+    },
+    "profile_bindings": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["profile_id", "compose_file", "compose_sha256", "project_name", "database_namespace"],
+        "properties": {
+          "profile_id": {"enum": ["research_sgp_stable", "execution_aws_hk_dark"]},
+          "compose_file": {"type": "string"},
+          "compose_sha256": {"$ref": "#/$defs/digest"},
+          "project_name": {"type": "string"},
+          "database_namespace": {"type": "string"}
+        }
+      }
+    },
+    "compatibility_matrix": {"$ref": "#/$defs/fileDigest"},
+    "migration_chain": {
+      "type": "object",
+      "required": ["directory", "file_count", "sha256", "policy"],
+      "additionalProperties": false,
+      "properties": {
+        "directory": {"const": "apps/control-api/migrations"},
+        "file_count": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/digest"},
+        "policy": {"const": "FORWARD_ONLY_WITH_PROVEN_RESTORE_AND_FORWARD_FIX"}
+      }
+    },
+    "candidate_evidence": {"$ref": "#/$defs/fileDigest"},
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["previous_release_manifest_sha256", "strategy", "runbook", "runbook_sha256"],
+      "properties": {
+        "previous_release_manifest_sha256": {"$ref": "#/$defs/digest"},
+        "strategy": {"const": "PER_CELL_SIGNED_IMAGE_ROLLBACK_FORWARD_FIX_DB"},
+        "runbook": {"const": "deploy/runbooks/portal-n14a-source-dark-release-and-rollback.md"},
+        "runbook_sha256": {"$ref": "#/$defs/digest"}
+      }
+    }
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "fileDigest": {
+      "type": "object",
+      "required": ["file", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "file": {"type": "string"},
+        "sha256": {"$ref": "#/$defs/digest"}
+      }
+    }
+  }
+}

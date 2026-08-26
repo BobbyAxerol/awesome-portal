@@ -1,0 +1,39 @@
+{
+  "schema_version": "portal.release-manifest.v1",
+  "release_id": "rel_00000000000000000000000000",
+  "source_commit": "0000000000000000000000000000000000000000",
+  "source_ref": "refs/heads/main",
+  "image_tag": "sha-0000000000000000000000000000000000000000",
+  "delivery_profile": "source-dark",
+  "created_at": "2026-08-26T00:00:00Z",
+  "authority": {
+    "portal_release": true,
+    "trading_system_release": false,
+    "source_activation": false,
+    "query_activation": false,
+    "sse_activation": false,
+    "command_activation": false,
+    "database_copy_between_channels": false
+  },
+  "services": [
+    {"service_id": "portal-api", "cell": "SGP_RESEARCH", "image": "ghcr.io/example/portal-portal-api@sha256:0000000000000000000000000000000000000000000000000000000000000000", "image_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "source_enabled": false, "command_enabled": false},
+    {"service_id": "portal-web", "cell": "SGP_RESEARCH", "image": "ghcr.io/example/portal-portal-web@sha256:0000000000000000000000000000000000000000000000000000000000000000", "image_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "source_enabled": false, "command_enabled": false},
+    {"service_id": "control-api", "cell": "SGP_RESEARCH", "image": "ghcr.io/example/portal-control-api@sha256:0000000000000000000000000000000000000000000000000000000000000000", "image_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "source_enabled": false, "command_enabled": false},
+    {"service_id": "roadmap-task-board-api", "cell": "SGP_RESEARCH", "image": "ghcr.io/example/portal-roadmap-task-board-api@sha256:0000000000000000000000000000000000000000000000000000000000000000", "image_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "source_enabled": false, "command_enabled": false},
+    {"service_id": "execution-edge", "cell": "AWS_HK_EXECUTION", "image": "ghcr.io/example/portal-execution-edge@sha256:0000000000000000000000000000000000000000000000000000000000000000", "image_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "source_enabled": false, "command_enabled": false},
+    {"service_id": "source-proxy", "cell": "AWS_HK_EXECUTION", "image": "ghcr.io/example/portal-source-proxy@sha256:0000000000000000000000000000000000000000000000000000000000000000", "image_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "source_enabled": false, "command_enabled": false}
+  ],
+  "profile_bindings": [
+    {"profile_id": "research_sgp_stable", "compose_file": "deploy/compose.production.yaml", "compose_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "project_name": "portal-stable", "database_namespace": "portal-stable_portal-postgres-data"},
+    {"profile_id": "execution_aws_hk_dark", "compose_file": "deploy/compose.execution-edge.yaml", "compose_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "project_name": "portal-execution-edge", "database_namespace": "portal-execution-projection-d4"}
+  ],
+  "compatibility_matrix": {"file": "compatibility-matrix.json", "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+  "migration_chain": {"directory": "apps/control-api/migrations", "file_count": 0, "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "policy": "FORWARD_ONLY_WITH_PROVEN_RESTORE_AND_FORWARD_FIX"},
+  "candidate_evidence": {"file": "release-candidate-evidence.json", "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+  "rollback": {
+    "previous_release_manifest_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "strategy": "PER_CELL_SIGNED_IMAGE_ROLLBACK_FORWARD_FIX_DB",
+    "runbook": "deploy/runbooks/portal-n14a-source-dark-release-and-rollback.md",
+    "runbook_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://primusspark.com/schemas/portal-release-compatibility-matrix.v1.schema.json",
+  "title": "Portal source-dark release compatibility matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "delivery_profile", "portal_contracts", "services", "trading_system", "activation"],
+  "properties": {
+    "schema_version": {"const": "portal.release-compatibility-matrix.v1"},
+    "delivery_profile": {"const": "source-dark"},
+    "portal_contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["staged_activation", "execution_query", "execution_realtime", "execution_governance", "execution_operations"],
+      "properties": {
+        "staged_activation": {"type": "string"},
+        "execution_query": {"type": "string"},
+        "execution_realtime": {"type": "string"},
+        "execution_governance": {"type": "string"},
+        "execution_operations": {"type": "string"}
+      }
+    },
+    "services": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["service_id", "cell", "required"],
+        "properties": {
+          "service_id": {"enum": ["portal-api", "portal-web", "control-api", "roadmap-task-board-api", "execution-edge", "source-proxy"]},
+          "cell": {"enum": ["SGP_RESEARCH", "AWS_HK_EXECUTION"]},
+          "required": {"const": true}
+        }
+      }
+    },
+    "trading_system": {
+      "const": {
+        "owner_campaign_revision": "portal.execution.trading-system-owner-request.v1",
+        "owner_return_status": "PENDING_N14B",
+        "source_contract": "UNBOUND",
+        "source_image_digest": "UNBOUND",
+        "gateway_image_digest": "UNBOUND"
+      }
+    },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projection", "query", "sse", "command_r1", "command_r2", "command_r3", "command_r4"],
+      "properties": {
+        "projection": {"const": false},
+        "query": {"const": false},
+        "sse": {"const": false},
+        "command_r1": {"const": false},
+        "command_r2": {"const": false},
+        "command_r3": {"const": false},
+        "command_r4": {"const": false}
+      }
+    }
+  }
+}

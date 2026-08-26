@@ -1437,6 +1437,21 @@ activation or the phase):**
   a rollback to fixture. Owner import and real promotion remain N13B. See
   [`EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md`](./backend/EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md).
 
+- **N14A Portal release authority (2026-08-26):** an exact six-service
+  `image@sha256` manifest now binds the protected-main Portal commit,
+  source-dark compatibility/profile matrix, migration chain, candidate
+  evidence and rollback runbook. BuildKit SBOM/SLSA, Trivy and keyless Cosign
+  evidence cover all six images; production requires the exact candidate run,
+  reviewed manifest digest, vulnerability acceptance and a separately signed
+  `ACCEPT_SOURCE_DARK` decision. Stable SGP uses project `portal-stable`, port
+  18081, distinct volumes and digest-only service images; dev remains project
+  `portal`, port 8080 and isolated state. Seventeen security/release tests,
+  actionlint and a real three-volume PostgreSQL backup/restore/forward-fix
+  rehearsal pass. Status is `N14A_COMPLETE_SOURCE_DARK /
+  N14B_OWNER_RELEASE_EVIDENCE_PENDING`; no source/Query/SSE/command flag,
+  AWS-HK or Trading System route changed. See
+  [`EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md`](./backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md).
+
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
   workload-identity/window gates precede D2, then authenticated transport and

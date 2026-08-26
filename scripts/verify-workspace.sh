@@ -21,6 +21,7 @@ for required in \
   "${ROOT_DIR}/compose.yaml" \
   "${ROOT_DIR}/deploy/compose.production.yaml" \
   "${ROOT_DIR}/deploy/.env.production.example" \
+  "${ROOT_DIR}/deploy/.env.development.example" \
   "${ROOT_DIR}/constraints/portal.txt" \
   "${ROOT_DIR}/vendor/hmd-reader/README.md" \
   "${ROOT_DIR}/.gitignore" \
@@ -416,6 +417,22 @@ for required in \
   "${ROOT_DIR}/apps/control-api/test/staged-activation.spec.ts" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N13A_STAGED_ACTIVATION_HANDOFF.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md" \
+  "${ROOT_DIR}/deploy/manifests/deployment-profile.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/deployment-profiles.source-dark.json" \
+  "${ROOT_DIR}/deploy/manifests/portal-release-compatibility-matrix.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/compatibility-matrix.source-dark.json" \
+  "${ROOT_DIR}/deploy/manifests/portal-release-manifest.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/portal-release-candidate-evidence.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/portal-release-owner-decision.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/release-manifest.template.json" \
+  "${ROOT_DIR}/deploy/manifests/release-candidate-evidence.template.json" \
+  "${ROOT_DIR}/deploy/manifests/release-owner-decision.template.json" \
+  "${ROOT_DIR}/deploy/runbooks/portal-n14a-source-dark-release-and-rollback.md" \
+  "${ROOT_DIR}/scripts/portal-release-authority.py" \
+  "${ROOT_DIR}/scripts/test_portal_release_authority.py" \
+  "${ROOT_DIR}/scripts/portal-release-authority-test.sh" \
   "${ROOT_DIR}/.github/workflows/publish-images.yml" \
   "${ROOT_DIR}/deploy/execution-d1/README.md" \
   "${ROOT_DIR}/deploy/execution-d1/owner-input.env.example" \
@@ -1021,6 +1038,23 @@ for tracked_source in \
   apps/control-api/test/staged-activation.spec.ts \
   upgrade/backend/EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md \
   upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N13A_STAGED_ACTIVATION_HANDOFF.md \
+  upgrade/backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md \
+  deploy/.env.development.example \
+  deploy/manifests/deployment-profile.v1.schema.json \
+  deploy/manifests/deployment-profiles.source-dark.json \
+  deploy/manifests/portal-release-compatibility-matrix.v1.schema.json \
+  deploy/manifests/compatibility-matrix.source-dark.json \
+  deploy/manifests/portal-release-manifest.v1.schema.json \
+  deploy/manifests/portal-release-candidate-evidence.v1.schema.json \
+  deploy/manifests/portal-release-owner-decision.v1.schema.json \
+  deploy/manifests/release-manifest.template.json \
+  deploy/manifests/release-candidate-evidence.template.json \
+  deploy/manifests/release-owner-decision.template.json \
+  deploy/runbooks/portal-n14a-source-dark-release-and-rollback.md \
+  scripts/portal-release-authority.py \
+  scripts/test_portal_release_authority.py \
+  scripts/portal-release-authority-test.sh \
   apps/control-api/src/auth/auth.service.ts \
   apps/control-api/src/auth/auth.controller.ts \
   apps/control-api/src/auth/argon.ts \
@@ -1069,6 +1103,16 @@ command -v python3 >/dev/null 2>&1 || {
 
 for json_contract in \
   "${ROOT_DIR}/apps/portal/registry/registry.json" \
+  "${ROOT_DIR}/deploy/manifests/deployment-profile.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/deployment-profiles.source-dark.json" \
+  "${ROOT_DIR}/deploy/manifests/portal-release-compatibility-matrix.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/compatibility-matrix.source-dark.json" \
+  "${ROOT_DIR}/deploy/manifests/portal-release-manifest.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/portal-release-candidate-evidence.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/portal-release-owner-decision.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/release-manifest.template.json" \
+  "${ROOT_DIR}/deploy/manifests/release-candidate-evidence.template.json" \
+  "${ROOT_DIR}/deploy/manifests/release-owner-decision.template.json" \
   "${ROOT_DIR}/deploy/execution-d4/source-idle-evidence.json.example" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/owner-pack.manifest.example.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/incremental-contract.example.json" \
@@ -1138,6 +1182,7 @@ bash -n \
   "${ROOT_DIR}/scripts/verify-workspace.sh" \
   "${ROOT_DIR}/scripts/verify-migration-history.sh" \
   "${ROOT_DIR}/scripts/verify-release-channel.sh" \
+  "${ROOT_DIR}/scripts/portal-release-authority-test.sh" \
   "${ROOT_DIR}/scripts/smoke-stack.sh" \
   "${ROOT_DIR}/scripts/control-api-provision-keyrings.sh" \
   "${ROOT_DIR}/scripts/stage-hmd-reader-wheel.sh" \
@@ -1205,6 +1250,9 @@ python3 -m py_compile \
   "${ROOT_DIR}/scripts/test_execution_n11_external_read_verify.py" \
   "${ROOT_DIR}/scripts/execution-n12-command-publication-verify.py" \
   "${ROOT_DIR}/scripts/test_execution_n12_command_publication_verify.py"
+python3 -m py_compile \
+  "${ROOT_DIR}/scripts/portal-release-authority.py" \
+  "${ROOT_DIR}/scripts/test_portal_release_authority.py"
 python3 "${ROOT_DIR}/scripts/test_execution_iam_verify.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_authorization.py"
@@ -1219,6 +1267,8 @@ python3 "${ROOT_DIR}/scripts/execution-n11-external-read-verify.py" --mode templ
 python3 "${ROOT_DIR}/scripts/test_execution_n11_external_read_verify.py"
 python3 "${ROOT_DIR}/scripts/execution-n12-command-publication-verify.py" --mode template
 python3 "${ROOT_DIR}/scripts/test_execution_n12_command_publication_verify.py"
+python3 "${ROOT_DIR}/scripts/portal-release-authority.py" verify --mode template
+python3 "${ROOT_DIR}/scripts/test_portal_release_authority.py"
 "${ROOT_DIR}/scripts/test-execution-d4-storage.sh"
 "${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh"
 "${ROOT_DIR}/scripts/execution-d4-qualification-preflight-test.sh"

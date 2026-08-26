@@ -96,8 +96,8 @@ if [[ "${channel}" == "stable" ]]; then
     printf 'Stable origin is invalid: %s\n' "${public_origin}" >&2
     exit 1
   }
-  [[ -n "${image_tag}" && "${image_tag}" != "dev" ]] || {
-    printf 'Stable image tag must be immutable/released, not dev.\n' >&2
+  [[ "${image_tag}" =~ ^sha-[0-9a-f]{40}$ ]] || {
+    printf 'Stable image tag must be sha-<40 lowercase hexadecimal commit>.\n' >&2
     exit 1
   }
 else

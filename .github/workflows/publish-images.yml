@@ -17,6 +17,8 @@ on:
           - execution-d3
 
 permissions:
+  actions: read
+  checks: read
   contents: read
   packages: write
   id-token: write
@@ -31,7 +33,7 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 105
 
     steps:
       - name: Check out Portal source
@@ -47,6 +49,43 @@ jobs:
             printf 'Manual production image publication must run from main, found: %s\n' "${GITHUB_REF}" >&2
             exit 1
           fi
+
+      - name: Wait for commit-bound Portal CI release gates
+        if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || inputs.scope == 'all')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p release-gates
+          for attempt in $(seq 1 90); do
+            gh api \
+              -H 'Accept: application/vnd.github+json' \
+              "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs?per_page=100" \
+              > release-gates/portal-ci-check-runs.json
+            conclusion="$(jq -r '
+              [.check_runs[]
+                | select(.name == "Validate Portal monorepo stack")
+                | .conclusion] | last // "pending"
+            ' release-gates/portal-ci-check-runs.json)"
+            if [[ "${conclusion}" == "success" ]]; then
+              break
+            fi
+            if [[ "${conclusion}" =~ ^(failure|cancelled|timed_out|action_required|stale)$ ]]; then
+              printf 'Portal CI rejected release commit %s: %s\n' \
+                "${GITHUB_SHA}" "${conclusion}" >&2
+              exit 1
+            fi
+            if [[ "${attempt}" == "90" ]]; then
+              printf 'Timed out waiting for Portal CI on %s.\n' "${GITHUB_SHA}" >&2
+              exit 1
+            fi
+            sleep 30
+          done
+          jq -e '
+            .check_runs
+            | any(.name == "Validate Portal monorepo stack"
+                and .head_sha == env.GITHUB_SHA
+                and .conclusion == "success")
+          ' release-gates/portal-ci-check-runs.json >/dev/null
 
       - name: Derive lowercase image prefix
         id: image-prefix
@@ -154,6 +193,7 @@ jobs:
             | sha256sum -c -
 
       - name: Build and publish API image
+        id: portal-api-build
         if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all'
         uses: docker/build-push-action@v6
         with:
@@ -164,10 +204,13 @@ jobs:
           push: true
           tags: ${{ steps.api-meta.outputs.tags }}
           labels: ${{ steps.api-meta.outputs.labels }}
+          provenance: mode=max
+          sbom: true
           cache-from: type=gha,scope=portal-api
           cache-to: type=gha,mode=max,scope=portal-api
 
       - name: Build and publish web image
+        id: portal-web-build
         if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all'
         uses: docker/build-push-action@v6
         with:
@@ -176,6 +219,8 @@ jobs:
           push: true
           tags: ${{ steps.web-meta.outputs.tags }}
           labels: ${{ steps.web-meta.outputs.labels }}
+          provenance: mode=max
+          sbom: true
           cache-from: type=gha,scope=portal-web
           cache-to: type=gha,mode=max,scope=portal-web
 
@@ -195,6 +240,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=control-api
 
       - name: Build and publish Roadmap & Task Board API image
+        id: roadmap-task-board-api-build
         if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all'
         uses: docker/build-push-action@v6
         with:
@@ -203,6 +249,8 @@ jobs:
           push: true
           tags: ${{ steps.roadmap-task-board-api-meta.outputs.tags }}
           labels: ${{ steps.roadmap-task-board-api-meta.outputs.labels }}
+          provenance: mode=max
+          sbom: true
           cache-from: type=gha,scope=roadmap-task-board-api
           cache-to: type=gha,mode=max,scope=roadmap-task-board-api
 
@@ -233,6 +281,93 @@ jobs:
           sbom: true
           cache-from: type=gha,scope=source-proxy
           cache-to: type=gha,mode=max,scope=source-proxy
+
+      - name: Scan Portal API for high and critical vulnerabilities
+        if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.image-prefix.outputs.value }}-portal-api@${{ steps.portal-api-build.outputs.digest }}
+          format: json
+          output: portal-api-trivy.json
+          exit-code: "0"
+          ignore-unfixed: false
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Reject critical Portal API vulnerabilities
+        if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.image-prefix.outputs.value }}-portal-api@${{ steps.portal-api-build.outputs.digest }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: false
+          vuln-type: os,library
+          severity: CRITICAL
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Scan Portal web for high and critical vulnerabilities
+        if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.image-prefix.outputs.value }}-portal-web@${{ steps.portal-web-build.outputs.digest }}
+          format: json
+          output: portal-web-trivy.json
+          exit-code: "0"
+          ignore-unfixed: false
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Reject critical Portal web vulnerabilities
+        if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.image-prefix.outputs.value }}-portal-web@${{ steps.portal-web-build.outputs.digest }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: false
+          vuln-type: os,library
+          severity: CRITICAL
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Scan Roadmap API for high and critical vulnerabilities
+        if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.image-prefix.outputs.value }}-roadmap-task-board-api@${{ steps.roadmap-task-board-api-build.outputs.digest }}
+          format: json
+          output: roadmap-task-board-api-trivy.json
+          exit-code: "0"
+          ignore-unfixed: false
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Reject critical Roadmap API vulnerabilities
+        if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.image-prefix.outputs.value }}-roadmap-task-board-api@${{ steps.roadmap-task-board-api-build.outputs.digest }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: false
+          vuln-type: os,library
+          severity: CRITICAL
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Scan execution edge for high and critical vulnerabilities
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -328,8 +463,21 @@ jobs:
           cosign sign --yes "${EXECUTION_EDGE_IMAGE}"
           cosign sign --yes "${SOURCE_PROXY_IMAGE}"
 
+      - name: Sign SGP Portal images by immutable digest
+        if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all'
+        env:
+          PORTAL_API_IMAGE: ${{ steps.image-prefix.outputs.value }}-portal-api@${{ steps.portal-api-build.outputs.digest }}
+          PORTAL_WEB_IMAGE: ${{ steps.image-prefix.outputs.value }}-portal-web@${{ steps.portal-web-build.outputs.digest }}
+          CONTROL_API_IMAGE: ${{ steps.image-prefix.outputs.value }}-control-api@${{ steps.control-api-build.outputs.digest }}
+          ROADMAP_API_IMAGE: ${{ steps.image-prefix.outputs.value }}-roadmap-task-board-api@${{ steps.roadmap-task-board-api-build.outputs.digest }}
+        run: |
+          cosign sign --yes "${PORTAL_API_IMAGE}"
+          cosign sign --yes "${PORTAL_WEB_IMAGE}"
+          cosign sign --yes "${CONTROL_API_IMAGE}"
+          cosign sign --yes "${ROADMAP_API_IMAGE}"
+
       - name: Sign D3 Control API by immutable digest
-        if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all' || inputs.scope == 'execution-d3'
+        if: github.event_name == 'workflow_dispatch' && inputs.scope == 'execution-d3'
         env:
           CONTROL_API_IMAGE: ${{ steps.image-prefix.outputs.value }}-control-api@${{ steps.control-api-build.outputs.digest }}
         run: cosign sign --yes "${CONTROL_API_IMAGE}"
@@ -406,6 +554,86 @@ jobs:
         with:
           name: execution-d3-publication-${{ github.sha }}
           path: release/execution-d3
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Verify all release images and generate N14A candidate
+        if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || inputs.scope == 'all')
+        env:
+          PORTAL_API_IMAGE: ${{ steps.image-prefix.outputs.value }}-portal-api@${{ steps.portal-api-build.outputs.digest }}
+          PORTAL_WEB_IMAGE: ${{ steps.image-prefix.outputs.value }}-portal-web@${{ steps.portal-web-build.outputs.digest }}
+          CONTROL_API_IMAGE: ${{ steps.image-prefix.outputs.value }}-control-api@${{ steps.control-api-build.outputs.digest }}
+          ROADMAP_API_IMAGE: ${{ steps.image-prefix.outputs.value }}-roadmap-task-board-api@${{ steps.roadmap-task-board-api-build.outputs.digest }}
+          EXECUTION_EDGE_IMAGE: ${{ steps.image-prefix.outputs.value }}-execution-edge@${{ steps.execution-edge-build.outputs.digest }}
+          SOURCE_PROXY_IMAGE: ${{ steps.image-prefix.outputs.value }}-source-proxy@${{ steps.source-proxy-build.outputs.digest }}
+        run: |
+          mkdir -p release/n14a-evidence
+          certificate_identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/publish-images.yml@${GITHUB_REF}"
+          issuer="https://token.actions.githubusercontent.com"
+
+          verify_release_image() {
+            service="$1"
+            image="$2"
+            cosign verify \
+              --certificate-identity "${certificate_identity}" \
+              --certificate-oidc-issuer "${issuer}" \
+              --output json "${image}" \
+              > "release/n14a-evidence/${service}-signature.json"
+            cosign verify-attestation \
+              --certificate-identity "${certificate_identity}" \
+              --certificate-oidc-issuer "${issuer}" \
+              --type spdxjson "${image}" \
+              > "release/n14a-evidence/${service}-sbom.json"
+            cosign verify-attestation \
+              --certificate-identity "${certificate_identity}" \
+              --certificate-oidc-issuer "${issuer}" \
+              --type slsaprovenance "${image}" \
+              > "release/n14a-evidence/${service}-provenance.json"
+          }
+
+          verify_release_image portal-api "${PORTAL_API_IMAGE}"
+          verify_release_image portal-web "${PORTAL_WEB_IMAGE}"
+          verify_release_image control-api "${CONTROL_API_IMAGE}"
+          verify_release_image roadmap-task-board-api "${ROADMAP_API_IMAGE}"
+          verify_release_image execution-edge "${EXECUTION_EDGE_IMAGE}"
+          verify_release_image source-proxy "${SOURCE_PROXY_IMAGE}"
+          cp \
+            portal-api-trivy.json \
+            portal-web-trivy.json \
+            control-api-trivy.json \
+            roadmap-task-board-api-trivy.json \
+            execution-edge-trivy.json \
+            source-proxy-trivy.json \
+            release/n14a-evidence/
+
+          python3 scripts/portal-release-authority.py generate \
+            --output-dir release/n14a-candidate \
+            --source-commit "${GITHUB_SHA}" \
+            --source-ref "${GITHUB_REF}" \
+            --evidence-dir release/n14a-evidence \
+            --image "portal-api=${PORTAL_API_IMAGE}" \
+            --image "portal-web=${PORTAL_WEB_IMAGE}" \
+            --image "control-api=${CONTROL_API_IMAGE}" \
+            --image "roadmap-task-board-api=${ROADMAP_API_IMAGE}" \
+            --image "execution-edge=${EXECUTION_EDGE_IMAGE}" \
+            --image "source-proxy=${SOURCE_PROXY_IMAGE}" \
+            --gate-evidence "contracts=release-gates/portal-ci-check-runs.json" \
+            --gate-evidence "control_api=release-gates/portal-ci-check-runs.json" \
+            --gate-evidence "research_backend=release-gates/portal-ci-check-runs.json" \
+            --gate-evidence "planning_backend=release-gates/portal-ci-check-runs.json" \
+            --gate-evidence "frontend=release-gates/portal-ci-check-runs.json" \
+            --gate-evidence "migration_restore=release-gates/portal-ci-check-runs.json" \
+            --gate-evidence "channel_isolation=release-gates/portal-ci-check-runs.json" \
+            --gate-evidence "rollback_forward_fix=release-gates/portal-ci-check-runs.json"
+          python3 scripts/portal-release-authority.py verify \
+            --mode candidate --pack-dir release/n14a-candidate
+
+      - name: Upload N14A source-dark release candidate
+        if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || inputs.scope == 'all')
+        uses: actions/upload-artifact@v7
+        with:
+          name: portal-release-candidate-${{ github.sha }}
+          path: release/n14a-candidate
           if-no-files-found: error
           retention-days: 30
 

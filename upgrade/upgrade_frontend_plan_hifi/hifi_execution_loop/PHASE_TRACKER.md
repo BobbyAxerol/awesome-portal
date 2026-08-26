@@ -2702,7 +2702,7 @@ master request activates a source, screen or command.
 | Phase | Lane A — Portal continues now | Lane B — external/live gate | Current status |
 |---|---|---|---|
 | N13 | delivery-profile state machine, repositories/APIs, evidence validation, rollback fixtures | import owner bytes, Paper shadow/qualification and staged promotion | `N13A_COMPLETE_SOURCE_DARK / N13B_MASTER_OWNER_RETURN_PENDING` |
-| N14 | Portal release manifest, signed images/SBOM, dev/stable isolation, migration/rollback rehearsal | bind exact Trading System identities and run joint release rehearsal | `N14A_PLANNED / N14B_OWNER_RELEASE_EVIDENCE_PENDING` |
+| N14 | exact six-image digest manifest, CI-bound signatures/SBOM/SLSA/Trivy, dev/stable isolation, owner decision and restore/forward-fix rehearsal complete | after N13B target selection, bind accepted Trading System source/gateway commit/image/config/contracts and run joint release/rollback/forward-fix with exact dual-owner approval | `N14A_COMPLETE_SOURCE_DARK / N14B_OWNER_RELEASE_EVIDENCE_PENDING` |
 | N15 | Query/Command/Event/Artifact contracts, negotiation and local transport doubles | real mTLS/JWT routes, WAN/fault/compatibility acceptance | `N15A_READ_COMMAND_FOUNDATION_READY / N15B_EVENT_ARTIFACT_OWNER_PUBLICATION_PENDING` |
 | N16 | same-domain/emergency policy, audit and simulated origin failure | accepted R3 protective route and real observed acknowledgement | `N16A_PLANNED / N16B_R3_OWNER_ACCEPTANCE_PENDING` |
 | N17 | SLO/DR/rotation tooling, isolated restore and dry-run game day | bounded production activation and joint SLO/DR/game-day evidence | `N17A_PLANNED / N17B_PRODUCTION_OWNER_EVIDENCE_PENDING` |
@@ -2711,3 +2711,21 @@ Rule: Claude and Portal backend may implement/test every A lane without waiting
 for Trading System. No B lane may start from template/candidate/fixture bytes,
 and no A-lane status may remove an unavailable label or enable a source,
 Query/SSE profile or command.
+
+### N14A backend — Portal release authority, source-dark (2026-08-26)
+
+Codex completed the Portal-owned release lane: all six images are digest-bound,
+the protected-main publisher records verified signature/SBOM/provenance/Trivy
+evidence, stable consumes per-service digest references, production acceptance
+is bound to an exact manifest and owner decision, and an isolated Docker
+PostgreSQL rehearsal proves dev/stable/restore separation. Every execution
+flag remains false; no AWS-HK/Trading System request occurred.
+
+Backend report:
+[`EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md`](../../backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md).
+Claude handoff:
+[`CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md`](./CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md).
+
+Next A action is N15A Event/Artifact completion. N14B remains parked until the
+master owner return and N13B exact target profile; it must bind owner bytes and
+run the joint release rehearsal, not reinterpret this source-dark result.

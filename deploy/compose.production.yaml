@@ -1,7 +1,7 @@
 name: ${PORTAL_STACK_NAME:-portal}
 
 x-control-api-image: &control-api-image
-  image: ${PORTAL_IMAGE_PREFIX:?Set PORTAL_IMAGE_PREFIX}-control-api:${PORTAL_IMAGE_TAG:?Set PORTAL_IMAGE_TAG}
+  image: ${PORTAL_CONTROL_API_IMAGE:?Set PORTAL_CONTROL_API_IMAGE to an immutable digest}
 
 x-control-api-environment: &control-api-environment
   PORTAL_ENV: ${CONTROL_API_PORTAL_ENV:-research}
@@ -51,7 +51,7 @@ x-control-api-hardening: &control-api-hardening
 # do not put deployment secrets in this repository.
 services:
   portal-api:
-    image: ${PORTAL_IMAGE_PREFIX:?Set PORTAL_IMAGE_PREFIX}-portal-api:${PORTAL_IMAGE_TAG:?Set PORTAL_IMAGE_TAG}
+    image: ${PORTAL_API_IMAGE:?Set PORTAL_API_IMAGE to an immutable digest}
     restart: unless-stopped
     environment:
       PORTAL_ARTIFACT_ROOT: /var/lib/portal/artifacts/runs
@@ -83,7 +83,7 @@ services:
       start_period: 15s
 
   roadmap-task-board-api:
-    image: ${PORTAL_IMAGE_PREFIX:?Set PORTAL_IMAGE_PREFIX}-roadmap-task-board-api:${PORTAL_IMAGE_TAG:?Set PORTAL_IMAGE_TAG}
+    image: ${PORTAL_ROADMAP_API_IMAGE:?Set PORTAL_ROADMAP_API_IMAGE to an immutable digest}
     restart: unless-stopped
     environment:
       PORTAL_ENV: production
@@ -115,7 +115,7 @@ services:
       start_period: 15s
 
   portal-web:
-    image: ${PORTAL_IMAGE_PREFIX:?Set PORTAL_IMAGE_PREFIX}-portal-web:${PORTAL_IMAGE_TAG:?Set PORTAL_IMAGE_TAG}
+    image: ${PORTAL_WEB_IMAGE:?Set PORTAL_WEB_IMAGE to an immutable digest}
     restart: unless-stopped
     ports:
       - "127.0.0.1:${PORTAL_HTTP_PORT:-8080}:80"

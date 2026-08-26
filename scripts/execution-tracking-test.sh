@@ -23,8 +23,15 @@ N09_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_05_N09_PORTAL_GOVERNANCE_WORKFLOW_
 N09_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N09_GOVERNANCE_WORKFLOW_HANDOFF.md"
 OWNER_MASTER_REQUEST="${ROOT_DIR}/upgrade/backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md"
 EXECUTION_UNIFIED_PLAN="${ROOT_DIR}/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md"
+N14A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md"
+N14A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md"
 
-for required_file in "${OWNER_MASTER_REQUEST}" "${EXECUTION_UNIFIED_PLAN}"; do
+for required_file in \
+    "${OWNER_MASTER_REQUEST}" \
+    "${EXECUTION_UNIFIED_PLAN}" \
+    "${N14A_REPORT}" \
+    "${N14A_HANDOFF}"
+do
     if [[ ! -f "${required_file}" ]]; then
         echo "execution owner/phase plan is missing: ${required_file}" >&2
         exit 1
@@ -45,7 +52,7 @@ do
 done
 for token in \
     "N13A_COMPLETE_SOURCE_DARK / N13B_MASTER_OWNER_RETURN_PENDING" \
-    "N14A_PLANNED / N14B_OWNER_RELEASE_EVIDENCE_PENDING" \
+    "N14A_COMPLETE_SOURCE_DARK / N14B_OWNER_RELEASE_EVIDENCE_PENDING" \
     "N15A_READ_COMMAND_FOUNDATION_READY" \
     "N16A_PLANNED / N16B_R3_OWNER_ACCEPTANCE_PENDING" \
     "N17A_PLANNED / N17B_PRODUCTION_OWNER_EVIDENCE_PENDING"
@@ -59,6 +66,33 @@ do
         exit 1
     fi
 done
+
+for token in \
+    "N14A_COMPLETE_SOURCE_DARK" \
+    "PRODUCTION_INACTIVE" \
+    "N14B_OWNER_RELEASE_EVIDENCE_PENDING" \
+    "image@sha256"
+do
+    if ! grep -Fq "${token}" "${N14A_REPORT}"; then
+        echo "N14A report lost source-dark release invariant: ${token}" >&2
+        exit 1
+    fi
+done
+for token in \
+    "N14A_COMPLETE_SOURCE_DARK" \
+    "PRODUCTION_INACTIVE" \
+    "do not expose release hashes" \
+    "N14B"
+do
+    if ! grep -Fq "${token}" "${N14A_HANDOFF}"; then
+        echo "N14A Claude handoff lost consumer boundary: ${token}" >&2
+        exit 1
+    fi
+done
+if ! grep -Fq "N14A backend — Portal release authority" "${TRACKER}"; then
+    echo "shared tracker lost N14A closeout section" >&2
+    exit 1
+fi
 
 python3 - "${MASTER}" "${TRACKER}" "${ROADMAP}" "${LEDGER}" "${BACKEND_README}" "${ARCHITECTURE}" "${FRONTEND_HANDOFF}" "${CATALOG}" "${ADMISSION_HISTORY}" "${UNIFIED}" "${F2_REPORT}" "${F2_HANDOFF}" "${F3_REPORT}" "${F3_HANDOFF}" "${IAM_REVISION}" "${F4_REPORT}" "${F4_HANDOFF}" "${N09_REPORT}" "${N09_HANDOFF}" <<'PY'
 from pathlib import Path

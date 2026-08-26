@@ -57,6 +57,8 @@ for build_only_runtime_path in (
 
 permissions = document.get("permissions")
 expected_permissions = {
+    "actions": "read",
+    "checks": "read",
     "contents": "read",
     "packages": "write",
     "id-token": "write",
@@ -112,10 +114,10 @@ trivy_steps = [
     if isinstance(step, dict)
     and step.get("uses") == "aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25"
 ]
-if len(trivy_steps) != 6:
-    raise SystemExit("D2/D3 require report and critical gates for all three execution images.")
-if sum(step.get("with", {}).get("exit-code") == "1" for step in trivy_steps) != 3:
-    raise SystemExit("Exactly three critical vulnerability gates must fail closed.")
+if len(trivy_steps) != 12:
+    raise SystemExit("N14A requires report and critical gates for all six Portal images.")
+if sum(step.get("with", {}).get("exit-code") == "1" for step in trivy_steps) != 6:
+    raise SystemExit("Exactly six critical vulnerability gates must fail closed.")
 for step in trivy_steps:
     image_ref = str(step.get("with", {}).get("image-ref", ""))
     if "outputs.digest" not in image_ref:

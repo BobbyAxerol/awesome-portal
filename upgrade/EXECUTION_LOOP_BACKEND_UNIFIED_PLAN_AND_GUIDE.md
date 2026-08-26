@@ -941,7 +941,7 @@ acceptance matrix for the exact promoted screen/profile.
 ### N14 — Deployment and release authority
 
 **Mapping:** BAR-17.  
-**Status:** `N14A_PLANNED / N14B_OWNER_RELEASE_EVIDENCE_PENDING`.  
+**Status:** `N14A_COMPLETE_SOURCE_DARK / N14B_OWNER_RELEASE_EVIDENCE_PENDING`.  
 **Priority:** P2 before formal release.
 
 Trading System contributes immutable compatibility/evidence under the master
@@ -960,6 +960,16 @@ campaign. N14 does not open a new endpoint request.
 database restore and branch/runtime separation pass without Trading System
 traffic.
 
+**Completed 2026-08-26:** the exact six-service digest manifest,
+source-dark compatibility/profile contracts, CI-bound signatures/SBOM/SLSA/
+Trivy evidence, production owner-decision gate and stable digest-only Compose
+path are implemented. A real three-volume PostgreSQL rehearsal proves
+dev/stable isolation, pre-migration restore and expand/forward-fix behavior.
+Seventeen release/security tests and actionlint pass with no AWS-HK or Trading
+System traffic. The production keyless candidate is emitted only from a
+successful protected-main CI commit. See
+[`EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md`](./backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md).
+
 #### N14B — Joint immutable release compatibility
 
 **Blocked until:** accepted owner contracts/images and N13B target profile.
@@ -971,6 +981,12 @@ traffic.
 
 **Combined N14 exit gate:** deploy/rollback rehearsal on isolated state,
 signature verification and owner release approval.
+
+**Exact next action for N14B:** after N13B selects one accepted target profile,
+import the owner-published source/gateway commit, image, config and contract
+digests into a new compatibility revision; then run joint preflight,
+deploy/rollback/forward-fix and obtain exact Portal + Trading System owner
+approval. N14A templates/candidates cannot satisfy this gate.
 
 ### N15 — Formal inter-cell gateway authority
 
@@ -1362,22 +1378,22 @@ command commit.
 
 ## 11. Recommended next sequence
 
-The immediate backend order after Bobby accepts this plan is:
+Current order after N13A and N14A completion:
 
-1. **N01 — D4 dormant closeout**: smallest high-value safety change; no source activation.
-2. **N09 design rulings + source-independent contracts** for BR-EX-30/31/32/33/35/36/37/38.
-3. **N10 contract design** for BR-EX-34/39/40, source-dark and fixture-backed.
-4. Send the completed **N02** request/verifier pack to the Trading System owner; Codex waits for
-   the exact four-file publication and acceptance result rather than editing Trading System.
-5. N04's source-dark core/fencing, **N05** retention/recovery and the Portal-owned **N06**
-   qualification authority are complete. Import and verify exact N02/N03 owner bytes before the
-   N04 thin wire adapter or real N06 window; do not infer the wire or claim a synthetic soak.
-6. Activate read surfaces through **N07**, realtime through **N08**, and commands through **N12**.
-7. Promote environments only through **N13**, then close formal release/production runway
-   **N14 → N17**.
+1. **N15A** — finish the source-dark Event/Artifact gateway authority and local
+   four-interface transport doubles; existing read/command foundations remain
+   inactive.
+2. **N16A** — same-domain routing and emergency policy against local doubles,
+   with no public protective command.
+3. **N17A** — offline SLO/DR/rotation/evidence preparation and isolated game-day
+   rehearsal.
+4. Keep N13B–N17B parked until the single master Trading System owner return is
+   accepted. Then resume in order from **N13B**, never by jumping directly to a
+   later B phase.
 
-The first implementation slice after this documentation commit should therefore be N01, unless Bobby
-explicitly selects one of the source-independent N09/N10 contracts.
+The exact A result and matching B next action are recorded in every completed
+phase report and the shared `PHASE_TRACKER.md`; completing A never changes a
+source/profile/command flag.
 
 ---
 
@@ -1416,3 +1432,4 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | 2026-08-26 | N09 BR-EX-30/31/32/33/35/36/37/38 closed | Portal contracts/repository/API/codegen complete; registry write policy false; production/source/command inactive |
 | 2026-08-26 | N10 BR-EX-34/39/40 closed | Rust pure engines + schema/OpenAPI/generated TS + canonical fixtures complete; routes/source/SSE/registry/commands inactive |
 | 2026-08-26 | N11 Portal publication gate + adapters closed | one 24-capability owner request, byte-bound schema/fixture verifier and strict Rust GET adapter complete; owner publication/source/runtime pending |
+| 2026-08-26 | N14A Portal release authority closed | six digest-pinned images, CI-bound SBOM/SLSA/Trivy/signature evidence, owner acceptance contract, dev/stable isolation and PostgreSQL restore/forward-fix rehearsal complete; N14B owner binding pending, source/runtime inactive |

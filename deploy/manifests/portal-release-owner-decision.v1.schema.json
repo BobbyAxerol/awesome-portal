@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://primusspark.com/schemas/portal-release-owner-decision.v1.schema.json",
+  "title": "Portal source-dark release owner decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "decision_id", "release_manifest_sha256",
+    "candidate_evidence_sha256", "decision", "decided_by", "decided_at",
+    "rationale", "scope", "vulnerability_evidence_accepted",
+    "deployment_authorized", "source_activation_authorized",
+    "query_activation_authorized", "sse_activation_authorized",
+    "command_activation_authorized", "trading_system_release_accepted"
+  ],
+  "properties": {
+    "schema_version": {"const": "portal.release-owner-decision.v1"},
+    "decision_id": {"type": "string", "pattern": "^reldec_[0-9A-HJKMNP-TV-Z]{26}$"},
+    "release_manifest_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "candidate_evidence_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "decision": {"enum": ["PENDING", "ACCEPT_SOURCE_DARK", "REJECT", "SUPERSEDE"]},
+    "decided_by": {"type": ["string", "null"]},
+    "decided_at": {"type": ["string", "null"], "format": "date-time"},
+    "rationale": {"type": "string", "minLength": 8, "maxLength": 2000},
+    "scope": {"const": "PORTAL_SOURCE_DARK_ONLY"},
+    "vulnerability_evidence_accepted": {"type": "boolean"},
+    "deployment_authorized": {"type": "boolean"},
+    "source_activation_authorized": {"const": false},
+    "query_activation_authorized": {"const": false},
+    "sse_activation_authorized": {"const": false},
+    "command_activation_authorized": {"const": false},
+    "trading_system_release_accepted": {"const": false}
+  }
+}

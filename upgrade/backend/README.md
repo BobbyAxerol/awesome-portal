@@ -971,3 +971,26 @@ durable run/attempt events. Detailed evidence:
   N13B_OWNER_RETURN_PENDING`. No AWS-HK/Trading System call, registry profile,
   network, secret or runtime flag changed. Detail:
   [`EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md`](./EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md).
+
+## Backend state — 2026-08-26 (N14A Portal release authority)
+
+- The exact protected-main Portal commit is bound to six immutable image
+  digests, two isolated deployment profiles, source-dark compatibility,
+  migration-chain evidence and a per-cell rollback contract.
+- All images now publish SBOM/SLSA provenance, Trivy evidence and keyless
+  signatures. A successful same-commit Portal CI check is mandatory before a
+  candidate exists; CRITICAL findings block it and HIGH findings remain visible
+  for explicit owner acceptance.
+- Stable SGP is project `portal-stable`, port 18081, digest-only and owns
+  distinct PostgreSQL/Roadmap/artifact volumes. Dev remains project `portal`,
+  port 8080 and cannot route to or mutate stable state.
+- Production requires an exact candidate run/manifest digest, protected
+  environment acceptance and signed manifest/decision verification. The
+  decision authorizes only source-dark Portal deployment.
+- Evidence is 17/17 release/security tests, actionlint, Compose rendering and a
+  real dev/stable/restore PostgreSQL backup/restore/forward-fix rehearsal.
+- Status is `N14A_COMPLETE_SOURCE_DARK /
+  N14B_OWNER_RELEASE_EVIDENCE_PENDING / PRODUCTION_INACTIVE`. N14B must later
+  bind accepted Trading System owner bytes and the N13B target profile; no
+  AWS-HK/source/Query/SSE/command authority changed. Detail:
+  [`EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md`](./EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md).

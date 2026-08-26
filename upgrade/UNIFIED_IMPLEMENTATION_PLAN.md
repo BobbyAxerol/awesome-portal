@@ -1940,6 +1940,19 @@ không phải 17 màn.
 > một owner window mới; chưa phải D4 hoặc source activation. Chi tiết:
 > [`EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md`](./backend/EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md).
 
+> **Backend checkpoint 2026-08-26 — N14A Portal release authority:** status is
+> `N14A_COMPLETE_SOURCE_DARK / N14B_OWNER_RELEASE_EVIDENCE_PENDING /
+> PRODUCTION_INACTIVE`. A protected-main commit now produces one exact
+> six-image digest manifest with SBOM/SLSA, Trivy and signature evidence;
+> stable SGP consumes per-service digests and owns state distinct from dev.
+> Production requires the reviewed manifest hash, vulnerability acceptance and
+> a signed owner decision bound to the exact candidate. Seventeen release/
+> security tests, actionlint and a real three-volume PostgreSQL dev/stable/
+> restore + forward-fix rehearsal pass. No AWS-HK/Trading System traffic or
+> Projection/Query/SSE/command activation occurred. N14B later binds exact
+> owner source/gateway bytes after N13B target selection. Detail:
+> [`EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md`](./backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md).
+
 ## 12.4 Thứ tự slice của frontend
 
 Lane A chạy trước; mỗi slice đóng độc lập và không slice nào chờ codex.
