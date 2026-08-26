@@ -13,6 +13,7 @@
  * stream prepends an `OK · ws delta applied` snapshot every 5s (max 6).
  */
 import { useEffect, useState } from "react";
+import { smokeMotionAllowed } from "./smokeMotion";
 
 export const ACCOUNTS_SMOKE = true;
 export const ACCOUNTS_SMOKE_MOTION = true;
@@ -95,7 +96,7 @@ export function useAccountsTick(stream = false): { now: Date; j: number; snaps: 
   const [s, set] = useState<{ now: Date; j: number; n: number; snaps: Snap[] }>({ now: new Date(0), j: 0, n: 0, snaps: ACCOUNTS_SMOKE_DATA.binding.snaps as Snap[] });
   useEffect(() => {
     if (!ACCOUNTS_SMOKE || !ACCOUNTS_SMOKE_MOTION) return;
-    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (!smokeMotionAllowed()) return;
     set((p) => ({ ...p, now: new Date() }));
     const a = window.setInterval(() => set((p) => ({ ...p, now: new Date() })), 1000);
     const b = window.setInterval(() => set((p) => ({ ...p, n: p.n + 1, j: Math.max(-8, Math.min(8, p.j + noise(p.n + 1, 5.5) * 2)) })), 1400);

@@ -7,6 +7,7 @@
  * 2026-08-31T08:00:00Z; d9 box blinks (omTick).
  */
 import { useEffect, useState } from "react";
+import { smokeMotionAllowed } from "./smokeMotion";
 
 export const CANARY_SMOKE = true;
 export const CANARY_SMOKE_MOTION = true;
@@ -46,7 +47,7 @@ export function useCanaryTick(): { now: Date; j: number } {
   const [s, set] = useState({ now: new Date(0), j: 0, n: 0 });
   useEffect(() => {
     if (!CANARY_SMOKE || !CANARY_SMOKE_MOTION) return;
-    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (!smokeMotionAllowed()) return;
     set((p) => ({ ...p, now: new Date() }));
     const a = window.setInterval(() => set((p) => ({ ...p, now: new Date() })), 1000);
     const b = window.setInterval(() => set((p) => ({ ...p, n: p.n + 1, j: Math.max(-6, Math.min(6, p.j + noise(p.n + 1, 4.4) * 1.6)) })), 1400);

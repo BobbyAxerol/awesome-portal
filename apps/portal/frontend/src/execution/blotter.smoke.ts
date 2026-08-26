@@ -18,6 +18,7 @@
  * canonical fixtures.
  */
 import { useEffect, useState } from "react";
+import { smokeMotionAllowed } from "./smokeMotion";
 
 export const BLOTTER_SMOKE = true;
 export const BLOTTER_SMOKE_MOTION = true;
@@ -131,7 +132,7 @@ export function useBlotterTick(base: number): { elapsed: number; price: number; 
   const [s, set] = useState({ elapsed: 0, price: base, prev: base, slice: 40, n: 0 });
   useEffect(() => {
     if (!BLOTTER_SMOKE || !BLOTTER_SMOKE_MOTION) return;
-    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (!smokeMotionAllowed()) return;
     const id = window.setInterval(() => set((p) => {
       const n = p.n + 1;
       const price = Math.max(60_800, Math.min(62_200, p.price + (noise(n, 11) - 0.04) * 22));

@@ -10,6 +10,7 @@
  * the last candle re-prices with it; the STOP leg's distance re-computes.
  */
 import { useEffect, useState } from "react";
+import { smokeMotionAllowed } from "./smokeMotion";
 
 export const REPLAY_SMOKE = true;
 export const REPLAY_SMOKE_MOTION = true;
@@ -75,7 +76,7 @@ export function useMarkTick(base: number): { price: number; prev: number } {
   const [s, set] = useState({ price: base, prev: base, n: 0 });
   useEffect(() => {
     if (!REPLAY_SMOKE || !REPLAY_SMOKE_MOTION) return;
-    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (!smokeMotionAllowed()) return;
     const id = window.setInterval(() => set((p) => ({ price: Math.max(60_700, Math.min(62_300, p.price + noise(p.n + 1) * 22)), prev: p.price, n: p.n + 1 })), 1400);
     return () => window.clearInterval(id);
   }, []);

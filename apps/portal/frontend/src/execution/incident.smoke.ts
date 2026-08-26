@@ -16,6 +16,7 @@
  * with canonical fixtures (+ the market stream via BR-EX-43/SSE).
  */
 import { useEffect, useState } from "react";
+import { smokeMotionAllowed } from "./smokeMotion";
 
 export const INCIDENT_SMOKE = true;
 export const INCIDENT_SMOKE_WARNING =
@@ -161,7 +162,7 @@ export function useIncidentLive(base: IncidentSmoke | null, resolved: boolean): 
   }));
   useEffect(() => {
     if (!base || resolved) return;
-    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (!smokeMotionAllowed()) return;
     let n = 0;
     const clock = window.setInterval(() => setState((s) => ({ ...s, openSeconds: s.openSeconds + 1 })), 1000);
     const price = window.setInterval(() => {

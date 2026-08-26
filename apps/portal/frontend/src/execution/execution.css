@@ -5641,3 +5641,24 @@
 .exec-pf2-grid[data-ratio="1.55"] { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); }
 .exec-cn-option { font: 400 11px/16px var(--font-mono); border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-soft); padding: 4px 10px; }
 .exec-cn-option[data-tone="bad"] { border-color: var(--bad); color: var(--bad); background: var(--paper-raised); }
+/* §5.2 scale on non-hi-fi surfaces: the shared grammar sizes sit on the locked
+   scale (15/13/12/11); hi-fi-exact screens (.exec-a3) keep the hi-fi sizes. */
+.exec-surface .exec-strip-value { font: 500 15px/20px var(--font-mono); }
+.exec-a3 .exec-strip-value { font: 500 17px/24px var(--font-mono); }
+.exec-surface .exec-strip-label { font: 400 11px/14px var(--font-mono); }
+.exec-a3 .exec-strip-label { font: 400 10px/14px var(--font-mono); }
+.exec-surface .exec-strip-cell .exec-value-unit, .exec-surface .exec-strip-note, .exec-surface .exec-strip-absent { font: 400 11px/14px var(--font-mono); }
+.exec-surface .exec-rail-severity { font: 600 11px/14px var(--font-mono); }
+.exec-a3 .exec-rail-severity { font: 600 9px/14px var(--font-mono); }
+.exec-surface .exec-rail-section .exec-role-meta, .exec-surface .exec-rail-blockers li > .exec-role-meta:not(.exec-rail-severity), .exec-surface .exec-rail-section[data-section="provenance"] summary { font: 400 11px/14px var(--font-mono); }
+.exec-a3 .exec-rail-section .exec-role-meta, .exec-a3 .exec-rail-blockers li > .exec-role-meta:not(.exec-rail-severity), .exec-a3 .exec-rail-section[data-section="provenance"] summary { font: 400 10px/14px var(--font-mono); }
+.exec-surface .exec-visual .exec-role-meta, .exec-surface .exec-visual .exec-chart-evidence-note, .exec-surface .exec-visual .exec-blotter-note { font: 400 11px/14px var(--font-mono); }
+.exec-a3 .exec-visual .exec-role-meta, .exec-a3 .exec-visual .exec-chart-evidence-note, .exec-a3 .exec-visual .exec-blotter-note { font: 400 10px/14px var(--font-mono); }
+/* narrow containment on the canary/live panels */
+.exec-ac-masthead { box-sizing: border-box; width: 100%; }
+.exec-pf2-barrow { flex-wrap: wrap; }
+.exec-pf2-head, .exec-pf2-title { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 767px) { .exec-pf2-grid[data-ratio="1.55"], .exec-pf2-grid[data-ratio="1.15"], .exec-pf2-grid[data-ratio="1.2r"] { grid-template-columns: minmax(0, 1fr); } .exec-lf-kv, .exec-bd-kv, .exec-cn-marginal .exec-lf-kv { grid-template-columns: 1fr; } }
+.exec-surface .exec-visual, .exec-surface .exec-visual-row > *, .exec-surface .exec-visual-grid > * { min-width: 0; }
+.exec-surface .exec-rail-section > h2, .exec-surface .exec-rail-section > h3 { overflow-wrap: anywhere; }
+@media (max-width: 767px) { .exec-surface .exec-visual-row { grid-template-columns: minmax(0, 1fr); } .exec-surface .exec-visual-grid { grid-template-columns: minmax(0, 1fr); } .exec-cn .exec-ac-masthead { padding: 6px 8px; } }

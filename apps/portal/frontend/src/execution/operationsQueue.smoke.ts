@@ -16,6 +16,7 @@
  * BR-EX-43 alerts summary) delivered with canonical fixtures.
  */
 import { useEffect, useState } from "react";
+import { smokeMotionAllowed } from "./smokeMotion";
 import type { QueueRow } from "./operations";
 
 export const QUEUE_SMOKE = true;
@@ -139,7 +140,7 @@ export function useQueueTick(): { elapsed: number; sub: number } {
   const [s, set] = useState({ elapsed: 0, sub: 66 });
   useEffect(() => {
     if (!QUEUE_SMOKE || !QUEUE_SMOKE_MOTION) return;
-    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (!smokeMotionAllowed()) return;
     const id = window.setInterval(() => set((p) => ({ elapsed: p.elapsed + 1, sub: p.sub >= 96 ? 66 : p.sub + 2 })), 1000);
     return () => window.clearInterval(id);
   }, []);

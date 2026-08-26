@@ -105,13 +105,14 @@ export function ccSmoke() {
 }
 
 import { useEffect, useState } from "react";
+import { smokeMotionAllowed } from "./smokeMotion";
 
 /** Seconds elapsed since mount, ticking every `everyMs`; 0 forever when motion is off. */
 export function useSmokeTick(everyMs = 1000): number {
   const [tick, setTick] = useState(0);
   useEffect(() => {
     if (!CC_SMOKE || !CC_SMOKE_MOTION) return;
-    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (!smokeMotionAllowed()) return;
     const id = window.setInterval(() => setTick((t) => t + everyMs / 1000), everyMs);
     return () => window.clearInterval(id);
   }, [everyMs]);

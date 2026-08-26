@@ -9,6 +9,7 @@
  * ws age cycles 0.4–5.0s; incident age counts; tape timestamps follow now.
  */
 import { useEffect, useState } from "react";
+import { smokeMotionAllowed } from "./smokeMotion";
 
 export const LIVE_SMOKE = true;
 export const LIVE_SMOKE_MOTION = true;
@@ -62,7 +63,7 @@ export function useLiveTick(): { now: Date; j: number; price: number; prev: numb
   const [s, set] = useState({ now: new Date(0), j: 0, n: 0, price: LIVE_SMOKE_DATA.basePrice, prev: LIVE_SMOKE_DATA.basePrice, sp: [] as number[] });
   useEffect(() => {
     if (!LIVE_SMOKE || !LIVE_SMOKE_MOTION) return;
-    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (!smokeMotionAllowed()) return;
     set((p) => ({ ...p, now: new Date() }));
     const a = window.setInterval(() => set((p) => ({ ...p, now: new Date() })), 1000);
     const b = window.setInterval(() => set((p) => {
