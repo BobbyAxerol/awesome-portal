@@ -193,7 +193,7 @@ export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: 
       content = <LiveFullOperationsContainer api={api} deploymentId={deploymentId} />;
       break;
     case "EXECUTION_FULL_BLOTTER_SCREEN":
-      content = <FullBlotterPreview initialFilter="FILLED" />;
+      content = <FullBlotterPreview initialFilter="ALL" />;
       break;
     case "EXECUTION_ALPHA_360_SCREEN":
       content = <AlphaThreeSixtyPreview alphaId={params.alphaId ?? "av_2041"} />;

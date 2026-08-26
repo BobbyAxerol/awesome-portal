@@ -39,13 +39,8 @@ import { useState } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
-import {
-  ExecutionContextRail,
-  ExecutionPageHeader,
-  ExecutionProvenanceDrawer,
-  ExecutionWorkspace,
-  type HeaderBadge,
-} from "../components/workspace";
+import { ExecutionWorkspace } from "../components/workspace";
+import { blotterSmoke, fmtBlotterAge, useBlotterTick, type Flag, type SmokeOrder } from "../blotter.smoke";
 
 /**
  * Fills shown per funnel stage before capping.
@@ -89,14 +84,6 @@ export interface BlotterRow {
 export const BLOTTER_FILTERS: readonly BlotterFilter[] = [
   "ALL", "FILLED", "PARTIAL", "REJECTED", "OPEN",
 ];
-
-const FILTER_LABEL: Record<BlotterFilter, string> = {
-  ALL: "All",
-  FILLED: "Filled",
-  PARTIAL: "Partial",
-  REJECTED: "Rejected",
-  OPEN: "Open",
-};
 
 /**
  * The four stages the server publishes, with the hi-fi's words where they map.
@@ -331,6 +318,87 @@ export interface FullBlotterProps {
   aggregates?: readonly CurrencyAggregate[] | null;
 }
 
+const FLAG_TONE: Record<NonNullable<Flag["tone"]>, string> = { warn: "warn", bad: "bad", good: "good", paper: "paper" };
+
+function Flags({ flags, plain }: { flags: Flag[]; plain?: string }) {
+  if (plain) return <span className="exec-bl-plain">{plain}</span>;
+  return (
+    <span className="exec-bl-flags">
+      {flags.map((f) => <span key={f.text} className="exec-bl-flag" data-tone={f.tone ? FLAG_TONE[f.tone] : undefined}>{f.text}</span>)}
+    </span>
+  );
+}
+
+/** Hi-fi 4c: a smoke order = one main row + one detail row (+ legs or fills when expanded). */
+function SmokeRows({ order, cols, open, onToggle, elapsed, price, slice }: { order: SmokeOrder; cols: readonly string[]; open: boolean; onToggle: () => void; elapsed: number; price: number; slice: number }) {
+  const expandable = Boolean(order.legs || order.fills);
+  const chevron = expandable ? (open ? "▾" : "▸") : order.kind === "conditional" ? "◇" : "";
+  const age = typeof order.ageSeconds === "number" ? fmtBlotterAge(order.ageSeconds + elapsed) : order.ageSeconds;
+  const trig = order.triggerAt ? `−${Math.max(0, price - order.triggerAt).toLocaleString("en-US", { maximumFractionDigits: 0 })} to trigger` : null;
+  const cell: Record<string, React.ReactNode> = {
+    mark: <span className="exec-bl-mark" data-tone={expandable ? "accent" : undefined}>{chevron}</span>,
+    at: <span className="exec-bl-time">{order.time}</span>,
+    order: <><a href={order.href}>{order.id}</a><div className="exec-bl-sub">{order.sub}</div></>,
+    where: <span className="exec-bl-dim">{order.deployment} · {order.venue}</span>,
+    symbol: order.symbol,
+    type: <Flags flags={order.flags} />,
+    price: <span data-tone={order.priceTone}>{order.price}{trig ? <div className="exec-bl-trig">{trig}</div> : null}</span>,
+    qty: <span data-tone={order.qtyTone}>{order.qty}{order.qtyBar ? <span className="exec-bl-bar"><span className="exec-bl-barfill" data-tone={order.qtyBar.tone} style={{ width: `${order.qtyBar.pct}%` }} /></span> : null}</span>,
+    avg: <span>{order.avg}{order.slip ? <> <span data-tone={order.slip.tone}>{order.slip.text}</span></> : null}{order.avgSub ? <div className="exec-bl-sub">{order.avgSub}</div> : null}</span>,
+    status: <span className="exec-bl-status" data-tone={order.status.tone} data-pulse={order.status.pulse ? "true" : undefined}>{order.status.label}</span>,
+    age: <span className="exec-bl-dim">{age}</span>,
+  };
+  return (
+    <>
+      <tr className="exec-bl-row" data-kind={order.kind} onClick={expandable ? onToggle : undefined} role={expandable ? "button" : undefined} tabIndex={expandable ? 0 : undefined} onKeyDown={expandable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } } : undefined} aria-expanded={expandable ? open : undefined}>
+        {cols.map((k) => <td key={k} data-col={k} data-numeric={k === "price" || k === "qty" || k === "avg" || k === "age" ? "true" : undefined}>{cell[k]}</td>)}
+      </tr>
+      <tr className="exec-bl-detail" data-tone={order.detailTone}>
+        <td colSpan={cols.length}>
+          {order.detail}{order.detailLink ? <> <a href={order.detailLink.href}>{order.detailLink.label}</a> via bracket_group_id br_0088 (one cancels the other) · trigger source: mark price · protective leg of dep_88 canary envelope</> : null}
+          {order.kind === "bracket" && open === false ? " (collapsed)" : null}
+        </td>
+      </tr>
+      {open && order.legs ? order.legs.map((leg) => {
+        const lc: Record<string, React.ReactNode> = {
+          mark: "", at: <span className="exec-bl-dim">{leg.time}</span>,
+          order: <span>└ {leg.href ? <a href={leg.href}>{leg.id}</a> : leg.id}</span>,
+          where: <span className="exec-bl-mute">{leg.role}</span>, symbol: <span className="exec-bl-dim">{leg.symbol}</span>,
+          type: <Flags flags={leg.flags} plain={leg.flagsPlain} />,
+          price: <span data-tone={leg.priceTone}>{leg.price}</span>,
+          qty: <span data-tone={leg.qtyTone}>{leg.qty}{leg.qtyBar ? <span className="exec-bl-bar exec-bl-bar-sm"><span className="exec-bl-barfill" data-tone="warn" style={{ width: `${slice}%` }} /></span> : null}</span>,
+          avg: <span className="exec-bl-dim">{leg.avg}</span>,
+          status: <span className="exec-bl-status exec-bl-status-sm" data-tone={leg.status.tone} data-pulse={leg.status.pulse ? "true" : undefined}>{leg.status.label}</span>,
+          age: <span className="exec-bl-mute">{leg.age === "tick" ? fmtBlotterAge(600 + elapsed) : leg.age}</span>,
+        };
+        return <tr key={leg.id} className="exec-bl-leg">{cols.map((k) => <td key={k} data-col={k}>{lc[k]}</td>)}</tr>;
+      }) : null}
+      {open && order.fills ? (
+        <>
+          <tr className="exec-bl-leg"><td /><td colSpan={cols.length - 1} className="exec-bl-lineage"><span className="exec-bl-mute">LINEAGE</span> &nbsp; {order.fills.lineage}</td></tr>
+          {order.fills.rows.map((f) => (
+            <tr key={f.id} className="exec-bl-leg">
+              <td /><td className="exec-bl-dim">{f.time}</td><td>└ <a href={`/deployments/blotter?fill=${encodeURIComponent(f.id)}`}>{f.id}</a></td><td colSpan={3} className="exec-bl-mute">{f.liquidity}</td>
+              <td data-numeric="true" className="exec-bl-dim">{f.price}</td><td data-numeric="true" className="exec-bl-dim">{f.qty}</td><td data-numeric="true" className="exec-bl-dim">{f.fee}</td>
+              <td colSpan={2}><span className="exec-bl-status exec-bl-status-sm" data-tone="good">{f.status}</span></td>
+            </tr>
+          ))}
+        </>
+      ) : null}
+    </>
+  );
+}
+
+const HIFI_FILTERS: { key: BlotterFilter | "CONDITIONAL" | "BRACKETS"; label: string; smokeOnly?: boolean }[] = [
+  { key: "ALL", label: "All" },
+  { key: "OPEN", label: "Working" },
+  { key: "CONDITIONAL", label: "Conditional", smokeOnly: true },
+  { key: "BRACKETS", label: "Brackets", smokeOnly: true },
+  { key: "FILLED", label: "Filled" },
+  { key: "PARTIAL", label: "Partial" },
+  { key: "REJECTED", label: "Rejected" },
+];
+
 export function FullBlotter({
   envelope,
   page,
@@ -350,229 +418,140 @@ export function FullBlotter({
   onExpand,
   aggregates,
 }: FullBlotterProps) {
+  const smoke = blotterSmoke();
+  const tick = useBlotterTick(smoke?.basePrice ?? 0);
+  const [view, setView] = useState<"CONDITIONAL" | "BRACKETS" | null>(null);
+  const [openSmoke, setOpenSmoke] = useState<Record<string, boolean>>({ br_0092: true });
   const columns: readonly Column<BlotterRow>[] = [
-    {
-      key: "at",
-      header: "time (UTC)",
-      width: "12rem",
-      render: (row) => <span className="exec-num">{row.at}</span>,
-    },
-    {
-      key: "where",
-      header: "deployment · venue",
-      width: "13rem",
-      render: (row) => `${row.deployment} · ${row.venue}`,
-    },
-    { key: "symbol", header: "symbol", width: "9rem", render: (row) => row.symbol },
-    {
-      key: "type",
-      header: "type / side",
-      width: "9rem",
-      render: (row) => `${row.orderType} ${row.side}`,
-    },
-    {
-      key: "qty",
-      header: "qty",
-      width: "9rem",
-      render: (row) =>
-        row.filledQuantity ? (
-          // Both figures, never one. "0.9000/1.2000" is the fill; "0.9000"
-          // alone would read as the order.
-          <span className="exec-num">
-            {row.filledQuantity}/{row.quantity}
-          </span>
-        ) : (
-          <span className="exec-num">{row.quantity}</span>
-        ),
-    },
-    {
-      key: "price",
-      header: "price",
-      width: "9rem",
-      render: (row) =>
-        row.price ? (
-          <span className="exec-num">{row.price}</span>
-        ) : (
-          <span className="exec-gate-unverified">no limit price</span>
-        ),
-    },
-    {
-      key: "status",
-      header: "status",
-      width: "14rem",
-      render: (row) => (
-        <>
-          <OrderStatusChip status={row.status} />
-          {row.rejectReason ? (
-            <span className="exec-blotter-reason"> {row.rejectReason}</span>
-          ) : null}
-        </>
-      ),
-    },
-    {
-      key: "fee",
-      header: "fee",
-      width: "8rem",
-      render: (row) =>
-        row.fee ? (
-          <span className="exec-num">
-            {row.fee}
-            {row.feeCurrency ? <span className="exec-blotter-ccy"> {row.feeCurrency}</span> : null}
-          </span>
-        ) : (
-          // The hi-fi's dash means "this order incurred no fee", which a
-          // rejected order genuinely did not. It cannot also mean "the fee was
-          // not published" — that is a gap, and a gap on a fee column is a
-          // reconciliation problem rather than a zero-cost trade.
-          <span className="exec-gate-unverified">not published</span>
-        ),
-    },
-    { key: "orderId", header: "order_id", width: "9rem", render: (row) => row.orderId },
+    { key: "mark", header: "", width: "26px", render: () => "" },
+    { key: "at", header: "time (UTC)", width: "8rem", render: (row) => <span className="exec-bl-time">{row.at}</span> },
+    { key: "order", header: "order · client id", width: "11rem", render: (row) => <span>{row.orderId}<div className="exec-bl-sub">cl: not published</div></span> },
+    { key: "where", header: "deployment · venue", width: "11rem", render: (row) => <span className="exec-bl-dim">{row.deployment} · {row.venue}</span> },
+    { key: "symbol", header: "symbol", width: "7rem", render: (row) => row.symbol },
+    { key: "type", header: "type · tif · flags", width: "12rem", render: (row) => <Flags flags={[{ text: row.orderType }, { text: row.side, tone: row.side === "BUY" ? "good" : "bad" }]} /> },
+    { key: "price", header: "price / trigger", width: "9rem", numeric: true, render: (row) => (row.price ? <span><span className="exec-num">{row.price}</span><span className="exec-bl-mute"> / —</span></span> : <span className="exec-gate-unverified">no limit price</span>) },
+    { key: "qty", header: "qty filled / total", width: "9rem", numeric: true, render: (row) => (row.filledQuantity ? <span className="exec-num">{row.filledQuantity}/{row.quantity}</span> : <span className="exec-num">{row.quantity}</span>) },
+    { key: "avg", header: "avg px · slip · fee", width: "10rem", numeric: true, render: (row) => (row.fee ? <span>— · —<div className="exec-bl-sub">fee {row.fee}{row.feeCurrency ? ` ${row.feeCurrency}` : ""}</div></span> : <span className="exec-gate-unverified">not published</span>) },
+    { key: "status", header: "status", width: "10rem", render: (row) => (<><OrderStatusChip status={row.status} />{row.rejectReason ? <span className="exec-blotter-reason"> {row.rejectReason}</span> : null}</>) },
+    { key: "age", header: "age", width: "5rem", numeric: true, render: () => <span className="exec-bl-dim">—</span> },
   ];
-
   const [hidden, setHidden] = useState<readonly string[]>([]);
   const visibleColumns = columns.filter((c) => !hidden.includes(c.key));
+  const colKeys = visibleColumns.map((c) => c.key);
   const exportRows = () => {
-    // Bounded on purpose: the rows this page has loaded, never a "full export"
-    // the server did not publish. Values are the strings as rendered.
     const header = visibleColumns.map((c) => c.key).join(",");
     const lines = page.rows.map((row) => visibleColumns.map((c) => JSON.stringify(String((row as unknown as Record<string, unknown>)[c.key] ?? ""))).join(","));
-    const text = [header, ...lines].join("\n");
-    void navigator.clipboard?.writeText(text);
+    void navigator.clipboard?.writeText([header, ...lines].join("\n"));
     setExported(`${page.rows.length} loaded rows copied as CSV — bounded to this page, not the ${page.totalCount ?? "unpublished"} total`);
   };
   const [exported, setExported] = useState<string | null>(null);
-  const rejected = page.rows.filter((r) => r.status === "REJECTED" || r.status === "DENIED");
-  const blotterRail = (
-    <ExecutionContextRail
-      next={{
-        title: expandedOrderId ? `Funnel · ${expandedOrderId}` : "Pick an order for its funnel",
-        detail: (
-          <span className="exec-role-body">
-            {expandedOrderId ? "Funnel from the server — shown under the table." : "Click a row to open its signal → fill funnel."}
-          </span>
-        ),
-      }}
-      blockers={rejected.map((r) => ({ label: `${r.orderId} ${r.status}`, detail: null, severity: "watch" as const }))}
-      freshness={<span className="exec-role-meta">{envelope.authority} · as_of {envelope.asOf ?? "not stated"} · {envelope.freshness} · {page.rows.length} loaded of {page.totalCount ?? "an unpublished"} total</span>}
-      provenance={
-        <ExecutionProvenanceDrawer
-          items={[
-            { label: "filter", short: filter, full: null },
-            ...(crossFilter ? [{ label: "cross-filter", short: crossFilter, full: null }] : []),
-          ]}
-          onCopy={(full) => void navigator.clipboard?.writeText(full)}
-        />
-      }
-    />
-  );
+  const smokeOrders = smoke
+    ? smoke.orders.filter((o) => {
+        if (view === "CONDITIONAL") return o.kind === "conditional";
+        if (view === "BRACKETS") return o.kind === "bracket";
+        if (filter === "ALL") return true;
+        if (filter === "OPEN") return o.kind === "conditional" || o.kind === "bracket" || o.kind === "partial";
+        if (filter === "FILLED") return o.kind === "filled";
+        if (filter === "PARTIAL") return o.kind === "partial";
+        if (filter === "REJECTED") return o.kind === "rejected";
+        return true;
+      })
+    : [];
+  const counts = smoke ? { OPEN: 3, CONDITIONAL: 2, BRACKETS: 1 } : ({} as Record<string, number>);
+  const up = tick.price >= tick.prev;
+  const leading = smoke
+    ? smokeOrders.map((o) => (
+        <SmokeRows key={o.id} order={o} cols={colKeys} open={Boolean(openSmoke[o.id])} onToggle={() => setOpenSmoke((m) => ({ ...m, [o.id]: !m[o.id] }))} elapsed={tick.elapsed} price={tick.price} slice={tick.slice} />
+      ))
+    : null;
+  const activeKey = view ?? filter;
   return (
-    <ExecutionSurface kind="deployments" className="exec-blotter">
-      {/* Reuses the inbox/gate header pair rather than adding a third. */}
-      <ExecutionWorkspace layout="balanced" rail={blotterRail}>
-      <ExecutionPageHeader
-        title="Orders & fills — full blotter"
-        badges={[
-          { label: `${envelope.authority} · ${envelope.freshness}`, axis: "broker-sync", tone: envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn" },
-          ...(crossFilter ? [{ label: "CROSS-FILTERED", axis: "other", tone: "warn" } as HeaderBadge] : []),
-        ]}
-        purpose="Every order and fill in scope — exact values, never abbreviated."
-      />
-
-      {scope ? <div className="exec-blotter-scope">{scope}</div> : null}
-
-      {/* The inbox's chips, same class and same `data-active` convention. */}
-      <div className="exec-inbox-filters" role="group" aria-label="Order status">
-        {BLOTTER_FILTERS.map((option) => (
-          <button
-            key={option}
-            type="button"
-            className="exec-inbox-filter"
-            data-active={filter === option ? "true" : undefined}
-            aria-pressed={filter === option}
-            onClick={() => onFilterChange(option)}
-          >
-            {FILTER_LABEL[option]}
-          </button>
-        ))}
-        <Hint>applied by the server — the chips re-query, they do not hide loaded rows</Hint>
-      </div>
-      <div className="exec-blotter-tools" role="group" aria-label="Table tools">
-        <details className="exec-blotter-columns">
-          <summary className="exec-role-control">Columns ▾</summary>
-          <div className="exec-blotter-columnlist">
-            {columns.map((c) => (
-              <label key={c.key} className="exec-role-meta">
-                <input
-                  type="checkbox"
-                  checked={!hidden.includes(c.key)}
-                  onChange={(e) => setHidden((h) => (e.target.checked ? h.filter((k) => k !== c.key) : [...h, c.key]))}
-                />{" "}
-                {c.header}
-              </label>
+    <ExecutionSurface kind="deployments" className="exec-blotter exec-bl" data-hifi-exact="blotter-4c">
+      <ExecutionWorkspace layout="dense">
+        <div className="exec-bl-page">
+          <header className="exec-bl-masthead">
+            <h1 className="exec-bl-h1">Blotter</h1>
+            <span className="exec-bl-spacer" />
+            {smoke ? (
+              <>
+                <span className="exec-bl-pricepill"><span className="exec-bl-livedot" aria-hidden="true" />{smoke.symbol} <b data-tone={up ? "good" : "bad"}>{tick.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b> <span data-tone={up ? "good" : "bad"}>{up ? "▲" : "▼"}</span></span>
+                <span className="exec-bl-lastfill">last fill <span className="exec-bl-good">{fmtBlotterAge(2 + tick.elapsed)}</span> ago</span>
+              </>
+            ) : null}
+            <span className="exec-bl-source"><b>{envelope.authority}</b> · orders_v2 + fills_v2 · {envelope.freshness}</span>
+          </header>
+          {scope ? <div className="exec-blotter-scope">{scope}</div> : null}
+          <div className="exec-bl-toolbar" role="group" aria-label="Scope">
+            {["Alpha All ▾", "Deployment All ▾", "Venue All ▾", "24h ▾"].map((label) => (
+              <button key={label} type="button" className="exec-bl-chip" disabled title="Scope filters are not published by the blotter contract (BR-EX-24) — the list is the full scope">{label}</button>
             ))}
+            <span className="exec-bl-spacer" />
+            <details className="exec-blotter-columns exec-bl-columns">
+              <summary className="exec-bl-chip">Columns ▾</summary>
+              <div className="exec-blotter-columnlist">
+                {columns.filter((c) => c.header).map((c) => (
+                  <label key={c.key} className="exec-role-meta">
+                    <input type="checkbox" checked={!hidden.includes(c.key)} onChange={(e) => setHidden((h) => (e.target.checked ? h.filter((k) => k !== c.key) : [...h, c.key]))} />{" "}
+                    {c.header}
+                  </label>
+                ))}
+              </div>
+            </details>
+            <button type="button" className="exec-bl-chip" onClick={exportRows} aria-label="Export loaded rows" title="Copies the loaded rows as CSV — bounded to this page">Export</button>
+            {exported ? <span className="exec-bl-note" role="status">{exported}</span> : null}
           </div>
-        </details>
-        <button type="button" className="exec-role-control exec-btn-ghost" onClick={exportRows} title="Copies the loaded rows as CSV — bounded to this page">
-          Export loaded rows
-        </button>
-        {exported ? <span className="exec-role-meta" role="status">{exported}</span> : null}
-      </div>
-
-      <KeysetTable
-        label="Orders and fills"
-        columns={visibleColumns}
-        page={page}
-        rowKey={(row) => row.orderId}
-        status={status}
-        reason={reason}
-        onLoadOlder={onLoadOlder}
-        loading={loading}
-        minWidth={980}
-        selectedKey={expandedOrderId}
-        onRowClick={onExpand}
-        rowEmphasis={(row) => (row.status === "REJECTED" || row.status === "DENIED" ? "bad" : undefined)}
-        notice={
-          crossFilter ? (
-            <div className="exec-blotter-cross">
-              <span className="exec-chip" data-tone="warn">
-                {/* Wrapped in a span rather than left as bare text. Inside an
-                    inline-flex chip a bare text run becomes an anonymous flex
-                    item, and an anonymous item cannot be given `min-width: 0`,
-                    so it sized the chip to its longest line and pushed the
-                    blotter 42px past its column on a phone. */}
-                <span className="exec-chip-text">Cross-filter · {crossFilter}</span>
-                <button
-                  type="button"
-                  className="exec-chip-reset"
-                  onClick={onResetCrossFilter}
-                  aria-label={`Reset the cross-filter ${crossFilter}`}
-                >
-                  ✕ reset
+          <div className="exec-bl-filters" role="group" aria-label="Order status">
+            {HIFI_FILTERS.filter((f) => !f.smokeOnly || smoke).map((f) => {
+              const n = counts[f.key as string];
+              const active = activeKey === f.key;
+              return (
+                <button key={f.key} type="button" className="exec-bl-chip" data-active={active ? "true" : undefined} aria-pressed={active} onClick={() => { if (f.smokeOnly) { setView(f.key as "CONDITIONAL" | "BRACKETS"); } else { setView(null); onFilterChange(f.key as BlotterFilter); } }}>
+                  {f.label}{n ? ` (${n})` : ""}
                 </button>
-              </span>
-              <Hint>set by clicking a series in any chart — the table and its counts follow the selection</Hint>
+              );
+            })}
+            <Hint>applied by the server — the chips re-query, they do not hide loaded rows</Hint>
+          </div>
+          {crossFilter ? (
+            <div className="exec-bl-cross">
+              <button type="button" className="exec-bl-crosschip" onClick={onResetCrossFilter} aria-label={`Reset the cross-filter ${crossFilter}`}>✕ {smoke ? smoke.crossFilter.label : crossFilter}</button>
+              <span className="exec-bl-note">cross-filter active — <b>{smoke ? smoke.crossFilter.selection.toLocaleString("en-US") : (page.filteredCount ?? "—")} rows in selection</b> of {smoke ? smoke.crossFilter.total.toLocaleString("en-US") : (page.totalCount ?? "—")}</span>
             </div>
-          ) : undefined
-        }
-      />
-
-      {/* The counts, the cursor and the virtualization note are the table's,
-          not this screen's. Restating them here would be a second source for
-          one number. */}
-      <footer className="exec-blotter-foot">
-        <AggregatesFooter aggregates={aggregates} />
-        <span className="exec-blotter-note">
-          click a row for its funnel · fees in venue currency, exact values, never abbreviated
-        </span>
-      </footer>
-
-      {expandedOrderId ? (
-        <section className="exec-blotter-funnel" aria-label={`Funnel for ${expandedOrderId}`}>
-          <div className="exec-tile-title">{expandedOrderId} — order funnel</div>
-          <OrderFunnelStrip funnel={funnel} status={funnelStatus} reason={funnelReason} />
-        </section>
-      ) : null}
+          ) : null}
+          <div className="exec-bl-panel">
+            <KeysetTable
+              label="Orders and fills"
+              columns={visibleColumns}
+              page={page}
+              rowKey={(row) => row.orderId}
+              status={status}
+              reason={reason}
+              onLoadOlder={onLoadOlder}
+              loading={loading}
+              minWidth={1240}
+              selectedKey={expandedOrderId}
+              onRowClick={onExpand}
+              rowEmphasis={(row) => (row.status === "REJECTED" || row.status === "DENIED" ? "bad" : undefined)}
+              leadingRows={leading}
+            />
+            <footer className="exec-bl-foot">
+              <span>{smoke && crossFilter ? `${smoke.crossFilter.selection.toLocaleString("en-US")} rows in selection · ${smoke.crossFilter.total.toLocaleString("en-US")} total` : `${page.totalCount ?? "—"} rows total`}</span>
+              <span className="exec-bl-spacer" />
+              <span>◇ conditional · ▸/▾ expandable (bracket legs, fills) · WORKING rows re-price live · every id navigates</span>
+            </footer>
+          </div>
+          <footer className="exec-blotter-foot exec-bl-agg">
+            <AggregatesFooter aggregates={aggregates} />
+            <span className="exec-blotter-note">fees in venue currency, exact values, never abbreviated</span>
+          </footer>
+          {expandedOrderId ? (
+            <section className="exec-blotter-funnel" aria-label={`Funnel for ${expandedOrderId}`}>
+              <div className="exec-tile-title">{expandedOrderId} — order funnel</div>
+              <OrderFunnelStrip funnel={funnel} status={funnelStatus} reason={funnelReason} />
+            </section>
+          ) : null}
+          {smoke ? <p className="exec-bl-smoke">! {smoke.warning}</p> : null}
+        </div>
       </ExecutionWorkspace>
     </ExecutionSurface>
   );

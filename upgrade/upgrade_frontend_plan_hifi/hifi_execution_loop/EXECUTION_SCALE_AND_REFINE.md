@@ -1107,3 +1107,18 @@ component nào tiêu thụ.
 - **Fixture:** `execution-operations-queue.attention.valid.json` (3 hàng hi-fi + 3 done) và `execution-alerts.valid.json` (4 thẻ).
 - **Xoá smoke:** khi 47 + 43 giao → xoá `operationsQueue.smoke.ts` theo hợp đồng đầu file.
 
+### BR-EX-48 — Full Blotter v2 (hi-fi WF 4c): order detail, conditionals, brackets/OCO, fills + lineage, live price (2026-08-25) — **spec cho codex**
+
+- **Cần trong `blotter-orders.v1` mỗi row:** `client_order_id`, `tif` (`GTC|IOC|FOK|DAY`), `flags[]` (`REDUCE-ONLY|POST-ONLY|BUY|SELL`),
+  `order_type` mở rộng (`STOP_MKT|STOP_MARKET|TAKE_PROFIT|TRAILING_STOP_MKT|BRACKET`), `trigger_price`, `trigger_source` (`mark|last|index`),
+  `oco_with` (order id), `bracket_group_id`, `risk_grant_id`, `avg_price`, `slippage_bp` (string, signed), `fee{amount,currency,liquidity: maker|taker}`,
+  `fill_count`, `age_seconds`, `detail` (một dòng do server soạn: "armed server-side at venue · …", "rejected pre-venue by risk gate rg_2188 — max position notional").
+- **Bracket group:** `GET /orders/{bracket_group_id}/legs` → `legs[{role: ENTRY|TP|SL|TRAILING, order_id, client_order_id, order_type, flags, price|trigger, qty_filled, qty_total, avg_price, status, activation_policy, callback_pct?}]`.
+- **Fills + lineage:** `GET /orders/{id}/fills` → `fills[{fill_id, at(ms), liquidity, trade_id, price, qty, fee{amount,currency}, status: SETTLED|PENDING}]`, `lineage{signal_id, signal_at, intent_id, sizing, risk_grant{id, checks[]}, venue_ack_at, hops[{from,to,ms}]}` — đây là BR-EX-25 (5 hop) chốt.
+- **Live:** `market.tick` (BR-EX-43) cho pill giá + `last_fill_at` trong envelope; WORKING/conditional rows re-price khoảng cách tới trigger từ tick (server gửi `trigger_price`, frontend hiển thị `last_price − trigger_price` **ghi rõ derived_display**).
+- **Chips:** `counts{working, conditional, brackets, filled, partial, rejected}` server-side; filter enum thêm `CONDITIONAL|BRACKETS|WORKING` (alias OPEN).
+- **Lý do UI:** hi-fi 4c là blotter đối soát được: id, cờ, trigger, nhóm OCO, fill từng lệnh với lineage/latency; contract hiện chỉ có type/side/qty/price/status/fee.
+- **Ảnh hưởng hiện tại:** `/deployments/blotter` hiển thị 5 hàng smoke (`blotter.smoke.ts`) trên đầu bảng, hàng contract thật giữ nguyên bên dưới (keyset, virtualized, M7 totals). Motion: giá 1.3s, "last fill Ns ago", "−1,138 to trigger" nhấp nháy, slice bar TP leg loop.
+- **Invariant:** số luôn chuỗi decimal đúng precision; không tổng hợp chéo tiền tệ (USDC ≠ USDT); rejected là hàng hạng nhất.
+- **Fixture:** `execution-blotter-orders.hifi.valid.json` (5 hàng + legs + fills). **Xoá smoke:** khi 48 (+24/25/43) giao.
+

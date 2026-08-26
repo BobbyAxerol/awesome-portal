@@ -274,3 +274,27 @@ Root: `kpis[]` (`partial`, `awaiting_apply`, `running`, `verified_24h` + `failed
 Alerts: `GET /api/v1/execution/alerts?limit=20` như trên. Fixtures: `execution-operations-queue.attention.valid.json`,
 `execution-alerts.valid.json`. Tiêu thụ: `OperationsQueueScreen` (smoke `operationsQueue.smoke.ts`).
 
+## A.48 · `blotter-orders.v1` — Full Blotter v2 (WF 4c)
+
+| field | type | null? | authority | ví dụ / rule |
+|---|---|---|---|---|
+| `client_order_id` | string | yes | TRADING_SYSTEM | `"grid-v21-sl-0088"` |
+| `order_type` | enum `LIMIT\|MARKET\|STOP_MKT\|STOP_MARKET\|TAKE_PROFIT\|TRAILING_STOP_MKT\|BRACKET` | no | TRADING_SYSTEM | |
+| `tif` | enum `GTC\|IOC\|FOK\|DAY` | yes | TRADING_SYSTEM | |
+| `flags[]` | enum[] `REDUCE_ONLY\|POST_ONLY\|BUY\|SELL` | no | TRADING_SYSTEM | side là flag để hiển thị chip |
+| `price` / `trigger_price` | string decimal | yes | TRADING_SYSTEM | cột "price / trigger" = `price ?? "—"` + `/` + `trigger_price ?? "—"` |
+| `trigger_source` | enum `mark\|last\|index` | yes | | |
+| `oco_with` / `bracket_group_id` / `risk_grant_id` | string | yes | TRADING_SYSTEM / PORTAL_CONTROL | `"ord_8843"`, `"br_0088"`, `"rg_2210"` |
+| `qty_filled` / `qty_total` | string decimal | no | TRADING_SYSTEM | precision theo venue lot |
+| `avg_price` | string | yes | TRADING_SYSTEM | |
+| `slippage_bp` | string signed | yes | DERIVED (`slippage.v1`) | `"-1.9"` |
+| `fee` | `{amount:string, currency, liquidity: maker\|taker}` | yes | TRADING_SYSTEM | không quy đổi |
+| `fill_count` | int | no | | |
+| `status` | enum hiện tại + `ACTIVE` (bracket), `CREATED` | no | | |
+| `age_seconds` | int | no | PORTAL_PROJECTION | |
+| `detail` | string | yes | server | một dòng dưới hàng |
+| `reject{gate_id, reason}` | object | yes | PORTAL_CONTROL | hàng REJECTED đỏ |
+
+Legs / fills / lineage: xem BR-EX-48 trong `EXECUTION_SCALE_AND_REFINE.md`. Fixture:
+`execution-blotter-orders.hifi.valid.json`. Tiêu thụ: `FullBlotter` (`leadingRows` smoke `blotter.smoke.ts`).
+
