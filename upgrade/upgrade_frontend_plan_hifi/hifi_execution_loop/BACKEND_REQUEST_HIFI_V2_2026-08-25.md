@@ -369,6 +369,17 @@ Legs / fills / lineage: xem BR-EX-48 trong `EXECUTION_SCALE_AND_REFINE.md`. Fixt
 
 Additive: `masthead{env, sync{state,age_seconds}, headroom_state, facts}`, `internal.cash_free`, `internal.locked_reserved`, `broker.source`, `difference.rows[].severity`, `findings.history_href`. Còn lại contract v1 đã có.
 
+## A.55 · `entity-names.v1` — display names for breadcrumbs / mastheads
+
+| field | type | null? | authority | ví dụ / rule |
+|---|---|---|---|---|
+| `[].id` | string | no | — | echo id yêu cầu |
+| `[].kind` | enum `alpha\|deployment\|account\|binding\|portfolio\|incident\|approval\|exit_review` \| null | no | PORTAL_PROJECTION | null khi không tìm thấy |
+| `[].label` | string \| null | no | registry/strategies/… | `"Grid v2.1"`, `"acct-live-grid-v21"` (account label = id) |
+| `[].sub` | string | yes | | `"BINANCE · canary"` cho deployment |
+| `[].href` | string | yes | | route canonical |
+| `[].env` | enum | yes | | LIVE/MAINNET tô đỏ trên chip crumb |
+
 ---
 
 # Phụ lục B — Definition of Ready (§5.1 backend plan) điền sẵn cho từng gói
@@ -390,6 +401,7 @@ Codex chỉ cần xác nhận/sửa từng ô; ô nào tôi không có quyền q
 | **52** bindings list | Codex · `dev` | READ; PORTAL_CONTROL (bindings/credentials) · BROKER (equity/sync) · PORTAL_PROJECTION (virtual) | new `bindings-list.v1` | ≤50 bindings; ≤20 virtual/binding; sync age per tick | viewer read; credential secrets never | route absent → panel unavailable | `venue_accounts`/`venue_credentials`; BR-EX-43 tick | fixture `execution-bindings-list.valid.json`; invariant test Σ virtual ≤ physical; frontend `accountsBindings.test` |
 | **53** binding detail | Codex · `dev` | READ (+ rotate action via Drawer) | new `binding-detail.v1` | stream ≤50; audit ≤200 keyset | viewer read; rotate = ADMIN step-up | route absent → panel unavailable | `venue_credentials`, `broker_account_sync_snapshots`, `audit_log` | fixture `execution-binding-detail.binance_main_01.valid.json`; secret-leak test (no key material in payload) |
 | **54** account 360 v1.1 | Codex · `dev` | READ (+ existing simulate actions) | `account-broker-360.v1` → v1.1 additive | 1 account/screen | viewer read | missing additive fields → v1 rendering | existing contract | fixture update; frontend `account360.test` |
+| **55** entity names | Codex · `dev` | READ; PORTAL_PROJECTION over registry/strategies/deployments/accounts/portfolios + Portal-owned incidents/approvals | new `entity-names.v1` (batch) | ≤50 ids/call; cached ETag | any viewer | unknown id → null label (id shown raw) | none | fixture `execution-entity-names.valid.json`; frontend crumb tests | 
 | **41** stage telemetry | Codex · `dev` (source-dark schema first, N10) | READ; PORTAL_PROJECTION/TRADING_SYSTEM/BROKER/DERIVED per 41.x | new `stage-equity.v1`, `envelope-consumption.v1`, `execution-quality.v1`, `positions.v1`, `contribution.v1`; `sandbox-certification.v1.1` | ≤5,000 pts/series; caps ≤8; buckets ≤12; positions ≤500 | viewer read | per-panel honest states (today) | N06 Paper qualification for source-backed values | per-kind fixtures; exact-decimal pure-engine tests |
 
 # Phụ lục C — OpenAPI path stubs (đề xuất; codex quyết tên cuối)
@@ -409,6 +421,7 @@ paths:
   /api/v1/execution/bindings:                  # GET ?filter → bindings-list.v1 (BR-EX-52)
   /api/v1/execution/bindings/{id}:             # GET → binding-detail.v1 (BR-EX-53); POST …/rotate-credential later
   /api/v1/execution/accounts/{id}:             # v1.1 additive (BR-EX-54)
+  /api/v1/execution/entities:                  # GET ?ids=… → entity-names.v1 (BR-EX-55, cross-screen)
   /api/v1/execution/fleet:                     # GET ?stage&venue&owner[&cursor] → fleet-list.v1 (BR-EX-49)
   /api/v1/execution/deployments/{id}/replay:   # GET ?symbol&interval=1h&window=120 → replay.v1 (BR-EX-50)
   /api/v1/execution/deployments/{id}/stage-equity:            # 41.1
@@ -449,7 +462,7 @@ trong test (không chép tay), ghi `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` 
 
 # Phụ lục F — cách codex nhận request này
 
-- **Intake chính thức:** 14 hàng BR-EX-41…54 trong §7.2 của `portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`
+- **Intake chính thức:** 15 hàng BR-EX-41…55 trong §7.2 của `portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`
   (đang là sửa unstaged trên `feat/execution-n04-lease-aware-consumer`). Bản patch để apply lại nếu cần:
   `BACKEND_PLAN_7_2_ROWS_2026-08-25.md` (cùng thư mục, 8 hàng nguyên văn).
 - **Chi tiết field/type/enum/ví dụ:** phụ lục A; DoR: phụ lục B; path: C; error: D; thứ tự: E.

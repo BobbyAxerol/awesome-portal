@@ -1185,3 +1185,12 @@ component nào tiêu thụ.
 - **Ảnh hưởng hiện tại:** màn đã có contract; restyle theo grammar hi-fi 1g (khung LIVE đỏ, 3 panel mono, binding table, sync history, findings + 2 nút). Smoke chỉ cho `facts` masthead nếu thiếu.
 - **Fixture:** cập nhật `execution-account-broker-360.*.valid.json`.
 
+### BR-EX-55 — Entity display names for breadcrumbs / mastheads (cross-screen) (2026-08-26) — **spec cho codex**
+
+- **Vấn đề:** breadcrumb và masthead cần tên người vận hành dùng (`av_2041 → "Grid v2.1"`, `PF-CRYPTO`, `acct-live-grid-v21`, `binance_main_01`, `dep_88 → "Grid v2.1 · BINANCE canary"`, `inc_44`, `AP-352`, `EX-771`). Frontend hiện map cứng `av_2041 → Grid v2.1` (fixture cast) — mọi id khác chỉ in id. Lỗi vừa sửa (route list mang đuôi entity của fixture) là hệ quả của việc thiếu resolver: entity phải đến từ route + server, không từ screenId.
+- **Cần:** `GET /api/v1/execution/entities?ids=av_2041,dep_88,acct-live-grid-v21,binance_main_01,PF-CRYPTO,inc_44,AP-352,EX-771` → `entity-names.v1`: `[{id, kind: alpha|deployment|account|binding|portfolio|incident|approval|exit_review, label, sub?, href, env?: LIVE|MAINNET|TESTNET|PAPER}]`; batch ≤50 id, ETag; 404 từng id → `{id, kind: null, label: null}` (frontend in id thô, không bịa).
+- **Áp dụng cho các màn đã làm:** Alpha 360 (h1 + crumb), Portfolio 360 (h1 hiện dùng `portfolioId`), Account 360 (crumb + `alpha · dep · portfolio` links), Binding Detail (title venue/env/settle), Incident (subject), Gate R1/R2/Exit review (approval subject), Command Center/Queue/Blotter (mọi link id → label khi hover/title).
+- **Nguồn:** `strategies`/`alphas` (name, version), `strategy_deployments` (+venue/stage), `accounts`, `venue_accounts`, `portfolios`, PORTAL incidents/approvals/exit reviews.
+- **Invariant:** label chỉ là hiển thị; id vẫn là khoá trong URL và mọi liên kết; không có label → id.
+- **Fixture:** `execution-entity-names.valid.json`. Không có smoke riêng; map cứng `av_2041` trong `ExecutionPreviewRoute.tsx` xoá khi 55 giao.
+
