@@ -1054,3 +1054,62 @@ Ký hiệu: **DB** = bảng trong trading DB (88 bảng/2 view); **TS route** = 
 - **Hiển thị:** rail = panel "GUARD" mono: dòng 1 = protective ladder + policy; danh sách blocker = `severity edge · code (mono 11) · label · owner chip · since · →` sắp theo `rank`; mã không có trong catalog → in thô (không bịa).
 - **Fixture:** `execution-blocker-catalog.valid.json`. Test: mọi `blockerCodes` trong các fixture stage tồn tại trong catalog (hoặc test ghi nhận thiếu).
 
+## L.8 Nguồn dữ liệu theo cột thật (DB guide 88 bảng) — BR-EX-56 Live Overview
+
+| field | bảng · cột | logic |
+|---|---|---|
+| `rows[]` (tập live) | `strategy_deployments(deployment_id, strategy_id, account_id, mode, venue, currency, active, portfolio_id, state, risk_profile_id, account_policy_id)` | `mode='live' AND active` ; stage từ `state` (LIVE_FULL/LIVE_CANARY) hoặc `metadata_v2.stage` — codex chốt cột |
+| `rows[].alpha`, `alpha_id` | `strategies` (name, version) qua `strategy_id` | label theo BR-EX-55 |
+| `rows[].since`, `gate_id` | PORTAL approvals (AP-*) + `operator_operations(operation_type='deployment.activate_*', scope_id=deployment_id, status='VERIFIED', updated_at)` | since = updated_at của op VERIFIED cuối |
+| `rows[].canary{day,total}` | PORTAL approval conditions (AP-311 review day 9/14) hoặc `strategy_deployments.metadata_v2.canary` | total = review window |
+| `rows[].alloc` | `portfolio_allocations(allocated_capital, max_capital, currency, state)` by `deployment_id` | state ACTIVE |
+| `rows[].exposure` | `positions_v2(notional, signed_qty, mark_price)` by `strategy_id, account_id, mode='live', venue`, `closed_at IS NULL` | Σ\|notional\| |
+| `rows[].session_pnl` | `execution_sessions` (session hiện tại: `state`, `started_at`) + `positions_v2.realized_pnl + unrealized_pnl` + `account_equity_snapshots.fee_total/net_pnl` (delta từ `started_at`) | live = re-price `unrealized_pnl` với `mark_price` mới nhất (tick) |
+| `rows[].dd` | `account_equity_snapshots.drawdown` (mới nhất theo deployment_id) | ratio string |
+| `rows[].pulse_60m` | `account_equity_snapshots(ts, net_pnl)` 60 phút gần nhất / 2.5 phút | 24 điểm |
+| `rows[].health` | `reconciliation_findings(finding_type='MISMATCH', status='OPEN', severity)` + `broker_account_sync_snapshots(status, synced_at)` vs policy + `service_heartbeats(status, last_seen_at)` | FAIL_CLOSED / DEGRADED / READY như L.4 |
+| `rows[].note` | session counters `execution_sessions(submitted_count, sent_count, filled_count, partial_fill_count, broker_rejected_count)` ("14 orders · 12 fills"), `sizing_decisions.leverage/risk_percent` ("risk utilization 52%"), `risk_profiles(max_notional_order)` ("max order 500"), conditions (PORTAL) | server soạn; links = ids |
+| `kpis.live_capital` | Σ `portfolio_allocations.allocated_capital` (live deployments); `canary_envelope` = Σ của LIVE_CANARY | ccy base |
+| `kpis.session_pnl` | Σ rows session_pnl | |
+| `kpis.gross_exposure` | Σ rows exposure; `pct_of_capital` = / live_capital | |
+| `kpis.fail_closed` | count health FAIL_CLOSED; `incident_id` từ PORTAL incidents gắn `finding_id` | |
+| `kpis.protective_ladder` | PORTAL command policy (halt/reduce/close available) + `operator_operations(operation_type='rollback.test', status)` | ARMED khi cả 3 bước khả dụng |
+| `kpis.broker_sync` | `broker_account_sync_snapshots(source='ws'\|'rest', synced_at)` mới nhất theo `external_account_ref`; policy từ venue policy | age = now − synced_at |
+| `tape[]` | `domain_events(event_ts, event_type ∈ {FILL, QUOTE_REFRESH, RECON_MISMATCH}, strategy_id, account_id, payload)` ⋈ `fills` | ≤20 desc; SSE `live.tape` từ cùng stream |
+| `venues[]` | `venues` ⋈ live deployments | `live` = có ≥1 deployment live |
+
+## L.9 Nguồn dữ liệu theo cột thật — BR-EX-57 Live Full v1.1
+
+| field | bảng · cột |
+|---|---|
+| `masthead.alpha/portfolio/venue/stage/promoted_*` | `strategies`, `strategy_deployments(portfolio_id, venue, state)`, `operator_operations` (activate op VERIFIED) |
+| `meta.artifact_digest, canary_exit_id, live_approval_id` | `alpha_ledger` (artifact digest) · PORTAL exit reviews (CX) · PORTAL approvals (AP) |
+| `lifecycle[]` | `alpha_ledger` (R1/R2 refs) + PORTAL exit reviews PX/SX/CX + `operator_operations` |
+| `kpis.capital` | `portfolio_allocations.allocated_capital` |
+| `kpis.gross_exposure / net_exposure` | `performance_snapshots(exposure_long, exposure_short)` mới nhất per deployment: gross = long + short, net = long − short |
+| `kpis.risk_envelope_used_pct` | gross_notional / `risk_grants.max_gross_notional` (grant còn hiệu lực) hoặc `risk_profiles.max_notional_position` |
+| `kpis.daily_loss{value, limit}` | `account_equity_snapshots.net_pnl` hôm nay / equity; limit = `risk_profiles.max_daily_loss` |
+| `kpis.broker_freshness_seconds` | now − `broker_account_sync_snapshots.synced_at` |
+| `broker_truth.sync{state, age, digest}` | `broker_account_sync_snapshots(status, synced_at, execution_state_digest)` |
+| `broker_truth.last_recon` | `reconciliation_findings` (rec id, `created_at`, verdict clean khi 0 finding actionable) hoặc `operator_operations(operation_type='reconcile.dry_run')` |
+| `broker_truth.positions_match{n,of}` | so `positions_v2` với `broker_account_sync_snapshots.positions` (JSON) theo instrument |
+| `broker_truth.open_orders_match` | `orders(status ∈ working)` vs `broker_account_sync_snapshots.open_orders` |
+| `broker_truth.balance_delta` | `account_balances` vs `broker_account_sync_snapshots.balances` |
+| `broker_truth.mismatch` | `reconciliation_findings(details{symbol, local, broker, delta}, created_at, finding_id)` |
+| `open_exposure.positions[]` | `positions_v2(instrument_id→instruments.symbol, side, quantity, unrealized_pnl)`; leverage = notional / (equity share) hoặc `sizing_decisions.leverage` |
+| `open_exposure.open_orders` | `orders(status working)` count + `order_pending_exposure` Σ |
+| `open_exposure.reservations` | `account_reservations` count |
+| `incidents.active[]` | PORTAL incidents ⋈ `reconciliation_findings` |
+| `incidents.ladder.rollback_plan` | `operator_operations(operation_type='rollback.plan', scope_id, status, updated_at)` |
+| `incidents.last_operation` | `operator_operations` mới nhất theo scope deployment (`operation_type`, `status`, `updated_at`) |
+| `contribution_30d.bars` | `account_equity_snapshots(ts, net_pnl)` nhóm theo ngày 30d; `cost_drag` = Σ `fee_total` + `funding_pnl` âm; formula `contrib.v1` |
+
+## L.10 Quyết định codex phải chốt (không đoán)
+
+1. Cột stage LIVE_FULL/LIVE_CANARY: `strategy_deployments.state` hay `metadata_v2.stage` — chọn một và ghi vào contract.
+2. Session pnl: dùng `execution_sessions` boundary hay "ngày giao dịch UTC"; frontend chỉ hiển thị `session_pnl.window`.
+3. Risk envelope used: mẫu số là `risk_grants.max_gross_notional` (grant động) hay `risk_profiles.max_notional_position` (tĩnh) — hi-fi ghi "58%".
+4. Tape: `domain_events` có `QUOTE_REFRESH`? nếu không → chỉ FILL/MISMATCH.
+5. Canary review day/total: nguồn conditions của approval hay `metadata_v2` — BR-EX-35 đã hỏi, chưa chốt.
+6. Sibling fail-closed rule (scale-up blocked): server đánh dấu `rows[].canary.scale_up_blocked_by` để note không suy diễn.
+
