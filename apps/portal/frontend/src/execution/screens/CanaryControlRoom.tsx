@@ -265,7 +265,7 @@ export function CanaryControlRoomScreen({
             </>
           ) : null}
         </div>
-        <details className="exec-pf2-contract exec-lf-contractstrip">
+        <details className="exec-pf2-contract exec-lf-contractstrip" open>
           <summary>published KPIs · canary-control-room.v1 contract — the strip above is smoke until BR-EX-59</summary>
         <ExecutionDecisionStrip
           metrics={room.kpis.map((kpi) => {

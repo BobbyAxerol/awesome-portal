@@ -916,7 +916,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
             <div className="exec-pf2-grid" data-ratio="1"><PfLeadership lens={lens !== null} onLens={() => setLens(lens === null ? 0 : null)} /><PfWhatIf /></div>
             <div className="exec-pf2-grid" data-ratio="1.2r"><PfInfluence /><PfDdOverlap /></div>
             <PfFooterLinks />
-            <details className="exec-pf2-contract" open={!smoke}>
+            <details className="exec-pf2-contract" open>
               <summary>published correlation · corr.v1 contract (matrix · lens · ranked · influence · ρ timeline · drawdown overlap · leaders) — retires with BR-EX-51</summary>
             <CorrelationPanel
               correlation={correlation}

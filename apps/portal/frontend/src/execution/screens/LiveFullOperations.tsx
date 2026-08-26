@@ -160,7 +160,7 @@ export function LiveFullOperationsScreen({
             </>
           ) : null}
         </div>
-        <details className="exec-pf2-contract exec-lf-contractstrip">
+        <details className="exec-pf2-contract exec-lf-contractstrip" open>
           <summary>published KPIs · live-full.v1 contract — the strip above is smoke until BR-EX-57</summary>
         <ExecutionDecisionStrip
           metrics={live.kpis.map((kpi) => {
