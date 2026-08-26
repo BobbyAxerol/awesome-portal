@@ -8,6 +8,7 @@
  */
 import { useEffect, useMemo, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { AlphaFleet } from "./screens/AlphaFleet";
 import { reviewRouteFor } from "./screens/ApprovalInbox";
 
 import { usePresentation } from "../app/presentation";
@@ -196,7 +197,9 @@ export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: 
       content = <FullBlotterPreview initialFilter="ALL" />;
       break;
     case "EXECUTION_ALPHA_360_SCREEN":
-      content = <AlphaThreeSixtyPreview alphaId={params.alphaId ?? "av_2041"} />;
+      // The feature's canonical route (/deployments/alphas, no alphaId) is the
+      // fleet list — the entry screen of WF 2a; a row opens the alpha's 360.
+      content = params.alphaId ? <AlphaThreeSixtyPreview alphaId={params.alphaId} /> : <AlphaFleet />;
       break;
     case "EXECUTION_PORTFOLIO_360_SCREEN":
       content = <PortfolioThreeSixtyPreview portfolioId={params.portfolioId ?? "PF-CRYPTO"} />;
