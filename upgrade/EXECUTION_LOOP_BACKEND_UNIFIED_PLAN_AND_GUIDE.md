@@ -758,7 +758,7 @@ fixtures once delivered, without inventing numbers.
 ### N11 — Published external read capabilities and adapters
 
 **Mapping:** EX-BE-01/07b compatibility continuation.  
-**Status:** `EXTERNAL_CONTRACT_PENDING`.  
+**Status:** `PORTAL_REQUEST_GATE_AND_ADAPTER_COMPLETE / OWNER_PUBLICATION_PENDING / PRODUCTION_INACTIVE`.  
 **Priority:** P1/P2 by screen safety value.
 
 **Requests waiting on Trading System owner**
@@ -770,7 +770,17 @@ fixtures once delivered, without inventing numbers.
 - authoritative VNM calendar/session/ATO/ATC capability;
 - the eight exact `ops` routes in §6.5.
 
-**Deliverables after publication**
+**Portal deliverables complete**
+
+- one consolidated revision-1 request enumerating 24 exact GET capabilities;
+- immutable owner catalogue/semantic/corpus/results/manifest shapes;
+- fail-closed verifier for template, candidate and accepted owner packs;
+- Rust compatibility gate, exact path/query allowlists, resource/scope checks,
+  response-header/schema binding and typed denied/retryable/unavailable/incompatible outcomes;
+- actual schema/fixture byte verification; a hash without its regular non-symlink artifact fails;
+- partial publication remains per-capability unavailable and cannot become a false zero.
+
+**Deliverables after owner publication**
 
 - new contract pack revision and immutable digest;
 - Rust compatibility adapter and golden positive/negative corpus;
@@ -782,6 +792,10 @@ fixtures once delivered, without inventing numbers.
 
 No adapter is accepted from handwritten prose alone. Published machine contract, owner identity,
 golden corpus and accepted shadow evidence are all required.
+
+Portal-side exit evidence is complete. The source-backed portion stays closed until the Trading
+System owner returns the accepted pack; no runtime/profile/source flag is changed by N11. Detail:
+[`EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md`](./backend/EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md).
 
 **Claude parallel lane:** keep affected controls/panels disabled or unavailable with the request ID;
 never sum a visible page or infer missing source facts.
@@ -1212,7 +1226,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | Backend completed-slice index | `backend/README.md` |
 | Claude original request/review | `upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_BACKEND_PLAN_REQUEST.md`, `BACKEND_PLAN_REVIEW.md` |
 | Claude scale/current BR requests | `upgrade_frontend_plan_hifi/hifi_execution_loop/EXECUTION_SCALE_AND_REFINE.md` |
-| **Hi-fi V2 requests BR-EX-41…59 — field-level detail** (types/enums/examples, DoR §5.1 pre-filled per package, OpenAPI path stubs, typed error/state examples, delivery order and per-package smoke retirement) | `upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` (appendices A–M; G/H/I = full JSON examples, derivation rules, errors, live events and required tests for BR-EX-49/50/51; J = source mapping and open decisions; K = BR-EX-52/53/54 bindings/accounts; L = BR-EX-56/57 live overview/full; M = BR-EX-59 canary); verbatim copy of the §7.2 rows: `…/BACKEND_PLAN_7_2_ROWS_2026-08-25.md` |
+| **Hi-fi V2 requests BR-EX-41…59 — field-level detail** (types/enums/examples, DoR §5.1 pre-filled per package, OpenAPI path stubs, typed error/state examples, delivery order and per-package smoke retirement) | `upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` (appendices A–N; G/H/I = full JSON examples, derivation rules, errors, live events and required tests for BR-EX-49/50/51; J = source mapping and open decisions; K = BR-EX-52/53/54 bindings/accounts; L = BR-EX-56/57 live overview/full; M = BR-EX-59 canary; N = screen ↔ request coverage matrix and remaining gaps); verbatim copy of the §7.2 rows: `…/BACKEND_PLAN_7_2_ROWS_2026-08-25.md` |
 | UI/UX authority for those requests — what each screen must show and why | hi-fi files `…/Design system discussion request_version2/HiFi *.dc.html` + owner screenshots 2026-08-25; grammar and per-screen smoke table `…/DESIGN_GRAMMAR_V3.md` (§8); audit `…/AUDIT_DENSITY_AND_INSIGHT_2026-08-25.md` |
 | Frontend smoke modules to delete on delivery (one per screen, contract at file head) | `apps/portal/frontend/src/execution/{commandCenter,incident,operationsQueue,blotter,stage,alpha360}.smoke.ts` |
 | Shared frontend/backend board | `upgrade_frontend_plan_hifi/hifi_execution_loop/PHASE_TRACKER.md` |
@@ -1236,3 +1250,4 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | 2026-08-25 | Claude: §7.2 BR-EX-41…59 appended (`RECEIVED`) — hi-fi V2 Command Center 5a / Incident 4d / stage workbenches; schema appendix in `hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` | documentation only; no runtime/profile/source/command change; codex triages per §7.1 |
 | 2026-08-26 | N09 BR-EX-30/31/32/33/35/36/37/38 closed | Portal contracts/repository/API/codegen complete; registry write policy false; production/source/command inactive |
 | 2026-08-26 | N10 BR-EX-34/39/40 closed | Rust pure engines + schema/OpenAPI/generated TS + canonical fixtures complete; routes/source/SSE/registry/commands inactive |
+| 2026-08-26 | N11 Portal publication gate + adapters closed | one 24-capability owner request, byte-bound schema/fixture verifier and strict Rust GET adapter complete; owner publication/source/runtime pending |

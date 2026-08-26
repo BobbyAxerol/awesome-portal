@@ -2635,3 +2635,18 @@ Claude handoff:
 The OpenAPI routes are contract-only and unmounted; registry/source flags remain false. Claude may
 integrate the generated readers and canonical fixtures now, but must preserve freshness,
 partiality, explicit gaps and exact-decimal strings and must not label fixture data as live.
+
+### N11 backend — published external read capability gate (2026-08-26)
+
+| Slice | BE | FE | Runtime/source | Evidence |
+|---|---|---|---|---|
+| 24-capability owner request | `PORTAL_GATE_COMPLETE / PRODUCTION_INACTIVE` | availability consumer pending | `INACTIVE` | exact GET/auth/row/byte catalogue + semantic rulings |
+| owner publication verifier | `PORTAL_GATE_COMPLETE / PRODUCTION_INACTIVE` | n/a | `INACTIVE` | actual schema/fixture bytes + manifest/evidence fail-closed |
+| Rust external read adapter | `PORTAL_GATE_COMPLETE / PRODUCTION_INACTIVE` | typed state mapper pending | `INACTIVE` | strict scope/query/header/envelope + typed outcomes |
+| owner publication/source parity | `PENDING_OWNER` | panels remain unavailable | `INACTIVE` | no accepted owner pack yet |
+
+Backend report:
+[`EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md`](../../backend/EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md).
+Claude handoff:
+[`CODEX_TO_CLAUDE_N11_EXTERNAL_READ_HANDOFF.md`](./CODEX_TO_CLAUDE_N11_EXTERNAL_READ_HANDOFF.md).
+This checkpoint does not authorize any Trading System call or remove any fixture/unavailable label.

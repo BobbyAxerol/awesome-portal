@@ -1,0 +1,23 @@
+{
+  "schema_version": "trading-system.portal-read-acceptance-results.v1",
+  "request_revision": "portal.execution.external-read-request.v1",
+  "synthetic_example": true,
+  "cases": [
+    {"name":"all_published_routes_exact_get_only","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"mtls_and_delegated_jwt_positive","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"identity_and_scope_negative_matrix","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"contract_and_schema_digest_drift_denied","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"keyset_forward_backward_context_expiry","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"exact_decimal_and_currency_separation","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"total_and_filtered_counts_full_population","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"funnel_and_order_bucket_semantics","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"binding_exposure_fail_closed","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"correlation_sample_count_packing","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"vnm_calendar_session_order_type_semantics","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"response_count_byte_time_bounds","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"partial_stale_unavailable_no_false_zero","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"source_loss_recovery_and_no_blind_retry","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"no_database_redis_cli_broker_command_authority","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"rollback_removes_only_n11_locations","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"}
+  ]
+}

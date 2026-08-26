@@ -905,3 +905,19 @@ TypeScript build, 20 Control API suites / 173 tests and PostgreSQL restore passe
 U11 still owns migration from the Python compatibility event source to committed
 durable run/attempt events. Detailed evidence:
 [`U10_QUANTBT_RUN_SSE_FACADE_CUTOVER.md`](./U10_QUANTBT_RUN_SSE_FACADE_CUTOVER.md).
+
+## Backend state — 2026-08-26 (N11 external read publication gate)
+
+- One consolidated request now enumerates all 24 known Trading System read
+  capabilities needed by Execution Loop instead of emitting per-screen prose
+  requests. Exact GET path, mTLS+delegated-JWT mode, scope, row/byte bounds,
+  semantic rulings, schemas, fixtures and acceptance evidence are mandatory.
+- The offline verifier binds actual regular schema/fixture bytes to the owner
+  catalogue/corpus/manifest and rejects authority widening, invented hashes,
+  secret-shaped fixtures and incomplete acceptance.
+- The source-dark Rust adapter locks request/query/header/envelope behavior and
+  keeps unpublished/denied/incompatible/retryable/unavailable distinct.
+- Status is `PORTAL_REQUEST_GATE_AND_ADAPTER_COMPLETE /
+  OWNER_PUBLICATION_PENDING / PRODUCTION_INACTIVE`; no source route, profile,
+  network, secret, DB/Redis/CLI/broker or command authority changed. Detail:
+  [`EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md`](./EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md).

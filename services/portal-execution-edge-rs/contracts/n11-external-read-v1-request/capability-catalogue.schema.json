@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://primusspark.com/contracts/trading-system.portal-read-publication.v1.schema.json",
+  "title": "Trading System Portal External Read Publication",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "request_revision", "source_contract_revision", "source_contract_commit", "owner_id", "owner_accepted", "partial_publication", "authority", "capabilities"],
+  "properties": {
+    "schema_version": { "const": "trading-system.portal-read-publication.v1" },
+    "request_revision": { "const": "portal.execution.external-read-request.v1" },
+    "source_contract_revision": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "source_contract_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "owner_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "owner_accepted": { "type": "boolean" },
+    "partial_publication": { "type": "boolean" },
+    "authority": {
+      "type": "object", "additionalProperties": false,
+      "required": ["read_only", "portal_database_credential", "portal_redis_authority", "portal_cli_authority", "portal_broker_authority", "command_or_mutation"],
+      "properties": {
+        "read_only": { "const": true },
+        "portal_database_credential": { "const": false },
+        "portal_redis_authority": { "const": false },
+        "portal_cli_authority": { "const": false },
+        "portal_broker_authority": { "const": false },
+        "command_or_mutation": { "const": false }
+      }
+    },
+    "capabilities": {
+      "type": "array", "minItems": 1, "maxItems": 24,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "method", "path_template", "authentication", "pagination", "maximum_page_rows", "maximum_response_bytes", "response_schema_sha256", "positive_fixture_sha256", "published", "portal_reachable"],
+        "properties": {
+          "id": { "type": "string" },
+          "method": { "const": "GET" },
+          "path_template": { "type": "string", "pattern": "^/portal/execution/v1/" },
+          "authentication": { "const": "MTLS_AND_DELEGATED_JWT" },
+          "pagination": { "enum": ["NONE", "KEYSET"] },
+          "maximum_page_rows": { "type": "integer", "minimum": 1, "maximum": 5000 },
+          "maximum_response_bytes": { "type": "integer", "minimum": 1, "maximum": 8388608 },
+          "response_schema_sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "positive_fixture_sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "published": { "type": "boolean" },
+          "portal_reachable": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

@@ -19,6 +19,7 @@ members = [
   "crates/ts-adapter-v1",
   "crates/ts-transport",
   "crates/command-relay",
+  "crates/external-read-adapter",
 ]
 resolver = "2"
 

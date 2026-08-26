@@ -52,6 +52,13 @@ f4 = f4_report.read_text()
 f4h = f4_handoff.read_text()
 n09 = n09_report.read_text()
 n09h = n09_handoff.read_text()
+n11_report = backend.parent / "EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md"
+n11_handoff = tracker.parent / "CODEX_TO_CLAUDE_N11_EXTERNAL_READ_HANDOFF.md"
+for path in (n11_report, n11_handoff):
+    if not path.is_file():
+        raise SystemExit(f"N11 tracking file missing: {path}")
+n11 = n11_report.read_text()
+n11h = n11_handoff.read_text()
 
 for label, text in (("N09 report", n09), ("N09 Claude handoff", n09h)):
     for token in (
@@ -67,6 +74,15 @@ if "Codex N09 Portal governance/workflow gaps" not in t:
     raise SystemExit("tracker lost N09 shared-board row")
 if "EX_BE_05_N09_PORTAL_GOVERNANCE_WORKFLOW_GAPS.md" not in b:
     raise SystemExit("backend README lost N09 closeout index")
+for label, text in (("N11 report", n11), ("N11 Claude handoff", n11h)):
+    for token in (
+        "OWNER_PUBLICATION_PENDING",
+        "PRODUCTION_INACTIVE",
+    ):
+        if token not in text:
+            raise SystemExit(f"{label} lost N11 boundary {token}")
+if "Rust compatibility adapter" not in n11 or "availability" not in n11h:
+    raise SystemExit("N11 tracking files lost adapter/consumer boundary")
 
 qualified = "`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`"
 for phase in (3, 14, 15, 16, 17):
@@ -95,7 +111,11 @@ for action in (
     "ops/trace-order", "ops/streams", "ops/alpha-activity", "ops/redis-retention",
 ):
     row = next((line for line in l.splitlines() if f"`{action}`" in line), None)
-    if row is None or "EXTERNAL_CONTRACT_PENDING" not in row:
+    if (
+        row is None
+        or "PORTAL_ADAPTER_GATE_COMPLETE" not in row
+        or "OWNER_PUBLICATION_PENDING" not in row
+    ):
         raise SystemExit(f"request ledger lost unreachable Trading System action {action}")
 
 if "Generic `redis/get` and `redis/scan` are explicitly **REJECTED" not in l:

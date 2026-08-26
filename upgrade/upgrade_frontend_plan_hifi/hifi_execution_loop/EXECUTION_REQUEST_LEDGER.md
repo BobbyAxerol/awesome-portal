@@ -51,7 +51,7 @@ is in [`PRE_IAM_04_OFFLINE_HARDENING_CLOSEOUT.md`](../../backend/PRE_IAM_04_OFFL
 | A-4 typed page retention | Codex contract; source owner | real retention policy/time range | `CONTRACT_COMPLETE / OWNER_DECISION_PENDING` |
 | A-5 nullable projection-gap facts | Claude consumer | null means absent fact, never zero | `DECISION_COMPLETE / FRONTEND_INTEGRATION_PENDING` |
 | A-6 delegated assertion expiry | Codex contract; Claude consumer | do not present as Portal-session expiry | `CONTRACT_COMPLETE / FRONTEND_INTEGRATION_PENDING` |
-| A-7 BR-EX-24–27 follow-up | owners below | four independent contract/owner decisions | `OWNER_DECISION_PENDING` |
+| A-7 BR-EX-24–27 follow-up | owners below | one consolidated machine-readable owner publication still required | `PORTAL_REQUEST_GATE_COMPLETE / OWNER_PUBLICATION_PENDING` |
 
 ## 4. BR-EX request ledger
 
@@ -68,10 +68,10 @@ activation remains independently gated by the per-phase table in §12.2.
 | Request | Owner | Exact blocker / safe current behavior | Status |
 |---|---|---|---|
 | BR-EX-23 R2 `portfolio_id` + `currency` | Codex contract; Claude consumer | none in contract; Claude removed fixture defaults | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` |
-| BR-EX-24 scope-bound order list | Trading System source owner + Bobby scope; Codex adapter after publication | no list capability exists; Full Blotter stays fixture and browser never fabricates totals | `OWNER_DECISION_PENDING` |
-| BR-EX-25 five-hop vs four-stage funnel | Bobby product/source owner | published contract has four stages; UI labels the limitation and does not invent a fifth hop | `OWNER_DECISION_PENDING` |
-| BR-EX-26 aggregate exposure verdict | Trading System source owner; Codex adapter after publication | no authoritative full-population verdict; UI is `unavailable`, never sums visible rows | `EXTERNAL_CONTRACT_PENDING` |
-| BR-EX-27 packed correlation `sample_counts` | Trading System source owner; Codex adapter after publication | per-cell sample floor unavailable; UI does not infer insufficient data | `EXTERNAL_CONTRACT_PENDING` |
+| BR-EX-24 scope-bound order list | Trading System source owner + Bobby scope; Codex adapter gate complete | `orders.list` exact GET requested; Full Blotter stays fixture until accepted publication | `PORTAL_ADAPTER_GATE_COMPLETE / OWNER_PUBLICATION_PENDING` |
+| BR-EX-25 five-hop vs four-stage funnel | Bobby product/source owner | semantic-ruling artifact requires owner choice; UI does not invent signal/intent facts | `PORTAL_REQUEST_COMPLETE / OWNER_RULING_PENDING` |
+| BR-EX-26 aggregate exposure verdict | Trading System source owner; Codex adapter gate complete | `bindings.exposure-verdict` requests full-population per-currency verdict; UI stays unavailable | `PORTAL_ADAPTER_GATE_COMPLETE / OWNER_PUBLICATION_PENDING` |
+| BR-EX-27 packed correlation `sample_counts` | Trading System source owner; Codex adapter gate complete | `portfolios.correlation-samples` requests per-cell counts and explicit diagonal semantics | `PORTAL_ADAPTER_GATE_COMPLETE / OWNER_PUBLICATION_PENDING` |
 | BR-EX-28 canonical command catalogue | Codex EX-BE-05b/F0; Claude consumer | revision-2 64-action catalogue is ADMIN/workspace/actor/environment/entity/risk scoped; non-GET owner review and R1–R4 plan/apply are enforced; all entries remain unreachable and all runtime command flags remain false | `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` |
 | BR-EX-28 allocation classification | Bobby/Trading System command owner; Codex enforces conservative floor | remains at least R1, owner-reviewed and plan/apply-gated; it can never fall to R0 without a published ruling | `OWNER_DECISION_PENDING` |
 | BR-EX-29 typed `conditions[]` | Codex EX-BE-05b/F0; Claude consumer | backend/schema/PostgreSQL canonical array delivered; legacy singular value remains only at explicit compatibility boundary | `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` |
@@ -85,14 +85,14 @@ adapter only after that owner publishes an authenticated, typed route.
 
 | Action | Needed by | Status | Prohibited substitute |
 |---|---|---|---|
-| `ops/command-journal` | Operations Queue | `EXTERNAL_CONTRACT_PENDING` | direct PostgreSQL/CLI |
-| `ops/findings` | Operations Queue | `EXTERNAL_CONTRACT_PENDING` | direct PostgreSQL/CLI |
-| `ops/alerts` | Incident Detail | `EXTERNAL_CONTRACT_PENDING` | direct Redis/CLI |
-| `ops/dead-letters` | Incident Detail | `EXTERNAL_CONTRACT_PENDING` | direct Redis/CLI |
-| `ops/trace-order` | Incident Detail | `EXTERNAL_CONTRACT_PENDING` | direct PostgreSQL/Redis/CLI |
-| `ops/streams` | Command Center | `EXTERNAL_CONTRACT_PENDING` | direct Redis stream access |
-| `ops/alpha-activity` | Command Center | `EXTERNAL_CONTRACT_PENDING` | direct Redis/CLI |
-| `ops/redis-retention` | Operations/diagnostics | `EXTERNAL_CONTRACT_PENDING` | generic Redis keyspace access |
+| `ops/command-journal` | Operations Queue | `PORTAL_ADAPTER_GATE_COMPLETE / OWNER_PUBLICATION_PENDING` | direct PostgreSQL/CLI |
+| `ops/findings` | Operations Queue | `PORTAL_ADAPTER_GATE_COMPLETE / OWNER_PUBLICATION_PENDING` | direct PostgreSQL/CLI |
+| `ops/alerts` | Incident Detail | `PORTAL_ADAPTER_GATE_COMPLETE / OWNER_PUBLICATION_PENDING` | direct Redis/CLI |
+| `ops/dead-letters` | Incident Detail | `PORTAL_ADAPTER_GATE_COMPLETE / OWNER_PUBLICATION_PENDING` | direct Redis/CLI |
+| `ops/trace-order` | Incident Detail | `PORTAL_ADAPTER_GATE_COMPLETE / OWNER_PUBLICATION_PENDING` | direct PostgreSQL/Redis/CLI |
+| `ops/streams` | Command Center | `PORTAL_ADAPTER_GATE_COMPLETE / OWNER_PUBLICATION_PENDING` | direct Redis stream access |
+| `ops/alpha-activity` | Command Center | `PORTAL_ADAPTER_GATE_COMPLETE / OWNER_PUBLICATION_PENDING` | direct Redis/CLI |
+| `ops/redis-retention` | Operations/diagnostics | `PORTAL_ADAPTER_GATE_COMPLETE / OWNER_PUBLICATION_PENDING` | generic Redis keyspace access |
 
 Generic `redis/get` and `redis/scan` are explicitly **REJECTED as Portal
 capabilities**. If a screen needs data currently discovered through either CLI

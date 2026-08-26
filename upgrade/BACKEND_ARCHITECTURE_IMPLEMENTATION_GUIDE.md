@@ -1410,6 +1410,14 @@ deep-dive → ADR → slice → evidence discipline documented above.
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**
 
+- **N11 external read boundary (2026-08-26):** Portal's consolidated
+  24-capability request, byte-bound owner verifier and source-dark Rust
+  compatibility gate are complete. Source adapters remain production-inactive
+  until an accepted Trading System owner pack supplies exact schemas, fixtures,
+  semantic rulings and evidence. No direct DB/Redis/CLI/broker substitute is
+  allowed. See
+  [`EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md`](./backend/EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md).
+
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
   workload-identity/window gates precede D2, then authenticated transport and
