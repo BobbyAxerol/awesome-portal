@@ -814,8 +814,8 @@ export default function ExecutionFixtures() {
             <LifecycleRail
               steps={stageRail({
                 stage: "PAPER_OBSERVATION",
-                r1: { label: "AP-101", href: "#ap-101" },
-                r2: { label: "AP-207", href: "#ap-207" },
+                r1: { label: "AP-101", href: "/governance/approvals/AP-101/r1" },
+                r2: { label: "AP-207", href: "/governance/approvals/AP-207/r2" },
                 detail: "12/30 days · 184/300 trades",
               })}
             />
