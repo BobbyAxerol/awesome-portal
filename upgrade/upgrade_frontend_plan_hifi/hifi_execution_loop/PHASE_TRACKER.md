@@ -2669,6 +2669,23 @@ Claude handoff:
 Read/query/SSE health never enables a command; every existing runtime command flag remains false.
 N12 is a separately gated machine annex of the same official owner campaign.
 
+### N13A backend — source-dark staged activation foundation (2026-08-26)
+
+| Slice | BE | FE | Runtime/source | Evidence |
+|---|---|---|---|---|
+| seven capability states | `PORTAL_FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | shared profile/status component pending | `FIXTURE / DARK` | independent PROJECTION/QUERY/SSE/R1/R2/R3/R4 versions and kill switches |
+| immutable plan/evidence repository | `PORTAL_FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | audit/details disclosure pending | `INACTIVE` | structural signature/hash/revision validation; owner accepted/trusted false |
+| plan/apply/verify API | `PORTAL_FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | seven-state reader/actions pending | `ROLLBACK_ONLY` | session/workspace/RBAC/CSRF/idempotency/OCC/audit/outbox |
+| owner-backed promotion | `N13B_PENDING_OWNER` | keep unavailable/blocked labels | `INACTIVE` | master owner return + N06 real Paper evidence absent |
+
+Backend report:
+[`EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md`](../../backend/EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md).
+Claude handoff:
+[`CODEX_TO_CLAUDE_N13A_STAGED_ACTIVATION_HANDOFF.md`](./CODEX_TO_CLAUDE_N13A_STAGED_ACTIVATION_HANDOFF.md).
+The canonical states are fixture, denied, incompatible, stale, partial,
+rollback and restart. Every action remains visually/runtime disabled except an
+authenticated ADMIN fixture rollback workflow; HTTP 202 is not terminal.
+
 ### Official Trading System owner campaign (2026-08-26)
 
 The only document Bobby should send is
@@ -2684,7 +2701,7 @@ master request activates a source, screen or command.
 
 | Phase | Lane A — Portal continues now | Lane B — external/live gate | Current status |
 |---|---|---|---|
-| N13 | delivery-profile state machine, repositories/APIs, evidence validation, rollback fixtures | import owner bytes, Paper shadow/qualification and staged promotion | `N13A_READY / N13B_MASTER_OWNER_RETURN_PENDING` |
+| N13 | delivery-profile state machine, repositories/APIs, evidence validation, rollback fixtures | import owner bytes, Paper shadow/qualification and staged promotion | `N13A_COMPLETE_SOURCE_DARK / N13B_MASTER_OWNER_RETURN_PENDING` |
 | N14 | Portal release manifest, signed images/SBOM, dev/stable isolation, migration/rollback rehearsal | bind exact Trading System identities and run joint release rehearsal | `N14A_PLANNED / N14B_OWNER_RELEASE_EVIDENCE_PENDING` |
 | N15 | Query/Command/Event/Artifact contracts, negotiation and local transport doubles | real mTLS/JWT routes, WAN/fault/compatibility acceptance | `N15A_READ_COMMAND_FOUNDATION_READY / N15B_EVENT_ARTIFACT_OWNER_PUBLICATION_PENDING` |
 | N16 | same-domain/emergency policy, audit and simulated origin failure | accepted R3 protective route and real observed acknowledgement | `N16A_PLANNED / N16B_R3_OWNER_ACCEPTANCE_PENDING` |

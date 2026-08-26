@@ -1,6 +1,6 @@
 {
   "file_digests": {
-    "README.md": "sha256:d9c424f9ae332bb7e8ffa0ba85e8396e0052959fc2ca90d63c9df7b06f7022e8",
+    "README.md": "sha256:725b6368d12a6dd678c7a61b4e298aaebd6ce75b4b08a92055f73bbe2379d9cb",
     "fixtures/command.valid.json": "sha256:9792bac391b74bfd6a2581768d6ea60ae0e880f9504063d82a52c4f8893f39ce",
     "fixtures/event.valid.json": "sha256:c245b69c773d205d6edec800db8cee5410769b0d8e256905ea8827fcf08ae11e",
     "fixtures/execution-analytics.binding-exposure.valid.json": "sha256:1dc0db4f1c81d8f13e3858da0d100a1a7cfd40870da14bc7347ac51efdb1c6a0",
@@ -38,6 +38,9 @@
     "fixtures/execution-projection-page.valid.json": "sha256:4713f2aa4c4d74fd447339ed651d5b936879632d25400e229d8443ebf45eb96d",
     "fixtures/execution-realtime.auth-expiring.valid.json": "sha256:fb352df5f700c8cc3e091f849927c305e8f2e6b7ca0447d95b7dc850b4e46c8f",
     "fixtures/execution-realtime.projection-gap.valid.json": "sha256:d9af9dd2a9a2d979c5ee087df9735262392379731156890f89824532f6475f36",
+    "fixtures/execution-staged-activation.capabilities.valid.json": "sha256:87ff22bd7be9862217b10224fe7f29cefb2abcb399b3d09adb407715b8d50203",
+    "fixtures/execution-staged-activation.plan-blocked.valid.json": "sha256:686d29d14d837cd324eb087f3e08e6758022e3b0f1f1a018a220c15d2ec44958",
+    "fixtures/execution-staged-activation.states.valid.json": "sha256:9a94bda34f0ad739cad68fa869f5f26f6c1499a8e2dc1e6de4063f80f1b64c24",
     "fixtures/keyset-page.valid.json": "sha256:2b78c3322f9b8b69045540cb9eb25346816ca814a6bd1b1530606615c7435c32",
     "fixtures/problem.valid.json": "sha256:3986ee8577ed6867e5abcf7619576869f80847944bc11d8cbae7056750c552a1",
     "generated/execution-analytics-series.d.ts": "sha256:c0f407caebf5e4591771b3819e2a4843b2bfd96fcdac65a3467735e0e8c0ad75",
@@ -46,6 +49,7 @@
     "generated/execution-governance.d.ts": "sha256:520ed22f3ef97f8333c070244ed90d0c32afad4f522369fbd811cad58c80e537",
     "generated/execution-operations.d.ts": "sha256:ed8e2d2c76457612391dc74329bb4c8096181afb9649277b33dea741b6078ce5",
     "generated/execution-realtime.d.ts": "sha256:d53dd7a9fdab92e8ee9fb4c6c2de394324ae0ef1396888ab50af49b3ebed4788",
+    "generated/execution-staged-activation.d.ts": "sha256:0c1dca37692c56aa495510afa05202d41d9ec9d7fb77b8b6ab7d4943da2220ce",
     "generated/portal-api.d.ts": "sha256:dcad2bc7eb4174cd08e80efeffa95244804fa450519dfd56375c0dcbf74d6919",
     "openapi/execution-analytics-series.openapi.json": "sha256:d1cb7c1c900060853f104ae716f34c7503bfaeaf060357eb6268095d4e95364c",
     "openapi/execution-analytics.openapi.json": "sha256:1a59324036a9971bc030251350264f8041c53ec83bde7125726e2d4b7090cd8c",
@@ -53,7 +57,8 @@
     "openapi/execution-governance.openapi.json": "sha256:1b240c0538b31644ca9254448d3eb528e6cacf678f866b4588f09aa96d4d0630",
     "openapi/execution-operations.openapi.json": "sha256:5c2b531c79f23db651cecbe1051ac2aaefba1b803f9b433afc2983eb20eb4732",
     "openapi/execution-realtime.openapi.json": "sha256:e839476525da989b282e835c14c22ae258f2c46105fca6065a6db38d125843c1",
-    "package.json": "sha256:e292e60c5a90655753879e0710723bd6b5ad243c9fa533ca48c08490546944ac",
+    "openapi/execution-staged-activation.openapi.json": "sha256:c741d5b93362e2af59342df7c6c78e7586f81ab72c89039e6010b2632c81e6b2",
+    "package.json": "sha256:6282bffa38db124b01dbd846a567763504fddaa04ec9d85181b570a84a5d9c5f",
     "schemas/command-envelope.v1.schema.json": "sha256:53c6f3ccf66d1b74de59945fe33f480ae58bb00ae500b7696d0411d8094d4cb1",
     "schemas/common.v1.schema.json": "sha256:a74a2c08ff7e87f8cb9110932099c66520bb942788000f5499c594d1c6ef5f88",
     "schemas/event-envelope.v1.schema.json": "sha256:527a2d5128758d088bfcd9e86291ac1a0be1b993821c90be2bd2a36890d10a95",
@@ -66,6 +71,7 @@
     "schemas/execution-operations.v1.schema.json": "sha256:e1e7aed7daaaf2b4e5ecba453cf96643cd24c58794a6002c1c3772b7a66642fd",
     "schemas/execution-projection-page.v1.schema.json": "sha256:bb3968f70b679340b0d2166bd27924506b9fb5b9fcc25bebe3a6feca1134e8a0",
     "schemas/execution-realtime-event.v1.schema.json": "sha256:574099fc4a6ddad883a8dc35eff7726368793ed3c9ccc524e82ed26c00623100",
+    "schemas/execution-staged-activation.v1.schema.json": "sha256:2650ef1f73c93d2a9fb919a403eeed04518698922eb6518b67e72fb92fe66555",
     "schemas/keyset-page.v1.schema.json": "sha256:304c6bb02e5abed72ad23e30cff40f6a35cd5f343b401bf9df697d8460110ca5",
     "schemas/problem.v1.schema.json": "sha256:dea537e39acbf3c4b42865fb089a1fa606907a4c2a21ec095f50703affaafbee"
   },

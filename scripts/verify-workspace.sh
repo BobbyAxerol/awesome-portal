@@ -117,6 +117,7 @@ for required in \
   "${ROOT_DIR}/packages/contracts/schemas/execution-analytics-series.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-event-envelope.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-operations.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-staged-activation.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/problem.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/command.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/event.valid.json" \
@@ -150,17 +151,22 @@ for required in \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-operation-workflow.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-incident-detail.open.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-incident-workflow.resolved.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-staged-activation.capabilities.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-staged-activation.plan-blocked.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-staged-activation.states.valid.json" \
   "${ROOT_DIR}/packages/contracts/generated/portal-api.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-analytics.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-analytics-series.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-governance.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-realtime.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-operations.d.ts" \
+  "${ROOT_DIR}/packages/contracts/generated/execution-staged-activation.d.ts" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-analytics.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-analytics-series.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-governance.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-realtime.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-operations.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-staged-activation.openapi.json" \
   "${ROOT_DIR}/packages/contracts/tooling/generate-execution-command-catalog.mjs" \
   "${ROOT_DIR}/packages/contracts/vitest.config.ts" \
   "${ROOT_DIR}/packages/contracts/test/fixtures.spec.ts" \
@@ -402,6 +408,14 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/owner-publication.manifest.example.json" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_05B_N12_LIVE_COMMAND_RELAY.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N12_COMMAND_RELAY_HANDOFF.md" \
+  "${ROOT_DIR}/apps/control-api/migrations/1723680000013_execution-staged-activation.sql" \
+  "${ROOT_DIR}/apps/control-api/src/activation/contracts.ts" \
+  "${ROOT_DIR}/apps/control-api/src/activation/activation.repository.ts" \
+  "${ROOT_DIR}/apps/control-api/src/activation/activation.service.ts" \
+  "${ROOT_DIR}/apps/control-api/src/activation/activation.controller.ts" \
+  "${ROOT_DIR}/apps/control-api/test/staged-activation.spec.ts" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N13A_STAGED_ACTIVATION_HANDOFF.md" \
   "${ROOT_DIR}/.github/workflows/publish-images.yml" \
   "${ROOT_DIR}/deploy/execution-d1/README.md" \
   "${ROOT_DIR}/deploy/execution-d1/owner-input.env.example" \
@@ -636,12 +650,18 @@ for tracked_source in \
   packages/contracts/schemas/execution-analytics-series.v1.schema.json \
   packages/contracts/schemas/execution-event-envelope.v1.schema.json \
   packages/contracts/schemas/execution-operations.v1.schema.json \
+  packages/contracts/schemas/execution-staged-activation.v1.schema.json \
   packages/contracts/fixtures/problem.valid.json \
   packages/contracts/fixtures/command.valid.json \
   packages/contracts/fixtures/event.valid.json \
   packages/contracts/fixtures/keyset-page.valid.json \
   packages/contracts/fixtures/execution-analytics.capital-preview.valid.json \
   packages/contracts/fixtures/execution-analytics.order-funnel.valid.json \
+  packages/contracts/fixtures/execution-staged-activation.capabilities.valid.json \
+  packages/contracts/fixtures/execution-staged-activation.plan-blocked.valid.json \
+  packages/contracts/fixtures/execution-staged-activation.states.valid.json \
+  packages/contracts/openapi/execution-staged-activation.openapi.json \
+  packages/contracts/generated/execution-staged-activation.d.ts \
   packages/contracts/fixtures/execution-analytics.insight-batch.valid.json \
   packages/contracts/fixtures/execution-analytics.correlation.valid.json \
   packages/contracts/fixtures/execution-analytics.capital-ledger.valid.json \
@@ -993,6 +1013,14 @@ for tracked_source in \
   apps/control-api/src/execution/analytics.controller.ts \
   apps/control-api/src/execution/analytics.proxy.ts \
   apps/control-api/test/execution-analytics.spec.ts \
+  apps/control-api/migrations/1723680000013_execution-staged-activation.sql \
+  apps/control-api/src/activation/contracts.ts \
+  apps/control-api/src/activation/activation.repository.ts \
+  apps/control-api/src/activation/activation.service.ts \
+  apps/control-api/src/activation/activation.controller.ts \
+  apps/control-api/test/staged-activation.spec.ts \
+  upgrade/backend/EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N13A_STAGED_ACTIVATION_HANDOFF.md \
   apps/control-api/src/auth/auth.service.ts \
   apps/control-api/src/auth/auth.controller.ts \
   apps/control-api/src/auth/argon.ts \

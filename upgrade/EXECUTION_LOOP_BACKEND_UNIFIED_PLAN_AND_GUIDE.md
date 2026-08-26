@@ -871,7 +871,7 @@ disabled and never equate HTTP 202 with success.
 ### N13 — Staged product activation
 
 **Mapping:** product phases 4–18; delivery profile ladder.  
-**Status:** `N13A_READY / N13B_MASTER_OWNER_RETURN_PENDING`.  
+**Status:** `N13A_COMPLETE_SOURCE_DARK / N13B_MASTER_OWNER_RETURN_PENDING`.  
 **Priority:** P1 after foundations.
 
 N13 requires accepted owner bytes and environment-specific evidence from the
@@ -897,6 +897,13 @@ master campaign; it does not require another Trading System feature request.
 **N13A exit gate:** fresh-PostgreSQL migration/repository/API/security tests,
 duplicate/conflict/restart/rollback corpus and fixture-only end-to-end tests
 pass. Every runtime/source/command flag remains false.
+
+**Completed 2026-08-26:** the TypeScript control plane, thirteen-migration
+Portal PostgreSQL model, immutable evidence/compatibility references,
+plan/apply/verify APIs, seven-state Claude corpus and affected-capability-only
+fixture rollback are implemented. Database constraints keep effective profile
+`fixture`, source/runtime false and kill switches engaged. See
+[`EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md`](./backend/EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md).
 
 #### N13B — Owner-backed staged activation
 

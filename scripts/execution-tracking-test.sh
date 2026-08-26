@@ -44,7 +44,7 @@ do
     fi
 done
 for token in \
-    "N13A_READY / N13B_MASTER_OWNER_RETURN_PENDING" \
+    "N13A_COMPLETE_SOURCE_DARK / N13B_MASTER_OWNER_RETURN_PENDING" \
     "N14A_PLANNED / N14B_OWNER_RELEASE_EVIDENCE_PENDING" \
     "N15A_READ_COMMAND_FOUNDATION_READY" \
     "N16A_PLANNED / N16B_R3_OWNER_ACCEPTANCE_PENDING" \
@@ -94,13 +94,17 @@ n11_report = backend.parent / "EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPT
 n11_handoff = tracker.parent / "CODEX_TO_CLAUDE_N11_EXTERNAL_READ_HANDOFF.md"
 n12_report = backend.parent / "EX_BE_05B_N12_LIVE_COMMAND_RELAY.md"
 n12_handoff = tracker.parent / "CODEX_TO_CLAUDE_N12_COMMAND_RELAY_HANDOFF.md"
-for path in (n11_report, n11_handoff, n12_report, n12_handoff):
+n13a_report = backend.parent / "EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md"
+n13a_handoff = tracker.parent / "CODEX_TO_CLAUDE_N13A_STAGED_ACTIVATION_HANDOFF.md"
+for path in (n11_report, n11_handoff, n12_report, n12_handoff, n13a_report, n13a_handoff):
     if not path.is_file():
         raise SystemExit(f"N11/N12 tracking file missing: {path}")
 n11 = n11_report.read_text()
 n11h = n11_handoff.read_text()
 n12 = n12_report.read_text()
 n12h = n12_handoff.read_text()
+n13a = n13a_report.read_text()
+n13ah = n13a_handoff.read_text()
 
 for label, text in (("N09 report", n09), ("N09 Claude handoff", n09h)):
     for token in (
@@ -133,6 +137,12 @@ if "202" not in n12 or "202" not in n12h or "command kill switch" not in n12:
     raise SystemExit("N12 tracking files lost terminal/kill-switch semantics")
 if "N12 backend — live command publication/relay gate" not in t:
     raise SystemExit("tracker lost N12 shared-board section")
+for label, text in (("N13A report", n13a), ("N13A Claude handoff", n13ah)):
+    for token in ("SOURCE_DARK", "N13B", "fixture", "false"):
+        if token not in text:
+            raise SystemExit(f"{label} lost N13A boundary {token}")
+if "N13A backend — source-dark staged activation foundation" not in t:
+    raise SystemExit("tracker lost N13A shared-board section")
 
 qualified = "`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`"
 for phase in (3, 14, 15, 16, 17):

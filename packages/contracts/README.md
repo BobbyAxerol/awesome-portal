@@ -86,6 +86,15 @@ continuity, rollback and realtime are explicitly unavailable. The broker panel
 is suppressed and cannot carry data; `BROKER_MISMATCH_SUPPRESSES_VALUES_AND_SOURCE_GAP_BLOCKS_R4`
 is machine-checked while both R3 and R4 actions remain invisible/disabled.
 
+N13A adds `execution-staged-activation.openapi.json` and the strict
+`execution-staged-activation.v1.schema.json` control-plane contract. It exposes
+seven independent Portal capabilities plus plan/apply/verify state, while the
+schema hard-codes the effective profile to `fixture`, source/runtime flags to
+`false`, the kill switch to `true`, and owner references to untrusted. The
+seven-state UI corpus (`fixture`, `denied`, `incompatible`, `stale`, `partial`,
+`rollback`, `restart`) is the canonical Claude handoff; none of those fixtures
+grants source, Query, SSE or command authority.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields
@@ -130,6 +139,7 @@ packages/contracts/
     execution-event-envelope.v1.schema.json
     execution-command-center-snapshot.v1.schema.json
     execution-operations.v1.schema.json
+    execution-staged-activation.v1.schema.json
   fixtures/
     problem.valid.json
     command.valid.json
@@ -151,6 +161,7 @@ packages/contracts/
     execution-realtime.projection-gap.valid.json
     execution-command-center.{busy,empty,partial,stale,unavailable}.valid.json
     execution-command-{catalog,plan,operation,relay-denied}.valid.json
+    execution-staged-activation.{capabilities,plan-blocked,states}.valid.json
   openapi/
     execution-analytics.openapi.json
     execution-analytics-series.openapi.json
@@ -158,6 +169,7 @@ packages/contracts/
     execution-realtime.openapi.json
     execution-command-center.openapi.json
     execution-operations.openapi.json
+    execution-staged-activation.openapi.json
   generated/
     portal-api.d.ts
     execution-analytics.d.ts
@@ -166,6 +178,7 @@ packages/contracts/
     execution-realtime.d.ts
     execution-command-center.d.ts
     execution-operations.d.ts
+    execution-staged-activation.d.ts
   contracts-snapshot.json
   package.json
   tsconfig.json

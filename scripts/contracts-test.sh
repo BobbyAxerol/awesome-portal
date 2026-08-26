@@ -54,5 +54,7 @@ trap cleanup EXIT
     diff -q /tmp/execution-canary.d.ts generated/execution-canary.d.ts
     npx openapi-typescript openapi/execution-live-full.openapi.json -o /tmp/execution-live-full.d.ts
     diff -q /tmp/execution-live-full.d.ts generated/execution-live-full.d.ts
+    npx openapi-typescript openapi/execution-staged-activation.openapi.json -o /tmp/execution-staged-activation.d.ts
+    diff -q /tmp/execution-staged-activation.d.ts generated/execution-staged-activation.d.ts
   '
 printf 'Contracts workspace tests passed.\n'

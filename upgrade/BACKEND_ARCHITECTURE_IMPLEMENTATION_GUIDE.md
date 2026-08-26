@@ -1427,6 +1427,16 @@ activation or the phase):**
   and every runtime command flag remain pending/false. See
   [`EX_BE_05B_N12_LIVE_COMMAND_RELAY.md`](./backend/EX_BE_05B_N12_LIVE_COMMAND_RELAY.md).
 
+- **N13A staged activation foundation (2026-08-26):** TypeScript and isolated
+  Portal PostgreSQL now implement seven independent source-dark capabilities,
+  the legal delivery-profile graph and authenticated plan/apply/verify with
+  RBAC, CSRF, idempotency, optimistic versions, atomic audit/outbox and bounded
+  per-capability rollback. Immutable owner references remain structurally valid
+  but unaccepted/untrusted. Database constraints keep effective profile
+  `fixture`, source/runtime false and kill switches engaged; N13A can apply only
+  a rollback to fixture. Owner import and real promotion remain N13B. See
+  [`EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md`](./backend/EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md).
+
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
   workload-identity/window gates precede D2, then authenticated transport and

@@ -43,6 +43,9 @@ import { CanaryRepository } from "./canary/canary.repository";
 import { CanaryService } from "./canary/canary.service";
 import { LiveOperationsController } from "./live/live-operations.controller";
 import { LiveOperationsService } from "./live/live-operations.service";
+import { ActivationController } from "./activation/activation.controller";
+import { ActivationRepository } from "./activation/activation.repository";
+import { ActivationService } from "./activation/activation.service";
 
 @Module({})
 export class AppModule {
@@ -63,6 +66,7 @@ export class AppModule {
         SandboxCertificationController,
         CanaryController,
         LiveOperationsController,
+        ActivationController,
       ],
       providers: [
         { provide: CONTROL_API_CONFIG, useValue: config },
@@ -108,6 +112,8 @@ export class AppModule {
         CanaryRepository,
         CanaryService,
         LiveOperationsService,
+        ActivationRepository,
+        ActivationService,
         {
           provide: ExecutionRealtimeProxy,
           useFactory: (cfg: ControlApiConfig) => ExecutionRealtimeProxy.create(cfg),

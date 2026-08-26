@@ -118,6 +118,12 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-canary-control-room.v1.schema.json#/$defs/CanaryControlRoom",
   "execution-live-full-operations.unavailable.valid.json":
     "https://schemas.primusspark.com/portal/execution-live-full-operations.v1.schema.json#/$defs/LiveFullOperations",
+  "execution-staged-activation.capabilities.valid.json":
+    "https://schemas.primusspark.com/portal/execution-staged-activation.v1.schema.json#/$defs/CapabilitiesResponse",
+  "execution-staged-activation.plan-blocked.valid.json":
+    "https://schemas.primusspark.com/portal/execution-staged-activation.v1.schema.json#/$defs/PlanResponse",
+  "execution-staged-activation.states.valid.json":
+    "https://schemas.primusspark.com/portal/execution-staged-activation.v1.schema.json#/$defs/UiStateCorpus",
   "execution-analytics.equity-projection.valid.json":
     "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/EquityProjectionResponse",
   "execution-analytics.insight-line.valid.json":
@@ -208,6 +214,23 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     })).toBe(false);
     expect(validate!({ ...liveFullFixture, production_command_active: true })).toBe(false);
     expect(validate!({ ...liveFullFixture, realtime_active: true })).toBe(false);
+  });
+
+  it("keeps every N13A capability source-dark and every UI corpus action disabled", () => {
+    const capabilities = loadJson(
+      join(fixtureDir, "execution-staged-activation.capabilities.valid.json"),
+    ) as { capabilities: Array<Record<string, unknown>> };
+    const states = loadJson(
+      join(fixtureDir, "execution-staged-activation.states.valid.json"),
+    ) as Array<Record<string, unknown>>;
+    expect(capabilities.capabilities).toHaveLength(7);
+    expect(capabilities.capabilities.every((item) =>
+      item.effective_profile === "fixture" && item.source_enabled === false &&
+      item.runtime_enabled === false && item.kill_switch_engaged === true)).toBe(true);
+    expect(states.map((item) => item.state)).toEqual([
+      "fixture", "denied", "incompatible", "stale", "partial", "rollback", "restart",
+    ]);
+    expect(states.every((item) => item.action_enabled === false)).toBe(true);
   });
 
   it("rejects malformed event envelopes", () => {

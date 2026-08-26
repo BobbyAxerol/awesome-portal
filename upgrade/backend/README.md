@@ -953,3 +953,21 @@ durable run/attempt events. Detailed evidence:
   [`EX_BE_05B_N12_LIVE_COMMAND_RELAY.md`](./EX_BE_05B_N12_LIVE_COMMAND_RELAY.md).
 - N12 is a separately gated machine annex of the same official master owner
   request, not a second owner campaign.
+
+## Backend state — 2026-08-26 (N13A source-dark staged activation)
+
+- TypeScript now owns an authenticated, workspace-scoped plan/apply/verify
+  boundary for seven independent delivery capabilities. Legal transitions,
+  request-key replay, optimistic versions and affected-capability rollback are
+  durable in isolated Portal PostgreSQL.
+- Immutable evidence/signature/compatibility references are structurally
+  validated but explicitly untrusted. Partial, stale, incompatible, denied,
+  rollback and restart states are canonical contracts for Claude.
+- Database constraints force effective profile `fixture`, source/runtime false,
+  owner import false and kill switches engaged. N13A can apply only a rollback
+  to fixture; every promotion is blocked pending the owner master return and
+  N06 real Paper evidence.
+- Status is `PORTAL_FOUNDATION_COMPLETE / SOURCE_DARK /
+  N13B_OWNER_RETURN_PENDING`. No AWS-HK/Trading System call, registry profile,
+  network, secret or runtime flag changed. Detail:
+  [`EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md`](./EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md).

@@ -699,6 +699,7 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     await ctx.pool.query(
       `UPDATE governance_approval_requests
           SET evidence_set_hash = $1,
+              sla_due_at = now() - interval '2 minutes',
               expires_at = now() - interval '1 minute'
         WHERE approval_id = 'AP-R2-DETAIL-R1'`,
       [storedR1Hash],
@@ -711,7 +712,8 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     });
     await ctx.pool.query(
       `UPDATE governance_approval_requests
-          SET expires_at = now() + interval '48 hours'
+          SET sla_due_at = now() + interval '24 hours',
+              expires_at = now() + interval '48 hours'
         WHERE approval_id = 'AP-R2-DETAIL-R1'`,
     );
 

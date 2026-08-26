@@ -41,6 +41,10 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_sandbox_certifications: boolean;
       has_sandbox_events: boolean;
       has_canary_envelopes: boolean;
+      has_activation_capabilities: boolean;
+      has_activation_plans: boolean;
+      has_activation_events: boolean;
+      source_dark_constraint_count: number;
     }>(
       `SELECT
          (SELECT count(*)::integer FROM pgmigrations) AS migration_count,
@@ -61,11 +65,21 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
          to_regclass('public.execution_incident_events') IS NOT NULL AS has_incident_events,
          to_regclass('public.governance_sandbox_certifications') IS NOT NULL AS has_sandbox_certifications,
          to_regclass('public.governance_sandbox_certification_events') IS NOT NULL AS has_sandbox_events,
-         to_regclass('public.governance_canary_envelopes') IS NOT NULL AS has_canary_envelopes`,
+         to_regclass('public.governance_canary_envelopes') IS NOT NULL AS has_canary_envelopes,
+         to_regclass('public.execution_activation_capabilities') IS NOT NULL AS has_activation_capabilities,
+         to_regclass('public.execution_activation_plans') IS NOT NULL AS has_activation_plans,
+         to_regclass('public.execution_activation_events') IS NOT NULL AS has_activation_events,
+         (SELECT count(*)::integer FROM pg_constraint
+          WHERE conname IN (
+            'execution_activation_capabilities_effective_profile_check',
+            'execution_activation_capabilities_source_enabled_check',
+            'execution_activation_capabilities_runtime_enabled_check',
+            'execution_activation_capabilities_kill_switch_engaged_check'
+          )) AS source_dark_constraint_count`,
     );
     const row = result.rows[0];
     if (
-      row.migration_count < 12 ||
+      row.migration_count < 13 ||
       !row.has_f0 ||
       !row.has_hash_only_policy ||
       !row.has_hash_only_constraint ||
@@ -75,7 +89,11 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_incident_events ||
       !row.has_sandbox_certifications ||
       !row.has_sandbox_events ||
-      !row.has_canary_envelopes
+      !row.has_canary_envelopes ||
+      !row.has_activation_capabilities ||
+      !row.has_activation_plans ||
+      !row.has_activation_events ||
+      row.source_dark_constraint_count !== 4
     ) {
       throw new Error(
         `Control API test migration gate did not reach EX-BE-05b/F3 ` +
@@ -89,6 +107,10 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `sandbox_certifications=${row.has_sandbox_certifications}, ` +
         `sandbox_events=${row.has_sandbox_events}, ` +
         `canary_envelopes=${row.has_canary_envelopes}, ` +
+        `activation_capabilities=${row.has_activation_capabilities}, ` +
+        `activation_plans=${row.has_activation_plans}, ` +
+        `activation_events=${row.has_activation_events}, ` +
+        `source_dark_constraints=${row.source_dark_constraint_count}, ` +
         `dir=${migrationsDir})`,
       );
     }
