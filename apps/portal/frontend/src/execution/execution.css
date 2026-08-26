@@ -5538,3 +5538,4 @@
 .exec-lf .exec-strip { margin-bottom: 14px; }
 .exec-lf .exec-strip-cell { background: var(--paper-raised); border: 1px solid var(--line); }
 .exec-lf-telemetry { margin-bottom: 14px; } .exec-lf-telemetry > summary { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); cursor: pointer; margin-bottom: 8px; }
+.exec-lf-contractstrip { margin-bottom: 14px; } .exec-lf-contractstrip > summary { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); cursor: pointer; margin-bottom: 8px; }

@@ -161,12 +161,15 @@ export function LiveFullOperationsScreen({
             </>
           ) : null}
         </div>
+        <details className="exec-pf2-contract exec-lf-contractstrip">
+          <summary>published KPIs · live-full.v1 contract — the strip above is smoke until BR-EX-57</summary>
         <ExecutionDecisionStrip
           metrics={live.kpis.map((kpi) => {
-            const smoke = kpi.value === null && !kpi.suppressed ? visuals?.kpis[kpi.key] : undefined;
-            return { label: kpi.label, value: smoke?.value ?? kpi.value, unit: smoke ? (smoke.unit || null) : kpi.unit, note: smoke ? "smoke" : kpi.value === null ? (kpi.suppressed ? "suppressed" : null) : kpi.authority };
+            const sm = kpi.value === null && !kpi.suppressed ? visuals?.kpis[kpi.key] : undefined;
+            return { label: kpi.label, value: sm?.value ?? kpi.value, unit: sm ? (sm.unit || null) : kpi.unit, note: sm ? "smoke" : kpi.value === null ? (kpi.suppressed ? "suppressed" : null) : kpi.authority };
           })}
         />
+        </details>
         {visuals ? (
           <details className="exec-pf2-contract exec-lf-telemetry">
             <summary>stage telemetry · smoke until BR-EX-41 (contribution bars, envelope gauges, ACK latency, sparklines)</summary>
