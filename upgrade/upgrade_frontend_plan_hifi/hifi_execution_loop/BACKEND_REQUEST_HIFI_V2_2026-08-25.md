@@ -325,6 +325,24 @@ Legs / fills / lineage: xem BR-EX-48 trong `EXECUTION_SCALE_AND_REFINE.md`. Fixt
 | `job` | `{id, table:"execution_replay_jobs", status}` | yes | PORTAL_CONTROL | `erj_112` |
 | `log[]` | `[{t, event, order_id, fill_id?, leg?, type, side, qty, price_or_trigger, fee{amount,liquidity}?, note}]` | no | TRADING_SYSTEM | keyset ≤200 |
 
+## A.51 · `portfolio-360.v1.1` — Portfolio 360 v2 (WF 3a)
+
+| field | type | null? | authority | ví dụ / rule |
+|---|---|---|---|---|
+| `status` | enum `ACTIVE\|PAUSED\|CLOSED` | no | PORTAL_CONTROL | chip xanh ● ACTIVE |
+| `strip.nav` | `{value:string, ccy, as_of, live:bool}` | no | DERIVED (marks) | re-price per tick |
+| `strip.today` | `{value:string}` | yes | DERIVED | `+486.20` |
+| `strip.return_30d` | `{value, benchmark_value, alpha}` | yes | DERIVED (`twr.v1`) | `+1.86% · bm +0.9% · α +0.96%` |
+| `strip.max_dd_30d` | `{value, limit, headroom_pt}` | yes | DERIVED + PORTAL_CONTROL (limit) | `−1.6% · limit −5.0% · headroom 3.4pt` |
+| `strip.attention` | `{mismatch:int, incident_id, note}` | no | PORTAL_CONTROL | `inc_44 · orders fail-closed` |
+| `equity_segmented.windows[]` | `{key, label, nav[], benchmark[], eras[]}` | no | DERIVED (`twr.v1`) + PORTAL_CONTROL (revisions) | ≤ 400 điểm/window, 1d |
+| `eras[]` | `{rev:int, from, to, label, tone}` | no | PORTAL_CONTROL | era = revision in force |
+| `cross_portfolio[]` | xem BR-EX-51 | no | DERIVED | same window, same formulas; sleeve rows `sleeve:"VND"` |
+| `cross_corr` | `{pair:[a,b], rho:string, window, note}` | yes | DERIVED (`corr.v1`) | |
+| `config_log[]` | `{rev, current, retired, date, change, detail, account_id, operation_id, approval_id, actor, since_rev_pnl{value,ccy}}` | no | PORTAL_CONTROL | append-only |
+| `what_if[]` | `{scenario, estimate_text, headline, formula}` | yes | DERIVED (`marginal.v1`) | labeled estimates |
+| `symbol_overlap[]` | `{symbol, alphas[], same_direction_notional, tone}` | no | DERIVED | |
+
 ---
 
 # Phụ lục B — Definition of Ready (§5.1 backend plan) điền sẵn cho từng gói
@@ -342,6 +360,7 @@ Codex chỉ cần xác nhận/sửa từng ô; ô nào tôi không có quyền q
 | **48** blotter v2 | Codex (Portal) · Trading System owner (orders_v2/fills_v2 routes) · `dev` | READ; TRADING_SYSTEM (orders/legs/fills) · PORTAL_CONTROL (risk grant/reject) · DERIVED (`slippage.v1`) | `blotter-orders.v1` → v1.1 additive; new `order-legs.v1`, `order-fills.v1` | 10⁵–10⁷ rows keyset ≤200/page; legs ≤8; fills ≤5,000 paged; tick ≤1/1.3s | viewer read | route unpublished → fields null "not published"; tick absent → no pill | BR-EX-24/25 (`OWNER_DECISION_PENDING`) · BR-EX-43 | fixture `execution-blotter-orders.hifi.valid.json` (+legs+fills); exact-decimal tests; frontend `analytics360.test` blotter cases, journey 4 |
 | **49** fleet | Codex · `dev` | READ; PORTAL_PROJECTION over strategies ⋈ strategy_deployments ⋈ allocations ⋈ snapshots; DERIVED pnl/spark | new `fleet-list.v1` | ≤500 alphas keyset ≤50/page; deployments ≤20/alpha; spark ≤30 pts | any viewer | route absent → panel unavailable (today) | BR-EX-43 tick for session pnl/sync age | fixture `execution-fleet-list.valid.json`; sort-rule tests; frontend `alphaFleet.test` |
 | **50** replay | Codex · Trading System owner (OHLC/fills) · `dev` | READ; TRADING_SYSTEM candles/markers/legs · DERIVED round trips · PORTAL_CONTROL job | new `replay.v1` | 120–2,000 candles; markers ≤500/window; log keyset ≤200 | any viewer | route absent → tab shows unavailable | BR-EX-48 legs/fills; BR-EX-43 tick | fixture `execution-replay.dep_88.valid.json`; marker↔log id consistency test; frontend `alpha360.test` replay cases |
+| **51** portfolio v2 | Codex · `dev` | READ (+2 actions later); DERIVED twr/corr/marginal · PORTAL_CONTROL revisions/log/limits | `portfolio-360.v1` → v1.1 additive | 3 windows ≤400 pts; config log ≤200 keyset; cross ≤20 portfolios | viewer read; report/rebalance = ADMIN step-up (future) | route fields absent → panels unavailable; strip falls back to contract KPIs | BR-EX-43 tick (NAV live); BR-EX-30/35 approvals | fixture `execution-portfolio-360.PF-CRYPTO.v1_1.valid.json`; era/rev consistency tests; frontend `analytics360.test` portfolio cases |
 | **41** stage telemetry | Codex · `dev` (source-dark schema first, N10) | READ; PORTAL_PROJECTION/TRADING_SYSTEM/BROKER/DERIVED per 41.x | new `stage-equity.v1`, `envelope-consumption.v1`, `execution-quality.v1`, `positions.v1`, `contribution.v1`; `sandbox-certification.v1.1` | ≤5,000 pts/series; caps ≤8; buckets ≤12; positions ≤500 | viewer read | per-panel honest states (today) | N06 Paper qualification for source-backed values | per-kind fixtures; exact-decimal pure-engine tests |
 
 # Phụ lục C — OpenAPI path stubs (đề xuất; codex quyết tên cuối)
@@ -357,6 +376,7 @@ paths:
   /api/v1/execution/blotter/orders:            # v1.1 additive per-row; ?filter=ALL|WORKING|CONDITIONAL|BRACKETS|FILLED|PARTIAL|REJECTED
   /api/v1/execution/blotter/orders/{id}/legs:  # GET → order-legs.v1
   /api/v1/execution/blotter/orders/{id}/fills: # GET ?cursor → order-fills.v1 (+ lineage)
+  /api/v1/execution/portfolios/{id}:           # v1.1 additive (BR-EX-51); POST …/report-pack, POST …/rebalance-plan later
   /api/v1/execution/fleet:                     # GET ?stage&venue&owner[&cursor] → fleet-list.v1 (BR-EX-49)
   /api/v1/execution/deployments/{id}/replay:   # GET ?symbol&interval=1h&window=120 → replay.v1 (BR-EX-50)
   /api/v1/execution/deployments/{id}/stage-equity:            # 41.1
@@ -388,14 +408,15 @@ paths:
 6. **43** (N08, Bobby duyệt activation): xoá `CC_SMOKE_MOTION`, market band Incident, pill giá Blotter chuyển sang stream.
 7. **49**: xoá `alphaFleet.smoke.ts`, re-record `el-v2-08-alpha-fleet`.
 8. **50**: xoá `alphaReplay.smoke.ts`, re-record `el-v2-08-alpha-replay`.
-9. **34/40**: xoá `alpha360.smoke.ts`.
+9. **51**: xoá `portfolio360.smoke.ts`, re-record `el-v2-08-portfolio-*`.
+10. **34/40**: xoá `alpha360.smoke.ts`.
 
 Mỗi bước: handoff codex kèm **Required frontend tests**; tôi regenerate `portal-api.d.ts`, nạp fixture canonical
 trong test (không chép tay), ghi `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` vào ledger §3, tick grammar §8.
 
 # Phụ lục F — cách codex nhận request này
 
-- **Intake chính thức:** 10 hàng BR-EX-41…50 trong §7.2 của `portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`
+- **Intake chính thức:** 11 hàng BR-EX-41…51 trong §7.2 của `portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`
   (đang là sửa unstaged trên `feat/execution-n04-lease-aware-consumer`). Bản patch để apply lại nếu cần:
   `BACKEND_PLAN_7_2_ROWS_2026-08-25.md` (cùng thư mục, 8 hàng nguyên văn).
 - **Chi tiết field/type/enum/ví dụ:** phụ lục A; DoR: phụ lục B; path: C; error: D; thứ tự: E.
@@ -568,4 +589,105 @@ Nguồn: `orders` ⋈ `fills` (order_id) ⋈ `order_bracket_legs` (bracket_group
 4. legs chỉ chứa leg chưa terminal; `armed_index` = index của marker BRACKET_ARMED cùng group.
 5. `last_bucket_live` đúng khi `candles[-1].t + interval > as_of`.
 6. keyset log: trang 2 không lặp hàng.
+
+---
+
+# Phụ lục I — BR-EX-51 · Portfolio 360 v2: đặc tả đầy đủ
+
+## I.1 Endpoints
+
+| Method · path | Trả về | Ghi chú |
+|---|---|---|
+| `GET /api/v1/execution/portfolios/{portfolio_id}?window=30d\|90d\|all&mode&venue&benchmark_id` | `portfolio-360.v1.1` (additive lên v1: giữ `kpis`, `holdings`, `correlation`, `leaders`, `ledger`, `approvals`, `incidents`) | ETag/304; `Vary: Authorization` |
+| `GET /api/v1/execution/portfolios/{id}/config-log?cursor&limit=50` | `portfolio-config-log.v1` keyset (rev desc) | tab Overview + Capital Ledger đối chiếu |
+| `GET /api/v1/execution/portfolios/{id}/cross?window=30d` | `cross-portfolio.v1` | có thể gộp vào 360 khi ≤20 portfolio |
+| `POST /api/v1/execution/portfolios/{id}/report-pack` (sau) | `202 {job_id}` | ADMIN step-up; export PDF/CSV theo scope |
+| `POST /api/v1/execution/portfolios/{id}/rebalance-plan` (sau) | `202 {operation_id}` (plan → apply → verify) | ADMIN step-up, đi qua Admin Action Drawer; expected_revision bắt buộc |
+
+Nguồn: `portfolios` ⋈ `portfolio_allocations` ⋈ `portfolio_config_revisions` (rev, from, to, operation_id, approval_id) ⋈ `capital_ledger` ⋈ `performance_snapshots` / `account_equity_snapshots` ⋈ benchmark series (`benchmarks`, `bms_204`) ⋈ `incidents` ⋈ `risk_profiles` (dd limit) ⋈ `market.tick`.
+
+## I.2 Response mẫu (rút gọn, khớp `portfolio360.smoke.ts`)
+
+```json
+{
+  "envelope": { "authority": "EXECUTION", "as_of": "2026-08-25T10:42:01Z", "freshness": "OK" },
+  "portfolio": { "id": "PF-CRYPTO", "status": "ACTIVE", "base_ccy": "USDT", "facts": { "alphas": 4, "accounts": 6 } },
+  "scope": { "window": "30d", "mode": "all", "venue": "all", "benchmark": { "id": "bms_204", "label": "Crypto Core v3" } },
+  "strip": {
+    "nav": { "value": "131240.00", "ccy": "USDT", "as_of": "2026-08-25T10:42:01Z", "live": true },
+    "today": { "value": "486.20", "ccy": "USDT" },
+    "allocated": { "value": "125000", "max": "200000", "free": "57842.55" },
+    "exposure": { "gross": "26100", "accounts": 6, "venues": 3 },
+    "return_30d": { "value": "0.0186", "benchmark_value": "0.0090", "alpha": "0.0096", "formula": "twr.v1" },
+    "max_dd_30d": { "value": "-0.016", "limit": "-0.050", "headroom_pt": "3.4", "limit_source": "risk_profile rev 12" },
+    "attention": { "mismatch": 1, "incident_id": "inc_44", "note": "orders fail-closed" }
+  },
+  "equity_segmented": {
+    "buckets": "1d", "formula": "twr.v1",
+    "windows": [
+      { "key": "90d", "label": "90d",
+        "nav": [ { "t": "2026-05-27", "v": "1.0000" }, { "t": "2026-08-25", "v": "1.0392" } ],
+        "benchmark": [ { "t": "2026-05-27", "v": "1.0000" }, { "t": "2026-08-25", "v": "1.0148" } ],
+        "eras": [
+          { "rev": 10, "from": "2026-07-12", "to": "2026-07-20", "label": "rev 10 · Carry +50k (07-12)", "tone": "accent" },
+          { "rev": 11, "from": "2026-07-20", "to": "2026-08-01", "label": "rev 11 · MM added (07-20) · rev 12 risk (07-28)", "tone": "good", "merged_revs": [11, 12] },
+          { "rev": 13, "from": "2026-08-01", "to": "2026-08-13", "label": "rev 13 · Grid paper 60k (08-01)", "tone": "paper" },
+          { "rev": 14, "from": "2026-08-13", "to": null, "label": "rev 14 · canary", "tone": "bad" }
+        ] }
+    ]
+  },
+  "cross_portfolio": {
+    "rows": [
+      { "portfolio_id": "PF-CRYPTO", "this": true, "nav": { "value": "131240.00", "ccy": "USDT" }, "ret_30d": "0.0186", "max_dd": "-0.016", "alphas": 3, "live_exposure": "41000", "spark": ["16","15","16","12","10","8","5"] },
+      { "portfolio_id": "PF-MAIN", "nav": { "value": "62410.00", "ccy": "USDT" }, "ret_30d": "0.0064", "max_dd": "-0.004", "alphas": 1, "live_exposure": "0", "spark": ["13","13","12","12","11","11","10"] },
+      { "portfolio_id": "PF-MAIN", "sleeve": "VND", "nav": { "value": "502100000", "ccy": "VND" }, "ret_30d": "0.0043", "max_dd": "-0.006", "alphas": 1, "live_exposure": "0", "spark": ["14","13","14","11","12","10","9"] }
+    ],
+    "cross_corr": { "pair": ["PF-CRYPTO", "PF-MAIN"], "rho": "0.21", "window": "30d daily", "note": "low — sleeves diversify at fund level", "formula": "corr.v1" }
+  },
+  "config_log": [
+    { "rev": 14, "current": true, "date": "2026-08-13", "change": "CANARY_JOIN", "detail": "Grid v2.1 → LIVE·CANARY · +5,000", "account_id": "acct-canary-grid", "operation_id": "op_1201", "approval_id": "AP-311", "actor": "Stan", "since_rev_pnl": { "value": "112.40", "ccy": "USDT" } },
+    { "rev": 9, "retired": true, "date": "2026-06-30", "change": "ALPHA_REMOVED", "detail": "RSI v0.9 retired — failed R2 re-review · allocation −8,000 returned to free", "operation_id": "op_1044", "approval_id": "AP-198", "approval_decision": "REJECTED", "actor": "Lan", "since_rev_pnl": { "value": "-96.40", "ccy": "USDT", "final": true } }
+  ],
+  "structure": {
+    "kpis": { "equity": "127842.55", "net_pnl_30d": "3754.20", "drawdown": "-0.028", "gross_exposure": "37400", "net_exposure": "24600", "allocated": "125000", "max": "200000" },
+    "what_if": [ { "scenario": "halve Grid alloc", "estimate_text": "est. portfolio vol −18% · net PnL −9%", "headline": "-18%", "formula": "marginal.v1" } ],
+    "symbol_overlap": [ { "symbol": "BTCUSDT", "alphas": ["Grid v2.1", "Carry v3.2"], "same_direction_notional": "9100.00", "tone": "warn", "note": "duplicate edge risk" }, { "symbol": "ETHUSDT", "alphas": ["Carry v3.2"], "same_direction_notional": "0", "tone": "good", "note": "no overlap" } ],
+    "links": { "incidents_open": 0, "recon_findings": 0, "approvals": ["AP-207", "AP-311"] }
+  }
+}
+```
+
+## I.3 Quy tắc suy ra
+
+| Mục | Quy tắc |
+|---|---|
+| `strip.nav` | NAV theo mark hiện tại (per tick); `today` = NAV − NAV lúc 00:00 UTC; ccy = base_ccy; **không** cộng sleeve ccy khác |
+| `return_30d.alpha` | `value − benchmark_value` cùng window, cùng TWR 1d; đơn vị ratio (frontend in %) |
+| `max_dd_30d.headroom_pt` | `(limit − value) × 100` theo điểm phần trăm; `limit` từ risk profile đang hiệu lực (ghi `limit_source`) |
+| `eras[]` | một era cho mỗi `portfolio_config_revisions` giao với window; rev không đủ ≥2 bucket được **merge** vào era trước (`merged_revs`), label vẫn kể cả hai; era cuối `to:null` = current |
+| `eras[].tone` | CANARY_JOIN → bad · ALLOC_UP/ALLOC_DOWN → accent · ALPHA_ADDED → good · RISK_PROFILE → warn · paper alloc → paper · build-up (rev 1–9) → mute |
+| `nav[]`/`benchmark[]` | normalized 1.0 tại đầu window; 1d bucket; ≤400 điểm (LTTB, giữ extrema, `downsample_meta`) |
+| `cross_portfolio` | cùng window/công thức; rank chỉ trong cùng base ccy; sleeve ccy khác là hàng riêng `sleeve`; `this:true` cho portfolio đang xem |
+| `config_log` | append-only; mỗi rev ↔ đúng 1 `operation_id` (VERIFIED) + `approval_id`; `since_rev_pnl` = pnl tích luỹ từ `from` của rev (đến rev kế tiếp hoặc now); `retired:true` khi ALPHA_REMOVED; `current:true` cho rev cuối |
+| `what_if` | `marginal.v1`: ước lượng cục bộ (halve/remove/double top leader) — **luôn** kèm `formula`, frontend in "labeled estimates" |
+| `symbol_overlap` | cùng symbol, cùng chiều, ≥2 alpha → `warn` + notional trùng |
+| VND | không bao giờ quy đổi vào USDT ở màn này; chỉ liệt kê |
+
+## I.4 Lỗi / trạng thái
+
+`503 PORTFOLIO_PROJECTION_UNAVAILABLE` → màn giữ KPI contract (v1) + panel unavailable · `equity_segmented` thiếu window → chip window disabled kèm lý do · `attention.incident_id` không tồn tại → chỉ đếm · `409 CURSOR_EXPIRED` cho config-log · `403 PORTFOLIO_READ_DENIED`.
+
+## I.5 Live
+
+`market.tick` (BR-EX-43) → `strip.nav`, `today`, `exposure` re-price; `portfolio.revision` event `{portfolio_id, rev, operation_id}` → thêm era + hàng log đầu bảng.
+
+## I.6 Test bắt buộc — fixture `execution-portfolio-360.PF-CRYPTO.v1_1.valid.json`
+
+1. eras phủ kín window không chồng, era cuối `to:null`; mỗi era.rev tồn tại trong config_log.
+2. `config_log[].operation_id` đều VERIFIED trong command journal fixture; rev tăng đơn điệu; đúng 1 `current`.
+3. `return_30d.alpha == value − benchmark_value` (decimal string exact).
+4. `headroom_pt` khớp limit − value.
+5. cross_portfolio: rank không trộn ccy; sleeve VND không cộng vào bất kỳ tổng nào.
+6. `nav[]` downsample giữ min/max gốc; ≤400 điểm.
+7. schema round-trip + ETag 304; v1 client đọc được v1.1 (additive).
 

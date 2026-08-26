@@ -1146,3 +1146,17 @@ component nào tiêu thụ.
 - **Invariant:** marker time = fill event ts (UTC); candle không downsample dưới 1h; replay job id hiện trong footer.
 - **Fixture:** `execution-replay.dep_88.valid.json`. **Xoá smoke:** khi 50 (+43) giao.
 
+### BR-EX-51 — Portfolio 360 v2 (hi-fi WF 3a): live NAV strip, revision-segmented equity, cross-portfolio, configuration log, what-if, overlap (2026-08-25) — **spec cho codex**
+
+- **Cần trong `portfolio-360.v1` → v1.1 (additive):** `status` (`ACTIVE|PAUSED|CLOSED`), `facts{alphas, accounts, base_ccy}`,
+  `strip{nav{value,ccy,as_of,live}, today{value}, allocated{value,max,free}, exposure{gross, accounts, venues}, return_30d{value, benchmark_value, alpha}, max_dd_30d{value, limit, headroom_pt}, attention{mismatch, incident_id, note}}`,
+  `equity_segmented{windows:[{key:30d|90d|all, label, nav[{t,v}], benchmark[{t,v}], eras[{rev, from, to, label, tone}]}]}` (1d TWR),
+  `cross_portfolio[{portfolio_id, sleeve?, nav{value,ccy}, ret_30d, max_dd, alphas, live_exposure, spark[7..30]}]` + `cross_corr{pair, rho, window, note}`,
+  `config_log[{rev, current, retired, date, change: CANARY_JOIN|ALLOC_UP|ALLOC_DOWN|RISK_PROFILE|ALPHA_ADDED|ALPHA_REMOVED, detail, account_id, operation_id, approval_id, actor, since_rev_pnl{value,ccy}}]`,
+  Structure: `structure_kpis{equity, net_pnl_30d, drawdown, gross_exposure, net_exposure, allocated, max}`, `what_if[{scenario, estimate_text, headline, formula:"marginal.v1"}]`, `symbol_overlap[{symbol, alphas[], same_direction_notional, tone}]`, `links{ledger, incidents_open, recon_findings, approvals[]}`.
+- **Actions:** `report_pack` (export) và `rebalance_plan` (plan → apply → verify) — cần route + RBAC step-up; hiện disabled với lý do.
+- **Lý do UI:** hi-fi Overview 3a là "NAV live + hiệu năng theo cấu hình + so sánh sổ + lịch sử cấu hình"; contract hiện chỉ có KPI tĩnh + holdings + correlation.
+- **Ảnh hưởng hiện tại:** `/deployments/portfolios/PF-CRYPTO` chạy `portfolio360.smoke.ts`; KPI contract giữ trong `<details>`; holdings chuyển sang tab Structure (đúng hi-fi). Motion: clock 1s, NAV/today/exposure jitter 1.4s, attention pulse.
+- **Invariant:** per-currency; era = revision đang hiệu lực; mỗi rev ↔ 1 operation_id + approval; VND sleeve liệt kê, không cộng.
+- **Fixture:** `execution-portfolio-360.PF-CRYPTO.v1_1.valid.json`. **Xoá smoke:** khi 51 giao.
+

@@ -84,6 +84,7 @@ re-record baseline màn đó, tick bảng này. Không trộn: smoke chưa bao g
 | Full Blotter | `blotter.smoke.ts` | `BLOTTER_SMOKE`, `BLOTTER_SMOKE_MOTION` | BR-EX-48 (+24/25/43) | smoke |
 | Alpha Fleet | `alphaFleet.smoke.ts` | `FLEET_SMOKE`, `FLEET_SMOKE_MOTION` | BR-EX-49 (+43) | smoke |
 | Alpha 360 · Trade Replay | `alphaReplay.smoke.ts` | `REPLAY_SMOKE`, `REPLAY_SMOKE_MOTION` | BR-EX-50 (+43/48) | smoke |
+| Portfolio 360 | `portfolio360.smoke.ts` | `PF_SMOKE`, `PF_SMOKE_MOTION` | BR-EX-51 (+43) | smoke |
 | Alpha 360 · Insight | `alpha360.smoke.ts` | `ALPHA_INSIGHT_SMOKE` | BR-EX-34/40 | smoke |
 | Paper / Sandbox / Canary / Live | `stage.smoke.ts` | `STAGE_SMOKE` | BR-EX-41 | smoke |
 | Inbox · R1 · R2 · Exit · Queue · Blotter · Portfolio · Account · Drawer | — | — | (chưa dựng theo hi-fi mới; smoke khi Bobby gửi màn) | fixture contract |
