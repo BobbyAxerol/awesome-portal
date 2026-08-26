@@ -1182,3 +1182,35 @@ Ký hiệu: **DB** = bảng trong trading DB (88 bảng/2 view); **TS route** = 
 - `409 SCALE_BLOCKED {reason: BROKER_STALE|SIBLING_FAIL_CLOSED|ENVELOPE_AT_CAP}` cho REQUEST_SCALE; `428 STEP_UP_REQUIRED`.
 - Tests: (1) gates.done == count(ok) và `request_exit_review.enabled ⇔ done==total || waiver`; (2) `trial.day` khớp `today` của timeline và `current.day`; (3) `envelope.rows[].pct == used/cap` (decimal exact), `at_cap ⇔ pct ≥ 1`; (4) 3 series chung `join_digest`; (5) readiness DEGRADED ⇔ sync age > policy; (6) v1.1 additive.
 
+---
+
+# Phụ lục N — Ma trận màn ↔ request (rà 2026-08-26) và các lỗ còn lại
+
+| Màn (route) | Hi-fi | Frontend | Request (§7.2) | Smoke xoá khi | Lỗ / ghi chú |
+|---|---|---|---|---|---|
+| Command Center `/execution/command-center` | 5a | done | 42 · 44 · 45 · 43 (stream) | 42/44/45 · 43 | — |
+| Operations Queue `/execution/operations` | 4e | done | 47 · 43 (alerts) · 32 · 33 | 47 | — |
+| Incident Detail `/execution/operations/incidents/:id` | 4d | done | 46 · 43 (market band) | 46 | — |
+| Full Blotter `/deployments/blotter` | 4c | done | 48 · 24 · 25 · 43 | 48 | — |
+| Alpha Fleet `/deployments/alphas` | list | done | 49 · 43 · 55 | 49 | feature registry vẫn COMMISSIONED → codex đổi `data_mode` khi 49 giao |
+| Alpha 360 `/deployments/alphas/:id` (Overview/Insight/Replay) | 2a/2b | done | 34 · 40 (tiles) · 50 (replay) · 55 | 34/40 · 50 | tab Positions/Orders/Risk/Sessions/Accounting/Recon/Audit dùng contract v1 hiện có — chưa restyle theo hi-fi (đợt sau) |
+| Portfolio 360 `/deployments/portfolios/:id` (6 tab) | 3a | done | 51 (+I.7) · 43 | 51 | Report pack / Rebalance plan = action sau (I.1) |
+| Accounts & Bindings `/deployments/accounts` | list | done | 52 · 43 | 52 | registry chưa có screen riêng — dùng feature canonical route |
+| Binding Detail `/deployments/accounts?binding=` | detail | done | 53 (+ rotate action) | 53 | route dùng query param vì registry chưa có `/bindings/:id` → codex/Bobby chốt route |
+| Account/Broker 360 `/deployments/accounts/:id` | 1g | done | 54 · 55 | — | — |
+| Live Overview `/deployments/live` | entry | done | 56 · 43 | 56 | — |
+| Live Full `/deployments/live/:id` | 1f | done | 57 · 41 · 58 (rail) | 57 · 41 | — |
+| Canary Control Room `/deployments/live/:id/canary` | 1e | done | 59 · 41 · 58 | 59 · 41 | — |
+| Paper Workbench `/deployments/paper/:id` | 1c | grammar v3 + visuals 41 | 41 · (hi-fi pass chưa làm) | 41 | **chờ hi-fi từ Bobby** để restyle như Live/Canary |
+| Sandbox Certification `/deployments/sandbox/:id` | 1d | grammar v3 + visuals 41 | 41 | 41 | như trên |
+| Approval Inbox `/governance/approvals` | 2c | grammar v3 | BR-EX-30 (cũ) | — | hi-fi pass chưa làm |
+| Gate R1/R2 review `/governance/approvals/:id/r1|r2` | 2d/2e | grammar v3 | 30 · 35 | — | như trên |
+| Paper Exit Review `/governance/exit-reviews/:id` | 1c' | grammar v3 | 36 (cũ) | — | như trên |
+| Admin Action Drawer `/administration/actions` | 5b | grammar v3 | 37 (cũ) | — | rotate credential / rebalance plan / decision options sẽ đi qua đây (53, 51, 59) |
+| Alerts (sidebar hi-fi) | — | **không có màn** | 43 (summary) | — | hi-fi có mục "Alerts" — cần hi-fi + registry screen |
+| Promotion Timeline, Waivers & Conditions (sidebar hi-fi) | — | **không có màn** | — | — | cần hi-fi + registry screen; link `waivers & conditions` tạm trỏ Approval Inbox |
+| Reconciliation (sidebar hi-fi) | — | **không có màn** | — | — | link `rec_*` tạm trỏ Account 360; cần hi-fi |
+| Cross-screen | — | breadcrumb theo route | 55 (entity names) · 58 (blocker catalog) | 55 | — |
+
+**Việc frontend đã tự sửa trong đợt rà (không cần backend):** breadcrumb list-route không mang entity fixture; incident h1 = id trên route; canary rows → Canary room; link approvals mang `/r1|/r2`; passport/evidence anchor → tab Audit; rail/strip/telemetry một grammar trên mọi surface.
+
