@@ -213,7 +213,7 @@ def validate_compatibility(payload: dict[str, Any]) -> None:
         raise ReleaseError("compatibility service matrix is incomplete")
     trading = payload["trading_system"]
     if trading != {
-        "owner_campaign_revision": "portal.execution.trading-system-owner-request.v1",
+        "owner_campaign_revision": "portal.execution.trading-system-owner-request.v2",
         "owner_return_status": "PENDING_N14B",
         "source_contract": "UNBOUND", "source_image_digest": "UNBOUND", "gateway_image_digest": "UNBOUND",
     }:

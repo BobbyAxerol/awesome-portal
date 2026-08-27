@@ -17,7 +17,7 @@
     {"service_id": "source-proxy", "cell": "AWS_HK_EXECUTION", "required": true}
   ],
   "trading_system": {
-    "owner_campaign_revision": "portal.execution.trading-system-owner-request.v1",
+    "owner_campaign_revision": "portal.execution.trading-system-owner-request.v2",
     "owner_return_status": "PENDING_N14B",
     "source_contract": "UNBOUND",
     "source_image_digest": "UNBOUND",

@@ -463,6 +463,7 @@ for required in \
   "${ROOT_DIR}/scripts/execution-n17a-readiness.py" \
   "${ROOT_DIR}/scripts/test_execution_n17a_readiness.py" \
   "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh" \
+  "${ROOT_DIR}/scripts/build-trading-system-owner-campaign-pack.sh" \
   "${ROOT_DIR}/deploy/manifests/deployment-profile.v1.schema.json" \
   "${ROOT_DIR}/deploy/manifests/deployment-profiles.source-dark.json" \
   "${ROOT_DIR}/deploy/manifests/portal-release-compatibility-matrix.v1.schema.json" \
@@ -1290,6 +1291,7 @@ bash -n \
   "${ROOT_DIR}/scripts/portal-release-authority-test.sh" \
   "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
   "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh" \
+  "${ROOT_DIR}/scripts/build-trading-system-owner-campaign-pack.sh" \
   "${ROOT_DIR}/scripts/smoke-stack.sh" \
   "${ROOT_DIR}/scripts/control-api-provision-keyrings.sh" \
   "${ROOT_DIR}/scripts/stage-hmd-reader-wheel.sh" \

@@ -2,11 +2,16 @@
 
 Status: `OFFICIAL_SINGLE_OWNER_REQUEST / PORTAL_TEMPLATES_READY / OWNER_CAMPAIGN_PENDING / NO_RUNTIME_AUTHORITY`
 
-Request revision: `portal.execution.trading-system-owner-request.v1`  
-Date: 2026-08-26  
+Request revision: `portal.execution.trading-system-owner-request.v2`  
+Date: 2026-08-27  
 Requested by: Bobby / Portal  
 Portal implementation owner: Portal backend  
 Source and execution authority owner: Trading System
+
+Supersedes: `portal.execution.trading-system-owner-request.v1`. Revision v2
+does not widen runtime authority. It consolidates the previously separate
+N02/N03/N11/N12/N15 inputs into one manifest-bound owner campaign pack and
+keeps every activation flag false.
 
 > **This is the only active document to send to the Trading System owner.**
 > Do not send N02, N03, N11, N12 or older D4/Claude request files as separate
@@ -180,9 +185,28 @@ If Trading System needs no artifact transport because it already consumes an
 immutable owner-approved location, publish that ruling and its verification
 contract. Do not invent an upload API merely to satisfy the document.
 
-## 4. Single owner return root
+## 4. Single owner input and return roots
 
-Return one sanitized tree, not separate chat replies:
+The Portal team supplies exactly one deterministic, non-secret input pack:
+
+```text
+trading-system-owner-campaign-v2/
+  REQUEST.md
+  annexes/
+    n02-incremental-contract/
+    n03-source-implementation/
+    n11-external-read/
+    n12-command/
+    n15-event-artifact-reference/
+  INPUT_MANIFEST.sha256
+```
+
+Build it only with `scripts/build-trading-system-owner-campaign-pack.sh` and
+verify `INPUT_MANIFEST.sha256` before implementation. The annex directories are
+supporting machine contracts, not independent change requests, repositories,
+services, containers or runtime activation units.
+
+The Trading System owner returns one sanitized tree, not separate chat replies:
 
 ```text
 /home/bobby/portal-trading-system-owner-return-v1/
