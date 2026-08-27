@@ -44,6 +44,10 @@ export interface AuthContextResult {
   accessIdentity: { sub: string; email: string } | null;
 }
 
+type CredentialProof =
+  | { kind: "ACTIVATION"; activationId: string }
+  | { kind: "PASSWORD"; activationId: null };
+
 export class AuthService {
   readonly users: UsersRepository;
   readonly bindings: BindingsRepository;
@@ -269,8 +273,8 @@ export class AuthService {
       throw new AuthError("INVALID_CREDENTIALS", GENERIC_LOGIN_ERROR, 401);
     }
 
-    const verified = await this.verifyCredential(user, input.credential);
-    if (!verified) {
+    const credentialProof = await this.verifyCredential(user, input.credential);
+    if (!credentialProof) {
       const attempts = await this.users.recordFailedLogin(
         user.userId,
         this.config.LOGIN_LOCK_ATTEMPTS,
@@ -324,25 +328,33 @@ export class AuthService {
       requestId: input.requestId,
       sourceIp: input.sourceIp,
     });
-    return this.createSession(user, identity, input.requestId);
+    return this.createSession(
+      user,
+      identity,
+      credentialProof.activationId,
+      input.requestId,
+    );
   }
 
   private async verifyCredential(
     user: PortalUser,
     credential: string,
-  ): Promise<boolean> {
-    if (user.status === "INVITED") {
-      const activation = await this.credentials.findUsableActivation(
+  ): Promise<CredentialProof | null> {
+    if (user.mustChangePassword) {
+      const activation = await this.credentials.consumeUsableActivation(
         user.userId,
         sha256(credential),
       );
-      if (!activation) return false;
-      await this.credentials.markActivationUsed(activation.activationId);
-      return true;
+      return activation
+        ? { kind: "ACTIVATION", activationId: activation.activationId }
+        : null;
     }
+    if (user.status !== "ACTIVE") return null;
     const password = await this.credentials.findPassword(user.userId);
-    if (!password) return false;
-    return this.argon2.verify(password.passwordHash, credential);
+    if (!password) return null;
+    return (await this.argon2.verify(password.passwordHash, credential))
+      ? { kind: "PASSWORD", activationId: null }
+      : null;
   }
 
   // ------------------------------------------------------------ sessions
@@ -367,6 +379,7 @@ export class AuthService {
   private async createSession(
     user: PortalUser,
     identity: VerifiedAccessIdentity,
+    activationId: string | null,
     requestId: string | undefined,
   ): Promise<SessionResult> {
     const token = randomToken(32);
@@ -386,6 +399,7 @@ export class AuthService {
       accessSubject: identity.sub,
       accessTokenExpiresAt: identity.tokenExpiresAt,
       csrfSecretHash: sha256(csrfToken),
+      activationId,
       sessionVersion: user.sessionVersion,
       idleExpiresAt: session.idleExpiresAt,
       absoluteExpiresAt: session.absoluteExpiresAt,
@@ -452,8 +466,19 @@ export class AuthService {
     if (!user) {
       throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
     }
-    const credential = await this.credentials.findPassword(user.userId);
-    if (credential && !(await this.argon2.verify(credential.passwordHash, input.currentPassword))) {
+    const currentCredentialMatches = session.activationId
+      ? await this.credentials.matchesConsumedActivation({
+          activationId: session.activationId,
+          userId: user.userId,
+          tokenHash: sha256(input.currentPassword),
+        })
+      : await (async () => {
+          const credential = await this.credentials.findPassword(user.userId);
+          return credential
+            ? this.argon2.verify(credential.passwordHash, input.currentPassword)
+            : false;
+        })();
+    if (!currentCredentialMatches) {
       await this.audit.record({
         eventType: "password_change_denied",
         actorUserId: user.userId,

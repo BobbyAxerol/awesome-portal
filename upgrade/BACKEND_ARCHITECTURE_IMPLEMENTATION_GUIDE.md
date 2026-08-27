@@ -721,6 +721,13 @@ deep-dive → ADR → slice → evidence discipline documented above.
   bounded task/assignee/timing context while escaping task-supplied Lark
   markup. Mention resolution is an explicit three-person runtime alias map;
   missing `open_id` values degrade to names, never guessed identifiers.
+- **Stable Bobby activation repair (2026-08-27):** activation login now
+  atomically consumes the one-time credential and binds its identifier to the
+  newly created session. Frame 01C verifies the submitted current credential
+  against that exact consumed activation proof instead of an older Argon2id
+  password row. Active-account reset accepts only the new activation token,
+  ordinary login remains password-only, and successful rotation revokes all
+  activation records and sessions without persisting plaintext credentials.
 - **v1.0.1 HMD reader-permission remediation (2026-08-19):** WFO/three-window
   failures were traced to numeric identity drift, not Parquet or QuantBT:
   canonical storage grants its named reader ACL to host GID `996`, while the
