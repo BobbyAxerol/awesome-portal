@@ -5664,3 +5664,42 @@
 @media (max-width: 767px) { .exec-surface .exec-visual-row { grid-template-columns: minmax(0, 1fr); } .exec-surface .exec-visual-grid { grid-template-columns: minmax(0, 1fr); } .exec-cn .exec-ac-masthead { padding: 6px 8px; } }
 .exec-surface .exec-visual .exec-360-sync th, .exec-surface .exec-visual table th { font: 400 11px/16px var(--font-mono); }
 .exec-a3 .exec-visual .exec-360-sync th, .exec-a3 .exec-visual table th { font: 400 10px/16px var(--font-mono); }
+/* ── Command Center motion, owner 2026-08-26: the queue must look alive where
+   time is running out, and stay still everywhere else. All of it is CSS or a
+   frozen smoke tick, so baselines and audits still measure a still page. ── */
+.exec-cc-beat { display: block; flex-basis: 100%; height: 2px; background: var(--line-soft); overflow: hidden; }
+.exec-cc-beatfill { display: block; height: 100%; width: 100%; background: var(--accent); transform-origin: left center; transform: scaleX(0); }
+.exec-cc-critical { will-change: opacity; }
+.exec-cc-row[data-clock="overdue"] { border-left-color: var(--bad); }
+.exec-cc-row[data-clock="overdue"] .exec-cc-rank { color: var(--bad); font-weight: 600; }
+.exec-cc-row[data-clock="due"] .exec-cc-rank { color: var(--warn); }
+.exec-cc-sla { font-variant-numeric: tabular-nums; }
+.exec-cc-funnelnum { font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: no-preference) {
+  /* one refresh heartbeat, matched to the 1s smoke tick */
+  .exec-cc-beatfill { animation: exec-cc-beat 1s linear infinite; }
+  /* the breach itself: label pulses, rank ring breathes, row edge sweeps */
+  .exec-cc-sla[data-clock="overdue"] { animation: exec-cc-overduetext 1.6s ease-in-out infinite; }
+  .exec-cc-row[data-clock="overdue"] .exec-cc-rank { animation: exec-cc-rankring 2s ease-in-out infinite; }
+  .exec-cc-row[data-clock="overdue"] { position: relative; overflow: hidden; }
+  .exec-cc-row[data-clock="overdue"]::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, transparent 0%, var(--bad) 50%, transparent 100%); opacity: 0; transform: translateX(-100%); animation: exec-cc-sweep 5s ease-in-out infinite; }
+  /* due soon: the bar keeps draining, the label breathes at half the rate */
+  .exec-cc-sla[data-clock="due"] { animation: exec-cc-duetext 3.2s ease-in-out infinite; }
+  /* a fleet cell that carries a warning, and a pin waiting on an operator */
+  .exec-cc-cellsub[data-tone="warn"] { animation: exec-cc-overduetext 2.6s ease-in-out infinite; }
+  .exec-cc-status[data-status="AWAITING_APPLY"], .exec-cc-status[data-status="PARTIAL"] { animation: exec-cc-overduetext 1.8s ease-in-out infinite; }
+  /* the stage chip of a canary counts its watch: a slow shield glow */
+  .exec-cc-stagechip[data-stage="CANARY"] { animation: exec-cc-canary 3.4s ease-in-out infinite; }
+}
+@keyframes exec-cc-beat { 0% { transform: scaleX(0); opacity: 0.9; } 85% { transform: scaleX(1); opacity: 0.5; } 100% { transform: scaleX(1); opacity: 0; } }
+@keyframes exec-cc-overduetext { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes exec-cc-duetext { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+@keyframes exec-cc-rankring { 0%, 100% { box-shadow: 0 0 0 0 var(--bad-bg); } 50% { box-shadow: 0 0 0 3px var(--bad-bg); } }
+@keyframes exec-cc-canary { 0%, 100% { border-color: var(--bad); } 50% { border-color: var(--warn); } }
+@media (prefers-reduced-motion: no-preference) {
+  /* the count of criticals is the one number that must catch the eye first */
+  .exec-cc-critical { animation: exec-cc-overduetext 2.2s ease-in-out infinite; }
+  /* "● now" in the promotion matrix: the stage a version sits in today */
+  .exec-cc-mx-current { animation: exec-cc-nowdot 2.6s ease-in-out infinite; }
+}
+@keyframes exec-cc-nowdot { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }

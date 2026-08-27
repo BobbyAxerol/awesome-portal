@@ -23,6 +23,8 @@ import { PanelState } from "../components/states";
 import { ExecutionWorkspace } from "../components/workspace";
 import type { SubscriptionState } from "../subscription";
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
+import { smokeMotionAllowed } from "../smokeMotion";
 import { advanceAsOf, ccSmoke, jitter, useSmokeTick, type MatrixCell, type Pipeline, type StageKey } from "../commandCenter.smoke";
 
 const SEVERITY_ORDER = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
@@ -69,6 +71,13 @@ function slaLabel(item: TriageItem): string {
   const parts = [item.slaState ? item.slaState.replace("_", " ") : null, item.ageSeconds !== null ? ageLabel(item.ageSeconds) : null].filter(Boolean);
   return parts.join(" · ") || "—";
 }
+/** mm:ss for anything inside an hour — the deadline ticks, it does not step. */
+function clockLabel(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds));
+  if (s < 3600) return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  return ageLabel(s);
+}
+
 function ageLabel(seconds: number): string {
   if (seconds < 3600) return `${Math.max(1, Math.round(seconds / 60))}m`;
   if (seconds < 86400) return `${Math.round(seconds / 3600)}h`;
@@ -88,10 +97,13 @@ function slaClock(item: TriageItem, readAt: string | null, elapsed: number): { l
   const remaining = (due - now) / 1000;
   const age = (item.ageSeconds ?? 0) + elapsed;
   const window = Math.max(1, age + Math.max(remaining, 0));
-  if (remaining < 0) return { label: `OVERDUE · +${ageLabel(-remaining)}`, frac: 1, state: "overdue" };
+  // Overdue counts up in mm:ss so the breach is visibly getting worse, not a
+  // number that only changes once a minute.
+  if (remaining < 0) return { label: `OVERDUE · +${clockLabel(-remaining)}`, frac: 1, state: "overdue" };
   const frac = Math.max(0, Math.min(1, remaining / window));
   const state = item.slaState === "DUE_SOON" || remaining < 3600 ? "due" : "ok";
-  return { label: `${state === "due" ? "DUE SOON" : "ON TRACK"} · ${ageLabel(remaining)} left`, frac, state };
+  const left = remaining < 3600 ? clockLabel(remaining) : ageLabel(remaining);
+  return { label: `${state === "due" ? "DUE SOON" : "ON TRACK"} · ${left} left`, frac, state };
 }
 
 function TriageRow({ item, position, onOpen, elapsed = 0, readAt = null }: { item: TriageItem; position: number; onOpen: (item: TriageItem) => void; elapsed?: number; readAt?: string | null }) {
@@ -102,6 +114,7 @@ function TriageRow({ item, position, onOpen, elapsed = 0, readAt = null }: { ite
       className="exec-cc-row"
       data-severity={item.severity ?? undefined}
       data-sla={item.slaState ?? undefined}
+      data-clock={clock.state}
       onClick={() => onOpen(item)}
       disabled={!item.href}
       title={item.href ? undefined : "The owning screen for this item was not published"}
@@ -260,6 +273,25 @@ export function Today({ panel }: { panel: TodayPanel }) {
 
 const STAGE_ORDER: StageKey[] = ["PAPER", "SANDBOX", "CANARY", "LIVE"];
 
+/** Counts a published integer up on mount — the value is the server's; only the
+ *  path to it is animated. Frozen with the rest of the smoke motion. */
+function CountUp({ value }: { value: number }) {
+  const [shown, setShown] = useState(value);
+  useEffect(() => {
+    if (!smokeMotionAllowed()) { setShown(value); return; }
+    let frame = 0;
+    const steps = 14;
+    setShown(0);
+    const id = window.setInterval(() => {
+      frame += 1;
+      setShown(frame >= steps ? value : Math.round((value * frame) / steps));
+      if (frame >= steps) window.clearInterval(id);
+    }, 28);
+    return () => window.clearInterval(id);
+  }, [value]);
+  return <>{shown}</>;
+}
+
 function MatrixCellView({ cell }: { cell: MatrixCell }) {
   if (cell.kind === "none") return <span className="exec-cc-mx-none">—</span>;
   if (cell.kind === "done") {
@@ -290,7 +322,7 @@ export function PromotionPipeline({ pipeline, warning }: { pipeline: Pipeline; w
           <div className="exec-cc-funnelstage" key={st.key} data-stage={st.key}>
             <div className="exec-cc-funnellabel">{st.label}</div>
             <div className="exec-cc-funnelrow">
-              <span className="exec-cc-funnelnum">{st.entered}</span>
+              <span className="exec-cc-funnelnum"><CountUp value={st.entered} /></span>
               {st.conversion ? (
                 <span className="exec-cc-funnelconv">
                   {st.conversion.num}/{st.conversion.den} ↗<br />
@@ -365,6 +397,7 @@ export function CommandCenterScreen({ snapshot, onOpen, live }: { snapshot: Comm
             <span className="exec-cc-state" data-tone={busy ? "warn" : "good"}>{busy ? `BUSY · ${ranked.length}` : "QUIET"}</span>
             {streamBadge ? <span className="exec-cc-state" data-tone={streamBadge.tone}>{streamBadge.label}</span> : null}
             <span className="exec-cc-spacer" />
+            {smoke ? <span className="exec-cc-beat" aria-hidden="true"><span className="exec-cc-beatfill" /></span> : null}
             <span className="exec-cc-asof" data-smoke-clock={smoke ? "true" : undefined}>as_of {asOf ?? "not published"} · every row links to its owning screen</span>
           </header>
           {streamLine}
