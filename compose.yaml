@@ -110,6 +110,7 @@ services:
       LARK_WEBHOOK_URL: ${LARK_WEBHOOK_URL:-}
       LARK_WEBHOOK_SIGN_SECRET: ${LARK_WEBHOOK_SIGN_SECRET:-}
       LARK_MENTION_MAP: ${LARK_MENTION_MAP:-}
+      LARK_MESSAGE_FORMAT: ${LARK_MESSAGE_FORMAT:-text}
       PORTAL_NOTIFY_CHANNELS: ${PORTAL_NOTIFY_CHANNELS:-discord}
     volumes:
       - roadmap-task-board-data:/var/lib/roadmap-task-board

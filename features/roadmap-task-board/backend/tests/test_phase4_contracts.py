@@ -197,3 +197,18 @@ def test_lark_channel_requires_webhook_url_at_startup(monkeypatch, tmp_path: Pat
     )
     settings = Settings.from_environment()
     assert settings.notification_channels == ("lark",)
+
+
+def test_lark_message_format_is_bounded(monkeypatch, tmp_path: Path):
+    monkeypatch.setenv("PORTAL_DATABASE_PATH", str(tmp_path / "portal.db"))
+    monkeypatch.setenv("PORTAL_NOTIFY_CHANNELS", "lark")
+    monkeypatch.setenv(
+        "LARK_WEBHOOK_URL",
+        "https://open.larksuite.com/open-apis/bot/v2/hook/test",
+    )
+    monkeypatch.setenv("LARK_MESSAGE_FORMAT", "card")
+    assert Settings.from_environment().lark_message_format == "card"
+
+    monkeypatch.setenv("LARK_MESSAGE_FORMAT", "html")
+    with pytest.raises(ValueError, match="text or card"):
+        Settings.from_environment()

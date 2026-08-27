@@ -769,6 +769,20 @@ alphas are never executable. Fixtures: `visual-baseline-run` (COMPLETED) +
   `LARK_MESSAGE_PRESENTATION_HANDOFF_2026-08-27.md`; it does not delay this
   delivery/configuration hotfix.
 
+### Claude card follow-up
+
+- Claude's `LARK_CARD_DESIGN_2026-08-27.md` is implemented behind the bounded
+  `LARK_MESSAGE_FORMAT=text|card` deployment setting.
+- Text and card rendering share one normalized field contract. Task content is
+  always treated as untrusted text; only an allowlisted `LARK_MENTION_MAP`
+  entry may emit an assignee mention.
+- A rejected interactive card falls back to the exact text renderer once in
+  the same outbox attempt. Network failures remain normal bounded retries and
+  never cause a second immediate request.
+- The Planning dev dependency set includes Starlette's current `httpx2` test
+  transport explicitly; a clean 2026 resolver must not silently fall back to
+  the deprecated `httpx` TestClient path and hang before application startup.
+
 ## Backend state — 2026-08-19 (v1.0.1 HMD mount permission hotfix)
 
 - Root cause for WFO/three-window `PermissionError` was a numeric group

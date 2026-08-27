@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import json
 from dataclasses import replace
 
 import httpx
@@ -280,3 +281,91 @@ def test_lark_escapes_user_supplied_mention_markup(client):
     assert "‹at user_id=" in text
     assert text.count("https://portal.example/roadmap-task-board") == 1
     assert "/roadmap-task-board/roadmap-task-board" not in text
+
+
+def test_lark_card_uses_bounded_safe_fields_and_configured_mention_only(client):
+    settings = replace(
+        client.app.state.settings,
+        lark_message_format="card",
+        lark_mention_map={"bobby": "ou_00000000000000000000000000000000"},
+        portal_url="https://portal.example",
+    )
+    delivery = {
+        "entity_id": "T-CARD",
+        "actor": "bobby",
+        "before_json": '{"item":{"status":"Validating"}}',
+        "after_json": (
+            '{"item":{"id":"T-CARD","status":"Done",'
+            '"title":"<at user_id=\\"all\\">all</at>",'
+            '"description":"A safe compact card","owner":"Bobby",'
+            '"workstream":"Planning","weeks":"Week 35"}}'
+        ),
+    }
+
+    payload = LarkWebhookService(client.app.state.repository, settings)._payload(delivery)
+    encoded = json.dumps(payload, ensure_ascii=False)
+
+    assert payload["msg_type"] == "interactive"
+    assert "content" not in payload
+    assert payload["card"]["header"]["template"] == "green"
+    assert "Backlog › Ready › In Progress › Validating › Done" in encoded
+    assert '<at user_id=\\"all\\">' not in encoded
+    assert '‹at user_id=\\"all\\"›all‹/at›' in encoded
+    assert '<at user_id=\\"ou_00000000000000000000000000000000\\">Bobby</at>' in encoded
+    assert "https://portal.example/roadmap-task-board" in encoded
+
+
+def test_lark_card_success_marks_same_delivery_sent(client, monkeypatch):
+    _queue_notification(client)
+    sent_payloads = []
+
+    def post(_self, url, *, json):
+        sent_payloads.append(json)
+        return httpx.Response(200, json={"code": 0}, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx.Client, "post", post)
+    settings = replace(
+        client.app.state.settings,
+        lark_webhook_url="https://open.larksuite.com/open-apis/bot/v2/hook/test",
+        lark_message_format="card",
+        notification_channels=("lark",),
+    )
+
+    assert LarkWebhookService(client.app.state.repository, settings).flush_pending() == 1
+    assert [payload["msg_type"] for payload in sent_payloads] == ["interactive"]
+
+
+def test_lark_card_rejection_falls_back_to_text_in_same_attempt(client, monkeypatch):
+    _queue_notification(client)
+    sent_payloads = []
+
+    def post(_self, url, *, json):
+        sent_payloads.append(json)
+        body = (
+            {"code": 19001, "msg": "invalid card"}
+            if json["msg_type"] == "interactive"
+            else {"code": 0}
+        )
+        return httpx.Response(200, json=body, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx.Client, "post", post)
+    settings = replace(
+        client.app.state.settings,
+        lark_webhook_url="https://open.larksuite.com/open-apis/bot/v2/hook/test",
+        lark_message_format="card",
+        notification_channels=("lark",),
+    )
+    repository = client.app.state.repository
+
+    assert LarkWebhookService(repository, settings).flush_pending() == 1
+    assert [payload["msg_type"] for payload in sent_payloads] == ["interactive", "text"]
+    connection = repository._read()
+    try:
+        delivery = connection.execute(
+            "SELECT status, attempt_count, last_error FROM webhook_deliveries WHERE channel = 'lark'"
+        ).fetchone()
+    finally:
+        connection.close()
+    assert delivery["status"] == "sent"
+    assert delivery["attempt_count"] == 1
+    assert delivery["last_error"] is None
