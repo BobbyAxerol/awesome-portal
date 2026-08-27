@@ -117,6 +117,12 @@ class Settings:
         database_path = Path(os.getenv("PORTAL_DATABASE_PATH", str(DEFAULT_DATABASE_FILE))).expanduser()
         portal_file = Path(os.getenv("PORTAL_FILE", str(DEFAULT_PORTAL_FILE))).expanduser()
         environment = _environment()
+        notification_channels = _notification_channels()
+        lark_webhook_url = _lark_webhook_url()
+        if "lark" in notification_channels and not lark_webhook_url:
+            raise ValueError(
+                "LARK_WEBHOOK_URL is required when PORTAL_NOTIFY_CHANNELS enables lark"
+            )
         configured_origins = os.getenv("PORTAL_CORS_ORIGINS")
         cors_origins = _csv(configured_origins) if configured_origins is not None else (
             _csv("http://127.0.0.1:8000,http://localhost:8000,http://127.0.0.1:5173,http://localhost:5173")
@@ -129,13 +135,13 @@ class Settings:
             database_path=database_path,
             portal_file=portal_file,
             discord_webhook_url=_discord_webhook_url(),
-            lark_webhook_url=_lark_webhook_url(),
+            lark_webhook_url=lark_webhook_url,
             lark_webhook_sign_secret=os.getenv("LARK_WEBHOOK_SIGN_SECRET", "").strip() or None,
             lark_mention_map=_lark_mention_map(),
             portal_url=os.getenv("PORTAL_PUBLIC_URL", "http://127.0.0.1:8000").rstrip("/"),
             default_actor=os.getenv("PORTAL_DEFAULT_ACTOR", "local-user"),
             cors_origins=cors_origins,
-            notification_channels=_notification_channels(),
+            notification_channels=notification_channels,
             webhook_max_attempts=_positive_int("DISCORD_WEBHOOK_MAX_ATTEMPTS", 5),
             environment=environment,
             webhook_retry_base_seconds=_positive_int("DISCORD_WEBHOOK_RETRY_BASE_SECONDS", 60),
