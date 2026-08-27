@@ -82,6 +82,21 @@ stack_name="$(read_setting PORTAL_STACK_NAME)"
 http_port="$(read_setting PORTAL_HTTP_PORT)"
 image_tag="$(read_setting PORTAL_IMAGE_TAG)"
 public_origin="$(read_setting PORTAL_PUBLIC_ORIGIN)"
+notification_channels="$(read_setting PORTAL_NOTIFY_CHANNELS)"
+notification_channels_compact="${notification_channels//[[:space:]]/}"
+
+if [[ ",${notification_channels_compact}," == *,lark,* ]]; then
+  lark_webhook_url="$(read_setting LARK_WEBHOOK_URL)"
+  lark_webhook_sign_secret="$(read_setting LARK_WEBHOOK_SIGN_SECRET)"
+  [[ "${lark_webhook_url}" == https://open.larksuite.com/open-apis/bot/* ]] || {
+    printf 'Lark notifications require an open.larksuite.com HTTPS bot URL.\n' >&2
+    exit 1
+  }
+  [[ -n "${lark_webhook_sign_secret}" ]] || {
+    printf 'Lark notifications require LARK_WEBHOOK_SIGN_SECRET.\n' >&2
+    exit 1
+  }
+fi
 
 if [[ "${channel}" == "stable" ]]; then
   [[ "${stack_name}" == portal-stable* ]] || {

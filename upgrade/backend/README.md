@@ -752,6 +752,23 @@ alphas are never executable. Fixtures: `visual-baseline-run` (COMPLETED) +
 - This closes the stable Task Tracking operational gap only. BAR-15/U18 remains
   the authority for moving Planning persistence from SQLite to PostgreSQL.
 
+## Backend state — 2026-08-27 (stable Lark delivery repair)
+
+- Root cause was deployment drift: stable enabled `lark` while omitting its
+  webhook URL/signing secret/mention map. Seven auditable deliveries queued but
+  no HTTP call was attempted. Application startup and the release-channel gate
+  now reject that contradictory configuration.
+- Stable text notifications expose the authenticated action actor, task title,
+  bounded/escaped description, transition, assignee, assignment time, optional
+  deadline remaining and workstream/timeline. Alias matching is limited to the
+  three configured team members; unknown or task-supplied markup cannot create
+  an `@` mention.
+- The persisted seven-message backlog is retained as terminal/superseded audit
+  evidence during rollout instead of flooding the Lark group. Interactive-card
+  presentation is delegated by
+  `LARK_MESSAGE_PRESENTATION_HANDOFF_2026-08-27.md`; it does not delay this
+  delivery/configuration hotfix.
+
 ## Backend state — 2026-08-19 (v1.0.1 HMD mount permission hotfix)
 
 - Root cause for WFO/three-window `PermissionError` was a numeric group

@@ -1,8 +1,8 @@
 """Lark (Feishu) custom-bot delivery through the persisted webhook outbox.
 
 Custom-bot signature (https://open.larksuite.com/document/.../custom-bot):
-    string_to_sign = f"{timestamp}\\n{secret}"
-    sign = base64(hmac_sha256(key=secret, msg=string_to_sign))
+    signing_key = f"{timestamp}\\n{secret}"
+    sign = base64(hmac_sha256(key=signing_key, msg=b""))
 The sign secret lives only in environment configuration, never in source.
 """
 from __future__ import annotations
@@ -13,6 +13,7 @@ import hmac
 import json
 import logging
 import time
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 import httpx
@@ -28,6 +29,7 @@ class LarkWebhookService:
         self.repository = repository
         self.settings = settings
         self.logger = logging.getLogger("portal.lark")
+        self._warned_missing_url = False
 
     @staticmethod
     def _load(value: Optional[str]) -> Dict[str, Any]:
@@ -35,15 +37,66 @@ class LarkWebhookService:
 
     @classmethod
     def _sign(cls, timestamp: str, secret: str) -> str:
-        string_to_sign = f"{timestamp}\n{secret}".encode("utf-8")
-        digest = hmac.new(string_to_sign, digestmod=hashlib.sha256).digest()
+        signing_key = f"{timestamp}\n{secret}".encode("utf-8")
+        digest = hmac.new(signing_key, digestmod=hashlib.sha256).digest()
         return base64.b64encode(digest).decode("ascii")
 
+    @staticmethod
+    def _member_key(value: Any) -> str:
+        """Match the three-person team safely across display-name variants."""
+        return "".join(character for character in str(value).casefold() if character.isalnum())
+
+    @staticmethod
+    def _single_line(value: Any, fallback: str = "—", limit: int = 600) -> str:
+        text = " ".join(str(value if value not in (None, "") else fallback).split())
+        # Task content is untrusted text. Only the service-generated assignee
+        # token below may use Lark's <at ...> markup.
+        text = text.replace("<", "‹").replace(">", "›")
+        return text if len(text) <= limit else f"{text[: limit - 1]}…"
+
     def _mention(self, owner: str) -> str:
-        open_id = self.settings.lark_mention_map.get(str(owner).strip())
+        normalized = self._member_key(owner)
+        open_id = next(
+            (
+                configured_id
+                for configured_name, configured_id in self.settings.lark_mention_map.items()
+                if self._member_key(configured_name) == normalized
+            ),
+            None,
+        )
         if not open_id:
             return ""
-        return f"<at user_id=\"{open_id}\">{owner}</at>"
+        label = self._single_line(owner, "Assignee", 160)
+        return f"<at user_id=\"{open_id}\">{label}</at>"
+
+    @staticmethod
+    def _deadline(value: Any) -> Optional[datetime]:
+        if value in (None, ""):
+            return None
+        try:
+            parsed = datetime.fromisoformat(str(value).strip().replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+
+    @staticmethod
+    def _remaining(deadline: datetime) -> str:
+        delta_seconds = int((deadline - datetime.now(timezone.utc)).total_seconds())
+        overdue = delta_seconds < 0
+        total_minutes = max(0, abs(delta_seconds) // 60)
+        days, remainder = divmod(total_minutes, 24 * 60)
+        hours, minutes = divmod(remainder, 60)
+        parts = []
+        if days:
+            parts.append(f"{days} ngày")
+        if hours and len(parts) < 2:
+            parts.append(f"{hours} giờ")
+        if not parts:
+            parts.append(f"{minutes} phút")
+        duration = " ".join(parts)
+        return f"Quá hạn {duration}" if overdue else f"Còn {duration}"
 
     def _text(self, delivery: Dict[str, Any]) -> str:
         before = self._load(delivery.get("before_json"))
@@ -52,20 +105,42 @@ class LarkWebhookService:
         previous_item = before.get("item", {})
         from_status = str(previous_item.get("status", "—"))
         to_status = str(item.get("status", "—"))
-        task_id = str(item.get("id", delivery["entity_id"]))
-        title = str(item.get("title", "Untitled task"))
-        owner = str(item.get("owner", "") or "Unassigned")
-        workstream = str(item.get("workstream", "") or "General")
-        actor = str(delivery.get("actor", "") or "System")
-        portal = self.settings.portal_url
-        mention = self._mention(owner)
-        mention_line = f"{mention}\n" if mention else ""
+        task_id = self._single_line(item.get("id", delivery["entity_id"]), "task", 120)
+        title = self._single_line(item.get("title"), "Untitled task", 500)
+        description = self._single_line(
+            item.get("description") or item.get("notes"), "Chưa có mô tả"
+        )
+        raw_owner = str(item.get("owner", "") or "Unassigned")
+        owner = self._single_line(raw_owner, "Unassigned", 160)
+        workstream = self._single_line(item.get("workstream"), "General", 160)
+        actor = self._single_line(delivery.get("actor"), "System", 160)
+        assigned_at = self._single_line(
+            item.get("assigned_at") or item.get("created") or after.get("created_at"),
+            "Chưa ghi nhận",
+            100,
+        )
+        deadline_value = item.get("deadline") or item.get("due_at")
+        deadline = self._deadline(deadline_value)
+        deadline_text = self._single_line(deadline_value, "Chưa đặt", 100)
+        remaining = self._remaining(deadline) if deadline else "Chưa tính được"
+        timeline = self._single_line(item.get("weeks"), "Chưa đặt", 100)
+        portal = self.settings.portal_url.rstrip("/")
+        task_board_url = (
+            portal if portal.endswith("/roadmap-task-board") else f"{portal}/roadmap-task-board"
+        )
+        mention = self._mention(raw_owner)
+        assignee = f"{owner} — {mention}" if mention else owner
         return (
-            f"Task Board — {actor} đã chuyển trạng thái nhiệm vụ\n"
-            f"`{task_id}` — {title}\n"
-            f"Trạng thái: {from_status} -> {to_status}\n"
-            f"Owner: {owner} · Workstream: {workstream}\n"
-            f"{mention_line}{portal}/roadmap-task-board"
+            f"📌 TASK STATUS UPDATED\n"
+            f"Người thao tác: {actor}\n"
+            f"Task: `{task_id}` — {title}\n"
+            f"Mô tả: {description}\n"
+            f"Trạng thái: {from_status} → {to_status}\n"
+            f"Assignee: {assignee}\n"
+            f"Giao lúc: {assigned_at}\n"
+            f"Deadline: {deadline_text} · {remaining}\n"
+            f"Timeline: {timeline} · Workstream: {workstream}\n"
+            f"Mở task: {task_board_url}"
         )
 
     def _payload(self, delivery: Dict[str, Any]) -> Dict[str, Any]:
@@ -80,6 +155,9 @@ class LarkWebhookService:
     def flush_pending(self, limit: int = 20) -> int:
         """Deliver due Lark notifications. A failure never rolls back task state."""
         if not self.settings.lark_webhook_url:
+            if "lark" in self.settings.notification_channels and not self._warned_missing_url:
+                self.logger.warning("lark_disabled_no_url")
+                self._warned_missing_url = True
             return 0
         delivered = 0
         with httpx.Client(timeout=5.0) as client:
@@ -96,7 +174,7 @@ class LarkWebhookService:
                     body = response.json()
                     if body.get("code", 0) != 0:
                         raise httpx.HTTPError(f"lark rejected payload: {body.get('msg')}")
-                except httpx.HTTPError as exc:
+                except (httpx.HTTPError, ValueError) as exc:
                     accepted = self.repository.mark_delivery_failed(
                         delivery["id"],
                         str(exc),

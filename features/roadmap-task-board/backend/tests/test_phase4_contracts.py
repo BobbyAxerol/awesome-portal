@@ -180,3 +180,20 @@ def test_production_config_requires_explicit_cors_and_https_webhook(monkeypatch,
     monkeypatch.setenv("DISCORD_WEBHOOK_URL", "http://discord.example/webhook")
     with pytest.raises(ValueError, match="HTTPS"):
         Settings.from_environment()
+
+
+def test_lark_channel_requires_webhook_url_at_startup(monkeypatch, tmp_path: Path):
+    monkeypatch.setenv("PORTAL_ENV", "production")
+    monkeypatch.setenv("PORTAL_DATABASE_PATH", str(tmp_path / "portal.db"))
+    monkeypatch.setenv("PORTAL_NOTIFY_CHANNELS", "lark")
+    monkeypatch.delenv("LARK_WEBHOOK_URL", raising=False)
+
+    with pytest.raises(ValueError, match="LARK_WEBHOOK_URL is required"):
+        Settings.from_environment()
+
+    monkeypatch.setenv(
+        "LARK_WEBHOOK_URL",
+        "https://open.larksuite.com/open-apis/bot/v2/hook/test",
+    )
+    settings = Settings.from_environment()
+    assert settings.notification_channels == ("lark",)

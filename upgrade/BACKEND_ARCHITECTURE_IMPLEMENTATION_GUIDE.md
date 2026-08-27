@@ -714,6 +714,13 @@ deep-dive → ADR → slice → evidence discipline documented above.
   Evidence: Control API 62/62, Planning backend 30/30, Planning frontend
   80/80 + build, Portal frontend 381 passed/3 skipped + build. This is a
   compatibility hotfix; it does not replace BAR-15/U18 PostgreSQL cutover.
+- **Stable Lark delivery repair (2026-08-27):** deployment configuration now
+  fails closed when `PORTAL_NOTIFY_CHANNELS` enables Lark without an approved
+  HTTPS bot URL, and the stable release gate also requires its signing secret.
+  The message contract identifies the session-derived actor and provides
+  bounded task/assignee/timing context while escaping task-supplied Lark
+  markup. Mention resolution is an explicit three-person runtime alias map;
+  missing `open_id` values degrade to names, never guessed identifiers.
 - **v1.0.1 HMD reader-permission remediation (2026-08-19):** WFO/three-window
   failures were traced to numeric identity drift, not Parquet or QuantBT:
   canonical storage grants its named reader ACL to host GID `996`, while the
