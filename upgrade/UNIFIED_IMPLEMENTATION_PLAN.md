@@ -1977,6 +1977,18 @@ không phải 17 màn.
 > identity, N15B and an owner window. Detail:
 > [`EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md`](./backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md).
 
+> **Backend checkpoint 2026-08-27 — N17A source-dark production/DR:** status is
+> `N17A_COMPLETE_SOURCE_DARK / N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING /
+> PRODUCTION_INACTIVE`. Pure Rust/contracts distinguish provisional budgets
+> from measured production SLO/error budgets and keep production RPO/RTO/cost
+> null. Unmounted observability, recovery, rotation, owner and game-day
+> blueprints are complete. An internal-only Docker rehearsal passed WAL PITR
+> to an exact LSN, ephemeral encrypted logical restore, deterministic
+> projection rebuild, identity rotation/compromise, rollback and all eight
+> fault scenarios. No runtime/source/command/AWS-HK/Trading System change was
+> made. Detail:
+> [`EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md`](./backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md).
+
 ## 12.4 Thứ tự slice của frontend
 
 Lane A chạy trước; mỗi slice đóng độc lập và không slice nào chờ codex.

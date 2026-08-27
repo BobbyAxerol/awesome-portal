@@ -54,6 +54,9 @@ jobs:
       - name: Validate N16A source-dark emergency routing authority
         run: ./scripts/execution-n16a-emergency-routing-test.sh
 
+      - name: Rehearse N17A source-dark production and DR readiness
+        run: ./scripts/execution-n17a-production-dr-test.sh
+
       - name: Test Rust execution edge
         run: ./scripts/execution-edge-test.sh
 

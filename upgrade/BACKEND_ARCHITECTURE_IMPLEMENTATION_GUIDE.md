@@ -1476,6 +1476,20 @@ activation or the phase):**
   PRODUCTION_INACTIVE`. See
   [`EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md`](./backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md).
 
+- **N17A source-dark production/DR preparation (2026-08-27):** canonical
+  contracts and pure Rust now own provisional SLO/error-budget semantics,
+  control/projection/object recovery, five distinct identity rotation families,
+  capacity/retention/cost gates and digest-sealed isolated game-day evidence.
+  Prometheus/Grafana and operations files are unmounted and have no datasource,
+  origin or secret. The operational harness passed actual internal-only WAL
+  PITR to a selected LSN, ephemeral encrypted logical backup restore,
+  deterministic projection rebuild, rotation/compromise, rollback and eight
+  complete fault scenarios with external `network_attempts=0`. Production SLO,
+  error budget, RPO/RTO and cost remain unclaimed. Status is
+  `N17A_COMPLETE_SOURCE_DARK / N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING /
+  PRODUCTION_INACTIVE`. See
+  [`EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md`](./backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md).
+
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
   workload-identity/window gates precede D2, then authenticated transport and

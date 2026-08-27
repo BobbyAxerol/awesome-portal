@@ -1079,7 +1079,7 @@ or audit; public/auth/source loss is visibly degraded and recoverable.
 ### N17 — Production activation, SLO, DR and owner operations
 
 **Mapping:** BAR-20 + product phase 18.  
-**Status:** `N17A_PLANNED / N17B_PRODUCTION_OWNER_EVIDENCE_PENDING`.  
+**Status:** `N17A_COMPLETE_SOURCE_DARK / N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING`.  
 **Priority:** final.
 
 Trading System participates in measured SLO, rollback, rotation and game-day
@@ -1385,13 +1385,12 @@ command commit.
 
 ## 11. Recommended next sequence
 
-Current order after N13A, N14A, N15A and N16A completion:
+All Portal-owned A lanes N13A–N17A are complete:
 
-1. **N17A** — offline SLO/DR/rotation/evidence preparation and isolated game-day
-   rehearsal.
-2. Keep N13B–N17B parked until the single master Trading System owner return is
-   accepted. Then resume in order from **N13B**, never by jumping directly to a
-   later B phase.
+1. Keep N13B–N17B parked until the single master Trading System owner return is
+   accepted for one exact profile.
+2. Resume in order from **N13B**, never by jumping directly to a later B phase
+   or relabelling source-dark evidence as production acceptance.
 
 The exact A result and matching B next action are recorded in every completed
 phase report and the shared `PHASE_TRACKER.md`; completing A never changes a

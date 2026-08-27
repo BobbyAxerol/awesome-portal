@@ -134,6 +134,10 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-emergency-routing.v1.schema.json#/$defs/EmergencyProfile",
   "execution-emergency-routing.ui-corpus.valid.json":
     "https://schemas.primusspark.com/portal/execution-emergency-routing.v1.schema.json#/$defs/UiStateCorpus",
+  "execution-production-readiness.source-dark.valid.json":
+    "https://schemas.primusspark.com/portal/execution-production-readiness.v1.schema.json#/$defs/ReadinessProfile",
+  "execution-production-readiness.game-day-corpus.valid.json":
+    "https://schemas.primusspark.com/portal/execution-production-readiness.v1.schema.json#/$defs/GameDayCorpus",
   "execution-analytics.equity-projection.valid.json":
     "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/EquityProjectionResponse",
   "execution-analytics.insight-line.valid.json":
@@ -417,6 +421,110 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(openapi.servers).toEqual([]);
     expect(openapi["x-runtime-mounted"]).toBe(false);
     expect(openapi["x-public-route-active"]).toBe(false);
+  });
+
+  it("keeps N17A readiness budgets provisional, source-dark and owner-gated", () => {
+    const profile = loadJson(
+      join(fixtureDir, "execution-production-readiness.source-dark.valid.json"),
+    ) as {
+      production_active: boolean;
+      network_authorized: boolean;
+      source_call_authorized: boolean;
+      command_authorized: boolean;
+      production_slo_claimed: boolean;
+      budgets: Array<Record<string, unknown>>;
+      error_budget: Record<string, unknown>;
+      recovery: Array<Record<string, unknown>>;
+      rotations: Array<Record<string, unknown>>;
+      capacity: Record<string, unknown>;
+    };
+    expect(profile).toMatchObject({
+      production_active: false,
+      network_authorized: false,
+      source_call_authorized: false,
+      command_authorized: false,
+      production_slo_claimed: false,
+    });
+    expect(profile.budgets).toHaveLength(7);
+    expect(profile.budgets.every((budget) =>
+      budget.authority === "PROVISIONAL_QUALIFICATION_ONLY" &&
+      budget.production_slo_claimed === false)).toBe(true);
+    expect(profile.error_budget).toMatchObject({
+      mode: "NOT_MEASURED",
+      availability_target_basis_points: null,
+      production_window_open: false,
+      burn_alert_active: false,
+    });
+    expect(profile.recovery).toHaveLength(3);
+    expect(profile.recovery.every((item) =>
+      item.production_rpo_seconds === null && item.production_rto_seconds === null &&
+      item.owner_approval_required === true)).toBe(true);
+    expect(profile.rotations).toHaveLength(5);
+    expect(profile.rotations.every((item) =>
+      item.runtime_identity_bound === false && item.secret_material_present === false)).toBe(true);
+    expect(profile.capacity).toMatchObject({
+      six_month_order_fill_rows: 182000,
+      initial_concurrent_sse_clients: 100,
+      maximum_chart_points: 5000,
+      maximum_correlation_assets: 150,
+      monthly_cost_budget_usd: null,
+      cost_owner_approval_required: true,
+    });
+
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-production-readiness.v1.schema.json#/$defs/ReadinessProfile",
+    );
+    expect(validate!({ ...profile, production_active: true })).toBe(false);
+    expect(validate!({ ...profile, production_slo_claimed: true })).toBe(false);
+    expect(validate!({
+      ...profile,
+      error_budget: { ...profile.error_budget, availability_target_basis_points: 9990 },
+    })).toBe(false);
+  });
+
+  it("keeps every N17A game-day case isolated and non-authoritative", () => {
+    const corpus = loadJson(
+      join(fixtureDir, "execution-production-readiness.game-day-corpus.valid.json"),
+    ) as {
+      fixture_only: boolean;
+      production_active: boolean;
+      cases: Array<Record<string, unknown>>;
+    };
+    expect(corpus.fixture_only).toBe(true);
+    expect(corpus.production_active).toBe(false);
+    expect(corpus.cases.map((item) => item.scenario)).toEqual([
+      "NETWORK_PARTITION", "AUTH_LOSS", "SOURCE_LOSS", "COMMAND_CONTAINMENT",
+      "CONTROL_DATABASE_PITR", "PROJECTION_REBUILD", "RELEASE_ROLLBACK",
+      "CREDENTIAL_COMPROMISE",
+    ]);
+    expect(corpus.cases.every((item) =>
+      item.isolated === true && item.expected_outcome === "PASS" &&
+      item.expected_source_request_sent === false &&
+      item.expected_command_dispatched === false &&
+      item.expected_network_attempts === 0)).toBe(true);
+
+    const openapi = loadJson(
+      join(ROOT, "openapi", "execution-production-readiness.openapi.json"),
+    ) as {
+      paths: Record<string, unknown>;
+      servers: unknown[];
+      "x-runtime-mounted": boolean;
+      "x-production-active": boolean;
+      "x-production-slo-claimed": boolean;
+    };
+    expect(openapi.paths).toEqual({});
+    expect(openapi.servers).toEqual([]);
+    expect(openapi["x-runtime-mounted"]).toBe(false);
+    expect(openapi["x-production-active"]).toBe(false);
+    expect(openapi["x-production-slo-claimed"]).toBe(false);
+    const generated = readFileSync(
+      join(ROOT, "generated", "execution-production-readiness.d.ts"),
+      "utf8",
+    );
+    for (const token of [
+      "ReadinessProfile", "ProvisionalBudget", "RecoveryPolicy",
+      "RotationPolicy", "GameDayCase", "QualificationResult",
+    ]) expect(generated).toContain(token);
   });
 
   it("rejects malformed event envelopes", () => {

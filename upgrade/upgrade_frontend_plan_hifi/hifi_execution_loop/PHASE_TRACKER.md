@@ -2705,7 +2705,7 @@ master request activates a source, screen or command.
 | N14 | exact six-image digest manifest, CI-bound signatures/SBOM/SLSA/Trivy, dev/stable isolation, owner decision and restore/forward-fix rehearsal complete | after N13B target selection, bind accepted Trading System source/gateway commit/image/config/contracts and run joint release/rollback/forward-fix with exact dual-owner approval | `N14A_COMPLETE_SOURCE_DARK / N14B_OWNER_RELEASE_EVIDENCE_PENDING` |
 | N15 | independent Query/Command/Event/Artifact contracts, rollback negotiation, identity/transport policy, Event/Artifact semantics and local fault doubles complete | bind accepted owner bytes and prove real mTLS/JWT routes plus WAN/fault/compatibility/SLO evidence independently | `N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING` |
 | N16 | same-domain/origin-isolation templates, short-session/WebAuthn ceremony, typed health/failure states, immutable audit, R3/R4 split and local origin-loss/rollback drills complete | accepted N12 R3 protective route, N15B, dedicated command identity and real observed acknowledgement | `N16A_COMPLETE_SOURCE_DARK / N16B_R3_OWNER_ACCEPTANCE_PENDING` |
-| N17 | SLO/DR/rotation tooling, isolated restore and dry-run game day | bounded production activation and joint SLO/DR/game-day evidence | `N17A_PLANNED / N17B_PRODUCTION_OWNER_EVIDENCE_PENDING` |
+| N17 | provisional SLO/error-budget contract, unmounted observability, recovery/rotation/capacity/owner tooling, actual isolated WAL PITR + encrypted restore + projection rebuild + rollback/compromise game day complete | bind exact accepted profile and run bounded joint production SLO/DR/rotation/containment evidence with Bobby final sign-off | `N17A_COMPLETE_SOURCE_DARK / N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING` |
 
 Rule: Claude and Portal backend may implement/test every A lane without waiting
 for Trading System. No B lane may start from template/candidate/fixture bytes,
@@ -2726,9 +2726,9 @@ Backend report:
 Claude handoff:
 [`CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md`](./CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md).
 
-Next A action is N17A source-dark SLO/DR/game-day preparation. N14B remains parked until the
-master owner return and N13B exact target profile; it must bind owner bytes and
-run the joint release rehearsal, not reinterpret this source-dark result.
+All A-lane work is complete through N17A. N14B remains parked until the master
+owner return and N13B exact target profile; it must bind owner bytes and run the
+joint release rehearsal, not reinterpret source-dark evidence.
 
 ### N15A backend — Source-dark four-interface gateway (2026-08-26)
 
@@ -2769,6 +2769,32 @@ Backend report:
 Claude handoff:
 [`CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md`](./CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md).
 
-Next A action is N17A offline SLO/DR/rotation/evidence and isolated game-day
-rehearsal. N16B remains parked until accepted N12 R3 owner bytes, dedicated
-command identity, N15B and an owner change window exist.
+N16B remains parked until accepted N12 R3 owner bytes, dedicated command
+identity, N15B and an owner change window exist. All A-lane work is complete
+through N17A.
+
+### N17A backend — Source-dark production/DR preparation (2026-08-27)
+
+Codex completed the Portal-owned production-readiness lane without binding a
+runtime. Canonical contracts distinguish provisional latency budgets from
+measured production SLOs and leave error budget, monthly cost, RPO and RTO null
+and owner-gated. Pure Rust validates recovery, five separate identity rotation
+families, capacity/retention limits and digest-sealed isolated evidence.
+
+The unmounted Prometheus/Grafana, capacity, rotation, owner and game-day
+blueprints contain no datasource/origin/secret. A real internal-only Docker
+rehearsal proves PostgreSQL WAL PITR to an exact LSN, encrypted logical backup
+restore, deterministic projection rebuild, rotation/compromise containment,
+release rollback and all eight declared fault scenarios. Cleanup removes only
+exact N17A test resources. No stable/dev/AWS-HK/Trading System resource or
+traffic changed; production/source/command flags remain false.
+
+Backend report:
+[`EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md`](../../backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md).
+Claude handoff:
+[`CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md`](./CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md).
+
+Status is `N17A_COMPLETE_SOURCE_DARK /
+N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING / PRODUCTION_INACTIVE`. No Portal-owned
+A phase remains. When the single master owner return is accepted, resume at
+N13B and proceed in order through N17B.

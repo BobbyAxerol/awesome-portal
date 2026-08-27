@@ -1,0 +1,21 @@
+{
+  "schema_version": "portal.execution.rotation-inventory.v1",
+  "source_dark": true,
+  "runtime_identity_bound": false,
+  "secret_material_present": false,
+  "identities": [
+    { "identity": "MTLS_READ", "owner": "PORTAL_SRE", "overlap_seconds": 600, "verify_before_revoke": true },
+    { "identity": "MTLS_COMMAND", "owner": "PORTAL_SRE_AND_TRADING_SYSTEM_OWNER", "overlap_seconds": 600, "verify_before_revoke": true },
+    { "identity": "DELEGATED_JWT_SIGNER", "owner": "PORTAL_SECURITY", "overlap_seconds": 600, "verify_before_revoke": true },
+    { "identity": "PORTAL_SESSION_SIGNER", "owner": "PORTAL_SECURITY", "overlap_seconds": 600, "verify_before_revoke": true },
+    { "identity": "PROJECTION_DATABASE", "owner": "PORTAL_SRE", "overlap_seconds": 600, "verify_before_revoke": true }
+  ],
+  "compromise_order": [
+    "DISABLE_COMMAND_CAPABILITIES",
+    "REVOKE_COMPROMISED_IDENTITY",
+    "ISSUE_DISTINCT_REPLACEMENT",
+    "VERIFY_NEGATIVE_AND_POSITIVE_MATRIX",
+    "PRESERVE_AUDIT",
+    "OWNER_APPROVES_REENABLEMENT"
+  ]
+}

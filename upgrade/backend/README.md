@@ -1032,3 +1032,22 @@ durable run/attempt events. Detailed evidence:
   and proves observed acknowledgement/reconciliation under a change window.
   Detail:
   [`EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md`](./EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md).
+
+## Backend state — 2026-08-27 (N17A source-dark production/DR preparation)
+
+- Pure Rust and canonical contracts now distinguish provisional interaction
+  budgets from measured production SLO/error budgets and keep production RPO,
+  RTO and monthly cost null/owner-gated.
+- Recovery covers control DB encrypted PITR, projection deterministic rebuild
+  and object-evidence hash restore. Five distinct identity families have
+  bounded overlap, verify-before-revoke and command-first compromise policy.
+- Unmounted alert/dashboard, capacity/retention/cost, owner and quarterly
+  game-day blueprints contain no datasource, origin, secret or runtime binding.
+- A real internal-only Docker drill proves WAL PITR to an exact LSN, encrypted
+  logical restore, deterministic projection rebuild, identity rotation/
+  compromise, release rollback and eight digest-sealed fault scenarios.
+- Status is `N17A_COMPLETE_SOURCE_DARK /
+  N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING / PRODUCTION_INACTIVE`. No
+  stable/dev/AWS-HK/Trading System resource changed and every source/command/
+  production flag remains false. Detail:
+  [`EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md`](./EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md).

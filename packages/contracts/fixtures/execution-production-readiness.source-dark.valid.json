@@ -1,0 +1,49 @@
+{
+  "schema_version": "portal.execution.production-readiness.v1",
+  "profile_id": "n17a-source-dark",
+  "source_dark": true,
+  "production_active": false,
+  "network_authorized": false,
+  "source_call_authorized": false,
+  "command_authorized": false,
+  "production_slo_claimed": false,
+  "game_day_frequency_days": 90,
+  "budgets": [
+    { "class": "CURRENT_STATE_SAME_CELL", "maximum_p95_milliseconds": 200, "authority": "PROVISIONAL_QUALIFICATION_ONLY", "production_slo_claimed": false },
+    { "class": "CROSS_CELL_BFF", "maximum_p95_milliseconds": 500, "authority": "PROVISIONAL_QUALIFICATION_ONLY", "production_slo_claimed": false },
+    { "class": "CACHED_CHART", "maximum_p95_milliseconds": 500, "authority": "PROVISIONAL_QUALIFICATION_ONLY", "production_slo_claimed": false },
+    { "class": "UNCACHED_MEDIUM_CHART", "maximum_p95_milliseconds": 1500, "authority": "PROVISIONAL_QUALIFICATION_ONLY", "production_slo_claimed": false },
+    { "class": "FIRST_EVENT", "maximum_p95_milliseconds": 2000, "authority": "PROVISIONAL_QUALIFICATION_ONLY", "production_slo_claimed": false },
+    { "class": "CORRELATION_FRESHNESS", "maximum_p95_milliseconds": 300000, "authority": "PROVISIONAL_QUALIFICATION_ONLY", "production_slo_claimed": false },
+    { "class": "COMMAND_PLAN_ACKNOWLEDGEMENT", "maximum_p95_milliseconds": 500, "authority": "PROVISIONAL_QUALIFICATION_ONLY", "production_slo_claimed": false }
+  ],
+  "error_budget": {
+    "mode": "NOT_MEASURED",
+    "availability_target_basis_points": null,
+    "production_window_open": false,
+    "burn_alert_active": false
+  },
+  "recovery": [
+    { "component": "PORTAL_CONTROL_DATABASE", "method": "ENCRYPTED_PITR_RESTORE", "encrypted_at_rest_required": true, "restore_verification_required": true, "production_rpo_seconds": null, "production_rto_seconds": null, "owner_approval_required": true },
+    { "component": "PROJECTION_DATABASE", "method": "DETERMINISTIC_REBUILD", "encrypted_at_rest_required": true, "restore_verification_required": true, "production_rpo_seconds": null, "production_rto_seconds": null, "owner_approval_required": true },
+    { "component": "OBJECT_EVIDENCE", "method": "HASH_VERIFIED_RESTORE", "encrypted_at_rest_required": true, "restore_verification_required": true, "production_rpo_seconds": null, "production_rto_seconds": null, "owner_approval_required": true }
+  ],
+  "rotations": [
+    { "identity": "MTLS_READ", "overlap_seconds": 600, "revoke_old_after_verify": true, "compromise_disables_commands_first": true, "runtime_identity_bound": false, "secret_material_present": false },
+    { "identity": "MTLS_COMMAND", "overlap_seconds": 600, "revoke_old_after_verify": true, "compromise_disables_commands_first": true, "runtime_identity_bound": false, "secret_material_present": false },
+    { "identity": "DELEGATED_JWT_SIGNER", "overlap_seconds": 600, "revoke_old_after_verify": true, "compromise_disables_commands_first": true, "runtime_identity_bound": false, "secret_material_present": false },
+    { "identity": "PORTAL_SESSION_SIGNER", "overlap_seconds": 600, "revoke_old_after_verify": true, "compromise_disables_commands_first": true, "runtime_identity_bound": false, "secret_material_present": false },
+    { "identity": "PROJECTION_DATABASE", "overlap_seconds": 600, "revoke_old_after_verify": true, "compromise_disables_commands_first": true, "runtime_identity_bound": false, "secret_material_present": false }
+  ],
+  "capacity": {
+    "six_month_order_fill_rows": 182000,
+    "initial_concurrent_sse_clients": 100,
+    "source_burst_events_per_minute": 140,
+    "maximum_chart_points": 5000,
+    "maximum_correlation_assets": 150,
+    "backup_daily_copies": 7,
+    "backup_weekly_copies": 4,
+    "monthly_cost_budget_usd": null,
+    "cost_owner_approval_required": true
+  }
+}

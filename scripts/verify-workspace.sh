@@ -443,6 +443,26 @@ for required in \
   "${ROOT_DIR}/deploy/execution-emergency/origin-isolation.source-dark.json" \
   "${ROOT_DIR}/deploy/execution-emergency/nginx.same-origin.source-dark.conf.template" \
   "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-production-readiness.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-production-readiness.source-dark.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-production-readiness.game-day-corpus.valid.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-production-readiness.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/generated/execution-production-readiness.d.ts" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/production-readiness/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/production-readiness/src/lib.rs" \
+  "${ROOT_DIR}/deploy/execution-readiness/README.md" \
+  "${ROOT_DIR}/deploy/execution-readiness/slo-alerts.source-dark.yml" \
+  "${ROOT_DIR}/deploy/execution-readiness/grafana-dashboard.source-dark.json" \
+  "${ROOT_DIR}/deploy/execution-readiness/capacity-retention-cost.source-dark.json" \
+  "${ROOT_DIR}/deploy/execution-readiness/rotation-inventory.source-dark.json" \
+  "${ROOT_DIR}/deploy/execution-readiness/owner-matrix.source-dark.json" \
+  "${ROOT_DIR}/deploy/execution-readiness/game-day-plan.source-dark.json" \
+  "${ROOT_DIR}/deploy/runbooks/portal-n17a-source-dark-production-dr.md" \
+  "${ROOT_DIR}/scripts/execution-n17a-readiness.py" \
+  "${ROOT_DIR}/scripts/test_execution_n17a_readiness.py" \
+  "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh" \
   "${ROOT_DIR}/deploy/manifests/deployment-profile.v1.schema.json" \
   "${ROOT_DIR}/deploy/manifests/deployment-profiles.source-dark.json" \
   "${ROOT_DIR}/deploy/manifests/portal-release-compatibility-matrix.v1.schema.json" \
@@ -1088,6 +1108,26 @@ for tracked_source in \
   deploy/execution-emergency/origin-isolation.source-dark.json \
   deploy/execution-emergency/nginx.same-origin.source-dark.conf.template \
   scripts/execution-n16a-emergency-routing-test.sh \
+  upgrade/backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md \
+  packages/contracts/schemas/execution-production-readiness.v1.schema.json \
+  packages/contracts/fixtures/execution-production-readiness.source-dark.valid.json \
+  packages/contracts/fixtures/execution-production-readiness.game-day-corpus.valid.json \
+  packages/contracts/openapi/execution-production-readiness.openapi.json \
+  packages/contracts/generated/execution-production-readiness.d.ts \
+  services/portal-execution-edge-rs/crates/production-readiness/Cargo.toml \
+  services/portal-execution-edge-rs/crates/production-readiness/src/lib.rs \
+  deploy/execution-readiness/README.md \
+  deploy/execution-readiness/slo-alerts.source-dark.yml \
+  deploy/execution-readiness/grafana-dashboard.source-dark.json \
+  deploy/execution-readiness/capacity-retention-cost.source-dark.json \
+  deploy/execution-readiness/rotation-inventory.source-dark.json \
+  deploy/execution-readiness/owner-matrix.source-dark.json \
+  deploy/execution-readiness/game-day-plan.source-dark.json \
+  deploy/runbooks/portal-n17a-source-dark-production-dr.md \
+  scripts/execution-n17a-readiness.py \
+  scripts/test_execution_n17a_readiness.py \
+  scripts/execution-n17a-production-dr-test.sh \
   deploy/.env.development.example \
   deploy/manifests/deployment-profile.v1.schema.json \
   deploy/manifests/deployment-profiles.source-dark.json \
@@ -1227,6 +1267,14 @@ for json_contract in \
   "${ROOT_DIR}/packages/contracts/openapi/execution-operations.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-intercell-gateway.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-emergency-routing.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-production-readiness.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-production-readiness.source-dark.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-production-readiness.game-day-corpus.valid.json" \
+  "${ROOT_DIR}/deploy/execution-readiness/grafana-dashboard.source-dark.json" \
+  "${ROOT_DIR}/deploy/execution-readiness/capacity-retention-cost.source-dark.json" \
+  "${ROOT_DIR}/deploy/execution-readiness/rotation-inventory.source-dark.json" \
+  "${ROOT_DIR}/deploy/execution-readiness/owner-matrix.source-dark.json" \
+  "${ROOT_DIR}/deploy/execution-readiness/game-day-plan.source-dark.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contract-pack.lock.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/planning-api.openapi.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/run-request.schema.json" \
@@ -1241,6 +1289,7 @@ bash -n \
   "${ROOT_DIR}/scripts/verify-release-channel.sh" \
   "${ROOT_DIR}/scripts/portal-release-authority-test.sh" \
   "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh" \
   "${ROOT_DIR}/scripts/smoke-stack.sh" \
   "${ROOT_DIR}/scripts/control-api-provision-keyrings.sh" \
   "${ROOT_DIR}/scripts/stage-hmd-reader-wheel.sh" \
@@ -1282,6 +1331,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-image-publication-test.sh" \
   "${ROOT_DIR}/scripts/execution-n15a-gateway-test.sh" \
   "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
@@ -1312,7 +1362,9 @@ python3 -m py_compile \
   "${ROOT_DIR}/scripts/test_execution_n12_command_publication_verify.py"
 python3 -m py_compile \
   "${ROOT_DIR}/scripts/portal-release-authority.py" \
-  "${ROOT_DIR}/scripts/test_portal_release_authority.py"
+  "${ROOT_DIR}/scripts/test_portal_release_authority.py" \
+  "${ROOT_DIR}/scripts/execution-n17a-readiness.py" \
+  "${ROOT_DIR}/scripts/test_execution_n17a_readiness.py"
 python3 "${ROOT_DIR}/scripts/test_execution_iam_verify.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_authorization.py"
@@ -1363,5 +1415,6 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-image-publication-test.sh"
 "${ROOT_DIR}/scripts/execution-n15a-gateway-test.sh"
 "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh"
+"${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh"
 "${ROOT_DIR}/scripts/execution-tracking-test.sh"
 printf 'Portal monorepo verification passed.\n'

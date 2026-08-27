@@ -1,0 +1,16 @@
+{
+  "schema_version": "portal.execution.production-readiness-game-day.v1",
+  "source_dark": true,
+  "production_active": false,
+  "fixture_only": true,
+  "cases": [
+    { "scenario": "NETWORK_PARTITION", "fixture_only": true, "isolated": true, "expected_outcome": "PASS", "expected_source_request_sent": false, "expected_command_dispatched": false, "expected_network_attempts": 0, "abort_condition": "Any packet leaves the isolated test network." },
+    { "scenario": "AUTH_LOSS", "fixture_only": true, "isolated": true, "expected_outcome": "PASS", "expected_source_request_sent": false, "expected_command_dispatched": false, "expected_network_attempts": 0, "abort_condition": "A missing or revoked identity falls back to anonymous access." },
+    { "scenario": "SOURCE_LOSS", "fixture_only": true, "isolated": true, "expected_outcome": "PASS", "expected_source_request_sent": false, "expected_command_dispatched": false, "expected_network_attempts": 0, "abort_condition": "A panel or collector represents fixture data as live authority." },
+    { "scenario": "COMMAND_CONTAINMENT", "fixture_only": true, "isolated": true, "expected_outcome": "PASS", "expected_source_request_sent": false, "expected_command_dispatched": false, "expected_network_attempts": 0, "abort_condition": "Any PLAN, APPLY or VERIFY operation becomes enabled." },
+    { "scenario": "CONTROL_DATABASE_PITR", "fixture_only": true, "isolated": true, "expected_outcome": "PASS", "expected_source_request_sent": false, "expected_command_dispatched": false, "expected_network_attempts": 0, "abort_condition": "The isolated restore includes a transaction after the selected recovery target." },
+    { "scenario": "PROJECTION_REBUILD", "fixture_only": true, "isolated": true, "expected_outcome": "PASS", "expected_source_request_sent": false, "expected_command_dispatched": false, "expected_network_attempts": 0, "abort_condition": "Rebuilt projection checksum differs from the sealed input corpus." },
+    { "scenario": "RELEASE_ROLLBACK", "fixture_only": true, "isolated": true, "expected_outcome": "PASS", "expected_source_request_sent": false, "expected_command_dispatched": false, "expected_network_attempts": 0, "abort_condition": "Rollback changes source or command activation flags." },
+    { "scenario": "CREDENTIAL_COMPROMISE", "fixture_only": true, "isolated": true, "expected_outcome": "PASS", "expected_source_request_sent": false, "expected_command_dispatched": false, "expected_network_attempts": 0, "abort_condition": "Old identity remains accepted after replacement verification and revocation." }
+  ]
+}

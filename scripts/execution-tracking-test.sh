@@ -29,6 +29,8 @@ N15A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFAC
 N15A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md"
 N16A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md"
 N16A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md"
+N17A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md"
+N17A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md"
 
 for required_file in \
     "${OWNER_MASTER_REQUEST}" \
@@ -38,7 +40,9 @@ for required_file in \
     "${N15A_REPORT}" \
     "${N15A_HANDOFF}" \
     "${N16A_REPORT}" \
-    "${N16A_HANDOFF}"
+    "${N16A_HANDOFF}" \
+    "${N17A_REPORT}" \
+    "${N17A_HANDOFF}"
 do
     if [[ ! -f "${required_file}" ]]; then
         echo "execution owner/phase plan is missing: ${required_file}" >&2
@@ -63,7 +67,7 @@ for token in \
     "N14A_COMPLETE_SOURCE_DARK / N14B_OWNER_RELEASE_EVIDENCE_PENDING" \
     "N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING" \
     "N16A_COMPLETE_SOURCE_DARK / N16B_R3_OWNER_ACCEPTANCE_PENDING" \
-    "N17A_PLANNED / N17B_PRODUCTION_OWNER_EVIDENCE_PENDING"
+    "N17A_COMPLETE_SOURCE_DARK / N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING"
 do
     if ! grep -Fq "${token}" "${EXECUTION_UNIFIED_PLAN}"; then
         echo "execution unified plan lost A/B split: ${token}" >&2
@@ -158,6 +162,36 @@ do
 done
 if ! grep -Fq "N16A backend — Source-dark routing and emergency policy" "${TRACKER}"; then
     echo "shared tracker lost N16A closeout section" >&2
+    exit 1
+fi
+
+for token in \
+    "N17A_COMPLETE_SOURCE_DARK" \
+    "N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING" \
+    "PRODUCTION_INACTIVE" \
+    "WAL PITR" \
+    "encrypted logical" \
+    "Network attempts outside the isolated Docker network: \`0\`"
+do
+    if ! grep -Fq "${token}" "${N17A_REPORT}"; then
+        echo "N17A report lost source-dark production/DR invariant: ${token}" >&2
+        exit 1
+    fi
+done
+for token in \
+    "N17A_COMPLETE_SOURCE_DARK" \
+    "PRODUCTION_INACTIVE" \
+    "N17B" \
+    "generated/execution-production-readiness.d.ts" \
+    "no production-ready badge"
+do
+    if ! grep -Fq "${token}" "${N17A_HANDOFF}"; then
+        echo "N17A Claude handoff lost consumer boundary: ${token}" >&2
+        exit 1
+    fi
+done
+if ! grep -Fq "N17A backend — Source-dark production/DR preparation" "${TRACKER}"; then
+    echo "shared tracker lost N17A closeout section" >&2
     exit 1
 fi
 
