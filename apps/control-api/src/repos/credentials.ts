@@ -129,17 +129,58 @@ export class CredentialsRepository {
     };
   }
 
-  async markActivationUsed(activationId: string): Promise<void> {
-    await this.pool.query(
-      `UPDATE activation_credentials SET used_at = now() WHERE activation_id = $1`,
-      [activationId],
+  async consumeUsableActivation(
+    userId: string,
+    tokenHash: string,
+  ): Promise<ActivationCredential | null> {
+    const result = await this.pool.query<ActivationRow>(
+      `UPDATE activation_credentials
+          SET used_at = now()
+        WHERE activation_id = (
+          SELECT activation_id
+            FROM activation_credentials
+           WHERE user_id = $1 AND token_hash = $2
+             AND used_at IS NULL AND revoked_at IS NULL AND expires_at > now()
+           ORDER BY expires_at DESC
+           LIMIT 1
+           FOR UPDATE SKIP LOCKED
+        )
+        RETURNING *`,
+      [userId, tokenHash],
     );
+    const row = result.rows[0];
+    if (!row) return null;
+    return {
+      activationId: row.activation_id,
+      userId: row.user_id,
+      tokenHash: row.token_hash,
+      expiresAt: row.expires_at,
+      usedAt: row.used_at,
+      revokedAt: row.revoked_at,
+    };
+  }
+
+  async matchesConsumedActivation(input: {
+    activationId: string;
+    userId: string;
+    tokenHash: string;
+  }): Promise<boolean> {
+    const result = await this.pool.query<{ matches: boolean }>(
+      `SELECT EXISTS (
+         SELECT 1
+           FROM activation_credentials
+          WHERE activation_id = $1 AND user_id = $2 AND token_hash = $3
+            AND used_at IS NOT NULL AND revoked_at IS NULL
+       ) AS matches`,
+      [input.activationId, input.userId, input.tokenHash],
+    );
+    return result.rows[0]?.matches === true;
   }
 
   async revokeActivationCredentials(userId: string): Promise<void> {
     await this.pool.query(
       `UPDATE activation_credentials SET revoked_at = now()
-       WHERE user_id = $1 AND used_at IS NULL AND revoked_at IS NULL`,
+       WHERE user_id = $1 AND revoked_at IS NULL`,
       [userId],
     );
   }

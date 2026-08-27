@@ -634,6 +634,21 @@ alphas are never executable. Fixtures: `visual-baseline-run` (COMPLETED) +
   transport explicitly; a clean 2026 resolver must not silently fall back to
   the deprecated `httpx` TestClient path and hang before application startup.
 
+## Backend state — 2026-08-27 (stable Bobby activation repair)
+
+- Root cause: credential reset left an existing password hash in place while
+  the activation login created a session with no durable record of which
+  one-time credential authenticated it. Password change therefore compared the
+  activation token with Bobby's old password hash and denied the valid flow.
+- Each activation login now atomically consumes one token and stores only its
+  activation identifier on the resulting session. Password change accepts only
+  the exact consumed activation proof bound to that session; ordinary sessions
+  still require the current Argon2id password. Reset accounts cannot keep using
+  their old password while `must_change_password` is set.
+- Migration `1723680000012` adds the nullable, unique session-to-activation
+  proof link. Credential rotation revokes both unused and consumed activation
+  records; no plaintext token is persisted or logged.
+
 ## Backend state — 2026-08-19 (v1.0.1 HMD mount permission hotfix)
 
 - Root cause for WFO/three-window `PermissionError` was a numeric group

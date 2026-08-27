@@ -130,6 +130,17 @@ describe("auth flows (dev mode)", () => {
     });
     expect(pending.json().state).toBe("PASSWORD_CHANGE_REQUIRED");
 
+    const wrongCurrent = await inject("/api/auth/change-password", {
+      method: "POST",
+      headers: { cookie: sessionCookie, "x-portal-csrf": csrf },
+      payload: {
+        current_password: "not-the-activation-credential",
+        new_password: "a-correct-horse-battery-staple-42",
+      },
+    });
+    expect(wrongCurrent.statusCode).toBe(401);
+    expect(wrongCurrent.json().error.code).toBe("INVALID_CREDENTIALS");
+
     const changed = await inject("/api/auth/change-password", {
       method: "POST",
       headers: { cookie: sessionCookie, "x-portal-csrf": csrf },
@@ -156,6 +167,69 @@ describe("auth flows (dev mode)", () => {
       role: "ADMIN",
       mustChangePassword: false,
     });
+  });
+
+  it("an active account reset uses only the new activation proof", async () => {
+    const username = `reset-user-${Date.now()}`;
+    const email = `${username}@azdag.com`;
+    await admin.createUser({
+      username,
+      displayName: "Reset User",
+      role: "USER",
+    });
+    const user = await auth.users.findByUsername(username);
+    const firstActivation = await admin.resetCredential(user!.userId);
+    const firstLogin = await inject("/api/auth/login", {
+      method: "POST",
+      headers: { "x-dev-access-email": email },
+      payload: { username, credential: firstActivation.activationToken },
+    });
+    const firstChange = await inject("/api/auth/change-password", {
+      method: "POST",
+      headers: {
+        cookie: cookies(firstLogin),
+        "x-portal-csrf": csrfFrom(firstLogin),
+      },
+      payload: {
+        current_password: firstActivation.activationToken,
+        new_password: "violet-harbor-correct-staple-2026",
+      },
+    });
+    expect(firstChange.statusCode).toBe(201);
+
+    const reset = await admin.resetCredential(user!.userId);
+    const oldPassword = await inject("/api/auth/login", {
+      method: "POST",
+      headers: { "x-dev-access-email": email },
+      payload: { username, credential: "violet-harbor-correct-staple-2026" },
+    });
+    expect(oldPassword.statusCode).toBe(401);
+
+    const activationLogin = await inject("/api/auth/login", {
+      method: "POST",
+      headers: { "x-dev-access-email": email },
+      payload: { username, credential: reset.activationToken },
+    });
+    expect(activationLogin.statusCode).toBe(201);
+    const changed = await inject("/api/auth/change-password", {
+      method: "POST",
+      headers: {
+        cookie: cookies(activationLogin),
+        "x-portal-csrf": csrfFrom(activationLogin),
+      },
+      payload: {
+        current_password: reset.activationToken,
+        new_password: "granite-orbit-secure-phrase-2027",
+      },
+    });
+    expect(changed.statusCode).toBe(201);
+
+    const finalLogin = await inject("/api/auth/login", {
+      method: "POST",
+      headers: { "x-dev-access-email": email },
+      payload: { username, credential: "granite-orbit-secure-phrase-2027" },
+    });
+    expect(finalLogin.statusCode).toBe(201);
   });
 
   it("activation credential is single use", async () => {

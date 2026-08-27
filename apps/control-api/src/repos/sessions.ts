@@ -9,6 +9,7 @@ interface SessionRow {
   access_token_expires_at: Date | null;
   state: "ACTIVE" | "REVOKED" | "EXPIRED";
   csrf_secret_hash: string;
+  activation_id: string | null;
   session_version: number;
   created_at: Date;
   last_seen_at: Date;
@@ -22,6 +23,7 @@ function toSession(row: SessionRow): AuthSession & {
   accessSubject: string | null;
   accessTokenExpiresAt: Date | null;
   csrfSecretHash: string;
+  activationId: string | null;
   createdAt: Date;
   lastSeenAt: Date;
   revokedAt: Date | null;
@@ -38,6 +40,7 @@ function toSession(row: SessionRow): AuthSession & {
     accessSubject: row.access_subject,
     accessTokenExpiresAt: row.access_token_expires_at,
     csrfSecretHash: row.csrf_secret_hash,
+    activationId: row.activation_id,
     createdAt: row.created_at,
     lastSeenAt: row.last_seen_at,
     revokedAt: row.revoked_at,
@@ -55,6 +58,7 @@ export class SessionsRepository {
     accessSubject: string | null;
     accessTokenExpiresAt: Date | null;
     csrfSecretHash: string;
+    activationId: string | null;
     sessionVersion: number;
     idleExpiresAt: Date;
     absoluteExpiresAt: Date;
@@ -62,8 +66,9 @@ export class SessionsRepository {
     await this.pool.query(
       `INSERT INTO auth_sessions
          (session_id, session_token_hash, user_id, access_subject, access_token_expires_at,
-          state, csrf_secret_hash, session_version, idle_expires_at, absolute_expires_at)
-       VALUES ($1, $2, $3, $4, $5, 'ACTIVE', $6, $7, $8, $9)
+          state, csrf_secret_hash, activation_id, session_version, idle_expires_at,
+          absolute_expires_at)
+       VALUES ($1, $2, $3, $4, $5, 'ACTIVE', $6, $7, $8, $9, $10)
        RETURNING session_id`,
       [
         input.sessionId,
@@ -72,6 +77,7 @@ export class SessionsRepository {
         input.accessSubject,
         input.accessTokenExpiresAt,
         input.csrfSecretHash,
+        input.activationId,
         input.sessionVersion,
         input.idleExpiresAt,
         input.absoluteExpiresAt,
