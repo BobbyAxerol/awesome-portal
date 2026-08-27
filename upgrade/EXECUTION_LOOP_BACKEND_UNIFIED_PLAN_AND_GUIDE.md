@@ -299,6 +299,23 @@ reviewed evidence/profile promotions. A genuinely new product capability or an
 incompatible owner contract change amends the master revision instead of
 creating another phase-local request file.
 
+**Owner campaign consolidation checkpoint — 2026-08-27.** The only active
+owner input is revision `portal.execution.trading-system-owner-request.v2`,
+built by `scripts/build-trading-system-owner-campaign-pack.sh`. Portal commit
+`d6609c8` produced the manifest-bound input; AWS-HK imported it at Trading
+System commit `d900265` on branch
+`feat/portal-execution-owner-campaign-v2`, worktree
+`/home/bobby/.worktrees/trading-system-portal-execution-owner-v2/`. Historical
+D1/D4/N02/N03/discovery packets were moved without deletion to the private,
+hash-verified archive
+`/home/bobby/.local/state/portal-execution/archive/20260827-consolidation-v2/`.
+The legacy D4 v1 full-snapshot poller was stopped cleanly because it had no
+connected client while refreshing every 500 ms. The canonical Rust Edge,
+Source Proxy and projection PostgreSQL remain healthy and source-dark; all
+seven proxy guard locations still return 503. The owner now implements within
+the single campaign worktree. No older root-level packet or D4 v1 runtime is an
+active instruction/source dependency, and no B-lane activation is implied.
+
 ---
 
 ## 4. Unified backend phases
