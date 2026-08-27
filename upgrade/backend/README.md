@@ -1015,3 +1015,20 @@ durable run/attempt events. Detailed evidence:
   PRODUCTION_INACTIVE`. N15B later binds the accepted master owner pack and
   proves all four real interfaces independently. Detail:
   [`EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md`](./EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md).
+
+## Backend state — 2026-08-27 (N16A source-dark emergency routing)
+
+- One logical Portal origin and `/ops/emergency/*` prefix are canonical, but
+  origin selection is server-side and the route remains unmounted.
+- Rust owns short-session/WebAuthn ceremony validation, R3/R4 separation,
+  immutable audit and local Research/Cloudflare/execution-origin/rollback
+  decisions. Every effective route target remains `NONE`.
+- N12 R3 is unpublished, command identity is unbound and all controls plus
+  PLAN/APPLY/VERIFY are false. R4 resume/scale is structurally forbidden.
+- OpenAPI has no paths/servers; the Nginx template has no forwarding directive.
+  No Cloudflare/DNS/tunnel/AWS/source/runtime changed and `network_attempts=0`.
+- Status is `N16A_COMPLETE_SOURCE_DARK / N16B_R3_OWNER_ACCEPTANCE_PENDING /
+  PRODUCTION_INACTIVE`. N16B later binds accepted N12 R3/N15B owner authority
+  and proves observed acknowledgement/reconciliation under a change window.
+  Detail:
+  [`EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md`](./EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md).

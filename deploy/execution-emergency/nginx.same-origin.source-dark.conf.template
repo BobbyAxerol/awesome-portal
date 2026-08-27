@@ -1,0 +1,10 @@
+# N16A SOURCE-DARK TEMPLATE — NOT INCLUDED BY ANY DEPLOYMENT.
+# There is intentionally no backend forwarding directive, internal hostname or token.
+# If included accidentally, fail closed under the one Portal origin.
+location ^~ /ops/emergency/ {
+    default_type application/problem+json;
+    add_header Cache-Control "no-store" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer" always;
+    return 503 '{"type":"https://portal.primusspark.com/problems/emergency-source-dark","title":"Emergency operations unavailable","status":503,"code":"N12_R3_CATALOGUE_UNPUBLISHED","retryable":false}';
+}

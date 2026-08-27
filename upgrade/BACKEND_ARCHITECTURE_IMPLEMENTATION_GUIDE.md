@@ -1463,6 +1463,19 @@ activation or the phase):**
   PRODUCTION_INACTIVE`; no origin, credential, source or runtime changed. See
   [`EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md`](./backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md).
 
+- **N16A source-dark same-domain emergency routing (2026-08-27):** the exact
+  Portal origin and `/ops/emergency/*` prefix, server-side-only origin
+  isolation, five-minute session, phishing-resistant step-up, break-glass
+  ceremony, command-independent health, typed dependency/failover states and
+  immutable SHA-256 audit chain are now pure Rust/contracts/templates tested
+  against local doubles. The component OpenAPI has no paths/servers and the
+  unmounted Nginx template has no forwarding directive. N12 R3 publication,
+  dedicated command identity and every PLAN/APPLY/VERIFY flag remain false;
+  R4 resume/scale is structurally forbidden and `network_attempts=0`. Status is
+  `N16A_COMPLETE_SOURCE_DARK / N16B_R3_OWNER_ACCEPTANCE_PENDING /
+  PRODUCTION_INACTIVE`. See
+  [`EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md`](./backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md).
+
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
   workload-identity/window gates precede D2, then authenticated transport and

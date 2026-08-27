@@ -1,0 +1,17 @@
+{
+  "schema_version": "portal.execution.emergency-origin-isolation.v1",
+  "source_dark": true,
+  "public_origin": "https://portal.primusspark.com",
+  "path_prefix": "/ops/emergency/",
+  "profile": "execution_ops",
+  "browser_contract": "SAME_ORIGIN_ONLY",
+  "origin_resolution": "SERVER_SIDE_ONLY",
+  "cloudflare_application_created": false,
+  "dns_or_tunnel_route_created": false,
+  "public_route_active": false,
+  "execution_origin_bound": false,
+  "internal_origin_in_browser_payload": false,
+  "delegated_token_in_browser": false,
+  "r3_catalogue_published": false,
+  "r4_allowed": false
+}

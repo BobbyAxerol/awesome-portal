@@ -430,6 +430,19 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/intercell-gateway/Cargo.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/intercell-gateway/src/lib.rs" \
   "${ROOT_DIR}/scripts/execution-n15a-gateway-test.sh" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-emergency-routing.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-emergency-routing.source-dark.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-emergency-routing.ui-corpus.valid.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-emergency-routing.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/generated/execution-emergency-routing.d.ts" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/emergency-routing/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/emergency-routing/src/lib.rs" \
+  "${ROOT_DIR}/deploy/execution-emergency/README.md" \
+  "${ROOT_DIR}/deploy/execution-emergency/origin-isolation.source-dark.json" \
+  "${ROOT_DIR}/deploy/execution-emergency/nginx.same-origin.source-dark.conf.template" \
+  "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
   "${ROOT_DIR}/deploy/manifests/deployment-profile.v1.schema.json" \
   "${ROOT_DIR}/deploy/manifests/deployment-profiles.source-dark.json" \
   "${ROOT_DIR}/deploy/manifests/portal-release-compatibility-matrix.v1.schema.json" \
@@ -1062,6 +1075,19 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/intercell-gateway/Cargo.toml \
   services/portal-execution-edge-rs/crates/intercell-gateway/src/lib.rs \
   scripts/execution-n15a-gateway-test.sh \
+  upgrade/backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md \
+  packages/contracts/schemas/execution-emergency-routing.v1.schema.json \
+  packages/contracts/fixtures/execution-emergency-routing.source-dark.valid.json \
+  packages/contracts/fixtures/execution-emergency-routing.ui-corpus.valid.json \
+  packages/contracts/openapi/execution-emergency-routing.openapi.json \
+  packages/contracts/generated/execution-emergency-routing.d.ts \
+  services/portal-execution-edge-rs/crates/emergency-routing/Cargo.toml \
+  services/portal-execution-edge-rs/crates/emergency-routing/src/lib.rs \
+  deploy/execution-emergency/README.md \
+  deploy/execution-emergency/origin-isolation.source-dark.json \
+  deploy/execution-emergency/nginx.same-origin.source-dark.conf.template \
+  scripts/execution-n16a-emergency-routing-test.sh \
   deploy/.env.development.example \
   deploy/manifests/deployment-profile.v1.schema.json \
   deploy/manifests/deployment-profiles.source-dark.json \
@@ -1184,6 +1210,9 @@ for json_contract in \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-intercell-gateway.source-dark.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-intercell-gateway.event-corpus.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-intercell-gateway.artifact-corpus.valid.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-emergency-routing.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-emergency-routing.source-dark.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-emergency-routing.ui-corpus.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-command-catalog.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-command-plan.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-command-operation.valid.json" \
@@ -1197,6 +1226,7 @@ for json_contract in \
   "${ROOT_DIR}/packages/contracts/openapi/execution-realtime.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-operations.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-intercell-gateway.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-emergency-routing.openapi.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contract-pack.lock.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/planning-api.openapi.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/run-request.schema.json" \
@@ -1210,6 +1240,7 @@ bash -n \
   "${ROOT_DIR}/scripts/verify-migration-history.sh" \
   "${ROOT_DIR}/scripts/verify-release-channel.sh" \
   "${ROOT_DIR}/scripts/portal-release-authority-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
   "${ROOT_DIR}/scripts/smoke-stack.sh" \
   "${ROOT_DIR}/scripts/control-api-provision-keyrings.sh" \
   "${ROOT_DIR}/scripts/stage-hmd-reader-wheel.sh" \
@@ -1250,6 +1281,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-n06-qualification-test.sh" \
   "${ROOT_DIR}/scripts/execution-image-publication-test.sh" \
   "${ROOT_DIR}/scripts/execution-n15a-gateway-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
@@ -1330,5 +1362,6 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-d3-test.sh"
 "${ROOT_DIR}/scripts/execution-image-publication-test.sh"
 "${ROOT_DIR}/scripts/execution-n15a-gateway-test.sh"
+"${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh"
 "${ROOT_DIR}/scripts/execution-tracking-test.sh"
 printf 'Portal monorepo verification passed.\n'

@@ -130,6 +130,10 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-intercell-gateway.v1.schema.json#/$defs/EventCorpus",
   "execution-intercell-gateway.artifact-corpus.valid.json":
     "https://schemas.primusspark.com/portal/execution-intercell-gateway.v1.schema.json#/$defs/ArtifactCorpus",
+  "execution-emergency-routing.source-dark.valid.json":
+    "https://schemas.primusspark.com/portal/execution-emergency-routing.v1.schema.json#/$defs/EmergencyProfile",
+  "execution-emergency-routing.ui-corpus.valid.json":
+    "https://schemas.primusspark.com/portal/execution-emergency-routing.v1.schema.json#/$defs/UiStateCorpus",
   "execution-analytics.equity-projection.valid.json":
     "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/EquityProjectionResponse",
   "execution-analytics.insight-line.valid.json":
@@ -321,6 +325,98 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(eventSchema!({ ...events.events[0], operation: "PATCH" })).toBe(false);
     expect(artifactSchema!(artifactWithoutDigest)).toBe(false);
     expect(artifactSchema!({ ...artifacts.cases[0].descriptor, access_policy: "PUBLIC" })).toBe(false);
+  });
+
+  it("keeps N16A same-domain emergency routing source-dark and R4 forbidden", () => {
+    const profile = loadJson(
+      join(fixtureDir, "execution-emergency-routing.source-dark.valid.json"),
+    ) as {
+      runtime_active: boolean;
+      network_authorized: boolean;
+      source_call_authorized: boolean;
+      route: Record<string, unknown>;
+      command: Record<string, unknown> & {
+        protective_capabilities: string[];
+        forbidden_risk_increasing_capabilities: string[];
+      };
+    };
+    expect(profile).toMatchObject({
+      runtime_active: false,
+      network_authorized: false,
+      source_call_authorized: false,
+    });
+    expect(profile.route).toMatchObject({
+      public_origin: "https://portal.primusspark.com",
+      path_prefix: "/ops/emergency/",
+      browser_mode: "SAME_ORIGIN_ONLY",
+      origin_resolution: "SERVER_SIDE_ONLY",
+      public_route_active: false,
+      execution_origin_bound: false,
+      browser_internal_origin_visible: false,
+      browser_delegated_token_visible: false,
+    });
+    expect(profile.command.protective_capabilities).toEqual([
+      "LIVE_HALT", "LIVE_REDUCE", "LIVE_EMERGENCY_CLOSE",
+    ]);
+    expect(profile.command.forbidden_risk_increasing_capabilities).toEqual([
+      "LIVE_RESUME", "LIVE_SCALE",
+    ]);
+    expect(profile.command).toMatchObject({
+      n12_r3_catalogue_published: false,
+      dedicated_command_identity_bound: false,
+      control_visible: false,
+      plan_allowed: false,
+      apply_allowed: false,
+      verify_allowed: false,
+    });
+
+    const schema = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-emergency-routing.v1.schema.json#/$defs/EmergencyProfile",
+    );
+    expect(schema!({ ...profile, runtime_active: true })).toBe(false);
+    expect(schema!({
+      ...profile,
+      route: { ...profile.route, public_route_active: true },
+    })).toBe(false);
+    expect(schema!({
+      ...profile,
+      command: { ...profile.command, n12_r3_catalogue_published: true },
+    })).toBe(false);
+  });
+
+  it("publishes N16A typed failure corpus without a route or source request", () => {
+    const corpus = loadJson(
+      join(fixtureDir, "execution-emergency-routing.ui-corpus.valid.json"),
+    ) as {
+      routes: Array<Record<string, unknown>>;
+      commands: Array<Record<string, unknown>>;
+    };
+    expect(corpus.routes.map((route) => route.scenario)).toEqual([
+      "NORMAL_RESEARCH", "RESEARCH_LOSS", "CLOUDFLARE_LOSS",
+      "EXECUTION_ORIGIN_LOSS", "ROLLBACK",
+    ]);
+    expect(corpus.routes.every((route) =>
+      route.route_target === "NONE" && route.control_visible === false &&
+      route.source_request_sent === false && route.network_attempts === 0)).toBe(true);
+    expect(corpus.commands.every((command) =>
+      command.decision === "DENIED" && command.plan_allowed === false &&
+      command.apply_allowed === false && command.verify_allowed === false &&
+      command.source_request_sent === false)).toBe(true);
+    expect(corpus.commands.find((command) => command.risk_tier === "R4_LIVE_RISK_INCREASING"))
+      .toMatchObject({ reason: "RISK_INCREASING_FORBIDDEN" });
+
+    const openapi = loadJson(
+      join(ROOT, "openapi", "execution-emergency-routing.openapi.json"),
+    ) as {
+      paths: Record<string, unknown>;
+      servers: unknown[];
+      "x-runtime-mounted": boolean;
+      "x-public-route-active": boolean;
+    };
+    expect(openapi.paths).toEqual({});
+    expect(openapi.servers).toEqual([]);
+    expect(openapi["x-runtime-mounted"]).toBe(false);
+    expect(openapi["x-public-route-active"]).toBe(false);
   });
 
   it("rejects malformed event envelopes", () => {

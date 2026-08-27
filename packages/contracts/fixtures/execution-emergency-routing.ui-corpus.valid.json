@@ -1,0 +1,105 @@
+{
+  "schema_version": "portal.execution.emergency-ui-corpus.v1",
+  "source_dark": true,
+  "routes": [
+    {
+      "schema_version": "portal.execution.emergency-route-decision.v1",
+      "scenario": "NORMAL_RESEARCH",
+      "research": "AVAILABLE",
+      "cloudflare": "AVAILABLE",
+      "execution_origin": "AVAILABLE",
+      "ui_state": "SOURCE_DARK",
+      "reason": "SOURCE_DARK",
+      "route_target": "NONE",
+      "candidate_profile": null,
+      "health_available": true,
+      "control_visible": false,
+      "source_request_sent": false,
+      "network_attempts": 0
+    },
+    {
+      "schema_version": "portal.execution.emergency-route-decision.v1",
+      "scenario": "RESEARCH_LOSS",
+      "research": "UNAVAILABLE",
+      "cloudflare": "AVAILABLE",
+      "execution_origin": "AVAILABLE",
+      "ui_state": "DEGRADED",
+      "reason": "N12_R3_CATALOGUE_UNPUBLISHED",
+      "route_target": "NONE",
+      "candidate_profile": "execution_ops",
+      "health_available": true,
+      "control_visible": false,
+      "source_request_sent": false,
+      "network_attempts": 0
+    },
+    {
+      "schema_version": "portal.execution.emergency-route-decision.v1",
+      "scenario": "CLOUDFLARE_LOSS",
+      "research": "AVAILABLE",
+      "cloudflare": "UNAVAILABLE",
+      "execution_origin": "AVAILABLE",
+      "ui_state": "UNAVAILABLE",
+      "reason": "CLOUDFLARE_UNAVAILABLE",
+      "route_target": "NONE",
+      "candidate_profile": null,
+      "health_available": true,
+      "control_visible": false,
+      "source_request_sent": false,
+      "network_attempts": 0
+    },
+    {
+      "schema_version": "portal.execution.emergency-route-decision.v1",
+      "scenario": "EXECUTION_ORIGIN_LOSS",
+      "research": "UNAVAILABLE",
+      "cloudflare": "AVAILABLE",
+      "execution_origin": "UNAVAILABLE",
+      "ui_state": "UNAVAILABLE",
+      "reason": "EXECUTION_ORIGIN_UNAVAILABLE",
+      "route_target": "NONE",
+      "candidate_profile": null,
+      "health_available": true,
+      "control_visible": false,
+      "source_request_sent": false,
+      "network_attempts": 0
+    },
+    {
+      "schema_version": "portal.execution.emergency-route-decision.v1",
+      "scenario": "ROLLBACK",
+      "research": "AVAILABLE",
+      "cloudflare": "AVAILABLE",
+      "execution_origin": "AVAILABLE",
+      "ui_state": "ROLLBACK",
+      "reason": "ROLLBACK_ENGAGED",
+      "route_target": "NONE",
+      "candidate_profile": null,
+      "health_available": true,
+      "control_visible": false,
+      "source_request_sent": false,
+      "network_attempts": 0
+    }
+  ],
+  "commands": [
+    {
+      "schema_version": "portal.execution.emergency-command-decision.v1",
+      "operation_id": "op_r3_source_dark",
+      "decision": "DENIED",
+      "reason": "N12_R3_CATALOGUE_UNPUBLISHED",
+      "risk_tier": "R3_LIVE_PROTECTIVE",
+      "plan_allowed": false,
+      "apply_allowed": false,
+      "verify_allowed": false,
+      "source_request_sent": false
+    },
+    {
+      "schema_version": "portal.execution.emergency-command-decision.v1",
+      "operation_id": "op_r4_forbidden",
+      "decision": "DENIED",
+      "reason": "RISK_INCREASING_FORBIDDEN",
+      "risk_tier": "R4_LIVE_RISK_INCREASING",
+      "plan_allowed": false,
+      "apply_allowed": false,
+      "verify_allowed": false,
+      "source_request_sent": false
+    }
+  ]
+}

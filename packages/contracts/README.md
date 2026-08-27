@@ -106,6 +106,14 @@ post-dispatch retry. The OpenAPI has no paths or servers. Event and Artifact
 corpora cover replay/gap/epoch/tombstone and digest/schema/size/expiry/access
 rejections without publishing a source location, credential or artifact body.
 
+N16A adds the component-only same-domain emergency-routing authority at
+`schemas/execution-emergency-routing.v1.schema.json`. Its profile and failure
+corpus keep `/ops/emergency/*` source-dark, expose command-independent typed
+health/degraded states, define the short-session/WebAuthn/break-glass ceremony
+and keep N12 R3 unpublished plus R4 resume/scale structurally forbidden. The
+matching OpenAPI has no path or server; generated types are safe for Claude to
+consume without implying a public route or command authority.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields
@@ -175,6 +183,7 @@ packages/contracts/
     execution-command-{catalog,plan,operation,relay-denied}.valid.json
     execution-staged-activation.{capabilities,plan-blocked,states}.valid.json
     execution-intercell-gateway.{source-dark,event-corpus,artifact-corpus}.valid.json
+    execution-emergency-routing.{source-dark,ui-corpus}.valid.json
   openapi/
     execution-analytics.openapi.json
     execution-analytics-series.openapi.json
@@ -184,6 +193,7 @@ packages/contracts/
     execution-operations.openapi.json
     execution-staged-activation.openapi.json
     execution-intercell-gateway.openapi.json
+    execution-emergency-routing.openapi.json
   generated/
     portal-api.d.ts
     execution-analytics.d.ts
@@ -194,6 +204,7 @@ packages/contracts/
     execution-operations.d.ts
     execution-staged-activation.d.ts
     execution-intercell-gateway.d.ts
+    execution-emergency-routing.d.ts
   contracts-snapshot.json
   package.json
   tsconfig.json

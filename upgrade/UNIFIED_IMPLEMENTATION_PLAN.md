@@ -1964,6 +1964,19 @@ không phải 17 màn.
 > real per-interface mTLS/JWT/WAN/fault/SLO acceptance. Detail:
 > [`EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md`](./backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md).
 
+> **Backend checkpoint 2026-08-27 — N16A source-dark emergency routing:**
+> status is `N16A_COMPLETE_SOURCE_DARK / N16B_R3_OWNER_ACCEPTANCE_PENDING /
+> PRODUCTION_INACTIVE`. One same-origin `/ops/emergency/*` component contract,
+> server-side origin isolation, five-minute session/WebAuthn ceremony,
+> command-independent typed health, immutable audit and local Research/
+> Cloudflare/execution-origin/rollback drills are complete. OpenAPI has no
+> path/server, the unmounted Nginx blueprint has no forwarding directive,
+> N12 R3 remains unpublished and R4 resume/scale is structurally forbidden.
+> No public route, Cloudflare/DNS/tunnel, AWS-HK/source/runtime changed and
+> `network_attempts=0`. N16B later requires accepted N12 R3, dedicated command
+> identity, N15B and an owner window. Detail:
+> [`EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md`](./backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md).
+
 ## 12.4 Thứ tự slice của frontend
 
 Lane A chạy trước; mỗi slice đóng độc lập và không slice nào chờ codex.

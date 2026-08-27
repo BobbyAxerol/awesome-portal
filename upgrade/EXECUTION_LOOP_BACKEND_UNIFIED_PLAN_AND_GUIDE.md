@@ -1041,7 +1041,7 @@ rollback and owner matrix exist for all four without generic host/DB/Redis acces
 ### N16 — Same-domain routing and emergency operations
 
 **Mapping:** BAR-19.  
-**Status:** `N16A_PLANNED / N16B_R3_OWNER_ACCEPTANCE_PENDING`.  
+**Status:** `N16A_COMPLETE_SOURCE_DARK / N16B_R3_OWNER_ACCEPTANCE_PENDING`.  
 **Priority:** P2.
 
 The Trading System dependency is the existing N12 R3 protective contract plus
@@ -1385,13 +1385,11 @@ command commit.
 
 ## 11. Recommended next sequence
 
-Current order after N13A, N14A and N15A completion:
+Current order after N13A, N14A, N15A and N16A completion:
 
-1. **N16A** — same-domain routing and emergency policy against local doubles,
-   with no public protective command.
-2. **N17A** — offline SLO/DR/rotation/evidence preparation and isolated game-day
+1. **N17A** — offline SLO/DR/rotation/evidence preparation and isolated game-day
    rehearsal.
-3. Keep N13B–N17B parked until the single master Trading System owner return is
+2. Keep N13B–N17B parked until the single master Trading System owner return is
    accepted. Then resume in order from **N13B**, never by jumping directly to a
    later B phase.
 
@@ -1438,3 +1436,4 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | 2026-08-26 | N11 Portal publication gate + adapters closed | one 24-capability owner request, byte-bound schema/fixture verifier and strict Rust GET adapter complete; owner publication/source/runtime pending |
 | 2026-08-26 | N14A Portal release authority closed | six digest-pinned images, CI-bound SBOM/SLSA/Trivy/signature evidence, owner acceptance contract, dev/stable isolation and PostgreSQL restore/forward-fix rehearsal complete; N14B owner binding pending, source/runtime inactive |
 | 2026-08-26 | N15A four-interface gateway authority closed | independent Query/Command/Event/Artifact negotiation, split identities, bounded transports, Event continuity, Artifact reference policy and local fault doubles complete; N15B owner publication pending, network/source/runtime inactive |
+| 2026-08-27 | N16A same-domain emergency-routing authority closed | same-origin/origin-isolation templates, short session/WebAuthn ceremony, typed health/failure states, immutable audit and local Research/Cloudflare/origin/rollback drills complete; R3 unpublished, R4 forbidden, N16B pending, public route/source/runtime inactive |

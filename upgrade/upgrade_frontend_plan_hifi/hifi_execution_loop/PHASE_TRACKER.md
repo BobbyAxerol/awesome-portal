@@ -2704,7 +2704,7 @@ master request activates a source, screen or command.
 | N13 | delivery-profile state machine, repositories/APIs, evidence validation, rollback fixtures | import owner bytes, Paper shadow/qualification and staged promotion | `N13A_COMPLETE_SOURCE_DARK / N13B_MASTER_OWNER_RETURN_PENDING` |
 | N14 | exact six-image digest manifest, CI-bound signatures/SBOM/SLSA/Trivy, dev/stable isolation, owner decision and restore/forward-fix rehearsal complete | after N13B target selection, bind accepted Trading System source/gateway commit/image/config/contracts and run joint release/rollback/forward-fix with exact dual-owner approval | `N14A_COMPLETE_SOURCE_DARK / N14B_OWNER_RELEASE_EVIDENCE_PENDING` |
 | N15 | independent Query/Command/Event/Artifact contracts, rollback negotiation, identity/transport policy, Event/Artifact semantics and local fault doubles complete | bind accepted owner bytes and prove real mTLS/JWT routes plus WAN/fault/compatibility/SLO evidence independently | `N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING` |
-| N16 | same-domain/emergency policy, audit and simulated origin failure | accepted R3 protective route and real observed acknowledgement | `N16A_PLANNED / N16B_R3_OWNER_ACCEPTANCE_PENDING` |
+| N16 | same-domain/origin-isolation templates, short-session/WebAuthn ceremony, typed health/failure states, immutable audit, R3/R4 split and local origin-loss/rollback drills complete | accepted N12 R3 protective route, N15B, dedicated command identity and real observed acknowledgement | `N16A_COMPLETE_SOURCE_DARK / N16B_R3_OWNER_ACCEPTANCE_PENDING` |
 | N17 | SLO/DR/rotation tooling, isolated restore and dry-run game day | bounded production activation and joint SLO/DR/game-day evidence | `N17A_PLANNED / N17B_PRODUCTION_OWNER_EVIDENCE_PENDING` |
 
 Rule: Claude and Portal backend may implement/test every A lane without waiting
@@ -2726,7 +2726,7 @@ Backend report:
 Claude handoff:
 [`CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md`](./CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md).
 
-Next A action is N16A source-dark same-domain/emergency policy. N14B remains parked until the
+Next A action is N17A source-dark SLO/DR/game-day preparation. N14B remains parked until the
 master owner return and N13B exact target profile; it must bind owner bytes and
 run the joint release rehearsal, not reinterpret this source-dark result.
 
@@ -2745,7 +2745,30 @@ Backend report:
 Claude handoff:
 [`CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md`](./CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md).
 
-Next A action is N16A. N15B remains parked until accepted exact bytes from the
+N15B remains parked until accepted exact bytes from the
 single master Trading System owner pack; it then binds each interface and runs
 real mTLS/JWT, WAN/fault/compatibility/rollback/SLO acceptance without treating
 one passing interface as global authority.
+
+### N16A backend — Source-dark routing and emergency policy (2026-08-27)
+
+Codex completed the Portal-owned same-domain/emergency authority against local
+doubles. The exact public origin/path, server-side origin isolation, five-minute
+session, WebAuthn step-up, break-glass reason/expiry/actor/approvals, immutable
+hash-chain audit and typed Research/Cloudflare/execution-origin/rollback states
+are canonical. The component OpenAPI has no route/server; the unmounted Nginx
+template has no forwarding directive and fails closed with typed 503.
+
+N12 R3 remains unpublished and every control/PLAN/APPLY/VERIFY flag is false.
+R4 resume/scale is structurally forbidden. No Cloudflare, DNS, tunnel, Nginx
+production include, AWS-HK, origin, credential or Trading System call changed;
+`network_attempts=0`.
+
+Backend report:
+[`EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md`](../../backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md).
+Claude handoff:
+[`CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md`](./CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md).
+
+Next A action is N17A offline SLO/DR/rotation/evidence and isolated game-day
+rehearsal. N16B remains parked until accepted N12 R3 owner bytes, dedicated
+command identity, N15B and an owner change window exist.

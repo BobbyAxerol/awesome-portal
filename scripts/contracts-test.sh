@@ -56,5 +56,9 @@ trap cleanup EXIT
     diff -q /tmp/execution-live-full.d.ts generated/execution-live-full.d.ts
     npx openapi-typescript openapi/execution-staged-activation.openapi.json -o /tmp/execution-staged-activation.d.ts
     diff -q /tmp/execution-staged-activation.d.ts generated/execution-staged-activation.d.ts
+    npx openapi-typescript openapi/execution-intercell-gateway.openapi.json -o /tmp/execution-intercell-gateway.d.ts
+    diff -q /tmp/execution-intercell-gateway.d.ts generated/execution-intercell-gateway.d.ts
+    npx openapi-typescript openapi/execution-emergency-routing.openapi.json -o /tmp/execution-emergency-routing.d.ts
+    diff -q /tmp/execution-emergency-routing.d.ts generated/execution-emergency-routing.d.ts
   '
 printf 'Contracts workspace tests passed.\n'
