@@ -92,6 +92,13 @@ def _lark_mention_map() -> Dict[str, str]:
     return {str(name).strip(): open_id for name, open_id in mapping.items() if str(name).strip()}
 
 
+def _lark_message_format() -> str:
+    value = os.getenv("LARK_MESSAGE_FORMAT", "text").strip().lower()
+    if value not in {"text", "card"}:
+        raise ValueError("LARK_MESSAGE_FORMAT must be text or card")
+    return value
+
+
 @dataclass(frozen=True)
 class Settings:
     """Only configuration that belongs to environment/runtime, never task data."""
@@ -106,6 +113,7 @@ class Settings:
     lark_webhook_url: Optional[str] = None
     lark_webhook_sign_secret: Optional[str] = None
     lark_mention_map: Dict[str, str] = field(default_factory=dict)
+    lark_message_format: str = "text"
     notification_channels: Tuple[str, ...] = ("discord",)
     environment: str = "development"
     webhook_retry_base_seconds: int = 60
@@ -138,6 +146,7 @@ class Settings:
             lark_webhook_url=lark_webhook_url,
             lark_webhook_sign_secret=os.getenv("LARK_WEBHOOK_SIGN_SECRET", "").strip() or None,
             lark_mention_map=_lark_mention_map(),
+            lark_message_format=_lark_message_format(),
             portal_url=os.getenv("PORTAL_PUBLIC_URL", "http://127.0.0.1:8000").rstrip("/"),
             default_actor=os.getenv("PORTAL_DEFAULT_ACTOR", "local-user"),
             cors_origins=cors_origins,
