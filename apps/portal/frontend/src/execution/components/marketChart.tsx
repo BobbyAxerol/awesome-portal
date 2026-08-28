@@ -136,7 +136,8 @@ export interface LineSeries {
   tone: ChartTone;
   dashed?: boolean;
   width?: number;
-  points: readonly (readonly [string, number])[];
+  /** A null breaks the line — a venue-closed window is a gap, not a segment. */
+  points: readonly (readonly [string, number | null])[];
 }
 
 /**
@@ -237,9 +238,16 @@ export function LinesChart({
       legend: { show: false },
       dataZoom: [],
       grid: { left: 8, right: 56, top: 14, bottom: 24, containLabel: true },
-      // MM-DD with overlap hiding: the full ISO tick of the shared theme is
-      // right for a wide research chart and collides at panel width.
-      xAxis: { type: "time", axisLabel: { hideOverlap: true, formatter: (v: number) => new Date(v).toISOString().slice(5, 10) } },
+      // MM-DD with overlap hiding — and the clock too when the window is
+      // intraday, or "08-19 08-19 08-19" is three ticks saying nothing.
+      xAxis: { type: "time", axisLabel: { hideOverlap: true, formatter: (v: number) => {
+        const first = series[0]?.points[0]?.[0]; const last = series[0]?.points[series[0].points.length - 1]?.[0];
+        const spanDays = first && last ? (Number(new Date(last)) - Number(new Date(first))) / 86_400_000 : 99;
+        const d = new Date(v);
+        return spanDays <= 5
+          ? `${d.toISOString().slice(5, 10)} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+          : d.toISOString().slice(5, 10);
+      } } },
       yAxis: { scale: true, position: "right", ...(yFormatter ? { axisLabel: { formatter: (v: number) => yFormatter(v) } } : {}) },
       tooltip: {
         formatter: (params) => {

@@ -368,12 +368,15 @@ export function corrSeries(endIso: string): { t: string; pf: number; bm: number 
 }
 
 /** VN equity by session with the closed windows the venue calendar publishes. */
-export function vnSessions(): { points: [string, number][]; closed: { from: string; to: string; label?: string }[]; frozen: { t: string; v: number } } {
+export function vnSessions(): { points: [string, number | null][]; closed: { from: string; to: string; label?: string }[]; frozen: { t: string; v: number } } {
   const days = ["2026-08-19", "2026-08-20", "2026-08-21"];
-  const points: [string, number][] = [];
+  const points: [string, number | null][] = [];
   let v = 1_000_000_000;
   let n = 0;
   for (const d of days) {
+    // The line exists only inside a session: a null between days breaks it,
+    // because equity was not a straight line through a shut market.
+    if (points.length) points.push([`${d} 08:00`, null]);
     for (const hm of ["09:00", "10:00", "11:00", "11:30", "13:00", "14:00", "14:45"]) {
       v += 2_400_000 + det(n++, 8.8) * 6_000_000;
       points.push([`${d} ${hm}`, Math.round(v)]);
@@ -385,7 +388,7 @@ export function vnSessions(): { points: [string, number][]; closed: { from: stri
       { from: "2026-08-19 14:45", to: "2026-08-20 09:00", label: "closed 14:45→09:00" },
       { from: "2026-08-20 14:45", to: "2026-08-21 09:00" },
     ],
-    frozen: { t: points[points.length - 1][0], v: points[points.length - 1][1] },
+    frozen: { t: points[points.length - 1][0], v: points[points.length - 1][1] as number },
   };
 }
 
