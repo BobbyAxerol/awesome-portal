@@ -202,7 +202,7 @@ export const PAPER_LIST: PaperListRow[] = [
     venue: "DERIBIT", account: "acct-paper-grid-drb", accountHref: "/deployments/accounts/acct-paper-grid-drb",
     portfolio: "PF-CRYPTO", portfolioHref: "/deployments/portfolios/PF-CRYPTO",
     gate: "30/30 GATE MET", gateMet: true, session: null,
-    next: { label: "Paper Exit Review → EX-771", href: "/governance/exit-reviews/EX-771" },
+    next: { label: "Exit Review → EX-771", href: "/governance/exit-reviews/EX-771" },
     note: "gate met — the next stop is the review, not more observation · slippage INSUFFICIENT_DATA carries into sandbox certification",
   },
   {

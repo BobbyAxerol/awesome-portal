@@ -44,7 +44,7 @@ describe("Paper entry list", () => {
   it("the met gate's next step is its exit review, not more observation", () => {
     const { container } = list();
     const row = screen.getByRole("button", { name: /Grid v2.1 dep_94/ });
-    expect(within(row).getByRole("link", { name: /Paper Exit Review → EX-771/ }).getAttribute("href"))
+    expect(within(row).getByRole("link", { name: /Exit Review → EX-771/ }).getAttribute("href"))
       .toBe("/governance/exit-reviews/EX-771");
     expect(container.querySelectorAll('[data-tone="good"]').length).toBeGreaterThan(0);
   });
