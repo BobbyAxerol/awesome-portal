@@ -1,6 +1,6 @@
 # EX-BE-02A — Manager-v2 Edge Read-through API
 
-Status: **BACKEND_COMPLETE / RUNTIME_ACTIVATION_PREPARED / SGP_HOST_KEY_PIN_REQUIRED / PAPER_ONLY**
+Status: **BACKEND_COMPLETE / RUNTIME_ACTIVATION_PREPARED / SGP_ACCESS_IDENTITY_REQUIRED / PAPER_ONLY**
 
 Date: 2026-08-28  
 Portal branch: `feat/manager-v2-paper-read`  
@@ -221,3 +221,41 @@ authorized by this implementation.
   (or a pre-pinned `known_hosts` line); then deploy the exact Control API/Edge
   candidate pair, mint one fresh assertion and run the frozen positive/
   negative qualification with rollback on any failure.
+
+### 2026-08-28 — owner authorization to execute the runtime change
+
+- The owner explicitly confirmed the scanned SGP ED25519 host-key fingerprint
+  `SHA256:nEK3LhBMDQiTwkai9JlAV8MsUWW7SoHrntyFSrUlvgw` for a dedicated
+  secure activation-only `known_hosts` pin, and authorized the required
+  rolling deployment scope: the SGP `control-api` and the AWS
+  `portal-execution-edge-execution-edge-1` container.
+- No other runtime mutation is approved. In particular, Source Proxy,
+  `portal_manager_issuer`, `portal_manager_read`, V1/D4/projection services,
+  database/data/role/secret/JWKS authority and all non-Manager flags remain
+  unchanged. The new Control API image may mint only the exact
+  `execution:manager-v2:read` assertion; it adds no public/browser route.
+- Before each mutation, inspect the exact current image/config/health and
+  retain the predecessor image/config identifiers. If SGP Control API fails
+  health, the Edge fails health/readiness, a positive source call fails, a
+  negative authorization test succeeds unexpectedly, or any non-Manager flag
+  drifts, roll back the affected service immediately to its predecessor. No
+  source fallback, manual JWT construction, direct database query or third
+  service restart is permitted.
+
+### 2026-08-28 — secure SGP access preflight result
+
+- The owner-confirmed SGP ED25519 fingerprint was rescanned, matched exactly,
+  and installed mode `0600` in the private activation-only host pin. Strict
+  host-key verification now succeeds; no global `known_hosts` entry was
+  changed.
+- The existing AWS operator key was then tried key-only against the two
+  explicitly bounded conventional SGP accounts (`bobby`, then `root`). Both
+  were denied by SGP public-key authentication. No password attempt, user
+  enumeration, SSH configuration change, key reset, Control API/Edge deploy or
+  container restart was attempted.
+- **Current gate:** the actual SGP management identity is absent from the
+  available private inputs. The next permitted input is the approved SGP SSH
+  username plus its existing private-key reference, or another already
+  authorized management path. This is an external access-identity dependency,
+  not an implementation defect. AWS Edge remains on its prior healthy image
+  with the active Manager gate false.
