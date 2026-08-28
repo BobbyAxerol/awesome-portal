@@ -1380,3 +1380,27 @@ Backend request (@codex) — BR-EX-64
   hay Trading System market route; HAI màn đang chặn trên quyết định này
   (Paper overlay 62 + Trade Replay 50).
 ```
+
+### 8.26 Portfolio 360 — real charts trong contract slots + nút active (2026-08-28)
+
+Pass sửa 3 điểm Bobby chỉ từ screenshot (commit `9709679`):
+
+- **Influence map contract** (`InfluenceMap`, Structure tab): bỏ SVG 320×240 bị
+  kéo giãn toàn khung ("phóng to quá") — giờ vẽ bằng `InfluenceGraph`
+  (ECharts graph, layout tĩnh, khung 260px): node = alpha (bán kính = exposure
+  share đã publish), edge = |ρ| ≥ threshold từ đúng packed matrix. Không xin
+  series mới — chỉ đọc contract đã có.
+- **Hai khung "not published"** trong disclosure corr.v1 thay bằng chart thật
+  có nhãn smoke: ρ-timeline (`PF_CHARTS.rho`, threshold line 0.6 + annotation
+  breach 08-12→14) và drawdown-overlap (`EpisodesChart` từ
+  `PF_CHARTS.ddOverlap`, episode = interval + depth, joint window có regime
+  label, INSUFFICIENT_DATA là state tường minh). Deletion note tại chỗ; đây là
+  fixture tham chiếu cho BR-EX-34 — đã ghi backend plan **§7.6.6** (commit
+  `7b6f353` bên portal-backend-plan).
+- **`Rebalance plan ▾` / `Report pack`** hết disabled: mở plan-preview panel
+  (grammar `exec-sbc-plan` của Sandbox); `Apply`/`Generate` bên trong là điểm
+  enable duy nhất khi BR-EX-51 giao route plan → apply → verify. KV grid của
+  preview (operation · targets · writes · governance) là field list đề xuất
+  cho plan endpoint.
+- Smoke mới: `PF_CHARTS` trong `portfolio360.smoke.ts` — xoá khi BR-EX-34/51
+  giao. Tests: `analytics360.test.tsx` 13/13; full vitest 1706 pass.
