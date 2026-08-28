@@ -1251,3 +1251,40 @@ Backend requests: **BR-EX-62** (`paper-workbench.v1.1` + `paper-list.v1`) and
 **BR-EX-63** (`paper-exit-review.v1.1`), specified in full in §7.5 of the
 unified plan. Smoke module `src/execution/paper.smoke.ts` carries the deletion
 contract.
+
+### 8.23 Paper link map — verified by probe, not by reading (2026-08-28)
+
+Owner asked how the three Paper screens reach each other and the rest of the
+loop. A probe (`e2e/_probe-paper-links.spec.ts`, scratch harness, not a gate)
+walks every `href` on all three routes, opens each one, and fails if any lands
+on the registry's not-found. Result: **0 dead**, after four anchors from an
+earlier phase (`#ap-322`, `#ap-338`, `#pf-vn`, `#acct-vn`) were replaced with
+real routes.
+
+**Between the three**
+
+| From | Control | To |
+|---|---|---|
+| Paper Workbench `dep_74` | switcher chip · VnMomo | `/deployments/paper/dep_102/vn-market` |
+| Paper Workbench (either) | switcher chip · Grid `dep_94`, gate met | `/governance/exit-reviews/EX-771` — a met gate's next stop is its review, not its workbench |
+| Paper Workbench (either) | `Request Paper Exit Review` | `/governance/exit-reviews/EX-771?from=<the workbench and its tab>` |
+| Paper Exit Review | evidence rows | back to `/deployments/paper/dep_94`, `…#sessions`, `/deployments/blotter?deployment=dep_94`, `/execution/operations?deployment=dep_94` |
+
+**Out of Paper, into the loop**
+
+| Control | To |
+|---|---|
+| lineage `R1` / `R2` | `/governance/approvals/AP-101/r1`, `/AP-207/r2` (VN: AP-322 / AP-338) |
+| lineage `artifact` | `/deployments/alphas/av_2088?tab=Audit` (VN: `av_2110`) |
+| lineage `portfolio` | `/deployments/portfolios/PF-MAIN` (VN: `PF-VN`) |
+| lineage `account` | `/deployments/accounts/paper-binance-carry-v32` (VN: `paper-dnse-vnmomo`) |
+| lineage `venue` | `/deployments/accounts` |
+| `Alpha 360° — all deployments` | `/deployments/alphas` — the fleet, deliberately: a per-alpha 360 resolves one cast document in the preview, so a deep link opens a page titled with a different alpha |
+| `View approvals` | `/governance/approvals` |
+| journals footer `full blotter →` | `/deployments/blotter` |
+| exit review `run_5498` | `/research/quantbt/runs/run_5498` |
+
+**Not linked, on purpose:** the lifecycle rail's SANDBOX / CANARY / LIVE steps
+carry no href while they are pending. A stage a deployment has not reached has
+no decision to link to, and a link that opens someone else's deployment is worse
+than no link.

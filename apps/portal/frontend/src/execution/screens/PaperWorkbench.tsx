@@ -217,6 +217,13 @@ const DRIFT_WORD: Record<DriftRow["verdict"], string> = {
 
 type DriftHead = typeof import("../paper.smoke").PAPER_SMOKE_DATA.crypto.drift;
 
+/** `Asia/Ho_Chi_Minh` → `ICT`. The venue's abbreviation, not an offset the
+ *  reader has to convert. Unknown zones keep their IANA name rather than being
+ *  guessed at. */
+function venueZone(tz: string): string {
+  return { "Asia/Ho_Chi_Minh": "ICT", "Asia/Bangkok": "ICT", "Asia/Tokyo": "JST", "Asia/Hong_Kong": "HKT", "Asia/Singapore": "SGT" }[tz] ?? tz;
+}
+
 const DRIFT_TONE: Record<DriftRow["verdict"], "good" | "warn" | "bad" | "mute"> = {
   WITHIN_BAND: "good",
   WATCH: "warn",
@@ -416,6 +423,9 @@ export function PaperWorkbench({
                     hi-fi ticks: authority · freshness · as_of · age. */}
                 <span className="exec-a3-source exec-pw-source" data-tone={closed ? "calendar" : envelope.freshness === "STALE" ? "warn" : "good"}>
                   <b>{`${envelope.authority} · ${closed ? "PAUSED" : envelope.freshness}`}</b> · as_of {clockOf(envelope.asOf)}
+                {/* A venue-local time without its zone is a time in the wrong
+                    place: 14:45 ICT is not 14:45 anywhere the reader sits. */}
+                {calendar ? ` ${venueZone(calendar.timezone)} close` : ""}
                   {closed ? <span className="exec-pw-paused"> · aging paused</span> : <span className="exec-pw-age"> · age {age}</span>}
                 </span>
                 <a className="exec-a3-btn" href="/governance/approvals">View approvals</a>
