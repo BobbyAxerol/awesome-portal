@@ -20,13 +20,15 @@ async function open(page: Page, route: string) {
 test.describe("§8.2 journeys", () => {
   test("1 · Paper: every tab → request exit → Paper Exit Review → back with context", async ({ page }) => {
     await open(page, "/deployments/paper/dep_94");
-    for (const tab of ["Fills", "Positions", "Sessions", "Orders", "Accounting", "Evidence", "Overview"]) {
+    for (const tab of ["Fills", "Positions", "Sessions", "Accounting", "Evidence", "Overview", "Orders"]) {
       await page.getByRole("tab", { name: tab }).click();
       await expect(page.getByRole("tab", { name: tab })).toHaveAttribute("aria-selected", "true");
       // The default tab is represented by the ABSENCE of the param —
       // a clean URL for the clean state; every other tab is mirrored.
-      // EL-V2-04: Overview is the first tab, so it is the clean-URL default.
-      if (tab === "Overview") await expect(page).not.toHaveURL(/tab=/);
+      // The default is Orders: the hi-fi's journal strip opens there, and
+      // Overview's content (runtime health) moved onto the page itself, so
+      // landing on it would open the workbench on a pointer.
+      if (tab === "Orders") await expect(page).not.toHaveURL(/tab=/);
       else await expect(page).toHaveURL(new RegExp(`tab=${tab}`));
     }
     await page.getByRole("tab", { name: "Fills" }).click();
