@@ -1714,9 +1714,18 @@ Four branches, and one new list route.
     "closed_windows": [ { "from": "2026-08-20T14:45:00+07:00", "to": "2026-08-21T09:00:00+07:00" } ],
     "frozen_at": "2026-08-21T14:45:00+07:00"
   },
-  "report": { "available": false, "reason": "REPORT_ROUTE_UNPUBLISHED" }
+  "report": { "available": false, "reason": "REPORT_ROUTE_UNPUBLISHED" },
+  "runtime_state": "ACTIVE"
 }
 ```
+
+`runtime_state` was added on 2026-08-28 after the hi-fi review. The hi-fi
+masthead carries `● ACTIVE` beside `✓ READY`: the first is the deployment's
+runtime, the second its readiness, and they are different axes — a deployment
+can be READY and stopped. `paper-workbench.v1` publishes readiness and freshness
+but no runtime, so the frontend renders the chip **absent** rather than deriving
+it from readiness, which would tell an operator a stopped deployment is running.
+Null stays null and the chip stays absent.
 
 `GET /api/v1/execution/paper` → `paper-list.v1` for the switcher (the same rows as `peers`, so a
 deployment can be reached without already being on one).
@@ -1733,6 +1742,7 @@ deployment can be reached without already being on one).
 | `order_markers.markers[]` | `orders(submitted_at, side, price)` and `fills(trade_time, price, quantity)`, each carrying its own id so a marker drills into the journal |
 | `correlation_series` | DERIVED `corr.v1` over `performance_snapshots` for the deployment and its portfolio/benchmark |
 | `session_shading` | `venues.trading_sessions` + the venue holiday calendar — the same source the freshness clock already pauses against |
+| `runtime_state` | `strategy_deployments(runtime_state)` — published or null, never derived from readiness |
 
 **Server rules**
 
