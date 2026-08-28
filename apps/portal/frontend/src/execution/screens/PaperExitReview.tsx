@@ -385,7 +385,7 @@ export function PaperExitReview({
     />
   );
   return (
-    <section className="exec-exit" aria-label={`Paper exit review ${reviewId}`}>
+    <section className={smoke ? "exec-exit exec-px" : "exec-exit"} data-hifi-exact={smoke ? "paper-exit-review" : undefined} aria-label={`Paper exit review ${reviewId}`}>
       <ExecutionWorkspace layout="balanced" rail={contextRail}>
         {smoke ? (
           <>
