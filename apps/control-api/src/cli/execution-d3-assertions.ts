@@ -20,6 +20,11 @@ import { ExecutionDelegationService } from "../execution/delegation";
 
 const IDENTIFIER = /^[A-Za-z0-9._-]{1,128}$/;
 const CHANGE_WINDOW = /^[A-Za-z0-9._:-]{3,128}$/;
+const D3_ASSERTION_RESOURCES = [
+  "execution:command-center",
+  "execution:manager-v2:read",
+] as const;
+const DEFAULT_D3_ASSERTION_RESOURCE = "execution:command-center";
 const FILES = {
   valid: "valid.jwt",
   malformed: "malformed.jwt",
@@ -34,6 +39,8 @@ const FILES = {
   missingScope: "missing-scope.jwt",
 } as const;
 
+export type D3AssertionResource = (typeof D3_ASSERTION_RESOURCES)[number];
+
 export interface D3AssertionCorpusOptions {
   privateKeyFile: string;
   keyId: string;
@@ -42,6 +49,11 @@ export interface D3AssertionCorpusOptions {
   environment: "paper" | "sandbox" | "live";
   outputDirectory: string;
   changeWindowId: string;
+  /**
+   * Closed operator-only target. The default preserves the existing D3
+   * Command Center corpus; Manager-v2 qualification must opt in explicitly.
+   */
+  resource?: D3AssertionResource;
   now?: Date;
 }
 
@@ -60,6 +72,7 @@ export async function issueD3AssertionCorpus(
   options: D3AssertionCorpusOptions,
 ): Promise<{ manifestFile: string; records: AssertionRecord[] }> {
   validateOptions(options);
+  const resource = options.resource ?? DEFAULT_D3_ASSERTION_RESOURCE;
   await validatePrivateBoundary(options.privateKeyFile, options.outputDirectory);
   const privateKeyPem = await readFile(options.privateKeyFile, "utf8");
   if (Buffer.byteLength(privateKeyPem, "utf8") > 16 * 1024) {
@@ -81,7 +94,7 @@ export async function issueD3AssertionCorpus(
     sessionId: `d3-${options.changeWindowId}`,
     workspaceId: "d3-transport-probe",
     roles: ["ADMIN"],
-    resources: ["execution:command-center"],
+    resources: [resource],
     authenticationTime: new Date(now.getTime() - 1_000),
     authenticationMethods: ["operator_change_window"],
   });
@@ -142,6 +155,7 @@ export async function issueD3AssertionCorpus(
         issuer: options.issuer,
         audience: options.audience,
         environment: options.environment,
+        resource,
         maximum_accepted_ttl_seconds: 60,
         records,
       },
@@ -159,6 +173,7 @@ function validateOptions(options: D3AssertionCorpusOptions): void {
     options.audience.trim() === "" ||
     !["paper", "sandbox", "live"].includes(options.environment) ||
     !CHANGE_WINDOW.test(options.changeWindowId) ||
+    (options.resource !== undefined && !D3_ASSERTION_RESOURCES.includes(options.resource)) ||
     !isAbsolute(options.privateKeyFile) ||
     !isAbsolute(options.outputDirectory)
   ) {
@@ -208,6 +223,13 @@ function argument(args: string[], name: string): string {
   return args[index + 1];
 }
 
+function optionalArgument(args: string[], name: string): string | undefined {
+  const index = args.indexOf(name);
+  if (index < 0) return undefined;
+  if (index + 1 >= args.length) throw new Error(`${name} is required`);
+  return args[index + 1];
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   if (argument(args, "--acknowledge") !== "D3_AUTH_NEGATIVE_MATRIX") {
@@ -225,6 +247,7 @@ async function main(): Promise<void> {
     environment: environment as "paper" | "sandbox" | "live",
     outputDirectory: argument(args, "--output-directory"),
     changeWindowId: argument(args, "--change-window-id"),
+    resource: optionalArgument(args, "--resource") as D3AssertionResource | undefined,
   });
   console.log(`D3 assertion corpus written without token output: ${result.records.length} cases`);
 }

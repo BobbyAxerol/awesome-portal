@@ -1298,11 +1298,14 @@ deep-dive → ADR → slice → evidence discipline documented above.
   runtime deployment. Rust 18+6+6 tests, rustfmt, strict Clippy and D2-dark
   gates passed. The owner has now approved a separate narrow release and the
   exact Control API resource/Compose overlay/local candidate are validated.
-  The owner approved the required narrow SGP Control API + AWS Edge rollout,
-  but strict SGP host verification correctly found the available operator key
-  is not an authorized SGP management identity. The real signer cannot be
-  accessed until that private identity/path is supplied; no Manager/V1/D4
-  container or authority may change. Detail:
+  The owner has since installed the approved SGP operator identity; strict SSH
+  now verifies the private host pin, and the existing D3 signer modulus and
+  mTLS client issuer match the active Edge JWKS/CA. Both long-running SGP
+  Control APIs remain feature-dark, so qualification uses a network-disabled
+  one-shot candidate signer rather than restarting either service. Only after
+  its locally-tested, closed exact-resource assertion corpus succeeds may the
+  single AWS Edge be recreated; no Manager/V1/D4 container or authority may
+  otherwise change. Detail:
   [`EX_BE_02A_MANAGER_V2_EDGE_READTHROUGH_API.md`](./backend/EX_BE_02A_MANAGER_V2_EDGE_READTHROUGH_API.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,

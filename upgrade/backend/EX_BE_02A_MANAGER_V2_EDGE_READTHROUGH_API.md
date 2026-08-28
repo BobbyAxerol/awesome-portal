@@ -1,6 +1,6 @@
 # EX-BE-02A — Manager-v2 Edge Read-through API
 
-Status: **BACKEND_COMPLETE / RUNTIME_ACTIVATION_PREPARED / SGP_ACCESS_IDENTITY_REQUIRED / PAPER_ONLY**
+Status: **BACKEND_COMPLETE / RUNTIME_QUALIFICATION_IN_PROGRESS / PAPER_ONLY**
 
 Date: 2026-08-28  
 Portal branch: `feat/manager-v2-paper-read`  
@@ -259,3 +259,76 @@ authorized by this implementation.
   authorized management path. This is an external access-identity dependency,
   not an implementation defect. AWS Edge remains on its prior healthy image
   with the active Manager gate false.
+
+### 2026-08-28 — SGP identity/trust verification and one-shot issuer freeze
+
+- The owner installed the approved operator public key for the bounded SGP
+  `bobby` account. Strict SSH now succeeds using the separately pinned,
+  owner-confirmed ED25519 host key; the pin remains private and no global
+  `known_hosts` entry changed. The account has passwordless `sudo`; Docker is
+  intentionally accessed only through `sudo -n`.
+- Read-only inventory found both long-running SGP Control API stacks healthy
+  but deliberately `FEATURE_EXECUTION_EDGE=false`. Neither is an activation
+  target and neither will be restarted. The private D3 identity inventory is
+  present outside those containers: the delegation key, Edge-server CA, and
+  SGP mTLS client certificate/key have the documented `root:portal-runtime`
+  permissions.
+- The non-secret RSA modulus hash from the SGP delegation private key matches
+  the active AWS Edge JWKS key `portal-d3-b69d63fc1a88a0a4`. The SGP client
+  certificate issuer is the exact CA trusted by the active Edge and is valid
+  through 2027-02-20. No private-key, certificate body, JWT, credential, or
+  business payload was read or recorded.
+- **Frozen operational correction:** use a one-shot, network-disabled Control
+  API candidate container only to issue the existing bounded assertion corpus;
+  do not deploy or restart a Control API service. Before that run, extend the
+  existing offline corpus tool so its positive resource is a closed enum of
+  `execution:command-center` or the exact
+  `execution:manager-v2:read` resource. The Manager invocation selects the
+  latter, `paper`, a 45-second TTL, the existing matching key ID, a fresh
+  caller-owned mode-0700 directory, and no public listener.
+- This is the smallest code/config scope needed for the real probe. It creates
+  no database state, Portal API route, browser credential, role, CA, JWKS
+  change, or long-running SGP service change. The candidate image is an
+  owner-approved local qualification artifact, not a published/signed release.
+  Code/build/tests must pass before transfer to SGP; the assertion directory
+  and all tokens are deleted after the bounded probe. Any candidate failure
+  stops before the AWS Edge mutation.
+- After a successful one-shot issuance, recreate only the AWS Edge with the
+  existing Paper Manager overlay, inspect all inherited dark flags, run the
+  frozen positive/negative mTLS matrix, and roll that one container back to
+  its retained immutable predecessor on any failure. Source Proxy, Manager
+  issuer/facade, Trading System, database, V1/D4, projection, SSE and command
+  paths remain out of scope.
+
+### 2026-08-28 — bounded assertion-corpus implementation and local gate
+
+- Extended the existing `execution-d3-assertions` offline CLI rather than
+  adding a second signer path. Its optional `--resource` is a closed TypeScript
+  enum: the historic `execution:command-center` default or the exact
+  `execution:manager-v2:read` literal. A wildcard, arbitrary execution
+  resource, new scope, or command claim cannot be selected.
+- The manifest now records only the selected resource name, never a token. The
+  positive Manager assertion continues to use the existing
+  `ExecutionDelegationService`, RS256 key ID, fixed `execution.read` scope,
+  `paper` environment and 45-second caller-selected corpus TTL; negative cases
+  remain the existing bounded D3 matrix.
+- Local isolated evidence, in an ephemeral pinned
+  `node:22.23.2-alpine3.24` container with the worktree mounted read-only:
+
+  ```text
+  npm ci --no-audit --no-fund
+  npm run build
+  npx vitest run test/execution-delegation.spec.ts test/execution-d3-assertions.spec.ts \
+    --maxWorkers=1 --no-file-parallelism
+  # 2 files passed; 8 tests passed; 0 failed
+  ```
+
+- The new test proves a Manager valid assertion carries only the exact named
+  resource and that `execution:manager-v2:*` is rejected before any private
+  key file is read. The ephemeral test container exited and left no
+  `node_modules`, token, key, test output or runtime mutation in the worktree.
+- **Next bounded action:** build this tested Control API image locally, record
+  its content ID, transfer it through the pinned SGP channel, and run it once
+  with `--network none`, read-only root, the existing root-owned signer mount
+  and a fresh SGP 0700 assertion directory. A failed build/transfer/one-shot
+  gate stops before any Edge replacement.

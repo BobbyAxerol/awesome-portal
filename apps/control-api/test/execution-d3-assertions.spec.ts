@@ -33,11 +33,13 @@ describe("D3 assertion corpus", () => {
       aud: "portal-execution-edge-paper",
       environment: "paper",
       scopes: ["execution.read"],
+      resources: ["execution:command-center"],
     });
     const tooLong = decodeJwt(await readFile(join(output, "ttl-too-long.jwt"), "utf8"));
     expect(Number(tooLong.exp) - Number(tooLong.iat)).toBe(61);
     const manifest = JSON.parse(await readFile(result.manifestFile, "utf8"));
     expect(manifest).not.toHaveProperty("tokens");
+    expect(manifest.resource).toBe("execution:command-center");
     for (const record of result.records) {
       expect((await stat(join(output, record.file))).mode & 0o777).toBe(0o600);
     }
@@ -63,5 +65,44 @@ describe("D3 assertion corpus", () => {
         changeWindowId: "CW-D3-TEST",
       }),
     ).rejects.toThrow(/must be empty/);
+  });
+
+  it("issues the exact Manager-v2 resource and rejects resource patterns", async () => {
+    const root = await mkdtemp(join(tmpdir(), "portal-d3-manager-v2-"));
+    const output = join(root, "tokens");
+    await mkdir(output, { mode: 0o700 });
+    const { privateKey } = await generateKeyPair("RS256", { modulusLength: 2048 });
+    const keyFile = join(root, "delegation-private-key.pem");
+    await writeFile(keyFile, await exportPKCS8(privateKey), { mode: 0o600 });
+
+    await issueD3AssertionCorpus({
+      privateKeyFile: keyFile,
+      keyId: "d3-test-k1",
+      issuer: "portal-control-api",
+      audience: "portal-execution-edge-paper",
+      environment: "paper",
+      outputDirectory: output,
+      changeWindowId: "CW-MANAGER-V2-TEST",
+      resource: "execution:manager-v2:read",
+    });
+
+    expect(decodeJwt(await readFile(join(output, "valid.jwt"), "utf8"))).toMatchObject({
+      resources: ["execution:manager-v2:read"],
+    });
+
+    const invalidOutput = join(root, "invalid");
+    await mkdir(invalidOutput, { mode: 0o700 });
+    await expect(
+      issueD3AssertionCorpus({
+        privateKeyFile: keyFile,
+        keyId: "d3-test-k1",
+        issuer: "portal-control-api",
+        audience: "portal-execution-edge-paper",
+        environment: "paper",
+        outputDirectory: invalidOutput,
+        changeWindowId: "CW-MANAGER-V2-TEST",
+        resource: "execution:manager-v2:*" as never,
+      }),
+    ).rejects.toThrow(/bounded probe contract/);
   });
 });

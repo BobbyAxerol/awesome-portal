@@ -8,12 +8,13 @@ Chúng không thay thế phase hoặc exit gate trong
 ## Active deep dives
 
 - [EX-BE-02A — Manager-v2 Edge Read-through API](./EX_BE_02A_MANAGER_V2_EDGE_READTHROUGH_API.md)
-  — **Backend complete / Paper runtime activation prepared, SGP access identity required:** the existing
+  — **Backend complete / Paper runtime qualification in progress:** the existing
   private Rust Edge has four resource-scoped Manager-v2 Paper read-through
-  routes. The owner approved the narrow Control API + Edge rollout, but strict
-  SGP host verification now correctly stops at an unavailable SSH management
-  identity; Source Proxy, Trading System and all V1/D4/command/event/SSE paths
-  remain untouched and dark.
+  routes. The approved SGP operator identity and existing signer/mTLS trust now
+  verify against the active AWS Edge JWKS/CA. Qualification uses a bounded
+  one-shot signer candidate whose exact Manager resource gate is locally
+  tested, not a Control API restart; Source Proxy, Trading System and all
+  V1/D4/command/event/SSE paths remain untouched and dark.
 
 - [EX-BE-02 — Manager-v2 Backend Consumer](./EX_BE_02_MANAGER_V2_BACKEND_CONSUMER.md)
   — **Complete / backend only / no runtime activation:** separate sealed Rust
