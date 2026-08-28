@@ -23,7 +23,7 @@ import { smokeMotionAllowed } from "./smokeMotion";
 export const PAPER_SMOKE = true;
 export const PAPER_SMOKE_MOTION = true;
 export const PAPER_SMOKE_WARNING =
-  "SMOKE DATA — the deployment switcher, the equity-vs-research band, the orders/fills candle overlay, the rolling-correlation lines, the VN session shading and the exit review's evidence-pack chart are synthetic; every figure beside them is contract data. Delete when BR-EX-62 / BR-EX-63 ship";
+  "SMOKE DATA — the paper list, the deployment switcher, the equity-vs-research band, the orders/fills candle overlay, the rolling-correlation lines, the VN session shading and the exit review's evidence-pack chart are synthetic; every figure beside them is contract data. Delete when BR-EX-62 / BR-EX-63 ship";
 
 export interface PaperPeer {
   dep: string;
@@ -172,6 +172,48 @@ export const PAPER_SMOKE_DATA = {
     planNote: "approve grants promotion authority only — activation itself is plan → apply → verify by an Operator Admin",
   },
 };
+
+/**
+ * The entry list at /deployments/paper (the same rows the switcher strip
+ * reads, with the columns the strip has no room for). Retired by BR-EX-62's
+ * `paper-list.v1` together with the switcher.
+ */
+export interface PaperListRow {
+  dep: string; alpha: string; href: string;
+  venue: string; account: string; accountHref: string;
+  portfolio: string; portfolioHref: string;
+  gate: string; gateMet?: boolean;
+  session?: { label: string; tone: "calendar" } | null;
+  next: { label: string; href: string };
+  note: string;
+}
+
+export const PAPER_LIST: PaperListRow[] = [
+  {
+    dep: "dep_74", alpha: "Carry v3.2", href: "/deployments/paper/dep_74",
+    venue: "BINANCE", account: "paper-binance-carry-v32", accountHref: "/deployments/accounts/paper-binance-carry-v32",
+    portfolio: "PF-MAIN", portfolioHref: "/deployments/portfolios/PF-MAIN",
+    gate: "12/30 days · 184/300 trades", session: null,
+    next: { label: "open workbench →", href: "/deployments/paper/dep_74" },
+    note: "R1 AP-101 · R2 AP-207 · drift within band · fee drag + signal→fill on WATCH",
+  },
+  {
+    dep: "dep_94", alpha: "Grid v2.1", href: "/deployments/paper/dep_94",
+    venue: "DERIBIT", account: "acct-paper-grid-drb", accountHref: "/deployments/accounts/acct-paper-grid-drb",
+    portfolio: "PF-CRYPTO", portfolioHref: "/deployments/portfolios/PF-CRYPTO",
+    gate: "30/30 GATE MET", gateMet: true, session: null,
+    next: { label: "Paper Exit Review → EX-771", href: "/governance/exit-reviews/EX-771" },
+    note: "gate met — the next stop is the review, not more observation · slippage INSUFFICIENT_DATA carries into sandbox certification",
+  },
+  {
+    dep: "dep_102", alpha: "VnMomo v0.9", href: "/deployments/paper/dep_102/vn-market",
+    venue: "VN MARKET · DNSE", account: "paper-dnse-vnmomo", accountHref: "/deployments/accounts/paper-dnse-vnmomo",
+    portfolio: "PF-VN", portfolioHref: "/deployments/portfolios/PF-VN",
+    gate: "6/30 sessions", session: { label: "market CLOSED · reopens 09:00 ICT", tone: "calendar" },
+    next: { label: "open workbench →", href: "/deployments/paper/dep_102/vn-market" },
+    note: "session-aware venue — the gate counts TRADING days, a calendar closure does not consume the window · credential DNSE-01 EXPIRING",
+  },
+];
 
 export function paperSmoke() {
   return PAPER_SMOKE ? PAPER_SMOKE_DATA : null;

@@ -168,6 +168,7 @@ export function ExecutionTabs({
   onChange,
   urlKey,
   label = "Sections",
+  trailing,
   children,
 }: {
   tabs: ExecutionTab[];
@@ -180,6 +181,12 @@ export function ExecutionTabs({
    */
   urlKey?: string;
   label?: string;
+  /**
+   * Rendered at the right end of the strip — the hi-fi puts the journal's
+   * caveat ("cursor pagination · virtualized · exact values") inside the tab
+   * row, not under the table it describes.
+   */
+  trailing?: ReactNode;
   /** The panel content for the active tab. */
   children: ReactNode;
 }) {
@@ -246,6 +253,7 @@ export function ExecutionTabs({
             </button>
           );
         })}
+      {trailing ? <span className="exec-tabs-trailing">{trailing}</span> : null}
       </div>
       <div className="exec-tabs-panel" role="tabpanel" id={`${uid}-panel`} aria-labelledby={`${uid}-tab-${active}`}>
         {children}

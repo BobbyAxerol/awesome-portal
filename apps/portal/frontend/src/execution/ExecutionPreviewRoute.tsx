@@ -13,6 +13,7 @@ import { AccountsBindings } from "./screens/AccountsBindings";
 import { BindingDetail } from "./screens/BindingDetail";
 import { LiveOverview } from "./screens/LiveOverview";
 import { SandboxOverview } from "./screens/SandboxOverview";
+import { PaperList } from "./screens/PaperList";
 import { reviewRouteFor } from "./screens/ApprovalInbox";
 
 import { usePresentation } from "../app/presentation";
@@ -137,7 +138,7 @@ export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: 
   // name would be a second feature model.
   const entity = useMemo(() => {
     switch (screenId) {
-      case "EXECUTION_PAPER_WORKBENCH_SCREEN": return "Carry v3.2";
+      case "EXECUTION_PAPER_WORKBENCH_SCREEN": return params.deploymentId ? "Carry v3.2" : null;
       case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN": return "VnMomo v0.9";
       case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN": return params.deploymentId ? `${params.deploymentId} · certification` : null;
       // Live Full and Canary share an alpha; the crumb names the deployment and the room.
@@ -189,7 +190,10 @@ export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: 
       content = <PaperWorkbenchPreview deploymentId={deploymentId} variant="vnm" />;
       break;
     case "EXECUTION_PAPER_WORKBENCH_SCREEN":
-      content = <PaperWorkbenchPreview deploymentId={deploymentId} />;
+      // Feature canonical route (/deployments/paper) = the paper list, entry
+      // of WF 1c; /:deploymentId opens that deployment's workbench. The
+      // sidebar must never land an operator inside one alpha unasked.
+      content = params.deploymentId ? <PaperWorkbenchPreview deploymentId={deploymentId} /> : <PaperList />;
       break;
     case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN":
       // Feature canonical route (/deployments/sandbox) = the sandbox overview,

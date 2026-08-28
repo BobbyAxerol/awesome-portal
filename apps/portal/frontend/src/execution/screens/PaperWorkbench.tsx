@@ -351,7 +351,11 @@ export function PaperWorkbench({
       title={exitTitle}
       onClick={onRequestExit}
     >
-      Request Paper Exit Review
+      {/* The hi-fi's blocked control carries its count in the label — a grey
+          button with the reason only in a tooltip is a support ticket. */}
+      {exitBlocked && hifi
+        ? `Request Paper Exit Review — blocked: ${unmetCriteria.length || 1} gate criteria unmet`
+        : "Request Paper Exit Review"}
     </button>
   );
   const rail = (
@@ -539,7 +543,10 @@ export function PaperWorkbench({
         <ExecutionDecisionStrip
           metrics={kpis.map((kpi, i) => ({
             label: kpi.label,
-            value: kpi.value,
+            // The hi-fi's projection-age cell ticks (0.8–4.8s); a frozen 1.2s
+            // beside a ticking as_of is two clocks disagreeing. Only while the
+            // projection is OK — a STALE age is the contract's own figure.
+            value: hifi && kpi.label === "Projection age" && envelope.freshness === "OK" && !closed ? age : kpi.value,
             unit: kpi.unit ?? null,
             // The VN hi-fi qualifies each figure with one line; the crypto one
             // does not, and inventing five lines for it would be noise.
@@ -667,7 +674,18 @@ export function PaperWorkbench({
           </div>
           )
         ) : null}
-        <ExecutionTabs tabs={tabs} active={tab} onChange={(key) => onTabChange(key as WorkbenchTab)} label="Deployment activity">
+        <ExecutionTabs
+          tabs={tabs}
+          active={tab}
+          onChange={(key) => onTabChange(key as WorkbenchTab)}
+          label="Deployment activity"
+          trailing={hifi ? (
+            <>
+              {hifi.kind === "vnm" ? hifi.ordersFoot : "cursor pagination · virtualized · exact values, never abbreviated"} ·{" "}
+              <a href="/deployments/blotter">full blotter →</a>
+            </>
+          ) : undefined}
+        >
           {tab === "Overview" ? (hifi ? <PanelPointer what="Runtime health" /> : <FactPanel title="Runtime health" rows={runtime} />) : null}
           {tab === "Orders" ? <Orders orders={orders} onLoadOlder={onLoadOlder} /> : null}
           {tab === "Fills" ? <Fills fills={fills} onLoadOlder={onLoadOlder} /> : null}
@@ -724,16 +742,6 @@ export function PaperWorkbench({
             </section>
           ) : null}
         </ExecutionTabs>
-        {hifi?.kind === "vnm" ? (
-          <p className="exec-pw-ordersfoot">
-            {hifi.ordersFoot} · <a href="/deployments/blotter">full blotter →</a>
-          </p>
-        ) : null}
-        {hifi?.kind === "crypto" ? (
-          <p className="exec-pw-ordersfoot">
-            cursor pagination · virtualized · exact values, never abbreviated · <a href="/deployments/blotter">full blotter →</a>
-          </p>
-        ) : null}
         {smoke ? <p className="exec-af-smoke">! {PAPER_SMOKE_WARNING}</p> : null}
       </ExecutionWorkspace>
     </ExecutionSurface>
