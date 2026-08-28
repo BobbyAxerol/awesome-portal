@@ -23,7 +23,7 @@ import { smokeMotionAllowed } from "./smokeMotion";
 export const PAPER_SMOKE = true;
 export const PAPER_SMOKE_MOTION = true;
 export const PAPER_SMOKE_WARNING =
-  "SMOKE DATA — the paper list, the deployment switcher, the equity-vs-research band, the orders/fills candle overlay, the rolling-correlation lines, the VN session shading and the exit review's evidence-pack chart are synthetic; every figure beside them is contract data. Delete when BR-EX-62 / BR-EX-63 ship";
+  "SMOKE DATA — the paper overview (KPIs, funnel, runway, left-paper history), the deployment switcher, the equity-vs-research band, the orders/fills candle overlay, the rolling-correlation lines, the VN session shading and the exit review's evidence-pack chart are synthetic; every figure beside them is contract data. Delete when BR-EX-62 / BR-EX-63 ship";
 
 export interface PaperPeer {
   dep: string;
@@ -173,47 +173,141 @@ export const PAPER_SMOKE_DATA = {
   },
 };
 
-/**
- * The entry list at /deployments/paper (the same rows the switcher strip
- * reads, with the columns the strip has no room for). Retired by BR-EX-62's
- * `paper-list.v1` together with the switcher.
- */
-export interface PaperListRow {
-  dep: string; alpha: string; href: string;
-  venue: string; account: string; accountHref: string;
-  portfolio: string; portfolioHref: string;
-  gate: string; gateMet?: boolean;
-  session?: { label: string; tone: "calendar" } | null;
-  next: { label: string; href: string };
-  note: string;
+/* ---------------------------------------------------------------------------
+ * Paper Overview — the entry at /deployments/paper (hi-fi "Paper Overview
+ * (entry for WF 1c/4h)"). Every figure below is copied from that file, not
+ * invented; retired together with the workbench half by BR-EX-62.
+ *
+ * Motion (hi-fi script): as_of 1s; the three equity lines breathe on a sine
+ * driven by the clock; the VN countdown runs to the 09:00 ICT open; today's
+ * runway cell pulses. All deterministic in time, so a frozen clock gives a
+ * reproducible baseline.
+ * ------------------------------------------------------------------------ */
+
+export interface PoFunnelRow {
+  alpha: string; venue: string; tone: "accent" | "good" | "paper";
+  stats: { pre: string; rej: string; rejTone: "warn" | "good"; post: string };
+  bar: { filled: number; working: number; rejected: number; skipped: number };
+}
+export interface PoDay { kind: "up" | "down" | "today" | "next" | "ahead" }
+export interface PoBoardRow {
+  dep: string; alpha: string; venue: string; href: string;
+  pf: string; pfHref: string; account: string; accountHref: string; alloc: string;
+  session: { text: string; tone: "good" | "calendar"; countdown?: boolean };
+  gate: { label: string; met?: boolean; trades: string };
+  days: { results: number[]; total: number; liveToday: boolean; complete?: boolean };
+  projection: string;
+  drift: { label: string; tone: "good" | "warn" | "mute"; spark: { amp: number; drop: number } };
+  win: string; rej: string; fees: string; pnl: string; pnlCcy?: string;
+  next: { label: string; href: string; met?: boolean };
 }
 
-export const PAPER_LIST: PaperListRow[] = [
-  {
-    dep: "dep_74", alpha: "Carry v3.2", href: "/deployments/paper/dep_74",
-    venue: "BINANCE", account: "paper-binance-carry-v32", accountHref: "/deployments/accounts/paper-binance-carry-v32",
-    portfolio: "PF-MAIN", portfolioHref: "/deployments/portfolios/PF-MAIN",
-    gate: "12/30 days · 184/300 trades", session: null,
-    next: { label: "open workbench →", href: "/deployments/paper/dep_74" },
-    note: "R1 AP-101 · R2 AP-207 · drift within band · fee drag + signal→fill on WATCH",
+export const PAPER_OVERVIEW = {
+  gateChip: "1 GATE MET",
+  kpis: {
+    observation: { value: "3", sub: "2 crypto · 1 VN" },
+    gateMet: { value: "1", link: { label: "EX-771 pending →", href: "/governance/exit-reviews/EX-771" } },
+    nextGate: { value: "2026-09-15", sub: "Carry v3.2 · at current pace" },
+    capital: { value: "120,000", ccy: "USDT/USDC", vnd: "1.0B", vndNote: "VND — never summed" },
+    drift: { value: "1 WATCH", sub: "0 FAIL · band ±1σ" },
   },
-  {
-    dep: "dep_94", alpha: "Grid v2.1", href: "/deployments/paper/dep_94",
-    venue: "DERIBIT", account: "acct-paper-grid-drb", accountHref: "/deployments/accounts/acct-paper-grid-drb",
-    portfolio: "PF-CRYPTO", portfolioHref: "/deployments/portfolios/PF-CRYPTO",
-    gate: "30/30 GATE MET", gateMet: true, session: null,
-    next: { label: "Exit Review → EX-771", href: "/governance/exit-reviews/EX-771" },
-    note: "gate met — the next stop is the review, not more observation · slippage INSUFFICIENT_DATA carries into sandbox certification",
+  venues: ["All", "BINANCE", "DERIBIT", "VN MARKET"],
+  scopeNote: "venues from registry — new venues appear automatically",
+  equity: {
+    title: "Cumulative return — normalized %",
+    head: "per deployment · own currency, never mixed",
+    legend: [
+      { label: "— Carry +3.3%", tone: "accent" }, { label: "— Grid +3.1%", tone: "good" }, { label: "— VnMomo +5.2%", tone: "paper" },
+    ] as { label: string; tone: "accent" | "good" | "paper" }[],
+    foot: "30d · session buckets",
+    lines: [ { amp: 1.2, gain: 32, tone: "accent" }, { amp: 0.7, gain: 30, tone: "good" }, { amp: 1.6, gain: 50, tone: "paper" } ],
   },
-  {
-    dep: "dep_102", alpha: "VnMomo v0.9", href: "/deployments/paper/dep_102/vn-market",
-    venue: "VN MARKET · DNSE", account: "paper-dnse-vnmomo", accountHref: "/deployments/accounts/paper-dnse-vnmomo",
-    portfolio: "PF-VN", portfolioHref: "/deployments/portfolios/PF-VN",
-    gate: "6/30 sessions", session: { label: "market CLOSED · reopens 09:00 ICT", tone: "calendar" },
-    next: { label: "open workbench →", href: "/deployments/paper/dep_102/vn-market" },
-    note: "session-aware venue — the gate counts TRADING days, a calendar closure does not consume the window · credential DNSE-01 EXPIRING",
+  funnel: {
+    title: "Order funnel — did the alpha behave as designed?",
+    head: "7d · signals → orders → fills",
+    rows: [
+      { alpha: "Carry", venue: "BINANCE", tone: "accent", stats: { pre: "sig 96 → ord 71 → fill 64 · rej ", rej: "5", rejTone: "warn", post: " risk-cap · skip 20 min-qty" }, bar: { filled: 67, working: 7, rejected: 5, skipped: 21 } },
+      { alpha: "Grid", venue: "DERIBIT", tone: "good", stats: { pre: "sig 210 → ord 198 → fill 191 · rej ", rej: "2", rejTone: "good", post: " · skip 10" }, bar: { filled: 91, working: 3, rejected: 1, skipped: 5 } },
+      { alpha: "VnMomo", venue: "VN MARKET", tone: "paper", stats: { pre: "sig 31 → ord 24 → fill 22 · rej ", rej: "2", rejTone: "warn", post: " lot-100 · queue 5 ATO" }, bar: { filled: 71, working: 6, rejected: 6, skipped: 17 } },
+    ] as PoFunnelRow[],
+    legend: "■ filled · ■ working · ■ rejected · ■ skipped — paper exists to prove the funnel, not the PnL · reasons → ",
+    legendLink: { label: "blotter", href: "/deployments/blotter" },
   },
-];
+  runway: {
+    title: "Observation runway — one cell = one trading day, colored by day PnL",
+    head: "■ up · ■ down · ▢ ahead · ▢ pulsing = today",
+    rows: [
+      {
+        dep: "dep_74", alpha: "Carry v3.2", venue: "BINANCE", href: "/deployments/paper/dep_74",
+        pf: "PF-CRYPTO", pfHref: "/deployments/portfolios/PF-CRYPTO", account: "paper-binance-carry-v32", accountHref: "/deployments/accounts/paper-binance-carry-v32", alloc: "60,000 USDT",
+        session: { text: "● 24/7 · projection live", tone: "good" },
+        gate: { label: "12/30 days", trades: "184/300 trades" },
+        days: { results: [1,1,-1,1,1,1,-1,1,1,1,-1,1], total: 30, liveToday: true },
+        projection: "gate ≈ 2026-09-15 at current pace · trades on pace",
+        drift: { label: "WATCH −1.06pt", tone: "warn", spark: { amp: 2, drop: 9 } },
+        win: "58%", rej: "0.2%", fees: "12.4", pnl: "+1,954",
+        next: { label: "workbench →", href: "/deployments/paper/dep_74" },
+      },
+      {
+        dep: "dep_94", alpha: "Grid v2.1", venue: "DERIBIT", href: "/deployments/paper/dep_94",
+        pf: "PF-CRYPTO", pfHref: "/deployments/portfolios/PF-CRYPTO", account: "acct-paper-grid-drb", accountHref: "/deployments/accounts/acct-paper-grid-drb", alloc: "60,000 USDC",
+        session: { text: "● 24/7 · projection live", tone: "good" },
+        gate: { label: "30/30 ✓", met: true, trades: "300/300 ✓" },
+        days: { results: [1,1,1,-1,1,1,1,1,-1,1,1,1,1,-1,1,1,1,1,-1,1,1,1,1,-1,1,1,1,1,-1,1], total: 30, liveToday: false, complete: true },
+        projection: "window complete 2026-08-26 · evidence pack ep_4471 frozen",
+        drift: { label: "OK −0.3pt", tone: "good", spark: { amp: 1.5, drop: 2 } },
+        win: "61%", rej: "0.1%", fees: "48.1", pnl: "+1,842",
+        next: { label: "GATE MET → EX-771", href: "/governance/exit-reviews/EX-771", met: true },
+      },
+      {
+        dep: "dep_102", alpha: "VnMomo v0.9", venue: "VN MARKET", href: "/deployments/paper/dep_102/vn-market",
+        pf: "PF-VN", pfHref: "/deployments/portfolios/PF-VN", account: "paper-dnse-vnmomo", accountHref: "/deployments/accounts/paper-dnse-vnmomo", alloc: "1.0B VND",
+        session: { text: "CLOSED · opens in ", tone: "calendar", countdown: true },
+        gate: { label: "6/30 sessions", trades: "counts trading days" },
+        days: { results: [1,-1,1,1,1,1], total: 30, liveToday: false },
+        projection: "≈ 2026-10-02 · skips weekends & HOSE holidays",
+        drift: { label: "INSUFFICIENT_DATA", tone: "mute", spark: { amp: 0.8, drop: 1 } },
+        win: "67%", rej: "0.8%", fees: "1.1M ₫", pnl: "+52.4M ₫",
+        next: { label: "workbench →", href: "/deployments/paper/dep_102/vn-market" },
+      },
+    ] as PoBoardRow[],
+    footLeft: "gate counts trading days only · drift exits ±1σ band → FAIL blocks exit",
+    footRight: "workbench = one framework, venue policies differ (calendar · currency · order types)",
+  },
+  leftPaper: {
+    title: "Left paper — last 90d",
+    rows: [
+      { parts: [ { t: "Grid v2.1 · BINANCE — exited " }, { t: "PX-22", href: "/governance/exit-reviews/PX-22" }, { t: " → sandbox " }, { t: "SX-14", href: "/deployments/sandbox" }, { t: " → now " }, { t: "canary d9/14", href: "/deployments/live/dep_88/canary" } ] },
+      { parts: [ { t: "MM v1.1 · BINANCE — exited " }, { t: "PX-31", href: "/governance/exit-reviews/PX-31" }, { t: " → now " }, { t: "canary d2/14", href: "/deployments/live/dep_63/canary" } ] },
+      { muted: true, parts: [ { t: "RSI v1.4 — REJECTED at exit (drift FAIL) · returned to research" } ] },
+    ] as { muted?: boolean; parts: { t: string; href?: string }[] }[],
+  },
+};
+
+/** The hi-fi's equity line: 30 points on a clock-phased sine, 560×120 box. */
+export function poEquityLine(amp: number, gain: number, nowMs: number): string {
+  const ph = nowMs / 1600;
+  return Array.from({ length: 30 }, (_, i) =>
+    `${((i / 29) * 560).toFixed(1)},${(96 - (i / 29) * gain - amp * Math.sin(i / 4 + ph) * 8 - Math.sin(i * 2.7 + ph * 2) * 2).toFixed(1)}`,
+  ).join(" ");
+}
+
+/** The hi-fi's drift sparkline: 26 points, 130×26 box around a midline. */
+export function poSpark(amp: number, drop: number): string {
+  const n = 26;
+  return Array.from({ length: n }, (_, i) => {
+    const v = 13 - amp * Math.sin(i / 6) + (i / n) * drop;
+    return `${((i / (n - 1)) * 130).toFixed(1)},${Math.max(2, Math.min(24, v)).toFixed(1)}`;
+  }).join(" ");
+}
+
+/** One runway row's cells, exactly as the hi-fi builds them. */
+export function poCells(days: PoBoardRow["days"]): PoDay[] {
+  const out: PoDay[] = days.results.map((r) => ({ kind: r > 0 ? "up" : "down" }));
+  if (out.length < days.total) out.push({ kind: days.liveToday ? "today" : "next" });
+  while (out.length < days.total) out.push({ kind: "ahead" });
+  return out;
+}
 
 export function paperSmoke() {
   return PAPER_SMOKE ? PAPER_SMOKE_DATA : null;

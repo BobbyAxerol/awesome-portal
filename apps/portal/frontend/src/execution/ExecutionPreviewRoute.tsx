@@ -13,7 +13,7 @@ import { AccountsBindings } from "./screens/AccountsBindings";
 import { BindingDetail } from "./screens/BindingDetail";
 import { LiveOverview } from "./screens/LiveOverview";
 import { SandboxOverview } from "./screens/SandboxOverview";
-import { PaperList } from "./screens/PaperList";
+import { PaperOverview } from "./screens/PaperOverview";
 import { reviewRouteFor } from "./screens/ApprovalInbox";
 
 import { usePresentation } from "../app/presentation";
@@ -193,7 +193,7 @@ export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: 
       // Feature canonical route (/deployments/paper) = the paper list, entry
       // of WF 1c; /:deploymentId opens that deployment's workbench. The
       // sidebar must never land an operator inside one alpha unasked.
-      content = params.deploymentId ? <PaperWorkbenchPreview deploymentId={deploymentId} /> : <PaperList />;
+      content = params.deploymentId ? <PaperWorkbenchPreview deploymentId={deploymentId} /> : <PaperOverview />;
       break;
     case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN":
       // Feature canonical route (/deployments/sandbox) = the sandbox overview,
