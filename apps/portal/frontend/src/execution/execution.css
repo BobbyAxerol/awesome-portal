@@ -5703,3 +5703,140 @@
   .exec-cc-mx-current { animation: exec-cc-nowdot 2.6s ease-in-out infinite; }
 }
 @keyframes exec-cc-nowdot { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+/* ── Sandbox Overview + Sandbox Certification — hi-fi WF 1d, owner 2026-08-28
+   Overview rides the Alpha-Fleet grammar (page 1520 · h1 300 22 · KPI strip
+   1px gap · chips mono 10); everything below is what the fleet does not have:
+   the seven-segment certification bar, the connectivity meters, the seven-step
+   stepper, the reconciliation triptych and the certification action bar. Both
+   screens are `data-hifi-exact`, so §5.2's scale audit steps aside for the
+   hi-fi's mono 9/10/11/12 and its 17px strip figures. */
+.exec-sb-table { min-width: 1080px; }
+.exec-sb-kpis .exec-af-kpi { flex: 1 1 140px; min-width: 130px; }
+.exec-sb-kpis .exec-af-kpi[data-wide="true"] { flex: 1 1 150px; min-width: 140px; }
+.exec-sb-dashed { border-style: dashed; color: var(--ink-mute); cursor: default; }
+.exec-sb-row { cursor: pointer; }
+.exec-sb-row > td { border-bottom: 0; }
+.exec-sb-row:hover > td, .exec-sb-row:focus-visible > td { background: var(--surface-3); }
+.exec-sb-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.exec-sb-edge { border-left: 3px solid transparent; }
+.exec-sb-row[data-stalled="true"] .exec-sb-edge { border-left-color: var(--bad); }
+.exec-sb-note-row td { padding-left: 12px !important; }
+.exec-sb-note-row [data-tone="warn"] { color: var(--warn); }
+.exec-sb-status { font: 600 11px/16px var(--font-mono); padding: 1px 8px; white-space: nowrap; }
+.exec-sb-status[data-tone="warn"] { background: var(--warn-bg); color: var(--warn); }
+.exec-sb-status[data-tone="bad"] { background: var(--bad-bg); color: var(--bad); }
+/* Seven segments: position carries the step, colour only reinforces it. */
+.exec-sb-steps { display: inline-flex; gap: 2px; vertical-align: middle; }
+.exec-sb-seg { width: 14px; height: 8px; background: var(--surface-2); border: 1px solid var(--line); box-sizing: border-box; }
+.exec-sb-seg[data-seg="ok"] { background: var(--good); border-color: var(--good); }
+.exec-sb-seg[data-seg="warn"] { background: var(--warn); border-color: var(--warn); }
+.exec-sb-seg[data-seg="bad"] { background: var(--bad); border-color: var(--bad); }
+
+.exec-sb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 14px; margin: 14px 0; }
+.exec-sb-panel { display: flex; flex-direction: column; }
+.exec-sb-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); }
+.exec-sb-title { font: 400 11px/16px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
+.exec-sb-note { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-sb-note b { color: var(--ink-soft); font-weight: 600; }
+.exec-sb-jtable { width: 100%; min-width: 420px; border-collapse: collapse; font: 400 12px/16px var(--font-mono); font-variant-numeric: tabular-nums; }
+.exec-sb-jtable th { font: 500 10px/14px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); text-align: left; border-bottom: 1px solid var(--line); padding: 7px 10px; }
+.exec-sb-jtable th[data-numeric="true"], .exec-sb-jtable td[data-numeric="true"] { text-align: right; }
+.exec-sb-jtable td { padding: 7px 10px; border-bottom: 1px solid var(--line-soft); color: var(--ink); }
+.exec-sb-jtable tr:last-child td { border-bottom: 0; }
+.exec-sb-jtable [data-tone="good"] { color: var(--good); }
+.exec-sb-jtable [data-tone="warn"] { color: var(--warn); }
+.exec-sb-jtable [data-tone="bad"] { color: var(--bad); }
+.exec-sb-jtable [data-tone="mute"] { color: var(--ink-faint); }
+.exec-sb-types { padding: 8px 14px; display: flex; flex-direction: column; gap: 5px; margin-top: auto; }
+.exec-sb-typenote { font: 400 10px/14px var(--font-mono); color: var(--ink-soft); }
+.exec-sb-typechips { display: flex; flex-wrap: wrap; gap: 5px; }
+.exec-sb-type { font: 400 10px/14px var(--font-mono); border: 1px solid var(--line-strong); color: var(--ink-mute); padding: 0 6px; white-space: nowrap; }
+.exec-sb-type[data-tone="good"] { border-color: var(--good); color: var(--good); }
+.exec-sb-type[data-tone="warn"] { border-color: var(--warn); color: var(--warn); }
+.exec-sb-conn { padding: 10px 14px; display: grid; grid-template-columns: minmax(96px, 24%) minmax(0, 1fr) 104px; gap: 6px 10px; align-items: center; }
+.exec-sb-connrow { display: contents; }
+.exec-sb-connk { font: 400 10px/14px var(--font-mono); text-transform: uppercase; color: var(--ink-faint); }
+.exec-sb-connv { font: 400 11px/16px var(--font-mono); color: var(--ink-soft); text-align: right; font-variant-numeric: tabular-nums; }
+.exec-sb-track { display: block; height: 8px; background: var(--paper-sunken); border: 1px solid var(--line); }
+.exec-sb-fill { display: block; height: 100%; background: var(--accent); transition: width 220ms linear; }
+.exec-sb-fill[data-tone="good"] { background: var(--good); }
+.exec-sb-fill[data-tone="warn"] { background: var(--warn); }
+.exec-sb-fill[data-tone="bad"] { background: var(--bad); }
+.exec-sb-connfoot { margin-top: auto; border-top: 1px solid var(--line-soft); padding: 8px 14px; font: 400 10px/16px var(--font-mono); color: var(--ink-mute); }
+.exec-sb-connfoot b { color: var(--ink-soft); font-weight: 600; }
+.exec-sb-recent { padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; font: 400 11px/16px var(--font-mono); color: var(--ink-soft); }
+
+/* ── Sandbox Certification workbench (.exec-sbc — shares the .exec-a3 masthead,
+   .exec-ac triptych and .exec-pf2 panel grammar). hi-fi WF 1d. ── */
+.exec-sbc .exec-ws { max-width: 1440px; }
+.exec-sbc .exec-guard-band { display: none; }
+.exec-sbc-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 12px; font: 400 10px/14px var(--font-mono); }
+.exec-sbc-back { color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; }
+.exec-sbc-switchlabel { color: var(--ink-mute); text-transform: uppercase; letter-spacing: 0.08em; }
+.exec-sbc-tab { color: var(--ink-soft); background: var(--surface-2); border: 1px solid var(--line); padding: 4px 10px; }
+.exec-sbc-tab[data-active="true"] { color: var(--paper); background: var(--accent); border-color: var(--accent); font-weight: 600; }
+.exec-sbc-tab[data-active="true"] .exec-sbc-haltword { color: var(--paper); }
+.exec-sbc-haltword { color: var(--warn); }
+.exec-sbc-switchnote { color: var(--ink-mute); margin-left: 8px; }
+.exec-sbc-masthead { padding-bottom: 10px; }
+.exec-sbc-validation { color: var(--warn); border-color: var(--warn); }
+.exec-sbc-broker { display: inline-flex; align-items: center; gap: 6px; }
+.exec-sbc-meta { margin-bottom: 14px; }
+.exec-sbc-meta b[data-tone="good"] { color: var(--good); font-weight: 400; }
+.exec-cert-critical.exec-sbc-critical { display: block; border: 1px solid var(--bad); border-left: 4px solid var(--bad); background: var(--bad-bg); color: var(--ink); padding: 8px 12px; margin-bottom: 14px; font: 400 12px/20px var(--font-body); }
+.exec-sbc-critical b { display: block; font: 600 11px/16px var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--bad); }
+/* Seven steps, one row: the ordinal carries the order, the state carries the verdict. */
+.exec-sbc-stepper { display: flex; flex-wrap: nowrap; overflow-x: auto; list-style: none; margin: 0 0 14px; padding: 0; border: 1px solid var(--line); background: var(--paper-raised); }
+.exec-sbc-step { flex: 1 1 110px; min-width: 110px; padding: 8px 12px; border-right: 1px solid var(--line-soft); }
+.exec-sbc-step:last-child { border-right: 0; }
+.exec-sbc-stepn { display: block; font: 400 9px/14px var(--font-mono); text-transform: uppercase; color: var(--ink-mute); }
+.exec-sbc-stepstate { display: block; font: 400 11px/16px var(--font-mono); color: var(--ink-soft); }
+.exec-sbc-stepstate[data-tone="good"] { color: var(--good); }
+.exec-sbc-stepstate[data-tone="warn"] { color: var(--warn); }
+.exec-sbc-stepstate[data-tone="bad"] { color: var(--bad); }
+.exec-sbc-stepstate[data-tone="mute"] { color: var(--ink-mute); }
+.exec-sbc-life { margin-bottom: 14px; }
+.exec-sbc-triptych { margin-bottom: 14px; }
+.exec-sbc-src { font: 400 9px/12px var(--font-mono); color: var(--ink-mute); text-transform: none; }
+.exec-sbc-fact { display: contents; }
+.exec-sbc .exec-360-facts dd[data-tone="good"] { color: var(--good); }
+.exec-sbc .exec-360-facts dd[data-tone="warn"] { color: var(--warn); }
+.exec-sbc .exec-360-facts dd[data-tone="bad"] { color: var(--bad); }
+.exec-sbc-findings { margin-bottom: 14px; }
+.exec-sbc-ftable { min-width: 760px; }
+.exec-sbc-ftable td[data-tone="good"] { color: var(--good); }
+.exec-sbc-ftable td[data-tone="warn"] { color: var(--warn); }
+.exec-sbc-ftable td[data-tone="bad"] { color: var(--bad); }
+.exec-sbc-ftable td[data-tone="mute"] { color: var(--ink-faint); }
+.exec-sbc-kv [data-tone="warn"] { color: var(--warn); }
+.exec-sbc-kv [data-tone="mute"] { color: var(--ink-mute); }
+.exec-sbc-check { list-style: none; margin: 0; padding: 12px 14px; display: flex; flex-direction: column; gap: 7px; font: 400 12px/16px var(--font-mono); color: var(--ink-soft); flex: 1; }
+.exec-sbc-check li[data-ok="true"] b { color: var(--good); }
+.exec-sbc-check li[data-ok="false"] { color: var(--warn); }
+.exec-sbc-actionbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; border: 1px solid var(--line); background: var(--paper-raised); padding: 10px 14px; margin-bottom: 14px; }
+.exec-sbc-blocked { font: 400 11px/16px var(--font-mono); color: var(--ink-mute); border: 1px dashed var(--line-strong); padding: 6px 14px; cursor: not-allowed; }
+.exec-sbc-actionfoot { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-sbc-plan { border: 1px solid var(--accent); background: var(--paper-raised); margin-bottom: 14px; }
+.exec-sbc-planhead { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--line-soft); }
+.exec-sbc-plantitle { font: 600 11px/16px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
+.exec-sbc-planfoot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--line-soft); font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-sbc-contract, .exec-sbc-telemetry { margin-bottom: 14px; }
+.exec-sbc-contract > summary, .exec-sbc-telemetry > summary { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); cursor: pointer; margin-bottom: 8px; }
+@media (max-width: 767px) {
+  .exec-sbc .exec-360-grid3 { grid-template-columns: minmax(0, 1fr); }
+  .exec-sbc-step { min-width: 96px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* The step the certification is waiting on, and the broker's REST heartbeat. */
+  .exec-sbc-step[data-pending="true"] .exec-sbc-stepstate { animation: exec-sb-tick 1.4s ease-in-out infinite; }
+  .exec-sbc-critical { animation: exec-sb-edge 2.4s ease-in-out infinite; }
+  /* A halted certification and its stalled row keep their own slow pulse. */
+  .exec-sb-seg[data-live="true"][data-seg="warn"] { animation: exec-sb-tick 1.2s infinite; }
+  .exec-sb-seg[data-live="true"][data-seg="bad"] { animation: exec-sb-pulse 1.6s infinite; }
+  .exec-sb-row[data-stalled="true"] .exec-sb-edge { animation: exec-sb-edgeline 3.2s ease-in-out infinite; }
+}
+@keyframes exec-sb-tick { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes exec-sb-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes exec-sb-edge { 0%, 100% { border-left-color: var(--bad); } 50% { border-left-color: var(--warn); } }
+@keyframes exec-sb-edgeline { 0%, 100% { border-left-color: var(--bad); } 50% { border-left-color: var(--warn); } }

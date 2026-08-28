@@ -12,6 +12,7 @@ import { AlphaFleet } from "./screens/AlphaFleet";
 import { AccountsBindings } from "./screens/AccountsBindings";
 import { BindingDetail } from "./screens/BindingDetail";
 import { LiveOverview } from "./screens/LiveOverview";
+import { SandboxOverview } from "./screens/SandboxOverview";
 import { reviewRouteFor } from "./screens/ApprovalInbox";
 
 import { usePresentation } from "../app/presentation";
@@ -138,7 +139,7 @@ export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: 
     switch (screenId) {
       case "EXECUTION_PAPER_WORKBENCH_SCREEN": return "Carry v3.2";
       case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN": return "VnMomo v0.9";
-      case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN": return "MM v1.1";
+      case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN": return params.deploymentId ? `${params.deploymentId} · certification` : null;
       // Live Full and Canary share an alpha; the crumb names the deployment and the room.
       case "EXECUTION_CANARY_CONTROL_ROOM_SCREEN": return `${deploymentId} · canary`;
       case "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN": return params.deploymentId ? `${params.deploymentId} · live full` : null;
@@ -191,7 +192,11 @@ export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: 
       content = <PaperWorkbenchPreview deploymentId={deploymentId} />;
       break;
     case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN":
-      content = <SandboxCertificationContainer api={api} deploymentId={deploymentId} />;
+      // Feature canonical route (/deployments/sandbox) = the sandbox overview,
+      // entry screen of WF 1d; /:deploymentId opens that certification.
+      content = params.deploymentId
+        ? <SandboxCertificationContainer api={api} deploymentId={deploymentId} />
+        : <SandboxOverview />;
       break;
     case "EXECUTION_CANARY_CONTROL_ROOM_SCREEN":
       content = <CanaryControlRoomContainer api={api} deploymentId={deploymentId} />;

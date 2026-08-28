@@ -1255,6 +1255,7 @@ export function SandboxCertificationContainer({
   return (
     <SandboxCertificationScreen
       certification={state.value}
+      deploymentId={deploymentId}
       status={state.status}
       reason={state.reason}
       visuals={STAGE_SMOKE ? stageVisuals("sandbox") : undefined}
